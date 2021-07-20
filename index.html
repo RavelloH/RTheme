@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <title>RTheme | 开始页面</title>
+    <!-- 以下meta请自行修改 -->
+    <meta name="keywords" content="RTheme">
+    <meta name="description" content="A Theme by RavelloH">
+
+    <!-- CSS -->
+    <link type="text/css" rel="stylesheet" href="css/common.css">
+    <link type="text/css" rel="stylesheet" href="css/style.css">
+    <link type="text/css" rel="stylesheet" href="css/iconfont.css">
+    <!-- JavaScript -->
+    <script type="text/javascript" src="js/loading.js"></script>
+    <script type="text/javascript" src="js/common.js"></script>
+</head>
+<body>
+    <body>
+        <section class="showcase">
+            <header>
+                <h2 class="logo">
+                    <a href="/">
+                        <!-- 自行修改/img/avatar.jpg来修改头像 -->
+                        <img class="logoimg" src="img/avatar.jpg" style="width: 1.5em;border-radius: 50%;"
+                            alt="avatar">
+                    </a>
+                </h2>
+                <div class="headers">
+                    <nav>
+                        <a href="/">
+                            自定义1
+                        </a>
+                        <a href="/">
+                            自定义2
+                        </a>
+                        <a href="/">
+                            自定义3
+                        </a>
+                        <a href="/">
+                            自定义4
+                        </a>
+                        <a href="/">
+                            自定义5
+                        </a>
+                        </p>
+                    </nav>
+                </div>
+                <div class="toggle" class="header">
+                </div>
+            </header>
+
+            <div class="overlay"></div>
+            <div class="text" id="text">
+                <h3>Thanks for use</h3>
+                <h2>RTheme</h2>
+                <p class="typing">
+                    右侧的指引能帮助你快速上手使用这款主题。
+                </p>
+                
+            </div>
+            <!-- 上面是左栏，下面是右栏，直接在左栏结束后加一个div即可 -->
+
+            <!-- 以下这个div不推荐直接放在主页。 -->
+            <div class="text listline" id="text">
+                <h3>欢迎使用RTheme!</h3><br>
+
+                以下是一些属性的介绍及常用的模板。<br>
+                <br>
+                <h4>总体布局：</h4>
+                    本主题为横向风格，使用了遮罩，请将要显示的内容放置于&lt;/section&gt;标签内。<br>
+                    其中，位于class为text的div内的元素有切换动画效果。<br>
+                    左上角头像，右上角为顶栏及目录按键。<br>
+                    主题为响应式布局，如需要遮罩切换特效，请将位于/css/style.css中的
+                    section {
+                        height: 100%;
+                      }
+                      标签删掉。<strong>注意！这样会使用于显示文本的class:listline失效</strong><br>
+                      左下角为小图标，可自行通过修改icon设置。 <br>
+                      布局分两栏，如现在。 <br>
+                      默认无右边，在源代码中科查看如何添加。    
+                      <br>
+                      <hr> 
+                <h4>标签模板</h4>
+                      a标签:
+                      按钮式 <a class="button" href="/">a</a><br>
+                      自带间隔：<a href="/" class="c">a</a><a href="/" class="c">b</a><a href="/" class="c">c</a><br>
+                      普通:<a href="/">aaa</a><br>
+                      带下划线:<a href="/" class="linkline">aaa</a>
+                      <br>
+                      <br>
+
+                      div:
+                      class:text：文本区，有页面切换动画<br>
+                      class:listline：有自动滚动条的div<br>
+                      class:overlay：遮罩用<br>
+                      class:headers：顶栏<br>
+                      class:center：居中<br>
+                      class:right：右对齐（默认左）<br>
+                      class:article：宽屏div（文章用）<br>
+                      class:menu：目录<br>
+                      class:showcase：关闭目录<br>
+                      class:toggle：目录按钮<br>
+                      class:social：左下小图标<br>
+                      <br>
+                      id:text：进入动画<br>
+                      id:active：退出动画<br>
+                      <br>
+                      <br>
+                      
+                      p标签：<br>
+                      <p>普通的p标签</p>
+                      <p class="typing">有打字机特效的p标签</p>
+                    <br>
+                    <br>
+                    <hr>
+
+                    <h4>全模板:</h4>
+                    <br>
+                    上面就是基本的页面组成了。<br>
+                    一些进阶组成，可以在<a href="https://ravelloh.github.io" class="linkline">我的blog</a>中自行F12。
+
+                    
+
+
+            </div>
+
+
+            <!-- 左下角小图标，自行修改。 -->
+            <ul class="social">
+                <li><a href="/"><span class="iconfont icon-about"></span></a></li>
+                <li><a href="http://github.com/ravelloh" target="_blank" rel="noreferrer"><span
+                            class="iconfont icon-github"></span></a></li>
+            </ul>
+        </section>
+        <div class="menu">
+            <ul>
+                请在/js/menu.js中修改。<br>
+                <script type="text/javascript" src="js/menu.js"></script>
+            </ul>
+        </div>
+        <script src="js/script.js"></script>
+    </body>
+
+</html>

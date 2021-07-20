@@ -1,0 +1,84 @@
+.text,.article {
+    position: relative;
+    animation-name: startloading;
+    animation-duration: 1s;
+    color: #111111,
+}
+
+@keyframes startloading {
+    0% {
+        color: #111111;
+        left: -2000px
+    }
+
+    100% {
+        color: #ffffff;
+        left: 0px;
+    }
+}
+
+.text#active,.article#active {
+    position: relative;
+    animation-name: endloading;
+    animation-duration: 1s;
+    color: #111111;
+    animation-fill-mode: forwards;
+}
+
+@keyframes endloading {
+    0% {
+        color: #ffffff;
+        left: 0px
+    }
+
+    100% {
+        color: #111111;
+        left: -2000px;
+    }
+}
+
+
+.logoimg:hover {
+    position: relative;
+    animation: logoimghover 4s 1;
+}
+
+@keyframes logoimghover {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    25% {
+        transform: rotate(20deg);
+    }
+
+    50% {
+        transform: rotate(0deg);
+    }
+
+    55% {
+        transform: rotate(0deg);
+    }
+
+    70% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(-360deg);
+    }
+}
+
+.avatarimg:hover {
+    position: relative;
+    animation: avatarimghover 1s 1;
+}
+
+@keyframes avatarimghover {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(-360deg);
+    }
+}

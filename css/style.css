@@ -1,0 +1,726 @@
+/* Font引用 */
+@font-face {
+  font-family: 'Furore';
+  src: local('Furore'), local('Furore');
+  src: url(/css/font/Furore.otf),
+    url(/css/font/Furore.ttf) format(ttf) url(/css/font/Furore.woff) format(woff);
+}
+
+@font-face {
+  font-family: 'Microsoft Yahei';
+  src: local(Microsoft), local('Microsoft Yahei');
+  src: url(/css/font/WeiRuanYaHei.ttf);
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MicrosoftYaqiHeiBold';
+  src: local('MicrosoftYaqiHeiBold'), local('MicrosoftYaqiHeiBold');
+  src: url(/css/font/MicrosoftYaqiHeiBold-2.ttf);
+  font-display: swap;
+}
+
+/* 粗体优化 */
+b {
+  font-family: 'MicrosoftYaqiHeiBold';
+
+}
+
+.iconfont {
+  font-family: "iconfont" !important;
+  font-size: 16px;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  background-color: #1e1e1e;
+  color: #c6c9ce;
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+body {
+  -webkit-tap-highlight-color: rgba(255, 255, 255, 0);
+  -webkit-overflow-scrolling: touch
+}
+
+html,
+body {
+  position: relative;
+  min-height: 100%;
+  height: 100%
+}
+
+nav {
+  font-family: 'Furore', 'MicrosoftYaqiHeiBold', 'MicrosoftYahei';
+}
+
+header {
+  font-family: 'Furore', 'MicrosoftYaqiHeiBold', 'MicrosoftYahei';
+}
+
+p {
+  color: #c6c9ce;
+}
+
+.lock {
+  overflow: hidden;
+  max-height: 100%
+}
+
+body,
+input,
+button,
+textarea,
+select,
+option {
+  font: normal 1em 'MicrosoftYaqiHeiBold', 'MicrosoftYahei'"Microsoft Yahei", sans-serif
+}
+
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+figure,
+pre,
+dl,
+dd,
+blockquote,
+button,
+input {
+  margin: 0
+}
+
+input,
+legend,
+input,
+textarea,
+button {
+  padding: 0
+}
+
+form,
+fieldset,
+th,
+td {
+  margin: 0;
+  padding: 0
+}
+
+ol,
+ul {
+  margin: 12px 0;
+  padding: 0 0 0 32px
+}
+
+ol.reset,
+ul.reset {
+  margin: 0;
+  padding: 0;
+  list-style: none
+}
+
+ol ol,
+ol ul,
+ul ol,
+ul ul {
+  margin-top: 0;
+  margin-bottom: 0
+}
+
+p {
+  margin: 12px 0
+}
+
+small {
+  font-size: 75%;
+  line-height: 1
+}
+
+main {
+  display: block
+}
+
+template {
+  display: none
+}
+
+img {
+  max-width: 100%;
+  border: none
+}
+
+img,
+input,
+button,
+label {
+  vertical-align: middle
+}
+
+i {
+  font-style: normal
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 400
+}
+
+h1,
+.h1 {
+  font-size: 44px;
+  line-height: 48px;
+  color: #c6c9ce
+}
+
+h2,
+.h2 {
+  font-size: 34px;
+  line-height: 40px
+}
+
+h3,
+.h3 {
+  font-size: 24px;
+  line-height: 32px
+}
+
+h4,
+.h4 {
+  font-size: 20px;
+  line-height: 28px
+}
+
+h5,
+.h5 {
+  font-size: 16px;
+  line-height: 24px
+}
+
+h6,
+.h6 {
+  font-size: 12px;
+  line-height: 20px
+}
+
+input[type="button"],
+input[type="submit"],
+input[type="search"],
+input[type="reset"] {
+  cursor: pointer;
+  -webkit-appearance: button
+}
+
+input:focus,
+select:focus,
+button:focus,
+textarea:focus {
+  outline: none
+}
+
+textarea {
+  resize: none
+}
+
+a {
+  background-color: transparent;
+  background-image: none;
+  color: #c6c9ce;
+  text-decoration: none;
+  outline: 0
+}
+
+a:hover {
+  color: #1e1e1e;
+  text-decoration: double
+}
+
+hr,
+.hr {
+  border: 0;
+  border-top: 1px solid #dadada;
+  box-sizing: content-box;
+  display: block;
+  height: 0;
+  margin-top: 24px;
+  margin-bottom: 24px
+}
+
+.fl {
+  float: left
+}
+
+.fr {
+  float: right
+}
+
+.tr {
+  text-align: right
+}
+
+.tc {
+  text-align: center
+}
+
+header {
+  margin-top: 40px;
+  margin-bottom: 40px;
+  position: fixed;
+  line-height: 40px;
+}
+
+.headers {
+  position: position;
+  margin-left: 10px;
+  top: -10px;
+  width: 70%;
+  text-align: right;
+  margin-top: 55px;
+  margin-bottom: 40px;
+  word-spacing: 30px;
+  font-family: 'Furore', 'MicrosoftYaqiHeiBold', 'MicrosoftYahei';
+
+}
+
+a:link {
+  color: #c6c9ce;
+}
+
+a:visited {
+  color: #c6c9ced7;
+}
+
+a:hover {
+  color: #03a9f4;
+}
+
+a:active {
+  color: #0078d7;
+}
+
+.logoimg {
+  display: inline-block;
+}
+
+.main {
+
+  color: honeydew;
+  position: absolute;
+  top: 50%;
+  left: 5%
+}
+
+.typing {
+  color: #fff;
+  overflow: hidden;
+  border-right: .15em solid whitesmoke;
+  white-space: nowrap;
+  margin: 0;
+  letter-spacing: .15em;
+  animation:
+    typing 4s steps(60, end),
+    blink-caret .5s step-end infinite,
+    show 0.3s;
+  animation-delay: 0.3s;
+  text-align: left;
+}
+
+@keyframes typing {
+  from {
+    width: 0;
+    display: block;
+  }
+
+  to {
+    width: 100%;
+    display: block;
+  }
+}
+
+@keyframes blink-caret {
+
+  from,
+  to {
+    border-color: transparent
+  }
+
+  50% {
+    border-color: white
+  }
+}
+
+.more {
+  margin-bottom: 10px;
+  margin-left: 40px;
+  margin-right: 40px;
+}
+
+
+/* 
+设计有加载动画，
+使用<div class="loadingcircle"></div>引用。
+
+.loadingcircle {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #c6c9ce;
+  -webkit-mask:
+    repeating-conic-gradient(#0000 0deg, #000 1deg 70deg, #0000 71deg 90deg),
+    radial-gradient(farthest-side, #0000 calc(100% - 9px), #000 calc(100% - 8px));
+  -webkit-mask-composite: destination-in;
+  mask-composite: intersect;
+  animation: s5 1s infinite;
+} 
+
+@keyframes s5 {
+  to {
+    transform: rotate(.5turn)
+  }
+}
+*/
+
+body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-auto-rows: 130px;
+  place-items: center;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* [class*=classic]:before {
+  content: "Loading...";
+}
+
+.classic {
+  font-weight: bold;
+  font-family: Furore;
+  font-size: 30px;
+  animation: c1 1s linear infinite alternate;
+}
+
+@keyframes c1 {
+  to {
+    opacity: 0
+  }
+} */
+
+
+header {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Furore', sans-serif;
+}
+
+body .text {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: sans-serif, 'MicrosoftYahei', 'MicrosoftYaqiHeiBold';
+}
+
+header {
+  position: absolute;
+  top: -10px;
+  left: 0;
+  width: 100%;
+  padding: 40px 100px;
+  z-index: 1000;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+header .logo {
+  color: #c6c9ce;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.toggle {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  background: url(../img/menu.png);
+  background-repeat: no-repeat;
+  background-size: 30px;
+  background-position: center;
+  cursor: pointer;
+}
+
+.toggle.active {
+  background: url(../img/close.png);
+  background-repeat: no-repeat;
+  background-size: 25px;
+  background-position: center;
+  cursor: pointer;
+}
+
+.showcase {
+  position: absolute;
+  right: 0;
+  width: 100%;
+  min-height: 100vh;
+  padding: 100px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #111111;
+  transition: 0.5s;
+  z-index: 2;
+}
+
+.showcase.active {
+  right: 300px;
+}
+
+.showcase video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.8;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #1e1e1e00;
+  mix-blend-mode: overlay;
+}
+
+.text {
+  position: relative;
+  z-index: 10;
+}
+
+.text h2 {
+  font-size: 5em;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1em;
+  text-transform: uppercase;
+}
+
+.text h3 {
+  font-size: 4em;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1em;
+  text-transform: uppercase;
+}
+
+.text p {
+  font-size: 1em;
+  color: #fff;
+  margin: 20px 0;
+  font-weight: 400;
+  max-width: 700px;
+}
+
+.text a.button {
+  display: inline-block;
+  font-size: 1em;
+  background: #fff;
+  padding: 10px 30px;
+  text-transform: uppercase;
+  text-decoration: none;
+  font-weight: 500;
+  margin-top: 10px;
+  color: #111;
+  letter-spacing: 2px;
+  transition: 0.2s;
+}
+
+.text a.button:hover {
+  letter-spacing: 6px;
+}
+
+.social {
+  position: absolute;
+  z-index: 10;
+  bottom: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.social li {
+  list-style: none;
+}
+
+.social li a {
+  display: inline-block;
+  margin-right: 20px;
+  filter: invert(1);
+  transform: scale(0.5);
+  transition: 0.5s;
+}
+
+.social li a:hover {
+  transform: scale(0.5) translateY(-15px);
+}
+
+.menu {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 300px;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.menu ul {
+  position: relative;
+}
+
+.menu ul li {
+  list-style: none;
+}
+
+.menu ul li a {
+  text-decoration: none;
+  font-size: 24px;
+  color: #c6c9ce;
+}
+
+.menu ul li a:hover {
+  color: #03a9f4;
+}
+
+@media (max-width: 991px) {
+
+  .showcase,
+  .showcase header {
+    padding: 40px;
+  }
+
+  .text h2 {
+    font-size: 3em;
+  }
+
+  .text h3 {
+    font-size: 2em;
+  }
+}
+
+textarea {
+  resize: none;
+}
+
+hr,
+.hr {
+  border: 0;
+  border-top: 1px solid #dadada;
+  box-sizing: content-box;
+  display: block;
+  height: 0;
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+code {
+  font-family: Consolas, Monaco, courier, monospace;
+}
+
+/* 如果需要遮罩切换动画，注释掉下面的。(会有BUG) */
+section {
+  height: 100%;
+}
+
+.listline {
+  width: 35%;
+  height: 65%;
+  overflow: auto;
+}
+
+.article {
+  width: 100%;
+  height: 80%;
+  overflow: auto;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background-color: #111111;
+}
+
+::-webkit-scrollbar-track {
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  background-color: #111111;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, .3);
+  background-color: #c6c9ce6e;
+}
+
+strong {
+  font-weight: bold;
+  font-family: "MicrosoftYaqiHeiBold";
+}
+
+.right {
+  align-content: right;
+  text-align: right;
+}
+
+.text a.tag,
+a.c,
+.article a.tag,
+a.m {
+  display: inline-block;
+  font-size: 1em;
+  padding: 5px 10px;
+  text-transform: uppercase;
+  text-decoration: none;
+  font-weight: 500;
+  letter-spacing: 2px;
+  transition: 0.4s;
+}
+
+img.img {
+  -webkit-transform: scale(0.8);
+  -moz-transform: scale(0.8);
+  -ms-transform: scale(0.8);
+  -o-transform: scale(0.8);
+  transform: scale(0.8);
+}
+
+.center {
+  align-content: center;
+  text-align: center;
+}
+
+.linkline {
+  border-bottom: 1px dashed #ffffff;
+  height: 50px;
+  width: 350px;
+  color: #ffffff
+}
