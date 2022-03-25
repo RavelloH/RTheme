@@ -17,12 +17,19 @@
 **This document also supports [English](https://github.com/RavelloH/RTheme/doc/README-En.md).**
 </div>
 
-## 示例网站:
+## 示例
 
-https://ravelloh.github.io
-https://ravelloh.github.io/RTheme
+示例博客:https://ravelloh.github.io
+
+演示网站:https://ravelloh.github.io/RTheme
   
+## 使用
+推荐  
+下载正式版ZIP:https://github.com/RavelloH/RTheme/archive/refs/heads/main.zip
 
+
+或直接clone
+  https://github.com/RavelloH/RTheme.git
 ## 使用方式:
 clone后直接修改。
 
