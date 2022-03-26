@@ -14,7 +14,7 @@
 </div>
 <div align="center">
   
-**This document also supports [English](https://github.com/RavelloH/RTheme/doc/README-En.md).**
+**This document also supports [English](https://github.com/RavelloH/RTheme/blob/main/doc/README-En.md).**
 </div>
 
 ## 示例
