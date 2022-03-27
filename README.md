@@ -18,21 +18,14 @@
 </div>
 
 ## 示例
-
 示例博客:https://ravelloh.github.io
-
+  
 演示网站:https://ravelloh.github.io/RTheme
   
 ## 使用
-推荐  
-下载正式版ZIP:https://github.com/RavelloH/RTheme/archive/refs/heads/main.zip
+- 直接在此Github仓库内选择使用此模板
+- 下载正式版ZIP:https://github.com/RavelloH/RTheme/archive/refs/heads/main.zip
+- 或直接clone:https://github.com/RavelloH/RTheme.git
+  
+## 功能
 
-
-或直接clone
-  https://github.com/RavelloH/RTheme.git
-## 使用方式:
-clone后直接修改。
-
-内附指南，位于index.html内。
-
-如有需要，自行修改。
