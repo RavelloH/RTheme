@@ -51,4 +51,4 @@
 ## 标签指南
 
 ## LICENCE
-(MIT License)[https://github.com/RavelloH/RTheme/blob/main/LICENSE]  
+[MIT License](https://github.com/RavelloH/RTheme/blob/main/LICENSE)
