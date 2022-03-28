@@ -37,7 +37,7 @@ b {
 html {
   background-color: #1e1e1e;
   color: #c6c9ce;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.5;
   overflow-x: hidden;
 }
@@ -366,12 +366,7 @@ a:active {
   margin-right: 40px;
 }
 
-
-/* 
-设计有加载动画，
-使用<div class="loadingcircle"></div>引用。
-
-.loadingcircle {
+/* .loadingcircle {
   width: 50px;
   height: 50px;
   border-radius: 50%;
@@ -436,7 +431,7 @@ body .text {
 
 header {
   position: absolute;
-  top: -10px;
+  top: -20px;
   left: 0;
   width: 100%;
   padding: 40px 100px;
@@ -627,6 +622,22 @@ header .logo {
   }
 }
 
+@media (max-width: 700px) {
+  
+  .headers {
+    visibility: hidden;
+  }
+  html {
+    font-size: 10px;
+  }
+  .text h2 {
+    font-size: 2em;
+  }
+  .text h3 {
+    font-size: 1em;
+  }
+
+}
 textarea {
   resize: none;
 }
@@ -646,7 +657,6 @@ code {
   font-family: Consolas, Monaco, courier, monospace;
 }
 
-/* 如果需要遮罩切换动画，注释掉下面的。(会有BUG) */
 section {
   height: 100%;
 }
@@ -661,6 +671,12 @@ section {
   width: 100%;
   height: 80%;
   overflow: auto;
+  word-break:break-all;
+}
+
+.codeline {
+   width: 98%;
+   height: auto;
 }
 
 ::-webkit-scrollbar {
@@ -720,7 +736,64 @@ img.img {
 
 .linkline {
   border-bottom: 1px dashed #ffffff;
-  height: 50px;
-  width: 350px;
   color: #ffffff
+}
+
+pre {
+    background: #2d2d2d;
+    color: rgb(201,209,217);
+    font-family: Consolas;
+    text-align: left;
+    padding: 1em;
+    padding-left: 0.8em;
+    margin: 1em;
+    border-radius: 5px;
+    counter-reset: line;
+    word-spacing: normal;
+    word-break: normal;
+    line-height: 0.2;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow: auto;
+}
+
+pre span {
+    display: block;
+    line-height: 1.5rem;
+    white-space: pre;
+}
+
+pre span:before {
+    counter-increment: line;
+    content: counter(line);
+    display: inline-block;
+    width: 3em;
+    text-align: right;
+    border-right: 2px solid #999;
+    padding-right: .8em;
+    margin-right: 1em;
+    color: #999;
+}
+
+a {
+  display: inline-block;
+  position: relative;
+}
+
+a:after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  transform: scaleX(0);
+  height: 2px;
+  bottom: 0;
+  left: 0;
+  background-color: #0087ca;
+  transform-origin: bottom right;
+  transition: transform 0.25s ease-out;
+}
+
+a:hover:after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
 }
