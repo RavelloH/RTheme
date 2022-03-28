@@ -49,6 +49,97 @@
 - [x] 支持图片懒加载(默认关闭)
   
 ## 标签指南
+* `<a>`  
+   * class:  
+       * button:白底黑字大按钮，带伸缩hover  
+       * c:自带间隔，带变色hover
+       * linkline:带虚线下划线
+       * tag:标签用
+       * m:目录索引用，同tag
+* `<div>`  
+    * class:  
+        * text：文本区(分栏)
+        * listline：有自动滚动条的div(分栏)
+        * ~~codeline:代码块，已被pre平替~~
+        * overlay：遮罩
+        * headers：顶栏
+        * center：元素居中
+        * right：右对齐（默认左）
+        * article：宽屏div（文章用）
+        * menu：目录区域
+        * showcase：显示区域(遮罩上)
+        * toggle：目录按钮
+    * id:
+        * text：进入动画
+        * active：退出动画
+* `<ul>`
+    * class:
+        * social：左下小图标
+* `<span>`:  
+    注:span使用方法为class里同时写大小加类型，如大号“关于”的图标:`<span class="iconfontlarge icon-about"></span>`
+   * class:
+      * iconfont:50px图标
+      * iconfontsmall:26px图标
+      * iconfontmini:20px图标
+      * iconfontbig:50px图标，带top12px
+      * iconfontlarge:70px图标  
+          以下icon效果请在<https://ravelloh.github.io/RTheme/help/icon/>中查看
+      * icon-search
+      * icon-about
+      * icon-share
+      * icon-note
+      * icon-archive
+      * icon-error
+      * icon-tag
+      * icon-gang
+      * icon-home
+      * icon-annotation
+      * icon-classification
+      * icon-aboutcircle
+      * icon-clock
+      * icon-app
+      * icon-menu
+      * icon-bilibili
+      * icon-neteasemusic
+      * icon-github
+      * icon-article
+      * icon-help
+      * icon-link
+      * icon-friend
+      * icon-gift
+      * icon-QR
+      * icon-add
+      * icon-del
+      * icon-download
+      * icon-bad
+      * icon-right
+      * icon-fujian
+      * icon-code
+      * icon-message
+      * icon-fuzhi
+      * icon-message
+      * icon-like
+      * icon-star
+      * icon-lock
+      * icon-good
+      * icon-scan
+      * icon-save
+      * icon-flag
+      * icon-upload
+      * icon-more1
+      * icon-more2
+* `<p>`
+  * class:  
+      * typing:打字机特效
+  
+* 全局:
+  * class:  
+     * fl:元素左对齐(环绕)
+     * fr:元素右对齐(环绕)
+     * tc:文字居中
+     * tr:文字右对齐
+     * logoimg:头像
+     * center:元素居中
 
 ## LICENCE
 [MIT License](https://github.com/RavelloH/RTheme/blob/main/LICENSE)
