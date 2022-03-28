@@ -14,8 +14,10 @@
 </div>
 <div align="center">
   
-**此文档也支持 [中文](https://github.com/RavelloH/RTheme/blob/main/README.md).**
+**此文档也支持 [中文](https://github.com/RavelloH/RTheme/blob/main/README.md).**  
+**The translation of this document is still in progress.You can contribute at any time!**
 </div>
+
 ## Demonstration
 Sample blog: https://ravelloh.github.io
 Demo site: https://ravelloh.github.io/RTheme
@@ -86,57 +88,57 @@ Demo site: https://ravelloh.github.io/RTheme
 
 * `<div>`
 
-* class:
+    * class:
 
-*Text: text area (column)
+        * Text: text area (column)
 
-*Listline: div with automatic scroll bar
+        * Listline: div with automatic scroll bar
 
-*~ ~ Codeline: code block, replaced by pre~~
+        * ~~Codeline: code block, replaced by pre~~
 
-*Overlays: Masks
+        *Overlays: Masks
 
-*Headers: top bar
+        *Headers: top bar
 
-*Center: element centered
+        *Center: element centered
 
-*Right: align right (left by default)
+        *Right: align right (left by default)
 
-*Article: widescreen div (for articles)
+        *Article: widescreen div (for articles)
 
-*Menu: directory area
+        *Menu: directory area
 
-*Showcase: display area (on mask)
+        *Showcase: display area (on mask)
 
-*Toggle: Directory button
+        *Toggle: Directory button
 
-* id:
+    * id:
 
-*Text: enter animation
+        *Text: enter animation
 
-*Active: exit animation
+        *Active: exit animation
 
 * `<ul>`
 
-* class:
+    * class:
 
-*Social: small icon at the bottom left
+        *Social: small icon at the bottom left
 
 * `<span>`:
 
-Note: span can be used in both case and type in class, such as large "about" icon: ` < span class = "iconfontlarge icon about" > < / span >`
+         Note: span can be used in both case and type in class, such as large "about" icon: ` < span class = "iconfontlarge icon about" > < / span >`
 
-* class:
+    * class:
 
-*Iconfont: 50px Icon
+        *Iconfont: 50px Icon
 
-*Iconfontsmall: 26px Icon
+        *Iconfontsmall: 26px Icon
 
-*Icon 20iconti:
+        *Icon 20iconti:
 
-*Iconfontbig: 50px icon with top12px
+        *Iconfontbig: 50px icon with top12px
 
-*Iconfontlarge: 70px Icon
+        *Iconfontlarge: 70px Icon
 
 For the following icon effects, please click< https://ravelloh.github.io/RTheme/help/icon/ >View in
 
@@ -230,21 +232,21 @@ For the following icon effects, please click< https://ravelloh.github.io/RTheme/
 
 * `<p>`
 
-* class:
+    * class:
 
-*Typing: typewriter effects
+        * Typing: typewriter effects
 
 *Global:
 
-* class:
+    * class:
 
-*FL: align elements left (wrap)
+        * FL: align elements left (wrap)
 
-*Fr: align elements right (wrap)
+        * Fr: align elements right (wrap)
 
-*TC: text centered
+        * TC: text centered
 
-*Tr: align text right
+        * Tr: align text right
 
 *Logoimg: Avatar
 
