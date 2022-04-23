@@ -77,7 +77,7 @@ button,
 textarea,
 select,
 option {
-  font: normal 1em 'MicrosoftYaqiHeiBold', 'MicrosoftYahei'"Microsoft Yahei", sans-serif
+  font: normal 1em 'MicrosoftYaqiHeiBold', 'MicrosoftYahei', sans-serif
 }
 
 body,
@@ -88,7 +88,7 @@ h4,
 h5,
 h6,
 p,
-figure,
+o figure,
 pre,
 dl,
 dd,
@@ -623,21 +623,25 @@ header .logo {
 }
 
 @media (max-width: 700px) {
-  
+
   .headers {
     visibility: hidden;
   }
+
   html {
     font-size: 10px;
   }
+
   .text h2 {
     font-size: 2em;
   }
+
   .text h3 {
     font-size: 1em;
   }
 
 }
+
 textarea {
   resize: none;
 }
@@ -671,12 +675,12 @@ section {
   width: 100%;
   height: 80%;
   overflow: auto;
-  word-break:break-all;
+  word-break: break-all;
 }
 
 .codeline {
-   width: 98%;
-   height: auto;
+  width: 98%;
+  height: auto;
 }
 
 ::-webkit-scrollbar {
@@ -740,39 +744,39 @@ img.img {
 }
 
 pre {
-    background: #2d2d2d;
-    color: rgb(201,209,217);
-    font-family: Consolas;
-    text-align: left;
-    padding: 1em;
-    padding-left: 0.8em;
-    margin: 1em;
-    border-radius: 5px;
-    counter-reset: line;
-    word-spacing: normal;
-    word-break: normal;
-    line-height: 0.2;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    overflow: auto;
+  background: #2d2d2d;
+  color: rgb(201, 209, 217);
+  font-family: Consolas;
+  text-align: left;
+  padding: 1em;
+  padding-left: 0.8em;
+  margin: 1em;
+  border-radius: 5px;
+  counter-reset: line;
+  word-spacing: normal;
+  word-break: normal;
+  line-height: 0.2;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow: auto;
 }
 
 pre span {
-    display: block;
-    line-height: 1.5rem;
-    white-space: pre;
+  display: block;
+  line-height: 1.5rem;
+  white-space: pre;
 }
 
 pre span:before {
-    counter-increment: line;
-    content: counter(line);
-    display: inline-block;
-    width: 3em;
-    text-align: right;
-    border-right: 2px solid #999;
-    padding-right: .8em;
-    margin-right: 1em;
-    color: #999;
+  counter-increment: line;
+  content: counter(line);
+  display: inline-block;
+  width: 3em;
+  text-align: right;
+  border-right: 2px solid #999;
+  padding-right: .8em;
+  margin-right: 1em;
+  color: #999;
 }
 
 a {
@@ -796,4 +800,46 @@ a:after {
 a:hover:after {
   transform: scaleX(1);
   transform-origin: bottom left;
+}
+
+/* Container */
+.imgarea {
+  --column-count-small: 1;
+  --column-count-medium: 2;
+  --column-count-large: 3;
+  --column-gap: 0.125rem;
+  padding: var(--column-gap);
+}
+
+/* Columns */
+.imglist {
+  column-gap: var(--column-gap);
+  column-count: var(--column-count-small);
+  column-width: calc(1 / var(--column-count-small) * 100%);
+}
+
+@media only screen and (min-width: 640px) {
+  .imglist {
+    column-count: var(--column-count-medium);
+    column-width: calc(1 / var(--column-count-medium) * 100%);
+  }
+}
+
+@media only screen and (min-width: 800px) {
+  .imglist {
+    column-count: var(--column-count-large);
+    column-width: calc(1 / var(--column-count-large) * 100%);
+  }
+}
+
+/* Bricks */
+.brick {
+  width: 100%;
+  height: auto;
+  margin: var(--column-gap) 0;
+  display: block;
+}
+
+.brick:first-child {
+  margin: 0 0 var(--column-gap);
 }
