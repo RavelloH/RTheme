@@ -92,7 +92,7 @@
       * iconfontmini:20px图标
       * iconfontbig:50px图标，带top12px
       * iconfontlarge:70px图标  
-          以下icon效果请在<https://ravelloh.github.io/RTheme/documents/icon/>中查看
+          以下icon效果请在<https://ravelloh.github.io/RTheme/documents/icon.html>中查看
       * icon-search
       * icon-about
       * icon-share
