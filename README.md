@@ -20,9 +20,18 @@
 ## 演示
 示例博客:https://ravelloh.github.io  
 演示网站:https://ravelloh.github.io/RTheme
+![](https://ravelloh.github.io/RTheme/img/screenshot1.png)
+![](https://ravelloh.github.io/RTheme/img/screenshot2.png)
+![](https://ravelloh.github.io/RTheme/img/screenshot3.png)
+![](https://ravelloh.github.io/RTheme/img/screenshot4.png)
+![](https://ravelloh.github.io/RTheme/img/screenshot5.png)
+![](https://ravelloh.github.io/RTheme/img/screenshot6.png)
+![](https://ravelloh.github.io/RTheme/img/screenshot7.png)
+![](https://ravelloh.github.io/RTheme/img/screenshot8.png)
   
 ## 使用
-- 直接在此Github仓库内选择使用此模板
+- 直接在此Github仓库内选择使用此模板(推荐)
+  - 选择此页面中的`Use this template`，在下一页面内自定义仓库，*注意:需要选择下方的`Include all branches`，之后在仓库设置中的Pages项中，选择以仓库的page分支作为GithubPages页面，保存即可
 - 下载正式版ZIP:https://github.com/RavelloH/RTheme/archive/refs/heads/main.zip
 - 或直接clone:https://github.com/RavelloH/RTheme.git
   
@@ -83,7 +92,7 @@
       * iconfontmini:20px图标
       * iconfontbig:50px图标，带top12px
       * iconfontlarge:70px图标  
-          以下icon效果请在<https://ravelloh.github.io/RTheme/help/icon/>中查看
+          以下icon效果请在<https://ravelloh.github.io/RTheme/documents/icon.html>中查看
       * icon-search
       * icon-about
       * icon-share
