@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>${articlesName} | ${siteName}</title>
+    <meta name="keywords" content="" />
+    <meta name="description" content="${articlesName} | ${siteName}" />
+    <meta name="author" content="${authorName}" />
+    <meta name="pagetype" content="articles-context" />
+    <meta name="theme-color" content="#111111" />
+    <meta property="og:title" content="${siteName}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="${siteURL}">
+    <meta property="og:image" content="${siteShareImage}">
+
+    <!-- Preload -->
+    <link rel="preload" href="../../assets/fonts/ri.woff2" as="font" crossorigin>
+    <link rel="preload" href="../../assets/fonts/Furore.ttf" as="font" crossorigin>
+    <link rel="preload" href="../../assets/js/script.js" as="script">
+    <link rel="preload" href="../../assets/js/i18n.js" as="script">
+    <link rel="preload" href="../../assets/js/moudle.js" as="script">
+    <link rel="preload" href="../../assets/js/display.js" as="script">
+    <link rel="preload" href="../../assets/css/style.css" as="style" />
+    <link rel="preload" href="../../assets/css/iconfont.css" as="style" />
+    <link rel="preload" href="../../assets/images/avatar.jpg" as="image" />
+    <script defer type="text/javascript" src="../../assets/js/loading.js"></script>
+
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="../../assets/css/style.css" type="text/css" media="all" />
+    <link rel="stylesheet" href="../../assets/css/iconfont.css" type="text/css" />
+    <noscript>
+        <style type="text/css" media="all">
+            .loading {
+                opacity: 1;
+                transition: 0.5s;
+            }
+
+            #load-shade {
+                display: none;
+            }
+        </style>
+    </noscript>
+
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/assets/images/apple-touch-icon.png"
+    type="image/png" />
+    <link rel="apple-touch-icon-precomposed" href="/assets/images/favicon-32x32.png" type="image/png" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="manifest" href="/site.webmanifest">
+</head>
+
+<body>
+    <!-- viewport start -->
+    <section id="showcase">
+        <div id="shade-global"></div>
+        <div id='load-shade' class="active">
+            <div id='load-content'>
+                <hr>
+                <h2>${siteName}</h2>
+                <h3>LOAD<span id='loading-text'>ing<span class="breath"><span>.</span><span>.</span><span>.</span></span></span></h3>
+                <hr>
+                <br>
+            </div>
+        </div>
+        <header>
+            <div id="logo" class="loading" style="--i: 1">
+                <!-- logo start -->
+                <a href="#userbar">
+                    <img id="avatar" class="no-zoom" src="../../assets/images/avatar.jpg" alt="avatar">
+                </a>
+                <!-- logo end -->
+            </div>
+            <div id="header-side">
+                <div id="navs">
+                    <!-- nav start -->
+                    <nav>
+                        <a href="/" class="loading" style="--i: 5" id="nav-home">HOME</a>
+                        <a href="/works/" class="loading" style="--i: 4" id="nav-works">WORKS</a>
+                        <a href="/articles/" class="loading" style="--i: 3" id="nav-articles">ARTICLES</a>
+                        <a href="/friends/" class="loading" style="--i: 2" id="nav-friends">FRIENDS</a>
+                        <a href="/about/" class="loading" style="--i: 1" id="nav-about">ABOUT</a>
+                    </nav>
+                    <!-- nav end -->
+                </div>
+                <div id="toggle" class="loading" style="--i: 0"></div>
+            </div>
+        </header>
+        <div id="shade-context"></div>
+        <div id="main" class="loading">
+            <div id='viewmap'>
+                <article>
+                    <div id="articles-header">
+                        <h1><a href="/articles/${articlesPath}/">${articlesName}</a></h1>
+                        <p class="articles-info">
+                            <time>${articlesTime}</time> •
+                            <span class="i_small ri:archive-line"></span>
+                            <span class="class">
+                                <a>${articlesClass}</a>/
+                                <a>${articlesClass}</a>/
+                                <a>${articlesClass}</a>
+                            </span> •
+                            <span class="i_small ri:t-box-line"></span> <span id="textLength">----字</span> •
+                            <span class="i_small ri:search-eye-line"></span> <span id="pageVisitors">---</span>
+                        </p>
+                        <p class="articles-tags">
+                            <span class="i_small ri:price-tag-3-line"></span>
+                            <a>${articlesTag}</a>
+                            <a>${articlesTag}</a>
+                            <a>${articlesTag}</a>
+                        </p>
+                        <hr>
+                    </div>
+
+                    <div id="articles-body">
+                        ${articlesContext}
+                    </div>
+                    <div id="articles-footer">
+                        <hr>
+                        <div class="articles-footer-cc">
+                            <span class="i_small ri:information-line"></span> 原创内容使用 <a href="/help#分享协议">
+                                <span class="i_small ri:creative-commons-line"></span><span class="i_small ri:creative-commons-nc-line"></span><span class="i_small ri:creative-commons-nd-line"></span>知识共享 署名-非商业性使用-相同方式共享 4.0 (CC BY-NC-ND 4.0)
+                            </a>
+                            协议授权。转载请注明出处。
+                        </div>
+                        <div id="blockchain-data"></div>
+                        <div id="more-articles">
+                            <div id="previous" onclick="pjaxLoad('${previousArticlesUrl}')">
+                                <b><span class="i_small ri:arrow-left-s-line"></span> 上一篇</b><br>
+                                <span class="one-line">正在加载中...</span>
+                            </div>
+                            <div id="next" onclick="pjaxLoad('${nextArticlesUrl}')">
+                                <b>下一篇 <span class="i_small ri:arrow-right-s-line"></span></b><br>
+                                <span class="one-line">正在加载中...</span>
+                            </div>
+                        </div>
+                        <br><br>
+                        <div id="tcomment">
+                            <div class="info center">
+                                <span class="i_small ri:download-cloud-line"></span> 正在加载评论...
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </div>
+
+        <footer>
+            <div id="icons-left">
+                <nav>
+                    <a class="loading" style="--i: 1" id="icon-about" href="#about" onclick="openInfoBar('info');return false;" aria-label="about this page"><span class="i ri:file-info-line"></span></a>
+                    <a class="loading" style="--i: 2" id="icon-github" href="http://github.com/${githubUserName}" target="_blank" rel="noreferrer" aria-label="my github"><span class="i ri:github-fill"></span></a>
+                    <a class="loading" style="--i: 4" id="icon-rss" onclick="openInfoBar('feed')" aria-label="rss"><span class="i ri:rss-fill"></span></a>
+                </nav>
+            </div>
+            <div id="icons-right" class="loading" style="--i: 1">
+                <div id="message-bar">
+                    <noscript>
+                        <a class="red" href="/about/help#javascript"><strong>错误:无法使用JAVASCRIPT</strong>&nbsp;<span class="i ri:alert-line"></span></a>
+                    </noscript>
+                </div>
+            </div>
+        </footer>
+    </section>
+    <section id="sidebar">
+        <div id="sidebar-top">
+            <div id="sideinfo">
+                <h3>${authorName}'s</h3>
+                <h2>BLOG</h2>
+                <a class="icons" href="mailto:${authorMail}" id="email"><span class="i ri:mail-add-fill"></span>&nbsp;<span> ${authorMail}</span></a>
+                <hr>
+            </div>
+        </div>
+        <div id="sidebar-mid">
+            <menu id="sidebar-menu">
+                <ul>
+                    <!-- menu start -->
+                    <li style="--i: 1"><a href='/'><span class='i_small ri:home-3-fill'></span> HOME</a></li>
+                    <li style="--i: 2"><a href='/works/'><span class='i_small ri:dashboard-fill'></span> WORKS</a></li>
+                    <li style="--i: 3"><a href='/articles/'><span class='i_small ri:article-fill'></span> ARTICLES</a></li>
+                    <li style="--i: 4"><a href='/${nav1}/'><span class='i_small ${navIcon1}'></span> ${navName1}</a></li>
+                    <li style="--i: 5"><a href='/${nav2}/'><span class='i_small ${navIcon2}'></span> ${navName2}</a></li>
+                    <li style="--i: 6"><a href='/${nav3}/'><span class='i_small ${navIcon3}'></span> ${navName3}</a></li>
+                    <li style="--i: 7"><a href='/friends/'><span class='i_small ri:team-fill'></span> FRIENDS</a></li>
+                    <li style="--i: 8"><a href='/about/'><span class='i_small ri:information-fill'></span> ABOUT</a></li>
+                    <li>&nbsp;</li>
+                    <li><a href="/admin/"><span class="i_small ri:login-box-fill"></span> LOG IN</a></li>
+                    <li><a href="/about/help/"><span class="i_small ri:questionnaire-fill"></span> HELP</a></li>
+                    <!-- menu end -->
+                </ul>
+            </menu>
+        </div>
+        <div id="sidebar-bottom">
+            <hr>
+            <div id="side-info">
+                <!-- side-info start -->
+                <b>
+                    Theme : <a href='https://github.com/ravelloh/RTheme'>RTheme </a>.<br>
+                    Copyright © ${copyrightStart} - <b id='year'></b> ${authorName}.<br>
+                    All rights reserved.
+                </b>
+                <!-- side-info end -->
+            </div>
+            <div class="flex-iconset">
+                <ul>
+                    <li><a href="#swap" id="icon-swap" onclick="openInfoBar('swap');return false;" aria-label="swap"><span class="i ri:swap-box-line"></span></a></li>
+                    <li><a href="#" id="icon-color" onclick="toggleThemeMode();return false;" aria-label="color"><span class="i ri:sun-line"></span></a></li>
+                    <li><a href="#music" id="icon-music" onclick="openInfoBar('music');return false;" aria-label="music"><span class="i ri:file-music-line"></span></a></li>
+                    <li><a href="#" id="icon-fullscreen" onclick="toggleFullScreen();return false;" aria-label="fullscreen"><span class="i ri:aspect-ratio-line"></span></a></li>
+                    <li><a href="#share" id="icon-share" onclick="openInfoBar('share');return false;" aria-label="share"><span class="i ri:share-box-line"></span></a></li>
+                    <li><a href="#setting" id="icon-setting" onclick="openInfoBar('setting');return false;" aria-label="setting"><span class="i ri:settings-4-line"></span></a></li>
+                </ul>
+            </div>
+        </div>
+    </section>
+    <section id="infobar">
+        <div id="infobar-header">
+            <div id="infobar-title">
+                INFO
+            </div>
+            <div id="infobar-toggle">
+                <span class="i ri:arrow-down-s-line"></span>
+            </div>
+        </div>
+        <div id="infobar-context">
+            <div id="infobar-left">
+            </div>
+            <div id="infobar-right">
+                <h2 id="time">00:00</h2>
+                <hr />
+                <div id="music-player">
+                    <div id='music-top'>
+                        <div id="music-name">
+                            无正在播放的音乐
+                        </div>
+                        <div id='music-time'>
+                            00:00/00:00
+                        </div>
+                    </div>
+                    <audio id="music" src="/" ontimeupdate="musicUpdata()" loop="loop" preload="none"></audio>
+                    <div id="music-bar">
+                        <div id="music-progress-container">
+                            <div id="music-progress">
+                            </div>
+                        </div>
+                    </div>
+                    <div id="music-operation">
+                        <span onclick="musicSetting()"><span class="i ri:play-list-line"></span></span>
+                        <span class="i ri:skip-back-line" onclick="musicGo(-10)"></span>
+                        <span id='music-button' onclick="musicPlay()"><span class="i ri:play-line"></span></span>
+                        <span class="i ri:skip-forward-line" onclick="musicGo(10)"></span>
+                        <span class="i ri:repeat-one-line"></span>
+                    </div>
+                </div>
+                <div id="state-bar">
+                </div>
+                <div id="uid" class="barcode center">
+                    <br>
+                </div>
+
+
+            </div>
+        </div>
+    </section>
+    <section id="userbar"></section>
+    <!-- viewport end -->
+
+    <!-- JavaScript -->
+    <script defer type="text/javascript" src="../../assets/js/i18n.js" onload="loadComplete('i18n.js')"></script>
+    <script defer type="text/javascript" src="../../assets/js/moudle.js" onload="loadComplete('moudle.js')"></script>
+    <script defer type="text/javascript" src="../../assets/js/script.js" onload="loadComplete('script.js')"></script>
+    <script defer type="text/javascript" src="../../assets/js/display.js" onload="loadComplete('display.js')"></script>
+    <script defer type="text/javascript" src="../../assets/js/pjax.js" onload="enablePjax();loadComplete('pjax.js')"></script>
+    <script defer type="text/javascript" src="../../assets/js/analysis.js"
+        onload="initAnalytics()"></script>
+    <div id="page-js">
+        <script>
+            function main() {}
+        </script>
+    </div>
+
+    <!-- Prefetch -->
+    <div id="page-prefetch">
+    </div>
+</body>
+
+</html>
+<!-- EOF -->

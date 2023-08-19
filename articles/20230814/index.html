@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Hello World | ${siteName}</title>
+    <meta name="keywords" content="" />
+    <meta name="description" content="Hello World | ${siteName}" />
+    <meta name="author" content="${authorName}" />
+    <meta name="pagetype" content="articles-context" />
+    <meta name="theme-color" content="#111111" />
+    <meta property="og:title" content="${siteName}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="${siteURL}">
+    <meta property="og:image" content="${siteShareImage}">
+
+    <!-- Preload -->
+    <link rel="preload" href="../../assets/fonts/ri.woff2" as="font" crossorigin>
+    <link rel="preload" href="../../assets/fonts/Furore.ttf" as="font" crossorigin>
+    <link rel="preload" href="../../assets/js/script.js" as="script">
+    <link rel="preload" href="../../assets/js/i18n.js" as="script">
+    <link rel="preload" href="../../assets/js/moudle.js" as="script">
+    <link rel="preload" href="../../assets/js/display.js" as="script">
+    <link rel="preload" href="../../assets/css/style.css" as="style" />
+    <link rel="preload" href="../../assets/css/iconfont.css" as="style" />
+    <link rel="preload" href="../../assets/images/avatar.jpg" as="image" />
+    <script defer type="text/javascript" src="../../assets/js/loading.js"></script>
+
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="../../assets/css/style.css" type="text/css" media="all" />
+    <link rel="stylesheet" href="../../assets/css/iconfont.css" type="text/css" />
+    <noscript>
+        <style type="text/css" media="all">
+            .loading {
+                opacity: 1;
+                transition: 0.5s;
+            }
+
+            #load-shade {
+                display: none;
+            }
+        </style>
+    </noscript>
+
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/assets/images/apple-touch-icon.png"
+    type="image/png" />
+    <link rel="apple-touch-icon-precomposed" href="/assets/images/favicon-32x32.png" type="image/png" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="manifest" href="/site.webmanifest">
+</head>
+
+<body>
+    <!-- viewport start -->
+    <section id="showcase">
+        <div id="shade-global"></div>
+        <div id='load-shade' class="active">
+            <div id='load-content'>
+                <hr>
+                <h2>${siteName}</h2>
+                <h3>LOAD<span id='loading-text'>ing<span class="breath"><span>.</span><span>.</span><span>.</span></span></span></h3>
+                <hr>
+                <br>
+            </div>
+        </div>
+        <header>
+            <div id="logo" class="loading" style="--i: 1">
+                <!-- logo start -->
+                <a href="#userbar">
+                    <img id="avatar" class="no-zoom" src="../../assets/images/avatar.jpg" alt="avatar">
+                </a>
+                <!-- logo end -->
+            </div>
+            <div id="header-side">
+                <div id="navs">
+                    <!-- nav start -->
+                    <nav>
+                        <a href="/" class="loading" style="--i: 5" id="nav-home">HOME</a>
+                        <a href="/works/" class="loading" style="--i: 4" id="nav-works">WORKS</a>
+                        <a href="/articles/" class="loading" style="--i: 3" id="nav-articles">ARTICLES</a>
+                        <a href="/friends/" class="loading" style="--i: 2" id="nav-friends">FRIENDS</a>
+                        <a href="/about/" class="loading" style="--i: 1" id="nav-about">ABOUT</a>
+                    </nav>
+                    <!-- nav end -->
+                </div>
+                <div id="toggle" class="loading" style="--i: 0"></div>
+            </div>
+        </header>
+        <div id="shade-context"></div>
+        <div id="main" class="loading">
+            <div id='viewmap'>
+                <article>
+                    <div id="articles-header">
+                        <h1><a href="/articles/20230814/">Hello World</a></h1>
+                        <p class="articles-info">
+                            <time>2023-08-14</time> •
+                            <span class="i_small ri:archive-line"></span>
+                            <span class="class">
+                                <a>文档</a>/
+                                <a>帮助</a>
+                            </span> •
+                            <span class="i_small ri:t-box-line"></span> <span id="textLength">----字</span> •
+                            <span class="i_small ri:search-eye-line"></span> <span id="pageVisitors">---</span>
+                        </p>
+                        <p class="articles-tags">
+                            <span class="i_small ri:price-tag-3-line"></span>
+                            <a>文档</a>
+                            <a>测试标签</a>
+                        </p>
+                        <hr>
+                    </div>
+
+                    <div id="articles-body">
+                        <p>
+                            欢迎来到RTheme。当你看到这篇文章时，说明你的RTheme已经部署。<br>
+                            不过，你仍需要对主题进行个性化处理，详阅<a href="https://ravelloh.top/articles/20230815/#从模板开始">#从模板开始</a>。<br>
+                            个性化设置后，RTheme应该就已经正常运行了。你可以另外配置Twikoo评论、Umami统计服务、BetterStack的Uptime服务，来获取更丰富的主题功能。详阅<a href="https://ravelloh.top/articles/20230815/#配置边缘服务">#配置边缘服务</a>。<br>
+                            之后，你可以进行添加文章等操作，但首先应该熟悉一下RTheme的文章语法。<br>
+                            与其他主题不同，RTheme默认的标记语言是<code>HTML</code>而不是<code>Markdown</code>，因为<code>HTML</code>可以提供更丰富的功能。不过，你仍可使用<code>Markdown</code>写作，并使用API将其转换为<code>HTML</code>。RTheme向下兼容所有的<code>Markdown</code>语法。<br>
+                            我编写的一个可用的API示例见下，你可以传递给它你的<code>Markdown</code>文件路径，它会返回转换后的<code>HTML</code>内容。
+                            <a href="https://github.com/RavelloH/markdown-it-api" type="link-box">Github RavelloH/markdown-it-api</a>
+                        </p>
+
+                        <h2>支持的语法展示</h2>
+                        <h3>段落分隔</h3>
+                        <div class="codeline">
+                            <pre>
+                                <span>&lt;p&gt;</span>
+                                <span>    这是一个普通段落。</span>
+                                <span>&lt;/p&gt;</span>
+                                <span>&lt;p&gt;</span>
+                                <span>    这是第二个段落。</span>
+                                <span>&lt;/p&gt;</span>
+                                <span>&lt;p class=&quot;center&quot;&gt;</span>
+                                <span>    这是个居中的段落。</span>
+                                <span>&lt;/p&gt;</span>
+                            </pre>
+                        </div>
+                        <p>
+                            这是一个普通段落。
+                        </p>
+                        <p>
+                            这是第二个段落。
+                        </p>
+                        <p class="center">
+                            这是个居中的段落。
+                        </p>
+
+
+                        <h3>标题</h3>
+                        <p>
+                            <div class="info-warning center">
+                                注意：标题请勿以数字开头，主题会自动在目录中添加序号，以数字开头的标题将无法正常解析。
+                            </div>
+
+                            在主题中，因为<code>h1</code>表示文章的主标题，所以文章内容中可用的超链接包括<code>h2</code> <code>h3</code> <code>h4</code> <code>h5</code> <code>h6</code>。<br>
+                            主题会自动标题渲染锚点、样式？目录等，所以在使用时只需要使用标准html格式：
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;h2&gt;这是一个h2标题&lt;/h2&gt;</span>
+                                    <span>&lt;h3&gt;这是一个h3标题&lt;/h3&gt;</span>
+                                </pre>
+                            </div>
+                        </p>
+                        <br><br><hr class="light">
+
+
+
+                        <h3>超链接</h3>
+                        <p>
+                            超链接在RTheme中一共分六种，可以按需使用。<br>
+                            其中，三种高级超链接(箱式超链接、箱式音乐盒、箱式下载盒)使用时的语法基本与普通超链接相同，不过要使用它们需要在普通超链接的基础上添加type属性来注明它们的类型。
+                            <h4>内部超链接</h4>
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;a href=&quot;/articles/&quot;&gt;这是一个指向/articles/的内部超链接&lt;/a&gt;，它的颜色跟其他的字体有区别，但是没有图标和下划线。</span>
+                                    <span>&lt;a href=&quot;https://ravelloh.top/&quot; class=&quot;noline&quot;&gt;这是一个指向https://ravelloh.top/的外部超链接&lt;/a&gt;，它有一个名为&lt;code&gt;noline&lt;/code&gt;的类名，所以跟内部链接表现相同。</span>
+                                </pre>
+                            </div>
+                            <a href="/articles/">这是一个指向/articles/的内部超链接</a>，它的颜色跟其他的字体有区别，但是没有图标和下划线。<br>
+                            <a href="https://ravelloh.top/" class="noline">这是一个指向https://ravelloh.top/的外部超链接</a>，它有一个名为<code>noline</code>的类名，所以跟内部链接表现相同。
+                            <br>
+
+
+                            <h4>外部超链接</h4>
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;a&nbsp;href=&quot;/articles/&quot;&nbsp;class=&quot;link&quot;&gt;这是一个指向/articles/的内部超链接&lt;/a&gt;，但是它有一个名为&lt;code&gt;link&lt;/code&gt;的类名，所以它表现的与外部链接相同。</span>
+                                    <span>&lt;a&nbsp;href=&quot;https://ravelloh.top/&quot;&gt;这是一个指向https://ravelloh.top/的外部超链接&lt;/a&gt;，它具有下划线和图标来表示它指向站外。</span>
+                                </pre>
+                            </div>
+                            <a href="/articles/" class="link">这是一个指向/articles/的内部超链接</a>，但是它有一个名为<code>link</code>的类名，所以它表现的与外部链接相同。<br>
+                            <a href="https://ravelloh.top/">这是一个指向https://ravelloh.top/的外部超链接</a>，它具有下划线和图标来表示它指向站外。
+                            <br>
+                            主题会自动为目标为http或https的超链接添加此样式，不过你可以设置<code>noline</code>的类名来取消此样式。
+                            <br>
+
+                            <h4>按钮式超链接</h4>
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;a&nbsp;href=&quot;/articles/&quot;&nbsp;class=&quot;button&quot;&gt;Articles&lt;/a&gt;</span>
+                                    <span>&lt;a&nbsp;href=&quot;/works/&quot;&nbsp;class=&quot;button&quot;&gt;Works&lt;/a&gt;</span>
+                                    <span>&lt;a&nbsp;href=&quot;/about/&quot;&nbsp;class=&quot;button&quot;&gt;About&lt;/a&gt;</span>
+                                </pre>
+                            </div>
+                            <a href="/articles/" class="button">Articles</a>
+                            <a href="/works/" class="button">Works</a>
+                            <a href="/about/" class="button">About</a>
+                            <br>
+
+                            <h4>箱式超链接</h4>
+                            箱式超链接依赖我自己搭建的网页截图API，不过，你也可以自己部署。它的使用方式十分简单，主题会自动添加额外的属性。
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;a&nbsp;href=&quot;https://ravelloh.top/&quot;&nbsp;type=&quot;link-box&quot;&gt;RavelloH&#39;s&nbsp;Blog&lt;/a&gt;</span>
+                                </pre>
+                            </div>
+                            <a href="https://ravelloh.top/" type="link-box">RavelloH's Blog</a>
+                            <br>
+
+                            <h4>箱式音乐盒</h4>
+                            <div class="info-success center">
+                                <span class="i_small ri:sparkling-2-fill"></span> 箱式音乐盒的配置较为复杂。不过，RTheme会自动生成相应结构及信息。
+                            </div>
+                            你可以使用RTheme自带的音乐搜索器搜索相应歌曲，并点击<code>"＋"</code>复制超链接。<br>
+                            之后，将其粘贴到文档内即可。RTheme会自动生成相应结构及信息。
+                            <img src="music-add.png" alt="使用RTheme搜索响应歌曲并点击加号复制">
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;a&nbsp;href=&quot;http://music.163.com/song/media/outer/url?id=1477655546.mp3&quot;&nbsp;type=&quot;music-box&quot;&nbsp;info=&quot;&lt;span&nbsp;class=&#39;music-search-author&#39;&gt;&nbsp;&lt;span&nbsp;class=&#39;i_small&nbsp;ri:account-box-line&#39;&gt;&lt;/span&gt;&nbsp;West&nbsp;&amp;&nbsp;Zander&nbsp;-&nbsp;&lt;span&nbsp;class=&#39;i_small&nbsp;ri:mv-line&#39;&gt;&lt;/span&gt;&nbsp;Deep&nbsp;Breathing&lt;/span&gt;&quot;&nbsp;src=&quot;http://p1.music.126.net/FDE2goZS7DJ3HhIBFsQEMQ==/109951165303988707.jpg&quot;&gt;Autumn&nbsp;Haze&lt;/a&gt;</span>
+                                </pre>
+                            </div>
+                            在点击时，会自动调用RTheme内置播放器播放。<br>
+                            <a href="http://music.163.com/song/media/outer/url?id=1477655546.mp3" type="music-box" info="<span class='music-search-author'> <span class='i_small ri:account-box-line'></span> West & Zander - <span class='i_small ri:mv-line'></span> Deep Breathing</span>" src="http://p1.music.126.net/FDE2goZS7DJ3HhIBFsQEMQ==/109951165303988707.jpg">Autumn Haze</a>
+                            你也可以手动设置，需要设置的项如下:
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>项</th>
+                                        <th>描述</th>
+                                        <th>默认值</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>type</td>
+                                        <td>设置为music-box以启用音乐盒</td>
+                                        <td>undefined</td>
+                                    </tr>
+                                    <tr>
+                                        <td>href</td>
+                                        <td>指向的音乐文件链接</td>
+                                        <td>undefined</td>
+                                    </tr>
+                                    <tr>
+                                        <td>info(可选)</td>
+                                        <td>显示的音乐附加信息，会在第二行显示</td>
+                                        <td>"无更多信息"</td>
+                                    </tr>
+                                    <tr>
+                                        <td>src(可选)</td>
+                                        <td>显示的封面图像</td>
+                                        <td>/assets/images/music.jpg</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+
+
+                            <h4>箱式下载盒</h4>
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;a&nbsp;href=&quot;https://drive.ravelloh.top/api/raw/?path=/video/%E9%AC%BC%E6%B3%A35.mp4&quot;&nbsp;type=&quot;download-box&quot;&gt;鬼泣5测试视频.mp4&lt;/a&gt;</span>
+                                </pre>
+                            </div>
+                            点击时，会调用主题内置下载器进行下载。其中，标签的内容即为下载内容将保存为的文件名。
+                            <a href="https://drive.ravelloh.top/api/raw/?path=/video/%E9%AC%BC%E6%B3%A35.mp4" type="download-box">鬼泣5测试视频.mp4</a>
+                        </p>
+
+
+
+                        <br><br><hr class="light">
+                        <h3>信息栏</h3>
+                        <p>
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;div&nbsp;class=&quot;info&quot;&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;这是个普通信息栏。</span>
+                                    <span>&lt;/div&gt;</span>
+                                    <span>&lt;div&nbsp;class=&quot;info-success&quot;&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;这个信息栏可以用来表示成功的消息。</span>
+                                    <span>&lt;/div&gt;</span>
+                                    <span>&lt;div&nbsp;class=&quot;info-warning&quot;&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;这个信息栏可以用来表示警告的消息。</span>
+                                    <span>&lt;/div&gt;</span>
+                                    <span>&lt;div&nbsp;class=&quot;info-alert&quot;&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;这个信息栏可以用来表示失败的消息。</span>
+                                    <span>&lt;/div&gt;</span>
+                                    <span>&lt;div&nbsp;class=&quot;info-alert&nbsp;center&quot;&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;span&nbsp;class=&quot;i_small&nbsp;ri:spam-line&quot;&gt;&lt;/span&gt;&nbsp;这是个居中的信息栏，并且带有小图标。</span>
+                                    <span>&lt;/div&gt;</span>
+                                </pre>
+                            </div>
+                            <div class="info">
+                                这是个普通信息栏。
+                            </div>
+                            <div class="info-success">
+                                这个信息栏可以用来表示成功的消息。
+                            </div>
+                            <div class="info-warning">
+                                这个信息栏可以用来表示警告的消息。
+                            </div>
+                            <div class="info-alert">
+                                这个信息栏可以用来表示失败的消息。
+                            </div>
+                            <div class="info-alert center">
+                                <span class="i_small ri:spam-line"></span> 这是个居中的信息栏，并且带有小图标。
+                            </div>
+                        </p>
+
+
+                        <br><br><hr class="light">
+                        <h3>代码</h3>
+                        <p>
+                            <h4>行内代码</h4>
+                            你可以直接使用<code>&lt;code&gt;内容&lt;/code&gt;</code>来插入行内代码，效果如本句。
+                            <br>
+                            <h4>代码块</h4>
+                            <h5>带有行数显示的代码块</h5>
+                            <div class="info-success center">
+                                <span class="i_small ri:sparkling-2-fill"></span> 将代码转换为这个格式比较麻烦，你需要先转义代码，之后将每一行包裹在span标签内。<br>
+                                因此，我做了个自动转换器，可以直接转换为此格式代码。<a href="https://ravelloh.top/tools/code/">https://ravelloh.top/tools/code/</a>
+                            </div>
+                            默认设置下，类名中带有<code>codeline</code>的代码块会被自动语法高亮。你可以删除此类名来禁用对单个代码块的语法高亮。
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;div&nbsp;class=&quot;codeline&quot;&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;pre&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;span&gt;&amp;lt;details&amp;gt;&amp;nbsp;&lt;/span&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;span&gt;&amp;nbsp;&amp;nbsp;&amp;lt;summary&amp;gt;Show&amp;lt;/summary&amp;gt;&lt;/span&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;span&gt;&amp;nbsp;&amp;nbsp;&amp;lt;!--&amp;nbsp;readme-tree&amp;nbsp;start&amp;nbsp;--&amp;gt;&lt;/span&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;span&gt;&amp;nbsp;&amp;nbsp;&amp;lt;!--&amp;nbsp;readme-tree&amp;nbsp;end&amp;nbsp;--&amp;gt;&lt;/span&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;span&gt;&amp;lt;/details&amp;gt;&lt;/span&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/pre&gt;</span>
+                                    <span>&lt;/div&gt;</span>
+                                </pre>
+                            </div>
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;details&gt;&nbsp;</span>
+                                    <span>&nbsp;&nbsp;&lt;summary&gt;Show&lt;/summary&gt;</span>
+                                    <span>&nbsp;&nbsp;&lt;!--&nbsp;readme-tree&nbsp;start&nbsp;--&gt;</span>
+                                    <span>&nbsp;&nbsp;&lt;!--&nbsp;readme-tree&nbsp;end&nbsp;--&gt;</span>
+                                    <span>&lt;/details&gt;</span>
+                                </pre>
+                            </div>
+                            <br>
+                            <h5>无行数代码块</h5>
+                            <div class="info-warning center">
+                                不建议这样使用代码块，这样可能导致样式丢失等问题。
+                            </div>
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;pre&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;code&nbsp;class=&quot;language-js&quot;&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;function&nbsp;getSearchData()&nbsp;{</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if&nbsp;(typeof&nbsp;searchData&nbsp;==&nbsp;&quot;undefined&quot;)&nbsp;{</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return&nbsp;new&nbsp;Promise((resolve,&nbsp;reject)&nbsp;=&amp;gt;&nbsp;{</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fetch(dataFilePath,&nbsp;{})</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.then((response)&nbsp;=&amp;gt;&nbsp;response.json())</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.then((data)&nbsp;=&amp;gt;&nbsp;{</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;searchData&nbsp;=&nbsp;data;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;resolve(data);</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;});</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}).catch((err)&nbsp;=&amp;gt;&nbsp;{</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;throw&nbsp;err;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;});</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;else&nbsp;{</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return&nbsp;Promise.resolve(searchData);</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;function&nbsp;search(keyword)&nbsp;{</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;let&nbsp;start&nbsp;=&nbsp;new&nbsp;Date().getTime();</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if&nbsp;(keyword&nbsp;==&nbsp;&quot;&quot;&nbsp;||&nbsp;keyword&nbsp;==&nbsp;&quot;.&quot;)&nbsp;{</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return&nbsp;false;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;searchWord&nbsp;=&nbsp;HTMLDecode(keyword);</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;getSearchData().then((data)&nbsp;=&amp;gt;&nbsp;{</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if&nbsp;(typeof&nbsp;searchWorker&nbsp;==&nbsp;&quot;undefined&quot;)&nbsp;{</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;searchWorker&nbsp;=&nbsp;new&nbsp;Worker(workerPath);</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;searchWorker.onmessage&nbsp;=&nbsp;(result)&nbsp;=&amp;gt;&nbsp;{</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;let&nbsp;end&nbsp;=&nbsp;new&nbsp;Date().getTime();</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;let&nbsp;data&nbsp;=&nbsp;result.data;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;console.log(`查询操作用时${end&nbsp;-&nbsp;start}MS`);</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if&nbsp;(data.length&nbsp;==&nbsp;0)&nbsp;{</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;console.log(&quot;未找到有关选项&quot;);</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return&nbsp;false;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;let&nbsp;resultHTML&nbsp;=&nbsp;&quot;&quot;;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;data.forEach((e,&nbsp;index)&nbsp;=&amp;gt;&nbsp;{</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;resultHTML&nbsp;+=&nbsp;structureSearchResult(e);</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;});</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;console.log(resultHTML);&nbsp;//&nbsp;结果输出</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;};</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;searchWorker.postMessage([data,&nbsp;searchWord]);</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;});</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/code&gt;</span>
+                                    <span>&lt;/pre&gt;</span>
+                                </pre>
+                            </div>
+                            <pre>
+                                <code class="language-js">
+                                    function getSearchData() {
+                                    if (typeof searchData == "undefined") {
+                                    return new Promise((resolve, reject) =&gt; {
+                                    fetch(dataFilePath, {})
+                                    .then((response) =&gt; response.json())
+                                    .then((data) =&gt; {
+                                    searchData = data;
+                                    resolve(data);
+                                    });
+                                    }).catch((err) =&gt; {
+                                    throw err;
+                                    });
+                                    } else {
+                                    return Promise.resolve(searchData);
+                                    }
+                                    }
+                                    function search(keyword) {
+                                    let start = new Date().getTime();
+                                    if (keyword == "" || keyword == ".") {
+                                    return false;
+                                    }
+                                    searchWord = HTMLDecode(keyword);
+                                    getSearchData().then((data) =&gt; {
+                                    if (typeof searchWorker == "undefined") {
+                                    searchWorker = new Worker(workerPath);
+                                    }
+                                    searchWorker.onmessage = (result) =&gt; {
+                                    let end = new Date().getTime();
+                                    let data = result.data;
+                                    console.log(`查询操作用时${end - start}MS`);
+                                    if (data.length == 0) {
+                                    console.log("未找到有关选项");
+                                    return false;
+                                    }
+                                    let resultHTML = "";
+                                    data.forEach((e, index) =&gt; {
+                                    resultHTML += structureSearchResult(e);
+                                    });
+                                    console.log(resultHTML); // 结果输出
+                                    };
+                                    searchWorker.postMessage([data, searchWord]);
+                                    });
+                                    }
+                                </code>
+                            </pre>
+                        </p>
+
+
+                        <br><br><hr class="light">
+                        <h3>引用</h3>
+                        <p>
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;blockquote&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;曾经有人说过，....</span>
+                                    <span>&lt;/blockquote&gt;</span>
+                                </pre>
+                            </div>
+                            <blockquote>
+                                曾经有人说过，....
+                            </blockquote>
+                        </p>
+
+                        <br><br><hr class="light">
+                        <h3>文字控件</h3>
+                        <p>
+                            <div class="info center">
+                                以下效果均可嵌套组合使用
+                            </div>
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;h4&gt;粗体&lt;/h4&gt;</span>
+                                    <span>你可以&lt;b&gt;加粗&lt;/b&gt;一段文字。</span>
+                                    <span>&lt;h4&gt;强调&lt;/h4&gt;</span>
+                                    <span>你可以&lt;strong&gt;强调&lt;/strong&gt;一段文字。</span>
+                                    <span>&lt;h4&gt;斜体&lt;/h4&gt;</span>
+                                    <span>你可以&lt;em&gt;斜体显示&lt;/em&gt;一段文字。</span>
+                                    <span>&lt;h4&gt;下划线&lt;/h4&gt;</span>
+                                    <span>你可以为一段文字添加&lt;u&gt;下划线&lt;/u&gt;。</span>
+                                    <span>&lt;h4&gt;删除线&lt;/h4&gt;</span>
+                                    <span>你可以&lt;del&gt;删除&lt;/del&gt;一段文字。</span>
+                                    <span>&lt;h4&gt;添加线&lt;/h4&gt;</span>
+                                    <span>你可以&lt;ins&gt;添加&lt;/ins&gt;一段文字。</span>
+                                    <span>&lt;h4&gt;键盘文本&lt;/h4&gt;</span>
+                                    <span>你可以用&lt;kdb&gt;TAB&lt;/kdb&gt;和&lt;kdb&gt;SHITF&lt;/kdb&gt;+&lt;kdb&gt;TAB&lt;/kdb&gt;来在网页中移动。</span>
+                                    <span>&lt;h4&gt;行内引用&lt;/h4&gt;</span>
+                                    <span>《国语·周语下》是&lt;q&gt;众口铄金，积毁销骨&lt;/q&gt;的出处。</span>
+                                    <span>&lt;h4&gt;引用来源&lt;/h4&gt;</span>
+                                    <span>这篇文章来源于&lt;cite&gt;&lt;a&nbsp;href=&quot;https://ravelloh.top/articles/20230815/&quot;&gt;RavelloH的博客&lt;/a&gt;&lt;/cite&gt;。</span>
+                                    <span>&lt;h4&gt;突出显示&lt;/h4&gt;</span>
+                                    <span>&lt;mark&gt;这段文字&lt;/mark&gt;是高亮突出显示的。</span>
+                                    <span>&lt;h4&gt;注音&lt;/h4&gt;</span>
+                                    <span>&lt;ruby&gt;汉&nbsp;&lt;rp&gt;(&lt;/rp&gt;&lt;rt&gt;han&lt;/rt&gt;&lt;rp&gt;)&lt;/rp&gt;&nbsp;字&nbsp;&lt;rp&gt;(&lt;/rp&gt;&lt;rt&gt;zi&lt;/rt&gt;&lt;rp&gt;)&lt;/rp&gt;&lt;/ruby&gt;</span>
+                                    <span>&lt;h4&gt;下标&lt;/h4&gt;</span>
+                                    <span>这段文本包含&nbsp;&lt;sub&gt;下标&lt;/sub&gt;</span>
+                                    <span>&lt;h4&gt;上标&lt;/h4&gt;</span>
+                                    <span>这段文本包含&nbsp;&lt;sup&gt;上标&lt;/sup&gt;</span>
+                                </pre>
+                            </div>
+                            <h4>粗体</h4>
+                            你可以<b>加粗</b>一段文字。
+                            <h4>强调</h4>
+                            你可以<strong>强调</strong>一段文字。
+                            <h4>斜体</h4>
+                            你可以<em>斜体显示</em>一段文字。
+                            <h4>下划线</h4>
+                            你可以为一段文字添加<u>下划线</u>。
+                            <h4>删除线</h4>
+                            你可以<del>删除</del>一段文字。
+                            <h4>添加线</h4>
+                            你可以<ins>添加</ins>一段文字。
+                            <h4>键盘文本</h4>
+                            你可以用<kdb>TAB</kdb>和<kdb>SHITF</kdb>+<kdb>TAB</kdb>来在网页中移动。
+                            <h4>行内引用</h4>
+                            《国语·周语下》是<q>众口铄金，积毁销骨</q>的出处。
+                            <h4>引用来源</h4>
+                            这篇文章来源于<cite><a href="https://ravelloh.top/articles/20230815/">RavelloH的博客</a></cite>。
+                            <h4>突出显示</h4>
+                            <mark>这段文字</mark>是高亮突出显示的。
+                            <h4>注音</h4>
+                            <ruby>汉 <rp>(</rp><rt>han</rt><rp>)</rp> 字 <rp>(</rp><rt>zi</rt><rp>)</rp></ruby>
+                            <h4>下标</h4>
+                            这段文本包含 <sub>下标</sub>
+                            <h4>上标</h4>
+                            这段文本包含 <sup>上标</sup>
+                        </p>
+
+
+
+                        <br><br><hr class="light">
+                        <h3>媒体内容</h3>
+                        <p>
+                            <h4>图片</h4>
+                            <div class="info-success center">
+                                <span class="i_small ri:sparkling-2-fill"></span> 主题会自动的为图片进行样式重组，以显示图片的描述等。
+                            </div>
+                            在默认情况下，图片中包含的<code>alt</code>信息将会被主题显示在图片底部。
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;img&nbsp;src=&quot;https://drive.ravelloh.top/api/raw/?path=/img/Sekiro%E2%84%A2_%20Shadows%20Die%20Twice_20220827210734.jpg&quot;&nbsp;alt=&quot;游戏《只狼-影逝二度》中的成就截图&quot;&gt;</span>
+                                </pre>
+                            </div>
+                            <img src="https://drive.ravelloh.top/api/raw/?path=/img/Sekiro%E2%84%A2_%20Shadows%20Die%20Twice_20220827210734.jpg" alt="游戏《只狼-影逝二度》中的成就截图" loading="lazy">
+
+                            <h4>视频</h4>
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;video&nbsp;src=&quot;https://drive.ravelloh.top/api/raw/?path=/video/鬼泣5_片段.mp4&quot;&nbsp;controls=&quot;controls&quot;&gt;&lt;/video&gt;</span>
+                                </pre>
+                            </div>
+                            <video src="https://drive.ravelloh.top/api/raw/?path=/video/鬼泣5_片段.mp4" controls="controls"></video>
+
+                            <h4>音频</h4>
+                            你可以使用传统的audio标签来嵌入音频，不过实际上更好的选择是使用RTheme的内置播放器。<br>
+                            你可以参考<a href="#箱式音乐盒">#箱式音乐盒</a>来配置。
+                        </p>
+                        <br><br><hr class="light">
+                        <h3>时间</h3>
+                        <p>
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;time&gt;2023-08-14&nbsp;10:46:53&lt;/time&gt;</span>
+                                </pre>
+                            </div>
+                            <div class="info-success center">
+                                <span class="i_small ri:sparkling-2-fill"></span> 主题会自动的为time标签加入切换选项，你可以点击下方的时间试试。
+                            </div>
+                            <time>2023-08-14 10:46:53</time>
+                        </p>
+
+                        <br><br><hr class="light">
+
+                        <h3>大型文本框</h3>
+                        <p>
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;textarea&nbsp;name=&quot;test&quot;&nbsp;id=&quot;test&quot;&nbsp;rows=&quot;4&quot;&nbsp;cols=&quot;40&quot;&nbsp;placeholder=&quot;这是一个文本框&quot;&gt;&lt;/textarea&gt;</span>
+                                </pre>
+                            </div>
+                            <textarea name="test" id="test" rows="4" cols="40" placeholder="这是一个文本框"></textarea>
+
+                        </p>
+                        <br><br><hr class="light">
+                        <h3>表格</h3>
+                        <p>
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;table&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;thead&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;tr&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;th&gt;功能名&lt;/th&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;th&gt;描述&lt;/th&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;th&gt;可选值&lt;/th&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;th&gt;默认值&lt;/th&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/tr&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/thead&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;tbody&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;tr&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;showall&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;是否展示所有文件及目录&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;yes/no&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;yes&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/tr&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;tr&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;showdirectoryname&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;仅展示文件夹名&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;yes/no&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;no&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/tr&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;tr&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;showchangetime&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;显示更改时间(废弃参数，不可用)&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;-&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;no&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/tr&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;tr&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;showsize&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;以字节为单位，显示文件大小&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;yes/no&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;no&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/tr&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;tr&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;showallname&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;显示相对路径&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;yes/no&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;no&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/tr&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;tr&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;ignoregit&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;隐藏.git文件&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;yes/no&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;yes&lt;/td&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/tr&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/tbody&gt;</span>
+                                    <span>&lt;/table&gt;</span>
+                                </pre>
+                            </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>功能名</th>
+                                        <th>描述</th>
+                                        <th>可选值</th>
+                                        <th>默认值</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>showall</td>
+                                        <td>是否展示所有文件及目录</td>
+                                        <td>yes/no</td>
+                                        <td>yes</td>
+                                    </tr>
+                                    <tr>
+                                        <td>showdirectoryname</td>
+                                        <td>仅展示文件夹名</td>
+                                        <td>yes/no</td>
+                                        <td>no</td>
+                                    </tr>
+                                    <tr>
+                                        <td>showchangetime</td>
+                                        <td>显示更改时间(废弃参数，不可用)</td>
+                                        <td>-</td>
+                                        <td>no</td>
+                                    </tr>
+                                    <tr>
+                                        <td>showsize</td>
+                                        <td>以字节为单位，显示文件大小</td>
+                                        <td>yes/no</td>
+                                        <td>no</td>
+                                    </tr>
+                                    <tr>
+                                        <td>showallname</td>
+                                        <td>显示相对路径</td>
+                                        <td>yes/no</td>
+                                        <td>no</td>
+                                    </tr>
+                                    <tr>
+                                        <td>ignoregit</td>
+                                        <td>隐藏.git文件</td>
+                                        <td>yes/no</td>
+                                        <td>yes</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </p>
+                        <br><br><hr class="light">
+                        <h3>列表</h3>
+                        <p>
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;ul&gt;</span>
+                                    <span>&nbsp;&nbsp;&lt;li&gt;Coffee&lt;/li&gt;</span>
+                                    <span>&nbsp;&nbsp;&lt;li&gt;Tea</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;ul&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;li&gt;Black&nbsp;tea&lt;/li&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;li&gt;Green&nbsp;tea</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ol&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;li&gt;China&lt;/li&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;li&gt;Africa&lt;/li&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/ol&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/li&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/ul&gt;</span>
+                                    <span>&nbsp;&nbsp;&lt;/li&gt;</span>
+                                    <span>&nbsp;&nbsp;&lt;li&gt;Milk&lt;/li&gt;</span>
+                                    <span>&lt;/ul&gt;</span>
+                                </pre>
+                            </div>
+                            <ul>
+                                <li>Coffee</li>
+                                <li>Tea
+                                    <ul>
+                                        <li>Black tea</li>
+                                        <li>Green tea
+                                            <ol>
+                                                <li>China</li>
+                                                <li>Africa</li>
+                                            </ol>
+                                        </li>
+                                    </ul>
+                                </li>
+                                <li>Milk</li>
+                            </ul>
+                        </p>
+
+                        <br><br><hr class="light">
+                        <h3>分隔线</h3>
+                        <p>
+                            主题中的分割线一共分为两种，你可以在其中自由使用。<br>
+                            它们的区别是，有<code>light</code>类名的<code>hr</code>标签会比默认标签更细、边距更小，推荐在文章内部使用。<br>
+                            同时，为了保证一定的段落间隔，推荐在使用时加上两个<code>br</code>标签，总体如下：<br>
+                            <code>&lt;br&gt;&lt;br&gt;&lt;hr&nbsp;class=&quot;light&quot;&gt;</code>
+
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;hr&nbsp;class=&quot;light&quot;&gt;</span>
+                                    <span>&lt;hr&gt;</span>
+                                </pre>
+                            </div>
+                            效果：
+                            <pre>
+                                <hr class="light">
+                                <hr>
+                            </pre>
+                        </p>
+
+                        <br><br><hr class="light">
+                        <h3>图标</h3>
+                        <p>
+                            RTheme使用Remix icon作为本体的默认图标集。你可以自由使用持续更新的超过2500个风格统一的图标。<br>
+                            使用方法非常简单，但首先你需要找到你需要的图标：<br>
+                            <a href="https://icones.js.org/collection/ri" type="link-box">Icones.js - Remix Icon</a>
+                            你可以在其中搜索来找到你需要的图标。之后，单击需要的图标，复制其名称（格式如<code>ri:xxxxx</code>）
+                            <img src="icon-select.png" alt="复制其名称，在图片中已经用白色线框标出">
+                            之后，你可以这样使用该图标：
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;span&nbsp;class=&quot;i_small&nbsp;ri:thumb-up-fill&quot;&gt;&lt;/span&gt;</span>
+                                </pre>
+                            </div>
+                            效果见此：<span class="i_small ri:thumb-up-fill"></span>
+                            <br>
+                            除了<code>i_small</code>，主题中内置5种不同大小的图标，你可以自由使用。
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;span&nbsp;class=&quot;i_small&nbsp;ri:thumb-up-fill&quot;&gt;&lt;/span&gt;&lt;br&gt;</span>
+                                    <span>&lt;span&nbsp;class=&quot;i_mini&nbsp;ri:thumb-up-fill&quot;&gt;&lt;/span&gt;&lt;br&gt;</span>
+                                    <span>&lt;span&nbsp;class=&quot;i&nbsp;ri:thumb-up-fill&quot;&gt;&lt;/span&gt;&lt;br&gt;</span>
+                                    <span>&lt;span&nbsp;class=&quot;i_big&nbsp;ri:thumb-up-fill&quot;&gt;&lt;/span&gt;&lt;br&gt;</span>
+                                    <span>&lt;span&nbsp;class=&quot;i_large&nbsp;ri:thumb-up-fill&quot;&gt;&lt;/span&gt;&lt;br&gt;</span>
+                                </pre>
+                            </div>
+                            <span class="i_small ri:thumb-up-fill"></span><br>
+                            <span class="i_mini ri:thumb-up-fill"></span><br>
+                            <span class="i ri:thumb-up-fill"></span><br>
+                            <span class="i_big ri:thumb-up-fill"></span><br>
+                            <span class="i_large ri:thumb-up-fill"></span><br>
+                        </p>
+
+                        <h2>编写并发布文章</h2>
+                        <div class="info-warning center">
+                            <strong>注：在进行接下来的操作之前，请确认你已经对你的站点进行过个性化设置，即已经将自己的信息替换至主题内</strong>
+                        </div>
+                        <p>
+                            你可以使用上文中的HTML语法或转换成HTML的markdown语法自由创作。之后，使用下面的步骤来发布它：
+                            <h3>确定文章信息</h3>
+                            你需要确定文章的信息。这包括如下信息:
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>值</th>
+                                        <th>描述</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>${articlesName}</td>
+                                        <td>文章的标题，不宜过长</td>
+                                    </tr>
+                                    <tr>
+                                        <td>${articlesPath}</td>
+                                        <td>指定其在/articles/文件夹中的路径，默认应该是一串无分隔的日期，如20230815</td>
+                                    </tr>
+                                    <tr>
+                                        <td>${articlesTime}</td>
+                                        <td>文章的发布日期，如2023-08-15</td>
+                                    </tr>
+                                    <tr>
+                                        <td>${articlesClass}</td>
+                                        <td>文章的分类，数量不限</td>
+                                    </tr>
+                                    <tr>
+                                        <td>${articlesTag}</td>
+                                        <td>文章的标签，数量不限</td>
+                                    </tr>
+                                    <tr>
+                                        <td>${articlesContext}</td>
+                                        <td>文章的内容</td>
+                                    </tr>
+                                </tbody>
+                                <colgroup>
+                                    <col style="width: 50%;">
+                                    <col style="width: 50%;">
+                                </colgroup>
+                            </table>
+                            <br>
+                            <h3>复制模板文件</h3>
+                            前往你的主题根目录下的<code>/articles/</code>文件夹，创建一个新的文件夹用于保存你的新文章。<br>
+                            建议这个新的文件夹名为${articlesPath}，也就是一串无分隔的日期，能表示其发布时间，如20230815。这样可以帮助搜索引擎索引此文章。<br>
+                            复制文件，将根目录下的模板文件<code>/template/articles/index.html</code>复制到你的新文章的位置<code>/articles/${articlesPath}/index.html</code>。
+                            <br>
+                            <h3>更改文章信息</h3>
+                            编辑你复制到新位置的新文章，修改其中的变量。变量包括<a href="#确定文章信息">#确定文章信息</a>中的6个变量。<br>
+                            你可以an自己的需要，增加或减少文章的分类和标签的数量。默认情况下，模板中提供了3个标签和3个分类。<br>
+                            在此过程中，你可以随时预览文章的显示效果。你需要先安装<code>Node.js</code>环境，之后使用命令行工具转到主题根目录，之后运行：
+                            <div>
+                                <pre>
+                                    <span>npx&nbsp;http-server&nbsp;-c-1</span>
+                                </pre>
+                            </div>
+                            这样，你会将主题暂时部署在本地，以预览其效果。默认的预览地址是<code>http://localhost:8080</code>
+                            <h3>更改索引信息</h3>
+                            等到文章更改完毕后，打开<code>/articles/index.html</code>，添加你的新文章。它的模板内容如下：
+                            <div class="codeline">
+                                <pre>
+                                    <span>&lt;div&nbsp;class=&quot;loading&nbsp;listprogram&quot;&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;article&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;span&nbsp;class=&quot;article-name&quot;&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;h4&gt;&lt;a&nbsp;href=&quot;/articles/${articlesPath}/&quot;&gt;${articlesName}&lt;/a&gt;&lt;/h4&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/span&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;p&nbsp;class=&quot;articles-info&quot;&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;time&gt;${articlesTime}&lt;/time&gt;&nbsp;•&nbsp;&lt;span&nbsp;class=&quot;i_small&nbsp;ri:archive-line&quot;&gt;&lt;/span&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;span&nbsp;class=&quot;class&quot;&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;a&gt;${articlesClass}&lt;/a&gt;/</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;a&gt;${articlesClass}&lt;/a&gt;/</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;a&gt;${articlesClass}&lt;/a&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/span&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/p&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;p&nbsp;class=&quot;articles-tags&quot;&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;a&gt;${articlesTag}&lt;/a&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;a&gt;${articlesTag}&lt;/a&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;a&gt;${articlesTag}&lt;/a&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/p&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/article&gt;</span>
+                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;hr&gt;</span>
+                                    <span>&lt;/div&gt;</span>
+                                </pre>
+                            </div>
+                            之后，同样的将其中的变量修改为<a href="#确定文章信息">#确定文章信息</a>中的6个变量。<br>
+                            <h3>发布更改</h3>
+                            至此，你的新文章已经添加完成。如果你使用Github存储主题，直接使用git提交即可。RTheme框架会在云端自动使用Github Actions来为你的文章更新索引、订阅信息及站点地图、旁路推荐等。<br>
+                            不过，如果没有使用Github，你也可以在本地提前运行。转到你的主题根目录，运行以下命令：
+                            <div class="codeline">
+                                <pre>
+                                    <span>cd&nbsp;program</span>
+                                    <span>npm&nbsp;install</span>
+                                    <span>node&nbsp;search.js</span>
+                                    <span>node&nbsp;feed.js</span>
+                                    <span>node&nbsp;fileList.js</span>
+                                </pre>
+                            </div>
+                            这样，RTheme会在本地完成以上工作。之后，将其推送至云端即可。对于git，它大概是：
+                            <div class="codeline">
+                                <pre>
+                                    <span>git&nbsp;pull</span>
+                                    <span>git&nbsp;status</span>
+                                    <span>git&nbsp;add&nbsp;.</span>
+                                    <span>git&nbsp;commit&nbsp;-m&nbsp;&quot;添加新文章&quot;</span>
+                                    <span>git&nbsp;push</span>
+                                </pre>
+                            </div>
+                            稍等片刻，访问你的主题，查看你的文章。一切应该按预期工作。
+                        </p>
+                    </div>
+                    <div id="articles-footer">
+                        <hr>
+                        <div class="articles-footer-cc">
+                            <span class="i_small ri:information-line"></span> 原创内容使用 <a href="/help#分享协议">
+                                <span class="i_small ri:creative-commons-line"></span><span class="i_small ri:creative-commons-nc-line"></span><span class="i_small ri:creative-commons-nd-line"></span>知识共享 署名-非商业性使用-相同方式共享 4.0 (CC BY-NC-ND 4.0)
+                            </a>
+                            协议授权。转载请注明出处。
+                        </div>
+                        <div id="blockchain-data"></div>
+                        <div id="more-articles">
+                            <div id="previous" onclick="pjaxLoad('${previousArticlesUrl}')">
+                                <b><span class="i_small ri:arrow-left-s-line"></span> 上一篇</b><br>
+                                <span class="one-line">正在加载中...</span>
+                            </div>
+                            <div id="next" onclick="pjaxLoad('${nextArticlesUrl}')">
+                                <b>下一篇 <span class="i_small ri:arrow-right-s-line"></span></b><br>
+                                <span class="one-line">正在加载中...</span>
+                            </div>
+                        </div>
+                        <br><br>
+                        <div id="tcomment">
+                            <div class="info center">
+                                <span class="i_small ri:download-cloud-line"></span> 正在加载评论...
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </div>
+
+        <footer>
+            <div id="icons-left">
+                <nav>
+                    <a class="loading" style="--i: 1" id="icon-about" href="#about" onclick="openInfoBar('info');return false;" aria-label="about this page"><span class="i ri:file-info-line"></span></a>
+                    <a class="loading" style="--i: 2" id="icon-github" href="http://github.com/${githubUserName}" target="_blank" rel="noreferrer" aria-label="my github"><span class="i ri:github-fill"></span></a>
+                    <a class="loading" style="--i: 4" id="icon-rss" onclick="openInfoBar('feed')" aria-label="rss"><span class="i ri:rss-fill"></span></a>
+                </nav>
+            </div>
+            <div id="icons-right" class="loading" style="--i: 1">
+                <div id="message-bar">
+                    <noscript>
+                        <a class="red" href="/about/help#javascript"><strong>错误:无法使用JAVASCRIPT</strong>&nbsp;<span class="i ri:alert-line"></span></a>
+                    </noscript>
+                </div>
+            </div>
+        </footer>
+    </section>
+    <section id="sidebar">
+        <div id="sidebar-top">
+            <div id="sideinfo">
+                <h3>${authorName}'s</h3>
+                <h2>BLOG</h2>
+                <a class="icons" href="mailto:${authorMail}" id="email"><span class="i ri:mail-add-fill"></span>&nbsp;<span> ${authorMail}</span></a>
+                <hr>
+            </div>
+        </div>
+        <div id="sidebar-mid">
+            <menu id="sidebar-menu">
+                <ul>
+                    <!-- menu start -->
+                    <li style="--i: 1"><a href='/'><span class='i_small ri:home-3-fill'></span> HOME</a></li>
+                    <li style="--i: 2"><a href='/works/'><span class='i_small ri:dashboard-fill'></span> WORKS</a></li>
+                    <li style="--i: 3"><a href='/articles/'><span class='i_small ri:article-fill'></span> ARTICLES</a></li>
+                    <li style="--i: 4"><a href='/${nav1}/'><span class='i_small ${navIcon1}'></span> ${navName1}</a></li>
+                    <li style="--i: 5"><a href='/${nav2}/'><span class='i_small ${navIcon2}'></span> ${navName2}</a></li>
+                    <li style="--i: 6"><a href='/${nav3}/'><span class='i_small ${navIcon3}'></span> ${navName3}</a></li>
+                    <li style="--i: 7"><a href='/friends/'><span class='i_small ri:team-fill'></span> FRIENDS</a></li>
+                    <li style="--i: 8"><a href='/about/'><span class='i_small ri:information-fill'></span> ABOUT</a></li>
+                    <li>&nbsp;</li>
+                    <li><a href="/admin/"><span class="i_small ri:login-box-fill"></span> LOG IN</a></li>
+                    <li><a href="/about/help/"><span class="i_small ri:questionnaire-fill"></span> HELP</a></li>
+                    <!-- menu end -->
+                </ul>
+            </menu>
+        </div>
+        <div id="sidebar-bottom">
+            <hr>
+            <div id="side-info">
+                <!-- side-info start -->
+                <b>
+                    Theme : <a href='https://github.com/ravelloh/RTheme'>RTheme </a>.<br>
+                    Copyright © ${copyrightStart} - <b id='year'></b> ${authorName}.<br>
+                    All rights reserved.
+                </b>
+                <!-- side-info end -->
+            </div>
+            <div class="flex-iconset">
+                <ul>
+                    <li><a href="#swap" id="icon-swap" onclick="openInfoBar('swap');return false;" aria-label="swap"><span class="i ri:swap-box-line"></span></a></li>
+                    <li><a href="#" id="icon-color" onclick="toggleThemeMode();return false;" aria-label="color"><span class="i ri:sun-line"></span></a></li>
+                    <li><a href="#music" id="icon-music" onclick="openInfoBar('music');return false;" aria-label="music"><span class="i ri:file-music-line"></span></a></li>
+                    <li><a href="#" id="icon-fullscreen" onclick="toggleFullScreen();return false;" aria-label="fullscreen"><span class="i ri:aspect-ratio-line"></span></a></li>
+                    <li><a href="#share" id="icon-share" onclick="openInfoBar('share');return false;" aria-label="share"><span class="i ri:share-box-line"></span></a></li>
+                    <li><a href="#setting" id="icon-setting" onclick="openInfoBar('setting');return false;" aria-label="setting"><span class="i ri:settings-4-line"></span></a></li>
+                </ul>
+            </div>
+        </div>
+    </section>
+    <section id="infobar">
+        <div id="infobar-header">
+            <div id="infobar-title">
+                INFO
+            </div>
+            <div id="infobar-toggle">
+                <span class="i ri:arrow-down-s-line"></span>
+            </div>
+        </div>
+        <div id="infobar-context">
+            <div id="infobar-left">
+            </div>
+            <div id="infobar-right">
+                <h2 id="time">00:00</h2>
+                <hr />
+                <div id="music-player">
+                    <div id='music-top'>
+                        <div id="music-name">
+                            无正在播放的音乐
+                        </div>
+                        <div id='music-time'>
+                            00:00/00:00
+                        </div>
+                    </div>
+                    <audio id="music" src="/" ontimeupdate="musicUpdata()" loop="loop" preload="none"></audio>
+                    <div id="music-bar">
+                        <div id="music-progress-container">
+                            <div id="music-progress">
+                            </div>
+                        </div>
+                    </div>
+                    <div id="music-operation">
+                        <span onclick="musicSetting()"><span class="i ri:play-list-line"></span></span>
+                        <span class="i ri:skip-back-line" onclick="musicGo(-10)"></span>
+                        <span id='music-button' onclick="musicPlay()"><span class="i ri:play-line"></span></span>
+                        <span class="i ri:skip-forward-line" onclick="musicGo(10)"></span>
+                        <span class="i ri:repeat-one-line"></span>
+                    </div>
+                </div>
+                <div id="state-bar">
+                </div>
+                <div id="uid" class="barcode center">
+                    <br>
+                </div>
+
+
+            </div>
+        </div>
+    </section>
+    <section id="userbar"></section>
+    <!-- viewport end -->
+
+    <!-- JavaScript -->
+    <script defer type="text/javascript" src="../../assets/js/i18n.js" onload="loadComplete('i18n.js')"></script>
+    <script defer type="text/javascript" src="../../assets/js/moudle.js" onload="loadComplete('moudle.js')"></script>
+    <script defer type="text/javascript" src="../../assets/js/script.js" onload="loadComplete('script.js')"></script>
+    <script defer type="text/javascript" src="../../assets/js/display.js" onload="loadComplete('display.js')"></script>
+    <script defer type="text/javascript" src="../../assets/js/pjax.js" onload="enablePjax();loadComplete('pjax.js')"></script>
+    <script defer type="text/javascript" src="../../assets/js/analysis.js"
+        onload="initAnalytics()"></script>
+    <div id="page-js">
+        <script>
+            function main() {}
+        </script>
+    </div>
+
+    <!-- Prefetch -->
+    <div id="page-prefetch">
+    </div>
+</body>
+
+</html>
+<!-- EOF -->

@@ -1,0 +1,10 @@
+assets/js/lib/**
+*.json
+assets/data/**
+*.min.js
+assets/js/pjax.js
+*.html
+*.htm
+assets/css/iconfont.css
+assets/css/hybrid.min.css
+README.md

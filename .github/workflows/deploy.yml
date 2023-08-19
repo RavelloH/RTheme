@@ -1,0 +1,23 @@
+name: deploy
+on: [push]
+jobs:
+    gitee:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: wearerequired/git-mirror-action@master
+              env:
+                  SSH_PRIVATE_KEY: ${{ secrets.GITEE_PRIVATE_KEY }}
+              with:
+                  source-repo: 'git@github.com:RavelloH/ravelloh.github.io.git'
+                  destination-repo: 'git@gitee.com:ravelloh/ravelloh.git'
+    reload-pages:
+        needs: gitee
+        runs-on: ubuntu-latest
+        steps:
+            - name: reload
+              uses: mizuka-wu/gitee-pages-action@v1.0.0
+              with:
+                  repository: RavelloH/ravelloh
+                  cookie: ${{ secrets.GITEE_COOKIE }}
+                  branch: master
+                  https: true

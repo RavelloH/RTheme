@@ -1,0 +1,59 @@
+name: 'RTheme Build'
+on:
+    push:
+        paths:
+            - '**'
+    workflow_dispatch:
+
+permissions:
+    contents: write
+    pages: write
+    id-token: write
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v3
+            - name: 'Setup Git'
+              run: |
+                  git init
+                  git pull
+                  git config --local user.email "dr_hamilton@foxmail.com"
+                  git config --local user.name "Ravello-H"
+            - name: 'Setup nodejs'
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 'latest'
+            - name: 'Install requirements'
+              run: |
+                  npm install
+            - name: 'RPageSearch'
+              continue-on-error: True
+              run: |
+                  cd program
+                  node search.js
+                  git add -A
+                  git commit -m "[RPageSearch]`date '+%Y-%m-%d %H:%M:%S'`" || exit
+            - name: 'local-feed-generation'
+              continue-on-error: True
+              run: |
+                  cd program
+                  node feed.js
+                  git add -A
+                  git commit -m "[local-feed-generation]`date '+%Y-%m-%d %H:%M:%S'`" || exit
+            - name: 'local-sitemap-generation'
+              continue-on-error: True
+              run: |
+                  cd program
+                  node fileList.js
+                  npx sitemap < ../assets/data/urlList.txt > ../sitemap.xml
+                  git add -A
+                  git commit -m "[local-sitemap-generation]`date '+%Y-%m-%d %H:%M:%S'`" || exit
+            - name: 'Commit files'
+              continue-on-error: True
+              run: |
+                  git diff
+                  git status
+                  git push -f || exit

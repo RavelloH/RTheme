@@ -1,0 +1,43 @@
+{
+    "name": "${siteName}",
+    "start_url": "/index.html?mode=pwa",
+    "display": "standalone",
+    "background_color": "#1e1e1e",
+    "description": "A blog of ${authorName}",
+    "theme_color": "#1e1e1e",
+    "launch_handler": {
+        "client_mode": "auto"
+    },
+    "icons": [
+        {
+            "src": "/assets/images/android-chrome-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/assets/images/android-chrome-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "/assets/images/apple-touch-icon.png",
+            "sizes": "180x180",
+            "type": "image/png"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "主页 / HOME",
+            "url": "/",
+            "description": "主页 & 门户"
+        },
+        {
+            "name": "作品 / WORKS",
+            "url": "/works/"
+        },
+        {
+            "name": "文章 / ARTICLES",
+            "url": "/articles/"
+        }
+    ]
+}
