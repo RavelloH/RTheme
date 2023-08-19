@@ -20,7 +20,6 @@ A GitHub personal site # # # 基于GithubPage的个人博客
 <!-- readme-tree start -->
 ```
 .
-├── .deepsource.toml
 ├── .gitattributes
 ├── .github
 │   └── workflows
@@ -30,58 +29,16 @@ A GitHub personal site # # # 基于GithubPage的个人博客
 ├── .gitignore
 ├── .prettierignore
 ├── .prettierrc.js
-├── .vscode
-│   └── settings.json
 ├── 404.html
 ├── LICENSE
 ├── README.md
 ├── about
 │   └── index.html
 ├── articles
-│   ├── 20200816
+│   ├── 20230814
+│   │   ├── icon-select.png
 │   │   ├── index.html
-│   │   ├── show1.gif
-│   │   ├── show2.gif
-│   │   └── show3.gif
-│   ├── 20210701
-│   │   └── index.html
-│   ├── 20210705
-│   │   ├── code1.png
-│   │   ├── code2.png
-│   │   ├── code3.png
-│   │   └── index.html
-│   ├── 20210719
-│   │   ├── img1.png
-│   │   ├── img2.gif
-│   │   └── index.html
-│   ├── 20220206
-│   │   └── index.html
-│   ├── 20220323
-│   │   ├── img1.jpg
-│   │   └── index.html
-│   ├── 20220708
-│   │   ├── code3.png
-│   │   ├── index.html
-│   │   ├── show1.gif
-│   │   └── show2.png
-│   ├── 20220825
-│   │   ├── index.html
-│   │   └── show1.jpg
-│   ├── 20221126
-│   │   ├── index.html
-│   │   ├── new.gif
-│   │   └── old.gif
-│   ├── 20221224
-│   │   ├── img1.png
-│   │   ├── img2.png
-│   │   ├── index.html
-│   │   └── show.htm
-│   ├── 20230812
-│   │   ├── index.html
-│   │   ├── rpagesearch-link.png
-│   │   ├── rpagesearch-name.png
-│   │   ├── rpagesearch-regular.png
-│   │   └── rpagesearch-title.png
+│   │   └── music-add.png
 │   └── index.html
 ├── assets
 │   ├── css
@@ -107,7 +64,6 @@ A GitHub personal site # # # 基于GithubPage的个人博客
 │   │   ├── ri.woff
 │   │   └── ri.woff2
 │   ├── images
-│   │   ├── RavelloH.svg
 │   │   ├── android-chrome-192x192.png
 │   │   ├── android-chrome-512x512.png
 │   │   ├── apple-touch-icon.png
@@ -116,10 +72,10 @@ A GitHub personal site # # # 基于GithubPage的个人博客
 │   │   ├── close.png
 │   │   ├── favicon-16x16.png
 │   │   ├── favicon-32x32.png
+│   │   ├── favicon.ico
+│   │   ├── file.png
 │   │   ├── menu.png
 │   │   ├── music.jpg
-│   │   ├── screenshot-mobile.png
-│   │   ├── screenshot-pc.png
 │   │   └── user.jpg
 │   └── js
 │       ├── analysis.js
@@ -142,16 +98,6 @@ A GitHub personal site # # # 基于GithubPage的个人博客
 │   └── rss.xml
 ├── friends
 │   └── index.html
-├── google15e5df7e8b90902d.html
-├── images
-│   ├── everydaynews-image.png
-│   ├── everydaynews-search.png
-│   ├── everydaynews-share.png
-│   ├── everydaynews-text.png
-│   ├── nsgamespider.png
-│   ├── psgamespider-en.png
-│   ├── psgamespider-search.png
-│   └── psgamespider.png
 ├── index.html
 ├── package-lock.json
 ├── package.json
@@ -162,11 +108,14 @@ A GitHub personal site # # # 基于GithubPage的个人博客
 ├── robots.txt
 ├── site.webmanifest
 ├── sitemap.xml
+├── template
+│   └── articles
+│       └── index.html
 ├── tree.bak
 └── works
     └── index.html
 
-29 directories, 116 files
+19 directories, 75 files
 ```
 <!-- readme-tree end -->
 
