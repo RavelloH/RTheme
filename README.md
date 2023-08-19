@@ -24,7 +24,6 @@ A GitHub personal site # # # 基于GithubPage的个人博客
 ├── .github
 │   └── workflows
 │       ├── build.yml
-│       ├── deploy.yml
 │       └── tree.yml
 ├── .gitignore
 ├── .prettierignore
@@ -115,7 +114,7 @@ A GitHub personal site # # # 基于GithubPage的个人博客
 └── works
     └── index.html
 
-19 directories, 75 files
+19 directories, 74 files
 ```
 <!-- readme-tree end -->
 
