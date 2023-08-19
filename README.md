@@ -46,7 +46,7 @@ RTheme使用Github Actions在云端自动部署，无需本地干预，即可自
 主题功能丰富，内置设置/分享/在线音乐播放/多站点测速/自动全站搜索/文章自定义排序/文章标签&分类自动索引/站点地图/RSS/Atom自动生成/文章自动推荐/内置高级下载器/主动型预加载/用户登录接口/外链截图API等等一系列功能，创造出属于极客的极致主题框架。  
 
 ### 函数化  
-主题中除了用于管控初始化加载的`loading.js`，其余脚本均将各功能包装为函数，以保证其可复用性及无依赖无需加载性。  
+主题中除了用于管控初始化加载的`loading.js`，其余脚本均将各功能包装为函数，以保证其可复用性及可免依赖乱序加载。  
 ![Screenshot_20230819_170439_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/2ffb3784-11ab-4326-9bd1-078d1ef17563)  
 这使得二次开发十分简单，可直接复用主题框架中的功能。
 
@@ -64,3 +64,89 @@ RTheme使用Github Actions在云端自动部署，无需本地干预，即可自
 ### 高兼容性  
 主题最早支持到Chrome58(2017年4月19日),Firefox52(2017年3月7日),Opera45(2017年5月10日)，Safari，能够提供兼容性的保障。  
 注：IE已死，不支持IE。
+
+### 单页应用程序  
+主题使用PJAX技术进行页面加载，并在页面加载切换之间加入过渡动画。  
+另外，主题也会在页面加载时更新左下角的进度条，以展示正在加载/加载超时/加载完成/加载失败等不同场景。
+![Screenshot_20230819_175635_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/160277fb-e8c1-4af9-9b3c-48c7bd23e9f0)
+
+### 原生音乐播放器
+主题内置原生音乐播放器，支持播放/切换/跳转/循环等功能，且可进行在线搜索以使用在线资源。  
+![Screenshot_20230819_163646_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/293cb420-25a7-4b34-8900-b137f107c196)
+也支持在文章内部加入音乐播放器，来调用主题的播放器进行播放。  
+![Screenshot_20230819_180221_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/b8535362-58ad-4f37-8b44-2f3f206396c3)
+
+### 过渡自然  
+主题内置顺滑的元素切换函数`switchElementContext()`，以保证元素切换的顺滑自然。
+
+### 轻量化&原生实现  
+主题本体大小小于600KB，无任何框架，保证了其高速的加载性能。
+![Screenshot_20230819_182143_com kiwibrowser browser](https://github.com/RavelloH/RTheme/assets/68409330/172c2488-40f4-4f4c-9f27-0ee93448c2ef)
+
+### 代码高亮  
+主题使用`highlight.js`代码高亮，并在其基础上使用Web Worker并行加载，防止页面阻塞。  
+![Screenshot_20230819_182502_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/3c71231d-dd54-4b85-9fcf-4f1eb01097d8)
+
+### 标签&分类自动索引
+主题能自动根据文章信息索引具有相应标签/分类的文章，无需干预。
+![Screenshot_20230819_182651_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/564e86cf-686b-4f05-9ebf-44f7d45e0af9)
+
+### 语言自定义
+主题的语言文件包单独成文件，你可以根据自己的需要更改模板，也可实现其国际化。
+![Screenshot_20230819_182834_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/52fde86d-8136-4191-b90b-1a28653fb9bb)
+
+### 设置自定义  
+主题可进行各式设置，以提供个性化体验。  
+设置项使用cookie存储，并且使用列表快速创建，保证其易用性。  
+![Screenshot_20230819_183116_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/834ceb8e-fcdf-4404-b8df-76a6594f61ae)
+![Screenshot_20230819_183151_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/4bf9efab-5b84-4777-a6e6-55af41c64ecd)
+
+### 自动目录索引
+主题可根据文章内标题自动生成目录，并高亮阅读项，以提高阅读体验。
+![Screenshot_20230819_183406_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/33954e5b-c1e8-4e9a-a7d3-e4378e3b6b59)
+
+### 文章旁路推荐
+文章结尾自动推荐上一篇/下一篇文章，无需手动设置。效果见上方图片。
+
+### 内置高级下载器
+主题内置下载器，提高整体感。你可以在文章中使用。  
+详阅[#箱式下载盒](https://ravelloh.top/articles/20230815/#%E7%AE%B1%E5%BC%8F%E4%B8%8B%E8%BD%BD%E7%9B%92)
+![Screenshot_20230819_183617_com kiwibrowser browser](https://github.com/RavelloH/RTheme/assets/68409330/5d32c6bf-2b41-46b1-b898-09cb185e8ccd)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
