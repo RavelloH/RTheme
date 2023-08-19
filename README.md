@@ -138,6 +138,24 @@ node feed.js
 node fileList.js
 ```
 
+## 依赖  
+主题依赖以下项目：
+[https://github.com/RavelloH/RPageSearch](https://github.com/RavelloH/RPageSearch)
+[https://github.com/RavelloH/markdown-it-api](https://github.com/RavelloH/markdown-it-api)
+[https://github.com/RavelloH/local-sitemap-generation](https://github.com/RavelloH/local-sitemap-generation)
+[https://github.com/RavelloH/local-sitemap-generation](https://github.com/RavelloH/local-sitemap-generation)
+[https://github.com/Binaryify/NeteaseCloudMusicApi](https://github.com/Binaryify/NeteaseCloudMusicApi)
+[https://github.com/instantpage/instant.page](https://github.com/instantpage/instant.page)
+
+此外，完整版还依赖以下项目：
+[https://github.com/RavelloH/umami-api-route](https://github.com/RavelloH/umami-api-route)
+[https://github.com/RavelloH/uptime-api-route](https://github.com/RavelloH/uptime-api-route)
+[https://github.com/umami-software/umami](https://github.com/umami-software/umami)
+[https://github.com/imaegoo/twikoo](https://github.com/imaegoo/twikoo)
+
+
+
+
 ## Licence
 MIT
 
