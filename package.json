@@ -1,24 +1,23 @@
 {
-  "name": "ravelloh.github.io",
+  "name": "RTheme",
   "version": "3.0.0",
-  "description": "RavelloH's blog",
-  "main": "program/index.js",
+  "description": "新一代现代化极客风多功能横版静态博客主题框架",
+  "main": "program/search.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ravelloh/ravelloh.github.io.git"
+    "url": "git+https://github.com/ravelloh/RTheme.git"
   },
   "author": "RavelloH",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ravelloh/ravelloh.github.ii/issues"
+    "url": "https://github.com/ravelloh/RTheme/issues"
   },
-  "homepage": "https://github.com/ravelloh/ravelloh.github.ii#readme",
+  "homepage": "https://github.com/ravelloh/RTheme#readme",
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",
-    "feed": "^4.2.2",
-    "pretty": "^2.0.0"
+    "feed": "^4.2.2"
   }
 }
