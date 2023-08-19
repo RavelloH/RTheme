@@ -113,7 +113,33 @@ RTheme使用Github Actions在云端自动部署，无需本地干预，即可自
 详阅[#箱式下载盒](https://ravelloh.top/articles/20230815/#%E7%AE%B1%E5%BC%8F%E4%B8%8B%E8%BD%BD%E7%9B%92)
 ![Screenshot_20230819_183617_com kiwibrowser browser](https://github.com/RavelloH/RTheme/assets/68409330/5d32c6bf-2b41-46b1-b898-09cb185e8ccd)
 
+---
 
+## 使用  
+虽然此主题独立于其他任何静态博客生成器，不过作为标榜属于极客的主题，它使用模板化设计，你可以使用全局替换快速进行个性化配置。
+
+> 参阅[#部署](https://ravelloh.top/articles/20230815/#部署)  
+> 主题部署成功后，将包含一篇默认的Hello World的文章，其中包含语法示例与文章编发流程。
+
+## 开发  
+欢迎改进/修复/增加主题的功能。你可以使用nodejs在本地查看更改。
+```shell
+git clone https://github.com/RavelloH/RTheme
+cd RTheme
+npm install
+npx http-server -c-1
+```
+另外，也可以直接运行RTheme的build流程
+```shell
+cd program
+npm install
+node search.js
+node feed.js
+node fileList.js
+```
+
+## Licence
+MIT
 
 
 
