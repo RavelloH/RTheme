@@ -1661,6 +1661,10 @@ pre span:not(span[highlight], span[class*='hljs']):hover:before {
     color: #c6c9ce;
 }
 
+pre:has(span) {
+    white-space: normal;
+}
+
 code {
     font-family: IBMPlex, Consolas, Monaco, courier, monospace;
     line-height: initial;
