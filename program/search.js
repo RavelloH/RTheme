@@ -9,8 +9,8 @@ const articlesFolder = '../articles/'; // 文章根目录
 const articlesFileName = 'index.html'; // 文档文件名
 const savePath = '../assets/data/search.json';
 // 选择器
-const articlesName = '#articles-header h2 a'; // 文章标题元素
-const articlesUrl = '#articles-header h2 a'; // 文章链接元素
+const articlesName = '#articles-header h1 a'; // 文章标题元素
+const articlesUrl = '#articles-header h1 a'; // 文章链接元素
 const articlesTime = '#articles-header .articles-info time'; // 文章时间元素
 const articlesClass = '#articles-header .articles-info .class a'; // 文章分类元素
 const articlesTag = '#articles-header .articles-tags a'; // 文章标签元素
