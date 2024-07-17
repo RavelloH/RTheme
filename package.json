@@ -1,23 +1,34 @@
 {
-  "name": "RTheme",
-  "version": "3.0.0",
-  "description": "新一代现代化极客风多功能横版静态博客主题框架",
-  "main": "program/search.js",
+  "name": "rtheme-next",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ravelloh/RTheme.git"
-  },
-  "author": "RavelloH",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/ravelloh/RTheme/issues"
-  },
-  "homepage": "https://github.com/ravelloh/RTheme#readme",
   "dependencies": {
-    "cheerio": "^1.0.0-rc.12",
-    "feed": "^4.2.2"
+    "@prisma/client": "5.16.2",
+    "@vercel/analytics": "^1.3.1",
+    "@vercel/speed-insights": "^1.0.12",
+    "argon2": "^0.40.3",
+    "instant.page": "^5.2.0",
+    "js-base64": "^3.7.7",
+    "jsonwebtoken": "^9.0.2",
+    "next": "14.2.5",
+    "next-mdx-remote": "^5.0.0",
+    "pjax": "^0.2.8",
+    "qs": "^6.12.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remixicon": "^4.3.0",
+    "sharp": "^0.33.4",
+    "virgule-js": "^2.1.0"
+  },
+  "devDependencies": {
+    "eslint": "^8",
+    "eslint-config-next": "14.2.5",
+    "prisma": "^5.16.2"
   }
 }

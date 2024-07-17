@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  uid           Int          @id @default(autoincrement())
+  uuid          String       @default(uuid())
+  email         String       @unique
+  emailVerified Boolean      @default(false)
+  username      String       @unique @db.VarChar(10)
+  nickname      String       @db.VarChar(50)
+  bio           String?      @db.VarChar(255)
+  birth         DateTime?    @db.Date
+  country       String?      @db.VarChar(10)
+  website       String?      @db.VarChar(60)
+  avatar        String?      @db.VarChar(100)
+  role          Role         @default(USER)
+  updatedAt     DateTime     @updatedAt
+  createAt      DateTime     @default(now())
+  lastUseAt     String?
+  gender        Gender?      @default(UNSET)
+  password      String
+  note          Note[]
+  followed      FriendShip[] @relation("Followed")
+  following     FriendShip[] @relation("Following")
+  message       Message[]
+  post          Post[]
+  comment       Comment[]
+  admin         Site?
+}
+
+model Comment {
+  id       String   @id @default(uuid())
+  content  String   @db.VarChar(1000)
+  createAt DateTime @default(now())
+  postUid  String?
+  noteUid  String?
+  userUid  Int
+  post     Post?    @relation(fields: [postUid], references: [id])
+  note     Note?    @relation(fields: [noteUid], references: [id])
+  user     User     @relation(fields: [userUid], references: [uid])
+}
+
+model Message {
+  id          String   @id @default(uuid())
+  content     String   @db.VarChar(511)
+  createAt    DateTime @default(now())
+  fromUserUid Int
+  toUserUid   Int
+  from        User     @relation(fields: [fromUserUid], references: [uid])
+}
+
+model Post {
+  id          String     @id @default(uuid())
+  name        String     @unique @db.VarChar(50)
+  title       String     @db.VarChar(50)
+  ip          String
+  content     String     @db.VarChar(100000)
+  createAt    DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  userUid     Int
+  likeUserUid Int[]
+  user        User       @relation(fields: [userUid], references: [uid])
+  comment     Comment[]
+  tag        Tag[]
+  category    Category[]
+}
+
+model Tag {
+  name String @id @unique
+  post Post[]
+}
+
+model Category {
+  name String @id @unique
+  post Post[]
+}
+
+model Note {
+  id        String    @id @default(uuid())
+  userUid   Int
+  createAt  DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  content   String    @db.VarChar(5000)
+  title     String    @db.VarChar(50)
+  User      User      @relation(fields: [userUid], references: [uid])
+  comment   Comment[]
+}
+
+model FriendShip {
+  id               String   @id @default(uuid())
+  followingUserUid Int
+  followedUserUid  Int
+  startAt          DateTime @default(now())
+  followedUser     User     @relation("Followed", fields: [followedUserUid], references: [uid])
+  followingUser    User     @relation("Following", fields: [followingUserUid], references: [uid])
+}
+
+model Site {
+  siteName       String  @id @db.VarChar(50)
+  siteShortName  String  @db.VarChar(10)
+  description    String  @db.VarChar(100)
+  sign           String  @db.VarChar(50)
+  author         String  @db.VarChar(50)
+  githubUsername String? @db.VarChar(50)
+  admin          User    @relation(fields: [adminUid], references: [uid])
+  adminUid       Int     @unique
+}
+
+model RequestLog {
+  id          Int      @id @default(autoincrement())
+  ip          String
+  requestTime DateTime
+}
+
+enum Role {
+  USER
+  MANAGER
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FAMALE
+  INTERSEX
+  UNSET
+}
