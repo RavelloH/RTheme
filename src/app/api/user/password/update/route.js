@@ -65,69 +65,68 @@ export async function POST(request) {
 
         let infoJSON = info;
 
-        if (await limitControl.check(request)) {
-            let result = await prisma.user.findFirst({
-                where: {
-                    OR: [
-                        {
-                            email: infoJSON.account,
-                        },
-                        {
-                            username: infoJSON.account,
-                        },
-                    ],
-                },
-            });
-            if (result == null) {
-                return Response.json(
+        if (!(await limitControl.check(request))) {
+            return Response.json({ message: '已触发速率限制' }, { status: 429 });
+        }
+        let result = await prisma.user.findFirst({
+            where: {
+                OR: [
                     {
-                        message: '未找到此账户',
+                        email: infoJSON.account,
                     },
-                    { status: 400 },
-                );
-            } else {
-                // 验证密码
-                let shufflerPassword = shuffler(infoJSON.password);
-                let passwordValidate = await argon2.verify(result.password, shufflerPassword);
-                let isPasswordOK = passwordValidate;
-                if (isPasswordOK) {
-                    // 修改密码
-                    let encryptPassword = await encrypt(info.newpassword);
-                    try {
-                        await prisma.user.update({
-                            where: {
-                                uid: result.uid,
-                            },
-                            data: {
-                                password: encryptPassword,
-                            },
-                        });
-                        limitControl.update(request);
-                        return Response.json(
-                            {
-                                message: '修改成功',
-                            },
-                            { status: 200 },
-                        );
-                    } catch (e) {
-                        return Response.json(
-                            {
-                                message: '写入密码时发生错误',
-                            },
-                            { status: 400 },
-                        );
-                    }
-                } else {
+                    {
+                        username: infoJSON.account,
+                    },
+                ],
+            },
+        });
+        if (result == null) {
+            return Response.json(
+                {
+                    message: '未找到此账户',
+                },
+                { status: 400 },
+            );
+        } else {
+            // 验证密码
+            let shufflerPassword = shuffler(infoJSON.password);
+            let passwordValidate = await argon2.verify(result.password, shufflerPassword);
+            let isPasswordOK = passwordValidate;
+            if (isPasswordOK) {
+                // 修改密码
+                let encryptPassword = await encrypt(info.newpassword);
+                try {
+                    await prisma.user.update({
+                        where: {
+                            uid: result.uid,
+                        },
+                        data: {
+                            password: encryptPassword,
+                        },
+                    });
+                    limitControl.update(request);
                     return Response.json(
                         {
-                            message: '密码错误',
+                            message: '修改成功',
                         },
-                        { status: 401 },
+                        { status: 200 },
+                    );
+                } catch (e) {
+                    return Response.json(
+                        {
+                            message: '写入密码时发生错误',
+                        },
+                        { status: 400 },
                     );
                 }
+            } else {
+                return Response.json(
+                    {
+                        message: '密码错误',
+                    },
+                    { status: 401 },
+                );
             }
-        } else {
-            return Response.json({ message: '已触发速率限制' }, { status: 429 });
         }
     } catch (error) {
         console.error(error);

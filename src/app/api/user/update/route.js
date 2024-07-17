@@ -59,57 +59,53 @@ export async function POST(request) {
 
         // 验证格式
 
-        if (await limitControl.check(request)) {
-            // 检查传入的token
-            const tokenString = request.headers.get('authorization').split(' ')[1];
-            let tokenInfo;
-            try {
-                tokenInfo = token.verify(tokenString);
-            } catch (err) {
-                if (err.name == 'TokenExpiredError') {
-                    return Response.json(
-                        {
-                            message: 'TOKEN已过期，请重新登录',
-                        },
-                        { status: 410 },
-                    );
-                } else {
-                    return Response.json(
-                        {
-                            message: 'TOKEN无效',
-                            error: err,
-                        },
-                        { status: 400 },
-                    );
-                }
-            }
-
-            // 更新信息
-            if (tokenInfo) {
-                let filteredObject = filterObject(
-                    editableProperty,
-                    JSON.parse(JSON.stringify(info)),
-                );
-                // 请求新信息
-                try {
-                    await prisma.user.update({
-                        where: { uid: tokenInfo.uid },
-                        data: filteredObject,
-                    });
-                    limitControl.update(request);
-                    return Response.json(
-                        { message: '修改成功', update: filteredObject },
-                        { status: 200 },
-                    );
-                } catch (e) {
-                    return Response.json(
-                        { message: '修改失败：一项或多项属性值不合法', error: e },
-                        { status: 429 },
-                    );
-                }
-            }
-        } else {
+        if (!(await limitControl.check(request))) {
             return Response.json({ message: '已触发速率限制' }, { status: 429 });
+        }
+        // 检查传入的token
+        const tokenString = request.headers.get('authorization').split(' ')[1];
+        let tokenInfo;
+        try {
+            tokenInfo = token.verify(tokenString);
+        } catch (err) {
+            if (err.name == 'TokenExpiredError') {
+                return Response.json(
+                    {
+                        message: 'TOKEN已过期，请重新登录',
+                    },
+                    { status: 410 },
+                );
+            } else {
+                return Response.json(
+                    {
+                        message: 'TOKEN无效',
+                        error: err,
+                    },
+                    { status: 400 },
+                );
+            }
+        }
+
+        // 更新信息
+        if (tokenInfo) {
+            let filteredObject = filterObject(editableProperty, JSON.parse(JSON.stringify(info)));
+            // 请求新信息
+            try {
+                await prisma.user.update({
+                    where: { uid: tokenInfo.uid },
+                    data: filteredObject,
+                });
+                limitControl.update(request);
+                return Response.json(
+                    { message: '修改成功', update: filteredObject },
+                    { status: 200 },
+                );
+            } catch (e) {
+                return Response.json(
+                    { message: '修改失败：一项或多项属性值不合法', error: e },
+                    { status: 429 },
+                );
+            }
         }
     } catch (error) {
         console.error(error);

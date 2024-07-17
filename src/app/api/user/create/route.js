@@ -107,39 +107,38 @@ export async function POST(request) {
 
         let requestAction = info;
 
-        if (await limitControl.check(request)) {
-            let result = await prisma.user.findMany({
-                where: {
-                    OR: [
-                        {
-                            email: requestAction.email,
-                        },
-                        {
-                            username: requestAction.username,
-                        },
-                    ],
-                },
-            });
-
-            if (result.length !== 0) {
-                return Response.json({ message: '用户名/邮箱已被占用' }, { status: 400 });
-            } else {
-                // 注册流程
-                try {
-                    await signup(
-                        requestAction.username,
-                        requestAction.nickname,
-                        requestAction.email,
-                        requestAction.password,
-                    );
-                    limitControl.update(request);
-                    return Response.json({ message: '注册成功' }, { status: 200 });
-                } catch (e) {
-                    return Response.json({ message: '注册失败' + e }, { status: 400 });
-                }
-            }
-        } else {
+        if (!(await limitControl.check(request))) {
             return Response.json({ message: '已触发速率限制' }, { status: 429 });
+        }
+        let result = await prisma.user.findMany({
+            where: {
+                OR: [
+                    {
+                        email: requestAction.email,
+                    },
+                    {
+                        username: requestAction.username,
+                    },
+                ],
+            },
+        });
+
+        if (result.length !== 0) {
+            return Response.json({ message: '用户名/邮箱已被占用' }, { status: 400 });
+        } else {
+            // 注册流程
+            try {
+                await signup(
+                    requestAction.username,
+                    requestAction.nickname,
+                    requestAction.email,
+                    requestAction.password,
+                );
+                limitControl.update(request);
+                return Response.json({ message: '注册成功' }, { status: 200 });
+            } catch (e) {
+                return Response.json({ message: '注册失败' + e }, { status: 400 });
+            }
         }
     } catch (error) {
         console.error(error);

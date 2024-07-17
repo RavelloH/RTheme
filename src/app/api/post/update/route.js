@@ -6,6 +6,7 @@
 import prisma from '../../_utils/prisma';
 import auth from '../../_utils/auth';
 import qs from 'qs';
+import limitControl from '../../_utils/limitControl';
 
 function convertToObjectArray(input) {
     if (!input) return [];
@@ -33,7 +34,7 @@ function findUniqueObjects(arr1, arr2) {
     });
 }
 
-const editableProperty = ['name', 'title', 'content'];
+const editableProperty = ['name', 'title', 'content', 'draft', 'tag', 'category'];
 
 function filterObject(properties, objects) {
     const filteredObject = {};
@@ -50,7 +51,7 @@ function filterObject(properties, objects) {
 export async function POST(request) {
     const time = new Date().toISOString();
     const action = await request.text();
-    const { title, content, name, tag, category } = qs.parse(action);
+    const { title, content, name, tag, category, draft } = qs.parse(action);
     const ip =
         request.headers['x-real-ip'] || request.headers['x-forwarded-for'] || request.ip || '';
     const user = await auth(request);
@@ -81,6 +82,9 @@ export async function POST(request) {
     }
     let filteredObject = filterObject(editableProperty, qs.parse(action));
     filteredObject.updatedAt = time;
+    if (!(await limitControl.check(request))) {
+        return Response.json({ message: '已触发速率限制' }, { status: 429 });
+    }
     try {
         const oldPost = await prisma.post.findUnique({
             where: { name: name },
@@ -103,6 +107,7 @@ export async function POST(request) {
                     connectOrCreate: convertToObjectArray(category) || undefined,
                 },
                 updatedAt: time,
+                published: !draft || true,
             },
         });
     } catch (error) {
@@ -123,6 +128,6 @@ export async function POST(request) {
     await prisma.category.deleteMany({
         where: { post: { none: {} } },
     });
-
+    limitControl.update(request);
     return Response.json({ message: '修改成功', update: filteredObject }, { status: 200 });
 }

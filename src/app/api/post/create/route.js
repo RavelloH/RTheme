@@ -1,12 +1,13 @@
 /*
  * POST /api/post/create
  * WITH Authorization: Bearer <token>
- * WITH title, content, name, tag, category
+ * WITH title, content, name, tag, category, draft?
  */
 
 import prisma from '../../_utils/prisma';
 import auth from '../../_utils/auth';
 import qs from 'qs';
+import limitControl from '../../_utils/limitControl';
 
 function convertToObjectArray(input) {
     const arr = input.split(' ');
@@ -18,7 +19,7 @@ function convertToObjectArray(input) {
 
 export async function POST(request) {
     const action = await request.text();
-    const { title, content, name, tag, category } = qs.parse(action);
+    const { title, content, name, tag, category, draft } = qs.parse(action);
     const ip =
         request.headers['x-real-ip'] || request.headers['x-forwarded-for'] || request.ip || '';
     const user = await auth(request);
@@ -47,6 +48,10 @@ export async function POST(request) {
             { status: 400 },
         );
     }
+    if (!(await limitControl.check(request))) {
+        return Response.json({ message: '已触发速率限制' }, { status: 429 });
+    }
+
     try {
         const post = await prisma.post.create({
             data: {
@@ -61,6 +66,7 @@ export async function POST(request) {
                 },
                 ip: ip,
                 userUid: user.uid,
+                published: draft ? false : true,
             },
         });
     } catch (error) {
@@ -73,5 +79,6 @@ export async function POST(request) {
         );
     }
 
+    limitControl.update(request);
     return Response.json({ message: '创建成功' }, { status: 200 });
 }

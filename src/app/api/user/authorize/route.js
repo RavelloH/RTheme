@@ -55,137 +55,136 @@ export async function POST(request) {
 
         let infoJSON = info;
 
-        if (await limitControl.check(request)) {
-            // 登录模式分发
-            if (typeof infoJSON.token !== 'undefined') {
-                // JWT 刷新登录
+        if (!(await limitControl.check(request))) {
+            return Response.json({ message: '已触发速率限制' }, { status: 429 });
+        }
+        // 登录模式分发
+        if (typeof infoJSON.token !== 'undefined') {
+            // JWT 刷新登录
 
-                // 检查传入的token
+            // 检查传入的token
+            let tokenInfo;
+            try {
+                tokenInfo = token.verify(infoJSON.token);
+            } catch (err) {
                 let tokenInfo;
-                try {
-                    tokenInfo = token.verify(infoJSON.token);
-                } catch (err) {
-                    let tokenInfo;
-                    if (err.name == 'TokenExpiredError') {
-                        return Response.json(
-                            {
-                                message: 'TOKEN已过期，请重新登录',
-                            },
-                            { status: 410 },
-                        );
-                    } else {
-                        return Response.json(
-                            {
-                                message: 'TOKEN无效',
-                            },
-                            { status: 400 },
-                        );
-                    }
-                }
-
-                // TOKEN有效，刷新TOKEN
-                if (tokenInfo) {
-                    // 请求新信息
-                    let result = await prisma.user.findUnique({ where: { uid: tokenInfo.uid } });
-                    // 检查此Token是否为最新
-                    if (result.lastUseAt == tokenInfo.lastUseAt + '') {
-                        updateTime(result.uid, startTime);
-                        return Response.json(
-                            {
-                                message: '登录成功',
-                                info: pack(result, startTime),
-                                token: token.sign(
-                                    pack(result, startTime),
-                                    infoJSON.expiredTime || '7d',
-                                ),
-                            },
-                            { status: 200 },
-                        );
-                    } else {
-                        return Response.json(
-                            {
-                                message: 'TOKEN未处于激活状态',
-                            },
-                            { status: 420 },
-                        );
-                    }
-                }
-            } else if (
-                typeof infoJSON.account !== 'undefined' &&
-                typeof infoJSON.password !== 'undefined'
-            ) {
-                // 密码登录
-
-                // 验证密码长度
-                if (infoJSON.password.length < 6) {
+                if (err.name == 'TokenExpiredError') {
                     return Response.json(
                         {
-                            message: '密码格式错误',
+                            message: 'TOKEN已过期，请重新登录',
                         },
-                        { status: 400 },
-                    );
-                }
-
-                // 查询是否有此用户
-                let result = await prisma.user.findFirst({
-                    where: {
-                        OR: [
-                            {
-                                email: infoJSON.account,
-                            },
-                            {
-                                username: infoJSON.account,
-                            },
-                        ],
-                    },
-                });
-
-                if (result == null) {
-                    return Response.json(
-                        {
-                            message: '未找到此账号，请先注册',
-                        },
-                        { status: 400 },
+                        { status: 410 },
                     );
                 } else {
-                    // 验证密码
-                    shufflerPassword = shuffler(infoJSON.password);
-                    console.log(shufflerPassword);
-                    let passwordValidate = await argon2.verify(result.password, shufflerPassword);
-                    isPasswordOK = passwordValidate;
-                    if (isPasswordOK) {
-                        await updateTime(result.uid, startTime);
-                        limitControl.update(request);
-                        return Response.json(
-                            {
-                                message: '登录成功',
-                                info: pack(result, startTime),
-                                token: token.sign(
-                                    pack(result, startTime),
-                                    infoJSON.expiredTime || '7d',
-                                ),
-                            },
-                            { status: 200 },
-                        );
-                    } else {
-                        return Response.json(
-                            {
-                                message: '密码错误',
-                            },
-                            { status: 400 },
-                        );
-                    }
+                    return Response.json(
+                        {
+                            message: 'TOKEN无效',
+                        },
+                        { status: 400 },
+                    );
                 }
-            } else {
+            }
+
+            // TOKEN有效，刷新TOKEN
+            if (tokenInfo) {
+                // 请求新信息
+                let result = await prisma.user.findUnique({ where: { uid: tokenInfo.uid } });
+                // 检查此Token是否为最新
+                if (result.lastUseAt == tokenInfo.lastUseAt + '') {
+                    updateTime(result.uid, startTime);
+                    return Response.json(
+                        {
+                            message: '登录成功',
+                            info: pack(result, startTime),
+                            token: token.sign(
+                                pack(result, startTime),
+                                infoJSON.expiredTime || '7d',
+                            ),
+                        },
+                        { status: 200 },
+                    );
+                } else {
+                    return Response.json(
+                        {
+                            message: 'TOKEN未处于激活状态',
+                        },
+                        { status: 420 },
+                    );
+                }
+            }
+        } else if (
+            typeof infoJSON.account !== 'undefined' &&
+            typeof infoJSON.password !== 'undefined'
+        ) {
+            // 密码登录
+
+            // 验证密码长度
+            if (infoJSON.password.length < 6) {
                 return Response.json(
                     {
-                        message: '缺少必要的参数',
+                        message: '密码格式错误',
                     },
                     { status: 400 },
                 );
             }
+
+            // 查询是否有此用户
+            let result = await prisma.user.findFirst({
+                where: {
+                    OR: [
+                        {
+                            email: infoJSON.account,
+                        },
+                        {
+                            username: infoJSON.account,
+                        },
+                    ],
+                },
+            });
+
+            if (result == null) {
+                return Response.json(
+                    {
+                        message: '未找到此账号，请先注册',
+                    },
+                    { status: 400 },
+                );
+            } else {
+                // 验证密码
+                shufflerPassword = shuffler(infoJSON.password);
+                console.log(shufflerPassword);
+                let passwordValidate = await argon2.verify(result.password, shufflerPassword);
+                isPasswordOK = passwordValidate;
+                if (isPasswordOK) {
+                    await updateTime(result.uid, startTime);
+                    limitControl.update(request);
+                    return Response.json(
+                        {
+                            message: '登录成功',
+                            info: pack(result, startTime),
+                            token: token.sign(
+                                pack(result, startTime),
+                                infoJSON.expiredTime || '7d',
+                            ),
+                        },
+                        { status: 200 },
+                    );
+                } else {
+                    return Response.json(
+                        {
+                            message: '密码错误',
+                        },
+                        { status: 400 },
+                    );
+                }
+            }
         } else {
-            return Response.json({ message: '已触发速率限制' }, { status: 429 });
+            return Response.json(
+                {
+                    message: '缺少必要的参数',
+                },
+                { status: 400 },
+            );
         }
     } catch (error) {
         console.error(error);

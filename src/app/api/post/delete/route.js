@@ -7,6 +7,7 @@
 import prisma from '../../_utils/prisma';
 import auth from '../../_utils/auth';
 import qs from 'qs';
+import limitControl from '../../_utils/limitControl';
 
 export async function POST(request) {
     const time = new Date().toISOString();
@@ -41,6 +42,10 @@ export async function POST(request) {
         );
     }
 
+    if (!(await limitControl.check(request))) {
+        return Response.json({ message: '已触发速率限制' }, { status: 429 });
+    }
+
     try {
         await prisma.post.delete({
             where: { name: name },
@@ -64,5 +69,6 @@ export async function POST(request) {
         where: { post: { none: {} } },
     });
 
+    limitControl.update(request);
     return Response.json({ message: '删除成功' }, { status: 200 });
 }
