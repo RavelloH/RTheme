@@ -1,6 +1,5 @@
 import Nav from './Nav';
 import config from '../../config';
-import avatar from '../assets/images/avatar.jpg';
 import Image from 'next/image';
 
 export default function Header() {
