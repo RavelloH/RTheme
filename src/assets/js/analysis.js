@@ -11,11 +11,10 @@ function umamiAnalytics() {
     if (cookie.getItem('settingEnableUmamiAnalytics') == 'false') {
         return false;
     }
-    // 检测这是不是我自己的域名
-    if (/rav.*h/.test(window.location.hostname) == false) {
-        baiduAnalysis(true);
-        return false;
-    }
+    // // 检测这是不是我自己的域名
+    // if (/rav.*h/.test(window.location.hostname) == false) {
+    //     return false;
+    // }
     (function () {
         addEvent(getUmamiEventList());
         var umami = document.createElement('script');
@@ -29,25 +28,13 @@ function umamiAnalytics() {
     })();
 }
 
-function baiduAnalysis(force = false) {
-    if (cookie.getItem('settingEnableBaiduTongji') == 'true' || force == true) {
-        var _hmt = _hmt || [];
-        (function () {
-            var hm = document.createElement('script');
-            hm.src = 'https://hm.baidu.com/hm.js?dbfc04c30a6804002416a339a4023685';
-            var s = document.getElementsByTagName('script')[0];
-            s.parentNode.insertBefore(hm, s);
-        })();
-    }
-}
-
 function addEvent(list) {
-    if (cookie.getItem('settingEnableUmamiEvents') == 'false') {
-        return false;
-    }
-    list.forEach((item) => {
-        document.querySelector(item[0]).setAttribute('data-umami-event', item[1]);
-    });
+    // if (cookie.getItem('settingEnableUmamiEvents') == 'false') {
+    //     return false;
+    // }
+    // list.forEach((item) => {
+    //     document.querySelector(item[0]).setAttribute('data-umami-event', item[1]);
+    // });
 }
 
 function getUmamiEventList() {
