@@ -1,3 +1,5 @@
+'use client';
+
 const cookie = {
     getItem: function (sKey) {
         return (
@@ -40,7 +42,7 @@ const cookie = {
             encodeURIComponent(sValue) +
             sExpires +
             (sDomain ? '; domain=' + sDomain : '') +
-            (sPath ? '; path=' + sPath : '') +
+            (sPath ? '; path=' + sPath : '; path=/') +
             (bSecure ? '; secure' : '');
         return true;
     },

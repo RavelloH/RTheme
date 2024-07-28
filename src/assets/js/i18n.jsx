@@ -51,15 +51,8 @@ const structureErrorViewmap = (
     </>
 );
 const originMessageBar = (
-    <noscript>
-        <a className='red' href='/about/help#javascript'>
-            <strong>错误:无法使用JAVASCRIPT</strong>&nbsp;<span className='i ri-alert-line'></span>
-        </a>
-    </noscript>
-);
-const structureLeaveMessage = (
-    <a onClick={() => pjax.reload()}>
-        取消跳转&nbsp;<span className='i ri-arrow-go-back-line'></span>
+    <a>
+        <div></div>
     </a>
 );
 
@@ -102,12 +95,6 @@ function structureInfobarInfo() {
             <div className='flex-items'>
                 <strong> 网络连接状态: </strong>
                 <span id='network-state'>
-                    <div className='circle-loader'></div>
-                </span>
-            </div>
-            <div className='flex-items'>
-                <strong> PJAX状态: </strong>
-                <span id='pjax-state'>
                     <div className='circle-loader'></div>
                 </span>
             </div>
@@ -827,7 +814,6 @@ export default {
     originIconsLeftContext,
     structureErrorViewmap,
     originMessageBar,
-    structureLeaveMessage,
     structureUntrustedDomain,
     structureMusicPlay,
     structureMusicPause,

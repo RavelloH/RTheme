@@ -22,7 +22,7 @@ export default function Home() {
             </span>
             <div className='button-list loading' style={{ '--i': 5 }}>
                 <a className='button loading' href='/posts/'>
-                    文章 / POST &gt;
+                    文稿 / POST &gt;
                 </a>{' '}
                 <a className='button loading' href='/projects/'>
                     项目 / PROJECTS &gt;

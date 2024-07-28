@@ -12,7 +12,7 @@ import qs from 'qs';
 // 注册器
 async function signup(username, nickname, email, password) {
     let encryptPassword = await encrypt(password);
-    await prisma.user.create({
+    return await prisma.user.create({
         data: {
             username: username,
             nickname: nickname,
@@ -128,12 +128,23 @@ export async function POST(request) {
         } else {
             // 注册流程
             try {
-                await signup(
+                const user = await signup(
                     requestAction.username,
                     requestAction.nickname,
                     requestAction.email,
                     requestAction.password,
                 );
+                // 初始激活
+                if (user.uid == 1) {
+                    await prisma.user.update({
+                        where: {
+                            uid: 1,
+                        },
+                        data: {
+                            role: 'ADMIN',
+                        },
+                    });
+                }
                 limitControl.update(request);
                 return Response.json({ message: '注册成功' }, { status: 200 });
             } catch (e) {

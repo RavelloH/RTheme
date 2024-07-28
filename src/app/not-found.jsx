@@ -7,7 +7,7 @@ export const metadata = {
     description: '发生错误： 请求的文件未在服务器中找到',
 };
 
-export default function About() {
+export default function NotFound() {
     return (
         <>
             <div className='texts'>

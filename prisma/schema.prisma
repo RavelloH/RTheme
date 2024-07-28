@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["fullTextSearch"]
 }
 
 datasource db {
@@ -21,7 +22,7 @@ model User {
   avatar        String?      @db.VarChar(100)
   role          Role         @default(USER)
   updatedAt     DateTime     @updatedAt
-  createAt      DateTime     @default(now())
+  createdAt     DateTime     @default(now())
   lastUseAt     String?
   gender        Gender?      @default(UNSET)
   password      String
@@ -35,21 +36,21 @@ model User {
 }
 
 model Comment {
-  id       String   @id @default(uuid())
-  content  String   @db.VarChar(1000)
-  createAt DateTime @default(now())
-  postUid  String?
-  noteUid  String?
-  userUid  Int
-  post     Post?    @relation(fields: [postUid], references: [id])
-  note     Note?    @relation(fields: [noteUid], references: [id])
-  user     User     @relation(fields: [userUid], references: [uid])
+  id        String   @id @default(uuid())
+  content   String   @db.VarChar(1000)
+  createdAt DateTime @default(now())
+  postUid   String?
+  noteUid   String?
+  userUid   Int
+  post      Post?    @relation(fields: [postUid], references: [id])
+  note      Note?    @relation(fields: [noteUid], references: [id])
+  user      User     @relation(fields: [userUid], references: [uid])
 }
 
 model Message {
   id          String   @id @default(uuid())
   content     String   @db.VarChar(511)
-  createAt    DateTime @default(now())
+  createdAt   DateTime @default(now())
   fromUserUid Int
   toUserUid   Int
   from        User     @relation(fields: [fromUserUid], references: [uid])
@@ -61,13 +62,14 @@ model Post {
   title       String     @db.VarChar(50)
   ip          String
   content     String     @db.VarChar(100000)
-  createAt    DateTime   @default(now())
+  createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  published   Boolean    @default(true)
   userUid     Int
   likeUserUid Int[]
   user        User       @relation(fields: [userUid], references: [uid])
   comment     Comment[]
-  tag        Tag[]
+  tag         Tag[]
   category    Category[]
 }
 
@@ -84,7 +86,7 @@ model Category {
 model Note {
   id        String    @id @default(uuid())
   userUid   Int
-  createAt  DateTime  @default(now())
+  createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   content   String    @db.VarChar(5000)
   title     String    @db.VarChar(50)

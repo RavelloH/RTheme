@@ -68,10 +68,8 @@
 }
 @font-face {
     font-family: 'Geometos';
-    src:
-        url('../fonts/Geometos.ttf') format('truetype'),
-        url('../fonts/Geometos.woff') format('woff'),
-        local('Geometos');
+    src: url('../fonts/Geometos.ttf') format('truetype'),
+        url('../fonts/Geometos.woff') format('woff'), local('Geometos');
     font-display: swap;
 }
 @font-face {
@@ -268,21 +266,11 @@ h6,
     -webkit-transition: 0.2s ease-in-out;
     -o-transition: 0.2s ease-in-out;
     transition: 0.2s ease-in-out;
-    -webkit-transition-property:
-        background,
-        opacity,
-        -webkit-transform;
-    transition-property:
-        background,
-        opacity,
-        -webkit-transform;
+    -webkit-transition-property: background, opacity, -webkit-transform;
+    transition-property: background, opacity, -webkit-transform;
     -o-transition-property: background, opacity, transform;
     transition-property: background, opacity, transform;
-    transition-property:
-        background,
-        opacity,
-        transform,
-        -webkit-transform;
+    transition-property: background, opacity, transform, -webkit-transform;
 }
 
 #cursor.hidden {
@@ -310,7 +298,7 @@ h6,
     background: #000;
     -webkit-transition: 0.5s;
     -o-transition: 0.5s;
-    transition: 0.5s;
+    transition: 0.35s;
     margin: 15px 5px 5px 5px;
     opacity: 1;
 }
@@ -320,9 +308,9 @@ h6,
     width: 0;
     border-radius: 0.4rem;
     background: #c6c9ce50;
-    -webkit-transition: all 0.5s ease;
-    -o-transition: all 0.5s ease;
-    transition: all 0.5s ease;
+    -webkit-transition: all 0.35s ease;
+    -o-transition: all 0.35s ease;
+    transition: all 0.35s ease;
     position: relative;
     top: 50%;
     -webkit-transform: translateY(-50%);
@@ -501,8 +489,7 @@ a:after {
     transition: -webkit-transform 0.3s cubic-bezier(0.28, 0.94, 0.82, 1.09);
     -o-transition: transform 0.3s cubic-bezier(0.28, 0.94, 0.82, 1.09);
     transition: transform 0.3s cubic-bezier(0.28, 0.94, 0.82, 1.09);
-    transition:
-        transform 0.3s cubic-bezier(0.28, 0.94, 0.82, 1.09),
+    transition: transform 0.3s cubic-bezier(0.28, 0.94, 0.82, 1.09),
         -webkit-transform 0.3s cubic-bezier(0.28, 0.94, 0.82, 1.09);
 }
 
@@ -576,7 +563,7 @@ hr {
 #shade-global.active {
     z-index: 70;
 }
-#load-shade.active {
+#load-shade.active:not(body[quickload] #load-shade) {
     opacity: 1;
     z-index: 10;
     -webkit-transition: all 0.5s ease-in-out;
@@ -1157,6 +1144,7 @@ span.yellow {
     height: 100%;
     left: 0;
     margin: 0.7142rem 0.1428rem;
+    transition: all 0.4s;
     overflow: hidden;
 }
 
@@ -2077,7 +2065,7 @@ blockquote:hover a,
     color: #5babec;
 }
 
-pre {
+pre:not(#vditor pre) {
     background: #2d2d2d;
     color: rgb(201, 209, 217);
     font-family: IBMPlex, monospace;
@@ -2095,13 +2083,13 @@ pre {
     overflow: auto;
 }
 
-pre span:not(span[highlight], span[class*='hljs']) {
+pre span:not(span[highlight], span[class*='hljs'], #vditor span) {
     display: block;
     line-height: 1.8rem;
     white-space: pre;
 }
 
-pre span:not(span[highlight], span[class*='hljs']):before {
+pre span:not(span[highlight], span[class*='hljs'], #vditor span):before {
     counter-increment: line;
     content: counter(line);
     display: inline-block;
@@ -2472,7 +2460,9 @@ a.tag,
     white-space: nowrap;
 }
 
-.loading {
+.loading:not(body[quickload] .loading, .loaded),
+#viewmap .loading:not(.loaded),
+#main.loading:not(.loaded) {
     opacity: 0;
     -webkit-transition-property: opacity;
     -o-transition-property: opacity;
@@ -2483,6 +2473,9 @@ a.tag,
 }
 
 .loaded:not(.no-delay) {
+    -webkit-transition: 0.3s;
+    -o-transition: 0.3s;
+    transition: 0.3s;
     -webkit-transition-delay: calc((0.1s * var(--i)));
     -o-transition-delay: calc((0.1s * var(--i)));
     transition-delay: calc((0.1s * var(--i)));
@@ -2495,16 +2488,6 @@ a.tag,
     -webkit-transition-delay: unset;
     -o-transition-delay: unset;
     transition-delay: unset;
-}
-
-.articles-info time:before {
-    content: '\e8cd\ ';
-    font-family: 'Remix' !important;
-    font-style: normal;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    position: relative;
-    top: 0.12em;
 }
 
 .articles-info .class a {
@@ -2869,7 +2852,8 @@ mark {
     justify-content: space-between;
 }
 
-#more-articles > div {
+#more-articles > div,
+#more-articles > a {
     width: 50%;
     padding: 1.25em;
     -webkit-transition: all 0.5s;
@@ -3392,4 +3376,12 @@ kdb {
 }
 span {
     position: relative;
+}
+
+#user-actions {
+    flex-direction: column;
+}
+
+#user-actions > a {
+    width: 93%;
 }

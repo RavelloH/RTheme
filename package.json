@@ -24,6 +24,7 @@
     "react-dom": "^18.3.1",
     "remixicon": "^4.3.0",
     "sharp": "^0.33.4",
+    "vditor": "^3.10.4",
     "virgule-js": "^2.1.0"
   },
   "devDependencies": {

@@ -16,12 +16,9 @@ export default function Footer() {
                 data-umami-event='footer-消息栏'
             >
                 <div id='message-bar'>
-                    <noscript>
-                        <a className='red' href={config.remotePath + '/about/help#javascript'}>
-                            <strong>错误:无法使用JAVASCRIPT</strong>&nbsp;
-                            <span className='i ri-alert-line'></span>
-                        </a>
-                    </noscript>
+                    <a>
+                        <div className='circle-loader'></div>
+                    </a>
                 </div>
             </div>
         </footer>

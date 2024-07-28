@@ -1,6 +1,6 @@
 /*
  * POST /api/user/authorize
- * WITH ( account password ) || token
+ * WITH (( account password ) || token ),expiredTime
  */
 
 import prisma from '../../_utils/prisma';
@@ -152,7 +152,6 @@ export async function POST(request) {
             } else {
                 // 验证密码
                 shufflerPassword = shuffler(infoJSON.password);
-                console.log(shufflerPassword);
                 let passwordValidate = await argon2.verify(result.password, shufflerPassword);
                 isPasswordOK = passwordValidate;
                 if (isPasswordOK) {

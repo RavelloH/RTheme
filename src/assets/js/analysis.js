@@ -4,6 +4,7 @@ import global from './Global';
 import i18n from './i18n';
 import config from '../../../config';
 import cookie from './lib/cookie';
+import message from '@/utils/message';
 
 let uptimeData;
 function umamiAnalytics() {
@@ -82,7 +83,7 @@ function getRealTimeVisitors(mode = 'return') {
         .then((response) => response.json())
         .then((data) => {
             if (global.isLayoutMenuOpen() && mode == 'switch') {
-                return global.switchMessageBarContent(i18n.structureOnlineVistor(data.x));
+                return message.switch(i18n.structureOnlineVistor(data.x));
             }
             if (mode == 'return') {
                 return data.x;

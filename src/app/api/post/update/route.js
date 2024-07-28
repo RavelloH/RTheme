@@ -1,6 +1,7 @@
 /*
  * POST /api/post/update
- * WITH name, title, content, tag, category
+ * WITH name, title, content, tag, category, draft?
+ * NEED role == 'ADMIN' or 'MANAGER'
  */
 
 import prisma from '../../_utils/prisma';
@@ -80,6 +81,15 @@ export async function POST(request) {
             { status: 400 },
         );
     }
+
+    if (!user.role.includes('ADMIN') && !user.role.includes('MANAGER')) {
+        return Response.json(
+            {
+                message: '权限不足',
+            },
+            { status: 403 },
+        );
+    }
     let filteredObject = filterObject(editableProperty, qs.parse(action));
     filteredObject.updatedAt = time;
     if (!(await limitControl.check(request))) {
@@ -107,7 +117,7 @@ export async function POST(request) {
                     connectOrCreate: convertToObjectArray(category) || undefined,
                 },
                 updatedAt: time,
-                published: !draft || true,
+                published: draft == "true"  ? false : true,
             },
         });
     } catch (error) {

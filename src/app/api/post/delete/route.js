@@ -2,6 +2,7 @@
  * POST /api/post/delete
  * WITH Authorization: Bearer <token>
  * WITH name
+ * NEED role == 'ADMIN' or 'MANAGER'
  */
 
 import prisma from '../../_utils/prisma';
@@ -39,6 +40,15 @@ export async function POST(request) {
                 message: 'name格式不正确',
             },
             { status: 400 },
+        );
+    }
+
+    if (!user.role.includes('ADMIN') && !user.role.includes('MANAGER')) {
+        return Response.json(
+            {
+                message: '权限不足',
+            },
+            { status: 403 },
         );
     }
 

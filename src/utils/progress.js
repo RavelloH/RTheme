@@ -16,18 +16,18 @@ const progress = {
     show: function () {
         progress.number = 0;
 
-        document.querySelector('#icons-left').style.opacity = '1';
-        document.querySelector('#icons-left').style.transition = 'opacity 300ms';
-        document.querySelector('#icons-left').style.opacity = '0';
+        document.querySelector('#icons-right').style.opacity = '1';
+        document.querySelector('#icons-right').style.transition = 'opacity 100ms';
+        document.querySelector('#icons-right').style.opacity = '0';
 
         new Promise((resolve) => {
             setTimeout(() => {
                 if (progress.root !== null) {
                     progress.root.unmount();
                 }
-                progress.root = ReactDOM.createRoot(document.querySelector('#icons-left'));
+                progress.root = ReactDOM.createRoot(document.querySelector('#icons-right'));
                 progress.root.render(i18n.structurePrograssBar);
-                document.querySelector('#icons-left').style.opacity = '1';
+                document.querySelector('#icons-right').style.opacity = '1';
                 resolve();
             }, 300);
         }).then(() => {
@@ -91,21 +91,24 @@ const progress = {
         }
     },
     close: function () {
+        if (!progress.bar) {
+            return;
+        }
         if (progress.bar.classList[0] == 'yellow') {
             progress.bar.classList.toggle('yellow');
         }
         if (progress.state !== '') {
-            document.querySelector('#icons-left').style.opacity = '1';
-            document.querySelector('#icons-left').style.transition = 'opacity 300ms';
-            document.querySelector('#icons-left').style.opacity = '0';
+            document.querySelector('#icons-right').style.opacity = '1';
+            document.querySelector('#icons-right').style.transition = 'opacity 100ms';
+            document.querySelector('#icons-right').style.opacity = '0';
 
             new Promise(function (resolve) {
                 setTimeout(() => {
                     progress.root.unmount();
-                    progress.root = ReactDOM.createRoot(document.querySelector('#icons-left'));
-                    progress.root.render(i18n.originIconsLeftContext);
+                    progress.root = ReactDOM.createRoot(document.querySelector('#icons-right'));
+                    progress.root.render(i18n.originMessageBar);
 
-                    document.querySelector('#icons-left').style.opacity = '1';
+                    document.querySelector('#icons-right').style.opacity = '1';
                     progress.state = '';
                     resolve();
                 }, 300);

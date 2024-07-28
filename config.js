@@ -6,17 +6,15 @@ const config = {
     sign: 'Debug the life.', // 站点签名
     siteURL: 'https://ravelloh.top/', // 站点地址,带有尾缀斜杠
     pwaStartURL: '/?mode=pwa', // PWA启动地址
-    iconImage: 'assets/images/android-chrome-512x512.png', // 站点图标
+    iconImage: 'icon.png', // 站点图标
     githubUserName: 'RavelloH', // github用户名
     mail: 'ravelloh@outlook.com', // 邮箱
     copyrightStartTime: '2019', // 建站开始年份
     siteBirthday: '2/03/2019 20:52:00', // 站点建立时间
     siteHelloWords: 'Welcome to here and fell free to check it out ...', // 站点欢迎语
     defaultScript: '<script>function main(){}</script>', // 默认站点脚本
-    analyticScript:
-        '<script defer type="text/javascript" src="/assets/js/analysis.js" onload="baiduAnalysis();umamiAnalytics()"></script>', // 站点分析脚本
     remotePath: '', // 远程资源路径，主站点不填
-    trustDomain: ['ravelloh.top', 'ravelloh.github.io', 'ravelloh.js.org'],
+    trustDomain: ['ravelloh.top'],
     musicApiList: ['https://music.api.ravelloh.top/cloudsearch?keywords='],
     nav: [
         // 菜单导航设置
@@ -31,7 +29,7 @@ const config = {
             id: 'nav-projects',
         },
         {
-            name: '文章',
+            name: '文稿',
             link: '/posts/',
             id: 'nav-posts',
         },
@@ -138,12 +136,12 @@ const config = {
 
         {
             name: 'LOG IN',
-            href: '/platform/signin/',
+            href: '/account/signin/',
             icon: 'ri-login-box-fill',
         },
         {
             name: 'LOG UP',
-            href: '/platform/signup/',
+            href: '/account/signup/',
             icon: 'ri-user-add-fill',
         },
         {

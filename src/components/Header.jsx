@@ -8,7 +8,13 @@ export default function Header() {
         <header>
             <div id='logo' className='loading' style={{ '--i': 1 }}>
                 <a href='#userbar'>
-                    <Image id='avatar' className='no-zoom' src={avatar} alt='avatar' />
+                    <img
+                        id='avatar'
+                        className='no-zoom'
+                        src='/avatar.jpg'
+                        alt='avatar'
+                        placeholder='blur'
+                    />
                     {config.logo && (
                         <Image
                             id='avatarname'

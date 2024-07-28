@@ -10,7 +10,7 @@ function pack(userinfo, timestamp) {
         country: userinfo.country,
         role: userinfo.role,
         updatedAt: userinfo.updatedAt,
-        createAt: userinfo.createAt,
+        createdAt: userinfo.createdAt,
         lastUseAt: timestamp + '',
         gender: userinfo.gender,
         avatar: userinfo.avatar,

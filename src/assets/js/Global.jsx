@@ -4,9 +4,10 @@ import analysis from './analysis.js';
 import i18n from './i18n.jsx';
 import { Base64 } from 'js-base64';
 import config from '../../../config.js';
-
 import switchElementContent from '../../utils/switchElement.js';
-import progress from '../../utils/progress.js';
+import display from './display.js';
+import message from '@/utils/message.js';
+import token from '@/utils/token.js';
 
 // 全局声明
 let domMenuToggle,
@@ -24,12 +25,10 @@ let domMenuToggle,
     domLoadShade,
     musicApi,
     currentInfoBarInner,
-    pjax,
     closeErrorBar,
     searchTimer,
     changeMusicProgress,
-    beforeLeaveContent,
-    Pjax;
+    accountTimer;
 
 let errorList = [];
 
@@ -50,8 +49,6 @@ function resetElements() {
     domLoadShade = document.querySelector('#load-shade');
 }
 
-function main() {}
-
 // 刷新Cookie状态
 function resetCookies() {
     if (cookie.hasItem('isCookieReseted') == false) {
@@ -60,9 +57,17 @@ function resetCookies() {
 }
 
 if (isBrowser()) {
-    window.onload = function () {
-        loadComplete();
-    };
+    let observer = new MutationObserver((mutations) => {
+        if (document.documentElement.childElementCount > 0) {
+            loadComplete();
+            observer.disconnect();
+        }
+    });
+
+    observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+    });
 }
 
 function loadPage() {
@@ -74,26 +79,68 @@ function loadPage() {
     addListeners();
     switchElementContent('#year', getTime('yyyy'), 0);
     zoomPics();
-    enablePjax();
+    document.addEventListener('click', function (event) {
+        let target = event.target;
+        if (target.href) {
+            event.preventDefault();
+            let url = target.href;
+            fadeOutPage('#viewmap');
+            message.add(i18n.originMessageBar, 0);
+            if (isLayoutMenuOpen() == true) {
+                toggleLayoutMenu();
+            }
+            if (isLayoutUserbarOpen()) {
+                toggleLayoutUserbar();
+            }
+            if (typeof closeErrorBar !== 'undefined') {
+                clearTimeout(closeErrorBar);
+            }
+            hiddenPageContent();
+            setTimeout(() => (window.location.href = url), 400);
+            switchElementContent(
+                '#message-bar',
+                <a>
+                    <div className='circle-loader'></div>
+                </a>,
+            );
+        }
+    });
 
+    loadAccount();
     analysis.umamiAnalytics();
     if (analyzeURL(window.location.href, 'u') !== '') {
-        pjaxLoad(base.decrypt(analyzeURL(window.location.href, 'u')));
+        window.location.href = base.decrypt(analyzeURL(window.location.href, 'u'));
     }
-    switchElementContent('#loading-text', '<span class="green-text"> Completed.</span>');
-    setTimeout(function () {
-        domLoadShade.classList.toggle('active');
+    switchElementContent('#loading-text', <span className='green-text'> Completed.</span>);
+    message.switch('', 450);
+
+    if (
+        window &&
+        performance.navigation.type == 0 &&
+        document.referrer.startsWith(window.location.origin)
+    ) {
+        // domLoadShade.classList.toggle('active');
+        var loadList = document.querySelectorAll('.loading:not(.listprogram)');
+        for (let i = 0; i < loadList.length; i++) {
+            loadList[i].classList.add('loaded');
+        }
+        firstLoad();
+        loadPageType();
+    } else {
         setTimeout(function () {
-            var loadList = document.querySelectorAll('.loading:not(.listprogram)');
-            for (let i = 0; i < loadList.length; i++) {
-                loadList[i].classList.add('loaded');
-            }
-            setTimeout(() => {
-                loadPageType();
-            }, 0);
-            firstLoad();
-        }, 500);
-    }, 600);
+            domLoadShade.classList.toggle('active');
+            setTimeout(function () {
+                var loadList = document.querySelectorAll('.loading:not(.listprogram)');
+                for (let i = 0; i < loadList.length; i++) {
+                    loadList[i].classList.add('loaded');
+                }
+                setTimeout(() => {
+                    loadPageType();
+                }, 0);
+                firstLoad();
+            }, 500);
+        }, 600);
+    }
 }
 
 function loadComplete() {
@@ -186,7 +233,7 @@ function toggleLayoutMenu() {
         }
     } else {
         if (typeof currentInfoBarInner !== 'undefined') {
-            switchMessageBarContent(currentInfoBarInner);
+            message.switch(currentInfoBarInner);
             currentInfoBarInner = undefined;
         }
     }
@@ -256,67 +303,17 @@ function highlightElement(selector) {
     }, 1500);
 }
 
-// messagebar切换
-function switchMessageBarContent(context, time = 300) {
-    switchElementContent('#message-bar', context, time);
-}
-
-let messageBarQueue = [];
-let messageBarState = 'offdisplay';
-
-// 添加消息队列
-function addMessageBarQueue(context, lastTime, TransTime = 300) {
-    if (cookie.getItem('settingEnableMessage') == 'false') {
-        return false;
-    }
-    if (messageBarQueue.includes([context, lastTime, TransTime])) {
-        return false;
-    } else {
-        messageBarQueue.push([context, lastTime, TransTime]);
-    }
-    if (messageBarState == 'offdisplay') {
-        messageBarState = 'ondisplay';
-        enableMessageBarQueue();
-    }
-}
-// 处理消息队列
-function enableMessageBarQueue() {
-    if (messageBarQueue.length === 0) {
-        messageBarState = 'offdisplay';
-        switchMessageBarContent(i18n.originMessageBar);
-    } else {
-        switchMessageBarContent(messageBarQueue[0][0], messageBarQueue[0][2]);
-        setTimeout(() => {
-            messageBarQueue.shift();
-            enableMessageBarQueue();
-        }, messageBarQueue[0][1]);
-    }
-}
-
 // 延时，搭配asymc wait使用
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // 页面主题切换
-function switchPageContent(selector, news, time = 450) {
+function fadeOutPage(selector, time = 450) {
     const element = document.querySelector(selector);
     element.style.opacity = '1';
-    // element.style.left = '0'
     element.style.transition = `opacity ${time}ms,left ${time}ms`;
     element.style.opacity = '0';
-    // element.style.left = '-60%'
-    news.style.opacity = '0';
-    // news.style.left = '-60%'
-    news.style.transition = `opacity ${time}ms,left ${time}ms`;
-    setTimeout(function () {
-        element.outerHTML = news.outerHTML;
-        document.querySelector(selector).style.transition = `opacity ${time}ms,left ${time}ms`;
-        setTimeout(function () {
-            document.querySelector(selector).style.opacity = '1';
-            // document.querySelector(selector).style.left = '0';
-        }, 50);
-    }, 300);
 }
 
 // 获取元素InnerHTML
@@ -332,16 +329,13 @@ function getElementInnerhtml(selector) {
 // 初始化监听器
 function addListeners() {
     addEventListener('copy', (event) => {
-        addMessageBarQueue('<a>已复制 &nbsp;<span class="i ri-file-copy-2-line"></span></a>', 2000);
+        message.add('<a>已复制 &nbsp;<span class="i ri-file-copy-2-line"></span></a>', 2000);
     });
     addEventListener('cut', (event) => {
-        addMessageBarQueue(
-            '<a>已剪切 &nbsp;<span class="i ri-scissors-cut-line"></span></a>',
-            2000,
-        );
+        message.add('<a>已剪切 &nbsp;<span class="i ri-scissors-cut-line"></span></a>', 2000);
     });
     addEventListener('paste', (event) => {
-        addMessageBarQueue('<a>已粘贴 &nbsp;<span class="i ri-chat-check-line"></span></a>', 2000);
+        message.add('<a>已粘贴 &nbsp;<span class="i ri-chat-check-line"></span></a>', 2000);
     });
     window.addEventListener(
         'hashchange',
@@ -351,10 +345,7 @@ function addListeners() {
         false,
     );
     addEventListener('offline', (event) => {
-        addMessageBarQueue(
-            '<a>互联网连接已断开 <span class="i ri-cloud-off-line"></span></a>',
-            5000,
-        );
+        message.add('<a>互联网连接已断开 <span class="i ri-cloud-off-line"></span></a>', 5000);
     });
     domMenuToggle.addEventListener('click', () => {
         toggleLayoutMenu();
@@ -376,26 +367,6 @@ function addListeners() {
     domUserbarToggle.addEventListener('click', () => {
         toggleLayoutUserbar();
     });
-    document.addEventListener('pjax:send', () => {
-        pjaxLoadSend();
-    });
-    document.addEventListener('pjax:complete', () => {
-        pjaxLoadComplete();
-    });
-    document.addEventListener('pjax:error', () => {
-        pjaxLoadError();
-    });
-    document.addEventListener('pjax:success', () => {
-        pjaxLoadSuccess();
-    });
-}
-
-// 退出检测
-if (isBrowser()) {
-    window.onbeforeunload = function () {
-        beforeLeaveContent = getElementInnerhtml('#viewmap');
-        switchMessageBarContent(i18n.structureLeaveMessage);
-    };
 }
 
 // 全屏
@@ -407,163 +378,6 @@ function toggleFullScreen() {
             document.exitFullscreen();
         }
     }
-}
-
-// PJAX模块
-// 启用pjax
-async function enablePjax() {
-    if (isBrowser()) {
-        Pjax = (await import('pjax/pjax.js')).default;
-    }
-    if (cookie.getItem('settingEnablePjaxLoad') == 'false') {
-        return false;
-    }
-
-    if (cookie.getItem('settingEnablePjaxDebug') == 'true') {
-        pjax = new Pjax({
-            selectors: [
-                'title',
-                'meta[name=description]',
-                'meta[name=keywords]',
-                'meta[name=pagetype]',
-                'link[rel=canonical]',
-                '#viewmap',
-                '#page-js',
-                '#page-prefetch',
-            ],
-            cacheBust: false,
-            analytics: false,
-            scrollRestoration: false,
-            debug: true,
-            switches: {
-                '#viewmap': function (oldEl, newEl) {
-                    setTimeout(() => switchPageContent('#viewmap', newEl), 305);
-                    setTimeout(() => progress.full(), 50);
-                    setTimeout(() => this.onSwitch(), 610);
-                },
-            },
-        });
-    } else {
-        pjax = new Pjax({
-            selectors: ['title', 'meta[name=pagetype]', '#viewmap', '#page-js', '#page-prefetch'],
-            cacheBust: false,
-            debug: false,
-            analytics: false,
-            scrollRestoration: false,
-            switches: {
-                '#viewmap': function (oldEl, newEl) {
-                    setTimeout(() => switchPageContent('#viewmap', newEl), 300);
-                    setTimeout(() => progress.full(), 50);
-                    setTimeout(() => (progress.state = 'success'), 610);
-                    setTimeout(() => this.onSwitch(), 610);
-                    setTimeout(() => {
-                        main();
-                        loadPageType();
-                    }, 660);
-                    setTimeout(() => pjax.refresh(), 700);
-                },
-            },
-        });
-    }
-}
-
-// PJAX触发
-function pjaxLoadSend() {
-    progress.state = 'sending';
-    i18n.originMessageBar = '';
-    addMessageBarQueue(i18n.originMessageBar, 0);
-    if (isLayoutMenuOpen() == true) {
-        toggleLayoutMenu();
-    }
-    if (typeof closeErrorBar !== 'undefined') {
-        clearTimeout(closeErrorBar);
-    }
-    hiddenPageContent();
-    progress.show();
-}
-
-// PJAX成功
-function pjaxLoadSuccess() {
-    progress.state = 'success';
-    progress.number = 99;
-    setTimeout(() => {
-        zoomPics();
-    }, 300);
-}
-
-// PJAX失败
-function pjaxLoadError() {
-    progress.state = 'error';
-    progress.error();
-    switchElementContent('#viewmap', i18n.structureErrorViewmap, 500);
-}
-
-// PJAX结束
-function pjaxLoadComplete() {
-    progress.state = 'done';
-    refershPageJs();
-    pjax.refresh();
-    highlightNav('');
-}
-
-// 使用PJAX加载
-function pjaxLoad(url) {
-    pjax.loadUrl(url);
-}
-
-// 页面JS重刷新
-function refershPageJs() {
-    document.querySelectorAll('script[page-js], #page-js script').forEach(function (element) {
-        var id = element.id || '';
-        var src = element.src || '';
-        var code = element.text || element.textContent || element.innerHTML || '';
-        var parent = element.parentNode;
-        var script = document.createElement('script');
-
-        parent.removeChild(element);
-
-        if (id !== '') {
-            script.id = element.id;
-        }
-
-        if (src !== '') {
-            script.src = src;
-            script.async = false;
-        }
-
-        if (code !== '') {
-            script.appendChild(document.createTextNode(code));
-        }
-
-        parent.appendChild(script);
-    });
-}
-
-// HTML编解码模块
-function HTMLEncode(str) {
-    var s = '';
-    if (str.length == 0) return '';
-    s = str.replace(/&/g, '&amp;');
-    s = s.replace(/</g, '&lt;');
-    s = s.replace(/>/g, '&gt;');
-    s = s.replace(/ /g, '&nbsp;');
-    s = s.replace(/\'/g, '&#39;');
-    s = s.replace(/\"/g, '&quot;');
-    s = s.replace(/\n/g, '<br/>');
-    return s;
-}
-
-function HTMLDecode(str) {
-    var s = '';
-    if (str.length == 0) return '';
-    s = str.replace(/&amp;/g, '&');
-    s = s.replace(/&lt;/g, '<');
-    s = s.replace(/&gt;/g, '>');
-    s = s.replace(/&nbsp;/g, ' ');
-    s = s.replace(/&#39;/g, "'");
-    s = s.replace(/&quot;/g, '"');
-    s = s.replace(/<br\/>/g, '\n');
-    return s;
 }
 
 // 时间处理
@@ -750,8 +564,8 @@ function musicChange(name, url) {
                 cookie.setItem('musicPlayingName', name);
                 cookie.setItem('musicPlayingSource', url);
             }
-            switchMessageBarContent(i18n.structurePlayingMusic(name));
-            setTimeout(() => switchMessageBarContent(i18n.originMessageBar), 10000);
+            message.switch(i18n.structurePlayingMusic(name));
+            setTimeout(() => message.switch(i18n.originMessageBar), 10000);
         }, 100);
     }, 200);
 }
@@ -761,7 +575,7 @@ function musicSetting() {
     if (typeof InfobarRefersher !== 'undefined') {
         clearInterval(InfobarRefersher);
     }
-    preload('/assets/images/music.jpg');
+    preload('/music.jpg');
     infoBarMode = 'music';
     switchElementContent('#infobar-left', i18n.structureInfobarMusic);
     setTimeout(() => enableInfobarRefersh());
@@ -834,11 +648,6 @@ function refreshInfo(runTime) {
             `<span class="red">发生${errorList.length}个异常</span>`,
         );
     }
-    if (typeof pjax == 'undefined') {
-        switchElementContent('#pjax-state', '<span class="red">离线</span>');
-    } else {
-        switchElementContent('#pjax-state', '就绪');
-    }
     if (window.navigator.onLine) {
         switchElementContent('#network-state', '就绪');
     } else {
@@ -905,7 +714,7 @@ function XMLDownload(url, name) {
 
     request = new XMLHttpRequest();
     switchElementContent('#state-bar', i18n.structureDownloadBar);
-    switchMessageBarContent(i18n.structureDownloadMessage);
+    message.switch(i18n.structureDownloadMessage);
     request.responseType = 'blob';
     request.open('get', url, true);
     request.send();
@@ -927,25 +736,25 @@ function XMLDownload(url, name) {
             anchor.click();
             setTimeout(() => {
                 switchElementContent('#download-state', '已完成');
-                switchMessageBarContent(i18n.structureDownloadCompleteMessage);
+                message.switch(i18n.structureDownloadCompleteMessage);
             }, 300);
             setTimeout(() => {
                 switchElementContent('#state-bar', '');
                 switchElementContent('#state-bar', '');
-                switchMessageBarContent('');
+                message.switch('');
             }, 15000);
         }
     };
     request.onerror = function (error) {
         setTimeout(() => {
             switchElementContent('#download-state', '错误');
-            switchMessageBarContent(i18n.structureDownloadErrorMessage);
+            message.switch(i18n.structureDownloadErrorMessage);
         }, 300);
 
         setTimeout(() => {
             switchElementContent('#state-bar', '');
             switchElementContent('#state-bar', '');
-            switchMessageBarContent('');
+            message.switch('<a></a>');
         }, 15000);
     };
 
@@ -1167,7 +976,6 @@ function zoomPics() {
     try {
         img = document.querySelectorAll('img:not(#avatar , #avatarname , .no-zoom)');
     } catch (e) {
-        console.log(`不支持的浏览器版本。已尝试回退，错误:${e}`);
         img = document.querySelectorAll('img');
     }
 
@@ -1217,7 +1025,12 @@ function checkURL(url, callback, errorback) {
 // 主题颜色切换
 // TODO
 function toggleThemeMode() {
-    addMessageBarQueue('<a>此功能尚在开发&nbsp;<span class="i ri-alert-line"></span></a>', 1500);
+    message.add(
+        <a>
+            此功能尚在开发&nbsp;<span className='ri-alert-line'></span>
+        </a>,
+        1500,
+    );
 }
 
 // 启动加载动画
@@ -1266,18 +1079,13 @@ function runTime(f) {
     console.timeEnd();
 }
 
-// 检测宽度超出
-function isEllipsisActive(e) {
-    return e.offsetWidth < e.scrollWidth;
-}
-
 // 导航栏高亮
 function highlightNav(name) {
     if (cookie.getItem('settingEnableNavHighlight') == 'false') {
         return false;
     }
     for (let i = 0; i < config.nav.length; i++) {
-        if (config.nav[i].link.replace('/', '') == name) {
+        if (config.nav[i].link.replaceAll('/', '') == name) {
             document.querySelectorAll('#header-side nav a').forEach((element) => {
                 element.classList.remove('active');
             });
@@ -1301,76 +1109,68 @@ function objectToForm(obj) {
 
 // 账户管理模块
 function loadAccount() {
-    if (cookie.getItem('userToken') == null) {
+    if (!token.get()) {
         switchElementContent(
             '#user-main',
             <div className='info-warning center'>
                 <span className='i_small ri-user-unfollow-line'></span> 尚未登录，部分功能受限
                 <br />
-                立刻 <a onClick={() => pjaxLoad('/platform/signin')}>登录</a> 或{' '}
-                <a onClick={() => pjaxLoad('/platform/signup')}>注册</a>
+                立刻 <a href='/account/signin'>登录</a> 或 <a href='/account/signup'>注册</a>
             </div>,
         );
     } else {
+        document.querySelector("#icon-account").href = "/user?uid="+token.read("uid")
+        let refreshTime = token.read('iat') * 1000 + 20 * 60 * 1000 - Date.now();
+        if (accountTimer) return;
+        accountTimer = setTimeout(() => {
+            token.refresh().then(() => {
+                loadAccount();
+            });
+        }, refreshTime);
+        switchElementContent(
+            '#user-state',
+            <div>
+                <span>
+                    <span className='ri-time-fill'></span> 将于
+                    {formatTimeDifference(Date.now() + refreshTime)}后重新刷新TOKEN
+                </span>
+                <br />
+                <span>
+                    <span className='ri-lock-password-fill'></span> TOKEN将于
+                    {formatTimeDifference(1000 * token.read('exp'))}后失效
+                </span>
+            </div>,
+        );
     }
 }
 
-const token = {
-    read: function (property) {
-        if (cookie.getItem('usertoken') == null) {
-            return undefined;
-        } else {
-            return JSON.parse(
-                base.decrypt(cookie.getItem('usertoken').split('.')[1]).replace('\x00', ''),
-            )[property];
-        }
-    },
-    get: function () {
-        if (cookie.getItem('usertoken') == null) {
-            return undefined;
-        } else {
-            return cookie.getItem('usertoken');
-        }
-    },
-    getObject: function () {
-        if (cookie.getItem('usertoken') == null) {
-            return undefined;
-        } else {
-            return JSON.parse(
-                base.decrypt(cookie.getItem('usertoken').split('.')[1]).replace('\x00', ''),
-            );
-        }
-    },
-    refresh: function () {
-        fetch(platformUrl + 'api/signin', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: objectToForm({
-                token: token.get(),
-            }),
-        })
-            .then((response) => response.json())
-            .then((data) => {
-                if (data.code == 200) {
-                    cookie.setItem('usertoken', data.inner.token);
-                    console.log('ok');
-                } else {
-                    console.log(data.message);
-                }
-            })
-            .catch((e) => {
-                console.error(e);
-            });
-    },
-    clear: function () {
-        cookie.removeItem('usertoken');
-    },
-    write: function (string) {
-        cookie.setItem('usertoken', string);
-    },
-};
+function formatTimeDifference(timestamp) {
+    const now = new Date();
+    const futureDate = new Date(timestamp);
+
+    let diffInSeconds = Math.floor((futureDate - now) / 1000);
+
+    const days = Math.floor(diffInSeconds / (3600 * 24));
+    const hours = Math.floor((diffInSeconds % (3600 * 24)) / 3600);
+    const minutes = Math.floor((diffInSeconds % 3600) / 60);
+
+    let result = '';
+
+    if (days > 0) {
+        result += `${days}天`;
+    }
+    if (hours > 0) {
+        result += `${hours}小时`;
+    }
+    if (minutes > 0) {
+        result += `${minutes}分`;
+    }
+    if (!result) {
+        return '一分钟';
+    }
+
+    return result;
+}
 
 function loginWithPassword(username, password, expiredTime = '7d') {
     fetch(platformUrl + 'api/signin', {
@@ -1394,35 +1194,6 @@ function loginWithPassword(username, password, expiredTime = '7d') {
             }
         });
 }
-
-function loginWithToken(token) {
-    fetch(platformUrl + 'signin', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: objectToForm({
-            token: token,
-        }),
-    })
-        .then((response) => response.json())
-        .then((data) => {
-            if (data.code == 200) {
-                cookie.setItem('usertoken', data.inner.token);
-                return true;
-            } else {
-                return data.message;
-            }
-        });
-}
-
-function getAccountInfo(token) {
-    if (typeof token == 'undefined') {
-        token = cookie.getItem('usertoken');
-    }
-}
-
-function accountLoginIn(username, password, expireTime) {}
 
 function openUserbar(mode) {}
 
@@ -1448,8 +1219,9 @@ function loadPageType() {
     switch (pageType) {
         case '': // home
             virgule(document.querySelector('#jumping'), '## ' + config.siteHelloWords, 20);
-
-            // code
+            break;
+        case 'posts':
+            display.resetTagList();
             break;
         case '404page':
             // code
@@ -1458,7 +1230,7 @@ function loadPageType() {
             highlightNav('friends');
             reorder('#friends-link-box', '.friends-link-item', 0);
             i18n.originMessageBar = `<a onclick="reorder('#friends-link-box','.friends-link-item',300);zoomPics()">重新随机排序&nbsp;<span class="i ri-refresh-line"></span></a>`;
-            addMessageBarQueue(i18n.originMessageBar, 0);
+            message.add(i18n.originMessageBar, 0);
             zoomPics();
             loadComment();
             codeHighlight();
@@ -1470,15 +1242,6 @@ function loadPageType() {
             switchElementContent('#uptime2', getTime('DD', config.siteBirthday), 0);
             break;
         case 'articles-index':
-            i18n.originMessageBar = `<a onclick='openInfoBar("articles-sort")'>更改排序方式&nbsp;<span class="i ri-bar-chart-horizontal-line"></span></a>`;
-            addMessageBarQueue(i18n.originMessageBar, 0);
-            document.querySelectorAll('time').forEach((element) => {
-                element.setAttribute('onclick', 'switchTimeDisplay(this)');
-            });
-            document.querySelector('#showarea').classList.add('loaded');
-            resetFilter();
-            setTimeout(() => checkPageHash());
-            highlightNav('articles');
             break;
         case 'articles-context':
             highlightNav('articles');
@@ -1492,7 +1255,7 @@ function loadPageType() {
             updateTitle();
             resetFilter();
             i18n.originMessageBar = `<a onclick='openInfoBar("menu")'>目录&nbsp;<span class="i ri-list-unordered"></span></a>`;
-            addMessageBarQueue(i18n.originMessageBar, 0);
+            message.add(i18n.originMessageBar, 0);
             if (cookie.getItem('settingEnableUmamiAnalytics') !== 'false') {
                 analysis.getPageVisitors().then((data) => {
                     switchElementContent('#pageVisitors', data['pageviews'].value);
@@ -1523,22 +1286,6 @@ function loadPageType() {
     checkPageHash();
 }
 
-// 错误消息推送
-function showError(text, time = 6000) {
-    addMessageBarQueue(
-        `<a class="red"><strong>错误:${text}</strong>&nbsp;<span class="i ri-alert-line"></span></a>`,
-        time,
-    );
-}
-
-// 警告消息推送
-function showWarn(text, time = 5000) {
-    addMessageBarQueue(
-        `<a class="yellow"><strong>警告:${text}</strong>&nbsp;<span class="i ri-alarm-warning-line"></span></a>`,
-        time,
-    );
-}
-
 // 检查页面锚点
 let isHashWorking = false;
 function checkPageHash() {
@@ -1566,7 +1313,6 @@ function checkPageHash() {
 }
 
 export default {
-    switchMessageBarContent,
     isLayoutMenuOpen,
     openInfoBar,
     toggleThemeMode,
@@ -1576,7 +1322,6 @@ export default {
     musicPlay,
     musicSetting,
     openUserbar,
-    pjaxLoad,
     copy,
     musicSearch,
     musicUpdata,

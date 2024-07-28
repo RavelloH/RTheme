@@ -2,6 +2,7 @@
  * POST /api/post/create
  * WITH Authorization: Bearer <token>
  * WITH title, content, name, tag, category, draft?
+ * NEED role == 'ADMIN' or 'MANAGER'
  */
 
 import prisma from '../../_utils/prisma';
@@ -48,6 +49,15 @@ export async function POST(request) {
             { status: 400 },
         );
     }
+
+    if ( !user.role.includes('ADMIN') && !user.role.includes('MANAGER') ) {
+        return Response.json(
+            {
+                message: '权限不足',
+            },
+            { status: 403 },
+        );
+    }
     if (!(await limitControl.check(request))) {
         return Response.json({ message: '已触发速率限制' }, { status: 429 });
     }
@@ -66,7 +76,7 @@ export async function POST(request) {
                 },
                 ip: ip,
                 userUid: user.uid,
-                published: draft ? false : true,
+                published: draft == "true"  ? false : true,
             },
         });
     } catch (error) {

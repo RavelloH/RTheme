@@ -1,5 +1,9 @@
-// RTheme v3 - display.js
+// RTheme v4 - display.js
 
+import switchElementContent from '../../utils/switchElement.js';
+import cookie from './lib/cookie.js';
+
+let searchWorker;
 // 作品显示
 function workShow(element) {
     document.querySelectorAll('.work-program').forEach((e) => {
@@ -86,7 +90,7 @@ async function getMarkdownToHTML(url, name) {
 
 // 代码高亮
 function codeHighlight() {
-    if (docCookies.getItem('settingEnableCodeHighlight') == 'false') {
+    if (cookie.getItem('settingEnableCodeHighlight') == 'false') {
         return false;
     }
     var codeEl = document.querySelectorAll(
@@ -335,7 +339,7 @@ function switchTimeDisplay(element) {
 
 // 索引数据拉取
 function getSearchData() {
-    if (docCookies.getItem('settingEnableSearchDataGet') == 'false') {
+    if (cookie.getItem('settingEnableSearchDataGet') == 'false') {
         return false;
     }
     if (typeof searchData == 'undefined') {
@@ -345,7 +349,7 @@ function getSearchData() {
                 .then((data) => {
                     if (
                         typeof articlesModel == 'undefined' ||
-                        docCookies.getItem('settingEnableSkipModelTest') == 'true'
+                        cookie.getItem('settingEnableSkipModelTest') == 'true'
                     ) {
                         searchData = data;
                         resolve(data);
@@ -379,42 +383,6 @@ function modelValidator(pageModel, searchModel) {
         }
     }
     return true;
-}
-
-// 搜索
-function search(keyword) {
-    let start = new Date().getTime();
-    if (keyword == '' || keyword == '.') {
-        sortArticles('time');
-        setTimeout(() => resetTagList(), 300);
-        return false;
-    }
-    searchWord = HTMLDecode(keyword);
-    getSearchData().then((data) => {
-        if (typeof searchWorker == 'undefined') {
-            searchWorker = new Worker('../assets/js/worker/search.worker.js');
-        }
-        searchWorker.onmessage = (result) => {
-            let end = new Date().getTime();
-            let data = result.data;
-            switchElementContent('#index-info', `查询操作用时${end - start}MS`, 100);
-            if (data.length == 0) {
-                switchElementContent(
-                    '.listlines',
-                    "<div class='center'><span class='i_small ri-filter-off-line'></span>未找到有关选项。</div>",
-                    0,
-                );
-                return false;
-            }
-            let resultHTML = '';
-            data.forEach((e, index) => {
-                resultHTML += structureSearchResult(e);
-            });
-            switchElementContent('.listlines', resultHTML, 0);
-            resetTagList();
-        };
-        searchWorker.postMessage([data, searchWord]);
-    });
 }
 
 // 搜索初始化
@@ -461,7 +429,7 @@ function searchClose() {
 // 文章旁路推荐
 function loadMoreArticles(path) {
     let data = searchData;
-    if (docCookies.getItem('settingEnableArticlesRecommand') == 'false') {
+    if (cookie.getItem('settingEnableArticlesRecommand') == 'false') {
         return false;
     }
     for (let i = 0; i < data.length; i++) {
@@ -509,7 +477,7 @@ function pageModelObjectCreater(arr) {
 
 // 更新页面模型
 function updatePageModel() {
-    if (docCookies.getItem('settingEnablePageModel') == 'false') {
+    if (cookie.getItem('settingEnablePageModel') == 'false') {
         return false;
     }
     let articlesList = document.querySelectorAll('#viewmap .listprogram');
@@ -559,7 +527,7 @@ function showArticlesInfo(element) {
 
 // 图片重组
 function resetImage() {
-    if (docCookies.getItem('settingEnableImgReset') == 'false') {
+    if (cookie.getItem('settingEnableImgReset') == 'false') {
         return false;
     }
     document.querySelectorAll('#articles-body img').forEach((element) => {
@@ -576,7 +544,7 @@ function resetImage() {
 
 // 加载高级超链接
 function loadBox() {
-    if (docCookies.getItem('settingEnableAdvanceLink') == 'false') {
+    if (cookie.getItem('settingEnableAdvanceLink') == 'false') {
         return false;
     }
     loadLinkBox();
@@ -634,7 +602,7 @@ function loadDownloadBox() {
 
 // 标题重组
 function updateTitle() {
-    if (docCookies.getItem('settingEnableUpdateMenu') == 'false') {
+    if (cookie.getItem('settingEnableUpdateMenu') == 'false') {
         return false;
     }
     document
@@ -694,7 +662,7 @@ function updateMenu() {
 
 // 预加载图片
 function prefetchImg() {
-    if (docCookies.getItem('settingEnableImgPrefetch') == 'false') {
+    if (cookie.getItem('settingEnableImgPrefetch') == 'false') {
         return false;
     }
     document.querySelectorAll('#viewmap img').forEach((element) => {
@@ -728,7 +696,7 @@ function getHeightDifferent(element) {
 
 // 目录高亮
 function highlightMenu() {
-    if (docCookies.getItem('settingEnableMenuHighlight') == 'false') {
+    if (cookie.getItem('settingEnableMenuHighlight') == 'false') {
         return false;
     }
     document.querySelectorAll('#articles-menu *.active').forEach((element) => {
@@ -852,3 +820,12 @@ function sortArticles(mode) {
         resetTagList();
     }, 300);
 }
+
+// 检测宽度超出
+function isEllipsisActive(e) {
+    return e.offsetWidth < e.scrollWidth;
+}
+
+export default {
+    resetTagList,
+};
