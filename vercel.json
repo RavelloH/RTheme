@@ -3,7 +3,6 @@
         "silent": true
     },
     "cleanUrls": true,
-    "trailingSlash": true,
     "headers": [
         {
             "source": "/(.*).(ttf|woff|woff2)",
