@@ -1518,7 +1518,7 @@ img.loaderror::before {
     width: 3rem;
     height: 3rem;
     border-radius: 5px;
-    background-image: url('../images/music.jpg');
+    background-image: url('../../../public/music.jpg');
     background-size: 3rem 3rem;
 }
 
