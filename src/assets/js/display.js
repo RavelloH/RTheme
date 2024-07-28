@@ -264,10 +264,10 @@ function imgError(element) {
     }
     element.setAttribute('error', 'true');
     if (element.getAttribute('type') == 'avatar') {
-        element.src = '/assets/images/user.jpg';
+        element.src = '/user.jpg';
         return;
     }
-    element.src = '/assets/images/broke.jpg';
+    element.src = '/broke.jpg';
 }
 
 // 重置作品列表
