@@ -1,20 +1,20 @@
 const config = {
-    siteName: "RavelloH's Blog", // 站点名
-    siteShortname: "RH's Blog", // 站点简称
-    author: 'RavelloH', // 作者名
-    description: "RavelloH's Blog", // 站点描述
-    sign: 'Debug the life.', // 站点签名
-    siteURL: 'https://ravelloh.top/', // 站点地址,带有尾缀斜杠
+    siteName: "Lonelleaf's Blog", // 站点名
+    siteShortname: "LLeaf's Blog", // 站点简称
+    author: 'Lonelleaf', // 作者名
+    description: "Lonelleaf's Blog", // 站点描述
+    sign: 'Be Happy.', // 站点签名
+    siteURL: 'https://lonelleaf.top/', // 站点地址,带有尾缀斜杠
     pwaStartURL: '/?mode=pwa', // PWA启动地址
     iconImage: 'icon.png', // 站点图标
-    githubUserName: 'RavelloH', // github用户名
+    githubUserName: 'Lonelleaf', // github用户名
     mail: 'ravelloh@outlook.com', // 邮箱
     copyrightStartTime: '2019', // 建站开始年份
     siteBirthday: '2/03/2019 20:52:00', // 站点建立时间
-    siteHelloWords: 'Welcome to here and fell free to check it out ...', // 站点欢迎语
+    siteHelloWords: '孤凡欢迎诸位。', // 站点欢迎语
     defaultScript: '<script>function main(){}</script>', // 默认站点脚本
     remotePath: '', // 远程资源路径，主站点不填
-    trustDomain: ['ravelloh.top'],
+    trustDomain: ['lonelleaf.top'],
     musicApiList: ['https://music.api.ravelloh.top/cloudsearch?keywords='],
     nav: [
         // 菜单导航设置
