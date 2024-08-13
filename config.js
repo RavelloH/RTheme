@@ -8,7 +8,7 @@ const config = {
     pwaStartURL: '/?mode=pwa', // PWA启动地址
     iconImage: 'icon.png', // 站点图标
     githubUserName: 'Lonelleaf', // github用户名
-    mail: 'ravelloh@outlook.com', // 邮箱
+    mail: '2468360006@qq.com', // 邮箱
     copyrightStartTime: '2019', // 建站开始年份
     siteBirthday: '2/03/2019 20:52:00', // 站点建立时间
     siteHelloWords: '孤凡欢迎诸位。', // 站点欢迎语
