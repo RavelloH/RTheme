@@ -5,7 +5,7 @@ const post = await getDB('post');
 const tag = await getDB('tag');
 const category = await getDB('category');
 
-console.log(tag);
+// console.log(tag);
 
 const siteURL = config.siteURL;
 
