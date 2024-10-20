@@ -16,8 +16,54 @@ import Userbar from '@/components/Userbar.jsx';
 import '@/assets/js/Global';
 
 export const metadata = {
-    title: config.siteName,
+    title: {
+        template: '%s | ' + config.siteName,
+        default: config.siteName,
+    },
+    siteName: config.siteName,
+    generator: 'RTheme',
+    referrer: 'origin-when-cross-origin',
     description: config.description,
+    metadataBase: new URL(config.siteURL),
+    alternates: {
+        types: {
+            'application/rss+xml': [{ url: 'feed.xml', title: 'RSS 订阅' }],
+        },
+    },
+    openGraph: {
+        title: {
+            template: '%s | ' + config.siteName,
+            default: config.siteName,
+        },
+        description: config.description,
+        siteName: config.siteName,
+        images: [
+            {
+                url: `${config.screenshotApi}?url=${config.siteURL}&viewport=1600x800&waitUntil=networkidle0`,
+                height: 800,
+            },
+            {
+                url: `${config.screenshotApi}?url=${config.siteURL}&viewport=600x800&waitUntil=networkidle0`,
+                width: 600,
+                height: 800,
+            },
+        ],
+        locale: config.lang,
+        type: 'website',
+    },
+    twitter: {
+        card: "summary_large_image",
+        title: {
+            template: '%s | ' + config.siteName,
+            default: config.siteName,
+        },
+        description: config.siteName,
+        creator: config.twitterUsername,
+        images: {
+            url: `${config.screenshotApi}?url=${config.siteURL}&viewport=1600x800&waitUntil=networkidle0`,
+            alt: config.siteShortname+"'s Screenshot",
+        },
+    },
 };
 
 export default function RootLayout({ children }) {
