@@ -13,7 +13,6 @@
     "@vercel/analytics": "^1.3.1",
     "@vercel/speed-insights": "^1.0.12",
     "argon2": "^0.31.0",
-    "ref-napi": "^3.0.3",
     "instant.page": "^5.2.0",
     "js-base64": "^3.7.7",
     "jsonwebtoken": "^9.0.2",
@@ -23,7 +22,9 @@
     "qs": "^6.12.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "ref-napi": "^3.0.3",
     "remixicon": "^4.3.0",
+    "rss": "^1.2.2",
     "sharp": "^0.33.4",
     "vditor": "^3.10.4",
     "virgule-js": "^2.1.0"

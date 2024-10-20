@@ -6,6 +6,7 @@ const config = {
     sign: 'Debug the life.', // 站点签名
     siteURL: 'https://ravelloh.top/', // 站点地址,带有尾缀斜杠
     pwaStartURL: '/?mode=pwa', // PWA启动地址
+    lang: 'zh-CN', // 站点语言
     iconImage: 'icon.png', // 站点图标
     githubUserName: 'RavelloH', // github用户名
     mail: 'ravelloh@outlook.com', // 邮箱
@@ -16,6 +17,8 @@ const config = {
     remotePath: '', // 远程资源路径，主站点不填
     trustDomain: ['ravelloh.top'],
     musicApiList: ['https://music.api.ravelloh.top/cloudsearch?keywords='],
+    screenshotApi: "https://screenshot.ravelloh.top/",
+    twitterUsername: "@ravelohh",
     nav: [
         // 菜单导航设置
         {
