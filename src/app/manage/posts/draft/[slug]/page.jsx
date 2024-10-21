@@ -160,6 +160,6 @@ export async function generateMetadata({ params }) {
         return config.siteName;
     }
     return {
-        title: post.title + ' | ' + config.siteName,
+        title: post.title,
     };
 }

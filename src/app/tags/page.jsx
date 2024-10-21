@@ -2,8 +2,7 @@ import config from '@/../config';
 import prisma from '@/app/api/_utils/prisma';
 
 export const metadata = {
-    title: '标签 \\ Tags | ' + config.siteName,
-    description: '欢迎来到我的博客，这里可以找到我的文章和作品。',
+    title: '标签 \\ Tags',
 };
 
 const postslength = await prisma.post.count();

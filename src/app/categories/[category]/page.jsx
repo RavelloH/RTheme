@@ -1,6 +1,5 @@
 import prisma from '@/app/api/_utils/prisma';
 
-import config from '@/../config';
 
 function formatDate(dateStr) {
     var date = new Date(dateStr);
@@ -111,7 +110,7 @@ export async function generateMetadata({ params }) {
     });
     await prisma.$disconnect();
     return {
-        title: '分类:' + categoryItem.name + ' | ' + config.siteName,
+        title: '分类:' + categoryItem.name,
     };
 }
 

@@ -4,8 +4,7 @@ import config from '@/../config';
 import Search from '@/components/Search';
 
 export const metadata = {
-    title: '文稿 \\ Posts | ' + config.siteName,
-    description: '欢迎来到我的博客，这里可以找到我的文章和作品。',
+    title: '文稿 \\ Posts',
 };
 
 function formatDate(dateStr) {

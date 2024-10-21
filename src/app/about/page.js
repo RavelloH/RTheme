@@ -6,8 +6,7 @@ import RunningTime from '@/components/RunnningTime';
 // import doc from "../../../origin/about/about.mdx"
 
 export const metadata = {
-    title: '关于 \\ About | ' + config.siteName,
-    description: '欢迎来到我的博客，这里可以找到我的文章和作品。',
+    title: "关于 \\ About",
 };
 
 const components = { RunningTime };
