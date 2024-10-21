@@ -31,6 +31,9 @@ let links = [
 ];
 
 post.forEach((p) => {
+    if (!p.published) {
+        return;
+    }
     links.unshift({
         url: `${siteURL}posts/${p.name}`,
         lastModified: p.updatedAt,
