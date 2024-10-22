@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["fullTextSearch"]
 }
 
@@ -36,15 +36,21 @@ model User {
 }
 
 model Comment {
-  id        String   @id @default(uuid())
-  content   String   @db.VarChar(1000)
-  createdAt DateTime @default(now())
-  postUid   String?
-  noteUid   String?
-  userUid   Int
-  post      Post?    @relation(fields: [postUid], references: [id])
-  note      Note?    @relation(fields: [noteUid], references: [id])
-  user      User     @relation(fields: [userUid], references: [uid])
+  id            String    @id @default(uuid())
+  content       String    @db.VarChar(1000)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  postUid       String?
+  noteUid       String?
+  commentUid    String?
+  userUid       Int
+  likeUserUid   Int[]
+  post          Post?     @relation(fields: [postUid], references: [id])
+  note          Note?     @relation(fields: [noteUid], references: [id])
+  user          User      @relation(fields: [userUid], references: [uid])
+  parentComment Comment?  @relation("CommentReplies", fields: [commentUid], references: [id])
+  replies       Comment[] @relation("CommentReplies")
+  childReplay   Boolean   @default(false)
 }
 
 model Message {
