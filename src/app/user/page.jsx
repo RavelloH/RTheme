@@ -56,6 +56,22 @@ function dynamic(userinfo) {
             ),
         }),
     );
+    userinfo.comment.forEach((comment) => {
+        dynamicList.push({
+            time: comment.createdAt,
+            link: "#",
+            message: (
+                <div>
+                    <p style={{ maxWidth: '100%' }}>
+                        <span className='ri-time-fill'></span>{' '}
+                        <span>{formatDateWithTimeZone(comment.createdAt, -8)}</span> &gt;
+                        评论了文稿：{comment.content.slice(0, 30)}...
+                    </p>
+                    <hr className='light' />
+                </div>
+            ),
+        });
+    })
     dynamicList.sort((a, b) => new Date(b.time) - new Date(a.time));
     let resultList = [];
     dynamicList.forEach((item) =>
