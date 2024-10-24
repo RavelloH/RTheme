@@ -30,6 +30,14 @@ export async function GET(request) {
                 },
                 include: {
                     replies: true,
+                    user: {
+                        select: {
+                            uid: true,
+                            username: true,
+                            nickname: true,
+                            avatar: true,
+                        },
+                    },
                 },
             });
             result = result.concat(comments);

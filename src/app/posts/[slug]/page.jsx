@@ -122,7 +122,7 @@ export default async function Post(params) {
                 {(post.createdAt !== post.updatedAt) ? <span><span className='ri-edit-box-line'></span> 最后编辑于 {formatDateWithTimeZone(post.updatedAt,-8)}</span> : ""}
                 <div id='blockchain-data' className='center'>
                     <br />
-                    <span className='barcode one-line'>{Base64.encode(post.name)}</span>
+                    <span className='barcode one-line'>{post.id}</span>
                 </div>
                 <PostSuggestion name={post.name} />
                 <br />
