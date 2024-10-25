@@ -137,7 +137,6 @@ export default async function DraftContent(params) {
                 </div>
                 <br />
                 <br />
-                <Comment />
             </div>
         </article>
     );
