@@ -3,7 +3,7 @@
  * WITH PARAM postUid/noteUid/commentUid
  * RETURN Array[{id,content,createdAt,updatedAt,likeUserUid,user}]
  */
-
+const md = require('markdown-it')();
 import prisma from '../../_utils/prisma';
 import limitControl from '../../_utils/limitControl';
 
@@ -51,5 +51,12 @@ export async function GET(request) {
     if (commentUid != null) await fetchComments(commentUid, 'commentUid');
 
     limitControl.update(request);
+    // markdown渲染
+    for (const comment of result) {
+        comment.content = md.render(comment.content);
+        for (const reply of comment.replies) {
+            reply.content = md.render(reply.content);
+        }
+    }
     return Response.json(result, { status: 200 });
 }
