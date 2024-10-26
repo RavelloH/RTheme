@@ -2112,7 +2112,7 @@ pre:has(span) {
 code {
     font-family: IBMPlex, Consolas, Monaco, courier, monospace;
     line-height: initial;
-    padding: 0.1em 0.4em;
+    /* padding: 0.1em 0.4em; */
     margin: 0;
     font-size: 85%;
     white-space: break-spaces;
