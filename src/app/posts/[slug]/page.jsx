@@ -11,7 +11,7 @@ import { Base64 } from 'js-base64';
 import Shiki from '@shikijs/markdown-it';
 import MarkdownIt from 'markdown-it';
 
-const md = MarkdownIt();
+const md = MarkdownIt({ html: true });
 md.use(
     await Shiki({
         themes: {
