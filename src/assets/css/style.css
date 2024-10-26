@@ -2083,7 +2083,7 @@ pre:not(#vditor pre) {
     overflow: auto;
 }
 
-pre span:not(span[highlight], span[class*='hljs'], #vditor span) {
+/* pre span:not(span[highlight], span[class*='hljs'], #vditor span) {
     display: block;
     line-height: 1.8rem;
     white-space: pre;
@@ -2103,7 +2103,7 @@ pre span:not(span[highlight], span[class*='hljs'], #vditor span):before {
 
 pre span:not(span[highlight], span[class*='hljs']):hover:before {
     color: #c6c9ce;
-}
+} */
 
 pre:has(span) {
     white-space: normal;
@@ -2119,11 +2119,11 @@ code {
     border-radius: 6px;
 }
 
-pre code {
+/* pre code {
     padding: 0.1em 0;
     color: rgb(201, 209, 217);
     background-color: #2d2d2d;
-}
+} */
 
 .article code:not(pre code),
 #markdown-area code:not(pre code) {
@@ -2617,7 +2617,7 @@ a.tag,
 
 code {
     line-height: initial;
-    padding: 0.1em 0.4em;
+    /* padding: 0.1em 0.4em; */
     margin: 0;
     font-size: 85%;
     white-space: break-spaces;

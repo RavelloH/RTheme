@@ -8,6 +8,18 @@ import formatDateWithTimeZone from '@/utils/time';
 import { cookies } from 'next/headers';
 import NotFound from '@/app/not-found';
 import tokenServer from '@/app/api/_utils/token';
+import Shiki from '@shikijs/markdown-it';
+import MarkdownIt from 'markdown-it';
+
+const md = MarkdownIt();
+md.use(
+    await Shiki({
+        themes: {
+            light: 'dark-plus',
+            dark: 'dark-plus',
+        },
+    }),
+);
 let title;
 
 function createCategory(arr) {
@@ -101,7 +113,7 @@ export default async function DraftContent(params) {
             </div>
 
             <div id='articles-body'>
-                <MDXRemote source={post.content.replaceAll('{', '\\{')} components={{ a: Link }} />
+            <div dangerouslySetInnerHTML={{ __html: md.render(post.content) }} />
             </div>
             <div id='articles-footer'>
                 <hr />

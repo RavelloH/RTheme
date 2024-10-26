@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@prisma/client": "5.16.2",
+    "@shikijs/markdown-it": "^1.22.1",
     "@vercel/analytics": "^1.3.1",
     "@vercel/speed-insights": "^1.0.12",
     "argon2": "^0.31.0",
@@ -33,6 +34,7 @@
   "devDependencies": {
     "eslint": "^8",
     "eslint-config-next": "14.2.5",
-    "prisma": "^5.16.2"
+    "prisma": "^5.16.2",
+    "shiki": "^1.22.1"
   }
 }

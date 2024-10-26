@@ -8,6 +8,18 @@ import Image from 'next/image';
 import formatDateWithTimeZone from '@/utils/time';
 import NotFound from '@/app/not-found';
 import { Base64 } from 'js-base64';
+import Shiki from '@shikijs/markdown-it';
+import MarkdownIt from 'markdown-it';
+
+const md = MarkdownIt();
+md.use(
+    await Shiki({
+        themes: {
+            light: 'dark-plus',
+            dark: 'dark-plus',
+        },
+    }),
+);
 
 let title;
 
@@ -105,13 +117,16 @@ export default async function Post(params) {
             </div>
 
             <div id='articles-body'>
-                <MDXRemote source={post.content.replaceAll('{', '\\{')} components={{ a: Link }} />
+                <div dangerouslySetInnerHTML={{ __html: md.render(post.content) }} />
             </div>
             <div id='articles-footer'>
                 <hr />
                 <div className='articles-footer-cc'>
                     <span className='i_small ri-information-line'></span> 原创内容使用{' '}
-                    <a href='https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans' target='_blank' className='no-effect'>
+                    <a
+                        href='https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans'
+                        target='_blank'
+                        className='no-effect'>
                         <span className='ri-creative-commons-line'></span>
                         <span className='ri-creative-commons-nc-line'></span>
                         <span className='ri-creative-commons-nd-line'></span>知识共享
@@ -119,7 +134,14 @@ export default async function Post(params) {
                     </a>
                     协议授权。转载请注明出处。
                 </div>
-                {(post.createdAt !== post.updatedAt) ? <span><span className='ri-edit-box-line'></span> 最后编辑于 {formatDateWithTimeZone(post.updatedAt,-8)}</span> : ""}
+                {post.createdAt !== post.updatedAt ? (
+                    <span>
+                        <span className='ri-edit-box-line'></span> 最后编辑于{' '}
+                        {formatDateWithTimeZone(post.updatedAt, -8)}
+                    </span>
+                ) : (
+                    ''
+                )}
                 <div id='blockchain-data' className='center'>
                     <br />
                     <span className='barcode one-line'>{post.id}</span>
@@ -147,9 +169,9 @@ export async function generateMetadata({ params }) {
     });
     await prisma.$disconnect();
     if (!post) {
-        return  config.siteName
+        return config.siteName;
     }
     return {
-        title: post.title
+        title: post.title,
     };
 }
