@@ -1,6 +1,8 @@
 import prisma from '@/app/api/_utils/prisma';
 import config from '@/../config';
 import { MDXRemote } from 'next-mdx-remote/rsc';
+import { getHighlighter } from 'shiki';
+import remarkShikiTwoslash from 'remark-shiki-twoslash';
 import Comment from '@/components/Comment';
 import PostSuggestion from '@/components/PostSuggeston';
 import Link from 'next/link';
@@ -8,34 +10,6 @@ import formatDateWithTimeZone from '@/utils/time';
 import { cookies } from 'next/headers';
 import NotFound from '@/app/not-found';
 import tokenServer from '@/app/api/_utils/token';
-import Shiki from '@shikijs/markdown-it';
-import MarkdownIt from 'markdown-it';
-
-// 初始化 markdown-it
-const md = MarkdownIt({ html: true });
-
-// 使用缓存机制
-const cache = new Map();
-
-async function renderMarkdown(content) {
-    if (cache.has(content)) {
-        return cache.get(content);
-    }
-
-    // 使用 Shiki 插件
-    md.use(
-        await Shiki({
-            themes: {
-                light: 'dark-plus',
-                dark: 'dark-plus',
-            },
-        }),
-    );
-
-    const result = md.render(content);
-    cache.set(content, result);
-    return result;
-}
 
 let title;
 
@@ -47,7 +21,7 @@ function createCategory(arr) {
         }
         return element;
     });
-    return <sapn className='class'>{joinedElements}</sapn>;
+    return <span className='class'>{joinedElements}</span>;
 }
 
 function createTag(arr) {
@@ -90,28 +64,17 @@ export default async function DraftContent(params) {
     }
 
     const { slug } = params.params;
-
-    // 并行处理数据库查询和Markdown渲染
-    const [post, shiki] = await Promise.all([
-        prisma.post.findFirst({
-            where: {
-                name: slug,
-                published: false,
-                userUid: user.uid,
-            },
-            include: {
-                category: true,
-                tag: true,
-            },
-        }),
-        Shiki({
-            themes: {
-                light: 'dark-plus',
-                dark: 'dark-plus',
-            },
-        }),
-    ]);
-
+    const post = await prisma.post.findFirst({
+        where: {
+            name: slug,
+            published: false,
+            userUid: user.uid,
+        },
+        include: {
+            category: true,
+            tag: true,
+        },
+    });
     await prisma.$disconnect();
 
     if (!post) {
@@ -119,6 +82,10 @@ export default async function DraftContent(params) {
     }
 
     title = post.title;
+
+    // 使用 Shiki 高亮代码
+    const highlighter = await getHighlighter({ theme: 'nord' });
+    const highlightedContent = await highlighter.codeToHtml(post.content, { lang: 'markdown' });
 
     return (
         <article>
@@ -134,14 +101,13 @@ export default async function DraftContent(params) {
                     {createCategory(post.category)} {' • '}
                     <span className='ri-t-box-line'></span>{' '}
                     <span id='textLength'>{post.content.length}字</span>
-                    {/* {' • '}<span className='ri-search-eye-line'></span> <span id='pageVisitors'>---</span> */}
                 </p>
                 {createTag(post.tag)}
                 <hr />
             </div>
 
             <div id='articles-body'>
-                <div dangerouslySetInnerHTML={{ __html: await renderMarkdown(post.content) }} />
+                <MDXRemote source={highlightedContent} components={{ a: Link }} />
             </div>
             <div id='articles-footer'>
                 <hr />
