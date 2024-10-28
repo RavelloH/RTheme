@@ -1,8 +1,6 @@
 import prisma from '@/app/api/_utils/prisma';
 import config from '@/../config';
 import { MDXRemote } from 'next-mdx-remote/rsc';
-import { getHighlighter } from 'shiki';
-import remarkShikiTwoslash from 'remark-shiki-twoslash';
 import Comment from '@/components/Comment';
 import PostSuggestion from '@/components/PostSuggeston';
 import Link from 'next/link';
@@ -10,7 +8,6 @@ import formatDateWithTimeZone from '@/utils/time';
 import { cookies } from 'next/headers';
 import NotFound from '@/app/not-found';
 import tokenServer from '@/app/api/_utils/token';
-
 let title;
 
 function createCategory(arr) {
@@ -21,7 +18,7 @@ function createCategory(arr) {
         }
         return element;
     });
-    return <span className='class'>{joinedElements}</span>;
+    return <sapn className='class'>{joinedElements}</sapn>;
 }
 
 function createTag(arr) {
@@ -83,10 +80,6 @@ export default async function DraftContent(params) {
 
     title = post.title;
 
-    // 使用 Shiki 高亮代码
-    const highlighter = await getHighlighter({ theme: 'nord' });
-    const highlightedContent = await highlighter.codeToHtml(post.content, { lang: 'markdown' });
-
     return (
         <article>
             <div id='articles-header'>
@@ -101,13 +94,14 @@ export default async function DraftContent(params) {
                     {createCategory(post.category)} {' • '}
                     <span className='ri-t-box-line'></span>{' '}
                     <span id='textLength'>{post.content.length}字</span>
+                    {/* {' • '}<span className='ri-search-eye-line'></span> <span id='pageVisitors'>---</span> */}
                 </p>
                 {createTag(post.tag)}
                 <hr />
             </div>
 
             <div id='articles-body'>
-                <MDXRemote source={highlightedContent} components={{ a: Link }} />
+                <MDXRemote source={post.content.replaceAll('{', '\\{')} components={{ a: Link }} />
             </div>
             <div id='articles-footer'>
                 <hr />
