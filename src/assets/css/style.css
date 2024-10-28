@@ -3386,3 +3386,7 @@ span {
 #user-actions > a {
     width: 93%;
 }
+
+.vditor-reset ol, .vditor-reset ul {
+    color: white;
+}
