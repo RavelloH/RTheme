@@ -101,7 +101,7 @@ export default async function DraftContent(params) {
             </div>
 
             <div id='articles-body'>
-                <MDXRemote source={post.content.replaceAll('{', '\\{')} components={{ a: Link }} />
+                <MDXRemote source={post.content} components={{ a: Link }} />
             </div>
             <div id='articles-footer'>
                 <hr />
