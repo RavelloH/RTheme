@@ -21,13 +21,13 @@ category.forEach((c) => {
 });
 export async function GET() {
     const feed = new RSS({
-        title: config.title,
+        title: config.name,
         description: config.description,
         feed_url: `${config.siteURL}feed.xml`,
         site_url: config.siteURL,
-        image_url: config.iconImage,
+        image_url: `${config.siteURL}${config.iconImage}`,
         managingEditor: config.author,
-        webMaster: config.webMaster,
+        webMaster: config.author,
         copyright: `${config.copyrightStartTime} - ${new Date().getFullYear()} ${config.author}`,
         language: config.lang,
         categories: categories,
