@@ -1,6 +1,18 @@
 import RSS from 'rss';
 import config from '../../../config';
 import getDB from '@/utils/db';
+import Shiki from '@shikijs/markdown-it';
+import MarkdownIt from 'markdown-it';
+
+const md = MarkdownIt({ html: true });
+md.use(
+    await Shiki({
+        themes: {
+            light: 'dark-plus',
+            dark: 'dark-plus',
+        },
+    }),
+);
 
 const category = await getDB('category');
 const categories = [];
@@ -34,7 +46,7 @@ export async function GET() {
             title: post.title,
             guid: post.id,
             url: `${config.siteName}posts/${post.name}`,
-            description: post.content,
+            description: md.render(post.content),
             date: new Date(post.createdAt),
         });
     });
