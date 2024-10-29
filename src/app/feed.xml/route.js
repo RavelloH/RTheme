@@ -21,7 +21,7 @@ category.forEach((c) => {
 });
 export async function GET() {
     const feed = new RSS({
-        title: config.name,
+        title: config.siteName,
         description: config.description,
         feed_url: `${config.siteURL}feed.xml`,
         site_url: config.siteURL,
