@@ -2,7 +2,7 @@
 
 # RTheme - v4
 
-新一代现代化极客风多功能横版博客系统 - 基于Nextjs
+新一代现代化极客风多功能横版博客系统 - 基于Next.js
 
 // Next-gen modern geeky versatile horizontal blog system - Powered by Nextjs. //  
 
