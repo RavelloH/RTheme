@@ -5,7 +5,7 @@ const rlog = new RLog();
 
 // 初始化:强制同步数据库
 try {
-    const stdout = execSync('npx prisma migrate dev --name init');
+    const stdout = execSync('npx prisma migrate deploy --name init');
     rlog.success(`Success: ${stdout.toString()}`);
 } catch (error) {
     rlog.error(`Error: ${error.message}`);
