@@ -38,7 +38,7 @@ function createTag(arr) {
 }
 
 export default async function DraftContent(params) {
-    const cookieStore = cookies().get('usertoken');
+    const cookieStore = (await cookies()).get('usertoken');
     if (!cookieStore) {
         return (
             <div className='texts full overflow center'>
@@ -60,7 +60,7 @@ export default async function DraftContent(params) {
         );
     }
 
-    const { slug } = params.params;
+    const { slug } = (await params.params);
     const post = await prisma.post.findFirst({
         where: {
             name: slug,
@@ -142,7 +142,8 @@ export default async function DraftContent(params) {
     );
 }
 
-export async function generateMetadata({ params }) {
+export async function generateMetadata(props) {
+    const params = await props.params;
     const { slug } = params;
     const post = await prisma.post.findFirst({
         where: {

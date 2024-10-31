@@ -5,8 +5,8 @@ import NotFound from '@/app/not-found';
 import Deleter from '@/components/Deleter';
 
 export default async function EditPostPage(params) {
-    const { slug } = params.params;
-    const cookieStore = cookies().get('usertoken');
+    const { slug } = (await params.params);
+    const cookieStore = (await cookies()).get('usertoken');
     if (!cookieStore) {
         return (
             <div className='texts full overflow center'>

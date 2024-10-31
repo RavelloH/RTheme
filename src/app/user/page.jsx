@@ -89,9 +89,10 @@ function dynamic(userinfo) {
     return resultList;
 }
 
-export default async function User({ searchParams }) {
+export default async function User(props) {
+    const searchParams = await props.searchParams;
     const { uid } = searchParams;
-    const cookieStore = cookies().get('usertoken');
+    const cookieStore = (await cookies()).get('usertoken');
 
     if (!cookieStore && uid) {
         const userinfo = await prisma.user.findUnique({

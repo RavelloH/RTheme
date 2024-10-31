@@ -40,7 +40,8 @@ function createTag(arr) {
     return <p className='class'>{joinedElements}</p>;
 }
 
-export default async function Posts({ params }) {
+export default async function Posts(props) {
+    const params = await props.params;
     const tag = decodeURIComponent(params.tag);
     const posts = await prisma.post.findMany({
         where: {
@@ -102,7 +103,8 @@ export default async function Posts({ params }) {
     );
 }
 
-export async function generateMetadata({ params }) {
+export async function generateMetadata(props) {
+    const params = await props.params;
     const { tag } = params;
     const categoryItem = await prisma.tag.findFirst({
         where: {

@@ -48,7 +48,7 @@ function createTag(arr) {
 }
 
 export default async function Draft() {
-    const cookieStore = cookies().get('usertoken');
+    const cookieStore = (await cookies()).get('usertoken');
     if (!cookieStore) {
         return (
             <div className='texts full overflow center'>

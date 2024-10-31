@@ -77,7 +77,7 @@ function createTag(arr) {
 }
 
 export default async function Post(params) {
-    const { slug } = params.params;
+    const { slug } = (await params.params);
     const post = await prisma.post.findFirst({
         where: {
             name: slug,
@@ -155,7 +155,8 @@ export default async function Post(params) {
     );
 }
 
-export async function generateMetadata({ params }) {
+export async function generateMetadata(props) {
+    const params = await props.params;
     const { slug } = params;
     const post = await prisma.post.findFirst({
         where: {

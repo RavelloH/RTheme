@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node script/check.js && next dev",
+    "dev": "node script/check.js && next dev --turbopack",
     "build": "node script/check.js && next build",
     "start": "next start",
     "lint": "next lint"
@@ -18,12 +18,12 @@
     "js-base64": "^3.7.7",
     "jsonwebtoken": "^9.0.2",
     "markdown-it": "^14.1.0",
-    "next": "14.2.5",
+    "next": "15.0.2",
     "next-mdx-remote": "^5.0.0",
     "pjax": "^0.2.8",
     "qs": "^6.13.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "19.0.0-rc-02c0e824-20241028",
+    "react-dom": "19.0.0-rc-02c0e824-20241028",
     "ref-napi": "^3.0.3",
     "remixicon": "^4.5.0",
     "rlog-js": "^1.4.0",
@@ -34,7 +34,7 @@
   },
   "devDependencies": {
     "eslint": "^8.57.1",
-    "eslint-config-next": "14.2.5",
+    "eslint-config-next": "15.0.2",
     "prisma": "^5.21.1",
     "shiki": "^1.22.2"
   }
