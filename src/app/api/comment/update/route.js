@@ -97,7 +97,9 @@ export async function POST(request) {
                 return Response.json({ message: '请提供唯一的参数' }, { status: 400 });
             }
             // 请求新信息
-            console.log(filteredObject);
+            if (filteredObject.content.replaceAll(" ","") < 1) {
+                return Response.json({ message: '评论不能为空' }, { status: 400 });
+            }
             try {
                 if (filteredObject.id) {
                     // 有id: 查找并验证user
