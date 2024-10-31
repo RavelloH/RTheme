@@ -245,6 +245,15 @@ function submit(mode) {
                 }
                 localStorage.clear();
                 window.vditor.destroy();
+
+                // Trigger Vercel build
+                fetch('/api/vercel/build', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: 'Bearer ' + token.get(),
+                    },
+                });
             } else {
                 if (mode == 'publish') {
                     switchElementContent('#publish-button span', data.message);
