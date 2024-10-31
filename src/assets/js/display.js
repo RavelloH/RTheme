@@ -826,6 +826,8 @@ function isEllipsisActive(e) {
     return e.offsetWidth < e.scrollWidth;
 }
 
-export default {
+const displayModule = {
     resetTagList,
 };
+
+export default displayModule;

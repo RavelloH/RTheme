@@ -64,7 +64,7 @@ export default function Userbar() {
             </div>
             <div id='userbar-context' className='overflow'>
                 <div id='user-info'>
-                    <img id='user-avatar' src={'/user.jpg'} alt='User avatar' />
+                    <image id='user-avatar' src={'/user.jpg'} alt='User avatar' />
                     <div id='user-describe'>
                         <span id='user-name'>未登录</span>
                         <span id='user-bio'>未设置描述...</span>

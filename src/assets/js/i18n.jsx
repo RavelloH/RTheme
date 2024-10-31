@@ -808,7 +808,7 @@ function structureUptime(name, status, url, index) {
     );
 }
 
-export default {
+const i18nModule = {
     collator,
     structurePrograssBar,
     originIconsLeftContext,
@@ -844,3 +844,5 @@ export default {
     structureInfobarFeed,
     structureUptime,
 };
+
+export default i18nModule;

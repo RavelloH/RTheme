@@ -7,7 +7,7 @@ export default function Header() {
         <header>
             <div id='logo' className='loading' style={{ '--i': 1 }}>
                 <a href='#userbar'>
-                    <img
+                    <image
                         id='avatar'
                         className='no-zoom'
                         src='/avatar.jpg'
