@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "prisma generate && next dev",
-    "build": "prisma generate && next build",
+    "dev": "prisma generate && node sync-database.js && next dev",
+    "build": "prisma generate && node sync-database.js && next build",
     "start": "next start",
     "lint": "next lint"
   },
