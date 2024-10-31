@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import '../assets/css/Comment.css';
@@ -6,6 +7,7 @@ import token from '@/utils/token';
 import objectToForm from '@/utils/objectToForm';
 import switchElementContent from '@/utils/switchElement';
 import { useEffect } from 'react';
+import Image from 'next/image';
 
 function timeParse(time) {
     const date = new Date(time);
@@ -20,9 +22,10 @@ function timeParse(time) {
 
 function commentInit() {
     // 确保只运行一次
-    if (document.getElementById('comment-history')) {
+    if (window.commentInitialized) {
         return;
     } else {
+        window.commentInitialized = true;
         const commentHistory = document.createElement('div');
         commentHistory.id = 'comment-history';
         document.body.appendChild(commentHistory);
@@ -69,7 +72,7 @@ function getComment() {
     // 提示加载中
     const commentList = document.getElementById('comment-list');
     commentList.innerHTML = `<div class='square-loader'><span></span><span></span><span></span><span></span><span></span></div>`;
-    const comment = fetch(
+    fetch(
         `/api/comment/read?postUid=${document.querySelector('.barcode.one-line').innerHTML}`,
         {
             method: 'GET',
@@ -83,36 +86,42 @@ function getComment() {
             if (data) {
                 if (data.length > 0) {
                     const commentList = document.getElementById('comment-list');
+                    let resultList = [];
                     data.forEach((comment) => {
                         const commentItem = document.createElement('div');
                         commentItem.className = 'comment-item';
-                        commentItem.innerHTML = `
-                        <a class='comment-item-header no-effect' href='/user?uid=${
-                            comment.user.uid
-                        }'>
-                            <img class='comment-item-avatar' src='${comment.user.avatar || "/user.jpg"}' />
-                            <div>
-                                <span class='comment-item-nickname'>${
-                                    comment.user.nickname
-                                }</span><br/>
-                                <span class='comment-item-username'>@${comment.user.username}</span>
-                                <span class='comment-item-time'>${timeParse(
-                                    comment.createdAt,
-                                )}</span>
-                                ${
-                                    comment.updatedAt !== comment.createdAt
-                                        ? `<span class='comment-item-time'>(修改于 ${timeParse(
-                                              comment.updatedAt,
-                                          )}</span>)`
-                                        : ''
-                                }
-                            </div>
-                            
-                        </a>
-                        <div class='comment-item-content'>${comment.content}</div>
-                    `;
-                        commentList.appendChild(commentItem);
+                        resultList.push(
+                            <div className='comment-item' key={comment.id}>
+                                <a href={`/user?uid=${comment.user.uid}`} className='comment-item-header no-effect'>
+                                    <img
+                                        className='comment-item-avatar'
+                                        src={comment.user.avatar || "/user.jpg"}
+                                        alt='User Avatar'
+                                    />
+                                    <div>
+                                        <span className='comment-item-nickname'>
+                                            {comment.user.nickname}
+                                        </span>
+                                        <br />
+                                        <span className='comment-item-username'>
+                                            @{comment.user.username}
+                                        </span>
+                                        <span className='comment-item-time'>
+                                            {timeParse(comment.createdAt)}
+                                        </span>
+                                        {comment.updatedAt !== comment.createdAt && (
+                                            <span className='comment-item-time'>
+                                                (修改于 {timeParse(comment.updatedAt)})
+                                            </span>
+                                        )}
+                                    </div>
+                                </a>
+                                <div className='comment-item-content'>{comment.content}</div>
+                            </div>,
+                        );
                     });
+                    console.log(resultList);
+                    switchElementContent("#comment-list",resultList,0)
                 } else {
                     const commentList = document.getElementById('comment-list');
                     commentList.innerHTML = '<p class="center">暂无评论</p>';
@@ -122,6 +131,7 @@ function getComment() {
         .catch((e) => {
             const commentList = document.getElementById('comment-list');
             commentList.innerHTML = '<p class="center">加载失败</p>';
+            console.error(e)
         });
 }
 
@@ -190,7 +200,34 @@ function sendComment() {
         });
 }
 
-export default function Comment(parma) {
+function createCategory(arr) {
+    const elements = arr.map((item, index) => <a key={`category-${index}`}>{item.name}</a>);
+    const joinedElements = elements.map((element, index) => {
+        if (index > 0) {
+            return [<span key={`separator-${index}`}>/</span>, element];
+        }
+        return element;
+    });
+    return <span className='class'>{joinedElements}</span>;
+}
+
+function createTag(arr) {
+    const elements = arr.map((item, index) => <a key={`tag-${index}`}>{item.name}</a>);
+    const joinedElements = elements.map((element, index) => {
+        if (index > 0) {
+            return [element];
+        }
+        return element;
+    });
+    return (
+        <p className='articles-tags'>
+            <span className='ri-price-tag-3-line'></span>
+            {joinedElements}
+        </p>
+    );
+}
+
+export default function Comment() {
     useEffect(() => commentInit(), []);
 
     return (

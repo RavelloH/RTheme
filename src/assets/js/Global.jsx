@@ -1119,7 +1119,7 @@ function loadAccount() {
             </div>,
         );
     } else {
-        document.querySelector("#icon-account").href = "/user?uid="+token.read("uid")
+        document.querySelector('#icon-account').href = '/user?uid=' + token.read('uid');
         let refreshTime = token.read('iat') * 1000 + 20 * 60 * 1000 - Date.now();
         if (accountTimer) return;
         accountTimer = setTimeout(() => {
@@ -1222,7 +1222,14 @@ function loadPageType() {
             break;
         case 'posts':
             display.resetTagList();
-            virgule(document.querySelector('#index-info'), document.querySelector('#index-info').innerText+`最近更新于${getTime("DD",document.querySelector("time").innerHTML)}天前`, 20);
+            if (document.querySelector('#index-info')) {
+                virgule(
+                    document.querySelector('#index-info'),
+                    document.querySelector('#index-info').innerText +
+                        `最近更新于${getTime('DD', document.querySelector('time').innerHTML)}天前`,
+                    20,
+                );
+            }
             break;
         case '404page':
             // code
