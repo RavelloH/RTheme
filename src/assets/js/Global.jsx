@@ -1320,7 +1320,7 @@ function checkPageHash() {
     }, 0);
 }
 
-export default {
+const globalModule = {
     isLayoutMenuOpen,
     openInfoBar,
     toggleThemeMode,
@@ -1336,3 +1336,5 @@ export default {
     setting,
     toggleLayoutUserbar,
 };
+
+export default globalModule;

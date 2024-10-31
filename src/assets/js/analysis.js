@@ -112,9 +112,11 @@ function loadUptime() {
     }
 }
 
-export default {
+const analysisModule = {
     getRealTimeVisitors,
     getPageVisitors,
     loadUptime,
     umamiAnalytics,
 };
+
+export default analysisModule;
