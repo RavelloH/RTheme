@@ -70,8 +70,7 @@ function commentInit() {
 }
 function getComment() {
     // 提示加载中
-    const commentList = document.getElementById('comment-list');
-    commentList.innerHTML = `<div class='square-loader'><span></span><span></span><span></span><span></span><span></span></div>`;
+    switchElementContent("#comment-list",`<div class='square-loader'><span></span><span></span><span></span><span></span><span></span></div>`,0);
     fetch(
         `/api/comment/read?postUid=${document.querySelector('.barcode.one-line').innerHTML}`,
         {
@@ -80,12 +79,9 @@ function getComment() {
     )
         .then((response) => response.json())
         .then((data) => {
-            // 清空list
-            commentList.innerHTML = '';
             // TODO: LIKE DELETE...
             if (data) {
                 if (data.length > 0) {
-                    const commentList = document.getElementById('comment-list');
                     let resultList = [];
                     data.forEach((comment) => {
                         const commentItem = document.createElement('div');
@@ -120,7 +116,6 @@ function getComment() {
                             </div>,
                         );
                     });
-                    console.log(resultList);
                     switchElementContent("#comment-list",resultList,0)
                 } else {
                     const commentList = document.getElementById('comment-list');
