@@ -42,9 +42,8 @@ rlog.success('Database chekced.');
 
 // 同步数据库
 rlog.info("Start sync database...");
-const commit = new Date().toISOString();
 try {
-    const stdout = execSync(`npx prisma migrate deploy --name ${commit}`);
+    const stdout = execSync('npx prisma migrate deploy');
     rlog.success(`Success: ${stdout.toString()}`);
 } catch (error) {
     rlog.error(`Error: ${error.message}`);
