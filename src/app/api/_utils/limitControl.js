@@ -1,8 +1,14 @@
+import { headers } from 'next/headers';
 import prisma from './prisma';
 
 async function checkLimitControl(request) {
     const ip =
-        request.headers['x-real-ip'] || request.headers['x-forwarded-for'] || request.ip || '';
+        request.headers['x-real-ip'] ||
+        request.headers['x-forwarded-for'] ||
+        request.ip ||
+        (request.connection && request.connection.remoteAddress) ||
+        '';
+    console.log(request.headers);
     const currentTime = new Date();
 
     const count = await prisma.requestLog.count({
@@ -20,7 +26,11 @@ async function checkLimitControl(request) {
 
 async function updateLimitControl(request) {
     const ip =
-        request.headers['x-real-ip'] || request.headers['x-forwarded-for'] || request.ip || '';
+        request.headers['x-real-ip'] ||
+        request.headers['x-forwarded-for'] ||
+        request.ip ||
+        (request.connection && request.connection.remoteAddress) ||
+        '';
     const currentTime = new Date();
 
     await prisma.requestLog.create({
