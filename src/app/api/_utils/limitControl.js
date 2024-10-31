@@ -5,10 +5,10 @@ async function checkLimitControl(request) {
     const ip =
         request.headers['x-real-ip'] ||
         request.headers['x-forwarded-for'] ||
+        request.headers["x-vercel-proxied-for"] ||
         request.ip ||
         (request.connection && request.connection.remoteAddress) ||
         '';
-    console.log(request.headers);
     const currentTime = new Date();
 
     const count = await prisma.requestLog.count({
@@ -28,9 +28,11 @@ async function updateLimitControl(request) {
     const ip =
         request.headers['x-real-ip'] ||
         request.headers['x-forwarded-for'] ||
+        request.headers["x-vercel-proxied-for"] ||
         request.ip ||
         (request.connection && request.connection.remoteAddress) ||
         '';
+    console.log(ip);
     const currentTime = new Date();
 
     await prisma.requestLog.create({
