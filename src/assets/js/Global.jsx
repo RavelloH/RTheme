@@ -1222,6 +1222,7 @@ function loadPageType() {
             break;
         case 'posts':
             display.resetTagList();
+            virgule(document.querySelector('#index-info'), document.querySelector('#index-info').innerText+`最近更新于${getTime("DD",document.querySelector("time").innerHTML)}天前`, 20);
             break;
         case '404page':
             // code
