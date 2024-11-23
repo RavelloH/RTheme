@@ -37,6 +37,9 @@ export async function GET() {
 
     const data = await getDB('post');
 
+    // 倒序排列
+    data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
     data.forEach((post) => {
         // console.log(post);
         if (!post.published) {

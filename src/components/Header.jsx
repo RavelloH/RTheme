@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import Nav from './Nav';
 import config from '../../config';
 import Image from 'next/image';

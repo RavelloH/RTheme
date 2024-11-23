@@ -5,6 +5,7 @@ import global from './Global.jsx';
 import Image from 'next/image.js';
 
 import FooterIcon from '../../components/FooterIcon.jsx';
+import message from '@/utils/message.js';
 
 const collator = new Intl.Collator('zh-Hans-CN', {
     numeric: true,
@@ -767,6 +768,16 @@ function structureInfobarFeed() {
                         <span className='i ri-rss-fill'></span> <span>RSS</span>
                     </div>
                 </a>
+                <a href={config.siteURL+"sitemap.xml"} className='no-effect' target='_blank'>
+                    <div>
+                        <span className='i ri-road-map-fill'></span> <span>Sitemap</span>
+                    </div>
+                </a>
+                <a onClick={()=>{addToFavorites(config.siteURL)}} className='no-effect' target='_blank'>
+                    <div>
+                        <span className='i ri-star-fill'></span> <span>收藏本站</span>
+                    </div>
+                </a>
             </div>
             <div className='center' id='mail-feed' onClick={() => global.feedMail()}>
                 <span className='i ri-mail-add-fill'></span> <span>邮箱订阅</span>
@@ -780,6 +791,20 @@ function structureInfobarFeed() {
             </p>
         </>
     );
+}
+
+function addToFavorites() {
+    const url = window.location.href;
+    const title = document.title;
+    try {
+        window.external.addFavorite(url, title);
+    } catch (e) {
+        try {
+            window.sidebar.addPanel(title, url, "");
+        } catch (e) {
+            message.error("请使用Ctrl+D添加到收藏夹");
+        }
+    }
 }
 
 function structureUptime(name, status, url, index) {
