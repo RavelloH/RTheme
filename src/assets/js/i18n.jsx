@@ -274,7 +274,7 @@ function getstructureMusicSearchResult(name, url, artist, pic, album) {
             <div className='music-search-result'>
                 <div className='music-search-info'>
                     <div className='music-search-img'>
-                        <Image src={pic} loading='lazy' alt={name} />
+                        <img src={pic} loading='lazy' alt={name} />
                     </div>
                     <div className='music-search-title'>
                         <span className='music-search-name'>{name}</span>
@@ -762,19 +762,9 @@ function structureInfobarFeed() {
     return (
         <>
             <div className='full' id='feed-list'>
-                <a href='https://ravelloh.top/feed/rss.xml' className='no-effect' target='_blank'>
+                <a href={config.siteURL+"feed.xml"} className='no-effect' target='_blank'>
                     <div>
                         <span className='i ri-rss-fill'></span> <span>RSS</span>
-                    </div>
-                </a>
-                <a href='https://ravelloh.top/feed/atom.xml' className='no-effect' target='_blank'>
-                    <div>
-                        <span className='i ri-reactjs-fill'></span> <span>Atom</span>
-                    </div>
-                </a>
-                <a href='https://ravelloh.top/feed/feed.json' className='no-effect' target='_blank'>
-                    <div>
-                        <span className='i ri-braces-fill'></span> <span>JSON Feed</span>
                     </div>
                 </a>
             </div>
