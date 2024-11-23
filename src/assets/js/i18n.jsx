@@ -6,6 +6,7 @@ import Image from 'next/image.js';
 
 import FooterIcon from '../../components/FooterIcon.jsx';
 import message from '@/utils/message.js';
+import notice from '@/utils/notice.js';
 
 const collator = new Intl.Collator('zh-Hans-CN', {
     numeric: true,
@@ -186,8 +187,7 @@ function structureInfobarShare() {
                                     this.parentNode,
                                 )
                             }
-                            className='i ri-file-copy-2-fill'
-                        ></span>
+                            className='i ri-file-copy-2-fill'></span>
                     </span>
                 </div>
             </div>
@@ -203,8 +203,7 @@ function structureInfobarShare() {
                                     this.parentNode,
                                 )
                             }
-                            className='i ri-file-copy-2-fill'
-                        ></span>
+                            className='i ri-file-copy-2-fill'></span>
                     </span>
                 </div>
             </div>
@@ -297,15 +296,13 @@ function getstructureMusicSearchResult(name, url, artist, pic, album) {
                             data-album={album}
                             data-url={url}
                             data-artist={artist}
-                            data-pic={pic}
-                        ></span>
+                            data-pic={pic}></span>
                     </span>
                     <span
                         className='i ri-play-fill'
                         onClick={() => {
                             global.musicChange(`${name} - ${artist}`, url);
-                        }}
-                    ></span>
+                        }}></span>
                 </div>
             </div>
             <hr />
@@ -331,8 +328,7 @@ function structureMusicExport(e) {
                 album +
                 '</span>'
             }
-            src={pic}
-        >
+            src={pic}>
             {name}
         </a>
     );
@@ -344,8 +340,7 @@ function getMailFeedbackButton() {
             href={
                 'mailto:ravelloh@outlook.com?subject=[错误反馈]网站资源错误&body=错误地址:' +
                 window.location.pathname
-            }
-        >
+            }>
             邮件反馈
         </a>
     );
@@ -442,8 +437,7 @@ function structureShareInput(id, path) {
                                 this.parentNode,
                             );
                         }}
-                        className='i ri-file-copy-2-fill'
-                    ></span>
+                        className='i ri-file-copy-2-fill'></span>
                 </span>
             </div>
         </div>
@@ -763,19 +757,26 @@ function structureInfobarFeed() {
     return (
         <>
             <div className='full' id='feed-list'>
-                <a href={config.siteURL+"feed.xml"} className='no-effect' target='_blank'>
+                <a href={config.siteURL + 'feed.xml'} className='no-effect' target='_blank'>
                     <div>
                         <span className='i ri-rss-fill'></span> <span>RSS</span>
                     </div>
                 </a>
-                <a href={config.siteURL+"sitemap.xml"} className='no-effect' target='_blank'>
+                <a href={config.siteURL + 'sitemap.xml'} className='no-effect' target='_blank'>
                     <div>
                         <span className='i ri-road-map-fill'></span> <span>Sitemap</span>
                     </div>
                 </a>
-                <a onClick={()=>{addToFavorites(config.siteURL)}} className='no-effect' target='_blank'>
+                <a
+                    onClick={() => {
+                        if (!notice.check()) {
+                            notice.request();
+                        }
+                    }}
+                    className='no-effect'
+                    target='_blank'>
                     <div>
-                        <span className='i ri-star-fill'></span> <span>收藏本站</span>
+                        <span className='i ri-notification-2-fill'></span> <span>启用通知</span>
                     </div>
                 </a>
             </div>
@@ -800,9 +801,9 @@ function addToFavorites() {
         window.external.addFavorite(url, title);
     } catch (e) {
         try {
-            window.sidebar.addPanel(title, url, "");
+            window.sidebar.addPanel(title, url, '');
         } catch (e) {
-            message.error("请使用Ctrl+D添加到收藏夹");
+            message.error('请使用Ctrl+D添加到收藏夹');
         }
     }
 }

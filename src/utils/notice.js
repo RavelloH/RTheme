@@ -5,13 +5,13 @@ const notice = {
     request: () => {
         Notification.requestPermission().then((permission) => {
             if (permission === 'granted') {
-                this.send('通知', '通知功能已成功开启', '/icon/512x');
+                notice.send('通知开启成功', '通知功能已成功开启,可在设置中随时关闭', '/icon/512x');
             } else {
                 return false;
             }
         });
     },
-    send: (title, body, icon) => {
+    send: (title, body, icon = "/icon/512x") => {
         const options = {
             body: body,
             icon: icon,
