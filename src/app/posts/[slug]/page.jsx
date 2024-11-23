@@ -21,6 +21,25 @@ md.use(
     }),
 );
 
+// 处理 h1 到 h6 标签
+md.renderer.rules.heading_open = function (tokens, idx, options, env, self) {
+    const level = tokens[idx].tag.slice(1);
+    const title = tokens[idx + 1].content;
+    const slug = title.replace(/\s+/g, '-').toLowerCase();
+    return `<h${level}><a href="#${slug}" id="${slug}" title="${title}">`;
+};
+
+md.renderer.rules.heading_close = function (tokens, idx) {
+    const level = tokens[idx].tag.slice(1);
+    return `</a></h${level}>`;
+};
+
+md.renderer.rules.image = function (tokens, idx, options, env, self) {
+    const src = tokens[idx].attrGet('src');
+    const alt = tokens[idx].content;
+    return `<div class="imgbox"><img src="${src}" alt="${alt}" loading="lazy"><span>${alt}</span></div>`;
+};
+
 let title;
 
 export async function generateStaticParams() {
@@ -110,7 +129,7 @@ export default async function Post(params) {
                     {createCategory(post.category)} {' • '}
                     <span className='ri-t-box-line'></span>{' '}
                     <span id='textLength'>{post.content.length}字</span>
-                    {/* {' • '}<span className='ri-search-eye-line'></span> <span id='pageVisitors'>---</span> */}
+                    {' • '}<span className='ri-search-eye-line'></span> <span id='pageVisitors'>---</span>
                 </p>
                 {createTag(post.tag)}
                 <hr />

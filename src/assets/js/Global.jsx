@@ -81,7 +81,12 @@ function loadPage() {
     zoomPics();
     document.addEventListener('click', function (event) {
         let target = event.target;
-        if (target.href) {
+        if (target.href && target.href !== window.location.href) {
+            const targetUrl = new URL(target.href);
+            const currentUrl = new URL(window.location.href);
+            if (targetUrl.pathname === currentUrl.pathname && targetUrl.hash !== currentUrl.hash) {
+                return;
+            }
             event.preventDefault();
             let url = target.href;
             fadeOutPage('#viewmap');
@@ -414,6 +419,90 @@ function getTime(formats, startTime = '') {
     }
 }
 
+// 目录重组
+function updateMenu() {
+    var menuStructure = "<div id='articles-menu'>";
+    let titleSet = document.querySelectorAll(
+        '#articles-header h1 , #articles-body h2 , #articles-body h3 , #articles-body h4 , #articles-body h5 , #articles-body h6',
+    );
+    titleSet.forEach((element) => {
+        switch (element.outerHTML.substring(0, 3)) {
+            case '<h1':
+                menuStructure += `<br><span class='t1 center'>${element.innerHTML}</span><hr>`;
+                break;
+            case '<h2':
+                menuStructure += `<span class='t2'>${
+                    '&nbsp;'.repeat(2) + '<span>' + element.innerHTML + '</span>'
+                }</span></br>`;
+                break;
+            case '<h3':
+                menuStructure += `<span class='t3'>${
+                    '&nbsp;'.repeat(4) + '<span>' + element.innerHTML + '</span>'
+                }</span></br>`;
+                break;
+            case '<h4':
+                menuStructure += `<span class='t4'>${
+                    '&nbsp;'.repeat(6) + '<span>' + element.innerHTML + '</span>'
+                }</span></br>`;
+                break;
+            case '<h5':
+                menuStructure += `<span class='t5'>${
+                    '&nbsp;'.repeat(8) + '<span>' + element.innerHTML + '</span>'
+                }</span></br>`;
+                break;
+            case '<h6':
+                menuStructure += `<span class='t6'>${
+                    '&nbsp;'.repeat(10) + '<span>' + element.innerHTML + '</span>'
+                }</span></br>`;
+                break;
+        }
+    });
+    menuStructure += '</div>';
+    return menuStructure;
+}
+
+// 目录高亮
+function highlightMenu() {
+    if (cookie.getItem('settingEnableMenuHighlight') == 'false') {
+        return false;
+    }
+    document.querySelectorAll('#articles-menu *.active').forEach((element) => {
+        element.classList.remove('active');
+    });
+    const titleList = document.querySelectorAll(
+        '#articles-body h2 , #articles-body h3 , #articles-body h4 , #articles-body h5 , #articles-body h6',
+    );
+    for (let i = 0; i < titleList.length; i++) {
+        let heights = getHeightDifferent(titleList[i]);
+        if (heights == 0) {
+            document
+                .querySelector(`#articles-menu #${titleList[i].firstChild.id}`)
+                .classList.add('active');
+            return titleList[i];
+        }
+        if (heights > 0) {
+            document
+                .querySelector(`#articles-menu #${titleList[i - 1].firstChild.id}`)
+                .classList.add('active');
+            return titleList[i - 1];
+        }
+    }
+    return false;
+}
+
+// 相对高度差
+function getHeightDifferent(element) {
+    const rect = element.getBoundingClientRect();
+    const vWidth = document.querySelector('#viewmap article').clientWidth;
+    const vHeight = document.querySelector('#viewmap article').clientHeight;
+
+    if (rect.right < 0 || rect.bottom < 0 || rect.left > vWidth || rect.top > vHeight) {
+        return rect.top;
+    }
+
+    return 0;
+}
+
 // InfoBar功能分发
 function openInfoBar(mode) {
     infoBarMode = mode || '';
@@ -429,9 +518,8 @@ function openInfoBar(mode) {
             switchElementContent('#infobar-left', updateMenu(), 0);
             setTimeout(() => {
                 highlightMenu();
-                document
-                    .querySelector('#articles-menu')
-                    .setAttribute('onclick', 'setTimeout(()=>highlightMenu(),1000)');
+                document.querySelector('#articles-menu').onclick = () =>
+                    setTimeout(() => highlightMenu(), 1000);
             }, 10);
             break;
         case 'setting':
@@ -1230,6 +1318,21 @@ function loadPageType() {
                     20,
                 );
             }
+            if (window.location.pathname.split('/')[2]) {
+                // 显示目录
+                i18n.originMessageBar = (
+                    <a onClick={() => openInfoBar('menu')}>
+                        目录&nbsp;<span class='i ri-list-unordered'></span>
+                    </a>
+                );
+                message.switch(i18n.originMessageBar);
+                if (cookie.getItem('settingEnableUmamiAnalytics') !== 'false') {
+                    analysis.getPageVisitors().then((data) => {
+                        switchElementContent('#pageVisitors', data['pageviews'].value);
+                    });
+                }
+                zoomPics();
+            }
             break;
         case '404page':
             // code
@@ -1250,45 +1353,6 @@ function loadPageType() {
             switchElementContent('#uptime2', getTime('DD', config.siteBirthday), 0);
             break;
         case 'articles-index':
-            break;
-        case 'articles-context':
-            highlightNav('articles');
-            resetImage();
-            switchElementContent(
-                '#textLength',
-                document.querySelector('#articles-body').innerText.length + '字',
-            );
-            loadComment();
-            codeHighlight();
-            updateTitle();
-            resetFilter();
-            i18n.originMessageBar = `<a onclick='openInfoBar("menu")'>目录&nbsp;<span class="i ri-list-unordered"></span></a>`;
-            message.add(i18n.originMessageBar, 0);
-            if (cookie.getItem('settingEnableUmamiAnalytics') !== 'false') {
-                analysis.getPageVisitors().then((data) => {
-                    switchElementContent('#pageVisitors', data['pageviews'].value);
-                });
-            }
-            document.querySelectorAll('time').forEach((element) => {
-                element.setAttribute('onclick', 'switchTimeDisplay(this)');
-            });
-            loadBox();
-            zoomPics();
-            prefetchImg();
-            getSearchData().then(() =>
-                switchElementContent(
-                    '#more-articles',
-                    loadMoreArticles(
-                        document.querySelector('#articles-header h1 a').getAttribute('href'),
-                    ),
-                ),
-            );
-            switchElementContent(
-                '#blockchain-data',
-                `<span class="i_small ri-shield-check-line"></span> 此数据所有权由区块链加密技术(<a href="https://scan.crossbell.io/tx/0xa486db8123cfa3d98a5cb4ba46d07b977be1138c3a51743feaaeb51bfcd8788a">区块链标识:#57514</a>)和智能合约保障仅归创作者所有。<br><hr><div class='center barcode page-id'>${base.encryption(
-                    window.location.pathname,
-                )}</div>`,
-            );
             break;
     }
     checkPageHash();
