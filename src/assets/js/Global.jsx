@@ -422,41 +422,57 @@ function getTime(formats, startTime = '') {
 // 目录重组
 function updateMenu() {
     var menuStructure = "<div id='articles-menu'>";
+    menuStructure += `<br><span class='t1 center'>${
+        document.querySelector('h1').innerHTML
+    }</span><hr>`;
     let titleSet = document.querySelectorAll(
-        '#articles-header h1 , #articles-body h2 , #articles-body h3 , #articles-body h4 , #articles-body h5 , #articles-body h6',
+        '#articles-header h2 , #articles-body h2 , #articles-body h3 , #articles-body h4 , #articles-body h5 , #articles-body h6',
     );
+
+    let counters = { h2: 0, h3: 0, h4: 0, h5: 0, h6: 0 };
+
     titleSet.forEach((element) => {
-        switch (element.outerHTML.substring(0, 3)) {
-            case '<h1':
-                menuStructure += `<br><span class='t1 center'>${element.innerHTML}</span><hr>`;
-                break;
-            case '<h2':
-                menuStructure += `<span class='t2'>${
-                    '&nbsp;'.repeat(2) + '<span>' + element.innerHTML + '</span>'
-                }</span></br>`;
-                break;
-            case '<h3':
-                menuStructure += `<span class='t3'>${
-                    '&nbsp;'.repeat(4) + '<span>' + element.innerHTML + '</span>'
-                }</span></br>`;
-                break;
-            case '<h4':
-                menuStructure += `<span class='t4'>${
-                    '&nbsp;'.repeat(6) + '<span>' + element.innerHTML + '</span>'
-                }</span></br>`;
-                break;
-            case '<h5':
-                menuStructure += `<span class='t5'>${
-                    '&nbsp;'.repeat(8) + '<span>' + element.innerHTML + '</span>'
-                }</span></br>`;
-                break;
-            case '<h6':
-                menuStructure += `<span class='t6'>${
-                    '&nbsp;'.repeat(10) + '<span>' + element.innerHTML + '</span>'
-                }</span></br>`;
-                break;
+        let tagName = element.tagName.toLowerCase();
+        counters[tagName]++;
+
+        // Reset lower level counters
+        if (tagName === 'h2') {
+            counters.h3 = counters.h4 = counters.h5 = counters.h6 = 0;
+        } else if (tagName === 'h3') {
+            counters.h4 = counters.h5 = counters.h6 = 0;
+        } else if (tagName === 'h4') {
+            counters.h5 = counters.h6 = 0;
+        } else if (tagName === 'h5') {
+            counters.h6 = 0;
         }
+
+        let numbering = '';
+        if (tagName === 'h2') {
+            numbering = `${counters.h2}`;
+        } else if (tagName === 'h3') {
+            numbering = `${counters.h2}.${counters.h3}`;
+        } else if (tagName === 'h4') {
+            numbering = `${counters.h2}.${counters.h3}.${counters.h4}`;
+        } else if (tagName === 'h5') {
+            numbering = `${counters.h2}.${counters.h3}.${counters.h4}.${counters.h5}`;
+        } else if (tagName === 'h6') {
+            numbering = `${counters.h2}.${counters.h3}.${counters.h4}.${counters.h5}.${counters.h6}`;
+        }
+
+        let indent = '';
+        if (tagName === 'h3') {
+            indent = '20px';
+        } else if (tagName === 'h4') {
+            indent = '40px';
+        } else if (tagName === 'h5') {
+            indent = '60px';
+        } else if (tagName === 'h6') {
+            indent = '80px';
+        }
+
+        menuStructure += `<span class='${tagName}' style='margin-left: ${indent};'>${numbering} ${element.innerHTML}</span><br>`;
     });
+
     menuStructure += '</div>';
     return menuStructure;
 }
@@ -1325,7 +1341,7 @@ function loadPageType() {
                         目录&nbsp;<span class='i ri-list-unordered'></span>
                     </a>
                 );
-                message.switch(i18n.originMessageBar);
+                setTimeout(() => message.switch(i18n.originMessageBar), 1000);
                 if (cookie.getItem('settingEnableUmamiAnalytics') !== 'false') {
                     analysis.getPageVisitors().then((data) => {
                         switchElementContent('#pageVisitors', data['pageviews'].value);
