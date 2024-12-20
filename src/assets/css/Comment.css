@@ -38,10 +38,11 @@ textarea#comment-textarea {
     margin-top: 2em;
 }
 
-.comment-item-header {
+.comment-item-header, .comment-item-header-info {
     display: flex;
     flex-direction: row;
     align-items: center;
+    justify-content: space-between;
 }
 
 .comment-item-nichname {

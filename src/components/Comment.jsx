@@ -7,7 +7,7 @@ import token from '@/utils/token';
 import objectToForm from '@/utils/objectToForm';
 import switchElementContent from '@/utils/switchElement';
 import { useEffect } from 'react';
-import Image from 'next/image';
+import message from '@/utils/message';
 
 function timeParse(time) {
     const date = new Date(time);
@@ -70,53 +70,87 @@ function commentInit() {
 }
 function getComment() {
     // 提示加载中
-    switchElementContent("#comment-list",`<div class='square-loader'><span></span><span></span><span></span><span></span><span></span></div>`,0);
-    fetch(
-        `/api/comment/read?postUid=${document.querySelector('.barcode.one-line').innerHTML}`,
-        {
-            method: 'GET',
-        },
-    )
+    switchElementContent(
+        '#comment-list',
+        `<div class='square-loader'><span></span><span></span><span></span><span></span><span></span></div>`,
+        0,
+    );
+    fetch(`/api/comment/read?postUid=${document.querySelector('.barcode.one-line').innerHTML}`, {
+        method: 'GET',
+    })
         .then((response) => response.json())
         .then((data) => {
             // TODO: LIKE DELETE...
             if (data) {
                 if (data.length > 0) {
                     let resultList = [];
+                    data.sort((a, b) => (a.createdAt > b.createdAt ? 1 : -1));
                     data.forEach((comment) => {
                         const commentItem = document.createElement('div');
                         commentItem.className = 'comment-item';
                         resultList.push(
-                            <div className='comment-item' key={comment.id}>
-                                <a href={`/user?uid=${comment.user.uid}`} className='comment-item-header no-effect'>
-                                    <img
-                                        className='comment-item-avatar'
-                                        src={comment.user.avatar || "/user.jpg"}
-                                        alt='User Avatar'
-                                    />
-                                    <div>
-                                        <span className='comment-item-nickname'>
-                                            {comment.user.nickname}
-                                        </span>
-                                        <br />
-                                        <span className='comment-item-username'>
-                                            @{comment.user.username}
-                                        </span>
-                                        <span className='comment-item-time'>
-                                            {timeParse(comment.createdAt)}
-                                        </span>
-                                        {comment.updatedAt !== comment.createdAt && (
-                                            <span className='comment-item-time'>
-                                                (修改于 {timeParse(comment.updatedAt)})
+                            <div className='comment-item' key={comment.id} name={comment.id}>
+                                <div className='comment-item-header no-effect'>
+                                    <a
+                                        className='comment-item-header-info no-effect'
+                                        href={`/user?uid=${comment.user.uid}`}>
+                                        <img
+                                            className='comment-item-avatar'
+                                            src={comment.user.avatar || '/user.jpg'}
+                                            alt='User Avatar'
+                                        />
+                                        <div>
+                                            <span className='comment-item-nickname'>
+                                                {comment.user.nickname}
                                             </span>
-                                        )}
+                                            <br />
+                                            <span className='comment-item-username'>
+                                                @{comment.user.username}
+                                            </span>{' '}
+                                            &nbsp;
+                                            <span className='comment-item-time'>
+                                                {timeParse(comment.createdAt)}
+                                            </span>
+                                            {/* {comment.updatedAt !== comment.createdAt && (
+                                                <span className='comment-item-time'>
+                                                    (修改于 {timeParse(comment.updatedAt)})
+                                                </span>
+                                            )} */}
+                                        </div>
+                                    </a>
+                                    <div className='comment-item-actions'>
+                                        {comment.user.uid === token.read('uid') ? (
+                                            <>
+                                                <a
+                                                    onClick={() => {
+                                                        deleteComment(comment.id);
+                                                    }}
+                                                    className='no-effect'>
+                                                    <span className='i_mini ri-delete-bin-2-line'></span>
+                                                </a>
+                                                &nbsp;
+                                            </>
+                                        ) : null}
+                                        {/* <a
+                                            onClick={() => {
+                                                likeComment(comment.id);
+                                            }}
+                                            className='no-effect'>
+                                            <span className='i_mini ri-message-2-line'></span>
+                                        </a>
+                                        &nbsp; */}
+                                        {comment.likeUserUid.includes(token.read('uid'))
+                                            ? getLikeButton(true, comment, 0)
+                                            : getLikeButton(false, comment, 0)}
                                     </div>
-                                </a>
-                                <div className='comment-item-content'>{comment.content}</div>
+                                </div>
+                                <div
+                                    className='comment-item-content'
+                                    dangerouslySetInnerHTML={{ __html: comment.content }}></div>
                             </div>,
                         );
                     });
-                    switchElementContent("#comment-list",resultList,0)
+                    switchElementContent('#comment-list', resultList, 0);
                 } else {
                     const commentList = document.getElementById('comment-list');
                     commentList.innerHTML = '<p class="center">暂无评论</p>';
@@ -126,9 +160,66 @@ function getComment() {
         .catch((e) => {
             const commentList = document.getElementById('comment-list');
             commentList.innerHTML = '<p class="center">加载失败</p>';
-            console.error(e)
+            console.error(e);
         });
 }
+
+function deleteComment(id) {
+    fetch('/api/comment/delete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Authorization: `Bearer ${token.get()}`,
+        },
+        body: objectToForm({
+            id: id,
+        }),
+    })
+        .then((response) => response.json())
+        .then((data) => {
+            if (data.message == '删除成功') {
+                getComment();
+                messsage.add(<a>删除成功</a>, 2000);
+            } else {
+                console.error(data.message);
+            }
+        })
+        .catch((e) => {
+            console.error(e);
+        });
+}
+
+async function likeComment(id) {
+    if (!token.get()) {
+        message.warn('请登录后点赞');
+        return;
+    }
+    return new Promise((resolve) => {
+        fetch('/api/comment/like', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                Authorization: `Bearer ${token.get()}`,
+            },
+            body: objectToForm({
+                commentId: id,
+            }),
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.message === '操作成功') {
+                    resolve(data);
+                } else {
+                    console.error(data.message);
+                }
+            })
+            .catch((e) => {
+                console.error(e);
+            });
+    });
+}
+
+function replyComment(id) {}
 
 function sendComment() {
     // 防抖
@@ -220,6 +311,57 @@ function createTag(arr) {
             {joinedElements}
         </p>
     );
+}
+
+function getLikeButton(liked, comment, diff) {
+    if (comment.likeNum) {
+        comment.likeNum += diff;
+    } else {
+        comment.likeNum = comment.likeUserUid.length + diff;
+    }
+    if (liked) {
+        return (
+            <span id={`like-comment-${comment.id}`}>
+                <a
+                    onClick={() => {
+                        if (!token.get()) {
+                            message.warn('请登录后点赞');
+                            return;
+                        }
+                        switchElementContent(
+                            `#like-comment-${comment.id}`,
+                            getLikeButton(false, comment, -1),
+                        );
+                        likeComment(comment.id);
+                    }}
+                    className='no-effect'>
+                    <span className='i_mini ri-heart-3-fill'>{comment.likeNum}</span>
+                </a>
+                &nbsp;
+            </span>
+        );
+    } else {
+        return (
+            <span id={`like-comment-${comment.id}`}>
+                <a
+                    onClick={() => {
+                        if (!token.get()) {
+                            message.warn('请登录后点赞');
+                            return;
+                        }
+                        switchElementContent(
+                            `#like-comment-${comment.id}`,
+                            getLikeButton(true, comment, 1),
+                        );
+                        likeComment(comment.id);
+                    }}
+                    className='no-effect'>
+                    <span className='i_mini ri-heart-3-line'>{comment.likeNum}</span>
+                </a>
+                &nbsp;
+            </span>
+        );
+    }
 }
 
 export default function Comment() {

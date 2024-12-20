@@ -1,7 +1,7 @@
 /*
- * POST /api/comment/delete
+ * POST /api/comment/like
  * WITH Authorization: Bearer <token>
- * WITH BODY: {id}
+ * WITH BODY: {commentUid}
  * RETURN {message}
  */
 
@@ -9,20 +9,6 @@ import prisma from '../../_utils/prisma';
 import limitControl from '../../_utils/limitControl';
 import token from '../../_utils/token';
 import qs from 'qs';
-
-const editableProperty = ['id'];
-
-function filterObject(properties, objects) {
-    const filteredObject = {};
-    if (typeof objects === 'object' && objects !== null) {
-        for (let property in objects) {
-            if (objects.hasOwnProperty(property) && properties.includes(property)) {
-                filteredObject[property] = objects[property];
-            }
-        }
-    }
-    return filteredObject;
-}
 
 export async function POST(request) {
     try {
@@ -49,19 +35,15 @@ export async function POST(request) {
             }
         }
 
-        console.log(info);
-
         const authHeader = request.headers.get('Authorization');
         if (!authHeader) {
             return Response.json({ message: '缺少授权头信息' }, { status: 400 });
         }
 
-        // 验证格式
-
         if (!(await limitControl.check(request))) {
             return Response.json({ message: '已触发速率限制' }, { status: 429 });
         }
-        // 检查传入的token
+
         const tokenString = authHeader.split(' ')[1];
         let tokenInfo;
         try {
@@ -85,52 +67,48 @@ export async function POST(request) {
             }
         }
 
-        // 更新信息
         if (tokenInfo) {
-            let filteredObject = filterObject(editableProperty, JSON.parse(JSON.stringify(info)));
-
-            // 检查是否存在两个及以上的'postUid', 'noteUid', 'commentUid'
-            const count = ['postUid', 'noteUid', 'commentUid'].filter(
-                (key) => filteredObject[key],
-            ).length;
-            if (count > 1) {
-                return Response.json({ message: '请提供唯一的参数' }, { status: 400 });
+            const { commentId } = info;
+            if (!commentId) {
+                return Response.json({ message: '请提供评论ID' }, { status: 400 });
             }
-            // 请求新信息
-            console.log(filteredObject);
+
             try {
-                if (filteredObject.id) {
-                    // 有id: 查找并验证user
-                    const comment = await prisma.comment.findUnique({
-                        where: {
-                            id: filteredObject.id,
-                        },
-                    });
-                    if (!comment) {
-                        return Response.json({ message: '评论不存在' }, { status: 404 });
-                    }
+                const comment = await prisma.comment.findUnique({
+                    where: {
+                        id: commentId,
+                    },
+                });
 
-                    if (comment.userUid !== tokenInfo.uid) {
-                        return Response.json({ message: '无权操作此评论' }, { status: 403 });
-                    }
-                    // delete
-
-                    await prisma.comment.delete({
-                        where: {
-                            id: filteredObject.id,
-                        },
-                    });
-                } else {
-                    // 无id: 返回错误
-                    return Response.json({ message: '请提供id' }, { status: 400 });
+                if (!comment) {
+                    return Response.json({ message: '评论不存在' }, { status: 404 });
                 }
+
+                let likeUserUid = comment.likeUserUid || [];
+                const userIndex = likeUserUid.indexOf(tokenInfo.uid);
+
+                if (userIndex > -1) {
+                    likeUserUid.splice(userIndex, 1);
+                } else {
+                    likeUserUid.push(tokenInfo.uid);
+                }
+
+                await prisma.comment.update({
+                    where: {
+                        id: commentId,
+                    },
+                    data: {
+                        likeUserUid: likeUserUid,
+                    },
+                });
+
                 limitControl.update(request);
+                return Response.json({ message: '操作成功', likeUserUid: likeUserUid }, { status: 200 });
+            } catch (error) {
                 return Response.json(
-                    { message: '删除成功', update: filteredObject },
-                    { status: 200 },
+                    { message: '点赞操作失败', error: error.message },
+                    { status: 500 },
                 );
-            } catch (e) {
-                return Response.json({ message: '评论操作失败', error: e }, { status: 429 });
             }
         }
     } catch (error) {
@@ -138,7 +116,7 @@ export async function POST(request) {
         return Response.json(
             {
                 code: 500,
-                message: '500 Interal server error.',
+                message: '500 Internal server error.',
                 error: error,
             },
             { status: 500 },
