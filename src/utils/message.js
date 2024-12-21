@@ -27,6 +27,14 @@ const message = {
             time,
         );
     },
+    success: function (text, time = 3000) {
+        message.add(
+            <a className='green'>
+                {text}&nbsp;<span className='ri-check-line'></span>
+            </a>,
+            time,
+        );
+    },
     add: function (context, lastTime, TransTime = 300) {
         if (message.state === 'off') {
             message.original = document.querySelector('#message-bar').innerHTML;
