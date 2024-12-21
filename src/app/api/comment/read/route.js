@@ -29,7 +29,18 @@ export async function GET(request) {
                     [type]: uid,
                 },
                 include: {
-                    replies: true,
+                    replies: {
+                        include: {
+                            user: {
+                                select: {
+                                    uid: true,
+                                    username: true,
+                                    nickname: true,
+                                    avatar: true,
+                                },
+                            },
+                        },
+                    },
                     user: {
                         select: {
                             uid: true,
