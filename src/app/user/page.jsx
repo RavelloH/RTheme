@@ -59,7 +59,7 @@ function dynamic(userinfo) {
     userinfo.comment.forEach((comment) => {
         dynamicList.push({
             time: comment.createdAt,
-            link: "#",
+            link: '#',
             message: (
                 <div>
                     <p style={{ maxWidth: '100%' }}>
@@ -71,7 +71,7 @@ function dynamic(userinfo) {
                 </div>
             ),
         });
-    })
+    });
     dynamicList.sort((a, b) => new Date(b.time) - new Date(a.time));
     let resultList = [];
     dynamicList.forEach((item) =>
@@ -138,7 +138,8 @@ export default async function User({ searchParams }) {
                         alignItems: 'center',
                         flexWrap: 'nowrap',
                         justifyContent: 'space-between',
-                    }}>
+                    }}
+                >
                     <div className='userInfo'>
                         <div id='user-info'>
                             <img
@@ -284,7 +285,8 @@ export default async function User({ searchParams }) {
                             alignItems: 'center',
                             flexWrap: 'nowrap',
                             justifyContent: 'space-between',
-                        }}>
+                        }}
+                    >
                         <div className='userInfo'>
                             <div id='user-info'>
                                 <img
@@ -390,7 +392,8 @@ export default async function User({ searchParams }) {
                         alignItems: 'center',
                         flexWrap: 'nowrap',
                         justifyContent: 'space-between',
-                    }}>
+                    }}
+                >
                     <div className='userInfo'>
                         <div id='user-info'>
                             <img

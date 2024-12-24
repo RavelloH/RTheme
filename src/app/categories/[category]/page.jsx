@@ -1,6 +1,5 @@
 import prisma from '@/app/api/_utils/prisma';
 
-
 function formatDate(dateStr) {
     var date = new Date(dateStr);
     var year = date.getFullYear();

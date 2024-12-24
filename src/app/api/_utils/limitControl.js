@@ -5,7 +5,7 @@ async function checkLimitControl(request) {
     const ip =
         request.headers['x-real-ip'] ||
         request.headers['x-forwarded-for'] ||
-        request.headers["x-vercel-proxied-for"] ||
+        request.headers['x-vercel-proxied-for'] ||
         request.ip ||
         (request.connection && request.connection.remoteAddress) ||
         '';
@@ -28,7 +28,7 @@ async function updateLimitControl(request) {
     const ip =
         request.headers['x-real-ip'] ||
         request.headers['x-forwarded-for'] ||
-        request.headers["x-vercel-proxied-for"] ||
+        request.headers['x-vercel-proxied-for'] ||
         request.ip ||
         (request.connection && request.connection.remoteAddress) ||
         '';

@@ -187,7 +187,8 @@ function structureInfobarShare() {
                                     this.parentNode,
                                 )
                             }
-                            className='i ri-file-copy-2-fill'></span>
+                            className='i ri-file-copy-2-fill'
+                        ></span>
                     </span>
                 </div>
             </div>
@@ -203,7 +204,8 @@ function structureInfobarShare() {
                                     this.parentNode,
                                 )
                             }
-                            className='i ri-file-copy-2-fill'></span>
+                            className='i ri-file-copy-2-fill'
+                        ></span>
                     </span>
                 </div>
             </div>
@@ -296,13 +298,15 @@ function getstructureMusicSearchResult(name, url, artist, pic, album) {
                             data-album={album}
                             data-url={url}
                             data-artist={artist}
-                            data-pic={pic}></span>
+                            data-pic={pic}
+                        ></span>
                     </span>
                     <span
                         className='i ri-play-fill'
                         onClick={() => {
                             global.musicChange(`${name} - ${artist}`, url);
-                        }}></span>
+                        }}
+                    ></span>
                 </div>
             </div>
             <hr />
@@ -328,7 +332,8 @@ function structureMusicExport(e) {
                 album +
                 '</span>'
             }
-            src={pic}>
+            src={pic}
+        >
             {name}
         </a>
     );
@@ -340,7 +345,8 @@ function getMailFeedbackButton() {
             href={
                 'mailto:ravelloh@outlook.com?subject=[错误反馈]网站资源错误&body=错误地址:' +
                 window.location.pathname
-            }>
+            }
+        >
             邮件反馈
         </a>
     );
@@ -437,7 +443,8 @@ function structureShareInput(id, path) {
                                 this.parentNode,
                             );
                         }}
-                        className='i ri-file-copy-2-fill'></span>
+                        className='i ri-file-copy-2-fill'
+                    ></span>
                 </span>
             </div>
         </div>
@@ -774,7 +781,8 @@ function structureInfobarFeed() {
                         }
                     }}
                     className='no-effect'
-                    target='_blank'>
+                    target='_blank'
+                >
                     <div>
                         <span className='i ri-notification-2-fill'></span> <span>启用通知</span>
                     </div>

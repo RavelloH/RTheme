@@ -143,7 +143,8 @@ function infoEdit() {
                     <div
                         className='big-button'
                         id='publish-button'
-                        onClick={() => submit('publish')}>
+                        onClick={() => submit('publish')}
+                    >
                         <span>发布</span>
                     </div>
                     <div className='big-button' id='draft-button' onClick={() => submit('draft')}>
@@ -384,7 +385,8 @@ export default function CreatePosts() {
                     <div
                         className='big-button'
                         id='to-content-button'
-                        onClick={() => contentEdit()}>
+                        onClick={() => contentEdit()}
+                    >
                         <span>下一步</span>
                     </div>
                 </div>

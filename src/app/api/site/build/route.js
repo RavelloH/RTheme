@@ -44,7 +44,7 @@ export async function POST(request) {
 
         // 检查用户权限
         if (tokenInfo) {
-            if (tokenInfo.role == "ADMIN") {
+            if (tokenInfo.role == 'ADMIN') {
                 // TODO: 根据config中设置的平台触发相关Hook
 
                 return Response.json({ message: '成功(这是一条占位消息)' }, { status: 200 });

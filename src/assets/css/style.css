@@ -68,8 +68,10 @@
 }
 @font-face {
     font-family: 'Geometos';
-    src: url('../fonts/Geometos.ttf') format('truetype'),
-        url('../fonts/Geometos.woff') format('woff'), local('Geometos');
+    src:
+        url('../fonts/Geometos.ttf') format('truetype'),
+        url('../fonts/Geometos.woff') format('woff'),
+        local('Geometos');
     font-display: swap;
 }
 @font-face {
@@ -266,11 +268,21 @@ h6,
     -webkit-transition: 0.2s ease-in-out;
     -o-transition: 0.2s ease-in-out;
     transition: 0.2s ease-in-out;
-    -webkit-transition-property: background, opacity, -webkit-transform;
-    transition-property: background, opacity, -webkit-transform;
+    -webkit-transition-property:
+        background,
+        opacity,
+        -webkit-transform;
+    transition-property:
+        background,
+        opacity,
+        -webkit-transform;
     -o-transition-property: background, opacity, transform;
     transition-property: background, opacity, transform;
-    transition-property: background, opacity, transform, -webkit-transform;
+    transition-property:
+        background,
+        opacity,
+        transform,
+        -webkit-transform;
 }
 
 #cursor.hidden {
@@ -489,7 +501,8 @@ a:after {
     transition: -webkit-transform 0.3s cubic-bezier(0.28, 0.94, 0.82, 1.09);
     -o-transition: transform 0.3s cubic-bezier(0.28, 0.94, 0.82, 1.09);
     transition: transform 0.3s cubic-bezier(0.28, 0.94, 0.82, 1.09);
-    transition: transform 0.3s cubic-bezier(0.28, 0.94, 0.82, 1.09),
+    transition:
+        transform 0.3s cubic-bezier(0.28, 0.94, 0.82, 1.09),
         -webkit-transform 0.3s cubic-bezier(0.28, 0.94, 0.82, 1.09);
 }
 
@@ -3387,6 +3400,7 @@ span {
     width: 93%;
 }
 
-.vditor-reset ol, .vditor-reset ul {
+.vditor-reset ol,
+.vditor-reset ul {
     color: white;
 }

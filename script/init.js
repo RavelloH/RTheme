@@ -9,7 +9,7 @@ try {
     rlog.success(`Success: ${stdout.toString()}`);
 } catch (error) {
     rlog.error(`Error: ${error.message}`);
-    exit
+    exit;
 }
 
 // TODO: 生成一些默认数据，例如首篇hello world，站点设置默认值等

@@ -110,7 +110,8 @@ export default async function DraftContent(params) {
                     <a
                         href='https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans'
                         target='_blank'
-                        className='no-effect'>
+                        className='no-effect'
+                    >
                         <span className='ri-creative-commons-line'></span>
                         <span className='ri-creative-commons-nc-line'></span>
                         <span className='ri-creative-commons-nd-line'></span>知识共享

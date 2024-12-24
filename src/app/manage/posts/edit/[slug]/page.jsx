@@ -44,7 +44,7 @@ export default async function EditPostPage(params) {
                 name={post.name}
                 title={post.title}
                 category={post.category.map((t) => t.name).join(' ')}
-                tag={post.tag.map((t) => t.name).join(" ")}
+                tag={post.tag.map((t) => t.name).join(' ')}
                 content={post.content}
             />
         </>

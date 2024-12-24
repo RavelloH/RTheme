@@ -18,7 +18,7 @@ function deletePost(name) {
             Authorization: 'Bearer ' + token.get(),
         },
         body: objectToForm({
-            name: name
+            name: name,
         }),
     })
         .then((response) => response.json())
@@ -76,13 +76,15 @@ export default function Deleter(props) {
                     <div
                         className='big-button'
                         id='delete-button'
-                        onClick={() => deletePost(props.name)}>
+                        onClick={() => deletePost(props.name)}
+                    >
                         <span>确认删除</span>
                     </div>
                     <div
                         className='big-button'
                         id='undo-button'
-                        onClick={() => window.history.back()}>
+                        onClick={() => window.history.back()}
+                    >
                         <span>取消</span>
                     </div>
                 </div>

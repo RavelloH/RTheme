@@ -11,7 +11,7 @@ const notice = {
             }
         });
     },
-    send: (title, body, icon = "/icon/512x") => {
+    send: (title, body, icon = '/icon/512x') => {
         const options = {
             body: body,
             icon: icon,
@@ -20,11 +20,11 @@ const notice = {
         notification.onclick = () => {
             window.focus();
             notification.close();
-        }
+        };
     },
     close: () => {
         Notification.close();
-    }
-}
+    },
+};
 
 export default notice;

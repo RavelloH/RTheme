@@ -628,10 +628,6 @@ function prefetchImg() {
     });
 }
 
-
-
-
-
 // 重置筛选
 function resetFilter() {
     let tagFilters = document.querySelectorAll('.articles-tags a:not(.ellipsis)');

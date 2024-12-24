@@ -108,11 +108,13 @@ function getComment() {
                                     name={comment.id}
                                     style={{
                                         marginLeft: comment.replyFor ? '5%' : '0',
-                                    }}>
+                                    }}
+                                >
                                     <div className='comment-item-header no-effect'>
                                         <a
                                             className='comment-item-header-info no-effect'
-                                            href={`/user?uid=${comment.user.uid}`}>
+                                            href={`/user?uid=${comment.user.uid}`}
+                                        >
                                             <img
                                                 className='comment-item-avatar'
                                                 src={comment.user.avatar || '/user.jpg'}
@@ -144,7 +146,8 @@ function getComment() {
                                                         onClick={() => {
                                                             deleteComment(comment.id);
                                                         }}
-                                                        className='no-effect'>
+                                                        className='no-effect'
+                                                    >
                                                         <span className='i_mini ri-delete-bin-2-line'></span>
                                                     </a>
                                                     &nbsp;
@@ -156,11 +159,16 @@ function getComment() {
                                                         message.warn('请登录后回复');
                                                         return;
                                                     }
-                                                    replyComment(comment.replyFor ? comment.replyFor : comment);
+                                                    replyComment(
+                                                        comment.replyFor
+                                                            ? comment.replyFor
+                                                            : comment,
+                                                    );
                                                 }}
-                                                className='no-effect'>
+                                                className='no-effect'
+                                            >
                                                 <span className='i_mini ri-message-2-line'>
-                                                    {comment.replies ? comment.replies.length : ""}
+                                                    {comment.replies ? comment.replies.length : ''}
                                                 </span>
                                             </a>
                                             &nbsp;
@@ -173,8 +181,9 @@ function getComment() {
                                     <div
                                         className='comment-item-content'
                                         dangerouslySetInnerHTML={{
-                                            __html: comment.content
-                                        }}></div>
+                                            __html: comment.content,
+                                        }}
+                                    ></div>
                                 </div>,
                             );
                         });
@@ -263,7 +272,8 @@ function replyComment(comment) {
                 className='big-button no-effect'
                 onClick={() => {
                     sendComment(comment.id);
-                }}>
+                }}
+            >
                 <span>回复评论</span>
             </a>
             <a
@@ -271,7 +281,8 @@ function replyComment(comment) {
                 className='big-button no-effect'
                 onClick={() => {
                     commentInit(true, false);
-                }}>
+                }}
+            >
                 <span>取消回复</span>
             </a>
         </>
@@ -401,7 +412,8 @@ function getLikeButton(liked, comment, diff) {
                         );
                         likeComment(comment.id);
                     }}
-                    className='no-effect'>
+                    className='no-effect'
+                >
                     <span className='i_mini ri-heart-3-fill'>{comment.likeNum}</span>
                 </a>
                 &nbsp;
@@ -422,7 +434,8 @@ function getLikeButton(liked, comment, diff) {
                         );
                         likeComment(comment.id);
                     }}
-                    className='no-effect'>
+                    className='no-effect'
+                >
                     <span className='i_mini ri-heart-3-line'>{comment.likeNum}</span>
                 </a>
                 &nbsp;
@@ -467,7 +480,8 @@ export default function Comment() {
                     <a
                         id='comment-button'
                         className='big-button no-effect block'
-                        onClick={() => sendComment()}>
+                        onClick={() => sendComment()}
+                    >
                         <span>登录后发送评论</span>
                     </a>
                 </div>

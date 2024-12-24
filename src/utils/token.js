@@ -55,7 +55,7 @@ const token = {
                 .then((response) => response.json())
                 .then((data) => {
                     if (data.token) {
-                        cookie.setItem('usertoken', data.token, data.info.exp-data.info.iat);
+                        cookie.setItem('usertoken', data.token, data.info.exp - data.info.iat);
                         resolve(data.token);
                     } else {
                         console.log(data.message);

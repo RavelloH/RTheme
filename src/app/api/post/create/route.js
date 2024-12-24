@@ -50,7 +50,7 @@ export async function POST(request) {
         );
     }
 
-    if ( !user.role.includes('ADMIN') && !user.role.includes('MANAGER') ) {
+    if (!user.role.includes('ADMIN') && !user.role.includes('MANAGER')) {
         return Response.json(
             {
                 message: '权限不足',
@@ -76,7 +76,7 @@ export async function POST(request) {
                 },
                 ip: ip,
                 userUid: user.uid,
-                published: draft == "true"  ? false : true,
+                published: draft == 'true' ? false : true,
             },
         });
     } catch (error) {

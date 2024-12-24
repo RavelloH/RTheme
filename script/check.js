@@ -41,7 +41,7 @@ try {
 rlog.success('Database chekced.');
 
 // 同步数据库
-rlog.info("Start sync database...");
+rlog.info('Start sync database...');
 try {
     const stdout = execSync('npx prisma migrate deploy');
     rlog.success(`Success: ${stdout.toString()}`);

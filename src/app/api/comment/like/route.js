@@ -103,7 +103,10 @@ export async function POST(request) {
                 });
 
                 limitControl.update(request);
-                return Response.json({ message: '操作成功', likeUserUid: likeUserUid }, { status: 200 });
+                return Response.json(
+                    { message: '操作成功', likeUserUid: likeUserUid },
+                    { status: 200 },
+                );
             } catch (error) {
                 return Response.json(
                     { message: '点赞操作失败', error: error.message },

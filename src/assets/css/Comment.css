@@ -7,8 +7,18 @@ textarea#comment-textarea {
     background-color: #111111;
     color: #c6c9ce;
     font-size: 1em;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
-        Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        'Segoe UI',
+        Roboto,
+        Oxygen,
+        Ubuntu,
+        Cantarell,
+        'Open Sans',
+        'Helvetica Neue',
+        sans-serif;
 }
 
 #comment-title {
@@ -38,7 +48,8 @@ textarea#comment-textarea {
     margin-top: 2em;
 }
 
-.comment-item-header, .comment-item-header-info {
+.comment-item-header,
+.comment-item-header-info {
     display: flex;
     flex-direction: row;
     align-items: center;

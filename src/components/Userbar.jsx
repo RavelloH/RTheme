@@ -58,7 +58,8 @@ export default function Userbar() {
                     id='userbar-toggle'
                     onClick={() => {
                         global.toggleLayoutUserbar();
-                    }}>
+                    }}
+                >
                     <span className='i ri-arrow-left-s-line'></span>
                 </div>
             </div>
@@ -121,7 +122,8 @@ export default function Userbar() {
                             <a
                                 href='/user/update'
                                 id='icon-account-setting'
-                                aria-label='account setting'>
+                                aria-label='account setting'
+                            >
                                 <span className='i ri-user-settings-line'></span>
                             </a>
                         </li>
@@ -133,7 +135,8 @@ export default function Userbar() {
                                     global.openUserbar('message-setting');
                                     return false;
                                 }}
-                                aria-label='message-setting'>
+                                aria-label='message-setting'
+                            >
                                 <span className='i ri-mail-settings-line'></span>
                             </a>
                         </li>
@@ -145,7 +148,8 @@ export default function Userbar() {
                                     global.openUserbar('message');
                                     return false;
                                 }}
-                                aria-label='message'>
+                                aria-label='message'
+                            >
                                 <span className='i ri-message-2-line'></span>
                             </a>
                         </li>
@@ -156,7 +160,8 @@ export default function Userbar() {
                                 onClick={() => {
                                     logout();
                                 }}
-                                aria-label='logout'>
+                                aria-label='logout'
+                            >
                                 <span className='i ri-logout-box-r-line'></span>
                             </a>
                         </li>

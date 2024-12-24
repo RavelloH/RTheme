@@ -117,7 +117,7 @@ export async function POST(request) {
                     connectOrCreate: convertToObjectArray(category) || undefined,
                 },
                 updatedAt: time,
-                published: draft == "true"  ? false : true,
+                published: draft == 'true' ? false : true,
             },
         });
     } catch (error) {

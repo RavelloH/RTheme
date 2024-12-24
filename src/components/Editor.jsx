@@ -105,7 +105,8 @@ function infoEdit() {
                     <div
                         className='big-button'
                         id='publish-button'
-                        onClick={() => submit('publish')}>
+                        onClick={() => submit('publish')}
+                    >
                         <span>保存并发布</span>
                     </div>
                     <div className='big-button' id='draft-button' onClick={() => submit('draft')}>
@@ -301,7 +302,8 @@ export default function Editor(props) {
                     <div
                         className='big-button'
                         id='to-content-button'
-                        onClick={() => contentEdit(props)}>
+                        onClick={() => contentEdit(props)}
+                    >
                         <span>编辑正文</span>
                     </div>
                 </div>

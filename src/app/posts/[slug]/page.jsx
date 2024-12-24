@@ -129,7 +129,8 @@ export default async function Post(params) {
                     {createCategory(post.category)} {' • '}
                     <span className='ri-t-box-line'></span>{' '}
                     <span id='textLength'>{post.content.length}字</span>
-                    {' • '}<span className='ri-search-eye-line'></span> <span id='pageVisitors'>---</span>
+                    {' • '}
+                    <span className='ri-search-eye-line'></span> <span id='pageVisitors'>---</span>
                 </p>
                 {createTag(post.tag)}
                 <hr />
@@ -145,7 +146,8 @@ export default async function Post(params) {
                     <a
                         href='https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans'
                         target='_blank'
-                        className='no-effect'>
+                        className='no-effect'
+                    >
                         <span className='ri-creative-commons-line'></span>
                         <span className='ri-creative-commons-nc-line'></span>
                         <span className='ri-creative-commons-nd-line'></span>知识共享

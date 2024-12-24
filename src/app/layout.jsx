@@ -52,7 +52,7 @@ export const metadata = {
         type: 'website',
     },
     twitter: {
-        card: "summary_large_image",
+        card: 'summary_large_image',
         title: {
             template: '%s | ' + config.siteName,
             default: config.siteName,
@@ -61,7 +61,7 @@ export const metadata = {
         creator: config.twitterUsername,
         images: {
             url: `${config.screenshotApi}?url=${config.siteURL}&viewport=1600x800&waitUntil=networkidle0`,
-            alt: config.siteShortname+"'s Screenshot",
+            alt: config.siteShortname + "'s Screenshot",
         },
     },
 };
