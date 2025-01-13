@@ -41,8 +41,9 @@ function commentInit(force, refresh = true) {
             document.querySelector('#comment-cancel-button').style.display = 'none';
         }
     } else {
+        commentButton.classList.add('to-login');
         commentTextarea.placeholder = '请登录后发送评论';
-        commentButton.innerHTML = '<span>登录后发送评论<span>';
+        commentButton.innerHTML = '<span><u>点击此处</u>登录后发送评论<span>';
     }
 
     // 评论字数统计
@@ -294,14 +295,17 @@ function replyComment(comment) {
 
 function sendComment(parentCommentId) {
     // 防抖
-    if (document.getElementById('comment-button').classList.contains('block')) {
+    if (
+        document.getElementById('comment-button').classList.contains('block') &&
+        !document.getElementById('comment-button').classList.contains('to-login')
+    ) {
         return;
     }
 
     // 创建评论
     if (!token.get()) {
         // 跳转登录
-        window.location.href = '/account/signin?redirect=' + window.location.href;
+        window.location.href = '/account/signin?redirect=' + window.location.href + '#comment';
     }
     const commentButton = document.getElementById('comment-button');
     switchElementContent(
