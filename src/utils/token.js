@@ -3,6 +3,7 @@
 import cookie from '@/assets/js/lib/cookie';
 import { Base64 } from 'js-base64';
 import objectToForm from './objectToForm';
+import message from './message';
 
 // Base64模块
 const base = {
@@ -56,8 +57,10 @@ const token = {
                 .then((data) => {
                     if (data.token) {
                         cookie.setItem('usertoken', data.token, data.info.exp - data.info.iat);
+                        message.success('已使用当前Token重新登陆');
                         resolve(data.token);
                     } else {
+                        message.error(data.message);
                         console.log(data.message);
                     }
                 })
