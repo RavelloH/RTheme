@@ -35,10 +35,13 @@ export async function GET() {
         ttl: '60',
     });
 
-    const data = await getDB('post');
+    let data = await getDB('post');
 
     // 倒序排列
     data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // 选取最新的 20 篇文章
+    data = data.slice(0, 20);
 
     data.forEach((post) => {
         // console.log(post);
