@@ -5,10 +5,13 @@ export const metadata = {
     title: '标签 \\ Tags',
 };
 
-const postslength = await prisma.post.count();
+const postslength = await prisma.post.count(
+    { where: { published: true } },
+);
 
 const tags = await prisma.tag.findMany({
     select: { name: true, post: true },
+    where: { post: { some: { published: true } } },
 });
 
 let tagsList = [];
