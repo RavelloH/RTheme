@@ -5,9 +5,7 @@ export const metadata = {
     title: '标签 \\ Tags',
 };
 
-const postslength = await prisma.post.count(
-    { where: { published: true } },
-);
+const postslength = await prisma.post.count({ where: { published: true } });
 
 const tags = await prisma.tag.findMany({
     select: { name: true, post: true },

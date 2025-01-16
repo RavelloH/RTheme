@@ -4,9 +4,7 @@ export const metadata = {
     title: '分类 \\ Categories',
 };
 
-const postslength = await prisma.post.count(
-    { where: { published: true } },
-);
+const postslength = await prisma.post.count({ where: { published: true } });
 
 const categories = await prisma.category.findMany({
     select: { name: true, post: true },
