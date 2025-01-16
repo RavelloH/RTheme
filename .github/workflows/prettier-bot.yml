@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Tree
-        uses: RavelloH/prettier-bot@latest
+        uses: RavelloH/prettier-bot@v1.0.1
       - name: commit
         continue-on-error: True
         run: |
