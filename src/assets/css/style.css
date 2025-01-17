@@ -3405,30 +3405,32 @@ span {
     color: white;
 }
 
-#main::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 10px;
-    background: linear-gradient(to bottom, #111111 0%, rgba(0, 0, 0, 0) 100%);
-    pointer-events: none;
-    z-index: 1;
-}
+@media screen and (min-width: 400px) {
+    #main::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 10px;
+        background: linear-gradient(to bottom, #111111 0%, rgba(0, 0, 0, 0) 100%);
+        pointer-events: none;
+        z-index: 1;
+    }
 
-#main::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 10px;
-    pointer-events: none;
-    z-index: 1;
-    background: linear-gradient(to top, #111111 0%, rgba(0, 0, 0, 0) 100%);
-}
+    #main::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 10px;
+        pointer-events: none;
+        z-index: 1;
+        background: linear-gradient(to top, #111111 0%, rgba(0, 0, 0, 0) 100%);
+    }
 
-.listprogram {
-    margin-top: 10px;
+    .listprogram {
+        margin-top: 10px;
+    }
 }
