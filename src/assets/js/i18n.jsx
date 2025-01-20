@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 // RTheme v3 - i18n.js(语言包)
 import cookie from './lib/cookie.js';
 import config from '../../../config.js';
