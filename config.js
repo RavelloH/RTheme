@@ -138,12 +138,12 @@ const config = {
         },
 
         {
-            name: 'LOG IN',
+            name: 'SIGN IN',
             href: '/account/signin/',
             icon: 'ri-login-box-fill',
         },
         {
-            name: 'LOG UP',
+            name: 'SIGN UP',
             href: '/account/signup/',
             icon: 'ri-user-add-fill',
         },
