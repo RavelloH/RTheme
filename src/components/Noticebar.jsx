@@ -181,6 +181,8 @@ export default function Noticebar() {
         // 确保在客户端执行的逻辑
         if (token.get()) {
             setIsLoggedIn(true);
+        } else {
+            localStorage.removeItem('noticeCache');
         }
         setLogData(log.data);
 
