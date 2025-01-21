@@ -17,13 +17,13 @@ function formatDate(dateStr) {
 
 function createCategory(arr) {
     const elements = arr.map((item, index) => (
-        <a key={index} href={'/categories/' + item.name}>
+        <a key={2*index} href={'/categories/' + item.name}>
             {item.name}
         </a>
     ));
     const joinedElements = elements.map((element, index) => {
         if (index > 0) {
-            return [<span key={index}>/</span>, element];
+            return [<span key={2*index+1}>/</span>, element];
         }
         return element;
     });
