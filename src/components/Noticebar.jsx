@@ -6,6 +6,7 @@ import notice from '@/utils/notice';
 import token from '@/utils/token';
 import log from '@/utils/log';
 import { subscribe, unsubscribe } from '@/utils/log';
+import message from '@/utils/message';
 
 export default function Noticebar() {
     const [unreadNotices, setUnreadNotices] = useState([]);
@@ -73,7 +74,7 @@ export default function Noticebar() {
                     });
                 }
 
-                // 在fetchNotices成功后，根据server返回的 isRead 字段重新分配已读、未读
+                // 在fetchNotices成功后，根据server返回的 isRead 字段重新分配已读、未读，并进行降序排序
                 const newNotices = newData.notices;
                 const updatedUnread = cacheData.unread.filter(
                     (n) => !newNotices.find((m) => m.id === n.id),
@@ -90,11 +91,14 @@ export default function Noticebar() {
                     }
                 });
 
+                // 对已读和未读通知进行降序排序
+                updatedUnread.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                updatedRead.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
                 saveCachedNotices(newTime, updatedUnread, updatedRead);
                 setUnreadNotices(updatedUnread);
                 setReadNotices(updatedRead);
                 setHasNewNotices(newNotices.some((n) => !n.isRead));
-                notice.send('收到一则新通知', newData.notices[0].content, '/icon/512x');
             } else {
                 log.info('No new notices received');
                 setUnreadNotices(cacheData.unread);
@@ -124,6 +128,7 @@ export default function Noticebar() {
         global.toggleLayoutNoticebar();
         e.preventDefault(); // 阻止默认导航
         log.info(`Marking notice as read: ${notice.id}`);
+        message.add('正在标记通知为已读', 30000);
         await markAsReadOnServer(notice.id);
         const cacheData = loadCachedNotices();
         const updatedUnread = cacheData.unread.filter((n) => n.id !== notice.id);
@@ -182,6 +187,8 @@ export default function Noticebar() {
             const iconNoticeSpan = document.querySelector('#icon-notice-span');
             if (iconNotice) iconNotice.classList.add('highlight');
             if (iconNoticeSpan) iconNoticeSpan.classList.add('breathI');
+            notice.send('收到一则新通知', newData.notices[0].content, '/icon/512x');
+            message.success('收到一则新通知',10000);
         }
     }, [hasNewNotices]);
 
@@ -287,6 +294,7 @@ export default function Noticebar() {
                             <br />
                             <br />
                             <h4>已读通知</h4>
+                            <br />
                             {readNotices.map((notice) => (
                                 <div
                                     key={notice.id}
@@ -298,6 +306,7 @@ export default function Noticebar() {
                                     }}>
                                     <a
                                         href={notice.href}
+                                        onClick={()=>global.toggleLayoutNoticebar()}
                                         style={{
                                             color: '#ccc',
                                             textDecoration: 'none',

@@ -35,7 +35,7 @@ export async function GET(request) {
                 userUid: user.uid,
             },
             orderBy: {
-                createdAt: 'asc',
+                createdAt: 'desc', // 将 'asc' 改为 'desc' 以降序排列
             },
         });
 
