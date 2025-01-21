@@ -7,6 +7,7 @@
 
 import switchElementContent from '@/utils/switchElement';
 import HTML from '@/utils/HTML';
+import log from '@/utils/log';
 
 let remoteOutputOrigin,
     localOutputOrigin,
@@ -21,6 +22,7 @@ let remoteOutputOrigin,
     searchTimer;
 
 function getSearchData(keyword) {
+    log.info('<search>', keyword);
     switchElementContent(remoteOutput, '正在请求远程Search服务器...');
     return new Promise((resolve) => {
         fetch('/api/search/post?q=' + keyword)

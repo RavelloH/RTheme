@@ -1,3 +1,4 @@
+import log from './log';
 import switchElementContent from './switchElement';
 
 const message = {
@@ -10,6 +11,7 @@ const message = {
     ),
     switch: function (context, time = 300) {
         switchElementContent('#message-bar', context, time);
+        log.info('<message>');
     },
     error: function (text, time = 6000) {
         message.add(

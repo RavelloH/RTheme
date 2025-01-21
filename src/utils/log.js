@@ -26,26 +26,26 @@ const log = {
             level: 'info',
         },
     ],
-    info: function (content) {
+    info: function (...args) {
         log.data.push({
             time: new Date().toISOString(),
-            content: content,
+            content: args.join(' '),
             level: 'info',
         });
         notify();
     },
-    error: function (content) {
+    error: function (...args) {
         log.data.push({
             time: new Date().toISOString(),
-            content: content,
+            content: args.join(' '),
             level: 'error',
         });
         notify();
     },
-    warn: function (content) {
+    warn: function (...args) {
         log.data.push({
             time: new Date().toISOString(),
-            content: content,
+            content: args.join(' '),
             level: 'warn',
         });
         notify();
@@ -63,18 +63,21 @@ const originalConsole = {
 console.log = function (...args) {
     const message = args.join(' ');
     log.info(message);
+    originalConsole.log(...args);
 };
 
 // 重写 console.warn
 console.warn = function (...args) {
     const message = args.join(' ');
     log.warn(message);
+    originalConsole.warn(...args);
 };
 
 // 重写 console.error
 console.error = function (...args) {
     const message = args.join(' ');
     log.error(message);
+    originalConsole.error(...args);
 };
 
 // 捕获全局错误

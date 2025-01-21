@@ -1,3 +1,5 @@
+import log from './log';
+
 const notice = {
     check: () => {
         return typeof Notification !== 'undefined' && Notification.permission === 'granted';
@@ -23,6 +25,7 @@ const notice = {
             icon: icon,
         };
         const notification = new Notification(title, options);
+        log.info('<notification>', title, body);
         notification.onclick = () => {
             window.focus();
             notification.close();

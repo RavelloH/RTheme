@@ -3,6 +3,7 @@
 import ReactDOM from 'react-dom/client';
 import ReactDOMServer from 'react-dom/server';
 import getXPathTo from '../assets/js/lib/getXPathTo';
+import log from './log';
 
 function reactDomToHtmlString(reactElement) {
     return ReactDOMServer.renderToString(reactElement);
@@ -25,6 +26,7 @@ function isContextSame(element, context) {
 
 // 切换元素内容
 function switchElementContent(selector, context, time = 300) {
+    log.info('<switchElementContent>', selector);
     let element;
     if (time == 0) {
         const element = document.querySelector(selector);
