@@ -65,7 +65,7 @@ function dynamic(userinfo) {
                     <p style={{ maxWidth: '100%' }}>
                         <span className='ri-time-fill'></span>{' '}
                         <span>{formatDateWithTimeZone(comment.createdAt, -8)}</span> &gt;
-                        评论了文稿：{comment.content.slice(0, 30)}...
+                        发表了评论：{comment.content.slice(0, 30)}...
                     </p>
                     <hr className='light' />
                 </div>
@@ -87,6 +87,74 @@ function dynamic(userinfo) {
         );
     }
     return resultList;
+}
+
+function renderProfileActions(isOwner, isLogged, uid) {
+    if (isOwner) {
+        return (
+            <a className='button no-effect' href='/user/update'>
+                <span className='ri-user-settings-fill button'></span> 编辑
+            </a>
+        );
+    }
+    if (!isLogged) {
+        return (
+            <>
+                <a className='button' href={'/account/signin?redirect=/user/' + uid}>
+                    <span className='ri-user-heart-fill button'></span> 关注
+                </a>
+                {'     '}
+                <a className='button' href={'/account/signin?redirect=/user/' + uid}>
+                    <span className='ri-message-2-fill button'></span> 私信
+                </a>
+            </>
+        );
+    }
+    return (
+        <>
+            <a className='button no-effect'>
+                <span className='ri-user-heart-fill button'></span> 关注
+            </a>
+            {'     '}
+            <a className='button no-effect' href={'/message?uid=' + uid}>
+                <span className='ri-message-2-fill button'></span> 私信
+            </a>
+        </>
+    );
+}
+
+function renderUserInfo(userinfo, getMinutesFromNow, timeAgo) {
+    return (
+        <>
+            <img
+                src={userinfo.avatar || '/user.jpg'}
+                alt='avatar'
+                width={100}
+                height={100}
+                id='user-avatar'
+            />
+            <div id='user-describe'>
+                <span id='user-name'>
+                    {userinfo.nickname}
+                    <span style={{ color: 'gray', fontSize: '0.8em' }}> @{userinfo.username}</span>
+                </span>
+                <span id='user-bio'>
+                    {userinfo.bio || '未设置描述...'}
+                    {' \\ '}
+                    <span>
+                        {getMinutesFromNow(userinfo.lastUseAt) < 20
+                            ? '当前在线'
+                            : '最近于' + timeAgo(userinfo.lastUseAt) + '在线'}{' '}
+                        \ 创建于
+                        {Math.floor(
+                            (Date.now() - userinfo.createdAt) / 1000 / 60 / 60 / 24,
+                        )}
+                        天前
+                    </span>
+                </span>
+            </div>
+        </>
+    );
 }
 
 export default async function User({ searchParams }) {
@@ -142,47 +210,12 @@ export default async function User({ searchParams }) {
                 >
                     <div className='userInfo'>
                         <div id='user-info'>
-                            <img
-                                src={userinfo.avatar || '/user.jpg'}
-                                alt='avatar'
-                                width={100}
-                                height={100}
-                                id='user-avatar'
-                            />
-                            <div id='user-describe'>
-                                <span id='user-name'>
-                                    {userinfo.nickname}
-                                    <span style={{ color: 'gray', fontSize: '0.8em' }}>
-                                        {' '}
-                                        @{userinfo.username}
-                                    </span>
-                                </span>
-                                <span id='user-bio'>
-                                    {userinfo.bio || '未设置描述...'}
-                                    {' \\ '}
-                                    <span>
-                                        {getMinutesFromNow(userinfo.lastUseAt) < 20
-                                            ? '当前在线'
-                                            : '最近于' + timeAgo(userinfo.lastUseAt) + '在线'}{' '}
-                                        \ 创建于
-                                        {Math.floor(
-                                            (Date.now() - userinfo.createdAt) / 1000 / 60 / 60 / 24,
-                                        )}
-                                        天前
-                                    </span>
-                                </span>
-                            </div>
+                            {renderUserInfo(userinfo, getMinutesFromNow, timeAgo)}
                         </div>
                     </div>
 
                     <div className='userBehavior'>
-                        <a className='button' href={'/account/signin?redirect=/user/' + uid}>
-                            <span className='ri-user-heart-fill button'></span> 关注
-                        </a>
-                        {'     '}
-                        <a className='button' href={'/account/signin?redirect=/user/' + uid}>
-                            <span className='ri-message-2-fill button'></span> 私信
-                        </a>
+                        {renderProfileActions(false, false, uid)}
                     </div>
                 </div>
                 <hr />
@@ -270,7 +303,11 @@ export default async function User({ searchParams }) {
                 following: true,
             },
         });
-        if (user.uid == uid || tokenServer.verify(cookieStore.value).uid == uid) {
+        const isOwner =
+            user.uid == uid ||
+            tokenServer.verify(cookieStore.value).uid == uid ||
+            !uid;
+        if (isOwner) {
             // 可编辑
             return (
                 <div className='full overflow' style={{ height: '100%' }}>
@@ -289,49 +326,12 @@ export default async function User({ searchParams }) {
                     >
                         <div className='userInfo'>
                             <div id='user-info'>
-                                <img
-                                    src={userinfo.avatar || '/user.jpg'}
-                                    alt='avatar'
-                                    width={100}
-                                    height={100}
-                                    id='user-avatar'
-                                />
-                                <div id='user-describe'>
-                                    <span id='user-name'>
-                                        {userinfo.nickname}
-                                        <span style={{ color: 'gray', fontSize: '0.8em' }}>
-                                            {' '}
-                                            @{userinfo.username}
-                                        </span>
-                                    </span>
-                                    <span id='user-bio'>
-                                        {userinfo.bio || '未设置描述...'}
-                                        {' \\ '}
-                                        <span>
-                                            {getMinutesFromNow(userinfo.lastUseAt) < 20
-                                                ? '当前在线'
-                                                : '最近于' +
-                                                  timeAgo(userinfo.lastUseAt) +
-                                                  '在线'}{' '}
-                                            \ 创建于
-                                            {Math.floor(
-                                                (Date.now() - userinfo.createdAt) /
-                                                    1000 /
-                                                    60 /
-                                                    60 /
-                                                    24,
-                                            )}
-                                            天前
-                                        </span>
-                                    </span>
-                                </div>
+                                {renderUserInfo(userinfo, getMinutesFromNow, timeAgo)}
                             </div>
                         </div>
 
                         <div className='userBehavior'>
-                            <a className='button' href='/user/update'>
-                                <span className='ri-user-settings-fill button'></span> 编辑
-                            </a>
+                            {renderProfileActions(isOwner, true, uid)}
                         </div>
                     </div>
                     <hr />
@@ -396,47 +396,12 @@ export default async function User({ searchParams }) {
                 >
                     <div className='userInfo'>
                         <div id='user-info'>
-                            <img
-                                src={userinfo.avatar || '/user.jpg'}
-                                alt='avatar'
-                                width={100}
-                                height={100}
-                                id='user-avatar'
-                            />
-                            <div id='user-describe'>
-                                <span id='user-name'>
-                                    {userinfo.nickname}
-                                    <span style={{ color: 'gray', fontSize: '0.8em' }}>
-                                        {' '}
-                                        @{userinfo.username}
-                                    </span>
-                                </span>
-                                <span id='user-bio'>
-                                    {userinfo.bio || '未设置描述...'}
-                                    {' \\ '}
-                                    <span>
-                                        {getMinutesFromNow(userinfo.lastUseAt) < 20
-                                            ? '当前在线'
-                                            : '最近于' + timeAgo(userinfo.lastUseAt) + '在线'}{' '}
-                                        \ 创建于
-                                        {Math.floor(
-                                            (Date.now() - userinfo.createdAt) / 1000 / 60 / 60 / 24,
-                                        )}
-                                        天前
-                                    </span>
-                                </span>
-                            </div>
+                            {renderUserInfo(userinfo, getMinutesFromNow, timeAgo)}
                         </div>
                     </div>
 
                     <div className='userBehavior'>
-                        <a className='button'>
-                            <span className='ri-user-heart-fill button'></span> 关注
-                        </a>
-                        {'     '}
-                        <a className='button' href={'/user/message?uid=' + uid}>
-                            <span className='ri-message-2-fill button'></span> 私信
-                        </a>
+                        {renderProfileActions(isOwner, true, uid)}
                     </div>
                 </div>
                 <hr />
