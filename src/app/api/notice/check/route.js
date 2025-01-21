@@ -35,7 +35,7 @@ export async function GET(request) {
                 userUid: user.uid,
             },
             orderBy: {
-                createdAt: 'desc', 
+                createdAt: 'desc',
             },
         });
         let newestTime = latestTime;
