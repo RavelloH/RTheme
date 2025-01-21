@@ -103,7 +103,8 @@ export default function Noticebar() {
                 const newUniqueNotices = newNotices.filter(
                     (n) =>
                         !cacheData.unread.some((unread) => unread.id === n.id) &&
-                        !cacheData.read.some((read) => read.id === n.id),
+                        !cacheData.read.some((read) => read.id === n.id) &&
+                        n.isRead === false,
                 );
                 setHasNewNotices(newUniqueNotices.length > 0);
 
