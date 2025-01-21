@@ -162,15 +162,19 @@ export default function Noticebar() {
 
     useEffect(() => {
         // 确保在客户端执行的逻辑
-        setIsLoggedIn(true); // 根据实际登录状态更新
+        if (token.get()) {
+            setIsLoggedIn(true);
+        }
         setLogData(log.data);
 
-        fetchNotices();
-        const interval = setInterval(fetchNotices, 60_000);
-        return () => {
-            clearInterval(interval);
-        };
-    }, []);
+        if (isLoggedIn) {
+            fetchNotices();
+            const interval = setInterval(fetchNotices, 60_000);
+            return () => {
+                clearInterval(interval);
+            };
+        }
+    }, [isLoggedIn]);
 
     useEffect(() => {
         if (hasNewNotices) {
