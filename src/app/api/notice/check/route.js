@@ -35,14 +35,12 @@ export async function GET(request) {
                 userUid: user.uid,
             },
             orderBy: {
-                createdAt: 'desc', // 将 'asc' 改为 'desc' 以降序排列
+                createdAt: 'desc', 
             },
         });
-
-        // 若请求到新数据，则设置 newestTime = 最后一条通知的 createdAt
         let newestTime = latestTime;
         if (notices.length > 0) {
-            newestTime = notices[notices.length - 1].createdAt;
+            newestTime = notices[0].createdAt;
         }
 
         return Response.json({
