@@ -381,7 +381,6 @@ function addListeners() {
         if (isLayoutNoticebarOpen()) {
             toggleLayoutNoticebar();
         }
-
     });
     domInfoBarToggle.addEventListener('click', () => {
         toggleLayoutInfobar();

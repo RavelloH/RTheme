@@ -192,7 +192,7 @@ export default function Noticebar() {
             if (iconNotice) iconNotice.classList.add('highlight');
             if (iconNoticeSpan) iconNoticeSpan.classList.add('breathI');
             notice.send('收到一则新通知', newData.notices[0].content, '/icon/512x');
-            message.success('收到一则新通知',10000);
+            message.success('收到一则新通知', 10000);
         }
     }, [hasNewNotices]);
 
@@ -225,14 +225,16 @@ export default function Noticebar() {
                     background: 'rgba(50, 50, 50, 0.2)',
                     backdropFilter: 'blur(8px)',
                     WebkitBackdropFilter: 'blur(8px)',
-                }}>
+                }}
+            >
                 <div
                     id='noticebar-left'
                     style={{
                         flex: 1,
                         overflowY: 'auto',
                         padding: '1rem',
-                    }}>
+                    }}
+                >
                     <h2>通知中心</h2>
                     <b>
                         总计{unreadNotices.length + readNotices.length}条通知，
@@ -251,7 +253,6 @@ export default function Noticebar() {
                                 </div>
                             ) : (
                                 <>
-
                                     {unreadNotices.map((notice) => (
                                         <div
                                             key={notice.id}
@@ -260,14 +261,16 @@ export default function Noticebar() {
                                                 marginBottom: '1rem',
                                                 borderBottom: '1px solid rgba(255,255,255,0.2)',
                                                 paddingBottom: '0.5rem',
-                                            }}>
+                                            }}
+                                        >
                                             <a
                                                 href={notice.href}
                                                 style={{
                                                     color: '#fff',
                                                     textDecoration: 'none',
                                                 }}
-                                                onClick={(e) => markAsRead(e, notice)}>
+                                                onClick={(e) => markAsRead(e, notice)}
+                                            >
                                                 {notice.content}
                                             </a>
                                             <div
@@ -275,7 +278,8 @@ export default function Noticebar() {
                                                     fontSize: '0.8rem',
                                                     color: 'rgba(255,255,255,0.6)',
                                                     marginTop: '0.25rem',
-                                                }}>
+                                                }}
+                                            >
                                                 {new Date(notice.createdAt).toLocaleString()}
                                             </div>
                                         </div>
@@ -290,7 +294,8 @@ export default function Noticebar() {
                         className='center full'
                         style={{
                             opacity: 0.25,
-                        }}>
+                        }}
+                    >
                         - <i>Mind stuff, that&apos;s what they say when the verses fly</i> -
                     </div>
                     {readNotices.length > 0 && (
@@ -307,15 +312,17 @@ export default function Noticebar() {
                                         marginBottom: '1rem',
                                         borderBottom: '1px dashed rgba(255,255,255,0.2)',
                                         paddingBottom: '0.5rem',
-                                    }}>
+                                    }}
+                                >
                                     <a
                                         href={notice.href}
-                                        onClick={()=>global.toggleLayoutNoticebar()}
+                                        onClick={() => global.toggleLayoutNoticebar()}
                                         style={{
                                             color: '#ccc',
                                             textDecoration: 'none',
                                         }}
-                                        className='no-effect'>
+                                        className='no-effect'
+                                    >
                                         {notice.content}
                                     </a>
                                     <div
@@ -323,7 +330,8 @@ export default function Noticebar() {
                                             fontSize: '0.8rem',
                                             color: 'rgba(200,200,200,0.5)',
                                             marginTop: '0.25rem',
-                                        }}>
+                                        }}
+                                    >
                                         {new Date(notice.createdAt).toLocaleString()}
                                     </div>
                                 </div>
@@ -334,7 +342,8 @@ export default function Noticebar() {
                 <div
                     id='noticebar-right'
                     ref={rightDivRef}
-                    style={{ flex: 1, padding: '1rem', opacity: 0.1 }}>
+                    style={{ flex: 1, padding: '1rem', opacity: 0.1 }}
+                >
                     {logData.map((item, index) => (
                         <>
                             <span key={index}>
@@ -358,7 +367,8 @@ export default function Noticebar() {
                     justifyContent: 'center',
                     height: '3em',
                 }}
-                onClick={() => global.toggleLayoutNoticebar()}>
+                onClick={() => global.toggleLayoutNoticebar()}
+            >
                 <span className='i ri-arrow-up-s-line'></span>
             </div>
         </section>

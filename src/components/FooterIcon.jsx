@@ -15,7 +15,8 @@ let footerList = config.footer.map((item, index) => {
             aria-label={item.additions.ariaLabel}
             data-pjax-state=''
             data-umami-event={item.additions.umamiEvent || ''}
-            target={item.additions.target || ''}>
+            target={item.additions.target || ''}
+        >
             <span className={'i ' + item.icon}></span>
         </a>
     );
@@ -46,7 +47,8 @@ export default function FooterIcon() {
                 aria-label='about this page'
                 data-pjax-state=''
                 data-umami-event='footer-关于'
-                target='_self'>
+                target='_self'
+            >
                 <span className={'i ' + 'ri-compass-discover-line'}></span>
             </a>
             <a
@@ -62,9 +64,17 @@ export default function FooterIcon() {
                 aria-label='about this page'
                 data-pjax-state=''
                 data-umami-event='footer-关于'
-                target='_self'>
-                <span className={`i ri-notification-2-line ${hasNewNotices ? 'breathI' : ''}`} id='icon-notice-span'></span>
-                {hasNewNotices ? <span className='ripple active'></span> : <span className='ripple'></span>}
+                target='_self'
+            >
+                <span
+                    className={`i ri-notification-2-line ${hasNewNotices ? 'breathI' : ''}`}
+                    id='icon-notice-span'
+                ></span>
+                {hasNewNotices ? (
+                    <span className='ripple active'></span>
+                ) : (
+                    <span className='ripple'></span>
+                )}
             </a>
             {footerList}
 
@@ -81,7 +91,8 @@ export default function FooterIcon() {
                 aria-label='my rss'
                 data-pjax-state=''
                 data-umami-event='footer-RSS'
-                target='_self'>
+                target='_self'
+            >
                 <span className={'i ' + 'ri-rss-fill'}></span>
             </a>
         </>
