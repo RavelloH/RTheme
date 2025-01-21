@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef} from 'react';
+import { useState, useEffect, useRef } from 'react';
 import global from '@/assets/js/Global';
 import '@/assets/css/Noticebar.css';
 import notice from '@/utils/notice';
