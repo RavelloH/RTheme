@@ -269,6 +269,19 @@ function isLayoutMenuOpen() {
     }
 }
 
+function toggleLayoutNoticebar() {
+    document.querySelector('#noticebar').classList.toggle('active');
+    domShadeGlobal.classList.toggle('active');
+}
+
+function isLayoutNoticebarOpen() {
+    if (document.querySelector('#noticebar').classList[0] == 'active') {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 // 下拉栏状态
 function isLayoutInfobarOpen() {
     if (domLayoutInfoBar.classList[0] == 'active') {
@@ -365,6 +378,10 @@ function addListeners() {
         if (isLayoutUserbarOpen()) {
             toggleLayoutUserbar();
         }
+        if (isLayoutNoticebarOpen()) {
+            toggleLayoutNoticebar();
+        }
+
     });
     domInfoBarToggle.addEventListener('click', () => {
         toggleLayoutInfobar();
@@ -1405,6 +1422,7 @@ const globalModule = {
     openInfoBar,
     toggleThemeMode,
     toggleFullScreen,
+    toggleLayoutNoticebar,
     musicChange,
     musicGo,
     musicPlay,

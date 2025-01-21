@@ -29,6 +29,7 @@ model User {
   note          Note[]
   followed      FriendShip[] @relation("Followed")
   following     FriendShip[] @relation("Following")
+  notice        Notice[]
   message       Message[]
   post          Post[]
   comment       Comment[]
@@ -60,6 +61,16 @@ model Message {
   fromUserUid Int
   toUserUid   Int
   from        User     @relation(fields: [fromUserUid], references: [uid])
+}
+
+model Notice {
+  id        String   @id @default(uuid())
+  content   String   @db.VarChar(511)
+  href      String   @db.VarChar(255)
+  createdAt DateTime @default(now())
+  userUid   Int
+  user      User     @relation(fields: [userUid], references: [uid])
+  isRead    Boolean  @default(false)
 }
 
 model Post {

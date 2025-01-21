@@ -9,6 +9,7 @@ import prisma from '../../_utils/prisma';
 import limitControl from '../../_utils/limitControl';
 import token from '../../_utils/token';
 import qs from 'qs';
+import sendNotice from '../../_utils/notice';
 
 const editableProperty = ['id', 'content', 'postUid', 'noteUid', 'commentUid'];
 
@@ -141,6 +142,43 @@ export async function POST(request) {
                                 commentUid: filteredObject.commentUid,
                             },
                         });
+                        // 如果是回复评论，发送notice
+                        if (filteredObject.commentUid) {
+                            const comment = await prisma.comment.findUnique({
+                                where: {
+                                    id: filteredObject.commentUid,
+                                },
+                                include: {
+                                    post: {
+                                        select: {
+                                            name: true,
+                                        },
+                                    }
+                                }
+                            });
+                            if (comment) {
+                                await sendNotice(
+                                    `您的评论"${comment.content}"被${tokenInfo.nickname}回复了：${filteredObject.content}`,
+                                    `/posts/${comment.post.name}#${filteredObject.commentUid}`,
+                                    comment.userUid,
+                                );
+                            }
+                        }
+                        // 如果是回复post，发送notice
+                        if (filteredObject.postUid) {
+                            const post = await prisma.post.findUnique({
+                                where: {
+                                    id: filteredObject.postUid,
+                                },
+                            });
+                            if (post) {
+                                await sendNotice(
+                                    `您的文章"${post.title}"被${tokenInfo.nickname}评论了：${filteredObject.content}`,
+                                    `/posts/${post.name}`,
+                                    post.userUid,
+                                );
+                            }
+                        }
                     } catch (error) {
                         return Response.json(
                             { message: '创建评论失败', error: error.message },

@@ -106,7 +106,7 @@ function getComment() {
                                 <div
                                     className='comment-item'
                                     key={comment.id}
-                                    name={comment.id}
+                                    id={comment.id}
                                     style={{
                                         marginLeft: comment.replyFor ? '5%' : '0',
                                     }}
@@ -190,6 +190,12 @@ function getComment() {
                         });
                     });
                     switchElementContent('#comment-list', resultList, 0);
+                    // 重新刷新页面的hash，如果有hash，先清空再还原
+                    if (window.location.hash) {
+                        const hash = window.location.hash;
+                        window.location.hash = '';
+                        window.location.hash = hash;
+                    }
                 } else {
                     const commentList = document.getElementById('comment-list');
                     commentList.innerHTML = '<p class="center">暂无评论</p>';

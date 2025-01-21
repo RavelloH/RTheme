@@ -14,6 +14,7 @@ import Infobar from '@/components/Infobar';
 import Userbar from '@/components/Userbar.jsx';
 
 import '@/assets/js/Global';
+import Noticebar from '@/components/Noticebar';
 
 export const metadata = {
     title: {
@@ -90,6 +91,7 @@ export default function RootLayout({ children }) {
                 <section id='userbar'>
                     <Userbar />
                 </section>
+                <Noticebar />
                 <SpeedInsights />
                 <Analytics />
             </body>

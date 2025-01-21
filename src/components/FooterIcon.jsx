@@ -1,5 +1,5 @@
 'use client';
-
+import { useState, useEffect } from 'react';
 import config from '../../config';
 import global from '@/assets/js/Global';
 
@@ -7,7 +7,7 @@ let footerList = config.footer.map((item, index) => {
     return (
         <a
             className='loading loaded'
-            style={{ '--i': index + 2 }}
+            style={{ '--i': index + 3 }}
             key={index}
             href={item.href || ''}
             id={item.id}
@@ -15,14 +15,22 @@ let footerList = config.footer.map((item, index) => {
             aria-label={item.additions.ariaLabel}
             data-pjax-state=''
             data-umami-event={item.additions.umamiEvent || ''}
-            target={item.additions.target || ''}
-        >
+            target={item.additions.target || ''}>
             <span className={'i ' + item.icon}></span>
         </a>
     );
 });
 
 export default function FooterIcon() {
+    const [hasNewNotices, setHasNewNotices] = useState(false);
+
+    useEffect(() => {
+        setTimeout(() => {
+            const cacheData = JSON.parse(localStorage.getItem('noticeCache') || '{}');
+            setHasNewNotices(cacheData.unread && cacheData.unread.length > 0);
+        }, 2000);
+    }, []);
+
     return (
         <>
             <a
@@ -38,9 +46,25 @@ export default function FooterIcon() {
                 aria-label='about this page'
                 data-pjax-state=''
                 data-umami-event='footer-关于'
-                target='_self'
-            >
+                target='_self'>
                 <span className={'i ' + 'ri-compass-discover-line'}></span>
+            </a>
+            <a
+                className={`loading loaded ${hasNewNotices ? 'highlight' : ''}`}
+                style={{ '--i': 2 }}
+                key={2}
+                onClick={() => {
+                    global.toggleLayoutNoticebar();
+                    return false;
+                }}
+                href='#notice'
+                id='icon-notice'
+                aria-label='about this page'
+                data-pjax-state=''
+                data-umami-event='footer-关于'
+                target='_self'>
+                <span className={`i ri-notification-2-line ${hasNewNotices ? 'breathI' : ''}`} id='icon-notice-span'></span>
+                {hasNewNotices ? <span className='ripple active'></span> : <span className='ripple'></span>}
             </a>
             {footerList}
 
@@ -57,8 +81,7 @@ export default function FooterIcon() {
                 aria-label='my rss'
                 data-pjax-state=''
                 data-umami-event='footer-RSS'
-                target='_self'
-            >
+                target='_self'>
                 <span className={'i ' + 'ri-rss-fill'}></span>
             </a>
         </>

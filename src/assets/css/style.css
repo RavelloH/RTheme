@@ -632,7 +632,8 @@ hr {
 }
 
 #infobar-header,
-#userbar-head {
+#userbar-head,
+#noticebar-footer {
     font-size: 2rem;
     display: -webkit-box;
     display: -ms-flexbox;
@@ -664,7 +665,8 @@ hr {
     text-transform: uppercase;
 }
 
-#infobar-context {
+#infobar-context,
+#noticebar-context {
     height: calc(100% - 6rem);
     margin: 0.714rem 1.786rem;
     display: -webkit-box;
@@ -752,7 +754,8 @@ hr {
     overflow-y: auto;
 }
 
-#infobar-left {
+#infobar-left,
+#noticebar-left {
     -webkit-box-flex: 6;
     -ms-flex: 6;
     flex: 6;
@@ -762,7 +765,8 @@ hr {
     max-width: 60%;
 }
 
-#infobar-right {
+#infobar-right,
+#noticebar-right {
     -webkit-box-flex: 4;
     -ms-flex: 4;
     flex: 4;
@@ -869,7 +873,7 @@ footer {
     display: flex;
     text-align: right;
     font-weight: bold;
-    overflow: hidden;
+    overflow: visable;
     -ms-flex-line-pack: center;
     align-content: center;
     -webkit-box-align: center;
@@ -2093,9 +2097,9 @@ pre:not(#vditor pre) {
     line-height: 0;
     white-space: pre-wrap;
     word-wrap: break-word;
-    overflow: auto;
 }
 
+/* pre span:not(span[highlight], span[class*='hljs'], #vditor span) {
 /* pre span:not(span[highlight], span[class*='hljs'], #vditor span) {
     display: block;
     line-height: 1.8rem;
@@ -3135,7 +3139,8 @@ kdb {
     #infobar.active {
         top: 25%;
     }
-    #infobar-context {
+    #infobar-context,
+    #noticebar-context {
         display: block;
         overflow: auto;
         -webkit-box-orient: vertical;
@@ -3144,10 +3149,15 @@ kdb {
         flex-direction: column-reverse;
         vertical-align: bottom;
     }
-    #infobar-left {
+    #noticebar-left {
+        height: 80%;
+    }
+    #infobar-left,
+    #noticebar-left {
         max-width: 100%;
     }
-    #infobar-right {
+    #infobar-right,
+    #noticebar-right {
         padding: 0;
         margin-top: 1.25em;
         max-width: 100%;
@@ -3413,7 +3423,7 @@ span {
         left: 0;
         width: 100%;
         height: 10px;
-        background: linear-gradient(to bottom, #111111 0%, rgba(0, 0, 0, 0) 100%);
+        background: linear-gradient(to bottom, var(--theme-black) 0%, rgba(0, 0, 0, 0) 100%);
         pointer-events: none;
         z-index: 1;
     }
@@ -3427,7 +3437,7 @@ span {
         height: 10px;
         pointer-events: none;
         z-index: 1;
-        background: linear-gradient(to top, #111111 0%, rgba(0, 0, 0, 0) 100%);
+        background: linear-gradient(to top, var(--theme-black) 0%, rgba(0, 0, 0, 0) 100%);
     }
 
     .listprogram {
