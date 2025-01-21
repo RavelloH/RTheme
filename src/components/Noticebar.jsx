@@ -98,7 +98,19 @@ export default function Noticebar() {
                 saveCachedNotices(newTime, updatedUnread, updatedRead);
                 setUnreadNotices(updatedUnread);
                 setReadNotices(updatedRead);
-                setHasNewNotices(newNotices.some((n) => !n.isRead));
+
+                // 修改 setHasNewNotices 条件
+                const newUniqueNotices = newNotices.filter(
+                    (n) =>
+                        !cacheData.unread.some((unread) => unread.id === n.id) &&
+                        !cacheData.read.some((read) => read.id === n.id),
+                );
+                setHasNewNotices(newUniqueNotices.length > 0);
+
+                if (newUniqueNotices.length > 0) {
+                    notice.send('收到一则新通知', newData.notices[0].content, '/icon/512x');
+                    message.success('收到一则新通知', 10000);
+                }
             } else {
                 log.info('No new notices received');
                 setUnreadNotices(cacheData.unread);
@@ -128,7 +140,12 @@ export default function Noticebar() {
         global.toggleLayoutNoticebar();
         e.preventDefault(); // 阻止默认导航
         log.info(`Marking notice as read: ${notice.id}`);
-        message.add('正在标记通知为已读', 30000);
+        message.add(
+            <a>
+                <div>正在标记通知为已读</div>
+            </a>,
+            30000,
+        );
         await markAsReadOnServer(notice.id);
         const cacheData = loadCachedNotices();
         const updatedUnread = cacheData.unread.filter((n) => n.id !== notice.id);
@@ -191,8 +208,6 @@ export default function Noticebar() {
             const iconNoticeSpan = document.querySelector('#icon-notice-span');
             if (iconNotice) iconNotice.classList.add('highlight');
             if (iconNoticeSpan) iconNoticeSpan.classList.add('breathI');
-            notice.send('收到一则新通知', newData.notices[0].content, '/icon/512x');
-            message.success('收到一则新通知',10000);
         }
     }, [hasNewNotices]);
 
@@ -251,7 +266,6 @@ export default function Noticebar() {
                                 </div>
                             ) : (
                                 <>
-
                                     {unreadNotices.map((notice) => (
                                         <div
                                             key={notice.id}
@@ -310,7 +324,7 @@ export default function Noticebar() {
                                     }}>
                                     <a
                                         href={notice.href}
-                                        onClick={()=>global.toggleLayoutNoticebar()}
+                                        onClick={() => global.toggleLayoutNoticebar()}
                                         style={{
                                             color: '#ccc',
                                             textDecoration: 'none',
