@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef} from 'react';
 import global from '@/assets/js/Global';
 import '@/assets/css/Noticebar.css';
 import notice from '@/utils/notice';
@@ -14,6 +14,7 @@ export default function Noticebar() {
     const [hasNewNotices, setHasNewNotices] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [logData, setLogData] = useState([]);
+    const [isLoadSuccess, setLoadSuccess] = useState(false);
     const rightDivRef = useRef(null);
 
     // 读写本地缓存
@@ -55,6 +56,7 @@ export default function Noticebar() {
                 return;
             }
             const newData = await res.json();
+            setLoadSuccess(true);
             log.info('Notices fetched successfully');
             if (newData.notices?.length) {
                 log.info(`${newData.notices.length} new notices received`);
@@ -73,8 +75,6 @@ export default function Noticebar() {
                         body: JSON.stringify(needMarkRead),
                     });
                 }
-
-                // 在fetchNotices成功后，根据server返回的 isRead 字段重新分配已读、未读，并进行降序排序
                 const newNotices = newData.notices;
                 const updatedUnread = cacheData.unread.filter(
                     (n) => !newNotices.find((m) => m.id === n.id),
@@ -133,7 +133,9 @@ export default function Noticebar() {
                 },
                 body: JSON.stringify([noticeId]),
             });
-        } catch {}
+        } catch {
+            log.error('Failed to mark notice as read on server');
+        }
     };
 
     // 将某通知设为已读
@@ -265,15 +267,15 @@ export default function Noticebar() {
                         <>
                             {unreadNotices.length === 0 ? (
                                 <div className='center'>
-                                    当前无未读通知
+                                    {isLoadSuccess ? '当前无未读通知' : '正在向服务器请求通知列表'}
                                     <br />
                                     <br />
                                 </div>
                             ) : (
                                 <>
-                                    {unreadNotices.map((notice) => (
+                                    {unreadNotices.map((notice, index) => (
                                         <div
-                                            key={notice.id}
+                                            key={index}
                                             className='notice-div'
                                             style={{
                                                 marginBottom: '1rem',
@@ -322,9 +324,9 @@ export default function Noticebar() {
                             <br />
                             <h4>已读通知</h4>
                             <br />
-                            {readNotices.map((notice) => (
+                            {readNotices.map((notice, index) => (
                                 <div
-                                    key={notice.id}
+                                    key={index}
                                     className='notice-div'
                                     style={{
                                         marginBottom: '1rem',
