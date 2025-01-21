@@ -146,9 +146,7 @@ function renderUserInfo(userinfo, getMinutesFromNow, timeAgo) {
                             ? '当前在线'
                             : '最近于' + timeAgo(userinfo.lastUseAt) + '在线'}{' '}
                         \ 创建于
-                        {Math.floor(
-                            (Date.now() - userinfo.createdAt) / 1000 / 60 / 60 / 24,
-                        )}
+                        {Math.floor((Date.now() - userinfo.createdAt) / 1000 / 60 / 60 / 24)}
                         天前
                     </span>
                 </span>
@@ -214,9 +212,7 @@ export default async function User({ searchParams }) {
                         </div>
                     </div>
 
-                    <div className='userBehavior'>
-                        {renderProfileActions(false, false, uid)}
-                    </div>
+                    <div className='userBehavior'>{renderProfileActions(false, false, uid)}</div>
                 </div>
                 <hr />
                 <div className='texts full'>
@@ -303,10 +299,7 @@ export default async function User({ searchParams }) {
                 following: true,
             },
         });
-        const isOwner =
-            user.uid == uid ||
-            tokenServer.verify(cookieStore.value).uid == uid ||
-            !uid;
+        const isOwner = user.uid == uid || tokenServer.verify(cookieStore.value).uid == uid || !uid;
         if (isOwner) {
             // 可编辑
             return (
@@ -400,9 +393,7 @@ export default async function User({ searchParams }) {
                         </div>
                     </div>
 
-                    <div className='userBehavior'>
-                        {renderProfileActions(isOwner, true, uid)}
-                    </div>
+                    <div className='userBehavior'>{renderProfileActions(isOwner, true, uid)}</div>
                 </div>
                 <hr />
                 <div className='texts full'>
