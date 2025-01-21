@@ -21,8 +21,8 @@ export async function POST(request) {
                 id: { in: ids },
             },
             data: {
-                isRead: true
-            }
+                isRead: true,
+            },
         });
         return new Response(JSON.stringify({ success: true }));
     } catch (error) {

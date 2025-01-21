@@ -153,8 +153,8 @@ export async function POST(request) {
                                         select: {
                                             name: true,
                                         },
-                                    }
-                                }
+                                    },
+                                },
                             });
                             if (comment) {
                                 await sendNotice(

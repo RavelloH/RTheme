@@ -1,4 +1,4 @@
-import prisma from "./prisma";
+import prisma from './prisma';
 
 async function sendNotice(content, href, userUid, createdAt = new Date()) {
     console.log('sendNotice:', content, href, userUid, createdAt);

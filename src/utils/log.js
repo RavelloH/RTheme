@@ -15,22 +15,22 @@ export function unsubscribe(fn) {
 
 // 通知所有订阅者
 function notify() {
-    subscribers.forEach(fn => fn());
+    subscribers.forEach((fn) => fn());
 }
 
 const log = {
     data: [
         {
             time: new Date().toISOString(),
-            content: "Log.js started.",
-            level: "info"
-        }
+            content: 'Log.js started.',
+            level: 'info',
+        },
     ],
     info: function (content) {
         log.data.push({
             time: new Date().toISOString(),
             content: content,
-            level: "info"
+            level: 'info',
         });
         notify();
     },
@@ -38,7 +38,7 @@ const log = {
         log.data.push({
             time: new Date().toISOString(),
             content: content,
-            level: "error"
+            level: 'error',
         });
         notify();
     },
@@ -46,45 +46,45 @@ const log = {
         log.data.push({
             time: new Date().toISOString(),
             content: content,
-            level: "warn"
+            level: 'warn',
         });
         notify();
-    }
-}
+    },
+};
 
 // 保存原始的 console 方法
 const originalConsole = {
     log: console.log,
     warn: console.warn,
-    error: console.error
+    error: console.error,
 };
 
 // 重写 console.log
-console.log = function(...args) {
+console.log = function (...args) {
     const message = args.join(' ');
     log.info(message);
 };
 
 // 重写 console.warn
-console.warn = function(...args) {
+console.warn = function (...args) {
     const message = args.join(' ');
     log.warn(message);
 };
 
 // 重写 console.error
-console.error = function(...args) {
+console.error = function (...args) {
     const message = args.join(' ');
     log.error(message);
 };
 
 // 捕获全局错误
 if (typeof window !== 'undefined') {
-    window.onerror = function(message, source, lineno, colno, error) {
+    window.onerror = function (message, source, lineno, colno, error) {
         log.error(`${message} at ${source}:${lineno}:${colno}`);
     };
 
     // 捕获未处理的 Promise 拒绝
-    window.onunhandledrejection = function(event) {
+    window.onunhandledrejection = function (event) {
         log.error(`Unhandled promise rejection: ${event.reason}`);
     };
 }

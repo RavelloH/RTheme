@@ -3,7 +3,7 @@ import prisma from './prisma';
 
 async function checkLimitControl(request) {
     const ip =
-        request.headers.get("x-real-ip") ||
+        request.headers.get('x-real-ip') ||
         request.headers.get('x-forwarded-for') ||
         request.headers.get('x-vercel-proxied-for') ||
         request.ip ||
@@ -26,7 +26,7 @@ async function checkLimitControl(request) {
 
 async function updateLimitControl(request) {
     const ip =
-        request.headers.get("x-real-ip") ||
+        request.headers.get('x-real-ip') ||
         request.headers.get('x-forwarded-for') ||
         request.headers.get('x-vercel-proxied-for') ||
         request.ip ||
