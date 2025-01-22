@@ -117,6 +117,7 @@ body {
     -webkit-transition: right 450ms;
     -o-transition: right 450ms;
     transition: right 450ms;
+    -webkit-overflow-scrolling: touch;
 }
 
 body.active {
