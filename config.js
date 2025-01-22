@@ -12,7 +12,7 @@ const config = {
     mail: 'ravelloh@outlook.com', // 邮箱
     copyrightStartTime: '2019', // 建站开始年份
     siteBirthday: '2/03/2019 20:52:00', // 站点建立时间
-    siteHelloWords: 'Welcome to here and fell free to check it out ...', // 站点欢迎语
+    siteHelloWords: 'Beginning of meditation.', // 站点欢迎语
     defaultScript: '<script>function main(){}</script>', // 默认站点脚本
     remotePath: '', // 远程资源路径，主站点不填
     trustDomain: ['ravelloh.top'],

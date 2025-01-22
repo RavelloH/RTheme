@@ -3151,7 +3151,7 @@ kdb {
         flex-direction: column-reverse;
     }
     #noticebar-left {
-        height: 80%;
+        min-height: 60%;
     }
     #infobar-left,
     #noticebar-left {
