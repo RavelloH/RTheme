@@ -56,8 +56,12 @@ const token = {
                 .then((response) => response.json())
                 .then((data) => {
                     if (data.token) {
-                        cookie.setItem('usertoken', data.token, Number(token.read("exp") - token.read("iat")));
-                        console.log(data.info.exp - data.info.iat)
+                        cookie.setItem(
+                            'usertoken',
+                            data.token,
+                            Number(token.read('exp') - token.read('iat')),
+                        );
+                        console.log(data.info.exp - data.info.iat);
                         message.success('已使用当前Token重新登陆');
                         resolve(data.token);
                     } else {
