@@ -1,6 +1,6 @@
 'use client';
 
-import i18n from '../assets/js/i18n.jsx';
+import FooterIcon from '../components/FooterIcon.jsx';
 import ReactDOM from 'react-dom/client';
 
 function getRandomInteger(min, max) {
@@ -16,18 +16,26 @@ const progress = {
     show: function () {
         progress.number = 0;
 
-        document.querySelector('#icons-right').style.opacity = '1';
-        document.querySelector('#icons-right').style.transition = 'opacity 100ms';
-        document.querySelector('#icons-right').style.opacity = '0';
+        document.querySelector('#icons-left').style.opacity = '1';
+        document.querySelector('#icons-left').style.transition = 'opacity 100ms';
+        document.querySelector('#icons-left').style.opacity = '0';
 
         new Promise((resolve) => {
             setTimeout(() => {
                 if (progress.root !== null) {
                     progress.root.unmount();
                 }
-                progress.root = ReactDOM.createRoot(document.querySelector('#icons-right'));
-                progress.root.render(i18n.structurePrograssBar);
-                document.querySelector('#icons-right').style.opacity = '1';
+                progress.root = ReactDOM.createRoot(document.querySelector('#icons-left'));
+                progress.root.render(
+                    <ul>
+                        <li>
+                            <div id='progress-container'>
+                                <div id='progress'></div>
+                            </div>
+                        </li>
+                    </ul>,
+                );
+                document.querySelector('#icons-left').style.opacity = '1';
                 resolve();
             }, 300);
         }).then(() => {
@@ -50,7 +58,7 @@ const progress = {
                 }
                 if (progress.number >= 10 && progress.state == 'sending') {
                     if (progress.number >= 70) {
-                        bar.classList.add('yellow');
+                        progress.bar.classList.add('yellow');
                         progress.change(progress.number + getRandomInteger(0, 2));
                     } else {
                         progress.change(progress.number + getRandomInteger(0, 10));
@@ -84,6 +92,7 @@ const progress = {
         progress.bar = document.querySelector('#progress');
         if (progress >= 99) {
             progress.bar.style.width = `100%`;
+            progress.bar.classList.remove('yellow');
             progress.number = 100;
         } else {
             progress.bar.style.width = `${num}%`;
@@ -98,17 +107,21 @@ const progress = {
             progress.bar.classList.toggle('yellow');
         }
         if (progress.state !== '') {
-            document.querySelector('#icons-right').style.opacity = '1';
-            document.querySelector('#icons-right').style.transition = 'opacity 100ms';
-            document.querySelector('#icons-right').style.opacity = '0';
+            document.querySelector('#icons-left').style.opacity = '1';
+            document.querySelector('#icons-left').style.transition = 'opacity 100ms';
+            document.querySelector('#icons-left').style.opacity = '0';
 
             new Promise(function (resolve) {
                 setTimeout(() => {
                     progress.root.unmount();
-                    progress.root = ReactDOM.createRoot(document.querySelector('#icons-right'));
-                    progress.root.render(i18n.originMessageBar);
+                    progress.root = ReactDOM.createRoot(document.querySelector('#icons-left'));
+                    progress.root.render(
+                        <nav>
+                            <FooterIcon />
+                        </nav>,
+                    );
 
-                    document.querySelector('#icons-right').style.opacity = '1';
+                    document.querySelector('#icons-left').style.opacity = '1';
                     progress.state = '';
                     resolve();
                 }, 300);
@@ -119,7 +132,7 @@ const progress = {
         setTimeout(() => {
             clearInterval(progress.addTimer);
             setTimeout(() => {
-                progress.change(100);
+                progress.change(100);   
             }, 50);
         }, 300);
         setTimeout(() => progress.close(), 1000);
