@@ -132,7 +132,7 @@ const progress = {
         setTimeout(() => {
             clearInterval(progress.addTimer);
             setTimeout(() => {
-                progress.change(100);   
+                progress.change(100);
             }, 50);
         }, 300);
         setTimeout(() => progress.close(), 1000);

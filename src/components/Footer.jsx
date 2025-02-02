@@ -1,7 +1,6 @@
 'use client';
 
 import FooterIcon from './FooterIcon';
-import config from '../../config';
 import progress from '@/utils/progress';
 import { useBroadcast } from '@/store/useBoardcast';
 import { useEffect } from 'react';
@@ -17,8 +16,8 @@ export default function Footer() {
                 progress.show();
             }
             if (message.action == 'loadEnd') {
-                progress.full()
-            };
+                progress.full();
+            }
             if (message.action == 'loadError') progress.error();
         };
         registerBroadcast(handleProgressBar);
@@ -38,7 +37,8 @@ export default function Footer() {
                 id='icons-right'
                 className='loading loaded'
                 style={{ '--i': 1 }}
-                data-umami-event='footer-消息栏'>
+                data-umami-event='footer-消息栏'
+            >
                 <div id='message-bar'>
                     <a>
                         <div className='circle-loader'></div>
