@@ -91,19 +91,11 @@ function loadPage() {
         performance.navigation.type == 0 &&
         document.referrer.startsWith(window.location.origin)
     ) {
-        var loadList = document.querySelectorAll('.loading:not(.listprogram)');
-        for (let i = 0; i < loadList.length; i++) {
-            loadList[i].classList.add('loaded');
-        }
         firstLoad();
         loadPageType();
     } else {
         setTimeout(function () {
             setTimeout(function () {
-                var loadList = document.querySelectorAll('.loading:not(.listprogram)');
-                for (let i = 0; i < loadList.length; i++) {
-                    loadList[i].classList.add('loaded');
-                }
                 setTimeout(() => {
                     loadPageType();
                 }, 0);
@@ -111,6 +103,19 @@ function loadPage() {
             }, 500);
         }, 600);
     }
+}
+
+function loadItems(parentNodeName, mode = 'sort') {
+    if (mode == 'sort') {
+        for (let j = document.querySelectorAll(parentNodeName + ' .loading').length; j > 0; j--) {
+            document
+                .querySelectorAll(parentNodeName + ' .loading')
+                [j - 1].setAttribute('style', '--i: ' + j);
+        }
+    }
+    document.querySelectorAll(parentNodeName + ' .loading').forEach((e) => {
+        e.classList.add('loaded');
+    });
 }
 
 function loadComplete() {
@@ -1118,20 +1123,6 @@ function toggleThemeMode() {
     );
 }
 
-// 启动加载动画
-function loadItems(parentNodeName, mode = 'sort') {
-    if (mode == 'sort') {
-        for (let j = document.querySelectorAll(parentNodeName + ' .loading').length; j > 0; j--) {
-            document
-                .querySelectorAll(parentNodeName + ' .loading')
-                [j - 1].setAttribute('style', '--i: ' + j);
-        }
-    }
-    document.querySelectorAll(parentNodeName + ' .loading').forEach((e) => {
-        e.classList.add('loaded');
-    });
-}
-
 // 清除加载状态
 function loadClear(parentNodeName) {
     document.querySelectorAll(parentNodeName + ' .loaded').forEach((e) => {
@@ -1282,11 +1273,8 @@ async function virgule(element, text, interval) {
 // 页面初始化
 function loadPageType() {
     let pageType = window.location.pathname.split('/')[1];
-    loadItems('#main', '');
-
     switch (pageType) {
         case '': // home
-            virgule(document.querySelector('#jumping'), '## ' + config.siteHelloWords, 20);
             break;
         case 'posts':
             display.resetTagList();
@@ -1340,29 +1328,7 @@ function loadPageType() {
 
 // 检查页面锚点
 let isHashWorking = false;
-function checkPageHash() {
-    if (isHashWorking !== false) {
-        return false;
-    }
-    isHashWorking = true;
-    if (cookie.getItem('settingEnableHashCheck') == 'false') {
-        return false;
-    }
-    let hash = window.location.hash;
-    if (hash.startsWith('#/tag/') || hash.startsWith('#/classification/')) {
-        articlesFilter();
-    }
-    setTimeout(() => {
-        if (isHashWorking == false) {
-            return false;
-        }
-        window.location.hash = '';
-        window.location.hash = hash;
-        setTimeout(() => {
-            isHashWorking = false;
-        }, 1);
-    }, 0);
-}
+function checkPageHash() {}
 
 const globalModule = {
     isLayoutMenuOpen,

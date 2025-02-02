@@ -11,12 +11,13 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Sidebar from '@/components/Sidebar';
 import Infobar from '@/components/Infobar';
-import Userbar from '@/components/Userbar.jsx';
+import Userbar from '@/components/Userbar';
 
 import Pjax from '@/components/Pjax';
 
 import '@/assets/js/Global';
 import Noticebar from '@/components/Noticebar';
+import Starter from '@/components/Starter';
 
 export const metadata = {
     title: {
@@ -83,6 +84,7 @@ export default function RootLayout({ children }) {
                         <div id='main' className='loading'>
                             <div id='viewmap'>{children}</div>
                         </div>
+                        <Starter />
                         <Footer />
                     </section>
                     <section id='sidebar'>
