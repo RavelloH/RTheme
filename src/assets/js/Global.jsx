@@ -79,44 +79,11 @@ function loadPage() {
     addListeners();
     switchElementContent('#year', getTime('yyyy'), 0);
     zoomPics();
-    // document.addEventListener('click', function (event) {
-    //     let target = event.target;
-    //     if (target.href && target.href !== window.location.href) {
-    //         const targetUrl = new URL(target.href);
-    //         const currentUrl = new URL(window.location.href);
-    //         if (targetUrl.pathname === currentUrl.pathname && targetUrl.hash !== currentUrl.hash) {
-    //             return;
-    //         }
-    //         event.preventDefault();
-    //         let url = target.href;
-    //         fadeOutPage('#viewmap');
-    //         message.add(i18n.originMessageBar, 0);
-    //         if (isLayoutMenuOpen() == true) {
-    //             toggleLayoutMenu();
-    //         }
-    //         if (isLayoutUserbarOpen()) {
-    //             toggleLayoutUserbar();
-    //         }
-    //         if (typeof closeErrorBar !== 'undefined') {
-    //             clearTimeout(closeErrorBar);
-    //         }
-    //         hiddenPageContent();
-    //         setTimeout(() => (window.location.href = url), 400);
-    //         switchElementContent(
-    //             '#message-bar',
-    //             <a>
-    //                 <div className='circle-loader'></div>
-    //             </a>,
-    //         );
-    //     }
-    // });
-
     loadAccount();
     analysis.umamiAnalytics();
     if (analyzeURL(window.location.href, 'u') !== '') {
         window.location.href = base.decrypt(analyzeURL(window.location.href, 'u'));
     }
-    // switchElementContent('#loading-text', <span className='green-text'> Completed.</span>);
     message.switch('', 450);
 
     if (
@@ -124,7 +91,6 @@ function loadPage() {
         performance.navigation.type == 0 &&
         document.referrer.startsWith(window.location.origin)
     ) {
-        // domLoadShade.classList.toggle('active');
         var loadList = document.querySelectorAll('.loading:not(.listprogram)');
         for (let i = 0; i < loadList.length; i++) {
             loadList[i].classList.add('loaded');
@@ -133,7 +99,6 @@ function loadPage() {
         loadPageType();
     } else {
         setTimeout(function () {
-            // domLoadShade.classList.remove('active');
             setTimeout(function () {
                 var loadList = document.querySelectorAll('.loading:not(.listprogram)');
                 for (let i = 0; i < loadList.length; i++) {
@@ -1199,22 +1164,6 @@ function runTime(f) {
     console.timeEnd();
 }
 
-// 导航栏高亮
-function highlightNav(name) {
-    if (cookie.getItem('settingEnableNavHighlight') == 'false') {
-        return false;
-    }
-    for (let i = 0; i < config.nav.length; i++) {
-        if (config.nav[i].link.replaceAll('/', '') == name) {
-            document.querySelectorAll('#header-side nav a').forEach((element) => {
-                element.classList.remove('active');
-            });
-            document.querySelector('#' + config.nav[i].id).classList.add('active');
-            break;
-        }
-    }
-}
-
 function objectToForm(obj) {
     var formData = [];
     for (var key in obj) {
@@ -1333,7 +1282,6 @@ async function virgule(element, text, interval) {
 // 页面初始化
 function loadPageType() {
     let pageType = window.location.pathname.split('/')[1];
-    highlightNav(pageType);
     loadItems('#main', '');
 
     switch (pageType) {
