@@ -4,6 +4,7 @@ import config from '../../config';
 import Menu from './Menu';
 import Copyright from './Copyright';
 import Sideicon from './Sideicon';
+import Virgule from './Virgule';
 
 export default function Sidebar() {
     return (
@@ -15,7 +16,9 @@ export default function Sidebar() {
                     <a className='icons' href={'mailto:' + config.mail} id='email'>
                         {' '}
                         <span className='i ri-mail-add-fill'></span> &nbsp;{' '}
-                        <span>{config.mail}</span>{' '}
+                        <span>
+                            <Virgule text={config.mail} />
+                        </span>{' '}
                     </a>
                     <hr />
                 </div>
