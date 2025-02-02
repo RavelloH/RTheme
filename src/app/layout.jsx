@@ -13,6 +13,8 @@ import Sidebar from '@/components/Sidebar';
 import Infobar from '@/components/Infobar';
 import Userbar from '@/components/Userbar.jsx';
 
+import Pjax from '@/components/Pjax';
+
 import '@/assets/js/Global';
 import Noticebar from '@/components/Noticebar';
 
@@ -69,32 +71,34 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
     return (
-        <html lang='zh'>
-            <head></head>
+        <Pjax selectors={['#main', 'title']}>
+            <html lang='zh'>
+                <head></head>
 
-            <body>
-                <section id='showcase'>
-                    <LoadingShade />
-                    <Header />
-                    <div id='shade-context'></div>
-                    <div id='main' className='loading'>
-                        <div id='viewmap'>{children}</div>
-                    </div>
-                    <Footer />
-                </section>
-                <section id='sidebar'>
-                    <Sidebar />
-                </section>
-                <section id='infobar'>
-                    <Infobar />
-                </section>
-                <section id='userbar'>
-                    <Userbar />
-                </section>
-                <Noticebar />
-                <SpeedInsights />
-                <Analytics />
-            </body>
-        </html>
+                <body>
+                    <section id='showcase'>
+                        <LoadingShade />
+                        <Header />
+                        <div id='shade-context'></div>
+                        <div id='main' className='loading'>
+                            <div id='viewmap'>{children}</div>
+                        </div>
+                        <Footer />
+                    </section>
+                    <section id='sidebar'>
+                        <Sidebar />
+                    </section>
+                    <section id='infobar'>
+                        <Infobar />
+                    </section>
+                    <section id='userbar'>
+                        <Userbar />
+                    </section>
+                    <Noticebar />
+                    <SpeedInsights />
+                    <Analytics />
+                </body>
+            </html>
+        </Pjax>
     );
 }

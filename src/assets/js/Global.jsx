@@ -79,44 +79,44 @@ function loadPage() {
     addListeners();
     switchElementContent('#year', getTime('yyyy'), 0);
     zoomPics();
-    document.addEventListener('click', function (event) {
-        let target = event.target;
-        if (target.href && target.href !== window.location.href) {
-            const targetUrl = new URL(target.href);
-            const currentUrl = new URL(window.location.href);
-            if (targetUrl.pathname === currentUrl.pathname && targetUrl.hash !== currentUrl.hash) {
-                return;
-            }
-            event.preventDefault();
-            let url = target.href;
-            fadeOutPage('#viewmap');
-            message.add(i18n.originMessageBar, 0);
-            if (isLayoutMenuOpen() == true) {
-                toggleLayoutMenu();
-            }
-            if (isLayoutUserbarOpen()) {
-                toggleLayoutUserbar();
-            }
-            if (typeof closeErrorBar !== 'undefined') {
-                clearTimeout(closeErrorBar);
-            }
-            hiddenPageContent();
-            setTimeout(() => (window.location.href = url), 400);
-            switchElementContent(
-                '#message-bar',
-                <a>
-                    <div className='circle-loader'></div>
-                </a>,
-            );
-        }
-    });
+    // document.addEventListener('click', function (event) {
+    //     let target = event.target;
+    //     if (target.href && target.href !== window.location.href) {
+    //         const targetUrl = new URL(target.href);
+    //         const currentUrl = new URL(window.location.href);
+    //         if (targetUrl.pathname === currentUrl.pathname && targetUrl.hash !== currentUrl.hash) {
+    //             return;
+    //         }
+    //         event.preventDefault();
+    //         let url = target.href;
+    //         fadeOutPage('#viewmap');
+    //         message.add(i18n.originMessageBar, 0);
+    //         if (isLayoutMenuOpen() == true) {
+    //             toggleLayoutMenu();
+    //         }
+    //         if (isLayoutUserbarOpen()) {
+    //             toggleLayoutUserbar();
+    //         }
+    //         if (typeof closeErrorBar !== 'undefined') {
+    //             clearTimeout(closeErrorBar);
+    //         }
+    //         hiddenPageContent();
+    //         setTimeout(() => (window.location.href = url), 400);
+    //         switchElementContent(
+    //             '#message-bar',
+    //             <a>
+    //                 <div className='circle-loader'></div>
+    //             </a>,
+    //         );
+    //     }
+    // });
 
     loadAccount();
     analysis.umamiAnalytics();
     if (analyzeURL(window.location.href, 'u') !== '') {
         window.location.href = base.decrypt(analyzeURL(window.location.href, 'u'));
     }
-    switchElementContent('#loading-text', <span className='green-text'> Completed.</span>);
+    // switchElementContent('#loading-text', <span className='green-text'> Completed.</span>);
     message.switch('', 450);
 
     if (
@@ -133,7 +133,7 @@ function loadPage() {
         loadPageType();
     } else {
         setTimeout(function () {
-            domLoadShade.classList.toggle('active');
+            // domLoadShade.classList.remove('active');
             setTimeout(function () {
                 var loadList = document.querySelectorAll('.loading:not(.listprogram)');
                 for (let i = 0; i < loadList.length; i++) {
@@ -196,31 +196,31 @@ function addScript(url, onloadFunction = '') {
 }
 
 if (isBrowser()) {
-    window.onerror = function (msg, url, lineNo, columnNo, error) {
-        var string = msg.toLowerCase();
-        var substring = 'script error';
-        if (string.indexOf(substring) > -1) {
-            alert('错误：侦测到脚本错误，无法初始化页面');
-        } else {
-            let message = `
-        <hr>
-        <div class='center'>
-        <h2>初始化异常</h2>
-        <h3>LOAD<span id='loading-text'><span class="red-text"> Failed.</span></span></h3>
-        <p><strong>消息: </strong>${msg}<p>
-        <p><strong>URL: </strong>${url}<p>
-        <p><strong>行号: </strong>${lineNo}<p>
-        <p><strong>列数: </strong>${columnNo}<p>
-        <p><strong>类型: </strong>${JSON.stringify(error)}<p>
-        </div>
-        <hr>
-        <br>
-        `;
-            document.querySelector('#load-content').innerHTML = message;
-            errorList.push(JSON.stringify(error));
-        }
-        return false;
-    };
+    // window.onerror = function (msg, url, lineNo, columnNo, error) {
+    //     var string = msg.toLowerCase();
+    //     var substring = 'script error';
+    //     if (string.indexOf(substring) > -1) {
+    //         alert('错误：侦测到脚本错误，无法初始化页面');
+    //     } else {
+    //         let message = `
+    //     <hr>
+    //     <div class='center'>
+    //     <h2>初始化异常</h2>
+    //     <h3>LOAD<span id='loading-text'><span class="red-text"> Failed.</span></span></h3>
+    //     <p><strong>消息: </strong>${msg}<p>
+    //     <p><strong>URL: </strong>${url}<p>
+    //     <p><strong>行号: </strong>${lineNo}<p>
+    //     <p><strong>列数: </strong>${columnNo}<p>
+    //     <p><strong>类型: </strong>${JSON.stringify(error)}<p>
+    //     </div>
+    //     <hr>
+    //     <br>
+    //     `;
+    //         document.querySelector('#load-content').innerHTML = message;
+    //         errorList.push(JSON.stringify(error));
+    //     }
+    //     return false;
+    // };
 }
 
 // 右菜单开关
@@ -355,13 +355,13 @@ function addListeners() {
     addEventListener('paste', (event) => {
         message.add('<a>已粘贴 &nbsp;<span class="i ri-chat-check-line"></span></a>', 2000);
     });
-    window.addEventListener(
-        'hashchange',
-        function () {
-            checkPageHash();
-        },
-        false,
-    );
+    // window.addEventListener(
+    //     'hashchange',
+    //     function () {
+    //         checkPageHash();
+    //     },
+    //     false,
+    // );
     addEventListener('offline', (event) => {
         message.add('<a>互联网连接已断开 <span class="i ri-cloud-off-line"></span></a>', 5000);
     });
