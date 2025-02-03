@@ -91,10 +91,12 @@ const progress = {
         }
         progress.bar = document.querySelector('#progress');
         if (progress >= 99) {
+            if (!progress.bar) return;
             progress.bar.style.width = `100%`;
             progress.bar.classList.remove('yellow');
             progress.number = 100;
         } else {
+            if (!progress.bar) return;
             progress.bar.style.width = `${num}%`;
             progress.number = num;
         }
