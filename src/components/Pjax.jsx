@@ -6,12 +6,15 @@ import { useBroadcast } from '@/store/useBoardcast';
 
 const Pjax = ({ children }) => {
     const [loadStart, setLoadStart] = useState(false);
+    const [userClick, setUserClick] = useState(false);
     const router = useRouter();
     const boardcast = useBroadcast((state) => state.broadcast);
     const pathname = usePathname();
 
     useEffect(() => {
         const handleClick = (e) => {
+            setUserClick(true);
+            setTimeout(() => setUserClick(false), 300);
             const target = e.target.closest('a');
             if (
                 !target ||
@@ -32,19 +35,12 @@ const Pjax = ({ children }) => {
             )
                 return;
 
-            if (target.href === location.href) {
-                router.refresh();
-                return;
-            }
-
             e.preventDefault();
-
-            // 触发加载状态广播（例如用于显示加载动画）
+            if (target.pathname === location.pathname) return;
             boardcast({ type: 'LOAD', action: 'loadStart' });
             setLoadStart(true);
 
-            // 使用 Next.js Router API 进行页面跳转
-            fetch(href);
+            router.prefetch(href);
             setTimeout(() => {
                 router.push(href);
             }, 300);
@@ -64,13 +60,10 @@ const Pjax = ({ children }) => {
     }, [pathname]);
 
     useEffect(() => {
-        const handlePopState = () => {
-            boardcast({ type: 'LOAD', action: 'loadStart' });
-            setLoadStart(true);
-            setTimeout(() => {
-                router.push(location.href);
-            }, 300);
+        const handlePopState = (e) => {
+            boardcast({ type: 'LOAD', action: 'loadEnd' });
         };
+
         window.addEventListener('popstate', handlePopState);
         return () => {
             window.removeEventListener('popstate', handlePopState);
