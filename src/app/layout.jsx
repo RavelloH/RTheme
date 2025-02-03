@@ -72,35 +72,35 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
     return (
-        <Pjax selectors={['#main', 'title']}>
-            <html lang='zh'>
-                <head></head>
+        <html lang='zh'>
+            <head></head>
 
-                <body>
-                    <section id='showcase'>
-                        <LoadingShade />
-                        <Header />
-                        <div id='shade-context'></div>
+            <body>
+                <section id='showcase'>
+                    <LoadingShade />
+                    <Header />
+                    <div id='shade-context'></div>
+                    <Pjax selectors={['#main', 'title']}>
                         <div id='main' className='loading'>
                             <div id='viewmap'>{children}</div>
                         </div>
-                        <Starter />
-                        <Footer />
-                    </section>
-                    <section id='sidebar'>
-                        <Sidebar />
-                    </section>
-                    <section id='infobar'>
-                        <Infobar />
-                    </section>
-                    <section id='userbar'>
-                        <Userbar />
-                    </section>
-                    <Noticebar />
-                    <SpeedInsights />
-                    <Analytics />
-                </body>
-            </html>
-        </Pjax>
+                    </Pjax>
+                    <Starter />
+                    <Footer />
+                </section>
+                <section id='sidebar'>
+                    <Sidebar />
+                </section>
+                <section id='infobar'>
+                    <Infobar />
+                </section>
+                <section id='userbar'>
+                    <Userbar />
+                </section>
+                <Noticebar />
+                <SpeedInsights />
+                <Analytics />
+            </body>
+        </html>
     );
 }
