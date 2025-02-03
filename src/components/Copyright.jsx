@@ -5,7 +5,11 @@ export default function Copyright() {
         <>
             <b>
                 Theme : <a href='https://github.com/ravelloh/RTheme'>RTheme</a>. <br />
-                Copyright © {config.copyrightStartTime} - <b id='year'></b> {config.author}. <br />
+                Copyright © {config.copyrightStartTime} - {new Date().getFullYear()}{' '}
+                <a href={config.siteURL} className=''>
+                    {config.author}
+                </a>
+                . <br />
                 All rights reserved.
             </b>
         </>

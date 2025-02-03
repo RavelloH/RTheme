@@ -15,6 +15,7 @@ export default function Noticebar() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [logData, setLogData] = useState([]);
     const [isLoadSuccess, setLoadSuccess] = useState(false);
+    const [isNoticeBarOpen, setNoticeBarOpen] = useState(false);
     const rightDivRef = useRef(null);
 
     // 读写本地缓存
@@ -364,16 +365,18 @@ export default function Noticebar() {
                     ref={rightDivRef}
                     style={{ flex: 1, padding: '1rem', opacity: 0.1 }}
                 >
-                    {logData.map((item, index) => (
-                        <>
-                            <span key={index}>
-                                {`[${new Date(
-                                    item.time,
-                                ).toLocaleString()}][${item.level.toUpperCase()}] ${item.content}`}
-                            </span>
-                            <br />
-                        </>
-                    ))}
+                    {isNoticeBarOpen
+                        ? logData.map((item, index) => (
+                              <>
+                                  <span key={index}>
+                                      {`[${new Date(
+                                          item.time,
+                                      ).toLocaleString()}][${item.level.toUpperCase()}] ${item.content}`}
+                                  </span>
+                                  <br />
+                              </>
+                          ))
+                        : null}
                 </div>
             </div>
             <div

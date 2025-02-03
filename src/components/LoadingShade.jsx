@@ -8,7 +8,7 @@ import switchElementContent from '@/utils/switchElement';
 export default function LoadingShade() {
     const registerBroadcast = useBroadcast((state) => state.registerCallback);
     const unregisterBroadcast = useBroadcast((state) => state.unregisterCallback);
-    const boardcast = useBroadcast((state) => state.broadcast);
+    const broadcast = useBroadcast((state) => state.broadcast);
 
     const [loadComplete, setLoadComplete] = useState(false);
 
@@ -31,6 +31,10 @@ export default function LoadingShade() {
                 document.getElementById('viewmap').style.transition = 'opacity 0.3s';
                 document.getElementById('viewmap').style.opacity = 0;
                 document.getElementById('viewmap').style.pointerEvents = 'none';
+                // 关闭所有附加页面
+                broadcast({
+                    action: 'closeUserbar',
+                });
             }
             if (message.action === 'loadEnd') {
                 setTimeout(() => {
@@ -46,15 +50,22 @@ export default function LoadingShade() {
     }, [registerBroadcast, unregisterBroadcast]);
 
     useEffect(() => {
-        boardcast({
+        broadcast({
             type: 'UI',
             action: 'firstLoadComplete',
         });
-    }, [boardcast]);
+    }, [broadcast]);
 
     return (
         <>
-            <div id='shade-global'></div>
+            <div
+                id='shade-global'
+                onClick={() => {
+                    broadcast({
+                        action: 'closeUserbar',
+                    });
+                }}
+            ></div>
             <div id='load-shade' className='active'>
                 <div id='load-content'>
                     <hr />

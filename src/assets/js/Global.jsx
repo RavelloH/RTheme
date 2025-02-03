@@ -16,8 +16,6 @@ let domMenuToggle,
     domShadeGlobal,
     domLayoutInfoBar,
     domInfoBarToggle,
-    domLayoutUserBar,
-    domUserbarToggle,
     domMusic,
     musicProgressbar,
     musicProfather,
@@ -27,8 +25,7 @@ let domMenuToggle,
     currentInfoBarInner,
     closeErrorBar,
     searchTimer,
-    changeMusicProgress,
-    accountTimer;
+    changeMusicProgress;
 
 let errorList = [];
 
@@ -41,8 +38,6 @@ function resetElements() {
     domShadeGlobal = document.querySelector('#shade-global');
     domLayoutInfoBar = document.querySelector('#infobar');
     domInfoBarToggle = document.querySelector('#infobar-toggle');
-    domUserbarToggle = document.querySelector('#logo');
-    domLayoutUserBar = document.querySelector('#userbar');
     domMusic = document.querySelector('#music');
     musicProgressbar = document.querySelector('#music-progress');
     musicProfather = document.querySelector('#music-progress-container');
@@ -77,9 +72,7 @@ function loadPage() {
     resetElements();
     resetCookies();
     addListeners();
-    switchElementContent('#year', getTime('yyyy'), 0);
     zoomPics();
-    loadAccount();
     analysis.umamiAnalytics();
     if (analyzeURL(window.location.href, 'u') !== '') {
         window.location.href = base.decrypt(analyzeURL(window.location.href, 'u'));
@@ -224,12 +217,6 @@ function toggleLayoutInfobar() {
     setTimeout(() => enableInfobarRefersh(), 0);
 }
 
-function toggleLayoutUserbar() {
-    loadAccount();
-    domLayoutUserBar.classList.toggle('active');
-    domShadeGlobal.classList.toggle('active');
-}
-
 // 右菜单状态
 function isLayoutMenuOpen() {
     if (domMenuToggle.classList[2] == 'active') {
@@ -255,15 +242,6 @@ function isLayoutNoticebarOpen() {
 // 下拉栏状态
 function isLayoutInfobarOpen() {
     if (domLayoutInfoBar.classList[0] == 'active') {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-// 用户栏状态
-function isLayoutUserbarOpen() {
-    if (domLayoutUserBar.classList[0] == 'active') {
         return true;
     } else {
         return false;
@@ -345,18 +323,13 @@ function addListeners() {
         if (isLayoutInfobarOpen()) {
             toggleLayoutInfobar();
         }
-        if (isLayoutUserbarOpen()) {
-            toggleLayoutUserbar();
-        }
+
         if (isLayoutNoticebarOpen()) {
             toggleLayoutNoticebar();
         }
     });
     domInfoBarToggle.addEventListener('click', () => {
         toggleLayoutInfobar();
-    });
-    domUserbarToggle.addEventListener('click', () => {
-        toggleLayoutUserbar();
     });
 }
 
@@ -1167,96 +1140,6 @@ function objectToForm(obj) {
     return formData.join('&');
 }
 
-// 账户管理模块
-function loadAccount() {
-    if (!token.get()) {
-        switchElementContent(
-            '#user-main',
-            <div className='info-warning center'>
-                <span className='i_small ri-user-unfollow-line'></span> 尚未登录，部分功能受限
-                <br />
-                立刻 <a href='/account/signin'>登录</a> 或 <a href='/account/signup'>注册</a>
-            </div>,
-        );
-    } else {
-        document.querySelector('#icon-account').href = '/user?uid=' + token.read('uid');
-        let refreshTime = token.read('iat') * 1000 + 20 * 60 * 1000 - Date.now();
-        if (accountTimer) return;
-        accountTimer = setTimeout(() => {
-            token.refresh().then(() => {
-                loadAccount();
-            });
-        }, refreshTime);
-        switchElementContent(
-            '#user-state',
-            <div>
-                <span>
-                    <span className='ri-time-fill'></span> 将于
-                    {formatTimeDifference(Date.now() + refreshTime)}后重新刷新TOKEN
-                </span>
-                <br />
-                <span>
-                    <span className='ri-lock-password-fill'></span> TOKEN将于
-                    {formatTimeDifference(1000 * token.read('exp'))}后失效
-                </span>
-            </div>,
-        );
-    }
-}
-
-function formatTimeDifference(timestamp) {
-    const now = new Date();
-    const futureDate = new Date(timestamp);
-
-    let diffInSeconds = Math.floor((futureDate - now) / 1000);
-
-    const days = Math.floor(diffInSeconds / (3600 * 24));
-    const hours = Math.floor((diffInSeconds % (3600 * 24)) / 3600);
-    const minutes = Math.floor((diffInSeconds % 3600) / 60);
-
-    let result = '';
-
-    if (days > 0) {
-        result += `${days}天`;
-    }
-    if (hours > 0) {
-        result += `${hours}小时`;
-    }
-    if (minutes > 0) {
-        result += `${minutes}分`;
-    }
-    if (!result) {
-        return '一分钟';
-    }
-
-    return result;
-}
-
-function loginWithPassword(username, password, expiredTime = '7d') {
-    fetch(platformUrl + 'api/signin', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: objectToForm({
-            account: username,
-            password: password,
-            expiredTime: expiredTime,
-        }),
-    })
-        .then((response) => response.json())
-        .then((data) => {
-            console.log(data);
-            if (data.code == 200) {
-                cookie.setItem('usertoken', data.inner.token);
-            } else {
-                console.log(data.message);
-            }
-        });
-}
-
-function openUserbar(mode) {}
-
 async function virgule(element, text, interval) {
     let vir = (await import('virgule-js')).default;
     let targetList = vir(text);
@@ -1340,12 +1223,10 @@ const globalModule = {
     musicGo,
     musicPlay,
     musicSetting,
-    openUserbar,
     copy,
     musicSearch,
     musicUpdata,
     setting,
-    toggleLayoutUserbar,
 };
 
 export default globalModule;

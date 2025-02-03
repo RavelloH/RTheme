@@ -8,7 +8,7 @@ const Pjax = ({ children }) => {
     const [loadStart, setLoadStart] = useState(false);
     const [userClick, setUserClick] = useState(false);
     const router = useRouter();
-    const boardcast = useBroadcast((state) => state.broadcast);
+    const broadcast = useBroadcast((state) => state.broadcast);
     const pathname = usePathname();
 
     useEffect(() => {
@@ -37,7 +37,7 @@ const Pjax = ({ children }) => {
 
             e.preventDefault();
             if (target.pathname === location.pathname) return;
-            boardcast({ type: 'LOAD', action: 'loadStart' });
+            broadcast({ type: 'LOAD', action: 'loadStart' });
             setLoadStart(true);
 
             router.prefetch(href);
@@ -50,25 +50,24 @@ const Pjax = ({ children }) => {
         return () => {
             document.removeEventListener('click', handleClick);
         };
-    }, [router, boardcast]);
+    }, [router, broadcast]);
 
     useEffect(() => {
-        // 仅当存在loadStart状态时，才会触发loadEnd状态
         if (!loadStart) return;
-        boardcast({ type: 'LOAD', action: 'loadEnd' });
+        broadcast({ type: 'LOAD', action: 'loadEnd' });
         setLoadStart(false);
     }, [pathname]);
 
     useEffect(() => {
         const handlePopState = (e) => {
-            boardcast({ type: 'LOAD', action: 'loadEnd' });
+            broadcast({ type: 'LOAD', action: 'loadEnd' });
         };
 
         window.addEventListener('popstate', handlePopState);
         return () => {
             window.removeEventListener('popstate', handlePopState);
         };
-    }, [router, boardcast]);
+    }, [router, broadcast]);
 
     return children || null;
 };

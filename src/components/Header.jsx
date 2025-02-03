@@ -1,12 +1,22 @@
 /* eslint-disable @next/next/no-img-element */
+'use client';
+
 import Nav from './Nav';
 import config from '../../config';
 import Image from 'next/image';
+import { useBroadcast } from '@/store/useBoardcast';
 
 export default function Header() {
+    const broadcast = useBroadcast((state) => state.broadcast);
+
     return (
         <header>
-            <div id='logo' className='loading' style={{ '--i': 1 }}>
+            <div
+                id='logo'
+                className='loading'
+                style={{ '--i': 1 }}
+                onClick={() => broadcast({ action: 'openUserbar' })}
+            >
                 <a href='#userbar'>
                     <img
                         id='avatar'
