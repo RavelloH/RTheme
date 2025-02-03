@@ -1,120 +1,81 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { useBroadcast } from '@/store/useBoardcast';
 
-const Pjax = ({ selectors = ['#main', 'title'], timeout = 30000, children }) => {
+const Pjax = ({ children }) => {
+    const [loadStart, setLoadStart] = useState(false);
+    const router = useRouter();
     const boardcast = useBroadcast((state) => state.broadcast);
+    const pathname = usePathname();
+
     useEffect(() => {
-        const handleClick = async (e) => {
+        const handleClick = (e) => {
             const target = e.target.closest('a');
-            if (!target || e.ctrlKey || e.metaKey || e.shiftKey || target.target === '_blank')
+            if (
+                !target ||
+                e.ctrlKey ||
+                e.metaKey ||
+                e.shiftKey ||
+                target.target === '_blank' ||
+                target.target === '_self'
+            ) {
                 return;
+            }
 
             const href = target.href;
-            if (!href || new URL(href).origin !== location.origin) return;
+            if (
+                !href ||
+                new URL(href).origin !== location.origin ||
+                href.replace(location.origin + '/', '').startsWith('#')
+            )
+                return;
 
-            e.preventDefault();
-            boardcast({
-                type: 'LOAD',
-                action: 'loadStart',
-            });
-
-            // 浏览器能力检测
-            if (!('fetch' in window && 'pushState' in history)) {
-                location.href = href;
+            if (target.href === location.href) {
+                router.refresh();
                 return;
             }
 
-            try {
-                const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), timeout);
+            e.preventDefault();
 
-                const response = await fetch(href, {
-                    signal: controller.signal,
-                    headers: { 'X-PJAX': 'true' },
-                });
-                clearTimeout(timer);
+            // 触发加载状态广播（例如用于显示加载动画）
+            boardcast({ type: 'LOAD', action: 'loadStart' });
+            setLoadStart(true);
 
-                if (!response.ok) {
-                    boardcast({
-                        type: 'LOAD',
-                        action: 'loadError',
-                    });
-                    if (response.status === 404) {
-                        await handlePageUpdate(await response.text());
-                    } else {
-                        location.href = href;
-                    }
-                    return;
-                }
-
-                await handlePageUpdate(await response.text());
-                history.pushState(null, '', href);
-                boardcast({
-                    type: 'LOAD',
-                    action: 'loadEnd',
-                });
-            } catch (error) {
-                location.href = href;
-            }
-        };
-
-        const handlePageUpdate = async (html) => {
-            const parser = new DOMParser();
-            const newDoc = parser.parseFromString(html, 'text/html');
-
-            const updateDOM = () => {
-                // 仅更新指定的选择器内容
-                selectors.forEach((selector) => {
-                    const oldElement = document.querySelector(selector);
-                    const newElement = newDoc.querySelector(selector);
-
-                    if (oldElement && newElement) {
-                        oldElement.innerHTML = newElement.innerHTML;
-                    }
-                });
-
-                // 处理脚本
-                // const newScripts = newDoc.querySelectorAll('script');
-                // newScripts.forEach((newScript) => {
-                //     const script = document.createElement('script');
-                //     script.textContent = newScript.textContent;
-                //     Array.from(newScript.attributes).forEach((attr) => {
-                //         script.setAttribute(attr.name, attr.value);
-                //     });
-                //     document.body.appendChild(script);
-                // });
-
-                // 处理样式
-                const newStyles = newDoc.querySelectorAll('link[rel="stylesheet"]');
-                newStyles.forEach((newStyle, index) => {
-                    if (index === 0) return; // 忽略第0个元素
-                    const style = document.createElement('link');
-                    style.rel = 'stylesheet';
-                    Array.from(newStyle.attributes).forEach((attr) => {
-                        style.setAttribute(attr.name, attr.value);
-                    });
-                    document.head.appendChild(style);
-                });
-            };
-
-            // 视图过渡
-            if ('startViewTransition' in document) {
-                document.startViewTransition(() => updateDOM());
-            } else {
-                updateDOM();
-            }
+            // 使用 Next.js Router API 进行页面跳转
+            fetch(href);
+            setTimeout(() => {
+                router.push(href);
+            }, 300);
         };
 
         document.addEventListener('click', handleClick);
-        window.addEventListener('popstate', () => location.reload());
-
         return () => {
             document.removeEventListener('click', handleClick);
-            window.removeEventListener('popstate', () => location.reload());
         };
-    }, [selectors, timeout]);
+    }, [router, boardcast]);
+
+    useEffect(() => {
+        // 仅当存在loadStart状态时，才会触发loadEnd状态
+        if (!loadStart) return;
+        boardcast({ type: 'LOAD', action: 'loadEnd' });
+        setLoadStart(false);
+    }, [pathname]);
+
+    useEffect(() => {
+        const handlePopState = () => {
+            boardcast({ type: 'LOAD', action: 'loadStart' });
+            setLoadStart(true);
+            setTimeout(() => {
+                router.push(location.href);
+            }, 300);
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [router, boardcast]);
 
     return children || null;
 };

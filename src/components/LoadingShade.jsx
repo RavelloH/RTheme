@@ -13,24 +13,33 @@ export default function LoadingShade() {
     const [loadComplete, setLoadComplete] = useState(false);
 
     useEffect(() => {
-        const removeLoadShade = (message) => {
-            if (message.type === 'UI') {
-                if (message.action === 'firstLoadComplete') {
-                    setTimeout(() => {
-                        setLoadComplete(true);
-                        switchElementContent(
-                            '#loading-text',
-                            <span className='green-text'> Completed.</span>,
-                        );
-                    }, 300);
-                    setTimeout(() => {
-                        document.getElementById('load-shade').classList.remove('active');
-                        document.getElementById('shade-global').classList.remove('active');
-                    }, 900);
-                }
+        const handlePageLoad = (message) => {
+            if (message.action === 'firstLoadComplete') {
+                setTimeout(() => {
+                    setLoadComplete(true);
+                    switchElementContent(
+                        '#loading-text',
+                        <span className='green-text'> Completed.</span>,
+                    );
+                }, 300);
+                setTimeout(() => {
+                    document.getElementById('load-shade').classList.remove('active');
+                    document.getElementById('shade-global').classList.remove('active');
+                }, 900);
+            }
+            if (message.action === 'loadStart') {
+                document.getElementById('viewmap').style.transition = 'opacity 0.3s';
+                document.getElementById('viewmap').style.opacity = 0;
+                document.getElementById('viewmap').style.pointerEvents = 'none';
+            }
+            if (message.action === 'loadEnd') {
+                setTimeout(() => {
+                    document.getElementById('viewmap').style.opacity = 1;
+                    document.getElementById('viewmap').style.pointerEvents = 'auto';
+                }, 300);
             }
         };
-        registerBroadcast(removeLoadShade);
+        registerBroadcast(handlePageLoad);
         return () => {
             unregisterBroadcast();
         };
