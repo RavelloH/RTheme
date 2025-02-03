@@ -4,6 +4,7 @@ import cookie from '@/assets/js/lib/cookie';
 import { Base64 } from 'js-base64';
 import objectToForm from './objectToForm';
 import message from './message';
+import { useBroadcast } from '@/store/useBoardcast';
 
 // Base64模块
 const base = {
@@ -61,12 +62,14 @@ const token = {
                             data.token,
                             Number(token.read('exp') - token.read('iat')),
                         );
-                        console.log(data.info.exp - data.info.iat);
                         message.success('已使用当前Token重新登陆');
                         resolve(data.token);
                     } else {
                         message.error(data.message);
-                        console.log(data.message);
+                        const broadcast = useBroadcast.getState().broadcast;
+                        broadcast({
+                            action: 'tokenError',
+                        });
                     }
                 })
                 .catch((e) => {
