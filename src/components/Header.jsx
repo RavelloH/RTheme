@@ -41,7 +41,12 @@ export default function Header() {
                 <div id='navs'>
                     <Nav />
                 </div>
-                <div id='toggle' className='loading' style={{ '--i': 0 }}></div>
+                <div
+                    id='toggle'
+                    className='loading'
+                    style={{ '--i': 0 }}
+                    onClick={() => broadcast({ action: 'toggleSidebar' })}
+                ></div>
             </div>
         </header>
     );

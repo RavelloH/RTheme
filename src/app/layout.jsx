@@ -12,6 +12,7 @@ import Footer from '@/components/Footer';
 import Sidebar from '@/components/Sidebar';
 import Infobar from '@/components/Infobar';
 import Userbar from '@/components/Userbar';
+import ShadeContent from '@/components/ShadeContent';
 
 import Pjax from '@/components/Pjax';
 
@@ -79,7 +80,7 @@ export default function RootLayout({ children }) {
                 <section id='showcase'>
                     <LoadingShade />
                     <Header />
-                    <div id='shade-context'></div>
+                    <ShadeContent />
                     <Pjax selectors={['#main', 'title']}>
                         <div id='main' className='loading'>
                             <div id='viewmap'>{children}</div>

@@ -484,7 +484,8 @@ a {
     transition: all 0.3s cubic-bezier(0.28, 0.94, 0.82, 1.09);
 }
 
-a:after {
+a:after,
+a.active:after {
     content: '';
     position: absolute;
     width: 100%;
@@ -507,6 +508,10 @@ a:after {
         -webkit-transform 0.3s cubic-bezier(0.28, 0.94, 0.82, 1.09);
 }
 
+a.active:after {
+    background-color: var(--theme-white-light);
+}
+
 a:not(
         #sidebar *,
         footer *,
@@ -518,7 +523,8 @@ a:not(
         .taglist a,
         #articles-menu *,
         .flex-iconset *
-    ):hover:after {
+    ):hover:after,
+a.active:after {
     -webkit-transform: scaleX(1);
     -ms-transform: scaleX(1);
     transform: scaleX(1);
@@ -1233,9 +1239,13 @@ a:visited {
     color: #c6c9ce50;
 }
 
-a:hover {
+a:not(.active):hover {
     color: var(--theme-blue-light);
     text-decoration: none;
+}
+
+nav a:hover {
+    color: var(--theme-white-light);
 }
 
 a:active {

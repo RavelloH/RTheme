@@ -31,10 +31,6 @@ export default function LoadingShade() {
                 document.getElementById('viewmap').style.transition = 'opacity 0.3s';
                 document.getElementById('viewmap').style.opacity = 0;
                 document.getElementById('viewmap').style.pointerEvents = 'none';
-                // 关闭所有附加页面
-                broadcast({
-                    action: 'closeUserbar',
-                });
             }
             if (message.action === 'loadEnd') {
                 setTimeout(() => {

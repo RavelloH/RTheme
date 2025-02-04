@@ -7,13 +7,10 @@ import config from '../../../config.js';
 import switchElementContent from '../../utils/switchElement.js';
 import display from './display.js';
 import message from '@/utils/message.js';
-import token from '@/utils/token.js';
 import loadURL from '@/utils/loadURL.js';
 
 // 全局声明
 let domMenuToggle,
-    domBody,
-    domShadeContext,
     domShadeGlobal,
     domLayoutInfoBar,
     domInfoBarToggle,
@@ -24,7 +21,6 @@ let domMenuToggle,
     domLoadShade,
     musicApi,
     currentInfoBarInner,
-    closeErrorBar,
     searchTimer,
     changeMusicProgress;
 
@@ -187,32 +183,8 @@ if (isBrowser()) {
     // };
 }
 
-// 右菜单开关
-function toggleLayoutMenu() {
-    domMenuToggle.classList.toggle('active');
-    domBody.classList.toggle('active');
-    domShadeContext.classList.toggle('active');
-    if (isLayoutMenuOpen()) {
-        currentInfoBarInner = getElementInnerhtml('#message-bar');
-        if (
-            cookie.getItem('settingEnableUmamiAnalytics') !== 'false' &&
-            cookie.getItem('settingEnableUmamiEvents') !== 'false'
-        ) {
-            analysis.getRealTimeVisitors('switch');
-        }
-    } else {
-        if (typeof currentInfoBarInner !== 'undefined') {
-            message.switch(currentInfoBarInner);
-            currentInfoBarInner = undefined;
-        }
-    }
-}
-
 // 下拉栏开关
 function toggleLayoutInfobar() {
-    if (isLayoutMenuOpen() == true) {
-        toggleLayoutMenu();
-    }
     domLayoutInfoBar.classList.toggle('active');
     domShadeGlobal.classList.toggle('active');
     setTimeout(() => enableInfobarRefersh(), 0);
@@ -249,16 +221,6 @@ function isLayoutInfobarOpen() {
     }
 }
 
-// 切换页面内容
-function hiddenPageContent() {
-    const element = document.querySelector('#viewmap');
-    element.style.opacity = '1';
-    // element.style.left = '0'
-    element.style.transition = 'all 350ms';
-    element.style.opacity = '0';
-    // element.style.left = '-60%'
-}
-
 // 高亮元素
 function highlightElement(selector) {
     const element = document.querySelector(selector);
@@ -268,19 +230,6 @@ function highlightElement(selector) {
     setTimeout(() => {
         element.style.color = originColor;
     }, 1500);
-}
-
-// 延时，搭配asymc wait使用
-function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// 页面主题切换
-function fadeOutPage(selector, time = 450) {
-    const element = document.querySelector(selector);
-    element.style.opacity = '1';
-    element.style.transition = `opacity ${time}ms,left ${time}ms`;
-    element.style.opacity = '0';
 }
 
 // 获取元素InnerHTML
@@ -313,12 +262,6 @@ function addListeners() {
     // );
     addEventListener('offline', (event) => {
         message.add('<a>互联网连接已断开 <span class="i ri-cloud-off-line"></span></a>', 5000);
-    });
-    domMenuToggle.addEventListener('click', () => {
-        toggleLayoutMenu();
-    });
-    domShadeContext.addEventListener('click', () => {
-        toggleLayoutMenu();
     });
     domShadeGlobal.addEventListener('click', () => {
         if (isLayoutInfobarOpen()) {

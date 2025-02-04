@@ -1,10 +1,7 @@
 // RTheme v3 - analysis.js(统计脚本)
 // 注：请勿将此脚本用于你的个人博客，此脚本仅由RavelloH使用用于统计个人博客访问情况
-import global from './Global';
-import i18n from './i18n';
 import config from '../../../config';
 import cookie from './lib/cookie';
-import message from '@/utils/message';
 
 let uptimeData;
 function umamiAnalytics() {
@@ -58,26 +55,6 @@ function getUmamiEventList() {
     ];
 }
 
-function getRealTimeVisitors(mode = 'return') {
-    let site = config.umami.url;
-    let token = config.umami.token;
-    let apiURL = site + 'api/websites/' + config.umami.id + '/active';
-    fetch(apiURL, {
-        headers: {
-            'x-umami-share-token': token,
-        },
-    })
-        .then((response) => response.json())
-        .then((data) => {
-            if (global.isLayoutMenuOpen() && mode == 'switch') {
-                return message.switch(i18n.structureOnlineVistor(data.x));
-            }
-            if (mode == 'return') {
-                return data.x;
-            }
-        });
-}
-
 function getPageVisitors(url = window.location.pathname) {
     return new Promise((resolve, reject) => {
         let apiURL = `${config.umami.apiUrl}pageview?url=${url}`;
@@ -113,7 +90,6 @@ function loadUptime() {
 }
 
 const analysisModule = {
-    getRealTimeVisitors,
     getPageVisitors,
     loadUptime,
     umamiAnalytics,
