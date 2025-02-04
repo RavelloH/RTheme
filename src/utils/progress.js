@@ -45,12 +45,12 @@ const progress = {
                 if (progress.state == 'sending') {
                     progress.change(getRandomInteger(5, 15), progress.bar);
                 }
-            }, 400);
+            }, 100);
             setTimeout(function () {
                 if (progress.state == 'sending') {
                     progress.change(progress.number + getRandomInteger(10, 25), progress.bar);
                 }
-            }, 500);
+            }, 300);
             progress.addTimer = setInterval(function () {
                 if (progress.number >= 85 || progress.state == 'success') {
                     clearInterval(progress.addTimer);

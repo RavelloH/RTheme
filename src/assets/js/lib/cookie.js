@@ -2,6 +2,7 @@
 
 const cookie = {
     getItem: function (sKey) {
+        if (typeof document == 'undefined') return;
         return (
             decodeURIComponent(
                 document.cookie.replace(
