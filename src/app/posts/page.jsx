@@ -1,7 +1,8 @@
 import prisma from '@/app/api/_utils/prisma';
 
-import config from '@/../config';
+import getTime from '@/utils/getTime';
 import Search from '@/components/Search';
+import Virgule from '@/components/Virgule';
 
 export const metadata = {
     title: '文稿 \\ Posts',
@@ -100,7 +101,13 @@ export default async function Posts() {
                     记录 & 索引所有文章。
                 </span>
                 <span className='virgule' id='index-info'>
-                    共索引 {posts.length} 篇文章。
+                    <Virgule
+                        text={`共索引 ${posts.length} 篇文章，最近更新于${getTime(
+                            'DD',
+                            posts[0].createdAt,
+                        )}天前`}
+                        timeout={1200}
+                    />
                 </span>
             </div>
             <div className='listlines' id='resultarea'>

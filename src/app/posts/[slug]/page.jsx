@@ -10,6 +10,8 @@ import NotFound from '@/app/not-found';
 import { Base64 } from 'js-base64';
 import Shiki from '@shikijs/markdown-it';
 import MarkdownIt from 'markdown-it';
+import MenuLoader from '@/components/MenuLoader';
+import ImageZoom from '@/components/ImageZoom';
 
 const md = MarkdownIt({ html: true });
 md.use(
@@ -26,7 +28,7 @@ md.renderer.rules.heading_open = function (tokens, idx, options, env, self) {
     const level = tokens[idx].tag.slice(1);
     const title = tokens[idx + 1].content;
     const slug = title.replace(/\s+/g, '-').toLowerCase();
-    return `<h${level}><a href="#${slug}" id="${slug}" title="${title}">`;
+    return `<h${level}><a href="#${slug}" id="${slug}" title="${title}" name="${slug}">`;
 };
 
 md.renderer.rules.heading_close = function (tokens, idx) {
@@ -37,7 +39,12 @@ md.renderer.rules.heading_close = function (tokens, idx) {
 md.renderer.rules.image = function (tokens, idx, options, env, self) {
     const src = tokens[idx].attrGet('src');
     const alt = tokens[idx].content;
-    return `<div class="imgbox"><img src="${src}" alt="${alt}" loading="lazy"><span>${alt}</span></div>`;
+    return `
+        <div class="imgbox">
+            <img src="${src}" alt="${alt}" loading="lazy" data-zoomable="true">
+            <span>${alt}</span>
+        </div>
+    `;
 };
 
 let title;
@@ -117,6 +124,7 @@ export default async function Post(params) {
 
     return (
         <article>
+            <ImageZoom />
             <div id='articles-header'>
                 <h1>
                     <a href={'/posts/' + post.name}>{post.title}</a>
@@ -136,7 +144,10 @@ export default async function Post(params) {
                 <hr />
             </div>
 
-            <div id='articles-body'>
+            <div id='articles-body' style={{
+                maxWidth: '1000px',
+                margin: '0 auto',
+            }}>
                 <div dangerouslySetInnerHTML={{ __html: md.render(post.content) }} />
             </div>
             <div id='articles-footer'>
@@ -171,6 +182,7 @@ export default async function Post(params) {
                 <br />
                 <br />
                 <Comment />
+                <MenuLoader />
             </div>
         </article>
     );
