@@ -9,8 +9,14 @@ const message = {
             <div></div>
         </a>
     ),
+    realTime: (
+        <a>
+            <div></div>
+        </a>
+    ),
     switch: function (context, time = 300) {
         switchElementContent('#message-bar', context, time);
+        message.realTime = context;
         log.info('<message>');
     },
     error: function (text, time = 6000) {
