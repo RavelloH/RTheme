@@ -19,7 +19,7 @@ export default function Home() {
                 RavelloH&apos;s 「BLOG」
             </h3>
             <span id='jumping' className='virgule loading' style={{ '--i': 3 }}>
-                <Virgule text={'## ' + config.siteHelloWords} interval={20} timeout={1200} />
+                <Virgule text={'## ' + config.siteHelloWords} interval={20} timeout={1500} />
             </span>
             <div className='button-list loading' style={{ '--i': 5 }}>
                 <a className='button loading' href='/posts/'>

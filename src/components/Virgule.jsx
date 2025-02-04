@@ -42,7 +42,7 @@ const Virgule = ({ text, interval = 20, inline = false, timeout }) => {
         };
     }, [text, interval, inline, timeout]);
 
-    return inline ? <span ref={elementRef}></span> : <div ref={elementRef}></div>;
+    return inline ? <span ref={elementRef}>/</span> : <div ref={elementRef}>/</div>;
 };
 
 export default Virgule;
