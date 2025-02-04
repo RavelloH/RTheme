@@ -20,7 +20,6 @@ let domMenuToggle,
     infoBarMode,
     domLoadShade,
     musicApi,
-    currentInfoBarInner,
     searchTimer,
     changeMusicProgress;
 
@@ -30,8 +29,6 @@ const isBrowser = () => typeof window !== 'undefined';
 
 function resetElements() {
     domMenuToggle = document.querySelector('#toggle');
-    domBody = document.querySelector('body');
-    domShadeContext = document.querySelector('#shade-context');
     domShadeGlobal = document.querySelector('#shade-global');
     domLayoutInfoBar = document.querySelector('#infobar');
     domInfoBarToggle = document.querySelector('#infobar-toggle');
@@ -199,19 +196,6 @@ function isLayoutMenuOpen() {
     }
 }
 
-function toggleLayoutNoticebar() {
-    document.querySelector('#noticebar').classList.toggle('active');
-    domShadeGlobal.classList.toggle('active');
-}
-
-function isLayoutNoticebarOpen() {
-    if (document.querySelector('#noticebar').classList[0] == 'active') {
-        return true;
-    } else {
-        return false;
-    }
-}
-
 // 下拉栏状态
 function isLayoutInfobarOpen() {
     if (domLayoutInfoBar.classList[0] == 'active') {
@@ -266,10 +250,6 @@ function addListeners() {
     domShadeGlobal.addEventListener('click', () => {
         if (isLayoutInfobarOpen()) {
             toggleLayoutInfobar();
-        }
-
-        if (isLayoutNoticebarOpen()) {
-            toggleLayoutNoticebar();
         }
     });
     domInfoBarToggle.addEventListener('click', () => {
@@ -1162,7 +1142,6 @@ const globalModule = {
     openInfoBar,
     toggleThemeMode,
     toggleFullScreen,
-    toggleLayoutNoticebar,
     musicChange,
     musicGo,
     musicPlay,

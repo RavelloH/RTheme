@@ -2,7 +2,7 @@
 
 import FooterIcon from './FooterIcon';
 import progress from '@/utils/progress';
-import { useBroadcast } from '@/store/useBoardcast';
+import { useBroadcast } from '@/store/useBroadcast';
 import { useEffect } from 'react';
 
 export default function Footer() {

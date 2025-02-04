@@ -4,7 +4,7 @@ import cookie from '@/assets/js/lib/cookie';
 import { Base64 } from 'js-base64';
 import objectToForm from './objectToForm';
 import message from './message';
-import { useBroadcast } from '@/store/useBoardcast';
+import { useBroadcast } from '@/store/useBroadcast';
 
 // Base64模块
 const base = {

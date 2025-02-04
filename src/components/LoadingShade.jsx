@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import config from '../../config';
-import { useBroadcast } from '@/store/useBoardcast';
+import { useBroadcast } from '@/store/useBroadcast';
 import switchElementContent from '@/utils/switchElement';
 
 export default function LoadingShade() {
@@ -31,6 +31,15 @@ export default function LoadingShade() {
                 document.getElementById('viewmap').style.transition = 'opacity 0.3s';
                 document.getElementById('viewmap').style.opacity = 0;
                 document.getElementById('viewmap').style.pointerEvents = 'none';
+                broadcast({
+                    action: 'closeUserbar',
+                });
+                broadcast({
+                    action: 'closeNoticebar',
+                });
+                broadcast({
+                    action: 'closeSidebar',
+                });
             }
             if (message.action === 'loadEnd') {
                 setTimeout(() => {
@@ -59,6 +68,9 @@ export default function LoadingShade() {
                 onClick={() => {
                     broadcast({
                         action: 'closeUserbar',
+                    });
+                    broadcast({
+                        action: 'closeNoticebar',
                     });
                 }}
             ></div>

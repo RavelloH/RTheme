@@ -4,7 +4,7 @@
 import Nav from './Nav';
 import config from '../../config';
 import Image from 'next/image';
-import { useBroadcast } from '@/store/useBoardcast';
+import { useBroadcast } from '@/store/useBroadcast';
 
 export default function Header() {
     const broadcast = useBroadcast((state) => state.broadcast);

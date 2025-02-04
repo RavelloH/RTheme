@@ -5,7 +5,7 @@ import Menu from './Menu';
 import Copyright from './Copyright';
 import Sideicon from './Sideicon';
 import Virgule from './Virgule';
-import { useBroadcast } from '@/store/useBoardcast';
+import { useBroadcast } from '@/store/useBroadcast';
 import { useEffect, useState, useRef } from 'react';
 import { getRealTimeVisitors } from '@/utils/analysis';
 import messager from '@/utils/message';

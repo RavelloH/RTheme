@@ -1,6 +1,6 @@
 'use client';
 
-import { useBroadcast } from '@/store/useBoardcast';
+import { useBroadcast } from '@/store/useBroadcast';
 
 export default function UserbarIcon() {
     const broadcast = useBroadcast((state) => state.broadcast);

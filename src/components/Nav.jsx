@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import config from '../../config';
 
-import { useBroadcast } from '@/store/useBoardcast';
+import { useBroadcast } from '@/store/useBroadcast';
 
 let navList = config.nav.map((item, index) => {
     return (

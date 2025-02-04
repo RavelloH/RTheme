@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import config from '../../config';
 import global from '@/assets/js/Global';
+import { useBroadcast } from '@/store/useBroadcast';
 
 let footerList = config.footer.map((item, index) => {
     return (
@@ -24,6 +25,8 @@ let footerList = config.footer.map((item, index) => {
 
 export default function FooterIcon() {
     const [hasNewNotices, setHasNewNotices] = useState(false);
+
+    const broadcast = useBroadcast((state) => state.broadcast);
 
     useEffect(() => {
         setTimeout(() => {
@@ -56,7 +59,7 @@ export default function FooterIcon() {
                 style={{ '--i': 2 }}
                 key={2}
                 onClick={() => {
-                    global.toggleLayoutNoticebar();
+                    broadcast({ action: 'openNoticebar' });
                     return false;
                 }}
                 href='#notice'

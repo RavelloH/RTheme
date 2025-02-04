@@ -106,13 +106,16 @@ function signin() {
                 }, 3000);
             } else {
                 switchElementContent('#login-button span', data.message);
+                setTimeout(() => {
+                    document.querySelector('#login-button').classList.remove('block');
+                    document.querySelector('#login-button').onclick = () => signin();
+                    switchElementContent('#login-button span', '登录');
+                }, 5000);
             }
         })
         .catch((e) => {
             switchElementContent('#login-button span', '无法与登录服务器建立连接');
             console.log(e);
-        })
-        .finally(() => {
             setTimeout(() => {
                 document.querySelector('#login-button').classList.remove('block');
                 document.querySelector('#login-button').onclick = () => signin();

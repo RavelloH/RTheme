@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import token from '@/utils/token.js';
 import message from '@/utils/message.js';
-import { useBroadcast } from '@/store/useBoardcast.js';
+import { useBroadcast } from '@/store/useBroadcast.js';
 import UserbarIcon from './UserbarIcon.jsx';
 import ConfirmList from './ConfirmList.jsx';
 import loadURL from '@/utils/loadURL.js';

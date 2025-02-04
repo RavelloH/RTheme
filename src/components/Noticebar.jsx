@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import global from '@/assets/js/Global';
 import '@/assets/css/Noticebar.css';
 import notice from '@/utils/notice';
 import token from '@/utils/token';
@@ -8,6 +7,7 @@ import log from '@/utils/log';
 import { subscribe, unsubscribe } from '@/utils/log';
 import message from '@/utils/message';
 import loadURL from '@/utils/loadURL';
+import { useBroadcast } from '@/store/useBroadcast';
 
 export default function Noticebar() {
     const [unreadNotices, setUnreadNotices] = useState([]);
@@ -18,6 +18,10 @@ export default function Noticebar() {
     const [isLoadSuccess, setLoadSuccess] = useState(false);
     const [isNoticeBarOpen, setNoticeBarOpen] = useState(false);
     const rightDivRef = useRef(null);
+
+    const registerBroadcast = useBroadcast((state) => state.registerCallback);
+    const unregisterBroadcast = useBroadcast((state) => state.unregisterCallback);
+    const broadcast = useBroadcast((state) => state.broadcast);
 
     // 读写本地缓存
     const loadCachedNotices = () => {
@@ -142,7 +146,9 @@ export default function Noticebar() {
 
     // 将某通知设为已读
     const markAsRead = async (e, notice) => {
-        global.toggleLayoutNoticebar();
+        broadcast({
+            action: 'closeNoticebar',
+        });
         e.preventDefault(); // 阻止默认导航
         log.info(`Marking notice as read: ${notice.id}`);
         message.add(
@@ -198,7 +204,7 @@ export default function Noticebar() {
                 clearInterval(interval);
             };
         }
-    }, [isLoggedIn]);
+    }, [isLoggedIn, token.get()]);
 
     useEffect(() => {
         if (hasNewNotices) {
@@ -236,27 +242,35 @@ export default function Noticebar() {
         }
     }, [logData]);
 
+    useEffect(() => {
+        const handleNoticebar = (message) => {
+            if (
+                (message.action == 'toggleNoticebar' && !isNoticeBarOpen) ||
+                message.action === 'openNoticebar'
+            ) {
+                setNoticeBarOpen(true);
+                document.querySelector('#noticebar').classList.add('active');
+                document.querySelector('#shade-global').classList.add('active');
+            }
+            if (
+                (message.action == 'toggleNoticebar' && isNoticeBarOpen) ||
+                message.action === 'closeNoticebar'
+            ) {
+                setTimeout(() => setNoticeBarOpen(false), 500);
+                document.querySelector('#noticebar').classList.remove('active');
+                document.querySelector('#shade-global').classList.remove('active');
+            }
+        };
+        registerBroadcast(handleNoticebar);
+        return () => {
+            unregisterBroadcast();
+        };
+    }, [registerBroadcast, unregisterBroadcast]);
+
     return (
         <section id='noticebar'>
-            <div
-                id='noticebar-context'
-                style={{
-                    color: '#fff',
-                    padding: '0.714rem 1.786rem',
-                    margin: '0',
-                    background: 'rgba(50, 50, 50, 0.2)',
-                    backdropFilter: 'blur(8px)',
-                    WebkitBackdropFilter: 'blur(8px)',
-                }}
-            >
-                <div
-                    id='noticebar-left'
-                    style={{
-                        flex: 1,
-                        overflowY: 'auto',
-                        padding: '1rem',
-                    }}
-                >
+            <div id='noticebar-context'>
+                <div id='noticebar-left'>
                     <h2>通知中心</h2>
                     <b>
                         总计{unreadNotices.length + readNotices.length}条通知，
@@ -276,15 +290,7 @@ export default function Noticebar() {
                             ) : (
                                 <>
                                     {unreadNotices.map((notice, index) => (
-                                        <div
-                                            key={index}
-                                            className='notice-div'
-                                            style={{
-                                                marginBottom: '1rem',
-                                                borderBottom: '1px solid rgba(255,255,255,0.2)',
-                                                paddingBottom: '0.5rem',
-                                            }}
-                                        >
+                                        <div key={index} className='notice-div'>
                                             <a
                                                 href={notice.href}
                                                 style={{
@@ -338,7 +344,7 @@ export default function Noticebar() {
                                 >
                                     <a
                                         href={notice.href}
-                                        onClick={() => global.toggleLayoutNoticebar()}
+                                        onClick={() => broadcast({ action: 'closeNoticebar' })}
                                         style={{
                                             color: '#ccc',
                                             textDecoration: 'none',
@@ -361,11 +367,7 @@ export default function Noticebar() {
                         </div>
                     )}
                 </div>
-                <div
-                    id='noticebar-right'
-                    ref={rightDivRef}
-                    style={{ flex: 1, padding: '1rem', opacity: 0.1 }}
-                >
+                <div id='noticebar-right' ref={rightDivRef}>
                     {isNoticeBarOpen
                         ? logData.map((item, index) => (
                               <>
@@ -382,19 +384,7 @@ export default function Noticebar() {
                         : null}
                 </div>
             </div>
-            <div
-                id='noticebar-footer'
-                style={{
-                    color: '#fff',
-                    background: 'rgba(50, 50, 50, 0.5)',
-                    backdropFilter: 'blur(8px)',
-                    WebkitBackdropFilter: 'blur(8px)',
-                    padding: '0.5rem 1rem',
-                    justifyContent: 'center',
-                    height: '3em',
-                }}
-                onClick={() => global.toggleLayoutNoticebar()}
-            >
+            <div id='noticebar-footer' onClick={() => broadcast({ action: 'closeNoticebar' })}>
                 <span className='i ri-arrow-up-s-line'></span>
             </div>
         </section>

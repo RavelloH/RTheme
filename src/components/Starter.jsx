@@ -1,6 +1,6 @@
 'use client';
 
-import { useBroadcast } from '@/store/useBoardcast';
+import { useBroadcast } from '@/store/useBroadcast';
 import { useEffect } from 'react';
 
 function loadItems(parentNodeName, mode = 'sort') {
