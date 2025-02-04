@@ -7,6 +7,7 @@ import message from '@/utils/message.js';
 import { useBroadcast } from '@/store/useBoardcast.js';
 import UserbarIcon from './UserbarIcon.jsx';
 import ConfirmList from './ConfirmList.jsx';
+import loadURL from '@/utils/loadURL.js';
 
 function extractLastSegment(href) {
     const regex = /^(.*\/manage\/posts\/draft\/|.*\/posts\/)([^\/]+)$/;
@@ -19,7 +20,7 @@ function extractLastSegment(href) {
 
 function editPost() {
     if (extractLastSegment(window.location.href)) {
-        window.location.href = '/manage/posts/edit/' + extractLastSegment(window.location.href);
+        loadURL('/manage/posts/edit/' + extractLastSegment(window.location.href));
     } else {
         message.warn('未识别到有效的文档');
     }
@@ -27,7 +28,7 @@ function editPost() {
 
 function deletePost() {
     if (extractLastSegment(window.location.href)) {
-        window.location.href = '/manage/posts/delete/' + extractLastSegment(window.location.href);
+        loadURL('/manage/posts/delete/' + extractLastSegment(window.location.href));
     } else {
         message.warn('未识别到有效的文档');
     }

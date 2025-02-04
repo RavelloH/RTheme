@@ -5,6 +5,7 @@ import switchElementContent from '@/utils/switchElement';
 import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 import objectToForm from '@/utils/objectToForm';
+import loadURL from '@/utils/loadURL';
 
 let postName, postTitle;
 
@@ -245,14 +246,14 @@ function submit(mode) {
                             // TODO: 重新部署模块即相关提示
                             switchElementContent('#publish-button span', '发布成功，即将跳转...');
                             setTimeout(() => {
-                                window.location.href = `/posts/${postName}`;
+                                loadURL(`/posts/${postName}`);
                             }, 3000);
                         });
                 }
                 if (mode == 'draft') {
                     switchElementContent('#draft-button span', '保存成功，即将跳转...');
                     setTimeout(() => {
-                        window.location.href = `/manage/posts/draft/${postName}`;
+                        loadURL(`/manage/posts/draft/${postName}`);
                     }, 3000);
                 }
                 localStorage.clear();

@@ -8,6 +8,7 @@ import objectToForm from '@/utils/objectToForm';
 import switchElementContent from '@/utils/switchElement';
 import { useEffect } from 'react';
 import message from '@/utils/message';
+import loadURL from '@/utils/loadURL';
 
 function timeParse(time) {
     const date = new Date(time);
@@ -311,7 +312,7 @@ function sendComment(parentCommentId) {
     // 创建评论
     if (!token.get()) {
         // 跳转登录
-        window.location.href = '/account/signin?redirect=' + window.location.href + '#comment';
+        loadURL('/account/signin?redirect=' + window.location.href + '#comment');
     }
     const commentButton = document.getElementById('comment-button');
     switchElementContent(

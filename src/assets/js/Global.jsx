@@ -8,6 +8,7 @@ import switchElementContent from '../../utils/switchElement.js';
 import display from './display.js';
 import message from '@/utils/message.js';
 import token from '@/utils/token.js';
+import loadURL from '@/utils/loadURL.js';
 
 // 全局声明
 let domMenuToggle,
@@ -75,7 +76,7 @@ function loadPage() {
     zoomPics();
     analysis.umamiAnalytics();
     if (analyzeURL(window.location.href, 'u') !== '') {
-        window.location.href = base.decrypt(analyzeURL(window.location.href, 'u'));
+        loadURL(base.decrypt(analyzeURL(window.location.href, 'u')));
     }
     message.switch('', 450);
 

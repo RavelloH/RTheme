@@ -7,6 +7,7 @@ import token from '@/utils/token';
 import log from '@/utils/log';
 import { subscribe, unsubscribe } from '@/utils/log';
 import message from '@/utils/message';
+import loadURL from '@/utils/loadURL';
 
 export default function Noticebar() {
     const [unreadNotices, setUnreadNotices] = useState([]);
@@ -158,7 +159,7 @@ export default function Noticebar() {
         setUnreadNotices(updatedUnread);
         setReadNotices(updatedRead);
         log.info(`Notice marked as read: ${notice.id}`);
-        window.location.href = notice.href; // 手动导航
+        loadURL(notice.href); // 手动导航
     };
 
     // 新增“已读全部”功能
@@ -371,7 +372,9 @@ export default function Noticebar() {
                                   <span key={index}>
                                       {`[${new Date(
                                           item.time,
-                                      ).toLocaleString()}][${item.level.toUpperCase()}] ${item.content}`}
+                                      ).toLocaleString()}][${item.level.toUpperCase()}] ${
+                                          item.content
+                                      }`}
                                   </span>
                                   <br />
                               </>

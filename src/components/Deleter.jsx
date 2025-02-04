@@ -3,6 +3,7 @@
 import switchElementContent from '@/utils/switchElement';
 import objectToForm from '@/utils/objectToForm';
 import token from '@/utils/token';
+import loadURL from '@/utils/loadURL';
 
 function deletePost(name) {
     document.querySelector('#delete-button').onClick = null;
@@ -26,7 +27,7 @@ function deletePost(name) {
             if (data.message == '删除成功') {
                 switchElementContent('#delete-button span', '删除成功，将跳转至文稿索引页');
                 setTimeout(() => {
-                    window.location.href = `/posts/`;
+                    loadURL(`/posts/`);
                 }, 3000);
             } else {
                 switchElementContent('#delete-button span', data.message);

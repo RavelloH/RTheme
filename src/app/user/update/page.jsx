@@ -4,10 +4,11 @@ import token from '@/utils/token';
 import { useEffect } from 'react';
 import switchElementContent from '@/utils/switchElement';
 import objectToForm from '@/utils/objectToForm';
+import loadURL from '@/utils/loadURL';
 
 function main() {
     const usertoken = token.getObject();
-    if (!usertoken) window.location.href = '/account/signin';
+    if (!usertoken) loadURL('/account/signin');
     document.querySelector('#nickname').value = usertoken.nickname;
     document.querySelector('#bio').value = usertoken.bio;
     document.querySelector('#website').value = usertoken.website;
@@ -95,14 +96,14 @@ async function update() {
                     .then(() => {
                         switchElementContent('#update-button span', '修改操作已完成');
                         setTimeout(() => {
-                            window.location.href = '/user?uid=' + token.read('uid');
+                            loadURL('/user?uid=' + token.read('uid'));
                         }, 3000);
                     })
                     .catch((e) => {
                         switchElementContent('#update-button span', '无法自动刷新，请手动重新登陆');
                         token.clear();
                         setTimeout(() => {
-                            window.location.href = '/account/signin?redirect=/user/update';
+                            loadURL('/account/signin?redirect=/user/update');
                         }, 3000);
                         console.error(e);
                     });
