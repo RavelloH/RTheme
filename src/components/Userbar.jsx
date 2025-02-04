@@ -1,7 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import global from '../assets/js/Global.jsx';
 import { useEffect, useState } from 'react';
 import token from '@/utils/token.js';
 import message from '@/utils/message.js';
@@ -71,35 +70,48 @@ export default function Userbar() {
     const [refreshTime, setRefreshTime] = useState(
         token.read('iat') * 1000 + 20 * 60 * 1000 - Date.now(),
     );
+    const [isTimerActive, setIsTimerActive] = useState(false);
+
+    let timer;
+    let refreshTimer;
+
+    function activateUserbar() {
+        if (token.get()) {
+            setIsLogin(true);
+
+            timer = setInterval(() => {
+                setRefreshTime(token.read('iat') * 1000 + 20 * 60 * 1000 - Date.now());
+            }, 1000);
+        }
+    }
 
     useEffect(() => {
         const domLayoutUserBar = document.querySelector('#userbar');
         const domShadeGlobal = document.querySelector('#shade-global');
 
         const createTimer = () => {
+            if (isTimerActive) return;
+            setIsTimerActive(true);
             setTimeout(() => {
                 if (!token.get()) return;
                 token.refresh().then(() => {
                     setRefreshTime(token.read('iat') * 1000 + 20 * 60 * 1000 - Date.now());
-                    createTimer();
+                    setIsTimerActive(false);
+                    createTimer(token.read('iat') * 1000 + 20 * 60 * 1000 - Date.now());
                 });
             }, refreshTime);
         };
 
+        createTimer();
+        activateUserbar();
+
         const openUserbar = (message) => {
-            let timer;
             if (
                 (message.action == 'toggleUserbar' && isUserbarOpen) ||
                 message.action == 'openUserbar'
             ) {
                 setIsUserBarOpen(true);
-                if (token.get()) {
-                    setIsLogin(true);
-
-                    timer = setInterval(() => {
-                        setRefreshTime(token.read('iat') * 1000 + 20 * 60 * 1000 - Date.now());
-                    }, 1000);
-                }
+                activateUserbar();
                 domLayoutUserBar.classList.add('active');
                 domShadeGlobal.classList.add('active');
             }
