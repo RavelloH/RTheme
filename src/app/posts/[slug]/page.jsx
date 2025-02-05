@@ -7,14 +7,15 @@ import Link from 'next/link';
 import Image from 'next/image';
 import formatDateWithTimeZone from '@/utils/time';
 import NotFound from '@/app/not-found';
-import { Base64 } from 'js-base64';
+import dynamic from 'next/dynamic'
 import Shiki from '@shikijs/markdown-it';
 import MarkdownIt from 'markdown-it';
 import MenuLoader from '@/components/MenuLoader';
 import ImageZoom from '@/components/ImageZoom';
-import PageVisitors from '@/components/PageVisitors';
 import LinkPreview from '@/components/LinkPreview';
 import CodeBlockTools from '@/components/CodeBlockTools';
+
+const PageVisitors = dynamic(() => import('@/components/PageVisitors'), { ssr: false });
 
 const md = MarkdownIt({ html: true });
 md.use(
