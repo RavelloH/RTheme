@@ -69,7 +69,7 @@ export default function LoadingShade() {
             type: 'UI',
             action: 'firstLoadComplete',
         });
-    }, [broadcast]);
+    }, []);
 
     return (
         <>
