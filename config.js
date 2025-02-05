@@ -16,7 +16,7 @@ const config = {
     defaultScript: '<script>function main(){}</script>', // 默认站点脚本
     remotePath: '', // 远程资源路径，主站点不填
     trustDomain: ['ravelloh.top'],
-    musicApiList: ['https://music.api.ravelloh.top/cloudsearch?keywords='],
+    musicApi: 'https://music.api.ravelloh.top/cloudsearch?keywords=',
     screenshotApi: 'https://screenshot.ravelloh.top/',
     twitterUsername: '@ravelohh',
     nav: [

@@ -1,8 +1,108 @@
 'use client';
 
-import global from '../assets/js/Global';
+import switchElementContent from '@/utils/switchElement';
+import { useEvent } from '@/store/useEvent';
+import { useEffect } from 'react';
+import message from '@/utils/message';
+import cookie from '@/assets/js/lib/cookie';
 
 export default function Player() {
+    const { emit, on, off } = useEvent();
+    function timeTrans(times) {
+        var t = '00:00';
+        if (times > -1) {
+            var hour = Math.floor(times / 3600);
+            var min = Math.floor(times / 60) % 60;
+            var sec = times % 60;
+            t = '';
+            if (min < 10) {
+                t += '0';
+            }
+            t += min + ':';
+            if (sec < 10) {
+                t += '0';
+            }
+            t += sec.toFixed(2);
+            t = t.substring(0, t.length - 3);
+        }
+        return t;
+    }
+    function musicUpdata() {
+        const changeMusicProgress = (progress) => {
+            document.querySelector('#music-progress').style.width = `${progress}%`;
+        };
+        changeMusicProgress((music.currentTime / music.duration) * 100);
+        document.getElementById('music-time').innerHTML =
+            timeTrans(music.currentTime) + '/' + timeTrans(music.duration);
+    }
+    function musicPlay() {
+        if (music.src == window.location.origin + '/') {
+            highlightElement('#music-name');
+        } else {
+            if (document.querySelector('#music-button').getAttribute('play') !== 'true') {
+                document.querySelector('#music-button').setAttribute('play', 'true');
+                switchElementContent(
+                    '#music-button',
+                    <span className='i ri-pause-line'></span>,
+                    200,
+                );
+                music.play();
+            } else {
+                document.querySelector('#music-button').setAttribute('play', 'false');
+                switchElementContent(
+                    '#music-button',
+                    <span className='i ri-play-line'></span>,
+                    200,
+                );
+                music.pause();
+            }
+        }
+    }
+    function musicGo(second) {
+        if (music.currentTime + second <= music.duration && music.currentTime + second >= 0) {
+            music.currentTime = music.currentTime + second;
+        }
+    }
+    function musicChange(name, url) {
+        if (music.paused == false) {
+            musicPlay();
+        }
+        setTimeout(() => {
+            music.src = url;
+            music.load();
+            switchElementContent('#music-name', name);
+            setTimeout(() => {
+                if (music.paused == true) {
+                    musicPlay();
+                }
+                if (cookie.getItem('settingEnableMusicStateStorage') !== 'false') {
+                    cookie.setItem('musicPlayingName', name);
+                    cookie.setItem('musicPlayingSource', url);
+                }
+                message.switch(
+                    <a onClick={() => global.openInfoBar('music')}>
+                        <strong>正在播放: {name}</strong>&nbsp;
+                        <span className='i ri-music-2-fill'></span>
+                    </a>,
+                );
+                setTimeout(() => message.switch(message.original), 10000);
+            }, 100);
+        }, 200);
+    }
+
+    useEffect(() => {
+        on('musicChange', musicChange);
+        on('musicPlay', musicPlay);
+        on('musicGo', musicGo);
+        on('musicUpdata', musicUpdata);
+        return () => {
+            off('musicChange', musicChange);
+            off('musicPlay', musicPlay);
+            off('musicGo', musicGo);
+            off('musicUpdata', musicUpdata);
+        };
+    }, []);
+
     return (
         <div id='music-player'>
             <div id='music-top'>
@@ -13,7 +113,7 @@ export default function Player() {
                 id='music'
                 src='/'
                 onTimeUpdate={() => {
-                    global.musicUpdata();
+                    musicUpdata();
                 }}
                 loop='loop'
                 preload='none'
@@ -26,7 +126,10 @@ export default function Player() {
             <div id='music-operation'>
                 <span
                     onClick={() => {
-                        global.musicSetting();
+                        emit('closeInfobar');
+                        setTimeout(() => {
+                            emit('openInfobar', 'music');
+                        }, 500);
                     }}
                 >
                     <span className='i ri-play-list-line'></span>
@@ -34,13 +137,13 @@ export default function Player() {
                 <span
                     className='i ri-skip-back-line'
                     onClick={() => {
-                        global.musicGo(-10);
+                        musicGo(-10);
                     }}
                 ></span>
                 <span
                     id='music-button'
                     onClick={() => {
-                        global.musicPlay();
+                        musicPlay();
                     }}
                 >
                     <span className='i ri-play-line'></span>
@@ -48,7 +151,7 @@ export default function Player() {
                 <span
                     className='i ri-skip-forward-line'
                     onClick={() => {
-                        global.musicGo(10);
+                        musicGo(10);
                     }}
                 ></span>
                 <span className='i ri-repeat-one-line'></span>
