@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import config from '../../config';
 import { useBroadcast } from '@/store/useBroadcast';
 import switchElementContent from '@/utils/switchElement';
+import messager from '@/utils/message';
 
 export default function LoadingShade() {
     const registerBroadcast = useBroadcast((state) => state.registerCallback);
@@ -45,6 +46,12 @@ export default function LoadingShade() {
                 setTimeout(() => {
                     document.getElementById('viewmap').style.opacity = 1;
                     document.getElementById('viewmap').style.pointerEvents = 'auto';
+                    messager.original = (
+                        <a>
+                            <div></div>
+                        </a>
+                    );
+                    messager.switch(messager.original);
                 }, 300);
             }
         };
