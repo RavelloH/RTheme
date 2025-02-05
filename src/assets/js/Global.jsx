@@ -66,7 +66,6 @@ function loadPage() {
     resetElements();
     resetCookies();
     addListeners();
-    zoomPics();
     analysis.umamiAnalytics();
     if (analyzeURL(window.location.href, 'u') !== '') {
         loadURL(base.decrypt(analyzeURL(window.location.href, 'u')));
@@ -1081,37 +1080,6 @@ async function virgule(element, text, interval) {
 function loadPageType() {
     let pageType = window.location.pathname.split('/')[1];
     switch (pageType) {
-        case '': // home
-            break;
-        case 'posts':
-            display.resetTagList();
-            if (document.querySelector('#index-info')) {
-                virgule(
-                    document.querySelector('#index-info'),
-                    document.querySelector('#index-info').innerText +
-                        `最近更新于${getTime('DD', document.querySelector('time').innerHTML)}天前`,
-                    20,
-                );
-            }
-            if (window.location.pathname.split('/')[2]) {
-                // 显示目录
-                i18n.originMessageBar = (
-                    <a onClick={() => openInfoBar('menu')}>
-                        目录&nbsp;<span class='i ri-list-unordered'></span>
-                    </a>
-                );
-                setTimeout(() => message.switch(i18n.originMessageBar), 1000);
-                if (cookie.getItem('settingEnableUmamiAnalytics') !== 'false') {
-                    analysis.getPageVisitors().then((data) => {
-                        switchElementContent('#pageVisitors', data['pageviews'].value);
-                    });
-                }
-                zoomPics();
-            }
-            break;
-        case '404page':
-            // code
-            break;
         case 'friends':
             highlightNav('friends');
             reorder('#friends-link-box', '.friends-link-item', 0);
@@ -1120,14 +1088,6 @@ function loadPageType() {
             zoomPics();
             loadComment();
             codeHighlight();
-            break;
-        case 'works-index':
-            document.querySelector('#showarea').classList.add('loaded');
-            break;
-        case 'about':
-            switchElementContent('#uptime2', getTime('DD', config.siteBirthday), 0);
-            break;
-        case 'articles-index':
             break;
     }
     checkPageHash();
