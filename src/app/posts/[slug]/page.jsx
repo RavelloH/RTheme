@@ -7,7 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import formatDateWithTimeZone from '@/utils/time';
 import NotFound from '@/app/not-found';
-import dynamic from 'next/dynamic'
+import dynamic from 'next/dynamic';
 import Shiki from '@shikijs/markdown-it';
 import MarkdownIt from 'markdown-it';
 import MenuLoader from '@/components/MenuLoader';
