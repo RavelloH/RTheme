@@ -75,7 +75,7 @@ export default function RootLayout({ children }) {
     return (
         <html lang='zh'>
             <head></head>
-
+            <Starter />
             <body>
                 <section id='showcase'>
                     <LoadingShade />
@@ -85,7 +85,6 @@ export default function RootLayout({ children }) {
                     <div id='main' className='loading'>
                         <div id='viewmap'>{children}</div>
                     </div>
-                    <Starter />
                     <Footer />
                 </section>
                 <section id='sidebar'>
