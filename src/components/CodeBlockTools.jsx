@@ -34,36 +34,36 @@ const styles = {
         fontSize: '0.85em',
         transition: 'all 0.2s ease',
         userSelect: 'none',
-    }
+    },
 };
 
 const languageMap = {
-    'js': 'JavaScript',
-    'jsx': 'React JSX',
-    'ts': 'TypeScript',
-    'tsx': 'React TSX',
-    'html': 'HTML',
-    'css': 'CSS',
-    'scss': 'SCSS',
-    'bash': 'Shell',
-    'sh': 'Shell',
-    'python': 'Python',
-    'py': 'Python',
-    'java': 'Java',
-    'c': 'C',
-    'cpp': 'C++',
-    'go': 'Go',
-    'rust': 'Rust',
-    'json': 'JSON',
-    'yaml': 'YAML',
-    'md': 'Markdown',
+    js: 'JavaScript',
+    jsx: 'React JSX',
+    ts: 'TypeScript',
+    tsx: 'React TSX',
+    html: 'HTML',
+    css: 'CSS',
+    scss: 'SCSS',
+    bash: 'Shell',
+    sh: 'Shell',
+    python: 'Python',
+    py: 'Python',
+    java: 'Java',
+    c: 'C',
+    cpp: 'C++',
+    go: 'Go',
+    rust: 'Rust',
+    json: 'JSON',
+    yaml: 'YAML',
+    md: 'Markdown',
 };
 
 export default function CodeBlockTools() {
     useEffect(() => {
         const preBlocks = document.querySelectorAll('article pre');
 
-        preBlocks.forEach(pre => {
+        preBlocks.forEach((pre) => {
             // 设置pre为相对定位
             if (getComputedStyle(pre).position === 'static') {
                 pre.style.position = 'relative';
@@ -115,16 +115,16 @@ export default function CodeBlockTools() {
             pre.appendChild(tools);
 
             // 添加悬停效果
-            pre.onmouseenter = () => tools.style.opacity = '1';
-            pre.onmouseleave = () => tools.style.opacity = '0';
+            pre.onmouseenter = () => (tools.style.opacity = '1');
+            pre.onmouseleave = () => (tools.style.opacity = '0');
 
             // 防止工具栏被选中
-            tools.addEventListener('mousedown', e => e.preventDefault());
+            tools.addEventListener('mousedown', (e) => e.preventDefault());
         });
 
         // 清理函数
         return () => {
-            preBlocks.forEach(pre => {
+            preBlocks.forEach((pre) => {
                 const tools = pre.querySelector('div');
                 tools?.remove();
             });

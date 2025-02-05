@@ -12,6 +12,9 @@ import Shiki from '@shikijs/markdown-it';
 import MarkdownIt from 'markdown-it';
 import MenuLoader from '@/components/MenuLoader';
 import ImageZoom from '@/components/ImageZoom';
+import PageVisitors from '@/components/PageVisitors';
+import LinkPreview from '@/components/LinkPreview';
+import CodeBlockTools from '@/components/CodeBlockTools';
 
 const md = MarkdownIt({ html: true });
 md.use(
@@ -28,7 +31,7 @@ md.renderer.rules.heading_open = function (tokens, idx, options, env, self) {
     const level = tokens[idx].tag.slice(1);
     const title = tokens[idx + 1].content;
     const slug = title.replace(/\s+/g, '-').toLowerCase();
-    return `<h${level}><a href="#${slug}" id="${slug}" title="${title}" name="${slug}">`;
+    return `<h${level}><a href="#${slug}" id="${slug}" title="${title}" onclick="window.location.hash=this.getAttribute('href')">`;
 };
 
 md.renderer.rules.heading_close = function (tokens, idx) {
@@ -45,6 +48,20 @@ md.renderer.rules.image = function (tokens, idx, options, env, self) {
             <span>${alt}</span>
         </div>
     `;
+};
+md.renderer.rules.link_open = function (tokens, idx, options, env, self) {
+    const token = tokens[idx];
+    let href = token.attrGet('href');
+    if (href) {
+        if (href.startsWith('#')) {
+            token.attrSet('onclick', "window.location.hash=this.getAttribute('href')");
+        } else if (href.startsWith('http')) {
+            if (!config.siteUrl || !href.startsWith(config.siteUrl)) {
+                token.attrSet('target', '_blank');
+            }
+        }
+    }
+    return self.renderToken(tokens, idx, options);
 };
 
 let title;
@@ -125,6 +142,8 @@ export default async function Post(params) {
     return (
         <article>
             <ImageZoom />
+            <LinkPreview />
+            <CodeBlockTools />
             <div id='articles-header'>
                 <h1>
                     <a href={'/posts/' + post.name}>{post.title}</a>
@@ -138,16 +157,19 @@ export default async function Post(params) {
                     <span className='ri-t-box-line'></span>{' '}
                     <span id='textLength'>{post.content.length}字</span>
                     {' • '}
-                    <span className='ri-search-eye-line'></span> <span id='pageVisitors'>---</span>
+                    <span className='ri-search-eye-line'></span> <PageVisitors />
                 </p>
                 {createTag(post.tag)}
                 <hr />
             </div>
 
-            <div id='articles-body' style={{
-                maxWidth: '1000px',
-                margin: '0 auto',
-            }}>
+            <div
+                id='articles-body'
+                style={{
+                    maxWidth: '1000px',
+                    margin: '0 auto',
+                }}
+            >
                 <div dangerouslySetInnerHTML={{ __html: md.render(post.content) }} />
             </div>
             <div id='articles-footer'>

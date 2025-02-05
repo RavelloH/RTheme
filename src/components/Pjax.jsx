@@ -6,15 +6,12 @@ import { useBroadcast } from '@/store/useBroadcast';
 
 const Pjax = ({ children }) => {
     const [loadStart, setLoadStart] = useState(false);
-    const [userClick, setUserClick] = useState(false);
     const router = useRouter();
     const broadcast = useBroadcast((state) => state.broadcast);
     const pathname = usePathname();
 
     useEffect(() => {
         const handleClick = (e) => {
-            setUserClick(true);
-            setTimeout(() => setUserClick(false), 300);
             const target = e.target.closest('a');
             if (
                 !target ||

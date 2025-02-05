@@ -81,11 +81,10 @@ export default function RootLayout({ children }) {
                     <LoadingShade />
                     <Header />
                     <ShadeContent />
-                    <Pjax selectors={['#main', 'title']}>
-                        <div id='main' className='loading'>
-                            <div id='viewmap'>{children}</div>
-                        </div>
-                    </Pjax>
+                    <Pjax />
+                    <div id='main' className='loading'>
+                        <div id='viewmap'>{children}</div>
+                    </div>
                     <Starter />
                     <Footer />
                 </section>

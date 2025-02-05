@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect } from 'react';
 import { useBroadcast } from '@/store/useBroadcast';
@@ -15,12 +15,12 @@ export default function MenuLoader() {
                         action: 'openInfobar',
                         target: 'menu',
                     })
-                }>
+                }
+            >
                 目录&nbsp;<span class='i ri-list-unordered'></span>
             </a>
         );
-        setTimeout(() => 
-        message.switch(message.original),500);
+        setTimeout(() => message.switch(message.original), 500);
     }, []);
 
     return;

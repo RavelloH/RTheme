@@ -1,9 +1,8 @@
-// 函数注册/调用管线
-import log from '@/utils/log';
 import { create } from 'zustand';
 
 export const useFunction = create((set, get) => ({
     functions: {},
+
     registerFunction: (name, fn) => {
         set((state) => ({
             functions: {
@@ -12,16 +11,17 @@ export const useFunction = create((set, get) => ({
             },
         }));
     },
-    callFunction: (name) => {
+
+    callFunction: (name, ...args) => {
         const { functions } = get();
         const targetFn = functions[name];
 
         if (typeof targetFn === 'function') {
-            return targetFn();
+            return targetFn(...args);
         }
-        log.error(`<store> Function ${name} not found.`);
         return null;
     },
+
     hasFunction: (name) => {
         return typeof get().functions[name] === 'function';
     },
