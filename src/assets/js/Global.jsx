@@ -14,7 +14,6 @@ let domMenuToggle,
     domShadeGlobal,
     domLayoutInfoBar,
     domInfoBarToggle,
-    domMusic,
     musicProgressbar,
     musicProfather,
     infoBarMode,
@@ -23,8 +22,6 @@ let domMenuToggle,
     searchTimer,
     changeMusicProgress;
 
-let errorList = [];
-
 const isBrowser = () => typeof window !== 'undefined';
 
 function resetElements() {
@@ -32,9 +29,6 @@ function resetElements() {
     domShadeGlobal = document.querySelector('#shade-global');
     domLayoutInfoBar = document.querySelector('#infobar');
     domInfoBarToggle = document.querySelector('#infobar-toggle');
-    domMusic = document.querySelector('#music');
-    musicProgressbar = document.querySelector('#music-progress');
-    musicProfather = document.querySelector('#music-progress-container');
     domLoadShade = document.querySelector('#load-shade');
 }
 
@@ -246,14 +240,6 @@ function addListeners() {
     addEventListener('offline', (event) => {
         message.add('<a>互联网连接已断开 <span class="i ri-cloud-off-line"></span></a>', 5000);
     });
-    domShadeGlobal.addEventListener('click', () => {
-        if (isLayoutInfobarOpen()) {
-            toggleLayoutInfobar();
-        }
-    });
-    domInfoBarToggle.addEventListener('click', () => {
-        toggleLayoutInfobar();
-    });
 }
 
 // 全屏
@@ -403,11 +389,9 @@ function getHeightDifferent(element) {
 
 // InfoBar功能分发
 function openInfoBar(mode) {
+    return;
     infoBarMode = mode || '';
     switch (mode) {
-        case 'info':
-            switchElementContent('#infobar-left', i18n.structureInfobarInfo(), 0);
-            break;
         case 'music':
             musicSetting();
             preload('/assets/images/music.jpg');
@@ -456,135 +440,6 @@ function openInfoBar(mode) {
     toggleLayoutInfobar();
 }
 
-// 音乐搜索
-function musicSearch(name) {
-    if (name !== '') {
-        switchElementContent('#music-search-program', i18n.structureSquareLoading);
-        if (typeof searchTimer !== 'undefined') {
-            clearTimeout(searchTimer);
-        }
-        searchTimer = setTimeout(function () {
-            fetch(musicApi + name)
-                .then((response) => response.json())
-                .then((data) => {
-                    var musicSearchResult = [];
-                    for (let i = 0; i < data['result']['songs'].length; i++) {
-                        var artists = '';
-                        for (let j = 0; j < data['result']['songs'][i]['ar'].length; j++) {
-                            artists = artists + data['result']['songs'][i]['ar'][j]['name'] + '/';
-                        }
-                        artists = artists.substring(0, artists.length - 1);
-                        musicSearchResult.push(
-                            i18n.getstructureMusicSearchResult(
-                                data['result']['songs'][i]['name'],
-                                'http://music.163.com/song/media/outer/url?id=' +
-                                    data['result']['songs'][i]['id'] +
-                                    '.mp3',
-                                artists,
-                                data['result']['songs'][i]['al']['picUrl'],
-                                data['result']['songs'][i]['al']['name'],
-                            ),
-                        );
-                    }
-                    switchElementContent('#music-search-program', musicSearchResult, 200);
-                    setTimeout(() => {
-                        loadItems('#music-search-program');
-                        zoomPics();
-                    }, 310);
-                })
-                .catch((error) => {
-                    switchElementContent('#music-search-program', i18n.structureErrorInfo(error));
-                });
-        }, 1000);
-    }
-}
-
-// 音乐进度更新
-function musicUpdata() {
-    changeMusicProgress = (progress) => {
-        musicProgressbar.style.width = `${progress}%`;
-    };
-    changeMusicProgress((music.currentTime / music.duration) * 100);
-    document.getElementById('music-time').innerHTML =
-        timeTrans(music.currentTime) + '/' + timeTrans(music.duration);
-}
-
-// 音乐播放/暂停
-function musicPlay() {
-    if (music.src == window.location.origin + '/') {
-        highlightElement('#music-name');
-    } else {
-        if (document.querySelector('#music-button').getAttribute('play') !== 'true') {
-            document.querySelector('#music-button').setAttribute('play', 'true');
-            switchElementContent('#music-button', i18n.structureMusicPause, 200);
-            music.play();
-        } else {
-            document.querySelector('#music-button').setAttribute('play', 'false');
-            switchElementContent('#music-button', i18n.structureMusicPlay, 200);
-            music.pause();
-        }
-    }
-}
-
-// 音乐前进/后退
-function musicGo(second) {
-    if (music.currentTime + second <= music.duration && music.currentTime + second >= 0) {
-        music.currentTime = music.currentTime + second;
-    }
-}
-
-// 更改音乐
-function musicChange(name, url) {
-    if (music.paused == false) {
-        musicPlay();
-    }
-    setTimeout(() => {
-        music.src = url;
-        music.load();
-        switchElementContent('#music-name', name);
-        setTimeout(() => {
-            if (music.paused == true) {
-                musicPlay();
-            }
-            if (cookie.getItem('settingEnableMusicStateStorage') !== 'false') {
-                cookie.setItem('musicPlayingName', name);
-                cookie.setItem('musicPlayingSource', url);
-            }
-            message.switch(i18n.structurePlayingMusic(name));
-            setTimeout(() => message.switch(i18n.originMessageBar), 10000);
-        }, 100);
-    }, 200);
-}
-
-// 启动音乐搜索
-function musicSetting() {
-    if (typeof InfobarRefersher !== 'undefined') {
-        clearInterval(InfobarRefersher);
-    }
-    preload('/music.jpg');
-    infoBarMode = 'music';
-    switchElementContent('#infobar-left', i18n.structureInfobarMusic);
-    setTimeout(() => enableInfobarRefersh());
-    if (typeof musicApi == 'undefined') {
-        musicApi = config.musicApiList[0];
-        if (cookie.getItem('settingEnableApiPrecheck') == 'false') {
-            return false;
-        }
-        config.musicApiList.forEach(function (e) {
-            checkURL(
-                e,
-                () => {
-                    musicAvailableApiList.push(e);
-                    musicApi = musicAvailableApiList[0];
-                },
-                () => {
-                    //
-                },
-            );
-        });
-    }
-}
-
 // 启动InfoBar刷新
 function enableInfobarRefersh() {
     var runTime = 0;
@@ -596,9 +451,6 @@ function enableInfobarRefersh() {
         } else {
             switchElementContent('#time', getTime('hh:mm'));
             switchElementContent('#uid', '<hr>' + base.encryption(window.location.href), 500);
-            if (infoBarMode == 'info') {
-                refreshInfo(runTime);
-            }
             if (infoBarMode == 'swap') {
                 startSwap(runTime);
             }
@@ -619,61 +471,6 @@ function enableInfobarRefersh() {
             }
         }
     }, 500);
-}
-
-// 信息刷新
-function refreshInfo(runTime) {
-    if (runTime == 1) {
-        switchElementContent('#page-update-time', document.lastModified);
-    }
-    if (errorList.length == 0) {
-        switchElementContent('#theme-state', '正常');
-    } else {
-        switchElementContent(
-            '#theme-state',
-            `<span class="red">发生${errorList.length}个异常</span>`,
-        );
-    }
-    if (window.navigator.onLine) {
-        switchElementContent('#network-state', '就绪');
-    } else {
-        switchElementContent('#network-state', '<span class="red">离线</span>');
-    }
-    if (cookie.getItem('isCookieReseted') == 'true') {
-        switchElementContent('#cookie-state', '已启用');
-    } else {
-        switchElementContent('#cookie-state', '<span class="yellow">未启用</span>');
-    }
-    switchElementContent('#up-time', getTime('DD天hh小时mm分钟', config.siteBirthday));
-    switchElementContent('#loading-time', cookie.getItem('lastLoadTime'));
-    if (config.trustDomain.indexOf(window.location.hostname) == -1) {
-        switchElementContent(
-            '#alert-info',
-            i18n.structureUntrustedDomain(window.location.hostname),
-        );
-    }
-    switchElementContent('#url', window.location.pathname);
-    if (cookie.getItem('settingEnableUmamiAnalytics') !== 'false' && runTime == 1) {
-        analysis
-            .getPageVisitors()
-            .then((data) => switchElementContent('#url-visitors', data['pageviews'].value));
-    }
-    if (runTime == 1) {
-        analysis.loadUptime().then((message) => {
-            let result = [];
-            message.data.forEach((e, index) => {
-                result.push(
-                    i18n.structureUptime(
-                        e.attributes.pronounceable_name,
-                        e.attributes.status,
-                        e.attributes.url,
-                        index + 1,
-                    ),
-                );
-            });
-            switchElementContent('#uptime-list', result);
-        });
-    }
 }
 
 // download分发
@@ -926,73 +723,6 @@ function copy(value, feedbackElement = null) {
     }
 }
 
-// 时间转换
-function timeTrans(times) {
-    var t = '00:00';
-    if (times > -1) {
-        var hour = Math.floor(times / 3600);
-        var min = Math.floor(times / 60) % 60;
-        var sec = times % 60;
-        t = '';
-        if (min < 10) {
-            t += '0';
-        }
-        t += min + ':';
-        if (sec < 10) {
-            t += '0';
-        }
-        t += sec.toFixed(2);
-        t = t.substring(0, t.length - 3);
-    }
-    return t;
-}
-
-// 图片放大
-function zoomPics() {
-    if (cookie.getItem('settingEnableImgZoom') == 'false') {
-        return false;
-    }
-    let img;
-    document.querySelectorAll('img').forEach((element) => {
-        // element.setAttribute('onload', 'this.classList.add(“loaded”)');
-    });
-    document.querySelectorAll('img').forEach((element) => {
-        // element.setAttribute('onerror', 'this.src = "/assets/images/broke.jpg"');
-    });
-    try {
-        img = document.querySelectorAll('img:not(#avatar , #avatarname , .no-zoom)');
-    } catch (e) {
-        img = document.querySelectorAll('img');
-    }
-
-    for (var i = 0; i < img.length; i++) {
-        img[i].onclick = function () {
-            var div = document.createElement('div');
-            var img = document.createElement('img');
-            img.className = 'img-fullscreen-out';
-            img.src = this.src;
-            document.body.appendChild(div);
-            div.appendChild(img);
-            setTimeout(function () {
-                img.className = 'img-fullscreen';
-                div.className = 'img-show';
-            }, 10);
-
-            img.onclick = function () {
-                img.className = 'img-fullscreen-out';
-                div.className = 'img-show-out';
-            };
-            div.onclick = function () {
-                img.className = 'img-fullscreen-out';
-                div.className = 'img-show-out';
-                setTimeout(function () {
-                    document.body.removeChild(div);
-                }, 500);
-            };
-        };
-    }
-}
-
 // URL可用性检查
 function checkURL(url, callback, errorback) {
     fetch(url)
@@ -1019,13 +749,6 @@ function toggleThemeMode() {
     );
 }
 
-// 清除加载状态
-function loadClear(parentNodeName) {
-    document.querySelectorAll(parentNodeName + ' .loaded').forEach((e) => {
-        e.classList.remove('loaded');
-    });
-}
-
 // 下载速度测试
 function speedtest(imgUrl, fileSize) {
     return new Promise((resolve, reject) => {
@@ -1044,38 +767,6 @@ function speedtest(imgUrl, fileSize) {
     });
 }
 
-// 运行时间测试
-function runTime(f) {
-    console.time();
-    f();
-    console.timeEnd();
-}
-
-function objectToForm(obj) {
-    var formData = [];
-    for (var key in obj) {
-        if (obj.hasOwnProperty(key)) {
-            var encodedKey = encodeURIComponent(key);
-            var encodedValue = encodeURIComponent(obj[key]);
-            formData.push(encodedKey + '=' + encodedValue);
-        }
-    }
-    return formData.join('&');
-}
-
-async function virgule(element, text, interval) {
-    let vir = (await import('virgule-js')).default;
-    let targetList = vir(text);
-    let doneTime = 0;
-    let virguleTimer = setInterval(() => {
-        doneTime++;
-        element.innerHTML = targetList[doneTime - 1];
-        if (doneTime == targetList.length) {
-            clearInterval(virguleTimer);
-        }
-    }, interval);
-}
-
 // 页面初始化
 function loadPageType() {
     let pageType = window.location.pathname.split('/')[1];
@@ -1085,7 +776,6 @@ function loadPageType() {
             reorder('#friends-link-box', '.friends-link-item', 0);
             i18n.originMessageBar = `<a onclick="reorder('#friends-link-box','.friends-link-item',300);zoomPics()">重新随机排序&nbsp;<span class="i ri-refresh-line"></span></a>`;
             message.add(i18n.originMessageBar, 0);
-            zoomPics();
             loadComment();
             codeHighlight();
             break;
@@ -1102,13 +792,7 @@ const globalModule = {
     openInfoBar,
     toggleThemeMode,
     toggleFullScreen,
-    musicChange,
-    musicGo,
-    musicPlay,
-    musicSetting,
     copy,
-    musicSearch,
-    musicUpdata,
     setting,
 };
 

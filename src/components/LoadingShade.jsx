@@ -5,11 +5,13 @@ import config from '../../config';
 import { useBroadcast } from '@/store/useBroadcast';
 import switchElementContent from '@/utils/switchElement';
 import messager from '@/utils/message';
+import { useEvent } from '@/store/useEvent';
 
 export default function LoadingShade() {
     const registerBroadcast = useBroadcast((state) => state.registerCallback);
     const unregisterBroadcast = useBroadcast((state) => state.unregisterCallback);
     const broadcast = useBroadcast((state) => state.broadcast);
+    const { emit } = useEvent();
 
     const [loadComplete, setLoadComplete] = useState(false);
 
@@ -41,6 +43,7 @@ export default function LoadingShade() {
                 broadcast({
                     action: 'closeSidebar',
                 });
+                emit('closeInfobar');
             }
             if (message.action === 'loadEnd') {
                 setTimeout(() => {
@@ -79,6 +82,7 @@ export default function LoadingShade() {
                     broadcast({
                         action: 'closeNoticebar',
                     });
+                    emit('closeInfobar');
                 }}
             ></div>
             <div id='load-shade' className='active'>

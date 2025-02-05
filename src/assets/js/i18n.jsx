@@ -69,8 +69,6 @@ function structureUntrustedDomain(domain = window.domain) {
         </div>
     );
 }
-const structureMusicPlay = <span className='i ri-play-line'></span>;
-const structureMusicPause = <span className='i ri-pause-line'></span>;
 function structureInfobarInfo() {
     return (
         <>
@@ -271,49 +269,6 @@ function structureErrorInfo(error) {
         </strong>
     </div>;
 }
-function getstructureMusicSearchResult(name, url, artist, pic, album) {
-    return (
-        <div className='music-search-list loading'>
-            <div className='music-search-result'>
-                <div className='music-search-info'>
-                    <div className='music-search-img'>
-                        <img src={pic} loading='lazy' alt={name} />
-                    </div>
-                    <div className='music-search-title'>
-                        <span className='music-search-name'>{name}</span>
-                        <span className='music-search-author'>
-                            {' '}
-                            <span className='i_small ri-account-box-line'></span> {artist} -{' '}
-                            <span className='i_small ri-mv-line'></span> {album}
-                        </span>
-                    </div>
-                </div>
-                <div className='music-search-operation'>
-                    <span>
-                        <span
-                            className='i ri-add-fill'
-                            onClick={() => {
-                                global.copy(structureMusicExport(this), this.parentNode);
-                            }}
-                            data-name={name}
-                            data-album={album}
-                            data-url={url}
-                            data-artist={artist}
-                            data-pic={pic}
-                        ></span>
-                    </span>
-                    <span
-                        className='i ri-play-fill'
-                        onClick={() => {
-                            global.musicChange(`${name} - ${artist}`, url);
-                        }}
-                    ></span>
-                </div>
-            </div>
-            <hr />
-        </div>
-    );
-}
 
 function structureMusicExport(e) {
     let name = e.getAttribute('data-name');
@@ -349,14 +304,6 @@ function getMailFeedbackButton() {
             }
         >
             邮件反馈
-        </a>
-    );
-}
-function structurePlayingMusic(name) {
-    return (
-        <a onClick={() => global.openInfoBar('music')}>
-            <strong>正在播放: {name}</strong>&nbsp;
-            <span className='i ri-music-2-fill'></span>
         </a>
     );
 }
@@ -761,48 +708,6 @@ function structureSearchResult(result) {
     );
 }
 
-function structureInfobarFeed() {
-    return (
-        <>
-            <div className='full' id='feed-list'>
-                <a href={config.siteURL + 'feed.xml'} className='no-effect' target='_blank'>
-                    <div>
-                        <span className='i ri-rss-fill'></span> <span>RSS</span>
-                    </div>
-                </a>
-                <a href={config.siteURL + 'sitemap.xml'} className='no-effect' target='_blank'>
-                    <div>
-                        <span className='i ri-road-map-fill'></span> <span>Sitemap</span>
-                    </div>
-                </a>
-                <a
-                    onClick={() => {
-                        if (!notice.check()) {
-                            notice.request();
-                        }
-                    }}
-                    className='no-effect'
-                    target='_blank'
-                >
-                    <div>
-                        <span className='i ri-notification-2-fill'></span> <span>启用通知</span>
-                    </div>
-                </a>
-            </div>
-            <div className='center' id='mail-feed' onClick={() => global.feedMail()}>
-                <span className='i ri-mail-add-fill'></span> <span>邮箱订阅</span>
-            </div>
-            <hr />
-            <h2>订阅</h2>
-            <p>
-                在上方选择相应的订阅格式获取链接，订阅将在新内容发布后自动同步。
-                <br />
-                或者，也可以在登录后使用邮箱订阅。订阅后，有更新时会向绑定的邮箱发送通知。
-            </p>
-        </>
-    );
-}
-
 function addToFavorites() {
     const url = window.location.href;
     const title = document.title;
@@ -840,8 +745,6 @@ const i18nModule = {
     structureErrorViewmap,
     originMessageBar,
     structureUntrustedDomain,
-    structureMusicPlay,
-    structureMusicPause,
     structureInfobarInfo,
     structureInfobarMusic,
     structureInfobarShare,
@@ -849,10 +752,7 @@ const i18nModule = {
     structureInfobarSwap,
     structureSquareLoading,
     structureErrorInfo,
-    getstructureMusicSearchResult,
-    structureMusicExport,
     getMailFeedbackButton,
-    structurePlayingMusic,
     structureDownloadBar,
     structureDownloadMessage,
     structureDownloadCompleteMessage,
@@ -866,7 +766,6 @@ const i18nModule = {
     structureArticlesList,
     structureInfobarSort,
     structureSearchResult,
-    structureInfobarFeed,
     structureUptime,
 };
 

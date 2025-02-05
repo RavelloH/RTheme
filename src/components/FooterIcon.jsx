@@ -1,8 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import config from '../../config';
-import global from '@/assets/js/Global';
 import { useBroadcast } from '@/store/useBroadcast';
+import { useEvent } from '@/store/useEvent';
 
 let footerList = config.footer.map((item, index) => {
     return (
@@ -27,6 +27,7 @@ export default function FooterIcon() {
     const [hasNewNotices, setHasNewNotices] = useState(false);
 
     const broadcast = useBroadcast((state) => state.broadcast);
+    const { emit } = useEvent();
 
     useEffect(() => {
         setTimeout(() => {
@@ -44,7 +45,7 @@ export default function FooterIcon() {
                 href='#info'
                 id='icon-about'
                 onClick={() => {
-                    global.openInfoBar('info');
+                    emit('openInfobar', 'info');
                     return false;
                 }}
                 aria-label='about this page'
@@ -88,7 +89,7 @@ export default function FooterIcon() {
                 href='#rss'
                 id='icon-rss'
                 onClick={() => {
-                    global.openInfoBar('feed');
+                    emit('openInfobar', 'rss');
                     return false;
                 }}
                 aria-label='my rss'

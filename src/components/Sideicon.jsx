@@ -1,21 +1,10 @@
 import global from '../assets/js/Global';
+import { useEvent } from '@/store/useEvent';
 
 export default function Sideicon() {
+    const { emit } = useEvent();
     return (
         <ul>
-            <li>
-                <a
-                    href='#swap'
-                    id='icon-swap'
-                    onClick={() => {
-                        global.openInfoBar('swap');
-                        return false;
-                    }}
-                    aria-label='swap'
-                >
-                    <span className='i ri-swap-box-line'></span>
-                </a>
-            </li>
             <li>
                 <a
                     href='#'
@@ -34,7 +23,7 @@ export default function Sideicon() {
                     href='#music'
                     id='icon-music'
                     onClick={() => {
-                        global.openInfoBar('music');
+                        emit('openInfobar', 'music');
                         return false;
                     }}
                     aria-label='music'
@@ -60,7 +49,7 @@ export default function Sideicon() {
                     href='#share'
                     id='icon-share'
                     onClick={() => {
-                        global.openInfoBar('share');
+                        emit('openInfobar', 'share');
                         return false;
                     }}
                     aria-label='share'
@@ -73,7 +62,7 @@ export default function Sideicon() {
                     href='#setting'
                     id='icon-setting'
                     onClick={() => {
-                        global.openInfoBar('setting');
+                        emit('openInfobar', 'setting');
                         return false;
                     }}
                     aria-label='setting'

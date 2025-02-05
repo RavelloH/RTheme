@@ -74,7 +74,7 @@ export default function ImageZoom() {
             requestAnimationFrame(() => {
                 const maxWidth = window.innerWidth * 0.9;
                 const maxHeight = window.innerHeight * 0.9;
-                const scale = Math.min(maxWidth / rect.width, maxHeight / rect.height, 3);
+                const scale = Math.min(maxWidth / rect.width, maxHeight / rect.height, 15);
 
                 const scaledWidth = rect.width * scale;
                 const scaledHeight = rect.height * scale;

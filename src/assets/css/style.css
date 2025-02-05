@@ -1851,7 +1851,8 @@ hr.light {
     color: var(--theme-white-light);
 }
 #uid,
-.page-id {
+.page-id,
+#href-id {
     -o-text-overflow: '';
     text-overflow: '';
     overflow: hidden;
