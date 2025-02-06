@@ -13,8 +13,10 @@ export default function Player() {
     const [playList, setPlayList] = useState([]);
     const [currentSongIndex, setCurrentSongIndex] = useState(0);
     const [hoverIndex, setHoverIndex] = useState(null);
-    // 新增：记录悬停的专辑封面索引
     const [albumHoverIndex, setAlbumHoverIndex] = useState(null);
+    // 新增：动画状态
+    const [isAnimating, setIsAnimating] = useState(false);
+    const [animationTarget, setAnimationTarget] = useState(null);
 
     // 高亮元素
     function highlightElement(selector) {
@@ -167,13 +169,57 @@ export default function Player() {
             });
     }
 
-    function switchSong(index) {
-        if (index === currentSongIndex) {
-            return;
+    // 新增：计算动画位置
+    const calculateAnimationStyle = (index, targetIndex, progress) => {
+        if (!isAnimating || animationTarget === null) return {};
+        
+        const offset = targetIndex - currentSongIndex;
+        const itemPosition = index - currentSongIndex;
+        
+        // 目标之前的图片（淡出效果）
+        if (itemPosition < offset) {
+            return {
+                opacity: 1 - progress,
+                transform: `scale(${1 - progress})`,
+            };
         }
-        const musicItem = playList[index];
-        musicChange(musicItem.name, musicItem.url);
-        setCurrentSongIndex(index);
+        
+        // 目标到当前显示末尾的图片（左移效果）
+        if (itemPosition >= offset && itemPosition < 10) {
+            const startLeft = `calc(${itemPosition} * ${gapCss})`;
+            const endLeft = `calc(${itemPosition - offset} * ${gapCss})`;
+            const currentLeft = `calc(${startLeft} + (${endLeft} - ${startLeft}) * ${progress})`;
+            return {
+                left: itemPosition === offset ? `calc(0px + (${currentLeft} - 0px) * (1 - ${progress}))` : currentLeft,
+            };
+        }
+        
+        // 新出现的图片（淡入效果）
+        if (itemPosition >= 10) {
+            return {
+                opacity: progress,
+                transform: `scale(${progress})`,
+            };
+        }
+
+        return {};
+    };
+
+    // 修改：switchSong函数
+    function switchSong(index) {
+        if (index === currentSongIndex || isAnimating) return;
+        
+        setIsAnimating(true);
+        setAnimationTarget(index);
+
+        // 动画完成后更新实际状态
+        setTimeout(() => {
+            const musicItem = playList[index];
+            musicChange(musicItem.name, musicItem.url);
+            setCurrentSongIndex(index);
+            setIsAnimating(false);
+            setAnimationTarget(null);
+        }, 500); // 动画持续时间
     }
 
     useEffect(() => {
@@ -230,11 +276,16 @@ export default function Player() {
                                 height: '80px',
                                 overflow: 'hidden',
                                 borderRadius: '8px',
-                                transition: 'transform 300ms ease',
+                                transition: isAnimating ? 'all 500ms ease' : 'transform 300ms ease',
                                 transform:
                                     albumHoverIndex === index
                                         ? 'translateY(-15px)'
                                         : 'translateY(0)',
+                                ...calculateAnimationStyle(
+                                    currentSongIndex + index,
+                                    animationTarget,
+                                    isAnimating ? 1 : 0
+                                ),
                             }}>
                             <img
                                 src={musicItem.pic}
@@ -323,7 +374,7 @@ export default function Player() {
                         <span
                             className='i ri-skip-back-line'
                             onClick={() => {
-                                nextMusic();
+                                switchSong((currentSongIndex - 1 + playList.length) % playList.length);
                             }}></span>
                     </span>
                     <span>
@@ -339,7 +390,7 @@ export default function Player() {
                         <span
                             className='i ri-skip-forward-line'
                             onClick={() => {
-                                prevMusic();
+                                switchSong((currentSongIndex + 1) % playList.length);
                             }}></span>
                     </span>
                     <span>
