@@ -154,7 +154,11 @@ export default function Userbar() {
             <div id='userbar-context' className='overflow'>
                 {isLogin ? (
                     <div id='user-info'>
-                        <img id='user-avatar' src={token.read('avatar') || '/user.jpg'} alt='User avatar' />
+                        <img
+                            id='user-avatar'
+                            src={token.read('avatar') || '/user.jpg'}
+                            alt='User avatar'
+                        />
                         <div id='user-describe'>
                             <span id='user-name'>
                                 {token.read('nickname') || token.read('username')}
