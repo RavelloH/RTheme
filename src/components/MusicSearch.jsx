@@ -4,10 +4,11 @@ import switchElementContent from '@/utils/switchElement';
 import config from '../../config';
 import ImageZoom from './ImageZoom';
 import { useEvent } from '@/store/useEvent';
+import { useEffect } from 'react';
 
 export default function MusicSearch() {
-    const { emit } = useEvent();
-    let searchTimer; // 内部变量，防止 hook 外部调用
+    const { emit, on, off } = useEvent();
+    let searchTimer;
 
     function getstructureMusicSearchResult(name, url, artist, pic, album) {
         return (
@@ -32,15 +33,13 @@ export default function MusicSearch() {
                                 className='i ri-add-fill'
                                 onClick={() => {
                                     emit('musicAddToList', `${name} - ${artist}`, url);
-                                }}
-                            ></span>
+                                }}></span>
                         </span>
                         <span
                             className='i ri-play-fill'
                             onClick={() => {
                                 emit('musicChange', `${name} - ${artist}`, url);
-                            }}
-                        ></span>
+                            }}></span>
                     </div>
                 </div>
                 <hr />
@@ -81,7 +80,7 @@ export default function MusicSearch() {
                 clearTimeout(searchTimer);
             }
             searchTimer = setTimeout(function () {
-                fetch(config.musicApi + name)
+                fetch(config.musicApi + 'cloudsearch?keywords=' + name)
                     .then((response) => response.json())
                     .then((data) => {
                         let musicSearchResult = [];
@@ -124,6 +123,35 @@ export default function MusicSearch() {
         }
     }
 
+    function getRecommandMusic() {
+        const recommandMusicList = JSON.parse(localStorage.getItem('recommandMusic'));
+        if (recommandMusicList.length === 0) {
+            return;
+        }
+        let recommandMusic = [];
+        for (let i = 0; i < recommandMusicList.length; i++) {
+            recommandMusic.push(
+                getstructureMusicSearchResult(
+                    recommandMusicList[i].name,
+                    recommandMusicList[i].url,
+                    recommandMusicList[i].artist,
+                    recommandMusicList[i].pic,
+                    recommandMusicList[i].album,
+                ),
+            );
+        }
+        recommandMusic.push(<ImageZoom />);
+        setTimeout(() => {
+            switchElementContent('#music-search-program', recommandMusic, 200);
+        }, 300);
+        setTimeout(() => {
+            loadItems('#music-search-program');
+        }, 600);
+    }
+    useEffect(() => {
+        getRecommandMusic();
+    }, []);
+
     return (
         <>
             <br />
@@ -152,7 +180,15 @@ export default function MusicSearch() {
                     <span style={{ '--i': 9 }}>.</span>
                 </label>
             </div>
-            <div id='music-search-program'></div>
+            <div id='music-search-program'>
+                <div className='square-loader'>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
             <div id='alert-info'></div>
         </>
     );

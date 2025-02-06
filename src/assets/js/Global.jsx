@@ -198,16 +198,6 @@ function isLayoutInfobarOpen() {
     }
 }
 
-// 高亮元素
-function highlightElement(selector) {
-    const element = document.querySelector(selector);
-    const originColor = element.style.color;
-    element.style.transition = 'color 500ms';
-    element.style.color = 'var(--theme-orange)';
-    setTimeout(() => {
-        element.style.color = originColor;
-    }, 1500);
-}
 
 // 获取元素InnerHTML
 function getElementInnerhtml(selector) {
