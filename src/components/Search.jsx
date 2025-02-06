@@ -186,10 +186,12 @@ function searchInit(props) {
 }
 
 function searchClose(props) {
-    switchElementContent(props.title, titleOrigin, 400);
-    switchElementContent(props.remoteOutput, remoteOutputOrigin);
-    switchElementContent(props.localOutput, localOutputOrigin);
-    switchElementContent(props.result, resultOrigin);
+    setTimeout(() => {
+        switchElementContent(props.title, titleOrigin, 400);
+        switchElementContent(props.remoteOutput, remoteOutputOrigin);
+        switchElementContent(props.localOutput, localOutputOrigin);
+        switchElementContent(props.result, resultOrigin);
+    }, 500);
 }
 
 export default function Search(props) {
