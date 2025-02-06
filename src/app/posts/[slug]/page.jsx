@@ -158,7 +158,8 @@ export default async function Post(params) {
                     <span className='ri-t-box-line'></span>{' '}
                     <span id='textLength'>{post.content.length}字</span>
                     {' • '}
-                    <span className='ri-search-eye-line'></span> <PageVisitors />
+                    <span className='ri-search-eye-line'></span>{' '}
+                    <PageVisitors url={'/posts/' + post.name} />
                 </p>
                 {createTag(post.tag)}
                 <hr />
