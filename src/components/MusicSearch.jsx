@@ -32,14 +32,16 @@ export default function MusicSearch() {
                             <span
                                 className='i ri-add-fill'
                                 onClick={() => {
-                                    emit('musicAddToList', `${name} - ${artist}`, url);
-                                }}></span>
+                                    emit('addToPlayList', name, url, artist, pic, album);
+                                }}
+                            ></span>
                         </span>
                         <span
                             className='i ri-play-fill'
                             onClick={() => {
-                                emit('musicChange', `${name} - ${artist}`, url);
-                            }}></span>
+                                emit('playToList', name, url, artist, pic, album);
+                            }}
+                        ></span>
                     </div>
                 </div>
                 <hr />

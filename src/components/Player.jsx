@@ -3,22 +3,26 @@
 
 import switchElementContent from '@/utils/switchElement';
 import { useEvent } from '@/store/useEvent';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import message from '@/utils/message';
 import cookie from '@/assets/js/lib/cookie';
 import config from '../../config';
+import Virgule from './Virgule';
 
 export default function Player() {
     const { emit, on, off } = useEvent();
+    const playlistRef = useRef(null);
     const [playList, setPlayList] = useState([]);
     const [currentSongIndex, setCurrentSongIndex] = useState(0);
     const [hoverIndex, setHoverIndex] = useState(null);
     const [albumHoverIndex, setAlbumHoverIndex] = useState(null);
-    // 新增：动画状态
     const [isAnimating, setIsAnimating] = useState(false);
     const [animationTarget, setAnimationTarget] = useState(null);
+    const [preloadedImages, setPreloadedImages] = useState({});
+    const [isLoop, setIsLoop] = useState(false);
+    const [lastInteractionTime, setLastInteractionTime] = useState(Date.now());
+    const autoScrollTimerRef = useRef(null);
 
-    // 高亮元素
     function highlightElement(selector) {
         const element = document.querySelector(selector);
         const originColor = element.style.color;
@@ -79,15 +83,33 @@ export default function Player() {
             }
         }
     }
+    const scrollToPlayingSong = () => {
+        if (!playlistRef.current) return;
+
+        const container = playlistRef.current;
+        const playingItem = container.querySelector(`li:nth-child(${currentSongIndex + 1})`);
+
+        if (playingItem) {
+            const containerRect = container.getBoundingClientRect();
+            const itemRect = playingItem.getBoundingClientRect();
+
+            const relativeTop = itemRect.top - containerRect.top;
+            const currentScroll = container.scrollTop;
+
+            const targetScroll = currentScroll + relativeTop;
+
+            container.scrollTo({
+                top: Math.max(0, targetScroll),
+                behavior: 'smooth',
+            });
+        }
+    };
     function musicChange(name, url) {
         if (music.paused == false) {
             musicPlay();
         }
         setTimeout(() => {
-            music.src = url;
             music.load();
-            switchElementContent('#music-name', name);
-            // 新增：更新当前播放歌曲状态
             const index = playList.findIndex((item) => item.name === name);
             setCurrentSongIndex(index);
             setTimeout(() => {
@@ -108,16 +130,71 @@ export default function Player() {
             }, 100);
         }, 200);
     }
-    function loadPlayList() {
-        // if (playList.length > 0) {
-        //     musicChange(playList[0].name, playList[0].url);
-        //     playList.shift();
-        //     localStorage.setItem('playList', JSON.stringify(playList));
-        // }
-        console.log(playList);
+
+    // 添加滚动到底部的辅助函数
+    const scrollToBottom = () => {
+        if (!playlistRef.current) return;
+        const container = playlistRef.current;
+        container.scrollTo({
+            top: container.scrollHeight,
+            behavior: 'smooth',
+        });
+    };
+
+    function addToPlayList(name, url, artist, pic, album) {
+        const newPlayList = [
+            ...JSON.parse(localStorage.getItem('playList')),
+            { name, url, artist, pic, album },
+        ];
+        newPlayList.forEach((item) => {
+            if (newPlayList.filter((i) => i.name === item.name).length > 1) {
+                newPlayList.splice(newPlayList.indexOf(item), 1);
+            }
+        });
+        setPlayList(newPlayList);
+        localStorage.setItem('playList', JSON.stringify(newPlayList));
+
+        // 添加setTimeout确保在DOM更新后滚动
+        setTimeout(scrollToBottom, 100);
     }
 
-    // 新增：根据鼠标位置更新进度
+    async function playToList(name, url, artist, pic, album) {
+        // 先获取当前播放列表
+        const currentList = JSON.parse(localStorage.getItem('playList')) || [];
+
+        // 创建新的歌曲对象
+        const newSong = { name, url, artist, pic, album };
+
+        // 检查是否已存在
+        const existingIndex = currentList.findIndex((item) => item.name === name);
+
+        let newList;
+        let targetIndex;
+
+        if (existingIndex !== -1) {
+            // 如果歌曲已存在，直接切换到该歌曲
+            targetIndex = existingIndex;
+            newList = currentList;
+        } else {
+            // 如果歌曲不存在，添加到列表末尾
+            newList = [...currentList, newSong];
+            targetIndex = newList.length - 1;
+        }
+
+        // 先更新localStorage
+        localStorage.setItem('playList', JSON.stringify(newList));
+
+        // 更新状态并等待完成
+        await new Promise((resolve) => {
+            setPlayList(newList);
+            // 使用setTimeout确保状态已更新
+            setTimeout(resolve, 0);
+        });
+
+        // 切换到新歌曲
+        await switchSong(targetIndex);
+    }
+
     function handleProgressBarDrag(e) {
         const container = document.getElementById('music-progress-container');
         const rect = container.getBoundingClientRect();
@@ -129,7 +206,6 @@ export default function Player() {
             musicUpdata();
         }
     }
-    // 新增：开始拖动进度条
     function handleProgressMouseDown(e) {
         handleProgressBarDrag(e);
         function handleMouseMove(e) {
@@ -144,6 +220,21 @@ export default function Player() {
     }
 
     function getRecommandMusic() {
+        const lastFetchTime = localStorage.getItem('lastMusicFetchTime');
+        const currentTime = Date.now();
+        const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+        if (lastFetchTime && currentTime - parseInt(lastFetchTime) < CACHE_DURATION) {
+            const cachedMusic = localStorage.getItem('recommandMusic');
+            if (cachedMusic) {
+                setPlayList(
+                    JSON.parse(localStorage.getItem('playList')) || JSON.parse(cachedMusic) || [],
+                );
+                switchSong(currentSongIndex);
+                return;
+            }
+        }
+
         fetch(config.musicApi + 'playlist/track/all?limit=50&offset=0&id=' + config.playList)
             .then((response) => response.json())
             .then((data) => {
@@ -161,83 +252,164 @@ export default function Player() {
                     });
                 }
                 localStorage.setItem('recommandMusic', JSON.stringify(playLists));
+                if (playList.length === 0) {
+                    localStorage.setItem('playList', JSON.stringify(playLists));
+                }
+                localStorage.setItem('lastMusicFetchTime', currentTime.toString());
                 setPlayList(
                     JSON.parse(localStorage.getItem('playList')) ||
                         JSON.parse(localStorage.getItem('recommandMusic')) ||
                         [],
                 );
+                switchSong(currentSongIndex);
             });
     }
 
-    // 新增：计算动画位置
     const calculateAnimationStyle = (index, targetIndex, progress) => {
         if (!isAnimating || animationTarget === null) return {};
-        
-        const offset = targetIndex - currentSongIndex;
+
+        // 计算实际的偏移量，考虑循环情况
+        let offset = targetIndex - currentSongIndex;
+        const totalLength = playList.length;
+
+        if (Math.abs(offset) > totalLength / 2) {
+            if (offset > 0) {
+                offset = offset - totalLength;
+            } else {
+                offset = offset + totalLength;
+            }
+        }
+
         const itemPosition = index - currentSongIndex;
-        
-        // 目标之前的图片（淡出效果）
-        if (itemPosition < offset) {
+        let adjustedPosition = itemPosition;
+
+        if (Math.abs(itemPosition) > totalLength / 2) {
+            if (itemPosition > 0) {
+                adjustedPosition = itemPosition - totalLength;
+            } else {
+                adjustedPosition = itemPosition + totalLength;
+            }
+        }
+
+        // 新增：计算图片透明度
+        let imageOpacity = 1;
+        if (adjustedPosition >= offset && Math.abs(adjustedPosition) < 10) {
+            imageOpacity = adjustedPosition === offset ? progress : progress * 0.8 + 0.2;
+        }
+
+        if (adjustedPosition < offset) {
             return {
                 opacity: 1 - progress,
                 transform: `scale(${1 - progress})`,
             };
         }
-        
-        // 目标到当前显示末尾的图片（左移效果）
-        if (itemPosition >= offset && itemPosition < 10) {
-            const startLeft = `calc(${itemPosition} * ${gapCss})`;
-            const endLeft = `calc(${itemPosition - offset} * ${gapCss})`;
+
+        if (adjustedPosition >= offset && Math.abs(adjustedPosition) < 10) {
+            const startLeft = `calc(${adjustedPosition} * ${gapCss})`;
+            const endLeft = `calc(${adjustedPosition - offset} * ${gapCss})`;
             const currentLeft = `calc(${startLeft} + (${endLeft} - ${startLeft}) * ${progress})`;
             return {
-                left: itemPosition === offset ? `calc(0px + (${currentLeft} - 0px) * (1 - ${progress}))` : currentLeft,
-            };
-        }
-        
-        // 新出现的图片（淡入效果）
-        if (itemPosition >= 10) {
-            return {
-                opacity: progress,
-                transform: `scale(${progress})`,
+                left:
+                    adjustedPosition === offset
+                        ? `calc(0px + (${currentLeft} - 0px) * (1 - ${progress}))`
+                        : currentLeft,
+                '--image-opacity': imageOpacity, // 新增：传递图片透明度变量
             };
         }
 
         return {};
     };
 
-    // 修改：switchSong函数
-    function switchSong(index) {
-        if (index === currentSongIndex || isAnimating) return;
-        
-        setIsAnimating(true);
-        setAnimationTarget(index);
+    const preloadImage = (src) => {
+        return new Promise((resolve, reject) => {
+            if (preloadedImages[src]) {
+                resolve();
+                return;
+            }
+            const img = new Image();
+            img.onload = () => {
+                setPreloadedImages((prev) => ({ ...prev, [src]: true }));
+                resolve();
+            };
+            img.onerror = reject;
+            img.src = src;
+        });
+    };
 
-        // 动画完成后更新实际状态
+    async function switchSong(index) {
+        if (index === currentSongIndex || isAnimating || index > playList.length) {
+            localStorage.setItem('playListIndex', 0);
+            return;
+        }
+        console.log(index);
+        localStorage.setItem('playListIndex', index);
+        const nextItemsToShow = [];
+        for (let i = 0; i < 10; i++) {
+            nextItemsToShow.push(playList[(index + i) % playList.length]);
+        }
+
         setTimeout(() => {
-            const musicItem = playList[index];
-            musicChange(musicItem.name, musicItem.url);
-            setCurrentSongIndex(index);
-            setIsAnimating(false);
-            setAnimationTarget(null);
-        }, 500); // 动画持续时间
+            document.querySelectorAll('.ready-to-show').forEach((item) => {
+                item.style.opacity = 1;
+            });
+        }, 700);
+
+        try {
+            await Promise.all(nextItemsToShow.map((item) => preloadImage(item.pic)));
+
+            setIsAnimating(true);
+            setAnimationTarget(index);
+
+            // 使用Promise来确保状态更新完成
+            await new Promise((resolve) => {
+                setTimeout(() => {
+                    const musicItem = playList[index];
+                    musicChange(musicItem.name, musicItem.url);
+                    setCurrentSongIndex(index);
+                    setIsAnimating(false);
+                    setAnimationTarget(null);
+                    resolve();
+                }, 500);
+            });
+        } catch (error) {
+            console.error('Error in switchSong:', error);
+            setIsAnimating(true);
+            setAnimationTarget(index);
+        }
     }
+
+    const resetInteractionTimer = () => {
+        setLastInteractionTime(Date.now());
+        if (autoScrollTimerRef.current) {
+            clearTimeout(autoScrollTimerRef.current);
+        }
+        autoScrollTimerRef.current = setTimeout(() => {
+            scrollToPlayingSong();
+        }, 3000);
+    };
 
     useEffect(() => {
         on('musicChange', musicChange);
+        on('addToPlayList', addToPlayList);
         on('musicPlay', musicPlay);
         on('musicUpdata', musicUpdata);
         on('musicLoad', getRecommandMusic);
+        on('playToList', playToList);
         setPlayList(JSON.parse(localStorage.getItem('playList')) || []);
-        loadPlayList();
+        setCurrentSongIndex(Number(localStorage.getItem('playListIndex')) || 0);
         return () => {
             off('musicChange', musicChange);
             off('musicPlay', musicPlay);
+            off('addToPlayList', addToPlayList);
             off('musicUpdata', musicUpdata);
             off('musicLoad', getRecommandMusic);
+            off('playToList', playToList);
+            if (autoScrollTimerRef.current) {
+                clearTimeout(autoScrollTimerRef.current);
+            }
         };
     }, []);
 
-    // 新增：仅显示最多20首音乐，并计算间隙
     const itemsToShow = [];
     if (playList.length > 0) {
         for (let i = 0; i < 10; i++) {
@@ -247,13 +419,31 @@ export default function Player() {
     const gapCss =
         itemsToShow.length > 1 ? `calc((100% - 80px) / ${itemsToShow.length - 1})` : '0px';
 
+    useEffect(() => {
+        if (document.querySelector('#music-name').innerText == playList[currentSongIndex]?.name) {
+            return;
+        }
+        switchElementContent(
+            '#music-name',
+            <Virgule
+                text={
+                    playList[currentSongIndex]
+                        ? playList[currentSongIndex].name
+                        : '无正在播放的音乐'
+                }
+            />,
+        );
+        scrollToPlayingSong();
+    }, [currentSongIndex, playList]);
+
     return (
         <>
             <div
                 style={{
                     display: 'flex',
                     flexDirection: 'row',
-                }}>
+                }}
+            >
                 <div
                     id='playlist-albums'
                     style={{
@@ -261,13 +451,18 @@ export default function Player() {
                         width: '50%',
                         height: '80px',
                         margin: '0 10px 0 0',
-                    }}>
+                    }}
+                >
                     {itemsToShow.map((musicItem, index) => (
                         <div
-                            key={index}
+                            key={`${currentSongIndex}-${index}`}
                             onMouseEnter={() => setAlbumHoverIndex(index)}
-                            onMouseLeave={() => setAlbumHoverIndex(null)}
+                            onMouseLeave={() => {
+                                setAlbumHoverIndex(null);
+                                scrollToPlayingSong();
+                            }}
                             onClick={() => switchSong(currentSongIndex + index)}
+                            className={index > 8 ? 'ready-to-show' : ''}
                             style={{
                                 position: 'absolute',
                                 left: index === 0 ? '0px' : `calc(${index} * ${gapCss})`,
@@ -276,45 +471,82 @@ export default function Player() {
                                 height: '80px',
                                 overflow: 'hidden',
                                 borderRadius: '8px',
-                                transition: isAnimating ? 'all 500ms ease' : 'transform 300ms ease',
+                                transition: isAnimating ? 'all 500ms ease' : 'all 300ms ease',
+                                backfaceVisibility: 'hidden',
+                                willChange: 'transform, opacity',
+                                opacity: index > 8 ? 0 : 1,
                                 transform:
                                     albumHoverIndex === index
                                         ? 'translateY(-15px)'
                                         : 'translateY(0)',
+                                '--image-opacity': 1, // 默认透明度
                                 ...calculateAnimationStyle(
                                     currentSongIndex + index,
                                     animationTarget,
-                                    isAnimating ? 1 : 0
+                                    isAnimating ? 1 : 0,
                                 ),
-                            }}>
+                            }}
+                        >
                             <img
-                                src={musicItem.pic}
-                                alt={musicItem.album}
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                src={musicItem ? musicItem.pic : '/music.png'}
+                                alt={musicItem ? musicItem.album : ''}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    backfaceVisibility: 'hidden',
+                                    transform: 'translateZ(0)',
+                                    opacity: 'var(--image-opacity)', // 使用CSS变量控制透明度
+                                    transition: 'opacity 500ms ease', // 添加透明度过渡效果
+                                }}
                             />
                         </div>
                     ))}
                 </div>
                 <div
                     id='playlist-title'
+                    ref={playlistRef}
+                    onMouseEnter={() => {
+                        if (autoScrollTimerRef.current) {
+                            clearTimeout(autoScrollTimerRef.current);
+                        }
+                    }}
+                    onMouseLeave={() => {
+                        scrollToPlayingSong();
+                    }}
+                    onWheel={resetInteractionTimer}
+                    onTouchStart={resetInteractionTimer}
+                    onTouchMove={resetInteractionTimer}
                     style={{
                         width: '50%',
                         height: '80px',
                         overflow: 'auto',
-                    }}>
+                    }}
+                >
                     <ul style={{ padding: 0, margin: 0, listStyle: 'none' }}>
                         {playList.map((item, idx) => (
                             <li
                                 key={idx}
                                 onMouseEnter={() => setHoverIndex(idx)}
-                                onMouseLeave={() => setHoverIndex(null)}
+                                onMouseLeave={() => {
+                                    setHoverIndex(null);
+                                }}
                                 style={{
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
                                     position: 'relative',
-                                }}>
-                                <div>
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        color:
+                                            idx === currentSongIndex
+                                                ? 'var(--theme-white-light)'
+                                                : 'var(--theme-white)',
+                                        fontWeight: idx === currentSongIndex ? 'bold' : 'normal',
+                                    }}
+                                >
                                     {idx + 1}. {item.name}
                                     {hoverIndex === idx && (
                                         <span
@@ -327,10 +559,31 @@ export default function Player() {
                                                 padding: '0 5px',
                                                 background:
                                                     'linear-gradient(to right, rgba(30,30,30,0) 0%, #1e1e1e 100%)',
-                                            }}>
+                                            }}
+                                        >
                                             &nbsp;&nbsp;&nbsp;&nbsp;
-                                            <span className='ri-delete-bin-6-fill'></span>
-                                            <span className='ri-play-fill'></span>
+                                            <span
+                                                className='ri-delete-bin-6-fill'
+                                                onClick={() => {
+                                                    if (idx === currentSongIndex) {
+                                                        switchSong(
+                                                            (currentSongIndex + 1) %
+                                                                playList.length,
+                                                        );
+                                                    }
+                                                    setPlayList(
+                                                        playList.filter((_, i) => i !== idx),
+                                                    );
+                                                    localStorage.setItem(
+                                                        'playList',
+                                                        JSON.stringify(playList),
+                                                    );
+                                                }}
+                                            ></span>
+                                            <span
+                                                className='ri-play-fill'
+                                                onClick={() => switchSong(idx)}
+                                            ></span>
                                         </span>
                                     )}
                                 </div>
@@ -341,17 +594,36 @@ export default function Player() {
             </div>
             <div id='music-player'>
                 <div id='music-top'>
-                    <div id='music-name'>无正在播放的音乐</div>
+                    <div
+                        id='music-name'
+                        style={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            userSelect: 'none',
+                        }}
+                    >
+                        无正在播放的音乐
+                    </div>
                     <div id='music-time'>00:00/00:00</div>
                 </div>
                 <audio
                     id='music'
-                    src='/'
+                    src={playList[currentSongIndex] ? playList[currentSongIndex].url : '/'}
                     onTimeUpdate={() => {
                         musicUpdata();
                     }}
-                    loop='loop'
-                    preload='none'></audio>
+                    onEnded={() => {
+                        switchSong((currentSongIndex + 1) % playList.length);
+                        musicPlay();
+                    }}
+                    onError={() => {
+                        switchSong((currentSongIndex + 1) % playList.length);
+                        musicPlay();
+                    }}
+                    loop={false}
+                    preload='none'
+                ></audio>
                 <div id='music-bar'>
                     <div id='music-progress-container' onMouseDown={handleProgressMouseDown}>
                         <div id='music-progress'></div>
@@ -365,7 +637,8 @@ export default function Player() {
                                 setTimeout(() => {
                                     emit('openInfobar', 'music');
                                 }, 500);
-                            }}>
+                            }}
+                        >
                             <span className='i ri-play-list-line'></span>
                         </span>
                     </span>
@@ -374,15 +647,19 @@ export default function Player() {
                         <span
                             className='i ri-skip-back-line'
                             onClick={() => {
-                                switchSong((currentSongIndex - 1 + playList.length) % playList.length);
-                            }}></span>
+                                switchSong(
+                                    (currentSongIndex - 1 + playList.length) % playList.length,
+                                );
+                            }}
+                        ></span>
                     </span>
                     <span>
                         <span
                             id='music-button'
                             onClick={() => {
                                 musicPlay();
-                            }}>
+                            }}
+                        >
                             <span className='i ri-play-line'></span>
                         </span>
                     </span>
@@ -391,10 +668,27 @@ export default function Player() {
                             className='i ri-skip-forward-line'
                             onClick={() => {
                                 switchSong((currentSongIndex + 1) % playList.length);
-                            }}></span>
+                            }}
+                        ></span>
                     </span>
                     <span>
-                        <span className='i ri-repeat-one-line'></span>
+                        {isLoop ? (
+                            <span
+                                className='i ri-repeat-one-line'
+                                onClick={() => {
+                                    setIsLoop(false);
+                                    music.loop = false;
+                                }}
+                            ></span>
+                        ) : (
+                            <span
+                                className='i ri-order-play-fill'
+                                onClick={() => {
+                                    setIsLoop(true);
+                                    music.loop = true;
+                                }}
+                            ></span>
+                        )}
                     </span>
                 </div>
             </div>

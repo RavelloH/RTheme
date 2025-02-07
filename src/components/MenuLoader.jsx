@@ -1,26 +1,23 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useBroadcast } from '@/store/useBroadcast';
+import { useEvent } from '@/store/useEvent';
 import message from '@/utils/message';
+import { useBroadcast } from '@/store/useBroadcast';
 
 export default function MenuLoader() {
-    const broadcast = useBroadcast((state) => state.broadcast);
+    const { emit } = useEvent();
+    const { registerCallback, unregisterCallback } = useBroadcast();
 
     useEffect(() => {
-        message.original = (
-            <a
-                onClick={() =>
-                    broadcast({
-                        action: 'openInfobar',
-                        target: 'menu',
-                    })
-                }
-            >
-                目录&nbsp;<span class='i ri-list-unordered'></span>
-            </a>
-        );
-        setTimeout(() => message.switch(message.original), 500);
+        setTimeout(() => {
+            message.original = (
+                <a onClick={() => emit('openInfobar', 'menu')}>
+                    目录&nbsp;<span class='i ri-list-unordered'></span>
+                </a>
+            );
+            message.switch(message.original);
+        }, 500);
     }, []);
 
     return;
