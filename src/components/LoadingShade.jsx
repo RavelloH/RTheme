@@ -30,7 +30,6 @@ export default function LoadingShade() {
                     document.getElementById('shade-global').classList.remove('active');
                     emit('musicLoad');
                 }, 900);
-                
             }
             if (message.action === 'loadStart') {
                 document.getElementById('viewmap').style.transition = 'opacity 0.3s';
@@ -85,7 +84,8 @@ export default function LoadingShade() {
                         action: 'closeNoticebar',
                     });
                     emit('closeInfobar');
-                }}></div>
+                }}
+            ></div>
             <div id='load-shade' className='active'>
                 <div id='load-content'>
                     <hr />

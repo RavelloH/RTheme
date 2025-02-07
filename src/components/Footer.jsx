@@ -40,9 +40,7 @@ export default function Footer() {
                 data-umami-event='footer-消息栏'
             >
                 <div id='message-bar'>
-                    <a>
-                        <div className='circle-loader'></div>
-                    </a>
+                    <a></a>
                 </div>
             </div>
         </footer>

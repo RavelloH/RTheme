@@ -5,22 +5,8 @@ import i18n from './i18n.jsx';
 import { Base64 } from 'js-base64';
 import config from '../../../config.js';
 import switchElementContent from '../../utils/switchElement.js';
-import display from './display.js';
 import message from '@/utils/message.js';
 import loadURL from '@/utils/loadURL.js';
-
-// 全局声明
-let domMenuToggle,
-    domShadeGlobal,
-    domLayoutInfoBar,
-    domInfoBarToggle,
-    musicProgressbar,
-    musicProfather,
-    infoBarMode,
-    domLoadShade,
-    musicApi,
-    searchTimer,
-    changeMusicProgress;
 
 const isBrowser = () => typeof window !== 'undefined';
 
@@ -118,31 +104,7 @@ function loadComplete() {
 function firstLoad() {
     import('instant.page/instantpage.js');
     loadPageType();
-    if (cookie.getItem('musicPlayingName') !== null) {
-        switchElementContent('#music-name', cookie.getItem('musicPlayingName'));
-    }
-    if (cookie.getItem('musicPlayingSource') !== null) {
-        music.src = cookie.getItem('musicPlayingSource');
-        music.load();
-    }
     infoBarMode = '';
-}
-
-function preload(href) {
-    const preloadLink = document.createElement('link');
-    preloadLink.href = href;
-    preloadLink.rel = 'preload';
-    preloadLink.as = 'script';
-    document.head.appendChild(preloadLink);
-}
-
-function addScript(url, onloadFunction = '') {
-    var head = document.getElementsByTagName('head')[0];
-    var script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.src = url;
-    script.setAttribute('onload', onloadFunction);
-    head.appendChild(script);
 }
 
 if (isBrowser()) {
@@ -173,43 +135,6 @@ if (isBrowser()) {
     // };
 }
 
-// 下拉栏开关
-function toggleLayoutInfobar() {
-    domLayoutInfoBar.classList.toggle('active');
-    domShadeGlobal.classList.toggle('active');
-    setTimeout(() => enableInfobarRefersh(), 0);
-}
-
-// 右菜单状态
-function isLayoutMenuOpen() {
-    if (domMenuToggle.classList[2] == 'active') {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-// 下拉栏状态
-function isLayoutInfobarOpen() {
-    if (domLayoutInfoBar.classList[0] == 'active') {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-
-// 获取元素InnerHTML
-function getElementInnerhtml(selector) {
-    const element = document.querySelector(selector) || undefined;
-    if (typeof element !== 'undefined') {
-        return element.innerHTML;
-    } else {
-        return null;
-    }
-}
-
-// 初始化监听器
 function addListeners() {
     addEventListener('copy', (event) => {
         message.add('<a>已复制 &nbsp;<span class="i ri-file-copy-2-line"></span></a>', 2000);
@@ -220,27 +145,9 @@ function addListeners() {
     addEventListener('paste', (event) => {
         message.add('<a>已粘贴 &nbsp;<span class="i ri-chat-check-line"></span></a>', 2000);
     });
-    // window.addEventListener(
-    //     'hashchange',
-    //     function () {
-    //         checkPageHash();
-    //     },
-    //     false,
-    // );
     addEventListener('offline', (event) => {
         message.add('<a>互联网连接已断开 <span class="i ri-cloud-off-line"></span></a>', 5000);
     });
-}
-
-// 全屏
-function toggleFullScreen() {
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen();
-    } else {
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-        }
-    }
 }
 
 // 时间处理
@@ -375,92 +282,6 @@ function getHeightDifferent(element) {
     }
 
     return 0;
-}
-
-// InfoBar功能分发
-function openInfoBar(mode) {
-    return;
-    infoBarMode = mode || '';
-    switch (mode) {
-        case 'music':
-            musicSetting();
-            preload('/assets/images/music.jpg');
-            break;
-        case 'menu':
-            switchElementContent('#infobar-left', updateMenu(), 0);
-            setTimeout(() => {
-                highlightMenu();
-                document.querySelector('#articles-menu').onclick = () =>
-                    setTimeout(() => highlightMenu(), 1000);
-            }, 10);
-            break;
-        case 'setting':
-            switchElementContent('#infobar-left', i18n.structureInfobarSetting, 0);
-            var settingItems = i18n.valueSettingItems();
-            var settingList = [];
-            settingItems.forEach(function (item) {
-                if (item.length == 4) {
-                    settingList.push(
-                        i18n.structureSetting(item[0], item[1], item[2], settingList.length + 1, [
-                            3,
-                        ]),
-                    );
-                } else {
-                    settingList.push(
-                        i18n.structureSetting(item[0], item[1], item[2], settingList.length + 1),
-                    );
-                }
-            });
-            setTimeout(() => switchElementContent('#setting-list', settingList, 300), 300);
-            setTimeout(() => loadItems('#setting-list'), 700);
-            break;
-        case 'swap':
-            switchElementContent('#infobar-left', i18n.structureInfobarSwap, 0);
-            break;
-        case 'share':
-            switchElementContent('#infobar-left', i18n.structureInfobarShare(), 0);
-            break;
-        case 'articles-sort':
-            switchElementContent('#infobar-left', i18n.structureInfobarSort(), 0);
-            break;
-        case 'feed':
-            switchElementContent('#infobar-left', i18n.structureInfobarFeed(), 0);
-    }
-    switchElementContent('#infobar-title', mode, 300);
-    toggleLayoutInfobar();
-}
-
-// 启动InfoBar刷新
-function enableInfobarRefersh() {
-    var runTime = 0;
-    var InfobarRefersher = setInterval(function () {
-        runTime += 1;
-        if (isLayoutInfobarOpen() == false) {
-            clearInterval(InfobarRefersher);
-            switchElementContent('#infobar-left', '', 100);
-        } else {
-            switchElementContent('#time', getTime('hh:mm'));
-            switchElementContent('#uid', '<hr>' + base.encryption(window.location.href), 500);
-            if (infoBarMode == 'swap') {
-                startSwap(runTime);
-            }
-            if (infoBarMode == 'share') {
-                switchElementContent('#input-area-local', window.location.href, 800);
-                switchElementContent(
-                    '#input-area-short',
-                    window.location.origin + '/?u=' + base.encryption(window.location.pathname),
-                    800,
-                );
-                if (runTime <= 1) {
-                    var shareOtherInner = [];
-                    for (let i = 0; i < config.trustDomain.length; i++) {
-                        shareOtherInner.push(i18n.structureShareInput(i, window.location.pathname));
-                    }
-                    switchElementContent('#share-other', shareOtherInner, 800);
-                }
-            }
-        }
-    }, 500);
 }
 
 // download分发
@@ -778,11 +599,7 @@ let isHashWorking = false;
 function checkPageHash() {}
 
 const globalModule = {
-    isLayoutMenuOpen,
-    openInfoBar,
     toggleThemeMode,
-    toggleFullScreen,
-    copy,
     setting,
 };
 

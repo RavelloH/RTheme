@@ -1,7 +1,15 @@
-import global from '../assets/js/Global';
 import { useEvent } from '@/store/useEvent';
 
 export default function Sideicon() {
+    function toggleFullScreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    }
     const { emit } = useEvent();
     return (
         <ul>
@@ -36,7 +44,7 @@ export default function Sideicon() {
                     href='#'
                     id='icon-fullscreen'
                     onClick={() => {
-                        global.toggleFullScreen();
+                        toggleFullScreen();
                         return false;
                     }}
                     aria-label='fullscreen'
