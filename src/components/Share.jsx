@@ -1,7 +1,7 @@
 import { Base64 } from 'js-base64';
 import config from '../../config';
 import QR from './QR';
-import '@/assets/css/share.css';
+import '@/assets/css/Share.css';
 
 export default function Share({ pathname }) {
     function copy(text, button) {
