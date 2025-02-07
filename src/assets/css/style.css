@@ -3427,6 +3427,26 @@ span {
     color: white;
 }
 
+.qr-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0 auto;
+}
+
+.qr-wrapper {
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+}
+
+.qr-code {
+    border-radius: 0.5rem;
+}
+
 @media screen and (min-width: 400px) {
     #main::before {
         content: '';
