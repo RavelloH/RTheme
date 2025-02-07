@@ -11,11 +11,13 @@ import { useBroadcast } from '@/store/useBroadcast';
 import Info from './Info';
 import Feed from './Feed';
 import MusicSearch from './MusicSearch';
+import Share from './Share';
+import PostMenu from './PostMenu';
 
 export default function Infobar() {
     const { broadcast } = useBroadcast();
     const [infoTitle, setInfoTitle] = useState('INFO');
-    const [display, setDisplay] = useState(<></>);
+    const [display, setDisplay] = useState(<Info />);
     const [href, setHref] = useState('');
     const { on, off, emit } = useEvent();
     const [time, setTime] = useState('00:00');
@@ -35,6 +37,9 @@ export default function Infobar() {
             broadcast({
                 action: 'closeSidebar',
             });
+            document.querySelectorAll('.ready-to-show').forEach((item) => {
+                item.style.opacity = 1;
+            });
 
             switch (mode) {
                 case 'info':
@@ -48,6 +53,14 @@ export default function Infobar() {
                 case 'music':
                     setInfoTitle('MUSIC');
                     setDisplay(<MusicSearch />);
+                    break;
+                case 'share':
+                    setInfoTitle('SHARE');
+                    setDisplay(<Share pathname={window.location.pathname} />);
+                    break;
+                case 'menu':
+                    setInfoTitle('MENU');
+                    setDisplay(<PostMenu />);
                     break;
                 default:
                     break;
