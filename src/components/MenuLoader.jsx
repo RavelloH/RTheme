@@ -7,17 +7,20 @@ import { useBroadcast } from '@/store/useBroadcast';
 
 export default function MenuLoader() {
     const { emit } = useEvent();
-    const { registerCallback, unregisterCallback } = useBroadcast();
 
     useEffect(() => {
-        setTimeout(() => {
+        const timer = setInterval(() => {
             message.original = (
                 <a onClick={() => emit('openInfobar', 'menu')}>
                     目录&nbsp;<span class='i ri-list-unordered'></span>
                 </a>
             );
-            message.switch(message.original);
+            if (document.querySelector('#message-bar').innerText !== '目录 ')
+                message.switch(message.original, 0);
         }, 500);
+        return () => {
+            clearInterval(timer);
+        };
     }, []);
 
     return;

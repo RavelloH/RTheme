@@ -113,6 +113,8 @@ export default function PostMenu() {
             }
         };
 
+        handleScroll;
+
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
