@@ -18,11 +18,15 @@ export default function Sideicon() {
                     href='#'
                     id='icon-color'
                     onClick={() => {
-                        global.toggleThemeMode();
+                        message.add(
+                            <a>
+                                此功能尚在开发&nbsp;<span className='ri-alert-line'></span>
+                            </a>,
+                            1500,
+                        );
                         return false;
                     }}
-                    aria-label='color'
-                >
+                    aria-label='color'>
                     <span className='i ri-sun-line'></span>
                 </a>
             </li>
@@ -34,8 +38,7 @@ export default function Sideicon() {
                         emit('openInfobar', 'music');
                         return false;
                     }}
-                    aria-label='music'
-                >
+                    aria-label='music'>
                     <span className='i ri-file-music-line'></span>
                 </a>
             </li>
@@ -47,8 +50,7 @@ export default function Sideicon() {
                         toggleFullScreen();
                         return false;
                     }}
-                    aria-label='fullscreen'
-                >
+                    aria-label='fullscreen'>
                     <span className='i ri-aspect-ratio-line'></span>
                 </a>
             </li>
@@ -60,8 +62,7 @@ export default function Sideicon() {
                         emit('openInfobar', 'share');
                         return false;
                     }}
-                    aria-label='share'
-                >
+                    aria-label='share'>
                     <span className='i ri-share-box-line'></span>
                 </a>
             </li>
@@ -73,8 +74,7 @@ export default function Sideicon() {
                         emit('openInfobar', 'setting');
                         return false;
                     }}
-                    aria-label='setting'
-                >
+                    aria-label='setting'>
                     <span className='i ri-settings-4-line'></span>
                 </a>
             </li>

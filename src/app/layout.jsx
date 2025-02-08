@@ -16,7 +16,6 @@ import ShadeContent from '@/components/ShadeContent';
 
 import Pjax from '@/components/Pjax';
 
-import '@/assets/js/Global';
 import Noticebar from '@/components/Noticebar';
 import Starter from '@/components/Starter';
 

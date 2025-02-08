@@ -6,6 +6,22 @@ import { useBroadcast } from '@/store/useBroadcast';
 import switchElementContent from '@/utils/switchElement';
 import messager from '@/utils/message';
 import { useEvent } from '@/store/useEvent';
+import loadURL from '@/utils/loadURL';
+import { Base64 } from 'js-base64';
+
+function analyzeURL(url, target) {
+    let urlObj = new URL(url);
+    let queryString = urlObj.search;
+    if (queryString === '') {
+        return '';
+    }
+    let params = new URLSearchParams(queryString);
+    let targetValue = params.get(target);
+    if (targetValue === null) {
+        return '';
+    }
+    return targetValue;
+}
 
 export default function LoadingShade() {
     const registerBroadcast = useBroadcast((state) => state.registerCallback);
@@ -70,6 +86,59 @@ export default function LoadingShade() {
             type: 'UI',
             action: 'firstLoadComplete',
         });
+        if (analyzeURL(window.location.href, 'u') !== '') {
+            setTimeout(()=>loadURL(Base64.decode(analyzeURL(window.location.href, 'u'))),300);
+        }
+        addEventListener('copy', (event) => {
+            message.add('<a>已复制 &nbsp;<span class="i ri-file-copy-2-line"></span></a>', 2000);
+        });
+        addEventListener('cut', (event) => {
+            message.add('<a>已剪切 &nbsp;<span class="i ri-scissors-cut-line"></span></a>', 2000);
+        });
+        addEventListener('paste', (event) => {
+            message.add('<a>已粘贴 &nbsp;<span class="i ri-chat-check-line"></span></a>', 2000);
+        });
+        addEventListener('offline', (event) => {
+            message.add('<a>互联网连接已断开 <span class="i ri-cloud-off-line"></span></a>', 5000);
+        });
+        window.onerror = function (msg, url, lineNo, columnNo, error) {
+            var string = msg.toLowerCase();
+            var substring = 'script error';
+            let message = (
+                <>
+                    <hr />
+                    <div class='center'>
+                        <h2>初始化异常</h2>
+                        <h3>
+                            LOAD
+                            <span id='loading-text'>
+                                <span class='red-text'> Failed.</span>
+                            </span>
+                        </h3>
+                        <p>
+                            <strong>消息: </strong>${msg}
+                        </p>
+                        <p>
+                            <strong>URL: </strong>${url}
+                        </p>
+                        <p>
+                            <strong>行号: </strong>${lineNo}
+                        </p>
+                        <p>
+                            <strong>列数: </strong>${columnNo}
+                        </p>
+                        <p>
+                            <strong>类型: </strong>${JSON.stringify(error)}
+                        </p>
+                    </div>
+                    <hr />
+                    <br />
+                </>
+            );
+            document.querySelector('#load-content').innerHTML = message;
+            errorList.push(JSON.stringify(error));
+            return false;
+        };
     }, []);
 
     return (
@@ -84,8 +153,7 @@ export default function LoadingShade() {
                         action: 'closeNoticebar',
                     });
                     emit('closeInfobar');
-                }}
-            ></div>
+                }}></div>
             <div id='load-shade' className='active'>
                 <div id='load-content'>
                     <hr />
