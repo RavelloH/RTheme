@@ -8,20 +8,7 @@ import messager from '@/utils/message';
 import { useEvent } from '@/store/useEvent';
 import loadURL from '@/utils/loadURL';
 import { Base64 } from 'js-base64';
-
-function analyzeURL(url, target) {
-    let urlObj = new URL(url);
-    let queryString = urlObj.search;
-    if (queryString === '') {
-        return '';
-    }
-    let params = new URLSearchParams(queryString);
-    let targetValue = params.get(target);
-    if (targetValue === null) {
-        return '';
-    }
-    return targetValue;
-}
+import analyzeURL from '@/utils/analyzeURL';
 
 export default function LoadingShade() {
     const registerBroadcast = useBroadcast((state) => state.registerCallback);

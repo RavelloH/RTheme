@@ -15,9 +15,10 @@ import Userbar from '@/components/Userbar';
 import ShadeContent from '@/components/ShadeContent';
 
 import Pjax from '@/components/Pjax';
-
 import Noticebar from '@/components/Noticebar';
 import Starter from '@/components/Starter';
+
+import { Umami } from '@/components/PageVisitors';
 
 export const metadata = {
     title: {
@@ -98,6 +99,7 @@ export default function RootLayout({ children }) {
                 <Noticebar />
                 <SpeedInsights />
                 <Analytics />
+                <Umami />
             </body>
         </html>
     );

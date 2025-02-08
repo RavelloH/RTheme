@@ -28,3 +28,16 @@ export function getPageVisitors(url) {
             });
     });
 }
+
+export function Umami() {
+    if (!config.umami) return null;
+    return (
+        <>
+            <script
+                async
+                defer
+                data-website-id={config.umami.id}
+                src={config.umami.scirpt}></script>
+        </>
+    );
+}

@@ -1,4 +1,5 @@
 import { useEvent } from '@/store/useEvent';
+import message from '@/utils/message';
 
 export default function Sideicon() {
     function toggleFullScreen() {
