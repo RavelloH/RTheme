@@ -4,13 +4,28 @@ import switchElementContent from '@/utils/switchElement';
 import config from '../../config';
 import ImageZoom from './ImageZoom';
 import { useEvent } from '@/store/useEvent';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function MusicSearch() {
     const { emit, on, off } = useEvent();
     let searchTimer;
 
-    function getstructureMusicSearchResult(name, url, artist, pic, album) {
+    function isInPlayList(name) {
+        let playList = JSON.parse(localStorage.getItem('playList'));
+        if (playList === null) {
+            playList = [];
+        }
+        for (let i = 0; i < playList.length; i++) {
+            if (playList[i].name === name) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function MusicSearchResult({ name, url, artist, pic, album }) {
+        const [isAdded, setIsAdded] = useState(isInPlayList(name));
+
         return (
             <div className='music-search-list loading'>
                 <div className='music-search-result'>
@@ -29,19 +44,24 @@ export default function MusicSearch() {
                     </div>
                     <div className='music-search-operation'>
                         <span>
-                            <span
-                                className='i ri-add-fill'
-                                onClick={() => {
-                                    emit('addToPlayList', name, url, artist, pic, album);
-                                }}
-                            ></span>
+                            {isAdded ? (
+                                <span
+                                    className='i ri-close-fill'
+                                    onClick={() => {
+                                        emit('delFromPlayList', name);
+                                        setIsAdded(false);
+                                    }}
+                                ></span>
+                            ) : (
+                                <span
+                                    className='i ri-add-fill'
+                                    onClick={() => {
+                                        emit('addToPlayList', name, url, artist, pic, album);
+                                        setIsAdded(true);
+                                    }}
+                                ></span>
+                            )}
                         </span>
-                        <span
-                            className='i ri-play-fill'
-                            onClick={() => {
-                                emit('playToList', name, url, artist, pic, album);
-                            }}
-                        ></span>
                     </div>
                 </div>
                 <hr />
@@ -94,15 +114,17 @@ export default function MusicSearch() {
                             }
                             artists = artists.substring(0, artists.length - 1);
                             musicSearchResult.push(
-                                getstructureMusicSearchResult(
-                                    data['result']['songs'][i]['name'],
-                                    'http://music.163.com/song/media/outer/url?id=' +
+                                <MusicSearchResult
+                                    name={data['result']['songs'][i]['name']}
+                                    url={
+                                        'http://music.163.com/song/media/outer/url?id=' +
                                         data['result']['songs'][i]['id'] +
-                                        '.mp3',
-                                    artists,
-                                    data['result']['songs'][i]['al']['picUrl'],
-                                    data['result']['songs'][i]['al']['name'],
-                                ),
+                                        '.mp3'
+                                    }
+                                    artist={artists}
+                                    pic={data['result']['songs'][i]['al']['picUrl']}
+                                    album={data['result']['songs'][i]['al']['name']}
+                                />,
                             );
                         }
                         musicSearchResult.push(<ImageZoom />);
@@ -133,13 +155,13 @@ export default function MusicSearch() {
         let recommandMusic = [];
         for (let i = 0; i < recommandMusicList.length; i++) {
             recommandMusic.push(
-                getstructureMusicSearchResult(
-                    recommandMusicList[i].name,
-                    recommandMusicList[i].url,
-                    recommandMusicList[i].artist,
-                    recommandMusicList[i].pic,
-                    recommandMusicList[i].album,
-                ),
+                <MusicSearchResult
+                    name={recommandMusicList[i].name}
+                    url={recommandMusicList[i].url}
+                    artist={recommandMusicList[i].artist}
+                    pic={recommandMusicList[i].pic}
+                    album={recommandMusicList[i].album}
+                />,
             );
         }
         recommandMusic.push(<ImageZoom />);

@@ -388,6 +388,17 @@ export default function Player() {
         }, 3000);
     };
 
+    const delFromPlayList = (name) => {
+        const updatedPlayList = JSON.parse(localStorage.getItem('playList')).filter(
+            (item) => item.name !== name,
+        );
+        if (JSON.parse(localStorage.getItem('playList'))[currentSongIndex]?.name === name) {
+            switchSong((currentSongIndex + 1) % updatedPlayList.length);
+        }
+        setPlayList(updatedPlayList);
+        localStorage.setItem('playList', JSON.stringify(updatedPlayList));
+    };
+
     useEffect(() => {
         on('musicChange', musicChange);
         on('addToPlayList', addToPlayList);
@@ -395,6 +406,7 @@ export default function Player() {
         on('musicUpdata', musicUpdata);
         on('musicLoad', getRecommandMusic);
         on('playToList', playToList);
+        on('delFromPlayList', delFromPlayList);
         setPlayList(JSON.parse(localStorage.getItem('playList')) || []);
         setCurrentSongIndex(Number(localStorage.getItem('playListIndex')) || 0);
         return () => {
@@ -404,6 +416,7 @@ export default function Player() {
             off('musicUpdata', musicUpdata);
             off('musicLoad', getRecommandMusic);
             off('playToList', playToList);
+            off('delFromPlayList', delFromPlayList);
             if (autoScrollTimerRef.current) {
                 clearTimeout(autoScrollTimerRef.current);
             }
