@@ -37,7 +37,8 @@ export function Umami() {
                 async
                 defer
                 data-website-id={config.umami.id}
-                src={config.umami.scirpt}></script>
+                src={config.umami.scirpt}
+            ></script>
         </>
     );
 }

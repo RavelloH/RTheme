@@ -37,7 +37,7 @@ export default function Footer() {
                 id='icons-right'
                 className='loading loaded'
                 style={{ '--i': 1 }}
-                data-umami-event='footer-消息栏'
+                data-umami-event='footer-message-bar'
             >
                 <div id='message-bar'>
                     <a></a>

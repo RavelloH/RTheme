@@ -74,7 +74,7 @@ export default function LoadingShade() {
             action: 'firstLoadComplete',
         });
         if (analyzeURL(window.location.href, 'u') !== '') {
-            setTimeout(()=>loadURL(Base64.decode(analyzeURL(window.location.href, 'u'))),300);
+            setTimeout(() => loadURL(Base64.decode(analyzeURL(window.location.href, 'u'))), 300);
         }
         addEventListener('copy', (event) => {
             message.add('<a>已复制 &nbsp;<span class="i ri-file-copy-2-line"></span></a>', 2000);
@@ -132,6 +132,7 @@ export default function LoadingShade() {
         <>
             <div
                 id='shade-global'
+                data-umami-event='shade-global-click'
                 onClick={() => {
                     broadcast({
                         action: 'closeUserbar',
@@ -140,7 +141,8 @@ export default function LoadingShade() {
                         action: 'closeNoticebar',
                     });
                     emit('closeInfobar');
-                }}></div>
+                }}
+            ></div>
             <div id='load-shade' className='active'>
                 <div id='load-content'>
                     <hr />

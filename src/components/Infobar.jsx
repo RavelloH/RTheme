@@ -86,6 +86,7 @@ export default function Infobar() {
                 <div id='infobar-title'>{infoTitle}</div>
                 <div
                     id='infobar-toggle'
+                    data-umami-event='infobar-close'
                     onClick={() => {
                         emit('closeInfobar');
                     }}

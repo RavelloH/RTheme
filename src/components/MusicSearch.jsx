@@ -47,6 +47,7 @@ export default function MusicSearch() {
                             {isAdded ? (
                                 <span
                                     className='i ri-close-fill'
+                                    data-umami-event={`music-delete-${name}`}
                                     onClick={() => {
                                         emit('delFromPlayList', name);
                                         setIsAdded(false);
@@ -55,6 +56,7 @@ export default function MusicSearch() {
                             ) : (
                                 <span
                                     className='i ri-add-fill'
+                                    data-umami-event={`music-add-${name}`}
                                     onClick={() => {
                                         emit('addToPlayList', name, url, artist, pic, album);
                                         setIsAdded(true);
@@ -182,6 +184,7 @@ export default function MusicSearch() {
             <div className='form-control'>
                 <input
                     type='search'
+                    data-umami-event='music-search'
                     required={true}
                     onInput={() => musicSearch(document.querySelector('#music-search-input').value)}
                     onChange={() =>

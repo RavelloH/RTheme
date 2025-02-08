@@ -67,7 +67,12 @@ export default function Sidebar() {
                 <div id='sideinfo'>
                     <h3>{config.author}&apos;s</h3>
                     <h2>BLOG</h2>
-                    <a className='icons' href={'mailto:' + config.mail} id='email'>
+                    <a
+                        className='icons'
+                        href={'mailto:' + config.mail}
+                        id='email'
+                        data-umami-event='mail'
+                    >
                         {' '}
                         <span className='i ri-mail-add-fill'></span> &nbsp;{' '}
                         <span>

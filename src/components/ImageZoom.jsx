@@ -111,6 +111,7 @@ export default function ImageZoom() {
 
         const images = document.querySelectorAll('img[data-zoomable]');
         images.forEach((img) => {
+            img.setAttribute('data-umami-event', 'zoom-image');
             Object.assign(img.style, styles.zoomableImg);
             img.addEventListener('click', () => handleImageClick(img));
         });

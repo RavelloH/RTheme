@@ -11,7 +11,7 @@ export default function MenuLoader() {
     useEffect(() => {
         const timer = setInterval(() => {
             message.original = (
-                <a onClick={() => emit('openInfobar', 'menu')}>
+                <a onClick={() => emit('openInfobar', 'menu')} data-umami-event='post-menu'>
                     目录&nbsp;<span class='i ri-list-unordered'></span>
                 </a>
             );

@@ -15,7 +15,7 @@ let footerList = config.footer.map((item, index) => {
             onClick={item.additions.onclick || function () {}}
             aria-label={item.additions.ariaLabel}
             data-pjax-state=''
-            data-umami-event={item.additions.umamiEvent || ''}
+            data-umami-event={item.additions.umamiEvent || 'footer-icon'}
             target={item.additions.target || ''}
         >
             <span className={'i ' + item.icon}></span>

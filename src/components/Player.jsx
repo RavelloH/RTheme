@@ -474,6 +474,7 @@ export default function Player() {
                                 setAlbumHoverIndex(null);
                                 scrollToPlayingSong();
                             }}
+                            data-umami-event-music={`music-album-click-${musicItem?.name}`}
                             onClick={() => switchSong(currentSongIndex + index)}
                             className={index > 8 ? 'ready-to-show' : ''}
                             style={{
@@ -577,6 +578,7 @@ export default function Player() {
                                             &nbsp;&nbsp;&nbsp;&nbsp;
                                             <span
                                                 className='ri-delete-bin-6-fill'
+                                                data-umami-event-music={`music-delete-${item.name}`}
                                                 onClick={() => {
                                                     if (idx === currentSongIndex) {
                                                         switchSong(
@@ -595,6 +597,7 @@ export default function Player() {
                                             ></span>
                                             <span
                                                 className='ri-play-fill'
+                                                data-umami-event-music={`music-play-${item.name}`}
                                                 onClick={() => switchSong(idx)}
                                             ></span>
                                         </span>
@@ -645,6 +648,7 @@ export default function Player() {
                 <div id='music-operation'>
                     <span>
                         <span
+                            data-umami-event-music='music-list'
                             onClick={() => {
                                 emit('closeInfobar');
                                 setTimeout(() => {
@@ -658,6 +662,7 @@ export default function Player() {
 
                     <span>
                         <span
+                            data-umami-event-music='music-prev'
                             className='i ri-skip-back-line'
                             onClick={() => {
                                 switchSong(
@@ -668,6 +673,7 @@ export default function Player() {
                     </span>
                     <span>
                         <span
+                            data-umami-event-music='music-play'
                             id='music-button'
                             onClick={() => {
                                 musicPlay();
@@ -687,6 +693,7 @@ export default function Player() {
                     <span>
                         {isLoop ? (
                             <span
+                                data-umami-event-music='music-cancle-loop'
                                 className='i ri-repeat-one-line'
                                 onClick={() => {
                                     setIsLoop(false);
@@ -695,6 +702,7 @@ export default function Player() {
                             ></span>
                         ) : (
                             <span
+                                data-umami-event-music='music-set-loop'
                                 className='i ri-order-play-fill'
                                 onClick={() => {
                                     setIsLoop(true);

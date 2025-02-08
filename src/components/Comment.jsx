@@ -470,22 +470,42 @@ export default function Comment() {
                 <span className='i_small ri-chat-4-line'></span> 评论
             </p>
             <div id='comment-input'>
-                <textarea id='comment-textarea' placeholder='评论' />
+                <textarea
+                    id='comment-textarea'
+                    placeholder='评论'
+                    data-umami-event='comment-write'
+                />
                 <div id='comment-info'>
                     <div id='textarea-actions'>
-                        <a className='no-effect' onClick={() => {}}>
+                        <a
+                            className='no-effect'
+                            onClick={() => {}}
+                            data-umami-event='comment-markdown'
+                        >
                             <span className='i ri-markdown-line'></span>
                         </a>{' '}
                         &nbsp;
-                        <a className='no-effect' onClick={() => {}}>
+                        <a
+                            className='no-effect'
+                            onClick={() => {}}
+                            data-umami-event='comment-image-add'
+                        >
                             <span className='i ri-image-line'></span>
                         </a>{' '}
                         &nbsp;
-                        <a className='no-effect' onClick={() => {}}>
+                        <a
+                            className='no-effect'
+                            onClick={() => {}}
+                            data-umami-event='comment-emoji'
+                        >
                             <span className='i ri-emotion-happy-line'></span>
                         </a>{' '}
                         &nbsp;
-                        <a className='no-effect' onClick={() => getComment()}>
+                        <a
+                            className='no-effect'
+                            onClick={() => getComment()}
+                            data-umami-event='comment-reload'
+                        >
                             <span className='i ri-refresh-line'></span>
                         </a>
                     </div>
@@ -498,6 +518,7 @@ export default function Comment() {
                         id='comment-button'
                         className='big-button no-effect block'
                         onClick={() => sendComment()}
+                        data-umami-event='comment-send'
                     >
                         <span>登录后发送评论</span>
                     </a>

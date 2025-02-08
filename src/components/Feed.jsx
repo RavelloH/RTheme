@@ -5,12 +5,22 @@ export default function Feed() {
     return (
         <>
             <div className='full' id='feed-list'>
-                <a href={config.siteURL + 'feed.xml'} className='no-effect' target='_blank'>
+                <a
+                    href={config.siteURL + 'feed.xml'}
+                    className='no-effect'
+                    target='_blank'
+                    data-umami-event='feed-rss'
+                >
                     <div>
                         <span className='i ri-rss-fill'></span> <span>RSS</span>
                     </div>
                 </a>
-                <a href={config.siteURL + 'sitemap.xml'} className='no-effect' target='_blank'>
+                <a
+                    href={config.siteURL + 'sitemap.xml'}
+                    className='no-effect'
+                    target='_blank'
+                    data-umami-event='feed-sitemap'
+                >
                     <div>
                         <span className='i ri-road-map-fill'></span> <span>Sitemap</span>
                     </div>
@@ -22,6 +32,7 @@ export default function Feed() {
                         }
                     }}
                     className='no-effect'
+                    data-umami-event='feed-notice'
                     target='_blank'
                 >
                     <div>
@@ -33,6 +44,7 @@ export default function Feed() {
                 className='center'
                 id='mail-feed'
                 onClick={() => alert('哈哈，我还没写这个功能，你找到彩蛋了')}
+                data-umami-event='feed-mail'
             >
                 <span className='i ri-mail-add-fill'></span> <span>邮箱订阅</span>
             </div>

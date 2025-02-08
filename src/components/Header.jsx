@@ -24,6 +24,7 @@ export default function Header() {
                         src='/avatar.jpg'
                         alt='avatar'
                         placeholder='blur'
+                        data-umami-event='header-avatar'
                     />
                     {config.logo && (
                         <Image
@@ -45,6 +46,7 @@ export default function Header() {
                     id='toggle'
                     className='loading'
                     style={{ '--i': 0 }}
+                    data-umami-event='header-toggler'
                     onClick={() => broadcast({ action: 'toggleSidebar' })}
                 ></div>
             </div>

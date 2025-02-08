@@ -18,6 +18,7 @@ export default function Sideicon() {
                 <a
                     href='#'
                     id='icon-color'
+                    data-umami-event='sideicon-theme'
                     onClick={() => {
                         message.add(
                             <a>
@@ -27,55 +28,64 @@ export default function Sideicon() {
                         );
                         return false;
                     }}
-                    aria-label='color'>
+                    aria-label='color'
+                >
                     <span className='i ri-sun-line'></span>
                 </a>
             </li>
             <li>
                 <a
+                    data-umami-event='sideicon-music'
                     href='#music'
                     id='icon-music'
                     onClick={() => {
                         emit('openInfobar', 'music');
                         return false;
                     }}
-                    aria-label='music'>
+                    aria-label='music'
+                >
                     <span className='i ri-file-music-line'></span>
                 </a>
             </li>
             <li>
                 <a
+                    data-umami-event='sideicon-fullscreen'
                     href='#'
                     id='icon-fullscreen'
                     onClick={() => {
                         toggleFullScreen();
                         return false;
                     }}
-                    aria-label='fullscreen'>
+                    aria-label='fullscreen'
+                >
                     <span className='i ri-aspect-ratio-line'></span>
                 </a>
             </li>
             <li>
                 <a
+                    data-umami-event='sideicon-share'
                     href='#share'
                     id='icon-share'
                     onClick={() => {
                         emit('openInfobar', 'share');
                         return false;
                     }}
-                    aria-label='share'>
+                    aria-label='share'
+                >
                     <span className='i ri-share-box-line'></span>
                 </a>
             </li>
             <li>
                 <a
+                    data-umami-event='sideicon-setting'
                     href='#setting'
                     id='icon-setting'
                     onClick={() => {
                         emit('openInfobar', 'setting');
                         return false;
                     }}
-                    aria-label='setting'>
+                    aria-label='setting'
+                >
                     <span className='i ri-settings-4-line'></span>
                 </a>
             </li>

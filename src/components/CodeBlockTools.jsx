@@ -88,6 +88,7 @@ export default function CodeBlockTools() {
             const copyBtn = document.createElement('button');
             Object.assign(copyBtn.style, styles.copyBtn);
             copyBtn.innerHTML = '<span class="i_mini ri-file-copy-line"></span>';
+            copyBtn.setAttribute('data-umami-event', 'copy-code');
 
             // 添加复制功能
             copyBtn.onclick = async () => {

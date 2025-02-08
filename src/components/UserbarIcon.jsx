@@ -20,6 +20,7 @@ export default function UserbarIcon() {
                 <a
                     href='#message-setting'
                     id='icon-message-setting'
+                    data-umami-event='userbar-message-setting'
                     onClick={() => {
                         broadcast({ action: 'openMessageSetting' });
                     }}
@@ -32,6 +33,7 @@ export default function UserbarIcon() {
                 <a
                     href='#message'
                     id='icon-message'
+                    data-umami-event='userbar-message'
                     onClick={() => {
                         broadcast({ action: 'openMessage' });
                     }}
@@ -44,6 +46,7 @@ export default function UserbarIcon() {
                 <a
                     href='#'
                     id='icon-logout'
+                    data-umami-event='userbar-logout'
                     onClick={() => {
                         broadcast({
                             action: 'logout',

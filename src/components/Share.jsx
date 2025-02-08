@@ -422,6 +422,7 @@ export default function Share({ pathname }) {
                             rel='noopener noreferrer'
                             title={`分享到${platform}`}
                             className='share-button no-effect'
+                            data-umami-event={`share-${platform}`}
                             onClick={onClick}
                         >
                             <i className={`i ${icon}`}></i>

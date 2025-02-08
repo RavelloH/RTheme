@@ -8,6 +8,7 @@ export default function ShadeContent() {
     return (
         <div
             id='shade-context'
+            data-umami-event='shade-context'
             onClick={() => {
                 boardcast({ type: 'UI', action: 'closeSidebar' });
                 boardcast({ type: 'UI', action: 'closeUserbar' });

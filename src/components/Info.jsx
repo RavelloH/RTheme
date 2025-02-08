@@ -27,7 +27,13 @@ function structureUptime(name, status, url, index) {
         Icon = <span className='i ri-signal-wifi-error-fill'></span>;
     }
     return (
-        <a href={url} className='no-effect' target='_blank' key={index}>
+        <a
+            href={url}
+            className='no-effect'
+            target='_blank'
+            key={index}
+            data-umami-event={'uptime-click-' + name}
+        >
             <div>
                 {Icon} <span>{name}</span>
             </div>
