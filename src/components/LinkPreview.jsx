@@ -8,11 +8,14 @@ const styles = {
         background: 'rgba(0, 0, 0, 0.65)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
         border: '1px solid rgba(255, 255, 255, 0.1)',
         borderRadius: '12px',
         padding: '16px',
         maxWidth: '400px',
-        width: 'calc(100vw - 32px)', // 添加这行，确保在移动设备上有边距
+        width: 'calc(100vw - 32px)',
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
         zIndex: 1000,
         fontSize: '14px',
@@ -20,28 +23,51 @@ const styles = {
         opacity: 0,
         pointerEvents: 'none',
         color: '#fff',
+        textShadow: '0 1px 3px rgba(0, 0, 0, 0.9), 0 2px 6px rgba(0, 0, 0, 0.9)',
+        overflow: 'hidden',
+        '&.loading': {
+            backgroundImage: 'none !important',
+            animation: 'shimmer 2.5s infinite linear',
+            backgroundSize: '400% 100%',
+            background:
+                'linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 100%)',
+        },
     },
     header: {
         display: 'flex',
-        alignItems: 'center', // 确保垂直居中对齐
-        gap: '8px', // 减小间距使布局更紧凑
+        alignItems: 'center',
+        gap: '8px',
         marginBottom: '12px',
-        lineHeight: '20px', // 与favicon大小保持一致
+        lineHeight: '20px',
+        textShadow: '0 1px 3px rgba(0, 0, 0, 0.9), 0 2px 6px rgba(0, 0, 0, 0.9)',
     },
     title: {
         margin: '0',
         fontSize: '16px',
         fontWeight: 'bold',
         color: '#fff',
-        lineHeight: '20px', // 与favicon大小保持一致
-        display: 'flex', // 使用flex布局
-        alignItems: 'center', // 确保文字垂直居中
+        lineHeight: '20px',
+        display: 'flex',
+        alignItems: 'center',
+        textShadow: '0 1px 3px rgba(0, 0, 0, 0.9), 0 2px 6px rgba(0, 0, 0, 0.9)',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        maxWidth: '100%',
     },
     url: {
         color: 'rgba(255, 255, 255, 0.7)',
         fontSize: '13px',
         marginBottom: '12px',
         wordBreak: 'break-all',
+        textShadow: '0 1px 3px rgba(0, 0, 0, 0.9), 0 2px 6px rgba(0, 0, 0, 0.9)',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        display: '-webkit-box',
+        '-webkit-line-clamp': '2',
+        '-webkit-box-orient': 'vertical',
+        whiteSpace: 'normal',
+        maxHeight: '2.6em',
     },
     warning: {
         display: 'flex',
@@ -51,6 +77,7 @@ const styles = {
         fontSize: '12px',
         paddingTop: '12px',
         borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+        textShadow: '0 1px 3px rgba(0, 0, 0, 0.9), 0 2px 6px rgba(0, 0, 0, 0.9)',
     },
 };
 
@@ -61,7 +88,11 @@ export default function LinkPreview() {
 
         const createPreview = (link) => {
             const preview = document.createElement('div');
-            preview.className = 'link-preview';
+            preview.className = 'link-preview loading';
+            const bgImageUrl = `https://screenshot.ravelloh.top/?url=${encodeURIComponent(
+                link.href,
+            )}&viewport=1600x800&cache=2592000`;
+
             Object.assign(preview.style, styles.preview);
 
             const url = link.href;
@@ -90,6 +121,46 @@ export default function LinkPreview() {
                 </div>
             `;
 
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+
+                // 获取图片中心区域的亮度
+                const imageData = ctx.getImageData(
+                    img.width * 0.25,
+                    img.height * 0.25,
+                    img.width * 0.5,
+                    img.height * 0.5,
+                );
+                const data = imageData.data;
+                let brightness = 0;
+
+                for (let i = 0; i < data.length; i += 4) {
+                    brightness += data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+                }
+                brightness = brightness / (data.length / 4) / 255;
+
+                const textColor = brightness > 0.6 ? '#000' : '#fff';
+                const textShadow =
+                    brightness > 0.6
+                        ? '0 1px 3px rgba(255, 255, 255, 0.9), 0 2px 6px rgba(255, 255, 255, 0.9)'
+                        : '0 1px 3px rgba(0, 0, 0, 0.9), 0 2px 6px rgba(0, 0, 0, 0.9)';
+
+                preview.querySelectorAll('div, h4').forEach((el) => {
+                    el.style.color = textColor;
+                    el.style.textShadow = textShadow;
+                });
+
+                preview.classList.remove('loading');
+                preview.style.backgroundImage = `url("${bgImageUrl}")`;
+            };
+            img.src = bgImageUrl;
+
             return preview;
         };
 
@@ -101,11 +172,10 @@ export default function LinkPreview() {
             const previewRect = preview.getBoundingClientRect();
             const top = rect.top - previewRect.height - 10;
 
-            // 修改left计算逻辑，确保不会超出屏幕
             let left = rect.left + (rect.width - previewRect.width) / 2;
-            const minLeft = 16; // 左边距
-            const maxLeft = window.innerWidth - previewRect.width - 16; // 右边距
-            left = Math.max(minLeft, Math.min(left, maxLeft)); // 限制在可视区域内
+            const minLeft = 16;
+            const maxLeft = window.innerWidth - previewRect.width - 16;
+            left = Math.max(minLeft, Math.min(left, maxLeft));
 
             Object.assign(preview.style, {
                 top: `${top}px`,
