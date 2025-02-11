@@ -227,7 +227,8 @@ export default function Player() {
         if (lastFetchTime && currentTime - parseInt(lastFetchTime) < CACHE_DURATION) {
             const cachedMusic = localStorage.getItem('recommandMusic');
             if (cachedMusic) {
-                const playlistData = JSON.parse(localStorage.getItem('playList')) || JSON.parse(cachedMusic) || [];
+                const playlistData =
+                    JSON.parse(localStorage.getItem('playList')) || JSON.parse(cachedMusic) || [];
                 setPlayList(playlistData);
                 // 确保设置完播放列表后更新歌曲名
                 if (playlistData.length > 0) {
@@ -237,7 +238,7 @@ export default function Player() {
                     switchElementContent(
                         '#music-name',
                         <Virgule text={playlistData[initialIndex].name} />,
-                        0
+                        0,
                     );
                 }
                 return;
@@ -265,10 +266,10 @@ export default function Player() {
                     localStorage.setItem('playList', JSON.stringify(playLists));
                 }
                 localStorage.setItem('lastMusicFetchTime', currentTime.toString());
-                
+
                 const finalPlaylist = JSON.parse(localStorage.getItem('playList')) || playLists;
                 setPlayList(finalPlaylist);
-                
+
                 if (finalPlaylist.length > 0) {
                     const initialIndex = Number(localStorage.getItem('playListIndex')) || 0;
                     setCurrentSongIndex(initialIndex);
@@ -276,7 +277,7 @@ export default function Player() {
                     switchElementContent(
                         '#music-name',
                         <Virgule text={finalPlaylist[initialIndex].name} />,
-                        0
+                        0,
                     );
                 }
             });
@@ -453,7 +454,10 @@ export default function Player() {
         if (document.querySelector('#music-name').innerText == playList[currentSongIndex]?.name) {
             return;
         }
-        localStorage.setItem('playListIndex', localStorage.getItem("playListIndex") || currentSongIndex);
+        localStorage.setItem(
+            'playListIndex',
+            localStorage.getItem('playListIndex') || currentSongIndex,
+        );
         switchElementContent(
             '#music-name',
             <Virgule
