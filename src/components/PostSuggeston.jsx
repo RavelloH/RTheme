@@ -14,28 +14,27 @@ await prisma.$disconnect();
 
 let previousArticlesUrl, nextArticlesUrl, previousArticlesTitle, nextArticlesTitle;
 
-export default function PostSuggestion(parmas) {
+export default function PostSuggestion(params) {
     for (let i = 0; i < posts.length; i++) {
-        if (posts[i].name == parmas.name) {
+        if (posts[i].name == params.name) {
             if (i == 0) {
                 previousArticlesUrl = null;
-                nextArticlesUrl = posts[i + 1].name;
+                nextArticlesUrl = posts[i + 1] ? posts[i + 1].name : null;
                 previousArticlesTitle = null;
-                nextArticlesTitle = posts[i + 1].title;
+                nextArticlesTitle = posts[i + 1] ? posts[i + 1].title : null;
             } else if (i == posts.length - 1) {
-                previousArticlesUrl = posts[i - 1].name;
+                previousArticlesUrl = posts[i - 1] ? posts[i - 1].name : null;
                 nextArticlesUrl = null;
-                previousArticlesTitle = posts[i - 1].title;
+                previousArticlesTitle = posts[i - 1] ? posts[i - 1].title : null;
                 nextArticlesTitle = null;
             } else {
-                previousArticlesUrl = posts[i - 1].name;
-                nextArticlesUrl = posts[i + 1].name;
-                previousArticlesTitle = posts[i - 1].title;
-                nextArticlesTitle = posts[i + 1].title;
+                previousArticlesUrl = posts[i - 1] ? posts[i - 1].name : null;
+                nextArticlesUrl = posts[i + 1] ? posts[i + 1].name : null;
+                previousArticlesTitle = posts[i - 1] ? posts[i - 1].title : null;
+                nextArticlesTitle = posts[i + 1] ? posts[i + 1].title : null;
             }
         }
     }
-
     return (
         <>
             <div id='more-articles'>

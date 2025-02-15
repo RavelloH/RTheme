@@ -7,7 +7,63 @@ import Link from 'next/link';
 import Image from 'next/image';
 import formatDateWithTimeZone from '@/utils/time';
 import NotFound from '@/app/not-found';
-import { Base64 } from 'js-base64';
+import dynamic from 'next/dynamic';
+import Shiki from '@shikijs/markdown-it';
+import MarkdownIt from 'markdown-it';
+import MenuLoader from '@/components/MenuLoader';
+import ImageZoom from '@/components/ImageZoom';
+import LinkPreview from '@/components/LinkPreview';
+import CodeBlockTools from '@/components/CodeBlockTools';
+
+const PageVisitors = dynamic(() => import('@/components/PageVisitors'), { ssr: false });
+
+const md = MarkdownIt({ html: true });
+md.use(
+    await Shiki({
+        themes: {
+            light: 'dark-plus',
+            dark: 'dark-plus',
+        },
+    }),
+);
+
+// 处理 h1 到 h6 标签
+md.renderer.rules.heading_open = function (tokens, idx, options, env, self) {
+    const level = tokens[idx].tag.slice(1);
+    const title = tokens[idx + 1].content;
+    const slug = title.replace(/\s+/g, '-').toLowerCase();
+    return `<h${level}><a href="#${slug}" id="${slug}" title="${title}" onclick="window.location.hash=this.getAttribute('href')">`;
+};
+
+md.renderer.rules.heading_close = function (tokens, idx) {
+    const level = tokens[idx].tag.slice(1);
+    return `</a></h${level}>`;
+};
+
+md.renderer.rules.image = function (tokens, idx, options, env, self) {
+    const src = tokens[idx].attrGet('src');
+    const alt = tokens[idx].content;
+    return `
+        <div class="imgbox">
+            <img src="${src}" alt="${alt}" loading="lazy" data-zoomable="true">
+            <span>${alt}</span>
+        </div>
+    `;
+};
+md.renderer.rules.link_open = function (tokens, idx, options, env, self) {
+    const token = tokens[idx];
+    let href = token.attrGet('href');
+    if (href) {
+        if (href.startsWith('#')) {
+            token.attrSet('onclick', "window.location.hash=this.getAttribute('href')");
+        } else if (href.startsWith('http')) {
+            if (!config.siteUrl || !href.startsWith(config.siteUrl)) {
+                token.attrSet('target', '_blank');
+            }
+        }
+    }
+    return self.renderToken(tokens, idx, options);
+};
 
 let title;
 
@@ -86,6 +142,9 @@ export default async function Post(params) {
 
     return (
         <article>
+            <ImageZoom />
+            <LinkPreview />
+            <CodeBlockTools />
             <div id='articles-header'>
                 <h1>
                     <a href={'/posts/' + post.name}>{post.title}</a>
@@ -98,20 +157,32 @@ export default async function Post(params) {
                     {createCategory(post.category)} {' • '}
                     <span className='ri-t-box-line'></span>{' '}
                     <span id='textLength'>{post.content.length}字</span>
-                    {/* {' • '}<span className='ri-search-eye-line'></span> <span id='pageVisitors'>---</span> */}
+                    {' • '}
+                    <span className='ri-search-eye-line'></span>{' '}
+                    <PageVisitors url={'/posts/' + post.name} />
                 </p>
                 {createTag(post.tag)}
                 <hr />
             </div>
 
-            <div id='articles-body'>
-                <MDXRemote source={post.content.replaceAll('{', '\\{')} components={{ a: Link }} />
+            <div
+                id='articles-body'
+                style={{
+                    maxWidth: '1000px',
+                    margin: '0 auto',
+                }}
+            >
+                <div dangerouslySetInnerHTML={{ __html: md.render(post.content) }} />
             </div>
             <div id='articles-footer'>
                 <hr />
                 <div className='articles-footer-cc'>
                     <span className='i_small ri-information-line'></span> 原创内容使用{' '}
-                    <a href='https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans' target='_blank' className='no-effect'>
+                    <a
+                        href='https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans'
+                        target='_blank'
+                        className='no-effect'
+                    >
                         <span className='ri-creative-commons-line'></span>
                         <span className='ri-creative-commons-nc-line'></span>
                         <span className='ri-creative-commons-nd-line'></span>知识共享
@@ -119,15 +190,23 @@ export default async function Post(params) {
                     </a>
                     协议授权。转载请注明出处。
                 </div>
-                {(post.createdAt !== post.updatedAt) ? <span><span className='ri-edit-box-line'></span> 最后编辑于 {formatDateWithTimeZone(post.updatedAt,-8)}</span> : ""}
+                {post.createdAt !== post.updatedAt ? (
+                    <span>
+                        <span className='ri-edit-box-line'></span> 最后编辑于{' '}
+                        {formatDateWithTimeZone(post.updatedAt, -8)}
+                    </span>
+                ) : (
+                    ''
+                )}
                 <div id='blockchain-data' className='center'>
                     <br />
-                    <span className='barcode one-line'>{Base64.encode(post.name)}</span>
+                    <span className='barcode one-line'>{post.id}</span>
                 </div>
                 <PostSuggestion name={post.name} />
                 <br />
                 <br />
                 <Comment />
+                <MenuLoader />
             </div>
         </article>
     );
@@ -147,9 +226,9 @@ export async function generateMetadata({ params }) {
     });
     await prisma.$disconnect();
     if (!post) {
-        return  config.siteName
+        return config.siteName;
     }
     return {
-        title: post.title + ' | ' + config.siteName,
+        title: post.title,
     };
 }

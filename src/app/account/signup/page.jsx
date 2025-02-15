@@ -7,10 +7,11 @@ import message from '@/utils/message';
 import config from '../../../../config';
 import objectToForm from '@/utils/objectToForm';
 import analyzeURL from '@/utils/analyzeURL';
+import loadURL from '@/utils/loadURL';
 
 function main() {
     if (cookie.getItem('usertoken')) {
-        window.location.href = `/user?uid=${token.read('uid')}`;
+        loadURL(`/user?uid=${token.read('uid')}`);
         return;
     }
     fetch(`/api/search/post`)
@@ -117,11 +118,12 @@ function signin() {
                 switchElementContent('#signup-button span', '注册成功，即将跳转至登录');
                 setTimeout(() => {
                     if (analyzeURL(window.location.href, 'redirect') !== '') {
-                        window.location.href =
+                        loadURL(
                             '/account/signin?redirect=' +
-                            analyzeURL(window.location.href, 'redirect');
+                                analyzeURL(window.location.href, 'redirect'),
+                        );
                     } else {
-                        window.location.href = '/account/signin';
+                        loadURL('/account/signin');
                     }
                 }, 3000);
             } else {

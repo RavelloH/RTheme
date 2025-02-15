@@ -1,15 +1,14 @@
-import config from '@/../config';
 import prisma from '@/app/api/_utils/prisma';
 
 export const metadata = {
-    title: '分类 \\ Categories | ' + config.siteName,
-    description: '欢迎来到我的博客，这里可以找到我的文章和作品。',
+    title: '分类 \\ Categories',
 };
 
-const postslength = await prisma.post.count();
+const postslength = await prisma.post.count({ where: { published: true } });
 
 const categories = await prisma.category.findMany({
     select: { name: true, post: true },
+    where: { post: { some: { published: true } } },
 });
 await prisma.$disconnect();
 

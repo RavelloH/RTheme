@@ -5,6 +5,7 @@ import switchElementContent from '@/utils/switchElement';
 import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 import objectToForm from '@/utils/objectToForm';
+import loadURL from '@/utils/loadURL';
 
 let postName, postTitle;
 
@@ -58,8 +59,7 @@ function contentEdit() {
                 <br />
                 <br />
                 <div style={{ margin: 'auto' }}>
-                    <div id='vditor' style={{ width: '100%' }}>
-                    </div>
+                    <div id='vditor' style={{ width: '100%' }}></div>
                 </div>
                 <br />
                 <div className='big-button' id='to-content-button' onClick={() => infoEdit()}>
@@ -144,7 +144,8 @@ function infoEdit() {
                     <div
                         className='big-button'
                         id='publish-button'
-                        onClick={() => submit('publish')}>
+                        onClick={() => submit('publish')}
+                    >
                         <span>发布</span>
                     </div>
                     <div className='big-button' id='draft-button' onClick={() => submit('draft')}>
@@ -228,19 +229,31 @@ function submit(mode) {
             draft: mode === 'draft',
         }),
     })
-    .then((response) => response.json())
-    .then((data) => {
+        .then((response) => response.json())
+        .then((data) => {
             if (data.message == '创建成功') {
                 if (mode == 'publish') {
-                    switchElementContent('#publish-button span', '发布成功，即将跳转...');
-                    setTimeout(() => {
-                        window.location.href = `/posts/${postName}`;
-                    }, 3000);
+                    // 触发重新部署的Hook
+                    fetch('/api/site/build', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: 'Bearer ' + token.get(),
+                        },
+                    })
+                        .then((response) => response.json())
+                        .then((data) => {
+                            // TODO: 重新部署模块即相关提示
+                            switchElementContent('#publish-button span', '发布成功，即将跳转...');
+                            setTimeout(() => {
+                                loadURL(`/posts/${postName}`);
+                            }, 3000);
+                        });
                 }
                 if (mode == 'draft') {
                     switchElementContent('#draft-button span', '保存成功，即将跳转...');
                     setTimeout(() => {
-                        window.location.href = `/manage/posts/draft/${postName}`;
+                        loadURL(`/manage/posts/draft/${postName}`);
                     }, 3000);
                 }
                 localStorage.clear();
@@ -373,7 +386,8 @@ export default function CreatePosts() {
                     <div
                         className='big-button'
                         id='to-content-button'
-                        onClick={() => contentEdit()}>
+                        onClick={() => contentEdit()}
+                    >
                         <span>下一步</span>
                     </div>
                 </div>

@@ -8,6 +8,7 @@ import prisma from '../../_utils/prisma';
 import auth from '../../_utils/auth';
 import qs from 'qs';
 import limitControl from '../../_utils/limitControl';
+import { refreshPosts } from '../../_utils/refresh';
 
 function convertToObjectArray(input) {
     if (!input) return [];
@@ -117,7 +118,7 @@ export async function POST(request) {
                     connectOrCreate: convertToObjectArray(category) || undefined,
                 },
                 updatedAt: time,
-                published: draft == "true"  ? false : true,
+                published: draft == 'true' ? false : true,
             },
         });
     } catch (error) {
@@ -139,5 +140,6 @@ export async function POST(request) {
         where: { post: { none: {} } },
     });
     limitControl.update(request);
+    refreshPosts();
     return Response.json({ message: '修改成功', update: filteredObject }, { status: 200 });
 }

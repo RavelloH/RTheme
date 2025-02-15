@@ -6,6 +6,7 @@ const config = {
     sign: 'Be Happy.', // 站点签名
     siteURL: 'https://lonelleaf.top/', // 站点地址,带有尾缀斜杠
     pwaStartURL: '/?mode=pwa', // PWA启动地址
+    lang: 'zh-CN', // 站点语言
     iconImage: 'icon.png', // 站点图标
     githubUserName: 'Lonelleaf', // github用户名
     mail: '2468360006@qq.com', // 邮箱
@@ -15,7 +16,10 @@ const config = {
     defaultScript: '<script>function main(){}</script>', // 默认站点脚本
     remotePath: '', // 远程资源路径，主站点不填
     trustDomain: ['lonelleaf.top'],
-    musicApiList: ['https://music.api.ravelloh.top/cloudsearch?keywords='],
+    musicApi: 'https://music.api.ravelloh.top/',
+    playList: '504715858',
+    screenshotApi: 'https://screenshot.ravelloh.top/',
+    twitterUsername: '@ravelohh',
     nav: [
         // 菜单导航设置
         {
@@ -135,12 +139,12 @@ const config = {
         },
 
         {
-            name: 'LOG IN',
+            name: 'SIGN IN',
             href: '/account/signin/',
             icon: 'ri-login-box-fill',
         },
         {
-            name: 'LOG UP',
+            name: 'SIGN UP',
             href: '/account/signup/',
             icon: 'ri-user-add-fill',
         },

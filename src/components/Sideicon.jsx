@@ -1,27 +1,31 @@
-import global from '../assets/js/Global';
+import { useEvent } from '@/store/useEvent';
+import message from '@/utils/message';
 
 export default function Sideicon() {
+    function toggleFullScreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    }
+    const { emit } = useEvent();
     return (
         <ul>
             <li>
                 <a
-                    href='#swap'
-                    id='icon-swap'
-                    onClick={() => {
-                        global.openInfoBar('swap');
-                        return false;
-                    }}
-                    aria-label='swap'
-                >
-                    <span className='i ri-swap-box-line'></span>
-                </a>
-            </li>
-            <li>
-                <a
                     href='#'
                     id='icon-color'
+                    data-umami-event='sideicon-theme'
                     onClick={() => {
-                        global.toggleThemeMode();
+                        message.add(
+                            <a>
+                                此功能尚在开发&nbsp;<span className='ri-alert-line'></span>
+                            </a>,
+                            1500,
+                        );
                         return false;
                     }}
                     aria-label='color'
@@ -31,10 +35,11 @@ export default function Sideicon() {
             </li>
             <li>
                 <a
+                    data-umami-event='sideicon-music'
                     href='#music'
                     id='icon-music'
                     onClick={() => {
-                        global.openInfoBar('music');
+                        emit('openInfobar', 'music');
                         return false;
                     }}
                     aria-label='music'
@@ -44,10 +49,11 @@ export default function Sideicon() {
             </li>
             <li>
                 <a
+                    data-umami-event='sideicon-fullscreen'
                     href='#'
                     id='icon-fullscreen'
                     onClick={() => {
-                        global.toggleFullScreen();
+                        toggleFullScreen();
                         return false;
                     }}
                     aria-label='fullscreen'
@@ -57,10 +63,11 @@ export default function Sideicon() {
             </li>
             <li>
                 <a
+                    data-umami-event='sideicon-share'
                     href='#share'
                     id='icon-share'
                     onClick={() => {
-                        global.openInfoBar('share');
+                        emit('openInfobar', 'share');
                         return false;
                     }}
                     aria-label='share'
@@ -70,10 +77,11 @@ export default function Sideicon() {
             </li>
             <li>
                 <a
+                    data-umami-event='sideicon-setting'
                     href='#setting'
                     id='icon-setting'
                     onClick={() => {
-                        global.openInfoBar('setting');
+                        emit('openInfobar', 'setting');
                         return false;
                     }}
                     aria-label='setting'

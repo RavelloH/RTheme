@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 import tokenServer from '@/app/api/_utils/token';
 
 export const metadata = {
-    title: '草稿 \\ Draft | ' + config.siteName,
+    title: '草稿 \\ Draft | ',
     description: '欢迎来到我的博客，这里可以找到我的文章和作品。',
 };
 

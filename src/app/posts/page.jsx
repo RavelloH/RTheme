@@ -1,11 +1,11 @@
 import prisma from '@/app/api/_utils/prisma';
 
-import config from '@/../config';
+import getTime from '@/utils/getTime';
 import Search from '@/components/Search';
+import Virgule from '@/components/Virgule';
 
 export const metadata = {
-    title: '文稿 \\ Posts | ' + config.siteName,
-    description: '欢迎来到我的博客，这里可以找到我的文章和作品。',
+    title: '文稿 \\ Posts',
 };
 
 function formatDate(dateStr) {
@@ -18,13 +18,13 @@ function formatDate(dateStr) {
 
 function createCategory(arr) {
     const elements = arr.map((item, index) => (
-        <a key={index} href={'/categories/' + item.name}>
+        <a key={2 * index} href={'/categories/' + item.name}>
             {item.name}
         </a>
     ));
     const joinedElements = elements.map((element, index) => {
         if (index > 0) {
-            return [<span key={index}>/</span>, element];
+            return [<span key={2 * index + 1}>/</span>, element];
         }
         return element;
     });
@@ -101,7 +101,13 @@ export default async function Posts() {
                     记录 & 索引所有文章。
                 </span>
                 <span className='virgule' id='index-info'>
-                    共索引 {posts.length} 篇文章。
+                    <Virgule
+                        text={`共索引 ${posts.length} 篇文章，最近更新于${getTime(
+                            'DD',
+                            posts[0].createdAt,
+                        )}天前`}
+                        timeout={1200}
+                    />
                 </span>
             </div>
             <div className='listlines' id='resultarea'>

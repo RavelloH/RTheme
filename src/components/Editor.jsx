@@ -5,6 +5,7 @@ import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 import objectToForm from '@/utils/objectToForm';
 import token from '@/utils/token';
+import loadURL from '@/utils/loadURL';
 
 let postTitle, postCategory, postTag, postName;
 
@@ -105,7 +106,8 @@ function infoEdit() {
                     <div
                         className='big-button'
                         id='publish-button'
-                        onClick={() => submit('publish')}>
+                        onClick={() => submit('publish')}
+                    >
                         <span>保存并发布</span>
                     </div>
                     <div className='big-button' id='draft-button' onClick={() => submit('draft')}>
@@ -153,13 +155,13 @@ function submit(mode) {
                 if (mode == 'publish') {
                     switchElementContent('#publish-button span', '发布成功，即将跳转...');
                     setTimeout(() => {
-                        window.location.href = `/posts/${postName}`;
+                        loadURL(`/posts/${postName}`);
                     }, 3000);
                 }
                 if (mode == 'draft') {
                     switchElementContent('#draft-button span', '保存成功，即将跳转...');
                     setTimeout(() => {
-                        window.location.href = `/manage/posts/draft/${postName}`;
+                        loadURL(`/manage/posts/draft/${postName}`);
                     }, 3000);
                 }
                 localStorage.clear();
@@ -301,7 +303,8 @@ export default function Editor(props) {
                     <div
                         className='big-button'
                         id='to-content-button'
-                        onClick={() => contentEdit(props)}>
+                        onClick={() => contentEdit(props)}
+                    >
                         <span>编辑正文</span>
                     </div>
                 </div>

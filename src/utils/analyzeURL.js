@@ -1,3 +1,5 @@
+import log from './log';
+
 function analyzeURL(url, target) {
     let urlObj = new URL(url);
     let queryString = urlObj.search;
@@ -9,6 +11,7 @@ function analyzeURL(url, target) {
     if (targetValue === null) {
         return '';
     }
+    log.info('<analyzeURL>', target, targetValue);
     return targetValue;
 }
 

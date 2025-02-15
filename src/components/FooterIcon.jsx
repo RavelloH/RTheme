@@ -1,20 +1,21 @@
 'use client';
-
+import { useState, useEffect } from 'react';
 import config from '../../config';
-import global from '@/assets/js/Global';
+import { useBroadcast } from '@/store/useBroadcast';
+import { useEvent } from '@/store/useEvent';
 
 let footerList = config.footer.map((item, index) => {
     return (
         <a
             className='loading loaded'
-            style={{ '--i': index + 2 }}
+            style={{ '--i': index + 3 }}
             key={index}
             href={item.href || ''}
             id={item.id}
             onClick={item.additions.onclick || function () {}}
             aria-label={item.additions.ariaLabel}
             data-pjax-state=''
-            data-umami-event={item.additions.umamiEvent || ''}
+            data-umami-event={item.additions.umamiEvent || 'footer-icon'}
             target={item.additions.target || ''}
         >
             <span className={'i ' + item.icon}></span>
@@ -23,6 +24,18 @@ let footerList = config.footer.map((item, index) => {
 });
 
 export default function FooterIcon() {
+    const [hasNewNotices, setHasNewNotices] = useState(false);
+
+    const broadcast = useBroadcast((state) => state.broadcast);
+    const { emit } = useEvent();
+
+    useEffect(() => {
+        setTimeout(() => {
+            const cacheData = JSON.parse(localStorage.getItem('noticeCache') || '{}');
+            setHasNewNotices(cacheData.unread && cacheData.unread.length > 0);
+        }, 2000);
+    }, []);
+
     return (
         <>
             <a
@@ -32,7 +45,7 @@ export default function FooterIcon() {
                 href='#info'
                 id='icon-about'
                 onClick={() => {
-                    global.openInfoBar('info');
+                    emit('openInfobar', 'info');
                     return false;
                 }}
                 aria-label='about this page'
@@ -41,6 +54,31 @@ export default function FooterIcon() {
                 target='_self'
             >
                 <span className={'i ' + 'ri-compass-discover-line'}></span>
+            </a>
+            <a
+                className={`loading loaded ${hasNewNotices ? 'highlight' : ''}`}
+                style={{ '--i': 2 }}
+                key={2}
+                onClick={() => {
+                    broadcast({ action: 'openNoticebar' });
+                    return false;
+                }}
+                href='#notice'
+                id='icon-notice'
+                aria-label='about this page'
+                data-pjax-state=''
+                data-umami-event='footer-关于'
+                target='_self'
+            >
+                <span
+                    className={`i ri-notification-2-line ${hasNewNotices ? 'breathI' : ''}`}
+                    id='icon-notice-span'
+                ></span>
+                {hasNewNotices ? (
+                    <span className='ripple active'></span>
+                ) : (
+                    <span className='ripple'></span>
+                )}
             </a>
             {footerList}
 
@@ -51,7 +89,7 @@ export default function FooterIcon() {
                 href='#rss'
                 id='icon-rss'
                 onClick={() => {
-                    global.openInfoBar('feed');
+                    emit('openInfobar', 'rss');
                     return false;
                 }}
                 aria-label='my rss'

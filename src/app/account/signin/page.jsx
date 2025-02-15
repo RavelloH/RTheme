@@ -7,10 +7,11 @@ import message from '@/utils/message';
 import config from '../../../../config';
 import objectToForm from '@/utils/objectToForm';
 import analyzeURL from '@/utils/analyzeURL';
+import loadURL from '@/utils/loadURL';
 
 function main() {
     if (cookie.getItem('usertoken')) {
-        window.location.href = `/user?uid=${token.read('uid')}`;
+        loadURL(`/user?uid=${token.read('uid')}`);
         return;
     }
     if (cookie.getItem('username')) {
@@ -98,20 +99,23 @@ function signin() {
 
                 setTimeout(() => {
                     if (analyzeURL(window.location.href, 'redirect') !== '') {
-                        window.location.href = analyzeURL(window.location.href, 'redirect');
+                        loadURL(analyzeURL(window.location.href, 'redirect'));
                     } else {
-                        window.location.href = `/user?uid=${token.read('uid')}`;
+                        loadURL(`/user?uid=${token.read('uid')}`);
                     }
                 }, 3000);
             } else {
                 switchElementContent('#login-button span', data.message);
+                setTimeout(() => {
+                    document.querySelector('#login-button').classList.remove('block');
+                    document.querySelector('#login-button').onclick = () => signin();
+                    switchElementContent('#login-button span', '登录');
+                }, 5000);
             }
         })
         .catch((e) => {
             switchElementContent('#login-button span', '无法与登录服务器建立连接');
             console.log(e);
-        })
-        .finally(() => {
             setTimeout(() => {
                 document.querySelector('#login-button').classList.remove('block');
                 document.querySelector('#login-button').onclick = () => signin();

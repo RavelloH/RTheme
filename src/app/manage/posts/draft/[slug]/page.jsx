@@ -101,7 +101,7 @@ export default async function DraftContent(params) {
             </div>
 
             <div id='articles-body'>
-                <MDXRemote source={post.content.replaceAll('{', '\\{')} components={{ a: Link }} />
+                <MDXRemote source={post.content} components={{ a: Link }} />
             </div>
             <div id='articles-footer'>
                 <hr />
@@ -110,7 +110,8 @@ export default async function DraftContent(params) {
                     <a
                         href='https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans'
                         target='_blank'
-                        className='no-effect'>
+                        className='no-effect'
+                    >
                         <span className='ri-creative-commons-line'></span>
                         <span className='ri-creative-commons-nc-line'></span>
                         <span className='ri-creative-commons-nd-line'></span>知识共享
@@ -137,7 +138,6 @@ export default async function DraftContent(params) {
                 </div>
                 <br />
                 <br />
-                <Comment />
             </div>
         </article>
     );
@@ -160,6 +160,6 @@ export async function generateMetadata({ params }) {
         return config.siteName;
     }
     return {
-        title: post.title + ' | ' + config.siteName,
+        title: post.title,
     };
 }

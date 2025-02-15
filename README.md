@@ -25,6 +25,8 @@
 - **低成本**：使用vercel或neon提供的免费postgres数据库可免费部署。
 - **过渡自然**：元素切换使用自研淡入淡出函数处理，过渡自然流畅。
 - **SEO友好**：自带RSS与Sitemap，SEO友好。
+- **消息中心**: 自带消息中心，显示各类通知(评论/回复/站内信)
+- **自带评论系统**: 无需其他任何第三方评论系统，自带markdown语法支持
   
 ## 预览  
 
@@ -45,6 +47,10 @@
 ![Screenshot_20230819_163646_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/293cb420-25a7-4b34-8900-b137f107c196)
 ![Screenshot_20230819_163712_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/ee264ec0-58c4-4169-a7c0-2febfabf5f93)
 ![Screenshot_20230819_163426_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/b38705ad-945e-4fd7-8ec6-93537ff52153)
+![image](https://github.com/user-attachments/assets/a5e3b8ec-4f66-42be-949a-b168f6d0ad3c)
+![image](https://github.com/user-attachments/assets/700f7a20-592f-4199-b84f-62331a2c9303)
+
+
 
 
 ## 特性  

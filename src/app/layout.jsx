@@ -11,25 +11,77 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Sidebar from '@/components/Sidebar';
 import Infobar from '@/components/Infobar';
-import Userbar from '@/components/Userbar.jsx';
+import Userbar from '@/components/Userbar';
+import ShadeContent from '@/components/ShadeContent';
 
-import '@/assets/js/Global';
+import Pjax from '@/components/Pjax';
+import Noticebar from '@/components/Noticebar';
+import Starter from '@/components/Starter';
+
+import { Umami } from '@/components/PageVisitors';
 
 export const metadata = {
-    title: config.siteName,
+    title: {
+        template: '%s | ' + config.siteName,
+        default: config.siteName,
+    },
+    siteName: config.siteName,
+    generator: 'RTheme',
+    referrer: 'origin-when-cross-origin',
     description: config.description,
+    metadataBase: new URL(config.siteURL),
+    alternates: {
+        types: {
+            'application/rss+xml': [{ url: 'feed.xml', title: 'RSS 订阅' }],
+        },
+    },
+    openGraph: {
+        title: {
+            template: '%s | ' + config.siteName,
+            default: config.siteName,
+        },
+        description: config.description,
+        siteName: config.siteName,
+        images: [
+            {
+                url: `${config.screenshotApi}?url=${config.siteURL}&viewport=1600x800&waitUntil=networkidle0`,
+                height: 800,
+            },
+            {
+                url: `${config.screenshotApi}?url=${config.siteURL}&viewport=600x800&waitUntil=networkidle0`,
+                width: 600,
+                height: 800,
+            },
+        ],
+        locale: config.lang,
+        type: 'website',
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: {
+            template: '%s | ' + config.siteName,
+            default: config.siteName,
+        },
+        description: config.siteName,
+        creator: config.twitterUsername,
+        images: {
+            url: `${config.screenshotApi}?url=${config.siteURL}&viewport=1600x800&waitUntil=networkidle0`,
+            alt: config.siteShortname + "'s Screenshot",
+        },
+    },
 };
 
 export default function RootLayout({ children }) {
     return (
         <html lang='zh'>
             <head></head>
-
+            <Starter />
             <body>
                 <section id='showcase'>
                     <LoadingShade />
                     <Header />
-                    <div id='shade-context'></div>
+                    <ShadeContent />
+                    <Pjax />
                     <div id='main' className='loading'>
                         <div id='viewmap'>{children}</div>
                     </div>
@@ -44,8 +96,10 @@ export default function RootLayout({ children }) {
                 <section id='userbar'>
                     <Userbar />
                 </section>
+                <Noticebar />
                 <SpeedInsights />
                 <Analytics />
+                <Umami />
             </body>
         </html>
     );

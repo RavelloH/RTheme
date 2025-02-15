@@ -1,11 +1,22 @@
+/* eslint-disable @next/next/no-img-element */
+'use client';
+
 import Nav from './Nav';
 import config from '../../config';
 import Image from 'next/image';
+import { useBroadcast } from '@/store/useBroadcast';
 
 export default function Header() {
+    const broadcast = useBroadcast((state) => state.broadcast);
+
     return (
         <header>
-            <div id='logo' className='loading' style={{ '--i': 1 }}>
+            <div
+                id='logo'
+                className='loading'
+                style={{ '--i': 1 }}
+                onClick={() => broadcast({ action: 'openUserbar' })}
+            >
                 <a href='#userbar'>
                     <img
                         id='avatar'
@@ -13,6 +24,7 @@ export default function Header() {
                         src='/avatar.jpg'
                         alt='avatar'
                         placeholder='blur'
+                        data-umami-event='header-avatar'
                     />
                     {config.logo && (
                         <Image
@@ -30,7 +42,13 @@ export default function Header() {
                 <div id='navs'>
                     <Nav />
                 </div>
-                <div id='toggle' className='loading' style={{ '--i': 0 }}></div>
+                <div
+                    id='toggle'
+                    className='loading'
+                    style={{ '--i': 0 }}
+                    data-umami-event='header-toggler'
+                    onClick={() => broadcast({ action: 'toggleSidebar' })}
+                ></div>
             </div>
         </header>
     );

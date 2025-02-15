@@ -3,6 +3,8 @@
 import cookie from '@/assets/js/lib/cookie';
 import { Base64 } from 'js-base64';
 import objectToForm from './objectToForm';
+import message from './message';
+import { useBroadcast } from '@/store/useBroadcast';
 
 // Base64模块
 const base = {
@@ -55,10 +57,19 @@ const token = {
                 .then((response) => response.json())
                 .then((data) => {
                     if (data.token) {
-                        cookie.setItem('usertoken', data.token, data.info.exp-data.info.iat);
+                        cookie.setItem(
+                            'usertoken',
+                            data.token,
+                            Number(token.read('exp') - token.read('iat')),
+                        );
+                        message.success('已使用当前Token重新登陆');
                         resolve(data.token);
                     } else {
-                        console.log(data.message);
+                        message.error(data.message);
+                        const broadcast = useBroadcast.getState().broadcast;
+                        broadcast({
+                            action: 'tokenError',
+                        });
                     }
                 })
                 .catch((e) => {

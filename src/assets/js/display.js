@@ -618,48 +618,6 @@ function updateTitle() {
         });
 }
 
-// 目录重组
-function updateMenu() {
-    var menuStructure = "<div id='articles-menu'>";
-    let titleSet = document.querySelectorAll(
-        '#articles-header h1 , #articles-body h2 , #articles-body h3 , #articles-body h4 , #articles-body h5 , #articles-body h6',
-    );
-    titleSet.forEach((element) => {
-        switch (element.outerHTML.substring(0, 3)) {
-            case '<h1':
-                menuStructure += `<br><span class='t1 center'>${element.innerHTML}</span><hr>`;
-                break;
-            case '<h2':
-                menuStructure += `<span class='t2'>${
-                    '&nbsp;'.repeat(2) + '<span>' + element.innerHTML + '</span>'
-                }</span></br>`;
-                break;
-            case '<h3':
-                menuStructure += `<span class='t3'>${
-                    '&nbsp;'.repeat(4) + '<span>' + element.innerHTML + '</span>'
-                }</span></br>`;
-                break;
-            case '<h4':
-                menuStructure += `<span class='t4'>${
-                    '&nbsp;'.repeat(6) + '<span>' + element.innerHTML + '</span>'
-                }</span></br>`;
-                break;
-            case '<h5':
-                menuStructure += `<span class='t5'>${
-                    '&nbsp;'.repeat(8) + '<span>' + element.innerHTML + '</span>'
-                }</span></br>`;
-                break;
-            case '<h6':
-                menuStructure += `<span class='t6'>${
-                    '&nbsp;'.repeat(10) + '<span>' + element.innerHTML + '</span>'
-                }</span></br>`;
-                break;
-        }
-    });
-    menuStructure += '</div>';
-    return menuStructure;
-}
-
 // 预加载图片
 function prefetchImg() {
     if (cookie.getItem('settingEnableImgPrefetch') == 'false') {
@@ -668,59 +626,6 @@ function prefetchImg() {
     document.querySelectorAll('#viewmap img').forEach((element) => {
         prefetch(element.getAttribute('src'));
     });
-}
-
-// 检测元素是否可见
-function isElementVisible(element) {
-    const rect = element.getBoundingClientRect();
-    const vWidth = window.innerWidth || document.documentElement.clientWidth;
-    const vHeight = window.innerHeight || document.documentElement.clientHeight;
-    if (rect.right < 0 || rect.bottom < 0 || rect.left > vWidth || rect.top > vHeight) {
-        return false;
-    }
-    return true;
-}
-
-// 相对高度差
-function getHeightDifferent(element) {
-    const rect = element.getBoundingClientRect();
-    const vWidth = document.querySelector('#viewmap article').clientWidth;
-    const vHeight = document.querySelector('#viewmap article').clientHeight;
-
-    if (rect.right < 0 || rect.bottom < 0 || rect.left > vWidth || rect.top > vHeight) {
-        return rect.top;
-    }
-
-    return 0;
-}
-
-// 目录高亮
-function highlightMenu() {
-    if (cookie.getItem('settingEnableMenuHighlight') == 'false') {
-        return false;
-    }
-    document.querySelectorAll('#articles-menu *.active').forEach((element) => {
-        element.classList.remove('active');
-    });
-    const titleList = document.querySelectorAll(
-        '#articles-body h2 , #articles-body h3 , #articles-body h4 , #articles-body h5 , #articles-body h6',
-    );
-    for (let i = 0; i < titleList.length; i++) {
-        let heights = getHeightDifferent(titleList[i]);
-        if (heights == 0) {
-            document
-                .querySelector(`#articles-menu #${titleList[i].firstChild.id}`)
-                .classList.add('active');
-            return titleList[i];
-        }
-        if (heights > 0) {
-            document
-                .querySelector(`#articles-menu #${titleList[i - 1].firstChild.id}`)
-                .classList.add('active');
-            return titleList[i - 1];
-        }
-    }
-    return false;
 }
 
 // 重置筛选
@@ -826,6 +731,8 @@ function isEllipsisActive(e) {
     return e.offsetWidth < e.scrollWidth;
 }
 
-export default {
+const displayModule = {
     resetTagList,
 };
+
+export default displayModule;
