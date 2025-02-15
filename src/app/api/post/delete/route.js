@@ -9,6 +9,7 @@ import prisma from '../../_utils/prisma';
 import auth from '../../_utils/auth';
 import qs from 'qs';
 import limitControl from '../../_utils/limitControl';
+import { refreshPosts } from '../../_utils/refresh';
 
 export async function POST(request) {
     const time = new Date().toISOString();
@@ -80,5 +81,6 @@ export async function POST(request) {
     });
 
     limitControl.update(request);
+    refreshPosts();
     return Response.json({ message: '删除成功' }, { status: 200 });
 }

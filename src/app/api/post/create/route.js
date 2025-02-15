@@ -9,6 +9,7 @@ import prisma from '../../_utils/prisma';
 import auth from '../../_utils/auth';
 import qs from 'qs';
 import limitControl from '../../_utils/limitControl';
+import { refreshPosts } from '../../_utils/refresh';
 
 function convertToObjectArray(input) {
     const arr = input.split(' ');
@@ -90,5 +91,6 @@ export async function POST(request) {
     }
 
     limitControl.update(request);
+    refreshPosts();
     return Response.json({ message: '创建成功' }, { status: 200 });
 }
