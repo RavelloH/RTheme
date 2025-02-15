@@ -19,7 +19,7 @@ const config = {
     musicApi: 'https://music.api.ravelloh.top/',
     playList: '504715858',
     screenshotApi: 'https://screenshot.ravelloh.top/',
-    twitterUsername: '@ravelohh',
+    twitterUsername: '@lonelleaf',
     nav: [
         // 菜单导航设置
         {
@@ -58,29 +58,7 @@ const config = {
             id: 'nav-about',
         },
     ],
-    footer: [
-        // footer icon
-        {
-            id: 'icon-github',
-            href: 'https://github.com/ravelloh',
-            icon: 'ri-github-line',
-            additions: {
-                target: '_blank',
-                dataUmamiEvent: 'footer-Github',
-                ariaLabel: 'my github',
-            },
-        },
-        {
-            id: 'icon-studio',
-            href: 'https://xeocnet-studio.github.io/',
-            icon: 'ri-building-2-line',
-            additions: {
-                target: '_blank',
-                dataUmamiEvent: 'footer-工作室',
-                ariaLabel: 'my studio',
-            },
-        },
-    ],
+    footer: [],
     menu: [
         //menu items
         {
@@ -150,39 +128,14 @@ const config = {
         },
         {
             name: 'ANALYTICS',
-            href: 'https://analytics.ravelloh.top/share/4kyzPMCCpfG9Vd1k/blog',
+            href: 'https://analytics.ravelloh.top/share/mnUyV0qRmq3Ix5aV/lonelleaf.github.io',
             icon: 'ri-bar-chart-box-fill',
-        },
-        {
-            name: 'DRIVE',
-            href: 'https://drive.ravelloh.top/',
-            icon: 'ri-hard-drive-3-fill',
-        },
-        {
-            name: 'UPTIME',
-            href: 'https://monitor.ravelloh.top/',
-            icon: 'ri-timer-flash-fill',
-        },
-        {
-            name: 'CHATROOM',
-            href: 'https://chat.ravelloh.top/ravelloh',
-            icon: 'ri-video-chat-fill',
-        },
-        {
-            name: 'MUSIC',
-            href: 'https://music.ravelloh.top/',
-            icon: 'ri-album-fill',
-        },
-        {
-            name: 'PSGAME',
-            href: 'https://psgamespider.ravelloh.top/',
-            icon: 'ri-playstation-fill',
         },
     ],
     umami: {
         url: 'https://analytics.ravelloh.top/',
         scirpt: 'https://analytics.ravelloh.top/script.js',
-        id: 'f47e2dc3-f6bf-4d7c-b311-7467bb1b17e5',
+        id: '6865705c-8253-4ba5-a84b-79282d81fb6f',
         token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ3ZWJzaXRlSWQiOiJmNDdlMmRjMy1mNmJmLTRkN2MtYjMxMS03NDY3YmIxYjE3ZTUiLCJpYXQiOjE3MjA3OTc2MTB9.F2K7fuCqjUCbIQDm7ygX98kRTCdkusHpgv27qQ4YZSY',
         apiUrl: 'https://analytics.api.ravelloh.top/',
     },
