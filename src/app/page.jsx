@@ -16,7 +16,7 @@ export default function Home() {
                 </span>
             </h2>
             <h3 className='loading' style={{ '--i': 1 }}>
-                RavelloH&apos;s 「BLOG」
+                Lonelleaf&apos;s 「BLOG」
             </h3>
             <span id='jumping' className='virgule loading' style={{ '--i': 3 }}>
                 <Virgule text={'## ' + config.siteHelloWords} interval={20} timeout={1500} />
