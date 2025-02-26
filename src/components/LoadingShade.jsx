@@ -9,6 +9,7 @@ import { useEvent } from '@/store/useEvent';
 import loadURL from '@/utils/loadURL';
 import { Base64 } from 'js-base64';
 import analyzeURL from '@/utils/analyzeURL';
+import message from '@/utils/message';
 
 export default function LoadingShade() {
     const registerBroadcast = useBroadcast((state) => state.registerCallback);
@@ -77,16 +78,36 @@ export default function LoadingShade() {
             setTimeout(() => loadURL(Base64.decode(analyzeURL(window.location.href, 'u'))), 300);
         }
         addEventListener('copy', (event) => {
-            message.add('<a>已复制 &nbsp;<span class="i ri-file-copy-2-line"></span></a>', 2000);
+            message.add(
+                <a>
+                    已复制 &nbsp;<span className='i ri-file-copy-2-line'></span>
+                </a>,
+                2000,
+            );
         });
         addEventListener('cut', (event) => {
-            message.add('<a>已剪切 &nbsp;<span class="i ri-scissors-cut-line"></span></a>', 2000);
+            message.add(
+                <a>
+                    已剪切 &nbsp;<span className='i ri-scissors-cut-line'></span>
+                </a>,
+                2000,
+            );
         });
         addEventListener('paste', (event) => {
-            message.add('<a>已粘贴 &nbsp;<span class="i ri-chat-check-line"></span></a>', 2000);
+            message.add(
+                <a>
+                    已粘贴 &nbsp;<span className='i ri-chat-check-line'></span>
+                </a>,
+                2000,
+            );
         });
         addEventListener('offline', (event) => {
-            message.add('<a>互联网连接已断开 <span class="i ri-cloud-off-line"></span></a>', 5000);
+            message.add(
+                <a>
+                    互联网连接已断开 <span className='i ri-cloud-off-line'></span>
+                </a>,
+                5000,
+            );
         });
         window.onerror = function (msg, url, lineNo, columnNo, error) {
             var string = msg.toLowerCase();

@@ -608,7 +608,8 @@
         }
     }
 
-    .user-list, .chat-area {
+    .user-list,
+    .chat-area {
         position: absolute;
         top: 0;
         left: 0;
@@ -659,7 +660,7 @@
     }
 
     /* 其他移动端样式保持不变 */
-  
+
     /* 修复：确保添加按钮在移动设备上保持圆形 */
     .add-conversation-btn {
         width: 32px !important;
@@ -670,7 +671,7 @@
         align-items: center;
         justify-content: center;
     }
-  
+
     /* 修复小屏幕高度问题 */
     .message-container {
         flex-direction: column;
@@ -683,7 +684,8 @@
     }
 
     /* 调整用户列表和聊天区域的绝对定位属性 */
-    .user-list, .chat-area {
+    .user-list,
+    .chat-area {
         position: absolute;
         top: 0;
         left: 0;
@@ -739,7 +741,7 @@
     }
 
     .chat-area {
-        height: 100%
+        height: 100%;
     }
 
     .back-button {
@@ -749,21 +751,22 @@
     .chat-header {
         padding: 8px 10px;
     }
-  
+
     /* 进一步确保小屏设备上的按钮样式 */
     .add-conversation-btn {
         min-height: unset !important;
         width: 32px !important;
         height: 32px !important;
     }
-  
+
     /* 确保在小屏幕设备上容器高度是固定的 */
     .message-container {
         height: 100vh !important; /* 使用视口高度 */
         min-height: 500px; /* 确保最小高度 */
     }
 
-    .user-list, .chat-area {
+    .user-list,
+    .chat-area {
         height: 100% !important; /* 强制子元素填充容器 */
         min-height: 500px; /* 确保最小高度 */
     }
@@ -878,8 +881,9 @@
     .message-container {
         height: -webkit-fill-available !important; /* 使用iOS可用高度 */
     }
-    
-    .user-list, .chat-area {
+
+    .user-list,
+    .chat-area {
         height: -webkit-fill-available !important;
     }
 }
