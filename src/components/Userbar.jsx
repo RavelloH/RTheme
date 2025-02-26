@@ -216,8 +216,26 @@ export default function Userbar() {
                                 <span className='i_small ri-user-unfollow-line'></span>{' '}
                                 尚未登录，部分功能受限
                                 <br />
-                                立刻 <a href='/account/signin'>登录</a> 或{' '}
-                                <a href='/account/signup'>注册</a>
+                                立刻{' '}
+                                <a
+                                    onClick={() =>
+                                        loadURL(
+                                            `/account/signin?redirect=${window.location.pathname}${window.location.search}`,
+                                        )
+                                    }
+                                >
+                                    登录
+                                </a>{' '}
+                                或{' '}
+                                <a
+                                    onClick={() =>
+                                        loadURL(
+                                            `/account/signin?redirect=${window.location.pathname}${window.location.search}`,
+                                        )
+                                    }
+                                >
+                                    注册
+                                </a>
                             </div>
                             <div className='square-loader'>
                                 <span></span>

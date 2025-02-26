@@ -100,11 +100,11 @@ function renderProfileActions(isOwner, isLogged, uid) {
     if (!isLogged) {
         return (
             <>
-                <a className='button' href={'/account/signin?redirect=/user/' + uid}>
+                <a className='button' href={'/account/signin?redirect=/user/?uid=' + uid}>
                     <span className='ri-user-heart-fill button'></span> 关注
                 </a>
                 {'     '}
-                <a className='button' href={'/account/signin?redirect=/user/' + uid}>
+                <a className='button' href={'/account/signin?redirect=/user/?uid=' + uid}>
                     <span className='ri-message-2-fill button'></span> 私信
                 </a>
             </>
@@ -258,7 +258,7 @@ export default async function User({ searchParams }) {
 
                     <div className='center virgule'>
                         <span className='ri-alert-line'></span> 尚未登录，请
-                        <a href='/account/signin'>登录</a>后查看更多
+                        <a href={`/account/signin?redirect=/user%3fuid=${uid}`}>登录</a>后查看更多
                     </div>
                 </div>
             </div>

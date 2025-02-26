@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import './message.css';
 import token from '@/utils/token';
 import { useSearchParams, useRouter } from 'next/navigation';
+import loadURL from '@/utils/loadURL';
 
 // 定义消息最大字数
 const MAX_MESSAGE_LENGTH = 300;
@@ -60,6 +61,12 @@ function MessageContent() {
 
     // 初始化检测设备类型 - 修改逻辑，确保移动端至少有一个视图可见
     useEffect(() => {
+        // 检查登录状态
+        if (!token.get()) {
+            loadURL(
+                `/account/signin?redirect=${window.location.pathname}${window.location.search}`,
+            );
+        }
         const checkMobile = () => {
             if (typeof window !== 'undefined') {
                 return window.innerWidth < 768;
@@ -415,10 +422,16 @@ function MessageContent() {
         } else if (diffDays < 7) {
             // 一周内，显示星期几+时:分
             const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-            return `${days[messageDate.getDay()]} ${messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            return `${days[messageDate.getDay()]} ${messageDate.toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+            })}`;
         } else {
             // 超过一周，显示年-月-日 时:分
-            return `${messageDate.toLocaleDateString()} ${messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            return `${messageDate.toLocaleDateString()} ${messageDate.toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+            })}`;
         }
     };
 
@@ -508,7 +521,9 @@ function MessageContent() {
                     users.map((user) => (
                         <div
                             key={user.uid}
-                            className={`user-item ${selectedUser && selectedUser.uid === user.uid ? 'active' : ''}`}
+                            className={`user-item ${
+                                selectedUser && selectedUser.uid === user.uid ? 'active' : ''
+                            }`}
                             onClick={() => selectUser(user)}
                         >
                             <div className='user-avatar'>
@@ -603,7 +618,9 @@ function MessageContent() {
                                 messages.map((msg) => (
                                     <div
                                         key={msg.id}
-                                        className={`message-bubble ${msg.isMine ? 'mine' : 'other'}`}
+                                        className={`message-bubble ${
+                                            msg.isMine ? 'mine' : 'other'
+                                        }`}
                                     >
                                         {msg.content}
                                         <div className='message-time'>
@@ -632,7 +649,11 @@ function MessageContent() {
                                     }}
                                 />
                                 <div
-                                    className={`char-counter ${newMessage.length >= MAX_MESSAGE_LENGTH * 0.9 ? 'warning' : ''}`}
+                                    className={`char-counter ${
+                                        newMessage.length >= MAX_MESSAGE_LENGTH * 0.9
+                                            ? 'warning'
+                                            : ''
+                                    }`}
                                 >
                                     {newMessage.length}/{MAX_MESSAGE_LENGTH}
                                 </div>

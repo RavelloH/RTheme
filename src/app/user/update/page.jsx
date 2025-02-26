@@ -8,7 +8,8 @@ import loadURL from '@/utils/loadURL';
 
 function main() {
     const usertoken = token.getObject();
-    if (!usertoken) loadURL('/account/signin');
+    if (!usertoken)
+        loadURL(`/account/signin?redirect=${window.location.pathname}${window.location.search}`);
     document.querySelector('#nickname').value = usertoken.nickname;
     document.querySelector('#bio').value = usertoken.bio;
     document.querySelector('#website').value = usertoken.website;

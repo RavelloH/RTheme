@@ -19,15 +19,14 @@ export default function UserbarIcon() {
             </li>
             <li>
                 <a
-                    href='#message-setting'
-                    id='icon-message-setting'
-                    data-umami-event='userbar-message-setting'
+                    href='#change-passowrd'
+                    id='icon-chgange-password'
                     onClick={() => {
-                        broadcast({ action: 'openMessageSetting' });
+                        loadURL('/user/password');
                     }}
-                    aria-label='message-setting'
+                    aria-label='change-password'
                 >
-                    <span className='i ri-mail-settings-line'></span>
+                    <span className='i ri-key-2-line'></span>
                 </a>
             </li>
             <li>
