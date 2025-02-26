@@ -772,7 +772,7 @@
     .messages-container {
         padding-bottom: 70px; /* 为输入区域留出空间 */
         flex: 1;
-        height: auto !重要; /* 自动高度 */
+        height: auto;
         min-height: calc(100% - 120px); /* 减去头部和输入框高度 */
     }
 
