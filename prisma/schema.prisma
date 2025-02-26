@@ -57,7 +57,7 @@ model Comment {
 
 model Message {
   id          String   @id @default(uuid())
-  content     String   @db.VarChar(2047)
+  content     String   @db.VarChar(10000)
   createdAt   DateTime @default(now())
   fromUserUid Int
   toUserUid   Int
