@@ -20,7 +20,7 @@ export async function GET(request) {
 
     const url = new URL(request.url);
     const query = url.searchParams.get('query');
-    
+
     if (!query || query.trim().length === 0) {
         return Response.json({ users: [] }, { status: 200 });
     }
@@ -29,7 +29,7 @@ export async function GET(request) {
         // 尝试解析查询为UID
         const uid = parseInt(query, 10);
         let users = [];
-        
+
         // 如果是有效UID，直接按UID搜索
         if (!isNaN(uid)) {
             const userByUid = await prisma.user.findUnique({
@@ -38,10 +38,10 @@ export async function GET(request) {
                     uid: true,
                     username: true,
                     nickname: true,
-                    avatar: true
-                }
+                    avatar: true,
+                },
             });
-            
+
             if (userByUid) {
                 users = [userByUid];
             }
@@ -53,27 +53,24 @@ export async function GET(request) {
                 where: {
                     OR: [
                         { username: { contains: query, mode: 'insensitive' } },
-                        { nickname: { contains: query, mode: 'insensitive' } }
+                        { nickname: { contains: query, mode: 'insensitive' } },
                     ],
                     // 排除当前用户
-                    NOT: { uid: user.uid }
+                    NOT: { uid: user.uid },
                 },
                 select: {
                     uid: true,
                     username: true,
                     nickname: true,
-                    avatar: true
+                    avatar: true,
                 },
-                take: 10 // 限制返回结果数量
+                take: 10, // 限制返回结果数量
             });
         }
 
         limitControl.update(request);
         return Response.json({ users }, { status: 200 });
     } catch (error) {
-        return Response.json(
-            { message: '搜索用户失败', error: error.message },
-            { status: 500 }
-        );
+        return Response.json({ message: '搜索用户失败', error: error.message }, { status: 500 });
     }
 }

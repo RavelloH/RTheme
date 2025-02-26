@@ -18,13 +18,13 @@ export default function Message() {
     const [loadingUsers, setLoadingUsers] = useState(true);
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
-    
+
     // 添加对话相关状态
     const [showAddDialog, setShowAddDialog] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [searching, setSearching] = useState(false);
-    
+
     const searchParams = useSearchParams();
     const router = useRouter();
 
@@ -38,21 +38,21 @@ export default function Message() {
             if (!silent) {
                 setLoadingUsers(true);
             }
-            
-            const response = await fetch('/api/message/list',{
+
+            const response = await fetch('/api/message/list', {
                 headers: {
-                    "Authorization": `Bearer ${token.get()}`
+                    Authorization: `Bearer ${token.get()}`,
                 },
             });
-            
+
             if (!response.ok) {
                 const data = await response.json();
                 throw new Error(data.message || '加载用户列表失败');
             }
-            
+
             const data = await response.json();
             setUsers(data.users || []);
-            
+
             if (!silent) {
                 setError(null);
             }
@@ -71,37 +71,37 @@ export default function Message() {
     // 加载对话消息 - 修改加载方法，添加静默刷新功能
     const loadConversation = async (uid, silent = false) => {
         if (!uid) return;
-        
+
         try {
             // 仅在非静默模式下显示加载状态
             if (!silent) {
                 setLoading(true);
             }
-            
+
             const response = await fetch(`/api/message/conversation?uid=${uid}`, {
                 headers: {
-                    "Authorization": `Bearer ${token.get()}`
-                }
+                    Authorization: `Bearer ${token.get()}`,
+                },
             });
-            
+
             if (!response.ok) {
                 const data = await response.json();
                 throw new Error(data.message || '加载对话失败');
             }
-            
+
             const data = await response.json();
             // 检查是否有新消息
             const currentMessageCount = messages.length;
             const newMessages = data.messages || [];
-            
+
             // 更新消息列表
             setMessages(newMessages);
-            
+
             // 仅在非静默模式下才清除错误
             if (!silent) {
                 setError(null);
             }
-            
+
             // 如果是静默更新并且有新消息，滚动到底部
             if (silent && newMessages.length > currentMessageCount) {
                 setTimeout(() => scrollToBottom(), 100);
@@ -124,7 +124,7 @@ export default function Message() {
     const sendMessage = async (e) => {
         e.preventDefault();
         if (!newMessage.trim() || !selectedUser) return;
-        
+
         // 检查字数是否超过限制
         if (newMessage.length > MAX_MESSAGE_LENGTH) {
             setError(`消息长度超出限制，最大${MAX_MESSAGE_LENGTH}字符`);
@@ -140,9 +140,9 @@ export default function Message() {
             const response = await fetch('/api/message/send', {
                 method: 'POST',
                 headers: {
-                    "Authorization": `Bearer ${token.get()}`
+                    Authorization: `Bearer ${token.get()}`,
                 },
-                body: formData
+                body: formData,
             });
 
             if (!response.ok) {
@@ -181,11 +181,14 @@ export default function Message() {
 
         try {
             setSearching(true);
-            const response = await fetch(`/api/user/search?query=${encodeURIComponent(searchQuery)}`, {
-                headers: {
-                    "Authorization": `Bearer ${token.get()}`
-                }
-            });
+            const response = await fetch(
+                `/api/user/search?query=${encodeURIComponent(searchQuery)}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token.get()}`,
+                    },
+                },
+            );
             if (!response.ok) {
                 const data = await response.json();
                 throw new Error(data.message || '搜索用户失败');
@@ -224,7 +227,7 @@ export default function Message() {
             const uid = parseInt(uidParam, 10);
             if (!isNaN(uid)) {
                 // 检查这个用户是否已经在我们的对话列表中
-                const existingUser = users.find(u => u.uid === uid);
+                const existingUser = users.find((u) => u.uid === uid);
                 if (existingUser) {
                     selectUser(existingUser);
                 } else {
@@ -232,8 +235,8 @@ export default function Message() {
                     try {
                         const response = await fetch(`/api/user/search?query=${uid}`, {
                             headers: {
-                                "Authorization": `Bearer ${token.get()}`
-                            }
+                                Authorization: `Bearer ${token.get()}`,
+                            },
                         });
                         if (response.ok) {
                             const data = await response.json();
@@ -254,19 +257,19 @@ export default function Message() {
         // 定义一个异步的轮询函数
         const pollData = async () => {
             if (isPolling) return; // 防止重复轮询
-            
+
             try {
                 setIsPolling(true);
-                
+
                 // 首先更新用户列表
                 await loadUserList(true);
-                
+
                 // 然后如果有选中的用户，更新对话内容
                 if (selectedUser) {
                     await loadConversation(selectedUser.uid, true);
                 }
             } catch (err) {
-                console.error("轮询更新失败:", err);
+                console.error('轮询更新失败:', err);
             } finally {
                 setIsPolling(false);
             }
@@ -279,7 +282,7 @@ export default function Message() {
 
         // 设置轮询
         const interval = setInterval(pollData, 10000);
-        
+
         return () => clearInterval(interval);
     }, []);
 
@@ -309,8 +312,8 @@ export default function Message() {
     useEffect(() => {
         // 如果users数组更新了且有选中的用户，检查这个用户是否还在列表中
         if (users.length > 0 && selectedUser) {
-            const userStillExists = users.find(u => u.uid === selectedUser.uid);
-            
+            const userStillExists = users.find((u) => u.uid === selectedUser.uid);
+
             // 如果用户还在列表中，刷新对话内容
             if (userStillExists && !isPolling) {
                 loadConversation(selectedUser.uid, true);
@@ -323,7 +326,7 @@ export default function Message() {
         const now = new Date();
         const messageDate = new Date(dateString);
         const diffDays = Math.floor((now - messageDate) / (1000 * 60 * 60 * 24));
-        
+
         if (diffDays === 0) {
             // 同一天，显示时:分
             return messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -351,68 +354,102 @@ export default function Message() {
     }, [selectedUser]);
 
     return (
-        <div className="message-container">
-            <div className="user-list">
-                <div className="user-list-header">
+        <div className='message-container'>
+            <div className='user-list'>
+                <div className='user-list-header'>
                     <h2>对话列表</h2>
-                    <button className="add-conversation-btn" onClick={() => setShowAddDialog(true)} title="添加新对话">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="12" y1="5" x2="12" y2="19"></line>
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <button
+                        className='add-conversation-btn'
+                        onClick={() => setShowAddDialog(true)}
+                        title='添加新对话'
+                    >
+                        <svg
+                            width='20'
+                            height='20'
+                            viewBox='0 0 24 24'
+                            fill='none'
+                            stroke='currentColor'
+                            strokeWidth='2'
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                        >
+                            <line x1='12' y1='5' x2='12' y2='19'></line>
+                            <line x1='5' y1='12' x2='19' y2='12'></line>
                         </svg>
                     </button>
                 </div>
-                
+
                 {loadingUsers ? (
-                    <div className="empty-state">
+                    <div className='empty-state'>
                         <div>加载对话列表...</div>
-                        <div className="loading-spinner"></div>
+                        <div className='loading-spinner'></div>
                     </div>
                 ) : users.length === 0 ? (
-                    <div className="empty-state">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    <div className='empty-state'>
+                        <svg
+                            width='48'
+                            height='48'
+                            viewBox='0 0 24 24'
+                            fill='none'
+                            stroke='currentColor'
+                            strokeWidth='1.5'
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                        >
+                            <path d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'></path>
                         </svg>
                         <p>暂无对话</p>
-                        <button 
-                            className="add-conversation-btn" 
-                            onClick={() => setShowAddDialog(true)} 
-                            style={{marginTop: '15px'}}
+                        <button
+                            className='add-conversation-btn'
+                            onClick={() => setShowAddDialog(true)}
+                            style={{ marginTop: '15px' }}
                         >
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <svg
+                                width='20'
+                                height='20'
+                                viewBox='0 0 24 24'
+                                fill='none'
+                                stroke='currentColor'
+                                strokeWidth='2'
+                                strokeLinecap='round'
+                                strokeLinejoin='round'
+                            >
+                                <line x1='12' y1='5' x2='12' y2='19'></line>
+                                <line x1='5' y1='12' x2='19' y2='12'></line>
                             </svg>
                         </button>
                     </div>
                 ) : (
-                    users.map(user => (
-                        <div 
+                    users.map((user) => (
+                        <div
                             key={user.uid}
                             className={`user-item ${selectedUser && selectedUser.uid === user.uid ? 'active' : ''}`}
                             onClick={() => selectUser(user)}
                         >
-                            <div className="user-avatar">
+                            <div className='user-avatar'>
                                 {user.avatar ? (
                                     <img src={user.avatar} alt={user.nickname} />
                                 ) : (
                                     user.nickname.charAt(0)
                                 )}
                             </div>
-                            <div className="user-info">
-                                <div className="user-name">{user.nickname}</div>
-                                <div className="user-username">@{user.username}</div>
+                            <div className='user-info'>
+                                <div className='user-name'>{user.nickname}</div>
+                                <div className='user-username'>@{user.username}</div>
                             </div>
                         </div>
                     ))
                 )}
             </div>
 
-            <div className="chat-area">
+            <div className='chat-area'>
                 {selectedUser ? (
                     <>
-                        <div className="chat-header">
-                            <div className="user-avatar" style={{ width: '32px', height: '32px', marginRight: '10px' }}>
+                        <div className='chat-header'>
+                            <div
+                                className='user-avatar'
+                                style={{ width: '32px', height: '32px', marginRight: '10px' }}
+                            >
                                 {selectedUser.avatar ? (
                                     <img src={selectedUser.avatar} alt={selectedUser.nickname} />
                                 ) : (
@@ -421,47 +458,60 @@ export default function Message() {
                             </div>
                             <div>
                                 <div>{selectedUser.nickname}</div>
-                                <div className="user-username" style={{fontSize: '12px'}}>@{selectedUser.username}</div>
+                                <div className='user-username' style={{ fontSize: '12px' }}>
+                                    @{selectedUser.username}
+                                </div>
                             </div>
                         </div>
-                        <div className="messages-container">
+                        <div className='messages-container'>
                             {loading && messages.length === 0 ? (
-                                <div className="empty-state">
+                                <div className='empty-state'>
                                     <div>加载消息中...</div>
-                                    <div className="loading-spinner"></div>
+                                    <div className='loading-spinner'></div>
                                 </div>
                             ) : messages.length === 0 ? (
-                                <div className="empty-state">
-                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <line x1="12" y1="8" x2="12" y2="12"></line>
-                                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                <div className='empty-state'>
+                                    <svg
+                                        width='48'
+                                        height='48'
+                                        viewBox='0 0 24 24'
+                                        fill='none'
+                                        stroke='currentColor'
+                                        strokeWidth='1.5'
+                                        strokeLinecap='round'
+                                        strokeLinejoin='round'
+                                    >
+                                        <circle cx='12' cy='12' r='10'></circle>
+                                        <line x1='12' y1='8' x2='12' y2='12'></line>
+                                        <line x1='12' y1='16' x2='12.01' y2='16'></line>
                                     </svg>
                                     <p>暂无消息记录，开始对话吧！</p>
                                 </div>
                             ) : (
-                                messages.map(msg => (
-                                    <div 
+                                messages.map((msg) => (
+                                    <div
                                         key={msg.id}
                                         className={`message-bubble ${msg.isMine ? 'mine' : 'other'}`}
                                     >
                                         {msg.content}
-                                        <div className="message-time">{formatTime(msg.createdAt)}</div>
+                                        <div className='message-time'>
+                                            {formatTime(msg.createdAt)}
+                                        </div>
                                     </div>
                                 ))
                             )}
                             <div ref={messagesEndRef} />
                         </div>
-                        <form className="input-area" onSubmit={sendMessage}>
-                            <div className="input-wrapper">
-                                <textarea 
+                        <form className='input-area' onSubmit={sendMessage}>
+                            <div className='input-wrapper'>
+                                <textarea
                                     ref={inputRef}
-                                    className="message-input"
+                                    className='message-input'
                                     value={newMessage}
                                     onChange={handleMessageChange}
-                                    placeholder="输入消息..."
+                                    placeholder='输入消息...'
                                     disabled={loading}
-                                    onKeyDown={e => {
+                                    onKeyDown={(e) => {
                                         // 按Ctrl+Enter或Cmd+Enter发送消息
                                         if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                                             e.preventDefault();
@@ -469,103 +519,172 @@ export default function Message() {
                                         }
                                     }}
                                 />
-                                <div className={`char-counter ${newMessage.length >= MAX_MESSAGE_LENGTH * 0.9 ? 'warning' : ''}`}>
+                                <div
+                                    className={`char-counter ${newMessage.length >= MAX_MESSAGE_LENGTH * 0.9 ? 'warning' : ''}`}
+                                >
                                     {newMessage.length}/{MAX_MESSAGE_LENGTH}
                                 </div>
                             </div>
-                            <button 
-                                type="submit" 
-                                className="send-button"
-                                disabled={!newMessage.trim() || loading || newMessage.length > MAX_MESSAGE_LENGTH}
+                            <button
+                                type='submit'
+                                className='send-button'
+                                disabled={
+                                    !newMessage.trim() ||
+                                    loading ||
+                                    newMessage.length > MAX_MESSAGE_LENGTH
+                                }
                             >
                                 {loading ? '发送中...' : '发送'}
                             </button>
                         </form>
                     </>
                 ) : (
-                    <div className="no-conversation">
-                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    <div className='no-conversation'>
+                        <svg
+                            width='64'
+                            height='64'
+                            viewBox='0 0 24 24'
+                            fill='none'
+                            stroke='currentColor'
+                            strokeWidth='1.5'
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                        >
+                            <path d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'></path>
                         </svg>
                         <p>选择一个联系人开始对话</p>
                     </div>
                 )}
-                
+
                 {error && (
-                    <div className="error-message">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="8" x2="12" y2="12"></line>
-                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    <div className='error-message'>
+                        <svg
+                            width='16'
+                            height='16'
+                            viewBox='0 0 24 24'
+                            fill='none'
+                            stroke='currentColor'
+                            strokeWidth='2'
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                        >
+                            <circle cx='12' cy='12' r='10'></circle>
+                            <line x1='12' y1='8' x2='12' y2='12'></line>
+                            <line x1='12' y1='16' x2='12.01' y2='16'></line>
                         </svg>
                         {error}
                     </div>
                 )}
             </div>
-            
+
             {/* 添加对话弹窗 */}
             {showAddDialog && (
-                <div className="dialog-overlay" onClick={() => setShowAddDialog(false)}>
-                    <div className="dialog-content" onClick={e => e.stopPropagation()}>
-                        <div className="dialog-header">
+                <div className='dialog-overlay' onClick={() => setShowAddDialog(false)}>
+                    <div className='dialog-content' onClick={(e) => e.stopPropagation()}>
+                        <div className='dialog-header'>
                             <h3>添加新对话</h3>
-                            <button className="close-button" onClick={() => setShowAddDialog(false)}>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                            <button
+                                className='close-button'
+                                onClick={() => setShowAddDialog(false)}
+                            >
+                                <svg
+                                    width='18'
+                                    height='18'
+                                    viewBox='0 0 24 24'
+                                    fill='none'
+                                    stroke='currentColor'
+                                    strokeWidth='2'
+                                    strokeLinecap='round'
+                                    strokeLinejoin='round'
+                                >
+                                    <line x1='18' y1='6' x2='6' y2='18'></line>
+                                    <line x1='6' y1='6' x2='18' y2='18'></line>
                                 </svg>
                             </button>
                         </div>
-                        <div className="dialog-body">
-                            <div className="search-container">
+                        <div className='dialog-body'>
+                            <div className='search-container'>
                                 <input
-                                    type="text"
-                                    className="search-input"
-                                    placeholder="输入用户ID、用户名或昵称搜索"
+                                    type='text'
+                                    className='search-input'
+                                    placeholder='输入用户ID、用户名或昵称搜索'
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     autoFocus
                                 />
                             </div>
-                            <div className="search-results">
+                            <div className='search-results'>
                                 {searching ? (
-                                    <div className="search-loading">
-                                        <div className="loading-spinner" style={{margin: '0 auto 15px'}}></div>
+                                    <div className='search-loading'>
+                                        <div
+                                            className='loading-spinner'
+                                            style={{ margin: '0 auto 15px' }}
+                                        ></div>
                                         <div>搜索中...</div>
                                     </div>
                                 ) : searchResults.length > 0 ? (
-                                    searchResults.map(user => (
-                                        <div 
+                                    searchResults.map((user) => (
+                                        <div
                                             key={user.uid}
-                                            className="user-item"
+                                            className='user-item'
                                             onClick={() => selectUser(user)}
                                         >
-                                            <div className="user-avatar">
+                                            <div className='user-avatar'>
                                                 {user.avatar ? (
                                                     <img src={user.avatar} alt={user.nickname} />
                                                 ) : (
                                                     user.nickname.charAt(0)
                                                 )}
                                             </div>
-                                            <div className="user-info">
-                                                <div className="user-name">{user.nickname}</div>
-                                                <div className="user-username">@{user.username} (ID: {user.uid})</div>
+                                            <div className='user-info'>
+                                                <div className='user-name'>{user.nickname}</div>
+                                                <div className='user-username'>
+                                                    @{user.username} (ID: {user.uid})
+                                                </div>
                                             </div>
                                         </div>
                                     ))
                                 ) : searchQuery ? (
-                                    <div className="no-results">
-                                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{margin: '0 auto 15px', display: 'block', color: '#999'}}>
-                                            <circle cx="11" cy="11" r="8"></circle>
-                                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                    <div className='no-results'>
+                                        <svg
+                                            width='40'
+                                            height='40'
+                                            viewBox='0 0 24 24'
+                                            fill='none'
+                                            stroke='currentColor'
+                                            strokeWidth='1.5'
+                                            strokeLinecap='round'
+                                            strokeLinejoin='round'
+                                            style={{
+                                                margin: '0 auto 15px',
+                                                display: 'block',
+                                                color: '#999',
+                                            }}
+                                        >
+                                            <circle cx='11' cy='11' r='8'></circle>
+                                            <line x1='21' y1='21' x2='16.65' y2='16.65'></line>
                                         </svg>
                                         没有找到匹配的用户
                                     </div>
                                 ) : (
-                                    <div className="search-tip">
-                                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{margin: '0 auto 15px', display: 'block', color: '#999'}}>
-                                            <circle cx="11" cy="11" r="8"></circle>
-                                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                    <div className='search-tip'>
+                                        <svg
+                                            width='40'
+                                            height='40'
+                                            viewBox='0 0 24 24'
+                                            fill='none'
+                                            stroke='currentColor'
+                                            strokeWidth='1.5'
+                                            strokeLinecap='round'
+                                            strokeLinejoin='round'
+                                            style={{
+                                                margin: '0 auto 15px',
+                                                display: 'block',
+                                                color: '#999',
+                                            }}
+                                        >
+                                            <circle cx='11' cy='11' r='8'></circle>
+                                            <line x1='21' y1='21' x2='16.65' y2='16.65'></line>
                                         </svg>
                                         输入关键词开始搜索用户
                                     </div>

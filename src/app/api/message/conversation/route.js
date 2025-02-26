@@ -21,7 +21,7 @@ export async function GET(request) {
 
     const url = new URL(request.url);
     const targetUid = parseInt(url.searchParams.get('uid'), 10);
-    
+
     if (!targetUid || isNaN(targetUid)) {
         return Response.json({ message: '目标用户ID无效' }, { status: 400 });
     }
@@ -32,8 +32,8 @@ export async function GET(request) {
             where: {
                 OR: [
                     { fromUserUid: user.uid, toUserUid: targetUid },
-                    { fromUserUid: targetUid, toUserUid: user.uid }
-                ]
+                    { fromUserUid: targetUid, toUserUid: user.uid },
+                ],
             },
             orderBy: { createdAt: 'asc' },
             include: {
@@ -42,17 +42,17 @@ export async function GET(request) {
                         uid: true,
                         username: true,
                         nickname: true,
-                        avatar: true
-                    }
-                }
-            }
+                        avatar: true,
+                    },
+                },
+            },
         });
-        
+
         // 解密消息内容
-        const decryptedMessages = messages.map(msg => ({
+        const decryptedMessages = messages.map((msg) => ({
             ...msg,
             content: decrypt(msg.content),
-            isMine: msg.fromUserUid === user.uid
+            isMine: msg.fromUserUid === user.uid,
         }));
 
         // 获取目标用户信息
@@ -62,8 +62,8 @@ export async function GET(request) {
                 uid: true,
                 username: true,
                 nickname: true,
-                avatar: true
-            }
+                avatar: true,
+            },
         });
 
         if (!targetUser) {
@@ -71,14 +71,14 @@ export async function GET(request) {
         }
 
         limitControl.update(request);
-        return Response.json({ 
-            messages: decryptedMessages,
-            targetUser: targetUser
-        }, { status: 200 });
-    } catch (error) {
         return Response.json(
-            { message: '获取对话失败', error: error.message },
-            { status: 500 }
+            {
+                messages: decryptedMessages,
+                targetUser: targetUser,
+            },
+            { status: 200 },
         );
+    } catch (error) {
+        return Response.json({ message: '获取对话失败', error: error.message }, { status: 500 });
     }
 }

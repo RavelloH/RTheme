@@ -20,9 +20,8 @@
     --theme-orange: #fc560b;
     --theme-green-light: #5cdb95;
     --theme-green-dark: #357e56;
-    --theme-fonts-regular:
-        -apple-system, BlinkMacSystemFont, 'Microsoft YaHei', 'Segoe UI', 'Roboto',
-        'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --theme-fonts-regular: -apple-system, BlinkMacSystemFont, 'Microsoft YaHei', 'Segoe UI',
+        'Roboto', 'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', system-ui;
     --theme-fonts-mono: 'IBMPlex', 'Courier New', monospace;
     --theme-fonts-special: 'Furore', 'Geometos';

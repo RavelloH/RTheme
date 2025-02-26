@@ -81,7 +81,7 @@ export async function POST(request) {
 
         limitControl.update(request);
         await sendNotice(
-            `来自${sendUser.nickname}的私信:${content.slice(0,10)}...`,
+            `来自${sendUser.nickname}的私信:${content.slice(0, 10)}...`,
             `/message?uid=${message.fromUserUid}`,
             parsedTargetUid,
         );
