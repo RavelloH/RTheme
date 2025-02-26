@@ -144,8 +144,7 @@ function infoEdit() {
                     <div
                         className='big-button'
                         id='publish-button'
-                        onClick={() => submit('publish')}
-                    >
+                        onClick={() => submit('publish')}>
                         <span>发布</span>
                     </div>
                     <div className='big-button' id='draft-button' onClick={() => submit('draft')}>
@@ -233,7 +232,8 @@ function submit(mode) {
         .then((data) => {
             if (data.message == '创建成功') {
                 if (mode == 'publish') {
-                    // 触发重新部署的Hook
+                    switchElementContent('#publish-button span', '发布成功，正在更新站点...');
+                    
                     fetch('/api/site/build', {
                         method: 'POST',
                         headers: {
@@ -243,11 +243,17 @@ function submit(mode) {
                     })
                         .then((response) => response.json())
                         .then((data) => {
-                            // TODO: 重新部署模块即相关提示
-                            switchElementContent('#publish-button span', '发布成功，即将跳转...');
+                            switchElementContent('#publish-button span', '站点更新成功，即将跳转...');
                             setTimeout(() => {
                                 loadURL(`/posts/${postName}`);
-                            }, 3000);
+                            }, 1000);
+                        })
+                        .catch((error) => {
+                            console.error('站点更新失败:', error);
+                            switchElementContent('#publish-button span', '站点更新失败，即将跳转...');
+                            setTimeout(() => {
+                                loadURL(`/posts/${postName}`);
+                            }, 1000);
                         });
                 }
                 if (mode == 'draft') {
@@ -386,8 +392,7 @@ export default function CreatePosts() {
                     <div
                         className='big-button'
                         id='to-content-button'
-                        onClick={() => contentEdit()}
-                    >
+                        onClick={() => contentEdit()}>
                         <span>下一步</span>
                     </div>
                 </div>
