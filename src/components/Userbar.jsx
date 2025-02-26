@@ -96,9 +96,15 @@ export default function Userbar() {
             setTimeout(() => {
                 if (!token.get()) return;
                 token.refresh().then(() => {
-                    setRefreshTime(token.read('iat') * 1000 + 20 * 60 * 1000 - Date.now());
+                    const newRefreshTime = token.read('iat') * 1000 + 20 * 60 * 1000 - Date.now();
+                    setRefreshTime(newRefreshTime);
                     setIsTimerActive(false);
-                    createTimer(token.read('iat') * 1000 + 20 * 60 * 1000 - Date.now());
+                    setTimeout(
+                        () => {
+                            createTimer();
+                        },
+                        20 * 60 * 1000,
+                    );
                 });
             }, refreshTime);
         };
