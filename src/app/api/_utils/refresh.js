@@ -9,7 +9,7 @@ export async function refreshPosts() {
     revalidatePath('/categories');
 
     // feed刷新
-    revalidatePath('/feed');
+    revalidatePath('/feed.xml');
 
     // 重建sitemap
     revalidatePath('/sitemap.xml');
