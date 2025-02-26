@@ -1,6 +1,7 @@
 'use client';
 
 import { useBroadcast } from '@/store/useBroadcast';
+import loadURL from '@/utils/loadURL';
 
 export default function UserbarIcon() {
     const broadcast = useBroadcast((state) => state.broadcast);
@@ -33,9 +34,8 @@ export default function UserbarIcon() {
                 <a
                     href='#message'
                     id='icon-message'
-                    data-umami-event='userbar-message'
                     onClick={() => {
-                        broadcast({ action: 'openMessage' });
+                        loadURL('/message');
                     }}
                     aria-label='message'
                 >

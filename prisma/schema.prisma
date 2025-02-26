@@ -9,31 +9,32 @@ datasource db {
 }
 
 model User {
-  uid           Int          @id @default(autoincrement())
-  uuid          String       @default(uuid())
-  email         String       @unique
-  emailVerified Boolean      @default(false)
-  username      String       @unique @db.VarChar(10)
-  nickname      String       @db.VarChar(50)
-  bio           String?      @db.VarChar(255)
-  birth         DateTime?    @db.Date
-  country       String?      @db.VarChar(10)
-  website       String?      @db.VarChar(60)
-  avatar        String?      @db.VarChar(100)
-  role          Role         @default(USER)
-  updatedAt     DateTime     @updatedAt
-  createdAt     DateTime     @default(now())
-  lastUseAt     String?
-  gender        Gender?      @default(UNSET)
-  password      String
-  note          Note[]
-  followed      FriendShip[] @relation("Followed")
-  following     FriendShip[] @relation("Following")
-  notice        Notice[]
-  message       Message[]
-  post          Post[]
-  comment       Comment[]
-  admin         Site?
+  uid            Int          @id @default(autoincrement())
+  uuid           String       @default(uuid())
+  email          String       @unique
+  emailVerified  Boolean      @default(false)
+  username       String       @unique @db.VarChar(10)
+  nickname       String       @db.VarChar(50)
+  bio            String?      @db.VarChar(255)
+  birth          DateTime?    @db.Date
+  country        String?      @db.VarChar(10)
+  website        String?      @db.VarChar(60)
+  avatar         String?      @db.VarChar(100)
+  role           Role         @default(USER)
+  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime     @default(now())
+  lastUseAt      String?
+  gender         Gender?      @default(UNSET)
+  password       String
+  note           Note[]
+  followed       FriendShip[] @relation("Followed")
+  following      FriendShip[] @relation("Following")
+  notice         Notice[]
+  messageSend    Message[]    @relation("MessageFrom")
+  messageReceive Message[]    @relation("MessageTo")
+  post           Post[]
+  comment        Comment[]
+  admin          Site?
 }
 
 model Comment {
@@ -56,11 +57,12 @@ model Comment {
 
 model Message {
   id          String   @id @default(uuid())
-  content     String   @db.VarChar(511)
+  content     String   @db.VarChar(1023)
   createdAt   DateTime @default(now())
   fromUserUid Int
   toUserUid   Int
-  from        User     @relation(fields: [fromUserUid], references: [uid])
+  from        User     @relation("MessageFrom", fields: [fromUserUid], references: [uid])
+  to          User     @relation("MessageTo", fields: [toUserUid], references: [uid])
 }
 
 model Notice {
@@ -135,6 +137,15 @@ model RequestLog {
   id          Int      @id @default(autoincrement())
   ip          String
   requestTime DateTime
+}
+
+model Page {
+  slug      String   @unique @db.VarChar(100)
+  title     String   @db.VarChar(100)
+  content   String   @db.VarChar(100000)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  published Boolean  @default(true)
 }
 
 enum Role {

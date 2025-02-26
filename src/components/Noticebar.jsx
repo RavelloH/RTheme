@@ -290,15 +290,21 @@ export default function Noticebar() {
                             ) : (
                                 <>
                                     {unreadNotices.map((notice, index) => (
-                                        <div key={index} className='notice-div'>
+                                        <div
+                                            key={index}
+                                            className='notice-div'
+                                            style={{
+                                                marginBottom: '1rem',
+                                                borderBottom: '1px dashed rgba(255,255,255,0.2)',
+                                                paddingBottom: '0.5rem',
+                                            }}>
                                             <a
                                                 href={notice.href}
                                                 style={{
                                                     color: '#fff',
                                                     textDecoration: 'none',
                                                 }}
-                                                onClick={(e) => markAsRead(e, notice)}
-                                            >
+                                                onClick={(e) => markAsRead(e, notice)}>
                                                 {notice.content}
                                             </a>
                                             <div
@@ -306,8 +312,7 @@ export default function Noticebar() {
                                                     fontSize: '0.8rem',
                                                     color: 'rgba(255,255,255,0.6)',
                                                     marginTop: '0.25rem',
-                                                }}
-                                            >
+                                                }}>
                                                 {new Date(notice.createdAt).toLocaleString()}
                                             </div>
                                         </div>
@@ -322,8 +327,7 @@ export default function Noticebar() {
                         className='center full'
                         style={{
                             opacity: 0.25,
-                        }}
-                    >
+                        }}>
                         - <i>Mind stuff, that&apos;s what they say when the verses fly</i> -
                     </div>
                     {readNotices.length > 0 && (
@@ -340,8 +344,7 @@ export default function Noticebar() {
                                         marginBottom: '1rem',
                                         borderBottom: '1px dashed rgba(255,255,255,0.2)',
                                         paddingBottom: '0.5rem',
-                                    }}
-                                >
+                                    }}>
                                     <a
                                         href={notice.href}
                                         onClick={() => broadcast({ action: 'closeNoticebar' })}
@@ -349,8 +352,7 @@ export default function Noticebar() {
                                             color: '#ccc',
                                             textDecoration: 'none',
                                         }}
-                                        className='no-effect'
-                                    >
+                                        className='no-effect'>
                                         {notice.content}
                                     </a>
                                     <div
@@ -358,8 +360,7 @@ export default function Noticebar() {
                                             fontSize: '0.8rem',
                                             color: 'rgba(200,200,200,0.5)',
                                             marginTop: '0.25rem',
-                                        }}
-                                    >
+                                        }}>
                                         {new Date(notice.createdAt).toLocaleString()}
                                     </div>
                                 </div>
