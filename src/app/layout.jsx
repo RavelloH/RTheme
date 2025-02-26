@@ -99,7 +99,6 @@ export default function RootLayout({ children }) {
                 <Noticebar />
                 <SpeedInsights />
                 <Analytics />
-                <Umami />
             </body>
         </html>
     );
