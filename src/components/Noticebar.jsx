@@ -41,6 +41,74 @@ export default function Noticebar() {
         localStorage.setItem('noticeCache', JSON.stringify({ latest, unread, read }));
     };
 
+    // 新增：规范化URL函数，确保可以正确比较
+    const normalizeUrl = (url) => {
+        if (!url) return '';
+        
+        // 如果是相对路径，转换为绝对路径
+        let fullUrl = url;
+        if (url.startsWith('/')) {
+            const baseUrl = window.location.origin;
+            fullUrl = `${baseUrl}${url}`;
+        } else if (!url.startsWith('http')) {
+            const baseUrl = window.location.origin + window.location.pathname;
+            fullUrl = `${baseUrl}/${url}`;
+        }
+        
+        try {
+            // 创建URL对象以规范化路径
+            const urlObj = new URL(fullUrl);
+            return urlObj.toString();
+        } catch (e) {
+            log.error(`Failed to normalize URL: ${url}, ${e.message}`);
+            return url;
+        }
+    };
+
+    // 新增：检查两个URL是否匹配
+    const urlsMatch = (noticeUrl, currentUrl) => {
+        if (!noticeUrl) return false;
+        
+        try {
+            // 规范化两个URL
+            const normalizedNoticeUrl = normalizeUrl(noticeUrl);
+            const normalizedCurrentUrl = normalizeUrl(currentUrl);
+            
+            log.info(`Comparing URLs: ${normalizedNoticeUrl} vs ${normalizedCurrentUrl}`);
+            
+            // 完全匹配
+            if (normalizedNoticeUrl === normalizedCurrentUrl) {
+                log.info('URLs match exactly');
+                return true;
+            }
+            
+            // 尝试解析URL对象进行更精确的比较
+            const noticeUrlObj = new URL(normalizedNoticeUrl);
+            const currentUrlObj = new URL(normalizedCurrentUrl);
+            
+            // 比较路径和查询参数（忽略hash）
+            if (noticeUrlObj.pathname === currentUrlObj.pathname && 
+                noticeUrlObj.search === currentUrlObj.search) {
+                log.info('URLs match (pathname and search params)');
+                return true;
+            }
+            
+            // 处理可能的相对路径差异
+            const noticePathAndQuery = noticeUrlObj.pathname + noticeUrlObj.search;
+            const currentPathAndQuery = currentUrlObj.pathname + currentUrlObj.search;
+            
+            if (noticePathAndQuery === currentPathAndQuery) {
+                log.info('URLs match (path and query)');
+                return true;
+            }
+            
+            return false;
+        } catch (e) {
+            log.error(`Error comparing URLs: ${noticeUrl} vs ${currentUrl}, ${e.message}`);
+            return false;
+        }
+    };
+
     // 获取新通知
     const fetchNotices = async () => {
         log.info('Fetching notices');
@@ -71,6 +139,42 @@ export default function Noticebar() {
                 const locallyReadIds = cacheData.read.map((n) => n.id);
                 const serverUnreadIds = newData.notices.map((n) => n.id);
                 const needMarkRead = locallyReadIds.filter((id) => serverUnreadIds.includes(id));
+                
+                // 获取当前完整URL，包括查询参数
+                const currentFullUrl = window.location.href;
+                log.info(`Current URL: ${currentFullUrl}`);
+                
+                // 检查是否有通知链接与当前URL匹配
+                const autoReadNotices = newData.notices.filter(n => 
+                    !n.isRead && n.href && urlsMatch(n.href, currentFullUrl)
+                );
+                
+                // 将匹配当前URL的通知标记为已读
+                if (autoReadNotices.length > 0) {
+                    const autoReadIds = autoReadNotices.map(n => n.id);
+                    log.info(`Auto marking ${autoReadIds.length} notices as read because they match current URL: ${currentFullUrl}`);
+                    
+                    autoReadNotices.forEach(n => {
+                        log.info(`Auto-read notice href: ${n.href}`);
+                    });
+                    
+                    await fetch('/api/notice/read', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${token.get()}`,
+                        },
+                        body: JSON.stringify(autoReadIds),
+                    });
+                    
+                    // 在新数据中更新这些通知为已读
+                    newData.notices.forEach(n => {
+                        if (autoReadIds.includes(n.id)) {
+                            n.isRead = true;
+                        }
+                    });
+                }
+                
                 if (needMarkRead.length > 0) {
                     await fetch('/api/notice/read', {
                         method: 'POST',
@@ -105,17 +209,20 @@ export default function Noticebar() {
                 setUnreadNotices(updatedUnread);
                 setReadNotices(updatedRead);
 
-                // 修改 setHasNewNotices 条件
+                // 过滤出真正需要提示的新通知（排除自动标记为已读的通知）
                 const newUniqueNotices = newNotices.filter(
                     (n) =>
                         !cacheData.unread.some((unread) => unread.id === n.id) &&
                         !cacheData.read.some((read) => read.id === n.id) &&
-                        n.isRead === false,
+                        n.isRead === false &&
+                        !(n.href && urlsMatch(n.href, currentFullUrl))
                 );
+                
                 setHasNewNotices(newUniqueNotices.length > 0);
 
+                // 只对不匹配当前路径的通知显示提示
                 if (newUniqueNotices.length > 0) {
-                    notice.send('收到一则新通知', newData.notices[0].content, '/icon/512x');
+                    notice.send('收到一则新通知', newUniqueNotices[0].content, '/icon/512x');
                     message.success('收到一则新通知', 10000);
                 }
             } else {
