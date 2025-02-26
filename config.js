@@ -29,22 +29,22 @@ const config = {
         },
         {
             name: '项目',
-            link: '/projects/',
+            link: '/projects',
             id: 'nav-projects',
         },
         {
             name: '文稿',
-            link: '/posts/',
+            link: '/posts',
             id: 'nav-posts',
         },
         {
             name: '分类',
-            link: '/categories/',
+            link: '/categories',
             id: 'nav-categories',
         },
         {
             name: '标签',
-            link: '/tags/',
+            link: '/tags',
             id: 'nav-tags',
         },
         {
@@ -90,47 +90,47 @@ const config = {
         },
         {
             name: 'PROJECTS',
-            href: '/projects/',
+            href: '/projects',
             icon: 'ri-dashboard-fill',
         },
         {
             name: 'POSTS',
-            href: '/posts/',
+            href: '/posts',
             icon: 'ri-article-fill',
         },
         {
             name: 'CATEGORIES',
-            href: '/categories/',
+            href: '/categories',
             icon: 'ri-folder-fill',
         },
         {
             name: 'TAGS',
-            href: '/tags/',
+            href: '/tags',
             icon: 'ri-price-tag-3-fill',
         },
         {
             name: 'IMAGES',
-            href: '/images/',
+            href: '/images',
             icon: 'ri-image-fill',
         },
         {
             name: 'GAMES',
-            href: '/games/',
+            href: '/games',
             icon: 'ri-gamepad-fill',
         },
         {
             name: 'FRIENDS',
-            href: '/friends/',
+            href: '/friends',
             icon: 'ri-team-fill',
         },
         {
             name: 'TIMELINE',
-            href: '/timeline/',
+            href: '/timeline',
             icon: 'ri-map-pin-time-fill',
         },
         {
             name: 'ABOUT',
-            href: '/about/',
+            href: '/about',
             icon: 'ri-information-fill',
         },
         {
@@ -140,12 +140,12 @@ const config = {
 
         {
             name: 'SIGN IN',
-            href: '/account/signin/',
+            href: '/account/signin',
             icon: 'ri-login-box-fill',
         },
         {
             name: 'SIGN UP',
-            href: '/account/signup/',
+            href: '/account/signup',
             icon: 'ri-user-add-fill',
         },
         {
