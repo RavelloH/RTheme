@@ -108,25 +108,30 @@ const config = {
             href: '/tags',
             icon: 'ri-price-tag-3-fill',
         },
-        {
-            name: 'IMAGES',
-            href: '/images',
-            icon: 'ri-image-fill',
-        },
-        {
-            name: 'GAMES',
-            href: '/games',
-            icon: 'ri-gamepad-fill',
-        },
+        // {
+        //     name: 'IMAGES',
+        //     href: '/images',
+        //     icon: 'ri-image-fill',
+        // },
+        // {
+        //     name: 'GAMES',
+        //     href: '/games',
+        //     icon: 'ri-gamepad-fill',
+        // },
         {
             name: 'FRIENDS',
             href: '/friends',
             icon: 'ri-team-fill',
         },
+        // {
+        //     name: 'TIMELINE',
+        //     href: '/timeline',
+        //     icon: 'ri-map-pin-time-fill',
+        // },
         {
-            name: 'TIMELINE',
-            href: '/timeline',
-            icon: 'ri-map-pin-time-fill',
+            name: 'MESSAGE',
+            href: '/message',
+            icon: 'ri-message-2-fill',
         },
         {
             name: 'ABOUT',
