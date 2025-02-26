@@ -54,7 +54,7 @@
     background-color: var(--bg-tertiary);
     position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: 2;
 }
 
 .user-list-header h2 {
@@ -167,7 +167,7 @@
     align-items: center;
     position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: 2;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -368,7 +368,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 3;
     -webkit-backdrop-filter: blur(2px);
     backdrop-filter: blur(2px);
     animation: fade-in 0.2s ease;
@@ -493,7 +493,7 @@
     transform: translateX(-50%);
     border-radius: 4px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    z-index: 100;
+    z-index: 3;
     max-width: 80%;
     display: flex;
     align-items: center;
@@ -501,6 +501,44 @@
 
 .error-message svg {
     margin-right: 8px;
+}
+
+/* 返回按钮样式 */
+.back-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 5px 10px 5px 0;
+    margin-right: 10px;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s ease;
+}
+
+.back-button:hover {
+    color: var(--text-primary);
+}
+
+.back-button-empty {
+    background: var(--accent-color);
+    color: var(--text-primary);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    transition: background-color 0.2s ease;
+}
+
+.back-button-empty svg {
+    margin-right: 8px;
+}
+
+.back-button-empty:hover {
+    background-color: var(--accent-hover);
 }
 
 /* 响应式设计 - 改进移动端适配 */
@@ -511,6 +549,8 @@
         margin: 0;
         border-radius: 0;
         max-height: none;
+        position: relative;
+        overflow: hidden;
     }
 
     .user-list {
@@ -544,6 +584,11 @@
 
     .input-area {
         padding: 10px;
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        background-color: var(--bg-tertiary);
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
     }
 
     .char-counter {
@@ -561,6 +606,100 @@
         .input-area {
             padding-bottom: calc(16px + env(safe-area-inset-bottom));
         }
+    }
+
+    .user-list, .chat-area {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        transition: transform 0.3s ease;
+        overflow-y: auto;
+        transform: translateX(0); /* 默认位置，确保元素可见 */
+        visibility: visible; /* 确保元素默认可见 */
+    }
+
+    /* 默认两个视图都显示，根据 mobile-hidden 类来控制 */
+    .mobile-hidden {
+        transform: translateX(100%);
+        visibility: hidden;
+    }
+
+    /* 聊天区域的位置，默认在右侧 */
+    .chat-area {
+        transform: translateX(0);
+    }
+
+    /* 列表区域的位置，默认在左侧 */
+    .user-list {
+        transform: translateX(0);
+    }
+
+    /* 当切换到聊天视图时 */
+    .chat-area:not(.mobile-hidden) {
+        z-index: 2;
+    }
+
+    /* 当切换到列表视图时 */
+    .user-list:not(.mobile-hidden) {
+        z-index: 2;
+    }
+
+    /* 聊天视图头部调整 */
+    .chat-header {
+        display: flex;
+        align-items: center;
+        padding: 12px;
+    }
+
+    /* 消息容器区域在移动端的调整，防止被输入框遮挡 */
+    .messages-container {
+        padding-bottom: 70px;
+    }
+
+    /* 其他移动端样式保持不变 */
+  
+    /* 修复：确保添加按钮在移动设备上保持圆形 */
+    .add-conversation-btn {
+        width: 32px !important;
+        height: 32px !important;
+        border-radius: 50% !important;
+        padding: 0 !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+  
+    /* 修复小屏幕高度问题 */
+    .message-container {
+        flex-direction: column;
+        height: 100vh !important; /* 强制使用视口高度 */
+        margin: 0;
+        border-radius: 0;
+        max-height: none;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* 调整用户列表和聊天区域的绝对定位属性 */
+    .user-list, .chat-area {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100% !important; /* 确保始终占满容器高度 */
+        transition: transform 0.3s ease;
+        overflow-y: auto;
+        transform: translateX(0);
+        visibility: visible;
+    }
+
+    /* 隐藏的元素要完全移出视图但保持100%高度 */
+    .mobile-hidden {
+        transform: translateX(100%) !important;
+        visibility: hidden !important;
+        height: 100% !important; /* 即使隐藏也保持高度 */
     }
 }
 
@@ -592,7 +731,7 @@
 
     /* 纵向模式下的布局调整 */
     .message-container {
-        height: calc(100vh - 60px);
+        height: 100%;
     }
 
     .user-list {
@@ -600,7 +739,50 @@
     }
 
     .chat-area {
-        height: 65%;
+        height: 100%
+    }
+
+    .back-button {
+        padding: 8px;
+    }
+
+    .chat-header {
+        padding: 8px 10px;
+    }
+  
+    /* 进一步确保小屏设备上的按钮样式 */
+    .add-conversation-btn {
+        min-height: unset !important;
+        width: 32px !important;
+        height: 32px !important;
+    }
+  
+    /* 确保在小屏幕设备上容器高度是固定的 */
+    .message-container {
+        height: 100vh !important; /* 使用视口高度 */
+        min-height: 500px; /* 确保最小高度 */
+    }
+
+    .user-list, .chat-area {
+        height: 100% !important; /* 强制子元素填充容器 */
+        min-height: 500px; /* 确保最小高度 */
+    }
+
+    /* 修复消息容器，确保它在聊天区域内正确显示 */
+    .messages-container {
+        padding-bottom: 70px; /* 为输入区域留出空间 */
+        flex: 1;
+        height: auto !重要; /* 自动高度 */
+        min-height: calc(100% - 120px); /* 减去头部和输入框高度 */
+    }
+
+    /* 确保输入区域固定在底部 */
+    .input-area {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        z-index: 2; /* 确保在最上层 */
     }
 }
 
@@ -687,5 +869,17 @@
 
     .search-input {
         font-size: 16px;
+    }
+}
+
+/* 处理iOS浏览器的特殊情况 */
+@supports (-webkit-touch-callout: none) {
+    /* iOS设备特有的修复 */
+    .message-container {
+        height: -webkit-fill-available !important; /* 使用iOS可用高度 */
+    }
+    
+    .user-list, .chat-area {
+        height: -webkit-fill-available !important;
     }
 }

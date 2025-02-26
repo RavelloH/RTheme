@@ -45,6 +45,54 @@ function MessageContent() {
   // 新增一个标志区分手动加载和自动轮询
   const [isPolling, setIsPolling] = useState(false);
 
+  // 添加移动设备视图状态 - 列表视图或聊天视图
+  const [mobileView, setMobileView] = useState('list'); // 'list' 或 'chat'
+  // 添加状态跟踪是否为移动设备
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // 检测设备是否为移动设备的函数 - 修改为安全的客户端检测
+  const checkIfMobile = () => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 768;
+    }
+    return false; // 默认返回桌面视图
+  };
+
+  // 初始化检测设备类型 - 修改逻辑，确保移动端至少有一个视图可见
+  useEffect(() => {
+    const checkMobile = () => {
+      if (typeof window !== 'undefined') {
+        return window.innerWidth < 768;
+      }
+      return false;
+    };
+    
+    // 设置初始移动设备状态
+    setIsMobile(checkMobile());
+    
+    // 如果URL中有uid参数，且是移动设备，则切换到聊天视图，否则默认显示列表视图
+    const uid = searchParams.get('uid');
+    if (uid && checkMobile()) {
+      setMobileView('chat');
+    } else {
+      setMobileView('list');
+    }
+    
+    // 添加窗口大小变化监听器
+    const handleResize = () => {
+      const mobile = checkMobile();
+      setIsMobile(mobile);
+      
+      // 如果从小屏幕变大，确保总是显示两栏布局
+      if (!mobile) {
+        // 不修改mobileView，在桌面视图时这个值没有影响
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [searchParams]);
+
   // 加载用户列表
   const loadUserList = async (silent = false) => {
     try {
@@ -227,6 +275,18 @@ function MessageContent() {
     router.push(`/message?uid=${user.uid}`, { scroll: false });
     // 如果是从搜索结果选择的，关闭对话框
     setShowAddDialog(false);
+    
+    // 在移动设备上，切换到聊天视图
+    if (isMobile) {
+      setMobileView('chat');
+    }
+  };
+
+  // 返回到列表视图的处理函数
+  const handleBackToList = () => {
+    setMobileView('list');
+    // 可选：清除URL中的uid参数
+    router.push('/message', { scroll: false });
   };
 
   // 滚动到最新消息
@@ -289,11 +349,19 @@ function MessageContent() {
 
   // 初始加载用户列表
   useEffect(() => {
-    // 首次加载
-    loadUserList(false).then(() => {
+    const loadInitialView = async () => {
+      await loadUserList(false);
+      const uid = searchParams.get('uid');
+      
+      // 如果URL中有uid，且是移动设备，则切换到聊天视图
+      if (uid && isMobile) {
+        setMobileView('chat');
+      }
+      
       loadUserFromParams();
-    });
-
+    };
+    
+    loadInitialView();
     // 设置轮询
     const interval = setInterval(pollData, 10000);
     
@@ -369,31 +437,19 @@ function MessageContent() {
 
   return (
     <div className="message-container">
-      <div className='user-list'>
-          <div className='user-list-header'>
-              <h2>对话列表</h2>
-              <button
-                  className='add-conversation-btn'
-                  onClick={() => setShowAddDialog(true)}
-                  title='添加新对话'
-              >
-                  <svg
-                      width='20'
-                      height='20'
-                      viewBox='0 0 24 24'
-                      fill='none'
-                      stroke='currentColor'
-                      strokeWidth='2'
-                      strokeLinecap='round'
-                      strokeLinejoin='round'
-                  >
-                      <line x1='12' y1='5' x2='12' y2='19'></line>
-                      <line x1='5' y1='12' x2='19' y2='12'></line>
-                  </svg>
-              </button>
-          </div>
-
-          {loadingUsers ? (
+      {/* 对话列表区域 - 只在桌面或是移动设备列表视图时显示 */}
+      <div className={`user-list ${isMobile && mobileView === 'chat' ? 'mobile-hidden' : ''}`}>
+        <div className="user-list-header">
+          <h2>对话列表</h2>
+          <button className="add-conversation-btn" onClick={() => setShowAddDialog(true)} title="添加新对话">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+        </div>
+        
+        {loadingUsers ? (
               <div className='empty-state'>
                   <div>加载对话列表...</div>
                   <div className='loading-spinner'></div>
@@ -456,28 +512,39 @@ function MessageContent() {
           )}
       </div>
 
-      <div className='chat-area'>
-          {selectedUser ? (
-              <>
-                  <div className='chat-header'>
-                      <div
-                          className='user-avatar'
-                          style={{ width: '32px', height: '32px', marginRight: '10px' }}
-                      >
-                          {selectedUser.avatar ? (
-                              <img src={selectedUser.avatar} alt={selectedUser.nickname} />
-                          ) : (
-                              selectedUser.nickname.charAt(0)
-                          )}
-                      </div>
-                      <div>
-                          <div>{selectedUser.nickname}</div>
-                          <div className='user-username' style={{ fontSize: '12px' }}>
-                              @{selectedUser.username}
-                          </div>
-                      </div>
-                  </div>
-                  <div className='messages-container'>
+      {/* 聊天区域 - 只在桌面或是移动设备聊天视图时显示 */}
+      <div className={`chat-area ${isMobile && mobileView === 'list' ? 'mobile-hidden' : ''}`}>
+        {selectedUser ? (
+          <>
+            <div className="chat-header">
+              {/* 在移动设备上添加返回按钮 */}
+              {isMobile && (
+                <button 
+                  className="back-button" 
+                  onClick={handleBackToList}
+                  aria-label="返回列表"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                  </svg>
+                </button>
+              )}
+              
+              <div className="user-avatar" style={{ width: '32px', height: '32px', marginRight: '10px' }}>
+                {selectedUser.avatar ? (
+                  <img src={selectedUser.avatar} alt={selectedUser.nickname} />
+                ) : (
+                  selectedUser.nickname.charAt(0)
+                )}
+              </div>
+              <div>
+                <div>{selectedUser.nickname}</div>
+                <div className="user-username" style={{fontSize: '12px'}}>@{selectedUser.username}</div>
+              </div>
+            </div>
+            
+            <div className='messages-container'>
                       {loading && messages.length === 0 ? (
                           <div className='empty-state'>
                               <div>加载消息中...</div>
@@ -551,26 +618,32 @@ function MessageContent() {
                           {loading ? '发送中...' : '发送'}
                       </button>
                   </form>
-              </>
-          ) : (
-              <div className='no-conversation'>
-                  <svg
-                      width='64'
-                      height='64'
-                      viewBox='0 0 24 24'
-                      fill='none'
-                      stroke='currentColor'
-                      strokeWidth='1.5'
-                      strokeLinecap='round'
-                      strokeLinejoin='round'
-                  >
-                      <path d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'></path>
-                  </svg>
-                  <p>选择一个联系人开始对话</p>
-              </div>
-          )}
-
-          {error && (
+          </>
+        ) : (
+          <div className="no-conversation">
+            {/* 在移动设备时添加返回按钮 */}
+            {isMobile && mobileView === 'chat' && (
+              <button 
+                className="back-button-empty" 
+                onClick={handleBackToList}
+                aria-label="返回列表"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                返回对话列表
+              </button>
+            )}
+            
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <p>选择一个联系人开始对话</p>
+          </div>
+        )}
+        
+        {error && (
               <div className='error-message'>
                   <svg
                       width='16'
@@ -590,7 +663,7 @@ function MessageContent() {
               </div>
           )}
       </div>
-
+      
       {/* 添加对话弹窗 */}
       {showAddDialog && (
           <div className='dialog-overlay' onClick={() => setShowAddDialog(false)}>

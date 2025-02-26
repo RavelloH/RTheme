@@ -3200,7 +3200,7 @@ kdb {
     }
 }
 
-@media screen and (max-width: 400px) {
+@media screen and (max-width: 480px) {
     #showcase {
         padding: calc(1.25rem + 1%) calc(22px + 1%) calc(1.25rem + 0.75%) calc(22px + 1%);
     }
