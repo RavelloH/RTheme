@@ -21,7 +21,7 @@ async function checkLimitControl(request) {
     });
 
     await prisma.$disconnect();
-    return count <= 20;
+    return count <= 30;
 }
 
 async function updateLimitControl(request) {
