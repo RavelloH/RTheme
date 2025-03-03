@@ -8,7 +8,7 @@ import objectToForm from '@/utils/objectToForm';
 export default function RenderProfileActions(props) {
     const { isOwner, isLogged, uid, followed, myUid } = props;
     const [isFollowing, setIsFollowing] = useState(
-        followed && followed.some((item) => item.followingUserUid == myUid)
+        followed && followed.some((item) => item.followingUserUid == myUid),
     );
 
     const handleFollow = (uid, action) => {
@@ -44,7 +44,7 @@ export default function RenderProfileActions(props) {
             </a>
         );
     }
-    
+
     if (!isLogged) {
         return (
             <>
@@ -58,7 +58,7 @@ export default function RenderProfileActions(props) {
             </>
         );
     }
-    
+
     return (
         <>
             {isFollowing ? (

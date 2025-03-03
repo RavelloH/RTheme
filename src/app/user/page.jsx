@@ -99,7 +99,10 @@ function dynamic(userinfo) {
                     <p style={{ maxWidth: '100%' }}>
                         <span className='ri-time-fill'></span>{' '}
                         <span>{formatDateWithTimeZone(followed.startAt, -8)}</span> &gt; 被用户：
-                        <a href={'/user?uid=' + followed.followingUserUid}>{followed.followingUser.nickname}</a> 关注
+                        <a href={'/user?uid=' + followed.followingUserUid}>
+                            {followed.followingUser.nickname}
+                        </a>{' '}
+                        关注
                     </p>
                     <hr className='light' />
                 </div>
@@ -204,7 +207,8 @@ export default async function User({ searchParams }) {
                         alignItems: 'center',
                         flexWrap: 'nowrap',
                         justifyContent: 'space-between',
-                    }}>
+                    }}
+                >
                     <div className='userInfo'>
                         <div id='user-info'>
                             {renderUserInfo(userinfo, getMinutesFromNow, timeAgo)}
@@ -312,7 +316,7 @@ export default async function User({ searchParams }) {
                             select: {
                                 nickname: true,
                                 uid: true,
-                            }
+                            },
                         },
                     },
                 },
@@ -334,7 +338,8 @@ export default async function User({ searchParams }) {
                             alignItems: 'center',
                             flexWrap: 'nowrap',
                             justifyContent: 'space-between',
-                        }}>
+                        }}
+                    >
                         <div className='userInfo'>
                             <div id='user-info'>
                                 {renderUserInfo(userinfo, getMinutesFromNow, timeAgo)}
@@ -403,7 +408,8 @@ export default async function User({ searchParams }) {
                         alignItems: 'center',
                         flexWrap: 'nowrap',
                         justifyContent: 'space-between',
-                    }}>
+                    }}
+                >
                     <div className='userInfo'>
                         <div id='user-info'>
                             {renderUserInfo(

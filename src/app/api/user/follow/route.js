@@ -41,8 +41,6 @@ export async function POST(request) {
             );
         }
 
-
-
         let infoJSON = info;
 
         if (!(await limitControl.check(request))) {
@@ -60,66 +58,66 @@ export async function POST(request) {
 
         if (result == null) {
             return Response.json(
-            {
-                message: '未找到此账户',
-            },
-            { status: 400 },
+                {
+                    message: '未找到此账户',
+                },
+                { status: 400 },
             );
         } else {
             if (infoJSON.action == 'follow') {
-            try {
-                await prisma.friendShip.create({
-                data: {
-                    id: user.uid + '-' + infoJSON.uid,
-                    followingUserUid: Number(user.uid),
-                    followedUserUid: Number(infoJSON.uid),
-                },
-                });
-                return Response.json(
-                {
-                    message: '关注成功',
-                },
-                { status: 200 },
-                );
-            } catch (e) {
-                if (e.code === 'P2002') {
-                return Response.json(
-                    {
-                    message: '您已经关注了该用户',
-                    },
-                    { status: 400 },
-                );
-                } 
-                throw e;
-            }
+                try {
+                    await prisma.friendShip.create({
+                        data: {
+                            id: user.uid + '-' + infoJSON.uid,
+                            followingUserUid: Number(user.uid),
+                            followedUserUid: Number(infoJSON.uid),
+                        },
+                    });
+                    return Response.json(
+                        {
+                            message: '关注成功',
+                        },
+                        { status: 200 },
+                    );
+                } catch (e) {
+                    if (e.code === 'P2002') {
+                        return Response.json(
+                            {
+                                message: '您已经关注了该用户',
+                            },
+                            { status: 400 },
+                        );
+                    }
+                    throw e;
+                }
             }
             if (infoJSON.action == 'unfollow') {
-            const friendship = await prisma.friendShip.findUnique({
-                where: {
-                id: user.uid + '-' + infoJSON.uid,
-                },
-            });
-            
-            if (!friendship) {
+                const friendship = await prisma.friendShip.findUnique({
+                    where: {
+                        id: user.uid + '-' + infoJSON.uid,
+                    },
+                });
+
+                if (!friendship) {
+                    return Response.json(
+                        {
+                            message: '您尚未关注该用户',
+                        },
+                        { status: 400 },
+                    );
+                }
+
+                await prisma.friendShip.deleteMany({
+                    where: {
+                        id: user.uid + '-' + infoJSON.uid,
+                    },
+                });
                 return Response.json(
-                {
-                    message: '您尚未关注该用户',
-                },
-                { status: 400 },
+                    {
+                        message: '取消关注成功',
+                    },
+                    { status: 200 },
                 );
-            }
-            
-            await prisma.friendShip.deleteMany({
-                where: {
-                id: user.uid + '-' + infoJSON.uid,
-                },
-            });
-            return Response.json(
-                {
-                message: '取消关注成功',
-                },
-                { status: 200 },
-            );
             }
         }
     } catch (error) {

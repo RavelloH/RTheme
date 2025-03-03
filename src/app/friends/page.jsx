@@ -2,21 +2,23 @@ import prisma from '../api/_utils/prisma';
 import config from '../../../config';
 
 export default async function FriendPage() {
-    const Friends = await prisma.user.findMany({
-        where: {
-            followed: {
-                some: {
-                    followingUserUid: 1,
+    const Friends = await prisma.user
+        .findMany({
+            where: {
+                followed: {
+                    some: {
+                        followingUserUid: 1,
+                    },
                 },
             },
-        },
-    }).then(friends => {
-        for (let i = friends.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [friends[i], friends[j]] = [friends[j], friends[i]];
-        }
-        return friends;
-    });
+        })
+        .then((friends) => {
+            for (let i = friends.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [friends[i], friends[j]] = [friends[j], friends[i]];
+            }
+            return friends;
+        });
 
     return (
         <>
@@ -38,7 +40,8 @@ export default async function FriendPage() {
                                 className='no-effect'
                                 target='_blank'
                                 data-pjax-state=''
-                                one-link-mark='yes'>
+                                one-link-mark='yes'
+                            >
                                 <div className='friends-avatar'>
                                     <img
                                         src={item.avatar || '/user.jpg'}
