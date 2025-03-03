@@ -71,6 +71,41 @@ function dynamic(userinfo) {
             ),
         });
     });
+    userinfo.following.forEach((following) => {
+        dynamicList.push({
+            time: following.startAt,
+            link: '/user?uid=' + following.uid,
+            message: (
+                <div>
+                    <p style={{ maxWidth: '100%' }}>
+                        <span className='ri-time-fill'></span>{' '}
+                        <span>{formatDateWithTimeZone(following.startAt, -8)}</span> &gt;
+                        关注了用户：
+                        <a href={'/user?uid=' + following.followedUserUid}>
+                            {following.followedUser.nickname}
+                        </a>
+                    </p>
+                    <hr className='light' />
+                </div>
+            ),
+        });
+    });
+    userinfo.followed.forEach((followed) => {
+        dynamicList.push({
+            time: followed.startAt,
+            link: '/user?uid=' + followed.uid,
+            message: (
+                <div>
+                    <p style={{ maxWidth: '100%' }}>
+                        <span className='ri-time-fill'></span>{' '}
+                        <span>{formatDateWithTimeZone(followed.startAt, -8)}</span> &gt; 被用户：
+                        <a href={'/user?uid=' + followed.followingUserUid}>{followed.followingUser.nickname}</a> 关注
+                    </p>
+                    <hr className='light' />
+                </div>
+            ),
+        });
+    });
     dynamicList.sort((a, b) => new Date(b.time) - new Date(a.time));
     let resultList = [];
     dynamicList.forEach((item) =>
@@ -261,8 +296,26 @@ export default async function User({ searchParams }) {
                 },
                 comment: true,
                 note: true,
-                followed: true,
-                following: true,
+                followed: {
+                    include: {
+                        followingUser: {
+                            select: {
+                                nickname: true,
+                                uid: true,
+                            },
+                        },
+                    },
+                },
+                following: {
+                    include: {
+                        followedUser: {
+                            select: {
+                                nickname: true,
+                                uid: true,
+                            }
+                        },
+                    },
+                },
             },
         });
         const isOwner = user.uid == uid || tokenServer.verify(cookieStore.value).uid == uid || !uid;
