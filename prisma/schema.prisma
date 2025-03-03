@@ -114,7 +114,7 @@ model Note {
 }
 
 model FriendShip {
-  id               String   @id @default(uuid())
+  id               String   @id
   followingUserUid Int
   followedUserUid  Int
   startAt          DateTime @default(now())

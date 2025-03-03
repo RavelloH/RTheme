@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import formatDateWithTimeZone from '@/utils/time';
 import prisma from '../api/_utils/prisma';
 import tokenServer from '../api/_utils/token';
+import RenderProfileActions from '@/components/ProfileActions';
 
 function getMinutesFromNow(timestamp) {
     const now = new Date().getTime();
@@ -35,8 +36,6 @@ function timeAgo(timestamp) {
 
     return '刚刚';
 }
-
-function followUser(uid) {}
 
 function dynamic(userinfo) {
     let dynamicList = [];
@@ -87,40 +86,6 @@ function dynamic(userinfo) {
         );
     }
     return resultList;
-}
-
-function renderProfileActions(isOwner, isLogged, uid) {
-    if (isOwner) {
-        return (
-            <a className='button no-effect' href='/user/update'>
-                <span className='ri-user-settings-fill button'></span> 编辑
-            </a>
-        );
-    }
-    if (!isLogged) {
-        return (
-            <>
-                <a className='button' href={'/account/signin?redirect=/user/?uid=' + uid}>
-                    <span className='ri-user-heart-fill button'></span> 关注
-                </a>
-                {'     '}
-                <a className='button' href={'/account/signin?redirect=/user/?uid=' + uid}>
-                    <span className='ri-message-2-fill button'></span> 私信
-                </a>
-            </>
-        );
-    }
-    return (
-        <>
-            <a className='button no-effect'>
-                <span className='ri-user-heart-fill button'></span> 关注
-            </a>
-            {'     '}
-            <a className='button no-effect' href={'/message?uid=' + uid}>
-                <span className='ri-message-2-fill button'></span> 私信
-            </a>
-        </>
-    );
 }
 
 function renderUserInfo(userinfo, getMinutesFromNow, timeAgo) {
@@ -204,15 +169,16 @@ export default async function User({ searchParams }) {
                         alignItems: 'center',
                         flexWrap: 'nowrap',
                         justifyContent: 'space-between',
-                    }}
-                >
+                    }}>
                     <div className='userInfo'>
                         <div id='user-info'>
                             {renderUserInfo(userinfo, getMinutesFromNow, timeAgo)}
                         </div>
                     </div>
 
-                    <div className='userBehavior'>{renderProfileActions(false, false, uid)}</div>
+                    <div className='userBehavior'>
+                        <RenderProfileActions isOwner={false} isLogged={false} uid={uid} />
+                    </div>
                 </div>
                 <hr />
                 <div className='texts full'>
@@ -315,8 +281,7 @@ export default async function User({ searchParams }) {
                             alignItems: 'center',
                             flexWrap: 'nowrap',
                             justifyContent: 'space-between',
-                        }}
-                    >
+                        }}>
                         <div className='userInfo'>
                             <div id='user-info'>
                                 {renderUserInfo(userinfo, getMinutesFromNow, timeAgo)}
@@ -324,7 +289,7 @@ export default async function User({ searchParams }) {
                         </div>
 
                         <div className='userBehavior'>
-                            {renderProfileActions(isOwner, true, uid)}
+                            <RenderProfileActions isOwner={isOwner} isLogged={true} uid={uid} />
                         </div>
                     </div>
                     <hr />
@@ -385,15 +350,27 @@ export default async function User({ searchParams }) {
                         alignItems: 'center',
                         flexWrap: 'nowrap',
                         justifyContent: 'space-between',
-                    }}
-                >
+                    }}>
                     <div className='userInfo'>
                         <div id='user-info'>
-                            {renderUserInfo(userinfo, getMinutesFromNow, timeAgo)}
+                            {renderUserInfo(
+                                userinfo,
+                                getMinutesFromNow,
+                                timeAgo,
+                                userinfo.followed,
+                            )}
                         </div>
                     </div>
 
-                    <div className='userBehavior'>{renderProfileActions(isOwner, true, uid)}</div>
+                    <div className='userBehavior'>
+                        <RenderProfileActions
+                            isOwner={isOwner}
+                            isLogged={true}
+                            uid={uid}
+                            followed={userinfo.followed}
+                            myUid={user.uid}
+                        />
+                    </div>
                 </div>
                 <hr />
                 <div className='texts full'>
