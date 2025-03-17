@@ -27,6 +27,7 @@
 - **SEO友好**：自带RSS与Sitemap，SEO友好。
 - **消息中心**: 自带消息中心，显示各类通知(评论/回复/站内信)
 - **自带评论系统**: 无需其他任何第三方评论系统，自带markdown语法支持
+- **AES-128加密的即时聊天**: 自带加密，接入博客消息系统
   
 ## 预览  
 
@@ -49,6 +50,9 @@
 ![Screenshot_20230819_163426_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/b38705ad-945e-4fd7-8ec6-93537ff52153)
 ![image](https://github.com/user-attachments/assets/a5e3b8ec-4f66-42be-949a-b168f6d0ad3c)
 ![image](https://github.com/user-attachments/assets/700f7a20-592f-4199-b84f-62331a2c9303)
+![image](https://github.com/user-attachments/assets/8a4959ff-9c2d-4291-ae99-c40d2d83179b)
+![image](https://github.com/user-attachments/assets/df934b22-aca5-4dd2-a7f1-c4d11699fcc1)
+
 
 
 
