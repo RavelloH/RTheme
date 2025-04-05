@@ -102,10 +102,10 @@ export default async function Posts() {
                 </span>
                 <span className='virgule' id='index-info'>
                     <Virgule
-                        text={`共索引 ${posts.length} 篇文章，最近更新于${getTime(
+                        text={`共索引 ${posts.length} 篇文章${posts.length > 0 ? `，最近更新于${getTime(
                             'DD',
                             posts[0].createdAt,
-                        )}天前`}
+                        )}天前` : ''}`}
                         timeout={1200}
                     />
                 </span>

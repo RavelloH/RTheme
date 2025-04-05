@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@prisma/client": "5.16.2",
+    "@prisma/client": "5.21.1",
     "@shikijs/markdown-it": "^1.22.2",
     "@vercel/analytics": "^1.3.2",
     "@vercel/speed-insights": "^1.0.14",
