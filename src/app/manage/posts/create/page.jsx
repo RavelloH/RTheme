@@ -144,8 +144,7 @@ function infoEdit() {
                     <div
                         className='big-button'
                         id='publish-button'
-                        onClick={() => submit('publish')}
-                    >
+                        onClick={() => submit('publish')}>
                         <span>发布</span>
                     </div>
                     <div className='big-button' id='draft-button' onClick={() => submit('draft')}>
@@ -234,35 +233,40 @@ function submit(mode) {
             if (data.message == '创建成功') {
                 if (mode == 'publish') {
                     switchElementContent('#publish-button span', '发布成功，正在更新站点...');
-
-                    fetch('/api/site/build', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            Authorization: 'Bearer ' + token.get(),
-                        },
-                    })
-                        .then((response) => response.json())
-                        .then((data) => {
-                            switchElementContent(
-                                '#publish-button span',
-                                '站点更新成功，即将跳转...',
-                            );
-                            setTimeout(() => {
-                                loadURL(`/posts/${postName}`);
-                            }, 1000);
-                        })
-                        .catch((error) => {
-                            console.error('站点更新失败:', error);
-                            switchElementContent(
-                                '#publish-button span',
-                                '站点更新失败，即将跳转...',
-                            );
-                            setTimeout(() => {
-                                loadURL(`/posts/${postName}`);
-                            }, 1000);
-                        });
+                    let tryTime = 1;
+                    function checkPage() {
+                        fetch(`/posts/${postName}`)
+                            .then((data) => {
+                                // 检测是否返回200
+                                if (data.status == 200) {
+                                    switchElementContent(
+                                        '#publish-button span',
+                                        '站点更新成功，即将跳转...',
+                                    );
+                                    setTimeout(() => {
+                                        window.location.href = `/posts/${postName}`;
+                                    }, 1000);
+                                } else {
+                                    switchElementContent(
+                                        '#publish-button span',
+                                        '正在等待远端部署刷新 尝试次数:' + tryTime,
+                                    );
+                                    tryTime++;
+                                    checkPage();
+                                }
+                            })
+                            .catch((e) => {
+                                switchElementContent(
+                                    '#publish-button span',
+                                    '远端部署暂时无法访问 尝试次数:' + tryTime,
+                                );
+                                tryTime++;
+                                checkPage();
+                            });
+                    }
+                    checkPage();
                 }
+
                 if (mode == 'draft') {
                     switchElementContent('#draft-button span', '保存成功，即将跳转...');
                     setTimeout(() => {
@@ -399,8 +403,7 @@ export default function CreatePosts() {
                     <div
                         className='big-button'
                         id='to-content-button'
-                        onClick={() => contentEdit()}
-                    >
+                        onClick={() => contentEdit()}>
                         <span>下一步</span>
                     </div>
                 </div>
