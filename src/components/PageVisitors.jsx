@@ -31,14 +31,14 @@ export function getPageVisitors(url) {
 
 export function Umami() {
     if (!config.umami) return null;
+    if (process.env.NODE_ENV === 'development') return null;
     return (
         <>
             <script
                 async
                 defer
                 data-website-id={config.umami.id}
-                src={config.umami.scirpt}
-            ></script>
+                src={config.umami.script}></script>
         </>
     );
 }
