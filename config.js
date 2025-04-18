@@ -174,9 +174,24 @@ const config = {
             icon: 'ri-video-chat-fill',
         },
         {
-            name: 'MUSIC',
-            href: 'https://music.ravelloh.top/',
-            icon: 'ri-album-fill',
+            name: 'TIMEPULSE',
+            href: 'https://timepulse.ravelloh.top/',
+            icon: 'ri-alarm-fill',
+        },
+        {
+            name: 'ZESTSEND',
+            href: 'https://zestsend.ravelloh.top/',
+            icon: 'ri-file-upload-fill',
+        },
+        {
+            name: 'NEWS',
+            href: 'https://news.ravelloh.top/',
+            icon: 'ri-newspaper-fill',
+        },
+        {
+            name: 'PHOTOS',
+            href: 'https://photos.ravelloh.top/',
+            icon: 'ri-image-2-fill',
         },
         {
             name: 'PSGAME',
@@ -186,7 +201,7 @@ const config = {
     ],
     umami: {
         url: 'https://analytics.ravelloh.top/',
-        scirpt: 'https://analytics.ravelloh.top/script.js',
+        script: 'https://analytics.ravelloh.top/script.js',
         id: 'f47e2dc3-f6bf-4d7c-b311-7467bb1b17e5',
         token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ3ZWJzaXRlSWQiOiJmNDdlMmRjMy1mNmJmLTRkN2MtYjMxMS03NDY3YmIxYjE3ZTUiLCJpYXQiOjE3MjA3OTc2MTB9.F2K7fuCqjUCbIQDm7ygX98kRTCdkusHpgv27qQ4YZSY',
         apiUrl: 'https://analytics.api.ravelloh.top/',
