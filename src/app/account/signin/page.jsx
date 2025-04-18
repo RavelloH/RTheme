@@ -8,6 +8,7 @@ import config from '../../../../config';
 import objectToForm from '@/utils/objectToForm';
 import analyzeURL from '@/utils/analyzeURL';
 import loadURL from '@/utils/loadURL';
+import { useBroadcast } from '@/store/useBroadcast';
 
 function main() {
     if (cookie.getItem('usertoken')) {
@@ -98,6 +99,7 @@ function signin() {
                 }
 
                 setTimeout(() => {
+                    useBroadcast.getState().broadcast({ action: 'login' });
                     if (analyzeURL(window.location.href, 'redirect') !== '') {
                         loadURL(analyzeURL(window.location.href, 'redirect'));
                     } else {
