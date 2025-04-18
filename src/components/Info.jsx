@@ -66,7 +66,7 @@ export default function Info() {
         setReferrer(document.referrer);
         setUptime(getTime('DD天hh小时mm分钟', config.siteBirthday));
 
-        if (config.uptime.apiUrl) {
+        if (config.uptime && config.uptime.apiUrl) {
             const cache = localStorage.getItem('uptimeData');
             const now = Date.now();
             if (cache) {
