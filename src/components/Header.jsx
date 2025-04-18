@@ -40,7 +40,8 @@ export default function Header() {
                 id='logo'
                 className='loading'
                 style={{ '--i': 1 }}
-                onClick={() => broadcast({ action: 'openUserbar' })}>
+                onClick={() => broadcast({ action: 'openUserbar' })}
+            >
                 <a href='#userbar'>
                     <img
                         id='avatar'
@@ -71,7 +72,8 @@ export default function Header() {
                     className='loading'
                     style={{ '--i': 0 }}
                     data-umami-event='header-toggler'
-                    onClick={() => broadcast({ action: 'toggleSidebar' })}></div>
+                    onClick={() => broadcast({ action: 'toggleSidebar' })}
+                ></div>
             </div>
         </header>
     );
