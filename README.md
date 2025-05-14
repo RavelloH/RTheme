@@ -10,6 +10,21 @@
 ![GitHub repo size](https://img.shields.io/github/repo-size/RavelloH/RTheme?style=for-the-badge)
 ![GitHub Repo stars](https://img.shields.io/github/stars/RavelloH/RTheme?style=for-the-badge)
 </div>
+## 比较
+为什么你应该试试RTheme?
+
+| 框架/功能   | 静态博客 | 动态博客 | RTheme |
+| ------- | ---- | ---- | ------ |
+| 文章实时更新  | ❌    | ✅    | ✅      |
+| 免费部署    | ✅    | ❌    | ✅      |
+| 内置内容管理  | ❌    | ✅    | ✅      |
+| 自带评论系统  | ❌    | ✅    | ✅      |
+| 不用定期维护  | ✅    | ❌    | ✅      |
+| 静态SEO优化 | ✅    | ❌    | ✅      |
+| 用户管理系统  | ❌    | ✅    | ✅      |
+| 自带全站搜索  | ❌    | ✅    | ✅      |
+| 站内消息系统  | ❌    | ✅    | ✅      |
+| 草稿箱     | ❌    | ✅    | ✅      |
 
 ## 特点
 - **现代化**：采用现代Web技术，如React、Next.js，提供快速、响应式的用户体验。
@@ -42,7 +57,6 @@
 ![user](https://raw.ravelloh.top/rtheme/user.webp)
 ![post-index](https://raw.ravelloh.top/rtheme/post-index.webp)
 
-![Screenshot_20230819_163309_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/b83fe77d-82ad-4d96-a1ba-c26e69f4eb1f)
 ![Screenshot_20230819_163340_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/8dda9083-2096-47f7-a868-565fc53a8ece)
 ![Screenshot_20230819_163447_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/d96d3c0d-c98a-4fc3-835a-57f2020e7bf7)
 ![Screenshot_20230819_163646_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/293cb420-25a7-4b34-8900-b137f107c196)
@@ -54,7 +68,7 @@
 ![image](https://github.com/user-attachments/assets/df934b22-aca5-4dd2-a7f1-c4d11699fcc1)
 
 
-
+---
 
 
 ## 特性  
@@ -64,36 +78,17 @@
 在实际体验中，RTheme使用Web Worker异步处理高负载任务，异步加载/执行渲染，避免阻塞页面；其主动预加载也降低了页面的加载延迟。
 在v3版本的全面升级中，主题已经改造为单页应用程序，加之顺畅的内容过渡，流畅性大大提升。
 
-### 自动化  
-RTheme使用Github Actions在云端自动部署，无需本地干预，即可自动完成索引更新、自动订阅更新、站点地图更新、文章旁路推荐等功能。  
-此外，RTheme优化了自身的架构，使得其编写文章十分简单----仅需要了解HTML语法即可。你也可以选择使用Markdown编辑。之后，其组件将在渲染时自动无感添加。  
-![Screenshot_20230817_200552_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/6e554c22-5a2f-45be-bc94-82ed845775a3)  
-
-
 ### 响应式  
 主题使用响应式设计，基准元素均使用flex/grid布局，在各尺寸屏幕上表现出色。
 ![Screenshot_20230819_165401_com kiwibrowser browser](https://github.com/RavelloH/RTheme/assets/68409330/ba0071fb-8e4d-4c90-8834-203cb478a880)
 ![Screenshot_20230819_165820_com android chrome_edit_386275673794257](https://github.com/RavelloH/RTheme/assets/68409330/2dc5f1ee-9d84-4a7b-8aa9-d7cd6f6bdef8)
 
 
-### 功能丰富  
-主题功能丰富，内置设置/分享/在线音乐播放/多站点测速/自动全站搜索/文章自定义排序/文章标签&分类自动索引/站点地图/RSS/Atom自动生成/文章自动推荐/内置高级下载器/主动型预加载/用户登录接口/外链截图API等等一系列功能，创造出属于极客的极致主题框架。  
-
-### 函数化  
-主题中除了用于管控初始化加载的`loading.js`，其余脚本均将各功能包装为函数，以保证其可复用性及可免依赖乱序加载。  
-![Screenshot_20230819_170439_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/2ffb3784-11ab-4326-9bd1-078d1ef17563)  
-这使得二次开发十分简单，可直接复用主题框架中的功能。
-
 ### SEO友好  
-主题自动根据页面内容生成两种格式的`sitemap`，优化搜索引擎抓取。  
-
-### 全站搜索  
-主题与可持续集成的RPageSearch深度集成，以提供静态站的全站高级搜索功能。
-详见[RavelloH/RPageSearch](https://github.com/RavelloH/RPageSearch)。高性能/实时搜索/正则语法支持/异步/web worker/自动持续构建/可拓展数据格式，提供丰富的搜索功能。  
-![Screenshot_20230812_214218_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/8244541c-c2c2-4893-a094-b49f2ac3d4fb)
+主题自动根据页面内容生成两`sitemap`，同时使用Nextjs的OG优化，优化搜索引擎抓取。  
 
 ### 自动订阅更新  
-主题基于页面内容自动生成`RSS`、`Atom`、`JSON Feed`三种格式的订阅信息。
+主题基于页面内容自动生成`RSS`，方便他人更新订阅
 
 ### 高兼容性  
 主题最早支持到Chrome58(2017年4月19日),Firefox52(2017年3月7日),Opera45(2017年5月10日)，Safari，能够提供兼容性的保障。  
@@ -105,29 +100,16 @@ RTheme使用Github Actions在云端自动部署，无需本地干预，即可自
 ![Screenshot_20230819_175635_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/160277fb-e8c1-4af9-9b3c-48c7bd23e9f0)
 
 ### 原生音乐播放器
-主题内置原生音乐播放器，支持播放/切换/跳转/循环等功能，且可进行在线搜索以使用在线资源。  
+主题内置原生音乐播放器，支持播放/切换/跳转/循环等功能，且可进行在线搜索以使用在线资源，同时也支持与你的网易云音乐歌单同步，创建默认播放列表。
 ![Screenshot_20230819_163646_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/293cb420-25a7-4b34-8900-b137f107c196)
-也支持在文章内部加入音乐播放器，来调用主题的播放器进行播放。  
-![Screenshot_20230819_180221_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/b8535362-58ad-4f37-8b44-2f3f206396c3)
 
-### 过渡自然  
-主题内置顺滑的元素切换函数`switchElementContext()`，以保证元素切换的顺滑自然。
-
-### 轻量化&原生实现  
-主题本体大小小于600KB，无任何框架，保证了其高速的加载性能。
-![Screenshot_20230819_182143_com kiwibrowser browser](https://github.com/RavelloH/RTheme/assets/68409330/172c2488-40f4-4f4c-9f27-0ee93448c2ef)
 
 ### 代码高亮  
-主题使用`highlight.js`代码高亮，并在其基础上使用Web Worker并行加载，防止页面阻塞。  
+主题使用[Shiki](https://github.com/shikijs/shiki)代码高亮，并在其基础上使用Web Worker并行加载，防止页面阻塞。  
 ![Screenshot_20230819_182502_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/3c71231d-dd54-4b85-9fcf-4f1eb01097d8)
 
 ### 标签&分类自动索引
-主题能自动根据文章信息索引具有相应标签/分类的文章，无需干预。
-![Screenshot_20230819_182651_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/564e86cf-686b-4f05-9ebf-44f7d45e0af9)
-
-### 语言自定义
-主题的语言文件包单独成文件，你可以根据自己的需要更改模板，也可实现其国际化。
-![Screenshot_20230819_182834_com android chrome](https://github.com/RavelloH/RTheme/assets/68409330/52fde86d-8136-4191-b90b-1a28653fb9bb)
+主题能自动根据文章信息索引具有相应标签/分类的文章。
 
 ### 设置自定义  
 主题可进行各式设置，以提供个性化体验。  
@@ -142,10 +124,13 @@ RTheme使用Github Actions在云端自动部署，无需本地干预，即可自
 ### 文章旁路推荐
 文章结尾自动推荐上一篇/下一篇文章，无需手动设置。效果见上方图片。
 
-### 内置高级下载器
-主题内置下载器，提高整体感。你可以在文章中使用。  
-详阅[#箱式下载盒](https://ravelloh.top/articles/20230815/#%E7%AE%B1%E5%BC%8F%E4%B8%8B%E8%BD%BD%E7%9B%92)
-![Screenshot_20230819_183617_com kiwibrowser browser](https://github.com/RavelloH/RTheme/assets/68409330/5d32c6bf-2b41-46b1-b898-09cb185e8ccd)
+### 完整的用户系统
+可查看用户动态，包括文稿、手记、评论、关注、关注者。
+
+### 自动友链系统
+对方在此博客注册账号并设置昵称、签名、网站地址后，管理员只需使用管理账户关注此用户，即可将其自动添加入友链中。内容实时更新，对方仅需修改自己的账户信息即可同步修改其友链信息。
+
+
 
 ---
 
