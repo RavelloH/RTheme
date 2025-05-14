@@ -10,6 +10,7 @@
 ![GitHub repo size](https://img.shields.io/github/repo-size/RavelloH/RTheme?style=for-the-badge)
 ![GitHub Repo stars](https://img.shields.io/github/stars/RavelloH/RTheme?style=for-the-badge)
 </div>
+
 ## 比较
 为什么你应该试试RTheme?
 
