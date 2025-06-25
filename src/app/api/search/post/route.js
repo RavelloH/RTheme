@@ -44,7 +44,7 @@ export async function GET(request) {
             _relevance: {
                 fields: ['title', 'content'],
                 search: q,
-                sort: 'asc',
+                sort: 'desc',
             },
         },
         include: {
