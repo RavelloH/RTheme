@@ -83,6 +83,27 @@ export default async function Posts() {
         );
     });
 
+    const React = require('react');
+    const { useEffect, useState } = React;
+
+    function DynamicVirgule({ posts }) {
+        const [daysAgo, setDaysAgo] = useState(null);
+        useEffect(() => {
+            if (posts.length > 0) {
+                const createdAt = new Date(posts[0].createdAt);
+                const now = new Date();
+                const diff = Math.floor((now - createdAt) / (1000 * 60 * 60 * 24));
+                setDaysAgo(diff);
+            }
+        }, [posts]);
+        const text = `共索引 ${posts.length} 篇文章${
+            posts.length > 0 && daysAgo !== null
+                ? `，最近更新于${daysAgo}天前`
+                : ''
+        }`;
+        return <Virgule text={text} timeout={1200} />;
+    }
+
     return (
         <>
             <div className='texts half loading' id='showarea' style={{ '--i': 0 }}>
@@ -101,14 +122,7 @@ export default async function Posts() {
                     记录 & 索引所有文章。
                 </span>
                 <span className='virgule' id='index-info'>
-                    <Virgule
-                        text={`共索引 ${posts.length} 篇文章${
-                            posts.length > 0
-                                ? `，最近更新于${getTime('DD', posts[0].createdAt)}天前`
-                                : ''
-                        }`}
-                        timeout={1200}
-                    />
+                    <DynamicVirgule posts={posts} />
                 </span>
             </div>
             <div className='listlines' id='resultarea'>

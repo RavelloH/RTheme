@@ -203,7 +203,7 @@ const config = {
         url: 'https://analytics.ravelloh.top/',
         script: 'https://analytics.ravelloh.top/script.js',
         id: 'f47e2dc3-f6bf-4d7c-b311-7467bb1b17e5',
-        token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ3ZWJzaXRlSWQiOiJmNDdlMmRjMy1mNmJmLTRkN2MtYjMxMS03NDY3YmIxYjE3ZTUiLCJpYXQiOjE3MjA3OTc2MTB9.F2K7fuCqjUCbIQDm7ygX98kRTCdkusHpgv27qQ4YZSY',
+        token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ3ZWJzaXRlSWQiOiJmNDdlMmRjMy1mNmJmLTRkN2MtYjMxMS03NDY3YmIxYjE3ZTUiLCJpYXQiOjE3NTUwMTk3OTF9.5Pcj27hXHal-kKTVfcFa73tZReBVtpWwOXCYEdr5j_s',
         apiUrl: 'https://analytics.api.ravelloh.top/',
     },
     uptime: {
