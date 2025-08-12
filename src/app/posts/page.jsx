@@ -84,7 +84,12 @@ export default async function Posts() {
         );
     });
 
-    const latestCreatedAt = posts.length > 0 ? posts[0].createdAt.toISOString ? posts[0].createdAt.toISOString() : posts[0].createdAt : null;
+    const latestCreatedAt =
+        posts.length > 0
+            ? posts[0].createdAt.toISOString
+                ? posts[0].createdAt.toISOString()
+                : posts[0].createdAt
+            : null;
     return (
         <>
             <div className='texts half loading' id='showarea' style={{ '--i': 0 }}>
