@@ -3,6 +3,7 @@ import prisma from '@/app/api/_utils/prisma';
 import getTime from '@/utils/getTime';
 import Search from '@/components/Search';
 import Virgule from '@/components/Virgule';
+import DynamicVirgule from '@/components/DynamicVirgule';
 
 export const metadata = {
     title: '文稿 \\ Posts',
@@ -83,27 +84,7 @@ export default async function Posts() {
         );
     });
 
-    const React = require('react');
-    const { useEffect, useState } = React;
-
-    function DynamicVirgule({ posts }) {
-        const [daysAgo, setDaysAgo] = useState(null);
-        useEffect(() => {
-            if (posts.length > 0) {
-                const createdAt = new Date(posts[0].createdAt);
-                const now = new Date();
-                const diff = Math.floor((now - createdAt) / (1000 * 60 * 60 * 24));
-                setDaysAgo(diff);
-            }
-        }, [posts]);
-        const text = `共索引 ${posts.length} 篇文章${
-            posts.length > 0 && daysAgo !== null
-                ? `，最近更新于${daysAgo}天前`
-                : ''
-        }`;
-        return <Virgule text={text} timeout={1200} />;
-    }
-
+    const latestCreatedAt = posts.length > 0 ? posts[0].createdAt.toISOString ? posts[0].createdAt.toISOString() : posts[0].createdAt : null;
     return (
         <>
             <div className='texts half loading' id='showarea' style={{ '--i': 0 }}>
@@ -122,7 +103,7 @@ export default async function Posts() {
                     记录 & 索引所有文章。
                 </span>
                 <span className='virgule' id='index-info'>
-                    <DynamicVirgule posts={posts} />
+                    <DynamicVirgule count={posts.length} latestCreatedAt={latestCreatedAt} />
                 </span>
             </div>
             <div className='listlines' id='resultarea'>

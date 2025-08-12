@@ -92,6 +92,26 @@ model Post {
   category    Category[]
 }
 
+model Projects {
+  id          String @id @default(uuid())
+  name        String @unique @db.VarChar(50)
+  title       String @db.VarChar(50)
+  description String @db.VarChar(10000)
+  url         String @db.VarChar(100)
+  image       String @db.VarChar(100)
+  lang        String @db.VarChar(100)
+  license     String @db.VarChar(50)
+  index       Int    @default(0)
+}
+
+model Config {
+  name  String @id @db.VarChar(50) @unique
+  value String @db.VarChar(1000)
+  type  String @db.VarChar(50)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
 model Tag {
   name String @id @unique
   post Post[]
