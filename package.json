@@ -1,44 +1,20 @@
 {
-  "name": "rtheme-next",
-  "version": "0.1.0",
+  "name": "neutral-press",
   "private": true,
   "scripts": {
-    "dev": "node script/check.js && next dev",
-    "build": "node script/check.js && next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "@prisma/client": "5.21.1",
-    "@shikijs/markdown-it": "^1.22.2",
-    "@vercel/analytics": "^1.3.2",
-    "@vercel/speed-insights": "^1.0.14",
-    "argon2": "^0.31.2",
-    "instant.page": "^5.2.0",
-    "js-base64": "^3.7.7",
-    "jsonwebtoken": "^9.0.2",
-    "markdown-it": "^14.1.0",
-    "next": "14.2.5",
-    "next-mdx-remote": "^5.0.0",
-    "pjax": "^0.2.8",
-    "qrcode.react": "^4.2.0",
-    "qs": "^6.13.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "ref-napi": "^3.0.3",
-    "remixicon": "^4.5.0",
-    "rlog-js": "^1.4.0",
-    "rss": "^1.2.2",
-    "sharp": "^0.33.5",
-    "swr": "^2.3.0",
-    "vditor": "^3.10.7",
-    "virgule-js": "^2.1.0",
-    "zustand": "^5.0.3"
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --write .",
+    "check-types": "turbo run check-types"
   },
   "devDependencies": {
-    "eslint": "^8.57.1",
-    "eslint-config-next": "14.2.5",
-    "prisma": "^5.21.1",
-    "shiki": "^1.22.2"
+    "prettier": "^3.6.2",
+    "turbo": "^2.5.6",
+    "typescript": "5.9.2"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=18"
   }
 }
