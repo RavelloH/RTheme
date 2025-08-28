@@ -37,3 +37,5 @@ yarn-error.log*
 .DS_Store
 *.pem
 .vscode
+CLAUDE.md
+.claude

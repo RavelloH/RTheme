@@ -1,6 +1,6 @@
 import { Prisma, PrismaClient } from '../../generated/prisma';
 
-// 创建全局 Prisma 实例，配置连接池和超时
+// 创建全局 Prisma 实例
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
@@ -14,10 +14,9 @@ const prisma = globalForPrisma.prisma ?? new PrismaClient({
   },
 });
 
-// 在开发环境中避免重复创建客户端实例
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
-// 在进程退出时优雅关闭连接
+// 防止并发超限
 process.on('beforeExit', async () => {
   await prisma.$disconnect();
 });

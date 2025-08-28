@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
@@ -12,4 +6,395 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  uid Int @id @default(autoincrement())
+
+  // 邮件业务
+  email           String  @unique
+  emailVerified   Boolean @default(false)
+  emailVerifyCode String? @db.VarChar(30)
+  emailNotice     Boolean @default(false)
+
+  // 用户信息
+  username String  @unique
+  nickname String? @db.VarChar(50)
+  website  String? @db.VarChar(255)
+  bio      String? @db.VarChar(255)
+  password String?
+  avatar   String? @db.VarChar(255)
+
+  // 统计相关
+  createdAt DateTime  @default(now())
+  lastUseAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  role   Role       @default(USER)
+  status UserStatus @default(ACTIVE)
+
+  // 关系
+  accounts   Account[]
+  posts      Post[]
+  comments   Comment[]
+  media      Media[]
+  pages      Page[]
+  notices    Notice[]
+  messages   Message[] @relation("MessageFrom")
+  messagesTo Message[] @relation("MessageTo")
+
+  // 索引优化
+  @@index([email])
+  @@index([username])
+  @@index([role])
+  @@index([status])
+  @@index([createdAt])
+  @@index([lastUseAt])
+}
+
+// 第三方账户模型 (用于SSO登录)
+model Account {
+  id                String  @id @default(uuid())
+  userUid           Int
+  type              String // oauth
+  provider          String // google, github
+  providerAccountId String // 第三方平台的用户ID
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+
+  // 复合唯一约束，确保同一个用户不能重复绑定同一个第三方账户
+  @@unique([provider, providerAccountId])
+  // 索引优化
+  @@index([userUid])
+  @@index([provider])
+}
+
+model Post {
+  id            String     @id @default(uuid())
+  title         String
+  slug          String     @unique
+  content       String
+  excerpt       String?    @db.VarChar(500)
+  featuredImage String?    @db.VarChar(255)
+  status        PostStatus @default(DRAFT)
+  isPinned      Boolean    @default(false)
+  allowComments Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+
+  userUid Int
+
+  // SEO
+  metaTitle       String? @db.VarChar(60)
+  metaDescription String? @db.VarChar(160)
+  metaKeywords    String? @db.VarChar(255)
+  robotsIndex     Boolean @default(true)
+
+  // 关系
+  author     User       @relation(fields: [userUid], references: [uid])
+  tags       Tag[]
+  categories Category[]
+  comments   Comment[]
+  media      Media[]
+
+  // 访问统计关系
+  // @@index([userUid, status]) // 复合索引：按作者和状态查询
+
+  // 索引优化
+  @@index([slug])
+  @@index([status])
+  @@index([userUid])
+  @@index([isPinned])
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@index([status, createdAt]) // 复合索引：按状态和时间查询
+}
+
+model Tag {
+  name        String   @id @unique
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now())
+  posts       Post[]
+}
+
+model Category {
+  name        String   @id @unique
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now())
+  posts       Post[]
+}
+
+// 评论模型
+model Comment {
+  id        String        @id @default(uuid())
+  content   String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  deletedAt DateTime?
+  status    CommentStatus @default(PENDING)
+
+  // 关系
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  // 登录用户评论
+  userUid     Int?
+  user        User?     @relation(fields: [userUid], references: [uid], onDelete: SetNull)
+  // 未登录用户评论
+  authorName  String?   @db.VarChar(50)
+  authorEmail String?   @db.VarChar(255)
+  // 嵌套评论
+  parentId    String?
+  parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     Comment[] @relation("CommentReplies")
+
+  // 索引优化
+  @@index([postId])
+  @@index([userUid])
+  @@index([status])
+  @@index([parentId])
+  @@index([createdAt])
+  @@index([postId, status]) // 复合索引：按文章和状态查询
+  @@index([userUid, status]) // 复合索引：按用户和状态查询
+  @@index([status, createdAt]) // 复合索引：按状态和时间查询
+}
+
+// 媒体文件模型
+model Media {
+  id           String  @id @default(uuid())
+  filename     String
+  originalName String
+  mimeType     String  @db.VarChar(100)
+  size         Int // 大小，单位字节
+  hash         String  @db.VarChar(64)
+  // 从属
+  postId       String?
+  post         Post?   @relation(fields: [postId], references: [id], onDelete: SetNull)
+
+  // 图片相关
+  width   Int?
+  height  Int?
+  altText String? @db.VarChar(255)
+
+  url               String   @db.VarChar(500)
+  createdAt         DateTime @default(now())
+  storageProviderId String
+
+  // 上传者
+  userUid         Int
+  user            User            @relation(fields: [userUid], references: [uid])
+  StorageProvider StorageProvider @relation(fields: [storageProviderId], references: [id])
+
+  // 索引优化
+  @@index([userUid])
+  @@index([mimeType])
+  @@index([createdAt])
+  @@index([filename])
+}
+
+model StorageProvider {
+  id          String  @id @default(uuid())
+  name        String  @unique @db.VarChar(50) // local/aws-s3/aliyun-oss/qcloud-cos
+  displayName String  @db.VarChar(100) // 显示名称
+  isActive    Boolean @default(true) // 是否启用
+  isDefault   Boolean @default(false) // 是否为默认存储
+
+  // 配置信息
+  config Json @db.Json // 存储配置
+
+  // 限制设置
+  maxFileSize  Int      @default(10485760) // 最大文件大小(字节) 默认10MB
+  allowedTypes String[] @db.VarChar(50) // 允许的文件类型
+
+  // 路径模板
+  pathTemplate String @default("/{year}/{month}/{filename}") // 路径生成模板
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  media Media[]
+
+  @@index([isActive])
+  @@index([isDefault])
+}
+
+// 静态页面模型
+model Page {
+  id        String     @id @default(uuid())
+  title     String
+  slug      String     @unique
+  content   String
+  excerpt   String?    @db.VarChar(500)
+  status    PageStatus @default(DRAFT)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // SEO
+  metaTitle       String? @db.VarChar(60)
+  metaDescription String? @db.VarChar(160)
+  metaKeywords    String? @db.VarChar(255)
+
+  // 创建者
+  userUid Int
+  author  User @relation(fields: [userUid], references: [uid])
+
+  // 索引优化
+  @@index([slug])
+  @@index([status])
+  @@index([userUid])
+  @@index([createdAt])
+}
+
+// 网站配置模型
+model Config {
+  key         String   @id
+  value       Json     @db.Json
+  description String?  @db.VarChar(255)
+  updatedAt   DateTime @updatedAt
+
+  // 索引优化
+  @@index([updatedAt])
+}
+
+model Notice {
+  id        String   @id @default(uuid())
+  userUid   Int
+  isRead    Boolean  @default(false)
+  content   String
+  link      String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+
+  @@index([userUid, isRead])
+}
+
+model Message {
+  id          String   @id @default(uuid())
+  content     String   @db.VarChar(10000)
+  createdAt   DateTime @default(now())
+  fromUserUid Int
+  toUserUid   Int
+  from        User     @relation("MessageFrom", fields: [fromUserUid], references: [uid])
+  to          User     @relation("MessageTo", fields: [toUserUid], references: [uid])
+
+  // 索引优化
+  @@index([fromUserUid])
+  @@index([toUserUid])
+  @@index([createdAt])
+  @@index([fromUserUid, toUserUid]) // 复合索引：会话查询
+}
+
+// 访问量缓存表 - 用于高性能访问统计查询
+model ViewCountCache {
+  path         String   @id @db.VarChar(500) // 路径作为主键
+  cachedCount  Int      @default(0) // 缓存的访问总数
+  lastArchived DateTime @default(now()) // 上次存档时间
+  lastUpdated  DateTime @updatedAt // 最后更新时间
+
+  // 索引优化
+  @@index([lastUpdated])
+  @@index([lastArchived])
+}
+
+// 页面浏览记录模型
+model PageView {
+  id        String   @id @default(uuid())
+  path      String   @db.VarChar(500)
+  timestamp DateTime @default(now())
+
+  // 网络信息
+  ipAddress String  @db.VarChar(45)
+  userAgent String? @db.VarChar(1000)
+  referer   String? @db.VarChar(500)
+
+  // 设备和浏览器信息
+  browser        String? @db.VarChar(50)
+  browserVersion String? @db.VarChar(20)
+  os             String? @db.VarChar(50)
+  osVersion      String? @db.VarChar(20)
+  deviceType     String? @db.VarChar(20) // desktop/mobile/tablet
+
+  // 屏幕和显示信息
+  screenSize String? @db.VarChar(20) // "1920x1080" 格式
+  language   String? @db.VarChar(10) // zh-CN, en-US等
+  timezone   String? @db.VarChar(50)
+
+  // 会话和访客跟踪
+  visitorId String @db.VarChar(100) // 访客ID
+
+  // 索引优化
+  @@index([path, timestamp])
+  @@index([timestamp])
+  @@index([visitorId])
+}
+
+// 页面浏览存档表 - 压缩存储历史浏览数据
+model PageViewArchive {
+  id   String   @id @default(uuid())
+  path String   @db.VarChar(500)
+  date DateTime @db.Date // 存档日期
+
+  // 汇总统计数据
+  totalViews     Int @default(0)
+  uniqueVisitors Int @default(0)
+
+  ipStats      Json? @db.Json
+  refererStats Json? @db.Json
+
+  deviceStats  Json? @db.Json
+  browserStats Json? @db.Json
+  osStats      Json? @db.Json
+
+  screenStats   Json? @db.Json
+  languageStats Json? @db.Json
+  timezoneStats Json? @db.Json
+
+  userAgentStats Json? @db.Json
+
+  createdAt DateTime @default(now())
+
+  @@unique([path, date])
+  // 索引优化
+  @@index([path])
+  @@index([date])
+  @@index([path, date]) // 复合索引：按路径和日期查询
+}
+
+enum Role {
+  USER
+  ADMIN
+  EDITOR
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum PageStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SPAM
 }
