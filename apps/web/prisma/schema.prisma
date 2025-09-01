@@ -41,8 +41,9 @@ model User {
   media      Media[]
   pages      Page[]
   notices    Notice[]
-  messages   Message[] @relation("MessageFrom")
-  messagesTo Message[] @relation("MessageTo")
+  messages   Message[]  @relation("MessageFrom")
+  messagesTo Message[]  @relation("MessageTo")
+  auditLogs  AuditLog[]
 
   // 索引优化
   @@index([email])
@@ -87,6 +88,7 @@ model Post {
   status        PostStatus @default(DRAFT)
   isPinned      Boolean    @default(false)
   allowComments Boolean    @default(true)
+  publishedAt   DateTime?  // 发布时间，用于精确控制发布时间
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   deletedAt     DateTime?
@@ -100,7 +102,7 @@ model Post {
   robotsIndex     Boolean @default(true)
 
   // 关系
-  author     User       @relation(fields: [userUid], references: [uid])
+  author     User       @relation(fields: [userUid], references: [uid], onDelete: Cascade)
   tags       Tag[]
   categories Category[]
   comments   Comment[]
@@ -123,6 +125,7 @@ model Tag {
   name        String   @id @unique
   description String?  @db.VarChar(255)
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   posts       Post[]
 }
 
@@ -130,6 +133,7 @@ model Category {
   name        String   @id @unique
   description String?  @db.VarChar(255)
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   posts       Post[]
 }
 
@@ -137,6 +141,7 @@ model Category {
 model Comment {
   id        String        @id @default(uuid())
   content   String
+  ipAddress String?       @db.VarChar(45) // IP地址，用于反垃圾评论
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   deletedAt DateTime?
@@ -191,14 +196,15 @@ model Media {
 
   // 上传者
   userUid         Int
-  user            User            @relation(fields: [userUid], references: [uid])
-  StorageProvider StorageProvider @relation(fields: [storageProviderId], references: [id])
+  user            User            @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+  StorageProvider StorageProvider @relation(fields: [storageProviderId], references: [id], onDelete: Restrict)
 
   // 索引优化
   @@index([userUid])
   @@index([mimeType])
   @@index([createdAt])
   @@index([filename])
+  @@unique([hash])
 }
 
 model StorageProvider {
@@ -209,7 +215,7 @@ model StorageProvider {
   isDefault   Boolean @default(false) // 是否为默认存储
 
   // 配置信息
-  config Json @db.Json // 存储配置
+  config Json // 存储配置
 
   // 限制设置
   maxFileSize  Int      @default(10485760) // 最大文件大小(字节) 默认10MB
@@ -245,7 +251,7 @@ model Page {
 
   // 创建者
   userUid Int
-  author  User @relation(fields: [userUid], references: [uid])
+  author  User @relation(fields: [userUid], references: [uid], onDelete: Cascade)
 
   // 索引优化
   @@index([slug])
@@ -257,7 +263,7 @@ model Page {
 // 网站配置模型
 model Config {
   key         String   @id
-  value       Json     @db.Json
+  value       Json
   description String?  @db.VarChar(255)
   updatedAt   DateTime @updatedAt
 
@@ -283,8 +289,8 @@ model Message {
   createdAt   DateTime @default(now())
   fromUserUid Int
   toUserUid   Int
-  from        User     @relation("MessageFrom", fields: [fromUserUid], references: [uid])
-  to          User     @relation("MessageTo", fields: [toUserUid], references: [uid])
+  from        User     @relation("MessageFrom", fields: [fromUserUid], references: [uid], onDelete: Cascade)
+  to          User     @relation("MessageTo", fields: [toUserUid], references: [uid], onDelete: Cascade)
 
   // 索引优化
   @@index([fromUserUid])
@@ -303,6 +309,7 @@ model ViewCountCache {
   // 索引优化
   @@index([lastUpdated])
   @@index([lastArchived])
+  @@index([cachedCount])
 }
 
 // 页面浏览记录模型
@@ -347,18 +354,18 @@ model PageViewArchive {
   totalViews     Int @default(0)
   uniqueVisitors Int @default(0)
 
-  ipStats      Json? @db.Json
-  refererStats Json? @db.Json
+  ipStats      Json?
+  refererStats Json?
 
-  deviceStats  Json? @db.Json
-  browserStats Json? @db.Json
-  osStats      Json? @db.Json
+  deviceStats  Json?
+  browserStats Json?
+  osStats      Json?
 
-  screenStats   Json? @db.Json
-  languageStats Json? @db.Json
-  timezoneStats Json? @db.Json
+  screenStats   Json?
+  languageStats Json?
+  timezoneStats Json?
 
-  userAgentStats Json? @db.Json
+  userAgentStats Json?
 
   createdAt DateTime @default(now())
 
@@ -367,6 +374,41 @@ model PageViewArchive {
   @@index([path])
   @@index([date])
   @@index([path, date]) // 复合索引：按路径和日期查询
+}
+
+// 审计日志模型 - 记录系统操作和数据变更
+model AuditLog {
+  id        String   @id @default(uuid())
+  timestamp DateTime @default(now())
+
+  // 操作信息
+  action     String @db.VarChar(50) // CREATE/UPDATE/DELETE/LOGIN/LOGOUT等
+  resource   String @db.VarChar(50) // User/Post/Comment/Config等资源类型
+  resourceId String @db.VarChar(100) // 资源ID
+
+  // 操作者信息
+  userUid   Int?
+  user      User?   @relation(fields: [userUid], references: [uid], onDelete: SetNull)
+  ipAddress String  @db.VarChar(45)
+  userAgent String? @db.VarChar(1000)
+
+  // 变更详情
+  oldData Json? // 变更前的数据
+  newData Json? // 变更后的数据
+  changes Json? // 具体变更字段
+
+  // 附加信息
+  description String? @db.VarChar(500) // 操作描述
+  metadata    Json? // 额外的元数据
+
+  // 索引优化
+  @@index([userUid])
+  @@index([timestamp])
+  @@index([action])
+  @@index([resource])
+  @@index([resourceId])
+  @@index([action, resource]) // 复合索引：按操作类型和资源类型查询
+  @@index([userUid, timestamp]) // 复合索引：按用户和时间查询
 }
 
 enum Role {
