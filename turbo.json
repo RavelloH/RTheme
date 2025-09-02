@@ -1,45 +1,42 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
-  "globalEnv": [
-    "NODE_ENV",
-    "DATABASE_URL"
-  ],
+  "globalEnv": ["NODE_ENV", "DATABASE_URL"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**", "build/**"],
-      "env": [
-        "NODE_ENV",
-        "DATABASE_URL"
-      ]
+      "env": ["NODE_ENV", "DATABASE_URL"]
     },
     "lint": {
       "dependsOn": ["^lint"],
-      "env": [
-        "NODE_ENV"
-      ]
+      "env": ["NODE_ENV"]
     },
     "check-types": {
       "dependsOn": ["^check-types"],
-      "env": [
-        "NODE_ENV"
-      ]
+      "env": ["NODE_ENV"]
     },
     "dev": {
       "cache": false,
       "persistent": true,
-      "env": [
-        "NODE_ENV",
-        "DATABASE_URL"
-      ]
+      "env": ["NODE_ENV", "DATABASE_URL"]
+    },
+    "watch-openapi": {
+      "cache": false,
+      "persistent": true,
+      "inputs": [
+        "packages/openapi-spec/openapi.json",
+        "packages/openapi-spec/openapi.yaml"
+      ],
+      "env": ["NODE_ENV"]
     },
     "generate-openapi": {
-      "dependsOn": ["@repo/shared-types#build", "@repo/openapi-generator#build"],
-      "env": [
-        "NODE_ENV"
-      ]
+      "dependsOn": [
+        "@repo/shared-types#build",
+        "@repo/openapi-generator#build"
+      ],
+      "env": ["NODE_ENV"]
     }
   }
 }

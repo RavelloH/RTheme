@@ -21,13 +21,17 @@
   ],
   "scripts": {
     "build": "tsc",
+    "dev": "node src/watcher.js",
     "generate": "pnpm --filter @repo/openapi-generator generate && pnpm build",
     "check-types": "tsc --noEmit",
     "clean": "rm -f index.js index.d.ts"
   },
-  "dependencies": {},
+  "dependencies": {
+    "chokidar": "^3.5.3"
+  },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
+    "chokidar-cli": "^3.0.0",
     "typescript": "5.9.2",
     "@types/node": "^22.15.3"
   }

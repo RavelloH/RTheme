@@ -67,11 +67,20 @@ const config: Config = {
           position: "left",
           label: "部署指南",
         },
-        // { to: "/blog", label: "Blog", position: "left" },
+        {
+          label: "进阶配置",
+          position: "left",
+          to: "/docs/setting",
+        },
         {
           label: "API 文档",
           position: "left",
           to: "/docs/api",
+        },
+        {
+          label: "开发文档",
+          position: "left",
+          to: "/docs/dev",
         },
         {
           href: "https://github.com/RavelloH/NeutralPress",

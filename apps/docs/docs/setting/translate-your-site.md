@@ -1,5 +1,5 @@
 ---
-sidebar_position: 2
+sidebar_position: 3
 tags:
   - test
 ---
@@ -15,8 +15,8 @@ Modify `docusaurus.config.js` to add support for the `fr` locale:
 ```js title="docusaurus.config.js"
 module.exports = {
   i18n: {
-    defaultLocale: 'en',
-    locales: ['en', 'fr'],
+    defaultLocale: "en",
+    locales: ["en", "fr"],
   },
 };
 ```
@@ -62,7 +62,7 @@ module.exports = {
       items: [
         // highlight-start
         {
-          type: 'localeDropdown',
+          type: "localeDropdown",
         },
         // highlight-end
       ],
@@ -72,7 +72,6 @@ module.exports = {
 ```
 
 The locale dropdown now appears in your navbar:
-
 
 ## Build your localized site
 

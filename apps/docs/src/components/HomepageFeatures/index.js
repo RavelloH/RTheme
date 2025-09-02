@@ -1,10 +1,10 @@
-import React from 'react';
-import clsx from 'clsx';
-import styles from './styles.module.css';
+import React from "react";
+import clsx from "clsx";
+import styles from "./styles.module.css";
 
 const FeatureList = [
   {
-    title: '易于使用',
+    title: "易于使用",
     // Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
     description: (
       <>
@@ -14,7 +14,7 @@ const FeatureList = [
     ),
   },
   {
-    title: '成本低廉',
+    title: "成本低廉",
     // Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
     description: (
       <>
@@ -24,7 +24,7 @@ const FeatureList = [
     ),
   },
   {
-    title: 'Powered by React',
+    title: "Powered by React",
     // Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
     description: (
       <>
@@ -35,9 +35,9 @@ const FeatureList = [
   },
 ];
 
-function Feature({title, description}) {
+function Feature({ title, description }) {
   return (
-    <div className={clsx('col col--4')}>
+    <div className={clsx("col col--4")}>
       <div className="text--center">
         {/* <Svg className={styles.featureSvg} role="img" /> */}
       </div>

@@ -10,7 +10,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch",
+    "dev": "tsx src/dev-watcher.ts",
+    "dev:tsc": "tsc --watch",
     "clean": "rm -rf dist",
     "generate": "tsx src/cli.ts",
     "generate-openapi": "tsx src/cli.ts",
@@ -18,6 +19,7 @@
   },
   "dependencies": {
     "@repo/shared-types": "workspace:*",
+    "chokidar": "^3.6.0",
     "glob": "^10.3.10",
     "rlog-js": "^1.5.2",
     "typescript": "5.9.2",
@@ -28,6 +30,6 @@
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^22.15.3",
-    "tsx": "^4.7.1"
+    "tsx": "^4.20.5"
   }
 }

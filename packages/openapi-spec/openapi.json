@@ -12,101 +12,11 @@
     }
   ],
   "paths": {
-    "/api/users": {
-      "get": {
-        "summary": "获取用户列表",
-        "tags": [
-          "Users"
-        ],
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 1
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 10
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "成功返回用户列表",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UsersListResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "创建用户",
-        "tags": [
-          "Users"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateUser"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "用户创建成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/User"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/posts": {
       "get": {
         "summary": "获取文章列表",
-        "tags": [
-          "Posts"
-        ],
+        "description": "分页获取文章列表，支持按发布状态筛选",
+        "tags": ["Posts"],
         "parameters": [
           {
             "name": "page",
@@ -147,29 +57,56 @@
             }
           }
         }
-      },
-      "post": {
-        "summary": "创建文章",
-        "tags": [
-          "Posts"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreatePost"
-              }
+      }
+    },
+    "/api/users": {
+      "get": {
+        "summary": "获取用户列表",
+        "tags": ["Users"],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["asc", "desc"],
+              "default": "desc"
             }
           }
-        },
+        ],
         "responses": {
-          "201": {
-            "description": "文章创建成功",
+          "200": {
+            "description": "成功返回用户列表",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Post"
+                  "$ref": "#/components/schemas/UsersListResponse"
                 }
               }
             }
@@ -197,11 +134,7 @@
           },
           "role": {
             "type": "string",
-            "enum": [
-              "USER",
-              "ADMIN",
-              "EDITOR"
-            ]
+            "enum": ["USER", "ADMIN", "EDITOR"]
           },
           "avatar": {
             "anyOf": [
@@ -247,11 +180,7 @@
           },
           "role": {
             "type": "string",
-            "enum": [
-              "USER",
-              "ADMIN",
-              "EDITOR"
-            ],
+            "enum": ["USER", "ADMIN", "EDITOR"],
             "default": "USER"
           },
           "avatar": {
@@ -259,10 +188,7 @@
             "format": "uri"
           }
         },
-        "required": [
-          "email",
-          "name"
-        ],
+        "required": ["email", "name"],
         "additionalProperties": false
       },
       "UpdateUser": {
@@ -278,11 +204,7 @@
           },
           "role": {
             "type": "string",
-            "enum": [
-              "USER",
-              "ADMIN",
-              "EDITOR"
-            ],
+            "enum": ["USER", "ADMIN", "EDITOR"],
             "default": "USER"
           },
           "avatar": {
@@ -314,11 +236,7 @@
                 },
                 "role": {
                   "type": "string",
-                  "enum": [
-                    "USER",
-                    "ADMIN",
-                    "EDITOR"
-                  ]
+                  "enum": ["USER", "ADMIN", "EDITOR"]
                 },
                 "avatar": {
                   "anyOf": [
@@ -362,12 +280,7 @@
             "type": "number"
           }
         },
-        "required": [
-          "users",
-          "total",
-          "page",
-          "limit"
-        ],
+        "required": ["users", "total", "page", "limit"],
         "additionalProperties": false
       },
       "Post": {
@@ -389,10 +302,7 @@
             "type": "string"
           },
           "excerpt": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "published": {
             "type": "boolean"
@@ -461,11 +371,7 @@
             "format": "uuid"
           }
         },
-        "required": [
-          "title",
-          "slug",
-          "content"
-        ],
+        "required": ["title", "slug", "content"],
         "additionalProperties": false
       },
       "UpdatePost": {
@@ -520,10 +426,7 @@
                   "type": "string"
                 },
                 "excerpt": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
+                  "type": ["string", "null"]
                 },
                 "published": {
                   "type": "boolean"
@@ -577,12 +480,7 @@
             "type": "number"
           }
         },
-        "required": [
-          "posts",
-          "total",
-          "page",
-          "limit"
-        ],
+        "required": ["posts", "total", "page", "limit"],
         "additionalProperties": false
       },
       "Category": {
@@ -601,10 +499,7 @@
             "minLength": 1
           },
           "description": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "createdAt": {
             "type": "string",
@@ -640,10 +535,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "name",
-          "slug"
-        ],
+        "required": ["name", "slug"],
         "additionalProperties": false
       },
       "UpdateCategory": {
@@ -683,12 +575,7 @@
             "format": "date-time"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "createdAt",
-          "updatedAt"
-        ],
+        "required": ["id", "name", "createdAt", "updatedAt"],
         "additionalProperties": false
       },
       "CreateTag": {
@@ -699,9 +586,7 @@
             "minLength": 1
           }
         },
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "additionalProperties": false
       },
       "ApiResponse": {
@@ -715,9 +600,7 @@
           },
           "data": {}
         },
-        "required": [
-          "success"
-        ],
+        "required": ["success"],
         "additionalProperties": false
       },
       "ErrorResponse": {
@@ -737,11 +620,7 @@
             "type": "number"
           }
         },
-        "required": [
-          "success",
-          "message",
-          "statusCode"
-        ],
+        "required": ["success", "message", "statusCode"],
         "additionalProperties": false
       },
       "Pagination": {
@@ -763,10 +642,7 @@
           },
           "sortOrder": {
             "type": "string",
-            "enum": [
-              "asc",
-              "desc"
-            ],
+            "enum": ["asc", "desc"],
             "default": "desc"
           }
         },

@@ -1,11 +1,90 @@
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import * as schemas from "@repo/shared-types";
-import { writeFileSync, mkdirSync } from "fs";
-import { dirname } from "path";
+import {
+  writeFileSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+} from "fs";
+import { dirname, join, extname } from "path";
 import YAML from "yaml";
 import Rlog from "rlog-js";
 const rlog = new Rlog();
+
+// 扫描API文件中的OpenAPI注释
+function scanApiFiles(apiDir: string): Record<string, any> {
+  const paths: Record<string, any> = {};
+
+  try {
+    const scanDirectory = (dir: string) => {
+      const items = readdirSync(dir);
+
+      for (const item of items) {
+        const fullPath = join(dir, item);
+        const stat = statSync(fullPath);
+
+        if (stat.isDirectory()) {
+          scanDirectory(fullPath);
+        } else if (item === "route.ts" || item === "route.js") {
+          try {
+            const content = readFileSync(fullPath, "utf8");
+            const pathSpecs = extractOpenAPIFromFile(content, fullPath);
+            Object.assign(paths, pathSpecs);
+          } catch (error) {
+            rlog.info(`无法读取文件 ${fullPath}: ${error}`);
+          }
+        }
+      }
+    };
+
+    scanDirectory(apiDir);
+  } catch (error) {
+    rlog.info(`扫描API目录时出错: ${error}`);
+  }
+
+  return paths;
+}
+
+// 从文件内容中提取OpenAPI规范
+function extractOpenAPIFromFile(
+  content: string,
+  filePath: string,
+): Record<string, any> {
+  const paths: Record<string, any> = {};
+
+  // 匹配 @openapi 注释块
+  const openApiRegex = /\/\*\*\s*\n\s*\*\s*@openapi\s*\n([\s\S]*?)\*\//g;
+  let match;
+
+  while ((match = openApiRegex.exec(content)) !== null) {
+    try {
+      // 清理注释内容，移除 * 前缀
+      const yamlContent = match[1]
+        ? match[1]
+            .split("\n")
+            .map((line) => line.replace(/^\s*\*\s?/, ""))
+            .join("\n")
+            .trim()
+        : "";
+
+      if (yamlContent) {
+        // 解析YAML内容
+        const spec = YAML.parse(yamlContent);
+
+        // 合并到paths对象中
+        if (spec && typeof spec === "object") {
+          Object.assign(paths, spec);
+        }
+      }
+    } catch (error) {
+      rlog.info(`解析OpenAPI注释时出错 (${filePath}): ${error}`);
+    }
+  }
+
+  return paths;
+}
 
 interface OpenAPISpec {
   openapi: string;
@@ -43,6 +122,18 @@ export function generateOpenAPISpec(): OpenAPISpec {
       schemas: {},
     },
   };
+
+  // 扫描API文件获取路径定义
+  const apiDir = join(process.cwd(), "../../apps/web/src/app/api");
+  rlog.info(`正在扫描API目录: ${apiDir}`);
+
+  try {
+    const scannedPaths = scanApiFiles(apiDir);
+    spec.paths = scannedPaths;
+    rlog.info(`扫描到 ${Object.keys(scannedPaths).length} 个API端点`);
+  } catch (error) {
+    rlog.error(`API扫描失败，使用默认路径定义: ${error}`);
+  }
 
   // 从 shared-types 生成 schema 定义
   const schemaDefinitions = [
@@ -88,137 +179,14 @@ export function generateOpenAPISpec(): OpenAPISpec {
     }
   });
 
-  // 生成基本的 API 路径定义
-  spec.paths = {
-    "/api/users": {
-      get: {
-        summary: "获取用户列表",
-        tags: ["Users"],
-        parameters: [
-          {
-            name: "page",
-            in: "query",
-            schema: { type: "integer", minimum: 1, default: 1 },
-          },
-          {
-            name: "limit",
-            in: "query",
-            schema: { type: "integer", minimum: 1, maximum: 100, default: 10 },
-          },
-        ],
-        responses: {
-          "200": {
-            description: "成功返回用户列表",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/UsersListResponse" },
-              },
-            },
-          },
-          "500": {
-            description: "服务器错误",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/ErrorResponse" },
-              },
-            },
-          },
-        },
-      },
-      post: {
-        summary: "创建用户",
-        tags: ["Users"],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/CreateUser" },
-            },
-          },
-        },
-        responses: {
-          "201": {
-            description: "用户创建成功",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/User" },
-              },
-            },
-          },
-          "400": {
-            description: "请求参数错误",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/ErrorResponse" },
-              },
-            },
-          },
-        },
-      },
-    },
-    "/api/posts": {
-      get: {
-        summary: "获取文章列表",
-        tags: ["Posts"],
-        parameters: [
-          {
-            name: "page",
-            in: "query",
-            schema: { type: "integer", minimum: 1, default: 1 },
-          },
-          {
-            name: "limit",
-            in: "query",
-            schema: { type: "integer", minimum: 1, maximum: 100, default: 10 },
-          },
-          {
-            name: "published",
-            in: "query",
-            schema: { type: "boolean" },
-          },
-        ],
-        responses: {
-          "200": {
-            description: "成功返回文章列表",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/PostsListResponse" },
-              },
-            },
-          },
-        },
-      },
-      post: {
-        summary: "创建文章",
-        tags: ["Posts"],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/CreatePost" },
-            },
-          },
-        },
-        responses: {
-          "201": {
-            description: "文章创建成功",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/Post" },
-              },
-            },
-          },
-        },
-      },
-    },
-  };
-
   return spec;
 }
 
+// 默认路径定义作为后备
+
 export function saveOpenAPISpec(
   spec: OpenAPISpec,
-  outputPath: string = "./openapi.yaml"
+  outputPath: string = "./openapi.yaml",
 ) {
   // 确保输出目录存在
   const dir = dirname(outputPath);

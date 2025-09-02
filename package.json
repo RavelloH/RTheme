@@ -2,7 +2,7 @@
   "name": "neutral-press",
   "private": true,
   "scripts": {
-    "build": "turbo run build",
+    "build": "pnpm generate-openapi && pnpm --filter docs generate-api-docs && turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "format": "prettier --write .",

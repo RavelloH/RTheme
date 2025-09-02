@@ -1,1 +1,1 @@
-export { generateOpenAPISpec, saveOpenAPISpec } from './generator.js'
+export { generateOpenAPISpec, saveOpenAPISpec } from "./generator.js";

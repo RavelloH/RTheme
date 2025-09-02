@@ -7,6 +7,7 @@ tags:
 # 快速部署
 
 NeutralPress 支持多种部署方式。主要可分为：
+
 - 托管到云服务平台（如 Vercel、Netlify 等）
 - Docker 容器化部署
 - Node.js 环境部署
@@ -19,5 +20,3 @@ NeutralPress 支持多种部署方式。主要可分为：
 ### Vercel
 
 推荐使用 Vercel 进行部署，Vercel 是 Next.js 的官方托管平台，提供了对 Next.js 应用的最佳支持。
-
-
