@@ -10,14 +10,14 @@
       "import": "./index.js",
       "types": "./index.d.ts"
     },
-    "./spec.json": "./spec.json",
-    "./spec.yaml": "./spec.yaml"
+    "./openapijson": "./openapijson",
+    "./openapiyaml": "./openapiyaml"
   },
   "files": [
     "index.js",
     "index.d.ts",
-    "spec.json",
-    "spec.yaml"
+    "openapijson",
+    "openapiyaml"
   ],
   "scripts": {
     "build": "tsc",

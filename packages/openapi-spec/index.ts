@@ -25,7 +25,7 @@ export interface OpenAPISpec {
 
 // 读取JSON文件
 function loadSpec(): OpenAPISpec {
-  const specPath = join(__dirname, 'spec.json')
+  const specPath = join(__dirname, 'openapi.json')
   const content = fs.readFileSync(specPath, 'utf-8')
   return JSON.parse(content)
 }
