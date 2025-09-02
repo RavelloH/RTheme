@@ -9,7 +9,7 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**", "build/**"],
       "env": [
         "NODE_ENV",
         "DATABASE_URL"
@@ -33,6 +33,12 @@
       "env": [
         "NODE_ENV",
         "DATABASE_URL"
+      ]
+    },
+    "generate-openapi": {
+      "dependsOn": ["@repo/shared-types#build", "@repo/openapi-generator#build"],
+      "env": [
+        "NODE_ENV"
       ]
     }
   }

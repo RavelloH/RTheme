@@ -1,0 +1,34 @@
+{
+  "name": "@repo/openapi-spec",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "types": "./index.d.ts"
+    },
+    "./spec.json": "./spec.json",
+    "./spec.yaml": "./spec.yaml"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "spec.json",
+    "spec.yaml"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "generate": "pnpm --filter @repo/openapi-generator generate && pnpm build",
+    "check-types": "tsc --noEmit",
+    "clean": "rm -f index.js index.d.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "5.9.2",
+    "@types/node": "^22.15.3"
+  }
+}

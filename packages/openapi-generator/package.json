@@ -1,0 +1,33 @@
+{
+  "name": "@repo/openapi-generator",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "generate-openapi": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "generate": "tsx src/cli.ts",
+    "generate-openapi": "tsx src/cli.ts",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@repo/shared-types": "workspace:*",
+    "glob": "^10.3.10",
+    "rlog-js": "^1.5.2",
+    "typescript": "5.9.2",
+    "yaml": "^2.3.4",
+    "zod": "^3.22.4",
+    "zod-to-json-schema": "^3.22.5"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22.15.3",
+    "tsx": "^4.7.1"
+  }
+}
