@@ -1,22 +1,23 @@
 import { NextResponse } from "next/server";
+import type { ApiResponse, PaginationMeta } from "@repo/shared-types/api/common";
 
 /**
- * API 响应的统一格式
+ * 创建分页元数据
  */
-interface ApiResponse<T = unknown> {
-  success: boolean;
-  message: string;
-  data: T | null;
-  timestamp: string;
-  requestId?: string;
-  error?: string;
-}
-
-/*
- * 创建Request ID
- */
-function generateRequestId(): string {
-  return crypto.randomUUID();
+function createPaginationMeta(
+  page: number,
+  pageSize: number,
+  total: number,
+): PaginationMeta {
+  const totalPages = Math.ceil(total / pageSize);
+  return {
+    page,
+    pageSize,
+    total,
+    totalPages,
+    hasNext: page < totalPages,
+    hasPrev: page > 1,
+  };
 }
 
 /**
@@ -29,27 +30,22 @@ function createResponse<T = unknown>(
   data: T | null = null,
   error?: string,
   customHeaders?: HeadersInit,
+  meta?: PaginationMeta,
 ): NextResponse<ApiResponse<T>> {
-  const requestId = generateRequestId();
-
   const responseBody: ApiResponse<T> = {
     success,
     message,
     data,
     timestamp: new Date().toISOString(),
-    requestId,
+    requestId: crypto.randomUUID(),
+    ...(error && { error }),
+    ...(meta && { meta }),
   };
 
-  // 添加错误信息
-  if (error) {
-    responseBody.error = error;
-  }
-
-  // 合并默认 headers 和自定义 headers
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     "Cache-Control": "no-store",
-    "x-request-id": requestId,
+    "x-request-id": responseBody.requestId,
     ...customHeaders,
   };
 
@@ -59,29 +55,31 @@ function createResponse<T = unknown>(
 /**
  * 200 - 成功响应
  */
-export function ok<T = unknown>(
+function ok<T = unknown>(
   data?: T,
   message: string = "请求成功",
   customHeaders?: HeadersInit,
+  meta?: PaginationMeta,
 ): NextResponse<ApiResponse<T>> {
-  return createResponse(200, true, message, data, undefined, customHeaders);
+  return createResponse(200, true, message, data, undefined, customHeaders, meta);
 }
 
 /**
  * 201 - 创建成功
  */
-export function created<T = unknown>(
+function created<T = unknown>(
   data: T,
   message: string = "创建成功",
   customHeaders?: HeadersInit,
+  meta?: PaginationMeta,
 ): NextResponse<ApiResponse<T>> {
-  return createResponse(201, true, message, data, undefined, customHeaders);
+  return createResponse(201, true, message, data, undefined, customHeaders, meta);
 }
 
 /**
  * 204 - 无内容
  */
-export function noContent(
+function noContent(
   message: string = "操作成功",
   customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
@@ -91,7 +89,7 @@ export function noContent(
 /**
  * 400 - 请求错误
  */
-export function badRequest(
+function badRequest(
   message: string = "请求参数错误",
   error?: string,
   customHeaders?: HeadersInit,
@@ -102,7 +100,7 @@ export function badRequest(
 /**
  * 401 - 未授权
  */
-export function unauthorized(
+function unauthorized(
   message: string = "未授权访问",
   customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
@@ -112,7 +110,7 @@ export function unauthorized(
 /**
  * 403 - 禁止访问
  */
-export function forbidden(
+function forbidden(
   message: string = "禁止访问",
   customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
@@ -122,7 +120,7 @@ export function forbidden(
 /**
  * 404 - 未找到
  */
-export function notFound(
+function notFound(
   message: string = "资源未找到",
   customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
@@ -132,7 +130,7 @@ export function notFound(
 /**
  * 409 - 冲突
  */
-export function conflict(
+function conflict(
   message: string = "资源冲突",
   error?: string,
   customHeaders?: HeadersInit,
@@ -143,7 +141,7 @@ export function conflict(
 /**
  * 422 - 无法处理的实体
  */
-export function unprocessableEntity(
+function unprocessableEntity(
   message: string = "验证失败",
   error?: string,
   customHeaders?: HeadersInit,
@@ -154,7 +152,7 @@ export function unprocessableEntity(
 /**
  * 429 - 请求过多
  */
-export function tooManyRequests(
+function tooManyRequests(
   message: string = "请求过于频繁，请稍后再试",
   customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
@@ -164,7 +162,7 @@ export function tooManyRequests(
 /**
  * 500 - 服务器错误
  */
-export function serverError(
+function serverError(
   message: string = "服务器内部错误",
   error?: string,
   customHeaders?: HeadersInit,
@@ -175,7 +173,7 @@ export function serverError(
 /**
  * 503 - 服务不可用
  */
-export function serviceUnavailable(
+function serviceUnavailable(
   message: string = "服务暂时不可用",
   customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
@@ -183,27 +181,33 @@ export function serviceUnavailable(
 }
 
 /**
- * 通用响应函数
- * 状态码 消息 数据 自定义头
+ * 通用响应函数，附带所有状态码方法
  */
-export default function response(
+function responseCore(
   status: number,
   message: string,
   data: unknown = null,
   customHeaders?: HeadersInit,
+  meta?: PaginationMeta,
 ): NextResponse<ApiResponse<unknown>> {
   const success = status >= 200 && status < 300;
-  return createResponse(
-    status,
-    success,
-    message,
-    data,
-    undefined,
-    customHeaders,
-  );
+  return createResponse(status, success, message, data, undefined, customHeaders, meta);
 }
 
-/**
- * 导出类型定义供其他文件使用
- */
-export type { ApiResponse };
+const response = Object.assign(responseCore, {
+  ok,
+  created,
+  noContent,
+  badRequest,
+  unauthorized,
+  forbidden,
+  notFound,
+  conflict,
+  unprocessableEntity,
+  tooManyRequests,
+  serverError,
+  serviceUnavailable,
+  createPaginationMeta,
+});
+
+export default response;
