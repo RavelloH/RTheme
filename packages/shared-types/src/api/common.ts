@@ -24,16 +24,25 @@ export const ApiResponseSchema = z.object({
 // 分页请求参数 Schema
 export const PaginationSchema = z.object({
   page: z.number().min(1).default(1),
-  limit: z.number().min(1).max(100).default(10),
+  pageSize: z.number().min(1).max(100).default(10),
   sortBy: z.string().optional(),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
 });
 
+// 定义允许的响应数据类型
+export type ApiResponseData = 
+  | Record<string, any> 
+  | Array<any> 
+  | string 
+  | number 
+  | boolean 
+  | null;
+
 // 导出推导的 TypeScript 类型
-export type ApiResponse<T = unknown> = {
+export type ApiResponse<T extends ApiResponseData = null> = {
   success: boolean;
   message: string;
-  data: T | null;
+  data: T;
   timestamp: string;
   requestId: string;
   error?: string;

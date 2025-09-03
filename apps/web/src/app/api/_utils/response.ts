@@ -1,5 +1,97 @@
 import { NextResponse } from "next/server";
-import type { ApiResponse, PaginationMeta } from "@repo/shared-types/api/common";
+import type { ApiResponse, PaginationMeta, ApiResponseData } from "@repo/shared-types/api/common";
+
+/**
+ * 缓存策略配置
+ */
+export interface CacheConfig {
+  maxAge?: number;
+  sMaxAge?: number;
+  staleWhileRevalidate?: number;
+  noCache?: boolean;
+  noStore?: boolean;
+  mustRevalidate?: boolean;
+  etag?: string;
+  lastModified?: Date;
+}
+
+/**
+ * 创建安全响应头
+ */
+function createSecurityHeaders(customHeaders?: HeadersInit): HeadersInit {
+  const securityHeaders: HeadersInit = {
+    // 基础安全头
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-XSS-Protection": "1; mode=block",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    
+    // CORS头
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+    "Access-Control-Max-Age": "86400",
+    
+    // CSP头
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none';",
+    
+    // 基础头
+    "Content-Type": "application/json",
+    "Cache-Control": "no-store",
+    
+    ...customHeaders,
+  };
+
+  return securityHeaders;
+}
+
+/**
+ * 创建缓存控制头
+ */
+function createCacheHeaders(cacheConfig?: CacheConfig): HeadersInit {
+  const headers: HeadersInit = {};
+  
+  if (!cacheConfig) {
+    headers["Cache-Control"] = "no-store";
+    return headers;
+  }
+
+  if (cacheConfig.noStore) {
+    headers["Cache-Control"] = "no-store";
+  } else if (cacheConfig.noCache) {
+    headers["Cache-Control"] = "no-cache";
+  } else {
+    const cacheDirectives: string[] = [];
+    
+    if (cacheConfig.maxAge !== undefined) {
+      cacheDirectives.push(`max-age=${cacheConfig.maxAge}`);
+    }
+    
+    if (cacheConfig.sMaxAge !== undefined) {
+      cacheDirectives.push(`s-maxage=${cacheConfig.sMaxAge}`);
+    }
+    
+    if (cacheConfig.staleWhileRevalidate !== undefined) {
+      cacheDirectives.push(`stale-while-revalidate=${cacheConfig.staleWhileRevalidate}`);
+    }
+    
+    if (cacheConfig.mustRevalidate) {
+      cacheDirectives.push("must-revalidate");
+    }
+    
+    headers["Cache-Control"] = cacheDirectives.join(", ") || "no-store";
+  }
+
+  if (cacheConfig.etag) {
+    headers["ETag"] = cacheConfig.etag;
+  }
+  
+  if (cacheConfig.lastModified) {
+    headers["Last-Modified"] = cacheConfig.lastModified.toUTCString();
+  }
+
+  return headers;
+}
 
 /**
  * 创建分页元数据
@@ -23,14 +115,15 @@ function createPaginationMeta(
 /**
  * 创建统一格式的 API 响应
  */
-function createResponse<T = unknown>(
+function createResponse<T extends ApiResponseData>(
   status: number,
   success: boolean,
   message: string,
-  data: T | null = null,
+  data: T = null as T,
   error?: string,
   customHeaders?: HeadersInit,
   meta?: PaginationMeta,
+  cacheConfig?: CacheConfig,
 ): NextResponse<ApiResponse<T>> {
   const responseBody: ApiResponse<T> = {
     success,
@@ -42,9 +135,12 @@ function createResponse<T = unknown>(
     ...(meta && { meta }),
   };
 
+  const securityHeaders = createSecurityHeaders();
+  const cacheHeaders = createCacheHeaders(cacheConfig);
+  
   const headers: HeadersInit = {
-    "Content-Type": "application/json",
-    "Cache-Control": "no-store",
+    ...securityHeaders,
+    ...cacheHeaders,
     "x-request-id": responseBody.requestId,
     ...customHeaders,
   };
@@ -55,25 +151,27 @@ function createResponse<T = unknown>(
 /**
  * 200 - 成功响应
  */
-function ok<T = unknown>(
+function ok<T extends ApiResponseData = null>(
   data?: T,
   message: string = "请求成功",
   customHeaders?: HeadersInit,
   meta?: PaginationMeta,
+  cacheConfig?: CacheConfig,
 ): NextResponse<ApiResponse<T>> {
-  return createResponse(200, true, message, data, undefined, customHeaders, meta);
+  return createResponse(200, true, message, data ?? null as T, undefined, customHeaders, meta, cacheConfig);
 }
 
 /**
  * 201 - 创建成功
  */
-function created<T = unknown>(
+function created<T extends ApiResponseData>(
   data: T,
   message: string = "创建成功",
   customHeaders?: HeadersInit,
   meta?: PaginationMeta,
+  cacheConfig?: CacheConfig,
 ): NextResponse<ApiResponse<T>> {
-  return createResponse(201, true, message, data, undefined, customHeaders, meta);
+  return createResponse(201, true, message, data, undefined, customHeaders, meta, cacheConfig);
 }
 
 /**
@@ -82,8 +180,9 @@ function created<T = unknown>(
 function noContent(
   message: string = "操作成功",
   customHeaders?: HeadersInit,
+  cacheConfig?: CacheConfig,
 ): NextResponse<ApiResponse<null>> {
-  return createResponse(204, true, message, null, undefined, customHeaders);
+  return createResponse(204, true, message, null, undefined, customHeaders, undefined, cacheConfig);
 }
 
 /**
@@ -181,17 +280,75 @@ function serviceUnavailable(
 }
 
 /**
- * 通用响应函数，附带所有状态码方法
+ * 304 - 未修改 (用于条件请求)
  */
-function responseCore(
-  status: number,
-  message: string,
-  data: unknown = null,
+function notModified(customHeaders?: HeadersInit): NextResponse<ApiResponse<null>> {
+  return createResponse(304, true, "未修改", null, undefined, customHeaders);
+}
+
+/**
+ * 带缓存的成功响应
+ */
+function cached<T extends ApiResponseData>(
+  data: T,
+  cacheConfig: CacheConfig,
+  message: string = "请求成功",
   customHeaders?: HeadersInit,
   meta?: PaginationMeta,
-): NextResponse<ApiResponse<unknown>> {
+): NextResponse<ApiResponse<T>> {
+  return createResponse(200, true, message, data, undefined, customHeaders, meta, cacheConfig);
+}
+
+/**
+ * 生成ETag
+ */
+function generateETag(data: unknown): string {
+  return `"${Buffer.from(JSON.stringify(data)).toString('base64')}"`;
+}
+
+/**
+ * 检查条件请求
+ */
+function checkConditionalRequest(
+  request: Request,
+  etag?: string,
+  lastModified?: Date,
+): { isNotModified: boolean; headers: HeadersInit } {
+  const headers: HeadersInit = {};
+  
+  if (etag) headers["ETag"] = etag;
+  if (lastModified) headers["Last-Modified"] = lastModified.toUTCString();
+  
+  const ifNoneMatch = request.headers.get("If-None-Match");
+  const ifModifiedSince = request.headers.get("If-Modified-Since");
+  
+  let isNotModified = false;
+  
+  if (ifNoneMatch && etag && ifNoneMatch === etag) {
+    isNotModified = true;
+  } else if (ifModifiedSince && lastModified) {
+    const ifModifiedSinceDate = new Date(ifModifiedSince);
+    if (lastModified <= ifModifiedSinceDate) {
+      isNotModified = true;
+    }
+  }
+  
+  return { isNotModified, headers };
+}
+
+/**
+ * 通用响应函数，附带所有状态码方法
+ */
+function responseCore<T extends ApiResponseData = null>(
+  status: number,
+  message: string,
+  data: T = null as T,
+  customHeaders?: HeadersInit,
+  meta?: PaginationMeta,
+  cacheConfig?: CacheConfig,
+): NextResponse<ApiResponse<T>> {
   const success = status >= 200 && status < 300;
-  return createResponse(status, success, message, data, undefined, customHeaders, meta);
+  return createResponse(status, success, message, data, undefined, customHeaders, meta, cacheConfig);
 }
 
 const response = Object.assign(responseCore, {
@@ -207,7 +364,12 @@ const response = Object.assign(responseCore, {
   tooManyRequests,
   serverError,
   serviceUnavailable,
+  notModified,
+  cached,
   createPaginationMeta,
+  generateETag,
+  checkConditionalRequest,
 });
 
 export default response;
+export { createSecurityHeaders, createCacheHeaders };
