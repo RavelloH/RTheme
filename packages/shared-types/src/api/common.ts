@@ -10,6 +10,14 @@ export const PaginationMetaSchema = z.object({
   hasPrev: z.boolean(),
 });
 
+// 错误详情 Schema
+export const ApiErrorSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+  details: z.record(z.any()).optional(),
+  field: z.string().optional(),
+});
+
 // 通用 API 响应 Schema
 export const ApiResponseSchema = z.object({
   success: z.boolean(),
@@ -17,7 +25,7 @@ export const ApiResponseSchema = z.object({
   data: z.unknown().nullable(),
   timestamp: z.string().datetime(),
   requestId: z.string(),
-  error: z.string().optional(),
+  error: ApiErrorSchema.optional(),
   meta: PaginationMetaSchema.optional(),
 });
 
@@ -38,6 +46,9 @@ export type ApiResponseData =
   | boolean 
   | null;
 
+// 定义错误详情类型
+export type ApiError = z.infer<typeof ApiErrorSchema>;
+
 // 导出推导的 TypeScript 类型
 export type ApiResponse<T extends ApiResponseData = null> = {
   success: boolean;
@@ -45,7 +56,7 @@ export type ApiResponse<T extends ApiResponseData = null> = {
   data: T;
   timestamp: string;
   requestId: string;
-  error?: string;
+  error?: ApiError;
   meta?: PaginationMeta;
 };
 

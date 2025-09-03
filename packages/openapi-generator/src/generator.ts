@@ -151,8 +151,10 @@ export function generateOpenAPISpec(): OpenAPISpec {
     { name: "Tag", schema: schemas.TagSchema },
     { name: "CreateTag", schema: schemas.CreateTagSchema },
     { name: "ApiResponse", schema: schemas.ApiResponseSchema },
-    { name: "ErrorResponse", schema: schemas.ErrorResponseSchema },
+    { name: "ErrorResponse", schema: schemas.ApiErrorSchema },
     { name: "Pagination", schema: schemas.PaginationSchema },
+    // Auth schemas
+    { name: "RegisterUser", schema: schemas.RegisterUserSchema },
   ];
 
   // 转换 Zod schema 为 JSON Schema

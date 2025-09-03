@@ -6,9 +6,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 // 读取JSON文件
 function loadSpec() {
-  const specPath = join(__dirname, "openapi.json");
-  const content = fs.readFileSync(specPath, "utf-8");
-  return JSON.parse(content);
+    const specPath = join(__dirname, "openapi.json");
+    const content = fs.readFileSync(specPath, "utf-8");
+    return JSON.parse(content);
 }
 export const openApiSpec = loadSpec();
 export default openApiSpec;

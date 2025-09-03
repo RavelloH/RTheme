@@ -13,6 +13,7 @@
   "dependencies": {
     "@prisma/client": "6.14.0",
     "@repo/shared-types": "workspace:*",
+    "ioredis": "^5.7.0",
     "next": "^15.4.7",
     "prisma": "^6.14.0",
     "react": "^19.1.0",

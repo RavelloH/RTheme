@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { ApiResponse, PaginationMeta, ApiResponseData } from "@repo/shared-types/api/common";
+import type { ApiResponse, PaginationMeta, ApiResponseData, ApiError } from "@repo/shared-types/api/common";
 
 /**
  * 缓存策略配置
@@ -32,8 +32,8 @@ function createSecurityHeaders(customHeaders?: HeadersInit): HeadersInit {
     "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
     "Access-Control-Max-Age": "86400",
     
-    // CSP头
-    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none';",
+    // CSP头（更安全的策略）
+    "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none';",
     
     // 基础头
     "Content-Type": "application/json",
@@ -113,6 +113,16 @@ function createPaginationMeta(
 }
 
 /**
+ * 生成唯一请求ID
+ */
+function generateRequestId(): string {
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 8);
+  const processId = process.pid?.toString(36) || '0';
+  return `${timestamp}-${processId}-${random}`;
+}
+
+/**
  * 创建统一格式的 API 响应
  */
 function createResponse<T extends ApiResponseData>(
@@ -120,7 +130,7 @@ function createResponse<T extends ApiResponseData>(
   success: boolean,
   message: string,
   data: T = null as T,
-  error?: string,
+  error?: ApiError,
   customHeaders?: HeadersInit,
   meta?: PaginationMeta,
   cacheConfig?: CacheConfig,
@@ -130,7 +140,7 @@ function createResponse<T extends ApiResponseData>(
     message,
     data,
     timestamp: new Date().toISOString(),
-    requestId: crypto.randomUUID(),
+    requestId: generateRequestId(),
     ...(error && { error }),
     ...(meta && { meta }),
   };
@@ -152,13 +162,13 @@ function createResponse<T extends ApiResponseData>(
  * 200 - 成功响应
  */
 function ok<T extends ApiResponseData = null>(
-  data?: T,
+  data: T = null as T,
   message: string = "请求成功",
   customHeaders?: HeadersInit,
   meta?: PaginationMeta,
   cacheConfig?: CacheConfig,
 ): NextResponse<ApiResponse<T>> {
-  return createResponse(200, true, message, data ?? null as T, undefined, customHeaders, meta, cacheConfig);
+  return createResponse(200, true, message, data, undefined, customHeaders, meta, cacheConfig);
 }
 
 /**
@@ -190,10 +200,13 @@ function noContent(
  */
 function badRequest(
   message: string = "请求参数错误",
-  error?: string,
+  error?: ApiError | string,
   customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
-  return createResponse(400, false, message, null, error, customHeaders);
+  const apiError = typeof error === 'string' 
+    ? { code: 'BAD_REQUEST', message: error }
+    : error;
+  return createResponse(400, false, message, null, apiError, customHeaders);
 }
 
 /**
@@ -231,10 +244,13 @@ function notFound(
  */
 function conflict(
   message: string = "资源冲突",
-  error?: string,
+  error?: ApiError | string,
   customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
-  return createResponse(409, false, message, null, error, customHeaders);
+  const apiError = typeof error === 'string' 
+    ? { code: 'CONFLICT', message: error }
+    : error;
+  return createResponse(409, false, message, null, apiError, customHeaders);
 }
 
 /**
@@ -242,10 +258,13 @@ function conflict(
  */
 function unprocessableEntity(
   message: string = "验证失败",
-  error?: string,
+  error?: ApiError | string,
   customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
-  return createResponse(422, false, message, null, error, customHeaders);
+  const apiError = typeof error === 'string' 
+    ? { code: 'VALIDATION_ERROR', message: error }
+    : error;
+  return createResponse(422, false, message, null, apiError, customHeaders);
 }
 
 /**
@@ -263,10 +282,13 @@ function tooManyRequests(
  */
 function serverError(
   message: string = "服务器内部错误",
-  error?: string,
+  error?: ApiError | string,
   customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
-  return createResponse(500, false, message, null, error, customHeaders);
+  const apiError = typeof error === 'string' 
+    ? { code: 'INTERNAL_ERROR', message: error }
+    : error;
+  return createResponse(500, false, message, null, apiError, customHeaders);
 }
 
 /**
@@ -300,10 +322,12 @@ function cached<T extends ApiResponseData>(
 }
 
 /**
- * 生成ETag
+ * 生成ETag（使用更高效的哈希）
  */
 function generateETag(data: unknown): string {
-  return `"${Buffer.from(JSON.stringify(data)).toString('base64')}"`;
+  const crypto = require('crypto');
+  const hash = crypto.createHash('md5').update(JSON.stringify(data)).digest('hex');
+  return `"${hash}"`;
 }
 
 /**
@@ -324,8 +348,11 @@ function checkConditionalRequest(
   
   let isNotModified = false;
   
-  if (ifNoneMatch && etag && ifNoneMatch === etag) {
-    isNotModified = true;
+  if (ifNoneMatch && etag) {
+    const clientETags = ifNoneMatch.split(',').map(tag => tag.trim());
+    isNotModified = clientETags.some(clientETag => 
+      clientETag === etag || clientETag === '*'
+    );
   } else if (ifModifiedSince && lastModified) {
     const ifModifiedSinceDate = new Date(ifModifiedSince);
     if (lastModified <= ifModifiedSinceDate) {
@@ -351,6 +378,31 @@ function responseCore<T extends ApiResponseData = null>(
   return createResponse(status, success, message, data, undefined, customHeaders, meta, cacheConfig);
 }
 
+/**
+ * 创建字段验证错误
+ */
+function fieldError(field: string, message: string, details?: Record<string, any>): ApiError {
+  return {
+    code: 'FIELD_VALIDATION_ERROR',
+    message: `${field}: ${message}`,
+    field,
+    details,
+  };
+}
+
+/**
+ * 验证失败响应（带字段信息）
+ */
+function validationError(
+  field: string,
+  message: string,
+  details?: Record<string, any>,
+  customHeaders?: HeadersInit,
+): NextResponse<ApiResponse<null>> {
+  const error = fieldError(field, message, details);
+  return createResponse(422, false, "数据验证失败", null, error, customHeaders);
+}
+
 const response = Object.assign(responseCore, {
   ok,
   created,
@@ -366,6 +418,8 @@ const response = Object.assign(responseCore, {
   serviceUnavailable,
   notModified,
   cached,
+  validationError,
+  fieldError,
   createPaginationMeta,
   generateETag,
   checkConditionalRequest,
