@@ -1,13 +1,13 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
-  "globalEnv": ["NODE_ENV", "DATABASE_URL"],
+  "globalEnv": ["NODE_ENV", "DATABASE_URL", "REDIS_URL"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**", "build/**"],
-      "env": ["NODE_ENV", "DATABASE_URL"]
+      "env": ["NODE_ENV", "DATABASE_URL", "REDIS_URL"]
     },
     "lint": {
       "dependsOn": ["^lint"],
@@ -20,7 +20,7 @@
     "dev": {
       "cache": false,
       "persistent": true,
-      "env": ["NODE_ENV", "DATABASE_URL"]
+      "env": ["NODE_ENV", "DATABASE_URL", "REDIS_URL"]
     },
     "watch-openapi": {
       "cache": false,

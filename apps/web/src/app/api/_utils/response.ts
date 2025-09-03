@@ -28,7 +28,7 @@ function createResponse<T = unknown>(
   message: string,
   data: T | null = null,
   error?: string,
-  customHeaders?: HeadersInit
+  customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<T>> {
   const requestId = generateRequestId();
 
@@ -62,7 +62,7 @@ function createResponse<T = unknown>(
 export function ok<T = unknown>(
   data?: T,
   message: string = "请求成功",
-  customHeaders?: HeadersInit
+  customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<T>> {
   return createResponse(200, true, message, data, undefined, customHeaders);
 }
@@ -73,7 +73,7 @@ export function ok<T = unknown>(
 export function created<T = unknown>(
   data: T,
   message: string = "创建成功",
-  customHeaders?: HeadersInit
+  customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<T>> {
   return createResponse(201, true, message, data, undefined, customHeaders);
 }
@@ -83,7 +83,7 @@ export function created<T = unknown>(
  */
 export function noContent(
   message: string = "操作成功",
-  customHeaders?: HeadersInit
+  customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
   return createResponse(204, true, message, null, undefined, customHeaders);
 }
@@ -94,7 +94,7 @@ export function noContent(
 export function badRequest(
   message: string = "请求参数错误",
   error?: string,
-  customHeaders?: HeadersInit
+  customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
   return createResponse(400, false, message, null, error, customHeaders);
 }
@@ -104,7 +104,7 @@ export function badRequest(
  */
 export function unauthorized(
   message: string = "未授权访问",
-  customHeaders?: HeadersInit
+  customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
   return createResponse(401, false, message, null, undefined, customHeaders);
 }
@@ -114,7 +114,7 @@ export function unauthorized(
  */
 export function forbidden(
   message: string = "禁止访问",
-  customHeaders?: HeadersInit
+  customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
   return createResponse(403, false, message, null, undefined, customHeaders);
 }
@@ -124,7 +124,7 @@ export function forbidden(
  */
 export function notFound(
   message: string = "资源未找到",
-  customHeaders?: HeadersInit
+  customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
   return createResponse(404, false, message, null, undefined, customHeaders);
 }
@@ -135,7 +135,7 @@ export function notFound(
 export function conflict(
   message: string = "资源冲突",
   error?: string,
-  customHeaders?: HeadersInit
+  customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
   return createResponse(409, false, message, null, error, customHeaders);
 }
@@ -146,7 +146,7 @@ export function conflict(
 export function unprocessableEntity(
   message: string = "验证失败",
   error?: string,
-  customHeaders?: HeadersInit
+  customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
   return createResponse(422, false, message, null, error, customHeaders);
 }
@@ -156,7 +156,7 @@ export function unprocessableEntity(
  */
 export function tooManyRequests(
   message: string = "请求过于频繁，请稍后再试",
-  customHeaders?: HeadersInit
+  customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
   return createResponse(429, false, message, null, undefined, customHeaders);
 }
@@ -167,7 +167,7 @@ export function tooManyRequests(
 export function serverError(
   message: string = "服务器内部错误",
   error?: string,
-  customHeaders?: HeadersInit
+  customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
   return createResponse(500, false, message, null, error, customHeaders);
 }
@@ -177,7 +177,7 @@ export function serverError(
  */
 export function serviceUnavailable(
   message: string = "服务暂时不可用",
-  customHeaders?: HeadersInit
+  customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<null>> {
   return createResponse(503, false, message, null, undefined, customHeaders);
 }
@@ -190,7 +190,7 @@ export default function response(
   status: number,
   message: string,
   data: unknown = null,
-  customHeaders?: HeadersInit
+  customHeaders?: HeadersInit,
 ): NextResponse<ApiResponse<unknown>> {
   const success = status >= 200 && status < 300;
   return createResponse(
@@ -199,7 +199,7 @@ export default function response(
     message,
     data,
     undefined,
-    customHeaders
+    customHeaders,
   );
 }
 
