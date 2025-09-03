@@ -5,11 +5,11 @@ import { resolve } from "path";
 import Rlog from "rlog-js";
 const rlog = new Rlog();
 
-function main() {
+async function main() {
   rlog.log("正在生成 OpenAPI 规范...");
 
   try {
-    const spec = generateOpenAPISpec();
+    const spec = await generateOpenAPISpec(); // 现在是异步的
     // 生成到 openapi-spec 包目录
     const outputPath = resolve(process.cwd(), "../openapi-spec/openapi.yaml");
 

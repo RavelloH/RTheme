@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
-import * as schemas from "@repo/shared-types";
 import {
   writeFileSync,
   mkdirSync,
@@ -12,6 +11,24 @@ import { dirname, join, extname } from "path";
 import YAML from "yaml";
 import Rlog from "rlog-js";
 const rlog = new Rlog();
+
+// 动态导入 shared-types 以避免模块缓存问题
+async function getSharedTypesSchemas() {
+  // 清除可能的缓存，强制重新加载模块
+  const sharedTypesPath = "@repo/shared-types";
+  
+  try {
+    // 使用动态导入来绕过缓存
+    const importPath = `${sharedTypesPath}?t=${Date.now()}`;
+    const schemas = await import(sharedTypesPath);
+    return schemas;
+  } catch (error) {
+    rlog.error(`导入 shared-types 失败: ${error}`);
+    // 如果动态导入失败，尝试传统导入
+    const schemas = await import("@repo/shared-types");
+    return schemas;
+  }
+}
 
 // 扫描API文件中的OpenAPI注释
 function scanApiFiles(apiDir: string): Record<string, any> {
@@ -103,7 +120,7 @@ interface OpenAPISpec {
   };
 }
 
-export function generateOpenAPISpec(): OpenAPISpec {
+export async function generateOpenAPISpec(): Promise<OpenAPISpec> {
   const spec: OpenAPISpec = {
     openapi: "3.0.3",
     info: {
@@ -134,6 +151,9 @@ export function generateOpenAPISpec(): OpenAPISpec {
   } catch (error) {
     rlog.error(`API扫描失败，使用默认路径定义: ${error}`);
   }
+
+  // 动态获取 shared-types schemas
+  const schemas = await getSharedTypesSchemas();
 
   // 从 shared-types 生成 schema 定义
   const schemaDefinitions = [

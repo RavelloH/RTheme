@@ -10,6 +10,7 @@ class DevWatcher {
   private apiWatcher: chokidar.FSWatcher | null = null;
   private sharedTypesWatcher: chokidar.FSWatcher | null = null;
   private isGenerating = false;
+  private generationQueue: (() => void)[] = [];
 
   constructor() {
     this.startTypeScriptWatcher();
@@ -48,15 +49,15 @@ class DevWatcher {
     this.apiWatcher
       .on("change", (path: string) => {
         rlog.info(`检测到 API 文件变化: ${path}`);
-        this.regenerateOpenAPI();
+        this.queueGeneration();
       })
       .on("add", (path: string) => {
         rlog.info(`检测到新 API 文件: ${path}`);
-        this.regenerateOpenAPI();
+        this.queueGeneration();
       })
       .on("unlink", (path: string) => {
         rlog.info(`检测到 API 文件删除: ${path}`);
-        this.regenerateOpenAPI();
+        this.queueGeneration();
       })
       .on("error", (error: Error) => {
         rlog.error(`API 文件监控错误: ${error}`);
@@ -66,7 +67,7 @@ class DevWatcher {
   }
 
   private startSharedTypesWatcher() {
-    // 监控 shared-types API 文件
+    // 监控 shared-types 源文件
     const sharedTypesPath = join(
       process.cwd(),
       "../shared-types/src/api/**/*.ts"
@@ -83,15 +84,15 @@ class DevWatcher {
     this.sharedTypesWatcher
       .on("change", (path: string) => {
         rlog.info(`检测到 shared-types API 文件变化: ${path}`);
-        this.regenerateOpenAPI();
+        this.queueGeneration();
       })
       .on("add", (path: string) => {
         rlog.info(`检测到新 shared-types API 文件: ${path}`);
-        this.regenerateOpenAPI();
+        this.queueGeneration();
       })
       .on("unlink", (path: string) => {
         rlog.info(`检测到 shared-types API 文件删除: ${path}`);
-        this.regenerateOpenAPI();
+        this.queueGeneration();
       })
       .on("error", (error: Error) => {
         rlog.error(`shared-types API 文件监控错误: ${error}`);
@@ -100,32 +101,62 @@ class DevWatcher {
     rlog.success("shared-types API 文件监控已启动");
   }
 
-  private async regenerateOpenAPI() {
-    if (this.isGenerating) {
-      rlog.info("OpenAPI 生成进行中，跳过此次触发");
+  private queueGeneration() {
+    // 使用队列机制，确保同时只有一个生成任务
+    this.generationQueue.push(() => this.regenerateOpenAPI());
+    this.processQueue();
+  }
+
+  private async processQueue() {
+    if (this.isGenerating || this.generationQueue.length === 0) {
       return;
     }
 
     this.isGenerating = true;
-    rlog.info("正在重新生成 OpenAPI 规范...");
+
+    // 延迟执行，给 TypeScript 编译时间
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    // 清空队列，只执行最新的生成请求
+    this.generationQueue.length = 0;
 
     try {
-      // 动态导入并执行生成器
-      const { generateOpenAPISpec, saveOpenAPISpec } = await import(
-        "./generator.js"
-      );
-      const spec = generateOpenAPISpec();
-      saveOpenAPISpec(
-        spec,
-        join(process.cwd(), "../openapi-spec/openapi.yaml")
-      );
-
-      rlog.success("OpenAPI 规范已更新");
-    } catch (error) {
-      rlog.error(`OpenAPI 生成失败: ${error}`);
+      await this.regenerateOpenAPI();
     } finally {
       this.isGenerating = false;
+      // 检查队列中是否有新任务
+      if (this.generationQueue.length > 0) {
+        this.processQueue();
+      }
     }
+  }
+
+  private async regenerateOpenAPI() {
+    rlog.info("正在重新生成 OpenAPI 规范...");
+
+    return new Promise<void>((resolve, reject) => {
+      // 使用子进程来生成 OpenAPI，完全避免模块缓存问题
+      const child = spawn("tsx", ["src/cli.ts"], {
+        cwd: process.cwd(),
+        stdio: "inherit",
+        shell: true,
+      });
+
+      child.on("close", (code) => {
+        if (code === 0) {
+          rlog.success("OpenAPI 规范已更新");
+          resolve();
+        } else {
+          rlog.error(`OpenAPI 生成失败，退出代码: ${code}`);
+          reject(new Error(`Process exited with code ${code}`));
+        }
+      });
+
+      child.on("error", (error) => {
+        rlog.error(`OpenAPI 生成进程错误: ${error}`);
+        reject(error);
+      });
+    });
   }
 
   private handleProcessExit() {
