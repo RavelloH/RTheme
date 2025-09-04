@@ -12,6 +12,19 @@ const watcher = chokidar.watch(["openapi.json", "openapi.yaml"], {
 });
 
 let isProcessing = false;
+let pendingRegeneration = null;
+
+// 防抖函数：延迟执行，避免快速连续触发
+function debounceRegeneration() {
+  if (pendingRegeneration) {
+    clearTimeout(pendingRegeneration);
+  }
+
+  pendingRegeneration = setTimeout(() => {
+    regenerateAPIDocs();
+    pendingRegeneration = null;
+  }, 1000); // 1秒延迟
+}
 
 async function regenerateAPIDocs() {
   if (isProcessing) {
@@ -23,12 +36,14 @@ async function regenerateAPIDocs() {
   console.log("🔄 检测到 OpenAPI 文件变化，正在重新生成 API 文档...");
 
   try {
-    // 先清理旧的API文档
+    // 在开发模式下，为了确保更新，总是先清理再生成
     console.log("🧹 清理旧的 API 文档...");
     await runCommand("pnpm", ["--filter", "docs", "clean-api-docs"]);
 
-    // 重新生成API文档
-    console.log("📚 生成新的 API 文档...");
+    // 短暂延迟确保清理完成并给Docusaurus反应时间
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    console.log("📚 重新生成 API 文档...");
     await runCommand("pnpm", ["--filter", "docs", "gen-api-docs", "api"]);
 
     console.log("✅ API 文档已成功更新!");
@@ -39,12 +54,13 @@ async function regenerateAPIDocs() {
   }
 }
 
-function runCommand(command, args) {
+function runCommand(command, args, env = process.env) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       stdio: "inherit",
       shell: true,
       cwd: join(process.cwd(), "../.."),
+      env,
     });
 
     child.on("close", (code) => {
@@ -64,15 +80,15 @@ function runCommand(command, args) {
 watcher
   .on("change", (path) => {
     console.log(`📝 检测到文件变化: ${path}`);
-    regenerateAPIDocs();
+    debounceRegeneration();
   })
   .on("add", (path) => {
     console.log(`➕ 检测到新文件: ${path}`);
-    regenerateAPIDocs();
+    debounceRegeneration();
   })
   .on("unlink", (path) => {
     console.log(`🗑️ 检测到文件删除: ${path}`);
-    regenerateAPIDocs();
+    debounceRegeneration();
   })
   .on("error", (error) => {
     console.error("❌ 文件监控错误:", error);
@@ -86,6 +102,13 @@ watcher
 // 处理进程退出
 const cleanup = () => {
   console.log("\n🔄 正在停止文件监控...");
+
+  // 清除待执行的防抖任务
+  if (pendingRegeneration) {
+    clearTimeout(pendingRegeneration);
+    pendingRegeneration = null;
+  }
+
   watcher.close();
   process.exit(0);
 };

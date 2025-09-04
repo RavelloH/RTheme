@@ -10,8 +10,7 @@
     "declaration": true,
     "outDir": "./",
     "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true,
-    "ignoreDeprecations": "6.0"
+    "allowSyntheticDefaultImports": true
   },
   "include": ["index.ts"],
   "exclude": ["node_modules", "*.d.ts"]

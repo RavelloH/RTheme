@@ -16,7 +16,7 @@ const rlog = new Rlog();
 async function getSharedTypesSchemas() {
   // 清除可能的缓存，强制重新加载模块
   const sharedTypesPath = "@repo/shared-types";
-  
+
   try {
     // 使用动态导入来绕过缓存
     const importPath = `${sharedTypesPath}?t=${Date.now()}`;

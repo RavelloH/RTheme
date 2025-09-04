@@ -1,44 +1,63 @@
 import { NextResponse } from "next/server";
-import type { ApiResponse, PaginationMeta, ApiResponseData, ApiError } from "@repo/shared-types/api/common";
+import type {
+  ApiResponse,
+  PaginationMeta,
+  ApiResponseData,
+  ApiError,
+} from "@repo/shared-types/api/common";
+
+// ============================================================================
+// 类型定义
+// ============================================================================
 
 /**
  * 缓存策略配置
  */
 export interface CacheConfig {
+  /** 缓存最大时间（秒） */
   maxAge?: number;
+  /** 共享缓存最大时间（秒） */
   sMaxAge?: number;
+  /** 过期后仍可使用的时间（秒） */
   staleWhileRevalidate?: number;
+  /** 禁用缓存 */
   noCache?: boolean;
+  /** 不存储缓存 */
   noStore?: boolean;
+  /** 必须重新验证 */
   mustRevalidate?: boolean;
+  /** ETag标识 */
   etag?: string;
+  /** 最后修改时间 */
   lastModified?: Date;
 }
+
+// ============================================================================
+// 工具函数
+// ============================================================================
 
 /**
  * 创建安全响应头
  */
 function createSecurityHeaders(customHeaders?: HeadersInit): HeadersInit {
   const securityHeaders: HeadersInit = {
-    // 基础安全头
+    // 安全头
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "X-XSS-Protection": "1; mode=block",
     "Referrer-Policy": "strict-origin-when-cross-origin",
-    
-    // CORS头
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
-    "Access-Control-Max-Age": "86400",
-    
-    // CSP头（更安全的策略）
-    "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none';",
-    
+
+    // CORS头 - 在实际使用时应该根据请求的Origin动态设置
+    // 注意：这里不设置Access-Control-Allow-Origin，建议在中间件中根据环境配置
+
+    // CSP头
+    "Content-Security-Policy": 
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' wss: https:; form-action 'self'; frame-ancestors 'none';",
+
     // 基础头
     "Content-Type": "application/json",
     "Cache-Control": "no-store",
-    
+
     ...customHeaders,
   };
 
@@ -50,7 +69,7 @@ function createSecurityHeaders(customHeaders?: HeadersInit): HeadersInit {
  */
 function createCacheHeaders(cacheConfig?: CacheConfig): HeadersInit {
   const headers: HeadersInit = {};
-  
+
   if (!cacheConfig) {
     headers["Cache-Control"] = "no-store";
     return headers;
@@ -62,30 +81,26 @@ function createCacheHeaders(cacheConfig?: CacheConfig): HeadersInit {
     headers["Cache-Control"] = "no-cache";
   } else {
     const cacheDirectives: string[] = [];
-    
+
     if (cacheConfig.maxAge !== undefined) {
       cacheDirectives.push(`max-age=${cacheConfig.maxAge}`);
     }
-    
     if (cacheConfig.sMaxAge !== undefined) {
       cacheDirectives.push(`s-maxage=${cacheConfig.sMaxAge}`);
     }
-    
     if (cacheConfig.staleWhileRevalidate !== undefined) {
       cacheDirectives.push(`stale-while-revalidate=${cacheConfig.staleWhileRevalidate}`);
     }
-    
     if (cacheConfig.mustRevalidate) {
       cacheDirectives.push("must-revalidate");
     }
-    
+
     headers["Cache-Control"] = cacheDirectives.join(", ") || "no-store";
   }
 
   if (cacheConfig.etag) {
     headers["ETag"] = cacheConfig.etag;
   }
-  
   if (cacheConfig.lastModified) {
     headers["Last-Modified"] = cacheConfig.lastModified.toUTCString();
   }
@@ -118,9 +133,24 @@ function createPaginationMeta(
 function generateRequestId(): string {
   const timestamp = Date.now().toString(36);
   const random = Math.random().toString(36).substring(2, 8);
-  const processId = process.pid?.toString(36) || '0';
+  const processId = process.pid?.toString(36) || "0";
   return `${timestamp}-${processId}-${random}`;
 }
+
+/**
+ * 处理错误信息
+ */
+function processError(error?: ApiError | string): ApiError | undefined {
+  if (!error) return undefined;
+  
+  return typeof error === "string"
+    ? { code: "CUSTOM_ERROR", message: error }
+    : error;
+}
+
+// ============================================================================
+// 核心响应函数
+// ============================================================================
 
 /**
  * 创建统一格式的 API 响应
@@ -147,7 +177,7 @@ function createResponse<T extends ApiResponseData>(
 
   const securityHeaders = createSecurityHeaders();
   const cacheHeaders = createCacheHeaders(cacheConfig);
-  
+
   const headers: HeadersInit = {
     ...securityHeaders,
     ...cacheHeaders,
@@ -159,231 +189,430 @@ function createResponse<T extends ApiResponseData>(
 }
 
 /**
+ * 通用响应函数
+ */
+function response<T extends ApiResponseData = null>(
+  config: {
+    /** HTTP状态码 */
+    status?: number;
+    /** 是否成功 */
+    success?: boolean;
+    /** 响应消息 */
+    message?: string;
+    /** 响应数据 */
+    data?: T;
+    /** 错误信息 */
+    error?: ApiError | string;
+    /** 自定义响应头 */
+    customHeaders?: HeadersInit;
+    /** 分页元数据 */
+    meta?: PaginationMeta;
+    /** 缓存配置 */
+    cacheConfig?: CacheConfig;
+  },
+): NextResponse<ApiResponse<T>> {
+  const status = config.status || 200;
+  const success = config.success ?? (status >= 200 && status < 300);
+  const finalMessage = config.message || (success ? "请求成功" : "请求失败");
+  const finalData = config.data ?? (null as T);
+  const finalError = processError(config.error);
+
+  return createResponse(
+    status,
+    success,
+    finalMessage,
+    finalData,
+    finalError,
+    config.customHeaders,
+    config.meta,
+    config.cacheConfig,
+  );
+}
+
+// ============================================================================
+// 快捷响应方法
+// ============================================================================
+
+// === 成功响应 ===
+
+/**
  * 200 - 成功响应
  */
 function ok<T extends ApiResponseData = null>(
-  data: T = null as T,
-  message: string = "请求成功",
-  customHeaders?: HeadersInit,
-  meta?: PaginationMeta,
-  cacheConfig?: CacheConfig,
+  config?: {
+    /** 响应消息 */
+    message?: string;
+    /** 响应数据 */
+    data?: T;
+    /** 分页元数据 */
+    meta?: PaginationMeta;
+    /** 自定义响应头 */
+    customHeaders?: HeadersInit;
+    /** 缓存配置 */
+    cacheConfig?: CacheConfig;
+  }
 ): NextResponse<ApiResponse<T>> {
-  return createResponse(200, true, message, data, undefined, customHeaders, meta, cacheConfig);
+  return response({
+    status: 200,
+    success: true,
+    message: config?.message || "请求成功",
+    data: config?.data,
+    meta: config?.meta,
+    customHeaders: config?.customHeaders,
+    cacheConfig: config?.cacheConfig,
+  });
 }
 
 /**
  * 201 - 创建成功
  */
 function created<T extends ApiResponseData>(
-  data: T,
-  message: string = "创建成功",
-  customHeaders?: HeadersInit,
-  meta?: PaginationMeta,
-  cacheConfig?: CacheConfig,
+  config?: {
+    /** 响应消息 */
+    message?: string;
+    /** 响应数据 */
+    data?: T;
+    /** 分页元数据 */
+    meta?: PaginationMeta;
+    /** 自定义响应头 */
+    customHeaders?: HeadersInit;
+    /** 缓存配置 */
+    cacheConfig?: CacheConfig;
+  }
 ): NextResponse<ApiResponse<T>> {
-  return createResponse(201, true, message, data, undefined, customHeaders, meta, cacheConfig);
+  return response({
+    status: 201,
+    success: true,
+    message: config?.message || "创建成功",
+    data: config?.data,
+    meta: config?.meta,
+    customHeaders: config?.customHeaders,
+    cacheConfig: config?.cacheConfig,
+  });
 }
 
 /**
  * 204 - 无内容
  */
 function noContent(
-  message: string = "操作成功",
-  customHeaders?: HeadersInit,
-  cacheConfig?: CacheConfig,
+  config?: {
+    /** 响应消息 */
+    message?: string;
+    /** 自定义响应头 */
+    customHeaders?: HeadersInit;
+    /** 缓存配置 */
+    cacheConfig?: CacheConfig;
+  }
 ): NextResponse<ApiResponse<null>> {
-  return createResponse(204, true, message, null, undefined, customHeaders, undefined, cacheConfig);
+  return response({
+    status: 204,
+    success: true,
+    message: config?.message || "操作成功",
+    data: null,
+    customHeaders: config?.customHeaders,
+    cacheConfig: config?.cacheConfig,
+  });
 }
+
+/**
+ * 304 - 未修改 (用于条件请求)
+ */
+function notModified(
+  config?: {
+    /** 响应消息 */
+    message?: string;
+    /** 自定义响应头 */
+    customHeaders?: HeadersInit;
+    /** 缓存配置 */
+    cacheConfig?: CacheConfig;
+  }
+): NextResponse<ApiResponse<null>> {
+  return response({
+    status: 304,
+    success: true,
+    message: config?.message || "未修改",
+    data: null,
+    customHeaders: config?.customHeaders,
+    cacheConfig: config?.cacheConfig,
+  });
+}
+
+// === 错误响应 ===
 
 /**
  * 400 - 请求错误
  */
 function badRequest(
-  message: string = "请求参数错误",
-  error?: ApiError | string,
-  customHeaders?: HeadersInit,
+  config?: {
+    /** 响应消息 */
+    message?: string;
+    /** 错误信息 */
+    error?: ApiError | string;
+    /** 自定义响应头 */
+    customHeaders?: HeadersInit;
+    /** 缓存配置 */
+    cacheConfig?: CacheConfig;
+  }
 ): NextResponse<ApiResponse<null>> {
-  const apiError = typeof error === 'string' 
-    ? { code: 'BAD_REQUEST', message: error }
-    : error;
-  return createResponse(400, false, message, null, apiError, customHeaders);
+  return response({
+    status: 400,
+    success: false,
+    message: config?.message || "请求参数错误",
+    data: null,
+    error: config?.error,
+    customHeaders: config?.customHeaders,
+    cacheConfig: config?.cacheConfig,
+  });
 }
 
 /**
  * 401 - 未授权
  */
 function unauthorized(
-  message: string = "未授权访问",
-  customHeaders?: HeadersInit,
+  config?: {
+    /** 响应消息 */
+    message?: string;
+    /** 错误信息 */
+    error?: ApiError | string;
+    /** 自定义响应头 */
+    customHeaders?: HeadersInit;
+    /** 缓存配置 */
+    cacheConfig?: CacheConfig;
+  }
 ): NextResponse<ApiResponse<null>> {
-  return createResponse(401, false, message, null, undefined, customHeaders);
+  return response({
+    status: 401,
+    success: false,
+    message: config?.message || "未授权访问",
+    data: null,
+    error: config?.error,
+    customHeaders: config?.customHeaders,
+    cacheConfig: config?.cacheConfig,
+  });
 }
 
 /**
  * 403 - 禁止访问
  */
 function forbidden(
-  message: string = "禁止访问",
-  customHeaders?: HeadersInit,
+  config?: {
+    /** 响应消息 */
+    message?: string;
+    /** 错误信息 */
+    error?: ApiError | string;
+    /** 自定义响应头 */
+    customHeaders?: HeadersInit;
+    /** 缓存配置 */
+    cacheConfig?: CacheConfig;
+  }
 ): NextResponse<ApiResponse<null>> {
-  return createResponse(403, false, message, null, undefined, customHeaders);
+  return response({
+    status: 403,
+    success: false,
+    message: config?.message || "禁止访问",
+    data: null,
+    error: config?.error,
+    customHeaders: config?.customHeaders,
+    cacheConfig: config?.cacheConfig,
+  });
 }
 
 /**
  * 404 - 未找到
  */
 function notFound(
-  message: string = "资源未找到",
-  customHeaders?: HeadersInit,
+  config?: {
+    /** 响应消息 */
+    message?: string;
+    /** 错误信息 */
+    error?: ApiError | string;
+    /** 自定义响应头 */
+    customHeaders?: HeadersInit;
+    /** 缓存配置 */
+    cacheConfig?: CacheConfig;
+  }
 ): NextResponse<ApiResponse<null>> {
-  return createResponse(404, false, message, null, undefined, customHeaders);
+  return response({
+    status: 404,
+    success: false,
+    message: config?.message || "资源未找到",
+    data: null,
+    error: config?.error,
+    customHeaders: config?.customHeaders,
+    cacheConfig: config?.cacheConfig,
+  });
 }
 
 /**
  * 409 - 冲突
  */
 function conflict(
-  message: string = "资源冲突",
-  error?: ApiError | string,
-  customHeaders?: HeadersInit,
+  config?: {
+    /** 响应消息 */
+    message?: string;
+    /** 错误信息 */
+    error?: ApiError | string;
+    /** 自定义响应头 */
+    customHeaders?: HeadersInit;
+    /** 缓存配置 */
+    cacheConfig?: CacheConfig;
+  }
 ): NextResponse<ApiResponse<null>> {
-  const apiError = typeof error === 'string' 
-    ? { code: 'CONFLICT', message: error }
-    : error;
-  return createResponse(409, false, message, null, apiError, customHeaders);
+  return response({
+    status: 409,
+    success: false,
+    message: config?.message || "资源冲突",
+    data: null,
+    error: config?.error,
+    customHeaders: config?.customHeaders,
+    cacheConfig: config?.cacheConfig,
+  });
 }
 
 /**
  * 422 - 无法处理的实体
  */
 function unprocessableEntity(
-  message: string = "验证失败",
-  error?: ApiError | string,
-  customHeaders?: HeadersInit,
+  config?: {
+    /** 响应消息 */
+    message?: string;
+    /** 错误信息 */
+    error?: ApiError | string;
+    /** 自定义响应头 */
+    customHeaders?: HeadersInit;
+    /** 缓存配置 */
+    cacheConfig?: CacheConfig;
+  }
 ): NextResponse<ApiResponse<null>> {
-  const apiError = typeof error === 'string' 
-    ? { code: 'VALIDATION_ERROR', message: error }
-    : error;
-  return createResponse(422, false, message, null, apiError, customHeaders);
+  return response({
+    status: 422,
+    success: false,
+    message: config?.message || "验证失败",
+    data: null,
+    error: config?.error,
+    customHeaders: config?.customHeaders,
+    cacheConfig: config?.cacheConfig,
+  });
 }
 
 /**
  * 429 - 请求过多
  */
 function tooManyRequests(
-  message: string = "请求过于频繁，请稍后再试",
-  customHeaders?: HeadersInit,
+  config?: {
+    /** 响应消息 */
+    message?: string;
+    /** 错误信息 */
+    error?: ApiError | string;
+    /** 自定义响应头 */
+    customHeaders?: HeadersInit;
+    /** 缓存配置 */
+    cacheConfig?: CacheConfig;
+  }
 ): NextResponse<ApiResponse<null>> {
-  return createResponse(429, false, message, null, undefined, customHeaders);
+  return response({
+    status: 429,
+    success: false,
+    message: config?.message || "请求过于频繁，请稍后再试",
+    data: null,
+    error: config?.error,
+    customHeaders: config?.customHeaders,
+    cacheConfig: config?.cacheConfig,
+  });
 }
 
 /**
  * 500 - 服务器错误
  */
 function serverError(
-  message: string = "服务器内部错误",
-  error?: ApiError | string,
-  customHeaders?: HeadersInit,
+  config?: {
+    /** 响应消息 */
+    message?: string;
+    /** 错误信息 */
+    error?: ApiError | string;
+    /** 自定义响应头 */
+    customHeaders?: HeadersInit;
+    /** 缓存配置 */
+    cacheConfig?: CacheConfig;
+  }
 ): NextResponse<ApiResponse<null>> {
-  const apiError = typeof error === 'string' 
-    ? { code: 'INTERNAL_ERROR', message: error }
-    : error;
-  return createResponse(500, false, message, null, apiError, customHeaders);
+  return response({
+    status: 500,
+    success: false,
+    message: config?.message || "服务器内部错误",
+    data: null,
+    error: config?.error,
+    customHeaders: config?.customHeaders,
+    cacheConfig: config?.cacheConfig,
+  });
 }
 
 /**
  * 503 - 服务不可用
  */
 function serviceUnavailable(
-  message: string = "服务暂时不可用",
-  customHeaders?: HeadersInit,
+  config?: {
+    /** 响应消息 */
+    message?: string;
+    /** 错误信息 */
+    error?: ApiError | string;
+    /** 自定义响应头 */
+    customHeaders?: HeadersInit;
+    /** 缓存配置 */
+    cacheConfig?: CacheConfig;
+  }
 ): NextResponse<ApiResponse<null>> {
-  return createResponse(503, false, message, null, undefined, customHeaders);
+  return response({
+    status: 503,
+    success: false,
+    message: config?.message || "服务暂时不可用",
+    data: null,
+    error: config?.error,
+    customHeaders: config?.customHeaders,
+    cacheConfig: config?.cacheConfig,
+  });
 }
 
-/**
- * 304 - 未修改 (用于条件请求)
- */
-function notModified(customHeaders?: HeadersInit): NextResponse<ApiResponse<null>> {
-  return createResponse(304, true, "未修改", null, undefined, customHeaders);
-}
+// === 特殊响应 ===
 
 /**
  * 带缓存的成功响应
  */
 function cached<T extends ApiResponseData>(
-  data: T,
-  cacheConfig: CacheConfig,
-  message: string = "请求成功",
-  customHeaders?: HeadersInit,
-  meta?: PaginationMeta,
-): NextResponse<ApiResponse<T>> {
-  return createResponse(200, true, message, data, undefined, customHeaders, meta, cacheConfig);
-}
-
-/**
- * 生成ETag（使用更高效的哈希）
- */
-function generateETag(data: unknown): string {
-  const crypto = require('crypto');
-  const hash = crypto.createHash('md5').update(JSON.stringify(data)).digest('hex');
-  return `"${hash}"`;
-}
-
-/**
- * 检查条件请求
- */
-function checkConditionalRequest(
-  request: Request,
-  etag?: string,
-  lastModified?: Date,
-): { isNotModified: boolean; headers: HeadersInit } {
-  const headers: HeadersInit = {};
-  
-  if (etag) headers["ETag"] = etag;
-  if (lastModified) headers["Last-Modified"] = lastModified.toUTCString();
-  
-  const ifNoneMatch = request.headers.get("If-None-Match");
-  const ifModifiedSince = request.headers.get("If-Modified-Since");
-  
-  let isNotModified = false;
-  
-  if (ifNoneMatch && etag) {
-    const clientETags = ifNoneMatch.split(',').map(tag => tag.trim());
-    isNotModified = clientETags.some(clientETag => 
-      clientETag === etag || clientETag === '*'
-    );
-  } else if (ifModifiedSince && lastModified) {
-    const ifModifiedSinceDate = new Date(ifModifiedSince);
-    if (lastModified <= ifModifiedSinceDate) {
-      isNotModified = true;
-    }
+  config: {
+    /** 响应消息 */
+    message?: string;
+    /** 响应数据 */
+    data?: T;
+    /** 分页元数据 */
+    meta?: PaginationMeta;
+    /** 自定义响应头 */
+    customHeaders?: HeadersInit;
+    /** 缓存配置 */
+    cacheConfig: CacheConfig;
   }
-  
-  return { isNotModified, headers };
-}
-
-/**
- * 通用响应函数，附带所有状态码方法
- */
-function responseCore<T extends ApiResponseData = null>(
-  status: number,
-  message: string,
-  data: T = null as T,
-  customHeaders?: HeadersInit,
-  meta?: PaginationMeta,
-  cacheConfig?: CacheConfig,
 ): NextResponse<ApiResponse<T>> {
-  const success = status >= 200 && status < 300;
-  return createResponse(status, success, message, data, undefined, customHeaders, meta, cacheConfig);
+  return response({
+    status: 200,
+    success: true,
+    message: config.message || "请求成功",
+    data: config.data,
+    customHeaders: config.customHeaders,
+    meta: config.meta,
+    cacheConfig: config.cacheConfig,
+  });
 }
 
 /**
  * 创建字段验证错误
  */
-function fieldError(field: string, message: string, details?: Record<string, any>): ApiError {
+function fieldError(
+  field: string,
+  message: string,
+  details?: Record<string, any>,
+): ApiError {
   return {
-    code: 'FIELD_VALIDATION_ERROR',
+    code: "FIELD_VALIDATION_ERROR",
     message: `${field}: ${message}`,
     field,
     details,
@@ -394,16 +623,43 @@ function fieldError(field: string, message: string, details?: Record<string, any
  * 验证失败响应（带字段信息）
  */
 function validationError(
-  field: string,
-  message: string,
-  details?: Record<string, any>,
-  customHeaders?: HeadersInit,
+  config: {
+    /** 响应消息 */
+    message?: string;
+    /** 错误字段 */
+    field: string;
+    /** 错误消息 */
+    errorMessage?: string;
+    /** 错误详情 */
+    details?: Record<string, any>;
+    /** 自定义响应头 */
+    customHeaders?: HeadersInit;
+    /** 缓存配置 */
+    cacheConfig?: CacheConfig;
+  }
 ): NextResponse<ApiResponse<null>> {
-  const error = fieldError(field, message, details);
-  return createResponse(422, false, "数据验证失败", null, error, customHeaders);
+  const error = fieldError(
+    config.field,
+    config.errorMessage || "验证失败",
+    config.details,
+  );
+
+  return response({
+    status: 422,
+    success: false,
+    message: config.message || "数据验证失败",
+    data: null,
+    error,
+    customHeaders: config.customHeaders,
+    cacheConfig: config.cacheConfig,
+  });
 }
 
-const response = Object.assign(responseCore, {
+// ============================================================================
+// 导出
+// ============================================================================
+
+const responseUtil = Object.assign(response, {
   ok,
   created,
   noContent,
@@ -421,9 +677,7 @@ const response = Object.assign(responseCore, {
   validationError,
   fieldError,
   createPaginationMeta,
-  generateETag,
-  checkConditionalRequest,
 });
 
-export default response;
+export default responseUtil;
 export { createSecurityHeaders, createCacheHeaders };

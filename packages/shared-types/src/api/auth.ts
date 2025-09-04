@@ -25,7 +25,7 @@ const nicknameSchema = z
 // 用户注册 Schema
 export const RegisterUserSchema = z.object({
   username: usernameSchema,
-  nickname: nicknameSchema.optional(), 
+  nickname: nicknameSchema.optional(),
   password: passwordSchema,
   email: emailSchema,
 });

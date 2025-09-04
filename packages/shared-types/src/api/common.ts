@@ -38,12 +38,12 @@ export const PaginationSchema = z.object({
 });
 
 // 定义允许的响应数据类型
-export type ApiResponseData = 
-  | Record<string, any> 
-  | Array<any> 
-  | string 
-  | number 
-  | boolean 
+export type ApiResponseData =
+  | Record<string, any>
+  | Array<any>
+  | string
+  | number
+  | boolean
   | null;
 
 // 定义错误详情类型
