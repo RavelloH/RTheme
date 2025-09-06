@@ -1,26 +1,72 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
-  "globalEnv": ["NODE_ENV", "DATABASE_URL", "REDIS_URL"],
+  "globalEnv": [
+    "NODE_ENV", 
+    "DATABASE_URL", 
+    "REDIS_URL",
+    "BUFFER",
+    "PEPPER",
+    "ARGON2_TIME_COST",
+    "ARGON2_MEMORY_COST", 
+    "ARGON2_PARALLELISM",
+    "ARGON2_HASH_LENGTH"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**", "build/**"],
-      "env": ["NODE_ENV", "DATABASE_URL", "REDIS_URL"]
+      "env": [
+        "NODE_ENV", 
+        "DATABASE_URL", 
+        "REDIS_URL",
+        "BUFFER",
+        "PEPPER",
+        "ARGON2_TIME_COST",
+        "ARGON2_MEMORY_COST", 
+        "ARGON2_PARALLELISM",
+        "ARGON2_HASH_LENGTH"
+      ]
     },
     "lint": {
       "dependsOn": ["^lint"],
-      "env": ["NODE_ENV"]
+      "env": [
+        "NODE_ENV",
+        "BUFFER",
+        "PEPPER",
+        "ARGON2_TIME_COST",
+        "ARGON2_MEMORY_COST", 
+        "ARGON2_PARALLELISM",
+        "ARGON2_HASH_LENGTH"
+      ]
     },
     "check-types": {
       "dependsOn": ["^check-types"],
-      "env": ["NODE_ENV"]
+      "env": [
+        "NODE_ENV",
+        "BUFFER",
+        "PEPPER",
+        "ARGON2_TIME_COST",
+        "ARGON2_MEMORY_COST", 
+        "ARGON2_PARALLELISM",
+        "ARGON2_HASH_LENGTH"
+      ]
     },
     "dev": {
       "cache": false,
       "persistent": true,
-      "env": ["NODE_ENV", "DATABASE_URL", "REDIS_URL"]
+      "env": [
+        "NODE_ENV", 
+        "DATABASE_URL", 
+        "REDIS_URL",
+        "BUFFER",
+        "PEPPER",
+        "ARGON2_TIME_COST",
+        "ARGON2_MEMORY_COST", 
+        "ARGON2_PARALLELISM",
+        "ARGON2_HASH_LENGTH"
+      ]
     },
     "watch-openapi": {
       "cache": false,

@@ -13,11 +13,13 @@
   "dependencies": {
     "@prisma/client": "6.14.0",
     "@repo/shared-types": "workspace:*",
+    "argon2": "^0.44.0",
     "ioredis": "^5.7.0",
     "next": "^15.4.7",
     "prisma": "^6.14.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "rlog-js": "^1.5.2",
     "zod": "^3.22.4"
   },
   "devDependencies": {
