@@ -67,7 +67,7 @@ function scanApiFiles(apiDir: string): Record<string, any> {
 // 从文件内容中提取OpenAPI规范
 function extractOpenAPIFromFile(
   content: string,
-  filePath: string,
+  filePath: string
 ): Record<string, any> {
   const paths: Record<string, any> = {};
 
@@ -155,75 +155,65 @@ export async function generateOpenAPISpec(): Promise<OpenAPISpec> {
   // 动态获取 shared-types schemas
   const schemas = await getSharedTypesSchemas();
 
-  // 从 shared-types 生成 schema 定义
-  const schemaDefinitions = [
-    { name: "User", schema: schemas.UserSchema },
-    { name: "CreateUser", schema: schemas.CreateUserSchema },
-    { name: "UpdateUser", schema: schemas.UpdateUserSchema },
-    { name: "UsersListResponse", schema: schemas.UsersListResponseSchema },
-    { name: "Post", schema: schemas.PostSchema },
-    { name: "CreatePost", schema: schemas.CreatePostSchema },
-    { name: "UpdatePost", schema: schemas.UpdatePostSchema },
-    { name: "PostsListResponse", schema: schemas.PostsListResponseSchema },
-    { name: "Category", schema: schemas.CategorySchema },
-    { name: "CreateCategory", schema: schemas.CreateCategorySchema },
-    { name: "UpdateCategory", schema: schemas.UpdateCategorySchema },
-    { name: "Tag", schema: schemas.TagSchema },
-    { name: "CreateTag", schema: schemas.CreateTagSchema },
-    { name: "ApiResponse", schema: schemas.ApiResponseSchema },
-    { name: "ErrorResponse", schema: schemas.ApiErrorSchema },
-    { name: "Pagination", schema: schemas.PaginationSchema },
-    // Auth schemas
-    { name: "RegisterUser", schema: schemas.RegisterUserSchema },
-    { name: "UserData", schema: schemas.UserDataSchema },
-    { name: "RegisterSuccessResponse", schema: schemas.RegisterSuccessResponseSchema },
-    { name: "ValidationErrorResponse", schema: schemas.ValidationErrorResponseSchema },
-    { name: "ConflictErrorResponse", schema: schemas.ConflictErrorResponseSchema },
-    { name: "RateLimitErrorResponse", schema: schemas.RateLimitErrorResponseSchema },
-    { name: "ServerErrorResponse", schema: schemas.ServerErrorResponseSchema },
-  ];
+  // 使用自动发现的schemas
+  try {
+    // 导入所有API模块来触发schema注册
+    await import("@repo/shared-types/api/common");
+    await import("@repo/shared-types/api/auth");
+    // 你可以在这里添加更多的API模块导入
 
-  // 转换 Zod schema 为 JSON Schema
-  schemaDefinitions.forEach(({ name, schema }) => {
-    if (!schema) {
-      rlog.info(`跳过未定义的schema: ${name}`);
-      return;
+    // 获取所有已注册的schemas
+    const registeredSchemas = schemas.getAllRegisteredSchemas
+      ? schemas.getAllRegisteredSchemas()
+      : [];
+
+    if (registeredSchemas.length === 0) {
+      rlog.warning("未发现任何已注册的schemas，可能是因为没有正确导入API模块");
+    } else {
+      rlog.info(`发现 ${registeredSchemas.length} 个已注册的schemas`);
+      registeredSchemas.forEach(
+        ({ name, schema }: { name: string; schema: any }) => {
+          convertAndAddSchema(spec, name, schema);
+        }
+      );
     }
-
-    try {
-      const jsonSchema = zodToJsonSchema(schema, {
-        name,
-        // 移除顶级的 $ref 和 definitions，直接使用定义
-        $refStrategy: "none",
-      });
-
-      // 清理生成的 schema，移除多余的包装
-      if (
-        (jsonSchema as any).definitions &&
-        (jsonSchema as any).definitions[name]
-      ) {
-        spec.components.schemas[name] = (jsonSchema as any).definitions[name];
-      } else {
-        // 去掉 $ref 和 definitions 包装
-        const cleanSchema = { ...jsonSchema } as any;
-        delete cleanSchema.$ref;
-        delete cleanSchema.definitions;
-        delete cleanSchema.$schema;
-        spec.components.schemas[name] = cleanSchema;
-      }
-    } catch (error) {
-      rlog.error(`转换schema ${name} 时出错:`, error);
-    }
-  });
+  } catch (error) {
+    rlog.exit(error);
+  }
 
   return spec;
+}
+
+// 辅助函数：转换并添加schema
+function convertAndAddSchema(spec: OpenAPISpec, name: string, schema: any) {
+  try {
+    const jsonSchema = zodToJsonSchema(schema, {
+      name,
+      $refStrategy: "none",
+    });
+
+    if (
+      (jsonSchema as any).definitions &&
+      (jsonSchema as any).definitions[name]
+    ) {
+      spec.components.schemas[name] = (jsonSchema as any).definitions[name];
+    } else {
+      const cleanSchema = { ...jsonSchema } as any;
+      delete cleanSchema.$ref;
+      delete cleanSchema.definitions;
+      delete cleanSchema.$schema;
+      spec.components.schemas[name] = cleanSchema;
+    }
+  } catch (error) {
+    rlog.error(`转换schema ${name} 时出错:`, error);
+  }
 }
 
 // 默认路径定义作为后备
 
 export function saveOpenAPISpec(
   spec: OpenAPISpec,
-  outputPath: string = "./openapi.yaml",
+  outputPath: string = "./openapi.yaml"
 ) {
   // 确保输出目录存在
   const dir = dirname(outputPath);

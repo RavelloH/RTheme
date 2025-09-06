@@ -67,6 +67,33 @@ export const PaginationSchema = z.object({
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
 });
 
+// Schema 注册系统
+export interface SchemaDefinition {
+  name: string;
+  schema: z.ZodTypeAny;
+}
+
+// 全局 schema 注册表
+const schemaRegistry = new Map<string, z.ZodTypeAny>();
+
+// 注册 schema 的函数
+export function registerSchema(name: string, schema: z.ZodTypeAny) {
+  schemaRegistry.set(name, schema);
+}
+
+// 获取所有已注册的 schemas
+export function getAllRegisteredSchemas(): SchemaDefinition[] {
+  return Array.from(schemaRegistry.entries()).map(([name, schema]) => ({
+    name,
+    schema,
+  }));
+}
+
+// 自动注册当前模块的schemas
+registerSchema("ApiResponse", ApiResponseSchema);
+registerSchema("ErrorResponse", ApiErrorSchema);
+registerSchema("Pagination", PaginationSchema);
+
 // 定义允许的响应数据类型
 export type ApiResponseData =
   | Record<string, any>

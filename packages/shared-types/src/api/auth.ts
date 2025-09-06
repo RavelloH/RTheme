@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createSuccessResponseSchema, createErrorResponseSchema } from "./common.js";
+import { createSuccessResponseSchema, createErrorResponseSchema, registerSchema } from "./common.js";
 
 // 用户名验证：只能由小写字母、数字和下划线组成
 const usernameSchema = z
@@ -78,6 +78,15 @@ export const ServerErrorResponseSchema = createErrorResponseSchema(
     message: z.string(),
   })
 );
+
+// 自动注册所有schemas到OpenAPI生成器
+registerSchema("RegisterUser", RegisterUserSchema);
+registerSchema("UserData", UserDataSchema);
+registerSchema("RegisterSuccessResponse", RegisterSuccessResponseSchema);
+registerSchema("ValidationErrorResponse", ValidationErrorResponseSchema);
+registerSchema("ConflictErrorResponse", ConflictErrorResponseSchema);
+registerSchema("RateLimitErrorResponse", RateLimitErrorResponseSchema);
+registerSchema("ServerErrorResponse", ServerErrorResponseSchema);
 
 // 导出推导的 TypeScript 类型
 export type RegisterUser = z.infer<typeof RegisterUserSchema>;
