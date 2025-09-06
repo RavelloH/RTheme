@@ -11,19 +11,17 @@ tags:
 
 ## 🚀 现代化开发流程
 
-NeutralPress采用基于Zod + 简化OpenAPI注释的现代化API开发方式：
+NeutralPress采用基于Zod + 自动化schema发现的现代化API开发方式：
 
 1. **定义Zod Schema** - 在 `packages/shared-types` 中定义数据结构
-2. **添加简化注释** - 只需指定路径、方法和Schema引用
-3. **使用验证工具** - 通过 `validateRequestJSON` 自动验证和错误处理
-4. **类型安全开发** - 获得完整的TypeScript类型推导
-5. **自动文档生成** - 从Zod Schema和注释生成完整OpenAPI文档
+2. **自动注册Schema** - 使用 `registerSchema()` 自动注册到OpenAPI生成器
+3. **添加简化注释** - 只需指定路径、方法和Schema引用
+4. **使用验证工具** - 通过 `validateRequestJSON` 自动验证和错误处理
+5. **类型安全开发** - 获得完整的TypeScript类型推导
+6. **自动文档生成** - 从Zod Schema和注释生成完整OpenAPI文档
 
-:::tip 优势
-- 大幅简化OpenAPI注释编写
-- 类型安全且运行时验证
-- 统一的错误处理格式
-- 自动同步的前后端类型
+:::tip 新功能：自动化Schema发现
+现在无需手动维护OpenAPI生成器中的schema列表！只需在API模块中使用 `registerSchema()` 注册，系统会自动发现并生成文档。
 :::
 
 ## 📝 API开发步骤
@@ -35,6 +33,7 @@ NeutralPress采用基于Zod + 简化OpenAPI注释的现代化API开发方式：
 ```typescript
 // packages/shared-types/src/api/auth.ts
 import { z } from "zod";
+import { createSuccessResponseSchema, createErrorResponseSchema, registerSchema } from "./common.js";
 
 export const RegisterUserSchema = z.object({
   username: z.string()
@@ -51,12 +50,44 @@ export const RegisterUserSchema = z.object({
     .optional()
 });
 
+export const UserDataSchema = z.object({
+  id: z.string().uuid(),
+  username: z.string(),
+  email: z.string().email(),
+  nickname: z.string(),
+  role: z.enum(["USER", "ADMIN", "EDITOR"]),
+  status: z.enum(["ACTIVE", "SUSPENDED"]),
+  isEmailVerified: z.boolean(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+// 使用响应构建器创建标准响应schemas
+export const RegisterSuccessResponseSchema = createSuccessResponseSchema(UserDataSchema);
+export const ValidationErrorResponseSchema = createErrorResponseSchema(
+  z.object({
+    code: z.literal("VALIDATION_ERROR"),
+    message: z.string(),
+    details: z.array(z.object({
+      field: z.string(),
+      message: z.string(),
+    })).optional(),
+  })
+);
+
+// 自动注册schemas到OpenAPI生成器
+registerSchema("RegisterUser", RegisterUserSchema);
+registerSchema("UserData", UserDataSchema);
+registerSchema("RegisterSuccessResponse", RegisterSuccessResponseSchema);
+registerSchema("ValidationErrorResponse", ValidationErrorResponseSchema);
+
 export type RegisterUser = z.infer<typeof RegisterUserSchema>;
+export type UserData = z.infer<typeof UserDataSchema>;
 ```
 
-### 2. 添加简化的OpenAPI注释
+### 2. 添加OpenAPI注释
 
-为API添加基本的OpenAPI注释，引用定义好的Schema：
+为API添加基本的OpenAPI注释，引用自动注册的Schema：
 
 ```typescript
 /**
@@ -78,19 +109,31 @@ export type RegisterUser = z.infer<typeof RegisterUserSchema>;
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               $ref: '#/components/schemas/RegisterSuccessResponse'
  *       400:
  *         description: 请求参数错误
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               $ref: '#/components/schemas/ValidationErrorResponse'
  *       409:
  *         description: 用户名或邮箱已存在
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               $ref: '#/components/schemas/ConflictErrorResponse'
+ *       429:
+ *         description: 请求过于频繁
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/RateLimitErrorResponse'
+ *       500:
+ *         description: 服务器内部错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ServerErrorResponse'
  */
 ```
 
@@ -105,34 +148,9 @@ import { validateRequestJSON } from "@/app/api/_utils/validator";
 import { RegisterUserSchema } from "@repo/shared-types/api/auth";
 import prisma from "@/app/lib/prisma";
 import limitControl from "../../_utils/limit";
+import { hashPassword } from "../../_utils/password";
+import emailUtils from "../../_utils/email";
 
-/**
- * @openapi
- * /api/auth/register:
- *   post:
- *     summary: 用户注册
- *     description: 注册新用户
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/RegisterUser'
- *     responses:
- *       201:
- *         description: 注册成功
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
- *       400:
- *         description: 请求参数错误
- *       409:
- *         description: 用户名或邮箱已存在
- *       429:
- *         description: 请求过于频繁
- */
 export async function POST(request: Request) {
   try {
     // 速率限制
@@ -146,7 +164,7 @@ export async function POST(request: Request) {
     
     const { username, email, password, nickname } = validation.data!;
 
-    // 业务逻辑
+    // 检查用户是否存在
     const userExists = await prisma.user.findFirst({
       where: { OR: [{ username }, { email }] }
     });
@@ -162,16 +180,20 @@ export async function POST(request: Request) {
     }
 
     // 创建用户
+    const hashedPassword = await hashPassword(password);
+    const emailVerifyCode = emailUtils.generate();
+    
     const user = await prisma.user.create({
-      data: { username, email, password, nickname }
+      data: { username, email, nickname, password: hashedPassword, emailVerifyCode }
     });
 
-    return response.created({
-      message: "注册成功",
-      data: { userId: user.id }
+    return response.ok({
+      data: user,
+      message: "注册成功，请检查邮箱以验证账户"
     });
 
   } catch (error) {
+    console.error("Registration error:", error);
     return response.serverError({
       message: "注册失败，请稍后重试"
     });
@@ -179,186 +201,43 @@ export async function POST(request: Request) {
 }
 ```
 
-### 4. 文件结构
+## 🔧 响应构建器系统
 
-```
-packages/shared-types/src/api/
-├── auth.ts              # 认证相关Schema
-├── posts.ts             # 文章相关Schema
-├── users.ts             # 用户相关Schema
-└── common.ts            # 通用Schema
+### 基础响应构建器
 
-apps/web/src/app/api/
-├── auth/
-│   ├── register/
-│   │   └── route.ts     # POST /api/auth/register
-│   └── login/
-│       └── route.ts     # POST /api/auth/login
-├── posts/
-│   ├── route.ts         # GET,POST /api/posts
-│   └── [id]/
-│       └── route.ts     # GET,PUT,DELETE /api/posts/[id]
-└── users/
-    └── route.ts         # GET /api/users
-```
-
-## 🔧 核心工具使用
-
-### 数据验证
+在 `packages/shared-types/src/api/common.ts` 中提供了三个核心响应构建器：
 
 ```typescript
-import { validateRequestJSON } from "@/app/api/_utils/validator";
+// 成功响应 - 只包含必要字段，无冗余的error和meta
+export const UserResponseSchema = createSuccessResponseSchema(UserDataSchema);
+// 生成: { success: true, message, data: UserData, timestamp, requestId }
 
-// 自动验证并返回错误响应
-const validation = await validateRequestJSON(request, MySchema);
-if (validation instanceof Response) return validation;
+// 错误响应 - 只包含错误相关字段
+export const ValidationErrorResponseSchema = createErrorResponseSchema(
+  z.object({
+    code: z.literal("VALIDATION_ERROR"),
+    message: z.string(),
+  })
+);
+// 生成: { success: false, message, data: null, error, timestamp, requestId }
 
-// 获得类型安全的数据
-const data = validation.data!; // 完整TypeScript类型推导
+// 分页响应 - 包含分页元数据
+export const UsersListResponseSchema = createPaginatedResponseSchema(
+  z.object({ users: z.array(UserDataSchema) })
+);
+// 生成: { success: true, message, data, meta: PaginationMeta, timestamp, requestId }
 ```
 
-### 统一响应
+### 自动Schema注册
+
+使用 `registerSchema()` 函数注册schemas到OpenAPI生成器：
 
 ```typescript
-import response from "@/app/api/_utils/response";
-
-// 成功响应
-return response.ok({ data: users, message: "获取成功" });
-return response.created({ data: newUser, message: "创建成功" });
-
-// 错误响应
-return response.badRequest({ message: "请求参数错误" });
-return response.notFound({ message: "用户不存在" });
-return response.conflict({ message: "用户已存在" });
-```
-
-### 速率限制
-
-```typescript
-import limitControl from "@/app/api/_utils/limit";
-
-// 自动IP限频
-if (!(await limitControl(request))) {
-  return response.tooManyRequests();
-}
-```
-
-## 📋 常用API模式
-
-### GET请求示例（带查询参数）
-
-```typescript
-/**
- * @openapi
- * /api/posts:
- *   get:
- *     summary: 获取文章列表
- *     description: 分页获取文章列表
- *     tags: [Posts]
- *     parameters:
- *       - name: page
- *         in: query
- *         schema:
- *           type: integer
- *           minimum: 1
- *           default: 1
- *       - name: limit
- *         in: query  
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 50
- *           default: 10
- *       - name: status
- *         in: query
- *         schema:
- *           type: string
- *           enum: [draft, published]
- *     responses:
- *       200:
- *         description: 获取成功
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/PostsListResponse'
- */
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  
-  const validation = validateSearchParams(searchParams, QuerySchema);
-  if (validation instanceof Response) return validation;
-  
-  const { page, limit, status } = validation.data!;
-  // ...
-}
-```
-
-### POST请求示例（JSON数据）
-
-```typescript
-/**
- * @openapi
- * /api/posts:
- *   post:
- *     summary: 创建文章
- *     description: 创建新文章
- *     tags: [Posts]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/CreatePost'
- *     responses:
- *       201:
- *         description: 创建成功
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/PostResponse'
- *       400:
- *         description: 请求参数错误
- *       409:
- *         description: 标题已存在
- */
-export async function POST(request: Request) {
-  const validation = await validateRequestJSON(request, CreatePostSchema);
-  if (validation instanceof Response) return validation;
-  
-  const { title, content, categoryId, tags } = validation.data!;
-  // ...
-}
-```
-
-### 路径参数处理
-
-```typescript
-const UpdateUserSchema = z.object({
-  nickname: z.string().min(2).max(20).optional(),
-  bio: z.string().max(500).optional()
-});
-
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  const { id } = params;
-  
-  // 验证UUID格式
-  const uuidSchema = z.string().uuid();
-  const idValidation = uuidSchema.safeParse(id);
-  if (!idValidation.success) {
-    return response.badRequest({ message: "无效的用户ID格式" });
-  }
-  
-  const validation = await validateRequestJSON(request, UpdateUserSchema);
-  if (validation instanceof Response) return validation;
-  
-  const updateData = validation.data!;
-  const user = await updateUser(id, updateData);
-  
-  return response.ok({ data: user, message: "更新成功" });
-}
+// 在每个API模块的底部添加
+registerSchema("RegisterUser", RegisterUserSchema);
+registerSchema("RegisterSuccessResponse", RegisterSuccessResponseSchema);
+registerSchema("ValidationErrorResponse", ValidationErrorResponseSchema);
+// ... 其他schemas
 ```
 
 ## 🛠️ 开发工作流
@@ -373,44 +252,52 @@ pnpm dev
 - 主应用：http://localhost:3000
 - API文档：http://localhost:3001/docs/api
 
-### 2. 开发流程
+### 2. 自动化开发流程
 
 1. **定义Schema** → `packages/shared-types/src/api/`
-2. **添加OpenAPI注释** → 引用Schema名称，指定路径和响应
-3. **实现API** → `apps/web/src/app/api/`
-4. **自动验证** → 使用 `validateRequestJSON`
-5. **错误处理** → 使用 `response` 工具
-6. **生成文档** → 运行 `pnpm generate-openapi`
+2. **注册Schema** → 在模块底部使用 `registerSchema()`
+3. **添加OpenAPI注释** → 引用Schema名称，指定路径和响应
+4. **实现API** → `apps/web/src/app/api/`
+5. **自动验证** → 使用 `validateRequestJSON`
+6. **错误处理** → 使用 `response` 工具
+7. **生成文档** → 运行 `pnpm generate-openapi` (自动发现所有注册的schemas)
 
-### 3. 类型安全使用
+### 3. 添加新API模块
+
+当添加新的API模块时（如 `posts.ts`），只需：
 
 ```typescript
-// Schema定义自动提供完整类型
-const validation = await validateRequestJSON(request, UserSchema);
-if (!(validation instanceof Response)) {
-  // validation.data! 具有完整的TypeScript类型推导
-  console.log(validation.data!.username); // string
-  console.log(validation.data!.email);    // string
-  console.log(validation.data!.nickname); // string | undefined
-}
+// packages/shared-types/src/api/posts.ts
+export const PostSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  content: z.string(),
+  // ...
+});
+
+export const CreatePostResponseSchema = createSuccessResponseSchema(PostSchema);
+
+// 注册所有schemas
+registerSchema("Post", PostSchema);
+registerSchema("CreatePostResponse", CreatePostResponseSchema);
 ```
+
+然后更新生成器导入：
+
+```typescript
+// packages/openapi-generator/src/generator.ts
+// 在 generateOpenAPISpec 函数中添加新模块导入
+await import("@repo/shared-types/api/posts");
+```
+
+系统会自动发现并生成文档，无需手动维护schema列表！
 
 ## 📚 最佳实践
 
-### 1. Schema设计
+### 1. Schema设计模式
 
 ```typescript
-// 好的做法：详细的验证和错误信息
-const UserSchema = z.object({
-  username: z.string()
-    .min(3, "用户名至少3个字符")
-    .max(20, "用户名最多20个字符")
-    .regex(/^[a-zA-Z0-9_]+$/, "只能包含字母、数字和下划线"),
-  email: z.string().email("邮箱格式不正确"),
-  age: z.number().min(18, "年龄必须大于18岁")
-});
-
-// 复用基础Schema
+// 使用响应构建器确保格式统一
 const BaseUserSchema = z.object({
   username: z.string(),
   email: z.string().email()
@@ -421,65 +308,69 @@ const CreateUserSchema = BaseUserSchema.extend({
 });
 
 const UpdateUserSchema = BaseUserSchema.partial();
+
+// 为每种响应创建专门的schema
+const UserSuccessResponseSchema = createSuccessResponseSchema(BaseUserSchema);
+const UserListResponseSchema = createPaginatedResponseSchema(
+  z.object({ users: z.array(BaseUserSchema) })
+);
 ```
 
-### 2. 错误处理
+### 2. 统一错误处理
 
 ```typescript
-// 统一错误格式
-return response.badRequest({
-  message: "用户输入错误",
-  error: {
-    code: "VALIDATION_FAILED",
-    message: "请检查输入数据",
-    details: { field: "email", reason: "格式不正确" }
-  }
-});
+// 为不同错误类型创建专门的schemas
+const ValidationErrorSchema = createErrorResponseSchema(
+  z.object({
+    code: z.literal("VALIDATION_ERROR"),
+    message: z.string(),
+    details: z.array(z.object({
+      field: z.string(),
+      message: z.string()
+    })).optional()
+  })
+);
+
+const NotFoundErrorSchema = createErrorResponseSchema(
+  z.object({
+    code: z.literal("NOT_FOUND"),
+    message: z.string()
+  })
+);
 ```
 
-### 3. 性能优化
+### 3. 自动注册管理
 
 ```typescript
-// 使用速率限制
-if (!(await limitControl(request))) {
-  return response.tooManyRequests();
-}
+// 在每个API模块末尾统一注册
+// 建议按类别组织
+registerSchema("RegisterUser", RegisterUserSchema);
+registerSchema("LoginUser", LoginUserSchema);
+registerSchema("UserData", UserDataSchema);
 
-// 分页查询
-const PaginationSchema = z.object({
-  page: z.string().transform(Number).pipe(z.number().min(1).default(1)),
-  limit: z.string().transform(Number).pipe(z.number().min(1).max(100).default(10))
-});
+// 响应schemas
+registerSchema("RegisterSuccessResponse", RegisterSuccessResponseSchema);
+registerSchema("LoginSuccessResponse", LoginSuccessResponseSchema);
+registerSchema("ValidationErrorResponse", ValidationErrorResponseSchema);
 ```
 
-## 🔧 故障排除
+## ⚡ 新特性亮点
 
-### 常见问题
+### 自动化Schema发现
+- ✅ 无需手动维护generator中的schema列表
+- ✅ 添加新API时只需注册schema
+- ✅ 自动同步，确保文档完整性
 
-1. **验证失败** → 检查Schema定义和输入数据格式
-2. **类型错误** → 确保从 `packages/shared-types` 正确导入Schema
-3. **响应格式** → 使用 `response` 工具确保统一格式
+### 响应构建器系统
+- ✅ 避免冗余字段（如成功响应不包含error字段）
+- ✅ 统一的响应格式
+- ✅ 类型安全的响应构建
 
-### 调试技巧
-
-```typescript
-// 开发时可以查看验证详情
-const validation = await validateRequestJSON(request, schema, { 
-  returnResponse: false 
-});
-
-if (!validation.success) {
-  console.log("验证错误:", validation.errors);
-}
-```
+### 类型安全验证
+- ✅ 端到端类型推导
+- ✅ 运行时验证
+- ✅ 统一错误格式
 
 ---
 
-现在您可以用简化的方式开发API：**定义Schema → 简化注释 → 自动验证 → 类型安全** 🎉
-
-## 📝 OpenAPI注释要点
-
-- 使用 `$ref: '#/components/schemas/SchemaName'` 引用Zod Schema
-- 只需指定基本信息：路径、方法、tags、描述
-- 响应状态码根据业务需要添加
-- Schema的详细验证规则由Zod定义，无需重复编写
+现在您可以更高效地开发API：**定义Schema → 自动注册 → 简化注释 → 自动生成** 🎉
