@@ -1,7 +1,5 @@
 // API Schema 导出
 export * from "./api/common.js";
-export * from "./api/users.js";
-export * from "./api/posts.js";
 export * from "./api/auth.js";
 
 // 类型安全的 API 客户端工具

@@ -18,16 +18,46 @@ export const ApiErrorSchema = z.object({
   field: z.string().optional(),
 });
 
-// 通用 API 响应 Schema
-export const ApiResponseSchema = z.object({
+// 基础响应 Schema（只包含必需字段）
+export const BaseResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
-  data: z.unknown().nullable(),
   timestamp: z.string().datetime(),
   requestId: z.string(),
+});
+
+// 通用 API 响应 Schema（包含所有可选字段，主要用于类型推导）
+export const ApiResponseSchema = BaseResponseSchema.extend({
+  data: z.unknown().nullable(),
   error: ApiErrorSchema.optional(),
   meta: PaginationMetaSchema.optional(),
 });
+
+// 响应构建器函数 - 成功响应
+export function createSuccessResponseSchema<T extends z.ZodTypeAny>(dataSchema: T) {
+  return BaseResponseSchema.extend({
+    success: z.literal(true),
+    data: dataSchema,
+  });
+}
+
+// 响应构建器函数 - 错误响应
+export function createErrorResponseSchema<T extends z.ZodTypeAny>(errorSchema: T) {
+  return BaseResponseSchema.extend({
+    success: z.literal(false),
+    data: z.null(),
+    error: errorSchema,
+  });
+}
+
+// 响应构建器函数 - 带分页的响应
+export function createPaginatedResponseSchema<T extends z.ZodTypeAny>(dataSchema: T) {
+  return BaseResponseSchema.extend({
+    success: z.literal(true),
+    data: dataSchema,
+    meta: PaginationMetaSchema,
+  });
+}
 
 // 分页请求参数 Schema
 export const PaginationSchema = z.object({

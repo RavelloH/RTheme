@@ -175,29 +175,44 @@ export async function generateOpenAPISpec(): Promise<OpenAPISpec> {
     { name: "Pagination", schema: schemas.PaginationSchema },
     // Auth schemas
     { name: "RegisterUser", schema: schemas.RegisterUserSchema },
+    { name: "UserData", schema: schemas.UserDataSchema },
+    { name: "RegisterSuccessResponse", schema: schemas.RegisterSuccessResponseSchema },
+    { name: "ValidationErrorResponse", schema: schemas.ValidationErrorResponseSchema },
+    { name: "ConflictErrorResponse", schema: schemas.ConflictErrorResponseSchema },
+    { name: "RateLimitErrorResponse", schema: schemas.RateLimitErrorResponseSchema },
+    { name: "ServerErrorResponse", schema: schemas.ServerErrorResponseSchema },
   ];
 
   // 转换 Zod schema 为 JSON Schema
   schemaDefinitions.forEach(({ name, schema }) => {
-    const jsonSchema = zodToJsonSchema(schema, {
-      name,
-      // 移除顶级的 $ref 和 definitions，直接使用定义
-      $refStrategy: "none",
-    });
+    if (!schema) {
+      rlog.info(`跳过未定义的schema: ${name}`);
+      return;
+    }
 
-    // 清理生成的 schema，移除多余的包装
-    if (
-      (jsonSchema as any).definitions &&
-      (jsonSchema as any).definitions[name]
-    ) {
-      spec.components.schemas[name] = (jsonSchema as any).definitions[name];
-    } else {
-      // 去掉 $ref 和 definitions 包装
-      const cleanSchema = { ...jsonSchema } as any;
-      delete cleanSchema.$ref;
-      delete cleanSchema.definitions;
-      delete cleanSchema.$schema;
-      spec.components.schemas[name] = cleanSchema;
+    try {
+      const jsonSchema = zodToJsonSchema(schema, {
+        name,
+        // 移除顶级的 $ref 和 definitions，直接使用定义
+        $refStrategy: "none",
+      });
+
+      // 清理生成的 schema，移除多余的包装
+      if (
+        (jsonSchema as any).definitions &&
+        (jsonSchema as any).definitions[name]
+      ) {
+        spec.components.schemas[name] = (jsonSchema as any).definitions[name];
+      } else {
+        // 去掉 $ref 和 definitions 包装
+        const cleanSchema = { ...jsonSchema } as any;
+        delete cleanSchema.$ref;
+        delete cleanSchema.definitions;
+        delete cleanSchema.$schema;
+        spec.components.schemas[name] = cleanSchema;
+      }
+    } catch (error) {
+      rlog.error(`转换schema ${name} 时出错:`, error);
     }
   });
 
