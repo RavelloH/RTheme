@@ -45,7 +45,14 @@ export const UserDataSchema = z.object({
 });
 
 // 使用构建器创建响应 schemas
-export const RegisterSuccessResponseSchema = createSuccessResponseSchema(UserDataSchema);
+// 注册成功响应不返回任何用户数据，只返回成功消息
+export const RegisterSuccessResponseSchema = z.object({
+  success: z.literal(true),
+  message: z.string(),
+  timestamp: z.string().datetime(),
+  requestId: z.string(),
+  data: z.null(),
+});
 
 export const ValidationErrorResponseSchema = createErrorResponseSchema(
   z.object({

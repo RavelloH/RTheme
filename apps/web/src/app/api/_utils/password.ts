@@ -85,10 +85,10 @@ function getPasswordConfig(): PasswordConfig {
     );
   }
 
-  if (!pepper || pepper.length < 16) {
+  if (!pepper || pepper.length < 8) {
     throw new PasswordError(
       PasswordErrorType.CONFIG_ERROR,
-      "PEPPER 环境变量必须设置且长度至少为 16 个字符"
+      "PEPPER 环境变量必须设置且长度至少为 8 个字符"
     );
   }
 

@@ -106,7 +106,6 @@ export async function POST(request: Request) {
     // TODO: 发送验证邮件
 
     return response.ok({
-      data: user,
       message: "注册成功，请检查邮箱以验证账户",
     });
 
