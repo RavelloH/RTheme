@@ -1,6 +1,8 @@
 import Redis from "ioredis";
 import prisma from "../../lib/prisma";
 
+const limit = 30; // 每分钟允许的请求数
+
 // 根据环境变量决定是否使用Redis
 const useRedis = !!process.env.REDIS_URL;
 const redis = useRedis ? new Redis(process.env.REDIS_URL as string) : null;
@@ -37,7 +39,6 @@ async function rateLimitRedis(request: RequestObject): Promise<boolean> {
   const key = `rate_limit:${ip}`;
   const currentTime = Date.now();
   const oneMinuteAgo = currentTime - 60000;
-  const limit = 30;
 
   // 使用 Redis 事务来确保原子性
   const multi = redis.multi();
@@ -74,7 +75,6 @@ async function rateLimitPrisma(request: RequestObject): Promise<boolean> {
   const ip = extractIpAddress(request);
   const currentTime = Date.now();
   const oneMinuteAgo = currentTime - 60000;
-  const limit = 30;
 
   try {
     // 使用事务来确保数据一致性

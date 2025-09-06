@@ -51,7 +51,7 @@ function createSecurityHeaders(customHeaders?: HeadersInit): HeadersInit {
     // 注意：这里不设置Access-Control-Allow-Origin，建议在中间件中根据环境配置
 
     // CSP头
-    "Content-Security-Policy": 
+    "Content-Security-Policy":
       "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' wss: https:; form-action 'self'; frame-ancestors 'none';",
 
     // 基础头
@@ -89,7 +89,9 @@ function createCacheHeaders(cacheConfig?: CacheConfig): HeadersInit {
       cacheDirectives.push(`s-maxage=${cacheConfig.sMaxAge}`);
     }
     if (cacheConfig.staleWhileRevalidate !== undefined) {
-      cacheDirectives.push(`stale-while-revalidate=${cacheConfig.staleWhileRevalidate}`);
+      cacheDirectives.push(
+        `stale-while-revalidate=${cacheConfig.staleWhileRevalidate}`
+      );
     }
     if (cacheConfig.mustRevalidate) {
       cacheDirectives.push("must-revalidate");
@@ -114,7 +116,7 @@ function createCacheHeaders(cacheConfig?: CacheConfig): HeadersInit {
 function createPaginationMeta(
   page: number,
   pageSize: number,
-  total: number,
+  total: number
 ): PaginationMeta {
   const totalPages = Math.ceil(total / pageSize);
   return {
@@ -142,7 +144,7 @@ function generateRequestId(): string {
  */
 function processError(error?: ApiError | string): ApiError | undefined {
   if (!error) return undefined;
-  
+
   return typeof error === "string"
     ? { code: "CUSTOM_ERROR", message: error }
     : error;
@@ -163,7 +165,7 @@ function createResponse<T extends ApiResponseData>(
   error?: ApiError,
   customHeaders?: HeadersInit,
   meta?: PaginationMeta,
-  cacheConfig?: CacheConfig,
+  cacheConfig?: CacheConfig
 ): NextResponse<ApiResponse<T>> {
   const responseBody: ApiResponse<T> = {
     success,
@@ -191,26 +193,24 @@ function createResponse<T extends ApiResponseData>(
 /**
  * 通用响应函数
  */
-function response<T extends ApiResponseData = null>(
-  config: {
-    /** HTTP状态码 */
-    status?: number;
-    /** 是否成功 */
-    success?: boolean;
-    /** 响应消息 */
-    message?: string;
-    /** 响应数据 */
-    data?: T;
-    /** 错误信息 */
-    error?: ApiError | string;
-    /** 自定义响应头 */
-    customHeaders?: HeadersInit;
-    /** 分页元数据 */
-    meta?: PaginationMeta;
-    /** 缓存配置 */
-    cacheConfig?: CacheConfig;
-  },
-): NextResponse<ApiResponse<T>> {
+function response<T extends ApiResponseData = null>(config: {
+  /** HTTP状态码 */
+  status?: number;
+  /** 是否成功 */
+  success?: boolean;
+  /** 响应消息 */
+  message?: string;
+  /** 响应数据 */
+  data?: T;
+  /** 错误信息 */
+  error?: ApiError | string;
+  /** 自定义响应头 */
+  customHeaders?: HeadersInit;
+  /** 分页元数据 */
+  meta?: PaginationMeta;
+  /** 缓存配置 */
+  cacheConfig?: CacheConfig;
+}): NextResponse<ApiResponse<T>> {
   const status = config.status || 200;
   const success = config.success ?? (status >= 200 && status < 300);
   const finalMessage = config.message || (success ? "请求成功" : "请求失败");
@@ -225,7 +225,7 @@ function response<T extends ApiResponseData = null>(
     finalError,
     config.customHeaders,
     config.meta,
-    config.cacheConfig,
+    config.cacheConfig
   );
 }
 
@@ -238,20 +238,18 @@ function response<T extends ApiResponseData = null>(
 /**
  * 200 - 成功响应
  */
-function ok<T extends ApiResponseData = null>(
-  config?: {
-    /** 响应消息 */
-    message?: string;
-    /** 响应数据 */
-    data?: T;
-    /** 分页元数据 */
-    meta?: PaginationMeta;
-    /** 自定义响应头 */
-    customHeaders?: HeadersInit;
-    /** 缓存配置 */
-    cacheConfig?: CacheConfig;
-  }
-): NextResponse<ApiResponse<T>> {
+function ok<T extends ApiResponseData = null>(config?: {
+  /** 响应消息 */
+  message?: string;
+  /** 响应数据 */
+  data?: T;
+  /** 分页元数据 */
+  meta?: PaginationMeta;
+  /** 自定义响应头 */
+  customHeaders?: HeadersInit;
+  /** 缓存配置 */
+  cacheConfig?: CacheConfig;
+}): NextResponse<ApiResponse<T>> {
   return response({
     status: 200,
     success: true,
@@ -266,20 +264,18 @@ function ok<T extends ApiResponseData = null>(
 /**
  * 201 - 创建成功
  */
-function created<T extends ApiResponseData>(
-  config?: {
-    /** 响应消息 */
-    message?: string;
-    /** 响应数据 */
-    data?: T;
-    /** 分页元数据 */
-    meta?: PaginationMeta;
-    /** 自定义响应头 */
-    customHeaders?: HeadersInit;
-    /** 缓存配置 */
-    cacheConfig?: CacheConfig;
-  }
-): NextResponse<ApiResponse<T>> {
+function created<T extends ApiResponseData>(config?: {
+  /** 响应消息 */
+  message?: string;
+  /** 响应数据 */
+  data?: T;
+  /** 分页元数据 */
+  meta?: PaginationMeta;
+  /** 自定义响应头 */
+  customHeaders?: HeadersInit;
+  /** 缓存配置 */
+  cacheConfig?: CacheConfig;
+}): NextResponse<ApiResponse<T>> {
   return response({
     status: 201,
     success: true,
@@ -294,16 +290,14 @@ function created<T extends ApiResponseData>(
 /**
  * 204 - 无内容
  */
-function noContent(
-  config?: {
-    /** 响应消息 */
-    message?: string;
-    /** 自定义响应头 */
-    customHeaders?: HeadersInit;
-    /** 缓存配置 */
-    cacheConfig?: CacheConfig;
-  }
-): NextResponse<ApiResponse<null>> {
+function noContent(config?: {
+  /** 响应消息 */
+  message?: string;
+  /** 自定义响应头 */
+  customHeaders?: HeadersInit;
+  /** 缓存配置 */
+  cacheConfig?: CacheConfig;
+}): NextResponse<ApiResponse<null>> {
   return response({
     status: 204,
     success: true,
@@ -317,16 +311,14 @@ function noContent(
 /**
  * 304 - 未修改 (用于条件请求)
  */
-function notModified(
-  config?: {
-    /** 响应消息 */
-    message?: string;
-    /** 自定义响应头 */
-    customHeaders?: HeadersInit;
-    /** 缓存配置 */
-    cacheConfig?: CacheConfig;
-  }
-): NextResponse<ApiResponse<null>> {
+function notModified(config?: {
+  /** 响应消息 */
+  message?: string;
+  /** 自定义响应头 */
+  customHeaders?: HeadersInit;
+  /** 缓存配置 */
+  cacheConfig?: CacheConfig;
+}): NextResponse<ApiResponse<null>> {
   return response({
     status: 304,
     success: true,
@@ -342,24 +334,22 @@ function notModified(
 /**
  * 400 - 请求错误
  */
-function badRequest(
-  config?: {
-    /** 响应消息 */
-    message?: string;
-    /** 错误信息 */
-    error?: ApiError | string;
-    /** 自定义响应头 */
-    customHeaders?: HeadersInit;
-    /** 缓存配置 */
-    cacheConfig?: CacheConfig;
-  }
-): NextResponse<ApiResponse<null>> {
+function badRequest(config?: {
+  /** 响应消息 */
+  message?: string;
+  /** 错误信息 */
+  error?: ApiError | string;
+  /** 自定义响应头 */
+  customHeaders?: HeadersInit;
+  /** 缓存配置 */
+  cacheConfig?: CacheConfig;
+}): NextResponse<ApiResponse<null>> {
   return response({
     status: 400,
     success: false,
     message: config?.message || "请求参数错误",
     data: null,
-    error: config?.error,
+    error: config?.error || { code: "BAD_REQUEST", message: "请求参数错误" },
     customHeaders: config?.customHeaders,
     cacheConfig: config?.cacheConfig,
   });
@@ -368,24 +358,22 @@ function badRequest(
 /**
  * 401 - 未授权
  */
-function unauthorized(
-  config?: {
-    /** 响应消息 */
-    message?: string;
-    /** 错误信息 */
-    error?: ApiError | string;
-    /** 自定义响应头 */
-    customHeaders?: HeadersInit;
-    /** 缓存配置 */
-    cacheConfig?: CacheConfig;
-  }
-): NextResponse<ApiResponse<null>> {
+function unauthorized(config?: {
+  /** 响应消息 */
+  message?: string;
+  /** 错误信息 */
+  error?: ApiError | string;
+  /** 自定义响应头 */
+  customHeaders?: HeadersInit;
+  /** 缓存配置 */
+  cacheConfig?: CacheConfig;
+}): NextResponse<ApiResponse<null>> {
   return response({
     status: 401,
     success: false,
     message: config?.message || "未授权访问",
     data: null,
-    error: config?.error,
+    error: config?.error || { code: "UNAUTHORIZED", message: "未授权访问" },
     customHeaders: config?.customHeaders,
     cacheConfig: config?.cacheConfig,
   });
@@ -394,24 +382,22 @@ function unauthorized(
 /**
  * 403 - 禁止访问
  */
-function forbidden(
-  config?: {
-    /** 响应消息 */
-    message?: string;
-    /** 错误信息 */
-    error?: ApiError | string;
-    /** 自定义响应头 */
-    customHeaders?: HeadersInit;
-    /** 缓存配置 */
-    cacheConfig?: CacheConfig;
-  }
-): NextResponse<ApiResponse<null>> {
+function forbidden(config?: {
+  /** 响应消息 */
+  message?: string;
+  /** 错误信息 */
+  error?: ApiError | string;
+  /** 自定义响应头 */
+  customHeaders?: HeadersInit;
+  /** 缓存配置 */
+  cacheConfig?: CacheConfig;
+}): NextResponse<ApiResponse<null>> {
   return response({
     status: 403,
     success: false,
     message: config?.message || "禁止访问",
     data: null,
-    error: config?.error,
+    error: config?.error || { code: "FORBIDDEN", message: "禁止访问" },
     customHeaders: config?.customHeaders,
     cacheConfig: config?.cacheConfig,
   });
@@ -420,24 +406,22 @@ function forbidden(
 /**
  * 404 - 未找到
  */
-function notFound(
-  config?: {
-    /** 响应消息 */
-    message?: string;
-    /** 错误信息 */
-    error?: ApiError | string;
-    /** 自定义响应头 */
-    customHeaders?: HeadersInit;
-    /** 缓存配置 */
-    cacheConfig?: CacheConfig;
-  }
-): NextResponse<ApiResponse<null>> {
+function notFound(config?: {
+  /** 响应消息 */
+  message?: string;
+  /** 错误信息 */
+  error?: ApiError | string;
+  /** 自定义响应头 */
+  customHeaders?: HeadersInit;
+  /** 缓存配置 */
+  cacheConfig?: CacheConfig;
+}): NextResponse<ApiResponse<null>> {
   return response({
     status: 404,
     success: false,
     message: config?.message || "资源未找到",
     data: null,
-    error: config?.error,
+    error: config?.error || { code: "NOT_FOUND", message: "资源未找到" },
     customHeaders: config?.customHeaders,
     cacheConfig: config?.cacheConfig,
   });
@@ -446,24 +430,22 @@ function notFound(
 /**
  * 409 - 冲突
  */
-function conflict(
-  config?: {
-    /** 响应消息 */
-    message?: string;
-    /** 错误信息 */
-    error?: ApiError | string;
-    /** 自定义响应头 */
-    customHeaders?: HeadersInit;
-    /** 缓存配置 */
-    cacheConfig?: CacheConfig;
-  }
-): NextResponse<ApiResponse<null>> {
+function conflict(config?: {
+  /** 响应消息 */
+  message?: string;
+  /** 错误信息 */
+  error?: ApiError | string;
+  /** 自定义响应头 */
+  customHeaders?: HeadersInit;
+  /** 缓存配置 */
+  cacheConfig?: CacheConfig;
+}): NextResponse<ApiResponse<null>> {
   return response({
     status: 409,
     success: false,
     message: config?.message || "资源冲突",
     data: null,
-    error: config?.error,
+    error: config?.error || { code: "CONFLICT", message: "资源冲突" },
     customHeaders: config?.customHeaders,
     cacheConfig: config?.cacheConfig,
   });
@@ -472,24 +454,22 @@ function conflict(
 /**
  * 422 - 无法处理的实体
  */
-function unprocessableEntity(
-  config?: {
-    /** 响应消息 */
-    message?: string;
-    /** 错误信息 */
-    error?: ApiError | string;
-    /** 自定义响应头 */
-    customHeaders?: HeadersInit;
-    /** 缓存配置 */
-    cacheConfig?: CacheConfig;
-  }
-): NextResponse<ApiResponse<null>> {
+function unprocessableEntity(config?: {
+  /** 响应消息 */
+  message?: string;
+  /** 错误信息 */
+  error?: ApiError | string;
+  /** 自定义响应头 */
+  customHeaders?: HeadersInit;
+  /** 缓存配置 */
+  cacheConfig?: CacheConfig;
+}): NextResponse<ApiResponse<null>> {
   return response({
     status: 422,
     success: false,
     message: config?.message || "验证失败",
     data: null,
-    error: config?.error,
+    error: config?.error || { code: "UNPROCESSABLE_ENTITY", message: "验证失败" },
     customHeaders: config?.customHeaders,
     cacheConfig: config?.cacheConfig,
   });
@@ -498,24 +478,22 @@ function unprocessableEntity(
 /**
  * 429 - 请求过多
  */
-function tooManyRequests(
-  config?: {
-    /** 响应消息 */
-    message?: string;
-    /** 错误信息 */
-    error?: ApiError | string;
-    /** 自定义响应头 */
-    customHeaders?: HeadersInit;
-    /** 缓存配置 */
-    cacheConfig?: CacheConfig;
-  }
-): NextResponse<ApiResponse<null>> {
+function tooManyRequests(config?: {
+  /** 响应消息 */
+  message?: string;
+  /** 错误信息 */
+  error?: ApiError | string;
+  /** 自定义响应头 */
+  customHeaders?: HeadersInit;
+  /** 缓存配置 */
+  cacheConfig?: CacheConfig;
+}): NextResponse<ApiResponse<null>> {
   return response({
     status: 429,
     success: false,
     message: config?.message || "请求过于频繁，请稍后再试",
     data: null,
-    error: config?.error,
+    error: config?.error || { code: "TOO_MANY_REQUESTS", message: "请求过于频繁，请稍后再试" },
     customHeaders: config?.customHeaders,
     cacheConfig: config?.cacheConfig,
   });
@@ -524,24 +502,22 @@ function tooManyRequests(
 /**
  * 500 - 服务器错误
  */
-function serverError(
-  config?: {
-    /** 响应消息 */
-    message?: string;
-    /** 错误信息 */
-    error?: ApiError | string;
-    /** 自定义响应头 */
-    customHeaders?: HeadersInit;
-    /** 缓存配置 */
-    cacheConfig?: CacheConfig;
-  }
-): NextResponse<ApiResponse<null>> {
+function serverError(config?: {
+  /** 响应消息 */
+  message?: string;
+  /** 错误信息 */
+  error?: ApiError | string;
+  /** 自定义响应头 */
+  customHeaders?: HeadersInit;
+  /** 缓存配置 */
+  cacheConfig?: CacheConfig;
+}): NextResponse<ApiResponse<null>> {
   return response({
     status: 500,
     success: false,
     message: config?.message || "服务器内部错误",
     data: null,
-    error: config?.error,
+    error: config?.error || { code: "INTERNAL_SERVER_ERROR", message: "服务器内部错误" },
     customHeaders: config?.customHeaders,
     cacheConfig: config?.cacheConfig,
   });
@@ -550,24 +526,22 @@ function serverError(
 /**
  * 503 - 服务不可用
  */
-function serviceUnavailable(
-  config?: {
-    /** 响应消息 */
-    message?: string;
-    /** 错误信息 */
-    error?: ApiError | string;
-    /** 自定义响应头 */
-    customHeaders?: HeadersInit;
-    /** 缓存配置 */
-    cacheConfig?: CacheConfig;
-  }
-): NextResponse<ApiResponse<null>> {
+function serviceUnavailable(config?: {
+  /** 响应消息 */
+  message?: string;
+  /** 错误信息 */
+  error?: ApiError | string;
+  /** 自定义响应头 */
+  customHeaders?: HeadersInit;
+  /** 缓存配置 */
+  cacheConfig?: CacheConfig;
+}): NextResponse<ApiResponse<null>> {
   return response({
     status: 503,
     success: false,
     message: config?.message || "服务暂时不可用",
     data: null,
-    error: config?.error,
+    error: config?.error || { code: "SERVICE_UNAVAILABLE", message: "服务暂时不可用" },
     customHeaders: config?.customHeaders,
     cacheConfig: config?.cacheConfig,
   });
@@ -578,20 +552,18 @@ function serviceUnavailable(
 /**
  * 带缓存的成功响应
  */
-function cached<T extends ApiResponseData>(
-  config: {
-    /** 响应消息 */
-    message?: string;
-    /** 响应数据 */
-    data?: T;
-    /** 分页元数据 */
-    meta?: PaginationMeta;
-    /** 自定义响应头 */
-    customHeaders?: HeadersInit;
-    /** 缓存配置 */
-    cacheConfig: CacheConfig;
-  }
-): NextResponse<ApiResponse<T>> {
+function cached<T extends ApiResponseData>(config: {
+  /** 响应消息 */
+  message?: string;
+  /** 响应数据 */
+  data?: T;
+  /** 分页元数据 */
+  meta?: PaginationMeta;
+  /** 自定义响应头 */
+  customHeaders?: HeadersInit;
+  /** 缓存配置 */
+  cacheConfig: CacheConfig;
+}): NextResponse<ApiResponse<T>> {
   return response({
     status: 200,
     success: true,
@@ -609,7 +581,7 @@ function cached<T extends ApiResponseData>(
 function fieldError(
   field: string,
   message: string,
-  details?: Record<string, any>,
+  details?: Record<string, any>
 ): ApiError {
   return {
     code: "FIELD_VALIDATION_ERROR",
@@ -622,26 +594,24 @@ function fieldError(
 /**
  * 验证失败响应（带字段信息）
  */
-function validationError(
-  config: {
-    /** 响应消息 */
-    message?: string;
-    /** 错误字段 */
-    field: string;
-    /** 错误消息 */
-    errorMessage?: string;
-    /** 错误详情 */
-    details?: Record<string, any>;
-    /** 自定义响应头 */
-    customHeaders?: HeadersInit;
-    /** 缓存配置 */
-    cacheConfig?: CacheConfig;
-  }
-): NextResponse<ApiResponse<null>> {
+function validationError(config: {
+  /** 响应消息 */
+  message?: string;
+  /** 错误字段 */
+  field: string;
+  /** 错误消息 */
+  errorMessage?: string;
+  /** 错误详情 */
+  details?: Record<string, any>;
+  /** 自定义响应头 */
+  customHeaders?: HeadersInit;
+  /** 缓存配置 */
+  cacheConfig?: CacheConfig;
+}): NextResponse<ApiResponse<null>> {
   const error = fieldError(
     config.field,
     config.errorMessage || "验证失败",
-    config.details,
+    config.details
   );
 
   return response({

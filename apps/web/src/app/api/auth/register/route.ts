@@ -1,5 +1,13 @@
 import response from "@/app/api/_utils/response";
+import { validateRequestJSON } from "@/app/api/_utils/validator";
+import prisma from "@/app/lib/prisma";
 import { RegisterUserSchema } from "@repo/shared-types/api/auth";
+import limitControl from "../../_utils/limit";
+import RLog from "rlog-js";
+import { hashPassword } from "../../_utils/password";
+import emailUtils from "../../_utils/email";
+
+const rlog = new RLog();
 
 /**
  * @openapi
@@ -20,71 +28,89 @@ import { RegisterUserSchema } from "@repo/shared-types/api/auth";
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               $ref: '#/components/schemas/RegisterSuccessResponse'
  *       400:
  *         description: 请求参数错误
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               $ref: '#/components/schemas/ValidationErrorResponse'
  *       409:
  *         description: 用户名或邮箱已存在
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
+ *               $ref: '#/components/schemas/ConflictErrorResponse'
+ *       429:
+ *         description: 请求过于频繁
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/RateLimitErrorResponse'
+ *       500:
+ *         description: 服务器内部错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ServerErrorResponse'
  */
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-
+    // 速率控制
+    if (!(await limitControl(request))) {
+      return response.tooManyRequests();
+    }
 
     // 验证请求数据
-    const validationResult = RegisterUserSchema.safeParse(body);
+    const validationResult = await validateRequestJSON(
+      request,
+      RegisterUserSchema
+    );
+    if (validationResult instanceof Response) return validationResult;
 
-    if (!validationResult.success) {
-      const errors = validationResult.error!.errors.map((err) => ({
-        field: err.path.join("."),
-        message: err.message,
-      }));
+    const { username, email, password, nickname } = validationResult.data!;
 
+    // 检查用户名或邮箱是否已存在
+    const userExists = await prisma.user.findFirst({
+      where: {
+        OR: [{ username }, { email }],
+      },
+    });
 
-      return response.badRequest({
-        message: "数据验证失败",
+    if (userExists) {
+      return response.conflict({
+        message: "用户名或邮箱已存在",
         error: {
-          code: "VALIDATION_ERROR",
-          message: "请求数据格式不正确",
-          details: { errors },
+          code: "USER_EXISTS",
+          message: "用户名或邮箱已存在",
         },
       });
     }
 
-    const { username, email, password, nickname } = validationResult.data!;
+    // 创建账户
+    // 生成密码哈希
+    const hashedPassword = await hashPassword(password);
+    // 生成邮箱验证码\
+    const emailVerifyCode = emailUtils.generate();
+    // 创建用户
+    const user = await prisma.user.create({
+      data: {
+        username,
+        email,
+        nickname,
+        password: hashedPassword,
+        emailVerifyCode,
+      },
+    });
 
-    // TODO: 检查用户名是否已存在
-    // TODO: 检查邮箱是否已存在
-    // TODO: 创建用户账户
     // TODO: 发送验证邮件
 
-    return response.forbidden({
-      message: "注册功能尚未实现",
-      error: {
-        code: "NOT_IMPLEMENTED",
-        message: "注册功能尚未实现",
-      },
+    return response.ok({
+      data: user,
+      message: "注册成功，请检查邮箱以验证账户",
     });
 
-    return response({
-      data: "OK",
-    });
-
-    return response.badRequest({
-      message: "注册功能尚未实现",
-      error: {
-        code: "NOT_IMPLEMENTED",
-        message: "注册功能尚未实现",
-      },
-    });
+    
   } catch (error) {
     console.error("Registration error:", error);
     return response.serverError({
