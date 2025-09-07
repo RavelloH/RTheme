@@ -59,7 +59,7 @@ export function validateRequestData<T>(
 
     if (!validationResult.success) {
       // 提取验证错误信息
-      const errors: ValidationErrorDetail[] = validationResult.error.errors.map((err) => ({
+      const errors: ValidationErrorDetail[] = validationResult.error.issues.map((err) => ({
         field: err.path.join("."),
         message: err.message,
       }));

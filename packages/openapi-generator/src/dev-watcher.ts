@@ -1,4 +1,4 @@
-import chokidar from "chokidar";
+import chokidar, { type FSWatcher } from "chokidar";
 import { spawn, ChildProcess } from "child_process";
 import { join } from "path";
 import Rlog from "rlog-js";
@@ -7,8 +7,8 @@ const rlog = new Rlog();
 
 class DevWatcher {
   private tscProcess: ChildProcess | null = null;
-  private apiWatcher: chokidar.FSWatcher | null = null;
-  private sharedTypesWatcher: chokidar.FSWatcher | null = null;
+  private apiWatcher: FSWatcher | null = null;
+  private sharedTypesWatcher: FSWatcher | null = null;
   private isGenerating = false;
   private generationQueue: (() => void)[] = [];
 
@@ -59,7 +59,7 @@ class DevWatcher {
         rlog.info(`检测到 API 文件删除: ${path}`);
         this.queueGeneration();
       })
-      .on("error", (error: Error) => {
+      .on("error", (error: unknown) => {
         rlog.error(`API 文件监控错误: ${error}`);
       });
 
@@ -94,7 +94,7 @@ class DevWatcher {
         rlog.info(`检测到 shared-types API 文件删除: ${path}`);
         this.queueGeneration();
       })
-      .on("error", (error: Error) => {
+      .on("error", (error: unknown) => {
         rlog.error(`shared-types API 文件监控错误: ${error}`);
       });
 
