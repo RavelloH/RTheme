@@ -2,12 +2,9 @@ import response from "@/app/api/_utils/response";
 import { validateRequestJSON } from "@/app/api/_utils/validator";
 import prisma from "@/app/lib/prisma";
 import { RegisterUserSchema } from "@repo/shared-types/api/auth";
-import limitControl from "../../_utils/limit";
-import RLog from "rlog-js";
+import limitControl from "../../_utils/rateLimit";
 import { hashPassword } from "../../_utils/password";
 import emailUtils from "../../_utils/email";
-
-const rlog = new RLog();
 
 /**
  * @openapi
@@ -70,6 +67,8 @@ export async function POST(request: Request) {
 
     const { username, email, password, nickname } = validationResult.data!;
 
+    // TODO: 校验验证码
+
     // 检查用户名或邮箱是否已存在
     const userExists = await prisma.user.findFirst({
       where: {
@@ -93,7 +92,7 @@ export async function POST(request: Request) {
     // 生成邮箱验证码\
     const emailVerifyCode = emailUtils.generate();
     // 创建用户
-    const user = await prisma.user.create({
+    await prisma.user.create({
       data: {
         username,
         email,

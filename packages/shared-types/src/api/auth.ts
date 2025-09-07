@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { createSuccessResponseSchema, createErrorResponseSchema, registerSchema } from "./common.js";
+import {
+  createSuccessResponseSchema,
+  createErrorResponseSchema,
+  registerSchema,
+} from "./common.js";
 
 // 用户名验证：只能由小写字母、数字和下划线组成
 const usernameSchema = z
@@ -23,27 +27,28 @@ const nicknameSchema = z
   .min(2, "昵称至少需要2个字符")
   .max(20, "昵称不能超过20个字符");
 
+// =============================================================================
+// Request Schemas
+// =============================================================================
 // 用户注册 Schema
 export const RegisterUserSchema = z.object({
   username: usernameSchema,
   nickname: nicknameSchema.optional(),
   password: passwordSchema,
   email: emailSchema,
+  captcha_token: z.string().min(1, "验证码不能为空"),
 });
 
-// 用户数据 Schema（返回给前端的用户信息，不包含密码等敏感信息）
-export const UserDataSchema = z.object({
-  id: z.string().uuid(),
-  username: z.string(),
-  email: z.string().email(),
-  nickname: z.string(),
-  role: z.enum(["USER", "ADMIN", "EDITOR"]),
-  status: z.enum(["ACTIVE", "SUSPENDED"]),
-  isEmailVerified: z.boolean(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+export const LoginUserSchema = z.object({
+  username: usernameSchema,
+  password: passwordSchema,
+  token_transport: z.enum(["cookie", "body"]).default("cookie"),
+  captcha_token: z.string().min(1, "验证码不能为空"),
 });
 
+// =============================================================================
+// Response Schemas
+// =============================================================================
 // 使用构建器创建响应 schemas
 // 注册成功响应不返回任何用户数据，只返回成功消息
 export const RegisterSuccessResponseSchema = z.object({
@@ -58,10 +63,14 @@ export const ValidationErrorResponseSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("VALIDATION_ERROR"),
     message: z.string(),
-    details: z.array(z.object({
-      field: z.string(),
-      message: z.string(),
-    })).optional(),
+    details: z
+      .array(
+        z.object({
+          field: z.string(),
+          message: z.string(),
+        })
+      )
+      .optional(),
   })
 );
 
@@ -88,7 +97,7 @@ export const ServerErrorResponseSchema = createErrorResponseSchema(
 
 // 自动注册所有schemas到OpenAPI生成器
 registerSchema("RegisterUser", RegisterUserSchema);
-registerSchema("UserData", UserDataSchema);
+registerSchema("LoginUser", LoginUserSchema);
 registerSchema("RegisterSuccessResponse", RegisterSuccessResponseSchema);
 registerSchema("ValidationErrorResponse", ValidationErrorResponseSchema);
 registerSchema("ConflictErrorResponse", ConflictErrorResponseSchema);
@@ -97,9 +106,14 @@ registerSchema("ServerErrorResponse", ServerErrorResponseSchema);
 
 // 导出推导的 TypeScript 类型
 export type RegisterUser = z.infer<typeof RegisterUserSchema>;
-export type UserData = z.infer<typeof UserDataSchema>;
-export type RegisterSuccessResponse = z.infer<typeof RegisterSuccessResponseSchema>;
-export type ValidationErrorResponse = z.infer<typeof ValidationErrorResponseSchema>;
+export type RegisterSuccessResponse = z.infer<
+  typeof RegisterSuccessResponseSchema
+>;
+export type ValidationErrorResponse = z.infer<
+  typeof ValidationErrorResponseSchema
+>;
 export type ConflictErrorResponse = z.infer<typeof ConflictErrorResponseSchema>;
-export type RateLimitErrorResponse = z.infer<typeof RateLimitErrorResponseSchema>;
+export type RateLimitErrorResponse = z.infer<
+  typeof RateLimitErrorResponseSchema
+>;
 export type ServerErrorResponse = z.infer<typeof ServerErrorResponseSchema>;
