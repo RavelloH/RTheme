@@ -1,5 +1,4 @@
-import { Prisma, PrismaClient } from "../../generated/prisma";
-
+import { Prisma, PrismaClient } from "@/../.prisma/client";
 // 创建全局 Prisma 实例
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
