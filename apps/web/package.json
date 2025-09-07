@@ -5,11 +5,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack --port 3000",
-    "build": "pnpm gem-prisma && next build",
+    "build": "pnpm gen-prisma && pnpm prebuild && next build",
     "start": "next start",
     "lint": "next lint --max-warnings 0",
     "check-types": "tsc --noEmit",
-    "gen-prisma": "prisma generate"
+    "gen-prisma": "prisma generate",
+    "prebuild": "cross-env NODE_ENV=production tsx scripts/generate-config-cache.ts"
   },
   "dependencies": {
     "@prisma/client": "6.15.0",
@@ -33,7 +34,9 @@
     "@types/react-dom": "19.1.9",
     "chokidar-cli": "^3.0.0",
     "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
     "eslint": "^9.35.0",
+    "tsx": "^4.20.5",
     "typescript": "5.9.2"
   }
 }
