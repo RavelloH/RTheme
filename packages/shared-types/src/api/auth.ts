@@ -95,24 +95,78 @@ export const ServerErrorResponseSchema = createErrorResponseSchema(
   })
 );
 
+// 登录成功响应
+export const LoginSuccessResponseSchema = z.object({
+  success: z.literal(true),
+  message: z.string(),
+  timestamp: z.string().datetime(),
+  requestId: z.string(),
+  data: z.object({
+    access_token: z.string(),
+    refresh_token: z.string().optional(), // cookie模式下不返回
+  }),
+});
+
+// 登录相关的错误响应
+export const InvalidCredentialsErrorResponseSchema = createErrorResponseSchema(
+  z.object({
+    code: z.literal("INVALID_CREDENTIALS"),
+    message: z.string(),
+  })
+);
+
+export const SsoUserErrorResponseSchema = createErrorResponseSchema(
+  z.object({
+    code: z.literal("SSO_USER"),
+    message: z.string(),
+    details: z
+      .array(
+        z.object({
+          provider: z.string(),
+        })
+      )
+      .optional(),
+  })
+);
+
+export const EmailNotVerifiedErrorResponseSchema = createErrorResponseSchema(
+  z.object({
+    code: z.literal("EMAIL_NOT_VERIFIED"),
+    message: z.string(),
+  })
+);
+
 // 自动注册所有schemas到OpenAPI生成器
 registerSchema("RegisterUser", RegisterUserSchema);
 registerSchema("LoginUser", LoginUserSchema);
 registerSchema("RegisterSuccessResponse", RegisterSuccessResponseSchema);
+registerSchema("LoginSuccessResponse", LoginSuccessResponseSchema);
 registerSchema("ValidationErrorResponse", ValidationErrorResponseSchema);
 registerSchema("ConflictErrorResponse", ConflictErrorResponseSchema);
+registerSchema("InvalidCredentialsErrorResponse", InvalidCredentialsErrorResponseSchema);
+registerSchema("SsoUserErrorResponse", SsoUserErrorResponseSchema);
+registerSchema("EmailNotVerifiedErrorResponse", EmailNotVerifiedErrorResponseSchema);
 registerSchema("RateLimitErrorResponse", RateLimitErrorResponseSchema);
 registerSchema("ServerErrorResponse", ServerErrorResponseSchema);
 
 // 导出推导的 TypeScript 类型
 export type RegisterUser = z.infer<typeof RegisterUserSchema>;
+export type LoginUser = z.infer<typeof LoginUserSchema>;
 export type RegisterSuccessResponse = z.infer<
   typeof RegisterSuccessResponseSchema
 >;
+export type LoginSuccessResponse = z.infer<typeof LoginSuccessResponseSchema>;
 export type ValidationErrorResponse = z.infer<
   typeof ValidationErrorResponseSchema
 >;
 export type ConflictErrorResponse = z.infer<typeof ConflictErrorResponseSchema>;
+export type InvalidCredentialsErrorResponse = z.infer<
+  typeof InvalidCredentialsErrorResponseSchema
+>;
+export type SsoUserErrorResponse = z.infer<typeof SsoUserErrorResponseSchema>;
+export type EmailNotVerifiedErrorResponse = z.infer<
+  typeof EmailNotVerifiedErrorResponseSchema
+>;
 export type RateLimitErrorResponse = z.infer<
   typeof RateLimitErrorResponseSchema
 >;

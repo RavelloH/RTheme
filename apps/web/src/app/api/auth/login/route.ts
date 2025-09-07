@@ -2,7 +2,7 @@ import response from "@/app/api/_utils/response";
 import { validateRequestJSON } from "@/app/api/_utils/validator";
 import limitControl from "../../_utils/rateLimit";
 import { LoginUserSchema } from "@repo/shared-types/api/auth";
-import prisma from "@/app/lib/prisma";
+import prisma from "@/lib/server/prisma";
 import { verifyPassword } from "../../_utils/password";
 import { jwtTokenSign } from "../../_utils/jwt";
 
@@ -19,6 +19,35 @@ import { jwtTokenSign } from "../../_utils/jwt";
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/LoginUser'
+ *     responses:
+ *       200:
+ *         description: 登录成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LoginSuccessResponse'
+ *       400:
+ *         description: 请求参数错误或用户状态异常  
+ *         content:
+ *           application/json:
+ *             schema:
+ *               oneOf:
+ *                 - $ref: '#/components/schemas/ValidationErrorResponse'
+ *                 - $ref: '#/components/schemas/InvalidCredentialsErrorResponse'
+ *                 - $ref: '#/components/schemas/SsoUserErrorResponse'
+ *                 - $ref: '#/components/schemas/EmailNotVerifiedErrorResponse'
+ *       429:
+ *         description: 请求过于频繁
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/RateLimitErrorResponse'
+ *       500:
+ *         description: 服务器内部错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ServerErrorResponse'
  */
 export async function POST(request: Request) {
   try {

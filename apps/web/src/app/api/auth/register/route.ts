@@ -1,6 +1,6 @@
 import response from "@/app/api/_utils/response";
 import { validateRequestJSON } from "@/app/api/_utils/validator";
-import prisma from "@/app/lib/prisma";
+import prisma from "@/lib/server/prisma";
 import { RegisterUserSchema } from "@repo/shared-types/api/auth";
 import limitControl from "../../_utils/rateLimit";
 import { hashPassword } from "../../_utils/password";
