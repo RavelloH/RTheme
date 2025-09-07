@@ -35,15 +35,16 @@ model User {
   status UserStatus @default(ACTIVE)
 
   // 关系
-  accounts   Account[]
-  posts      Post[]
-  comments   Comment[]
-  media      Media[]
-  pages      Page[]
-  notices    Notice[]
-  messages   Message[]  @relation("MessageFrom")
-  messagesTo Message[]  @relation("MessageTo")
-  auditLogs  AuditLog[]
+  accounts      Account[]
+  posts         Post[]
+  comments      Comment[]
+  media         Media[]
+  pages         Page[]
+  notices       Notice[]
+  messages      Message[]      @relation("MessageFrom")
+  messagesTo    Message[]      @relation("MessageTo")
+  auditLogs     AuditLog[]
+  refreshTokens RefreshToken[]
 
   // 索引优化
   @@index([email])
@@ -78,6 +79,20 @@ model Account {
   @@index([provider])
 }
 
+// refresh token 模型
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userUid   Int
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+
+  // 索引优化
+  @@index([userUid])
+  @@index([expiresAt])
+}
+
 model Post {
   id            String     @id @default(uuid())
   title         String
@@ -88,7 +103,7 @@ model Post {
   status        PostStatus @default(DRAFT)
   isPinned      Boolean    @default(false)
   allowComments Boolean    @default(true)
-  publishedAt   DateTime?  // 发布时间，用于精确控制发布时间
+  publishedAt   DateTime? // 发布时间，用于精确控制发布时间
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   deletedAt     DateTime?
@@ -199,12 +214,12 @@ model Media {
   user            User            @relation(fields: [userUid], references: [uid], onDelete: Cascade)
   StorageProvider StorageProvider @relation(fields: [storageProviderId], references: [id], onDelete: Restrict)
 
+  @@unique([hash])
   // 索引优化
   @@index([userUid])
   @@index([mimeType])
   @@index([createdAt])
   @@index([filename])
-  @@unique([hash])
 }
 
 model StorageProvider {
@@ -415,7 +430,7 @@ model AuditLog {
 model RateLimitRecord {
   id        String   @id @default(uuid())
   ipAddress String   @db.VarChar(45) // IP地址
-  timestamp BigInt   // 时间戳（毫秒）
+  timestamp BigInt // 时间戳（毫秒）
   createdAt DateTime @default(now())
 
   // 索引优化

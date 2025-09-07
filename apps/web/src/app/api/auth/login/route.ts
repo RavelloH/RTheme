@@ -4,6 +4,7 @@ import limitControl from "../../_utils/rateLimit";
 import { LoginUserSchema } from "@repo/shared-types/api/auth";
 import prisma from "@/app/lib/prisma";
 import { verifyPassword } from "../../_utils/password";
+import { jwtTokenSign } from "../../_utils/jwt";
 
 /**
  * @openapi
@@ -15,7 +16,7 @@ import { verifyPassword } from "../../_utils/password";
  *     requestBody:
  *       required: true
  *       content:
- *         application/json: 
+ *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/LoginUser'
  */
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
     );
     if (validationResult instanceof Response) return validationResult;
 
-    const { username, password } = validationResult.data!;
+    const { username, password, token_transport } = validationResult.data!;
 
     // TODO: 校验验证码
 
@@ -45,6 +46,10 @@ export async function POST(request: Request) {
       select: {
         password: true,
         accounts: true,
+        username: true,
+        nickname: true,
+        uid: true,
+        emailVerified: true,
       },
     });
 
@@ -72,6 +77,18 @@ export async function POST(request: Request) {
       });
     }
 
+    // 检测是否已验证邮箱
+    // TODO: 接入动态config
+    if (!user.emailVerified) {
+      return response.badRequest({
+        message: "请先验证邮箱后再登录",
+        error: {
+          code: "EMAIL_NOT_VERIFIED",
+          message: "请先验证邮箱后再登录",
+        },
+      });
+    }
+
     // 验证密码
     const isPasswordValid = await verifyPassword(user.password, password);
     if (!isPasswordValid.isValid) {
@@ -84,7 +101,63 @@ export async function POST(request: Request) {
       });
     }
 
+    const expiredAtSeconds = 30 * 24 * 60 * 60; // 30天的秒数
+    const expiredAt = new Date(Date.now() + expiredAtSeconds * 1000); 
+    const expiredAtUnix = Math.floor(expiredAt.getTime() / 1000); // 转换为Unix时间戳
+
+    // 向数据库记录refresh token
+    const dbRefreshToken = await prisma.refreshToken.create({
+      data: {
+        userUid: user.uid,
+        expiresAt: expiredAt,
+      },
+    });
+
     // 分发令牌
+    // Refresh Token
+    const refreshToken = jwtTokenSign({
+      inner: {
+        uid: user.uid,
+        tokenId: dbRefreshToken.id,
+        exp: expiredAtUnix,
+      },
+      expired: "30d",
+    });
+    // Access Token
+    const accessToken = jwtTokenSign({
+      inner: {
+        uid: user.uid,
+        username: user.username,
+        nickname: user.nickname,
+      },
+      expired: "10m",
+    });
+
+    // 根据 token_transport 决定令牌传输方式
+    if (token_transport === "cookie") {
+      // 设置 RefreshToken为HttpOnly Cookie
+      const refreshCookie = `REFRESH_TOKEN=${refreshToken}; Path=/api/auth/refresh; HttpOnly; SameSite=Strict; Max-Age=${expiredAtSeconds}`;
+      // 直接返回 AccessToken
+      return response.ok({
+        message: "登录成功",
+        data: {
+          access_token: accessToken,
+        },
+        customHeaders: {
+          "Set-Cookie": refreshCookie,
+        },
+      });
+    }
+
+    if (token_transport === "body") {
+      return response.ok({
+        message: "登录成功",
+        data: {
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        },
+      });
+    }
     return response.ok();
   } catch (error) {
     console.error("Login error:", error);

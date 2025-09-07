@@ -4,7 +4,6 @@ import { createPrivateKey, createPublicKey, KeyObject } from "crypto";
 interface TokenSignOptions {
   inner: Record<string, unknown>;
   expired?: number | string;
-  ablyToken?: string;
 }
 
 // 检查环境变量
