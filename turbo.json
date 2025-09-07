@@ -10,7 +10,9 @@
     "ARGON2_TIME_COST",
     "ARGON2_MEMORY_COST", 
     "ARGON2_PARALLELISM",
-    "ARGON2_HASH_LENGTH"
+    "ARGON2_HASH_LENGTH",
+    "JWT_PRIVATE_KEY",
+    "JWT_PUBLIC_KEY"
   ],
   "tasks": {
     "build": {
@@ -26,7 +28,9 @@
         "ARGON2_TIME_COST",
         "ARGON2_MEMORY_COST", 
         "ARGON2_PARALLELISM",
-        "ARGON2_HASH_LENGTH"
+        "ARGON2_HASH_LENGTH",
+        "JWT_PRIVATE_KEY",
+        "JWT_PUBLIC_KEY"
       ]
     },
     "lint": {
@@ -38,7 +42,9 @@
         "ARGON2_TIME_COST",
         "ARGON2_MEMORY_COST", 
         "ARGON2_PARALLELISM",
-        "ARGON2_HASH_LENGTH"
+        "ARGON2_HASH_LENGTH",
+        "JWT_PRIVATE_KEY",
+        "JWT_PUBLIC_KEY"
       ]
     },
     "check-types": {
@@ -50,7 +56,9 @@
         "ARGON2_TIME_COST",
         "ARGON2_MEMORY_COST", 
         "ARGON2_PARALLELISM",
-        "ARGON2_HASH_LENGTH"
+        "ARGON2_HASH_LENGTH",
+        "JWT_PRIVATE_KEY",
+        "JWT_PUBLIC_KEY"
       ]
     },
     "dev": {
@@ -65,7 +73,9 @@
         "ARGON2_TIME_COST",
         "ARGON2_MEMORY_COST", 
         "ARGON2_PARALLELISM",
-        "ARGON2_HASH_LENGTH"
+        "ARGON2_HASH_LENGTH",
+        "JWT_PRIVATE_KEY",
+        "JWT_PUBLIC_KEY"
       ]
     },
     "docs#dev": {

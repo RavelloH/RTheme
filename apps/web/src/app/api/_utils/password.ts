@@ -67,8 +67,8 @@ interface PasswordConfig {
  */
 function getDynamicParallelism(): number {
   const cores = cpus().length;
-  // 使用 CPU 核心数的一半，最少 2，最多 8
-  return Math.max(2, Math.min(8, Math.floor(cores / 2)));
+  // 使用 CPU 核心数的一半，最少 1，最多 8
+  return Math.max(1, Math.min(8, Math.floor(cores / 2)));
 }
 
 /**
@@ -97,7 +97,7 @@ function getPasswordConfig(): PasswordConfig {
     pepper,
     argon2: {
       timeCost: parseInt(process.env.ARGON2_TIME_COST || "3", 10),
-      memoryCost: parseInt(process.env.ARGON2_MEMORY_COST || "65536", 10),
+      memoryCost: parseInt(process.env.ARGON2_MEMORY_COST || "262144", 10),
       parallelism: parseInt(process.env.ARGON2_PARALLELISM || getDynamicParallelism().toString(), 10),
       hashLength: parseInt(process.env.ARGON2_HASH_LENGTH || "32", 10),
       type: argon2.argon2id,

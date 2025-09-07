@@ -1,0 +1,189 @@
+/* JWT 密钥生成器样式 */
+.container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 8px;
+  background-color: var(--ifm-background-color);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.header h3 {
+  color: var(--ifm-color-primary);
+  margin-bottom: 0.5rem;
+}
+
+.description {
+  color: var(--ifm-color-content-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.controls {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.generateButton {
+  background-color: var(--ifm-color-primary);
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-weight: 600;
+}
+
+.generateButton:hover:not(:disabled) {
+  background-color: var(--ifm-color-primary-dark);
+}
+
+.generateButton:disabled {
+  background-color: var(--ifm-color-emphasis-300);
+  cursor: not-allowed;
+}
+
+.error {
+  background-color: var(--ifm-color-danger-contrast-background);
+  border: 1px solid var(--ifm-color-danger);
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.error p {
+  margin: 0;
+  color: var(--ifm-color-danger);
+}
+
+.results {
+  margin-top: 2rem;
+}
+
+.keySection {
+  margin-bottom: 2rem;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.keySection h4 {
+  margin: 0;
+  padding: 1rem;
+  background-color: var(--ifm-color-emphasis-100);
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  color: var(--ifm-color-content);
+}
+
+.warning {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  background-color: var(--ifm-color-warning-contrast-background);
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  color: var(--ifm-color-warning-dark);
+  font-size: 0.9rem;
+}
+
+.keyContainer {
+  position: relative;
+}
+
+.keyContent {
+  margin: 0;
+  padding: 1rem;
+  background-color: var(--ifm-color-emphasis-100);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-all;
+  border: none;
+  border-radius: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.envInstructions {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--ifm-color-info);
+}
+
+.envInstructions h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--ifm-color-info-dark);
+}
+
+.envInstructions p {
+  margin-bottom: 1rem;
+  color: var(--ifm-color-content-secondary);
+}
+
+.envExample {
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.envExample pre {
+  margin: 0;
+  padding: 1rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  background-color: transparent;
+  border: none;
+  overflow-x: auto;
+}
+
+.footer {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.securityNote {
+  background-color: var(--ifm-color-success-contrast-background);
+  border: 1px solid var(--ifm-color-success);
+  border-radius: 6px;
+  padding: 1rem;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--ifm-color-success-dark);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .container {
+    margin: 1rem;
+    padding: 1rem;
+  }
+  
+  .keyContent {
+    font-size: 0.7rem;
+    max-height: 150px;
+  }
+}
+
+/* 深色主题优化 */
+[data-theme='dark'] .container {
+  border-color: var(--ifm-color-emphasis-200);
+}
+
+[data-theme='dark'] .keyContent {
+  background-color: var(--ifm-color-emphasis-200);
+  color: var(--ifm-color-content);
+}
+
+[data-theme='dark'] .envExample {
+  background-color: var(--ifm-color-emphasis-200);
+}
