@@ -68,6 +68,12 @@
         "ARGON2_HASH_LENGTH"
       ]
     },
+    "docs#dev": {
+      "dependsOn": ["generate-openapi"],
+      "cache": false,
+      "persistent": true,
+      "env": ["NODE_ENV"]
+    },
     "watch-openapi": {
       "cache": false,
       "persistent": true,
