@@ -11,6 +11,11 @@ import type {
 // ============================================================================
 
 /**
+ * 错误详情类型 - 更具体的类型定义以避免使用 any
+ */
+export type ErrorDetails = Record<string, string | number | boolean | null | undefined>;
+
+/**
  * 缓存策略配置
  */
 export interface CacheConfig {
@@ -581,7 +586,7 @@ function cached<T extends ApiResponseData>(config: {
 function fieldError(
   field: string,
   message: string,
-  details?: Record<string, any>
+  details?: ErrorDetails
 ): ApiError {
   return {
     code: "FIELD_VALIDATION_ERROR",
@@ -602,7 +607,7 @@ function validationError(config: {
   /** 错误消息 */
   errorMessage?: string;
   /** 错误详情 */
-  details?: Record<string, any>;
+  details?: ErrorDetails;
   /** 自定义响应头 */
   customHeaders?: HeadersInit;
   /** 缓存配置 */
