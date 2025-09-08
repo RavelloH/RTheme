@@ -1,5 +1,5 @@
 import Redis from "ioredis";
-import prisma from "../../../lib/server/prisma";
+import prisma from "@/lib/server/prisma";
 
 const limit = 30; // 每分钟允许的请求数
 

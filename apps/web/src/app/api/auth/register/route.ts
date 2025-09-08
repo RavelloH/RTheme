@@ -1,10 +1,10 @@
-import response from "@/app/api/_utils/response";
-import { validateRequestJSON } from "@/app/api/_utils/validator";
+import ResponseBuilder from "@/lib/server/response";
+import { validateRequestJSON } from "@/lib/server/validator";
 import prisma from "@/lib/server/prisma";
 import { RegisterUserSchema } from "@repo/shared-types/api/auth";
-import limitControl from "../../_utils/rateLimit";
-import { hashPassword } from "../../_utils/password";
-import emailUtils from "../../_utils/email";
+import limitControl from "@/lib/server/rateLimit";
+import { hashPassword } from "@/lib/server/password";
+import emailUtils from "@/lib/server/email";
 
 /**
  * @openapi
@@ -53,6 +53,9 @@ import emailUtils from "../../_utils/email";
  */
 export async function POST(request: Request) {
   try {
+    // 创建serverless环境的响应构建器
+    const response = new ResponseBuilder("serverless");
+    
     // 速率控制
     if (!(await limitControl(request))) {
       return response.tooManyRequests();
@@ -111,6 +114,7 @@ export async function POST(request: Request) {
     
   } catch (error) {
     console.error("Registration error:", error);
+    const response = new ResponseBuilder("serverless");
     return response.serverError({
       message: "注册失败，请稍后重试",
     });

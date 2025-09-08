@@ -1,10 +1,7 @@
-import response from "@/app/api/_utils/response";
-import { validateRequestJSON } from "@/app/api/_utils/validator";
-import limitControl from "../../_utils/rateLimit";
+import ResponseBuilder from "@/lib/server/response";
+import { validateRequestJSON } from "@/lib/server/validator";
 import { LoginUserSchema } from "@repo/shared-types/api/auth";
-import prisma from "@/lib/server/prisma";
-import { verifyPassword } from "../../_utils/password";
-import { jwtTokenSign } from "../../_utils/jwt";
+import { login, loginWithRateLimit } from "@/actions/auth";
 
 /**
  * @openapi
@@ -27,7 +24,7 @@ import { jwtTokenSign } from "../../_utils/jwt";
  *             schema:
  *               $ref: '#/components/schemas/LoginSuccessResponse'
  *       400:
- *         description: 请求参数错误或用户状态异常  
+ *         description: 请求参数错误或用户状态异常
  *         content:
  *           application/json:
  *             schema:
@@ -51,11 +48,9 @@ import { jwtTokenSign } from "../../_utils/jwt";
  */
 export async function POST(request: Request) {
   try {
-    // 速率控制
-    if (!(await limitControl(request))) {
-      return response.tooManyRequests();
-    }
-
+    // 创建serverless环境的响应构建器
+    const response = new ResponseBuilder("serverless");
+    
     // 验证请求数据
     const validationResult = await validateRequestJSON(
       request,
@@ -63,135 +58,38 @@ export async function POST(request: Request) {
     );
     if (validationResult instanceof Response) return validationResult;
 
-    const { username, password, token_transport } = validationResult.data!;
+    const { username, password, token_transport, captcha_token } =
+      validationResult.data!;
 
-    // TODO: 校验验证码
-
-    // 检查用户名或邮箱是否已存在
-    const user = await prisma.user.findFirst({
-      where: {
-        username,
-      },
-      select: {
-        password: true,
-        accounts: true,
-        username: true,
-        nickname: true,
-        uid: true,
-        emailVerified: true,
-      },
+    const loginResult = await login({
+      username,
+      password,
+      token_transport,
+      captcha_token: captcha_token,
     });
 
-    if (!user) {
-      return response.badRequest({
-        message: "用户名或密码错误",
-        error: {
-          code: "INVALID_CREDENTIALS",
-          message: "用户名或密码错误",
-        },
-      });
+    // login函数现在返回ApiResponse对象，我们需要转换为NextResponse
+    if ('success' in loginResult) {
+      if (loginResult.success) {
+        return response.ok({
+          message: loginResult.message || "登录成功",
+          data: loginResult.data,
+        });
+      } else {
+        return response.badRequest({
+          message: loginResult.message || "登录失败",
+          error: loginResult.error,
+        });
+      }
     }
 
-    // 检测是否SSO登录
-    if (!user.password) {
-      return response.badRequest({
-        message: "该用户通过第三方登录，请使用对应的登录方式",
-        error: {
-          code: "SSO_USER",
-          message: "该用户通过第三方登录，请使用对应的登录方式",
-          details: user.accounts?.map((account) => ({
-            provider: account.provider,
-          })),
-        },
-      });
-    }
-
-    // 检测是否已验证邮箱
-    // TODO: 接入动态config
-    if (!user.emailVerified) {
-      return response.badRequest({
-        message: "请先验证邮箱后再登录",
-        error: {
-          code: "EMAIL_NOT_VERIFIED",
-          message: "请先验证邮箱后再登录",
-        },
-      });
-    }
-
-    // 验证密码
-    const isPasswordValid = await verifyPassword(user.password, password);
-    if (!isPasswordValid.isValid) {
-      return response.badRequest({
-        message: "用户名或密码错误",
-        error: {
-          code: "INVALID_CREDENTIALS",
-          message: "用户名或密码错误",
-        },
-      });
-    }
-
-    const expiredAtSeconds = 30 * 24 * 60 * 60; // 30天的秒数
-    const expiredAt = new Date(Date.now() + expiredAtSeconds * 1000); 
-    const expiredAtUnix = Math.floor(expiredAt.getTime() / 1000); // 转换为Unix时间戳
-
-    // 向数据库记录refresh token
-    const dbRefreshToken = await prisma.refreshToken.create({
-      data: {
-        userUid: user.uid,
-        expiresAt: expiredAt,
-      },
-    });
-
-    // 分发令牌
-    // Refresh Token
-    const refreshToken = jwtTokenSign({
-      inner: {
-        uid: user.uid,
-        tokenId: dbRefreshToken.id,
-        exp: expiredAtUnix,
-      },
-      expired: "30d",
-    });
-    // Access Token
-    const accessToken = jwtTokenSign({
-      inner: {
-        uid: user.uid,
-        username: user.username,
-        nickname: user.nickname,
-      },
-      expired: "10m",
-    });
-
-    // 根据 token_transport 决定令牌传输方式
-    if (token_transport === "cookie") {
-      // 设置 RefreshToken为HttpOnly Cookie
-      const refreshCookie = `REFRESH_TOKEN=${refreshToken}; Path=/api/auth/refresh; HttpOnly; SameSite=Strict; Max-Age=${expiredAtSeconds}`;
-      // 直接返回 AccessToken
-      return response.ok({
-        message: "登录成功",
-        data: {
-          access_token: accessToken,
-        },
-        customHeaders: {
-          "Set-Cookie": refreshCookie,
-        },
-      });
-    }
-
-    if (token_transport === "body") {
-      return response.ok({
-        message: "登录成功",
-        data: {
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        },
-      });
-    }
-    return response.ok();
-  } catch (error) {
-    console.error("Login error:", error);
+    // 兜底情况，返回未知错误
     return response.serverError({
-      message: "登录失败，请稍后重试",
+      message: "登录过程发生未知错误"
     });
+  } catch (error) {
+    console.error("Login route error:", error);
+    const response = new ResponseBuilder("serverless");
+    return response.badGateway();
   }
 }
