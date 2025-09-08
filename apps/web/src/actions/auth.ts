@@ -9,19 +9,24 @@ import { jwtTokenSign } from "@/lib/server/jwt";
 import ResponseBuilder from "@/lib/server/response";
 import { cookies } from "next/headers";
 
-export async function login({
-  username,
-  password,
-  token_transport,
-  captcha_token,
-}: {
-  username: string;
-  password: string;
-  token_transport: "cookie" | "body";
-  captcha_token: string;
-}) {
-  // 创建server action环境的响应构建器
-  const response = new ResponseBuilder("serveraction");
+export async function login(
+  {
+    username,
+    password,
+    token_transport,
+    captcha_token,
+  }: {
+    username: string;
+    password: string;
+    token_transport: "cookie" | "body";
+    captcha_token: string;
+  },
+  serverConfig?: {
+    environment?: "serverless" | "serveraction";
+  }
+) {
+  // 创建响应构建器，根据配置选择环境
+  const response = new ResponseBuilder(serverConfig?.environment || "serveraction");
 
   try {
     // 验证输入参数
@@ -178,10 +183,13 @@ export async function loginWithRateLimit(
     password: string;
     token_transport: "cookie" | "body";
     captcha_token: string;
+  },
+  serverConfig?: {
+    environment?: "serverless" | "serveraction";
   }
 ) {
-  // 创建server action环境的响应构建器
-  const response = new ResponseBuilder("serveraction");
+  // 创建响应构建器，根据配置选择环境
+  const response = new ResponseBuilder(serverConfig?.environment || "serveraction");
 
   // 速率控制
   if (!(await limitControl(request))) {
@@ -194,5 +202,5 @@ export async function loginWithRateLimit(
     });
   }
 
-  return await login(data);
+  return await login(data, serverConfig);
 }

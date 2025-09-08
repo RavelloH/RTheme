@@ -1,7 +1,9 @@
 import ResponseBuilder from "@/lib/server/response";
 import { validateRequestJSON } from "@/lib/server/validator";
 import { LoginUserSchema } from "@repo/shared-types/api/auth";
-import { login, loginWithRateLimit } from "@/actions/auth";
+import { login } from "@/actions/auth";
+
+const response = new ResponseBuilder("serverless");
 
 /**
  * @openapi
@@ -48,9 +50,6 @@ import { login, loginWithRateLimit } from "@/actions/auth";
  */
 export async function POST(request: Request) {
   try {
-    // 创建serverless环境的响应构建器
-    const response = new ResponseBuilder("serverless");
-    
     // 验证请求数据
     const validationResult = await validateRequestJSON(
       request,
@@ -61,35 +60,19 @@ export async function POST(request: Request) {
     const { username, password, token_transport, captcha_token } =
       validationResult.data!;
 
-    const loginResult = await login({
-      username,
-      password,
-      token_transport,
-      captcha_token: captcha_token,
-    });
-
-    // login函数现在返回ApiResponse对象，我们需要转换为NextResponse
-    if ('success' in loginResult) {
-      if (loginResult.success) {
-        return response.ok({
-          message: loginResult.message || "登录成功",
-          data: loginResult.data,
-        });
-      } else {
-        return response.badRequest({
-          message: loginResult.message || "登录失败",
-          error: loginResult.error,
-        });
+    return await login(
+      {
+        username,
+        password,
+        token_transport,
+        captcha_token: captcha_token,
+      },
+      {
+        environment: "serverless",
       }
-    }
-
-    // 兜底情况，返回未知错误
-    return response.serverError({
-      message: "登录过程发生未知错误"
-    });
+    );
   } catch (error) {
     console.error("Login route error:", error);
-    const response = new ResponseBuilder("serverless");
     return response.badGateway();
   }
 }
