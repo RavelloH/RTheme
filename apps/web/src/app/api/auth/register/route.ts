@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     const response = new ResponseBuilder("serverless");
     
     // 速率控制
-    if (!(await limitControl(request))) {
+    if (!(await limitControl(request.headers))) {
       return response.tooManyRequests();
     }
 

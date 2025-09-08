@@ -7,35 +7,50 @@ const limit = 30; // 每分钟允许的请求数
 const useRedis = !!process.env.REDIS_URL;
 const redis = useRedis ? new Redis(process.env.REDIS_URL as string) : null;
 
-interface RequestObject {
-  headers: {
-    get: (key: string) => string | null;
-  };
-  ip?: string;
-  connection?: {
-    remoteAddress?: string;
-  };
-}
+// 支持两种 header 格式
+type HeadersObject = 
+  | { get: (key: string) => string | null } // Next.js Request headers 格式
+  | Headers // Web API Headers 格式
+  | Record<string, string | string[] | undefined>; // 普通对象格式
 
 // 提取IP地址的通用函数
-function extractIpAddress(request: RequestObject): string {
+function extractIpAddress(headers: HeadersObject): string {
+  let getHeader: (key: string) => string | null;
+
+  if (headers && typeof headers === 'object') {
+    if ('get' in headers && typeof headers.get === 'function') {
+      // Next.js Request headers 或 Web API Headers
+      const headersWithGet = headers as { get: (key: string) => string | null };
+      getHeader = (key: string) => headersWithGet.get(key);
+    } else {
+      // 普通对象格式
+      getHeader = (key: string) => {
+        const value = (headers as Record<string, string | string[] | undefined>)[key];
+        if (Array.isArray(value)) {
+          return value[0] || null;
+        }
+        return typeof value === 'string' ? value : null;
+      };
+    }
+  } else {
+    getHeader = () => null;
+  }
+
   return (
-    request.headers.get("x-real-ip") ||
-    request.headers.get("x-forwarded-for") ||
-    request.headers.get("x-vercel-proxied-for") ||
-    request.ip ||
-    (request.connection && request.connection.remoteAddress) ||
+    getHeader("x-real-ip") ||
+    getHeader("x-forwarded-for") ||
+    getHeader("x-vercel-proxied-for") ||
     ""
   );
 }
 
 // Redis实现的速率限制
-async function rateLimitRedis(request: RequestObject): Promise<boolean> {
+async function rateLimitRedis(headers: HeadersObject): Promise<boolean> {
   if (!redis) {
     return true;
   }
 
-  const ip = extractIpAddress(request);
+  const ip = extractIpAddress(headers);
   const key = `rate_limit:${ip}`;
   const currentTime = Date.now();
   const oneMinuteAgo = currentTime - 60000;
@@ -71,8 +86,8 @@ async function rateLimitRedis(request: RequestObject): Promise<boolean> {
 }
 
 // Prisma实现的速率限制（尽可能原子操作）
-async function rateLimitPrisma(request: RequestObject): Promise<boolean> {
-  const ip = extractIpAddress(request);
+async function rateLimitPrisma(headers: HeadersObject): Promise<boolean> {
+  const ip = extractIpAddress(headers);
   const currentTime = Date.now();
   const oneMinuteAgo = currentTime - 60000;
 
@@ -119,11 +134,11 @@ async function rateLimitPrisma(request: RequestObject): Promise<boolean> {
 }
 
 // 统一的速率限制函数
-async function limitControl(request: RequestObject): Promise<boolean> {
+async function limitControl(headers: HeadersObject): Promise<boolean> {
   if (useRedis) {
-    return await rateLimitRedis(request);
+    return await rateLimitRedis(headers);
   } else {
-    return await rateLimitPrisma(request);
+    return await rateLimitPrisma(headers);
   }
 }
 

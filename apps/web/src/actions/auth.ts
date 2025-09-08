@@ -7,7 +7,12 @@ import prisma from "@/lib/server/prisma";
 import { verifyPassword } from "@/lib/server/password";
 import { jwtTokenSign } from "@/lib/server/jwt";
 import ResponseBuilder from "@/lib/server/response";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+
+type HeadersObject =
+  | { get: (key: string) => string | null }
+  | Headers
+  | Record<string, string | string[] | undefined>;
 
 export async function login(
   {
@@ -23,10 +28,22 @@ export async function login(
   },
   serverConfig?: {
     environment?: "serverless" | "serveraction";
+    headers?: HeadersObject; // 从 serverless 传入的 headers
   }
 ) {
   // 创建响应构建器，根据配置选择环境
-  const response = new ResponseBuilder(serverConfig?.environment || "serveraction");
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction"
+  );
+
+  // 速率控制
+  const requestHeaders =
+    serverConfig?.environment === "serverless" && serverConfig?.headers
+      ? serverConfig.headers
+      : await headers();
+  if (!(await limitControl(requestHeaders))) {
+    return response.tooManyRequests();
+  }
 
   try {
     // 验证输入参数
@@ -174,33 +191,4 @@ export async function login(
       },
     });
   }
-}
-
-export async function loginWithRateLimit(
-  request: Request,
-  data: {
-    username: string;
-    password: string;
-    token_transport: "cookie" | "body";
-    captcha_token: string;
-  },
-  serverConfig?: {
-    environment?: "serverless" | "serveraction";
-  }
-) {
-  // 创建响应构建器，根据配置选择环境
-  const response = new ResponseBuilder(serverConfig?.environment || "serveraction");
-
-  // 速率控制
-  if (!(await limitControl(request))) {
-    return response.tooManyRequests({
-      message: "请求过于频繁",
-      error: {
-        code: "RATE_LIMIT_EXCEEDED",
-        message: "请求过于频繁",
-      },
-    });
-  }
-
-  return await login(data, serverConfig);
 }
