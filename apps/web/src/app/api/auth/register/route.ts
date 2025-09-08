@@ -1,10 +1,9 @@
 import ResponseBuilder from "@/lib/server/response";
 import { validateRequestJSON } from "@/lib/server/validator";
-import prisma from "@/lib/server/prisma";
 import { RegisterUserSchema } from "@repo/shared-types/api/auth";
-import limitControl from "@/lib/server/rateLimit";
-import { hashPassword } from "@/lib/server/password";
-import emailUtils from "@/lib/server/email";
+import { register } from "@/actions/auth";
+
+const response = new ResponseBuilder("serverless");
 
 /**
  * @openapi
@@ -53,14 +52,6 @@ import emailUtils from "@/lib/server/email";
  */
 export async function POST(request: Request) {
   try {
-    // 创建serverless环境的响应构建器
-    const response = new ResponseBuilder("serverless");
-    
-    // 速率控制
-    if (!(await limitControl(request.headers))) {
-      return response.tooManyRequests();
-    }
-
     // 验证请求数据
     const validationResult = await validateRequestJSON(
       request,
@@ -68,55 +59,24 @@ export async function POST(request: Request) {
     );
     if (validationResult instanceof Response) return validationResult;
 
-    const { username, email, password, nickname } = validationResult.data!;
+    const { username, email, password, nickname, captcha_token } =
+      validationResult.data!;
 
-    // TODO: 校验验证码
-
-    // 检查用户名或邮箱是否已存在
-    const userExists = await prisma.user.findFirst({
-      where: {
-        OR: [{ username }, { email }],
-      },
-    });
-
-    if (userExists) {
-      return response.conflict({
-        message: "用户名或邮箱已存在",
-        error: {
-          code: "USER_EXISTS",
-          message: "用户名或邮箱已存在",
-        },
-      });
-    }
-
-    // 创建账户
-    // 生成密码哈希
-    const hashedPassword = await hashPassword(password);
-    // 生成邮箱验证码\
-    const emailVerifyCode = emailUtils.generate();
-    // 创建用户
-    await prisma.user.create({
-      data: {
+    return await register(
+      {
         username,
         email,
+        password,
         nickname,
-        password: hashedPassword,
-        emailVerifyCode,
+        captcha_token,
       },
-    });
-
-    // TODO: 发送验证邮件
-
-    return response.ok({
-      message: "注册成功，请检查邮箱以验证账户",
-    });
-
-    
+      {
+        environment: "serverless",
+        headers: request.headers,
+      }
+    );
   } catch (error) {
-    console.error("Registration error:", error);
-    const response = new ResponseBuilder("serverless");
-    return response.serverError({
-      message: "注册失败，请稍后重试",
-    });
+    console.error("Register route error:", error);
+    return response.badGateway();
   }
 }

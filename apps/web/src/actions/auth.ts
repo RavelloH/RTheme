@@ -8,6 +8,9 @@ import { verifyPassword } from "@/lib/server/password";
 import { jwtTokenSign } from "@/lib/server/jwt";
 import ResponseBuilder from "@/lib/server/response";
 import { cookies, headers } from "next/headers";
+import { RegisterUserSchema } from "@repo/shared-types/api/auth";
+import { hashPassword } from "@/lib/server/password";
+import emailUtils from "@/lib/server/email";
 
 type HeadersObject =
   | { get: (key: string) => string | null }
@@ -188,6 +191,106 @@ export async function login(
       error: {
         code: "SERVER_ERROR",
         message: "登录失败，请稍后重试",
+      },
+    });
+  }
+}
+
+export async function register(
+  {
+    username,
+    email,
+    password,
+    nickname,
+    captcha_token
+  }: {
+    username: string;
+    email: string;
+    password: string;
+    nickname?: string;
+    captcha_token: string;
+  },
+  serverConfig?: {
+    environment?: "serverless" | "serveraction";
+    headers?: HeadersObject; // 从 serverless 传入的 headers
+  }
+) {
+  // 创建响应构建器，根据配置选择环境
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction"
+  );
+
+  // 速率控制
+  const requestHeaders =
+    serverConfig?.environment === "serverless" && serverConfig?.headers
+      ? serverConfig.headers
+      : await headers();
+  if (!(await limitControl(requestHeaders))) {
+    return response.tooManyRequests();
+  }
+
+  try {
+    // 验证输入参数
+    const validationResult = validateData(
+      {
+        username,
+        email,
+        password,
+        nickname,
+        captcha_token
+      },
+      RegisterUserSchema
+    );
+
+    if (validationResult instanceof Response) return validationResult;
+
+    // TODO: 验证验证码
+
+    // 检查用户名或邮箱是否已存在
+    const userExists = await prisma.user.findFirst({
+      where: {
+        OR: [{ username }, { email }],
+      },
+    });
+
+    if (userExists) {
+      return response.conflict({
+        message: "用户名或邮箱已存在",
+        error: {
+          code: "USER_EXISTS",
+          message: "用户名或邮箱已存在",
+        },
+      });
+    }
+
+    // 创建账户
+    // 生成密码哈希
+    const hashedPassword = await hashPassword(password);
+    // 生成邮箱验证码
+    const emailVerifyCode = emailUtils.generate();
+    // 创建用户
+    await prisma.user.create({
+      data: {
+        username,
+        email,
+        nickname,
+        password: hashedPassword,
+        emailVerifyCode,
+      },
+    });
+
+    // TODO: 发送验证邮件
+
+    return response.ok({
+      message: "注册成功，请检查邮箱以验证账户",
+    });
+  } catch (error) {
+    console.error("Registration error:", error);
+    return response.serverError({
+      message: "注册失败，请稍后重试",
+      error: {
+        code: "SERVER_ERROR",
+        message: "注册失败，请稍后重试",
       },
     });
   }
