@@ -11,6 +11,7 @@
 
 // @ts-check
 import type { SidebarsConfig } from "@docusaurus/plugin-content-docs";
+import apiSidebar from "./docs/api/sidebar.js";
 
 const sidebars: SidebarsConfig = {
   tutorialSidebar: [
@@ -30,7 +31,7 @@ const sidebars: SidebarsConfig = {
           "基于 OpenAPI 规范自动生成的接口文档，涵盖所有可用的 API 端点及其使用方法。",
         slug: "/api",
       },
-      items: require("./docs/api/sidebar.js"),
+      items: apiSidebar,
     },
   ],
 };

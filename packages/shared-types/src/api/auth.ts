@@ -5,12 +5,12 @@ import {
   registerSchema,
 } from "./common.js";
 
-// 用户名验证：只能由小写字母、数字和下划线组成
+// 用户名验证：只能以小写字母开头，只能包含小写字母、数字和下划线
 const usernameSchema = z
   .string()
   .min(3, "用户名至少需要3个字符")
   .max(20, "用户名不能超过20个字符")
-  .regex(/^[a-z0-9_]+$/, "用户名只能由小写字母、数字和下划线组成");
+  .regex(/^[a-z][a-z0-9_]*$/, "用户名只能以小写字母开头，只能包含小写字母、数字和下划线");
 
 // 密码验证
 const passwordSchema = z
@@ -19,7 +19,7 @@ const passwordSchema = z
   .max(100, "密码不能超过100个字符");
 
 // 邮箱验证
-const emailSchema = z.string().email("请输入有效的邮箱地址");
+const emailSchema = z.email("请输入有效的邮箱地址");
 
 // 昵称验证
 const nicknameSchema = z
@@ -61,7 +61,7 @@ export const RefreshTokenSchema = z.object({
 export const RegisterSuccessResponseSchema = z.object({
   success: z.literal(true),
   message: z.string(),
-  timestamp: z.string().datetime(),
+  timestamp: z.iso.datetime(),
   requestId: z.string(),
   data: z.null(),
 });
@@ -109,8 +109,8 @@ export const LoginSuccessResponseSchema = z.object({
   timestamp: z.string().datetime(),
   requestId: z.string(),
   data: z.object({
-    access_token: z.string(),
-    refresh_token: z.string().optional(), // cookie模式下不返回
+    access_token: z.string().optional(),
+    refresh_token: z.string().optional(),
   }),
 });
 

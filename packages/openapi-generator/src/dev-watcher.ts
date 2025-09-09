@@ -22,8 +22,16 @@ class DevWatcher {
   private startTypeScriptWatcher() {
     rlog.info("启动 TypeScript 编译监控...");
     this.tscProcess = spawn("tsc", ["--watch"], {
-      stdio: "inherit",
+      stdio: ["ignore", "ignore", "pipe"], // 忽略 stdout，只显示 stderr 错误
       shell: true,
+    });
+
+    this.tscProcess.stderr?.on("data", (data) => {
+      const output = data.toString();
+      // 只显示错误信息，过滤掉编译成功的消息
+      if (output.includes("error") || output.includes("Error")) {
+        process.stderr.write(output);
+      }
     });
 
     this.tscProcess.on("error", (error) => {
@@ -33,72 +41,90 @@ class DevWatcher {
 
   private startApiWatcher() {
     // 监控 API 路由文件
-    const apiPath = join(
-      process.cwd(),
-      "../../apps/web/src/app/api/**/route.{ts,js}"
-    );
+    const apiDir = join(process.cwd(), "../../apps/web/src/app/api");
+    
+    rlog.info(`启动 API 文件监控...`);
+    rlog.info(`工作目录: ${process.cwd()}`);
+    rlog.info(`监控API目录: ${apiDir}`);
 
-    rlog.info(`启动 API 文件监控: ${apiPath}`);
-
-    this.apiWatcher = chokidar.watch(apiPath, {
+    // 直接监控整个API目录，过滤route.ts和route.js文件
+    this.apiWatcher = chokidar.watch(apiDir, {
       ignored: /(^|[\/\\])\../, // 忽略隐藏文件
       persistent: true,
-      ignoreInitial: true, // 启动时不触发
+      ignoreInitial: false, // 启动时显示现有文件
+      depth: 10, // 递归深度
     });
 
     this.apiWatcher
+      .on("ready", () => {
+        rlog.success("API 文件监控已启动");
+      })
       .on("change", (path: string) => {
-        rlog.info(`检测到 API 文件变化: ${path}`);
-        this.queueGeneration();
+        if (path.endsWith('route.ts') || path.endsWith('route.js')) {
+          rlog.info(`检测到 API 文件变化: ${path}`);
+          this.queueGeneration();
+        }
       })
       .on("add", (path: string) => {
-        rlog.info(`检测到新 API 文件: ${path}`);
-        this.queueGeneration();
+        if (path.endsWith('route.ts') || path.endsWith('route.js')) {
+          rlog.info(`检测到新 API 文件: ${path}`);
+          this.queueGeneration();
+        }
       })
       .on("unlink", (path: string) => {
-        rlog.info(`检测到 API 文件删除: ${path}`);
-        this.queueGeneration();
+        if (path.endsWith('route.ts') || path.endsWith('route.js')) {
+          rlog.info(`检测到 API 文件删除: ${path}`);
+          this.queueGeneration();
+        }
       })
       .on("error", (error: unknown) => {
         rlog.error(`API 文件监控错误: ${error}`);
       });
-
-    rlog.success("API 文件监控已启动");
   }
 
   private startSharedTypesWatcher() {
     // 监控 shared-types 源文件
-    const sharedTypesPath = join(
-      process.cwd(),
-      "../shared-types/src/api/**/*.ts"
-    );
+    const sharedTypesDir = join(process.cwd(), "../shared-types/src/api");
+    const sharedTypesPattern = join(sharedTypesDir, "**/*.ts");
+    
+    rlog.info(`启动 shared-types API 文件监控...`);
+    rlog.info(`工作目录: ${process.cwd()}`);
+    rlog.info(`shared-types目录: ${sharedTypesDir}`);
+    rlog.info(`监控模式: ${sharedTypesPattern}`);
 
-    rlog.info(`启动 shared-types API 文件监控: ${sharedTypesPath}`);
-
-    this.sharedTypesWatcher = chokidar.watch(sharedTypesPath, {
+    // 直接监控目录而不是使用复杂的glob模式
+    this.sharedTypesWatcher = chokidar.watch(sharedTypesDir, {
       ignored: /(^|[\/\\])\../, // 忽略隐藏文件
       persistent: true,
-      ignoreInitial: true, // 启动时不触发
+      ignoreInitial: false, // 启动时显示现有文件
+      depth: 10, // 递归深度
     });
 
     this.sharedTypesWatcher
+      .on("ready", () => {
+        rlog.success("shared-types API 文件监控已启动");
+      })
       .on("change", (path: string) => {
-        rlog.info(`检测到 shared-types API 文件变化: ${path}`);
-        this.queueGeneration();
+        if (path.endsWith('.ts')) {
+          rlog.info(`检测到 shared-types API 文件变化: ${path}`);
+          this.queueGeneration();
+        }
       })
       .on("add", (path: string) => {
-        rlog.info(`检测到新 shared-types API 文件: ${path}`);
-        this.queueGeneration();
+        if (path.endsWith('.ts')) {
+          rlog.info(`检测到新 shared-types API 文件: ${path}`);
+          this.queueGeneration();
+        }
       })
       .on("unlink", (path: string) => {
-        rlog.info(`检测到 shared-types API 文件删除: ${path}`);
-        this.queueGeneration();
+        if (path.endsWith('.ts')) {
+          rlog.info(`检测到 shared-types API 文件删除: ${path}`);
+          this.queueGeneration();
+        }
       })
       .on("error", (error: unknown) => {
         rlog.error(`shared-types API 文件监控错误: ${error}`);
       });
-
-    rlog.success("shared-types API 文件监控已启动");
   }
 
   private queueGeneration() {
@@ -122,6 +148,9 @@ class DevWatcher {
 
     try {
       await this.regenerateOpenAPI();
+    } catch (error) {
+      // 在开发模式下，即使生成失败也不应该崩溃整个监控系统
+      rlog.error(`OpenAPI 生成失败，但监控将继续运行: ${error}`);
     } finally {
       this.isGenerating = false;
       // 检查队列中是否有新任务
@@ -134,7 +163,7 @@ class DevWatcher {
   private async regenerateOpenAPI() {
     rlog.info("正在重新生成 OpenAPI 规范...");
 
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>((resolve) => {
       // 使用子进程来生成 OpenAPI，完全避免模块缓存问题
       const child = spawn("tsx", ["src/cli.ts"], {
         cwd: process.cwd(),
@@ -147,14 +176,16 @@ class DevWatcher {
           rlog.success("OpenAPI 规范已更新");
           resolve();
         } else {
-          rlog.error(`OpenAPI 生成失败，退出代码: ${code}`);
-          reject(new Error(`Process exited with code ${code}`));
+          rlog.error(`OpenAPI 生成失败，退出代码: ${code}，但监控将继续运行`);
+          // 不再抛出异常，而是直接 resolve，让监控继续运行
+          resolve();
         }
       });
 
       child.on("error", (error) => {
-        rlog.error(`OpenAPI 生成进程错误: ${error}`);
-        reject(error);
+        rlog.error(`OpenAPI 生成进程错误: ${error}，但监控将继续运行`);
+        // 不再抛出异常，而是直接 resolve，让监控继续运行
+        resolve();
       });
     });
   }

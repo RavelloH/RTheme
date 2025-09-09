@@ -19,6 +19,75 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/LoginUser"
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginSuccessResponse"
+        "400":
+          description: 请求参数错误或用户状态异常
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ValidationErrorResponse"
+                  - $ref: "#/components/schemas/InvalidCredentialsErrorResponse"
+                  - $ref: "#/components/schemas/SsoUserErrorResponse"
+                  - $ref: "#/components/schemas/EmailNotVerifiedErrorResponse"
+        "429":
+          description: 请求过于频繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitErrorResponse"
+        "500":
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerErrorResponse"
+  /api/auth/refresh:
+    post:
+      summary: 令牌刷新
+      description: 传入 REFRESH_TOKEN 刷新 ACCESS_TOKEN。可以通过请求体传递 refresh_token，或在 Cookie
+        中携带名为 REFRESH_TOKEN 的令牌。
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshToken"
+      responses:
+        "200":
+          description: 令牌刷新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginSuccessResponse"
+        "400":
+          description: 请求参数错误或刷新令牌无效
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ValidationErrorResponse"
+                  - $ref: "#/components/schemas/InvalidCredentialsErrorResponse"
+        "429":
+          description: 请求过于频繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitErrorResponse"
+        "500":
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerErrorResponse"
   /api/auth/register:
     post:
       summary: 用户注册
@@ -74,12 +143,11 @@ components:
         timestamp:
           type: string
           format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
         requestId:
           type: string
         data:
-          anyOf:
-            - {}
-            - type: "null"
+          nullable: true
         error:
           type: object
           properties:
@@ -129,6 +197,7 @@ components:
         - message
         - timestamp
         - requestId
+        - data
       additionalProperties: false
     ErrorResponse:
       type: object
@@ -150,22 +219,26 @@ components:
       type: object
       properties:
         page:
+          default: 1
           type: number
           minimum: 1
-          default: 1
         pageSize:
+          default: 10
           type: number
           minimum: 1
           maximum: 100
-          default: 10
         sortBy:
           type: string
         sortOrder:
+          default: desc
           type: string
           enum:
             - asc
             - desc
-          default: desc
+      required:
+        - page
+        - pageSize
+        - sortOrder
       additionalProperties: false
     RegisterUser:
       type: object
@@ -174,7 +247,7 @@ components:
           type: string
           minLength: 3
           maxLength: 20
-          pattern: ^[a-z0-9_]+$
+          pattern: ^[a-z][a-z0-9_]*$
         nickname:
           type: string
           minLength: 2
@@ -186,6 +259,7 @@ components:
         email:
           type: string
           format: email
+          pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
         captcha_token:
           type: string
           minLength: 1
@@ -202,40 +276,90 @@ components:
           type: string
           minLength: 3
           maxLength: 20
-          pattern: ^[a-z0-9_]+$
+          pattern: ^[a-z][a-z0-9_]*$
         password:
           type: string
           minLength: 6
           maxLength: 100
         token_transport:
+          default: cookie
           type: string
           enum:
             - cookie
             - body
-          default: cookie
         captcha_token:
           type: string
           minLength: 1
       required:
         - username
         - password
+        - token_transport
         - captcha_token
+      additionalProperties: false
+    RefreshToken:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+        token_transport:
+          default: cookie
+          type: string
+          enum:
+            - cookie
+            - body
+      required:
+        - token_transport
       additionalProperties: false
     RegisterSuccessResponse:
       type: object
       properties:
         success:
           type: boolean
-          const: true
+          enum:
+            - true
         message:
           type: string
         timestamp:
           type: string
           format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
         requestId:
           type: string
         data:
-          type: "null"
+          type: string
+          nullable: true
+          enum:
+            - null
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    LoginSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+          additionalProperties: false
       required:
         - success
         - message
@@ -248,22 +372,28 @@ components:
       properties:
         success:
           type: boolean
-          const: false
+          enum:
+            - false
         message:
           type: string
         timestamp:
           type: string
           format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
         requestId:
           type: string
         data:
-          type: "null"
+          type: string
+          nullable: true
+          enum:
+            - null
         error:
           type: object
           properties:
             code:
               type: string
-              const: VALIDATION_ERROR
+              enum:
+                - VALIDATION_ERROR
             message:
               type: string
             details:
@@ -296,22 +426,161 @@ components:
       properties:
         success:
           type: boolean
-          const: false
+          enum:
+            - false
         message:
           type: string
         timestamp:
           type: string
           format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
         requestId:
           type: string
         data:
-          type: "null"
+          type: string
+          nullable: true
+          enum:
+            - null
         error:
           type: object
           properties:
             code:
               type: string
-              const: USER_EXISTS
+              enum:
+                - USER_EXISTS
+            message:
+              type: string
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - error
+      additionalProperties: false
+    InvalidCredentialsErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - INVALID_CREDENTIALS
+            message:
+              type: string
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - error
+      additionalProperties: false
+    SsoUserErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - SSO_USER
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  provider:
+                    type: string
+                required:
+                  - provider
+                additionalProperties: false
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - error
+      additionalProperties: false
+    EmailNotVerifiedErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - EMAIL_NOT_VERIFIED
             message:
               type: string
           required:
@@ -331,22 +600,28 @@ components:
       properties:
         success:
           type: boolean
-          const: false
+          enum:
+            - false
         message:
           type: string
         timestamp:
           type: string
           format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
         requestId:
           type: string
         data:
-          type: "null"
+          type: string
+          nullable: true
+          enum:
+            - null
         error:
           type: object
           properties:
             code:
               type: string
-              const: TOO_MANY_REQUESTS
+              enum:
+                - TOO_MANY_REQUESTS
             message:
               type: string
           required:
@@ -366,22 +641,28 @@ components:
       properties:
         success:
           type: boolean
-          const: false
+          enum:
+            - false
         message:
           type: string
         timestamp:
           type: string
           format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
         requestId:
           type: string
         data:
-          type: "null"
+          type: string
+          nullable: true
+          enum:
+            - null
         error:
           type: object
           properties:
             code:
               type: string
-              const: INTERNAL_SERVER_ERROR
+              enum:
+                - INTERNAL_SERVER_ERROR
             message:
               type: string
           required:

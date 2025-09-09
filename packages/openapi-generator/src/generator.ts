@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
 import {
   writeFileSync,
   mkdirSync,
@@ -187,23 +186,27 @@ export async function generateOpenAPISpec(): Promise<OpenAPISpec> {
 // 辅助函数：转换并添加schema
 function convertAndAddSchema(spec: OpenAPISpec, name: string, schema: any) {
   try {
-    const jsonSchema = zodToJsonSchema(schema, {
-      name,
-      $refStrategy: "none",
+    rlog.info(`正在转换schema: ${name}`);
+    
+    // 确保schema是有效的Zod schema
+    if (!schema || !schema._def) {
+      rlog.error(`Schema ${name} 不是有效的Zod schema`);
+      return;
+    }
+    
+    // 使用Zod v4的原生JSON Schema转换
+    const jsonSchema = z.toJSONSchema(schema, {
+      target: "openapi-3.0",
     });
 
-    if (
-      (jsonSchema as any).definitions &&
-      (jsonSchema as any).definitions[name]
-    ) {
-      spec.components.schemas[name] = (jsonSchema as any).definitions[name];
-    } else {
-      const cleanSchema = { ...jsonSchema } as any;
-      delete cleanSchema.$ref;
-      delete cleanSchema.definitions;
-      delete cleanSchema.$schema;
-      spec.components.schemas[name] = cleanSchema;
-    }
+    // 清理schema，移除不需要的元数据
+    const cleanSchema = { ...jsonSchema };
+    delete cleanSchema.$schema;
+    
+    // 添加到组件schemas中
+    spec.components.schemas[name] = cleanSchema;
+    
+    rlog.success(`成功转换schema: ${name}`);
   } catch (error) {
     rlog.error(`转换schema ${name} 时出错:`, error);
   }

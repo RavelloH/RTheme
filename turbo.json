@@ -78,11 +78,11 @@
         "JWT_PUBLIC_KEY"
       ]
     },
-    "openapi-generator#dev": {
+    "@repo/openapi-generator#dev": {
       "cache": false,
       "persistent": true,
       "env": ["NODE_ENV"],
-      "outputLogs": "new-only"
+      "outputLogs": "full"
     },
     "docs#dev": {
       "dependsOn": ["generate-openapi"],
