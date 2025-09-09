@@ -9,12 +9,12 @@ import {
 } from "@repo/shared-types/api/auth";
 import prisma from "@/lib/server/prisma";
 import { verifyPassword } from "@/lib/server/password";
-import { jwtTokenSign } from "@/lib/server/jwt";
+import { jwtTokenSign, jwtTokenVerify } from "@/lib/server/jwt";
 import ResponseBuilder from "@/lib/server/response";
 import { cookies, headers } from "next/headers";
 import { hashPassword } from "@/lib/server/password";
 import emailUtils from "@/lib/server/email";
-
+import { after } from "next/server";
 
 export async function login(
   {
@@ -118,7 +118,7 @@ export async function login(
       });
     }
 
-    const expiredAtSeconds = 30 * 24 * 60 * 60; // 30天的秒数
+    const expiredAtSeconds = 30 * 24 * 60 * 60; // 30天
     const expiredAt = new Date(Date.now() + expiredAtSeconds * 1000);
     const expiredAtUnix = Math.floor(expiredAt.getTime() / 1000); // 转换为Unix时间戳
 
@@ -162,19 +162,29 @@ export async function login(
         path: "/api/auth/refresh",
         secure: process.env.NODE_ENV === "production",
       });
+      cookieStore.set({
+        name: "ACCESS_TOKEN",
+        value: accessToken,
+        httpOnly: true,
+        maxAge: 600,
+        sameSite: "strict",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      });
     }
 
     // 返回成功结果
     return response.ok({
       message: "登录成功",
       data: {
-        access_token: accessToken,
+        access_token: token_transport === "body" ? accessToken : undefined,
         refresh_token: token_transport === "body" ? refreshToken : undefined,
       },
       ...(token_transport === "cookie" && {
-        customHeaders: {
-          "set-cookie": `REFRESH_TOKEN=${refreshToken}; Path=/api/auth/refresh; HttpOnly; SameSite=Strict; Max-Age=${expiredAtSeconds}`,
-        },
+        customHeaders: new Headers([
+          ["set-cookie", `REFRESH_TOKEN=${refreshToken}; Path=/api/auth/refresh; HttpOnly; SameSite=Strict; Max-Age=${expiredAtSeconds}${process.env.NODE_ENV === "production" ? "; Secure" : ""}`],
+          ["set-cookie", `ACCESS_TOKEN=${accessToken}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${10 * 60}${process.env.NODE_ENV === "production" ? "; Secure" : ""}`]
+        ]),
       }),
     });
   } catch (error) {
@@ -320,16 +330,81 @@ export async function refresh(
     const token = refresh_token || cookieStore.get("REFRESH_TOKEN")?.value;
 
     if (!token) {
-      return response.unauthorized()
+      return response.unauthorized();
     }
 
-    return response.ok(
-      {
-        data: {
-          token
-        }
-      }
-    )
+    // 验证&解析 Refresh Token
+    const decoded = jwtTokenVerify(token);
+    if (!decoded) {
+      return response.unauthorized();
+    }
+
+    // 数据库验证
+    const { tokenId, uid } = decoded;
+    const dbToken = await prisma.refreshToken.findUnique({
+      where: {
+        id: tokenId as string,
+        userUid: uid as number,
+      },
+      select: {
+        id: true,
+        userUid: true,
+        user: {
+          select: {
+            uid: true,
+            username: true,
+            nickname: true,
+          },
+        },
+      },
+    });
+    if (!dbToken) {
+      return response.unauthorized();
+    }
+
+    // 创建新 Access Token
+    const accessToken = jwtTokenSign({
+      inner: {
+        uid: dbToken.user.uid,
+        username: dbToken.user.username,
+        nickname: dbToken.user.nickname,
+      },
+      expired: "10m",
+    });
+
+    // 清理数据库中过期的 Refresh Token
+    after(async () => {
+      const now = new Date();
+      await prisma.refreshToken.deleteMany({
+        where: {
+          expiresAt: { lt: now },
+        },
+      });
+    });
+
+    // 返回成功结果
+    if (token_transport === "cookie") {
+      cookieStore.set({
+        name: "ACCESS_TOKEN",
+        value: accessToken,
+        httpOnly: true,
+        maxAge: 600,
+        sameSite: "strict",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      });
+    }
+    return response.ok({
+      message: "刷新成功",
+      data: {
+        access_token: token_transport === "body" ? accessToken : undefined,
+      },
+      ...(token_transport === "cookie" && {
+        customHeaders: {
+          "set-cookie": `ACCESS_TOKEN=${accessToken}; Path=/; HttpOnly; SameSite=Strict; Max-Age=600${process.env.NODE_ENV === "production" ? "; Secure" : ""}`,
+        },
+      }),
+    });
   } catch (error) {
     console.error("Login error:", error);
     return response.serverError();

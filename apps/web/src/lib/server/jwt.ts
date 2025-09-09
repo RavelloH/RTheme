@@ -42,9 +42,31 @@ export function jwtTokenSign({ inner, expired = "7d" }: TokenSignOptions) {
   return jwt.sign(inner, privateKey, signOptions);
 }
 
-export function jwtTokenVerify(tokenText: string) {
+export function jwtTokenVerify(tokenText: string): Record<string, unknown> | null {
   const verifyOptions: VerifyOptions = {
     algorithms: ["ES256"],
   };
-  return jwt.verify(tokenText, publicKey, verifyOptions);
+  
+  try {
+    const decoded = jwt.verify(tokenText, publicKey, verifyOptions);
+    
+    // 如果是字符串类型，尝试解析为JSON对象
+    if (typeof decoded === 'string') {
+      try {
+        return JSON.parse(decoded);
+      } catch {
+        return null;
+      }
+    }
+    
+    // 确保返回的是对象而不是其他类型
+    if (typeof decoded === 'object' && decoded !== null) {
+      return decoded as Record<string, unknown>;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("JWT verification error:", error);
+    return null;
+  }
 }
