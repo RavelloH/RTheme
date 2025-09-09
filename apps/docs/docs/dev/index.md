@@ -129,7 +129,7 @@ pnpm generate-openapi      # 生成 API 文档
 
 # 数据库
 cd apps/web
-pnpm prisma:generate       # 生成 Prisma 客户端
-pnpm prisma:migrate        # 运行数据库迁移
-pnpm prisma:studio         # 打开数据库管理界面
+pnpm gen-prisma             # 生成 Prisma 客户端
+npx prisma migrate dev       # 运行数据库迁移
+npx prisma studio            # 打开数据库管理界面
 ```

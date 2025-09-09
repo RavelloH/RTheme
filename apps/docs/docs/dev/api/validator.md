@@ -14,7 +14,7 @@ import {
   ValidationResult,
   ValidationErrorDetail,
   ValidationOptions
-} from "@/app/api/_utils/validator";
+} from "@/lib/server/validator";
 ```
 
 ## 核心接口
@@ -130,7 +130,7 @@ async function validateJSON<T>(
 
 ```typescript
 import { z } from "zod";
-import { validateRequestJSON } from "@/app/api/_utils/validator";
+import { validateRequestJSON } from "@/lib/server/validator";
 
 const UserSchema = z.object({
   name: z.string().min(1),
@@ -242,7 +242,7 @@ export async function PUT(request: Request) {
 ### 简单验证
 
 ```typescript
-import { validate, validateJSON } from "@/app/api/_utils/validator";
+import { validate, validateJSON } from "@/lib/server/validator";
 
 // 验证普通数据
 const result = validate(userData, UserSchema);
@@ -397,7 +397,7 @@ export async function GET(request: Request) {
 
 ```typescript
 // app/api/auth/register/route.ts
-import { validateRequestJSON } from "@/app/api/_utils/validator";
+import { validateRequestJSON } from "@/lib/server/validator";
 import { z } from "zod";
 
 const RegisterSchema = z.object({
@@ -454,7 +454,7 @@ export async function POST(request: Request) {
 
 ```typescript
 // app/api/posts/route.ts
-import { validateSearchParams } from "@/app/api/_utils/validator";
+import { validateSearchParams } from "@/lib/server/validator";
 
 const PostQuerySchema = z.object({
   page: z.string().transform(Number).pipe(z.number().min(1)),

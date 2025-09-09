@@ -143,13 +143,15 @@ export type UserData = z.infer<typeof UserDataSchema>;
 
 ```typescript
 // apps/web/src/app/api/auth/register/route.ts
-import response from "@/app/api/_utils/response";
-import { validateRequestJSON } from "@/app/api/_utils/validator";
+import ResponseBuilder from "@/lib/server/response";
+import { validateRequestJSON } from "@/lib/server/validator";
 import { RegisterUserSchema } from "@repo/shared-types/api/auth";
-import prisma from "@/app/lib/prisma";
-import limitControl from "../../_utils/limit";
-import { hashPassword } from "../../_utils/password";
-import emailUtils from "../../_utils/email";
+import prisma from "@/lib/shared/prisma";
+import limitControl from "@/lib/server/limit";
+import { hashPassword } from "@/lib/server/password";
+import emailUtils from "@/lib/server/email";
+
+const response = new ResponseBuilder("serverless");
 
 export async function POST(request: Request) {
   try {
@@ -259,7 +261,7 @@ pnpm dev
 3. **添加OpenAPI注释** → 引用Schema名称，指定路径和响应
 4. **实现API** → `apps/web/src/app/api/`
 5. **自动验证** → 使用 `validateRequestJSON`
-6. **错误处理** → 使用 `response` 工具
+6. **错误处理** → 使用 `ResponseBuilder` 实例
 7. **生成文档** → 运行 `pnpm generate-openapi` (自动发现所有注册的schemas)
 
 ### 3. 添加新API模块

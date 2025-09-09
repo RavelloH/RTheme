@@ -5,21 +5,38 @@ NeutralPress 提供了一套完整的 API 响应工具，确保所有 API 接口
 ## 导入方式
 
 ```typescript
-import response from "@/app/api/_utils/response";
+import ResponseBuilder from "@/lib/server/response";
 
-// 或按需导入
+// 创建响应构建器实例
+const response = new ResponseBuilder("serverless"); // 或 "serveraction"
+
+// 或按需导入工具函数
 import {
   createSecurityHeaders,
   createCacheHeaders,
   createPaginationMeta,
   fieldError,
-} from "@/app/api/_utils/response";
+} from "@/lib/server/response";
+```
+
+## ResponseBuilder 类
+
+ResponseBuilder 是一个可配置的响应构建器，支持两种环境：
+
+- `"serverless"` - 用于 API 路由（返回 NextResponse）
+- `"serveraction"` - 用于 Server Actions（返回纯对象）
+
+```typescript
+// API 路由中使用
+const response = new ResponseBuilder("serverless");
+
+// Server Action 中使用
+const response = new ResponseBuilder("serveraction");
 ```
 
 ## 可用方法
-
 ### 通用响应
-- `response(config)` - 通用响应函数，可自定义所有参数
+- `response.response(config)` - 通用响应函数，可自定义所有参数
 
 ### 成功响应
 - `response.ok(config?)` - 200 成功响应
@@ -62,6 +79,10 @@ import {
 ### 成功响应
 
 ```typescript
+import ResponseBuilder from "@/lib/server/response";
+
+const response = new ResponseBuilder("serverless");
+
 // 简单成功响应
 export async function GET() {
   const data = { users: [], total: 0 };
