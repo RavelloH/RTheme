@@ -15,10 +15,6 @@ import { cookies, headers } from "next/headers";
 import { hashPassword } from "@/lib/server/password";
 import emailUtils from "@/lib/server/email";
 
-type HeadersObject =
-  | { get: (key: string) => string | null }
-  | Headers
-  | Record<string, string | string[] | undefined>;
 
 export async function login(
   {
@@ -34,7 +30,6 @@ export async function login(
   },
   serverConfig?: {
     environment?: "serverless" | "serveraction";
-    headers?: HeadersObject; // 从 serverless 传入的 headers
   }
 ) {
   const response = new ResponseBuilder(
@@ -42,11 +37,7 @@ export async function login(
   );
 
   // 速率控制
-  const requestHeaders =
-    serverConfig?.environment === "serverless" && serverConfig?.headers
-      ? serverConfig.headers
-      : await headers();
-  if (!(await limitControl(requestHeaders))) {
+  if (!(await limitControl(await headers()))) {
     return response.tooManyRequests();
   }
 
@@ -214,7 +205,6 @@ export async function register(
   },
   serverConfig?: {
     environment?: "serverless" | "serveraction";
-    headers?: HeadersObject; // 从 serverless 传入的 headers
   }
 ) {
   // 创建响应构建器，根据配置选择环境
@@ -223,11 +213,7 @@ export async function register(
   );
 
   // 速率控制
-  const requestHeaders =
-    serverConfig?.environment === "serverless" && serverConfig?.headers
-      ? serverConfig.headers
-      : await headers();
-  if (!(await limitControl(requestHeaders))) {
+  if (!(await limitControl(await headers()))) {
     return response.tooManyRequests();
   }
 
@@ -308,7 +294,6 @@ export async function refresh(
   },
   serverConfig?: {
     environment?: "serverless" | "serveraction";
-    headers?: HeadersObject; // 从 serverless 传入的 headers
   }
 ) {
   const response = new ResponseBuilder(
@@ -316,11 +301,7 @@ export async function refresh(
   );
 
   // 速率控制
-  const requestHeaders =
-    serverConfig?.environment === "serverless" && serverConfig?.headers
-      ? serverConfig.headers
-      : await headers();
-  if (!(await limitControl(requestHeaders))) {
+  if (!(await limitControl(await headers()))) {
     return response.tooManyRequests();
   }
 

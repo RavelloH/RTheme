@@ -7,39 +7,15 @@ const limit = 30; // 每分钟允许的请求数
 const useRedis = !!process.env.REDIS_URL;
 const redis = useRedis ? new Redis(process.env.REDIS_URL as string) : null;
 
-// 支持两种 header 格式
-type HeadersObject = 
-  | { get: (key: string) => string | null } // Next.js Request headers 格式
-  | Headers // Web API Headers 格式
-  | Record<string, string | string[] | undefined>; // 普通对象格式
+// 简化后只支持有 get 方法的 Headers 格式
+type HeadersObject = { get: (key: string) => string | null };
 
-// 提取IP地址的通用函数
+// 提取IP地址的函数
 function extractIpAddress(headers: HeadersObject): string {
-  let getHeader: (key: string) => string | null;
-
-  if (headers && typeof headers === 'object') {
-    if ('get' in headers && typeof headers.get === 'function') {
-      // Next.js Request headers 或 Web API Headers
-      const headersWithGet = headers as { get: (key: string) => string | null };
-      getHeader = (key: string) => headersWithGet.get(key);
-    } else {
-      // 普通对象格式
-      getHeader = (key: string) => {
-        const value = (headers as Record<string, string | string[] | undefined>)[key];
-        if (Array.isArray(value)) {
-          return value[0] || null;
-        }
-        return typeof value === 'string' ? value : null;
-      };
-    }
-  } else {
-    getHeader = () => null;
-  }
-
   return (
-    getHeader("x-real-ip") ||
-    getHeader("x-forwarded-for") ||
-    getHeader("x-vercel-proxied-for") ||
+    headers.get("x-real-ip") ||
+    headers.get("x-forwarded-for") ||
+    headers.get("x-vercel-proxied-for") ||
     ""
   );
 }

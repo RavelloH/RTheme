@@ -37,7 +37,6 @@ export async function POST(request: Request) {
       },
       {
         environment: "serverless",
-        headers: request.headers,
       }
     );
   } catch (error) {
