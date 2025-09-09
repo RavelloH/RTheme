@@ -2,13 +2,16 @@
 
 import { validateData } from "@/lib/server/validator";
 import limitControl from "@/lib/server/rateLimit";
-import { LoginUserSchema } from "@repo/shared-types/api/auth";
+import {
+  LoginUserSchema,
+  RegisterUserSchema,
+  RefreshTokenSchema,
+} from "@repo/shared-types/api/auth";
 import prisma from "@/lib/server/prisma";
 import { verifyPassword } from "@/lib/server/password";
 import { jwtTokenSign } from "@/lib/server/jwt";
 import ResponseBuilder from "@/lib/server/response";
 import { cookies, headers } from "next/headers";
-import { RegisterUserSchema } from "@repo/shared-types/api/auth";
 import { hashPassword } from "@/lib/server/password";
 import emailUtils from "@/lib/server/email";
 
@@ -34,7 +37,6 @@ export async function login(
     headers?: HeadersObject; // 从 serverless 传入的 headers
   }
 ) {
-  // 创建响应构建器，根据配置选择环境
   const response = new ResponseBuilder(
     serverConfig?.environment || "serveraction"
   );
@@ -202,7 +204,7 @@ export async function register(
     email,
     password,
     nickname,
-    captcha_token
+    captcha_token,
   }: {
     username: string;
     email: string;
@@ -237,7 +239,7 @@ export async function register(
         email,
         password,
         nickname,
-        captcha_token
+        captcha_token,
       },
       RegisterUserSchema
     );
@@ -293,5 +295,62 @@ export async function register(
         message: "注册失败，请稍后重试",
       },
     });
+  }
+}
+
+export async function refresh(
+  {
+    refresh_token,
+    token_transport,
+  }: {
+    refresh_token?: string;
+    token_transport: "cookie" | "body";
+  },
+  serverConfig?: {
+    environment?: "serverless" | "serveraction";
+    headers?: HeadersObject; // 从 serverless 传入的 headers
+  }
+) {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction"
+  );
+
+  // 速率控制
+  const requestHeaders =
+    serverConfig?.environment === "serverless" && serverConfig?.headers
+      ? serverConfig.headers
+      : await headers();
+  if (!(await limitControl(requestHeaders))) {
+    return response.tooManyRequests();
+  }
+
+  try {
+    const validationResult = validateData(
+      {
+        token_transport,
+        refresh_token,
+      },
+      RefreshTokenSchema
+    );
+
+    if (validationResult instanceof Response) return validationResult;
+
+    const cookieStore = await cookies();
+    const token = refresh_token || cookieStore.get("REFRESH_TOKEN")?.value;
+
+    if (!token) {
+      return response.unauthorized()
+    }
+
+    return response.ok(
+      {
+        data: {
+          token
+        }
+      }
+    )
+  } catch (error) {
+    console.error("Login error:", error);
+    return response.serverError();
   }
 }

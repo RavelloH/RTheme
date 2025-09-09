@@ -39,11 +39,18 @@ export const RegisterUserSchema = z.object({
   captcha_token: z.string().min(1, "验证码不能为空"),
 });
 
+// 用户登录 Schema
 export const LoginUserSchema = z.object({
   username: usernameSchema,
   password: passwordSchema,
   token_transport: z.enum(["cookie", "body"]).default("cookie"),
   captcha_token: z.string().min(1, "验证码不能为空"),
+});
+
+// 令牌刷新 Schema
+export const RefreshTokenSchema = z.object({
+  refresh_token: z.string().optional(),
+  token_transport: z.enum(["cookie", "body"]).default("cookie"),
 });
 
 // =============================================================================
@@ -139,6 +146,7 @@ export const EmailNotVerifiedErrorResponseSchema = createErrorResponseSchema(
 // 自动注册所有schemas到OpenAPI生成器
 registerSchema("RegisterUser", RegisterUserSchema);
 registerSchema("LoginUser", LoginUserSchema);
+registerSchema("RefreshToken", RefreshTokenSchema);
 registerSchema("RegisterSuccessResponse", RegisterSuccessResponseSchema);
 registerSchema("LoginSuccessResponse", LoginSuccessResponseSchema);
 registerSchema("ValidationErrorResponse", ValidationErrorResponseSchema);
@@ -152,6 +160,7 @@ registerSchema("ServerErrorResponse", ServerErrorResponseSchema);
 // 导出推导的 TypeScript 类型
 export type RegisterUser = z.infer<typeof RegisterUserSchema>;
 export type LoginUser = z.infer<typeof LoginUserSchema>;
+export type RefreshToken = z.infer<typeof RefreshTokenSchema>;
 export type RegisterSuccessResponse = z.infer<
   typeof RegisterSuccessResponseSchema
 >;
