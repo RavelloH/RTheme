@@ -5,6 +5,7 @@
 
 import fs from 'fs'
 import path from 'path'
+import { pathToFileURL } from 'url'
 import RLog from 'rlog-js'
 import { type PrismaClient } from '@prisma/client'
 
@@ -22,7 +23,7 @@ async function generateConfigCache() {
   const CACHE_FILE_PATH = path.join(process.cwd(), '.next', 'config-cache.json')
   
   try {
-    rlog.log('正在生成配置缓存文件...')
+    rlog.log('> Generating configuration cache file...')
     
     // 确保 .next 目录存在
     const cacheDir = path.dirname(CACHE_FILE_PATH)
@@ -33,9 +34,9 @@ async function generateConfigCache() {
     // 动态导入 Prisma 客户端以避免初始化问题
     let prisma: PrismaClient
     try {
-      // 使用 file:// URL 格式导入以确保在 Windows 上正确工作
+      // 使用 pathToFileURL 确保跨平台兼容性
       const clientPath = path.join(process.cwd(), 'node_modules', '.prisma', 'client')
-      const clientUrl = `file://${clientPath.replace(/\\/g, '/')}`
+      const clientUrl = pathToFileURL(clientPath).href
       const { PrismaClient } = await import(clientUrl)
       
       prisma = new PrismaClient({
@@ -49,12 +50,12 @@ async function generateConfigCache() {
       // 测试连接
       await prisma.$connect()
     } catch (error) {
-      rlog.warning('Prisma 客户端未初始化，创建空缓存文件')
-      rlog.warning('错误详情:', error)
+      rlog.warning('Prisma client not initialized, creating empty cache file')
+      rlog.warning('Error details:', error)
       const result: Record<string, ConfigItem> = {}
       fs.writeFileSync(CACHE_FILE_PATH, JSON.stringify(result, null, 2), 'utf-8')
-      rlog.log(`配置缓存已生成: ${CACHE_FILE_PATH}`)
-      rlog.log(`缓存了 0 个配置项（Prisma 未就绪）`)
+      rlog.log(`  Configuration cache generated: ${CACHE_FILE_PATH}`)
+      rlog.success(`  Cached 0 configuration items (Prisma not ready)`)
       return
     }
     
@@ -77,27 +78,33 @@ async function generateConfigCache() {
     // 写入缓存文件
     fs.writeFileSync(CACHE_FILE_PATH, JSON.stringify(result, null, 2), 'utf-8')
     
-    rlog.log(`配置缓存已生成: ${CACHE_FILE_PATH}`)
-    rlog.log(`缓存了 ${Object.keys(result).length} 个配置项`)
+    rlog.log(`  Configuration cache generated: ${CACHE_FILE_PATH}`)
+    rlog.success(`  Cached ${Object.keys(result).length} configuration items`)
     
     await prisma.$disconnect()
   } catch (error) {
-    console.error('生成配置缓存失败:', error)
+    console.error('Configuration cache generation failed:', error)
     throw error
   }
 }
 
 async function main() {
-  rlog.log('开始生成配置缓存...')
+  rlog.log('Starting configuration cache generation...')
   
   try {
     await generateConfigCache()
-    rlog.log('配置缓存生成完成')
+    rlog.log('Configuration cache generation completed')
     process.exit(0)
   } catch (error) {
-    console.error('配置缓存生成失败:', error)
+    console.error('Configuration cache generation failed:', error)
     process.exit(1)
   }
 }
 
-main()
+// 导出函数供其他脚本使用
+export { generateConfigCache }
+
+// 只有在直接运行此脚本时才执行
+if (process.argv[1] && (process.argv[1].endsWith('generate-config-cache.ts') || process.argv[1].endsWith('generate-config-cache.js'))) {
+  main()
+}
