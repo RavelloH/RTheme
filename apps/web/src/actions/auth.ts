@@ -279,7 +279,7 @@ export async function register(
     // 生成邮箱验证码
     const emailVerifyCode = emailUtils.generate();
     // 创建用户
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         username,
         email,
@@ -288,6 +288,16 @@ export async function register(
         emailVerifyCode,
       },
     });
+
+    // 赋予第一个注册用户管理员权限
+    if (user.uid === 1) {
+      await prisma.user.update({
+        where: { uid: user.uid },
+        data: {
+          role: "ADMIN",
+        },
+      });
+    }
 
     // TODO: 发送验证邮件
     // TODO: 接入动态config
