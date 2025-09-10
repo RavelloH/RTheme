@@ -7,6 +7,7 @@ import {
   RegisterUserSchema,
   RefreshTokenSchema,
   EmailVerificationSchema,
+  ChangePasswordSchema,
 } from "@repo/shared-types/api/auth";
 import prisma from "@/lib/server/prisma";
 import { verifyPassword } from "@/lib/server/password";
@@ -162,7 +163,7 @@ export async function login(
         httpOnly: true,
         maxAge: expiredAtSeconds,
         sameSite: "strict",
-        path: "/api/auth/refresh",
+        path: "/",
         secure: process.env.NODE_ENV === "production",
       });
       cookieStore.set({
@@ -187,7 +188,7 @@ export async function login(
         customHeaders: new Headers([
           [
             "set-cookie",
-            `REFRESH_TOKEN=${refreshToken}; Path=/api/auth/refresh; HttpOnly; SameSite=Strict; Max-Age=${expiredAtSeconds}${process.env.NODE_ENV === "production" ? "; Secure" : ""}`,
+            `REFRESH_TOKEN=${refreshToken}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${expiredAtSeconds}${process.env.NODE_ENV === "production" ? "; Secure" : ""}`,
           ],
           [
             "set-cookie",
@@ -286,6 +287,7 @@ export async function register(
     });
 
     // TODO: 发送验证邮件
+    // TODO: 接入动态config
 
     return response.ok({
       message: "注册成功，请检查邮箱以验证账户",
@@ -460,7 +462,7 @@ export async function verifyEmail(
     // 从 cookie 或请求体中获取 Access Token
     const cookieStore = await cookies();
     const token = access_token || cookieStore.get("ACCESS_TOKEN")?.value || "";
-    
+
     // 验证 Access Token
     const decoded = jwtTokenVerify(token);
     if (!decoded) {
@@ -518,6 +520,122 @@ export async function verifyEmail(
     }
   } catch (error) {
     console.error("Email verification error:", error);
+    return response.serverError();
+  }
+}
+
+export async function changePassword(
+  {
+    old_password,
+    new_password,
+    access_token,
+  }: {
+    old_password: string;
+    new_password: string;
+    access_token?: string;
+  },
+  serverConfig?: {
+    environment?: "serverless" | "serveraction";
+  }
+) {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction"
+  );
+
+  // 速率控制
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  // 验证输入参数
+  const validationResult = validateData(
+    {
+      old_password,
+      new_password,
+      access_token,
+    },
+    ChangePasswordSchema
+  );
+  if (validationResult instanceof Response) return validationResult;
+
+  try {
+    // 新旧密码不能相同
+    if (old_password === new_password) {
+      return response.badRequest({
+        message: "新密码不能与旧密码相同",
+        error: {
+          code: "PASSWORDS_IDENTICAL",
+          message: "新密码不能与旧密码相同",
+        },
+      });
+    }
+    // 从 cookie 或请求体中获取 Access Token
+    const cookieStore = await cookies();
+    const token = access_token || cookieStore.get("ACCESS_TOKEN")?.value || "";
+    // 验证 Access Token
+    const decoded = jwtTokenVerify(token);
+    if (!decoded) {
+      return response.unauthorized();
+    }
+    const { uid } = decoded;
+    if (!uid) {
+      return response.unauthorized();
+    }
+    // 查找用户
+    const user = await prisma.user.findUnique({
+      where: { uid: uid as number },
+      select: {
+        uid: true,
+        password: true,
+        accounts: true,
+      },
+    });
+    if (!user) {
+      return response.unauthorized();
+    }
+    // 检测是否无密码
+    if (!user.password) {
+      return response.badRequest({
+        message: "未设置密码。如需设置密码，请重置密码",
+        error: {
+          code: "NO_PASSWORD_SET",
+          message: "未设置密码。如需设置密码，请重置密码",
+        },
+      });
+    }
+    // 验证旧密码
+    const isOldPasswordValid = await verifyPassword(
+      user.password,
+      old_password
+    );
+    if (!isOldPasswordValid.isValid) {
+      return response.badRequest({
+        message: "旧密码错误",
+        error: {
+          code: "INVALID_OLD_PASSWORD",
+          message: "旧密码错误",
+        },
+      });
+    }
+    // 哈希新密码
+    const hashedNewPassword = await hashPassword(new_password);
+    // 更新密码
+    await prisma.user.update({
+      where: { uid: user.uid },
+      data: {
+        password: hashedNewPassword,
+      },
+    });
+    // 注销所有会话
+    await prisma.refreshToken.deleteMany({
+      where: { userUid: user.uid },
+    });
+    // 返回成功结果
+    return response.ok({
+      message: "密码修改成功",
+    });
+  } catch (error) {
+    console.error("Change password error:", error);
     return response.serverError();
   }
 }

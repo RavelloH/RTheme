@@ -60,6 +60,13 @@ export const EmailVerificationSchema = z.object({
   access_token: z.string().optional(),
 });
 
+// 更改密码 Schema
+export const ChangePasswordSchema = z.object({
+  old_password: passwordSchema,
+  new_password: passwordSchema,
+  access_token: z.string().optional(),
+});
+
 // =============================================================================
 // Response Schemas
 // =============================================================================
@@ -140,6 +147,30 @@ export const UnauthorizedErrorResponseSchema = createErrorResponseSchema(
   })
 );
 
+// 密码修改成功响应
+export const ChangePasswordSuccessResponseSchema = z.object({
+  success: z.literal(true),
+  message: z.string(),
+  timestamp: z.string().datetime(),
+  requestId: z.string(),
+  data: z.null(),
+});
+
+// 密码修改相关的错误响应
+export const NoPasswordSetErrorResponseSchema = createErrorResponseSchema(
+  z.object({
+    code: z.literal("NO_PASSWORD_SET"),
+    message: z.string(),
+  })
+);
+
+export const InvalidOldPasswordErrorResponseSchema = createErrorResponseSchema(
+  z.object({
+    code: z.literal("INVALID_OLD_PASSWORD"),
+    message: z.string(),
+  })
+);
+
 // 登录成功响应
 export const LoginSuccessResponseSchema = z.object({
   success: z.literal(true),
@@ -186,6 +217,7 @@ registerSchema("RegisterUser", RegisterUserSchema);
 registerSchema("LoginUser", LoginUserSchema);
 registerSchema("RefreshToken", RefreshTokenSchema);
 registerSchema("EmailVerification", EmailVerificationSchema);
+registerSchema("ChangePassword", ChangePasswordSchema);
 
 registerSchema("RegisterSuccessResponse", RegisterSuccessResponseSchema);
 registerSchema("LoginSuccessResponse", LoginSuccessResponseSchema);
@@ -202,6 +234,11 @@ registerSchema("EmailVerifySuccessResponse", EmailVerifySuccessResponseSchema);
 registerSchema("EmailAlreadyVerifiedErrorResponse", EmailAlreadyVerifiedErrorResponseSchema);
 registerSchema("InvalidOrExpiredCodeErrorResponse", InvalidOrExpiredCodeErrorResponseSchema);
 registerSchema("UnauthorizedErrorResponse", UnauthorizedErrorResponseSchema);
+
+// 注册密码修改相关的 schema
+registerSchema("ChangePasswordSuccessResponse", ChangePasswordSuccessResponseSchema);
+registerSchema("NoPasswordSetErrorResponse", NoPasswordSetErrorResponseSchema);
+registerSchema("InvalidOldPasswordErrorResponse", InvalidOldPasswordErrorResponseSchema);
 
 // 导出推导的 TypeScript 类型
 export type RegisterUser = z.infer<typeof RegisterUserSchema>;
@@ -240,4 +277,16 @@ export type InvalidOrExpiredCodeErrorResponse = z.infer<
 >;
 export type UnauthorizedErrorResponse = z.infer<
   typeof UnauthorizedErrorResponseSchema
+>;
+
+// 密码修改相关的类型导出
+export type ChangePassword = z.infer<typeof ChangePasswordSchema>;
+export type ChangePasswordSuccessResponse = z.infer<
+  typeof ChangePasswordSuccessResponseSchema
+>;
+export type NoPasswordSetErrorResponse = z.infer<
+  typeof NoPasswordSetErrorResponseSchema
+>;
+export type InvalidOldPasswordErrorResponse = z.infer<
+  typeof InvalidOldPasswordErrorResponseSchema
 >;
