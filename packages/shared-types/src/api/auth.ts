@@ -57,7 +57,13 @@ export const RefreshTokenSchema = z.object({
 export const EmailVerificationSchema = z.object({
   code: z.string().min(1, "验证码不能为空"),
   captcha_token: z.string().min(1, "验证码不能为空"),
-  access_token: z.string().optional(),
+  email: emailSchema,
+});
+
+// 重发邮箱验证码 Schema
+export const ResendEmailVerificationSchema = z.object({
+  email: emailSchema,
+  captcha_token: z.string().min(1, "验证码不能为空"),
 });
 
 // 更改密码 Schema
@@ -138,6 +144,15 @@ export const EmailVerifySuccessResponseSchema = z.object({
   data: z.null(),
 });
 
+// 重发邮箱验证码成功响应
+export const ResendEmailVerificationSuccessResponseSchema = z.object({
+  success: z.literal(true),
+  message: z.string(),
+  timestamp: z.string().datetime(),
+  requestId: z.string(),
+  data: z.null(),
+});
+
 // 邮箱验证相关的错误响应
 export const EmailAlreadyVerifiedErrorResponseSchema = createErrorResponseSchema(
   z.object({
@@ -156,6 +171,13 @@ export const InvalidOrExpiredCodeErrorResponseSchema = createErrorResponseSchema
 export const UnauthorizedErrorResponseSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("UNAUTHORIZED"),
+    message: z.string(),
+  })
+);
+
+export const UserNotFoundErrorResponseSchema = createErrorResponseSchema(
+  z.object({
+    code: z.literal("USER_NOT_FOUND"),
     message: z.string(),
   })
 );
@@ -269,6 +291,7 @@ registerSchema("RegisterUser", RegisterUserSchema);
 registerSchema("LoginUser", LoginUserSchema);
 registerSchema("RefreshToken", RefreshTokenSchema);
 registerSchema("EmailVerification", EmailVerificationSchema);
+registerSchema("ResendEmailVerification", ResendEmailVerificationSchema);
 registerSchema("ChangePassword", ChangePasswordSchema);
 registerSchema("RequestPasswordReset", RequestPasswordResetSchema);
 registerSchema("ResetPassword", ResetPasswordSchema);
@@ -285,9 +308,11 @@ registerSchema("ServerErrorResponse", ServerErrorResponseSchema);
 
 // 注册邮箱验证相关的 schema
 registerSchema("EmailVerifySuccessResponse", EmailVerifySuccessResponseSchema);
+registerSchema("ResendEmailVerificationSuccessResponse", ResendEmailVerificationSuccessResponseSchema);
 registerSchema("EmailAlreadyVerifiedErrorResponse", EmailAlreadyVerifiedErrorResponseSchema);
 registerSchema("InvalidOrExpiredCodeErrorResponse", InvalidOrExpiredCodeErrorResponseSchema);
 registerSchema("UnauthorizedErrorResponse", UnauthorizedErrorResponseSchema);
+registerSchema("UserNotFoundErrorResponse", UserNotFoundErrorResponseSchema);
 
 // 注册密码修改相关的 schema
 registerSchema("ChangePasswordSuccessResponse", ChangePasswordSuccessResponseSchema);
@@ -330,6 +355,12 @@ export type ServerErrorResponse = z.infer<typeof ServerErrorResponseSchema>;
 export type EmailVerifySuccessResponse = z.infer<
   typeof EmailVerifySuccessResponseSchema
 >;
+export type ResendEmailVerification = z.infer<
+  typeof ResendEmailVerificationSchema
+>;
+export type ResendEmailVerificationSuccessResponse = z.infer<
+  typeof ResendEmailVerificationSuccessResponseSchema
+>;
 export type EmailAlreadyVerifiedErrorResponse = z.infer<
   typeof EmailAlreadyVerifiedErrorResponseSchema
 >;
@@ -338,6 +369,9 @@ export type InvalidOrExpiredCodeErrorResponse = z.infer<
 >;
 export type UnauthorizedErrorResponse = z.infer<
   typeof UnauthorizedErrorResponseSchema
+>;
+export type UserNotFoundErrorResponse = z.infer<
+  typeof UserNotFoundErrorResponseSchema
 >;
 
 // 密码修改相关的类型导出

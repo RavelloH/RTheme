@@ -12,6 +12,74 @@
     }
   ],
   "paths": {
+    "/api/auth/email-verify/resend": {
+      "post": {
+        "summary": "重发邮箱验证码",
+        "description": "重新发送邮箱验证码到用户邮箱，用于邮箱验证",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendEmailVerification"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "验证码发送成功（为安全起见，即使用户不存在也返回成功）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResendEmailVerificationSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误或邮箱已验证",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/EmailAlreadyVerifiedErrorResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "请求过于频繁",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务器内部错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/email/verify": {
       "post": {
         "summary": "邮箱验证",
@@ -774,12 +842,34 @@
             "type": "string",
             "minLength": 1
           },
-          "access_token": {
-            "type": "string"
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
           }
         },
         "required": [
           "code",
+          "captcha_token",
+          "email"
+        ],
+        "additionalProperties": false
+      },
+      "ResendEmailVerification": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "captcha_token": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "email",
           "captcha_token"
         ],
         "additionalProperties": false
@@ -1399,6 +1489,43 @@
         ],
         "additionalProperties": false
       },
+      "ResendEmailVerificationSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              null
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
       "EmailAlreadyVerifiedErrorResponse": {
         "type": "object",
         "properties": {
@@ -1547,6 +1674,63 @@
                 "type": "string",
                 "enum": [
                   "UNAUTHORIZED"
+                ]
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data",
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "UserNotFoundErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              null
+            ]
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "USER_NOT_FOUND"
                 ]
               },
               "message": {

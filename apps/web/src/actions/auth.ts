@@ -7,6 +7,7 @@ import {
   RegisterUserSchema,
   RefreshTokenSchema,
   EmailVerificationSchema,
+  ResendEmailVerificationSchema,
   ChangePasswordSchema,
   RequestPasswordResetSchema,
   ResetPasswordSchema,
@@ -427,11 +428,11 @@ export async function verifyEmail(
   {
     code,
     captcha_token,
-    access_token,
+    email,
   }: {
     code: string;
     captcha_token: string;
-    access_token?: string;
+    email: string;
   },
   serverConfig?: {
     environment?: "serverless" | "serveraction";
@@ -451,7 +452,7 @@ export async function verifyEmail(
     {
       code,
       captcha_token,
-      access_token,
+      email,
     },
     EmailVerificationSchema
   );
@@ -461,23 +462,9 @@ export async function verifyEmail(
   // TODO: 验证验证码
 
   try {
-    // 从 cookie 或请求体中获取 Access Token
-    const cookieStore = await cookies();
-    const token = access_token || cookieStore.get("ACCESS_TOKEN")?.value || "";
-
-    // 验证 Access Token
-    const decoded = jwtTokenVerify(token);
-    if (!decoded) {
-      return response.unauthorized();
-    }
-
-    const { uid } = decoded;
-    if (!uid) {
-      return response.unauthorized();
-    }
-    // 查找用户
+    // 根据邮箱查找用户
     const user = await prisma.user.findUnique({
-      where: { uid: uid as number },
+      where: { email },
       select: {
         uid: true,
         emailVerifyCode: true,
@@ -486,7 +473,13 @@ export async function verifyEmail(
     });
 
     if (!user) {
-      return response.unauthorized();
+      return response.badRequest({
+        message: "邮箱已验证，无需重复验证",
+        error: {
+          code: "EMAIL_ALREADY_VERIFIED",
+          message: "邮箱已验证，无需重复验证",
+        },
+      });
     }
 
     if (user.emailVerified) {
@@ -807,5 +800,91 @@ export async function resetPassword(
   } catch (error) {
     console.error("Reset password error:", error);
     return response.serverError();
+  }
+}
+
+export async function resendEmailVerification(
+  {
+    email,
+    captcha_token,
+  }: {
+    email: string;
+    captcha_token: string;
+  },
+  serverConfig?: {
+    environment?: "serverless" | "serveraction";
+  }
+) {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction"
+  );
+
+  // 速率控制
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  // 验证输入参数
+  const validationResult = validateData(
+    {
+      email,
+      captcha_token,
+    },
+    ResendEmailVerificationSchema
+  );
+  if (validationResult instanceof Response) return validationResult;
+
+  // TODO: 验证验证码
+
+  try {
+    // 查找用户
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        uid: true,
+        email: true,
+        emailVerified: true,
+      },
+    });
+
+    // 防止遍历
+    if (!user) {
+      return response.ok({
+        message: "验证码已重新发送，请检查邮箱",
+      });
+    }
+
+    // 如果邮箱已验证
+    if (user.emailVerified) {
+      return response.ok({
+        message: "验证码已重新发送，请检查邮箱",
+      });
+    }
+
+    // 重新生成邮箱验证码
+    const emailVerifyCode = emailUtils.generate();
+
+    // 更新用户的验证码
+    await prisma.user.update({
+      where: { uid: user.uid },
+      data: {
+        emailVerifyCode,
+      },
+    });
+
+    // TODO: 发送验证邮件
+
+    return response.ok({
+      message: "验证码已重新发送，请检查邮箱",
+    });
+  } catch (error) {
+    console.error("Resend email verification error:", error);
+    return response.serverError({
+      message: "发送失败，请稍后重试",
+      error: {
+        code: "SERVER_ERROR",
+        message: "发送失败，请稍后重试",
+      },
+    });
   }
 }

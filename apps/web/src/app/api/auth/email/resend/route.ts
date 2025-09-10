@@ -1,45 +1,38 @@
 import ResponseBuilder from "@/lib/server/response";
 import { validateRequestJSON } from "@/lib/server/validator";
-import { EmailVerificationSchema } from "@repo/shared-types/api/auth";
-import { verifyEmail } from "@/actions/auth";
+import { ResendEmailVerificationSchema } from "@repo/shared-types/api/auth";
+import { resendEmailVerification } from "@/actions/auth";
 
 const response = new ResponseBuilder("serverless");
 
 /**
  * @openapi
- * /api/auth/email/verify:
+ * /api/auth/email-verify/resend:
  *   post:
- *     summary: 邮箱验证
- *     description: 验证用户邮箱地址
+ *     summary: 重发邮箱验证码
+ *     description: 重新发送邮箱验证码到用户邮箱，用于邮箱验证
  *     tags: [Auth]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/EmailVerification'
+ *             $ref: '#/components/schemas/ResendEmailVerification'
  *     responses:
  *       200:
- *         description: 邮箱验证成功
+ *         description: 验证码发送成功（为安全起见，即使用户不存在也返回成功）
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/EmailVerifySuccessResponse'
+ *               $ref: '#/components/schemas/ResendEmailVerificationSuccessResponse'
  *       400:
- *         description: 请求参数错误或验证码无效
+ *         description: 请求参数错误或邮箱已验证
  *         content:
  *           application/json:
  *             schema:
  *               oneOf:
  *                 - $ref: '#/components/schemas/ValidationErrorResponse'
  *                 - $ref: '#/components/schemas/EmailAlreadyVerifiedErrorResponse'
- *                 - $ref: '#/components/schemas/InvalidOrExpiredCodeErrorResponse'
- *       401:
- *         description: 未授权，Access Token 无效或不存在
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/UnauthorizedErrorResponse'
  *       429:
  *         description: 请求过于频繁
  *         content:
@@ -58,24 +51,23 @@ export async function POST(request: Request) {
     // 验证请求数据
     const validationResult = await validateRequestJSON(
       request,
-      EmailVerificationSchema
+      ResendEmailVerificationSchema
     );
     if (validationResult instanceof Response) return validationResult;
 
-    const { code, captcha_token, email} = validationResult.data!;
+    const { email, captcha_token } = validationResult.data!;
 
-    return await verifyEmail(
+    return await resendEmailVerification(
       {
-        code,
+        email,
         captcha_token,
-        email
       },
       {
         environment: "serverless",
       }
     );
   } catch (error) {
-    console.error("Email verification route error:", error);
+    console.error("Resend email verification route error:", error);
     return response.badGateway();
   }
 }
