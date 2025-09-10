@@ -6,6 +6,7 @@ import {
   LoginUserSchema,
   RegisterUserSchema,
   RefreshTokenSchema,
+  EmailVerificationSchema,
 } from "@repo/shared-types/api/auth";
 import prisma from "@/lib/server/prisma";
 import { verifyPassword } from "@/lib/server/password";
@@ -41,20 +42,22 @@ export async function login(
     return response.tooManyRequests();
   }
 
+  // 验证输入参数
+  const validationResult = validateData(
+    {
+      username,
+      password,
+      token_transport,
+      captcha_token,
+    },
+    LoginUserSchema
+  );
+
+  if (validationResult instanceof Response) return validationResult;
+
+  // TODO: 验证验证码
+
   try {
-    // 验证输入参数
-    const validationResult = validateData(
-      {
-        username,
-        password,
-        token_transport,
-        captcha_token,
-      },
-      LoginUserSchema
-    );
-
-    if (validationResult instanceof Response) return validationResult;
-
     // 检查用户名或邮箱是否已存在
     const user = await prisma.user.findFirst({
       where: {
@@ -182,8 +185,14 @@ export async function login(
       },
       ...(token_transport === "cookie" && {
         customHeaders: new Headers([
-          ["set-cookie", `REFRESH_TOKEN=${refreshToken}; Path=/api/auth/refresh; HttpOnly; SameSite=Strict; Max-Age=${expiredAtSeconds}${process.env.NODE_ENV === "production" ? "; Secure" : ""}`],
-          ["set-cookie", `ACCESS_TOKEN=${accessToken}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${10 * 60}${process.env.NODE_ENV === "production" ? "; Secure" : ""}`]
+          [
+            "set-cookie",
+            `REFRESH_TOKEN=${refreshToken}; Path=/api/auth/refresh; HttpOnly; SameSite=Strict; Max-Age=${expiredAtSeconds}${process.env.NODE_ENV === "production" ? "; Secure" : ""}`,
+          ],
+          [
+            "set-cookie",
+            `ACCESS_TOKEN=${accessToken}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${10 * 60}${process.env.NODE_ENV === "production" ? "; Secure" : ""}`,
+          ],
         ]),
       }),
     });
@@ -227,23 +236,22 @@ export async function register(
     return response.tooManyRequests();
   }
 
+  // 验证输入参数
+  const validationResult = validateData(
+    {
+      username,
+      email,
+      password,
+      nickname,
+      captcha_token,
+    },
+    RegisterUserSchema
+  );
+  if (validationResult instanceof Response) return validationResult;
+
+  // TODO: 验证验证码
+
   try {
-    // 验证输入参数
-    const validationResult = validateData(
-      {
-        username,
-        email,
-        password,
-        nickname,
-        captcha_token,
-      },
-      RegisterUserSchema
-    );
-
-    if (validationResult instanceof Response) return validationResult;
-
-    // TODO: 验证验证码
-
     // 检查用户名或邮箱是否已存在
     const userExists = await prisma.user.findFirst({
       where: {
@@ -315,17 +323,17 @@ export async function refresh(
     return response.tooManyRequests();
   }
 
+  // 验证输入参数
+  const validationResult = validateData(
+    {
+      token_transport,
+      refresh_token,
+    },
+    RefreshTokenSchema
+  );
+  if (validationResult instanceof Response) return validationResult;
+
   try {
-    const validationResult = validateData(
-      {
-        token_transport,
-        refresh_token,
-      },
-      RefreshTokenSchema
-    );
-
-    if (validationResult instanceof Response) return validationResult;
-
     const cookieStore = await cookies();
     const token = refresh_token || cookieStore.get("REFRESH_TOKEN")?.value;
 
@@ -407,6 +415,109 @@ export async function refresh(
     });
   } catch (error) {
     console.error("Login error:", error);
+    return response.serverError();
+  }
+}
+
+export async function verifyEmail(
+  {
+    code,
+    captcha_token,
+    access_token,
+  }: {
+    code: string;
+    captcha_token: string;
+    access_token?: string;
+  },
+  serverConfig?: {
+    environment?: "serverless" | "serveraction";
+  }
+) {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction"
+  );
+
+  // 速率控制
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  // 验证输入参数
+  const validationResult = validateData(
+    {
+      code,
+      captcha_token,
+      access_token,
+    },
+    EmailVerificationSchema
+  );
+
+  if (validationResult instanceof Response) return validationResult;
+
+  // TODO: 验证验证码
+
+  try {
+    // 从 cookie 或请求体中获取 Access Token
+    const cookieStore = await cookies();
+    const token = access_token || cookieStore.get("ACCESS_TOKEN")?.value || "";
+    
+    // 验证 Access Token
+    const decoded = jwtTokenVerify(token);
+    if (!decoded) {
+      return response.unauthorized();
+    }
+
+    const { uid } = decoded;
+    if (!uid) {
+      return response.unauthorized();
+    }
+    // 查找用户
+    const user = await prisma.user.findUnique({
+      where: { uid: uid as number },
+      select: {
+        uid: true,
+        emailVerifyCode: true,
+        emailVerified: true,
+      },
+    });
+
+    if (!user) {
+      return response.unauthorized();
+    }
+
+    if (user.emailVerified) {
+      return response.badRequest({
+        message: "邮箱已验证，无需重复验证",
+        error: {
+          code: "EMAIL_ALREADY_VERIFIED",
+          message: "邮箱已验证，无需重复验证",
+        },
+      });
+    }
+
+    if (emailUtils.verify(code, user.emailVerifyCode || "")) {
+      // 更新用户状态
+      await prisma.user.update({
+        where: { uid: user.uid },
+        data: {
+          emailVerified: true,
+          emailVerifyCode: null,
+        },
+      });
+      return response.ok({
+        message: "邮箱验证成功",
+      });
+    } else {
+      return response.badRequest({
+        message: "验证码无效或已过期",
+        error: {
+          code: "INVALID_OR_EXPIRED_CODE",
+          message: "验证码无效或已过期",
+        },
+      });
+    }
+  } catch (error) {
+    console.error("Email verification error:", error);
     return response.serverError();
   }
 }

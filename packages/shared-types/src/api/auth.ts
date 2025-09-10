@@ -53,6 +53,13 @@ export const RefreshTokenSchema = z.object({
   token_transport: z.enum(["cookie", "body"]).default("cookie"),
 });
 
+// 邮箱验证 Schema
+export const EmailVerificationSchema = z.object({
+  code: z.string().min(1, "验证码不能为空"),
+  captcha_token: z.string().min(1, "验证码不能为空"),
+  access_token: z.string().optional(),
+});
+
 // =============================================================================
 // Response Schemas
 // =============================================================================
@@ -102,6 +109,37 @@ export const ServerErrorResponseSchema = createErrorResponseSchema(
   })
 );
 
+// 邮箱验证成功响应
+export const EmailVerifySuccessResponseSchema = z.object({
+  success: z.literal(true),
+  message: z.string(),
+  timestamp: z.string().datetime(),
+  requestId: z.string(),
+  data: z.null(),
+});
+
+// 邮箱验证相关的错误响应
+export const EmailAlreadyVerifiedErrorResponseSchema = createErrorResponseSchema(
+  z.object({
+    code: z.literal("EMAIL_ALREADY_VERIFIED"),
+    message: z.string(),
+  })
+);
+
+export const InvalidOrExpiredCodeErrorResponseSchema = createErrorResponseSchema(
+  z.object({
+    code: z.literal("INVALID_OR_EXPIRED_CODE"),
+    message: z.string(),
+  })
+);
+
+export const UnauthorizedErrorResponseSchema = createErrorResponseSchema(
+  z.object({
+    code: z.literal("UNAUTHORIZED"),
+    message: z.string(),
+  })
+);
+
 // 登录成功响应
 export const LoginSuccessResponseSchema = z.object({
   success: z.literal(true),
@@ -147,6 +185,8 @@ export const EmailNotVerifiedErrorResponseSchema = createErrorResponseSchema(
 registerSchema("RegisterUser", RegisterUserSchema);
 registerSchema("LoginUser", LoginUserSchema);
 registerSchema("RefreshToken", RefreshTokenSchema);
+registerSchema("EmailVerification", EmailVerificationSchema);
+
 registerSchema("RegisterSuccessResponse", RegisterSuccessResponseSchema);
 registerSchema("LoginSuccessResponse", LoginSuccessResponseSchema);
 registerSchema("ValidationErrorResponse", ValidationErrorResponseSchema);
@@ -157,10 +197,17 @@ registerSchema("EmailNotVerifiedErrorResponse", EmailNotVerifiedErrorResponseSch
 registerSchema("RateLimitErrorResponse", RateLimitErrorResponseSchema);
 registerSchema("ServerErrorResponse", ServerErrorResponseSchema);
 
+// 注册邮箱验证相关的 schema
+registerSchema("EmailVerifySuccessResponse", EmailVerifySuccessResponseSchema);
+registerSchema("EmailAlreadyVerifiedErrorResponse", EmailAlreadyVerifiedErrorResponseSchema);
+registerSchema("InvalidOrExpiredCodeErrorResponse", InvalidOrExpiredCodeErrorResponseSchema);
+registerSchema("UnauthorizedErrorResponse", UnauthorizedErrorResponseSchema);
+
 // 导出推导的 TypeScript 类型
 export type RegisterUser = z.infer<typeof RegisterUserSchema>;
 export type LoginUser = z.infer<typeof LoginUserSchema>;
 export type RefreshToken = z.infer<typeof RefreshTokenSchema>;
+export type EmailVerification = z.infer<typeof EmailVerificationSchema>;
 export type RegisterSuccessResponse = z.infer<
   typeof RegisterSuccessResponseSchema
 >;
@@ -180,3 +227,17 @@ export type RateLimitErrorResponse = z.infer<
   typeof RateLimitErrorResponseSchema
 >;
 export type ServerErrorResponse = z.infer<typeof ServerErrorResponseSchema>;
+
+// 邮箱验证相关的类型导出
+export type EmailVerifySuccessResponse = z.infer<
+  typeof EmailVerifySuccessResponseSchema
+>;
+export type EmailAlreadyVerifiedErrorResponse = z.infer<
+  typeof EmailAlreadyVerifiedErrorResponseSchema
+>;
+export type InvalidOrExpiredCodeErrorResponse = z.infer<
+  typeof InvalidOrExpiredCodeErrorResponseSchema
+>;
+export type UnauthorizedErrorResponse = z.infer<
+  typeof UnauthorizedErrorResponseSchema
+>;
