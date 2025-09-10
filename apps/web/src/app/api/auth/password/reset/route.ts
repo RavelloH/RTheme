@@ -1,46 +1,39 @@
 import ResponseBuilder from "@/lib/server/response";
 import { validateRequestJSON } from "@/lib/server/validator";
-import { ChangePasswordSchema } from "@repo/shared-types/api/auth";
-import { changePassword } from "@/actions/auth";
+import { ResetPasswordSchema } from "@repo/shared-types/api/auth";
+import { resetPassword } from "@/actions/auth";
 
 const response = new ResponseBuilder("serverless");
 
 /**
  * @openapi
- * /api/auth/password/change:
+ * /api/auth/password/reset:
  *   post:
- *     summary: 修改密码
- *     description: 修改用户密码，需要提供旧密码和access_token验证
+ *     summary: 重置密码
+ *     description: 使用重置码重置用户密码
  *     tags: [Auth]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/ChangePassword'
+ *             $ref: '#/components/schemas/ResetPassword'
  *     responses:
  *       200:
- *         description: 密码修改成功
+ *         description: 密码重置成功
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ChangePasswordSuccessResponse'
+ *               $ref: '#/components/schemas/ResetPasswordSuccessResponse'
  *       400:
- *         description: 请求参数错误或密码验证失败
+ *         description: 请求参数错误或重置码无效
  *         content:
  *           application/json:
  *             schema:
  *               oneOf:
  *                 - $ref: '#/components/schemas/ValidationErrorResponse'
- *                 - $ref: '#/components/schemas/NoPasswordSetErrorResponse'
- *                 - $ref: '#/components/schemas/InvalidOldPasswordErrorResponse'
- *                 - $ref: '#/components/schemas/PasswordsIdenticalErrorResponse'
- *       401:
- *         description: 未授权，Access Token 无效或不存在
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/UnauthorizedErrorResponse'
+ *                 - $ref: '#/components/schemas/InvalidResetCodeErrorResponse'
+ *                 - $ref: '#/components/schemas/ExpiredResetCodeErrorResponse'
  *       429:
  *         description: 请求过于频繁
  *         content:
@@ -59,24 +52,24 @@ export async function POST(request: Request) {
     // 验证请求数据
     const validationResult = await validateRequestJSON(
       request,
-      ChangePasswordSchema
+      ResetPasswordSchema
     );
     if (validationResult instanceof Response) return validationResult;
 
-    const { old_password, new_password, access_token } = validationResult.data!;
+    const { code, new_password, captcha_token } = validationResult.data!;
 
-    return await changePassword(
+    return await resetPassword(
       {
-        old_password,
+        code,
         new_password,
-        access_token,
+        captcha_token,
       },
       {
         environment: "serverless",
       }
     );
   } catch (error) {
-    console.error("Change password route error:", error);
+    console.error("Reset password route error:", error);
     return response.badGateway();
   }
 }

@@ -67,6 +67,19 @@ export const ChangePasswordSchema = z.object({
   access_token: z.string().optional(),
 });
 
+// 请求重置密码 Schema
+export const RequestPasswordResetSchema = z.object({
+  email: emailSchema,
+  captcha_token: z.string().min(1, "验证码不能为空"),
+});
+
+// 重置密码 Schema
+export const ResetPasswordSchema = z.object({
+  code: z.string().min(1, "验证码不能为空"),
+  new_password: passwordSchema,
+  captcha_token: z.string().min(1, "验证码不能为空"),
+});
+
 // =============================================================================
 // Response Schemas
 // =============================================================================
@@ -171,6 +184,45 @@ export const InvalidOldPasswordErrorResponseSchema = createErrorResponseSchema(
   })
 );
 
+export const PasswordsIdenticalErrorResponseSchema = createErrorResponseSchema(
+  z.object({
+    code: z.literal("PASSWORDS_IDENTICAL"),
+    message: z.string(),
+  })
+);
+
+// 密码重置成功响应
+export const PasswordResetRequestSuccessResponseSchema = z.object({
+  success: z.literal(true),
+  message: z.string(),
+  timestamp: z.string().datetime(),
+  requestId: z.string(),
+  data: z.null(),
+});
+
+export const ResetPasswordSuccessResponseSchema = z.object({
+  success: z.literal(true),
+  message: z.string(),
+  timestamp: z.string().datetime(),
+  requestId: z.string(),
+  data: z.null(),
+});
+
+// 密码重置相关的错误响应
+export const InvalidResetCodeErrorResponseSchema = createErrorResponseSchema(
+  z.object({
+    code: z.literal("INVALID_RESET_CODE"),
+    message: z.string(),
+  })
+);
+
+export const ExpiredResetCodeErrorResponseSchema = createErrorResponseSchema(
+  z.object({
+    code: z.literal("EXPIRED_RESET_CODE"),
+    message: z.string(),
+  })
+);
+
 // 登录成功响应
 export const LoginSuccessResponseSchema = z.object({
   success: z.literal(true),
@@ -218,6 +270,8 @@ registerSchema("LoginUser", LoginUserSchema);
 registerSchema("RefreshToken", RefreshTokenSchema);
 registerSchema("EmailVerification", EmailVerificationSchema);
 registerSchema("ChangePassword", ChangePasswordSchema);
+registerSchema("RequestPasswordReset", RequestPasswordResetSchema);
+registerSchema("ResetPassword", ResetPasswordSchema);
 
 registerSchema("RegisterSuccessResponse", RegisterSuccessResponseSchema);
 registerSchema("LoginSuccessResponse", LoginSuccessResponseSchema);
@@ -239,6 +293,13 @@ registerSchema("UnauthorizedErrorResponse", UnauthorizedErrorResponseSchema);
 registerSchema("ChangePasswordSuccessResponse", ChangePasswordSuccessResponseSchema);
 registerSchema("NoPasswordSetErrorResponse", NoPasswordSetErrorResponseSchema);
 registerSchema("InvalidOldPasswordErrorResponse", InvalidOldPasswordErrorResponseSchema);
+registerSchema("PasswordsIdenticalErrorResponse", PasswordsIdenticalErrorResponseSchema);
+
+// 注册密码重置相关的 schema
+registerSchema("PasswordResetRequestSuccessResponse", PasswordResetRequestSuccessResponseSchema);
+registerSchema("ResetPasswordSuccessResponse", ResetPasswordSuccessResponseSchema);
+registerSchema("InvalidResetCodeErrorResponse", InvalidResetCodeErrorResponseSchema);
+registerSchema("ExpiredResetCodeErrorResponse", ExpiredResetCodeErrorResponseSchema);
 
 // 导出推导的 TypeScript 类型
 export type RegisterUser = z.infer<typeof RegisterUserSchema>;
@@ -289,4 +350,23 @@ export type NoPasswordSetErrorResponse = z.infer<
 >;
 export type InvalidOldPasswordErrorResponse = z.infer<
   typeof InvalidOldPasswordErrorResponseSchema
+>;
+
+// 密码重置相关的类型导出
+export type RequestPasswordReset = z.infer<typeof RequestPasswordResetSchema>;
+export type ResetPassword = z.infer<typeof ResetPasswordSchema>;
+export type PasswordResetRequestSuccessResponse = z.infer<
+  typeof PasswordResetRequestSuccessResponseSchema
+>;
+export type ResetPasswordSuccessResponse = z.infer<
+  typeof ResetPasswordSuccessResponseSchema
+>;
+export type PasswordsIdenticalErrorResponse = z.infer<
+  typeof PasswordsIdenticalErrorResponseSchema
+>;
+export type InvalidResetCodeErrorResponse = z.infer<
+  typeof InvalidResetCodeErrorResponseSchema
+>;
+export type ExpiredResetCodeErrorResponse = z.infer<
+  typeof ExpiredResetCodeErrorResponseSchema
 >;

@@ -8,6 +8,8 @@ import {
   RefreshTokenSchema,
   EmailVerificationSchema,
   ChangePasswordSchema,
+  RequestPasswordResetSchema,
+  ResetPasswordSchema,
 } from "@repo/shared-types/api/auth";
 import prisma from "@/lib/server/prisma";
 import { verifyPassword } from "@/lib/server/password";
@@ -636,6 +638,174 @@ export async function changePassword(
     });
   } catch (error) {
     console.error("Change password error:", error);
+    return response.serverError();
+  }
+}
+
+export async function requestPasswordReset(
+  {
+    email,
+    captcha_token,
+  }: {
+    email: string;
+    captcha_token: string;
+  },
+  serverConfig?: {
+    environment?: "serverless" | "serveraction";
+  }
+) {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction"
+  );
+  // 速率控制
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+  // 验证输入参数
+  const validationResult = validateData(
+    {
+      email,
+      captcha_token,
+    },
+    RequestPasswordResetSchema
+  );
+  if (validationResult instanceof Response) return validationResult;
+
+  // TODO: 验证验证码
+
+  try {
+    // 查找用户
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        uid: true,
+        email: true,
+      },
+    });
+    if (!user) {
+      return response.ok({
+        message: "已发送重置密码链接，链接15分钟内有效",
+      });
+    } else {
+      // 添加到密码重置表
+      const passwordReset = await prisma.passwordReset.create({
+        data: {
+          userUid: user.uid,
+        },
+      });
+      const passwordResetCode = passwordReset.id;
+      // TODO：发送重置邮件
+      // TODO: 根据站点有无设置email确定是否过期
+      // const resetLink = `/reset-password?code=${passwordResetCode}`;
+      // 清理15分钟之前的请求
+      after(async () => {
+        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+        await prisma.passwordReset.deleteMany({
+          where: {
+            createdAt: { lt: fifteenMinutesAgo },
+          },
+        });
+      });
+      // 返回成功结果
+      return response.ok({
+        message: "已发送重置密码链接，链接15分钟内有效",
+      });
+    }
+  } catch (error) {
+    console.error("Request password reset error:", error);
+    return response.serverError();
+  }
+}
+
+export async function resetPassword(
+  {
+    code,
+    new_password,
+    captcha_token,
+  }: {
+    code: string;
+    new_password: string;
+    captcha_token: string;
+  },
+  serverConfig?: {
+    environment?: "serverless" | "serveraction";
+  }
+) {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction"
+  );
+
+  // 速率控制
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  // 验证输入参数
+  const validationResult = validateData(
+    {
+      code,
+      new_password,
+      captcha_token,
+    },
+    ResetPasswordSchema
+  );
+  if (validationResult instanceof Response) return validationResult;
+
+  // TODO: 验证验证码
+
+  try {
+    // 查找密码重置请求
+    const passwordReset = await prisma.passwordReset.findUnique({
+      where: { id: code },
+      select: {
+        id: true,
+        userUid: true,
+        createdAt: true,
+      },
+    });
+    if (!passwordReset) {
+      return response.badRequest({
+        message: "无效的重置码",
+        error: {
+          code: "INVALID_RESET_CODE",
+          message: "无效的重置码",
+        },
+      });
+    }
+    // 检查是否过期（15分钟内有效）
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+    if (passwordReset.createdAt < fifteenMinutesAgo) {
+      return response.badRequest({
+        message: "重置码已过期",
+        error: {
+          code: "EXPIRED_RESET_CODE",
+          message: "重置码已过期",
+        },
+      });
+    }
+    // 更改密码
+    const hashedNewPassword = await hashPassword(new_password);
+    await prisma.user.update({
+      where: { uid: passwordReset.userUid },
+      data: {
+        password: hashedNewPassword,
+      },
+    });
+
+    // 删除重置请求
+    await prisma.passwordReset.delete({
+      where: { id: passwordReset.id },
+    });
+    // 注销所有会话
+    await prisma.refreshToken.deleteMany({
+      where: { userUid: passwordReset.userUid },
+    });
+    // 返回成功结果
+    return response.ok({
+      message: "密码重置成功",
+    });
+  } catch (error) {
+    console.error("Reset password error:", error);
     return response.serverError();
   }
 }

@@ -93,6 +93,15 @@ model RefreshToken {
   @@index([expiresAt])
 }
 
+// 密码重置
+model PasswordReset {
+  id        String   @id @default(uuid())
+  userUid   Int
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 model Post {
   id            String     @id @default(uuid())
   title         String
