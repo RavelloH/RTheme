@@ -11,7 +11,7 @@ export interface ConfigItem {
 }
 
 // 缓存文件路径
-const CACHE_FILE_PATH = path.join(process.cwd(), '.next', 'config-cache.json')
+const CACHE_FILE_PATH = path.join(process.cwd(), '.config-cache.json')
 
 /**
  * 获取配置项
