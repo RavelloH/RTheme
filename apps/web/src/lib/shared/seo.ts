@@ -33,16 +33,8 @@ export const defaultMetadata: Metadata = {
   },
   alternates: {
     canonical: "/",
-    languages: {
-      "zh-CN": "/",
-      "en-US": "/en",
-    },
     types: {
       "application/rss+xml": "/rss.xml",
-      "application/atom+xml": "/atom.xml",
-    },
-    media: {
-      "only screen and (max-width: 600px)": "/mobile",
     },
   },
   robots: {
@@ -58,6 +50,7 @@ export const defaultMetadata: Metadata = {
       "max-snippet": -1,
     },
   },
+  // TODO
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon-16x16.png",
@@ -71,7 +64,6 @@ export const defaultMetadata: Metadata = {
   openGraph: {
     type: "website",
     locale: DEFAULT_LOCALE,
-    alternateLocale: ["en-US"],
     title: {
       template: "%s | " + DEFAULT_TITLE,
       default: DEFAULT_TITLE,
@@ -162,7 +154,6 @@ const seoConfigMap = {
   keywords: "site.seo.keywords",
   author: "site.author",
   themeColor: "site.theme_color",
-  locale: "site.seo.locale",
   twitterSite: "site.seo.twitter_site",
   twitterCreator: "site.seo.twitter_creator",
   googleVerification: "site.seo.google_verification",
@@ -184,35 +175,34 @@ export async function generateMetadata(
   );
 
   // 动态获取的值
-  const dynamicUrl = configValues[seoConfigMap.metadataBase] as string;
-  const dynamicTitle = configValues[seoConfigMap.title] as string;
-  const dynamicDescription = configValues[seoConfigMap.description] as string;
-  const dynamicAppName = configValues[seoConfigMap.applicationName] as string;
-  const dynamicKeywords = configValues[seoConfigMap.keywords] as string;
-  const dynamicAuthor = configValues[seoConfigMap.author] as string;
-  const dynamicThemeColor = configValues[seoConfigMap.themeColor] as string;
-  const dynamicLocale = configValues[seoConfigMap.locale] as string;
-  const dynamicTwitterSite = configValues[seoConfigMap.twitterSite] as string;
-  const dynamicTwitterCreator = configValues[seoConfigMap.twitterCreator] as string;
-  const dynamicGoogleVerification = configValues[seoConfigMap.googleVerification] as string;
-  const dynamicCategory = configValues[seoConfigMap.category] as string;
-  const dynamicCountry = configValues[seoConfigMap.country] as string;
+  const dynamicUrl = typeof configValues[seoConfigMap.metadataBase] === 'string' ? configValues[seoConfigMap.metadataBase] : "";
+  const dynamicTitle = typeof configValues[seoConfigMap.title] === 'string' ? configValues[seoConfigMap.title] : "";
+  const dynamicDescription = typeof configValues[seoConfigMap.description] === 'string' ? configValues[seoConfigMap.description] : "";
+  const dynamicAppName = typeof configValues[seoConfigMap.applicationName] === 'string' ? configValues[seoConfigMap.applicationName] : "";
+  const dynamicKeywords = typeof configValues[seoConfigMap.keywords] === 'string' ? configValues[seoConfigMap.keywords] : "";
+  const dynamicAuthor = typeof configValues[seoConfigMap.author] === 'string' ? configValues[seoConfigMap.author] : "";
+  const dynamicThemeColor = typeof configValues[seoConfigMap.themeColor] === 'string' ? configValues[seoConfigMap.themeColor] : "";
+  const dynamicTwitterSite = typeof configValues[seoConfigMap.twitterSite] === 'string' ? configValues[seoConfigMap.twitterSite] : "";
+  const dynamicTwitterCreator = typeof configValues[seoConfigMap.twitterCreator] === 'string' ? configValues[seoConfigMap.twitterCreator] : "";
+  const dynamicGoogleVerification = typeof configValues[seoConfigMap.googleVerification] === 'string' ? configValues[seoConfigMap.googleVerification] : "";
+  const dynamicCategory = typeof configValues[seoConfigMap.category] === 'string' ? configValues[seoConfigMap.category] : "";
+  const dynamicCountry = typeof configValues[seoConfigMap.country] === 'string' ? configValues[seoConfigMap.country] : "";
 
   // 构建最终的metadata
   const dynamicMetadata: Metadata = {
-    metadataBase: dynamicUrl ? new URL(dynamicUrl) : defaultMetadata.metadataBase,
+    metadataBase: typeof dynamicUrl === 'string' && dynamicUrl ? new URL(dynamicUrl) : defaultMetadata.metadataBase,
     title: {
-      template: `%s | ${dynamicTitle || DEFAULT_TITLE}`,
-      default: dynamicTitle || DEFAULT_TITLE,
+      template: `%s | ${typeof dynamicTitle === 'string' ? dynamicTitle : DEFAULT_TITLE}`,
+      default: typeof dynamicTitle === 'string' ? dynamicTitle : DEFAULT_TITLE,
     },
-    description: dynamicDescription || defaultMetadata.description,
-    applicationName: dynamicAppName || defaultMetadata.applicationName,
+    description: typeof dynamicDescription === 'string' ? dynamicDescription : defaultMetadata.description,
+    applicationName: typeof dynamicAppName === 'string' ? dynamicAppName : defaultMetadata.applicationName,
     generator: defaultMetadata.generator,
     referrer: defaultMetadata.referrer,
-    authors: [{ name: dynamicAuthor || DEFAULT_AUTHOR }],
-    creator: dynamicAuthor || DEFAULT_AUTHOR,
-    publisher: dynamicAuthor || DEFAULT_AUTHOR,
-    category: dynamicCategory || defaultMetadata.category,
+    authors: [{ name: typeof dynamicAuthor === 'string' ? dynamicAuthor : DEFAULT_AUTHOR }],
+    creator: typeof dynamicAuthor === 'string' ? dynamicAuthor : DEFAULT_AUTHOR,
+    publisher: typeof dynamicAuthor === 'string' ? dynamicAuthor : DEFAULT_AUTHOR,
+    category: typeof dynamicCategory === 'string' ? dynamicCategory : defaultMetadata.category,
     classification: defaultMetadata.classification,
     formatDetection: defaultMetadata.formatDetection,
     alternates: {
@@ -225,38 +215,39 @@ export async function generateMetadata(
     openGraph: {
       ...defaultMetadata.openGraph,
       title: {
-        template: `%s | ${dynamicTitle || DEFAULT_TITLE}`,
-        default: dynamicTitle || DEFAULT_TITLE,
+        template: `%s | ${typeof dynamicTitle === 'string' ? dynamicTitle : DEFAULT_TITLE}`,
+        default: typeof dynamicTitle === 'string' ? dynamicTitle : DEFAULT_TITLE,
       },
-      description: dynamicDescription || DEFAULT_DESCRIPTION,
-      siteName: dynamicAppName || dynamicTitle || DEFAULT_TITLE,
-      url: dynamicUrl || DEFAULT_URL,
-      locale: (dynamicLocale || DEFAULT_LOCALE) as "zh-CN" | "en-US",
-      countryName: dynamicCountry || defaultMetadata.openGraph?.countryName,
+      description: typeof dynamicDescription === 'string' ? dynamicDescription : DEFAULT_DESCRIPTION,
+      siteName: typeof dynamicAppName === 'string' ? dynamicAppName : typeof dynamicTitle === 'string' ? dynamicTitle : DEFAULT_TITLE,
+      url: typeof dynamicUrl === 'string' ? dynamicUrl : DEFAULT_URL,
+      countryName: typeof dynamicCountry === 'string' ? dynamicCountry : defaultMetadata.openGraph?.countryName,
     },
     twitter: {
       ...defaultMetadata.twitter,
-      site: dynamicTwitterSite || defaultMetadata.twitter?.site,
-      creator: dynamicTwitterCreator || defaultMetadata.twitter?.creator,
+      site: typeof dynamicTwitterSite === 'string' ? dynamicTwitterSite : defaultMetadata.twitter?.site,
+      creator: typeof dynamicTwitterCreator === 'string' ? dynamicTwitterCreator : defaultMetadata.twitter?.creator,
       title: {
-        template: `%s | ${dynamicTitle || DEFAULT_TITLE}`,
-        default: dynamicTitle || DEFAULT_TITLE,
+        template: `%s | ${typeof dynamicTitle === 'string' ? dynamicTitle : DEFAULT_TITLE}`,
+        default: typeof dynamicTitle === 'string' ? dynamicTitle : DEFAULT_TITLE,
       },
-      description: dynamicDescription || DEFAULT_DESCRIPTION,
+      description: typeof dynamicDescription === 'string' ? dynamicDescription : DEFAULT_DESCRIPTION,
     },
     verification: {
       ...defaultMetadata.verification,
-      google: dynamicGoogleVerification || defaultMetadata.verification?.google,
+      google: typeof dynamicGoogleVerification === 'string' ? dynamicGoogleVerification : defaultMetadata.verification?.google,
     },
-    keywords: dynamicKeywords
-      ? dynamicKeywords.split(",").map((k) => k.trim())
+    keywords: dynamicKeywords && dynamicKeywords !== ""
+      ? Array.isArray(dynamicKeywords) 
+        ? dynamicKeywords 
+        : (dynamicKeywords as string).split(",").map((k: string) => k.trim())
       : defaultMetadata.keywords,
     other: {
-      "theme-color": dynamicThemeColor || DEFAULT_THEME_COLOR,
-      "msapplication-TileColor": dynamicThemeColor || DEFAULT_THEME_COLOR,
+      "theme-color": typeof dynamicThemeColor === 'string' ? dynamicThemeColor : DEFAULT_THEME_COLOR,
+      "msapplication-TileColor": typeof dynamicThemeColor === 'string' ? dynamicThemeColor : DEFAULT_THEME_COLOR,
       "msapplication-config": "/browserconfig.xml",
-      "apple-mobile-web-app-title": dynamicAppName || dynamicTitle || DEFAULT_TITLE,
-      "application-name": dynamicAppName || dynamicTitle || DEFAULT_TITLE,
+      "apple-mobile-web-app-title": typeof dynamicAppName === 'string' ? dynamicAppName : typeof dynamicTitle === 'string' ? dynamicTitle : DEFAULT_TITLE,
+      "application-name": typeof dynamicAppName === 'string' ? dynamicAppName : typeof dynamicTitle === 'string' ? dynamicTitle : DEFAULT_TITLE,
       "mobile-web-app-capable": "yes",
     },
   };

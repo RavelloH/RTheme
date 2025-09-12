@@ -4,109 +4,110 @@
  */
 
 // Prisma Json 类型定义
-type JsonValue = string | number | boolean | null | JsonObject | JsonArray
-type JsonObject = { [key: string]: JsonValue }
-type JsonArray = JsonValue[]
+type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
+type JsonObject = { [key: string]: JsonValue };
+type JsonArray = JsonValue[];
 
 export interface DefaultConfig {
-  key: string
-  value: JsonValue
-  description?: string
+  key: string;
+  value: JsonValue;
+  description?: string;
 }
 
 // 网站基础配置
 export const defaultConfigs: DefaultConfig[] = [
+  // =====================================
+  // 网站基础配置
+  // =====================================
   {
-    key: 'site.title',
-    value: 'NeutralPress',
-    description: '网站标题'
+    key: "site.title",
+    value: "NeutralPress",
+    description: "网站标题",
   },
   {
-    key: 'site.seo.description', 
-    value: '一个现代化的内容管理系统',
-    description: '网站SEO描述'
+    key: "site.url",
+    value: "https://example.com",
+    description: "网站主域名地址",
   },
   {
-    key: 'site.seo.keywords',
-    value: ['CMS', 'Blog', 'NeutralPress'],
-    description: '网站SEO关键词'
+    key: "site.author",
+    value: "RavelloH",
+    description: "网站作者或团队名称",
   },
   {
-    key: 'site.logo',
-    value: '/icon',
-    description: '网站Logo路径'
+    key: "site.theme_color",
+    value: "#000000",
+    description: "网站主题颜色，影响浏览器UI",
+  },
+  // =====================================
+  // 网站SEO配置
+  // =====================================
+  {
+    key: "site.seo.description",
+    value: "一个现代化的内容管理系统",
+    description: "网站默认SEO描述",
   },
   {
-    key: 'site.favicon',
-    value: '/favicon.ico', 
-    description: '网站图标路径'
+    key: "site.seo.keywords",
+    value: ["CMS", "Blog", "NeutralPress"],
+    description: "网站SEO关键词",
   },
   {
-    key: 'user.registration.enabled',
+    key: "site.seo.category",
+    value: "Technology",
+    description: "网站分类，用于SEO优化（可留空）",
+  },
+  {
+    key: "site.seo.country",
+    value: "China",
+    description: "网站所属国家，用于SEO优化（可留空）",
+  },
+
+  {
+    key: "site.seo.twitter_site",
+    value: "@neutralpress",
+    description: "官方Twitter账号（不带@符号，可留空）",
+  },
+  {
+    key: "site.seo.twitter_creator",
+    value: "@neutralpress",
+    description: "内容创建者Twitter账号（不带@符号，可留空）",
+  },
+  {
+    key: "site.seo.google_verification",
+    value: "",
+    description: "Google Search Console网站验证码（可留空）",
+  },
+  // =====================================
+  // 用户相关配置
+  // =====================================
+  {
+    key: "user.registration.enabled",
     value: true,
-    description: '是否允许用户注册'
+    description: "是否允许用户注册",
   },
   {
-    key: 'user.email.verification.required',
+    key: "user.email.verification.required",
     value: true,
-    description: '是否需要邮箱验证'
+    description: "是否需要邮箱验证",
   },
+  // =====================================
+  // 内容相关配置
+  // =====================================
   {
-    key: 'content.comments.enabled',
+    key: "content.comments.enabled",
     value: true,
-    description: '是否启用评论功能'
+    description: "是否启用评论功能",
   },
+  // =====================================
+  // 媒体相关配置
+  // =====================================
   {
-    key: 'media.upload.allowed_types',
-    value: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-    description: '允许上传的媒体文件类型'
+    key: "media.upload.allowed_types",
+    value: ["image/jpeg", "image/png", "image/gif", "image/webp"],
+    description: "允许上传的媒体文件类型",
   },
-  {
-    key: 'site.seo.category',
-    value: 'Technology',
-    description: '网站分类，用于SEO优化'
-  },
-  {
-    key: 'site.seo.country',
-    value: 'China',
-    description: '网站所属国家，用于SEO优化'
-  },
-  {
-    key: 'site.url',
-    value: 'https://example.com',
-    description: '网站主域名地址'
-  },
-  {
-    key: 'site.author',
-    value: 'NeutralPress Team',
-    description: '网站作者或团队名称'
-  },
-  {
-    key: 'site.theme_color',
-    value: '#000000',
-    description: '网站主题颜色，影响浏览器UI'
-  },
-  {
-    key: 'site.seo.locale',
-    value: 'zh-CN',
-    description: '网站默认语言设置'
-  },
-  {
-    key: 'site.seo.twitter_site',
-    value: '@neutralpress',
-    description: '官方Twitter账号（不带@符号）'
-  },
-  {
-    key: 'site.seo.twitter_creator',
-    value: '@neutralpress',
-    description: '内容创建者Twitter账号（不带@符号）'
-  },
-  {
-    key: 'site.seo.google_verification',
-    value: '',
-    description: 'Google Search Console网站验证码'
-  }
-]
+];
 
 // 其他默认数据可以在这里添加，例如：
 // export const defaultCategories = [...]
