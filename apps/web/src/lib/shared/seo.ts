@@ -6,9 +6,9 @@ import { getConfig } from "@/lib/server/configCache";
 const DEFAULT_URL = "https://example.com";
 const DEFAULT_TITLE = "NeutralPress";
 const DEFAULT_DESCRIPTION = "现代化的内容管理系统";
-const DEFAULT_AUTHOR = "NeutralPress Team";
+const DEFAULT_AUTHOR = "RavelloH";
 const DEFAULT_LOCALE = "zh-CN";
-const DEFAULT_THEME_COLOR = "#000000";
+const DEFAULT_THEME_COLOR = "#2dd4bf";
 
 // 默认SEO配置
 export const defaultMetadata: Metadata = {
@@ -252,8 +252,39 @@ export async function generateMetadata(
     },
   };
 
+  // 处理页面级别的标题覆盖
+  const processedOverrides = { ...overrides };
+  
+  // 如果覆盖参数中包含标题，确保使用模板格式
+  if (overrides.title) {
+    const siteTitle = typeof dynamicTitle === 'string' ? dynamicTitle : DEFAULT_TITLE;
+    
+    if (typeof overrides.title === 'string') {
+      // 如果是字符串标题，应用模板格式
+      processedOverrides.title = `${overrides.title} | ${siteTitle}`;
+    } else if (overrides.title && typeof overrides.title === 'object') {
+      // 如果是对象格式，处理模板和默认值
+      const titleObj = overrides.title as Record<string, unknown>;
+      const newTitle: Record<string, unknown> = {};
+      
+      if ('template' in titleObj && titleObj.template) {
+        newTitle.template = titleObj.template;
+      }
+      if ('default' in titleObj && titleObj.default) {
+        newTitle.default = `${titleObj.default} | ${siteTitle}`;
+      }
+      if ('absolute' in titleObj) {
+        newTitle.absolute = titleObj.absolute;
+      }
+      
+      if (Object.keys(newTitle).length > 0) {
+        processedOverrides.title = newTitle as Metadata['title'];
+      }
+    }
+  }
+
   return {
     ...dynamicMetadata,
-    ...overrides, // 允许页面级别的覆盖
+    ...processedOverrides, // 允许页面级别的覆盖
   };
 }
