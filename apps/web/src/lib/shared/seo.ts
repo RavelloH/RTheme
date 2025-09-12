@@ -163,7 +163,8 @@ const seoConfigMap = {
 
 // 生成动态SEO配置的异步函数
 export async function generateMetadata(
-  overrides: Partial<Metadata> = {}
+  overrides: Partial<Metadata> = {},
+  options?: { pathname?: string }
 ): Promise<Metadata> {
   // 批量获取所有需要的配置
   const configKeys = Object.values(seoConfigMap);
@@ -207,7 +208,7 @@ export async function generateMetadata(
     formatDetection: defaultMetadata.formatDetection,
     alternates: {
       ...defaultMetadata.alternates,
-      canonical: "/",
+      canonical: options?.pathname || "/",
     },
     robots: defaultMetadata.robots,
     icons: defaultMetadata.icons,
@@ -285,6 +286,6 @@ export async function generateMetadata(
 
   return {
     ...dynamicMetadata,
-    ...processedOverrides, // 允许页面级别的覆盖
+    ...processedOverrides,
   };
 }
