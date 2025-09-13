@@ -1,10 +1,8 @@
-import { generateMetadata } from "@/lib/shared/seo";
+import { ThemeProvider } from "@/components/ThemeProvider";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import "./globals.css";
-
-export const metadata = await generateMetadata({
-  title: "首页",
-  description: "欢迎访问我们的网站",
-});
+import { Header } from "@/components/Header";
+import Footer from "@/components/Footer";
 
 export default function RootLayout({
   children,
@@ -12,8 +10,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh">
-      <body>{children}</body>
+    <html lang="zh-CN" className="h-full" suppressHydrationWarning>
+      <body
+        className="h-full bg-background text-foreground"
+        suppressHydrationWarning
+      >
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <div className="min-h-full flex flex-col">
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </div>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
