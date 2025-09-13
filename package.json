@@ -19,6 +19,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@tailwindcss/language-server": "^0.14.26",
     "next-themes": "^0.4.6"
   }
 }

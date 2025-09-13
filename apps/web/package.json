@@ -16,10 +16,13 @@
     "@prisma/client": "6.15.0",
     "@repo/shared-types": "workspace:*",
     "argon2": "^0.44.0",
+    "autoprefixer": "^10.4.21",
     "dotenv": "^17.2.2",
+    "framer-motion": "^12.23.12",
     "ioredis": "^5.7.0",
     "jsonwebtoken": "^9.0.2",
     "next": "^15.5.2",
+    "postcss": "^8.5.6",
     "prisma": "^6.15.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
@@ -29,6 +32,9 @@
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@tailwindcss/aspect-ratio": "^0.4.2",
+    "@tailwindcss/postcss": "^4.1.13",
+    "@tailwindcss/typography": "^0.5.16",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.3.1",
     "@types/react": "19.1.12",
@@ -37,6 +43,7 @@
     "concurrently": "^9.2.1",
     "cross-env": "^7.0.3",
     "eslint": "^9.35.0",
+    "tailwindcss": "^4.1.13",
     "tsx": "^4.20.5",
     "typescript": "5.9.2"
   }
