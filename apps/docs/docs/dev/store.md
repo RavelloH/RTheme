@@ -19,7 +19,7 @@ NeutralPress 提供了三个基于 Zustand 的状态管理工具，用于处理�
 ### 基础用法
 
 ```typescript
-import { useBroadcast, useBroadcastListener } from '@/hook/useBroadcast';
+import { useBroadcast, useBroadcastListener } from '@/store/useBroadcast';
 
 // 获取广播实例
 const broadcast = useBroadcast<string>();
@@ -45,7 +45,7 @@ console.log('当前回调数量:', broadcast.getCallbackCount());
 使用 `useBroadcastListener` Hook 实现自动清理：
 
 ```typescript
-import { useBroadcast, useBroadcastListener } from '@/hook/useBroadcast';
+import { useBroadcast, useBroadcastListener } from '@/store/useBroadcast';
 
 function MyComponent() {
   const broadcast = useBroadcast<string>();
@@ -105,7 +105,7 @@ userBroadcast.registerCallback(Symbol('user-callback'), (message) => {
 ### 基础用法
 
 ```typescript
-import { useEvent, useEventListener } from '@/hook/useEvent';
+import { useEvent, useEventListener } from '@/store/useEvent';
 
 // 定义事件映射
 interface AppEvents {
@@ -140,7 +140,7 @@ console.log('当前事件:', eventManager.getEventNames());
 使用 `useEventListener` Hook 实现自动清理：
 
 ```typescript
-import { useEvent, useEventListener } from '@/hook/useEvent';
+import { useEvent, useEventListener } from '@/store/useEvent';
 
 function LoginComponent() {
   const eventManager = useEvent<AppEvents>();
@@ -196,7 +196,7 @@ await eventManager.emit('unknown:event', 'data');
 ### 基础用法
 
 ```typescript
-import { useFunction, FunctionNotFoundError, FunctionExecutionError } from '@/hook/useFunction';
+import { useFunction, FunctionNotFoundError, FunctionExecutionError } from '@/store/useFunction';
 
 // 定义函数映射
 interface AppFunctions {
@@ -343,7 +343,7 @@ export interface BroadcastMessages {
 现在使用 React Hooks 自动处理内存清理：
 
 ```typescript
-import { useBroadcastListener, useEventListener } from '@/hook';
+import { useBroadcastListener, useEventListener } from '@/store';
 
 function MyComponent() {
   const broadcast = useBroadcast<BroadcastMessages>();
@@ -366,7 +366,7 @@ function MyComponent() {
 ### 3. 错误处理增强
 
 ```typescript
-import { FunctionNotFoundError, FunctionExecutionError } from '@/hook/useFunction';
+import { FunctionNotFoundError, FunctionExecutionError } from '@/store/useFunction';
 
 async function safeFunctionCall() {
   try {
@@ -390,7 +390,7 @@ async function safeFunctionCall() {
 
 ```typescript
 // stores/index.ts
-import { useBroadcast, useEvent, useFunction } from '@/hook';
+import { useBroadcast, useEvent, useFunction } from '@/store';
 import type { AppEvents, AppFunctions, BroadcastMessages } from '@/types';
 
 export const appBroadcast = useBroadcast<BroadcastMessages>();

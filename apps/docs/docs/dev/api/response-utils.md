@@ -355,8 +355,10 @@ return response.conflict({
 
 ```typescript
 // app/api/auth/register/route.ts
-import response from "@/app/api/_utils/response";
+import ResponseBuilder from "@/lib/server/response";
 import { RegisterUserSchema } from "@repo/shared-types/api/auth";
+
+const response = new ResponseBuilder("serverless");
 
 export async function POST(request: Request) {
   try {
@@ -411,9 +413,11 @@ export async function POST(request: Request) {
 
 ```typescript
 // app/api/users/route.ts
-import response from "@/app/api/_utils/response";
-import { createPaginationMeta, fieldError } from "@/app/api/_utils/response";
+import ResponseBuilder from "@/lib/server/response";
+import { createPaginationMeta, fieldError } from "@/lib/server/response";
 import { getUsersPaginated, createUser, validateUserData } from "@/lib/users";
+
+const response = new ResponseBuilder("serverless");
 
 // 获取用户列表
 export async function GET(request: Request) {

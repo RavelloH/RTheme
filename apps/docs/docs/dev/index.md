@@ -36,9 +36,13 @@ NeutralPress 是一个基于Next.js的CMS系统，旨在结合静态站点生成
 NeutralPress 采用现代化的单体仓库（Monorepo）架构，基于 Turborepo + pnpm workspaces 管理多个相关联的包和应用。
 
 ### 技术栈
-- **前端框架**: Next.js 15 + React 19
-- **数据库**: PostgreSQL + Prisma ORM  
+- **前端框架**: Next.js 15 + React 19 (App Router)
+- **数据库**: PostgreSQL + Prisma ORM v6.15.0
 - **类型系统**: TypeScript 5.9.2 (严格模式)
+- **样式系统**: Tailwind CSS v4 + CSS 变量主题
+- **状态管理**: Zustand + 广播消息系统
+- **动画系统**: Framer Motion
+- **主题管理**: next-themes (明暗模式)
 - **API 验证**: Zod (运行时类型验证)
 - **文档系统**: Docusaurus + OpenAPI 3.0
 - **构建工具**: Turborepo + pnpm workspaces

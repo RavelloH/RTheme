@@ -27,7 +27,7 @@ registerSchema("CreateUserResponse", CreateUserResponseSchema);
 获取所有已注册的schemas（主要供OpenAPI生成器使用）：
 
 ```typescript
-import { getAllRegisteredSchemas } from "@repo/shared-types/api/common";
+import { getAllRegisteredSchemas } from "@repo/shared-types/src/api/common";
 
 const schemas = getAllRegisteredSchemas();
 // 返回: Array<{ name: string, schema: z.ZodTypeAny }>
@@ -279,7 +279,7 @@ registerSchema("UserValidationErrorResponse", UserValidationErrorSchema);
 ### 查看已注册的Schemas
 
 ```typescript
-import { getAllRegisteredSchemas } from "@repo/shared-types/api/common";
+import { getAllRegisteredSchemas } from "@repo/shared-types/src/api/common";
 
 // 在开发环境中查看所有已注册的schemas
 if (process.env.NODE_ENV === 'development') {
