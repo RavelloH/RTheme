@@ -1,5 +1,4 @@
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -21,7 +20,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="min-h-full flex flex-col">
+          <div className="min-h-full flex flex-col overflow-hidden">
             <Header />
             <main className="flex-1">{children}</main>
             <Footer />

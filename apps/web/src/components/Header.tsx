@@ -4,10 +4,11 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu } from "./Menu";
+import { useMenuStore } from "@/store/menuStore";
 
 export function Header() {
   const [title, setTitle] = useState("NeutralPress");
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { isMenuOpen, toggleMenu } = useMenuStore();
 
   useEffect(() => {
     const updateTitle = () => {
@@ -48,7 +49,7 @@ export function Header() {
         <div className="w-[78px] h-full border-l border-border flex items-center justify-center">
           <MenuButton
             isOpen={isMenuOpen}
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            onClick={toggleMenu}
           />
         </div>
       </motion.header>
@@ -70,7 +71,7 @@ export function Header() {
             }}
           >
             <div className="h-full pt-[78px]">
-              <Menu setIsMenuOpen={setIsMenuOpen} />
+              <Menu setIsMenuOpen={(isOpen) => useMenuStore.getState().setMenuOpen(isOpen)} />
             </div>
           </motion.div>
         )}
