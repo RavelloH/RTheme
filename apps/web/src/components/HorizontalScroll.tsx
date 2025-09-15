@@ -13,7 +13,7 @@ interface GSAPHorizontalScrollProps {
   snapToElements?: boolean;
 }
 
-export default function GSAPHorizontalScroll({
+export default function HorizontalScroll({
   children,
   className = "",
   scrollSpeed = 3,

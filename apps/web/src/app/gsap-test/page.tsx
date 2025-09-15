@@ -1,5 +1,5 @@
 import { generateMetadata } from "@/lib/shared/seo";
-import GSAPHorizontalScroll from "@/components/GSAPHorizontalScroll";
+import HorizontalScroll from "@/components/HorizontalScroll";
 import FourAreaGrid, { GridItem } from "@/components/FourAreaGrid";
 
 export const metadata = await generateMetadata(
@@ -16,7 +16,7 @@ export default function GSAPTestPage() {
   return (
     <>
       <div className="h-[calc(100vh-156px)]">
-        <GSAPHorizontalScroll
+        <HorizontalScroll
           className="h-full"
           enableParallax={true}
           enableFadeElements={true}
@@ -328,7 +328,7 @@ export default function GSAPTestPage() {
             </GridItem>
             
           </FourAreaGrid>
-        </GSAPHorizontalScroll>
+        </HorizontalScroll>
       </div>
     </>
   );
