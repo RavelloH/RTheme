@@ -4,6 +4,10 @@ import { join } from "path";
 
 console.log("启动 OpenAPI 文件监控器...");
 
+// 添加启动延迟，避免与 docs 启动冲突
+const startupDelay = 3000; // 3秒延迟
+let isStartupPeriod = true;
+
 // 监控 OpenAPI 文件
 const watcher = chokidar.watch(["openapi.json", "openapi.yaml"], {
   ignored: /(^|[\/\\])\../, // 忽略隐藏文件
@@ -11,11 +15,22 @@ const watcher = chokidar.watch(["openapi.json", "openapi.yaml"], {
   ignoreInitial: true, // 启动时不触发
 });
 
+// 启动结束后启用监控
+setTimeout(() => {
+  isStartupPeriod = false;
+}, startupDelay);
+
 let isProcessing = false;
 let pendingRegeneration = null;
 
 // 防抖函数：延迟执行，避免快速连续触发
 function debounceRegeneration() {
+  // 在启动期间忽略文件变化
+  if (isStartupPeriod) {
+    console.log("⏳ 启动期间，忽略文件变化");
+    return;
+  }
+
   if (pendingRegeneration) {
     clearTimeout(pendingRegeneration);
   }
@@ -95,8 +110,12 @@ watcher
   })
   .on("ready", () => {
     console.log(
-      "👀 OpenAPI 文件监控已启动，监控文件: openapi.json, openapi.yaml",
+      `👀 OpenAPI 文件监控已启动，${startupDelay/1000}秒后开始监控文件: openapi.json, openapi.yaml`,
     );
+    // 延迟启用文件变化监控
+    setTimeout(() => {
+      console.log("🔥 OpenAPI 文件监控已启用");
+    }, startupDelay);
   });
 
 // 处理进程退出
