@@ -16,12 +16,14 @@ interface GSAPHorizontalScrollProps {
 export default function HorizontalScroll({
   children,
   className = "",
-  scrollSpeed = 3,
+  scrollSpeed = 1,
   enableParallax = false,
   enableFadeElements = false,
 }: GSAPHorizontalScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const targetXRef = useRef(0);
+  const animationRef = useRef<gsap.core.Tween | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -29,31 +31,57 @@ export default function HorizontalScroll({
     
     if (!container || !content) return;
 
+    // 初始化位置
+    const initialX = gsap.getProperty(content, "x") as number || 0;
+    targetXRef.current = initialX;
+
     // 存储清理函数
     const cleanupFunctions: (() => void)[] = [];
 
     // 创建 GSAP 上下文
     const ctx = gsap.context(() => {
       
+      // 更新到目标位置的函数
+      const animateToTarget = () => {
+        // 停止当前动画
+        if (animationRef.current) {
+          animationRef.current.kill();
+        }
+        
+        // 获取当前位置
+        const currentX = gsap.getProperty(content, "x") as number;
+        const targetX = targetXRef.current;
+        
+        // 如果已经在目标位置，不需要动画
+        if (Math.abs(targetX - currentX) < 0.1) {
+          return;
+        }
+        
+        // 创建新的GSAP动画，使用惯性ease
+        animationRef.current = gsap.to(content, {
+          x: targetX,
+          duration: 1,
+          ease: "power3.out", // 这个ease模拟真实的惯性感觉
+          overwrite: false,
+        });
+      };
+      
       // 鼠标滚轮控制
       const handleWheel = (e: WheelEvent) => {
         e.preventDefault();
         
-        // 获取当前位置
-        const currentX = gsap.getProperty(content, "x") as number;
+        // 计算滚动增量
         const deltaX = e.deltaY * scrollSpeed;
+        
+        // 更新目标位置
+        const newTargetX = targetXRef.current - deltaX;
         
         // 计算边界
         const maxScrollLeft = -(content.scrollWidth - container.offsetWidth);
-        const newX = Math.max(maxScrollLeft, Math.min(0, currentX - deltaX));
+        targetXRef.current = Math.max(maxScrollLeft, Math.min(0, newTargetX));
         
-        // 使用 GSAP 创建平滑滚动
-        gsap.to(content, {
-          x: newX,
-          duration: 0.8,
-          ease: "power2.out",
-          overwrite: true,
-        });
+        // 触发动画到新的目标位置
+        animateToTarget();
       };
 
       // 如果启用视差效果
@@ -162,6 +190,9 @@ export default function HorizontalScroll({
 
     // 组件卸载时清理
     return () => {
+      if (animationRef.current) {
+        animationRef.current.kill();
+      }
       ctx.revert();
       cleanupFunctions.forEach(cleanup => cleanup());
     };
