@@ -1,14 +1,42 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { gsap } from "gsap";
 import { Menu } from "./Menu";
 import { useMenuStore } from "@/store/menuStore";
 
 export function Header() {
   const [title, setTitle] = useState("NeutralPress");
   const { isMenuOpen, toggleMenu } = useMenuStore();
+  const headerRef = useRef<HTMLElement>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // 监听加载完成事件
+  useEffect(() => {
+    const handleLoadingComplete = () => {
+      setIsLoaded(true);
+      
+      // 使用GSAP动画从上方滑入
+      if (headerRef.current) {
+        gsap.fromTo(headerRef.current, 
+          { y: -78 },
+          { 
+            y: 0, 
+            duration: 0.8, 
+            ease: "power2.out"
+          }
+        );
+      }
+    };
+
+    window.addEventListener('loadingComplete', handleLoadingComplete);
+    
+    return () => {
+      window.removeEventListener('loadingComplete', handleLoadingComplete);
+    };
+  }, []);
 
   useEffect(() => {
     const updateTitle = () => {
@@ -28,10 +56,11 @@ export function Header() {
   return (
     <>
       <motion.header
+        ref={headerRef}
         className="w-full h-[78px] text-foreground bg-background border-y border-border flex relative z-50"
-        initial={false}
+        initial={{ y: -78 }}
         animate={{
-          y: isMenuOpen ? `calc(100vh - 78px)` : 0,
+          y: isMenuOpen ? `calc(100vh - 78px)` : (isLoaded ? 0 : -78),
         }}
         transition={{
           type: "spring",

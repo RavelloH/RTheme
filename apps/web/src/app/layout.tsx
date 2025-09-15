@@ -2,6 +2,8 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
+import { LoadingAnimation } from "@/components/LoadingAnimation";
+import { MainContent } from "@/components/MainContent";
 
 export default function RootLayout({
   children,
@@ -20,9 +22,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <LoadingAnimation />
           <div className="min-h-full flex flex-col overflow-hidden">
             <Header />
-            <main className="flex-1">{children}</main>
+            <MainContent>{children}</MainContent>
             <Footer />
           </div>
         </ThemeProvider>
