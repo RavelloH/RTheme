@@ -29,6 +29,9 @@ export default function HorizontalScroll({
     
     if (!container || !content) return;
 
+    // 存储清理函数
+    const cleanupFunctions: (() => void)[] = [];
+
     // 创建 GSAP 上下文
     const ctx = gsap.context(() => {
       
@@ -72,50 +75,96 @@ export default function HorizontalScroll({
           // 使用 GSAP 的 ticker 来更新视差效果
           gsap.ticker.add(parallaxAnimation);
           
-          // 清理函数中移除 ticker
-          return () => gsap.ticker.remove(parallaxAnimation);
+          // 添加清理函数
+          cleanupFunctions.push(() => gsap.ticker.remove(parallaxAnimation));
         });
       }
 
       // 如果启用淡入效果
       if (enableFadeElements) {
         const fadeElements = content.querySelectorAll("[data-fade]");
+        
+        // 创建一个函数来更新所有淡入元素的状态
+        const updateFadeElements = () => {
+          const containerRect = container.getBoundingClientRect();
+          const containerWidth = containerRect.width;
+          
+          fadeElements.forEach((element) => {
+            // 获取元素在文档中的位置
+            const elementRect = element.getBoundingClientRect();
+            
+            // 计算元素相对于容器视口的位置
+            // elementRect.left 是相对于整个页面的，containerRect.left 也是
+            // 所以 elementRect.left - containerRect.left 得到的是元素相对于容器的位置
+            const elementLeftInContainer = elementRect.left - containerRect.left;
+            const elementCenter = elementLeftInContainer + elementRect.width / 2;
+            
+            // 定义动画范围：从右边界到屏幕右侧80%位置
+            const animationStartX = containerWidth; // 右边界
+            const animationEndX = containerWidth * 0.8;   // 屏幕右侧80%位置
+            
+            // 计算元素中心在动画范围内的进度
+            let animationProgress = 0;
+            
+            if (elementCenter <= animationEndX) {
+              // 元素已经到达或超过屏幕右侧80%位置，完全显示
+              animationProgress = 1;
+            } else if (elementCenter >= animationStartX) {
+              // 元素还在右边界外，不显示
+              animationProgress = 0;
+            } else {
+              // 元素在动画范围内，计算进度
+              const totalDistance = animationStartX - animationEndX;
+              const currentDistance = animationStartX - elementCenter;
+              animationProgress = currentDistance / totalDistance;
+            }
+            
+            // 确保进度在 0-1 范围内
+            animationProgress = Math.max(0, Math.min(1, animationProgress));
+            
+            // 根据动画进度计算透明度和Y偏移
+            const opacity = animationProgress;
+            const yOffset = (1 - animationProgress) * 30; // 从30px偏移到0
+            
+            // 应用动画，使用较短的持续时间以保持响应性
+            gsap.to(element, {
+              opacity,
+              y: yOffset,
+              duration: 0.1,
+              ease: "none",
+              overwrite: true,
+            });
+          });
+        };
+        
+        // 初始状态设置
         fadeElements.forEach((element) => {
-          // 初始状态
           gsap.set(element, { opacity: 0, y: 30 });
-          
-          // 创建 Intersection Observer 来监听元素进入视口
-          const observer = new IntersectionObserver(
-            (entries) => {
-              entries.forEach((entry) => {
-                if (entry.isIntersecting) {
-                  gsap.to(entry.target, {
-                    opacity: 1,
-                    y: 0,
-                    duration: 0.6,
-                    ease: "power2.out",
-                  });
-                }
-              });
-            },
-            { threshold: 0.1 }
-          );
-          
-          observer.observe(element as Element);
         });
+        
+        // 立即更新一次
+        updateFadeElements();
+        
+        // 使用 GSAP ticker 来持续更新淡入效果
+        gsap.ticker.add(updateFadeElements);
+        
+        // 添加清理函数
+        cleanupFunctions.push(() => gsap.ticker.remove(updateFadeElements));
       }
 
       // 添加鼠标滚轮监听
       container.addEventListener("wheel", handleWheel, { passive: false });
+      
+      // 添加清理函数
+      cleanupFunctions.push(() => container.removeEventListener("wheel", handleWheel));
 
-      // 清理函数
-      return () => {
-        container.removeEventListener("wheel", handleWheel);
-      };
     }, container);
 
     // 组件卸载时清理
-    return () => ctx.revert();
+    return () => {
+      ctx.revert();
+      cleanupFunctions.forEach(cleanup => cleanup());
+    };
   }, [scrollSpeed, enableParallax, enableFadeElements]);
 
   return (
