@@ -3,17 +3,17 @@
 import { ReactNode, useRef, useEffect } from "react";
 
 // 定义区域类型
-export type GridArea = 1 | 2 | 3 | 4;
+export type GridArea = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 
 interface GridItemProps {
   children: ReactNode;
-  areas: GridArea[]; // 占据的区域（1-4）
+  areas: GridArea[]; // 占据的区域（1-12）
   width?: number; // 宽度比例，基于高度的倍数。例如：width=1 表示宽度等于高度，width=2 表示宽度为高度的2倍
   fontScale?: number; // 字体大小比例，基于容器高度。例如：fontScale=0.1 表示字体大小为容器高度的10%
   className?: string;
 }
 
-interface FourAreaGridProps {
+interface RowGridProps {
   children: ReactNode;
   className?: string;
 }
@@ -71,6 +71,14 @@ export function GridItem({
         case 2: return "row-start-2 row-end-3";
         case 3: return "row-start-3 row-end-4";
         case 4: return "row-start-4 row-end-5";
+        case 5: return "row-start-5 row-end-6";
+        case 6: return "row-start-6 row-end-7";
+        case 7: return "row-start-7 row-end-8";
+        case 8: return "row-start-8 row-end-9";
+        case 9: return "row-start-9 row-end-10";
+        case 10: return "row-start-10 row-end-11";
+        case 11: return "row-start-11 row-end-12";
+        case 12: return "row-start-12 row-end-13";
         default: return "";
       }
     } else {
@@ -91,14 +99,14 @@ export function GridItem({
   );
 }
 
-// 四区域网格容器
-export default function FourAreaGrid({ 
+// 十二区域网格容器
+export default function RowGrid({ 
   children, 
   className = "" 
-}: FourAreaGridProps) {
+}: RowGridProps) {
   return (
     <div 
-      className={`grid grid-rows-4 auto-cols-max grid-flow-col gap-0 h-full min-w-max ${className}`}
+      className={`grid grid-rows-12 auto-cols-max grid-flow-col gap-0 h-full min-w-max ${className}`}
     >
       {children}
     </div>
