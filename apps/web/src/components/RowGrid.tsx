@@ -34,8 +34,21 @@ export function GridItem({
       
       // 计算实际的宽度
       const updateSizes = () => {
-        const containerHeight = element.offsetHeight;
-        const calculatedWidth = containerHeight * width;
+        // 获取整个网格容器的高度，而不是单个项目的高度
+        const gridContainer = element.closest('.grid.grid-rows-12') as HTMLElement;
+        if (!gridContainer) return;
+        
+        const totalHeight = gridContainer.offsetHeight;
+        const areaCount = areas.length;
+        
+        // 计算单行高度（使用精确计算避免浮点误差）
+        const singleRowHeight = totalHeight / 12;
+        
+        // 计算当前项目应该占据的高度
+        const itemHeight = singleRowHeight * areaCount;
+        
+        // 使用 Math.round 避免浮点数精度问题
+        const calculatedWidth = Math.round(itemHeight * width);
         
         element.style.width = `${calculatedWidth}px`;
       };
@@ -43,15 +56,18 @@ export function GridItem({
       // 初始化大小
       updateSizes();
       
-      // 监听窗口大小变化
-      const resizeObserver = new ResizeObserver(updateSizes);
-      resizeObserver.observe(element);
-      
-      return () => {
-        resizeObserver.disconnect();
-      };
+      // 监听网格容器的大小变化，而不是单个项目
+      const gridContainer = element.closest('.grid.grid-rows-12') as HTMLElement;
+      if (gridContainer) {
+        const resizeObserver = new ResizeObserver(updateSizes);
+        resizeObserver.observe(gridContainer);
+        
+        return () => {
+          resizeObserver.disconnect();
+        };
+      }
     }
-  }, [width]);
+  }, [width, areas]);
 
   // 根据占据的区域计算位置
   const startArea = Math.min(...areas);
