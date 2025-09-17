@@ -9,7 +9,6 @@ interface GridItemProps {
   children: ReactNode;
   areas: GridArea[]; // 占据的区域（1-12）
   width?: number; // 宽度比例，基于高度的倍数。例如：width=1 表示宽度等于高度，width=2 表示宽度为高度的2倍
-  fontScale?: number; // 字体大小比例，基于容器高度。例如：fontScale=0.1 表示字体大小为容器高度的10%
   className?: string;
 }
 
@@ -23,7 +22,6 @@ export function GridItem({
   children, 
   areas, 
   width = 3.2, // 默认宽度比例（相当于原来的 w-80）
-  fontScale = 0.05, // 默认字体大小比例（容器高度的5%）
   className = "" 
 }: GridItemProps) {
   const itemRef = useRef<HTMLDivElement>(null);
@@ -33,16 +31,13 @@ export function GridItem({
       const element = itemRef.current;
       // 设置 CSS 自定义属性
       element.style.setProperty('--width-scale', width.toString());
-      element.style.setProperty('--font-scale', fontScale.toString());
       
-      // 计算实际的宽度和字体大小
+      // 计算实际的宽度
       const updateSizes = () => {
         const containerHeight = element.offsetHeight;
         const calculatedWidth = containerHeight * width;
-        const calculatedFontSize = containerHeight * fontScale;
         
         element.style.width = `${calculatedWidth}px`;
-        element.style.fontSize = `${calculatedFontSize}px`;
       };
       
       // 初始化大小
@@ -56,7 +51,7 @@ export function GridItem({
         resizeObserver.disconnect();
       };
     }
-  }, [width, fontScale]);
+  }, [width]);
 
   // 根据占据的区域计算位置
   const startArea = Math.min(...areas);

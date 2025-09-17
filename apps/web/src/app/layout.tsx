@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
 import { LoadingAnimation } from "@/components/LoadingAnimation";
 import { MainContent } from "@/components/MainContent";
+import ResponsiveFontScale from "@/components/ResponsiveFontScale";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,12 +26,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <LoadingAnimation />
-          <div className="min-h-full flex flex-col overflow-hidden">
-            <Header />
-            <MainContent>{children}</MainContent>
-            <Footer />
-          </div>
+          <ResponsiveFontScale scaleFactor={0.017} baseSize={12}>
+            <LoadingAnimation />
+            <div className="min-h-full flex flex-col overflow-hidden">
+              <Header />
+              <MainContent>{children}</MainContent>
+              <Footer />
+            </div>
+          </ResponsiveFontScale>
         </ThemeProvider>
       </body>
     </html>

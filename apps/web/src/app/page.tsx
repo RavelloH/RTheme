@@ -28,26 +28,23 @@ export default function Home() {
             <GridItem
               areas={[1, 2, 3, 4, 5, 6]}
               width={4.5}
-              fontScale={0.08}
-              className="flex items-center justify-center font-bold"
+              className="flex items-center justify-center text-5xl"
             >
               轮播图
             </GridItem>
             <GridItem
               areas={[7, 8, 9]}
               width={9}
-              fontScale={0.4}
-              className="flex items-center font-bold p-12"
+              className="flex items-center p-12 text-8xl font-bold overflow-hidden"
             >
-              <div data-fade data-parallax="-0.6">
+              <div data-fade data-parallax="-0.5">
                 <span>RavelloH&apos;s Blog</span>
               </div>
             </GridItem>
             <GridItem
               areas={[10, 11, 12]}
               width={9}
-              fontScale={0.4}
-              className=" flex items-center justify-start font-bold"
+              className=" flex items-center justify-start text-8xl"
             >
               <div className="h-full aspect-square mr-4 relative">
                 <Image
@@ -59,7 +56,7 @@ export default function Home() {
                 />
               </div>
               <div
-                className="flex-1 flex items-center justify-end pr-12"
+                className="flex-1 flex items-center justify-end pr-12 text-8xl"
                 data-fade
               >
                 <span data-parallax="0.5">Beginning of meditation.</span>
@@ -68,33 +65,27 @@ export default function Home() {
             <GridItem
               areas={[1]}
               width={14}
-              fontScale={0.3}
-              className="bg-primary text-primary-foreground flex items-center px-10 uppercase"
+              className="bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl"
             >
-              Welcome to 
+              Welcome to
             </GridItem>
 
             <GridItem
               areas={[2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
               width={1.4}
-              fontScale={0.08}
-              className="flex items-center justify-center font-bold px-10"
+              className="flex items-center justify-center px-10 text-2xl"
             >
-              <div className="w-192">
-                <span>Home</span>
-              </div>
-              <div className="w-192">
-                <span>Home</span>
-              </div>
+              内容
+              <span className="text-4xl">内容</span>
             </GridItem>
             <GridItem
               areas={[12]}
               width={14}
-              fontScale={0.3}
-              className="flex items-center uppercase px-10"
+              className="flex items-center uppercase px-10 text-2xl"
             >
               Learn more
             </GridItem>
+            
           </RowGrid>
         </HorizontalScroll>
       </div>
