@@ -3,13 +3,13 @@
 import { ReactNode, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 
-// 简化的 GSAP 横向滚动组件
 interface GSAPHorizontalScrollProps {
   children: ReactNode;
   className?: string;
   scrollSpeed?: number;
   enableParallax?: boolean;
   enableFadeElements?: boolean;
+  enableLineReveal?: boolean;
   snapToElements?: boolean;
 }
 
@@ -19,6 +19,7 @@ export default function HorizontalScroll({
   scrollSpeed = 1,
   enableParallax = false,
   enableFadeElements = false,
+  enableLineReveal = false,
 }: GSAPHorizontalScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -183,6 +184,109 @@ export default function HorizontalScroll({
         cleanupFunctions.push(() => gsap.ticker.remove(updateFadeElements));
       }
 
+      // 如果启用逐行显示效果
+      if (enableLineReveal) {
+        const lineRevealElements = content.querySelectorAll("[data-line-reveal]");
+
+        lineRevealElements.forEach((element) => {
+          // 获取所有直接子元素作为"行"
+          const lines = Array.from(element.children) as HTMLElement[];
+
+          // 初始状态：隐藏所有行
+          lines.forEach((line) => {
+            gsap.set(line, { 
+              opacity: 0, 
+              y: 20,
+              rotationX: -90,
+              transformOrigin: "50% 100%"
+            });
+          });
+
+          // 创建一个函数来更新逐行显示状态
+          const updateLineReveal = () => {
+            const containerRect = container.getBoundingClientRect();
+            const containerWidth = containerRect.width;
+            const elementRect = element.getBoundingClientRect();
+
+            // 计算元素相对于容器的位置
+            const elementLeftInContainer = elementRect.left - containerRect.left;
+            const elementRightInContainer = elementLeftInContainer + elementRect.width;
+
+            // 定义触发范围：当元素进入屏幕右侧70%位置时开始逐行显示
+            const triggerPoint = containerWidth * 0.8;
+
+            // 检查元素是否进入触发范围
+            if (elementRightInContainer <= triggerPoint) {
+              // 元素已经完全进入视野，显示所有行
+              lines.forEach((line, index) => {
+                gsap.to(line, {
+                  opacity: 1,
+                  y: 0,
+                  rotationX: 0,
+                  duration: 0.6,
+                  delay: index * 0.1, // 每行延迟0.1秒
+                  ease: "back.out(1.7)",
+                  overwrite: true,
+                });
+              });
+            } else if (elementLeftInContainer <= containerWidth) {
+              // 元素部分可见，计算应该显示多少行
+              const visibleProgress = Math.max(0, Math.min(1, 
+                (containerWidth - elementLeftInContainer) / elementRect.width
+              ));
+
+              // 根据可见进度决定显示多少行
+              const linesToShow = Math.floor(visibleProgress * lines.length);
+
+              lines.forEach((line, index) => {
+                if (index < linesToShow) {
+                  // 显示这一行
+                  gsap.to(line, {
+                    opacity: 1,
+                    y: 0,
+                    rotationX: 0,
+                    duration: 0.6,
+                    ease: "back.out(1.7)",
+                    overwrite: true,
+                  });
+                } else {
+                  // 隐藏这一行
+                  gsap.to(line, {
+                    opacity: 0,
+                    y: 20,
+                    rotationX: -90,
+                    duration: 0.3,
+                    ease: "power2.out",
+                    overwrite: true,
+                  });
+                }
+              });
+            } else {
+              // 元素完全不可见，隐藏所有行
+              lines.forEach((line) => {
+                gsap.to(line, {
+                  opacity: 0,
+                  y: 20,
+                  rotationX: -90,
+                  duration: 0.3,
+                  ease: "power2.out",
+                  overwrite: true,
+                });
+              });
+            }
+          };
+
+          // 使用 GSAP ticker 来持续更新逐行显示效果
+          gsap.ticker.add(updateLineReveal);
+
+          // 添加清理函数
+          cleanupFunctions.push(() => gsap.ticker.remove(updateLineReveal));
+
+          // 立即更新一次
+          updateLineReveal();
+        });
+      }
+
       // 添加鼠标滚轮监听
       container.addEventListener("wheel", handleWheel, { passive: false });
 
@@ -200,7 +304,7 @@ export default function HorizontalScroll({
       ctx.revert();
       cleanupFunctions.forEach((cleanup) => cleanup());
     };
-  }, [scrollSpeed, enableParallax, enableFadeElements]);
+  }, [scrollSpeed, enableParallax, enableFadeElements, enableLineReveal]);
 
   return (
     <div ref={containerRef} className={`overflow-hidden ${className}`}>

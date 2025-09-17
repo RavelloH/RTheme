@@ -21,6 +21,7 @@ export default function Home() {
           className="h-full"
           enableParallax={true}
           enableFadeElements={true}
+          enableLineReveal={true}
           snapToElements={false}
         >
           <RowGrid>
@@ -73,10 +74,13 @@ export default function Home() {
             <GridItem
               areas={[2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
               width={1.4}
-              className="flex items-center justify-center px-10 text-2xl"
+              className="px-10 py-15 text-2xl"
             >
-              内容
-              <span className="text-4xl">内容</span>
+              <div className="text-7xl">RavelloH \ 拉韦洛</div>
+              <div className="block mt-4" data-line-reveal>
+                <div>Web 全栈，</div>
+                <div>开源爱好者。</div>
+              </div>
             </GridItem>
             <GridItem
               areas={[12]}
@@ -85,7 +89,6 @@ export default function Home() {
             >
               Learn more
             </GridItem>
-            
           </RowGrid>
         </HorizontalScroll>
       </div>
