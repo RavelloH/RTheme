@@ -87,27 +87,80 @@ export default function HorizontalScroll({
       // 如果启用视差效果
       if (enableParallax) {
         const parallaxElements = content.querySelectorAll("[data-parallax]");
+        
+        // 为每个视差元素存储其初始状态
+        const elementStates = new Map();
+        
         parallaxElements.forEach((element) => {
           const speed = parseFloat(
             element.getAttribute("data-parallax") || "0.5"
           );
 
-          // 监听主容器的移动，应用视差效果
+          // 设置初始样式
           gsap.set(element, { transformOrigin: "center center" });
-
-          // 创建一个简单的视差动画
-          const parallaxAnimation = () => {
-            const currentX = gsap.getProperty(content, "x") as number;
-            const parallaxX = currentX * speed;
-            gsap.set(element, { x: parallaxX });
-          };
-
-          // 使用 GSAP 的 ticker 来更新视差效果
-          gsap.ticker.add(parallaxAnimation);
-
-          // 添加清理函数
-          cleanupFunctions.push(() => gsap.ticker.remove(parallaxAnimation));
+          
+          // 初始化元素状态
+          elementStates.set(element, {
+            speed,
+            initialX: 0,
+            hasEnteredViewport: false,
+            viewportEntryX: 0
+          });
         });
+
+        // 创建视差更新函数
+        const updateParallaxElements = () => {
+          const containerRect = container.getBoundingClientRect();
+          const containerWidth = containerRect.width;
+
+          parallaxElements.forEach((element) => {
+            const elementRect = element.getBoundingClientRect();
+            const elementState = elementStates.get(element);
+            
+            // 计算元素相对于容器的位置
+            const elementLeftInContainer = elementRect.left - containerRect.left;
+            const elementRightInContainer = elementLeftInContainer + elementRect.width;
+            
+            // 定义视口范围：从右边界向左扩展100px作为"准备区域"
+            const viewportPreparationZone = containerWidth + 100; // 右边界外100px开始准备
+            
+            // 检查元素是否在视口范围内（包括准备区域）
+            const isInViewportArea = elementLeftInContainer < viewportPreparationZone && 
+                                   elementRightInContainer > 0;
+            
+            if (isInViewportArea) {
+              // 如果元素首次进入视口区域，记录当前的滚动位置作为基准点
+              if (!elementState.hasEnteredViewport) {
+                elementState.hasEnteredViewport = true;
+                elementState.viewportEntryX = gsap.getProperty(content, "x") as number;
+                elementState.initialX = gsap.getProperty(element, "x") as number || 0;
+              }
+              
+              // 计算从进入视口开始的相对移动距离
+              const currentContentX = gsap.getProperty(content, "x") as number;
+              const relativeMovement = currentContentX - elementState.viewportEntryX;
+              
+              // 应用视差效果：基于相对移动距离
+              const parallaxX = elementState.initialX + (relativeMovement * elementState.speed);
+              gsap.set(element, { x: parallaxX });
+              
+            } else if (elementLeftInContainer >= viewportPreparationZone) {
+              // 元素还未进入准备区域，重置状态
+              if (elementState.hasEnteredViewport) {
+                elementState.hasEnteredViewport = false;
+                elementState.viewportEntryX = 0;
+                // 保持当前位置，不重置到初始位置
+              }
+            }
+            // 如果元素已经完全离开左侧视口，保持最后的视差位置
+          });
+        };
+
+        // 使用 GSAP ticker 来更新视差效果
+        gsap.ticker.add(updateParallaxElements);
+
+        // 添加清理函数
+        cleanupFunctions.push(() => gsap.ticker.remove(updateParallaxElements));
       }
 
       // 如果启用淡入效果
