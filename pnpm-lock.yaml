@@ -89,6 +89,9 @@ importers:
       '@prisma/client':
         specifier: 6.15.0
         version: 6.15.0(prisma@6.15.0(typescript@5.9.2))(typescript@5.9.2)
+      '@remixicon/react':
+        specifier: ^4.6.0
+        version: 4.6.0(react@19.1.1)
       '@repo/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
@@ -2058,6 +2061,11 @@ packages:
         optional: true
       react-redux:
         optional: true
+
+  '@remixicon/react@4.6.0':
+    resolution: {integrity: sha512-bY56maEgT5IYUSRotqy9h03IAKJC85vlKtWFg2FKzfs8JPrkdBAYSa9dxoUSKFwGzup8Ux6vjShs9Aec3jvr2w==}
+    peerDependencies:
+      react: '>=18.2.0'
 
   '@sideway/address@4.1.5':
     resolution: {integrity: sha512-IqO/DUQHUkPeixNQ8n0JA6102hT9CmaljNTPmQ1u8MEhBo/R4Q8eKLN/vGZxuebwOroDB4cbpjheD4+/sKFK4Q==}
@@ -10114,6 +10122,10 @@ snapshots:
     optionalDependencies:
       react: 19.1.1
       react-redux: 7.2.9(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+
+  '@remixicon/react@4.6.0(react@19.1.1)':
+    dependencies:
+      react: 19.1.1
 
   '@sideway/address@4.1.5':
     dependencies:

@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@prisma/client": "6.15.0",
+    "@remixicon/react": "^4.6.0",
     "@repo/shared-types": "workspace:*",
     "argon2": "^0.44.0",
     "autoprefixer": "^10.4.21",
