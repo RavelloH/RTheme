@@ -273,50 +273,51 @@ export default function Home() {
                 文章&nbsp;&nbsp;/&nbsp;&nbsp;
               </Marquee>
             </GridItem>
-            <GridItem areas={[7, 8, 9]} width={4} className="flex items-center">
+            <GridItem areas={[7, 8, 9]} width={4} className="">
               <PostCard
                 title="Minecraft Meteor 使用指南"
                 date="2025/08/01"
                 category={["游戏", "文档"]}
                 tags={["Minecraft", "Meteor"]}
+                cover="https://raw.ravelloh.top/20250228/meteor.webp"
               />
             </GridItem>
 
-            <GridItem
-              areas={[10, 11, 12]}
-              width={4}
-              className="flex items-center"
-            >
+            <GridItem areas={[10, 11, 12]} width={4} className="">
               <PostCard
                 title="使用Meilisearch实现全站搜索"
                 date="2025/06/25"
                 category={["技术", "设计"]}
                 tags={["search"]}
+                cover="https://raw.ravelloh.top/post/image.1ovfmxsmre.webp"
               />
             </GridItem>
 
-            <GridItem areas={[1, 2, 3]} width={4} className="flex items-center">
+            <GridItem areas={[1, 2, 3]} width={4} className="">
               <PostCard
                 title="Timepulse：现代化高颜值计时器"
                 date="2025/04/03"
                 category={["技术", "设计", "文档"]}
                 tags={["nextjs", "ui"]}
+                cover="https://raw.ravelloh.top/rtheme/categories.webp"
               />
             </GridItem>
-            <GridItem areas={[4, 5, 6]} width={4} className="flex items-center">
+            <GridItem areas={[4, 5, 6]} width={4} className="">
               <PostCard
                 title="Nextjs使用Server Action实现动态页面重部署"
                 date="2025/04/03"
                 category={["技术"]}
                 tags={["nextjs", "rtheme"]}
+                cover="https://raw.ravelloh.top/20250323/image.2obow0upmh.webp"
               />
             </GridItem>
-            <GridItem areas={[7, 8, 9]} width={4} className="flex items-center">
+            <GridItem areas={[7, 8, 9]} width={4} className="">
               <PostCard
                 title="使用Wireshark进行自我网络安全审计"
                 date="2025/02/25"
                 category={["技术", "网络安全"]}
                 tags={["wireshark"]}
+                cover="https://raw.ravelloh.top/20250228/image.86tsfdpaf3.webp"
               />
             </GridItem>
             <GridItem
@@ -327,6 +328,80 @@ export default function Home() {
               <div className="block" data-line-reveal>
                 <div className="text-4xl">查看全部文章</div>
                 <div className="text-2xl">共 1128 篇文章</div>
+              </div>
+            </GridItem>
+            <GridItem
+              areas={[1, 2, 3, 4, 5]}
+              width={6 / 5}
+              className="flex items-center justify-center px-10 text-2xl"
+            >
+              <div
+                className="flex flex-col gap-2 justify-center items-center"
+                data-line-reveal
+              >
+                <Link href="/tags/xxx">
+                  <div className=" hover:scale-110 transition-all">
+                    #Minecraft x 130
+                  </div>
+                </Link>
+                <Link href="/tags/xxx">
+                  <div>#dasdsa x 20</div>
+                </Link>
+                <Link href="/tags/xxx">
+                  <div>#dsadsadqweqw x 13</div>
+                </Link>
+                <Link href="/tags/xxx">
+                  <div>#ewqeqwewqew x 11</div>
+                </Link>
+                <Link href="/tags/xxx">
+                  <div>#Mizxczxcczx x 4</div>
+                </Link>
+                <Link href="/tags/xxx">
+                  <div>#xzczxcraft x 2</div>
+                </Link>
+                <div>...</div>
+              </div>
+            </GridItem>
+            <GridItem
+              areas={[6, 7, 8, 9, 10]}
+              width={6 / 5}
+              className="flex items-center justify-center px-10 text-2xl"
+            >
+              <div
+                className="flex flex-col gap-2 justify-center items-center"
+                data-line-reveal
+              >
+                <Link href="/tags/xxx">
+                  <div className=" hover:scale-110 transition-all">
+                    #Minecraft x 130
+                  </div>
+                </Link>
+                <Link href="/tags/xxx">
+                  <div>#dasdsa x 20</div>
+                </Link>
+                <Link href="/tags/xxx">
+                  <div>#dsadsadqweqw x 13</div>
+                </Link>
+                <Link href="/tags/xxx">
+                  <div>#ewqeqwewqew x 11</div>
+                </Link>
+                <Link href="/tags/xxx">
+                  <div>#Mizxczxcczx x 4</div>
+                </Link>
+                <Link href="/tags/xxx">
+                  <div>#xzczxcraft x 2</div>
+                </Link>
+                <div>...</div>
+              </div>
+            </GridItem>
+            <GridItem
+              areas={[11, 12]}
+              width={6 / 2}
+              className="flex items-center justify-center px-10 uppercase text-5xl bg-primary text-primary-foreground"
+            >
+              <div>
+                <div data-fade-char>Tags &</div>
+                <div data-fade-char>Categories</div>
               </div>
             </GridItem>
 
