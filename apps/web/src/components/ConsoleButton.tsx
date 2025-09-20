@@ -91,17 +91,14 @@ export function ConsoleButton() {
       // 确保角度在0-360度范围内
       if (targetAngle < 0) targetAngle += 360;
 
-      // 计算最短旋转路径
-      let rotationDiff = targetAngle - currentRotation;
+      // 计算角度差，处理跨过0度边界的情况
+      let angleDiff = targetAngle - currentRotation;
 
-      // 处理跨过0度线的情况
-      if (rotationDiff > 180) {
-        rotationDiff -= 360;
-      } else if (rotationDiff < -180) {
-        rotationDiff += 360;
-      }
+      // 将角度差标准化到[-180, 180]范围内
+      while (angleDiff > 180) angleDiff -= 360;
+      while (angleDiff < -180) angleDiff += 360;
 
-      const newRotation = currentRotation + rotationDiff;
+      const newRotation = currentRotation + angleDiff;
       setCurrentRotation(newRotation);
 
       // 使用GSAP平滑旋转
