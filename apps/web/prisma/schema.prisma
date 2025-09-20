@@ -262,11 +262,13 @@ model Page {
   id        String     @id @default(uuid())
   title     String
   slug      String     @unique
-  content   String
+  content   Json
+  config    Json?
   excerpt   String?    @db.VarChar(500)
   status    PageStatus @default(DRAFT)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+  isDefault Boolean    @default(false)
 
   // SEO
   metaTitle       String? @db.VarChar(60)
@@ -274,14 +276,40 @@ model Page {
   metaKeywords    String? @db.VarChar(255)
 
   // 创建者
-  userUid Int
-  author  User @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+  userUid Int?
+  author  User? @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+
+  // 导航关系
+  menus   Menu[]
 
   // 索引优化
   @@index([slug])
   @@index([status])
   @@index([userUid])
   @@index([createdAt])
+}
+
+model Menu {
+  id        String       @id @default(uuid())
+  name      String       @db.VarChar(100)
+  icon      String?      @db.VarChar(100)
+  link      String?      @db.VarChar(255)
+  slug      String?      @db.VarChar(100)
+  status    MenuStatus   @default(ACTIVE)
+  order     Int          @default(0)
+  category  MenuCategory @default(COMMON)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  // 页面关系 - 如果关联页面，则使用页面的 slug 和 title
+  pageId    String?
+  page      Page?        @relation(fields: [pageId], references: [id], onDelete: SetNull)
+
+  // 索引优化
+  @@index([name])
+  @@index([createdAt])
+  @@index([pageId])
+  @@unique([slug]) // 移到此处，因为 slug 现在是可选的
 }
 
 // 网站配置模型
@@ -477,4 +505,15 @@ enum CommentStatus {
   APPROVED
   REJECTED
   SPAM
+}
+
+enum MenuCategory {
+  MAIN
+  COMMON
+  OUTSITE
+}
+
+enum MenuStatus {
+  ACTIVE
+  SUSPENDED
 }
