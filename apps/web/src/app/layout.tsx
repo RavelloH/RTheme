@@ -6,14 +6,27 @@ import Footer from "@/components/Footer";
 import { LoadingAnimation } from "@/components/LoadingAnimation";
 import { MainContent } from "@/components/MainContent";
 import ResponsiveFontScale from "@/components/ResponsiveFontScale";
+import { getMenus } from "@/lib/server/menuCache";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export default function RootLayout({
+async function getFooterMenus() {
+  try {
+    const menus = await getMenus();
+    return menus.filter(menu => menu.status === 'ACTIVE');
+  } catch (error) {
+    console.error('Failed to get menus:', error);
+    return [];
+  }
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const footerMenus = await getFooterMenus();
+
   return (
     <html lang="zh-CN" className={`${inter.className} h-full`} suppressHydrationWarning>
       <body
@@ -31,7 +44,7 @@ export default function RootLayout({
             <div className="min-h-full flex flex-col overflow-hidden">
               <Header />
               <MainContent>{children}</MainContent>
-              <Footer />
+              <Footer menus={footerMenus} />
             </div>
           </ResponsiveFontScale>
         </ThemeProvider>

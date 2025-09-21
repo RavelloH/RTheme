@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { gsap } from "gsap";
 import { useMenuStore } from "@/store/menuStore";
@@ -8,13 +9,25 @@ import { useConsoleStore } from "@/store/consoleStore";
 import Image from "next/image";
 import { Panel } from "./Panel";
 import { ConsoleButton } from "./ConsoleButton";
+import { MenuItem } from "@/lib/server/menuCache";
+import Link from "next/link";
 
-export default function Footer() {
+interface FooterProps {
+  menus: MenuItem[];
+}
+
+export default function Footer({ menus }: FooterProps) {
   const [shouldAnimate, setShouldAnimate] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const pathname = usePathname();
   const isMenuOpen = useMenuStore((state) => state.isMenuOpen);
-  const { isConsoleOpen, toggleConsole } = useConsoleStore();
+  const { isConsoleOpen } = useConsoleStore();
   const footerRef = useRef<HTMLElement>(null);
+  const menuRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const underlineRef = useRef<HTMLSpanElement | null>(null);
+  const previousPathname = useRef<string>(pathname);
+  const isAnimating = useRef<boolean>(false);
+  const [activePathname, setActivePathname] = useState<string>(pathname);
 
   // 监听加载完成事件
   useEffect(() => {
@@ -56,7 +69,182 @@ export default function Footer() {
     }
   }, [isMenuOpen]);
 
-  
+  // 菜单 hover 颜色动画处理
+  const handleMenuHover = (index: number, isActive: boolean) => {
+    const linkElement = menuRefs.current[index];
+    if (!linkElement || isActive) return;
+
+    gsap.to(linkElement, {
+      color: "#ffffff",
+      duration: 0.3,
+      ease: "power2.out"
+    });
+  };
+
+  const handleMenuLeave = (index: number, isActive: boolean) => {
+    const linkElement = menuRefs.current[index];
+    if (!linkElement || isActive) return;
+
+    gsap.to(linkElement, {
+      color: "",
+      duration: 0.3,
+      ease: "power2.in"
+    });
+  };
+
+  // 创建单个下划线移动动画
+  const createUnderlineAnimation = (fromIndex: number, toIndex: number) => {
+    if (isAnimating.current) return;
+    isAnimating.current = true;
+
+    const tl = gsap.timeline();
+    const underline = underlineRef.current;
+
+    if (!underline) {
+      isAnimating.current = false;
+      setActivePathname(previousPathname.current);
+      return;
+    }
+
+    const fromLink = fromIndex !== -1 ? menuRefs.current[fromIndex] : null;
+    const toLink = toIndex !== -1 ? menuRefs.current[toIndex] : null;
+
+    // 如果没有变化，直接返回
+    if (fromIndex === toIndex) {
+      isAnimating.current = false;
+      setActivePathname(previousPathname.current);
+      return;
+    }
+
+    // 情况1：从菜单页面到非菜单页面 - 下划线向下移动并消失
+    if (fromIndex !== -1 && toIndex === -1) {
+      tl.to(underline, {
+        y: 10,
+        opacity: 0,
+        duration: 0.5,
+        ease: "power3.inOut"
+      }, 0);
+
+      if (fromLink) {
+        tl.to(fromLink, {
+          color: "var(--muted-foreground)",
+          duration: 0.4,
+          ease: "power3.in"
+        }, 0);
+      }
+    }
+    // 情况2：从非菜单页面到菜单页面 - 下划线向上移动并出现
+    else if (fromIndex === -1 && toIndex !== -1 && toLink) {
+      const toRect = toLink.getBoundingClientRect();
+
+      // 先设置位置和宽度
+      gsap.set(underline, {
+        x: toRect.left - (underline.parentElement?.getBoundingClientRect().left || 0),
+        width: toRect.width,
+        y: 10,
+        opacity: 0
+      });
+
+      // 向上移动并出现
+      tl.to(underline, {
+        y: 0,
+        opacity: 1,
+        duration: 0.5,
+        ease: "power3.inOut"
+      }, 0);
+
+      tl.to(toLink, {
+        color: "#ffffff",
+        duration: 0.4,
+        ease: "power3.out"
+      }, 0.2);
+    }
+    // 情况3：在菜单页面之间移动 - 正常的移动动画
+    else if (fromIndex !== -1 && toIndex !== -1 && toLink && fromLink) {
+      const toRect = toLink.getBoundingClientRect();
+
+      // 移动到新位置并调整宽度
+      tl.to(underline, {
+        x: toRect.left - (underline.parentElement?.getBoundingClientRect().left || 0),
+        width: toRect.width,
+        duration: 1,
+        ease: "power3.inOut"
+      }, 0);
+
+      // 链接颜色动画
+      tl.to(fromLink!, {
+        color: "var(--muted-foreground)",
+        duration: 0.4,
+        ease: "power3.in"
+      }, 0.1);
+
+      tl.to(toLink, {
+        color: "#ffffff",
+        duration: 0.4,
+        ease: "power3.out"
+      }, 0.2);
+    }
+
+    // 动画完成后重置状态
+    tl.eventCallback("onComplete", () => {
+      isAnimating.current = false;
+      setActivePathname(previousPathname.current);
+    });
+
+    tl.eventCallback("onInterrupt", () => {
+      isAnimating.current = false;
+    });
+  };
+
+  // 监听路由变化，更新下划线状态
+  useEffect(() => {
+    const mainMenus = menus.filter(menu => menu.category === "MAIN");
+
+    // 如果是首次加载，直接设置状态
+    if (previousPathname.current === pathname) {
+      const activeIndex = mainMenus.findIndex(menu =>
+        pathname === (menu.link ? menu.link : menu.page ? menu.page.slug : "#")
+      );
+
+      if (activeIndex !== -1) {
+        const activeLink = menuRefs.current[activeIndex];
+        const underline = underlineRef.current;
+
+        if (activeLink && underline) {
+          const rect = activeLink.getBoundingClientRect();
+          const parentRect = underline.parentElement?.getBoundingClientRect();
+
+          gsap.set(underline, {
+            x: rect.left - (parentRect?.left || 0),
+            width: rect.width,
+            opacity: 1
+          });
+        }
+
+        if (activeLink) {
+          gsap.set(activeLink, { color: "#ffffff" });
+        }
+      }
+      setActivePathname(pathname);
+      return;
+    }
+
+    // 找到旧的激活索引和新的激活索引
+    const oldActiveIndex = mainMenus.findIndex(menu =>
+      activePathname === (menu.link ? menu.link : menu.page ? menu.page.slug : "#")
+    );
+    const newActiveIndex = mainMenus.findIndex(menu =>
+      pathname === (menu.link ? menu.link : menu.page ? menu.page.slug : "#")
+    );
+
+    // 如果索引发生变化，执行动画
+    if (oldActiveIndex !== newActiveIndex) {
+      createUnderlineAnimation(oldActiveIndex, newActiveIndex);
+    }
+
+    previousPathname.current = pathname;
+  }, [pathname, menus, activePathname]);
+
   return (
     <>
       <motion.footer
@@ -85,11 +273,43 @@ export default function Footer() {
           <Image src="/avatar.jpg" alt="Logo" width={78} height={78} />
         </div>
         <div className="flex-1 flex items-center justify-center">
-          <span className="text-sm text-muted-foreground">
-            © 2024 NeutralPress. All rights reserved.
-          </span>
+          <div className="text-muted-foreground relative">
+            {menus.map((menu, index) => {
+              if (menu.category !== "MAIN") return null;
+              const isActive = activePathname === (menu.link ? menu.link : menu.page ? menu.page.slug : "#");
+              return (
+                <span
+                  key={index}
+                  className={`mx-6 relative ${isActive ? "text-white" : ""}`}
+                >
+                  <Link
+                    ref={(el) => {
+                      menuRefs.current[index] = el;
+                      // 初始化时设置激活状态的颜色
+                      if (isActive && el) {
+                        gsap.set(el, { color: "#ffffff" });
+                      }
+                    }}
+                    key={menu.id}
+                    href={
+                      menu.link ? menu.link : menu.page ? menu.page.slug : "#"
+                    }
+                    className="relative inline-block text-muted-foreground transition-colors duration-300"
+                    onMouseEnter={() => handleMenuHover(index, isActive)}
+                    onMouseLeave={() => handleMenuLeave(index, isActive)}
+                  >
+                    {menu.name}
+                  </Link>
+                </span>
+              );
+            })}
+            {/* 单个共享的下划线 */}
+            <span
+              className="absolute bottom-0 left-0 h-px bg-white opacity-0 w-0"
+              ref={underlineRef}
+            />
+          </div>
         </div>
-        {/* 控制面板按钮独立于Footer动画，避免状态重置 */}
         <ConsoleButton />
       </motion.footer>
 
@@ -109,7 +329,9 @@ export default function Footer() {
               restSpeed: 0.01,
             }}
           >
-            <Panel onClose={() => useConsoleStore.getState().setConsoleOpen(false)} />
+            <Panel
+              onClose={() => useConsoleStore.getState().setConsoleOpen(false)}
+            />
           </motion.div>
         )}
       </AnimatePresence>
