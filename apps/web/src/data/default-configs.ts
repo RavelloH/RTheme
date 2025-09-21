@@ -3,8 +3,6 @@
  * 这些配置将在首次运行时添加到数据库中
  */
 
-import { de } from "zod/v4/locales";
-
 // Prisma Json 类型定义
 type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
 type JsonObject = { [key: string]: JsonValue };

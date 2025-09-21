@@ -161,6 +161,12 @@ const seoConfigMap = {
   country: "site.seo.country",
 } as const;
 
+// 配置值类型定义
+interface ConfigValue {
+  default?: string | number | boolean | string[] | null;
+  [key: string]: unknown;
+}
+
 // 生成动态SEO配置的异步函数
 export async function generateMetadata(
   overrides: Partial<Metadata> = {},
@@ -172,22 +178,22 @@ export async function generateMetadata(
 
   // 构建配置映射
   const configValues = Object.fromEntries(
-    configKeys.map((key, index) => [key, configs[index]?.value])
-  );
+    configKeys.map((key, index) => [key, configs[index]?.value as ConfigValue | undefined])
+  ) as Record<string, ConfigValue | undefined>;
 
-  // 动态获取的值
-  const dynamicUrl = typeof configValues[seoConfigMap.metadataBase] === 'string' ? configValues[seoConfigMap.metadataBase] : "";
-  const dynamicTitle = typeof configValues[seoConfigMap.title] === 'string' ? configValues[seoConfigMap.title] : "";
-  const dynamicDescription = typeof configValues[seoConfigMap.description] === 'string' ? configValues[seoConfigMap.description] : "";
-  const dynamicAppName = typeof configValues[seoConfigMap.applicationName] === 'string' ? configValues[seoConfigMap.applicationName] : "";
-  const dynamicKeywords = typeof configValues[seoConfigMap.keywords] === 'string' ? configValues[seoConfigMap.keywords] : "";
-  const dynamicAuthor = typeof configValues[seoConfigMap.author] === 'string' ? configValues[seoConfigMap.author] : "";
-  const dynamicThemeColor = typeof configValues[seoConfigMap.themeColor] === 'string' ? configValues[seoConfigMap.themeColor] : "";
-  const dynamicTwitterSite = typeof configValues[seoConfigMap.twitterSite] === 'string' ? configValues[seoConfigMap.twitterSite] : "";
-  const dynamicTwitterCreator = typeof configValues[seoConfigMap.twitterCreator] === 'string' ? configValues[seoConfigMap.twitterCreator] : "";
-  const dynamicGoogleVerification = typeof configValues[seoConfigMap.googleVerification] === 'string' ? configValues[seoConfigMap.googleVerification] : "";
-  const dynamicCategory = typeof configValues[seoConfigMap.category] === 'string' ? configValues[seoConfigMap.category] : "";
-  const dynamicCountry = typeof configValues[seoConfigMap.country] === 'string' ? configValues[seoConfigMap.country] : "";
+  // 动态获取的值 - 适配新的 Object 格式
+  const dynamicUrl = configValues[seoConfigMap.metadataBase]?.default || "";
+  const dynamicTitle = configValues[seoConfigMap.title]?.default || "";
+  const dynamicDescription = configValues[seoConfigMap.description]?.default || "";
+  const dynamicAppName = configValues[seoConfigMap.applicationName]?.default || "";
+  const dynamicKeywords = configValues[seoConfigMap.keywords]?.default || "";
+  const dynamicAuthor = configValues[seoConfigMap.author]?.default || "";
+  const dynamicThemeColor = configValues[seoConfigMap.themeColor]?.default || "";
+  const dynamicTwitterSite = configValues[seoConfigMap.twitterSite]?.default || "";
+  const dynamicTwitterCreator = configValues[seoConfigMap.twitterCreator]?.default || "";
+  const dynamicGoogleVerification = configValues[seoConfigMap.googleVerification]?.default || "";
+  const dynamicCategory = configValues[seoConfigMap.category]?.default || "";
+  const dynamicCountry = configValues[seoConfigMap.country]?.default || "";
 
   // 构建最终的metadata
   const dynamicMetadata: Metadata = {
