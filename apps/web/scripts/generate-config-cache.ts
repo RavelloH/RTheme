@@ -20,7 +20,7 @@ interface ConfigItem {
 }
 
 async function generateConfigCache() {
-  const CACHE_FILE_PATH = path.join(process.cwd(), '.config-cache.json')
+  const CACHE_FILE_PATH = path.join(process.cwd(), '.cache', '.config-cache.json')
   
   try {
     rlog.log('> Generating configuration cache file...')

@@ -32,7 +32,7 @@ yarn-error.log*
 .vercel
 
 # config cache (will be regenerated during build)
-.config-cache.json
+.cache/
 
 # typescript
 *.tsbuildinfo
