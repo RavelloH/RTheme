@@ -42,18 +42,45 @@ export function Header({ menus }: { menus: MenuItem[] }) {
 
   useEffect(() => {
     const updateTitle = () => {
-      const documentTitle = document.title;
-      const cleanTitle = documentTitle?.split(" | ")[0] || "NeutralPress";
+      if (typeof document === "undefined") return;
+
+      const titleElement = document.querySelector("title");
+      if (!titleElement) return;
+
+      const documentTitle = titleElement.textContent || "";
+      const cleanTitle = documentTitle.includes(" | ")
+        ? documentTitle.split(" | ")[0] || "NeutralPress"
+        : documentTitle || "NeutralPress";
+
       setTitle(cleanTitle);
     };
 
     updateTitle();
 
-    const observer = new MutationObserver(updateTitle);
-    observer.observe(document.querySelector("title")!, { childList: true });
+    const titleElement = document.querySelector("title");
+    if (!titleElement) return;
+
+    const observer = new MutationObserver((mutations) => {
+      // 只在文本内容真正变化时更新
+      if (
+        mutations.some(
+          (mutation) =>
+            mutation.type === "childList" &&
+            mutation.target.textContent !== title,
+        )
+      ) {
+        updateTitle();
+      }
+    });
+
+    observer.observe(titleElement, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
 
     return () => observer.disconnect();
-  }, []);
+  }, [title]);
 
   return (
     <>

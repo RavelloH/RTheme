@@ -9,6 +9,7 @@ interface GridItemProps {
   children: ReactNode;
   areas: GridArea[]; // 占据的区域（1-12）
   width?: number; // 宽度比例，基于高度的倍数。例如：width=1 表示宽度等于高度，width=2 表示宽度为高度的2倍
+  absoluteWidth?: string; // 绝对宽度，例如：30%, 300px, 2em。如果提供此属性，则忽略 width 属性
   className?: string;
 }
 
@@ -22,6 +23,7 @@ export function GridItem({
   children,
   areas,
   width = 3.2, // 默认宽度比例（相当于原来的 w-80）
+  absoluteWidth,
   className = "",
 }: GridItemProps) {
   const itemRef = useRef<HTMLDivElement>(null);
@@ -34,6 +36,12 @@ export function GridItem({
 
       // 计算实际的宽度
       const updateSizes = () => {
+        // 如果提供了 absoluteWidth，直接使用绝对宽度
+        if (absoluteWidth) {
+          element.style.width = absoluteWidth;
+          return;
+        }
+
         // 获取整个网格容器的高度，而不是单个项目的高度
         const gridContainer = element.closest(
           ".grid.grid-rows-12",
@@ -71,7 +79,7 @@ export function GridItem({
         };
       }
     }
-  }, [width, areas]);
+  }, [width, areas, absoluteWidth]);
 
   // 根据占据的区域计算位置
   const startArea = Math.min(...areas);
