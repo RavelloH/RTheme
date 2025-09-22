@@ -245,7 +245,7 @@ async function seedDefaultPagesAndMenus(prisma: PrismaClient) {
       });
 
       for (const menu of menusToAdd) {
-        rlog.log(
+        rlog.info(
           `  | Added menu: ${menu.name} (${menu.slug || menu.link || menu.pageId})`,
         );
       }
@@ -258,7 +258,7 @@ async function seedDefaultPagesAndMenus(prisma: PrismaClient) {
           await prisma.menu.create({
             data: menuData,
           });
-          rlog.log(`  | Added menu: ${menuData.name} (${menuData.slug})`);
+          rlog.info(`  | Added menu: ${menuData.name} (${menuData.slug})`);
         } catch (individualError) {
           rlog.error(
             `  | Failed to add menu ${menuData.name}:`,

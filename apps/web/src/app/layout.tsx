@@ -6,26 +6,16 @@ import Footer from "@/components/Footer";
 import { LoadingAnimation } from "@/components/LoadingAnimation";
 import { MainContent } from "@/components/MainContent";
 import ResponsiveFontScale from "@/components/ResponsiveFontScale";
-import { getMenus } from "@/lib/server/menuCache";
+import { getActiveMenus } from "@/lib/server/menuCache";
 
 const inter = Inter({ subsets: ["latin"] });
-
-async function getFooterMenus() {
-  try {
-    const menus = await getMenus();
-    return menus.filter((menu) => menu.status === "ACTIVE");
-  } catch (error) {
-    console.error("Failed to get menus:", error);
-    return [];
-  }
-}
 
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const footerMenus = await getFooterMenus();
+  const menus = await getActiveMenus();
 
   return (
     <html
@@ -46,9 +36,9 @@ export default async function RootLayout({
           <ResponsiveFontScale scaleFactor={0.017} baseSize={12}>
             <LoadingAnimation />
             <div className="min-h-full flex flex-col overflow-hidden">
-              <Header />
+              <Header menus={menus} />
               <MainContent>{children}</MainContent>
-              <Footer menus={footerMenus} />
+              <Footer menus={menus} />
             </div>
           </ResponsiveFontScale>
         </ThemeProvider>

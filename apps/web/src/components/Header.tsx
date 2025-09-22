@@ -4,10 +4,11 @@ import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { gsap } from "gsap";
-import { Menu } from "./Menu";
+import Menu from "./Menu";
 import { useMenuStore } from "@/store/menuStore";
+import type { MenuItem } from "@/lib/server/menuCache";
 
-export function Header() {
+export function Header({ menus }: { menus: MenuItem[] }) {
   const [title, setTitle] = useState("NeutralPress");
   const { isMenuOpen, toggleMenu } = useMenuStore();
   const headerRef = useRef<HTMLElement>(null);
@@ -97,11 +98,12 @@ export function Header() {
               restSpeed: 0.01,
             }}
           >
-            <div className="h-full pt-[78px]">
+            <div className="h-full pb-[78px]">
               <Menu
-                setIsMenuOpen={(isOpen) =>
+                setIsMenuOpen={(isOpen: boolean) =>
                   useMenuStore.getState().setMenuOpen(isOpen)
                 }
+                menus={menus}
               />
             </div>
           </motion.div>
