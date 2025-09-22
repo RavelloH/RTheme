@@ -14,7 +14,7 @@ export const metadata = await generateMetadata(
   },
   {
     pathname: "/",
-  }
+  },
 );
 
 export default function Home() {

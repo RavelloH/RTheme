@@ -167,7 +167,7 @@
     margin: 1rem;
     padding: 1rem;
   }
-  
+
   .keyContent {
     font-size: 0.7rem;
     max-height: 150px;
@@ -175,15 +175,15 @@
 }
 
 /* 深色主题优化 */
-[data-theme='dark'] .container {
+[data-theme="dark"] .container {
   border-color: var(--ifm-color-emphasis-200);
 }
 
-[data-theme='dark'] .keyContent {
+[data-theme="dark"] .keyContent {
   background-color: var(--ifm-color-emphasis-200);
   color: var(--ifm-color-content);
 }
 
-[data-theme='dark'] .envExample {
+[data-theme="dark"] .envExample {
   background-color: var(--ifm-color-emphasis-200);
 }

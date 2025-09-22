@@ -35,10 +35,10 @@ export async function login(
   },
   serverConfig?: {
     environment?: "serverless" | "serveraction";
-  }
+  },
 ) {
   const response = new ResponseBuilder(
-    serverConfig?.environment || "serveraction"
+    serverConfig?.environment || "serveraction",
   );
 
   // 速率控制
@@ -54,7 +54,7 @@ export async function login(
       token_transport,
       captcha_token,
     },
-    LoginUserSchema
+    LoginUserSchema,
   );
 
   if (validationResult instanceof Response) return validationResult;
@@ -228,11 +228,11 @@ export async function register(
   },
   serverConfig?: {
     environment?: "serverless" | "serveraction";
-  }
+  },
 ) {
   // 创建响应构建器，根据配置选择环境
   const response = new ResponseBuilder(
-    serverConfig?.environment || "serveraction"
+    serverConfig?.environment || "serveraction",
   );
 
   // 速率控制
@@ -249,7 +249,7 @@ export async function register(
       nickname,
       captcha_token,
     },
-    RegisterUserSchema
+    RegisterUserSchema,
   );
   if (validationResult instanceof Response) return validationResult;
 
@@ -327,10 +327,10 @@ export async function refresh(
   },
   serverConfig?: {
     environment?: "serverless" | "serveraction";
-  }
+  },
 ) {
   const response = new ResponseBuilder(
-    serverConfig?.environment || "serveraction"
+    serverConfig?.environment || "serveraction",
   );
 
   // 速率控制
@@ -344,7 +344,7 @@ export async function refresh(
       token_transport,
       refresh_token,
     },
-    RefreshTokenSchema
+    RefreshTokenSchema,
   );
   if (validationResult instanceof Response) return validationResult;
 
@@ -446,10 +446,10 @@ export async function verifyEmail(
   },
   serverConfig?: {
     environment?: "serverless" | "serveraction";
-  }
+  },
 ) {
   const response = new ResponseBuilder(
-    serverConfig?.environment || "serveraction"
+    serverConfig?.environment || "serveraction",
   );
 
   // 速率控制
@@ -464,7 +464,7 @@ export async function verifyEmail(
       captcha_token,
       email,
     },
-    EmailVerificationSchema
+    EmailVerificationSchema,
   );
 
   if (validationResult instanceof Response) return validationResult;
@@ -541,10 +541,10 @@ export async function changePassword(
   },
   serverConfig?: {
     environment?: "serverless" | "serveraction";
-  }
+  },
 ) {
   const response = new ResponseBuilder(
-    serverConfig?.environment || "serveraction"
+    serverConfig?.environment || "serveraction",
   );
 
   // 速率控制
@@ -559,7 +559,7 @@ export async function changePassword(
       new_password,
       access_token,
     },
-    ChangePasswordSchema
+    ChangePasswordSchema,
   );
   if (validationResult instanceof Response) return validationResult;
 
@@ -611,7 +611,7 @@ export async function changePassword(
     // 验证旧密码
     const isOldPasswordValid = await verifyPassword(
       user.password,
-      old_password
+      old_password,
     );
     if (!isOldPasswordValid.isValid) {
       return response.badRequest({
@@ -655,10 +655,10 @@ export async function requestPasswordReset(
   },
   serverConfig?: {
     environment?: "serverless" | "serveraction";
-  }
+  },
 ) {
   const response = new ResponseBuilder(
-    serverConfig?.environment || "serveraction"
+    serverConfig?.environment || "serveraction",
   );
   // 速率控制
   if (!(await limitControl(await headers()))) {
@@ -670,7 +670,7 @@ export async function requestPasswordReset(
       email,
       captcha_token,
     },
-    RequestPasswordResetSchema
+    RequestPasswordResetSchema,
   );
   if (validationResult instanceof Response) return validationResult;
 
@@ -732,10 +732,10 @@ export async function resetPassword(
   },
   serverConfig?: {
     environment?: "serverless" | "serveraction";
-  }
+  },
 ) {
   const response = new ResponseBuilder(
-    serverConfig?.environment || "serveraction"
+    serverConfig?.environment || "serveraction",
   );
 
   // 速率控制
@@ -750,7 +750,7 @@ export async function resetPassword(
       new_password,
       captcha_token,
     },
-    ResetPasswordSchema
+    ResetPasswordSchema,
   );
   if (validationResult instanceof Response) return validationResult;
 
@@ -823,10 +823,10 @@ export async function resendEmailVerification(
   },
   serverConfig?: {
     environment?: "serverless" | "serveraction";
-  }
+  },
 ) {
   const response = new ResponseBuilder(
-    serverConfig?.environment || "serveraction"
+    serverConfig?.environment || "serveraction",
   );
 
   // 速率控制
@@ -840,7 +840,7 @@ export async function resendEmailVerification(
       email,
       captcha_token,
     },
-    ResendEmailVerificationSchema
+    ResendEmailVerificationSchema,
   );
   if (validationResult instanceof Response) return validationResult;
 

@@ -98,7 +98,7 @@ function createCacheHeaders(cacheConfig?: CacheConfig): HeadersInit {
     }
     if (cacheConfig.staleWhileRevalidate !== undefined) {
       cacheDirectives.push(
-        `stale-while-revalidate=${cacheConfig.staleWhileRevalidate}`
+        `stale-while-revalidate=${cacheConfig.staleWhileRevalidate}`,
       );
     }
     if (cacheConfig.mustRevalidate) {
@@ -124,7 +124,7 @@ function createCacheHeaders(cacheConfig?: CacheConfig): HeadersInit {
 function createPaginationMeta(
   page: number,
   pageSize: number,
-  total: number
+  total: number,
 ): PaginationMeta {
   const totalPages = Math.ceil(total / pageSize);
   return {
@@ -179,7 +179,7 @@ function createResponseBody<T extends ApiResponseData>(
   message: string,
   data: T = null as T,
   error?: ApiError,
-  meta?: PaginationMeta
+  meta?: PaginationMeta,
 ): ApiResponse<T> {
   return {
     success,
@@ -203,7 +203,7 @@ function createServerlessResponse<T extends ApiResponseData>(
   error?: ApiError,
   customHeaders?: HeadersInit,
   meta?: PaginationMeta,
-  cacheConfig?: CacheConfig
+  cacheConfig?: CacheConfig,
 ): NextResponse<ApiResponse<T>> {
   const responseBody = createResponseBody(success, message, data, error, meta);
 
@@ -228,7 +228,7 @@ function createServerActionResponse<T extends ApiResponseData>(
   message: string,
   data: T = null as T,
   error?: ApiError,
-  meta?: PaginationMeta
+  meta?: PaginationMeta,
 ): ApiResponse<T> {
   return createResponseBody(success, message, data, error, meta);
 }
@@ -281,7 +281,7 @@ class ResponseBuilder {
         finalMessage,
         finalData,
         finalError,
-        config.meta
+        config.meta,
       );
       return NextResponse.json(actionResponse, { status });
     }
@@ -294,7 +294,7 @@ class ResponseBuilder {
       finalError,
       config.customHeaders,
       config.meta,
-      config.cacheConfig
+      config.cacheConfig,
     );
   }
 
@@ -699,7 +699,7 @@ class ResponseBuilder {
     const error = fieldError(
       config.field,
       config.errorMessage || "验证失败",
-      config.details
+      config.details,
     );
 
     return this.response({
@@ -724,7 +724,7 @@ class ResponseBuilder {
 export function fieldError(
   field: string,
   message: string,
-  details?: ErrorDetails
+  details?: ErrorDetails,
 ): ApiError {
   return {
     code: "FIELD_VALIDATION_ERROR",

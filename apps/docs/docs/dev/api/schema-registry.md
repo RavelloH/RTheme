@@ -38,10 +38,10 @@ const schemas = getAllRegisteredSchemas();
 提供三种标准响应构建器：
 
 ```typescript
-import { 
-  createSuccessResponseSchema, 
-  createErrorResponseSchema, 
-  createPaginatedResponseSchema 
+import {
+  createSuccessResponseSchema,
+  createErrorResponseSchema,
+  createPaginatedResponseSchema,
 } from "./common.js";
 
 // 成功响应 - 不包含error和meta字段
@@ -61,7 +61,11 @@ const ListResponseSchema = createPaginatedResponseSchema(ListDataSchema);
 ```typescript
 // packages/shared-types/src/api/posts.ts
 import { z } from "zod";
-import { createSuccessResponseSchema, createErrorResponseSchema, registerSchema } from "./common.js";
+import {
+  createSuccessResponseSchema,
+  createErrorResponseSchema,
+  registerSchema,
+} from "./common.js";
 
 export const PostSchema = z.object({
   id: z.string().uuid(),
@@ -87,30 +91,35 @@ export const UpdatePostSchema = CreatePostSchema.partial();
 
 ```typescript
 // 使用构建器创建响应schemas
-export const PostSuccessResponseSchema = createSuccessResponseSchema(PostSchema);
+export const PostSuccessResponseSchema =
+  createSuccessResponseSchema(PostSchema);
 
 export const PostListResponseSchema = createPaginatedResponseSchema(
   z.object({
-    posts: z.array(PostSchema)
-  })
+    posts: z.array(PostSchema),
+  }),
 );
 
 export const PostNotFoundResponseSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("POST_NOT_FOUND"),
     message: z.string(),
-  })
+  }),
 );
 
 export const PostValidationErrorResponseSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("VALIDATION_ERROR"),
     message: z.string(),
-    details: z.array(z.object({
-      field: z.string(),
-      message: z.string(),
-    })).optional(),
-  })
+    details: z
+      .array(
+        z.object({
+          field: z.string(),
+          message: z.string(),
+        }),
+      )
+      .optional(),
+  }),
 );
 ```
 
@@ -126,7 +135,10 @@ registerSchema("UpdatePost", UpdatePostSchema);
 registerSchema("PostSuccessResponse", PostSuccessResponseSchema);
 registerSchema("PostListResponse", PostListResponseSchema);
 registerSchema("PostNotFoundResponse", PostNotFoundResponseSchema);
-registerSchema("PostValidationErrorResponse", PostValidationErrorResponseSchema);
+registerSchema(
+  "PostValidationErrorResponse",
+  PostValidationErrorResponseSchema,
+);
 
 // 导出类型
 export type Post = z.infer<typeof PostSchema>;
@@ -203,12 +215,12 @@ import { CreatePostSchema } from "@repo/shared-types/api/posts";
 export async function POST(request: Request) {
   const validation = await validateRequestJSON(request, CreatePostSchema);
   if (validation instanceof Response) return validation;
-  
+
   const postData = validation.data!;
   // postData 具有完整的TypeScript类型推导
-  console.log(postData.title);    // string
-  console.log(postData.status);   // "DRAFT" | "PUBLISHED"
-  
+  console.log(postData.title); // string
+  console.log(postData.status); // "DRAFT" | "PUBLISHED"
+
   // 创建文章逻辑...
 }
 ```
@@ -244,7 +256,7 @@ registerSchema("NotFoundErrorResponse", NotFoundErrorResponseSchema);
 // packages/shared-types/src/api/posts.ts
 // 文章相关的所有schemas和注册
 
-// packages/shared-types/src/api/comments.ts  
+// packages/shared-types/src/api/comments.ts
 // 评论相关的所有schemas和注册
 ```
 
@@ -256,18 +268,22 @@ const UserNotFoundErrorSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("USER_NOT_FOUND"),
     message: z.string(),
-  })
+  }),
 );
 
 const UserValidationErrorSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("USER_VALIDATION_ERROR"),
     message: z.string(),
-    details: z.array(z.object({
-      field: z.string(),
-      message: z.string(),
-    })).optional(),
-  })
+    details: z
+      .array(
+        z.object({
+          field: z.string(),
+          message: z.string(),
+        }),
+      )
+      .optional(),
+  }),
 );
 
 registerSchema("UserNotFoundResponse", UserNotFoundErrorSchema);
@@ -282,9 +298,12 @@ registerSchema("UserValidationErrorResponse", UserValidationErrorSchema);
 import { getAllRegisteredSchemas } from "@repo/shared-types/src/api/common";
 
 // 在开发环境中查看所有已注册的schemas
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV === "development") {
   const schemas = getAllRegisteredSchemas();
-  console.log('已注册的schemas:', schemas.map(s => s.name));
+  console.log(
+    "已注册的schemas:",
+    schemas.map((s) => s.name),
+  );
 }
 ```
 
@@ -305,21 +324,25 @@ OpenAPI生成器会输出详细的日志信息：
 ## 🚀 优势总结
 
 ### 开发效率
+
 - ✅ 一次注册，自动发现
 - ✅ 无需维护重复的schema列表
 - ✅ 新增API模块时只需添加导入
 
 ### 类型安全
+
 - ✅ 完整的TypeScript类型推导
 - ✅ 编译时类型检查
 - ✅ 运行时数据验证
 
 ### 文档质量
+
 - ✅ 自动同步，确保文档完整性
 - ✅ 精确的响应格式（无冗余字段）
 - ✅ 一致的错误处理格式
 
 ### 维护成本
+
 - ✅ 集中化的schema管理
 - ✅ 自动化的文档生成
 - ✅ 减少手动维护工作

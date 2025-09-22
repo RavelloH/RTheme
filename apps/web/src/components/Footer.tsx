@@ -44,7 +44,7 @@ export default function Footer({ menus }: FooterProps) {
             duration: 0.8,
             ease: "power2.out",
             delay: 0.2, // 稍微延迟，让Header先动画
-          }
+          },
         );
       }
     };
@@ -77,7 +77,7 @@ export default function Footer({ menus }: FooterProps) {
     gsap.to(linkElement, {
       color: "#ffffff",
       duration: 0.3,
-      ease: "power2.out"
+      ease: "power2.out",
     });
   };
 
@@ -88,7 +88,7 @@ export default function Footer({ menus }: FooterProps) {
     gsap.to(linkElement, {
       color: "",
       duration: 0.3,
-      ease: "power2.in"
+      ease: "power2.in",
     });
   };
 
@@ -118,19 +118,27 @@ export default function Footer({ menus }: FooterProps) {
 
     // 情况1：从菜单页面到非菜单页面 - 下划线向下移动并消失
     if (fromIndex !== -1 && toIndex === -1) {
-      tl.to(underline, {
-        y: 10,
-        opacity: 0,
-        duration: 0.5,
-        ease: "power3.inOut"
-      }, 0);
+      tl.to(
+        underline,
+        {
+          y: 10,
+          opacity: 0,
+          duration: 0.5,
+          ease: "power3.inOut",
+        },
+        0,
+      );
 
       if (fromLink) {
-        tl.to(fromLink, {
-          color: "var(--muted-foreground)",
-          duration: 0.4,
-          ease: "power3.in"
-        }, 0);
+        tl.to(
+          fromLink,
+          {
+            color: "var(--muted-foreground)",
+            duration: 0.4,
+            ease: "power3.in",
+          },
+          0,
+        );
       }
     }
     // 情况2：从非菜单页面到菜单页面 - 下划线向上移动并出现
@@ -139,50 +147,74 @@ export default function Footer({ menus }: FooterProps) {
 
       // 先设置位置和宽度
       gsap.set(underline, {
-        x: toRect.left - (underline.parentElement?.getBoundingClientRect().left || 0),
+        x:
+          toRect.left -
+          (underline.parentElement?.getBoundingClientRect().left || 0),
         width: toRect.width,
         y: 10,
-        opacity: 0
+        opacity: 0,
       });
 
       // 向上移动并出现
-      tl.to(underline, {
-        y: 0,
-        opacity: 1,
-        duration: 0.5,
-        ease: "power3.inOut"
-      }, 0);
+      tl.to(
+        underline,
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.5,
+          ease: "power3.inOut",
+        },
+        0,
+      );
 
-      tl.to(toLink, {
-        color: "#ffffff",
-        duration: 0.4,
-        ease: "power3.out"
-      }, 0.2);
+      tl.to(
+        toLink,
+        {
+          color: "#ffffff",
+          duration: 0.4,
+          ease: "power3.out",
+        },
+        0.2,
+      );
     }
     // 情况3：在菜单页面之间移动 - 正常的移动动画
     else if (fromIndex !== -1 && toIndex !== -1 && toLink && fromLink) {
       const toRect = toLink.getBoundingClientRect();
 
       // 移动到新位置并调整宽度
-      tl.to(underline, {
-        x: toRect.left - (underline.parentElement?.getBoundingClientRect().left || 0),
-        width: toRect.width,
-        duration: 1,
-        ease: "power3.inOut"
-      }, 0);
+      tl.to(
+        underline,
+        {
+          x:
+            toRect.left -
+            (underline.parentElement?.getBoundingClientRect().left || 0),
+          width: toRect.width,
+          duration: 1,
+          ease: "power3.inOut",
+        },
+        0,
+      );
 
       // 链接颜色动画
-      tl.to(fromLink!, {
-        color: "var(--muted-foreground)",
-        duration: 0.4,
-        ease: "power3.in"
-      }, 0.1);
+      tl.to(
+        fromLink!,
+        {
+          color: "var(--muted-foreground)",
+          duration: 0.4,
+          ease: "power3.in",
+        },
+        0.1,
+      );
 
-      tl.to(toLink, {
-        color: "#ffffff",
-        duration: 0.4,
-        ease: "power3.out"
-      }, 0.2);
+      tl.to(
+        toLink,
+        {
+          color: "#ffffff",
+          duration: 0.4,
+          ease: "power3.out",
+        },
+        0.2,
+      );
     }
 
     // 动画完成后重置状态
@@ -198,12 +230,14 @@ export default function Footer({ menus }: FooterProps) {
 
   // 监听路由变化，更新下划线状态
   useEffect(() => {
-    const mainMenus = menus.filter(menu => menu.category === "MAIN");
+    const mainMenus = menus.filter((menu) => menu.category === "MAIN");
 
     // 如果是首次加载，直接设置状态
     if (previousPathname.current === pathname) {
-      const activeIndex = mainMenus.findIndex(menu =>
-        pathname === (menu.link ? menu.link : menu.page ? menu.page.slug : "#")
+      const activeIndex = mainMenus.findIndex(
+        (menu) =>
+          pathname ===
+          (menu.link ? menu.link : menu.page ? menu.page.slug : "#"),
       );
 
       if (activeIndex !== -1) {
@@ -217,7 +251,7 @@ export default function Footer({ menus }: FooterProps) {
           gsap.set(underline, {
             x: rect.left - (parentRect?.left || 0),
             width: rect.width,
-            opacity: 1
+            opacity: 1,
           });
         }
 
@@ -230,11 +264,14 @@ export default function Footer({ menus }: FooterProps) {
     }
 
     // 找到旧的激活索引和新的激活索引
-    const oldActiveIndex = mainMenus.findIndex(menu =>
-      activePathname === (menu.link ? menu.link : menu.page ? menu.page.slug : "#")
+    const oldActiveIndex = mainMenus.findIndex(
+      (menu) =>
+        activePathname ===
+        (menu.link ? menu.link : menu.page ? menu.page.slug : "#"),
     );
-    const newActiveIndex = mainMenus.findIndex(menu =>
-      pathname === (menu.link ? menu.link : menu.page ? menu.page.slug : "#")
+    const newActiveIndex = mainMenus.findIndex(
+      (menu) =>
+        pathname === (menu.link ? menu.link : menu.page ? menu.page.slug : "#"),
     );
 
     // 如果索引发生变化，执行动画
@@ -276,7 +313,9 @@ export default function Footer({ menus }: FooterProps) {
           <div className="text-muted-foreground relative">
             {menus.map((menu, index) => {
               if (menu.category !== "MAIN") return null;
-              const isActive = activePathname === (menu.link ? menu.link : menu.page ? menu.page.slug : "#");
+              const isActive =
+                activePathname ===
+                (menu.link ? menu.link : menu.page ? menu.page.slug : "#");
               return (
                 <span
                   key={index}

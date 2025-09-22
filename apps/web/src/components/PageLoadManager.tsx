@@ -14,14 +14,14 @@ export function PageLoadManager({ onLoadComplete }: PageLoadManagerProps) {
     const checkPageLoad = () => {
       if (hasTriggeredRef.current) return;
 
-      const isReady = 
+      const isReady =
         document.readyState === "complete" &&
         window.performance &&
         performance.getEntriesByType("navigation").length > 0;
 
       if (isReady) {
         hasTriggeredRef.current = true;
-        
+
         // 延迟一点时间确保所有资源都已加载
         setTimeout(() => {
           onLoadComplete();
@@ -45,7 +45,7 @@ export function PageLoadManager({ onLoadComplete }: PageLoadManagerProps) {
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", handleDOMContentLoaded);
     }
-    
+
     window.addEventListener("load", handleLoad);
 
     // 兜底：最多3秒后强制完成加载

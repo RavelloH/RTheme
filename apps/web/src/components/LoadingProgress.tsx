@@ -40,16 +40,16 @@ export function LoadingProgress({ onComplete }: LoadingProgressProps) {
             opacity: 0,
             duration: 0.5,
             ease: "power2.out",
-            onComplete: handleComplete
+            onComplete: handleComplete,
           });
-        }
+        },
       });
 
       // 进度条动画
       tl.to(progressBarRef.current, {
-        width: "100%", 
+        width: "100%",
         duration: 2,
-        ease: "power2.out"
+        ease: "power2.out",
       });
 
       animationRef.current = tl;

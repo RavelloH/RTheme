@@ -26,7 +26,7 @@ interface AspectRatioOption {
 
 /**
  * 视差图片轮播组件
- * 
+ *
  * 特性：
  * - 图片从右往左排列，第一张图片在最右侧
  * - 自动重复图片以达到至少200%容器宽度
@@ -48,19 +48,19 @@ export default function ParallaxImageCarousel({
   // 获取最接近的aspect-ratio类名
   const getAspectRatioClass = (ratio: number): string => {
     const ratios: AspectRatioOption[] = [
-      { value: 16/9, class: "aspect-video" }, // 16:9
-      { value: 4/3, class: "aspect-[4/3]" },  // 4:3
-      { value: 3/2, class: "aspect-[3/2]" },  // 3:2
-      { value: 1, class: "aspect-square" },   // 1:1
-      { value: 2/3, class: "aspect-[2/3]" },  // 2:3
-      { value: 9/16, class: "aspect-[9/16]" }, // 9:16
+      { value: 16 / 9, class: "aspect-video" }, // 16:9
+      { value: 4 / 3, class: "aspect-[4/3]" }, // 4:3
+      { value: 3 / 2, class: "aspect-[3/2]" }, // 3:2
+      { value: 1, class: "aspect-square" }, // 1:1
+      { value: 2 / 3, class: "aspect-[2/3]" }, // 2:3
+      { value: 9 / 16, class: "aspect-[9/16]" }, // 9:16
     ];
 
     if (ratios.length === 0) return "aspect-square";
 
     let closest = ratios[0];
     if (!closest) return "aspect-square";
-    
+
     let minDiff = Math.abs(ratio - closest.value);
 
     for (const r of ratios) {
@@ -83,7 +83,7 @@ export default function ParallaxImageCarousel({
         images.map(
           (src) =>
             new Promise<ImageDimension>((resolve) => {
-              const img = document.createElement('img');
+              const img = document.createElement("img");
               img.onload = () => {
                 resolve({
                   width: img.naturalWidth,
@@ -100,8 +100,8 @@ export default function ParallaxImageCarousel({
                 });
               };
               img.src = src;
-            })
-        )
+            }),
+        ),
       );
 
       setImageDimensions(dimensions);
@@ -122,7 +122,7 @@ export default function ParallaxImageCarousel({
     const containerHeight = container.offsetHeight || 400; // 默认高度
     const singleRoundWidth = imageDimensions.reduce(
       (total, dimension) => total + containerHeight * dimension.aspectRatio,
-      0
+      0,
     );
 
     // 计算需要重复多少轮

@@ -42,7 +42,7 @@ class DevWatcher {
   private startApiWatcher() {
     // 监控 API 路由文件
     const apiDir = join(process.cwd(), "../../apps/web/src/app/api");
-    
+
     rlog.info(`启动 API 文件监控...`);
     rlog.info(`工作目录: ${process.cwd()}`);
     rlog.info(`监控API目录: ${apiDir}`);
@@ -60,19 +60,19 @@ class DevWatcher {
         rlog.success("API 文件监控已启动");
       })
       .on("change", (path: string) => {
-        if (path.endsWith('route.ts') || path.endsWith('route.js')) {
+        if (path.endsWith("route.ts") || path.endsWith("route.js")) {
           rlog.info(`检测到 API 文件变化: ${path}`);
           this.queueGeneration();
         }
       })
       .on("add", (path: string) => {
-        if (path.endsWith('route.ts') || path.endsWith('route.js')) {
+        if (path.endsWith("route.ts") || path.endsWith("route.js")) {
           rlog.info(`检测到新 API 文件: ${path}`);
           this.queueGeneration();
         }
       })
       .on("unlink", (path: string) => {
-        if (path.endsWith('route.ts') || path.endsWith('route.js')) {
+        if (path.endsWith("route.ts") || path.endsWith("route.js")) {
           rlog.info(`检测到 API 文件删除: ${path}`);
           this.queueGeneration();
         }
@@ -86,7 +86,7 @@ class DevWatcher {
     // 监控 shared-types 源文件
     const sharedTypesDir = join(process.cwd(), "../shared-types/src/api");
     const sharedTypesPattern = join(sharedTypesDir, "**/*.ts");
-    
+
     rlog.info(`启动 shared-types API 文件监控...`);
     rlog.info(`工作目录: ${process.cwd()}`);
     rlog.info(`shared-types目录: ${sharedTypesDir}`);
@@ -105,19 +105,19 @@ class DevWatcher {
         rlog.success("shared-types API 文件监控已启动");
       })
       .on("change", (path: string) => {
-        if (path.endsWith('.ts')) {
+        if (path.endsWith(".ts")) {
           rlog.info(`检测到 shared-types API 文件变化: ${path}`);
           this.queueGeneration();
         }
       })
       .on("add", (path: string) => {
-        if (path.endsWith('.ts')) {
+        if (path.endsWith(".ts")) {
           rlog.info(`检测到新 shared-types API 文件: ${path}`);
           this.queueGeneration();
         }
       })
       .on("unlink", (path: string) => {
-        if (path.endsWith('.ts')) {
+        if (path.endsWith(".ts")) {
           rlog.info(`检测到 shared-types API 文件删除: ${path}`);
           this.queueGeneration();
         }
@@ -141,7 +141,7 @@ class DevWatcher {
     this.isGenerating = true;
 
     // 延迟执行，给 TypeScript 编译时间
-    await new Promise(resolve => setTimeout(resolve, 800));
+    await new Promise((resolve) => setTimeout(resolve, 800));
 
     // 清空队列，只执行最新的生成请求
     this.generationQueue.length = 0;

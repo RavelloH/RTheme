@@ -6,14 +6,11 @@ function generate(): string {
   return code + "-" + timestamp;
 }
 
-function verify(
-  inputCode: string,
-  storedCodeWithTimestamp: string
-): boolean {
+function verify(inputCode: string, storedCodeWithTimestamp: string): boolean {
   try {
-    const [storedCode, timestampStr] = storedCodeWithTimestamp.split('-');
-    const timestamp = parseInt(timestampStr || '', 10);
-    
+    const [storedCode, timestampStr] = storedCodeWithTimestamp.split("-");
+    const timestamp = parseInt(timestampStr || "", 10);
+
     return (
       storedCode === inputCode &&
       !isNaN(timestamp) &&

@@ -10,7 +10,10 @@ const usernameSchema = z
   .string()
   .min(3, "用户名至少需要3个字符")
   .max(20, "用户名不能超过20个字符")
-  .regex(/^[a-z][a-z0-9_]*$/, "用户名只能以小写字母开头，只能包含小写字母、数字和下划线");
+  .regex(
+    /^[a-z][a-z0-9_]*$/,
+    "用户名只能以小写字母开头，只能包含小写字母、数字和下划线",
+  );
 
 // 密码验证
 const passwordSchema = z
@@ -108,31 +111,31 @@ export const ValidationErrorResponseSchema = createErrorResponseSchema(
         z.object({
           field: z.string(),
           message: z.string(),
-        })
+        }),
       )
       .optional(),
-  })
+  }),
 );
 
 export const ConflictErrorResponseSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("USER_EXISTS"),
     message: z.string(),
-  })
+  }),
 );
 
 export const RateLimitErrorResponseSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("TOO_MANY_REQUESTS"),
     message: z.string(),
-  })
+  }),
 );
 
 export const ServerErrorResponseSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("INTERNAL_SERVER_ERROR"),
     message: z.string(),
-  })
+  }),
 );
 
 // 邮箱验证成功响应
@@ -154,32 +157,34 @@ export const ResendEmailVerificationSuccessResponseSchema = z.object({
 });
 
 // 邮箱验证相关的错误响应
-export const EmailAlreadyVerifiedErrorResponseSchema = createErrorResponseSchema(
-  z.object({
-    code: z.literal("EMAIL_ALREADY_VERIFIED"),
-    message: z.string(),
-  })
-);
+export const EmailAlreadyVerifiedErrorResponseSchema =
+  createErrorResponseSchema(
+    z.object({
+      code: z.literal("EMAIL_ALREADY_VERIFIED"),
+      message: z.string(),
+    }),
+  );
 
-export const InvalidOrExpiredCodeErrorResponseSchema = createErrorResponseSchema(
-  z.object({
-    code: z.literal("INVALID_OR_EXPIRED_CODE"),
-    message: z.string(),
-  })
-);
+export const InvalidOrExpiredCodeErrorResponseSchema =
+  createErrorResponseSchema(
+    z.object({
+      code: z.literal("INVALID_OR_EXPIRED_CODE"),
+      message: z.string(),
+    }),
+  );
 
 export const UnauthorizedErrorResponseSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("UNAUTHORIZED"),
     message: z.string(),
-  })
+  }),
 );
 
 export const UserNotFoundErrorResponseSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("USER_NOT_FOUND"),
     message: z.string(),
-  })
+  }),
 );
 
 // 密码修改成功响应
@@ -196,21 +201,21 @@ export const NoPasswordSetErrorResponseSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("NO_PASSWORD_SET"),
     message: z.string(),
-  })
+  }),
 );
 
 export const InvalidOldPasswordErrorResponseSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("INVALID_OLD_PASSWORD"),
     message: z.string(),
-  })
+  }),
 );
 
 export const PasswordsIdenticalErrorResponseSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("PASSWORDS_IDENTICAL"),
     message: z.string(),
-  })
+  }),
 );
 
 // 密码重置成功响应
@@ -235,14 +240,14 @@ export const InvalidResetCodeErrorResponseSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("INVALID_RESET_CODE"),
     message: z.string(),
-  })
+  }),
 );
 
 export const ExpiredResetCodeErrorResponseSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("EXPIRED_RESET_CODE"),
     message: z.string(),
-  })
+  }),
 );
 
 // 登录成功响应
@@ -262,7 +267,7 @@ export const InvalidCredentialsErrorResponseSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("INVALID_CREDENTIALS"),
     message: z.string(),
-  })
+  }),
 );
 
 export const SsoUserErrorResponseSchema = createErrorResponseSchema(
@@ -273,17 +278,17 @@ export const SsoUserErrorResponseSchema = createErrorResponseSchema(
       .array(
         z.object({
           provider: z.string(),
-        })
+        }),
       )
       .optional(),
-  })
+  }),
 );
 
 export const EmailNotVerifiedErrorResponseSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("EMAIL_NOT_VERIFIED"),
     message: z.string(),
-  })
+  }),
 );
 
 // 自动注册所有schemas到OpenAPI生成器
@@ -300,31 +305,67 @@ registerSchema("RegisterSuccessResponse", RegisterSuccessResponseSchema);
 registerSchema("LoginSuccessResponse", LoginSuccessResponseSchema);
 registerSchema("ValidationErrorResponse", ValidationErrorResponseSchema);
 registerSchema("ConflictErrorResponse", ConflictErrorResponseSchema);
-registerSchema("InvalidCredentialsErrorResponse", InvalidCredentialsErrorResponseSchema);
+registerSchema(
+  "InvalidCredentialsErrorResponse",
+  InvalidCredentialsErrorResponseSchema,
+);
 registerSchema("SsoUserErrorResponse", SsoUserErrorResponseSchema);
-registerSchema("EmailNotVerifiedErrorResponse", EmailNotVerifiedErrorResponseSchema);
+registerSchema(
+  "EmailNotVerifiedErrorResponse",
+  EmailNotVerifiedErrorResponseSchema,
+);
 registerSchema("RateLimitErrorResponse", RateLimitErrorResponseSchema);
 registerSchema("ServerErrorResponse", ServerErrorResponseSchema);
 
 // 注册邮箱验证相关的 schema
 registerSchema("EmailVerifySuccessResponse", EmailVerifySuccessResponseSchema);
-registerSchema("ResendEmailVerificationSuccessResponse", ResendEmailVerificationSuccessResponseSchema);
-registerSchema("EmailAlreadyVerifiedErrorResponse", EmailAlreadyVerifiedErrorResponseSchema);
-registerSchema("InvalidOrExpiredCodeErrorResponse", InvalidOrExpiredCodeErrorResponseSchema);
+registerSchema(
+  "ResendEmailVerificationSuccessResponse",
+  ResendEmailVerificationSuccessResponseSchema,
+);
+registerSchema(
+  "EmailAlreadyVerifiedErrorResponse",
+  EmailAlreadyVerifiedErrorResponseSchema,
+);
+registerSchema(
+  "InvalidOrExpiredCodeErrorResponse",
+  InvalidOrExpiredCodeErrorResponseSchema,
+);
 registerSchema("UnauthorizedErrorResponse", UnauthorizedErrorResponseSchema);
 registerSchema("UserNotFoundErrorResponse", UserNotFoundErrorResponseSchema);
 
 // 注册密码修改相关的 schema
-registerSchema("ChangePasswordSuccessResponse", ChangePasswordSuccessResponseSchema);
+registerSchema(
+  "ChangePasswordSuccessResponse",
+  ChangePasswordSuccessResponseSchema,
+);
 registerSchema("NoPasswordSetErrorResponse", NoPasswordSetErrorResponseSchema);
-registerSchema("InvalidOldPasswordErrorResponse", InvalidOldPasswordErrorResponseSchema);
-registerSchema("PasswordsIdenticalErrorResponse", PasswordsIdenticalErrorResponseSchema);
+registerSchema(
+  "InvalidOldPasswordErrorResponse",
+  InvalidOldPasswordErrorResponseSchema,
+);
+registerSchema(
+  "PasswordsIdenticalErrorResponse",
+  PasswordsIdenticalErrorResponseSchema,
+);
 
 // 注册密码重置相关的 schema
-registerSchema("PasswordResetRequestSuccessResponse", PasswordResetRequestSuccessResponseSchema);
-registerSchema("ResetPasswordSuccessResponse", ResetPasswordSuccessResponseSchema);
-registerSchema("InvalidResetCodeErrorResponse", InvalidResetCodeErrorResponseSchema);
-registerSchema("ExpiredResetCodeErrorResponse", ExpiredResetCodeErrorResponseSchema);
+registerSchema(
+  "PasswordResetRequestSuccessResponse",
+  PasswordResetRequestSuccessResponseSchema,
+);
+registerSchema(
+  "ResetPasswordSuccessResponse",
+  ResetPasswordSuccessResponseSchema,
+);
+registerSchema(
+  "InvalidResetCodeErrorResponse",
+  InvalidResetCodeErrorResponseSchema,
+);
+registerSchema(
+  "ExpiredResetCodeErrorResponse",
+  ExpiredResetCodeErrorResponseSchema,
+);
 
 // 导出推导的 TypeScript 类型
 export type RegisterUser = z.infer<typeof RegisterUserSchema>;

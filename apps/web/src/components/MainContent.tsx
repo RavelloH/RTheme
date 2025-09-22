@@ -15,30 +15,31 @@ export function MainContent({ children }: MainContentProps) {
   useEffect(() => {
     const handleLoadingComplete = () => {
       setIsLoaded(true);
-      
+
       // 使用GSAP动画从右侧滑入
       if (mainRef.current) {
-        gsap.fromTo(mainRef.current, 
+        gsap.fromTo(
+          mainRef.current,
           { x: "100%" },
-          { 
-            x: "0%", 
-            duration: 0.8, 
+          {
+            x: "0%",
+            duration: 0.8,
             ease: "power2.out",
-            delay: 0.4 // 在Header和Footer之后
-          }
+            delay: 0.4, // 在Header和Footer之后
+          },
         );
       }
     };
 
-    window.addEventListener('loadingComplete', handleLoadingComplete);
-    
+    window.addEventListener("loadingComplete", handleLoadingComplete);
+
     return () => {
-      window.removeEventListener('loadingComplete', handleLoadingComplete);
+      window.removeEventListener("loadingComplete", handleLoadingComplete);
     };
   }, []);
 
   return (
-    <main 
+    <main
       ref={mainRef}
       className={`flex-1 ${isLoaded ? "translate-x-0" : "translate-x-full"}`}
     >

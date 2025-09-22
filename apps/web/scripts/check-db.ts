@@ -30,7 +30,9 @@ export async function checkDatabaseHealth(): Promise<void> {
 
     rlog.success("  Database health check completed successfully!");
   } catch (error) {
-    rlog.error(`  Database health check failed: ${error instanceof Error ? error.message : String(error)}`);
+    rlog.error(
+      `  Database health check failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
     throw error; // 重新抛出错误，让调用者处理
   } finally {
     await cleanup();
@@ -52,7 +54,9 @@ async function checkEnvironment() {
   if (!dbConnectionString) {
     rlog.error("  DATABASE_URL environment variable is not set");
     rlog.error("  Please set DATABASE_URL in your .env file");
-    rlog.error("  Example: DATABASE_URL=postgresql://user:password@localhost:5432/database");
+    rlog.error(
+      "  Example: DATABASE_URL=postgresql://user:password@localhost:5432/database",
+    );
     throw new Error("DATABASE_URL environment variable is not set");
   }
 
@@ -61,9 +65,13 @@ async function checkEnvironment() {
     !dbConnectionString.startsWith("postgresql://") &&
     !dbConnectionString.startsWith("postgres://")
   ) {
-    rlog.error("  DATABASE_URL doesn't appear to be a PostgreSQL connection string");
+    rlog.error(
+      "  DATABASE_URL doesn't appear to be a PostgreSQL connection string",
+    );
     rlog.error(`  Current value: ${dbConnectionString}`);
-    rlog.error("  Expected format: postgresql://user:password@host:port/database");
+    rlog.error(
+      "  Expected format: postgresql://user:password@host:port/database",
+    );
     throw new Error("Invalid DATABASE_URL format");
   }
 
@@ -77,7 +85,7 @@ async function initializePrismaClient() {
       process.cwd(),
       "node_modules",
       ".prisma",
-      "client"
+      "client",
     );
     const clientUrl = pathToFileURL(clientPath).href;
     const { PrismaClient } = await import(clientUrl);
@@ -139,14 +147,16 @@ async function checkDatabaseSchema() {
       { name: "Post", model: () => prisma.post },
       { name: "Comment", model: () => prisma.comment },
       { name: "Media", model: () => prisma.media },
-      { name: "Config", model: () => prisma.config }
+      { name: "Config", model: () => prisma.config },
     ];
-    
+
     for (const table of expectedTables) {
       const tableName = table.name; // 保持原始大小写
-      const tableExists = Array.isArray(existingTables) && 
-        existingTables.some((t: { tablename: string }) => 
-          t.tablename.toLowerCase() === tableName.toLowerCase()
+      const tableExists =
+        Array.isArray(existingTables) &&
+        existingTables.some(
+          (t: { tablename: string }) =>
+            t.tablename.toLowerCase() === tableName.toLowerCase(),
         );
 
       if (tableExists) {
@@ -154,7 +164,9 @@ async function checkDatabaseSchema() {
           const count = await table.model().count();
           rlog.info(`  ✓ Table '${table.name}': ${count} records`);
         } catch (error) {
-          rlog.warning(`  ! Table '${table.name}' exists but counting failed: ${error instanceof Error ? error.message : String(error)}`);
+          rlog.warning(
+            `  ! Table '${table.name}' exists but counting failed: ${error instanceof Error ? error.message : String(error)}`,
+          );
         }
       } else {
         rlog.warning(`  ✗ Table '${table.name}' does not exist`);
@@ -163,7 +175,9 @@ async function checkDatabaseSchema() {
 
     rlog.success("  Database schema check completed");
   } catch (error) {
-    rlog.error(`  Schema check encountered issues: ${error instanceof Error ? error.message : String(error)}`);
+    rlog.error(
+      `  Schema check encountered issues: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
@@ -181,14 +195,19 @@ async function checkMigrationStatus() {
       )
     `;
 
-    const exists = Array.isArray(migrationTableExists) && 
-                   migrationTableExists[0] && 
-                   (migrationTableExists[0] as { exists: boolean }).exists;
+    const exists =
+      Array.isArray(migrationTableExists) &&
+      migrationTableExists[0] &&
+      (migrationTableExists[0] as { exists: boolean }).exists;
 
     if (!exists) {
       rlog.warning("  _prisma_migrations table does not exist");
-      rlog.info("  This suggests the database hasn't been initialized with Prisma");
-      rlog.info("  Run 'npx prisma migrate deploy' or 'npx prisma db push' to set up the database");
+      rlog.info(
+        "  This suggests the database hasn't been initialized with Prisma",
+      );
+      rlog.info(
+        "  Run 'npx prisma migrate deploy' or 'npx prisma db push' to set up the database",
+      );
       return;
     }
 
@@ -202,18 +221,29 @@ async function checkMigrationStatus() {
 
     if (Array.isArray(migrations) && migrations.length > 0) {
       rlog.info(`  Found ${migrations.length} recent migrations:`);
-      migrations.forEach((migration: { migration_name: string; finished_at: string; applied_steps_count: number }, index) => {
-        rlog.info(
-          `  | ${index + 1}. ${migration.migration_name} (${migration.applied_steps_count} steps)`
-        );
-      });
+      migrations.forEach(
+        (
+          migration: {
+            migration_name: string;
+            finished_at: string;
+            applied_steps_count: number;
+          },
+          index,
+        ) => {
+          rlog.info(
+            `  | ${index + 1}. ${migration.migration_name} (${migration.applied_steps_count} steps)`,
+          );
+        },
+      );
     } else {
       rlog.warning("  No migrations found in _prisma_migrations table");
     }
 
     rlog.success("  Migration status check completed");
   } catch (error) {
-    rlog.error(`  Migration status check failed: ${error instanceof Error ? error.message : String(error)}`);
+    rlog.error(
+      `  Migration status check failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
@@ -227,7 +257,7 @@ async function performHealthChecks() {
     if (Array.isArray(version) && version.length > 0) {
       const versionStr = (version[0] as { version: string }).version;
       rlog.info(
-        `  | PostgreSQL version: ${versionStr.split(" ").slice(0, 2).join(" ")}`
+        `  | PostgreSQL version: ${versionStr.split(" ").slice(0, 2).join(" ")}`,
       );
     }
 
@@ -239,7 +269,9 @@ async function performHealthChecks() {
     `;
 
     if (Array.isArray(connections) && connections.length > 0) {
-      const activeConnections = (connections[0] as { active_connections: number }).active_connections;
+      const activeConnections = (
+        connections[0] as { active_connections: number }
+      ).active_connections;
       rlog.info(`  | Active connections: ${activeConnections}`);
     }
 
@@ -255,7 +287,9 @@ async function performHealthChecks() {
 
     rlog.success("  Health checks completed");
   } catch (error) {
-    rlog.exit(`  Health checks encountered issues: ${error instanceof Error ? error.message : String(error)}`);
+    rlog.exit(
+      `  Health checks encountered issues: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
@@ -266,7 +300,9 @@ async function cleanup() {
       await prisma.$disconnect();
       rlog.info("  Database connection closed");
     } catch (error) {
-      rlog.warning(`  Error closing database connection: ${error instanceof Error ? error.message : String(error)}`);
+      rlog.warning(
+        `  Error closing database connection: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 }
@@ -276,9 +312,11 @@ function isMainModule(): boolean {
   try {
     // 检查当前文件是否是主模块
     const arg1 = process.argv[1];
-    return import.meta.url === pathToFileURL(arg1 || '').href || 
-           (arg1?.endsWith('check-db.ts') ?? false) ||
-           (arg1?.endsWith('check-db.js') ?? false);
+    return (
+      import.meta.url === pathToFileURL(arg1 || "").href ||
+      (arg1?.endsWith("check-db.ts") ?? false) ||
+      (arg1?.endsWith("check-db.js") ?? false)
+    );
   } catch {
     return false;
   }

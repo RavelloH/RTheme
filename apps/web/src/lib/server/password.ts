@@ -10,10 +10,10 @@ import { cpus } from "os";
  */
 export enum PasswordErrorType {
   INVALID_INPUT = "INVALID_INPUT",
-  HASHING_FAILED = "HASHING_FAILED", 
+  HASHING_FAILED = "HASHING_FAILED",
   VERIFICATION_FAILED = "VERIFICATION_FAILED",
   CONFIG_ERROR = "CONFIG_ERROR",
-  SYSTEM_ERROR = "SYSTEM_ERROR"
+  SYSTEM_ERROR = "SYSTEM_ERROR",
 }
 
 /**
@@ -23,7 +23,7 @@ export class PasswordError extends Error {
   constructor(
     public type: PasswordErrorType,
     message: string,
-    public originalError?: unknown
+    public originalError?: unknown,
   ) {
     super(message);
     this.name = "PasswordError";
@@ -81,14 +81,14 @@ function getPasswordConfig(): PasswordConfig {
   if (!buffer || buffer.length < 8) {
     throw new PasswordError(
       PasswordErrorType.CONFIG_ERROR,
-      "BUFFER 环境变量必须设置且长度至少为 8 个字符"
+      "BUFFER 环境变量必须设置且长度至少为 8 个字符",
     );
   }
 
   if (!pepper || pepper.length < 8) {
     throw new PasswordError(
       PasswordErrorType.CONFIG_ERROR,
-      "PEPPER 环境变量必须设置且长度至少为 8 个字符"
+      "PEPPER 环境变量必须设置且长度至少为 8 个字符",
     );
   }
 
@@ -98,7 +98,10 @@ function getPasswordConfig(): PasswordConfig {
     argon2: {
       timeCost: parseInt(process.env.ARGON2_TIME_COST || "3", 10),
       memoryCost: parseInt(process.env.ARGON2_MEMORY_COST || "262144", 10),
-      parallelism: parseInt(process.env.ARGON2_PARALLELISM || getDynamicParallelism().toString(), 10),
+      parallelism: parseInt(
+        process.env.ARGON2_PARALLELISM || getDynamicParallelism().toString(),
+        10,
+      ),
       hashLength: parseInt(process.env.ARGON2_HASH_LENGTH || "32", 10),
       type: argon2.argon2id,
     },
@@ -131,10 +134,10 @@ function getConfig(): PasswordConfig {
  */
 function preprocessPassword(password: string): string {
   const { buffer, pepper } = getConfig();
-  
+
   let result = "";
   let bufferIndex = 0;
-  
+
   // 将缓冲字符与密码字符交替插入
   for (let i = 0; i < password.length; i++) {
     const passwordChar = password.charAt(i); // 使用 charAt 确保类型安全
@@ -142,7 +145,7 @@ function preprocessPassword(password: string): string {
     result += passwordChar + bufferChar;
     bufferIndex = (bufferIndex + 1) % buffer.length;
   }
-  
+
   // 添加 pepper
   return result + pepper;
 }
@@ -160,46 +163,46 @@ function preprocessPassword(password: string): string {
  */
 export async function hashPassword(
   password: string,
-  customOptions: Partial<Argon2Options> = {}
+  customOptions: Partial<Argon2Options> = {},
 ): Promise<string> {
   try {
     // 验证输入
     if (!password || typeof password !== "string") {
       throw new PasswordError(
         PasswordErrorType.INVALID_INPUT,
-        "密码必须是非空字符串"
+        "密码必须是非空字符串",
       );
     }
-    
+
     if (password.length < 1) {
       throw new PasswordError(
         PasswordErrorType.INVALID_INPUT,
-        "密码长度不能为空"
+        "密码长度不能为空",
       );
     }
-    
+
     const config = getConfig();
-    
+
     // 预处理密码
     const processedPassword = preprocessPassword(password);
-    
+
     // 合并配置
     const finalOptions = { ...config.argon2, ...customOptions };
-    
+
     // 生成哈希
     const hash = await argon2.hash(processedPassword, finalOptions);
-    
+
     return hash;
   } catch (error) {
     if (error instanceof PasswordError) {
       throw error;
     }
-    
+
     console.error("密码加密失败:", error);
     throw new PasswordError(
       PasswordErrorType.HASHING_FAILED,
       "密码加密过程中发生错误",
-      error
+      error,
     );
   }
 }
@@ -222,7 +225,7 @@ export interface VerifyPasswordResult {
  */
 export async function verifyPassword(
   hashedPassword: string,
-  password: string
+  password: string,
 ): Promise<VerifyPasswordResult> {
   try {
     // 验证输入
@@ -231,37 +234,37 @@ export async function verifyPassword(
         isValid: false,
         error: new PasswordError(
           PasswordErrorType.INVALID_INPUT,
-          "哈希值必须是非空字符串"
+          "哈希值必须是非空字符串",
         ),
       };
     }
-    
+
     if (!password || typeof password !== "string") {
       return {
         isValid: false,
         error: new PasswordError(
           PasswordErrorType.INVALID_INPUT,
-          "密码必须是非空字符串"
+          "密码必须是非空字符串",
         ),
       };
     }
-    
+
     // 预处理密码（与加密时保持一致）
     const processedPassword = preprocessPassword(password);
-    
+
     // 验证密码
     const isValid = await argon2.verify(hashedPassword, processedPassword);
-    
+
     return { isValid };
   } catch (error) {
     console.error("密码验证失败:", error);
-    
+
     return {
       isValid: false,
       error: new PasswordError(
         PasswordErrorType.VERIFICATION_FAILED,
         "密码验证过程中发生错误",
-        error
+        error,
       ),
     };
   }
@@ -275,7 +278,7 @@ export async function verifyPassword(
  */
 export function needsRehash(
   hashedPassword: string,
-  customOptions: Partial<Argon2Options> = {}
+  customOptions: Partial<Argon2Options> = {},
 ): boolean {
   try {
     if (!hashedPassword || typeof hashedPassword !== "string") {
@@ -284,7 +287,7 @@ export function needsRehash(
 
     const config = getConfig();
     const finalOptions = { ...config.argon2, ...customOptions };
-    
+
     return argon2.needsRehash(hashedPassword, finalOptions);
   } catch (error) {
     console.error("检查重新哈希需求失败:", error);
@@ -301,7 +304,7 @@ export function needsRehash(
  */
 export async function verifyPasswordSimple(
   hashedPassword: string,
-  password: string
+  password: string,
 ): Promise<boolean> {
   const result = await verifyPassword(hashedPassword, password);
   return result.isValid;

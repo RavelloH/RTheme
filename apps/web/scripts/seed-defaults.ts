@@ -27,7 +27,7 @@ async function seedDefaults() {
         process.cwd(),
         "node_modules",
         ".prisma",
-        "client"
+        "client",
       );
       const clientUrl = pathToFileURL(clientPath).href;
       const { PrismaClient } = await import(clientUrl);
@@ -44,7 +44,7 @@ async function seedDefaults() {
       await prisma.$connect();
     } catch (error) {
       rlog.warning(
-        "Prisma client not initialized, skipping default value seeding"
+        "Prisma client not initialized, skipping default value seeding",
       );
       rlog.warning("Error details:", error);
       return;
@@ -78,7 +78,7 @@ async function seedDefaultConfigs(prisma: PrismaClient) {
 
   // 创建现有配置 key 的 Set，便于快速查找
   const existingKeys = new Set(
-    existingConfigs.map((config: { key: string }) => config.key)
+    existingConfigs.map((config: { key: string }) => config.key),
   );
 
   // 准备要添加的配置数据
@@ -121,7 +121,7 @@ async function seedDefaultConfigs(prisma: PrismaClient) {
         } catch (individualError) {
           rlog.error(
             `  | Failed to add config ${config.key}:`,
-            individualError
+            individualError,
           );
           addedCount--;
         }
@@ -130,7 +130,7 @@ async function seedDefaultConfigs(prisma: PrismaClient) {
   }
 
   rlog.success(
-    `  Configuration check completed: added ${addedCount} items, skipped ${skippedCount} items`
+    `  Configuration check completed: added ${addedCount} items, skipped ${skippedCount} items`,
   );
 }
 
@@ -148,10 +148,10 @@ async function seedDefaultPagesAndMenus(prisma: PrismaClient) {
     select: { id: true, slug: true },
   });
   const existingPageIds = new Set(
-    existingPages.map((page: { id: string }) => page.id)
+    existingPages.map((page: { id: string }) => page.id),
   );
   const existingPageSlugs = new Set(
-    existingPages.map((page: { slug: string }) => page.slug)
+    existingPages.map((page: { slug: string }) => page.slug),
   );
 
   // 先创建页面
@@ -198,7 +198,7 @@ async function seedDefaultPagesAndMenus(prisma: PrismaClient) {
         } catch (individualError) {
           rlog.error(
             `  | Failed to add page ${pageData.title}:`,
-            individualError
+            individualError,
           );
           pagesAddedCount--;
         }
@@ -211,10 +211,10 @@ async function seedDefaultPagesAndMenus(prisma: PrismaClient) {
     select: { id: true, slug: true },
   });
   const existingMenuIds = new Set(
-    existingMenus.map((menu: { id: string }) => menu.id)
+    existingMenus.map((menu: { id: string }) => menu.id),
   );
   const existingMenuSlugs = new Set(
-    existingMenus.map((menu: { slug?: string }) => menu.slug)
+    existingMenus.map((menu: { slug?: string }) => menu.slug),
   );
 
   // 创建菜单
@@ -246,7 +246,7 @@ async function seedDefaultPagesAndMenus(prisma: PrismaClient) {
 
       for (const menu of menusToAdd) {
         rlog.log(
-          `  | Added menu: ${menu.name} (${menu.slug || menu.link || menu.pageId})`
+          `  | Added menu: ${menu.name} (${menu.slug || menu.link || menu.pageId})`,
         );
       }
     } catch (error) {
@@ -262,7 +262,7 @@ async function seedDefaultPagesAndMenus(prisma: PrismaClient) {
         } catch (individualError) {
           rlog.error(
             `  | Failed to add menu ${menuData.name}:`,
-            individualError
+            individualError,
           );
           menusAddedCount--;
         }
@@ -271,7 +271,7 @@ async function seedDefaultPagesAndMenus(prisma: PrismaClient) {
   }
 
   rlog.success(
-    `  Pages and menus check completed: added ${pagesAddedCount} pages, ${menusAddedCount} menus, skipped ${pagesSkippedCount} pages, ${menusSkippedCount} menus`
+    `  Pages and menus check completed: added ${pagesAddedCount} pages, ${menusAddedCount} menus, skipped ${pagesSkippedCount} pages, ${menusSkippedCount} menus`,
   );
 }
 

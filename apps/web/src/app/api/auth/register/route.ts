@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     // 验证请求数据
     const validationResult = await validateRequestJSON(
       request,
-      RegisterUserSchema
+      RegisterUserSchema,
     );
     if (validationResult instanceof Response) return validationResult;
 
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
       },
       {
         environment: "serverless",
-      }
+      },
     );
   } catch (error) {
     console.error("Register route error:", error);

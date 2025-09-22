@@ -15,43 +15,46 @@ export function AnimationManager({ onTrigger }: AnimationManagerProps) {
     hasTriggeredRef.current = true;
 
     // 触发Header动画
-    const header = document.querySelector('header');
+    const header = document.querySelector("header");
     if (header) {
-      gsap.fromTo(header, 
+      gsap.fromTo(
+        header,
         { y: -78 },
-        { 
-          y: 0, 
-          duration: 0.8, 
-          ease: "power2.out"
-        }
+        {
+          y: 0,
+          duration: 0.8,
+          ease: "power2.out",
+        },
       );
     }
 
     // 触发Footer动画
-    const footer = document.querySelector('footer');
+    const footer = document.querySelector("footer");
     if (footer) {
-      gsap.fromTo(footer, 
+      gsap.fromTo(
+        footer,
         { y: 78 },
-        { 
-          y: 0, 
-          duration: 0.8, 
+        {
+          y: 0,
+          duration: 0.8,
           ease: "power2.out",
-          delay: 0.2
-        }
+          delay: 0.2,
+        },
       );
     }
 
     // 触发Main动画
-    const main = document.querySelector('main');
+    const main = document.querySelector("main");
     if (main) {
-      gsap.fromTo(main, 
+      gsap.fromTo(
+        main,
         { x: "100%" },
-        { 
-          x: "0%", 
-          duration: 0.8, 
+        {
+          x: "0%",
+          duration: 0.8,
           ease: "power2.out",
-          delay: 0.4
-        }
+          delay: 0.4,
+        },
       );
     }
 

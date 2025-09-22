@@ -13,9 +13,9 @@ const inter = Inter({ subsets: ["latin"] });
 async function getFooterMenus() {
   try {
     const menus = await getMenus();
-    return menus.filter(menu => menu.status === 'ACTIVE');
+    return menus.filter((menu) => menu.status === "ACTIVE");
   } catch (error) {
-    console.error('Failed to get menus:', error);
+    console.error("Failed to get menus:", error);
     return [];
   }
 }
@@ -28,7 +28,11 @@ export default async function RootLayout({
   const footerMenus = await getFooterMenus();
 
   return (
-    <html lang="zh-CN" className={`${inter.className} h-full`} suppressHydrationWarning>
+    <html
+      lang="zh-CN"
+      className={`${inter.className} h-full`}
+      suppressHydrationWarning
+    >
       <body
         className="h-full bg-background text-foreground"
         suppressHydrationWarning

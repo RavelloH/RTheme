@@ -66,7 +66,7 @@ function scanApiFiles(apiDir: string): Record<string, any> {
 // 从文件内容中提取OpenAPI规范
 function extractOpenAPIFromFile(
   content: string,
-  filePath: string
+  filePath: string,
 ): Record<string, any> {
   const paths: Record<string, any> = {};
 
@@ -173,7 +173,7 @@ export async function generateOpenAPISpec(): Promise<OpenAPISpec> {
       registeredSchemas.forEach(
         ({ name, schema }: { name: string; schema: any }) => {
           convertAndAddSchema(spec, name, schema);
-        }
+        },
       );
     }
   } catch (error) {
@@ -187,13 +187,13 @@ export async function generateOpenAPISpec(): Promise<OpenAPISpec> {
 function convertAndAddSchema(spec: OpenAPISpec, name: string, schema: any) {
   try {
     rlog.info(`正在转换schema: ${name}`);
-    
+
     // 确保schema是有效的Zod schema
     if (!schema || !schema._def) {
       rlog.error(`Schema ${name} 不是有效的Zod schema`);
       return;
     }
-    
+
     // 使用Zod v4的原生JSON Schema转换
     const jsonSchema = z.toJSONSchema(schema, {
       target: "openapi-3.0",
@@ -202,10 +202,10 @@ function convertAndAddSchema(spec: OpenAPISpec, name: string, schema: any) {
     // 清理schema，移除不需要的元数据
     const cleanSchema = { ...jsonSchema };
     delete cleanSchema.$schema;
-    
+
     // 添加到组件schemas中
     spec.components.schemas[name] = cleanSchema;
-    
+
     rlog.success(`成功转换schema: ${name}`);
   } catch (error) {
     rlog.error(`转换schema ${name} 时出错:`, error);
@@ -216,7 +216,7 @@ function convertAndAddSchema(spec: OpenAPISpec, name: string, schema: any) {
 
 export function saveOpenAPISpec(
   spec: OpenAPISpec,
-  outputPath: string = "./openapi.yaml"
+  outputPath: string = "./openapi.yaml",
 ) {
   // 确保输出目录存在
   const dir = dirname(outputPath);

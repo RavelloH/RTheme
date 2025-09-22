@@ -38,7 +38,7 @@ interface ValidateDataOptions {
  */
 export function validateRequestData<T>(
   body: unknown,
-  schema: z.ZodSchema<T>
+  schema: z.ZodSchema<T>,
 ): { success: true; data: T } | NextResponse {
   const errorMessage = "请求数据格式不正确";
 
@@ -48,10 +48,12 @@ export function validateRequestData<T>(
 
     if (!validationResult.success) {
       // 提取验证错误信息
-      const errors: ValidationErrorDetail[] = validationResult.error.issues.map((err) => ({
-        field: err.path.join("."),
-        message: err.message,
-      }));
+      const errors: ValidationErrorDetail[] = validationResult.error.issues.map(
+        (err) => ({
+          field: err.path.join("."),
+          message: err.message,
+        }),
+      );
 
       const responseBuilder = new ResponseBuilder("serverless");
       const errorResponse = responseBuilder.badRequest({
@@ -62,7 +64,7 @@ export function validateRequestData<T>(
           details: { errors },
         },
       });
-      
+
       // 确保返回NextResponse类型
       return errorResponse as NextResponse;
     }
@@ -83,7 +85,7 @@ export function validateRequestData<T>(
         message: "验证过程中发生内部错误",
       },
     });
-    
+
     return errorResponse as NextResponse;
   }
 }
@@ -96,12 +98,12 @@ export function validateRequestData<T>(
  */
 export async function validateRequestJSON<T>(
   request: Request,
-  schema: z.ZodSchema<T>
+  schema: z.ZodSchema<T>,
 ): Promise<{ success: true; data: T } | NextResponse> {
   try {
     // 解析 JSON 数据
     const body = await request.json();
-    
+
     // 调用同步验证函数
     return validateRequestData(body, schema);
   } catch (error) {
@@ -115,7 +117,7 @@ export async function validateRequestJSON<T>(
         message: "请求体必须是有效的 JSON 格式",
       },
     });
-    
+
     return errorResponse as NextResponse;
   }
 }
@@ -128,11 +130,11 @@ export async function validateRequestJSON<T>(
  */
 export function validateSearchParams<T>(
   searchParams: URLSearchParams,
-  schema: z.ZodSchema<T>
+  schema: z.ZodSchema<T>,
 ): { success: true; data: T } | NextResponse {
   // 将 URLSearchParams 转换为普通对象
   const params: Record<string, string | string[]> = {};
-  
+
   for (const [key, value] of searchParams.entries()) {
     if (params[key]) {
       // 如果已存在该键，转换为数组
@@ -158,7 +160,7 @@ export function validateSearchParams<T>(
  */
 export function validate<T>(
   body: unknown,
-  schema: z.ZodSchema<T>
+  schema: z.ZodSchema<T>,
 ): { success: true; data: T } | NextResponse {
   return validateRequestData(body, schema);
 }
@@ -171,7 +173,7 @@ export function validate<T>(
  */
 export async function validateJSON<T>(
   request: Request,
-  schema: z.ZodSchema<T>
+  schema: z.ZodSchema<T>,
 ): Promise<{ success: true; data: T } | NextResponse> {
   return await validateRequestJSON(request, schema);
 }
@@ -186,28 +188,30 @@ export async function validateJSON<T>(
 export function validateData<T>(
   data: unknown,
   schema: z.ZodSchema<T>,
-  options: ValidateDataOptions & { returnResponse: false }
+  options: ValidateDataOptions & { returnResponse: false },
 ): ValidationResult<T>;
 export function validateData<T>(
   data: unknown,
   schema: z.ZodSchema<T>,
-  options?: ValidateDataOptions
+  options?: ValidateDataOptions,
 ): NextResponse | ValidationResult<T>;
 export function validateData<T>(
   data: unknown,
   schema: z.ZodSchema<T>,
-  options: ValidateDataOptions = {}
+  options: ValidateDataOptions = {},
 ): NextResponse | ValidationResult<T> {
   const { errorMessage = "数据验证失败", returnResponse = true } = options;
 
   try {
     const result = schema.safeParse(data);
-    
+
     if (!result.success) {
-      const errors: ValidationErrorDetail[] = result.error.issues.map((err) => ({
-        field: err.path.join("."),
-        message: err.message,
-      }));
+      const errors: ValidationErrorDetail[] = result.error.issues.map(
+        (err) => ({
+          field: err.path.join("."),
+          message: err.message,
+        }),
+      );
 
       const validationResult: ValidationResult<T> = {
         success: false,
@@ -240,7 +244,7 @@ export function validateData<T>(
     return validationResult;
   } catch (error) {
     console.error("Data validation error:", error);
-    
+
     const validationResult: ValidationResult<T> = {
       success: false,
       errors: [

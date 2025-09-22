@@ -23,9 +23,9 @@ export function LoadingAnimation() {
     if (pageLoaded && progressComplete && !hasTriggeredRef.current) {
       hasTriggeredRef.current = true;
       setShowLoading(false);
-      
+
       // 触发所有组件的动画
-      const event = new CustomEvent('loadingComplete');
+      const event = new CustomEvent("loadingComplete");
       window.dispatchEvent(event);
     }
   }, [pageLoaded, progressComplete]);

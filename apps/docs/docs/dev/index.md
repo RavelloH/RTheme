@@ -36,6 +36,7 @@ NeutralPress 是一个基于Next.js的CMS系统，旨在结合静态站点生成
 NeutralPress 采用现代化的单体仓库（Monorepo）架构，基于 Turborepo + pnpm workspaces 管理多个相关联的包和应用。
 
 ### 技术栈
+
 - **前端框架**: Next.js 15 + React 19 (App Router)
 - **数据库**: PostgreSQL + Prisma ORM v6.15.0
 - **类型系统**: TypeScript 5.9.2 (严格模式)
@@ -82,27 +83,32 @@ NeutralPress/
 ## 核心特性
 
 ### 🔧 开发体验
+
 - **类型安全**: 端到端的 TypeScript 类型推导
 - **自动验证**: Zod Schema 提供运行时数据验证
 - **热重载**: 开发环境支持快速热重载
 - **统一配置**: 共享的 ESLint 和 TypeScript 配置
 
-### 📚 文档系统  
+### 📚 文档系统
+
 - **自动生成**: 从 Zod Schema 自动生成 OpenAPI 文档
 - **实时同步**: 代码和文档保持同步
 - **交互式**: Docusaurus 提供现代化的文档体验
 
 ### 🚀 构建系统
+
 - **并行构建**: Turborepo 提供高效的并行构建
 - **智能缓存**: 构建结果智能缓存，加速开发
 - **依赖管理**: pnpm 提供高效的包管理
 
 ### 🗄️ 数据层
+
 - **现代 ORM**: Prisma 提供类型安全的数据库访问
 - **迁移系统**: 完整的数据库版本控制
 - **类型生成**: 自动生成数据库类型定义
 
 ### 🚄 缓存系统
+
 - **配置缓存**: 高性能配置数据缓存，减少数据库查询
 - **菜单缓存**: 完整的菜单和页面关系数据缓存
 - **读写分离**: 缓存生成与读取职责分离，提高维护性
@@ -112,11 +118,13 @@ NeutralPress/
 ## 开发环境
 
 ### 系统要求
+
 - Node.js 18+
 - pnpm 9.0.0+
 - PostgreSQL 数据库
 
 ### 快速开始
+
 ```bash
 # 安装依赖
 pnpm install
@@ -126,10 +134,12 @@ pnpm dev
 ```
 
 启动后访问：
+
 - **主应用**: http://localhost:3000
 - **API 文档**: http://localhost:3001/docs/api
 
 ### 常用命令
+
 ```bash
 # 开发
 pnpm dev                    # 启动所有服务

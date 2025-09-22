@@ -110,7 +110,7 @@ watcher
   })
   .on("ready", () => {
     console.log(
-      `👀 OpenAPI 文件监控已启动，${startupDelay/1000}秒后开始监控文件: openapi.json, openapi.yaml`,
+      `👀 OpenAPI 文件监控已启动，${startupDelay / 1000}秒后开始监控文件: openapi.json, openapi.yaml`,
     );
     // 延迟启用文件变化监控
     setTimeout(() => {

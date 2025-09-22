@@ -33,21 +33,28 @@ NeutralPress采用基于Zod + 自动化schema发现的现代化API开发方式�
 ```typescript
 // packages/shared-types/src/api/auth.ts
 import { z } from "zod";
-import { createSuccessResponseSchema, createErrorResponseSchema, registerSchema } from "./common.js";
+import {
+  createSuccessResponseSchema,
+  createErrorResponseSchema,
+  registerSchema,
+} from "./common.js";
 
 export const RegisterUserSchema = z.object({
-  username: z.string()
+  username: z
+    .string()
     .min(3, "用户名至少需要3个字符")
     .max(20, "用户名不能超过20个字符")
     .regex(/^[a-z0-9_]+$/, "用户名只能由小写字母、数字和下划线组成"),
   email: z.string().email("请输入有效的邮箱地址"),
-  password: z.string()
+  password: z
+    .string()
     .min(6, "密码至少需要6个字符")
     .max(100, "密码不能超过100个字符"),
-  nickname: z.string()
+  nickname: z
+    .string()
     .min(2, "昵称至少需要2个字符")
     .max(20, "昵称不能超过20个字符")
-    .optional()
+    .optional(),
 });
 
 export const UserDataSchema = z.object({
@@ -63,16 +70,21 @@ export const UserDataSchema = z.object({
 });
 
 // 使用响应构建器创建标准响应schemas
-export const RegisterSuccessResponseSchema = createSuccessResponseSchema(UserDataSchema);
+export const RegisterSuccessResponseSchema =
+  createSuccessResponseSchema(UserDataSchema);
 export const ValidationErrorResponseSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("VALIDATION_ERROR"),
     message: z.string(),
-    details: z.array(z.object({
-      field: z.string(),
-      message: z.string(),
-    })).optional(),
-  })
+    details: z
+      .array(
+        z.object({
+          field: z.string(),
+          message: z.string(),
+        }),
+      )
+      .optional(),
+  }),
 );
 
 // 自动注册schemas到OpenAPI生成器
@@ -163,12 +175,12 @@ export async function POST(request: Request) {
     // 数据验证（自动类型推导）
     const validation = await validateRequestJSON(request, RegisterUserSchema);
     if (validation instanceof Response) return validation;
-    
+
     const { username, email, password, nickname } = validation.data!;
 
     // 检查用户是否存在
     const userExists = await prisma.user.findFirst({
-      where: { OR: [{ username }, { email }] }
+      where: { OR: [{ username }, { email }] },
     });
 
     if (userExists) {
@@ -176,28 +188,33 @@ export async function POST(request: Request) {
         message: "用户名或邮箱已存在",
         error: {
           code: "USER_EXISTS",
-          message: "用户名或邮箱已存在"
-        }
+          message: "用户名或邮箱已存在",
+        },
       });
     }
 
     // 创建用户
     const hashedPassword = await hashPassword(password);
     const emailVerifyCode = emailUtils.generate();
-    
+
     const user = await prisma.user.create({
-      data: { username, email, nickname, password: hashedPassword, emailVerifyCode }
+      data: {
+        username,
+        email,
+        nickname,
+        password: hashedPassword,
+        emailVerifyCode,
+      },
     });
 
     return response.ok({
       data: user,
-      message: "注册成功，请检查邮箱以验证账户"
+      message: "注册成功，请检查邮箱以验证账户",
     });
-
   } catch (error) {
     console.error("Registration error:", error);
     return response.serverError({
-      message: "注册失败，请稍后重试"
+      message: "注册失败，请稍后重试",
     });
   }
 }
@@ -219,13 +236,13 @@ export const ValidationErrorResponseSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("VALIDATION_ERROR"),
     message: z.string(),
-  })
+  }),
 );
 // 生成: { success: false, message, data: null, error, timestamp, requestId }
 
 // 分页响应 - 包含分页元数据
 export const UsersListResponseSchema = createPaginatedResponseSchema(
-  z.object({ users: z.array(UserDataSchema) })
+  z.object({ users: z.array(UserDataSchema) }),
 );
 // 生成: { success: true, message, data, meta: PaginationMeta, timestamp, requestId }
 ```
@@ -251,6 +268,7 @@ pnpm dev
 ```
 
 启动后访问：
+
 - 主应用：http://localhost:3000
 - API文档：http://localhost:3001/docs/api
 
@@ -302,11 +320,11 @@ await import("@repo/shared-types/api/posts");
 // 使用响应构建器确保格式统一
 const BaseUserSchema = z.object({
   username: z.string(),
-  email: z.string().email()
+  email: z.string().email(),
 });
 
 const CreateUserSchema = BaseUserSchema.extend({
-  password: z.string().min(8)
+  password: z.string().min(8),
 });
 
 const UpdateUserSchema = BaseUserSchema.partial();
@@ -314,7 +332,7 @@ const UpdateUserSchema = BaseUserSchema.partial();
 // 为每种响应创建专门的schema
 const UserSuccessResponseSchema = createSuccessResponseSchema(BaseUserSchema);
 const UserListResponseSchema = createPaginatedResponseSchema(
-  z.object({ users: z.array(BaseUserSchema) })
+  z.object({ users: z.array(BaseUserSchema) }),
 );
 ```
 
@@ -326,18 +344,22 @@ const ValidationErrorSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("VALIDATION_ERROR"),
     message: z.string(),
-    details: z.array(z.object({
-      field: z.string(),
-      message: z.string()
-    })).optional()
-  })
+    details: z
+      .array(
+        z.object({
+          field: z.string(),
+          message: z.string(),
+        }),
+      )
+      .optional(),
+  }),
 );
 
 const NotFoundErrorSchema = createErrorResponseSchema(
   z.object({
     code: z.literal("NOT_FOUND"),
-    message: z.string()
-  })
+    message: z.string(),
+  }),
 );
 ```
 
@@ -359,16 +381,19 @@ registerSchema("ValidationErrorResponse", ValidationErrorResponseSchema);
 ## ⚡ 新特性亮点
 
 ### 自动化Schema发现
+
 - ✅ 无需手动维护generator中的schema列表
 - ✅ 添加新API时只需注册schema
 - ✅ 自动同步，确保文档完整性
 
 ### 响应构建器系统
+
 - ✅ 避免冗余字段（如成功响应不包含error字段）
 - ✅ 统一的响应格式
 - ✅ 类型安全的响应构建
 
 ### 类型安全验证
+
 - ✅ 端到端类型推导
 - ✅ 运行时验证
 - ✅ 统一错误格式

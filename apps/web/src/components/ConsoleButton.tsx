@@ -105,7 +105,7 @@ export function ConsoleButton() {
       gsap.to(container, {
         rotation: newRotation,
         duration: 0.3,
-        ease: "power2.out"
+        ease: "power2.out",
       });
     };
 

@@ -34,7 +34,9 @@ export const ApiResponseSchema = BaseResponseSchema.extend({
 });
 
 // 响应构建器函数 - 成功响应
-export function createSuccessResponseSchema<T extends z.ZodTypeAny>(dataSchema: T) {
+export function createSuccessResponseSchema<T extends z.ZodTypeAny>(
+  dataSchema: T,
+) {
   return BaseResponseSchema.extend({
     success: z.literal(true),
     data: dataSchema,
@@ -42,7 +44,9 @@ export function createSuccessResponseSchema<T extends z.ZodTypeAny>(dataSchema: 
 }
 
 // 响应构建器函数 - 错误响应
-export function createErrorResponseSchema<T extends z.ZodTypeAny>(errorSchema: T) {
+export function createErrorResponseSchema<T extends z.ZodTypeAny>(
+  errorSchema: T,
+) {
   return BaseResponseSchema.extend({
     success: z.literal(false),
     data: z.null(),
@@ -51,7 +55,9 @@ export function createErrorResponseSchema<T extends z.ZodTypeAny>(errorSchema: T
 }
 
 // 响应构建器函数 - 带分页的响应
-export function createPaginatedResponseSchema<T extends z.ZodTypeAny>(dataSchema: T) {
+export function createPaginatedResponseSchema<T extends z.ZodTypeAny>(
+  dataSchema: T,
+) {
   return BaseResponseSchema.extend({
     success: z.literal(true),
     data: dataSchema,

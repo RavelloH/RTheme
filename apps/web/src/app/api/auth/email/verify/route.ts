@@ -58,21 +58,21 @@ export async function POST(request: Request) {
     // 验证请求数据
     const validationResult = await validateRequestJSON(
       request,
-      EmailVerificationSchema
+      EmailVerificationSchema,
     );
     if (validationResult instanceof Response) return validationResult;
 
-    const { code, captcha_token, email} = validationResult.data!;
+    const { code, captcha_token, email } = validationResult.data!;
 
     return await verifyEmail(
       {
         code,
         captcha_token,
-        email
+        email,
       },
       {
         environment: "serverless",
-      }
+      },
     );
   } catch (error) {
     console.error("Email verification route error:", error);

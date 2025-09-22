@@ -87,24 +87,24 @@ export default function HorizontalScroll({
       // 如果启用视差效果
       if (enableParallax) {
         const parallaxElements = content.querySelectorAll("[data-parallax]");
-        
+
         // 为每个视差元素存储其初始状态
         const elementStates = new Map();
-        
+
         parallaxElements.forEach((element) => {
           const speed = parseFloat(
-            element.getAttribute("data-parallax") || "0.5"
+            element.getAttribute("data-parallax") || "0.5",
           );
 
           // 设置初始样式
           gsap.set(element, { transformOrigin: "center center" });
-          
+
           // 初始化元素状态
           elementStates.set(element, {
             speed,
             initialX: 0,
             hasEnteredViewport: false,
-            viewportEntryX: 0
+            viewportEntryX: 0,
           });
         });
 
@@ -116,34 +116,42 @@ export default function HorizontalScroll({
           parallaxElements.forEach((element) => {
             const elementRect = element.getBoundingClientRect();
             const elementState = elementStates.get(element);
-            
+
             // 计算元素相对于容器的位置
-            const elementLeftInContainer = elementRect.left - containerRect.left;
-            const elementRightInContainer = elementLeftInContainer + elementRect.width;
-            
+            const elementLeftInContainer =
+              elementRect.left - containerRect.left;
+            const elementRightInContainer =
+              elementLeftInContainer + elementRect.width;
+
             // 定义视口范围：从右边界向左扩展100px作为"准备区域"
             const viewportPreparationZone = containerWidth + 100; // 右边界外100px开始准备
-            
+
             // 检查元素是否在视口范围内（包括准备区域）
-            const isInViewportArea = elementLeftInContainer < viewportPreparationZone && 
-                                   elementRightInContainer > 0;
-            
+            const isInViewportArea =
+              elementLeftInContainer < viewportPreparationZone &&
+              elementRightInContainer > 0;
+
             if (isInViewportArea) {
               // 如果元素首次进入视口区域，记录当前的滚动位置作为基准点
               if (!elementState.hasEnteredViewport) {
                 elementState.hasEnteredViewport = true;
-                elementState.viewportEntryX = gsap.getProperty(content, "x") as number;
-                elementState.initialX = gsap.getProperty(element, "x") as number || 0;
+                elementState.viewportEntryX = gsap.getProperty(
+                  content,
+                  "x",
+                ) as number;
+                elementState.initialX =
+                  (gsap.getProperty(element, "x") as number) || 0;
               }
-              
+
               // 计算从进入视口开始的相对移动距离
               const currentContentX = gsap.getProperty(content, "x") as number;
-              const relativeMovement = currentContentX - elementState.viewportEntryX;
-              
+              const relativeMovement =
+                currentContentX - elementState.viewportEntryX;
+
               // 应用视差效果：基于相对移动距离
-              const parallaxX = elementState.initialX + (relativeMovement * elementState.speed);
+              const parallaxX =
+                elementState.initialX + relativeMovement * elementState.speed;
               gsap.set(element, { x: parallaxX });
-              
             } else if (elementLeftInContainer >= viewportPreparationZone) {
               // 元素还未进入准备区域，重置状态
               if (elementState.hasEnteredViewport) {
@@ -242,25 +250,27 @@ export default function HorizontalScroll({
         wordFadeElements.forEach((element) => {
           // 将文本内容分割成单词并包装在span中
           const originalText = element.textContent || "";
-          const words = originalText.split(/(\s+)/).filter(word => word.length > 0);
-          
+          const words = originalText
+            .split(/(\s+)/)
+            .filter((word) => word.length > 0);
+
           // 清空原内容并重新构建
           element.innerHTML = "";
-          
+
           const wordSpans: HTMLSpanElement[] = [];
           words.forEach((word) => {
             const span = document.createElement("span");
             span.textContent = word;
             span.style.display = "inline-block";
-            
+
             // 为空格设置固定宽度，避免缩放影响
             if (/^\s+$/.test(word)) {
               span.style.width = word.length * 0.25 + "em";
               span.style.minWidth = word.length * 0.25 + "em";
             }
-            
+
             element.appendChild(span);
-            
+
             // 为所有单词（包括空格）应用动画
             wordSpans.push(span);
           });
@@ -268,20 +278,20 @@ export default function HorizontalScroll({
           // 初始状态：隐藏所有单词
           wordSpans.forEach((span) => {
             const isSpace = /^\s+$/.test(span.textContent || "");
-            
+
             if (isSpace) {
               // 空格只控制透明度，不缩放
-              gsap.set(span, { 
+              gsap.set(span, {
                 opacity: 0,
-                transformOrigin: "50% 100%"
+                transformOrigin: "50% 100%",
               });
             } else {
               // 非空格单词进行完整动画
-              gsap.set(span, { 
-                opacity: 0, 
+              gsap.set(span, {
+                opacity: 0,
                 y: 10,
                 scale: 0.8,
-                transformOrigin: "50% 100%"
+                transformOrigin: "50% 100%",
               });
             }
           });
@@ -293,8 +303,10 @@ export default function HorizontalScroll({
             const elementRect = element.getBoundingClientRect();
 
             // 计算元素相对于容器的位置
-            const elementLeftInContainer = elementRect.left - containerRect.left;
-            const elementRightInContainer = elementLeftInContainer + elementRect.width;
+            const elementLeftInContainer =
+              elementRect.left - containerRect.left;
+            const elementRightInContainer =
+              elementLeftInContainer + elementRect.width;
 
             // 定义触发范围：当元素进入屏幕右侧80%位置时开始逐字显示
             const triggerPoint = containerWidth * 0.8;
@@ -304,7 +316,7 @@ export default function HorizontalScroll({
               // 元素已经完全进入视野，显示所有单词
               wordSpans.forEach((span, index) => {
                 const isSpace = /^\s+$/.test(span.textContent || "");
-                
+
                 if (isSpace) {
                   // 空格只淡入，不缩放和移动
                   gsap.to(span, {
@@ -329,16 +341,22 @@ export default function HorizontalScroll({
               });
             } else if (elementLeftInContainer <= containerWidth) {
               // 元素部分可见，计算应该显示多少单词
-              const visibleProgress = Math.max(0, Math.min(1, 
-                (containerWidth - elementLeftInContainer) / elementRect.width
-              ));
+              const visibleProgress = Math.max(
+                0,
+                Math.min(
+                  1,
+                  (containerWidth - elementLeftInContainer) / elementRect.width,
+                ),
+              );
 
               // 根据可见进度决定显示多少单词
-              const wordsToShow = Math.floor(visibleProgress * wordSpans.length);
+              const wordsToShow = Math.floor(
+                visibleProgress * wordSpans.length,
+              );
 
               wordSpans.forEach((span, index) => {
                 const isSpace = /^\s+$/.test(span.textContent || "");
-                
+
                 if (index < wordsToShow) {
                   // 显示这个单词
                   if (isSpace) {
@@ -387,7 +405,7 @@ export default function HorizontalScroll({
               // 元素完全不可见，隐藏所有单词
               wordSpans.forEach((span) => {
                 const isSpace = /^\s+$/.test(span.textContent || "");
-                
+
                 if (isSpace) {
                   // 空格只淡出
                   gsap.to(span, {
@@ -428,32 +446,32 @@ export default function HorizontalScroll({
           // 将文本内容分割成字符并包装在span中
           const originalText = element.textContent || "";
           const chars = originalText.split("");
-          
+
           // 清空原内容并重新构建
           element.innerHTML = "";
-          
+
           const charSpans: HTMLSpanElement[] = [];
           chars.forEach((char) => {
             const span = document.createElement("span");
             span.textContent = char;
             span.style.display = "inline-block";
-            
+
             // 为空格添加特殊处理，保持原有宽度
             if (char === " ") {
               span.style.width = "0.25em";
             }
-            
+
             element.appendChild(span);
             charSpans.push(span);
           });
 
           // 初始状态：隐藏所有字符
           charSpans.forEach((span) => {
-            gsap.set(span, { 
-              opacity: 0, 
+            gsap.set(span, {
+              opacity: 0,
               y: 15,
               rotationY: 90,
-              transformOrigin: "50% 50%"
+              transformOrigin: "50% 50%",
             });
           });
 
@@ -464,8 +482,10 @@ export default function HorizontalScroll({
             const elementRect = element.getBoundingClientRect();
 
             // 计算元素相对于容器的位置
-            const elementLeftInContainer = elementRect.left - containerRect.left;
-            const elementRightInContainer = elementLeftInContainer + elementRect.width;
+            const elementLeftInContainer =
+              elementRect.left - containerRect.left;
+            const elementRightInContainer =
+              elementLeftInContainer + elementRect.width;
 
             // 定义触发范围：当元素进入屏幕右侧75%位置时开始逐字符显示
             const triggerPoint = containerWidth * 0.75;
@@ -486,12 +506,18 @@ export default function HorizontalScroll({
               });
             } else if (elementLeftInContainer <= containerWidth) {
               // 元素部分可见，计算应该显示多少字符
-              const visibleProgress = Math.max(0, Math.min(1, 
-                (containerWidth - elementLeftInContainer) / elementRect.width
-              ));
+              const visibleProgress = Math.max(
+                0,
+                Math.min(
+                  1,
+                  (containerWidth - elementLeftInContainer) / elementRect.width,
+                ),
+              );
 
               // 根据可见进度决定显示多少字符
-              const charsToShow = Math.floor(visibleProgress * charSpans.length);
+              const charsToShow = Math.floor(
+                visibleProgress * charSpans.length,
+              );
 
               charSpans.forEach((span, index) => {
                 if (index < charsToShow) {
@@ -544,7 +570,8 @@ export default function HorizontalScroll({
 
       // 如果启用逐行显示效果
       if (enableLineReveal) {
-        const lineRevealElements = content.querySelectorAll("[data-line-reveal]");
+        const lineRevealElements =
+          content.querySelectorAll("[data-line-reveal]");
 
         lineRevealElements.forEach((element) => {
           // 获取所有直接子元素作为"行"
@@ -552,11 +579,11 @@ export default function HorizontalScroll({
 
           // 初始状态：隐藏所有行
           lines.forEach((line) => {
-            gsap.set(line, { 
-              opacity: 0, 
+            gsap.set(line, {
+              opacity: 0,
               y: 20,
               rotationX: -90,
-              transformOrigin: "50% 100%"
+              transformOrigin: "50% 100%",
             });
           });
 
@@ -567,8 +594,10 @@ export default function HorizontalScroll({
             const elementRect = element.getBoundingClientRect();
 
             // 计算元素相对于容器的位置
-            const elementLeftInContainer = elementRect.left - containerRect.left;
-            const elementRightInContainer = elementLeftInContainer + elementRect.width;
+            const elementLeftInContainer =
+              elementRect.left - containerRect.left;
+            const elementRightInContainer =
+              elementLeftInContainer + elementRect.width;
 
             // 定义触发范围：当元素进入屏幕右侧70%位置时开始逐行显示
             const triggerPoint = containerWidth * 0.8;
@@ -589,9 +618,13 @@ export default function HorizontalScroll({
               });
             } else if (elementLeftInContainer <= containerWidth) {
               // 元素部分可见，计算应该显示多少行
-              const visibleProgress = Math.max(0, Math.min(1, 
-                (containerWidth - elementLeftInContainer) / elementRect.width
-              ));
+              const visibleProgress = Math.max(
+                0,
+                Math.min(
+                  1,
+                  (containerWidth - elementLeftInContainer) / elementRect.width,
+                ),
+              );
 
               // 根据可见进度决定显示多少行
               const linesToShow = Math.floor(visibleProgress * lines.length);
@@ -650,7 +683,7 @@ export default function HorizontalScroll({
 
       // 添加清理函数
       cleanupFunctions.push(() =>
-        container.removeEventListener("wheel", handleWheel)
+        container.removeEventListener("wheel", handleWheel),
       );
     }, container);
 

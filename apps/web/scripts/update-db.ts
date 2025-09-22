@@ -21,8 +21,8 @@ const rlog = new Rlog();
 // 项目的迁移记录（用于验证数据库是否属于当前项目）
 const PROJECT_MIGRATIONS = [
   "20250907093828_init",
-  "20250910053758_password_reset", 
-  "20250910054138_fix_nonuid_issue"
+  "20250910053758_password_reset",
+  "20250910054138_fix_nonuid_issue",
 ];
 
 // 主入口函数
@@ -34,7 +34,9 @@ async function main() {
     await updateDatabaseInternal();
     rlog.success("  Database update completed successfully!");
   } catch (error) {
-    rlog.error(`  Database update failed: ${error instanceof Error ? error.message : String(error)}`);
+    rlog.error(
+      `  Database update failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
     process.exit(1);
   } finally {
     await cleanup();
@@ -48,7 +50,7 @@ async function initializePrismaClient() {
       process.cwd(),
       "node_modules",
       ".prisma",
-      "client"
+      "client",
     );
     const clientUrl = pathToFileURL(clientPath).href;
     const { PrismaClient } = await import(clientUrl);
@@ -96,9 +98,11 @@ async function hasMigrationsTable(): Promise<boolean> {
       )
     `;
 
-    return Array.isArray(result) && 
-           result[0] && 
-           (result[0] as { exists: boolean }).exists;
+    return (
+      Array.isArray(result) &&
+      result[0] &&
+      (result[0] as { exists: boolean }).exists
+    );
   } catch (error) {
     rlog.warning(`  Could not check migrations table: ${error}`);
     return false;
@@ -122,30 +126,38 @@ async function isProjectDatabase(): Promise<boolean> {
       return false;
     }
 
-    const existingMigrations = migrations.map((m: { migration_name: string }) => m.migration_name);
-    
+    const existingMigrations = migrations.map(
+      (m: { migration_name: string }) => m.migration_name,
+    );
+
     // 检查是否包含项目的核心迁移
-    const hasInitMigration = existingMigrations.some(name => name.includes("init"));
-    
+    const hasInitMigration = existingMigrations.some((name) =>
+      name.includes("init"),
+    );
+
     // 如果有任何项目迁移记录，则认为是项目数据库
-    const hasProjectMigrations = PROJECT_MIGRATIONS.some(projectMigration =>
-      existingMigrations.some(existing => existing === projectMigration)
+    const hasProjectMigrations = PROJECT_MIGRATIONS.some((projectMigration) =>
+      existingMigrations.some((existing) => existing === projectMigration),
     );
 
     if (!hasInitMigration && !hasProjectMigrations) {
-      rlog.warning("  Database contains migrations but none match this project");
+      rlog.warning(
+        "  Database contains migrations but none match this project",
+      );
       rlog.warning("  Existing migrations:");
-      existingMigrations.forEach(name => {
+      existingMigrations.forEach((name) => {
         rlog.warning(`  | ${name}`);
       });
       rlog.warning("  Expected project migrations:");
-      PROJECT_MIGRATIONS.forEach(name => {
+      PROJECT_MIGRATIONS.forEach((name) => {
         rlog.warning(`  | ${name}`);
       });
       return false;
     }
 
-    rlog.success(`  Database contains ${existingMigrations.length} migrations from this project`);
+    rlog.success(
+      `  Database contains ${existingMigrations.length} migrations from this project`,
+    );
     return true;
   } catch (error) {
     rlog.warning(`  Could not verify project database: ${error}`);
@@ -157,50 +169,62 @@ async function isProjectDatabase(): Promise<boolean> {
 async function runMigrateDeploy(): Promise<void> {
   try {
     rlog.info("> Running prisma migrate deploy...");
-    
+
     // 确保 .prisma/client 存在
-    const clientPath = path.join(process.cwd(), "node_modules", ".prisma", "client");
+    const clientPath = path.join(
+      process.cwd(),
+      "node_modules",
+      ".prisma",
+      "client",
+    );
     if (!fs.existsSync(clientPath)) {
       rlog.info("  Generating Prisma client first...");
-      execSync("npx prisma generate", { 
+      execSync("npx prisma generate", {
         stdio: "pipe",
-        cwd: process.cwd()
+        cwd: process.cwd(),
       });
     }
 
-    const output = execSync("npx prisma migrate deploy", { 
+    const output = execSync("npx prisma migrate deploy", {
       stdio: "pipe",
       cwd: process.cwd(),
-      encoding: "utf-8"
+      encoding: "utf-8",
     });
 
     rlog.success("  Prisma migrate deploy completed successfully");
-    
+
     // 如果输出包含有用信息，显示它
     if (output && output.trim()) {
-      const lines = output.trim().split('\n');
-      lines.forEach(line => {
-        if (line.includes('Applied') || line.includes('migration') || line.includes('Database')) {
+      const lines = output.trim().split("\n");
+      lines.forEach((line) => {
+        if (
+          line.includes("Applied") ||
+          line.includes("migration") ||
+          line.includes("Database")
+        ) {
           rlog.info(`  | ${line.trim()}`);
         }
       });
     }
   } catch (error) {
-    if (error instanceof Error && 'stdout' in error) {
-      const execError = error as Error & { stdout?: Buffer | string; stderr?: Buffer | string };
+    if (error instanceof Error && "stdout" in error) {
+      const execError = error as Error & {
+        stdout?: Buffer | string;
+        stderr?: Buffer | string;
+      };
       const stdout = execError.stdout?.toString();
       const stderr = execError.stderr?.toString();
-      
+
       if (stdout) {
         rlog.info("  Migrate output:");
-        stdout.split('\n').forEach((line: string) => {
+        stdout.split("\n").forEach((line: string) => {
           if (line.trim()) rlog.info(`  | ${line.trim()}`);
         });
       }
-      
+
       if (stderr) {
         rlog.error("  Migrate errors:");
-        stderr.split('\n').forEach((line: string) => {
+        stderr.split("\n").forEach((line: string) => {
           if (line.trim()) rlog.error(`  | ${line.trim()}`);
         });
       }
@@ -223,7 +247,7 @@ export async function updateDatabase(): Promise<void> {
 // 内部更新逻辑（重命名避免冲突）
 async function updateDatabaseInternal(): Promise<void> {
   const isEmpty = await isDatabaseEmpty();
-  
+
   if (isEmpty) {
     rlog.info("  Database is empty, initializing with migrations...");
     await runMigrateDeploy();
@@ -231,18 +255,22 @@ async function updateDatabaseInternal(): Promise<void> {
     return;
   }
 
-  rlog.info("> Database is not empty, checking if it belongs to this project...");
-  
+  rlog.info(
+    "> Database is not empty, checking if it belongs to this project...",
+  );
+
   const isProjectDb = await isProjectDatabase();
-  
+
   if (!isProjectDb) {
     throw new Error(
       "Database contains data but does not appear to belong to this project. " +
-      "Please use a different database or manually verify the database contents."
+        "Please use a different database or manually verify the database contents.",
     );
   }
 
-  rlog.info("  Database belongs to this project, applying any pending migrations...");
+  rlog.info(
+    "  Database belongs to this project, applying any pending migrations...",
+  );
   await runMigrateDeploy();
   rlog.success("  Database updated successfully");
 }
@@ -254,7 +282,9 @@ async function cleanup() {
       await prisma.$disconnect();
       rlog.info("  Database connection closed");
     } catch (error) {
-      rlog.warning(`  Error closing database connection: ${error instanceof Error ? error.message : String(error)}`);
+      rlog.warning(
+        `  Error closing database connection: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 }
@@ -264,9 +294,11 @@ function isMainModule(): boolean {
   try {
     // 检查当前文件是否是主模块
     const arg1 = process.argv[1];
-    return import.meta.url === pathToFileURL(arg1 || '').href || 
-           (arg1?.endsWith('update-db.ts') ?? false) ||
-           (arg1?.endsWith('update-db.js') ?? false);
+    return (
+      import.meta.url === pathToFileURL(arg1 || "").href ||
+      (arg1?.endsWith("update-db.ts") ?? false) ||
+      (arg1?.endsWith("update-db.js") ?? false)
+    );
   } catch {
     return false;
   }

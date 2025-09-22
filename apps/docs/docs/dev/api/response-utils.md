@@ -35,16 +35,20 @@ const response = new ResponseBuilder("serveraction");
 ```
 
 ## 可用方法
+
 ### 通用响应
+
 - `response.response(config)` - 通用响应函数，可自定义所有参数
 
 ### 成功响应
+
 - `response.ok(config?)` - 200 成功响应
 - `response.created(config?)` - 201 创建成功
 - `response.noContent(config?)` - 204 无内容
 - `response.notModified(config?)` - 304 未修改
 
 ### 错误响应
+
 - `response.badRequest(config?)` - 400 请求错误
 - `response.unauthorized(config?)` - 401 未授权
 - `response.forbidden(config?)` - 403 禁止访问
@@ -56,17 +60,21 @@ const response = new ResponseBuilder("serveraction");
 - `response.serviceUnavailable(config?)` - 503 服务不可用
 
 ### 特殊响应
+
 - `response.cached(config)` - 带缓存的成功响应（cacheConfig 必需）
 - `response.validationError(config)` - 字段验证错误（field 必需）
 
 ### 工具函数
+
 - `createPaginationMeta(page, pageSize, total)` - 创建分页元数据
 - `fieldError(field, message, details?)` - 创建字段错误对象
 - `createSecurityHeaders(customHeaders?)` - 创建安全响应头
 - `createCacheHeaders(cacheConfig?)` - 创建缓存控制头
 
 ### 配置参数
+
 所有快捷方法都接受可选的配置对象：
+
 - `message?: string` - 自定义响应消息
 - `data?: T` - 响应数据
 - `error?: ApiError | string` - 错误信息
@@ -92,25 +100,25 @@ export async function GET() {
 // 带消息的成功响应
 export async function GET() {
   const data = { users: [], total: 0 };
-  return response.ok({ 
+  return response.ok({
     data,
-    message: "获取用户列表成功" 
+    message: "获取用户列表成功",
   });
 }
 
 // 创建成功响应
 export async function POST() {
   const newUser = { id: "123", name: "John" };
-  return response.created({ 
+  return response.created({
     data: newUser,
-    message: "用户创建成功" 
+    message: "用户创建成功",
   });
 }
 
 // 无内容响应
 export async function DELETE() {
-  return response.noContent({ 
-    message: "删除成功" 
+  return response.noContent({
+    message: "删除成功",
   });
 }
 
@@ -136,7 +144,7 @@ export async function GET(request: Request) {
   return response.ok({
     data: users,
     message: "获取用户列表成功",
-    meta
+    meta,
   });
 }
 ```
@@ -151,8 +159,8 @@ export async function POST(request: Request) {
   try {
     const data = await request.json();
   } catch (error) {
-    return response.badRequest({ 
-      message: "请求体格式错误" 
+    return response.badRequest({
+      message: "请求体格式错误",
     });
   }
 }
@@ -161,8 +169,8 @@ export async function POST(request: Request) {
 export async function GET() {
   const token = getAuthToken();
   if (!token) {
-    return response.unauthorized({ 
-      message: "请先登录" 
+    return response.unauthorized({
+      message: "请先登录",
     });
   }
 }
@@ -171,8 +179,8 @@ export async function GET() {
 export async function GET() {
   const user = await getCurrentUser();
   if (!user.isAdmin) {
-    return response.forbidden({ 
-      message: "权限不足" 
+    return response.forbidden({
+      message: "权限不足",
     });
   }
 }
@@ -181,8 +189,8 @@ export async function GET() {
 export async function GET() {
   const user = await findUser(id);
   if (!user) {
-    return response.notFound({ 
-      message: "用户不存在" 
+    return response.notFound({
+      message: "用户不存在",
     });
   }
 }
@@ -192,8 +200,8 @@ export async function POST() {
   try {
     // 业务逻辑
   } catch (error) {
-    return response.serverError({ 
-      message: "系统异常，请稍后重试" 
+    return response.serverError({
+      message: "系统异常，请稍后重试",
     });
   }
 }
@@ -243,8 +251,8 @@ export async function DELETE() {
   return response.forbidden({
     error: {
       code: "FEATURE_DISABLED",
-      message: "删除功能已禁用"
-    }
+      message: "删除功能已禁用",
+    },
   });
 }
 ```
@@ -266,7 +274,7 @@ export async function GET() {
   return response.cached({
     data,
     cacheConfig,
-    message: "获取静态数据成功"
+    message: "获取静态数据成功",
   });
 }
 ```
@@ -294,7 +302,7 @@ export async function GET(request: Request) {
   return response.cached({
     data,
     cacheConfig,
-    message: "获取数据成功"
+    message: "获取数据成功",
   });
 }
 ```
@@ -311,7 +319,7 @@ export async function GET() {
   return response.ok({
     data,
     message: "请求成功",
-    customHeaders
+    customHeaders,
   });
 }
 ```
@@ -328,7 +336,7 @@ export async function POST() {
   return response({
     status: 206,
     message: "部分更新成功",
-    data
+    data,
   });
 }
 ```
@@ -343,7 +351,7 @@ const fieldErr = fieldError("username", "用户名已存在", {
 
 return response.conflict({
   message: "用户创建失败",
-  error: fieldErr
+  error: fieldErr,
 });
 ```
 
@@ -397,7 +405,6 @@ export async function POST(request: Request) {
         message: "注册功能尚未实现",
       },
     });
-
   } catch (error) {
     console.error("Registration error:", error);
     return response.serverError({
@@ -452,7 +459,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("获取用户列表失败:", error);
     return response.serverError({
-      message: "获取用户列表失败"
+      message: "获取用户列表失败",
     });
   }
 }

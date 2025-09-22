@@ -5,31 +5,33 @@ const limit = 30; // 每分钟允许的请求数
 
 // 根据环境变量决定是否使用Redis
 const useRedis = !!process.env.REDIS_URL;
-const redis = useRedis ? new Redis(process.env.REDIS_URL as string, {
-  maxRetriesPerRequest: 0,
-  lazyConnect: true,
-  enableOfflineQueue: false,
-  connectTimeout: 5000,
-  commandTimeout: 5000,
-}) : null;
+const redis = useRedis
+  ? new Redis(process.env.REDIS_URL as string, {
+      maxRetriesPerRequest: 0,
+      lazyConnect: true,
+      enableOfflineQueue: false,
+      connectTimeout: 5000,
+      commandTimeout: 5000,
+    })
+  : null;
 
 // 连接状态标记
 let isReconnecting = false;
 
 // 添加错误处理，防止无限重连
 if (redis) {
-  redis.on('error', () => {
+  redis.on("error", () => {
     isReconnecting = false;
     redis.disconnect();
   });
-  
-  redis.on('close', () => {
-    console.log('Redis connection closed');
+
+  redis.on("close", () => {
+    console.log("Redis connection closed");
     isReconnecting = false;
   });
-  
-  redis.on('connect', () => {
-    console.log('Redis connected successfully');
+
+  redis.on("connect", () => {
+    console.log("Redis connected successfully");
     isReconnecting = false;
   });
 }
@@ -55,7 +57,12 @@ async function rateLimitRedis(headers: HeadersObject): Promise<boolean> {
 
   try {
     // 检查Redis连接状态，如果断开则尝试重连
-    if ((redis.status === "close" || redis.status === "end" || redis.status === "wait") && !isReconnecting) {
+    if (
+      (redis.status === "close" ||
+        redis.status === "end" ||
+        redis.status === "wait") &&
+      !isReconnecting
+    ) {
       console.log(`Redis status: ${redis.status}, attempting to reconnect...`);
       isReconnecting = true;
       await redis.connect();

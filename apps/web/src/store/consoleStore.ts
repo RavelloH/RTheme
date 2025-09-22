@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 interface ConsoleState {
   isConsoleOpen: boolean;
@@ -13,5 +13,6 @@ interface ConsoleState {
 export const useConsoleStore = create<ConsoleState>((set) => ({
   isConsoleOpen: false,
   setConsoleOpen: (isOpen: boolean) => set({ isConsoleOpen: isOpen }),
-  toggleConsole: () => set((state) => ({ isConsoleOpen: !state.isConsoleOpen })),
+  toggleConsole: () =>
+    set((state) => ({ isConsoleOpen: !state.isConsoleOpen })),
 }));

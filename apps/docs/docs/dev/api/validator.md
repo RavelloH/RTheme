@@ -5,7 +5,7 @@ NeutralPress 提供了一套完整的 API 输入验证工具，基于 Zod 提供
 ## 导入方式
 
 ```typescript
-import { 
+import {
   validateRequestData,
   validateRequestJSON,
   validateSearchParams,
@@ -13,13 +13,14 @@ import {
   validateJSON,
   ValidationResult,
   ValidationErrorDetail,
-  ValidationOptions
+  ValidationOptions,
 } from "@/lib/server/validator";
 ```
 
 ## 核心接口
 
 ### ValidationResult&lt;T&gt;
+
 验证结果接口，包含成功状态、数据和错误信息：
 
 ```typescript
@@ -31,28 +32,31 @@ interface ValidationResult<T> {
 ```
 
 ### ValidationErrorDetail
+
 验证错误详情：
 
 ```typescript
 interface ValidationErrorDetail {
-  field: string;    // 错误字段路径
-  message: string;  // 错误消息
+  field: string; // 错误字段路径
+  message: string; // 错误消息
 }
 ```
 
 ### ValidationOptions
+
 验证配置选项：
 
 ```typescript
 interface ValidationOptions {
-  errorMessage?: string;      // 自定义错误消息
-  returnResponse?: boolean;   // 是否返回响应对象，默认为 true
+  errorMessage?: string; // 自定义错误消息
+  returnResponse?: boolean; // 是否返回响应对象，默认为 true
 }
 ```
 
 ## 主要验证函数
 
 ### validateRequestData()
+
 验证请求体数据（同步）
 
 ```typescript
@@ -60,18 +64,19 @@ interface ValidationOptions {
 function validateRequestData<T>(
   body: unknown,
   schema: z.ZodSchema<T>,
-  options?: ValidationOptions
-): NextResponse | ValidationResult<T>
+  options?: ValidationOptions,
+): NextResponse | ValidationResult<T>;
 
 // 只返回验证结果
 function validateRequestData<T>(
   body: unknown,
   schema: z.ZodSchema<T>,
-  options: ValidationOptions & { returnResponse: false }
-): ValidationResult<T>
+  options: ValidationOptions & { returnResponse: false },
+): ValidationResult<T>;
 ```
 
 ### validateRequestJSON()
+
 验证 JSON 请求数据（异步）
 
 ```typescript
@@ -79,18 +84,19 @@ function validateRequestData<T>(
 async function validateRequestJSON<T>(
   request: Request,
   schema: z.ZodSchema<T>,
-  options?: ValidationOptions
-): Promise<NextResponse | ValidationResult<T>>
+  options?: ValidationOptions,
+): Promise<NextResponse | ValidationResult<T>>;
 
 // 只返回验证结果
 async function validateRequestJSON<T>(
   request: Request,
   schema: z.ZodSchema<T>,
-  options: ValidationOptions & { returnResponse: false }
-): Promise<ValidationResult<T>>
+  options: ValidationOptions & { returnResponse: false },
+): Promise<ValidationResult<T>>;
 ```
 
 ### validateSearchParams()
+
 验证查询参数
 
 ```typescript
@@ -98,30 +104,31 @@ async function validateRequestJSON<T>(
 function validateSearchParams<T>(
   searchParams: URLSearchParams,
   schema: z.ZodSchema<T>,
-  options?: ValidationOptions
-): NextResponse | ValidationResult<T>
+  options?: ValidationOptions,
+): NextResponse | ValidationResult<T>;
 
 // 只返回验证结果
 function validateSearchParams<T>(
   searchParams: URLSearchParams,
   schema: z.ZodSchema<T>,
-  options: ValidationOptions & { returnResponse: false }
-): ValidationResult<T>
+  options: ValidationOptions & { returnResponse: false },
+): ValidationResult<T>;
 ```
 
 ### validate() 和 validateJSON()
+
 快速验证工具函数，只返回验证结果：
 
 ```typescript
 function validate<T>(
   body: unknown,
-  schema: z.ZodSchema<T>
-): ValidationResult<T>
+  schema: z.ZodSchema<T>,
+): ValidationResult<T>;
 
 async function validateJSON<T>(
   request: Request,
-  schema: z.ZodSchema<T>
-): Promise<ValidationResult<T>>
+  schema: z.ZodSchema<T>,
+): Promise<ValidationResult<T>>;
 ```
 
 ## 基本用法
@@ -135,24 +142,24 @@ import { validateRequestJSON } from "@/lib/server/validator";
 const UserSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
-  age: z.number().min(18)
+  age: z.number().min(18),
 });
 
 export async function POST(request: Request) {
   // 直接返回响应（推荐用法）
   const result = await validateRequestJSON(request, UserSchema, {
-    errorMessage: "用户数据验证失败"
+    errorMessage: "用户数据验证失败",
   });
-  
+
   // 如果验证失败，会直接返回错误响应
   if (result instanceof NextResponse) {
     return result;
   }
-  
+
   // 验证成功，继续处理业务逻辑
   const userData = result.data!;
   console.log(userData.name); // 类型安全
-  
+
   // 处理业务逻辑...
   return NextResponse.json({ success: true });
 }
@@ -164,19 +171,22 @@ export async function POST(request: Request) {
 export async function POST(request: Request) {
   // 只返回验证结果，不返回响应对象
   const validation = await validateRequestJSON(request, UserSchema, {
-    returnResponse: false
+    returnResponse: false,
   });
-  
+
   if (!validation.success) {
     // 自定义错误处理
     console.error("验证失败:", validation.errors);
-    
-    return NextResponse.json({
-      error: "数据格式不正确",
-      details: validation.errors
-    }, { status: 400 });
+
+    return NextResponse.json(
+      {
+        error: "数据格式不正确",
+        details: validation.errors,
+      },
+      { status: 400 },
+    );
   }
-  
+
   // 使用验证后的数据
   const userData = validation.data!;
   // ...
@@ -189,23 +199,23 @@ export async function POST(request: Request) {
 const SearchSchema = z.object({
   page: z.string().transform(Number).pipe(z.number().min(1)),
   limit: z.string().transform(Number).pipe(z.number().min(1).max(100)),
-  keyword: z.string().optional()
+  keyword: z.string().optional(),
 });
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  
+
   const result = validateSearchParams(searchParams, SearchSchema);
-  
+
   if (result instanceof NextResponse) {
     return result;
   }
-  
+
   const { page, limit, keyword } = result.data!;
-  
+
   // 使用验证后的查询参数
   const users = await getUserList({ page, limit, keyword });
-  
+
   return NextResponse.json({ users });
 }
 ```
@@ -216,23 +226,25 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    
+
     // 验证已解析的数据
     const result = validateRequestData(body, UserUpdateSchema, {
-      errorMessage: "更新数据格式错误"
+      errorMessage: "更新数据格式错误",
     });
-    
+
     if (result instanceof NextResponse) {
       return result;
     }
-    
+
     const updateData = result.data!;
     // 处理更新逻辑...
-    
   } catch (error) {
-    return NextResponse.json({
-      error: "请求体必须是有效的 JSON"
-    }, { status: 400 });
+    return NextResponse.json(
+      {
+        error: "请求体必须是有效的 JSON",
+      },
+      { status: 400 },
+    );
   }
 }
 ```
@@ -327,7 +339,7 @@ if (jsonResult.success) {
 
 ```typescript
 const result = await validateRequestJSON(request, UserSchema, {
-  errorMessage: "用户注册信息格式不正确"
+  errorMessage: "用户注册信息格式不正确",
 });
 ```
 
@@ -340,23 +352,25 @@ const CreatePostSchema = z.object({
   tags: z.array(z.string()).max(10, "标签数量不能超过10个"),
   category: z.string().uuid("分类ID格式不正确"),
   publishAt: z.string().datetime().optional(),
-  metadata: z.object({
-    seoTitle: z.string().max(60).optional(),
-    seoDescription: z.string().max(160).optional()
-  }).optional()
+  metadata: z
+    .object({
+      seoTitle: z.string().max(60).optional(),
+      seoDescription: z.string().max(160).optional(),
+    })
+    .optional(),
 });
 
 export async function POST(request: Request) {
   const result = await validateRequestJSON(request, CreatePostSchema);
-  
+
   if (result instanceof NextResponse) {
     return result;
   }
-  
+
   const postData = result.data!;
   // postData 具有完整的类型推导
-  console.log(postData.title);        // string
-  console.log(postData.tags);         // string[]
+  console.log(postData.title); // string
+  console.log(postData.tags); // string[]
   console.log(postData.metadata?.seoTitle); // string | undefined
 }
 ```
@@ -365,25 +379,27 @@ export async function POST(request: Request) {
 
 ```typescript
 const PaginationSchema = z.object({
-  page: z.string()
-    .transform(val => parseInt(val, 10))
+  page: z
+    .string()
+    .transform((val) => parseInt(val, 10))
     .pipe(z.number().min(1, "页码必须大于0")),
-  limit: z.string()
-    .transform(val => parseInt(val, 10))
+  limit: z
+    .string()
+    .transform((val) => parseInt(val, 10))
     .pipe(z.number().min(1).max(100, "每页数量在1-100之间")),
   sort: z.enum(["asc", "desc"]).default("desc"),
-  status: z.enum(["draft", "published", "archived"]).optional()
+  status: z.enum(["draft", "published", "archived"]).optional(),
 });
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  
+
   const result = validateSearchParams(searchParams, PaginationSchema);
-  
+
   if (result instanceof NextResponse) {
     return result;
   }
-  
+
   const { page, limit, sort, status } = result.data!;
   // page 和 limit 已自动转换为 number 类型
   // sort 有默认值
@@ -401,52 +417,61 @@ import { validateRequestJSON } from "@/lib/server/validator";
 import { z } from "zod";
 
 const RegisterSchema = z.object({
-  username: z.string()
+  username: z
+    .string()
     .min(3, "用户名至少3个字符")
     .max(20, "用户名最多20个字符")
     .regex(/^[a-zA-Z0-9_]+$/, "用户名只能包含字母、数字和下划线"),
   email: z.string().email("邮箱格式不正确"),
-  password: z.string()
+  password: z
+    .string()
     .min(8, "密码至少8个字符")
     .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "密码必须包含大小写字母和数字"),
-  nickname: z.string().min(1, "昵称不能为空").max(50, "昵称最多50个字符")
+  nickname: z.string().min(1, "昵称不能为空").max(50, "昵称最多50个字符"),
 });
 
 export async function POST(request: Request) {
   // 验证请求数据
   const validation = await validateRequestJSON(request, RegisterSchema, {
-    errorMessage: "注册信息格式不正确"
+    errorMessage: "注册信息格式不正确",
   });
-  
+
   if (validation instanceof NextResponse) {
     return validation;
   }
-  
+
   const { username, email, password, nickname } = validation.data!;
-  
+
   // 检查用户名和邮箱是否已存在
   const existingUser = await checkUserExists(username, email);
   if (existingUser) {
-    return NextResponse.json({
-      success: false,
-      message: "用户已存在",
-      error: {
-        code: "USER_EXISTS",
-        message: existingUser.type === "username" 
-          ? "用户名已被占用" 
-          : "邮箱已被注册"
-      }
-    }, { status: 409 });
+    return NextResponse.json(
+      {
+        success: false,
+        message: "用户已存在",
+        error: {
+          code: "USER_EXISTS",
+          message:
+            existingUser.type === "username"
+              ? "用户名已被占用"
+              : "邮箱已被注册",
+        },
+      },
+      { status: 409 },
+    );
   }
-  
+
   // 创建用户
   const user = await createUser({ username, email, password, nickname });
-  
-  return NextResponse.json({
-    success: true,
-    message: "注册成功",
-    data: { userId: user.id }
-  }, { status: 201 });
+
+  return NextResponse.json(
+    {
+      success: true,
+      message: "注册成功",
+      data: { userId: user.id },
+    },
+    { status: 201 },
+  );
 }
 ```
 
@@ -465,24 +490,24 @@ const PostQuerySchema = z.object({
   author: z.string().uuid().optional(),
   search: z.string().optional(),
   sortBy: z.enum(["createdAt", "updatedAt", "title"]).default("createdAt"),
-  sortOrder: z.enum(["asc", "desc"]).default("desc")
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
 });
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  
+
   const validation = validateSearchParams(searchParams, PostQuerySchema);
-  
+
   if (validation instanceof NextResponse) {
     return validation;
   }
-  
+
   const queryParams = validation.data!;
-  
+
   // 使用类型安全的查询参数
   const posts = await getPostsWithFilters(queryParams);
   const total = await countPostsWithFilters(queryParams);
-  
+
   return NextResponse.json({
     success: true,
     data: { posts },
@@ -490,8 +515,8 @@ export async function GET(request: Request) {
       page: queryParams.page,
       limit: queryParams.limit,
       total,
-      totalPages: Math.ceil(total / queryParams.limit)
-    }
+      totalPages: Math.ceil(total / queryParams.limit),
+    },
   });
 }
 ```
@@ -520,14 +545,14 @@ if (!result.success) {
 ```typescript
 const UserSchema = z.object({
   name: z.string(),
-  age: z.number()
+  age: z.number(),
 });
 
 const result = await validateRequestJSON(request, UserSchema);
 if (!(result instanceof NextResponse)) {
   // result.data! 具有完整类型推导
-  console.log(result.data!.name);  // TypeScript 知道这是 string
-  console.log(result.data!.age);   // TypeScript 知道这是 number
+  console.log(result.data!.name); // TypeScript 知道这是 string
+  console.log(result.data!.age); // TypeScript 知道这是 number
 }
 ```
 
@@ -536,7 +561,7 @@ if (!(result instanceof NextResponse)) {
 ```typescript
 // 为不同场景提供合适的错误消息
 const validation = await validateRequestJSON(request, UserSchema, {
-  errorMessage: "用户信息格式不正确，请检查输入数据"
+  errorMessage: "用户信息格式不正确，请检查输入数据",
 });
 ```
 
@@ -546,11 +571,11 @@ const validation = await validateRequestJSON(request, UserSchema, {
 // 定义在 packages/shared-types 中
 export const BaseUserSchema = z.object({
   name: z.string().min(1),
-  email: z.string().email()
+  email: z.string().email(),
 });
 
 export const CreateUserSchema = BaseUserSchema.extend({
-  password: z.string().min(8)
+  password: z.string().min(8),
 });
 
 export const UpdateUserSchema = BaseUserSchema.partial();

@@ -17,24 +17,25 @@ export function Header() {
   useEffect(() => {
     const handleLoadingComplete = () => {
       setIsLoaded(true);
-      
+
       // 使用GSAP动画从上方滑入
       if (headerRef.current) {
-        gsap.fromTo(headerRef.current, 
+        gsap.fromTo(
+          headerRef.current,
           { y: -78 },
-          { 
-            y: 0, 
-            duration: 0.8, 
-            ease: "power2.out"
-          }
+          {
+            y: 0,
+            duration: 0.8,
+            ease: "power2.out",
+          },
         );
       }
     };
 
-    window.addEventListener('loadingComplete', handleLoadingComplete);
-    
+    window.addEventListener("loadingComplete", handleLoadingComplete);
+
     return () => {
-      window.removeEventListener('loadingComplete', handleLoadingComplete);
+      window.removeEventListener("loadingComplete", handleLoadingComplete);
     };
   }, []);
 
@@ -60,7 +61,7 @@ export function Header() {
         className="w-full h-[78px] text-foreground bg-background border-y border-border flex relative z-50"
         initial={{ y: -78 }}
         animate={{
-          y: isMenuOpen ? `calc(100vh - 78px)` : (isLoaded ? 0 : -78),
+          y: isMenuOpen ? `calc(100vh - 78px)` : isLoaded ? 0 : -78,
         }}
         transition={{
           type: "spring",
@@ -76,10 +77,7 @@ export function Header() {
         </div>
         <div className="flex-1 flex items-center justify-center">{title}</div>
         <div className="w-[78px] h-full border-l border-border flex items-center justify-center">
-          <MenuButton
-            isOpen={isMenuOpen}
-            onClick={toggleMenu}
-          />
+          <MenuButton isOpen={isMenuOpen} onClick={toggleMenu} />
         </div>
       </motion.header>
 
@@ -100,7 +98,11 @@ export function Header() {
             }}
           >
             <div className="h-full pt-[78px]">
-              <Menu setIsMenuOpen={(isOpen) => useMenuStore.getState().setMenuOpen(isOpen)} />
+              <Menu
+                setIsMenuOpen={(isOpen) =>
+                  useMenuStore.getState().setMenuOpen(isOpen)
+                }
+              />
             </div>
           </motion.div>
         )}
@@ -127,10 +129,10 @@ function MenuButton({
         animate={{ rotate: isOpen ? 180 : 0 }}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
-        transition={{ 
-          duration: 0.5, 
+        transition={{
+          duration: 0.5,
           ease: "easeInOut",
-          scale: { duration: 0.2 }
+          scale: { duration: 0.2 },
         }}
       >
         <svg
@@ -167,7 +169,7 @@ function MenuButton({
             transition={{
               duration: 0.3,
               ease: [0.4, 0, 0.2, 1],
-              delay: isOpen ? 0 : .2,
+              delay: isOpen ? 0 : 0.2,
             }}
           />
           <motion.path
@@ -183,7 +185,7 @@ function MenuButton({
             transition={{
               duration: 0.5,
               ease: [0.4, 0, 0.2, 1],
-              delay: isOpen ? 0.2 : .2,
+              delay: isOpen ? 0.2 : 0.2,
             }}
           />
         </svg>
