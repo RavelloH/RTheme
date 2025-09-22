@@ -37,3 +37,51 @@
     --radius: 0.5rem;
   }
 }
+
+/* 自定义滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-muted-foreground);
+  border-radius: 4px;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-foreground);
+  opacity: 0.8;
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--color-background);
+}
+
+/* Firefox 滚动条样式 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-muted-foreground) var(--color-background);
+}
+
+/* 暗色模式下的滚动条优化 */
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--color-muted-foreground);
+  opacity: 0.5;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-foreground);
+  opacity: 0.7;
+}
+
+.dark {
+  scrollbar-color: var(--color-muted-foreground) var(--color-background);
+}
