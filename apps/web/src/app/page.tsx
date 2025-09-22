@@ -6,6 +6,7 @@ import Image from "next/image";
 import Marquee from "react-fast-marquee";
 import Link from "next/link";
 import PostCard from "@/components/PostCard";
+import MainLayout from "@/components/MainLayout";
 
 export const metadata = await generateMetadata(
   {
@@ -20,7 +21,7 @@ export const metadata = await generateMetadata(
 export default function Home() {
   return (
     <>
-      <div className="h-[calc(100vh-156px)]">
+      <MainLayout type="horizontal">
         <HorizontalScroll
           className="h-full"
           enableParallax={true}
@@ -448,7 +449,7 @@ export default function Home() {
             </GridItem>
           </RowGrid>
         </HorizontalScroll>
-      </div>
+      </MainLayout>
     </>
   );
 }
