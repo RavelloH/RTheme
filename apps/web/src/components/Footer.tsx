@@ -331,7 +331,9 @@ export default function Footer({ menus }: FooterProps) {
                     }}
                     key={menu.id}
                     href={
-                      menu.link ? menu.link : menu.page ? menu.page.slug : "#"
+                      menu.link ||
+                      menu.slug ||
+                      (menu.page ? menu.page.slug : "#")
                     }
                     className="relative inline-block text-muted-foreground transition-colors duration-300"
                     onMouseEnter={() => handleMenuHover(index, isActive)}

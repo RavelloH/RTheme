@@ -135,7 +135,7 @@ export default function Home() {
               className="flex items-center uppercase bg-primary text-primary-foreground"
             >
               <Marquee speed={40} autoFill={true} className="h-full text-7xl">
-                WORKS&nbsp;&nbsp;/&nbsp;&nbsp;
+                PROJECTS&nbsp;&nbsp;/&nbsp;&nbsp;
               </Marquee>
             </GridItem>
             <GridItem
@@ -227,7 +227,7 @@ export default function Home() {
                 <div>不止这些。</div>
                 <div>想要查看更多？</div>
                 <div>前往我的 Github 来查看我的所有项目，</div>
-                <div>或者在 Works 页面看看相关描述。</div>
+                <div>或者在 Projects 页面看看相关描述。</div>
                 <br />
                 <div data-fade>
                   Github:
@@ -246,7 +246,7 @@ export default function Home() {
               className="flex items-center px-10 text-2xl"
             >
               <span data-fade-word className="w-[50%] uppercase ">
-                View more works
+                View more projects
               </span>
             </GridItem>
 
