@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Marquee from "react-fast-marquee";
 import * as RemixIcon from "@remixicon/react";
 import type { MenuItem } from "@/lib/server/menuCache";
+import { useConfig } from "@/components/ConfigProvider";
 
 // 使用 menuCache 中的 MenuItem 类型
 type MenuType = MenuItem;
@@ -56,6 +57,8 @@ function getIconComponent(iconName: string) {
 }
 
 export default function Menu({ setIsMenuOpen, menus }: MenuProps) {
+  const { config } = useConfig();
+
   const handleMenuClick = (menu: MenuType) => {
     if (menu.link) {
       window.open(menu.link, "_blank", "noopener,noreferrer");
@@ -298,7 +301,10 @@ export default function Menu({ setIsMenuOpen, menus }: MenuProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
       >
-        <span>Copyright © 2019 - 2025 RavelloH. All rights reserved.</span>
+        <span>
+          Copyright © 2019 - 2025 {config<string>("site.author")}. All rights
+          reserved.
+        </span>
         <span className="px-2">/</span>
         <span>
           Powered by{" "}
