@@ -96,9 +96,7 @@ export default function Menu({ setIsMenuOpen, menus }: MenuProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <span>
-          {"// Mind stuff, that's what they say when the verses fly. //"}
-        </span>
+        <span>{`// ${config<string>("site.slogan.secondary")} //`}</span>
       </motion.div>
 
       <motion.div
@@ -109,7 +107,7 @@ export default function Menu({ setIsMenuOpen, menus }: MenuProps) {
       >
         <div className="w-full h-[25%] text-5xl border-y border-border">
           <Marquee speed={40} autoFill={true} className="h-full text-7xl">
-            <span>RavelloH&apos;s Blog</span>
+            <span>{config<string>("site.title")}</span>
             <span>&nbsp;&nbsp;/&nbsp;&nbsp;</span>
           </Marquee>
         </div>
@@ -302,17 +300,24 @@ export default function Menu({ setIsMenuOpen, menus }: MenuProps) {
         transition={{ delay: 0.6 }}
       >
         <span>
-          Copyright © 2019 - 2025 {config<string>("site.author")}. All rights
-          reserved.
+          Copyright ©{" "}
+          {(() => {
+            const startYear = new Date(
+              config<string>("site.birthday"),
+            ).getFullYear();
+            const currentYear = new Date().getFullYear();
+            return startYear === currentYear
+              ? startYear
+              : `${startYear} - ${currentYear}`;
+          })()}{" "}
+          {config<string>("site.author")}.
         </span>
-        <span className="px-2">/</span>
-        <span>
-          Powered by{" "}
-          <Link href="https://github.com/RavelloH/NeutralPress">
-            NeutralPress
-          </Link>
-          .
-        </span>
+        {config<Array<string>>("site.copyright").map((line, idx) => (
+          <span key={idx}>
+            <span className="px-2">/</span>
+            <span dangerouslySetInnerHTML={{ __html: line }}></span>
+          </span>
+        ))}
       </motion.div>
     </motion.div>
   );

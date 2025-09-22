@@ -56,13 +56,39 @@ export const defaultConfigs: DefaultConfig[] = [
   },
   {
     key: "site.author",
-    value: { default: "RavelloH" },
-    description: "网站作者或团队名称",
+    value: { default: "Your Name" },
+    description: "网站作者或团队名",
   },
+  // TODO
   {
     key: "site.theme_color",
-    value: { default: "#000000" },
+    value: { default: "#2dd4bf" },
     description: "网站主题颜色，影响浏览器UI",
+  },
+  {
+    key: "site.slogan.primary",
+    value: { default: "Beginning of meditation." },
+    description: "网站主标语，显示在主页",
+  },
+  {
+    key: "site.slogan.secondary",
+    value: { default: "Mind stuff, that's what they say when the verses fly." },
+    description: "网站副标语，显示在菜单的最上方",
+  },
+  {
+    key: "site.birthday",
+    value: { default: new Date().toISOString() },
+    description: "网站创建时间，用于计算运行天数及版权声明",
+  },
+  {
+    key: "site.copyright",
+    value: {
+      default: [
+        "All rights reserved.",
+        "Powered by <a href='https://github.com/RavelloH/NeutralPress'>NeutralPress</a>.",
+      ],
+    },
+    description: "网站版权信息，显示在页脚",
   },
   // =====================================
   // 网站SEO配置
