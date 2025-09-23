@@ -48,17 +48,15 @@ export default function PageTransition({ children }: PageTransitionProps) {
       gsap.to(containerRef.current, {
         opacity: 0,
         duration: 0.5,
-        ease: "power2.inOut",
+        ease: "power1.inOut",
         onComplete: () => {
           setTransitionState("waiting");
         },
       });
     } else {
-      // 位移动画：500ms内移动到目标方向
+      // 位移动画：先移动100px，然后立即移动到屏幕外
       const tl = gsap.timeline({
         onComplete: () => {
-          // 动画完成后，立即无动画设置到相反方向
-          setPositionToOpposite(direction);
           setTransitionState("waiting");
         },
       });
@@ -66,20 +64,17 @@ export default function PageTransition({ children }: PageTransitionProps) {
       gsapTimelineRef.current = tl;
 
       const props = getDirectionProps(direction, "exit");
+      const screenProps = getScreenProps(direction);
+
+      // 第一阶段：移动100px，同时透明度变化
       tl.to(containerRef.current, {
         ...props,
         duration: 0.5,
-        ease: "power2.inOut",
-      });
+        ease: "power1.inOut",
+      })
+        // 第二阶段：立即移动到屏幕外，不占用时间
+        .set(containerRef.current, screenProps);
     }
-  };
-
-  // 设置到相反方向（无动画）
-  const setPositionToOpposite = (direction: string) => {
-    if (!containerRef.current) return;
-
-    const props = getDirectionProps(direction, "opposite");
-    gsap.set(containerRef.current, props);
   };
 
   // 开始进入动画
@@ -93,23 +88,30 @@ export default function PageTransition({ children }: PageTransitionProps) {
       gsap.to(containerRef.current, {
         opacity: 1,
         duration: 0.5,
-        ease: "power2.inOut",
+        ease: "power1.inOut",
         onComplete: () => {
           setTransitionState("idle");
         },
       });
     } else {
-      // 位移动画：500ms内移动到中央
-      gsap.to(containerRef.current, {
-        x: 0,
-        y: 0,
-        opacity: 1,
-        duration: 0.5,
-        ease: "power2.inOut",
+      // 从屏幕外移动到中央，同时透明度恢复
+      const tl = gsap.timeline({
         onComplete: () => {
           setTransitionState("idle");
         },
       });
+
+      // 第一阶段：从屏幕外移动到100px位置（不占用时间，立即设置）
+      const enterProps = getDirectionProps(transitionDirection, "opposite");
+      tl.set(containerRef.current, enterProps)
+        // 第二阶段：移动到中央，同时透明度恢复
+        .to(containerRef.current, {
+          x: 0,
+          y: 0,
+          opacity: 1,
+          duration: 0.5,
+          ease: "power1.inOut",
+        });
     }
   }, [transitionDirection]);
 
@@ -125,41 +127,63 @@ export default function PageTransition({ children }: PageTransitionProps) {
     }
   }, [pathname, transitionState, children, startEnterAnimation]);
 
+  // 获取屏幕外位置属性
+  const getScreenProps = (direction: string) => {
+    const props: gsap.TweenVars = { opacity: 0 };
+
+    switch (direction) {
+      case "left":
+        props.x = "100%"; // 移动到屏幕右边
+        break;
+      case "right":
+        props.x = "-100%"; // 移动到屏幕左边
+        break;
+      case "up":
+        props.y = "100%"; // 移动到屏幕下边
+        break;
+      case "down":
+        props.y = "-100%"; // 移动到屏幕上边
+        break;
+    }
+
+    return props;
+  };
+
   // 获取方向属性
   const getDirectionProps = (direction: string, type: "exit" | "opposite") => {
-    const props: gsap.TweenVars = { opacity: type === "exit" ? 0 : 1 };
+    const props: gsap.TweenVars = { opacity: type === "exit" ? 0 : 0 };
 
     switch (direction) {
       case "left":
         // left方向：新页面从左边进入，所以当前页面向右退出
         if (type === "exit") {
-          props.x = "100%"; // 当前页面向右移动
+          props.x = 100; // 当前页面向右移动100px
         } else {
-          props.x = "-100%"; // 新页面从左边开始位置
+          props.x = -100; // 新页面从左边开始位置
         }
         break;
       case "right":
         // right方向：新页面从右边进入，所以当前页面向左退出
         if (type === "exit") {
-          props.x = "-100%"; // 当前页面向左移动
+          props.x = -100; // 当前页面向左移动100px
         } else {
-          props.x = "100%"; // 新页面从右边开始位置
+          props.x = 100; // 新页面从右边开始位置
         }
         break;
       case "up":
         // up方向：新页面从上边进入，所以当前页面向下退出
         if (type === "exit") {
-          props.y = "100%"; // 当前页面向下移动
+          props.y = 100; // 当前页面向下移动100px
         } else {
-          props.y = "-100%"; // 新页面从上边开始位置
+          props.y = -100; // 新页面从上边开始位置
         }
         break;
       case "down":
         // down方向：新页面从下边进入，所以当前页面向上退出
         if (type === "exit") {
-          props.y = "-100%"; // 当前页面向上移动
+          props.y = -100; // 当前页面向上移动100px
         } else {
-          props.y = "100%"; // 新页面从下边开始位置
+          props.y = 100; // 新页面从下边开始位置
         }
         break;
     }

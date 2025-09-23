@@ -10,6 +10,7 @@ import { MainContent } from "@/components/MainContent";
 import ResponsiveFontScale from "@/components/ResponsiveFontScale";
 import { getActiveMenus } from "@/lib/server/menuCache";
 import { getAllConfigs } from "@/lib/server/configCache";
+import PageTransition from "@/components/PageTransition";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -45,7 +46,9 @@ export default async function RootLayout({
                 <LoadingAnimation />
                 <div className="min-h-full flex flex-col overflow-hidden">
                   <Header menus={menus} />
-                  <MainContent>{children}</MainContent>
+                  <MainContent>
+                    <PageTransition>{children}</PageTransition>
+                  </MainContent>
                   <Footer menus={menus} />
                 </div>
               </ResponsiveFontScale>
