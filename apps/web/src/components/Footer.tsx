@@ -234,11 +234,16 @@ export default function Footer({ menus }: FooterProps) {
 
     // 如果是首次加载，直接设置状态
     if (previousPathname.current === pathname) {
-      const activeIndex = mainMenus.findIndex(
-        (menu) =>
-          pathname ===
-          (menu.link ? menu.link : menu.page ? menu.page.slug : "#"),
-      );
+      const activeIndex = mainMenus.findIndex((menu) => {
+        const targetPath =
+          menu.link ||
+          (menu.slug ? "/" + menu.slug : null) ||
+          (menu.page ? "/" + menu.page.slug : "#");
+        return (
+          pathname === targetPath ||
+          (targetPath !== "#" && pathname.startsWith(targetPath + "/"))
+        );
+      });
 
       if (activeIndex !== -1) {
         const activeLink = menuRefs.current[activeIndex];
@@ -264,15 +269,26 @@ export default function Footer({ menus }: FooterProps) {
     }
 
     // 找到旧的激活索引和新的激活索引
-    const oldActiveIndex = mainMenus.findIndex(
-      (menu) =>
-        activePathname ===
-        (menu.link ? menu.link : menu.page ? menu.page.slug : "#"),
-    );
-    const newActiveIndex = mainMenus.findIndex(
-      (menu) =>
-        pathname === (menu.link ? menu.link : menu.page ? menu.page.slug : "#"),
-    );
+    const oldActiveIndex = mainMenus.findIndex((menu) => {
+      const targetPath =
+        menu.link ||
+        (menu.slug ? "/" + menu.slug : null) ||
+        (menu.page ? "/" + menu.page.slug : "#");
+      return (
+        activePathname === targetPath ||
+        (targetPath !== "#" && activePathname.startsWith(targetPath + "/"))
+      );
+    });
+    const newActiveIndex = mainMenus.findIndex((menu) => {
+      const targetPath =
+        menu.link ||
+        (menu.slug ? "/" + menu.slug : null) ||
+        (menu.page ? "/" + menu.page.slug : "#");
+      return (
+        pathname === targetPath ||
+        (targetPath !== "#" && pathname.startsWith(targetPath + "/"))
+      );
+    });
 
     // 如果索引发生变化，执行动画
     if (oldActiveIndex !== newActiveIndex) {
@@ -313,9 +329,14 @@ export default function Footer({ menus }: FooterProps) {
           <div className="text-muted-foreground relative">
             {menus.map((menu, index) => {
               if (menu.category !== "MAIN") return null;
+              const targetPath =
+                menu.link ||
+                (menu.slug ? "/" + menu.slug : null) ||
+                (menu.page ? "/" + menu.page.slug : "#");
               const isActive =
-                activePathname ===
-                (menu.link ? menu.link : menu.page ? menu.page.slug : "#");
+                activePathname === targetPath ||
+                (targetPath !== "#" &&
+                  activePathname.startsWith(targetPath + "/"));
               return (
                 <span
                   key={index}
@@ -333,7 +354,7 @@ export default function Footer({ menus }: FooterProps) {
                     href={
                       menu.link ||
                       (menu.slug ? "/" + menu.slug : null) ||
-                      (menu.page ? menu.page.slug : "#")
+                      (menu.page ? "/" + menu.page.slug : "#")
                     }
                     className="relative inline-block text-muted-foreground transition-colors duration-300"
                     onMouseEnter={() => handleMenuHover(index, isActive)}
