@@ -10,7 +10,7 @@ import Image from "next/image";
 import { Panel } from "./Panel";
 import { ConsoleButton } from "./ConsoleButton";
 import { MenuItem } from "@/lib/server/menuCache";
-import Link from "next/link";
+import Link from "./Link";
 
 interface FooterProps {
   menus: MenuItem[];
@@ -332,7 +332,7 @@ export default function Footer({ menus }: FooterProps) {
                     key={menu.id}
                     href={
                       menu.link ||
-                      menu.slug ||
+                      (menu.slug ? "/" + menu.slug : null) ||
                       (menu.page ? menu.page.slug : "#")
                     }
                     className="relative inline-block text-muted-foreground transition-colors duration-300"

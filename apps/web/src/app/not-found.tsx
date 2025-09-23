@@ -1,8 +1,6 @@
 import { generateMetadata } from "@/lib/shared/seo";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import RowGrid, { GridItem } from "@/components/RowGrid";
-import Marquee from "react-fast-marquee";
-import Link from "next/link";
 import MainLayout from "@/components/MainLayout";
 
 export const metadata = await generateMetadata(

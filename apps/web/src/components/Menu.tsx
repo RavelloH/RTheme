@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "./Link";
 import { motion } from "framer-motion";
 import Marquee from "react-fast-marquee";
 import * as RemixIcon from "@remixicon/react";
