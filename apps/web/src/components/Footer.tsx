@@ -445,24 +445,37 @@ export default function Footer({ menus }: FooterProps) {
 
       <AnimatePresence>
         {isConsoleOpen && (
-          <motion.div
-            className="fixed bottom-0 left-0 right-0 z-40"
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{
-              type: "spring",
-              damping: 35,
-              stiffness: 280,
-              mass: 1,
-              restDelta: 0.01,
-              restSpeed: 0.01,
-            }}
-          >
-            <Panel
-              onClose={() => useConsoleStore.getState().setConsoleOpen(false)}
+          <>
+            {/* 半透明遮罩层 */}
+            <motion.div
+              className="fixed inset-0 z-40 backdrop-blur-xs"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{
+                duration: 0.2,
+              }}
+              onClick={() => useConsoleStore.getState().setConsoleOpen(false)}
             />
-          </motion.div>
+            <motion.div
+              className="fixed bottom-0 left-0 right-0 z-40"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{
+                type: "spring",
+                damping: 35,
+                stiffness: 280,
+                mass: 1,
+                restDelta: 0.01,
+                restSpeed: 0.01,
+              }}
+            >
+              <Panel
+                onClose={() => useConsoleStore.getState().setConsoleOpen(false)}
+              />
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </>
