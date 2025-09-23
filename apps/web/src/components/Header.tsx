@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { gsap } from "gsap";
 import Menu from "./Menu";
 import { useMenuStore } from "@/store/menuStore";
+import { useConsoleStore } from "@/store/consoleStore";
 import { useBroadcast } from "@/hooks/useBroadcast";
 import type { MenuItem } from "@/lib/server/menuCache";
 
@@ -105,6 +106,7 @@ function TitleTransition({
 
 export function Header({ menus }: { menus: MenuItem[] }) {
   const { isMenuOpen, toggleMenu } = useMenuStore();
+  const { setConsoleOpen } = useConsoleStore();
   const headerRef = useRef<HTMLElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const pathname = usePathname();
@@ -241,7 +243,15 @@ export function Header({ menus }: { menus: MenuItem[] }) {
           </TitleTransition>
         </div>
         <div className="w-[78px] h-full border-l border-border flex items-center justify-center">
-          <MenuButton isOpen={isMenuOpen} onClick={toggleMenu} />
+          <MenuButton
+            isOpen={isMenuOpen}
+            onClick={() => {
+              // 先关闭Footer的控制台面板
+              setConsoleOpen(false);
+              // 然后切换菜单状态
+              toggleMenu();
+            }}
+          />
         </div>
       </motion.header>
 
