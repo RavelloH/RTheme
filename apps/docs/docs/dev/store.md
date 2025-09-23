@@ -14,53 +14,87 @@ NeutralPress 提供了三个基于 Zustand 的状态管理工具，用于处理�
 
 ## useBroadcast - 广播消息系统
 
-用于全局消息广播，支持泛型类型安全和自动内存清理。
+用于全局消息广播，基于 Zustand 实现单例模式，支持泛型类型安全和自动内存清理。
 
 ### 基础用法
 
 ```typescript
-import { useBroadcast, useBroadcastListener } from "@/store/useBroadcast";
+import { useBroadcastStore } from "@/store/broadcastStore";
 
-// 获取广播实例
-const broadcast = useBroadcast<string>();
+// 直接使用全局广播 store
+const { broadcast } = useBroadcastStore.getState();
 
 // 注册回调（需要 ID）
 const id = Symbol("callback");
-broadcast.registerCallback(id, (message: string) => {
+useBroadcastStore.getState().registerCallback(id, (message: string) => {
   console.log("收到消息:", message);
 });
 
 // 广播消息（支持异步）
-await broadcast.broadcast("Hello World");
+await broadcast("Hello World");
 
 // 取消注册
-broadcast.unregisterCallback(id);
+useBroadcastStore.getState().unregisterCallback(id);
 
 // 获取当前回调数量
-console.log("当前回调数量:", broadcast.getCallbackCount());
+console.log("当前回调数量:", useBroadcastStore.getState().getCallbackCount());
 ```
 
 ### React Hook 用法（推荐）
 
-使用 `useBroadcastListener` Hook 实现自动清理：
+使用专门的 Hooks 实现自动清理：
 
 ```typescript
-import { useBroadcast, useBroadcastListener } from '@/store/useBroadcast';
+import { useBroadcast, useBroadcastSender } from '@/hooks/useBroadcast';
 
 function MyComponent() {
-  const broadcast = useBroadcast<string>();
-
-  // 自动注册和清理
-  useBroadcastListener(broadcast, (message: string) => {
+  // 接收消息
+  useBroadcast<string>((message) => {
     console.log('收到消息:', message);
   });
 
   // 发送消息
+  const { broadcast } = useBroadcastSender<string>();
+
   const sendMessage = () => {
-    broadcast.broadcast('Hello from Component');
+    broadcast('Hello from Component');
   };
 
   return <button onClick={sendMessage}>发送消息</button>;
+}
+```
+
+### 实际应用示例
+
+**页面过渡动画**：
+
+```typescript
+import { useBroadcast } from "@/hooks/useBroadcast";
+import { useBroadcastSender } from "@/hooks/useBroadcast";
+
+// 在 PageTransition 组件中接收消息
+function PageTransition() {
+  useBroadcast<{ type: "page-transition"; direction: string }>((message) => {
+    if (message?.type === "page-transition") {
+      console.log("页面过渡方向:", message.direction);
+      // 执行过渡动画
+    }
+  });
+}
+
+// 在 Link 组件中发送消息
+function Link() {
+  const { broadcast } = useBroadcastSender<{
+    type: "page-transition";
+    direction: string;
+  }>();
+
+  const handleClick = () => {
+    broadcast({
+      type: "page-transition",
+      direction: "left",
+    });
+  };
 }
 ```
 
@@ -69,14 +103,15 @@ function MyComponent() {
 所有回调都支持异步操作：
 
 ```typescript
-useBroadcastListener(broadcast, async (message: string) => {
+useBroadcast<string>(async (message) => {
   // 模拟异步操作
   await new Promise((resolve) => setTimeout(resolve, 100));
   console.log("异步处理消息:", message);
 });
 
 // 广播时会等待所有回调完成
-await broadcast.broadcast("异步消息");
+const { broadcast } = useBroadcastSender<string>();
+await broadcast("异步消息");
 ```
 
 ### 泛型支持
@@ -89,13 +124,24 @@ interface UserMessage {
   data: any;
 }
 
-const userBroadcast = useBroadcast<UserMessage>();
+// 在组件中使用
+function UserProfile() {
+  useBroadcast<UserMessage>((message) => {
+    if (message.type === "user_update") {
+      console.log("用户更新:", message.userId);
+    }
+  });
 
-userBroadcast.registerCallback(Symbol("user-callback"), (message) => {
-  if (message.type === "user_update") {
-    console.log("用户更新:", message.userId);
-  }
-});
+  const { broadcast } = useBroadcastSender<UserMessage>();
+
+  const updateUser = () => {
+    broadcast({
+      type: "user_update",
+      userId: 123,
+      data: { name: "新用户名" },
+    });
+  };
+}
 ```
 
 ## useEvent - 事件监听系统
@@ -351,16 +397,19 @@ export interface BroadcastMessages {
 现在使用 React Hooks 自动处理内存清理：
 
 ```typescript
-import { useBroadcastListener, useEventListener } from '@/store';
+import { useBroadcast, useBroadcastSender } from '@/hooks/useBroadcast';
+import { useEvent, useEventListener } from '@/store/useEvent';
 
 function MyComponent() {
-  const broadcast = useBroadcast<BroadcastMessages>();
-  const eventManager = useEvent<AppEvents>();
-
   // 自动清理的广播监听
-  useBroadcastListener(broadcast, (message) => {
+  useBroadcast<BroadcastMessages>((message) => {
     console.log('收到广播消息:', message);
   });
+
+  // 发送广播消息
+  const { broadcast } = useBroadcastSender<BroadcastMessages>();
+
+  const eventManager = useEvent<AppEvents>();
 
   // 自动清理的事件监听
   useEventListener(eventManager, 'user:login', (userId, userData) => {
@@ -405,10 +454,13 @@ async function safeFunctionCall() {
 
 ```typescript
 // stores/index.ts
-import { useBroadcast, useEvent, useFunction } from "@/store";
+import { useBroadcastStore } from "@/store/broadcastStore";
+import { useEvent, useFunction } from "@/store/useEvent";
 import type { AppEvents, AppFunctions, BroadcastMessages } from "@/types";
 
-export const appBroadcast = useBroadcast<BroadcastMessages>();
+// 广播系统已经是单例，直接导出
+export { useBroadcastStore } from "@/store/broadcastStore";
+
 export const appEvents = useEvent<AppEvents>();
 export const appFunctions = useFunction<AppFunctions>();
 
@@ -425,13 +477,11 @@ appFunctions.registerFunction("utils:formatDate", (date, format) => {
 import { useCallback } from 'react';
 
 function OptimizedComponent() {
-  const broadcast = useBroadcast<string>();
-
   const handleMessage = useCallback((message: string) => {
     console.log('处理消息:', message);
   }, []);
 
-  useBroadcastListener(broadcast, handleMessage);
+  useBroadcast<string>(handleMessage);
 
   return <div>优化组件</div>;
 }
@@ -439,11 +489,11 @@ function OptimizedComponent() {
 
 ## 性能考虑
 
-1. **使用 React Hooks**: 推荐使用 `useBroadcastListener` 和 `useEventListener`，它们自动处理内存清理
+1. **使用 React Hooks**: 推荐使用 `useBroadcast` 和 `useBroadcastSender`，它们自动处理内存清理
 2. **避免频繁注册/注销**: 在组件生命周期内尽量保持稳定的监听器
 3. **使用 useCallback**: 对于复杂的回调函数，使用 `useCallback` 避免不必要的重新渲染
 4. **异步操作优化**: 对于耗时的异步操作，考虑使用防抖或节流
-5. **监控资源使用**: 使用 `getCallbackCount()`、`getListenerCount()` 等方法监控资源使用情况
+5. **监控资源使用**: 使用 `useBroadcastStore.getState().getCallbackCount()`、`getListenerCount()` 等方法监控资源使用情况
 
 ## 调试工具
 
@@ -451,8 +501,7 @@ function OptimizedComponent() {
 
 ```typescript
 // 监控广播系统状态
-const broadcast = useBroadcast<string>();
-console.log("当前回调数量:", broadcast.getCallbackCount());
+console.log("当前回调数量:", useBroadcastStore.getState().getCallbackCount());
 
 // 监控事件系统状态
 const eventManager = useEvent<AppEvents>();
@@ -472,7 +521,7 @@ Zustand 内置了 Redux DevTools 支持，可以在浏览器开发者工具中�
 ```typescript
 // 开发环境自动启用 DevTools
 // 生产环境可以通过环境变量控制
-const broadcast = useBroadcast<string>();
+console.log("广播系统状态:", useBroadcastStore.getState());
 ```
 
 ## 常见问题
@@ -485,19 +534,57 @@ A: Zustand 更轻量级，API 更简洁，TypeScript 支持更好，适合中小
 
 A: 主要变化包括：
 
-- **内存管理**: 现在使用 React Hooks 自动清理，避免内存泄漏
+- **单例模式**: 广播系统现在使用全局单例 store，确保所有组件共享同一个消息通道
+- **API 简化**: 分离为 `useBroadcast`（接收）和 `useBroadcastSender`（发送）两个专用 Hook
+- **内存管理**: 使用 React Hooks 自动清理，避免内存泄漏
 - **类型安全**: 增强的 TypeScript 类型推断和错误处理
 - **异步支持**: 所有操作都支持 Promise 和异步处理
-- **API 变化**: 注册回调现在需要 Symbol ID，提供了自动清理的 Hooks
 
 ### Q: 如何从旧版本迁移？
 
 A: 迁移步骤：
 
-1. 将 `registerCallback(callback)` 改为 `registerCallback(id, callback)`
-2. 将 `on(eventName, listener)` 改为 `on(eventName, id, listener)`
-3. 使用 `useBroadcastListener` 和 `useEventListener` 替代手动清理
-4. 将 `callFunction` 改为异步调用 `await callFunction()`
+1. **广播系统**：
+   - 旧版本：`const broadcast = useBroadcast<T>()`
+   - 新版本：`useBroadcast<T>(callback)` 用于接收，`useBroadcastSender<T>()` 用于发送
+   - 移除 `useBroadcastListener`，直接使用 `useBroadcast` Hook
+
+2. **事件系统**：
+   - 将 `on(eventName, listener)` 改为 `on(eventName, id, listener)`
+   - 使用 `useEventListener` 替代手动清理
+
+3. **函数系统**：
+   - 将 `callFunction` 改为异步调用 `await callFunction()`
+
+**迁移示例**：
+
+```typescript
+// 旧版本
+function OldComponent() {
+  const broadcast = useBroadcast<string>();
+
+  useBroadcastListener(broadcast, (message) => {
+    console.log(message);
+  });
+
+  const send = () => {
+    broadcast.broadcast("hello");
+  };
+}
+
+// 新版本
+function NewComponent() {
+  useBroadcast<string>((message) => {
+    console.log(message);
+  });
+
+  const { broadcast } = useBroadcastSender<string>();
+
+  const send = () => {
+    broadcast("hello");
+  };
+}
+```
 
 ### Q: 如何在服务端渲染 (SSR) 中使用？
 
