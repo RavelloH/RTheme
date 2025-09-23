@@ -1,6 +1,7 @@
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ConfigProvider } from "@/components/ConfigProvider";
+import { MenuProvider } from "@/components/MenuProvider";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -39,14 +40,16 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <ConfigProvider configs={configs}>
-            <ResponsiveFontScale scaleFactor={0.017} baseSize={12}>
-              <LoadingAnimation />
-              <div className="min-h-full flex flex-col overflow-hidden">
-                <Header menus={menus} />
-                <MainContent>{children}</MainContent>
-                <Footer menus={menus} />
-              </div>
-            </ResponsiveFontScale>
+            <MenuProvider menus={menus}>
+              <ResponsiveFontScale scaleFactor={0.017} baseSize={12}>
+                <LoadingAnimation />
+                <div className="min-h-full flex flex-col overflow-hidden">
+                  <Header menus={menus} />
+                  <MainContent>{children}</MainContent>
+                  <Footer menus={menus} />
+                </div>
+              </ResponsiveFontScale>
+            </MenuProvider>
           </ConfigProvider>
         </ThemeProvider>
       </body>
