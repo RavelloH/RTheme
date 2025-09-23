@@ -22,6 +22,12 @@ const CACHE_FILE_PATH = path.join(
  * 在生产环境中从缓存文件读取
  */
 export async function getConfig(key: string): Promise<ConfigItem | null> {
+  // 检查是否为敏感配置
+  if (key.startsWith("secret.")) {
+    console.warn(`拒绝访问敏感配置: ${key}`);
+    return null;
+  }
+
   if (process.env.NODE_ENV === "production") {
     return getConfigFromCache(key);
   } else {
@@ -46,7 +52,7 @@ async function getConfigFromDatabase(key: string): Promise<ConfigItem | null> {
     return {
       key: config.key,
       value: config.value,
-      description: config.description || undefined,
+      description: undefined, // 移除描述字段
       updatedAt: config.updatedAt,
     };
   } catch (error) {
@@ -73,9 +79,10 @@ function getConfigFromCache(key: string): ConfigItem | null {
       return null;
     }
 
-    // 确保 updatedAt 是 Date 对象
+    // 确保 updatedAt 是 Date 对象并移除描述字段
     return {
       ...config,
+      description: undefined, // 移除描述字段
       updatedAt: new Date(config.updatedAt),
     };
   } catch (error) {
@@ -85,14 +92,44 @@ function getConfigFromCache(key: string): ConfigItem | null {
 }
 
 /**
- * 获取所有配置项（主要用于开发环境）
+ * 获取所有配置项（主要用于客户端）
+ * 过滤掉 secret 开头的敏感配置项和 description 字段
  */
 export async function getAllConfigs(): Promise<Record<string, ConfigItem>> {
-  if (process.env.NODE_ENV === "production") {
-    return getAllConfigsFromCache();
-  } else {
-    return getAllConfigsFromDatabase();
-  }
+  const allConfigs =
+    process.env.NODE_ENV === "production"
+      ? getAllConfigsFromCache()
+      : await getAllConfigsFromDatabase();
+
+  return filterSensitiveConfigs(allConfigs);
+}
+
+/**
+ * 过滤敏感配置项
+ * 移除 secret 开头的配置项和所有配置的 description 字段
+ */
+function filterSensitiveConfigs(
+  configs: Record<string, ConfigItem>,
+): Record<string, ConfigItem> {
+  const filteredConfigs: Record<string, ConfigItem> = {};
+
+  Object.entries(configs).forEach(([key, config]) => {
+    // 跳过 secret 开头的敏感配置
+    if (key.startsWith("secret.")) {
+      return;
+    }
+
+    // 移除 description 字段
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { description, ...safeConfig } = config;
+
+    filteredConfigs[key] = {
+      ...safeConfig,
+      description: undefined,
+    };
+  });
+
+  return filteredConfigs;
 }
 
 /**
