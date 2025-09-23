@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { gsap } from "gsap";
 import Menu from "./Menu";
@@ -13,6 +14,7 @@ export function Header({ menus }: { menus: MenuItem[] }) {
   const { isMenuOpen, toggleMenu } = useMenuStore();
   const headerRef = useRef<HTMLElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const pathname = usePathname();
 
   // 监听加载完成事件
   useEffect(() => {
@@ -40,6 +42,7 @@ export function Header({ menus }: { menus: MenuItem[] }) {
     };
   }, []);
 
+  // 根据 pathname 更新标题
   useEffect(() => {
     const updateTitle = () => {
       if (typeof document === "undefined") return;
@@ -55,32 +58,11 @@ export function Header({ menus }: { menus: MenuItem[] }) {
       setTitle(cleanTitle);
     };
 
-    updateTitle();
+    // 延迟一点确保 DOM 已更新
+    const timer = setTimeout(updateTitle, 50);
 
-    const titleElement = document.querySelector("title");
-    if (!titleElement) return;
-
-    const observer = new MutationObserver((mutations) => {
-      // 只在文本内容真正变化时更新
-      if (
-        mutations.some(
-          (mutation) =>
-            mutation.type === "childList" &&
-            mutation.target.textContent !== title,
-        )
-      ) {
-        updateTitle();
-      }
-    });
-
-    observer.observe(titleElement, {
-      childList: true,
-      characterData: true,
-      subtree: true,
-    });
-
-    return () => observer.disconnect();
-  }, [title]);
+    return () => clearTimeout(timer);
+  }, [pathname]);
 
   return (
     <>
