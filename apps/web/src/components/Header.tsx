@@ -7,14 +7,172 @@ import { motion, AnimatePresence } from "framer-motion";
 import { gsap } from "gsap";
 import Menu from "./Menu";
 import { useMenuStore } from "@/store/menuStore";
+import { useBroadcast } from "@/hooks/useBroadcast";
 import type { MenuItem } from "@/lib/server/menuCache";
 
+interface TransitionMessage {
+  type: "page-transition";
+  direction: "left" | "right" | "up" | "down" | "unknown";
+}
+
+// 加载指示器组件
+function LoadingIndicator() {
+  return (
+    <div className="flex space-x-1">
+      {Array.from({ length: 10 }, (_, i) => (
+        <motion.span
+          key={i}
+          className="text-foreground"
+          animate={{
+            opacity: [0.5, 1, 0.5],
+          }}
+          transition={{
+            duration: 0.8,
+            repeat: Infinity,
+            delay: i * 0.08,
+            ease: "easeInOut",
+          }}
+        >
+          /
+        </motion.span>
+      ))}
+    </div>
+  );
+}
+
+interface TitleTransitionProps {
+  children: React.ReactNode;
+  direction: "left" | "right" | "up" | "down" | "unknown";
+  isVisible: boolean;
+}
+
+function TitleTransition({
+  children,
+  direction,
+  isVisible,
+}: TitleTransitionProps) {
+  const getAnimationProps = () => {
+    // 映射左右方向到上下方向
+    const mappedDirection =
+      direction === "left" ? "up" : direction === "right" ? "down" : direction;
+
+    switch (mappedDirection) {
+      case "up":
+        // 向上方向：从下向上移动，退出时也向上消失
+        return {
+          initial: { y: 20, opacity: 0 },
+          animate: { y: 0, opacity: 1 },
+          exit: { y: -20, opacity: 0 },
+        };
+      case "down":
+        // 向下方向：从上向下移动，退出时也向下消失
+        return {
+          initial: { y: -20, opacity: 0 },
+          animate: { y: 0, opacity: 1 },
+          exit: { y: 20, opacity: 0 },
+        };
+      case "unknown":
+      default:
+        return {
+          initial: { opacity: 0 },
+          animate: { opacity: 1 },
+          exit: { opacity: 0 },
+        };
+    }
+  };
+
+  const { initial, animate, exit } = getAnimationProps();
+
+  return (
+    <AnimatePresence mode="wait">
+      {isVisible && (
+        <motion.div
+          className="absolute inset-0 flex items-center justify-center"
+          initial={initial}
+          animate={animate}
+          exit={exit}
+          transition={{
+            duration: 0.3,
+            ease: "easeInOut",
+          }}
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 export function Header({ menus }: { menus: MenuItem[] }) {
-  const [title, setTitle] = useState("NeutralPress");
   const { isMenuOpen, toggleMenu } = useMenuStore();
   const headerRef = useRef<HTMLElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const pathname = usePathname();
+  const previousPathname = useRef<string>("");
+  const [displayTitle, setDisplayTitle] = useState("NeutralPress");
+  const [showTitle, setShowTitle] = useState(true);
+  const [showLoading, setShowLoading] = useState(false);
+  const [transitionDirection, setTransitionDirection] = useState<
+    "left" | "right" | "up" | "down" | "unknown"
+  >("unknown");
+  const [transitionState, setTransitionState] = useState<
+    "idle" | "exiting" | "entering"
+  >("idle");
+
+  // 监听广播消息
+  useBroadcast((message: TransitionMessage) => {
+    if (message?.type === "page-transition") {
+      const { direction } = message;
+      setTransitionDirection(direction);
+      startTransition();
+    }
+  });
+
+  // 开始过渡动画
+  const startTransition = () => {
+    if (transitionState !== "idle") return;
+
+    setTransitionState("exiting");
+    setShowTitle(false);
+
+    setTimeout(() => {
+      setShowLoading(true);
+    }, 200);
+  };
+
+  // 监听 pathname 变化（页面加载完成）
+  useEffect(() => {
+    if (pathname === previousPathname.current) return;
+
+    if (transitionState === "exiting" && showLoading) {
+      // 页面已经加载完成，切换到新title
+      updateTitle();
+      setShowLoading(false);
+      setTransitionState("entering");
+      setShowTitle(true);
+
+      setTimeout(() => {
+        setTransitionState("idle");
+      }, 100);
+    }
+
+    previousPathname.current = pathname;
+  }, [pathname, transitionState, showLoading]);
+
+  // 更新标题
+  const updateTitle = () => {
+    if (typeof document === "undefined") return;
+
+    const titleElement = document.querySelector("title");
+    if (!titleElement) return;
+
+    const documentTitle = titleElement.textContent || "";
+    const cleanTitle = documentTitle.includes(" | ")
+      ? documentTitle.split(" | ")[0] || "NeutralPress"
+      : documentTitle || "NeutralPress";
+
+    setDisplayTitle(cleanTitle);
+  };
 
   // 监听加载完成事件
   useEffect(() => {
@@ -42,27 +200,10 @@ export function Header({ menus }: { menus: MenuItem[] }) {
     };
   }, []);
 
-  // 根据 pathname 更新标题
+  // 初始化标题
   useEffect(() => {
-    const updateTitle = () => {
-      if (typeof document === "undefined") return;
-
-      const titleElement = document.querySelector("title");
-      if (!titleElement) return;
-
-      const documentTitle = titleElement.textContent || "";
-      const cleanTitle = documentTitle.includes(" | ")
-        ? documentTitle.split(" | ")[0] || "NeutralPress"
-        : documentTitle || "NeutralPress";
-
-      setTitle(cleanTitle);
-    };
-
-    // 延迟一点确保 DOM 已更新
-    const timer = setTimeout(updateTitle, 50);
-
-    return () => clearTimeout(timer);
-  }, [pathname]);
+    updateTitle();
+  }, []);
 
   return (
     <>
@@ -85,7 +226,20 @@ export function Header({ menus }: { menus: MenuItem[] }) {
         <div className="w-[78px] flex items-center">
           <Image src="/avatar.jpg" alt="Logo" width={78} height={78} />
         </div>
-        <div className="flex-1 flex items-center justify-center">{title}</div>
+        <div className="flex-1 flex items-center justify-center relative h-full">
+          <TitleTransition
+            direction={transitionDirection}
+            isVisible={showTitle}
+          >
+            <span>{displayTitle}</span>
+          </TitleTransition>
+          <TitleTransition
+            direction={transitionDirection}
+            isVisible={showLoading}
+          >
+            <LoadingIndicator />
+          </TitleTransition>
+        </div>
         <div className="w-[78px] h-full border-l border-border flex items-center justify-center">
           <MenuButton isOpen={isMenuOpen} onClick={toggleMenu} />
         </div>
