@@ -2,7 +2,7 @@
 import { create } from "zustand";
 import { useEffect, useRef } from "react";
 
-interface BroadcastState<T = unknown> {
+export interface BroadcastState<T = unknown> {
   callbacks: Array<{
     id: symbol;
     callback: (message: T) => void | Promise<void>;
