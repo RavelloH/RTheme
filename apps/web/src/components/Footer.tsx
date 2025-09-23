@@ -22,12 +22,32 @@ export default function Footer({ menus }: FooterProps) {
   const pathname = usePathname();
   const isMenuOpen = useMenuStore((state) => state.isMenuOpen);
   const { isConsoleOpen } = useConsoleStore();
+  const [windowSize, setWindowSize] = useState({
+    width: typeof window !== "undefined" ? window.innerWidth : 0,
+    height: typeof window !== "undefined" ? window.innerHeight : 0,
+  });
   const footerRef = useRef<HTMLElement>(null);
   const menuRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const underlineRef = useRef<HTMLSpanElement | null>(null);
   const previousPathname = useRef<string>(pathname);
   const isAnimating = useRef<boolean>(false);
   const [activePathname, setActivePathname] = useState<string>(pathname);
+
+  // 监听窗口大小变化
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
   // 监听加载完成事件
   useEffect(() => {
@@ -90,6 +110,30 @@ export default function Footer({ menus }: FooterProps) {
       duration: 0.3,
       ease: "power2.in",
     });
+  };
+
+  // 更新下划线位置的函数
+  const updateUnderlinePosition = (activeIndex: number) => {
+    const underline = underlineRef.current;
+    const activeLink =
+      activeIndex !== -1 ? menuRefs.current[activeIndex] : null;
+
+    if (!underline) return;
+
+    if (activeLink) {
+      const rect = activeLink.getBoundingClientRect();
+      const parentRect = underline.parentElement?.getBoundingClientRect();
+
+      gsap.set(underline, {
+        x: rect.left - (parentRect?.left || 0),
+        width: rect.width,
+        opacity: 1,
+      });
+    } else {
+      gsap.set(underline, {
+        opacity: 0,
+      });
+    }
   };
 
   // 创建单个下划线移动动画
@@ -297,6 +341,30 @@ export default function Footer({ menus }: FooterProps) {
 
     previousPathname.current = pathname;
   }, [pathname, menus, activePathname]);
+
+  // 窗口大小变化时重新计算下划线位置
+  useEffect(() => {
+    const mainMenus = menus.filter((menu) => menu.category === "MAIN");
+    const activeIndex = mainMenus.findIndex((menu) => {
+      const targetPath =
+        menu.link ||
+        (menu.slug ? "/" + menu.slug : null) ||
+        (menu.page ? "/" + menu.page.slug : "#");
+      return (
+        activePathname === targetPath ||
+        (targetPath !== "#" && activePathname.startsWith(targetPath + "/"))
+      );
+    });
+
+    // 使用防抖优化性能
+    const debounceTimer = setTimeout(() => {
+      updateUnderlinePosition(activeIndex);
+    }, 100);
+
+    return () => {
+      clearTimeout(debounceTimer);
+    };
+  }, [windowSize, activePathname, menus]);
 
   return (
     <>
