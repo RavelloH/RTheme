@@ -265,25 +265,28 @@ export default function Menu({ setIsMenuOpen, menus }: MenuProps) {
                       target={menu.link ? "_blank" : undefined}
                       rel={menu.link ? "noopener noreferrer" : undefined}
                       onClick={() => handleMenuClick(menu)}
-                      className="w-full text-left p-3 flex items-center space-x-3 relative z-10 bg-transparent"
+                      className="w-full text-left p-3 flex items-center justify-between relative z-10 bg-transparent"
                     >
-                      {menu.icon &&
-                        (() => {
-                          const IconComponent = getIconComponent(menu.icon);
-                          if (!IconComponent) {
+                      <div className="flex items-center space-x-3">
+                        {menu.icon &&
+                          (() => {
+                            const IconComponent = getIconComponent(menu.icon);
+                            if (!IconComponent) {
+                              return (
+                                <span className="text-xs bg-red-100 text-red-600 px-1 rounded">
+                                  {menu.icon}
+                                </span>
+                              );
+                            }
                             return (
-                              <span className="text-xs bg-red-100 text-red-600 px-1 rounded">
-                                {menu.icon}
+                              <span className="text-lg">
+                                <IconComponent />
                               </span>
                             );
-                          }
-                          return (
-                            <span className="text-lg">
-                              <IconComponent />
-                            </span>
-                          );
-                        })()}
-                      <span>{menu.name}</span>
+                          })()}
+                        <span>{menu.name}</span>
+                      </div>
+                      <span className="text-muted-foreground">↗</span>
                     </Link>
                   </motion.div>
                 ))}
