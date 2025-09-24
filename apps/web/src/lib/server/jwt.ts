@@ -1,3 +1,4 @@
+import "server-only";
 import jwt, { SignOptions, VerifyOptions } from "jsonwebtoken";
 import { createPrivateKey, createPublicKey, KeyObject } from "crypto";
 

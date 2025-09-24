@@ -1,3 +1,5 @@
+import "server-only";
+
 import { Prisma, PrismaClient } from ".prisma/client";
 // 创建全局 Prisma 实例
 const globalForPrisma = globalThis as unknown as {

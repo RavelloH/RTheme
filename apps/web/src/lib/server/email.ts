@@ -1,3 +1,5 @@
+import "server-only";
+
 const MAX_VERIFY_DURATION = 15 * 60 * 1000; // 15分钟
 
 function generate(): string {

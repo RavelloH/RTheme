@@ -30,6 +30,7 @@
     "react-dom": "^19.1.1",
     "react-fast-marquee": "^1.6.5",
     "rlog-js": "^1.5.2",
+    "server-only": "^0.0.1",
     "zod": "^4.1.5",
     "zustand": "^5.0.8"
   },

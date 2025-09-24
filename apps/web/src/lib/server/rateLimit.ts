@@ -1,3 +1,5 @@
+import "server-only";
+
 import Redis from "ioredis";
 import prisma from "@/lib/server/prisma";
 
