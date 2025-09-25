@@ -269,7 +269,7 @@ class ResponseBuilder {
     meta?: PaginationMeta;
     /** 缓存配置 */
     cacheConfig?: CacheConfig;
-  }): NextResponse<ApiResponse<T>> {
+  }): NextResponse<ApiResponse<T>> | ApiResponse<T> {
     const status = config.status || 200;
     const success = config.success ?? (status >= 200 && status < 300);
     const finalMessage = config.message || (success ? "请求成功" : "请求失败");
@@ -277,15 +277,14 @@ class ResponseBuilder {
     const finalError = processError(config.error);
 
     if (this.environment === "serveraction") {
-      // 在 serveraction 环境中，将 ApiResponse 包装在 NextResponse 中
-      const actionResponse = createServerActionResponse(
+      // 在 serveraction 环境中，直接返回 ApiResponse 对象
+      return createServerActionResponse(
         success,
         finalMessage,
         finalData,
         finalError,
         config.meta,
       );
-      return NextResponse.json(actionResponse, { status });
     }
 
     return createServerlessResponse(
@@ -316,7 +315,7 @@ class ResponseBuilder {
     customHeaders?: HeadersInit;
     /** 缓存配置 */
     cacheConfig?: CacheConfig;
-  }): NextResponse<ApiResponse<T>> {
+  }): NextResponse<ApiResponse<T>> | ApiResponse<T> {
     return this.response({
       status: 200,
       success: true,
@@ -342,7 +341,7 @@ class ResponseBuilder {
     customHeaders?: HeadersInit;
     /** 缓存配置 */
     cacheConfig?: CacheConfig;
-  }): NextResponse<ApiResponse<T>> {
+  }): NextResponse<ApiResponse<T>> | ApiResponse<T> {
     return this.response({
       status: 201,
       success: true,
@@ -364,7 +363,7 @@ class ResponseBuilder {
     customHeaders?: HeadersInit;
     /** 缓存配置 */
     cacheConfig?: CacheConfig;
-  }): NextResponse<ApiResponse<null>> {
+  }): NextResponse<ApiResponse<null>> | ApiResponse<null> {
     return this.response({
       status: 204,
       success: true,
@@ -385,7 +384,7 @@ class ResponseBuilder {
     customHeaders?: HeadersInit;
     /** 缓存配置 */
     cacheConfig?: CacheConfig;
-  }): NextResponse<ApiResponse<null>> {
+  }): NextResponse<ApiResponse<null>> | ApiResponse<null> {
     return this.response({
       status: 304,
       success: true,
@@ -410,7 +409,7 @@ class ResponseBuilder {
     customHeaders?: HeadersInit;
     /** 缓存配置 */
     cacheConfig?: CacheConfig;
-  }): NextResponse<ApiResponse<null>> {
+  }): NextResponse<ApiResponse<null>> | ApiResponse<null> {
     return this.response({
       status: 400,
       success: false,
@@ -434,7 +433,7 @@ class ResponseBuilder {
     customHeaders?: HeadersInit;
     /** 缓存配置 */
     cacheConfig?: CacheConfig;
-  }): NextResponse<ApiResponse<null>> {
+  }): NextResponse<ApiResponse<null>> | ApiResponse<null> {
     return this.response({
       status: 401,
       success: false,
@@ -458,7 +457,7 @@ class ResponseBuilder {
     customHeaders?: HeadersInit;
     /** 缓存配置 */
     cacheConfig?: CacheConfig;
-  }): NextResponse<ApiResponse<null>> {
+  }): NextResponse<ApiResponse<null>> | ApiResponse<null> {
     return this.response({
       status: 403,
       success: false,
@@ -482,7 +481,7 @@ class ResponseBuilder {
     customHeaders?: HeadersInit;
     /** 缓存配置 */
     cacheConfig?: CacheConfig;
-  }): NextResponse<ApiResponse<null>> {
+  }): NextResponse<ApiResponse<null>> | ApiResponse<null> {
     return this.response({
       status: 404,
       success: false,
@@ -506,7 +505,7 @@ class ResponseBuilder {
     customHeaders?: HeadersInit;
     /** 缓存配置 */
     cacheConfig?: CacheConfig;
-  }): NextResponse<ApiResponse<null>> {
+  }): NextResponse<ApiResponse<null>> | ApiResponse<null> {
     return this.response({
       status: 409,
       success: false,
@@ -530,7 +529,7 @@ class ResponseBuilder {
     customHeaders?: HeadersInit;
     /** 缓存配置 */
     cacheConfig?: CacheConfig;
-  }): NextResponse<ApiResponse<null>> {
+  }): NextResponse<ApiResponse<null>> | ApiResponse<null> {
     return this.response({
       status: 422,
       success: false,
@@ -557,7 +556,7 @@ class ResponseBuilder {
     customHeaders?: HeadersInit;
     /** 缓存配置 */
     cacheConfig?: CacheConfig;
-  }): NextResponse<ApiResponse<null>> {
+  }): NextResponse<ApiResponse<null>> | ApiResponse<null> {
     return this.response({
       status: 429,
       success: false,
@@ -584,7 +583,7 @@ class ResponseBuilder {
     customHeaders?: HeadersInit;
     /** 缓存配置 */
     cacheConfig?: CacheConfig;
-  }): NextResponse<ApiResponse<null>> {
+  }): NextResponse<ApiResponse<null>> | ApiResponse<null> {
     return this.response({
       status: 500,
       success: false,
@@ -611,7 +610,7 @@ class ResponseBuilder {
     customHeaders?: HeadersInit;
     /** 缓存配置 */
     cacheConfig?: CacheConfig;
-  }): NextResponse<ApiResponse<null>> {
+  }): NextResponse<ApiResponse<null>> | ApiResponse<null> {
     return this.response({
       status: 500,
       success: false,
@@ -638,7 +637,7 @@ class ResponseBuilder {
     customHeaders?: HeadersInit;
     /** 缓存配置 */
     cacheConfig?: CacheConfig;
-  }): NextResponse<ApiResponse<null>> {
+  }): NextResponse<ApiResponse<null>> | ApiResponse<null> {
     return this.response({
       status: 503,
       success: false,
@@ -697,7 +696,7 @@ class ResponseBuilder {
     customHeaders?: HeadersInit;
     /** 缓存配置 */
     cacheConfig?: CacheConfig;
-  }): NextResponse<ApiResponse<null>> {
+  }): NextResponse<ApiResponse<null>> | ApiResponse<null> {
     const error = fieldError(
       config.field,
       config.errorMessage || "验证失败",
