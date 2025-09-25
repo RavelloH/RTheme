@@ -13,6 +13,7 @@
     "prebuild": "cross-env NODE_ENV=production tsx scripts/prebuild.ts"
   },
   "dependencies": {
+    "@cap.js/server": "^4.0.2",
     "@prisma/client": "6.15.0",
     "@remixicon/react": "^4.6.0",
     "@repo/shared-types": "workspace:*",
