@@ -1,3 +1,5 @@
+"use server";
+
 import limitControl from "@/lib/server/rateLimit";
 import ResponseBuilder from "@/lib/server/response";
 import Cap from "@cap.js/server";
@@ -220,8 +222,6 @@ const cap = new Cap({
     },
   },
 });
-
-export default cap;
 
 export async function createChallenge(serverConfig?: {
   environment?: "serverless" | "serveraction";
