@@ -234,14 +234,55 @@ export async function createChallenge(serverConfig?: {
     return response.tooManyRequests();
   }
 
-  const data = await cap.createChallenge({
-    challengeCount: 50,
-    challengeSize: 32,
-    challengeDifficulty: 4,
-    expiresMs: 600000,
-  });
+  try {
+    const data = await cap.createChallenge({
+      challengeCount: 50,
+      challengeSize: 32,
+      challengeDifficulty: 4,
+      expiresMs: 600000,
+    });
 
-  return response.ok({
-    data: data,
-  });
+    return response.ok({
+      data: data,
+    });
+  } catch (error) {
+    console.error("Create captcha error:", error);
+    return response.serverError({
+      message: "创建验证码失败，请稍后重试",
+    });
+  }
+}
+
+export async function verifyChallenge(
+  {
+    token,
+    solutions,
+  }: {
+    token: string;
+    solutions: number[];
+  },
+  serverConfig?: {
+    environment?: "serverless" | "serveraction";
+  },
+) {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  try {
+    const data = await cap.redeemChallenge({ token, solutions });
+
+    return response.ok({
+      data: data,
+    });
+  } catch (error) {
+    console.error("Verify captcha error:", error);
+    return response.serverError({
+      message: "验证验证码失败，请稍后重试",
+    });
+  }
 }

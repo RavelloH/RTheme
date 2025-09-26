@@ -17,50 +17,24 @@ const ChallengeDataSchema = z.object({
 });
 
 // 验证码响应 Schema
-export const CaptchaGetResponseSchema = createSuccessResponseSchema(
-  z.object({
-    data: ChallengeDataSchema,
-  }),
-);
+export const CaptchaGetResponseSchema =
+  createSuccessResponseSchema(ChallengeDataSchema);
 
 // 验证码验证请求 Schema
 export const CaptchaVerifyRequestSchema = z.object({
-  challenge: z.string(),
-  solution: z.string(),
-  captcha_token: z.string().min(1, "验证码不能为空"),
+  token: z.string().min(1, "Token不能为空"),
+  solutions: z
+    .array(z.number().min(0, "每个解答必须是非负整数"))
+    .min(1, "解答不能为空"),
 });
 
 // 验证码验证响应 Schema
 export const CaptchaVerifySuccessResponseSchema = createSuccessResponseSchema(
   z.object({
-    data: z.object({
-      valid: z.literal(true),
-    }),
-  }),
-);
-
-// 验证码相关的错误响应
-export const InvalidCaptchaErrorResponseSchema = createErrorResponseSchema(
-  z.object({
-    code: z.literal("INVALID_CAPTCHA"),
+    success: z.boolean(),
     message: z.string(),
   }),
 );
-
-export const CaptchaExpiredErrorResponseSchema = createErrorResponseSchema(
-  z.object({
-    code: z.literal("CAPTCHA_EXPIRED"),
-    message: z.string(),
-  }),
-);
-
-export const CaptchaAttemptsExceededErrorResponseSchema =
-  createErrorResponseSchema(
-    z.object({
-      code: z.literal("CAPTCHA_ATTEMPTS_EXCEEDED"),
-      message: z.string(),
-    }),
-  );
 
 // 注册所有 schemas 到 OpenAPI 生成器
 registerSchema("CaptchaGetResponse", CaptchaGetResponseSchema);
@@ -69,31 +43,10 @@ registerSchema(
   "CaptchaVerifySuccessResponse",
   CaptchaVerifySuccessResponseSchema,
 );
-registerSchema(
-  "InvalidCaptchaErrorResponse",
-  InvalidCaptchaErrorResponseSchema,
-);
-registerSchema(
-  "CaptchaExpiredErrorResponse",
-  CaptchaExpiredErrorResponseSchema,
-);
-registerSchema(
-  "CaptchaAttemptsExceededErrorResponse",
-  CaptchaAttemptsExceededErrorResponseSchema,
-);
 
 // 导出推导的 TypeScript 类型
 export type CaptchaGetResponse = z.infer<typeof CaptchaGetResponseSchema>;
 export type CaptchaVerifyRequest = z.infer<typeof CaptchaVerifyRequestSchema>;
 export type CaptchaVerifySuccessResponse = z.infer<
   typeof CaptchaVerifySuccessResponseSchema
->;
-export type InvalidCaptchaErrorResponse = z.infer<
-  typeof InvalidCaptchaErrorResponseSchema
->;
-export type CaptchaExpiredErrorResponse = z.infer<
-  typeof CaptchaExpiredErrorResponseSchema
->;
-export type CaptchaAttemptsExceededErrorResponse = z.infer<
-  typeof CaptchaAttemptsExceededErrorResponseSchema
 >;

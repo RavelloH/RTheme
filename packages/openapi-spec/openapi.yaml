@@ -341,18 +341,55 @@ paths:
               schema:
                 $ref: "#/components/schemas/ServerErrorResponse"
   /api/captcha/get:
-    post:
-      summary: 获取验证码挑战
-      description: 获取一个新的验证码挑战，客户端需要解决这个挑战才能进行敏感操作
+    get:
+      summary: 获取验证码
+      description: 获取一个新的验证码，客户端需要解决这个PoW才能进行敏感操作
       tags:
         - Captcha
       responses:
         "200":
-          description: 成功返回验证码挑战数据
+          description: 成功返回验证码数据
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CaptchaGetResponse"
+        "429":
+          description: 请求过于频繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitErrorResponse"
+        "500":
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerErrorResponse"
+  /api/captcha/verify:
+    post:
+      summary: 验证验证码
+      description: 验证传入的验证码是否正确
+      tags:
+        - Captcha
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaptchaVerifyRequest"
+      responses:
+        "200":
+          description: 验证成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaptchaVerifySuccessResponse"
+        "400":
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
         "429":
           description: 请求过于频繁
           content:
@@ -1514,33 +1551,27 @@ components:
         data:
           type: object
           properties:
-            data:
+            challenge:
               type: object
               properties:
-                challenge:
-                  type: object
-                  properties:
-                    c:
-                      type: number
-                    s:
-                      type: number
-                    d:
-                      type: number
-                  required:
-                    - c
-                    - s
-                    - d
-                  additionalProperties: false
-                token:
-                  type: string
-                expires:
+                c:
+                  type: number
+                s:
+                  type: number
+                d:
                   type: number
               required:
-                - challenge
-                - expires
+                - c
+                - s
+                - d
               additionalProperties: false
+            token:
+              type: string
+            expires:
+              type: number
           required:
-            - data
+            - challenge
+            - expires
           additionalProperties: false
       required:
         - success
@@ -1552,17 +1583,18 @@ components:
     CaptchaVerifyRequest:
       type: object
       properties:
-        challenge:
-          type: string
-        solution:
-          type: string
-        captcha_token:
+        token:
           type: string
           minLength: 1
+        solutions:
+          minItems: 1
+          type: array
+          items:
+            type: number
+            minimum: 0
       required:
-        - challenge
-        - solution
-        - captcha_token
+        - token
+        - solutions
       additionalProperties: false
     CaptchaVerifySuccessResponse:
       type: object
@@ -1582,57 +1614,12 @@ components:
         data:
           type: object
           properties:
-            data:
-              type: object
-              properties:
-                valid:
-                  type: boolean
-                  enum:
-                    - true
-              required:
-                - valid
-              additionalProperties: false
-          required:
-            - data
-          additionalProperties: false
-      required:
-        - success
-        - message
-        - timestamp
-        - requestId
-        - data
-      additionalProperties: false
-    InvalidCaptchaErrorResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - false
-        message:
-          type: string
-        timestamp:
-          type: string
-          format: date-time
-          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
-        requestId:
-          type: string
-        data:
-          type: string
-          nullable: true
-          enum:
-            - null
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              enum:
-                - INVALID_CAPTCHA
+            success:
+              type: boolean
             message:
               type: string
           required:
-            - code
+            - success
             - message
           additionalProperties: false
       required:
@@ -1641,87 +1628,4 @@ components:
         - timestamp
         - requestId
         - data
-        - error
-      additionalProperties: false
-    CaptchaExpiredErrorResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - false
-        message:
-          type: string
-        timestamp:
-          type: string
-          format: date-time
-          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
-        requestId:
-          type: string
-        data:
-          type: string
-          nullable: true
-          enum:
-            - null
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              enum:
-                - CAPTCHA_EXPIRED
-            message:
-              type: string
-          required:
-            - code
-            - message
-          additionalProperties: false
-      required:
-        - success
-        - message
-        - timestamp
-        - requestId
-        - data
-        - error
-      additionalProperties: false
-    CaptchaAttemptsExceededErrorResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - false
-        message:
-          type: string
-        timestamp:
-          type: string
-          format: date-time
-          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
-        requestId:
-          type: string
-        data:
-          type: string
-          nullable: true
-          enum:
-            - null
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              enum:
-                - CAPTCHA_ATTEMPTS_EXCEEDED
-            message:
-              type: string
-          required:
-            - code
-            - message
-          additionalProperties: false
-      required:
-        - success
-        - message
-        - timestamp
-        - requestId
-        - data
-        - error
       additionalProperties: false
