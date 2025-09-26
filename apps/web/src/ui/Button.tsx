@@ -58,7 +58,7 @@ export function Button({
       case "secondary":
         return "bg-foreground text-background hover:opacity-80";
       case "outline":
-        return "border-2 border-foreground text-foreground hover:bg-foreground hover:text-primary-foreground";
+        return "shadow-[inset_0_0_0_2px_var(--color-foreground)] text-foreground hover:bg-foreground hover:text-primary-foreground";
       case "ghost":
         return "text-foreground hover:bg-foreground hover:text-background";
       case "danger":
@@ -114,8 +114,6 @@ export function Button({
         ${fullWidth ? "w-full" : ""}
         ${className}
       `}
-      // whileHover={!isDisabled ? { opacity: 0.9 } : {}}
-      // whileTap={!isDisabled ? { opacity: 0.5 } : {}}
       {...props}
     >
       {isNumericLoading && (

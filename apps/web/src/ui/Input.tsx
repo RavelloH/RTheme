@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { AutoTransition } from "./AutoTransition";
 
 export interface InputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "id"> {
@@ -10,6 +11,7 @@ export interface InputProps
   id?: string;
   error?: boolean;
   helperText?: string;
+  tips?: string;
 }
 
 export function Input({
@@ -21,6 +23,7 @@ export function Input({
   className = "",
   type = "text",
   required = false,
+  tips,
   minLength,
   maxLength,
   pattern,
@@ -148,6 +151,20 @@ export function Input({
             {char === " " ? "\u00A0" : char}
           </motion.span>
         ))}
+        <motion.span
+          className="inline-block text-xl min-w-2 text-white px-2"
+          animate={{
+            color: showLabel ? "var(--color-primary)" : "#ffffff",
+            y: showLabel ? "-1.35em" : 0,
+            opacity: 1,
+          }}
+          transition={{
+            duration: 0.3,
+            ease: [0.68, -0.55, 0.265, 1.55],
+          }}
+        >
+          <AutoTransition duration={0.3}>{tips}</AutoTransition>
+        </motion.span>
       </label>
 
       {helperText && (
