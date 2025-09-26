@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 export interface ButtonProps
   extends Omit<
@@ -82,7 +82,10 @@ export function Button({
 
   const isLoading =
     typeof loading === "boolean" ? loading : loading >= 0 && loading <= 100;
-  const displayText = loadingText && isLoading ? loadingText : label;
+  const isNumericLoading =
+    typeof loading === "number" && loading >= 0 && loading <= 100;
+  const displayText = isLoading && loadingText ? loadingText : label;
+  const shouldShowSpinner = isLoading && !loadingText;
   const isDisabled = disabled || isLoading;
 
   return (
@@ -114,7 +117,36 @@ export function Button({
       // whileTap={!isDisabled ? { opacity: 0.5 } : {}}
       {...props}
     >
-      {isLoading && !loadingText && (
+      {isNumericLoading && (
+        <motion.div
+          className="absolute inset-0 rounded-sm overflow-hidden"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          style={
+            {
+              "--loading-progress": `${loading}%`,
+              "--loading-remaining": `${100 - loading}%`,
+            } as React.CSSProperties
+          }
+        >
+          <div className="relative w-full h-full">
+            <motion.div
+              className="absolute inset-y-0 left-0 bg-current opacity-0"
+              initial={{ width: 0 }}
+              animate={{ width: `${loading}%` }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+            />
+            <motion.div
+              className="absolute inset-y-0 right-0 bg-current opacity-30"
+              initial={{ left: 0, width: "100%" }}
+              animate={{ left: `${loading}%`, width: `${100 - loading}%` }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+            />
+          </div>
+        </motion.div>
+      )}
+
+      {shouldShowSpinner && (
         <motion.div
           className="absolute inset-0 flex items-center justify-center bg-inherit rounded-md overflow-hidden"
           initial={{ opacity: 0 }}
@@ -144,7 +176,7 @@ export function Button({
       )}
 
       <div
-        className={`flex items-center gap-2 ${isLoading && !loadingText ? "invisible" : ""}`}
+        className={`flex items-center gap-2 ${shouldShowSpinner ? "invisible" : ""}`}
       >
         {icon && iconPosition === "left" && (
           <motion.span
@@ -157,7 +189,17 @@ export function Button({
           </motion.span>
         )}
 
-        <span>{displayText}</span>
+        <AnimatePresence mode="wait">
+          <motion.span
+            key={displayText}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {displayText}
+          </motion.span>
+        </AnimatePresence>
 
         {icon && iconPosition === "right" && (
           <motion.span
