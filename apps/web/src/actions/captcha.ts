@@ -238,7 +238,7 @@ export async function createChallenge(serverConfig?: {
     const data = await cap.createChallenge({
       challengeCount: 50,
       challengeSize: 32,
-      challengeDifficulty: 4,
+      challengeDifficulty: 5,
       expiresMs: 600000,
     });
 
