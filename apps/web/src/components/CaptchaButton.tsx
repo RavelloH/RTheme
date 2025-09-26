@@ -31,5 +31,5 @@ export function CaptchaButton({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return Button({ loading, loadingText, ...props });
+  return Button({ ...props, loading, loadingText });
 }
