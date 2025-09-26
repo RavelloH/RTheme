@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { AutoTransition } from "./AutoTransition";
 
 export interface ButtonProps
   extends Omit<
@@ -189,17 +190,7 @@ export function Button({
           </motion.span>
         )}
 
-        <AnimatePresence mode="wait">
-          <motion.span
-            key={displayText}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            {displayText}
-          </motion.span>
-        </AnimatePresence>
+        <AutoTransition duration={0.3}>{displayText}</AutoTransition>
 
         {icon && iconPosition === "right" && (
           <motion.span
