@@ -16,6 +16,7 @@
   --color-input: oklch(0.92 0.004 286.32);
   --color-ring: #0d9488;
   --radius: 0.5rem;
+  --theme-red: #ef4444;
 }
 
 .dark {
