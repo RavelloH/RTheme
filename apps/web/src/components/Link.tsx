@@ -10,6 +10,7 @@ import type { MenuItem } from "@/lib/server/menuCache";
 
 interface CustomLinkProps extends React.ComponentProps<typeof NextLink> {
   children: React.ReactNode;
+  presets?: string[];
 }
 
 // 处理特殊链接类型
@@ -33,6 +34,47 @@ function handleSpecialLinks(newPath: string): boolean {
   }
 
   return false;
+}
+
+// 预设样式映射
+const presetStyles = {
+  "hover-underline": {
+    className: "group relative inline-block",
+  },
+  "hover-color": {
+    className: "transition-colors duration-300",
+  },
+};
+
+// 应用预设样式
+function applyPresets(presets: string[] = [], children: React.ReactNode) {
+  if (presets.length === 0) return children;
+
+  const className = presets
+    .map(
+      (preset) => presetStyles[preset as keyof typeof presetStyles]?.className,
+    )
+    .filter(Boolean)
+    .join(" ");
+
+  // 处理 hover-underline 预设
+  if (presets.includes("hover-underline")) {
+    return (
+      <span className={className}>
+        <span className="relative inline-block">
+          {children}
+          <span className="absolute bottom-0 left-0 w-full h-0.5 bg-current transform scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-300 ease-out"></span>
+        </span>
+      </span>
+    );
+  }
+
+  // 其他预设直接包装
+  if (className) {
+    return <span className={className}>{children}</span>;
+  }
+
+  return children;
 }
 
 // 规范化路径
@@ -178,7 +220,7 @@ function jumpTransition(
   }
 }
 
-export default function Link({ children, ...props }: CustomLinkProps) {
+export default function Link({ children, presets, ...props }: CustomLinkProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { broadcast } = useBroadcastSender<object>();
@@ -195,9 +237,24 @@ export default function Link({ children, ...props }: CustomLinkProps) {
     e.preventDefault();
   };
 
+  // 应用预设样式
+  const styledChildren = applyPresets(presets, children);
+
+  // 合并 className
+  const combinedClassName = [
+    props.className,
+    presets?.includes("hover-underline") ? "group" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <NextLink {...props} onNavigate={handleNavigation}>
-      {children}
+    <NextLink
+      {...props}
+      className={combinedClassName}
+      onNavigate={handleNavigation}
+    >
+      {styledChildren}
     </NextLink>
   );
 }
