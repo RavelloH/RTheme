@@ -2,17 +2,16 @@ import { generateMetadata } from "@/lib/shared/seo";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import RowGrid, { GridItem } from "@/components/RowGrid";
 import MainLayout from "@/components/MainLayout";
-import RegisterSheet from "@/app/register/RegisterSheet";
 import Marquee from "react-fast-marquee";
-import RegisterIntro from "./RegisterIntro";
+import LoginSheet from "./LoginSheet";
 
 export const metadata = await generateMetadata(
   {
-    title: "注册 / Register",
-    description: "在此站点注册个人账户，以便访问更多功能。",
+    title: "登录 / Login",
+    description: "登录到你的个人账户，以激活云同步，以及访问更多功能。",
   },
   {
-    pathname: "/register",
+    pathname: "/login",
   },
 );
 
@@ -33,14 +32,14 @@ export default function TestPage() {
               width={14}
               className="bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl"
             >
-              <h1>Register / 注册</h1>
+              <h1>Login / 登录</h1>
             </GridItem>
             <GridItem
               areas={[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}
               width={14 / 11}
               className="flex flex-col items-center justify-center text-center p-15"
             >
-              <RegisterSheet />
+              <LoginSheet />
             </GridItem>
 
             <GridItem
@@ -49,9 +48,9 @@ export default function TestPage() {
               className="flex items-center"
             >
               <Marquee className="text-7xl h-full" speed={30} autoFill>
-                <span>Register</span>
+                <span>Login</span>
                 <span className="px-4">/</span>
-                <span>注册</span>
+                <span>登录</span>
                 <span className="px-4">/</span>
               </Marquee>
             </GridItem>
@@ -61,7 +60,8 @@ export default function TestPage() {
               className="flex items-center px-10 text-2xl"
             >
               <p>
-                <RegisterIntro />
+                <div>在单个设备上，最多可保持登录30天。</div>
+                <div>你可在账户设置页面随时撤销其他会话的登陆状态。</div>
               </p>
             </GridItem>
             <GridItem

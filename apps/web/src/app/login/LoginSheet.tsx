@@ -1,35 +1,30 @@
 "use client";
 
 import { Input } from "@/ui/Input";
-import { RiLockPasswordLine, RiMailLine, RiUser3Line } from "@remixicon/react";
+import { RiLockPasswordLine, RiUser3Line } from "@remixicon/react";
 import { CaptchaButton } from "../../components/CaptchaButton";
 import { useState } from "react";
 import { useBroadcast } from "@/hooks/useBroadcast";
-import { register as registerAction } from "@/actions/auth";
-import { useConfig } from "../../components/ConfigProvider";
-import { useRouter } from "next/navigation";
+import { login as loginAction } from "@/actions/auth";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "@/components/Link";
 
-export default function RegisterSheet() {
+export default function LoginSheet() {
   const Router = useRouter();
-  const { config } = useConfig();
-  const canRegister = config<boolean>("user.registration.enabled");
+  const searchParams = useSearchParams();
+  const usernameFromUrl = searchParams.get("username") || "";
 
   const [token, setToken] = useState("");
-  const [buttonLabel, setButtonLabel] = useState(
-    canRegister ? "注册" : "此站点已关闭注册",
-  );
+  const [buttonLabel, setButtonLabel] = useState("登录");
   const [buttonVariant, setButtonVariant] = useState<"secondary" | "outline">(
     "secondary",
   );
   const [buttonLoading, setButtonLoading] = useState(false);
   const [buttonLoadingText, setButtonLoadingText] =
     useState("正在确认环境安全");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState(usernameFromUrl);
   const [password, setPassword] = useState("");
   const [usernameTip, setUsernameTip] = useState("");
-  const [emailTip, setEmailTip] = useState("");
   const [passwordTip, setPasswordTip] = useState("");
 
   useBroadcast((message: { type: string; token: string }) => {
@@ -69,22 +64,6 @@ export default function RegisterSheet() {
     }
   };
 
-  // Email 验证逻辑
-  const validateEmail = (value: string) => {
-    if (value === "") {
-      setEmailTip("");
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailRegex.test(value)) {
-      setEmailTip("(邮箱格式不正确)");
-    } else {
-      setEmailTip("");
-    }
-  };
-
   // Password 验证逻辑
   const validatePassword = (value: string) => {
     if (value === "") {
@@ -105,18 +84,18 @@ export default function RegisterSheet() {
     setButtonLabel(msg);
     setButtonVariant("outline");
     setTimeout(() => {
-      setButtonLabel("注册");
+      setButtonLabel("登录");
       setButtonVariant("secondary");
     }, 2000);
   };
 
-  const register = async () => {
+  const login = async () => {
     if (buttonVariant !== "secondary") return;
     if (!token) {
       showMessage("安全验证失败，请刷新页面重试");
       return;
     }
-    if (!username || !email || !password) {
+    if (!username || !password) {
       showMessage("请填写所有字段");
       return;
     }
@@ -124,54 +103,49 @@ export default function RegisterSheet() {
       showMessage("用户名格式不正确");
       return;
     }
-    if (emailTip) {
-      showMessage("邮箱格式不正确");
-      return;
-    }
     if (passwordTip) {
       showMessage("密码格式不正确");
       return;
     }
     setButtonLoading(true);
-    setButtonLoadingText("注册");
+    setButtonLoadingText("登录");
     setButtonVariant("outline");
 
-    const result = await registerAction({
+    const result = await loginAction({
       username,
-      email,
       password,
+      token_transport: "cookie",
       captcha_token: token,
     });
 
     const responseData =
       result instanceof Response ? await result.json() : result;
 
-    const emailVerificationRequired = config<boolean>(
-      "user.email.verification.required",
-    );
-
     if (responseData.success) {
-      // TODO：redirect传递
-      if (emailVerificationRequired) {
-        setButtonLoadingText("注册成功，请检查邮箱来验证账户");
+      setButtonLoadingText("登录成功，正在跳转...");
+
+      // 获取redirect参数
+      const redirectParam = searchParams.get("redirect");
+      const targetPath = redirectParam ? redirectParam : "/profile";
+
+      setTimeout(() => {
+        Router.push(targetPath);
+      }, 1500);
+    } else {
+      // 处理特定的错误情况
+      if (responseData.error?.code === "EMAIL_NOT_VERIFIED") {
+        setButtonLoadingText("请先验证邮箱后再登录");
         setTimeout(() => {
-          Router.push(
-            `/verify?username=${encodeURIComponent(username)}&email=${encodeURIComponent(email)}`,
-          );
+          Router.push(`/verify?username=${encodeURIComponent(username)}`);
         }, 2000);
       } else {
-        setButtonLoadingText("注册成功，正在跳转...");
+        setButtonLoadingText(responseData.message || "登录失败，请稍后重试");
         setTimeout(() => {
-          Router.push(`/login?username=${encodeURIComponent(username)}`);
+          setButtonLoading(false);
+          setButtonVariant("secondary");
+          setButtonLabel("登录");
         }, 2000);
       }
-    } else {
-      setButtonLoadingText(responseData.message || "注册失败，请稍后重试");
-      setTimeout(() => {
-        setButtonLoading(false);
-        setButtonVariant("secondary");
-        setButtonLabel("注册");
-      }, 2000);
     }
   };
 
@@ -180,7 +154,7 @@ export default function RegisterSheet() {
       <Input
         label="Username / 用户名"
         tips={usernameTip}
-        disabled={!canRegister || buttonLoading}
+        disabled={buttonLoading}
         helperText="3-20位，仅能包含小写字母、数字、下划线，且以小写字母开头"
         icon={<RiUser3Line size={"1em"} />}
         value={username}
@@ -190,21 +164,9 @@ export default function RegisterSheet() {
         }}
       />
       <Input
-        label="Email / 邮箱"
-        tips={emailTip}
-        disabled={!canRegister || buttonLoading}
-        helperText=""
-        icon={<RiMailLine size={"1em"} />}
-        value={email}
-        onChange={(e) => {
-          setEmail(e.target.value);
-          validateEmail(e.target.value);
-        }}
-      />
-      <Input
         label="Password / 密码"
         tips={passwordTip}
-        disabled={!canRegister || buttonLoading}
+        disabled={buttonLoading}
         helperText="6-100位"
         type="password"
         icon={<RiLockPasswordLine size={"1em"} />}
@@ -222,20 +184,28 @@ export default function RegisterSheet() {
           size="lg"
           fullWidth
           loadingText={buttonLoadingText}
-          onClick={register}
+          onClick={login}
           loading={buttonLoading}
-          disabled={!canRegister}
         />
       </div>
       <div className="pt-3 w-full flex justify-between">
         <div className="text-sm text-muted-foreground">
-          已有账号？
+          还没有账号？
           <Link
-            href="/login"
+            href="/register"
             className="hover:text-primary"
             presets={["hover-underline", "hover-color"]}
           >
-            立即登录{">"}
+            立即注册{">"}
+          </Link>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          <Link
+            href="/reset-password"
+            className="hover:text-primary"
+            presets={["hover-underline", "hover-color"]}
+          >
+            忘记账号/密码?
           </Link>
         </div>
       </div>

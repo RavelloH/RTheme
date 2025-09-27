@@ -2,7 +2,7 @@
 
 import { useConfig } from "@/components/ConfigProvider";
 
-export function RegisterIntro() {
+export default function RegisterIntro() {
   const { config } = useConfig();
   const canRegister = config<boolean>("user.registration.enabled");
   const isNeedEmailVerify = config<boolean>("user.email.verification.required");
