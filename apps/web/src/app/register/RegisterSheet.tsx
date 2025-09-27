@@ -2,11 +2,11 @@
 
 import { Input } from "@/ui/Input";
 import { RiLockPasswordLine, RiMailLine, RiUser3Line } from "@remixicon/react";
-import { CaptchaButton } from "./CaptchaButton";
+import { CaptchaButton } from "../../components/CaptchaButton";
 import { useState } from "react";
 import { useBroadcast } from "@/hooks/useBroadcast";
 import { register as registerAction } from "@/actions/auth";
-import { useConfig } from "./ConfigProvider";
+import { useConfig } from "../../components/ConfigProvider";
 import { useRouter } from "next/navigation";
 
 export default function RegisterSheet() {
