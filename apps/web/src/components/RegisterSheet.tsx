@@ -36,6 +36,12 @@ export default function RegisterSheet() {
       setToken(message.token);
     }
   });
+  useBroadcast((message: { type: string; token: string }) => {
+    if (message?.type === "captcha-error") {
+      setButtonLabel("安全验证失败，请刷新页面重试");
+      setButtonVariant("outline");
+    }
+  });
 
   // Username 验证逻辑
   const validateUsername = (value: string) => {

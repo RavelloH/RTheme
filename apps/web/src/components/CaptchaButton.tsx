@@ -36,6 +36,7 @@ export function CaptchaButton({
     onError: (error) => {
       setInternalLoading(true);
       setInternalLoadingText("环境确认失败，请刷新重试");
+      broadcast({ type: "captcha-error", error });
       console.error("Captcha error:", error);
     },
     onProgress: (progress) => {
