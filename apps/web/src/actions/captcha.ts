@@ -286,3 +286,16 @@ export async function verifyChallenge(
     });
   }
 }
+
+// Server Only
+export async function verifyToken(token: string) {
+  try {
+    const isValid = await cap.validateToken(token, {
+      keepToken: false,
+    });
+    return isValid;
+  } catch (error) {
+    console.error("Verify captcha token error:", error);
+    return { success: false };
+  }
+}

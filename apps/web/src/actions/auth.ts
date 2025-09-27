@@ -20,6 +20,7 @@ import { cookies, headers } from "next/headers";
 import { hashPassword } from "@/lib/server/password";
 import emailUtils from "@/lib/server/email";
 import { after } from "next/server";
+import { verifyToken } from "./captcha";
 
 export async function login(
   {
@@ -59,7 +60,10 @@ export async function login(
 
   if (validationResult instanceof Response) return validationResult;
 
-  // TODO: 验证验证码
+  if (!(await verifyToken(captcha_token)).success)
+    return response.unauthorized({
+      message: "安全验证失败，请刷新页面重试",
+    });
 
   try {
     // 检查用户名或邮箱是否已存在
@@ -253,7 +257,10 @@ export async function register(
   );
   if (validationResult instanceof Response) return validationResult;
 
-  // TODO: 验证验证码
+  if (!(await verifyToken(captcha_token)).success)
+    return response.unauthorized({
+      message: "安全验证失败，请刷新页面重试",
+    });
 
   try {
     // 检查用户名或邮箱是否已存在
@@ -469,7 +476,10 @@ export async function verifyEmail(
 
   if (validationResult instanceof Response) return validationResult;
 
-  // TODO: 验证验证码
+  if (!(await verifyToken(captcha_token)).success)
+    return response.unauthorized({
+      message: "安全验证失败，请刷新页面重试",
+    });
 
   try {
     // 根据邮箱查找用户
@@ -674,7 +684,10 @@ export async function requestPasswordReset(
   );
   if (validationResult instanceof Response) return validationResult;
 
-  // TODO: 验证验证码
+  if (!(await verifyToken(captcha_token)).success)
+    return response.unauthorized({
+      message: "安全验证失败，请刷新页面重试",
+    });
 
   try {
     // 查找用户
@@ -754,7 +767,10 @@ export async function resetPassword(
   );
   if (validationResult instanceof Response) return validationResult;
 
-  // TODO: 验证验证码
+  if (!(await verifyToken(captcha_token)).success)
+    return response.unauthorized({
+      message: "安全验证失败，请刷新页面重试",
+    });
 
   try {
     // 查找密码重置请求
@@ -844,7 +860,10 @@ export async function resendEmailVerification(
   );
   if (validationResult instanceof Response) return validationResult;
 
-  // TODO: 验证验证码
+  if (!(await verifyToken(captcha_token)).success)
+    return response.unauthorized({
+      message: "安全验证失败，请刷新页面重试",
+    });
 
   try {
     // 查找用户
