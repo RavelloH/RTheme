@@ -1,3 +1,6 @@
+"use client";
+import { useMobile } from "@/hooks/useMobile";
+
 export default function MainLayout({
   children,
   type,
@@ -5,10 +8,11 @@ export default function MainLayout({
   children: React.ReactNode;
   type: "horizontal" | "vertical";
 }) {
+  const isMobile = useMobile();
   return (
     <div
       className={
-        type === "horizontal"
+        type === "horizontal" && !isMobile
           ? "h-[calc(100vh-156px)] overflow-y-hidden"
           : "overflow-y-auto"
       }
