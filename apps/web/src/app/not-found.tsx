@@ -28,8 +28,8 @@ export default function Custom404() {
           <RowGrid>
             <GridItem
               areas={[1, 2, 3, 4, 5, 6]}
-              absoluteWidth="100%"
-              className="flex flex-col items-center justify-center text-center p-15"
+              className="flex flex-col items-center justify-center text-center p-15 w-full"
+              width={1}
             >
               <div className="text-9xl font-bold mb-4" data-fade-char>
                 404
