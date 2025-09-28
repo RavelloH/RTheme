@@ -1,15 +1,37 @@
 "use client";
 
-import { ReactNode, useRef, useEffect, useMemo, useCallback } from "react";
+import { ReactNode, useEffect, useRef } from "react";
+import { useMobile } from "@/hooks/useMobile";
 
-// 定义区域类型
 export type GridArea = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+
+const DEFAULT_MOBILE_AREAS: GridArea[] = [
+  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+];
+
+const COL_SPAN_CLASSES: string[] = [
+  "",
+  "col-span-1",
+  "col-span-2",
+  "col-span-3",
+  "col-span-4",
+  "col-span-5",
+  "col-span-6",
+  "col-span-7",
+  "col-span-8",
+  "col-span-9",
+  "col-span-10",
+  "col-span-11",
+  "col-span-12",
+];
 
 interface GridItemProps {
   children: ReactNode;
-  areas: GridArea[]; // 占据的区域（1-12）
-  width?: number; // 宽度比例，基于高度的倍数。例如：width=1 表示宽度等于高度，width=2 表示宽度为高度的2倍
+  areas: GridArea[];
+  width?: number;
   className?: string;
+  mobileAreas?: GridArea[];
+  height?: number;
 }
 
 interface RowGridProps {
@@ -17,93 +39,99 @@ interface RowGridProps {
   className?: string;
 }
 
-// 网格项组件
 export function GridItem({
   children,
   areas,
-  width = 3.2, // 默认宽度比例（相当于原来的 w-80）
+  width = 3.2,
   className = "",
+  mobileAreas,
+  height,
 }: GridItemProps) {
   const itemRef = useRef<HTMLDivElement>(null);
-
-  // 使用 useCallback 缓存更新函数
-  const updateSizes = useCallback(
-    (element: HTMLElement) => {
-      const gridContainer = element.closest(
-        ".grid.grid-rows-12",
-      ) as HTMLElement;
-      if (!gridContainer) return;
-
-      const totalHeight = gridContainer.offsetHeight;
-      const areaCount = areas.length;
-      const singleRowHeight = totalHeight / 12;
-      const itemHeight = singleRowHeight * areaCount;
-      const calculatedWidth = Math.round(itemHeight * width);
-
-      element.style.width = `${calculatedWidth}px`;
-    },
-    [width, areas.length],
-  );
+  const isMobile = useMobile();
+  const mobileHeight = height ?? 1 / width;
+  const gridSelector = isMobile ? ".grid.grid-cols-12" : ".grid.grid-rows-12";
+  const activeAreas = isMobile ? (mobileAreas ?? DEFAULT_MOBILE_AREAS) : areas;
+  const startArea = Math.min(...activeAreas);
+  const endArea = Math.max(...activeAreas);
 
   useEffect(() => {
-    if (itemRef.current) {
-      const element = itemRef.current;
-      // 设置 CSS 自定义属性
-      element.style.setProperty("--width-scale", width.toString());
+    const element = itemRef.current;
+    if (!element) return;
 
-      // 初始化大小
-      updateSizes(element);
+    element.style.setProperty("--width-scale", width.toString());
 
-      // 监听网格容器的大小变化
-      const gridContainer = element.closest(
-        ".grid.grid-rows-12",
-      ) as HTMLElement;
-      if (gridContainer) {
-        const resizeObserver = new ResizeObserver(() => updateSizes(element));
-        resizeObserver.observe(gridContainer);
+    const gridContainer = element.closest(gridSelector) as HTMLElement | null;
+    if (!gridContainer) return;
 
-        return () => {
-          resizeObserver.disconnect();
-        };
+    const adjustSizes = () => {
+      if (isMobile) {
+        const containerWidth = gridContainer.offsetWidth;
+        const calculatedHeight = Math.round(containerWidth * mobileHeight);
+
+        element.style.width = "100%";
+        element.style.height = `${calculatedHeight}px`;
+      } else {
+        const totalHeight = gridContainer.offsetHeight;
+        const singleRowHeight = totalHeight / 12;
+        const itemHeight = singleRowHeight * areas.length;
+        const calculatedWidth = Math.round(itemHeight * width);
+
+        element.style.width = `${calculatedWidth}px`;
       }
-    }
-  }, [width, areas, updateSizes]);
-
-  // 使用 useMemo 缓存计算结果
-  const { startArea, endArea } = useMemo(() => {
-    return {
-      startArea: Math.min(...areas),
-      endArea: Math.max(...areas),
     };
-  }, [areas]);
 
-  // 使用 useMemo 缓存 CSS 类名
-  const gridRowClass = useMemo(() => {
-    if (startArea === endArea) {
-      // 单个区域：使用模板字符串生成，避免数组查找
-      return `row-start-${startArea} row-end-${startArea + 1}`;
-    }
-    // 多个区域
-    return `row-start-${startArea} row-end-${endArea + 1}`;
-  }, [startArea, endArea]);
+    adjustSizes();
+
+    const resizeObserver = new ResizeObserver(adjustSizes);
+    resizeObserver.observe(gridContainer);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [areas.length, gridSelector, isMobile, mobileHeight, width]);
+
+  const gridPositionClass = isMobile
+    ? (() => {
+        const minCol = startArea;
+        const maxCol = endArea;
+        const colSpan = maxCol - minCol + 1;
+        const spanClass = COL_SPAN_CLASSES[colSpan];
+
+        if (spanClass) {
+          return spanClass;
+        }
+
+        if (minCol !== 1) {
+          return `col-start-${minCol} col-end-${maxCol + 1}`;
+        }
+
+        return "col-span-12";
+      })()
+    : startArea === endArea
+      ? `row-start-${startArea} row-end-${startArea + 1}`
+      : `row-start-${startArea} row-end-${endArea + 1}`;
+
+  const baseClass = isMobile ? "w-full" : "h-full";
 
   return (
     <div
       ref={itemRef}
-      className={`${className} h-full border-accent border ${gridRowClass}`}
+      className={`${className} border-accent border ${gridPositionClass} ${baseClass}`}
     >
       {children}
     </div>
   );
 }
 
-// 十二区域网格容器
 export default function RowGrid({ children, className = "" }: RowGridProps) {
-  return (
-    <div
-      className={`grid grid-rows-12 auto-cols-max grid-flow-col gap-0 h-full min-w-max ${className}`}
-    >
-      {children}
-    </div>
-  );
+  const isMobile = useMobile();
+
+  const baseClass = isMobile
+    ? "grid grid-cols-12 auto-rows-max grid-flow-row gap-0 w-full"
+    : "grid grid-rows-12 auto-cols-max grid-flow-col gap-0 h-full min-w-max";
+
+  const combinedClassName = className ? `${baseClass} ${className}` : baseClass;
+
+  return <div className={combinedClassName}>{children}</div>;
 }

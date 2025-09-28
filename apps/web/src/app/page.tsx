@@ -7,6 +7,8 @@ import Marquee from "react-fast-marquee";
 import Link from "@/components/Link";
 import PostCard from "@/components/PostCard";
 import MainLayout from "@/components/MainLayout";
+import HomeTitle from "./home/HomeTitle";
+import HomeSlogan from "./home/HomeSlogan";
 
 export const metadata = await generateMetadata(
   {
@@ -34,6 +36,7 @@ export default function Home() {
             <GridItem
               areas={[1, 2, 3, 4, 5, 6]}
               width={4.5}
+              height={0.5}
               className="flex items-center justify-center text-5xl"
             >
               轮播图
@@ -41,48 +44,38 @@ export default function Home() {
             <GridItem
               areas={[7, 8, 9]}
               width={9}
-              className="flex items-center p-12 text-8xl font-bold overflow-hidden"
+              height={0.3}
+              className="flex items-center text-8xl overflow-hidden"
             >
-              <div data-fade data-parallax="-0.5">
-                <span>RavelloH&apos;s Blog</span>
-              </div>
+              <HomeTitle title={"RavelloH's Blog"} />
             </GridItem>
             <GridItem
               areas={[10, 11, 12]}
               width={9}
+              height={0.3}
               className=" flex items-center justify-start text-8xl"
             >
-              <div className="h-full aspect-square mr-4 relative">
-                <Image
-                  src="/avatar.jpg"
-                  alt="logo"
-                  width={200}
-                  height={200}
-                  className="h-full w-auto object-cover"
-                />
-              </div>
-              <div
-                className="flex-1 flex items-center justify-end pr-12 text-8xl"
-                data-fade
-              >
-                <span data-parallax="0.5">Beginning of meditation.</span>
-              </div>
+              <HomeSlogan slogan={"Beginning of meditation."} />
             </GridItem>
             <GridItem
               areas={[1]}
               width={14}
-              className="bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl"
+              height={0.1}
+              className="bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl h-full"
             >
               <span>Welcome. I&apos;m...</span>
             </GridItem>
             <GridItem
               areas={[2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
               width={1.4}
+              height={1}
               className="px-10 py-15 text-2xl flex flex-col justify-between"
             >
               <div>
                 <div className="text-7xl" data-fade-char>
-                  RavelloH \ 拉韦洛
+                  <p>
+                    RavelloH \ <wbr /> 拉韦洛
+                  </p>
                 </div>
                 <div className="block mt-4" data-line-reveal>
                   <div>CTFer，</div>
@@ -103,6 +96,7 @@ export default function Home() {
             <GridItem
               areas={[12]}
               width={14}
+              height={0.1}
               className="flex items-center uppercase px-10 text-2xl"
             >
               <span data-fade-word>Learn more about me</span>
@@ -157,6 +151,7 @@ export default function Home() {
             <GridItem
               areas={[1]}
               width={12}
+              height={0.1}
               className="flex items-center px-10 text-2xl bg-primary text-primary-foreground uppercase"
             >
               <span data-fade-word>My main tech stack includes</span>
@@ -244,9 +239,10 @@ export default function Home() {
             <GridItem
               areas={[12]}
               width={12}
+              height={0.1}
               className="flex items-center px-10 text-2xl"
             >
-              <span data-fade-word className="w-[50%] uppercase ">
+              <span data-fade-word className="uppercase ">
                 View more projects
               </span>
             </GridItem>
@@ -274,7 +270,7 @@ export default function Home() {
                 文章&nbsp;&nbsp;/&nbsp;&nbsp;
               </Marquee>
             </GridItem>
-            <GridItem areas={[7, 8, 9]} width={4} className="">
+            <GridItem areas={[7, 8, 9]} width={4} height={0.4} className="">
               <PostCard
                 title="Minecraft Meteor 使用指南"
                 date="2025/08/01"
@@ -284,7 +280,7 @@ export default function Home() {
               />
             </GridItem>
 
-            <GridItem areas={[10, 11, 12]} width={4} className="">
+            <GridItem areas={[10, 11, 12]} width={4} height={0.4} className="">
               <PostCard
                 title="使用Meilisearch实现全站搜索"
                 date="2025/06/25"
@@ -294,7 +290,7 @@ export default function Home() {
               />
             </GridItem>
 
-            <GridItem areas={[1, 2, 3]} width={4} className="">
+            <GridItem areas={[1, 2, 3]} width={4} height={0.4} className="">
               <PostCard
                 title="Timepulse：现代化高颜值计时器"
                 date="2025/04/03"
@@ -303,7 +299,7 @@ export default function Home() {
                 cover="https://raw.ravelloh.top/rtheme/categories.webp"
               />
             </GridItem>
-            <GridItem areas={[4, 5, 6]} width={4} className="">
+            <GridItem areas={[4, 5, 6]} width={4} height={0.4} className="">
               <PostCard
                 title="Nextjs使用Server Action实现动态页面重部署"
                 date="2025/04/03"
@@ -312,7 +308,7 @@ export default function Home() {
                 cover="https://raw.ravelloh.top/20250323/image.2obow0upmh.webp"
               />
             </GridItem>
-            <GridItem areas={[7, 8, 9]} width={4} className="">
+            <GridItem areas={[7, 8, 9]} width={4} height={0.4} className="">
               <PostCard
                 title="使用Wireshark进行自我网络安全审计"
                 date="2025/02/25"
@@ -324,6 +320,7 @@ export default function Home() {
             <GridItem
               areas={[10, 11, 12]}
               width={4}
+              height={0.4}
               className="flex items-center uppercase px-10 py-15"
             >
               <div className="block" data-line-reveal>
@@ -333,6 +330,7 @@ export default function Home() {
             </GridItem>
             <GridItem
               areas={[1, 2, 3, 4, 5]}
+              mobileAreas={[1, 2, 3, 4, 5, 6]}
               width={6 / 5}
               className="flex items-center justify-center px-10 text-2xl"
             >
@@ -365,6 +363,7 @@ export default function Home() {
             </GridItem>
             <GridItem
               areas={[6, 7, 8, 9, 10]}
+              mobileAreas={[7, 8, 9, 10, 11, 12]}
               width={6 / 5}
               className="flex items-center justify-center px-10 text-2xl"
             >
@@ -398,6 +397,7 @@ export default function Home() {
             <GridItem
               areas={[11, 12]}
               width={6 / 2}
+              height={0.25}
               className="flex items-center justify-center px-10 uppercase text-5xl bg-primary text-primary-foreground"
             >
               <div>
@@ -409,6 +409,7 @@ export default function Home() {
             <GridItem
               areas={[1]}
               width={14}
+              height={0.1}
               className="bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl"
             >
               <span>Want to...</span>
@@ -416,6 +417,7 @@ export default function Home() {
             <GridItem
               areas={[2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
               width={1.4}
+              height={1}
               className="px-10 py-15 text-2xl flex flex-col justify-between"
             >
               <div>
@@ -443,6 +445,7 @@ export default function Home() {
             <GridItem
               areas={[12]}
               width={14}
+              height={0.1}
               className="flex items-center uppercase px-10 text-2xl"
             >
               <span data-fade-word>Start chatting with me</span>
