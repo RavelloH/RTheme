@@ -2,7 +2,6 @@ import { generateMetadata } from "@/lib/shared/seo";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import RowGrid, { GridItem } from "@/components/RowGrid";
 import ParallaxImageCarousel from "@/components/ParallaxImageCarousel";
-import Image from "next/image";
 import Marquee from "react-fast-marquee";
 import Link from "@/components/Link";
 import PostCard from "@/components/PostCard";

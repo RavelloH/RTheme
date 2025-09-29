@@ -86,3 +86,13 @@
 .dark {
   scrollbar-color: var(--color-muted-foreground) var(--color-background);
 }
+
+/* 水平滚动组件专用样式 */
+.horizontal-scroll-container {
+  touch-action: pan-y pinch-zoom;
+  -webkit-overflow-scrolling: touch;
+}
+
+.horizontal-scroll-content {
+  transform: translateZ(0);
+}

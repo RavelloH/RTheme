@@ -26,6 +26,19 @@ export default function HorizontalScroll({
   const targetXRef = useRef(0);
   const animationRef = useRef<gsap.core.Tween | null>(null);
 
+  // 触摸拖动相关状态
+  const touchStateRef = useRef({
+    isStarted: false,
+    startX: 0,
+    startY: 0,
+    startTargetX: 0,
+    currentX: 0,
+    velocity: 0,
+    lastTime: 0,
+    direction: 0,
+    isDragging: false,
+  });
+
   useEffect(() => {
     const container = containerRef.current;
     const content = contentRef.current;
@@ -82,6 +95,108 @@ export default function HorizontalScroll({
 
         // 触发动画到新的目标位置
         animateToTarget();
+      };
+
+      // 触摸开始处理
+      const handleTouchStart = (e: TouchEvent) => {
+        if (e.touches.length === 0) return;
+
+        const touch = e.touches[0];
+        if (!touch) return;
+
+        const now = Date.now();
+
+        touchStateRef.current = {
+          isStarted: true,
+          startX: touch.clientX,
+          startY: touch.clientY,
+          startTargetX: targetXRef.current,
+          currentX: touch.clientX,
+          velocity: 0,
+          lastTime: now,
+          direction: 0,
+          isDragging: false,
+        };
+
+        // 停止当前动画
+        if (animationRef.current) {
+          animationRef.current.kill();
+        }
+      };
+
+      // 触摸移动处理
+      const handleTouchMove = (e: TouchEvent) => {
+        if (!touchStateRef.current.isStarted || e.touches.length === 0) return;
+
+        const touch = e.touches[0];
+        if (!touch) return;
+
+        const now = Date.now();
+        const deltaTime = now - touchStateRef.current.lastTime;
+
+        // 节流：至少间隔 16ms（60fps）
+        if (deltaTime < 16) return;
+
+        const deltaX = touch.clientX - touchStateRef.current.currentX;
+        const deltaY = touch.clientY - touchStateRef.current.startY;
+
+        // 判断是否为水平拖动
+        const horizontalDistance = Math.abs(
+          touch.clientX - touchStateRef.current.startX,
+        );
+        const verticalDistance = Math.abs(deltaY);
+
+        if (horizontalDistance > 10 && horizontalDistance > verticalDistance) {
+          e.preventDefault();
+          touchStateRef.current.isDragging = true;
+
+          // 计算速度
+          touchStateRef.current.velocity = deltaX / deltaTime;
+          touchStateRef.current.direction = deltaX > 0 ? 1 : -1;
+
+          // 更新目标位置
+          const newTargetX =
+            touchStateRef.current.startTargetX +
+            (touch.clientX - touchStateRef.current.startX);
+
+          // 计算边界
+          const maxScrollLeft = -(content.scrollWidth - container.offsetWidth);
+          targetXRef.current = Math.max(maxScrollLeft, Math.min(0, newTargetX));
+
+          // 立即更新位置（跟随手指）
+          gsap.set(content, { x: targetXRef.current });
+
+          touchStateRef.current.currentX = touch.clientX;
+          touchStateRef.current.lastTime = now;
+        }
+      };
+
+      // 触摸结束处理
+      const handleTouchEnd = () => {
+        if (!touchStateRef.current.isStarted) return;
+
+        touchStateRef.current.isStarted = false;
+
+        if (touchStateRef.current.isDragging) {
+          // 计算惯性滚动
+          const velocity = touchStateRef.current.velocity;
+          const momentum = velocity * 300; // 惯性系数
+
+          // 计算最终位置
+          let finalX = targetXRef.current + momentum;
+
+          // 边界检查
+          const maxScrollLeft = -(content.scrollWidth - container.offsetWidth);
+          finalX = Math.max(maxScrollLeft, Math.min(0, finalX));
+
+          // 更新目标位置
+          targetXRef.current = finalX;
+
+          // 使用动画到达最终位置
+          animateToTarget();
+        }
+
+        touchStateRef.current.isDragging = false;
       };
 
       // 如果启用视差效果
@@ -681,9 +796,29 @@ export default function HorizontalScroll({
       // 添加鼠标滚轮监听
       container.addEventListener("wheel", handleWheel, { passive: false });
 
+      // 添加触摸事件监听
+      container.addEventListener("touchstart", handleTouchStart, {
+        passive: false,
+      });
+      container.addEventListener("touchmove", handleTouchMove, {
+        passive: false,
+      });
+      container.addEventListener("touchend", handleTouchEnd, {
+        passive: false,
+      });
+
       // 添加清理函数
       cleanupFunctions.push(() =>
         container.removeEventListener("wheel", handleWheel),
+      );
+      cleanupFunctions.push(() =>
+        container.removeEventListener("touchstart", handleTouchStart),
+      );
+      cleanupFunctions.push(() =>
+        container.removeEventListener("touchmove", handleTouchMove),
+      );
+      cleanupFunctions.push(() =>
+        container.removeEventListener("touchend", handleTouchEnd),
       );
     }, container);
 
@@ -698,8 +833,14 @@ export default function HorizontalScroll({
   }, [scrollSpeed, enableParallax, enableFadeElements, enableLineReveal]);
 
   return (
-    <div ref={containerRef} className={`overflow-hidden ${className}`}>
-      <div ref={contentRef} className="flex h-full will-change-transform">
+    <div
+      ref={containerRef}
+      className={`overflow-hidden horizontal-scroll-container ${className}`}
+    >
+      <div
+        ref={contentRef}
+        className="flex h-full will-change-transform horizontal-scroll-content"
+      >
         {children}
       </div>
     </div>
