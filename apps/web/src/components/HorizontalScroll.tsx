@@ -807,6 +807,64 @@ export default function HorizontalScroll({
         passive: false,
       });
 
+      // 键盘操作处理
+      const handleKeyDown = (e: KeyboardEvent) => {
+        // 检查是否在可编辑元素中，避免冲突
+        if (
+          document.activeElement?.tagName === "INPUT" ||
+          document.activeElement?.tagName === "TEXTAREA" ||
+          document.activeElement?.getAttribute("contenteditable") === "true"
+        ) {
+          return;
+        }
+
+        let scrollDelta = 0;
+
+        // 向右滚动：空格、右方向键、下方向键
+        if (
+          e.code === "Space" ||
+          e.code === "ArrowRight" ||
+          e.code === "ArrowDown"
+        ) {
+          e.preventDefault();
+          scrollDelta = -100; // 向右滚动为负值
+        }
+        // 向左滚动：Shift+空格、左方向键、上方向键
+        else if (
+          (e.code === "Space" && e.shiftKey) ||
+          e.code === "ArrowLeft" ||
+          e.code === "ArrowUp"
+        ) {
+          e.preventDefault();
+          scrollDelta = 100; // 向左滚动为正值
+        }
+
+        if (scrollDelta !== 0) {
+          // 计算滚动增量
+          const deltaX = scrollDelta * scrollSpeed;
+
+          // 更新目标位置
+          const newTargetX = targetXRef.current + deltaX;
+
+          // 计算边界
+          const maxScrollLeft = -(content.scrollWidth - container.offsetWidth);
+          targetXRef.current = Math.max(maxScrollLeft, Math.min(0, newTargetX));
+
+          // 触发动画到新的目标位置
+          animateToTarget();
+        }
+      };
+
+      // 添加键盘事件监听 - 改为全局监听
+      document.addEventListener("keydown", handleKeyDown, { passive: false });
+
+      // 点击容器时的处理（可以用于其他交互，暂时保留）
+      const handleClick = () => {
+        // 这里可以添加点击时的其他交互效果
+      };
+
+      container.addEventListener("click", handleClick);
+
       // 添加清理函数
       cleanupFunctions.push(() =>
         container.removeEventListener("wheel", handleWheel),
@@ -819,6 +877,12 @@ export default function HorizontalScroll({
       );
       cleanupFunctions.push(() =>
         container.removeEventListener("touchend", handleTouchEnd),
+      );
+      cleanupFunctions.push(() =>
+        document.removeEventListener("keydown", handleKeyDown),
+      );
+      cleanupFunctions.push(() =>
+        container.removeEventListener("click", handleClick),
       );
     }, container);
 
@@ -836,6 +900,8 @@ export default function HorizontalScroll({
     <div
       ref={containerRef}
       className={`overflow-hidden horizontal-scroll-container ${className}`}
+      role="region"
+      aria-label="横向滚动区域"
     >
       <div
         ref={contentRef}
