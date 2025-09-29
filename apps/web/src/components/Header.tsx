@@ -211,7 +211,7 @@ export function Header({ menus }: { menus: MenuItem[] }) {
     <>
       <motion.header
         ref={headerRef}
-        className="w-full h-[78px] text-foreground bg-background border-y border-border flex relative z-50"
+        className="w-full h-[78px] text-foreground bg-background border-y border-border flex fixed top-0 left-0 z-50"
         initial={{ y: -78 }}
         animate={{
           y: isMenuOpen ? `calc(100vh - 78px)` : isLoaded ? 0 : -78,

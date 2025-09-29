@@ -41,7 +41,7 @@ export function MainContent({ children }: MainContentProps) {
   return (
     <main
       ref={mainRef}
-      className={`flex-1 ${isLoaded ? "translate-x-0" : "translate-x-full"}`}
+      className={`flex-1 mt-[78px] ${isLoaded ? "translate-x-0" : "translate-x-full"}`}
     >
       {children}
     </main>
