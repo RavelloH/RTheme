@@ -31,6 +31,7 @@ export default function TestPage() {
             <GridItem
               areas={[1]}
               width={14}
+              height={0.1}
               className="bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl"
             >
               <h1>Register / 注册</h1>
@@ -38,6 +39,7 @@ export default function TestPage() {
             <GridItem
               areas={[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}
               width={14 / 11}
+              height={1}
               className="flex flex-col items-center justify-center text-center p-15"
             >
               <RegisterSheet />
@@ -47,6 +49,7 @@ export default function TestPage() {
               areas={[1, 2, 3, 4]}
               width={4}
               className="flex items-center"
+              height={0.3}
             >
               <Marquee className="text-7xl h-full" speed={30} autoFill>
                 <span>Register</span>
@@ -58,6 +61,7 @@ export default function TestPage() {
             <GridItem
               areas={[5, 6, 7, 8]}
               width={4}
+              height={0.4}
               className="flex items-center px-10 text-2xl"
             >
               <p>
@@ -67,6 +71,7 @@ export default function TestPage() {
             <GridItem
               areas={[9, 10, 11, 12]}
               width={4}
+              height={0.4}
               className="flex items-center px-10 text-2xl"
             >
               <p>
