@@ -180,6 +180,7 @@ export function GridItem({
 
   return (
     <div
+      key={`grid-item-${isMobile ? "mobile" : "desktop"}`}
       ref={itemRef}
       className={`${className} border-accent border ${gridPositionClass} ${baseClass}`}
     >
@@ -197,5 +198,12 @@ export default function RowGrid({ children, className = "" }: RowGridProps) {
 
   const combinedClassName = className ? `${baseClass} ${className}` : baseClass;
 
-  return <div className={combinedClassName}>{children}</div>;
+  return (
+    <div
+      key={`row-grid-${isMobile ? "mobile" : "desktop"}`}
+      className={combinedClassName}
+    >
+      {children}
+    </div>
+  );
 }
