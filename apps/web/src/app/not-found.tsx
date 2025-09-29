@@ -2,17 +2,13 @@ import { generateMetadata } from "@/lib/shared/seo";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import RowGrid, { GridItem } from "@/components/RowGrid";
 import MainLayout from "@/components/MainLayout";
+import ClientDiagnostics from "../components/ClientDiagnostics";
 
-export const metadata = await generateMetadata(
-  {
-    title: "404 Not Found",
-    description:
-      "在服务器中未找到此页面。这可能代表此页面已被删除、移动，或从未存在过。",
-  },
-  {
-    pathname: "/404",
-  },
-);
+export const metadata = await generateMetadata({
+  title: "404 Not Found",
+  description:
+    "在服务器中未找到此页面。这可能代表此页面已被删除、移动，或从未存在过。",
+});
 
 export default function Custom404() {
   return (
@@ -27,15 +23,29 @@ export default function Custom404() {
         >
           <RowGrid>
             <GridItem
-              areas={[1, 2, 3, 4, 5, 6]}
-              className="flex flex-col items-center justify-center text-center p-15 w-full"
-              width={1}
+              areas={[1]}
+              className="flex items-center px-10 bg-primary text-primary-foreground uppercase text-2xl"
+              width={14}
+              height={0.1}
             >
-              <div className="text-9xl font-bold mb-4" data-fade-char>
-                404
+              <div className="text-2xl" data-fade-char>
+                FATAL ERROR // 致命错误
               </div>
-              <div className="text-4xl mb-8" data-fade-word>
-                页面未找到
+            </GridItem>
+            <GridItem
+              areas={[2, 3, 4, 5, 6, 7, 8, 9, 10]}
+              className="px-10 py-15"
+              width={14 / 9}
+              height={1}
+            >
+              <div className="text-7xl font-bold mb-4" data-fade-char>
+                ERROR...
+              </div>
+              <div className="text-6xl mb-4" data-fade-word>
+                HTTP 404 Not Found
+              </div>
+              <div className="text-2xl mb-8" data-fade-word>
+                请求的文件未在服务器中找到。
               </div>
               <div
                 className="text-2xl text-muted-foreground mb-12"
@@ -43,7 +53,42 @@ export default function Custom404() {
               >
                 <div>您访问的页面可能已被删除、移动，</div>
                 <div>或者从未存在过。</div>
+                <div>
+                  <br />
+                </div>
+                <div>请尝试：</div>
+                <div>1. 检查当前链接是否正确</div>
+                <div>2. 重新搜索相关内容</div>
+                <div>3. 如果错误重复出现，请汇报给站点管理员。</div>
               </div>
+            </GridItem>
+            <GridItem
+              areas={[11]}
+              className="flex items-center px-10 uppercase text-2xl"
+              width={14}
+              height={0.1}
+            >
+              <div className="text-2xl" data-fade-char>
+                回到上一页
+              </div>
+            </GridItem>
+            <GridItem
+              areas={[12]}
+              className="flex items-center px-10 uppercase text-2xl"
+              width={14}
+              height={0.1}
+            >
+              <div className="text-2xl" data-fade-char>
+                发送反馈邮件
+              </div>
+            </GridItem>
+            <GridItem
+              areas={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}
+              className="px-10 py-20 text-foreground"
+              width={2}
+              height={1.5}
+            >
+              <ClientDiagnostics errorType="HTTP/404" />
             </GridItem>
           </RowGrid>
         </HorizontalScroll>
