@@ -25,6 +25,68 @@ const COL_SPAN_CLASSES: string[] = [
   "col-span-12",
 ];
 
+const ROW_START_CLASSES: Record<number, string> = {
+  1: "row-start-1",
+  2: "row-start-2",
+  3: "row-start-3",
+  4: "row-start-4",
+  5: "row-start-5",
+  6: "row-start-6",
+  7: "row-start-7",
+  8: "row-start-8",
+  9: "row-start-9",
+  10: "row-start-10",
+  11: "row-start-11",
+  12: "row-start-12",
+};
+
+const ROW_END_CLASSES: Record<number, string> = {
+  1: "row-end-1",
+  2: "row-end-2",
+  3: "row-end-3",
+  4: "row-end-4",
+  5: "row-end-5",
+  6: "row-end-6",
+  7: "row-end-7",
+  8: "row-end-8",
+  9: "row-end-9",
+  10: "row-end-10",
+  11: "row-end-11",
+  12: "row-end-12",
+  13: "row-end-13",
+};
+
+const COL_START_CLASSES: Record<number, string> = {
+  1: "col-start-1",
+  2: "col-start-2",
+  3: "col-start-3",
+  4: "col-start-4",
+  5: "col-start-5",
+  6: "col-start-6",
+  7: "col-start-7",
+  8: "col-start-8",
+  9: "col-start-9",
+  10: "col-start-10",
+  11: "col-start-11",
+  12: "col-start-12",
+};
+
+const COL_END_CLASSES: Record<number, string> = {
+  1: "col-end-1",
+  2: "col-end-2",
+  3: "col-end-3",
+  4: "col-end-4",
+  5: "col-end-5",
+  6: "col-end-6",
+  7: "col-end-7",
+  8: "col-end-8",
+  9: "col-end-9",
+  10: "col-end-10",
+  11: "col-end-11",
+  12: "col-end-12",
+  13: "col-end-13",
+};
+
 interface GridItemProps {
   children: ReactNode;
   areas: GridArea[];
@@ -103,14 +165,16 @@ export function GridItem({
         }
 
         if (minCol !== 1) {
-          return `col-start-${minCol} col-end-${maxCol + 1}`;
+          const colStartClass = COL_START_CLASSES[minCol];
+          const colEndClass = COL_END_CLASSES[maxCol + 1];
+          return `${colStartClass} ${colEndClass}`;
         }
 
         return "col-span-12";
       })()
     : startArea === endArea
-      ? `row-start-${startArea} row-end-${startArea + 1}`
-      : `row-start-${startArea} row-end-${endArea + 1}`;
+      ? `${ROW_START_CLASSES[startArea]} ${ROW_END_CLASSES[startArea + 1]}`
+      : `${ROW_START_CLASSES[startArea]} ${ROW_END_CLASSES[endArea + 1]}`;
 
   const baseClass = isMobile ? "w-full" : "h-full";
 
