@@ -411,6 +411,9 @@ export default function HorizontalScroll({
             }
           });
 
+          // 添加状态来跟踪是否已经完全显示
+          let isFullyRevealed = false;
+
           // 创建一个函数来更新逐字淡入状态
           const updateWordFade = () => {
             const containerRect = container.getBoundingClientRect();
@@ -428,33 +431,39 @@ export default function HorizontalScroll({
 
             // 检查元素是否进入触发范围
             if (elementRightInContainer <= triggerPoint) {
-              // 元素已经完全进入视野，显示所有单词
-              wordSpans.forEach((span, index) => {
-                const isSpace = /^\s+$/.test(span.textContent || "");
+              // 元素已经完全进入视野，标记为完全显示并播放完整动画
+              if (!isFullyRevealed) {
+                isFullyRevealed = true;
+                wordSpans.forEach((span, index) => {
+                  const isSpace = /^\s+$/.test(span.textContent || "");
 
-                if (isSpace) {
-                  // 空格只淡入，不缩放和移动
-                  gsap.to(span, {
-                    opacity: 1,
-                    duration: 0.4,
-                    delay: index * 0.05,
-                    ease: "back.out(1.2)",
-                    overwrite: true,
-                  });
-                } else {
-                  // 非空格单词进行完整动画
-                  gsap.to(span, {
-                    opacity: 1,
-                    y: 0,
-                    scale: 1,
-                    duration: 0.4,
-                    delay: index * 0.05, // 每个单词延迟0.05秒
-                    ease: "back.out(1.2)",
-                    overwrite: true,
-                  });
-                }
-              });
+                  if (isSpace) {
+                    // 空格只淡入，不缩放和移动
+                    gsap.to(span, {
+                      opacity: 1,
+                      duration: 0.4,
+                      delay: index * 0.05,
+                      ease: "back.out(1.2)",
+                      overwrite: true,
+                    });
+                  } else {
+                    // 非空格单词进行完整动画
+                    gsap.to(span, {
+                      opacity: 1,
+                      y: 0,
+                      scale: 1,
+                      duration: 0.4,
+                      delay: index * 0.05, // 每个单词延迟0.05秒
+                      ease: "back.out(1.2)",
+                      overwrite: true,
+                    });
+                  }
+                });
+              }
             } else if (elementLeftInContainer <= containerWidth) {
+              // 元素部分可见，重置完全显示状态
+              isFullyRevealed = false;
+
               // 元素部分可见，计算应该显示多少单词
               const visibleProgress = Math.max(
                 0,
@@ -517,7 +526,8 @@ export default function HorizontalScroll({
                 }
               });
             } else {
-              // 元素完全不可见，隐藏所有单词
+              // 元素完全不可见，重置完全显示状态并隐藏所有单词
+              isFullyRevealed = false;
               wordSpans.forEach((span) => {
                 const isSpace = /^\s+$/.test(span.textContent || "");
 
@@ -590,6 +600,9 @@ export default function HorizontalScroll({
             });
           });
 
+          // 添加状态来跟踪是否已经完全显示
+          let isFullyRevealed = false;
+
           // 创建一个函数来更新逐字符淡入状态
           const updateCharFade = () => {
             const containerRect = container.getBoundingClientRect();
@@ -607,19 +620,25 @@ export default function HorizontalScroll({
 
             // 检查元素是否进入触发范围
             if (elementRightInContainer <= triggerPoint) {
-              // 元素已经完全进入视野，显示所有字符
-              charSpans.forEach((span, index) => {
-                gsap.to(span, {
-                  opacity: 1,
-                  y: 0,
-                  rotationY: 0,
-                  duration: 0.3,
-                  delay: index * 0.02, // 每个字符延迟0.02秒
-                  ease: "back.out(1.1)",
-                  overwrite: true,
+              // 元素已经完全进入视野，标记为完全显示并播放完整动画
+              if (!isFullyRevealed) {
+                isFullyRevealed = true;
+                charSpans.forEach((span, index) => {
+                  gsap.to(span, {
+                    opacity: 1,
+                    y: 0,
+                    rotationY: 0,
+                    duration: 0.3,
+                    delay: index * 0.02, // 每个字符延迟0.02秒
+                    ease: "back.out(1.1)",
+                    overwrite: true,
+                  });
                 });
-              });
+              }
             } else if (elementLeftInContainer <= containerWidth) {
+              // 元素部分可见，重置完全显示状态
+              isFullyRevealed = false;
+
               // 元素部分可见，计算应该显示多少字符
               const visibleProgress = Math.max(
                 0,
@@ -658,7 +677,8 @@ export default function HorizontalScroll({
                 }
               });
             } else {
-              // 元素完全不可见，隐藏所有字符
+              // 元素完全不可见，重置完全显示状态并隐藏所有字符
+              isFullyRevealed = false;
               charSpans.forEach((span) => {
                 gsap.to(span, {
                   opacity: 0,
@@ -702,6 +722,9 @@ export default function HorizontalScroll({
             });
           });
 
+          // 添加状态来跟踪是否已经完全显示
+          let isFullyRevealed = false;
+
           // 创建一个函数来更新逐行显示状态
           const updateLineReveal = () => {
             const containerRect = container.getBoundingClientRect();
@@ -719,19 +742,25 @@ export default function HorizontalScroll({
 
             // 检查元素是否进入触发范围
             if (elementRightInContainer <= triggerPoint) {
-              // 元素已经完全进入视野，显示所有行
-              lines.forEach((line, index) => {
-                gsap.to(line, {
-                  opacity: 1,
-                  y: 0,
-                  rotationX: 0,
-                  duration: 0.6,
-                  delay: index * 0.1, // 每行延迟0.1秒
-                  ease: "back.out(1.7)",
-                  overwrite: true,
+              // 元素已经完全进入视野，标记为完全显示并播放完整动画
+              if (!isFullyRevealed) {
+                isFullyRevealed = true;
+                lines.forEach((line, index) => {
+                  gsap.to(line, {
+                    opacity: 1,
+                    y: 0,
+                    rotationX: 0,
+                    duration: 0.6,
+                    delay: index * 0.1, // 每行延迟0.1秒
+                    ease: "back.out(1.7)",
+                    overwrite: true,
+                  });
                 });
-              });
+              }
             } else if (elementLeftInContainer <= containerWidth) {
+              // 元素部分可见，重置完全显示状态
+              isFullyRevealed = false;
+
               // 元素部分可见，计算应该显示多少行
               const visibleProgress = Math.max(
                 0,
@@ -768,7 +797,8 @@ export default function HorizontalScroll({
                 }
               });
             } else {
-              // 元素完全不可见，隐藏所有行
+              // 元素完全不可见，重置完全显示状态并隐藏所有行
+              isFullyRevealed = false;
               lines.forEach((line) => {
                 gsap.to(line, {
                   opacity: 0,
