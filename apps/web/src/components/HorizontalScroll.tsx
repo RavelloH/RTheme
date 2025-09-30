@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useRef } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 
 interface GSAPHorizontalScrollProps {
@@ -26,6 +26,44 @@ export default function HorizontalScroll({
   const targetXRef = useRef(0);
   const animationRef = useRef<gsap.core.Tween | null>(null);
 
+  // 移动设备检测状态 - 使用函数获取初始状态
+  const getInitialMobileState = () => {
+    if (typeof window === "undefined") return false;
+
+    const isMobileWidth = window.innerWidth <= 768;
+    const isTouchDevice =
+      "ontouchstart" in window || navigator.maxTouchPoints > 0;
+    const isMobileUA =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent,
+      );
+
+    return isMobileWidth || (isTouchDevice && isMobileUA);
+  };
+
+  const [isMobile, setIsMobile] = useState(getInitialMobileState);
+
+  // 检测移动设备
+  useEffect(() => {
+    const checkMobile = () => {
+      // 结合屏幕宽度和用户代理进行检测
+      const isMobileWidth = window.innerWidth <= 768;
+      const isTouchDevice =
+        "ontouchstart" in window || navigator.maxTouchPoints > 0;
+      const isMobileUA =
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent,
+        );
+
+      setIsMobile(isMobileWidth || (isTouchDevice && isMobileUA));
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   // 触摸拖动相关状态
   const touchStateRef = useRef({
     isStarted: false,
@@ -44,6 +82,11 @@ export default function HorizontalScroll({
     const content = contentRef.current;
 
     if (!container || !content) return;
+
+    // 移动设备上直接返回，使用原生滚动
+    if (isMobile) {
+      return;
+    }
 
     // 初始化位置
     const initialX = (gsap.getProperty(content, "x") as number) || 0;
@@ -330,14 +373,12 @@ export default function HorizontalScroll({
             // 确保进度在 0-1 范围内
             animationProgress = Math.max(0, Math.min(1, animationProgress));
 
-            // 根据动画进度计算透明度和Y偏移
+            // 根据动画进度计算透明度
             const opacity = animationProgress;
-            const yOffset = (1 - animationProgress) * 30; // 从30px偏移到0
 
-            // 应用动画，使用较短的持续时间以保持响应性
+            // 应用动画 - 只改变透明度
             gsap.to(element, {
               opacity,
-              y: yOffset,
               duration: 0.1,
               ease: "none",
               overwrite: true,
@@ -345,9 +386,9 @@ export default function HorizontalScroll({
           });
         };
 
-        // 初始状态设置
+        // 初始状态设置 - 只设置透明度
         fadeElements.forEach((element) => {
-          gsap.set(element, { opacity: 0, y: 30 });
+          gsap.set(element, { opacity: 0 });
         });
 
         // 立即更新一次
@@ -924,18 +965,487 @@ export default function HorizontalScroll({
       ctx.revert();
       cleanupFunctions.forEach((cleanup) => cleanup());
     };
-  }, [scrollSpeed, enableParallax, enableFadeElements, enableLineReveal]);
+  }, [
+    scrollSpeed,
+    enableParallax,
+    enableFadeElements,
+    enableLineReveal,
+    isMobile,
+  ]);
+
+  // 移动设备上的竖直滚动动画效果
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const container = containerRef.current;
+    const content = contentRef.current;
+
+    if (!container || !content) return;
+
+    // 存储清理函数
+    const cleanupFunctions: (() => void)[] = [];
+
+    // 延迟初始化，确保其他动画已完成
+    const initTimeout = setTimeout(() => {
+      // 创建 GSAP 上下文
+      const ctx = gsap.context(() => {
+        // 移动设备上只启用淡入效果，不启用视差效果
+        if (enableFadeElements) {
+          const fadeElements = content.querySelectorAll("[data-fade]");
+
+          // 创建一个函数来更新所有淡入元素的状态（基于竖直滚动）
+          const updateFadeElements = () => {
+            const scrollTop =
+              window.pageYOffset || document.documentElement.scrollTop;
+            const windowHeight = window.innerHeight;
+
+            fadeElements.forEach((element, index) => {
+              const elementRect = element.getBoundingClientRect();
+              const elementTop = elementRect.top + scrollTop;
+
+              // 计算元素相对于视口的位置
+              const elementCenter = elementTop + elementRect.height / 2;
+
+              // 定义动画范围：在屏幕下方0-10%区域内播放动画
+              const animationStartY = scrollTop + windowHeight; // 屏幕底部（0%）
+              const animationEndY = scrollTop + windowHeight * 0.9; // 屏幕下方10%位置
+
+              // 计算元素中心在动画范围内的进度
+              let animationProgress = 0;
+
+              if (elementCenter <= animationEndY) {
+                // 元素已经到达或超过屏幕下方10%位置，完全显示
+                animationProgress = 1;
+              } else if (elementCenter >= animationStartY) {
+                // 元素还在屏幕底部下方，不显示
+                animationProgress = 0;
+              } else {
+                // 元素在动画范围内，计算进度
+                const totalDistance = animationStartY - animationEndY;
+                const currentDistance = animationStartY - elementCenter;
+                animationProgress = currentDistance / totalDistance;
+              }
+
+              // 确保进度在 0-1 范围内
+              animationProgress = Math.max(0, Math.min(1, animationProgress));
+
+              // 根据动画进度计算透明度
+              const opacity = animationProgress;
+
+              // 应用动画 - 只改变透明度
+              gsap.to(element, {
+                opacity,
+                duration: 0.3,
+                ease: "power2.out",
+                overwrite: true,
+              });
+            });
+          };
+
+          // 初始状态设置 - 只设置透明度
+          fadeElements.forEach((element) => {
+            gsap.set(element, {
+              opacity: 0,
+              clearProps: "transform,opacity",
+              force3D: true,
+            });
+          });
+
+          // 延迟执行初始更新，确保DOM完全准备好
+          setTimeout(() => {
+            updateFadeElements();
+          }, 100);
+
+          // 监听滚动事件
+          const scrollHandler = () => {
+            requestAnimationFrame(updateFadeElements);
+          };
+
+          window.addEventListener("scroll", scrollHandler, { passive: true });
+          cleanupFunctions.push(() =>
+            window.removeEventListener("scroll", scrollHandler),
+          );
+
+          // 逐字淡入效果
+          const wordFadeElements = content.querySelectorAll("[data-fade-word]");
+
+          wordFadeElements.forEach((element) => {
+            // 将文本内容分割成单词并包装在span中
+            const originalText = element.textContent || "";
+            const words = originalText
+              .split(/(\s+)/)
+              .filter((word) => word.length > 0);
+
+            // 清空原内容并重新构建
+            element.innerHTML = "";
+
+            const wordSpans: HTMLSpanElement[] = [];
+            words.forEach((word) => {
+              const span = document.createElement("span");
+              span.textContent = word;
+              span.style.display = "inline-block";
+
+              // 为空格设置固定宽度，避免缩放影响
+              if (/^\s+$/.test(word)) {
+                span.style.width = word.length * 0.25 + "em";
+                span.style.minWidth = word.length * 0.25 + "em";
+              }
+
+              element.appendChild(span);
+              wordSpans.push(span);
+            });
+
+            // 初始状态：隐藏所有单词
+            wordSpans.forEach((span) => {
+              const isSpace = /^\s+$/.test(span.textContent || "");
+
+              if (isSpace) {
+                gsap.set(span, {
+                  opacity: 0,
+                  transformOrigin: "50% 100%",
+                });
+              } else {
+                gsap.set(span, {
+                  opacity: 0,
+                  y: 10,
+                  scale: 0.8,
+                  transformOrigin: "50% 100%",
+                });
+              }
+            });
+
+            // 创建一个函数来更新逐字淡入状态（基于竖直滚动）
+            const updateWordFade = () => {
+              const scrollTop =
+                window.pageYOffset || document.documentElement.scrollTop;
+              const windowHeight = window.innerHeight;
+              const elementRect = element.getBoundingClientRect();
+              const elementTop = elementRect.top + scrollTop;
+              const elementCenter = elementTop + elementRect.height / 2;
+
+              // 定义触发范围：在屏幕下方0-10%区域内播放动画
+              const animationStartY = scrollTop + windowHeight; // 屏幕底部（0%）
+              const animationEndY = scrollTop + windowHeight * 0.9; // 屏幕下方10%位置
+
+              // 计算动画进度
+              let animationProgress = 0;
+
+              if (elementCenter <= animationEndY) {
+                // 元素已经到达或超过屏幕下方10%位置，完全显示
+                animationProgress = 1;
+              } else if (elementCenter >= animationStartY) {
+                // 元素还在屏幕底部下方，不显示
+                animationProgress = 0;
+              } else {
+                // 元素在动画范围内，计算进度
+                const totalDistance = animationStartY - animationEndY;
+                const currentDistance = animationStartY - elementCenter;
+                animationProgress = currentDistance / totalDistance;
+              }
+
+              // 确保进度在 0-1 范围内
+              animationProgress = Math.max(0, Math.min(1, animationProgress));
+
+              // 根据动画进度计算应该显示多少单词
+              const wordsToShow = Math.floor(
+                animationProgress * wordSpans.length,
+              );
+
+              // 根据滚动进度更新每个单词的显示状态
+              wordSpans.forEach((span, index) => {
+                const isSpace = /^\s+$/.test(span.textContent || "");
+
+                if (index < wordsToShow) {
+                  // 显示这个单词
+                  if (isSpace) {
+                    gsap.to(span, {
+                      opacity: 1,
+                      duration: 0.3,
+                      ease: "power2.out",
+                      overwrite: true,
+                    });
+                  } else {
+                    gsap.to(span, {
+                      opacity: 1,
+                      y: 0,
+                      scale: 1,
+                      duration: 0.3,
+                      ease: "back.out(1.2)",
+                      overwrite: true,
+                    });
+                  }
+                } else {
+                  // 隐藏这个单词
+                  if (isSpace) {
+                    gsap.to(span, {
+                      opacity: 0,
+                      duration: 0.2,
+                      ease: "power2.out",
+                      overwrite: true,
+                    });
+                  } else {
+                    gsap.to(span, {
+                      opacity: 0,
+                      y: 10,
+                      scale: 0.8,
+                      duration: 0.2,
+                      ease: "power2.out",
+                      overwrite: true,
+                    });
+                  }
+                }
+              });
+            };
+
+            // 监听滚动事件
+            const wordScrollHandler = () => {
+              requestAnimationFrame(updateWordFade);
+            };
+
+            window.addEventListener("scroll", wordScrollHandler, {
+              passive: true,
+            });
+            cleanupFunctions.push(() =>
+              window.removeEventListener("scroll", wordScrollHandler),
+            );
+
+            // 立即更新一次
+            updateWordFade();
+          });
+
+          // 逐字符淡入效果
+          const charFadeElements = content.querySelectorAll("[data-fade-char]");
+
+          charFadeElements.forEach((element) => {
+            // 将文本内容分割成字符并包装在span中
+            const originalText = element.textContent || "";
+            const chars = originalText.split("");
+
+            // 清空原内容并重新构建
+            element.innerHTML = "";
+
+            const charSpans: HTMLSpanElement[] = [];
+            chars.forEach((char) => {
+              const span = document.createElement("span");
+              span.textContent = char;
+              span.style.display = "inline-block";
+
+              // 为空格添加特殊处理，保持原有宽度
+              if (char === " ") {
+                span.style.width = "0.25em";
+              }
+
+              element.appendChild(span);
+              charSpans.push(span);
+            });
+
+            // 初始状态：隐藏所有字符
+            charSpans.forEach((span) => {
+              gsap.set(span, {
+                opacity: 0,
+                y: 15,
+                rotationY: 90,
+                transformOrigin: "50% 50%",
+              });
+            });
+
+            // 创建一个函数来更新逐字符淡入状态（基于竖直滚动）
+            const updateCharFade = () => {
+              const scrollTop =
+                window.pageYOffset || document.documentElement.scrollTop;
+              const windowHeight = window.innerHeight;
+              const elementRect = element.getBoundingClientRect();
+              const elementTop = elementRect.top + scrollTop;
+              const elementCenter = elementTop + elementRect.height / 2;
+
+              // 定义触发范围：在屏幕下方0-10%区域内播放动画
+              const animationStartY = scrollTop + windowHeight; // 屏幕底部（0%）
+              const animationEndY = scrollTop + windowHeight * 0.9; // 屏幕下方10%位置
+
+              // 计算动画进度
+              let animationProgress = 0;
+
+              if (elementCenter <= animationEndY) {
+                // 元素已经到达或超过屏幕下方10%位置，完全显示
+                animationProgress = 1;
+              } else if (elementCenter >= animationStartY) {
+                // 元素还在屏幕底部下方，不显示
+                animationProgress = 0;
+              } else {
+                // 元素在动画范围内，计算进度
+                const totalDistance = animationStartY - animationEndY;
+                const currentDistance = animationStartY - elementCenter;
+                animationProgress = currentDistance / totalDistance;
+              }
+
+              // 确保进度在 0-1 范围内
+              animationProgress = Math.max(0, Math.min(1, animationProgress));
+
+              // 根据进度计算应该显示多少字符
+              const charsToShow = Math.floor(
+                animationProgress * charSpans.length,
+              );
+
+              charSpans.forEach((span, index) => {
+                if (index < charsToShow) {
+                  // 显示这个字符
+                  gsap.to(span, {
+                    opacity: 1,
+                    y: 0,
+                    rotationY: 0,
+                    duration: 0.3,
+                    ease: "power2.out",
+                    overwrite: true,
+                  });
+                } else {
+                  // 隐藏这个字符
+                  gsap.to(span, {
+                    opacity: 0,
+                    y: 15,
+                    rotationY: 90,
+                    duration: 0.3,
+                    ease: "power2.out",
+                    overwrite: true,
+                  });
+                }
+              });
+            };
+
+            // 监听滚动事件
+            const charScrollHandler = () => {
+              requestAnimationFrame(updateCharFade);
+            };
+
+            window.addEventListener("scroll", charScrollHandler, {
+              passive: true,
+            });
+            cleanupFunctions.push(() =>
+              window.removeEventListener("scroll", charScrollHandler),
+            );
+
+            // 立即更新一次
+            updateCharFade();
+          });
+        }
+
+        // 如果启用逐行显示效果
+        if (enableLineReveal) {
+          const lineRevealElements =
+            content.querySelectorAll("[data-line-reveal]");
+
+          lineRevealElements.forEach((element) => {
+            // 获取所有直接子元素作为"行"
+            const lines = Array.from(element.children) as HTMLElement[];
+
+            // 初始状态：隐藏所有行
+            lines.forEach((line) => {
+              gsap.set(line, {
+                opacity: 0,
+                y: 20,
+                rotationX: -90,
+                transformOrigin: "50% 100%",
+              });
+            });
+
+            // 创建一个函数来更新逐行显示状态（基于竖直滚动）
+            const updateLineReveal = () => {
+              const scrollTop =
+                window.pageYOffset || document.documentElement.scrollTop;
+              const windowHeight = window.innerHeight;
+              const elementRect = element.getBoundingClientRect();
+              const elementTop = elementRect.top + scrollTop;
+              const elementCenter = elementTop + elementRect.height / 2;
+
+              // 定义触发范围：在屏幕下方0-10%区域内播放动画
+              const animationStartY = scrollTop + windowHeight; // 屏幕底部（0%）
+              const animationEndY = scrollTop + windowHeight * 0.9; // 屏幕下方10%位置
+
+              // 计算动画进度
+              let animationProgress = 0;
+
+              if (elementCenter <= animationEndY) {
+                // 元素已经到达或超过屏幕下方10%位置，完全显示
+                animationProgress = 1;
+              } else if (elementCenter >= animationStartY) {
+                // 元素还在屏幕底部下方，不显示
+                animationProgress = 0;
+              } else {
+                // 元素在动画范围内，计算进度
+                const totalDistance = animationStartY - animationEndY;
+                const currentDistance = animationStartY - elementCenter;
+                animationProgress = currentDistance / totalDistance;
+              }
+
+              // 确保进度在 0-1 范围内
+              animationProgress = Math.max(0, Math.min(1, animationProgress));
+
+              // 根据进度计算应该显示多少行
+              const linesToShow = Math.floor(animationProgress * lines.length);
+
+              lines.forEach((line, index) => {
+                if (index < linesToShow) {
+                  // 显示这一行
+                  gsap.to(line, {
+                    opacity: 1,
+                    y: 0,
+                    rotationX: 0,
+                    duration: 0.4,
+                    ease: "power2.out",
+                    overwrite: true,
+                  });
+                } else {
+                  // 隐藏这一行
+                  gsap.to(line, {
+                    opacity: 0,
+                    y: 20,
+                    rotationX: -90,
+                    duration: 0.3,
+                    ease: "power2.out",
+                    overwrite: true,
+                  });
+                }
+              });
+            };
+
+            // 监听滚动事件
+            const lineScrollHandler = () => {
+              requestAnimationFrame(updateLineReveal);
+            };
+
+            window.addEventListener("scroll", lineScrollHandler, {
+              passive: true,
+            });
+            cleanupFunctions.push(() =>
+              window.removeEventListener("scroll", lineScrollHandler),
+            );
+
+            // 立即更新一次
+            updateLineReveal();
+          });
+        }
+      }, container);
+
+      cleanupFunctions.push(() => ctx.revert());
+    }, 500); // 延迟500ms初始化
+
+    cleanupFunctions.push(() => clearTimeout(initTimeout));
+
+    // 组件卸载时清理
+    return () => {
+      cleanupFunctions.forEach((cleanup) => cleanup());
+    };
+  }, [isMobile, enableFadeElements, enableLineReveal]);
 
   return (
     <div
       ref={containerRef}
-      className={`overflow-hidden horizontal-scroll-container ${className}`}
+      className={`${isMobile ? "overflow-auto" : "overflow-hidden"} horizontal-scroll-container ${className}`}
       role="region"
-      aria-label="横向滚动区域"
+      aria-label="滚动区域"
     >
       <div
         ref={contentRef}
-        className="flex h-full will-change-transform horizontal-scroll-content"
+        className={`${isMobile ? "block" : "flex"} h-full will-change-transform horizontal-scroll-content`}
       >
         {children}
       </div>

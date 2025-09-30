@@ -35,17 +35,17 @@ export default function PostCard({
           </div>
           <div className="text-xl line-clamp-1 py-2 flex items-center">
             <span className="flex items-center gap-1 pr-3">
-              <RiTimeLine size={"1em"} />
-              <span data-fade-word>{date}</span>
+              <RiTimeLine size={"1em"} data-fade />
+              <span data-fade>{date}</span>
             </span>
             <span className="flex items-center gap-1">
-              <RiFolder2Line size={"1em"} />
+              <RiFolder2Line size={"1em"} data-fade />
               <span data-fade-word>{category.join(" / ")}</span>
             </span>
           </div>
           <div className="text-xl">
             <span className="flex items-center gap-1">
-              <RiPriceTagLine size={"1em"} />
+              <RiPriceTagLine size={"1em"} data-fade />
               {tags.map((tag, index) => (
                 <span key={index} data-fade-word>
                   #{tag}
