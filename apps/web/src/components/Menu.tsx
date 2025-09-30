@@ -6,6 +6,7 @@ import Marquee from "react-fast-marquee";
 import * as RemixIcon from "@remixicon/react";
 import type { MenuItem } from "@/lib/server/menuCache";
 import { useConfig } from "@/components/ConfigProvider";
+import { useMobile } from "@/hooks/useMobile";
 
 // 使用 menuCache 中的 MenuItem 类型
 type MenuType = MenuItem;
@@ -58,6 +59,7 @@ function getIconComponent(iconName: string) {
 
 export default function Menu({ setIsMenuOpen, menus }: MenuProps) {
   const { config } = useConfig();
+  const isMobile = useMobile();
 
   const handleMenuClick = (menu: MenuType) => {
     if (menu.link) {
@@ -118,7 +120,9 @@ export default function Menu({ setIsMenuOpen, menus }: MenuProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <div className="grid grid-cols-3 gap-6 h-full">
+          <div
+            className={isMobile ? "space-y-8" : "grid grid-cols-3 gap-6 h-full"}
+          >
             {/* 第一个div - 主要导航 */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-muted-foreground border-b border-border pb-2 text-center">
@@ -286,7 +290,9 @@ export default function Menu({ setIsMenuOpen, menus }: MenuProps) {
                           })()}
                         <span>{menu.name}</span>
                       </div>
-                      <span className="text-muted-foreground">↗</span>
+                      <span className="text-muted-foreground">
+                        <RemixIcon.RiArrowRightUpLongLine size={"1.5em"} />
+                      </span>
                     </Link>
                   </motion.div>
                 ))}
