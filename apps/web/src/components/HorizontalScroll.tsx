@@ -1,7 +1,8 @@
 "use client";
 
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { gsap } from "gsap";
+import { useMobile } from "@/hooks/useMobile";
 
 interface GSAPHorizontalScrollProps {
   children: ReactNode;
@@ -26,43 +27,8 @@ export default function HorizontalScroll({
   const targetXRef = useRef(0);
   const animationRef = useRef<gsap.core.Tween | null>(null);
 
-  // 移动设备检测状态 - 使用函数获取初始状态
-  const getInitialMobileState = () => {
-    if (typeof window === "undefined") return false;
-
-    const isMobileWidth = window.innerWidth <= 768;
-    const isTouchDevice =
-      "ontouchstart" in window || navigator.maxTouchPoints > 0;
-    const isMobileUA =
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent,
-      );
-
-    return isMobileWidth || (isTouchDevice && isMobileUA);
-  };
-
-  const [isMobile, setIsMobile] = useState(getInitialMobileState);
-
-  // 检测移动设备
-  useEffect(() => {
-    const checkMobile = () => {
-      // 结合屏幕宽度和用户代理进行检测
-      const isMobileWidth = window.innerWidth <= 768;
-      const isTouchDevice =
-        "ontouchstart" in window || navigator.maxTouchPoints > 0;
-      const isMobileUA =
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          navigator.userAgent,
-        );
-
-      setIsMobile(isMobileWidth || (isTouchDevice && isMobileUA));
-    };
-
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
+  // 使用 useMobile Hook 检测移动设备
+  const isMobile = useMobile();
 
   // 触摸拖动相关状态
   const touchStateRef = useRef({
@@ -999,7 +965,7 @@ export default function HorizontalScroll({
               window.pageYOffset || document.documentElement.scrollTop;
             const windowHeight = window.innerHeight;
 
-            fadeElements.forEach((element, index) => {
+            fadeElements.forEach((element) => {
               const elementRect = element.getBoundingClientRect();
               const elementTop = elementRect.top + scrollTop;
 
