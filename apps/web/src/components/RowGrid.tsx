@@ -87,6 +87,21 @@ const COL_END_CLASSES: Record<number, string> = {
   13: "col-end-13",
 };
 
+const ORDER_CLASSES: Record<number, string> = {
+  1: "order-1",
+  2: "order-2",
+  3: "order-3",
+  4: "order-4",
+  5: "order-5",
+  6: "order-6",
+  7: "order-7",
+  8: "order-8",
+  9: "order-9",
+  10: "order-10",
+  11: "order-11",
+  12: "order-12",
+};
+
 interface GridItemProps {
   children: ReactNode;
   areas: GridArea[];
@@ -94,6 +109,7 @@ interface GridItemProps {
   className?: string;
   mobileAreas?: GridArea[];
   height?: number;
+  mobileIndex?: number;
 }
 
 interface RowGridProps {
@@ -108,6 +124,7 @@ export function GridItem({
   className = "",
   mobileAreas,
   height,
+  mobileIndex,
 }: GridItemProps) {
   const itemRef = useRef<HTMLDivElement>(null);
   const isMobile = useMobile();
@@ -178,11 +195,16 @@ export function GridItem({
 
   const baseClass = isMobile ? "w-full" : "h-full";
 
+  const orderClass =
+    isMobile && mobileIndex !== undefined
+      ? ORDER_CLASSES[mobileIndex] || ""
+      : "";
+
   return (
     <div
       key={`grid-item-${isMobile ? "mobile" : "desktop"}`}
       ref={itemRef}
-      className={`${className} border-accent border ${gridPositionClass} ${baseClass}`}
+      className={`${className} border-accent border ${gridPositionClass} ${baseClass} ${orderClass}`.trim()}
     >
       {children}
     </div>

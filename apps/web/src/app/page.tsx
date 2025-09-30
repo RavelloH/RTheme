@@ -56,6 +56,8 @@ export default function Home() {
             >
               <HomeSlogan slogan={"Beginning of meditation."} />
             </GridItem>
+          </RowGrid>
+          <RowGrid>
             <GridItem
               areas={[1]}
               width={14}
@@ -100,9 +102,12 @@ export default function Home() {
             >
               <span data-fade-word>Learn more about me</span>
             </GridItem>
+          </RowGrid>
+          <RowGrid>
             <GridItem
               areas={[1, 2, 3, 4, 5, 6]}
               width={2}
+              mobileIndex={4}
               className="overflow-hidden block relative"
             >
               <ParallaxImageCarousel
@@ -126,6 +131,7 @@ export default function Home() {
             <GridItem
               areas={[7, 8, 9]}
               width={4}
+              mobileIndex={0}
               className="flex items-center uppercase bg-primary text-primary-foreground"
             >
               <Marquee speed={40} autoFill={true} className="h-full text-7xl">
@@ -136,6 +142,7 @@ export default function Home() {
               areas={[10, 11, 12]}
               width={4}
               className="flex items-center uppercase"
+              mobileIndex={1}
             >
               <Marquee
                 speed={40}
@@ -151,6 +158,7 @@ export default function Home() {
               areas={[1]}
               width={12}
               height={0.1}
+              mobileIndex={2}
               className="flex items-center px-10 text-2xl bg-primary text-primary-foreground uppercase"
             >
               <span data-fade-word>My main tech stack includes</span>
@@ -158,6 +166,7 @@ export default function Home() {
             <GridItem
               areas={[2, 3, 4, 5, 6]}
               width={12 / 5}
+              mobileIndex={3}
               className="flex items-center px-10 py-15"
             >
               <div className="text-2xl block">
@@ -174,6 +183,7 @@ export default function Home() {
               areas={[7, 8, 9, 10, 11, 12]}
               width={2}
               className="overflow-hidden block relative"
+              mobileIndex={5}
             >
               <ParallaxImageCarousel
                 images={[
@@ -195,6 +205,7 @@ export default function Home() {
             <GridItem
               areas={[1, 2, 3, 4, 5, 6]}
               width={2}
+              mobileIndex={6}
               className="overflow-hidden block relative"
             >
               <ParallaxImageCarousel
@@ -216,6 +227,7 @@ export default function Home() {
             <GridItem
               areas={[7, 8, 9, 10, 11]}
               width={12 / 5}
+              mobileIndex={7}
               className="flex items-center px-10 py-15"
             >
               <div className="text-2xl block" data-line-reveal>
@@ -239,13 +251,15 @@ export default function Home() {
               areas={[12]}
               width={12}
               height={0.1}
+              mobileIndex={8}
               className="flex items-center px-10 text-2xl"
             >
               <span data-fade-word className="uppercase ">
                 View more projects
               </span>
             </GridItem>
-
+          </RowGrid>
+          <RowGrid>
             <GridItem
               areas={[1, 2, 3]}
               width={4}
@@ -327,6 +341,8 @@ export default function Home() {
                 <div className="text-2xl">共 1128 篇文章</div>
               </div>
             </GridItem>
+          </RowGrid>
+          <RowGrid>
             <GridItem
               areas={[1, 2, 3, 4, 5]}
               mobileAreas={[1, 2, 3, 4, 5, 6]}
@@ -404,7 +420,8 @@ export default function Home() {
                 <div data-fade-char>Categories</div>
               </div>
             </GridItem>
-
+          </RowGrid>
+          <RowGrid>
             <GridItem
               areas={[1]}
               width={14}
