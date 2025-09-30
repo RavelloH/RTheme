@@ -3,10 +3,12 @@
 import Link from "./Link";
 import { motion } from "framer-motion";
 import Marquee from "react-fast-marquee";
-import * as RemixIcon from "@remixicon/react";
+import { ArrowUpRight } from "lucide-react";
 import type { MenuItem } from "@/lib/server/menuCache";
 import { useConfig } from "@/components/ConfigProvider";
 import { useMobile } from "@/hooks/useMobile";
+import { useState, useEffect } from "react";
+import type { LucideIcon } from "lucide-react";
 
 // 使用 menuCache 中的 MenuItem 类型
 type MenuType = MenuItem;
@@ -16,45 +18,55 @@ interface MenuProps {
   menus: MenuType[];
 }
 
-// 图标名称到组件的映射函数
-function getIconComponent(iconName: string) {
-  if (!iconName) return null;
+// 动态图标组件 - 使用 Lucide React 真正的按需加载
+function DynamicIcon({ iconName }: { iconName: string }) {
+  const [IconComponent, setIconComponent] = useState<LucideIcon | null>(null);
+  const [error, setError] = useState(false);
 
-  // 改进的图标名称解析 - 保留数字和连字符
-  const cleanIconName = iconName.replace(/[^a-zA-Z0-9-]/g, "");
-  if (!cleanIconName) return null;
-
-  // 构建可能的组件名称
-  const parts = cleanIconName.split("-");
-  if (parts.length === 0) return null;
-
-  // 构建组件名
-  let componentName =
-    "Ri" + parts[0]?.charAt(0).toUpperCase() + parts[0]?.slice(1) || "";
-
-  // 处理剩余部分
-  for (let i = 1; i < parts.length; i++) {
-    const part = parts[i];
-    if (!part) continue;
-    if (part === "fill" && i === parts.length - 1) {
-      // 最后一个部分是 fill，不添加 Fill 后缀，因为 RemixIcon 组件名本身就有 Fill
-      continue;
+  useEffect(() => {
+    if (!iconName) {
+      setError(true);
+      return;
     }
-    componentName += part.charAt(0).toUpperCase() + part.slice(1);
+
+    // Lucide 图标使用 PascalCase 命名
+    // 将 kebab-case 转换为 PascalCase
+    const pascalCaseName = iconName
+      .split("-")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join("");
+
+    // 动态导入图标 - Lucide 支持更好的 tree-shaking
+    import("lucide-react")
+      .then((iconModule) => {
+        const icon = (iconModule as unknown as Record<string, LucideIcon>)[
+          pascalCaseName
+        ];
+        if (icon) {
+          setIconComponent(() => icon);
+        } else {
+          setError(true);
+        }
+      })
+      .catch(() => {
+        setError(true);
+      });
+  }, [iconName]);
+
+  if (error) {
+    return (
+      <span className="text-xs bg-red-100 text-red-600 px-1 rounded">
+        {iconName}
+      </span>
+    );
   }
 
-  // 如果没有 fill 后缀，尝试 Line 版本
-  const finalComponentName = cleanIconName.endsWith("-fill")
-    ? componentName + "Fill"
-    : componentName + "Line";
+  if (!IconComponent) {
+    // 加载中状态 - 显示一个占位符
+    return <span className="inline-block w-5 h-5"></span>;
+  }
 
-  // 尝试访问组件
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const dynamicIcon = (RemixIcon as Record<string, React.ComponentType<any>>)[
-    finalComponentName
-  ];
-
-  return dynamicIcon || null;
+  return <IconComponent className="w-5 h-5" />;
 }
 
 export default function Menu({ setIsMenuOpen, menus }: MenuProps) {
@@ -157,22 +169,7 @@ export default function Menu({ setIsMenuOpen, menus }: MenuProps) {
                       onClick={() => handleMenuClick(menu)}
                       className="w-full text-left p-3 flex items-center space-x-3 relative z-10 bg-transparent"
                     >
-                      {menu.icon &&
-                        (() => {
-                          const IconComponent = getIconComponent(menu.icon);
-                          if (!IconComponent) {
-                            return (
-                              <span className="text-xs bg-red-100 text-red-600 px-1 rounded">
-                                {menu.icon}
-                              </span>
-                            );
-                          }
-                          return (
-                            <span className="text-lg">
-                              <IconComponent />
-                            </span>
-                          );
-                        })()}
+                      {menu.icon && <DynamicIcon iconName={menu.icon} />}
                       <span>{menu.name}</span>
                     </Link>
                   </motion.div>
@@ -214,22 +211,7 @@ export default function Menu({ setIsMenuOpen, menus }: MenuProps) {
                       onClick={() => handleMenuClick(menu)}
                       className="w-full text-left p-3 flex items-center space-x-3 relative z-10 bg-transparent"
                     >
-                      {menu.icon &&
-                        (() => {
-                          const IconComponent = getIconComponent(menu.icon);
-                          if (!IconComponent) {
-                            return (
-                              <span className="text-xs bg-red-100 text-red-600 px-1 rounded">
-                                {menu.icon}
-                              </span>
-                            );
-                          }
-                          return (
-                            <span className="text-lg">
-                              <IconComponent />
-                            </span>
-                          );
-                        })()}
+                      {menu.icon && <DynamicIcon iconName={menu.icon} />}
                       <span>{menu.name}</span>
                     </Link>
                   </motion.div>
@@ -272,26 +254,11 @@ export default function Menu({ setIsMenuOpen, menus }: MenuProps) {
                       className="w-full text-left p-3 flex items-center justify-between relative z-10 bg-transparent"
                     >
                       <div className="flex items-center space-x-3">
-                        {menu.icon &&
-                          (() => {
-                            const IconComponent = getIconComponent(menu.icon);
-                            if (!IconComponent) {
-                              return (
-                                <span className="text-xs bg-red-100 text-red-600 px-1 rounded">
-                                  {menu.icon}
-                                </span>
-                              );
-                            }
-                            return (
-                              <span className="text-lg">
-                                <IconComponent />
-                              </span>
-                            );
-                          })()}
+                        {menu.icon && <DynamicIcon iconName={menu.icon} />}
                         <span>{menu.name}</span>
                       </div>
                       <span className="text-muted-foreground">
-                        <RemixIcon.RiArrowRightUpLongLine size={"1.5em"} />
+                        <ArrowUpRight className="w-6 h-6" />
                       </span>
                     </Link>
                   </motion.div>
