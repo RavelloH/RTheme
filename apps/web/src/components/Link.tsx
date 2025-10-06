@@ -182,15 +182,18 @@ function jumpTransition(
     categoryIndex: number;
   },
 ) {
+  const cleanedPath = newPath.startsWith("http")
+    ? newPath.replace(/([^:])\/+/g, "$1/")
+    : newPath.replace(/\/+/g, "/");
   // 处理特殊链接
-  if (handleSpecialLinks(newPath)) {
+  if (handleSpecialLinks(cleanedPath)) {
     return;
   }
 
   // 规范化路径
-  const normalizedPath = normalizePath(oldPath, newPath);
+  const normalizedPath = normalizePath(oldPath, cleanedPath);
 
-  // 同一路径刷新
+  // 同一路径，静默刷新
   if (oldPath === normalizedPath) {
     router.refresh();
     return;
