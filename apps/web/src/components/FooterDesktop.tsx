@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { gsap } from "gsap";
 import { useMenuStore } from "@/store/menuStore";
 import { useConsoleStore } from "@/store/consoleStore";
+import { useMobile } from "@/hooks/useMobile";
 import { Panel } from "./Panel";
 import { ConsoleButton } from "./ConsoleButton";
 import { MenuItem } from "@/lib/server/menuCache";
@@ -31,6 +32,10 @@ export default function FooterDesktop({ menus }: FooterProps) {
   const previousPathname = useRef<string>(pathname);
   const isAnimating = useRef<boolean>(false);
   const [activePathname, setActivePathname] = useState<string>(pathname);
+  const isMobile = useMobile();
+
+  // 根据设备类型获取高度值
+  const getFooterHeight = () => (isMobile ? "6em" : "5em");
 
   // 监听窗口大小变化
   useEffect(() => {
@@ -55,9 +60,10 @@ export default function FooterDesktop({ menus }: FooterProps) {
 
       // 使用GSAP动画从下方滑入
       if (footerRef.current) {
+        const footerHeight = isMobile ? 112 : 80; // 6em * 16px = 112px, 5em * 16px = 80px
         gsap.fromTo(
           footerRef.current,
-          { y: 78 },
+          { y: footerHeight },
           {
             y: 0,
             duration: 0.8,
@@ -369,16 +375,21 @@ export default function FooterDesktop({ menus }: FooterProps) {
     <>
       <motion.footer
         ref={footerRef}
-        className="w-full h-[78px] text-foreground bg-background border-y border-border flex relative z-50"
-        initial={{ y: 78 }}
+        className="w-full text-foreground bg-background border-y border-border flex relative z-50"
+        style={{ height: getFooterHeight() }}
+        initial={{ y: isMobile ? 112 : 80 }}
         animate={{
           y: shouldAnimate
-            ? 78
+            ? isMobile
+              ? 112
+              : 80
             : isConsoleOpen
-              ? `calc(-60vh + 78px)`
+              ? `calc(-60vh + ${getFooterHeight()})`
               : isLoaded
                 ? 0
-                : 78,
+                : isMobile
+                  ? 112
+                  : 80,
         }}
         transition={{
           type: "spring",
@@ -389,7 +400,10 @@ export default function FooterDesktop({ menus }: FooterProps) {
           restSpeed: 0.01,
         }}
       >
-        <div className="w-[78px] h-full border-r border-border flex items-center justify-center">
+        <div
+          className="h-full border-r border-border flex items-center justify-center"
+          style={{ width: getFooterHeight() }}
+        >
           <button
             className="flex flex-col justify-center items-center w-full h-full relative group"
             aria-label="登录"

@@ -9,6 +9,7 @@ import Menu from "./Menu";
 import { useMenuStore } from "@/store/menuStore";
 import { useConsoleStore } from "@/store/consoleStore";
 import { useBroadcast } from "@/hooks/useBroadcast";
+import { useMobile } from "@/hooks/useMobile";
 import type { MenuItem } from "@/lib/server/menuCache";
 
 interface TransitionMessage {
@@ -120,6 +121,10 @@ export function Header({ menus }: { menus: MenuItem[] }) {
   const [transitionState, setTransitionState] = useState<
     "idle" | "exiting" | "entering"
   >("idle");
+  const isMobile = useMobile();
+
+  // 根据设备类型获取高度值
+  const getHeaderHeight = () => (isMobile ? "6em" : "5em");
 
   // 监听广播消息
   useBroadcast((message: TransitionMessage) => {
@@ -183,9 +188,10 @@ export function Header({ menus }: { menus: MenuItem[] }) {
 
       // 使用GSAP动画从上方滑入
       if (headerRef.current) {
+        const headerHeight = isMobile ? 112 : 80; // 6em * 16px = 112px, 5em * 16px = 80px
         gsap.fromTo(
           headerRef.current,
-          { y: -78 },
+          { y: -headerHeight },
           {
             y: 0,
             duration: 0.8,
@@ -211,10 +217,15 @@ export function Header({ menus }: { menus: MenuItem[] }) {
     <>
       <motion.header
         ref={headerRef}
-        className="w-full h-[78px] text-foreground bg-background border-y border-border flex fixed top-0 left-0 z-50"
-        initial={{ y: -78 }}
+        className={`w-full text-foreground bg-background border-y border-border flex fixed top-0 left-0 z-50`}
+        style={{ height: getHeaderHeight() }}
+        initial={{ y: -(isMobile ? 112 : 80) }}
         animate={{
-          y: isMenuOpen ? `calc(100vh - 78px)` : isLoaded ? 0 : -78,
+          y: isMenuOpen
+            ? `calc(100vh - ${getHeaderHeight()})`
+            : isLoaded
+              ? 0
+              : -(isMobile ? 112 : 80),
         }}
         transition={{
           type: "spring",
@@ -225,7 +236,7 @@ export function Header({ menus }: { menus: MenuItem[] }) {
           restSpeed: 0.01,
         }}
       >
-        <div className="w-[78px] flex items-center">
+        <div className="flex items-center" style={{ width: getHeaderHeight() }}>
           <Image src="/avatar.jpg" alt="Logo" width={78} height={78} />
         </div>
         <div className="flex-1 flex items-center justify-center relative h-full">
@@ -242,7 +253,10 @@ export function Header({ menus }: { menus: MenuItem[] }) {
             <LoadingIndicator />
           </TitleTransition>
         </div>
-        <div className="w-[78px] h-full border-l border-border flex items-center justify-center">
+        <div
+          className="h-full border-l border-border flex items-center justify-center"
+          style={{ width: getHeaderHeight() }}
+        >
           <MenuButton
             isOpen={isMenuOpen}
             onClick={() => {
@@ -259,9 +273,9 @@ export function Header({ menus }: { menus: MenuItem[] }) {
         {isMenuOpen && (
           <motion.div
             className="fixed inset-0 bg-background z-40"
-            initial={{ y: `calc(-100% + 78px)` }}
+            initial={{ y: `calc(-100% + ${getHeaderHeight()})` }}
             animate={{ y: 0 }}
-            exit={{ y: `calc(-100% + 78px)` }}
+            exit={{ y: `calc(-100% + ${getHeaderHeight()})` }}
             transition={{
               type: "spring",
               damping: 35,
@@ -271,7 +285,10 @@ export function Header({ menus }: { menus: MenuItem[] }) {
               restSpeed: 0.01,
             }}
           >
-            <div className="h-full pb-[78px]">
+            <div
+              className="h-full"
+              style={{ paddingBottom: getHeaderHeight() }}
+            >
               <Menu
                 setIsMenuOpen={(isOpen: boolean) =>
                   useMenuStore.getState().setMenuOpen(isOpen)

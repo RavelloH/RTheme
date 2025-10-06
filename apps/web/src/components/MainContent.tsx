@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import { gsap } from "gsap";
+import { useMobile } from "@/hooks/useMobile";
 
 interface MainContentProps {
   children: React.ReactNode;
@@ -10,6 +11,10 @@ interface MainContentProps {
 export function MainContent({ children }: MainContentProps) {
   const mainRef = useRef<HTMLElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const isMobile = useMobile();
+
+  // 根据设备类型获取高度值
+  const getHeaderHeight = () => (isMobile ? "6em" : "5em");
 
   // 监听加载完成事件
   useEffect(() => {
@@ -41,7 +46,8 @@ export function MainContent({ children }: MainContentProps) {
   return (
     <main
       ref={mainRef}
-      className={`flex-1 mt-[78px] ${isLoaded ? "translate-x-0" : "translate-x-full"}`}
+      className={`flex-1 ${isLoaded ? "translate-x-0" : "translate-x-full"}`}
+      style={{ marginTop: getHeaderHeight() }}
     >
       {children}
     </main>

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { gsap } from "gsap";
 import { useEffect, useRef, useState } from "react";
 import { useConsoleStore } from "@/store/consoleStore";
+import { useMobile } from "@/hooks/useMobile";
 
 function ControlCenterIcon({
   isConsoleOpen,
@@ -67,6 +68,10 @@ export function ConsoleButton() {
   const svgContainerRef = useRef<HTMLDivElement>(null);
   const [currentRotation, setCurrentRotation] = useState(0);
   const { isConsoleOpen, toggleConsole } = useConsoleStore();
+  const isMobile = useMobile();
+
+  // 根据设备类型获取高度值
+  const getButtonWidth = () => (isMobile ? "6em" : "5em");
 
   // 鼠标跟随旋转效果
   useEffect(() => {
@@ -117,7 +122,10 @@ export function ConsoleButton() {
   }, [currentRotation]);
 
   return (
-    <div className="w-[78px] h-full border-l border-border flex items-center justify-center">
+    <div
+      className="h-full border-l border-border flex items-center justify-center"
+      style={{ width: getButtonWidth() }}
+    >
       <div id="svg-container" ref={svgContainerRef}>
         <button
           className="flex flex-col justify-center items-center w-full h-full relative group"

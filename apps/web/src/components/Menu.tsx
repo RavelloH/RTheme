@@ -73,6 +73,9 @@ export default function Menu({ setIsMenuOpen, menus }: MenuProps) {
   const { config } = useConfig();
   const isMobile = useMobile();
 
+  // 根据设备类型获取高度值
+  const getMenuHeaderHeight = () => (isMobile ? "6em" : "5em");
+
   const handleMenuClick = (menu: MenuType) => {
     if (menu.link) {
       window.open(menu.link, "_blank", "noopener,noreferrer");
@@ -105,7 +108,8 @@ export default function Menu({ setIsMenuOpen, menus }: MenuProps) {
       }}
     >
       <motion.div
-        className="h-[78px] flex justify-center items-center w-full bg-primary text-primary-foreground"
+        className="flex justify-center items-center w-full bg-primary text-primary-foreground"
+        style={{ height: getMenuHeaderHeight() }}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}

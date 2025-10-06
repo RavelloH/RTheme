@@ -13,7 +13,7 @@ export default function MainLayout({
     <div
       className={
         type === "horizontal" && !isMobile
-          ? "h-[calc(100vh-156px)] overflow-y-hidden"
+          ? "h-[calc(100vh-10em)] overflow-y-hidden"
           : "overflow-y-auto py-8 px-6"
       }
     >
