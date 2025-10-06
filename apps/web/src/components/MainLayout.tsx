@@ -14,7 +14,7 @@ export default function MainLayout({
       className={
         type === "horizontal" && !isMobile
           ? "h-[calc(100vh-156px)] overflow-y-hidden"
-          : "overflow-y-auto"
+          : "overflow-y-auto py-8 px-6"
       }
     >
       {children}

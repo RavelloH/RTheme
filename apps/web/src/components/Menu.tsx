@@ -269,32 +269,34 @@ export default function Menu({ setIsMenuOpen, menus }: MenuProps) {
         </motion.div>
       </motion.div>
 
-      <motion.div
-        className="py-4 flex justify-center items-center w-full text-muted-foreground text-sm border-t border-border"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-      >
-        <span>
-          Copyright ©{" "}
-          {(() => {
-            const startYear = new Date(
-              config<string>("site.birthday"),
-            ).getFullYear();
-            const currentYear = new Date().getFullYear();
-            return startYear === currentYear
-              ? startYear
-              : `${startYear} - ${currentYear}`;
-          })()}{" "}
-          {config<string>("site.author")}.
-        </span>
-        {config<Array<string>>("site.copyright").map((line, idx) => (
-          <span key={idx}>
-            <span className="px-2">/</span>
-            <span dangerouslySetInnerHTML={{ __html: line }}></span>
+      {!isMobile && (
+        <motion.div
+          className="py-4 flex justify-center items-center w-full text-muted-foreground text-sm border-t border-border"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+        >
+          <span>
+            Copyright ©{" "}
+            {(() => {
+              const startYear = new Date(
+                config<string>("site.birthday"),
+              ).getFullYear();
+              const currentYear = new Date().getFullYear();
+              return startYear === currentYear
+                ? startYear
+                : `${startYear} - ${currentYear}`;
+            })()}{" "}
+            {config<string>("site.author")}.
           </span>
-        ))}
-      </motion.div>
+          {config<Array<string>>("site.copyright").map((line, idx) => (
+            <span key={idx}>
+              <span className="px-2">/</span>
+              <span dangerouslySetInnerHTML={{ __html: line }}></span>
+            </span>
+          ))}
+        </motion.div>
+      )}
     </motion.div>
   );
 }
