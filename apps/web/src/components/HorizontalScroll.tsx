@@ -1403,15 +1403,10 @@ export default function HorizontalScroll({
   }, [isMobile, enableFadeElements, enableLineReveal]);
 
   return (
-    <div
-      ref={containerRef}
-      className={`${isMobile ? "overflow-auto" : "overflow-hidden"} horizontal-scroll-container ${className}`}
-      role="region"
-      aria-label="滚动区域"
-    >
+    <div ref={containerRef} className={"overflow-hidden " + className}>
       <div
         ref={contentRef}
-        className={`${isMobile ? "block" : "flex"} h-full will-change-transform horizontal-scroll-content`}
+        className={`${isMobile ? "block" : "flex"} h-full will-change-transform`}
       >
         {children}
       </div>
