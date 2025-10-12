@@ -34,9 +34,6 @@ export default function FooterDesktop({ menus }: FooterProps) {
   const [activePathname, setActivePathname] = useState<string>(pathname);
   const isMobile = useMobile();
 
-  // 根据设备类型获取高度值
-  const getFooterHeight = () => (isMobile ? "6em" : "5em");
-
   // 监听窗口大小变化
   useEffect(() => {
     const handleResize = () => {
@@ -55,8 +52,20 @@ export default function FooterDesktop({ menus }: FooterProps) {
 
   // 监听加载完成事件
   useEffect(() => {
+    // 检查页面是否已经加载完成（例如从移动端切换到桌面端时）
+    const checkInitialLoadState = () => {
+      const isAlreadyLoaded = document.body.hasAttribute(
+        "data-loading-complete",
+      );
+      if (isAlreadyLoaded) {
+        setIsLoaded(true);
+      }
+    };
+
     const handleLoadingComplete = () => {
       setIsLoaded(true);
+      // 标记页面已加载完成
+      document.body.setAttribute("data-loading-complete", "true");
 
       // 使用GSAP动画从下方滑入
       if (footerRef.current) {
@@ -74,12 +83,15 @@ export default function FooterDesktop({ menus }: FooterProps) {
       }
     };
 
+    // 检查初始加载状态
+    checkInitialLoadState();
+
     window.addEventListener("loadingComplete", handleLoadingComplete);
 
     return () => {
       window.removeEventListener("loadingComplete", handleLoadingComplete);
     };
-  }, []);
+  }, [isMobile]);
 
   useEffect(() => {
     if (isMenuOpen) {
@@ -375,8 +387,7 @@ export default function FooterDesktop({ menus }: FooterProps) {
     <>
       <motion.footer
         ref={footerRef}
-        className="w-full text-foreground bg-background border-y border-border flex relative z-50"
-        style={{ height: getFooterHeight() }}
+        className="w-full text-foreground bg-background border-y border-border flex relative z-50 h-[5em]"
         initial={{ y: isMobile ? 112 : 80 }}
         animate={{
           y: shouldAnimate
@@ -384,7 +395,7 @@ export default function FooterDesktop({ menus }: FooterProps) {
               ? 112
               : 80
             : isConsoleOpen
-              ? `calc(-60vh + ${getFooterHeight()})`
+              ? `calc(-60vh + 5em)`
               : isLoaded
                 ? 0
                 : isMobile
@@ -400,10 +411,7 @@ export default function FooterDesktop({ menus }: FooterProps) {
           restSpeed: 0.01,
         }}
       >
-        <div
-          className="h-full border-r border-border flex items-center justify-center"
-          style={{ width: getFooterHeight() }}
-        >
+        <div className="h-full border-r border-border flex items-center justify-center w-[5em]">
           <button
             className="flex flex-col justify-center items-center w-full h-full relative group"
             aria-label="登录"
