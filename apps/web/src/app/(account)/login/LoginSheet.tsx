@@ -124,6 +124,13 @@ export default function LoginSheet() {
     if (responseData.success) {
       setButtonLoadingText("登录成功，正在跳转...");
 
+      // 保存用户信息
+      const userInfo = {
+        lastRefresh: new Date(),
+        ...responseData.data?.userInfo,
+      };
+      localStorage.setItem("user_info", JSON.stringify(userInfo));
+
       // 获取redirect参数
       const redirectParam = searchParams.get("redirect");
       const targetPath = redirectParam ? redirectParam : "/profile";

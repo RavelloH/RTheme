@@ -190,6 +190,12 @@ export async function login(
       data: {
         access_token: token_transport === "body" ? accessToken : undefined,
         refresh_token: token_transport === "body" ? refreshToken : undefined,
+        userInfo: {
+          uid: user.uid,
+          username: user.username,
+          nickname: user.nickname,
+          exp: expiredAt,
+        },
       },
       ...(token_transport === "cookie" && {
         customHeaders: new Headers([
@@ -428,6 +434,11 @@ export async function refresh(
       message: "刷新成功",
       data: {
         access_token: token_transport === "body" ? accessToken : undefined,
+        userInfo: {
+          uid: dbToken.user.uid,
+          username: dbToken.user.username,
+          nickname: dbToken.user.nickname,
+        },
       },
       ...(token_transport === "cookie" && {
         customHeaders: {

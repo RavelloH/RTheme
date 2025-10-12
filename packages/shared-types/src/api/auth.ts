@@ -142,7 +142,7 @@ export const ServerErrorResponseSchema = createErrorResponseSchema(
 export const EmailVerifySuccessResponseSchema = z.object({
   success: z.literal(true),
   message: z.string(),
-  timestamp: z.string().datetime(),
+  timestamp: z.iso.datetime(),
   requestId: z.string(),
   data: z.null(),
 });
@@ -151,7 +151,7 @@ export const EmailVerifySuccessResponseSchema = z.object({
 export const ResendEmailVerificationSuccessResponseSchema = z.object({
   success: z.literal(true),
   message: z.string(),
-  timestamp: z.string().datetime(),
+  timestamp: z.iso.datetime(),
   requestId: z.string(),
   data: z.null(),
 });
@@ -191,7 +191,7 @@ export const UserNotFoundErrorResponseSchema = createErrorResponseSchema(
 export const ChangePasswordSuccessResponseSchema = z.object({
   success: z.literal(true),
   message: z.string(),
-  timestamp: z.string().datetime(),
+  timestamp: z.iso.datetime(),
   requestId: z.string(),
   data: z.null(),
 });
@@ -222,7 +222,7 @@ export const PasswordsIdenticalErrorResponseSchema = createErrorResponseSchema(
 export const PasswordResetRequestSuccessResponseSchema = z.object({
   success: z.literal(true),
   message: z.string(),
-  timestamp: z.string().datetime(),
+  timestamp: z.iso.datetime(),
   requestId: z.string(),
   data: z.null(),
 });
@@ -230,7 +230,7 @@ export const PasswordResetRequestSuccessResponseSchema = z.object({
 export const ResetPasswordSuccessResponseSchema = z.object({
   success: z.literal(true),
   message: z.string(),
-  timestamp: z.string().datetime(),
+  timestamp: z.iso.datetime(),
   requestId: z.string(),
   data: z.null(),
 });
@@ -254,11 +254,17 @@ export const ExpiredResetCodeErrorResponseSchema = createErrorResponseSchema(
 export const LoginSuccessResponseSchema = z.object({
   success: z.literal(true),
   message: z.string(),
-  timestamp: z.string().datetime(),
+  timestamp: z.iso.datetime(),
   requestId: z.string(),
   data: z.object({
     access_token: z.string().optional(),
     refresh_token: z.string().optional(),
+    userInfo: z.object({
+      uid: z.number(),
+      username: z.string(),
+      nickname: z.string(),
+      exp: z.iso.datetime().optional(),
+    }),
   }),
 });
 

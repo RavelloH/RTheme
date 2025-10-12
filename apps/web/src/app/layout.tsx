@@ -11,6 +11,7 @@ import ResponsiveFontScale from "@/components/ResponsiveFontScale";
 import { getActiveMenus } from "@/lib/server/menuCache";
 import { getAllConfigs } from "@/lib/server/configCache";
 import PageTransition from "@/components/PageTransition";
+import TokenManager from "../components/TokenManager";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -56,6 +57,7 @@ export default async function RootLayout({
           </ConfigProvider>
         </ThemeProvider>
       </body>
+      <TokenManager />
     </html>
   );
 }
