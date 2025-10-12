@@ -2,11 +2,11 @@
 
 import { Input } from "@/ui/Input";
 import { RiLockPasswordLine, RiMailLine, RiUser3Line } from "@remixicon/react";
-import { CaptchaButton } from "../../components/CaptchaButton";
+import { CaptchaButton } from "@/components/CaptchaButton";
 import { useState } from "react";
 import { useBroadcast } from "@/hooks/useBroadcast";
 import { register as registerAction } from "@/actions/auth";
-import { useConfig } from "../../components/ConfigProvider";
+import { useConfig } from "@/components/ConfigProvider";
 import { useRouter } from "next/navigation";
 import Link from "@/components/Link";
 

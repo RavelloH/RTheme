@@ -2,7 +2,7 @@
 
 import { Input } from "@/ui/Input";
 import { RiLockPasswordLine, RiUser3Line } from "@remixicon/react";
-import { CaptchaButton } from "../../components/CaptchaButton";
+import { CaptchaButton } from "@/components/CaptchaButton";
 import { useState } from "react";
 import { useBroadcast } from "@/hooks/useBroadcast";
 import { login as loginAction } from "@/actions/auth";

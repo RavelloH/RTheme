@@ -2,7 +2,7 @@ import { generateMetadata } from "@/lib/shared/seo";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import RowGrid, { GridItem } from "@/components/RowGrid";
 import MainLayout from "@/components/MainLayout";
-import RegisterSheet from "@/app/register/RegisterSheet";
+import RegisterSheet from "./RegisterSheet";
 import Marquee from "react-fast-marquee";
 import RegisterIntro from "./RegisterIntro";
 
