@@ -298,12 +298,18 @@ export default function FooterDesktop({ menus }: FooterProps) {
       const activeIndex = mainMenus.findIndex((menu) => {
         const targetPath =
           menu.link ||
-          (menu.slug ? "/" + menu.slug : null) ||
+          (menu.slug ? (menu.slug === "/" ? "/" : "/" + menu.slug) : null) ||
           (menu.page ? "/" + menu.page.slug : "#");
-        return (
+
+        // 对首页特殊处理，只有完全匹配才算激活
+        if (targetPath === "/") {
+          const isMatch = pathname === "/";
+          return isMatch;
+        }
+        const isMatch =
           pathname === targetPath ||
-          (targetPath !== "#" && pathname.startsWith(targetPath + "/"))
-        );
+          (targetPath !== "#" && pathname.startsWith(targetPath + "/"));
+        return isMatch;
       });
 
       if (activeIndex !== -1) {
@@ -333,8 +339,12 @@ export default function FooterDesktop({ menus }: FooterProps) {
     const oldActiveIndex = mainMenus.findIndex((menu) => {
       const targetPath =
         menu.link ||
-        (menu.slug ? "/" + menu.slug : null) ||
+        (menu.slug ? (menu.slug === "/" ? "/" : "/" + menu.slug) : null) ||
         (menu.page ? "/" + menu.page.slug : "#");
+      // 对首页特殊处理，只有完全匹配才算激活
+      if (targetPath === "/") {
+        return activePathname === "/";
+      }
       return (
         activePathname === targetPath ||
         (targetPath !== "#" && activePathname.startsWith(targetPath + "/"))
@@ -343,8 +353,12 @@ export default function FooterDesktop({ menus }: FooterProps) {
     const newActiveIndex = mainMenus.findIndex((menu) => {
       const targetPath =
         menu.link ||
-        (menu.slug ? "/" + menu.slug : null) ||
+        (menu.slug ? (menu.slug === "/" ? "/" : "/" + menu.slug) : null) ||
         (menu.page ? "/" + menu.page.slug : "#");
+      // 对首页特殊处理，只有完全匹配才算激活
+      if (targetPath === "/") {
+        return pathname === "/";
+      }
       return (
         pathname === targetPath ||
         (targetPath !== "#" && pathname.startsWith(targetPath + "/"))
@@ -365,8 +379,12 @@ export default function FooterDesktop({ menus }: FooterProps) {
     const activeIndex = mainMenus.findIndex((menu) => {
       const targetPath =
         menu.link ||
-        (menu.slug ? "/" + menu.slug : null) ||
+        (menu.slug ? (menu.slug === "/" ? "/" : "/" + menu.slug) : null) ||
         (menu.page ? "/" + menu.page.slug : "#");
+      // 对首页特殊处理，只有完全匹配才算激活
+      if (targetPath === "/") {
+        return activePathname === "/";
+      }
       return (
         activePathname === targetPath ||
         (targetPath !== "#" && activePathname.startsWith(targetPath + "/"))
@@ -449,12 +467,20 @@ export default function FooterDesktop({ menus }: FooterProps) {
               if (menu.category !== "MAIN") return null;
               const targetPath =
                 menu.link ||
-                (menu.slug ? "/" + menu.slug : null) ||
+                (menu.slug
+                  ? menu.slug === "/"
+                    ? "/"
+                    : "/" + menu.slug
+                  : null) ||
                 (menu.page ? "/" + menu.page.slug : "#");
+              // 对首页特殊处理，只有完全匹配才算激活
               const isActive =
-                activePathname === targetPath ||
-                (targetPath !== "#" &&
-                  activePathname.startsWith(targetPath + "/"));
+                targetPath === "/"
+                  ? activePathname === "/"
+                  : activePathname === targetPath ||
+                    (targetPath !== "#" &&
+                      activePathname.startsWith(targetPath + "/"));
+
               return (
                 <span
                   key={index}
@@ -471,7 +497,11 @@ export default function FooterDesktop({ menus }: FooterProps) {
                     key={menu.id}
                     href={
                       menu.link ||
-                      (menu.slug ? "/" + menu.slug : null) ||
+                      (menu.slug
+                        ? menu.slug === "/"
+                          ? "/"
+                          : "/" + menu.slug
+                        : null) ||
                       (menu.page ? "/" + menu.page.slug : "#")
                     }
                     className="relative inline-block text-muted-foreground transition-colors duration-300"
