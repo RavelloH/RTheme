@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useId } from "react";
 import { motion } from "framer-motion";
 import { AutoTransition } from "./AutoTransition";
 
@@ -39,8 +39,7 @@ export function Input({
   ...props
 }: InputProps) {
   const inputId =
-    id ||
-    `input-${label.replace(/\s+/g, "-").toLowerCase()}-${Math.random().toString(36).slice(2, 11)}`;
+    id || `input-${label.replace(/\s+/g, "-").toLowerCase()}-${useId()}`;
   const [isFocused, setIsFocused] = useState(false);
   const [hasValue, setHasValue] = useState(!!defaultValue || !!value);
 

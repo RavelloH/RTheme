@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useId } from "react";
 import { motion } from "framer-motion";
 import { AutoTransition } from "./AutoTransition";
 
@@ -48,8 +48,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   const buttonId =
-    id ||
-    `button-${label.replace(/\s+/g, "-").toLowerCase()}-${Math.random().toString(36).slice(2, 11)}`;
+    id || `button-${label.replace(/\s+/g, "-").toLowerCase()}-${useId()}`;
 
   const getVariantStyles = () => {
     switch (variant) {
