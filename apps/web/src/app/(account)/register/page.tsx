@@ -64,9 +64,9 @@ export default function TestPage() {
               height={0.4}
               className="flex items-center px-10 text-2xl"
             >
-              <p>
+              <div>
                 <RegisterIntro />
-              </p>
+              </div>
             </GridItem>
             <GridItem
               areas={[9, 10, 11, 12]}
@@ -74,7 +74,7 @@ export default function TestPage() {
               height={0.4}
               className="flex items-center px-10 text-2xl"
             >
-              <p>
+              <div>
                 <div>
                   我们使用现代加密算法 Argon2id
                   以单向加盐的方式不可逆的处理密码，
@@ -83,7 +83,7 @@ export default function TestPage() {
                   并对输入的密码进行乱序重组预处理，以保证你的账号安全。
                 </div>
                 <div>这意味着任何人都无法获取你的密码明文。</div>
-              </p>
+              </div>
             </GridItem>
           </RowGrid>
         </HorizontalScroll>
