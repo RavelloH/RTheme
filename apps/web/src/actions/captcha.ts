@@ -2,7 +2,9 @@
 
 import limitControl from "@/lib/server/rateLimit";
 import ResponseBuilder from "@/lib/server/response";
+import { validateData } from "@/lib/server/validator";
 import Cap from "@cap.js/server";
+import { CaptchaVerifyRequestSchema } from "@repo/shared-types/api/captcha";
 import Redis from "ioredis";
 import { headers } from "next/headers";
 
@@ -272,6 +274,15 @@ export async function verifyChallenge(
   if (!(await limitControl(await headers()))) {
     return response.tooManyRequests();
   }
+
+  const validationError = validateData(
+    {
+      token,
+      solutions,
+    },
+    CaptchaVerifyRequestSchema,
+  );
+  if (validationError) return response.badRequest(validationError);
 
   try {
     const data = await cap.redeemChallenge({ token, solutions });
