@@ -6,7 +6,10 @@ import { default as NextLink } from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import React from "react";
-import type { MenuItem } from "@/lib/server/menuCache";
+
+type BroadcastFn = ReturnType<typeof useBroadcastSender<object>>["broadcast"];
+type GetLeftRightMenusFn = ReturnType<typeof useMenu>["getLeftRightMenus"];
+type RouterInstance = ReturnType<typeof useRouter>;
 
 interface CustomLinkProps extends React.ComponentProps<typeof NextLink> {
   children: React.ReactNode;
@@ -23,9 +26,25 @@ function handleSpecialLinks(newPath: string): boolean {
     return true;
   }
 
+  // 检查是否是外部链接（非当前域名）
   if (newPath.startsWith("http")) {
-    window.open(newPath, "_blank");
-    return true;
+    try {
+      const url = new URL(newPath);
+      const currentHost = window.location.host;
+
+      // 如果是外部链接，在新标签页打开
+      if (url.host !== currentHost) {
+        window.open(newPath, "_blank");
+        return true;
+      }
+
+      // 如果是当前域名的完整URL，返回false让后续逻辑处理
+      return false;
+    } catch {
+      // URL解析失败，按外部链接处理
+      window.open(newPath, "_blank");
+      return true;
+    }
   }
 
   if (newPath.startsWith("mailto:")) {
@@ -88,8 +107,8 @@ function normalizePath(oldPath: string, newPath: string): string {
 // 执行导航过渡和跳转
 function executeNavigationWithTransition(
   newPath: string,
-  router: ReturnType<typeof useRouter>,
-  broadcast: ReturnType<typeof useBroadcastSender<object>>["broadcast"],
+  router: RouterInstance,
+  broadcast: BroadcastFn,
   direction?: string,
 ) {
   // 如果有方向，广播过渡消息
@@ -113,16 +132,9 @@ function executeNavigationWithTransition(
 function handleHorizontalNavigation(
   oldPath: string,
   newPath: string,
-  router: ReturnType<typeof useRouter>,
-  broadcast: ReturnType<typeof useBroadcastSender<object>>["broadcast"],
-  getLeftRightMenus: (currentPath: string) => {
-    leftMenus: MenuItem[];
-    rightMenus: MenuItem[];
-    hasHomeOnLeft: boolean;
-    isMainMenu: boolean;
-    menuCategory: string;
-    categoryIndex: number;
-  },
+  router: RouterInstance,
+  broadcast: BroadcastFn,
+  getLeftRightMenus: GetLeftRightMenusFn,
 ) {
   const oldMenuInfo = getLeftRightMenus(oldPath);
   const newMenuInfo = getLeftRightMenus(newPath);
@@ -168,23 +180,39 @@ function handleHorizontalNavigation(
   executeNavigationWithTransition(newPath, router, broadcast, "unknown");
 }
 
-function jumpTransition(
+export function jumpTransition(
   oldPath: string,
   newPath: string,
-  router: ReturnType<typeof useRouter>,
-  broadcast: ReturnType<typeof useBroadcastSender<object>>["broadcast"],
-  getLeftRightMenus: (currentPath: string) => {
-    leftMenus: MenuItem[];
-    rightMenus: MenuItem[];
-    hasHomeOnLeft: boolean;
-    isMainMenu: boolean;
-    menuCategory: string;
-    categoryIndex: number;
-  },
+  router: RouterInstance,
+  broadcast: BroadcastFn,
+  getLeftRightMenus: GetLeftRightMenusFn,
 ) {
-  const cleanedPath = newPath.startsWith("http")
-    ? newPath.replace(/([^:])\/+/g, "$1/")
-    : newPath.replace(/\/+/g, "/");
+  let cleanedPath = newPath;
+
+  // 如果是完整URL且是当前域名，提取路径部分
+  if (newPath.startsWith("http")) {
+    try {
+      const url = new URL(newPath);
+      const currentHost = window.location.host;
+
+      if (url.host === currentHost) {
+        // 提取路径、search和hash部分
+        cleanedPath = url.pathname + url.search + url.hash;
+      } else {
+        // 保持原样，让 handleSpecialLinks 处理
+        cleanedPath = newPath;
+      }
+    } catch {
+      // URL解析失败，保持原样
+      cleanedPath = newPath;
+    }
+  }
+
+  // 清理多余的斜杠
+  cleanedPath = cleanedPath.startsWith("http")
+    ? cleanedPath.replace(/([^:])\/+/g, "$1/")
+    : cleanedPath.replace(/\/+/g, "/");
+
   // 处理特殊链接
   if (handleSpecialLinks(cleanedPath)) {
     return;
@@ -223,20 +251,30 @@ function jumpTransition(
   }
 }
 
-export default function Link({ children, presets, ...props }: CustomLinkProps) {
+/**
+ * Hook to get a navigation function with transition effects
+ * @returns A function that takes only the target path and handles navigation with transitions
+ * @example
+ * const navigate = useNavigateWithTransition();
+ * navigate('/about'); // Navigate to /about with transition
+ */
+export function useNavigateWithTransition() {
   const router = useRouter();
   const pathname = usePathname();
   const { broadcast } = useBroadcastSender<object>();
   const { getLeftRightMenus } = useMenu();
 
+  return (targetPath: string) => {
+    jumpTransition(pathname, targetPath, router, broadcast, getLeftRightMenus);
+  };
+}
+
+export default function Link({ children, presets, ...props }: CustomLinkProps) {
+  const navigate = useNavigateWithTransition();
+
   const handleNavigation = (e: { preventDefault: () => void }) => {
-    jumpTransition(
-      pathname,
-      props.href.toString(),
-      router,
-      broadcast,
-      getLeftRightMenus,
-    );
+    const targetPath = props.href.toString();
+    navigate(targetPath);
     e.preventDefault();
   };
 
