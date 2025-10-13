@@ -27,8 +27,22 @@ interface ValidationResult<T> {
 interface ValidateDataOptions {
   /** 自定义错误消息 */
   errorMessage?: string;
-  /** 是否返回响应对象，默认为 true */
-  returnResponse?: boolean;
+  /** 自定义错误码 */
+  errorCode?: string;
+}
+
+/**
+ * 验证失败时返回的结构
+ */
+export interface ValidationErrorResponse {
+  message: string;
+  error: {
+    code: string;
+    message: string;
+    details?: {
+      errors: ValidationErrorDetail[];
+    };
+  };
 }
 
 /**
@@ -190,19 +204,10 @@ export async function validateJSON<T>(
 export function validateData<T>(
   data: unknown,
   schema: z.ZodSchema<T>,
-  options: ValidateDataOptions & { returnResponse: false },
-): ValidationResult<T>;
-export function validateData<T>(
-  data: unknown,
-  schema: z.ZodSchema<T>,
-  options?: ValidateDataOptions,
-): NextResponse | ValidationResult<T>;
-export function validateData<T>(
-  data: unknown,
-  schema: z.ZodSchema<T>,
   options: ValidateDataOptions = {},
-): NextResponse | ValidationResult<T> {
-  const { errorMessage = "数据验证失败", returnResponse = true } = options;
+): ValidationErrorResponse | undefined {
+  const { errorMessage = "数据验证失败", errorCode = "VALIDATION_ERROR" } =
+    options;
 
   try {
     const result = schema.safeParse(data);
@@ -215,62 +220,28 @@ export function validateData<T>(
         }),
       );
 
-      const validationResult: ValidationResult<T> = {
-        success: false,
-        errors,
+      return {
+        message: errorMessage,
+        error: {
+          code: errorCode,
+          message: "数据格式不正确",
+          details: { errors },
+        },
       };
-
-      // 如果需要返回响应对象
-      if (returnResponse) {
-        const responseBuilder = new ResponseBuilder("serverless");
-        const errorResponse = responseBuilder.badRequest({
-          message: errorMessage,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "数据格式不正确",
-            details: { errors },
-          },
-        });
-        return errorResponse as NextResponse;
-      }
-
-      return validationResult;
     }
 
     // 验证成功
-    const validationResult: ValidationResult<T> = {
-      success: true,
-      data: result.data,
-    };
-
-    return validationResult;
+    return undefined;
   } catch (error) {
     console.error("Data validation error:", error);
 
-    const validationResult: ValidationResult<T> = {
-      success: false,
-      errors: [
-        {
-          field: "unknown",
-          message: "数据验证过程中发生错误",
-        },
-      ],
+    return {
+      message: "验证失败，请稍后重试",
+      error: {
+        code: "VALIDATION_INTERNAL_ERROR",
+        message: "验证过程中发生内部错误",
+      },
     };
-
-    // 如果需要返回响应对象
-    if (returnResponse) {
-      const responseBuilder = new ResponseBuilder("serverless");
-      const errorResponse = responseBuilder.serverError({
-        message: "验证失败，请稍后重试",
-        error: {
-          code: "VALIDATION_INTERNAL_ERROR",
-          message: "验证过程中发生内部错误",
-        },
-      });
-      return errorResponse as NextResponse;
-    }
-
-    return validationResult;
   }
 }
 

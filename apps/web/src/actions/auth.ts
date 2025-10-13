@@ -48,7 +48,7 @@ export async function login(
   }
 
   // 验证输入参数
-  const validationResult = validateData(
+  const validationError = validateData(
     {
       username,
       password,
@@ -58,7 +58,7 @@ export async function login(
     LoginUserSchema,
   );
 
-  if (validationResult instanceof Response) return validationResult;
+  if (validationError) return response.badRequest(validationError);
 
   if (!(await verifyToken(captcha_token)).success)
     return response.unauthorized({
@@ -251,7 +251,7 @@ export async function register(
   }
 
   // 验证输入参数
-  const validationResult = validateData(
+  const validationError = validateData(
     {
       username,
       email,
@@ -261,7 +261,7 @@ export async function register(
     },
     RegisterUserSchema,
   );
-  if (validationResult instanceof Response) return validationResult;
+  if (validationError) return response.badRequest(validationError);
 
   if (!(await verifyToken(captcha_token)).success)
     return response.unauthorized({
@@ -352,14 +352,14 @@ export async function refresh(
   }
 
   // 验证输入参数
-  const validationResult = validateData(
+  const validationError = validateData(
     {
       token_transport,
       refresh_token,
     },
     RefreshTokenSchema,
   );
-  if (validationResult instanceof Response) return validationResult;
+  if (validationError) return response.badRequest(validationError);
 
   try {
     const cookieStore = await cookies();
@@ -476,7 +476,7 @@ export async function verifyEmail(
   }
 
   // 验证输入参数
-  const validationResult = validateData(
+  const validationError = validateData(
     {
       code,
       captcha_token,
@@ -485,7 +485,7 @@ export async function verifyEmail(
     EmailVerificationSchema,
   );
 
-  if (validationResult instanceof Response) return validationResult;
+  if (validationError) return response.badRequest(validationError);
 
   if (!(await verifyToken(captcha_token)).success)
     return response.unauthorized({
@@ -574,7 +574,7 @@ export async function changePassword(
   }
 
   // 验证输入参数
-  const validationResult = validateData(
+  const validationError = validateData(
     {
       old_password,
       new_password,
@@ -582,7 +582,7 @@ export async function changePassword(
     },
     ChangePasswordSchema,
   );
-  if (validationResult instanceof Response) return validationResult;
+  if (validationError) return response.badRequest(validationError);
 
   try {
     // 新旧密码不能相同
@@ -686,14 +686,14 @@ export async function requestPasswordReset(
     return response.tooManyRequests();
   }
   // 验证输入参数
-  const validationResult = validateData(
+  const validationError = validateData(
     {
       email,
       captcha_token,
     },
     RequestPasswordResetSchema,
   );
-  if (validationResult instanceof Response) return validationResult;
+  if (validationError) return response.badRequest(validationError);
 
   if (!(await verifyToken(captcha_token)).success)
     return response.unauthorized({
@@ -768,7 +768,7 @@ export async function resetPassword(
   }
 
   // 验证输入参数
-  const validationResult = validateData(
+  const validationError = validateData(
     {
       code,
       new_password,
@@ -776,7 +776,7 @@ export async function resetPassword(
     },
     ResetPasswordSchema,
   );
-  if (validationResult instanceof Response) return validationResult;
+  if (validationError) return response.badRequest(validationError);
 
   if (!(await verifyToken(captcha_token)).success)
     return response.unauthorized({
@@ -862,14 +862,14 @@ export async function resendEmailVerification(
   }
 
   // 验证输入参数
-  const validationResult = validateData(
+  const validationError = validateData(
     {
       email,
       captcha_token,
     },
     ResendEmailVerificationSchema,
   );
-  if (validationResult instanceof Response) return validationResult;
+  if (validationError) return response.badRequest(validationError);
 
   if (!(await verifyToken(captcha_token)).success)
     return response.unauthorized({
