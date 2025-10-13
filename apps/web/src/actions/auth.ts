@@ -325,7 +325,7 @@ export async function register(
       data: {
         username,
         email,
-        nickname,
+        nickname: nickname || username,
         password: hashedPassword,
         emailVerifyCode,
       },
