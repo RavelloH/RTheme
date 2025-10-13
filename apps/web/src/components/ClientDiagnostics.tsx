@@ -600,7 +600,7 @@ export default function ClientDiagnostics({
   }
 
   return (
-    <div className="text-xs space-y-0 opacity-10 font-mono break-all">
+    <div className="text-xs space-y-0 opacity-20 font-mono break-all">
       {logs.map((log, index) => (
         <div key={index}>{log}</div>
       ))}

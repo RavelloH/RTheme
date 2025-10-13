@@ -1,17 +1,16 @@
-import { generateMetadata } from "@/lib/shared/seo";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import RowGrid, { GridItem } from "@/components/RowGrid";
-import MainLayout from "@/components/MainLayout";
-import ClientDiagnostics from "../components/ClientDiagnostics";
 import BackLink from "@/components/BackLink";
+import ClientDiagnostics from "@/components/ClientDiagnostics";
+import HorizontalScroll from "@/components/HorizontalScroll";
+import MainLayout from "@/components/MainLayout";
+import RowGrid, { GridItem } from "@/components/RowGrid";
 
-export const metadata = await generateMetadata({
-  title: "404 Not Found",
-  description:
-    "在服务器中未找到此页面。这可能代表此页面已被删除、移动，或从未存在过。",
-});
-
-export default function Custom404() {
+export default function ForbiddenPage({
+  role,
+  allowRoles,
+}: {
+  role: string;
+  allowRoles?: string[];
+}) {
   return (
     <>
       <MainLayout type="horizontal">
@@ -43,24 +42,22 @@ export default function Custom404() {
                 ERROR...
               </div>
               <div className="text-6xl mb-4" data-fade-word>
-                HTTP 404 Not Found
+                HTTP 403 Forbidden
               </div>
               <div className="text-2xl mb-8" data-fade-word>
-                请求的文件未在服务器中找到。
+                当前账号权限不足。
               </div>
               <div
                 className="text-2xl text-muted-foreground mb-12"
                 data-line-reveal
               >
-                <div>您访问的页面可能已被删除、移动，</div>
-                <div>或者从未存在过。</div>
+                <div>当前权限：{role}，</div>
+                <div>
+                  {allowRoles && `允许访问的权限：${allowRoles.join("、")}。`}
+                </div>
                 <div>
                   <br />
                 </div>
-                <div>请尝试：</div>
-                <div>1. 检查当前链接是否正确</div>
-                <div>2. 重新搜索相关内容</div>
-                <div>3. 如果错误重复出现，请汇报给站点管理员。</div>
               </div>
             </GridItem>
             <GridItem
@@ -82,7 +79,7 @@ export default function Custom404() {
               height={0.1}
             >
               <div className="text-2xl" data-fade-char>
-                发送反馈邮件
+                切换账号
               </div>
             </GridItem>
             <GridItem
@@ -91,7 +88,7 @@ export default function Custom404() {
               width={2}
               height={1.5}
             >
-              <ClientDiagnostics errorType="HTTP/404" />
+              <ClientDiagnostics errorType="HTTP/403" />
             </GridItem>
           </RowGrid>
         </HorizontalScroll>
