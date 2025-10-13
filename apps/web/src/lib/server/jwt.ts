@@ -7,6 +7,22 @@ interface TokenSignOptions {
   expired?: number | string;
 }
 
+export type AccessTokenPayload = {
+  uid: number;
+  username: string;
+  nickname: string;
+  role: string;
+  iat: number;
+  exp: number;
+};
+
+export type RefreshTokenPayload = {
+  uid: number;
+  tokenId: string;
+  iat: number;
+  exp: number;
+};
+
 // 检查环境变量
 if (!process.env.JWT_PRIVATE_KEY) {
   throw new Error("JWT_PRIVATE_KEY environment variable is not set");
@@ -43,9 +59,9 @@ export function jwtTokenSign({ inner, expired = "7d" }: TokenSignOptions) {
   return jwt.sign(inner, privateKey, signOptions);
 }
 
-export function jwtTokenVerify(
+export function jwtTokenVerify<T = AccessTokenPayload>(
   tokenText: string,
-): Record<string, unknown> | null {
+): T | null {
   const verifyOptions: VerifyOptions = {
     algorithms: ["ES256"],
   };
@@ -56,7 +72,7 @@ export function jwtTokenVerify(
     // 如果是字符串类型，尝试解析为JSON对象
     if (typeof decoded === "string") {
       try {
-        return JSON.parse(decoded);
+        return JSON.parse(decoded) as T;
       } catch {
         return null;
       }
@@ -64,7 +80,7 @@ export function jwtTokenVerify(
 
     // 确保返回的是对象而不是其他类型
     if (typeof decoded === "object" && decoded !== null) {
-      return decoded as Record<string, unknown>;
+      return decoded as T;
     }
 
     return null;

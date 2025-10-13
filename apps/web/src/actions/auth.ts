@@ -14,7 +14,12 @@ import {
 } from "@repo/shared-types/api/auth";
 import prisma from "@/lib/server/prisma";
 import { verifyPassword } from "@/lib/server/password";
-import { jwtTokenSign, jwtTokenVerify } from "@/lib/server/jwt";
+import {
+  jwtTokenSign,
+  jwtTokenVerify,
+  type AccessTokenPayload,
+  type RefreshTokenPayload,
+} from "@/lib/server/jwt";
 import ResponseBuilder from "@/lib/server/response";
 import { cookies, headers } from "next/headers";
 import { hashPassword } from "@/lib/server/password";
@@ -112,6 +117,7 @@ export async function login(
         username: true,
         nickname: true,
         uid: true,
+        role: true,
         emailVerified: true,
       },
     });
@@ -192,6 +198,7 @@ export async function login(
         uid: user.uid,
         username: user.username,
         nickname: user.nickname ?? "",
+        role: user.role,
       },
       expired: "10m",
     });
@@ -399,7 +406,7 @@ export async function refresh(
     }
 
     // 验证&解析 Refresh Token
-    const decoded = jwtTokenVerify(token);
+    const decoded = jwtTokenVerify<RefreshTokenPayload>(token);
     if (!decoded) {
       return response.unauthorized();
     }
@@ -408,8 +415,8 @@ export async function refresh(
     const { tokenId, uid } = decoded;
     const dbToken = await prisma.refreshToken.findUnique({
       where: {
-        id: tokenId as string,
-        userUid: uid as number,
+        id: tokenId,
+        userUid: uid,
       },
       select: {
         id: true,
@@ -419,6 +426,7 @@ export async function refresh(
             uid: true,
             username: true,
             nickname: true,
+            role: true,
           },
         },
       },
@@ -433,6 +441,7 @@ export async function refresh(
         uid: dbToken.user.uid,
         username: dbToken.user.username,
         nickname: dbToken.user.nickname ?? "",
+        role: dbToken.user.role,
       },
       expired: "10m",
     });
@@ -625,7 +634,7 @@ export async function changePassword(
     const cookieStore = await cookies();
     const token = access_token || cookieStore.get("ACCESS_TOKEN")?.value || "";
     // 验证 Access Token
-    const decoded = jwtTokenVerify(token);
+    const decoded = jwtTokenVerify<AccessTokenPayload>(token);
     if (!decoded) {
       return response.unauthorized();
     }
@@ -635,7 +644,7 @@ export async function changePassword(
     }
     // 查找用户
     const user = await prisma.user.findUnique({
-      where: { uid: uid as number },
+      where: { uid },
       select: {
         uid: true,
         password: true,
