@@ -180,15 +180,25 @@ function createResponseBody<T extends ApiResponseData>(
   success: boolean,
   message: string,
   data: T = null as T,
+  status: number,
   error?: ApiError,
   meta?: PaginationMeta,
 ): ApiResponse<T> {
+  const timestamp = new Date().toISOString();
+  const requestId = generateRequestId();
+
+  console.log(
+    `[${timestamp}] | ${requestId} | ${success ? ":S" : ":E"} | [Res/${status || "Action"}] | ${message} ${
+      error ? ` | ${JSON.stringify(error)}` : ""
+    }`,
+  );
+
   return {
     success,
     message,
     data,
-    timestamp: new Date().toISOString(),
-    requestId: generateRequestId(),
+    timestamp: timestamp,
+    requestId: requestId,
     ...(error && { error }),
     ...(meta && { meta }),
   };
@@ -207,7 +217,14 @@ function createServerlessResponse<T extends ApiResponseData>(
   meta?: PaginationMeta,
   cacheConfig?: CacheConfig,
 ): NextResponse<ApiResponse<T>> {
-  const responseBody = createResponseBody(success, message, data, error, meta);
+  const responseBody = createResponseBody(
+    success,
+    message,
+    data,
+    status,
+    error,
+    meta,
+  );
 
   const securityHeaders = createSecurityHeaders();
   const cacheHeaders = createCacheHeaders(cacheConfig);
@@ -232,7 +249,7 @@ function createServerActionResponse<T extends ApiResponseData>(
   error?: ApiError,
   meta?: PaginationMeta,
 ): ApiResponse<T> {
-  return createResponseBody(success, message, data, error, meta);
+  return createResponseBody(success, message, data, 0, error, meta);
 }
 
 // ============================================================================
