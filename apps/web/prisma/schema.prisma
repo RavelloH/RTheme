@@ -481,6 +481,7 @@ enum Role {
   USER
   ADMIN
   EDITOR
+  AUTHOR
 }
 
 enum UserStatus {
