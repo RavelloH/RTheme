@@ -1,4 +1,4 @@
-import BackLink from "@/components/BackLink";
+import LinkButton from "@/components/LinkButton";
 import ClientDiagnostics from "@/components/ClientDiagnostics";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import MainLayout from "@/components/MainLayout";
@@ -51,9 +51,9 @@ export default function ForbiddenPage({
                 className="text-2xl text-muted-foreground mb-12"
                 data-line-reveal
               >
-                <div>当前权限：{role}，</div>
+                <div>当前角色：{role}，</div>
                 <div>
-                  {allowRoles && `允许访问的权限：${allowRoles.join("、")}。`}
+                  {allowRoles && `允许访问的角色：${allowRoles.join("、")}。`}
                 </div>
                 <div>
                   <br />
@@ -62,25 +62,19 @@ export default function ForbiddenPage({
             </GridItem>
             <GridItem
               areas={[11]}
-              className="flex items-center px-10 uppercase text-2xl"
+              className="uppercase text-2xl"
               width={14}
               height={0.1}
             >
-              <BackLink>
-                <div className="text-2xl" data-fade-char>
-                  回到上一页
-                </div>
-              </BackLink>
+              <LinkButton mode="back" text="返回上一页" />
             </GridItem>
             <GridItem
               areas={[12]}
-              className="flex items-center px-10 uppercase text-2xl"
+              className="flex items-center uppercase text-2xl"
               width={14}
               height={0.1}
             >
-              <div className="text-2xl" data-fade-char>
-                切换账号
-              </div>
+              <LinkButton mode="link" href="/logout" text="切换账号" />
             </GridItem>
             <GridItem
               areas={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}

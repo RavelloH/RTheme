@@ -8,6 +8,7 @@ import PostCard from "@/components/PostCard";
 import MainLayout from "@/components/MainLayout";
 import HomeTitle from "./home/HomeTitle";
 import HomeSlogan from "./home/HomeSlogan";
+import LinkButton from "@/components/LinkButton";
 
 export const metadata = await generateMetadata(
   {
@@ -98,9 +99,13 @@ export default function Home() {
               areas={[12]}
               width={14}
               height={0.1}
-              className="flex items-center uppercase px-10 text-2xl"
+              className="flex items-center uppercase text-2xl"
             >
-              <span data-fade-word>Learn more about me</span>
+              <LinkButton
+                mode="link"
+                href="/about"
+                text="Learn more about me"
+              />
             </GridItem>
           </RowGrid>
           <RowGrid>
@@ -252,11 +257,13 @@ export default function Home() {
               width={12}
               height={0.1}
               mobileIndex={8}
-              className="flex items-center px-10 text-2xl"
+              className="flex items-center uppercase text-2xl"
             >
-              <span data-fade-word className="uppercase ">
-                View more projects
-              </span>
+              <LinkButton
+                mode="link"
+                href="/projects"
+                text="View more projects"
+              />
             </GridItem>
           </RowGrid>
           <RowGrid>
@@ -462,9 +469,13 @@ export default function Home() {
               areas={[12]}
               width={14}
               height={0.1}
-              className="flex items-center uppercase px-10 text-2xl"
+              className="flex items-center uppercase text-2xl"
             >
-              <span data-fade-word>Start chatting with me</span>
+              <LinkButton
+                mode="link"
+                href="/message?uid=1"
+                text="Start chatting with me"
+              />
             </GridItem>
           </RowGrid>
         </HorizontalScroll>

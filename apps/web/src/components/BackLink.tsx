@@ -4,7 +4,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useNavigateWithTransition } from "@/components/Link";
 
-export default function BackLink({ children }: { children: React.ReactNode }) {
+export default function BackLink({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   const router = useRouter();
   const [referer, setReferer] = useState<string | null>(null);
   const navigate = useNavigateWithTransition();
@@ -24,7 +30,7 @@ export default function BackLink({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="cursor-pointer" onClick={handleClick}>
+    <div className={"cursor-pointer " + className} onClick={handleClick}>
       {children}
     </div>
   );

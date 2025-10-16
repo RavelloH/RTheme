@@ -1,7 +1,6 @@
-import BackLink from "@/components/BackLink";
 import ClientDiagnostics from "@/components/ClientDiagnostics";
 import HorizontalScroll from "@/components/HorizontalScroll";
-import Link from "@/components/Link";
+import LinkButton from "@/components/LinkButton";
 import MainLayout from "@/components/MainLayout";
 import RowGrid, { GridItem } from "@/components/RowGrid";
 
@@ -54,27 +53,19 @@ export default function UnauthorizedPage() {
             </GridItem>
             <GridItem
               areas={[11]}
-              className="flex items-center px-10 uppercase text-2xl"
+              className="uppercase text-2xl"
               width={14}
               height={0.1}
             >
-              <BackLink>
-                <div className="text-2xl" data-fade-char>
-                  回到上一页
-                </div>
-              </BackLink>
+              <LinkButton mode="back" text="返回上一页" />
             </GridItem>
             <GridItem
               areas={[12]}
-              className="flex items-center px-10 uppercase text-2xl"
+              className="flex items-center uppercase text-2xl"
               width={14}
               height={0.1}
             >
-              <Link href="/login">
-                <div className="text-2xl" data-fade-char>
-                  登录
-                </div>
-              </Link>
+              <LinkButton mode="link" href="/login" text="登录" />
             </GridItem>
             <GridItem
               areas={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}

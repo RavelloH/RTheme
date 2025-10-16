@@ -3,7 +3,7 @@ import HorizontalScroll from "@/components/HorizontalScroll";
 import RowGrid, { GridItem } from "@/components/RowGrid";
 import MainLayout from "@/components/MainLayout";
 import ClientDiagnostics from "../components/ClientDiagnostics";
-import BackLink from "@/components/BackLink";
+import LinkButton from "@/components/LinkButton";
 
 export const metadata = await generateMetadata({
   title: "404 Not Found",
@@ -65,25 +65,24 @@ export default function Custom404() {
             </GridItem>
             <GridItem
               areas={[11]}
-              className="flex items-center px-10 uppercase text-2xl"
+              className="uppercase text-2xl"
               width={14}
               height={0.1}
             >
-              <BackLink>
-                <div className="text-2xl" data-fade-char>
-                  回到上一页
-                </div>
-              </BackLink>
+              <LinkButton mode="back" text="返回上一页" />
             </GridItem>
             <GridItem
               areas={[12]}
-              className="flex items-center px-10 uppercase text-2xl"
+              className="flex items-center uppercase text-2xl"
               width={14}
               height={0.1}
             >
-              <div className="text-2xl" data-fade-char>
-                发送反馈邮件
-              </div>
+              {/* TODO */}
+              <LinkButton
+                mode="link"
+                href="/message?uid=1"
+                text="反馈给管理员"
+              />
             </GridItem>
             <GridItem
               areas={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}
