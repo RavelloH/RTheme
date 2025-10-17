@@ -47,7 +47,7 @@ const response = new ResponseBuilder("serverless");
  *             schema:
  *               $ref: '#/components/schemas/ServerErrorResponse'
  */
-export async function POST(request: Request) {
+export async function POST(request: Request): Promise<Response> {
   try {
     // 验证请求数据
     const validationResult = await validateRequestJSON(
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 
     const { code, new_password, captcha_token } = validationResult.data!;
 
-    return await resetPassword(
+    return (await resetPassword(
       {
         code,
         new_password,
@@ -67,9 +67,9 @@ export async function POST(request: Request) {
       {
         environment: "serverless",
       },
-    );
+    )) as Response;
   } catch (error) {
     console.error("Reset password route error:", error);
-    return response.badGateway();
+    return response.badGateway() as Response;
   }
 }

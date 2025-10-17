@@ -46,7 +46,7 @@ const response = new ResponseBuilder("serverless");
  *             schema:
  *               $ref: '#/components/schemas/ServerErrorResponse'
  */
-export async function POST(request: Request) {
+export async function POST(request: Request): Promise<Response> {
   try {
     // 验证请求数据
     const validationResult = await validateRequestJSON(
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
 
     const { token_transport, refresh_token } = validationResult.data!;
 
-    return await refresh(
+    return (await refresh(
       {
         token_transport,
         refresh_token,
@@ -65,9 +65,9 @@ export async function POST(request: Request) {
       {
         environment: "serverless",
       },
-    );
+    )) as Response;
   } catch (error) {
     console.error("Login route error:", error);
-    return response.badGateway();
+    return response.badGateway() as Response;
   }
 }

@@ -31,14 +31,14 @@ const response = new ResponseBuilder("serverless");
  *             schema:
  *               $ref: '#/components/schemas/ServerErrorResponse'
  */
-export async function GET() {
+export async function GET(): Promise<Response> {
   try {
     const response = await createChallenge({
       environment: "serverless",
     });
-    return response;
+    return response as Response;
   } catch (error) {
     console.error("Get captcha error:", error);
-    return response.badGateway();
+    return response.badGateway() as Response;
   }
 }
