@@ -48,6 +48,7 @@ import type {
   ResendEmailVerificationSuccessResponse,
 } from "@repo/shared-types/api/auth";
 import { verifyToken } from "./captcha";
+import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
 
 type AuthActionEnvironment = "serverless" | "serveraction";
 type AuthActionConfig = { environment?: AuthActionEnvironment };
@@ -174,11 +175,18 @@ export async function login(
     const expiredAt = new Date(Date.now() + expiredAtSeconds * 1000);
     const expiredAtUnix = Math.floor(expiredAt.getTime() / 1000); // 转换为Unix时间戳
 
+    // 获取客户端信息
+    const clientIP = await getClientIP();
+    const clientUserAgent = await getClientUserAgent();
+
     // 向数据库记录refresh token
     const dbRefreshToken = await prisma.refreshToken.create({
       data: {
         userUid: user.uid,
         expiresAt: expiredAt,
+        ipAddress: clientIP,
+        userAgent: clientUserAgent,
+        lastUsedAt: new Date(),
       },
     });
 
@@ -421,6 +429,8 @@ export async function refresh(
       select: {
         id: true,
         userUid: true,
+        expiresAt: true,
+        revokedAt: true,
         user: {
           select: {
             uid: true,
@@ -431,7 +441,7 @@ export async function refresh(
         },
       },
     });
-    if (!dbToken) {
+    if (!dbToken || dbToken.revokedAt || dbToken.expiresAt < new Date()) {
       return response.unauthorized();
     }
 
@@ -446,12 +456,18 @@ export async function refresh(
       expired: "10m",
     });
 
-    // 清理数据库中过期的 Refresh Token
+    // 获取客户端信息
+    const clientIP = await getClientIP();
+    const clientUserAgent = await getClientUserAgent();
+
     after(async () => {
-      const now = new Date();
-      await prisma.refreshToken.deleteMany({
-        where: {
-          expiresAt: { lt: now },
+      // 更新当前 Refresh Token
+      await prisma.refreshToken.update({
+        where: { id: dbToken.id },
+        data: {
+          lastUsedAt: new Date(),
+          ipAddress: clientIP,
+          userAgent: clientUserAgent,
         },
       });
     });

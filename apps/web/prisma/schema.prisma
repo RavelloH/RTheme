@@ -86,6 +86,12 @@ model RefreshToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
 
+  // 安全相关拓展
+  ipAddress  String?   @db.VarChar(45)
+  userAgent  String?   @db.VarChar(1000)
+  revokedAt  DateTime?
+  lastUsedAt DateTime?
+
   user User @relation(fields: [userUid], references: [uid], onDelete: Cascade)
 
   // 索引优化
@@ -280,7 +286,7 @@ model Page {
   author  User? @relation(fields: [userUid], references: [uid], onDelete: Cascade)
 
   // 导航关系
-  menus   Menu[]
+  menus Menu[]
 
   // 索引优化
   @@index([slug])
@@ -302,14 +308,14 @@ model Menu {
   updatedAt DateTime     @updatedAt
 
   // 页面关系 - 如果关联页面，则使用页面的 slug 和 title
-  pageId    String?
-  page      Page?        @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  pageId String?
+  page   Page?   @relation(fields: [pageId], references: [id], onDelete: SetNull)
 
+  @@unique([slug]) // 移到此处，因为 slug 现在是可选的
   // 索引优化
   @@index([name])
   @@index([createdAt])
   @@index([pageId])
-  @@unique([slug]) // 移到此处，因为 slug 现在是可选的
 }
 
 // 网站配置模型
