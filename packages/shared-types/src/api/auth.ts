@@ -89,6 +89,11 @@ export const ResetPasswordSchema = z.object({
   captcha_token: z.string().min(1, "验证码不能为空"),
 });
 
+// 退出登录 Schema
+export const LogoutSchema = z.object({
+  refresh_token: z.string().optional(),
+});
+
 // =============================================================================
 // Response Schemas
 // =============================================================================
@@ -164,6 +169,15 @@ export const EmailAlreadyVerifiedErrorResponseSchema =
       message: z.string(),
     }),
   );
+
+// 退出登录成功响应
+export const LogoutSuccessResponseSchema = z.object({
+  success: z.literal(true),
+  message: z.string(),
+  timestamp: z.iso.datetime(),
+  requestId: z.string(),
+  data: z.null(),
+});
 
 export const InvalidOrExpiredCodeErrorResponseSchema =
   createErrorResponseSchema(
@@ -306,7 +320,7 @@ registerSchema("ResendEmailVerification", ResendEmailVerificationSchema);
 registerSchema("ChangePassword", ChangePasswordSchema);
 registerSchema("RequestPasswordReset", RequestPasswordResetSchema);
 registerSchema("ResetPassword", ResetPasswordSchema);
-
+registerSchema("LogoutUser", LogoutSchema);
 registerSchema("RegisterSuccessResponse", RegisterSuccessResponseSchema);
 registerSchema("LoginSuccessResponse", LoginSuccessResponseSchema);
 registerSchema("ValidationErrorResponse", ValidationErrorResponseSchema);
@@ -322,6 +336,7 @@ registerSchema(
 );
 registerSchema("RateLimitErrorResponse", RateLimitErrorResponseSchema);
 registerSchema("ServerErrorResponse", ServerErrorResponseSchema);
+registerSchema("LogoutSuccessResponse", LogoutSuccessResponseSchema);
 
 // 注册邮箱验证相关的 schema
 registerSchema("EmailVerifySuccessResponse", EmailVerifySuccessResponseSchema);
@@ -376,6 +391,7 @@ registerSchema(
 // 导出推导的 TypeScript 类型
 export type RegisterUser = z.infer<typeof RegisterUserSchema>;
 export type LoginUser = z.infer<typeof LoginUserSchema>;
+export type LogoutUser = z.infer<typeof LogoutSchema>;
 export type RefreshToken = z.infer<typeof RefreshTokenSchema>;
 export type EmailVerification = z.infer<typeof EmailVerificationSchema>;
 export type RegisterSuccessResponse = z.infer<

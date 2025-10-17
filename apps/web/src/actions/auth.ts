@@ -11,6 +11,7 @@ import {
   ChangePasswordSchema,
   RequestPasswordResetSchema,
   ResetPasswordSchema,
+  LogoutSchema,
 } from "@repo/shared-types/api/auth";
 import prisma from "@/lib/server/prisma";
 import { verifyPassword } from "@/lib/server/password";
@@ -35,6 +36,7 @@ import type {
   LoginSuccessResponse,
   RegisterUser,
   RegisterSuccessResponse,
+  LogoutUser,
   RefreshToken,
   EmailVerification,
   EmailVerifySuccessResponse,
@@ -974,5 +976,87 @@ export async function resendEmailVerification(
         message: "发送失败，请稍后重试",
       },
     });
+  }
+}
+
+export async function logout(
+  params: LogoutUser,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<null>>>;
+export async function logout(
+  params: LogoutUser,
+  serverConfig?: AuthActionConfig,
+): Promise<ApiResponse<null>>;
+export async function logout(
+  { refresh_token }: LogoutUser,
+  serverConfig?: AuthActionConfig,
+): Promise<ActionResult<null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+  // 速率控制
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  // 验证输入参数
+  const validationError = validateData(
+    {
+      refresh_token,
+    },
+    LogoutSchema,
+  );
+  if (validationError) return response.badRequest(validationError);
+
+  try {
+    // 从 cookie 或请求体中获取 Refresh Token
+    const cookieStore = await cookies();
+    const token =
+      refresh_token || cookieStore.get("REFRESH_TOKEN")?.value || "";
+    // 验证 Refresh Token
+    const decoded = jwtTokenVerify<RefreshTokenPayload>(token);
+    if (!decoded) {
+      return response.unauthorized();
+    }
+    const { tokenId } = decoded;
+    if (!tokenId) {
+      return response.unauthorized();
+    }
+
+    // 注销此会话
+    await prisma.refreshToken.update({
+      where: {
+        id: decoded.tokenId,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+
+    // 清除 Cookie
+    cookieStore.delete("REFRESH_TOKEN");
+    cookieStore.delete("ACCESS_TOKEN");
+
+    return response.ok({
+      message: "退出登录成功",
+      data: null,
+      customHeaders: new Headers([
+        [
+          "set-cookie",
+          `REFRESH_TOKEN=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${
+            process.env.NODE_ENV === "production" ? "; Secure" : ""
+          }`,
+        ],
+        [
+          "set-cookie",
+          `ACCESS_TOKEN=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${
+            process.env.NODE_ENV === "production" ? "; Secure" : ""
+          }`,
+        ],
+      ]),
+    });
+  } catch (error) {
+    console.error("Logout error:", error);
+    return response.serverError();
   }
 }

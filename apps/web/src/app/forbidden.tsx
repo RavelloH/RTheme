@@ -74,7 +74,11 @@ export default function ForbiddenPage({
               width={14}
               height={0.1}
             >
-              <LinkButton mode="link" href="/logout" text="切换账号" />
+              <LinkButton
+                mode="link"
+                href="/logout?redirect=/login"
+                text="切换账号"
+              />
             </GridItem>
             <GridItem
               areas={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}
