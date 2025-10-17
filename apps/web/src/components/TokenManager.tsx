@@ -1,6 +1,6 @@
 "use client";
 
-import { refresh } from "@/actions/auth";
+import { refresh, logout } from "@/actions/auth";
 import { useEffect, useRef } from "react";
 
 interface UserInfo {
@@ -166,6 +166,14 @@ export default function TokenManager() {
           "[TokenManager] Token refresh failed: " +
             (JSON.stringify(response.error) || "Unknown error"),
         );
+
+        // 刷新失败时清除本地存储和 cookie
+        localStorage.removeItem("user_info");
+        try {
+          await logout({ refresh_token: undefined });
+        } catch (error) {
+          console.error("[TokenManager] Logout after refresh failure:", error);
+        }
 
         return false;
       } catch {

@@ -1013,13 +1013,24 @@ export async function logout(
     const cookieStore = await cookies();
     const token =
       refresh_token || cookieStore.get("REFRESH_TOKEN")?.value || "";
+
+    // 清除 Cookie 的辅助函数
+    const clearCookies = () => {
+      cookieStore.delete("REFRESH_TOKEN");
+      cookieStore.delete("ACCESS_TOKEN");
+    };
+
     // 验证 Refresh Token
     const decoded = jwtTokenVerify<RefreshTokenPayload>(token);
     if (!decoded) {
+      // 认证失败时也清除 cookie
+      clearCookies();
       return response.unauthorized();
     }
     const { tokenId } = decoded;
     if (!tokenId) {
+      // 认证失败时也清除 cookie
+      clearCookies();
       return response.unauthorized();
     }
 
@@ -1034,8 +1045,7 @@ export async function logout(
     });
 
     // 清除 Cookie
-    cookieStore.delete("REFRESH_TOKEN");
-    cookieStore.delete("ACCESS_TOKEN");
+    clearCookies();
 
     return response.ok({
       message: "退出登录成功",
@@ -1057,6 +1067,10 @@ export async function logout(
     });
   } catch (error) {
     console.error("Logout error:", error);
+    // 发生错误时也清除 cookie
+    const cookieStore = await cookies();
+    cookieStore.delete("REFRESH_TOKEN");
+    cookieStore.delete("ACCESS_TOKEN");
     return response.serverError();
   }
 }
