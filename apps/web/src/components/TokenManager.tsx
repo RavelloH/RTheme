@@ -162,19 +162,34 @@ export default function TokenManager() {
           return true;
         }
 
+        // 刷新失败,根据错误类型决定处理方式
+        const errorCode = response.error?.code;
         console.log(
           "[TokenManager] Token refresh failed: " +
             (JSON.stringify(response.error) || "Unknown error"),
         );
 
-        // 刷新失败时清除本地存储和 cookie
-        localStorage.removeItem("user_info");
-        try {
-          await logout({ refresh_token: undefined });
-        } catch (error) {
-          console.error("[TokenManager] Logout after refresh failure:", error);
+        // 如果是 UNAUTHORIZED 错误,直接清除用户信息并登出
+        if (errorCode === "UNAUTHORIZED") {
+          console.log(
+            "[TokenManager] UNAUTHORIZED error detected, logging out immediately",
+          );
+          localStorage.removeItem("user_info");
+          try {
+            await logout({ refresh_token: undefined });
+          } catch (error) {
+            console.error(
+              "[TokenManager] Logout after UNAUTHORIZED error:",
+              error,
+            );
+          }
+          return false;
         }
 
+        // 其他错误,不清除用户信息,允许重试
+        console.log(
+          "[TokenManager] Non-UNAUTHORIZED error, will retry if attempts remaining",
+        );
         return false;
       } catch {
         return false;
