@@ -4,7 +4,7 @@ import { Input } from "@/ui/Input";
 import { RiLockPasswordLine, RiMailLine, RiUser3Line } from "@remixicon/react";
 import { CaptchaButton } from "@/components/CaptchaButton";
 import { useState } from "react";
-import { useBroadcast } from "@/hooks/useBroadcast";
+import { useBroadcast, useBroadcastSender } from "@/hooks/useBroadcast";
 import { register as registerAction } from "@/actions/auth";
 import { useConfig } from "@/components/ConfigProvider";
 import { useRouter } from "next/navigation";
@@ -14,6 +14,7 @@ export default function RegisterSheet() {
   const Router = useRouter();
   const { config } = useConfig();
   const canRegister = config<boolean>("user.registration.enabled");
+  const { broadcast } = useBroadcastSender<{ type: string }>();
 
   const [token, setToken] = useState("");
   const [buttonLabel, setButtonLabel] = useState(
@@ -171,6 +172,7 @@ export default function RegisterSheet() {
         setButtonLoading(false);
         setButtonVariant("secondary");
         setButtonLabel("注册");
+        broadcast({ type: "captcha-reset" });
       }, 2000);
     }
   };

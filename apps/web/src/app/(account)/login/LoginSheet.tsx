@@ -4,7 +4,7 @@ import { Input } from "@/ui/Input";
 import { RiLockPasswordLine, RiUser3Line } from "@remixicon/react";
 import { CaptchaButton } from "@/components/CaptchaButton";
 import { useState } from "react";
-import { useBroadcast } from "@/hooks/useBroadcast";
+import { useBroadcast, useBroadcastSender } from "@/hooks/useBroadcast";
 import { login as loginAction } from "@/actions/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "@/components/Link";
@@ -13,6 +13,7 @@ export default function LoginSheet() {
   const Router = useRouter();
   const searchParams = useSearchParams();
   const usernameFromUrl = searchParams.get("username") || "";
+  const { broadcast } = useBroadcastSender<{ type: string }>();
 
   const [token, setToken] = useState("");
   const [buttonLabel, setButtonLabel] = useState("登录");
@@ -151,6 +152,7 @@ export default function LoginSheet() {
           setButtonLoading(false);
           setButtonVariant("secondary");
           setButtonLabel("登录");
+          broadcast({ type: "captcha-reset" });
         }, 2000);
       }
     }
