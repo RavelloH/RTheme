@@ -493,6 +493,7 @@ enum Role {
 enum UserStatus {
   ACTIVE
   SUSPENDED
+  NEEDS_UPDATE
 }
 
 enum PostStatus {

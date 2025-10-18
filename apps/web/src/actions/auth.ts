@@ -122,6 +122,8 @@ export async function login(
         uid: true,
         role: true,
         emailVerified: true,
+        deletedAt: true,
+        status: true,
       },
     });
 
@@ -131,6 +133,28 @@ export async function login(
         error: {
           code: "INVALID_CREDENTIALS",
           message: "用户名或密码错误",
+        },
+      });
+    }
+
+    // 检查用户状态
+    if (user.deletedAt || user.status === "SUSPENDED") {
+      return response.forbidden({
+        message: "该账户已被禁用，如有疑问请联系管理员",
+        error: {
+          code: "ACCOUNT_DISABLED",
+          message: "该账户已被禁用，如有疑问请联系管理员",
+        },
+      });
+    }
+
+    // 检查是否是需要更新的账户
+    if (user.status === "NEEDS_UPDATE") {
+      return response.forbidden({
+        message: "站点安全策略已更新，请重置密码后重新登录",
+        error: {
+          code: "PASSWORD_RESET_REQUIRED",
+          message: "站点安全策略已更新，请重置密码后重新登录",
         },
       });
     }
@@ -865,12 +889,23 @@ export async function resetPassword(
     }
     // 更改密码
     const hashedNewPassword = await hashPassword(new_password);
-    await prisma.user.update({
+    const user = await prisma.user.update({
       where: { uid: passwordReset.userUid },
       data: {
         password: hashedNewPassword,
       },
     });
+
+    // 更新用户状态
+    if (user.status === "NEEDS_UPDATE") {
+      await prisma.user.update({
+        where: { uid: user.uid },
+        data: {
+          status: "ACTIVE",
+          emailVerified: true,
+        },
+      });
+    }
 
     // 删除重置请求
     await prisma.passwordReset.delete({
