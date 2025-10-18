@@ -468,19 +468,10 @@ model AuditLog {
   @@index([action, resource]) // 复合索引：按操作类型和资源类型查询
   @@index([userUid, timestamp]) // 复合索引：按用户和时间查询
 }
-
-// 速率限制记录模型 - 用于在没有Redis时存储访问频率控制数据
-model RateLimitRecord {
-  id        String   @id @default(uuid())
-  ipAddress String   @db.VarChar(45) // IP地址
-  timestamp BigInt // 时间戳（毫秒）
+model HealthCheck {
+  id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-
-  // 索引优化
-  @@index([ipAddress])
-  @@index([timestamp])
-  @@index([ipAddress, timestamp]) // 复合索引：按IP和时间戳查询
-  @@index([createdAt])
+  issues    Json?
 }
 
 enum Role {

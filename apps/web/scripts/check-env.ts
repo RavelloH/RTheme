@@ -73,16 +73,36 @@ const REQUIRED_ENV_VARS = [
       return null;
     },
   },
+  {
+    name: "REDIS_URL",
+    description: "Redis connection string (required)",
+    validator: (value: string) => {
+      if (!value.startsWith("redis://") && !value.startsWith("rediss://")) {
+        return "Should be a valid Redis connection string (redis:// or rediss://)";
+      }
+      return null;
+    },
+  },
 ];
 
 // 可选的环境变量配置
 const OPTIONAL_ENV_VARS = [
   {
-    name: "REDIS_URL",
-    description: "Redis connection string (optional)",
+    name: "ENABLE_API",
+    description: "Enable API endpoints (optional, default: true)",
     validator: (value: string) => {
-      if (value && !value.startsWith("redis://")) {
-        return "Should be a Redis connection string (redis://) if provided";
+      if (value && !["true", "false", "1", "0"].includes(value.toLowerCase())) {
+        return "Should be 'true', 'false', '1', or '0' if provided";
+      }
+      return null;
+    },
+  },
+  {
+    name: "DISABLE_ANALYTICS",
+    description: "Disable analytics tracking (optional, default: false)",
+    validator: (value: string) => {
+      if (value && !["true", "false", "1", "0"].includes(value.toLowerCase())) {
+        return "Should be 'true', 'false', '1', or '0' if provided";
       }
       return null;
     },
@@ -153,6 +173,9 @@ export async function checkEnvironmentVariables(): Promise<void> {
     rlog.error(
       '  JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\\n...\\n-----END PUBLIC KEY-----"',
     );
+    rlog.error("  # Optional variables:");
+    rlog.error("  ENABLE_API=true");
+    rlog.error("  DISABLE_ANALYTICS=false");
     throw new Error("Required environment variables are missing or invalid");
   }
 
