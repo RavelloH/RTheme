@@ -17,7 +17,7 @@ const response = new ResponseBuilder("serverless");
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/RegisterUser'
+ *             $ref: '#/components/schemas/Register'
  *     responses:
  *       200:
  *         description: 注册成功

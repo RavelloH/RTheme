@@ -3,7 +3,7 @@
 import { validateData } from "@/lib/server/validator";
 import limitControl from "@/lib/server/rateLimit";
 import {
-  LoginUserSchema,
+  LoginSchema,
   RegisterUserSchema,
   RefreshTokenSchema,
   EmailVerificationSchema,
@@ -32,11 +32,11 @@ import type {
   ApiResponseData,
 } from "@repo/shared-types/api/common";
 import type {
-  LoginUser,
+  Login,
   LoginSuccessResponse,
-  RegisterUser,
+  Register,
   RegisterSuccessResponse,
-  LogoutUser,
+  Logout,
   RefreshToken,
   EmailVerification,
   EmailVerifySuccessResponse,
@@ -58,29 +58,18 @@ type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
 
-type LoginResponseData = LoginSuccessResponse["data"] | null;
-type RegisterResponseData = RegisterSuccessResponse["data"];
-type RefreshResponseData = LoginSuccessResponse["data"] | null;
-type EmailVerifyResponseData = EmailVerifySuccessResponse["data"];
-type ChangePasswordResponseData = ChangePasswordSuccessResponse["data"];
-type PasswordResetRequestResponseData =
-  PasswordResetRequestSuccessResponse["data"];
-type ResetPasswordResponseData = ResetPasswordSuccessResponse["data"];
-type ResendEmailVerificationResponseData =
-  ResendEmailVerificationSuccessResponse["data"];
-
 export async function login(
-  params: LoginUser,
+  params: Login,
   serverConfig: { environment: "serverless" },
-): Promise<NextResponse<ApiResponse<LoginResponseData>>>;
+): Promise<NextResponse<ApiResponse<LoginSuccessResponse>>>;
 export async function login(
-  params: LoginUser,
+  params: Login,
   serverConfig?: AuthActionConfig,
-): Promise<ApiResponse<LoginResponseData>>;
+): Promise<ApiResponse<LoginSuccessResponse>>;
 export async function login(
-  { username, password, token_transport, captcha_token }: LoginUser,
+  { username, password, token_transport, captcha_token }: Login,
   serverConfig?: AuthActionConfig,
-): Promise<ActionResult<LoginResponseData>> {
+): Promise<ActionResult<LoginSuccessResponse | null>> {
   const response = new ResponseBuilder(
     serverConfig?.environment || "serveraction",
   );
@@ -98,7 +87,7 @@ export async function login(
       token_transport,
       captcha_token,
     },
-    LoginUserSchema,
+    LoginSchema,
   );
 
   if (validationError) return response.badRequest(validationError);
@@ -264,14 +253,14 @@ export async function login(
     return response.ok({
       message: "登录成功",
       data: {
-        access_token: token_transport === "body" ? accessToken : undefined,
-        refresh_token: token_transport === "body" ? refreshToken : undefined,
         userInfo: {
           uid: user.uid,
           username: user.username,
           nickname: user.nickname ?? "",
           exp: expiredAt.toISOString(),
         },
+        ...(token_transport === "body" && { access_token: accessToken }),
+        ...(token_transport === "body" && { refresh_token: refreshToken }),
       },
       ...(token_transport === "cookie" && {
         customHeaders: new Headers([
@@ -285,7 +274,7 @@ export async function login(
           ],
         ]),
       }),
-    });
+    }) as unknown as ActionResult<LoginSuccessResponse | null>;
   } catch (error) {
     console.error("Login error:", error);
     return response.serverError({
@@ -299,17 +288,17 @@ export async function login(
 }
 
 export async function register(
-  params: RegisterUser,
+  params: Register,
   serverConfig: { environment: "serverless" },
-): Promise<NextResponse<ApiResponse<RegisterResponseData>>>;
+): Promise<NextResponse<ApiResponse<RegisterSuccessResponse>>>;
 export async function register(
-  params: RegisterUser,
+  params: Register,
   serverConfig?: AuthActionConfig,
-): Promise<ApiResponse<RegisterResponseData>>;
+): Promise<ApiResponse<RegisterSuccessResponse>>;
 export async function register(
-  { username, email, password, nickname, captcha_token }: RegisterUser,
+  { username, email, password, nickname, captcha_token }: Register,
   serverConfig?: AuthActionConfig,
-): Promise<ActionResult<RegisterResponseData>> {
+): Promise<ActionResult<RegisterSuccessResponse | null>> {
   // 创建响应构建器，根据配置选择环境
   const response = new ResponseBuilder(
     serverConfig?.environment || "serveraction",
@@ -403,15 +392,15 @@ export async function register(
 export async function refresh(
   params: RefreshToken,
   serverConfig: { environment: "serverless" },
-): Promise<NextResponse<ApiResponse<RefreshResponseData>>>;
+): Promise<NextResponse<ApiResponse<LoginSuccessResponse>>>;
 export async function refresh(
   params: RefreshToken,
   serverConfig?: AuthActionConfig,
-): Promise<ApiResponse<RefreshResponseData>>;
+): Promise<ApiResponse<LoginSuccessResponse>>;
 export async function refresh(
   { refresh_token, token_transport }: RefreshToken,
   serverConfig?: AuthActionConfig,
-): Promise<ActionResult<RefreshResponseData>> {
+): Promise<ActionResult<LoginSuccessResponse | null>> {
   const response = new ResponseBuilder(
     serverConfig?.environment || "serveraction",
   );
@@ -526,7 +515,7 @@ export async function refresh(
           "set-cookie": `ACCESS_TOKEN=${accessToken}; Path=/; HttpOnly; SameSite=Strict; Max-Age=600${process.env.NODE_ENV === "production" ? "; Secure" : ""}`,
         },
       }),
-    });
+    }) as unknown as ActionResult<LoginSuccessResponse | null>;
   } catch (error) {
     console.error("Login error:", error);
     return response.serverError();
@@ -536,15 +525,15 @@ export async function refresh(
 export async function verifyEmail(
   params: EmailVerification,
   serverConfig: { environment: "serverless" },
-): Promise<NextResponse<ApiResponse<EmailVerifyResponseData>>>;
+): Promise<NextResponse<ApiResponse<EmailVerifySuccessResponse>>>;
 export async function verifyEmail(
   params: EmailVerification,
   serverConfig?: AuthActionConfig,
-): Promise<ApiResponse<EmailVerifyResponseData>>;
+): Promise<ApiResponse<EmailVerifySuccessResponse>>;
 export async function verifyEmail(
   { code, captcha_token, email }: EmailVerification,
   serverConfig?: AuthActionConfig,
-): Promise<ActionResult<EmailVerifyResponseData>> {
+): Promise<ActionResult<EmailVerifySuccessResponse | null>> {
   const response = new ResponseBuilder(
     serverConfig?.environment || "serveraction",
   );
@@ -632,15 +621,15 @@ export async function verifyEmail(
 export async function changePassword(
   params: ChangePassword,
   serverConfig: { environment: "serverless" },
-): Promise<NextResponse<ApiResponse<ChangePasswordResponseData>>>;
+): Promise<NextResponse<ApiResponse<ChangePasswordSuccessResponse>>>;
 export async function changePassword(
   params: ChangePassword,
   serverConfig?: AuthActionConfig,
-): Promise<ApiResponse<ChangePasswordResponseData>>;
+): Promise<ApiResponse<ChangePasswordSuccessResponse>>;
 export async function changePassword(
   { old_password, new_password, access_token }: ChangePassword,
   serverConfig?: AuthActionConfig,
-): Promise<ActionResult<ChangePasswordResponseData>> {
+): Promise<ActionResult<ChangePasswordSuccessResponse | null>> {
   const response = new ResponseBuilder(
     serverConfig?.environment || "serveraction",
   );
@@ -746,15 +735,15 @@ export async function changePassword(
 export async function requestPasswordReset(
   params: RequestPasswordReset,
   serverConfig: { environment: "serverless" },
-): Promise<NextResponse<ApiResponse<PasswordResetRequestResponseData>>>;
+): Promise<NextResponse<ApiResponse<PasswordResetRequestSuccessResponse>>>;
 export async function requestPasswordReset(
   params: RequestPasswordReset,
   serverConfig?: AuthActionConfig,
-): Promise<ApiResponse<PasswordResetRequestResponseData>>;
+): Promise<ApiResponse<PasswordResetRequestSuccessResponse>>;
 export async function requestPasswordReset(
   { email, captcha_token }: RequestPasswordReset,
   serverConfig?: AuthActionConfig,
-): Promise<ActionResult<PasswordResetRequestResponseData>> {
+): Promise<ActionResult<PasswordResetRequestSuccessResponse | null>> {
   const response = new ResponseBuilder(
     serverConfig?.environment || "serveraction",
   );
@@ -792,12 +781,12 @@ export async function requestPasswordReset(
       });
     } else {
       // 添加到密码重置表
-      const passwordReset = await prisma.passwordReset.create({
+      await prisma.passwordReset.create({
         data: {
           userUid: user.uid,
         },
       });
-      const passwordResetCode = passwordReset.id;
+      // const passwordResetCode = passwordReset.id;
       // TODO：发送重置邮件
       // TODO: 根据站点有无设置email确定是否过期
       // 清理15分钟之前的请求
@@ -823,15 +812,15 @@ export async function requestPasswordReset(
 export async function resetPassword(
   params: ResetPassword,
   serverConfig: { environment: "serverless" },
-): Promise<NextResponse<ApiResponse<ResetPasswordResponseData>>>;
+): Promise<NextResponse<ApiResponse<ResetPasswordSuccessResponse>>>;
 export async function resetPassword(
   params: ResetPassword,
   serverConfig?: AuthActionConfig,
-): Promise<ApiResponse<ResetPasswordResponseData>>;
+): Promise<ApiResponse<ResetPasswordSuccessResponse>>;
 export async function resetPassword(
   { code, new_password, captcha_token }: ResetPassword,
   serverConfig?: AuthActionConfig,
-): Promise<ActionResult<ResetPasswordResponseData>> {
+): Promise<ActionResult<ResetPasswordSuccessResponse | null>> {
   const response = new ResponseBuilder(
     serverConfig?.environment || "serveraction",
   );
@@ -928,15 +917,15 @@ export async function resetPassword(
 export async function resendEmailVerification(
   params: ResendEmailVerification,
   serverConfig: { environment: "serverless" },
-): Promise<NextResponse<ApiResponse<ResendEmailVerificationResponseData>>>;
+): Promise<NextResponse<ApiResponse<ResendEmailVerificationSuccessResponse>>>;
 export async function resendEmailVerification(
   params: ResendEmailVerification,
   serverConfig?: AuthActionConfig,
-): Promise<ApiResponse<ResendEmailVerificationResponseData>>;
+): Promise<ApiResponse<ResendEmailVerificationSuccessResponse>>;
 export async function resendEmailVerification(
   { email, captcha_token }: ResendEmailVerification,
   serverConfig?: AuthActionConfig,
-): Promise<ActionResult<ResendEmailVerificationResponseData>> {
+): Promise<ActionResult<ResendEmailVerificationSuccessResponse | null>> {
   const response = new ResponseBuilder(
     serverConfig?.environment || "serveraction",
   );
@@ -1015,15 +1004,15 @@ export async function resendEmailVerification(
 }
 
 export async function logout(
-  params: LogoutUser,
+  params: Logout,
   serverConfig: { environment: "serverless" },
 ): Promise<NextResponse<ApiResponse<null>>>;
 export async function logout(
-  params: LogoutUser,
+  params: Logout,
   serverConfig?: AuthActionConfig,
 ): Promise<ApiResponse<null>>;
 export async function logout(
-  { refresh_token }: LogoutUser,
+  { refresh_token }: Logout,
   serverConfig?: AuthActionConfig,
 ): Promise<ActionResult<null>> {
   const response = new ResponseBuilder(

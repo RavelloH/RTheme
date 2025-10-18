@@ -17,7 +17,7 @@ const response = new ResponseBuilder("serverless");
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/LogoutUser'
+ *             $ref: '#/components/schemas/Logout'
  *     responses:
  *       200:
  *         description: 退出登录成功

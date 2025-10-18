@@ -103,7 +103,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LoginUser"
+              $ref: "#/components/schemas/Login"
       responses:
         "200":
           description: 登录成功
@@ -145,7 +145,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LogoutUser"
+              $ref: "#/components/schemas/Logout"
       responses:
         "200":
           description: 退出登录成功
@@ -348,7 +348,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RegisterUser"
+              $ref: "#/components/schemas/Register"
       responses:
         "200":
           description: 注册成功
@@ -551,36 +551,7 @@ components:
         - pageSize
         - sortOrder
       additionalProperties: false
-    RegisterUser:
-      type: object
-      properties:
-        username:
-          type: string
-          minLength: 3
-          maxLength: 20
-          pattern: ^[a-z][a-z0-9_]*$
-        nickname:
-          type: string
-          minLength: 2
-          maxLength: 20
-        password:
-          type: string
-          minLength: 6
-          maxLength: 100
-        email:
-          type: string
-          format: email
-          pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
-        captcha_token:
-          type: string
-          minLength: 1
-      required:
-        - username
-        - password
-        - email
-        - captcha_token
-      additionalProperties: false
-    LoginUser:
+    Login:
       type: object
       properties:
         username:
@@ -606,134 +577,6 @@ components:
         - password
         - token_transport
         - captcha_token
-      additionalProperties: false
-    RefreshToken:
-      type: object
-      properties:
-        refresh_token:
-          type: string
-        token_transport:
-          default: cookie
-          type: string
-          enum:
-            - cookie
-            - body
-      required:
-        - token_transport
-      additionalProperties: false
-    EmailVerification:
-      type: object
-      properties:
-        code:
-          type: string
-          minLength: 1
-        captcha_token:
-          type: string
-          minLength: 1
-        email:
-          type: string
-          format: email
-          pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
-      required:
-        - code
-        - captcha_token
-        - email
-      additionalProperties: false
-    ResendEmailVerification:
-      type: object
-      properties:
-        email:
-          type: string
-          format: email
-          pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
-        captcha_token:
-          type: string
-          minLength: 1
-      required:
-        - email
-        - captcha_token
-      additionalProperties: false
-    ChangePassword:
-      type: object
-      properties:
-        old_password:
-          type: string
-          minLength: 6
-          maxLength: 100
-        new_password:
-          type: string
-          minLength: 6
-          maxLength: 100
-        access_token:
-          type: string
-      required:
-        - old_password
-        - new_password
-      additionalProperties: false
-    RequestPasswordReset:
-      type: object
-      properties:
-        email:
-          type: string
-          format: email
-          pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
-        captcha_token:
-          type: string
-          minLength: 1
-      required:
-        - email
-        - captcha_token
-      additionalProperties: false
-    ResetPassword:
-      type: object
-      properties:
-        code:
-          type: string
-          minLength: 1
-        new_password:
-          type: string
-          minLength: 6
-          maxLength: 100
-        captcha_token:
-          type: string
-          minLength: 1
-      required:
-        - code
-        - new_password
-        - captcha_token
-      additionalProperties: false
-    LogoutUser:
-      type: object
-      properties:
-        refresh_token:
-          type: string
-      additionalProperties: false
-    RegisterSuccessResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - true
-        message:
-          type: string
-        timestamp:
-          type: string
-          format: date-time
-          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
-        requestId:
-          type: string
-        data:
-          type: string
-          nullable: true
-          enum:
-            - null
-      required:
-        - success
-        - message
-        - timestamp
-        - requestId
-        - data
       additionalProperties: false
     LoginSuccessResponse:
       type: object
@@ -784,101 +627,6 @@ components:
         - timestamp
         - requestId
         - data
-      additionalProperties: false
-    ValidationErrorResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - false
-        message:
-          type: string
-        timestamp:
-          type: string
-          format: date-time
-          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
-        requestId:
-          type: string
-        data:
-          type: string
-          nullable: true
-          enum:
-            - null
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              enum:
-                - VALIDATION_ERROR
-            message:
-              type: string
-            details:
-              type: array
-              items:
-                type: object
-                properties:
-                  field:
-                    type: string
-                  message:
-                    type: string
-                required:
-                  - field
-                  - message
-                additionalProperties: false
-          required:
-            - code
-            - message
-          additionalProperties: false
-      required:
-        - success
-        - message
-        - timestamp
-        - requestId
-        - data
-        - error
-      additionalProperties: false
-    ConflictErrorResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - false
-        message:
-          type: string
-        timestamp:
-          type: string
-          format: date-time
-          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
-        requestId:
-          type: string
-        data:
-          type: string
-          nullable: true
-          enum:
-            - null
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              enum:
-                - USER_EXISTS
-            message:
-              type: string
-          required:
-            - code
-            - message
-          additionalProperties: false
-      required:
-        - success
-        - message
-        - timestamp
-        - requestId
-        - data
-        - error
       additionalProperties: false
     InvalidCredentialsErrorResponse:
       type: object
@@ -1013,89 +761,36 @@ components:
         - data
         - error
       additionalProperties: false
-    RateLimitErrorResponse:
+    Register:
       type: object
       properties:
-        success:
-          type: boolean
-          enum:
-            - false
-        message:
+        username:
           type: string
-        timestamp:
+          minLength: 3
+          maxLength: 20
+          pattern: ^[a-z][a-z0-9_]*$
+        nickname:
           type: string
-          format: date-time
-          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
-        requestId:
+          minLength: 2
+          maxLength: 20
+        password:
           type: string
-        data:
+          minLength: 6
+          maxLength: 100
+        email:
           type: string
-          nullable: true
-          enum:
-            - null
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              enum:
-                - TOO_MANY_REQUESTS
-            message:
-              type: string
-          required:
-            - code
-            - message
-          additionalProperties: false
+          format: email
+          pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+        captcha_token:
+          type: string
+          minLength: 1
       required:
-        - success
-        - message
-        - timestamp
-        - requestId
-        - data
-        - error
+        - username
+        - password
+        - email
+        - captcha_token
       additionalProperties: false
-    ServerErrorResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - false
-        message:
-          type: string
-        timestamp:
-          type: string
-          format: date-time
-          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
-        requestId:
-          type: string
-        data:
-          type: string
-          nullable: true
-          enum:
-            - null
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              enum:
-                - INTERNAL_SERVER_ERROR
-            message:
-              type: string
-          required:
-            - code
-            - message
-          additionalProperties: false
-      required:
-        - success
-        - message
-        - timestamp
-        - requestId
-        - data
-        - error
-      additionalProperties: false
-    LogoutSuccessResponse:
+    RegisterSuccessResponse:
       type: object
       properties:
         success:
@@ -1121,6 +816,79 @@ components:
         - timestamp
         - requestId
         - data
+      additionalProperties: false
+    ConflictErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - USER_EXISTS
+            message:
+              type: string
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - error
+      additionalProperties: false
+    RefreshToken:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+        token_transport:
+          default: cookie
+          type: string
+          enum:
+            - cookie
+            - body
+      required:
+        - token_transport
+      additionalProperties: false
+    EmailVerification:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+        captcha_token:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+          pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+      required:
+        - code
+        - captcha_token
+        - email
       additionalProperties: false
     EmailVerifySuccessResponse:
       type: object
@@ -1149,196 +917,22 @@ components:
         - requestId
         - data
       additionalProperties: false
-    ResendEmailVerificationSuccessResponse:
+    ChangePassword:
       type: object
       properties:
-        success:
-          type: boolean
-          enum:
-            - true
-        message:
+        old_password:
           type: string
-        timestamp:
+          minLength: 6
+          maxLength: 100
+        new_password:
           type: string
-          format: date-time
-          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
-        requestId:
+          minLength: 6
+          maxLength: 100
+        access_token:
           type: string
-        data:
-          type: string
-          nullable: true
-          enum:
-            - null
       required:
-        - success
-        - message
-        - timestamp
-        - requestId
-        - data
-      additionalProperties: false
-    EmailAlreadyVerifiedErrorResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - false
-        message:
-          type: string
-        timestamp:
-          type: string
-          format: date-time
-          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
-        requestId:
-          type: string
-        data:
-          type: string
-          nullable: true
-          enum:
-            - null
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              enum:
-                - EMAIL_ALREADY_VERIFIED
-            message:
-              type: string
-          required:
-            - code
-            - message
-          additionalProperties: false
-      required:
-        - success
-        - message
-        - timestamp
-        - requestId
-        - data
-        - error
-      additionalProperties: false
-    InvalidOrExpiredCodeErrorResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - false
-        message:
-          type: string
-        timestamp:
-          type: string
-          format: date-time
-          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
-        requestId:
-          type: string
-        data:
-          type: string
-          nullable: true
-          enum:
-            - null
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              enum:
-                - INVALID_OR_EXPIRED_CODE
-            message:
-              type: string
-          required:
-            - code
-            - message
-          additionalProperties: false
-      required:
-        - success
-        - message
-        - timestamp
-        - requestId
-        - data
-        - error
-      additionalProperties: false
-    UnauthorizedErrorResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - false
-        message:
-          type: string
-        timestamp:
-          type: string
-          format: date-time
-          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
-        requestId:
-          type: string
-        data:
-          type: string
-          nullable: true
-          enum:
-            - null
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              enum:
-                - UNAUTHORIZED
-            message:
-              type: string
-          required:
-            - code
-            - message
-          additionalProperties: false
-      required:
-        - success
-        - message
-        - timestamp
-        - requestId
-        - data
-        - error
-      additionalProperties: false
-    UserNotFoundErrorResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          enum:
-            - false
-        message:
-          type: string
-        timestamp:
-          type: string
-          format: date-time
-          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
-        requestId:
-          type: string
-        data:
-          type: string
-          nullable: true
-          enum:
-            - null
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              enum:
-                - USER_NOT_FOUND
-            message:
-              type: string
-          required:
-            - code
-            - message
-          additionalProperties: false
-      required:
-        - success
-        - message
-        - timestamp
-        - requestId
-        - data
-        - error
+        - old_password
+        - new_password
       additionalProperties: false
     ChangePasswordSuccessResponse:
       type: object
@@ -1490,6 +1084,20 @@ components:
         - data
         - error
       additionalProperties: false
+    RequestPasswordReset:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+        captcha_token:
+          type: string
+          minLength: 1
+      required:
+        - email
+        - captcha_token
+      additionalProperties: false
     PasswordResetRequestSuccessResponse:
       type: object
       properties:
@@ -1517,6 +1125,24 @@ components:
         - requestId
         - data
       additionalProperties: false
+    ResetPassword:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+        new_password:
+          type: string
+          minLength: 6
+          maxLength: 100
+        captcha_token:
+          type: string
+          minLength: 1
+      required:
+        - code
+        - new_password
+        - captcha_token
+      additionalProperties: false
     ResetPasswordSuccessResponse:
       type: object
       properties:
@@ -1543,6 +1169,47 @@ components:
         - timestamp
         - requestId
         - data
+      additionalProperties: false
+    InvalidOrExpiredCodeErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - INVALID_OR_EXPIRED_CODE
+            message:
+              type: string
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - error
       additionalProperties: false
     InvalidResetCodeErrorResponse:
       type: object
@@ -1625,6 +1292,121 @@ components:
         - requestId
         - data
         - error
+      additionalProperties: false
+    ResendEmailVerification:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+        captcha_token:
+          type: string
+          minLength: 1
+      required:
+        - email
+        - captcha_token
+      additionalProperties: false
+    ResendEmailVerificationSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    EmailAlreadyVerifiedErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - EMAIL_ALREADY_VERIFIED
+            message:
+              type: string
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - error
+      additionalProperties: false
+    Logout:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+      additionalProperties: false
+    LogoutSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
       additionalProperties: false
     CaptchaGetResponse:
       type: object
@@ -1721,4 +1503,245 @@ components:
         - timestamp
         - requestId
         - data
+      additionalProperties: false
+    DoctorSchema:
+      type: object
+      properties:
+        access_token:
+          type: string
+        force:
+          default: false
+          type: boolean
+      required:
+        - force
+      additionalProperties: false
+    DcotorSuccessResponseSchema:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            score:
+              type: number
+            issues:
+              type: array
+              items:
+                type: object
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  severity:
+                    type: string
+                    enum:
+                      - info
+                      - warning
+                      - error
+                  details:
+                    type: string
+                required:
+                  - code
+                  - message
+                  - severity
+                additionalProperties: false
+          required:
+            - score
+            - issues
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    RateLimitErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - TOO_MANY_REQUESTS
+            message:
+              type: string
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - error
+      additionalProperties: false
+    ServerErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - INTERNAL_SERVER_ERROR
+            message:
+              type: string
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - error
+      additionalProperties: false
+    UnauthorizedErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - UNAUTHORIZED
+            message:
+              type: string
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - error
+      additionalProperties: false
+    ValidationErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - VALIDATION_ERROR
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+                required:
+                  - field
+                  - message
+                additionalProperties: false
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - error
       additionalProperties: false

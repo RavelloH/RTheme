@@ -1,6 +1,6 @@
 import ResponseBuilder from "@/lib/server/response";
 import { validateRequestJSON } from "@/lib/server/validator";
-import { LoginUserSchema } from "@repo/shared-types/api/auth";
+import { LoginSchema } from "@repo/shared-types/api/auth";
 import { login } from "@/actions/auth";
 
 // 测试文件监控 - 修改3
@@ -18,7 +18,7 @@ const response = new ResponseBuilder("serverless");
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/LoginUser'
+ *             $ref: '#/components/schemas/Login'
  *     responses:
  *       200:
  *         description: 登录成功
@@ -52,10 +52,7 @@ const response = new ResponseBuilder("serverless");
 export async function POST(request: Request): Promise<Response> {
   try {
     // 验证请求数据
-    const validationResult = await validateRequestJSON(
-      request,
-      LoginUserSchema,
-    );
+    const validationResult = await validateRequestJSON(request, LoginSchema);
     if (validationResult instanceof Response) return validationResult;
 
     const { username, password, token_transport, captcha_token } =
