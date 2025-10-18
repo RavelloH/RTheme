@@ -54,6 +54,7 @@ export const LoginSuccessResponseSchema = createSuccessResponseSchema(
       uid: z.number(),
       username: z.string(),
       nickname: z.string(),
+      role: z.enum(["USER", "ADMIN", "EDITOR", "AUTHOR"]),
       exp: z.iso.datetime().optional(),
     }),
   }),

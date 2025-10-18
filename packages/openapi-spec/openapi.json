@@ -985,6 +985,15 @@
                   "nickname": {
                     "type": "string"
                   },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "USER",
+                      "ADMIN",
+                      "EDITOR",
+                      "AUTHOR"
+                    ]
+                  },
                   "exp": {
                     "type": "string",
                     "format": "date-time",
@@ -994,7 +1003,8 @@
                 "required": [
                   "uid",
                   "username",
-                  "nickname"
+                  "nickname",
+                  "role"
                 ],
                 "additionalProperties": false
               }

@@ -257,6 +257,7 @@ export async function login(
           uid: user.uid,
           username: user.username,
           nickname: user.nickname ?? "",
+          role: user.role,
           exp: expiredAt.toISOString(),
         },
         ...(token_transport === "body" && { access_token: accessToken }),
@@ -507,6 +508,7 @@ export async function refresh(
         userInfo: {
           uid: dbToken.user.uid,
           username: dbToken.user.username,
+          role: dbToken.user.role,
           nickname: dbToken.user.nickname ?? "",
         },
       },

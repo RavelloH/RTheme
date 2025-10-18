@@ -7,6 +7,7 @@ interface UserInfo {
   uid: number;
   username: string;
   nickname: string;
+  role: string;
   exp: string;
   lastRefresh: string;
 }
@@ -143,9 +144,13 @@ export default function TokenManager() {
         const response =
           result instanceof Response ? await result.json() : result;
 
-        if (response.success) {
+        if (response.success && response.data?.userInfo) {
           const updatedUserInfo: UserInfo = {
-            ...userInfo,
+            uid: response.data.userInfo.uid,
+            username: response.data.userInfo.username,
+            nickname: response.data.userInfo.nickname,
+            role: response.data.userInfo.role,
+            exp: response.data.userInfo.exp || userInfo.exp,
             lastRefresh: now.toISOString(),
           };
           localStorage.setItem("user_info", JSON.stringify(updatedUserInfo));

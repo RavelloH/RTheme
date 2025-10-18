@@ -609,6 +609,13 @@ components:
                   type: string
                 nickname:
                   type: string
+                role:
+                  type: string
+                  enum:
+                    - USER
+                    - ADMIN
+                    - EDITOR
+                    - AUTHOR
                 exp:
                   type: string
                   format: date-time
@@ -617,6 +624,7 @@ components:
                 - uid
                 - username
                 - nickname
+                - role
               additionalProperties: false
           required:
             - userInfo
