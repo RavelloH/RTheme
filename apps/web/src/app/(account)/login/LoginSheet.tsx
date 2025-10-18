@@ -6,11 +6,11 @@ import { CaptchaButton } from "@/components/CaptchaButton";
 import { useState } from "react";
 import { useBroadcast, useBroadcastSender } from "@/hooks/useBroadcast";
 import { login as loginAction } from "@/actions/auth";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "@/components/Link";
+import { useSearchParams } from "next/navigation";
+import Link, { useNavigateWithTransition } from "@/components/Link";
 
 export default function LoginSheet() {
-  const Router = useRouter();
+  const navigate = useNavigateWithTransition();
   const searchParams = useSearchParams();
   const usernameFromUrl = searchParams.get("username") || "";
   const { broadcast } = useBroadcastSender<{ type: string }>();
@@ -137,14 +137,14 @@ export default function LoginSheet() {
       const targetPath = redirectParam ? redirectParam : "/profile";
 
       setTimeout(() => {
-        Router.push(targetPath);
+        navigate(targetPath);
       }, 1500);
     } else {
       // 处理特定的错误情况
       if (responseData.error?.code === "EMAIL_NOT_VERIFIED") {
         setButtonLoadingText("请先验证邮箱后再登录");
         setTimeout(() => {
-          Router.push(`/verify?username=${encodeURIComponent(username)}`);
+          navigate(`/verify?username=${encodeURIComponent(username)}`);
         }, 2000);
       } else {
         setButtonLoadingText(responseData.message || "登录失败，请稍后重试");

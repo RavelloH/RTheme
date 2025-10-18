@@ -7,11 +7,10 @@ import { useState } from "react";
 import { useBroadcast, useBroadcastSender } from "@/hooks/useBroadcast";
 import { register as registerAction } from "@/actions/auth";
 import { useConfig } from "@/components/ConfigProvider";
-import { useRouter } from "next/navigation";
-import Link from "@/components/Link";
+import Link, { useNavigateWithTransition } from "@/components/Link";
 
 export default function RegisterSheet() {
-  const Router = useRouter();
+  const navigate = useNavigateWithTransition();
   const { config } = useConfig();
   const canRegister = config<boolean>("user.registration.enabled");
   const { broadcast } = useBroadcastSender<{ type: string }>();
@@ -156,14 +155,14 @@ export default function RegisterSheet() {
       if (emailVerificationRequired) {
         setButtonLoadingText("注册成功，请检查邮箱来验证账户");
         setTimeout(() => {
-          Router.push(
+          navigate(
             `/verify?username=${encodeURIComponent(username)}&email=${encodeURIComponent(email)}`,
           );
         }, 2000);
       } else {
         setButtonLoadingText("注册成功，正在跳转...");
         setTimeout(() => {
-          Router.push(`/login?username=${encodeURIComponent(username)}`);
+          navigate(`/login?username=${encodeURIComponent(username)}`);
         }, 2000);
       }
     } else {

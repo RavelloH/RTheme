@@ -4,7 +4,7 @@ import LinkButton from "@/components/LinkButton";
 import MainLayout from "@/components/MainLayout";
 import RowGrid, { GridItem } from "@/components/RowGrid";
 
-export default function UnauthorizedPage() {
+export default function UnauthorizedPage({ redirect }: { redirect?: string }) {
   return (
     <>
       <MainLayout type="horizontal">
@@ -65,7 +65,11 @@ export default function UnauthorizedPage() {
               width={14}
               height={0.1}
             >
-              <LinkButton mode="link" href="/login" text="登录" />
+              <LinkButton
+                mode="link"
+                href={redirect ? `/login?redirect=${redirect}` : "/login"}
+                text="登录"
+              />
             </GridItem>
             <GridItem
               areas={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}

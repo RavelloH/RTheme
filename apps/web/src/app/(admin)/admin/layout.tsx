@@ -15,13 +15,13 @@ export default async function AdminLayout({
   const token = cookieStore.get("ACCESS_TOKEN")?.value;
 
   if (!token) {
-    return <UnauthorizedPage />;
+    return <UnauthorizedPage redirect="/admin" />;
   }
 
   const user = jwtTokenVerify<AccessTokenPayload>(token);
 
   if (!user) {
-    return <UnauthorizedPage />;
+    return <UnauthorizedPage redirect="/admin" />;
   }
 
   if (!allowedRoles.includes(user.role)) {
