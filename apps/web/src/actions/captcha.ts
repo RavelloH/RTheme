@@ -1,68 +1,19 @@
 "use server";
 
 import limitControl from "@/lib/server/rateLimit";
+import redis, { ensureRedisConnection } from "@/lib/server/redis";
 import ResponseBuilder from "@/lib/server/response";
 import { validateData } from "@/lib/server/validator";
 import Cap from "@cap.js/server";
 import { CaptchaVerifyRequestSchema } from "@repo/shared-types/api/captcha";
-import Redis from "ioredis";
 import { headers } from "next/headers";
-
-// 根据环境变量决定是否使用Redis
-const useRedis = !!process.env.REDIS_URL;
-const redis = useRedis
-  ? new Redis(process.env.REDIS_URL as string, {
-      maxRetriesPerRequest: 0,
-      lazyConnect: true,
-      enableOfflineQueue: false,
-      connectTimeout: 5000,
-      commandTimeout: 5000,
-    })
-  : null;
-
-// 连接状态标记
-let isReconnecting = false;
-
-// 添加错误处理，防止无限重连
-if (redis) {
-  redis.on("error", () => {
-    isReconnecting = false;
-    redis.disconnect();
-  });
-
-  redis.on("close", () => {
-    console.log("Redis connection closed");
-    isReconnecting = false;
-  });
-
-  redis.on("connect", () => {
-    console.log("Redis connected successfully");
-    isReconnecting = false;
-  });
-}
 
 const cap = new Cap({
   storage: {
     challenges: {
       store: async (token, challengeData) => {
-        if (!useRedis || !redis) {
-          throw new Error("Redis not configured");
-        }
-
         try {
-          // 检查Redis连接状态，如果断开则尝试重连
-          if (
-            (redis.status === "close" ||
-              redis.status === "end" ||
-              redis.status === "wait") &&
-            !isReconnecting
-          ) {
-            console.log(
-              `Redis status: ${redis.status}, attempting to reconnect...`,
-            );
-            isReconnecting = true;
-            await redis.connect();
-          }
+          await ensureRedisConnection();
 
           // 使用 SETEX 命令设置带有过期时间的键
           const ttl = Math.floor((challengeData.expires - Date.now()) / 1000);
@@ -79,24 +30,8 @@ const cap = new Cap({
         }
       },
       read: async (token) => {
-        if (!useRedis || !redis) {
-          throw new Error("Redis not configured");
-        }
-
         try {
-          // 检查Redis连接状态，如果断开则尝试重连
-          if (
-            (redis.status === "close" ||
-              redis.status === "end" ||
-              redis.status === "wait") &&
-            !isReconnecting
-          ) {
-            console.log(
-              `Redis status: ${redis.status}, attempting to reconnect...`,
-            );
-            isReconnecting = true;
-            await redis.connect();
-          }
+          await ensureRedisConnection();
 
           const data = await redis.get(`captcha:challenge:${token}`);
           if (!data) {
@@ -117,10 +52,6 @@ const cap = new Cap({
         }
       },
       delete: async (token) => {
-        if (!useRedis || !redis) {
-          throw new Error("Redis not configured");
-        }
-
         try {
           await redis.del(`captcha:challenge:${token}`);
         } catch (error) {
@@ -135,24 +66,8 @@ const cap = new Cap({
     },
     tokens: {
       store: async (tokenKey, expires) => {
-        if (!useRedis || !redis) {
-          throw new Error("Redis not configured");
-        }
-
         try {
-          // 检查Redis连接状态，如果断开则尝试重连
-          if (
-            (redis.status === "close" ||
-              redis.status === "end" ||
-              redis.status === "wait") &&
-            !isReconnecting
-          ) {
-            console.log(
-              `Redis status: ${redis.status}, attempting to reconnect...`,
-            );
-            isReconnecting = true;
-            await redis.connect();
-          }
+          await ensureRedisConnection();
 
           // 使用 SETEX 命令设置带有过期时间的键
           const ttl = Math.floor((expires - Date.now()) / 1000);
@@ -169,24 +84,8 @@ const cap = new Cap({
         }
       },
       get: async (tokenKey) => {
-        if (!useRedis || !redis) {
-          throw new Error("Redis not configured");
-        }
-
         try {
-          // 检查Redis连接状态，如果断开则尝试重连
-          if (
-            (redis.status === "close" ||
-              redis.status === "end" ||
-              redis.status === "wait") &&
-            !isReconnecting
-          ) {
-            console.log(
-              `Redis status: ${redis.status}, attempting to reconnect...`,
-            );
-            isReconnecting = true;
-            await redis.connect();
-          }
+          await ensureRedisConnection();
 
           const data = await redis.get(`captcha:token:${tokenKey}`);
           if (!data) {
@@ -207,10 +106,6 @@ const cap = new Cap({
         }
       },
       delete: async (tokenKey) => {
-        if (!useRedis || !redis) {
-          throw new Error("Redis not configured");
-        }
-
         try {
           await redis.del(`captcha:token:${tokenKey}`);
         } catch (error) {
