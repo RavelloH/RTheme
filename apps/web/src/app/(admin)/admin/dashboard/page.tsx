@@ -3,6 +3,7 @@ import MainLayout from "@/components/MainLayout";
 import RowGrid, { GridItem } from "@/components/RowGrid";
 import { generateMetadata } from "@/lib/shared/seo";
 import DashboardDoctor from "./DashboardDoctor";
+import AdminSidebar from "@/components/AdminSidebar";
 
 export const metadata = await generateMetadata(
   {
@@ -24,6 +25,7 @@ export default function AdminDashboard() {
         enableLineReveal={true}
         snapToElements={false}
       >
+        <AdminSidebar />
         <RowGrid>
           <GridItem areas={[1, 2, 3, 4]} width={3} height={0.5}>
             <DashboardDoctor />
