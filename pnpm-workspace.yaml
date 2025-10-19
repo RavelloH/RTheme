@@ -1,3 +1,16 @@
 packages:
-  - "apps/*"
-  - "packages/*"
+  - apps/*
+  - packages/*
+
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - '@prisma/client'
+  - '@prisma/engines'
+  - '@tailwindcss/oxide'
+  - argon2
+  - core-js
+  - core-js-pure
+  - esbuild
+  - postman-code-generators
+  - prisma
+  - sharp
