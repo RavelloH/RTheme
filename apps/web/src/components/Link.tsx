@@ -5,6 +5,7 @@ import { useMenu } from "@/components/MenuProvider";
 import { default as NextLink } from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
+import { RiArrowRightDoubleLine } from "@remixicon/react";
 import React from "react";
 
 type BroadcastFn = ReturnType<typeof useBroadcastSender<object>>["broadcast"];
@@ -63,6 +64,9 @@ const presetStyles = {
   "hover-color": {
     className: "transition-colors duration-300",
   },
+  arrow: {
+    className: "inline-flex items-center gap-1",
+  },
 };
 
 // 应用预设样式
@@ -76,12 +80,24 @@ function applyPresets(presets: string[] = [], children: React.ReactNode) {
     .filter(Boolean)
     .join(" ");
 
+  let content = children;
+
+  // 处理 arrow 预设
+  if (presets.includes("arrow")) {
+    content = (
+      <span className="inline-flex items-center gap-1">
+        {content}
+        <RiArrowRightDoubleLine size={"1em"} />
+      </span>
+    );
+  }
+
   // 处理 hover-underline 预设
   if (presets.includes("hover-underline")) {
     return (
       <span className={className}>
         <span className="relative inline-block">
-          {children}
+          {content}
           <span className="absolute bottom-0 left-0 w-full h-0.5 bg-current transform scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-300 ease-out"></span>
         </span>
       </span>
@@ -90,10 +106,10 @@ function applyPresets(presets: string[] = [], children: React.ReactNode) {
 
   // 其他预设直接包装
   if (className) {
-    return <span className={className}>{children}</span>;
+    return <span className={className}>{content}</span>;
   }
 
-  return children;
+  return content;
 }
 
 // 规范化路径
