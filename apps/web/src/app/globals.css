@@ -17,6 +17,12 @@
   --color-ring: #0d9488;
   --radius: 0.5rem;
   --theme-red: #ef4444;
+  --color-success: #16a34a;
+  --color-success-foreground: #ffffff;
+  --color-error: #dc2626;
+  --color-error-foreground: #ffffff;
+  --color-warning: #ca8a04;
+  --color-warning-foreground: #ffffff;
 }
 
 .dark {
@@ -36,6 +42,12 @@
     --color-input: oklch(1 0 0 / 15%);
     --color-ring: #0d9488;
     --radius: 0.5rem;
+    --color-success: #22c55e;
+    --color-success-foreground: #111111;
+    --color-error: #ef4444;
+    --color-error-foreground: #111111;
+    --color-warning: #eab308;
+    --color-warning-foreground: #111111;
   }
 }
 
