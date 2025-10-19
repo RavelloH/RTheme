@@ -13,18 +13,14 @@ export default function AdminRedirect() {
   const isMobile = useMobile();
 
   useEffect(() => {
-    doctor({ force: false }).then((res) => {
-      if (!res.success) {
-        setTitle("管理面板启动失败，请稍后重试");
-      } else {
-        const role = JSON.parse(localStorage.getItem("user_info") || "{}").role;
-        if (role === "ADMIN") setTitle("正在导航至仪表盘...");
-        else setTitle("正在导航至内容管理中心...");
-        setTimeout(() => {
-          if (role === "ADMIN") navigate("/admin/dashboard");
-          else navigate("/admin/posts");
-        }, 1000);
-      }
+    doctor({ force: false }).then(() => {
+      const role = JSON.parse(localStorage.getItem("user_info") || "{}").role;
+      if (role === "ADMIN") setTitle("正在导航至仪表盘...");
+      else setTitle("正在导航至内容管理中心...");
+      setTimeout(() => {
+        if (role === "ADMIN") navigate("/admin/dashboard");
+        else navigate("/admin/posts");
+      }, 1000);
     });
   });
   return (
