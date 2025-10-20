@@ -4,6 +4,9 @@ import {
   DoctorSchema,
   Doctor,
   DoctorSuccessResponse,
+  GetDoctorHistorySchema,
+  GetDoctorHistory,
+  DoctorHistoryItem,
 } from "@repo/shared-types/api/doctor";
 import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
@@ -300,6 +303,96 @@ export async function doctor(
     });
   } catch (error) {
     console.error("Doctor error:", error);
+    return response.serverError();
+  }
+}
+
+export async function getDoctorHistory(
+  params: GetDoctorHistory,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<DoctorHistoryItem[] | null>>>;
+export async function getDoctorHistory(
+  params: GetDoctorHistory,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<DoctorHistoryItem[] | null>>;
+export async function getDoctorHistory(
+  { access_token, page = 1, pageSize = 10 }: GetDoctorHistory,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<DoctorHistoryItem[] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      page,
+      pageSize,
+    },
+    GetDoctorHistorySchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 计算偏移量
+    const skip = (page - 1) * pageSize;
+
+    // 获取总数
+    const total = await prisma.healthCheck.count();
+
+    // 获取分页数据
+    const records = await prisma.healthCheck.findMany({
+      skip,
+      take: pageSize,
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        issues: true,
+      },
+    });
+
+    // 转换数据格式
+    const data: DoctorHistoryItem[] = records.map((record) => ({
+      id: record.id,
+      createdAt: record.createdAt.toISOString(),
+      issues: record.issues as HealthCheckIssue[],
+    }));
+
+    // 计算分页元数据
+    const totalPages = Math.ceil(total / pageSize);
+    const meta = {
+      page,
+      pageSize,
+      total,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
+    };
+
+    return response.ok({
+      data,
+      meta,
+    });
+  } catch (error) {
+    console.error("Get doctor history error:", error);
     return response.serverError();
   }
 }

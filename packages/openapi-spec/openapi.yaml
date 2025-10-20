@@ -7,6 +7,61 @@ servers:
   - url: http://localhost:3000
     description: 开发环境
 paths:
+  /api/admin/doctor/history:
+    get:
+      summary: 获取自检历史记录
+      description: 需管理员身份，分页获取系统自检历史记录
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: 页码
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: 每页数量
+      security:
+        - BearerAuth: []
+      tags:
+        - Admin
+      responses:
+        "200":
+          description: 返回自检历史记录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetDoctorHistorySuccessResponse"
+        "400":
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+        "401":
+          description: 未授权，Access Token 无效或不存在，权限不足
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedErrorResponse"
+        "429":
+          description: 请求过于频繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitErrorResponse"
+        "500":
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerErrorResponse"
   /api/auth/email-verify/resend:
     post:
       summary: 重发邮箱验证码
@@ -1610,6 +1665,85 @@ components:
             - createdAt
             - issues
           additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    GetDoctorHistory:
+      type: object
+      properties:
+        access_token:
+          type: string
+        page:
+          default: 1
+          type: integer
+          exclusiveMinimum: true
+          maximum: 9007199254740991
+        pageSize:
+          default: 10
+          type: integer
+          exclusiveMinimum: true
+          maximum: 100
+      required:
+        - page
+        - pageSize
+      additionalProperties: false
+    GetDoctorHistorySuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: number
+              createdAt:
+                type: string
+                format: date-time
+                pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+              issues:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                    message:
+                      type: string
+                    severity:
+                      type: string
+                      enum:
+                        - info
+                        - warning
+                        - error
+                    details:
+                      type: string
+                  required:
+                    - code
+                    - message
+                    - severity
+                  additionalProperties: false
+            required:
+              - id
+              - createdAt
+              - issues
+            additionalProperties: false
       required:
         - success
         - message

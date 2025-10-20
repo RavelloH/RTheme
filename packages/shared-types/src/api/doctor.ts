@@ -26,3 +26,38 @@ export const DoctorSuccessResponseSchema = createSuccessResponseSchema(
 );
 export type DoctorSuccessResponse = z.infer<typeof DoctorSuccessResponseSchema>;
 registerSchema("DcotorSuccessResponse", DoctorSuccessResponseSchema);
+
+/*
+    getDoctorHistory() Schema
+*/
+export const GetDoctorHistorySchema = z.object({
+  access_token: z.string().optional(),
+  page: z.number().int().positive().default(1),
+  pageSize: z.number().int().positive().max(100).default(10),
+});
+export type GetDoctorHistory = z.infer<typeof GetDoctorHistorySchema>;
+registerSchema("GetDoctorHistory", GetDoctorHistorySchema);
+
+export const DoctorHistoryItemSchema = z.object({
+  id: z.number(),
+  createdAt: z.iso.datetime(),
+  issues: z.array(
+    z.object({
+      code: z.string(),
+      message: z.string(),
+      severity: z.enum(["info", "warning", "error"]),
+      details: z.string().optional(),
+    }),
+  ),
+});
+export type DoctorHistoryItem = z.infer<typeof DoctorHistoryItemSchema>;
+
+export const GetDoctorHistorySuccessResponseSchema =
+  createSuccessResponseSchema(z.array(DoctorHistoryItemSchema));
+export type GetDoctorHistorySuccessResponse = z.infer<
+  typeof GetDoctorHistorySuccessResponseSchema
+>;
+registerSchema(
+  "GetDoctorHistorySuccessResponse",
+  GetDoctorHistorySuccessResponseSchema,
+);
