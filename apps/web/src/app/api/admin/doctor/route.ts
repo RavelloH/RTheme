@@ -11,7 +11,7 @@ const response = new ResponseBuilder("serverless");
  *   post:
  *     summary: 运行自检
  *     description: 自我检查系统的健康状态。带有force参数时，忽略最近24小时内的缓存结果，强制重新运行自检。
- *     tags: [Admin]
+ *     tags: Admin
  *     requestBody:
  *       required: true
  *       content:
