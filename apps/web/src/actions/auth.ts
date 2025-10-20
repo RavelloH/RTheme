@@ -249,6 +249,16 @@ export async function login(
       });
     }
 
+    after(async () => {
+      // 更新最后登录时间
+      await prisma.user.update({
+        where: { uid: user.uid },
+        data: {
+          lastUseAt: new Date(),
+        },
+      });
+    });
+
     // 返回成功结果
     return response.ok({
       message: "登录成功",
@@ -484,6 +494,13 @@ export async function refresh(
           lastUsedAt: new Date(),
           ipAddress: clientIP,
           userAgent: clientUserAgent,
+        },
+      });
+      // 更新最后登录时间
+      await prisma.user.update({
+        where: { uid: dbToken.user.uid },
+        data: {
+          lastUseAt: new Date(),
         },
       });
     });
