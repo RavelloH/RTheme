@@ -90,6 +90,39 @@ export default function HorizontalScroll({
 
       // 鼠标滚轮控制
       const handleWheel = (e: WheelEvent) => {
+        // 检查是否是垂直滚动且目标元素有可滚动内容
+        const target = e.target as HTMLElement;
+
+        // 检查目标元素或其父元素是否有垂直滚动
+        let element: HTMLElement | null = target;
+        while (element && element !== container) {
+          const style = window.getComputedStyle(element);
+          const hasVerticalScroll =
+            (style.overflowY === "auto" || style.overflowY === "scroll") &&
+            element.scrollHeight > element.clientHeight;
+
+          if (hasVerticalScroll) {
+            // 检查是否可以在当前方向继续滚动
+            const isScrollingDown = e.deltaY > 0;
+            const isScrollingUp = e.deltaY < 0;
+            const isAtTop = element.scrollTop === 0;
+            const isAtBottom =
+              element.scrollTop + element.clientHeight >=
+              element.scrollHeight - 1;
+
+            // 如果可以继续滚动，则允许默认行为
+            if (
+              (isScrollingDown && !isAtBottom) ||
+              (isScrollingUp && !isAtTop)
+            ) {
+              return; // 不阻止默认行为，让子元素正常滚动
+            }
+          }
+
+          element = element.parentElement;
+        }
+
+        // 阻止默认滚动行为
         e.preventDefault();
 
         // 计算滚动增量
