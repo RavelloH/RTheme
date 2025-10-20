@@ -78,18 +78,41 @@ export async function getUsersStat(
       }
     }
 
-    // 获取用户总数统计（按角色分组）
-    const usersByRole = await prisma.user.groupBy({
-      by: ["role"],
-      _count: {
-        uid: true,
-      },
-      where: {
-        deletedAt: null,
-      },
-    });
+    // 计算时间边界
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    // 计算各角色用户数
+    // 使用一次原生 SQL 查询获取所有统计数据
+    // 优化：从 7 次查询减少到 1 次查询
+    const stats = await prisma.$queryRaw<
+      Array<{
+        role: string;
+        total_count: bigint;
+        active_1d: bigint;
+        active_7d: bigint;
+        active_30d: bigint;
+        new_1d: bigint;
+        new_7d: bigint;
+        new_30d: bigint;
+      }>
+    >`
+      SELECT 
+        role,
+        COUNT(*) as total_count,
+        COUNT(CASE WHEN "lastUseAt" >= ${oneDayAgo} THEN 1 END) as active_1d,
+        COUNT(CASE WHEN "lastUseAt" >= ${sevenDaysAgo} THEN 1 END) as active_7d,
+        COUNT(CASE WHEN "lastUseAt" >= ${thirtyDaysAgo} THEN 1 END) as active_30d,
+        COUNT(CASE WHEN "createdAt" >= ${oneDayAgo} THEN 1 END) as new_1d,
+        COUNT(CASE WHEN "createdAt" >= ${sevenDaysAgo} THEN 1 END) as new_7d,
+        COUNT(CASE WHEN "createdAt" >= ${thirtyDaysAgo} THEN 1 END) as new_30d
+      FROM "User"
+      WHERE "deletedAt" IS NULL
+      GROUP BY role
+    `;
+
+    // 初始化统计数据
     const total = {
       total: 0,
       user: 0,
@@ -98,11 +121,20 @@ export async function getUsersStat(
       author: 0,
     };
 
-    usersByRole.forEach((item) => {
-      const count = item._count.uid;
+    let activeLastDay = 0;
+    let activeLast7Days = 0;
+    let activeLast30Days = 0;
+    let newLastDay = 0;
+    let newLast7Days = 0;
+    let newLast30Days = 0;
+
+    // 聚合统计结果
+    stats.forEach((stat) => {
+      const count = Number(stat.total_count);
       total.total += count;
 
-      switch (item.role) {
+      // 按角色分类
+      switch (stat.role) {
         case "USER":
           total.user = count;
           break;
@@ -116,58 +148,17 @@ export async function getUsersStat(
           total.author = count;
           break;
       }
+
+      // 累加活跃用户数
+      activeLastDay += Number(stat.active_1d);
+      activeLast7Days += Number(stat.active_7d);
+      activeLast30Days += Number(stat.active_30d);
+
+      // 累加新增用户数
+      newLastDay += Number(stat.new_1d);
+      newLast7Days += Number(stat.new_7d);
+      newLast30Days += Number(stat.new_30d);
     });
-
-    // 计算时间边界
-    const now = new Date();
-    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-    // 活跃用户统计（根据 lastUseAt）
-    const [activeLastDay, activeLast7Days, activeLast30Days] =
-      await Promise.all([
-        prisma.user.count({
-          where: {
-            lastUseAt: { gte: oneDayAgo },
-            deletedAt: null,
-          },
-        }),
-        prisma.user.count({
-          where: {
-            lastUseAt: { gte: sevenDaysAgo },
-            deletedAt: null,
-          },
-        }),
-        prisma.user.count({
-          where: {
-            lastUseAt: { gte: thirtyDaysAgo },
-            deletedAt: null,
-          },
-        }),
-      ]);
-
-    // 新增用户统计（根据 createdAt）
-    const [newLastDay, newLast7Days, newLast30Days] = await Promise.all([
-      prisma.user.count({
-        where: {
-          createdAt: { gte: oneDayAgo },
-          deletedAt: null,
-        },
-      }),
-      prisma.user.count({
-        where: {
-          createdAt: { gte: sevenDaysAgo },
-          deletedAt: null,
-        },
-      }),
-      prisma.user.count({
-        where: {
-          createdAt: { gte: thirtyDaysAgo },
-          deletedAt: null,
-        },
-      }),
-    ]);
 
     // 构建响应数据
     const data: GetUsersStatsSuccessResponse["data"] = {
