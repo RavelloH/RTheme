@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import {
   DoctorSchema,
-  DoctorType,
+  Doctor,
   DoctorSuccessResponse,
 } from "@repo/shared-types/api/admin";
 import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
@@ -28,15 +28,15 @@ type ActionResult<T extends ApiResponseData> =
   | ApiResponse<T>;
 
 export async function doctor(
-  params: DoctorType,
+  params: Doctor,
   serverConfig: { environment: "serverless" },
 ): Promise<NextResponse<ApiResponse<DoctorSuccessResponse["data"]>>>;
 export async function doctor(
-  params: DoctorType,
+  params: Doctor,
   serverConfig?: ActionConfig,
 ): Promise<ApiResponse<DoctorSuccessResponse["data"]>>;
 export async function doctor(
-  { access_token, force }: DoctorType,
+  { access_token, force }: Doctor,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<DoctorSuccessResponse["data"] | null>> {
   const response = new ResponseBuilder(

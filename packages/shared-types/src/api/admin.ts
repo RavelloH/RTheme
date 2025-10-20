@@ -2,13 +2,13 @@ import { z } from "zod";
 import { createSuccessResponseSchema, registerSchema } from "./common.js";
 
 /*
-    Doctor() Schema
+    doctor() Schema
 */
 export const DoctorSchema = z.object({
   access_token: z.string().optional(),
   force: z.boolean().default(false),
 });
-export type DoctorType = z.infer<typeof DoctorSchema>;
+export type Doctor = z.infer<typeof DoctorSchema>;
 registerSchema("Doctor", DoctorSchema);
 
 export const DoctorSuccessResponseSchema = createSuccessResponseSchema(
