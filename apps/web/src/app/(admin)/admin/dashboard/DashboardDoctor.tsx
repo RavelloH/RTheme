@@ -1,6 +1,6 @@
 "use client";
 
-import { doctor } from "@/actions/admin";
+import { doctor } from "@/actions/doctor";
 import Clickable from "@/ui/Clickable";
 import Link from "@/components/Link";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
@@ -29,7 +29,6 @@ export default function DashboardDoctor() {
       if (!res.data.issues) return;
       setResult(res.data.issues);
       setRefreshTime(new Date(res.data.createdAt));
-      console.log("Doctor result:", res.data.issues);
       if (force) {
         setForce(false);
       }

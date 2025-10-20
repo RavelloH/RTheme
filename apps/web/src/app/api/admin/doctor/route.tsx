@@ -1,7 +1,7 @@
 import ResponseBuilder from "@/lib/server/response";
 import { validateRequestJSON } from "@/lib/server/validator";
-import { DoctorSchema } from "@repo/shared-types/api/admin";
-import { doctor } from "@/actions/admin";
+import { DoctorSchema } from "@repo/shared-types/api/doctor";
+import { doctor } from "@/actions/doctor";
 
 const response = new ResponseBuilder("serverless");
 

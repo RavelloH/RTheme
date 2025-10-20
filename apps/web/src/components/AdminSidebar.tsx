@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   RiArticleFill,
   RiAttachment2,
@@ -20,6 +19,7 @@ import {
 } from "@remixicon/react";
 import { usePathname } from "next/navigation";
 import { useMobile } from "@/hooks/useMobile";
+import Link from "./Link";
 
 const roles = {
   all: ["ADMIN", "EDITOR", "AUTHOR"],

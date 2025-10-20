@@ -1,6 +1,6 @@
 "use client";
 
-import { doctor } from "@/actions/admin";
+import { doctor } from "@/actions/doctor";
 import MainLayout from "@/components/MainLayout";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { useEffect, useState } from "react";

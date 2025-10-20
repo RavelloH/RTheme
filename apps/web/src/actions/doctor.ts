@@ -4,7 +4,7 @@ import {
   DoctorSchema,
   Doctor,
   DoctorSuccessResponse,
-} from "@repo/shared-types/api/admin";
+} from "@repo/shared-types/api/doctor";
 import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
 import limitControl from "@/lib/server/rateLimit";
