@@ -4,6 +4,7 @@ import RowGrid, { GridItem } from "@/components/RowGrid";
 import { generateMetadata } from "@/lib/shared/seo";
 import DashboardDoctor from "./DashboardDoctor";
 import AdminSidebar from "@/components/AdminSidebar";
+import DashboardUsersStats from "./DashboardUsersStats";
 
 export const metadata = await generateMetadata(
   {
@@ -29,6 +30,9 @@ export default function AdminDashboard() {
         <RowGrid>
           <GridItem areas={[1, 2, 3, 4]} width={3} height={0.5}>
             <DashboardDoctor />
+          </GridItem>
+          <GridItem areas={[5, 6, 7, 8]} width={2} height={0.5}>
+            <DashboardUsersStats />
           </GridItem>
         </RowGrid>
       </HorizontalScroll>

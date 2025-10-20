@@ -20,15 +20,15 @@ type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
 
-export async function getUsersStat(
+export async function getUsersStats(
   params: GetUsersStats,
   serverConfig: { environment: "serverless" },
 ): Promise<NextResponse<ApiResponse<GetUsersStatsSuccessResponse["data"]>>>;
-export async function getUsersStat(
+export async function getUsersStats(
   params: GetUsersStats,
   serverConfig?: ActionConfig,
 ): Promise<ApiResponse<GetUsersStatsSuccessResponse["data"]>>;
-export async function getUsersStat(
+export async function getUsersStats(
   { access_token, force }: GetUsersStats,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<GetUsersStatsSuccessResponse["data"] | null>> {

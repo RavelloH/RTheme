@@ -1,4 +1,4 @@
-import { getUsersStat } from "@/actions/stats";
+import { getUsersStats } from "@/actions/stats";
 import ResponseBuilder from "@/lib/server/response";
 import { validateGetRequest } from "@/lib/server/request-converter";
 import { GetUsersStatsSchema } from "@repo/shared-types/api/stats";
@@ -55,7 +55,7 @@ export async function GET(request: Request): Promise<Response> {
 
     const { access_token, force } = validationResult.data;
 
-    return (await getUsersStat(
+    return (await getUsersStats(
       {
         access_token,
         force,
