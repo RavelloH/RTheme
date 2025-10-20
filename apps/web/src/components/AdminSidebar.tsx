@@ -152,9 +152,9 @@ export default function AdminSidebar() {
     );
   }
 
-  // 桌面端：垂直侧边栏
+  // 桌面端:垂直侧边栏
   return (
-    <div className="group w-[5em] hover:w-[15em] h-full border-border border transition-all duration-300 ease-in-out overflow-y-auto overflow-x-hidden">
+    <div className="group relative w-[5em] hover:w-[15em] h-full border-border border transition-all duration-300 ease-in-out overflow-y-auto overflow-x-hidden bg-background shrink-0">
       {AdminSidebarList.map((item, index) => (
         <Link
           key={index}
