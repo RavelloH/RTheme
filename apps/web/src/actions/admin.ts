@@ -8,11 +8,11 @@ import {
 import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
 import limitControl from "@/lib/server/rateLimit";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { validateData } from "@/lib/server/validator";
 import prisma from "@/lib/server/prisma";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
-import { AccessTokenPayload, jwtTokenVerify } from "@/lib/server/jwt";
+import { authVerify } from "@/lib/server/auth-verify";
 
 type HealthCheckIssue = {
   code: string;
@@ -56,17 +56,13 @@ export async function doctor(
   if (validationError) return response.badRequest(validationError);
 
   // 身份验证
-  const cookieStore = await cookies();
-  const token = access_token || cookieStore.get("ACCESS_TOKEN")?.value;
-  if (!token) {
-    return response.unauthorized();
-  }
-  const user = await jwtTokenVerify<AccessTokenPayload>(token);
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: access_token,
+  });
+
   if (!user) {
     return response.unauthorized();
-  }
-  if (user.role == "USER") {
-    return response.forbidden();
   }
 
   // 运行自检
