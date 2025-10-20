@@ -13,7 +13,7 @@ registerSchema("Doctor", DoctorSchema);
 
 export const DoctorSuccessResponseSchema = createSuccessResponseSchema(
   z.object({
-    createdAt: z.string().or(z.date()),
+    createdAt: z.iso.datetime(),
     issues: z.array(
       z.object({
         code: z.string(),

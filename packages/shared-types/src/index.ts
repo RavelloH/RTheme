@@ -4,6 +4,7 @@ export * from "./api/auth.js";
 export * from "./api/captcha.js";
 export * from "./api/admin.js";
 export * from "./api/error.js";
+export * from "./api/stats.js";
 
 // 类型安全的 API 客户端工具
 export { createApiClient } from "./client.js";

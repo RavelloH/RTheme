@@ -442,6 +442,45 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ServerErrorResponse"
+  /api/stats/users:
+    get:
+      summary: 获取用户统计数据
+      description: 需管理员身份，获取用户统计信息
+      parameters:
+        - in: query
+          name: force
+          schema:
+            type: boolean
+          description: 是否强制刷新缓存
+      security:
+        - BearerAuth: []
+      tags:
+        - Stats
+      responses:
+        "200":
+          description: 返回用户数据
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetUsersStatsSuccessResponse"
+        "401":
+          description: 未授权，Access Token 无效或不存在，权限不足
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedErrorResponse"
+        "429":
+          description: 请求过于频繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitErrorResponse"
+        "500":
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerErrorResponse"
 components:
   schemas:
     ApiResponse:
@@ -1523,6 +1562,61 @@ components:
       required:
         - force
       additionalProperties: false
+    DcotorSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            createdAt:
+              type: string
+              format: date-time
+              pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+            issues:
+              type: array
+              items:
+                type: object
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  severity:
+                    type: string
+                    enum:
+                      - info
+                      - warning
+                      - error
+                  details:
+                    type: string
+                required:
+                  - code
+                  - message
+                  - severity
+                additionalProperties: false
+          required:
+            - createdAt
+            - issues
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
     RateLimitErrorResponse:
       type: object
       properties:
@@ -1699,4 +1793,123 @@ components:
         - requestId
         - data
         - error
+      additionalProperties: false
+    GetUsersStats:
+      type: object
+      properties:
+        access_token:
+          type: string
+        force:
+          default: false
+          type: boolean
+      required:
+        - force
+      additionalProperties: false
+    GetUsersStatsSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            updatedAt:
+              type: string
+              format: date-time
+              pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+            cache:
+              type: boolean
+            total:
+              type: object
+              properties:
+                total:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                user:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                admin:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                editor:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                author:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+              required:
+                - total
+                - user
+                - admin
+                - editor
+                - author
+              additionalProperties: false
+            active:
+              type: object
+              properties:
+                lastDay:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                last7Days:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                last30Days:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+              required:
+                - lastDay
+                - last7Days
+                - last30Days
+              additionalProperties: false
+            new:
+              type: object
+              properties:
+                lastDay:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                last7Days:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                last30Days:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+              required:
+                - lastDay
+                - last7Days
+                - last30Days
+              additionalProperties: false
+          required:
+            - updatedAt
+            - cache
+            - total
+            - active
+            - new
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
       additionalProperties: false

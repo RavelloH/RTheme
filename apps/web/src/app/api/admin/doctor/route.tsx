@@ -31,6 +31,12 @@ const response = new ResponseBuilder("serverless");
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ValidationErrorResponse'
+ *       401:
+ *         description: 未授权，Access Token 无效或不存在，权限不足
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedErrorResponse'
  *       429:
  *         description: 请求过于频繁
  *         content:
