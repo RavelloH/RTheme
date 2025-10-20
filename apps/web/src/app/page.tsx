@@ -114,6 +114,7 @@ export default function Home() {
               width={2}
               mobileIndex={4}
               className="overflow-hidden block relative"
+              fixedHeight={true}
             >
               <ParallaxImageCarousel
                 images={[
@@ -189,6 +190,7 @@ export default function Home() {
               width={2}
               className="overflow-hidden block relative"
               mobileIndex={5}
+              fixedHeight={true}
             >
               <ParallaxImageCarousel
                 images={[
@@ -212,6 +214,7 @@ export default function Home() {
               width={2}
               mobileIndex={6}
               className="overflow-hidden block relative"
+              fixedHeight={true}
             >
               <ParallaxImageCarousel
                 images={[

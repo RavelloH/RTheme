@@ -18,6 +18,8 @@ import {
   RiTeamFill,
   RiUserFill,
 } from "@remixicon/react";
+import { usePathname } from "next/navigation";
+import { useMobile } from "@/hooks/useMobile";
 
 const roles = {
   all: ["ADMIN", "EDITOR", "AUTHOR"],
@@ -119,10 +121,40 @@ const AdminSidebarList = [
 ];
 
 export default function AdminSidebar() {
-  const pathname = window.location.pathname;
+  const pathname = usePathname();
+  const isMobile = useMobile();
 
+  // 移动端：横向面包屑菜单
+  if (isMobile) {
+    return (
+      <div className="w-full h-[4em] border-border overflow-x-auto overflow-y-hidden mb-3">
+        <div className="flex items-center h-full gap-2 min-w-max">
+          {AdminSidebarList.map((item, index) => (
+            <Link
+              key={index}
+              href={item.href}
+              className={`flex items-center gap-2 px-3 py-2 shrink-0 transition-all duration-200 ${
+                pathname === item.href
+                  ? "bg-primary text-primary-foreground shadow-md"
+                  : "bg-accent/50 hover:bg-accent"
+              }`}
+            >
+              <div className="flex items-center justify-center">
+                {item.icon}
+              </div>
+              <span className="text-sm font-medium whitespace-nowrap">
+                {item.name}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // 桌面端：垂直侧边栏
   return (
-    <div className="group w-[5em] hover:w-[15em] h-full border-border border transition-all duration-300 ease-in-out overflow-hidden">
+    <div className="group w-[5em] hover:w-[15em] h-full border-border border transition-all duration-300 ease-in-out overflow-y-auto overflow-x-hidden">
       {AdminSidebarList.map((item, index) => (
         <Link
           key={index}

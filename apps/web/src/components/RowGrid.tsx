@@ -109,6 +109,7 @@ interface GridItemProps {
   className?: string;
   mobileAreas?: GridArea[];
   height?: number;
+  fixedHeight?: boolean;
   mobileIndex?: number;
 }
 
@@ -124,6 +125,7 @@ export function GridItem({
   className = "",
   mobileAreas,
   height,
+  fixedHeight,
   mobileIndex,
 }: GridItemProps) {
   const itemRef = useRef<HTMLDivElement>(null);
@@ -149,7 +151,8 @@ export function GridItem({
         const calculatedHeight = Math.round(containerWidth * mobileHeight);
 
         element.style.width = "100%";
-        element.style.height = `${calculatedHeight}px`;
+        if (fixedHeight) element.style.height = `${calculatedHeight}px`;
+        else element.style.minHeight = `${calculatedHeight}px`;
       } else {
         const totalHeight = gridContainer.offsetHeight;
         const singleRowHeight = totalHeight / 12;
@@ -168,7 +171,7 @@ export function GridItem({
     return () => {
       resizeObserver.disconnect();
     };
-  }, [areas.length, gridSelector, isMobile, mobileHeight, width]);
+  }, [areas.length, gridSelector, isMobile, mobileHeight, width, fixedHeight]);
 
   const gridPositionClass = isMobile
     ? (() => {
