@@ -8,6 +8,11 @@ interface ClickableProps {
   onClick?: (event: MouseEvent<HTMLDivElement>) => void;
   className?: string;
   /**
+   * 是否禁用点击
+   * @default false
+   */
+  disabled?: boolean;
+  /**
    * 启用/禁用 hover 缩放效果
    * @default true
    */
@@ -45,17 +50,25 @@ export default function Clickable({
   children,
   onClick,
   className = "",
+  disabled = false,
   enableHoverScale = true,
   hoverScale = 1.2,
   tapScale = 0.95,
   duration = 0.2,
 }: ClickableProps) {
+  const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (disabled) return;
+    onClick?.(event);
+  };
+
   return (
     <motion.div
-      className={`cursor-pointer inline-block ${className}`}
-      onClick={onClick}
-      whileHover={enableHoverScale ? { scale: hoverScale } : undefined}
-      whileTap={{ scale: tapScale }}
+      className={`inline-block ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"} ${className}`}
+      onClick={handleClick}
+      whileHover={
+        !disabled && enableHoverScale ? { scale: hoverScale } : undefined
+      }
+      whileTap={!disabled ? { scale: tapScale } : undefined}
       transition={{
         duration,
         ease: "easeOut",

@@ -209,72 +209,71 @@ export async function doctor(
 
     issues.push({
       code: "DB_LATENCY",
-      message: "数据库响应时间",
+      message: "DB响应时间",
       severity:
         dbLatency < 100 ? "info" : dbLatency < 300 ? "warning" : "error",
-      details: `往返延迟 ${dbLatency}ms`,
+      details: `${dbLatency}ms`,
     });
 
     issues.push({
       code: "DB_CONNECTIONS",
-      message: "数据库连接数",
+      message: "DB连接数",
       severity:
         dbConnections < 50 ? "info" : dbConnections < 150 ? "warning" : "error",
-      details: `连接数 ${dbConnections}`,
+      details: `${dbConnections}`,
     });
 
     issues.push({
       code: "DB_SIZE",
-      message: "数据库大小信息",
+      message: "DB大小",
       severity: "info",
-      details: `数据库大小 ${(dbSize / (1024 * 1024)).toFixed(2)} MB`,
+      details: `${(dbSize / (1024 * 1024)).toFixed(2)} MB`,
     });
 
     // Redis 检查结果
     if (redisLatency === -1) {
       issues.push({
         code: "REDIS_CONNECTION",
-        message: "Redis 连接失败",
+        message: "Redis连接失败",
         severity: "error",
-        details: "无法连接到 Redis 服务器",
+        details: "连接失败",
       });
     } else {
       issues.push({
         code: "REDIS_LATENCY",
-        message: "Redis 响应时间",
+        message: "Redis响应时间",
         severity:
           redisLatency < 10 ? "info" : redisLatency < 50 ? "warning" : "error",
-        details: `往返延迟 ${redisLatency}ms`,
+        details: `${redisLatency}ms`,
       });
     }
 
     if (redisMemory.used !== -1) {
       const usedMB = (redisMemory.used / (1024 * 1024)).toFixed(2);
-      const peakMB = (redisMemory.peak / (1024 * 1024)).toFixed(2);
 
       issues.push({
         code: "REDIS_MEMORY",
-        message: "Redis 内存使用",
+        message: "Redis内存",
         severity:
           redisMemory.used < 100 * 1024 * 1024
             ? "info"
             : redisMemory.used < 500 * 1024 * 1024
               ? "warning"
               : "error",
-        details: `当前使用 ${usedMB} MB，峰值 ${peakMB} MB`,
+        details: `${usedMB} MB`,
       });
 
       if (redisMemory.fragmentation > 0) {
         issues.push({
           code: "REDIS_FRAGMENTATION",
-          message: "Redis 内存碎片率",
+          message: "Redis碎片率",
           severity:
             redisMemory.fragmentation < 1.5
               ? "info"
               : redisMemory.fragmentation < 2.0
                 ? "warning"
                 : "error",
-          details: `碎片率 ${redisMemory.fragmentation.toFixed(2)}`,
+          details: `${redisMemory.fragmentation.toFixed(2)}`,
         });
       }
     }
@@ -282,9 +281,9 @@ export async function doctor(
     if (redisKeys.total !== -1) {
       issues.push({
         code: "REDIS_KEYS",
-        message: "Redis 键统计",
+        message: "Redis键数",
         severity: "info",
-        details: `总键数 ${redisKeys.total}，验证码 ${redisKeys.captcha}，速率限制 ${redisKeys.rateLimit}`,
+        details: `${redisKeys.total}`,
       });
     }
 
