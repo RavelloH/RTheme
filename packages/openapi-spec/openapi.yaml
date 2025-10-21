@@ -1728,7 +1728,7 @@ components:
           default: 10
           type: integer
           exclusiveMinimum: true
-          maximum: 100
+          maximum: 500
       required:
         - page
         - pageSize

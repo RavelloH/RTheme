@@ -6,6 +6,7 @@ import { Table, TableColumn } from "@/ui/Table";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
+import { Select } from "@/ui/Select";
 import { RiArrowLeftSLine, RiArrowRightSLine } from "@remixicon/react";
 
 export interface GridTableProps<T extends Record<string, unknown>> {
@@ -20,6 +21,7 @@ export interface GridTableProps<T extends Record<string, unknown>> {
   totalRecords: number;
   pageSize: number;
   onPageChange: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
   // 表格配置
   striped?: boolean;
   hoverable?: boolean;
@@ -48,6 +50,7 @@ export default function GridTable<T extends Record<string, unknown>>({
   totalRecords,
   pageSize,
   onPageChange,
+  onPageSizeChange,
   striped = true,
   hoverable = true,
   bordered = false,
@@ -127,7 +130,26 @@ export default function GridTable<T extends Record<string, unknown>>({
             {Math.min(page * pageSize, totalRecords)} 条
           </AutoTransition>
           <span>/</span>
-          <div>单页显示</div>
+          <div className="flex items-center gap-2">
+            {onPageSizeChange && (
+              <Select
+                value={pageSize}
+                onChange={(value) => {
+                  onPageSizeChange(Number(value));
+                  onPageChange(1);
+                }}
+                options={[
+                  { value: 10, label: "10 条/页" },
+                  { value: 25, label: "25 条/页" },
+                  { value: 50, label: "50 条/页" },
+                  { value: 100, label: "100 条/页" },
+                  { value: 250, label: "250 条/页" },
+                  { value: 500, label: "500 条/页" },
+                ]}
+                size="sm"
+              />
+            )}
+          </div>
         </div>
         <div className="flex items-center">
           {totalPages > 1 && (
