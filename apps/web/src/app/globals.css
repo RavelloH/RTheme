@@ -27,27 +27,29 @@
 
 .dark {
   @theme {
-    --color-background: #111111;
-    --color-foreground: #f4f4f4;
-    --color-primary: #2dd4bf;
-    --color-primary-foreground: #111111;
+    --color-background: oklch(0.1776 0 0);
+    --color-foreground: oklch(0.9672 0 0);
+
+    --color-primary: oklch(0.7845 0.1325 181.91);
+    --color-primary-foreground: var(--color-background);
+
     --color-secondary: oklch(0.274 0.006 286.033);
     --color-secondary-foreground: oklch(0.985 0 0);
-    --color-muted: oklch(0.274 0.006 286.033);
+
+    --color-muted: oklch(0.244 0.006 286.033);
     --color-muted-foreground: oklch(0.705 0.015 286.067);
+
     --color-accent: oklch(0.274 0.006 286.033);
     --color-accent-foreground: oklch(0.985 0 0);
-    --color-destructive: oklch(0.704 0.191 22.216);
+
+    --color-warning: #eab308;
+    --color-error: #ef4444;
+    --color-success: #22c55e;
+
     --color-border: oklch(100% 0.00011 271.152 / 0.1);
     --color-input: oklch(1 0 0 / 15%);
     --color-ring: #0d9488;
     --radius: 0.5rem;
-    --color-success: #22c55e;
-    --color-success-foreground: #111111;
-    --color-error: #ef4444;
-    --color-error-foreground: #111111;
-    --color-warning: #eab308;
-    --color-warning-foreground: #111111;
   }
 }
 

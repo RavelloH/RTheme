@@ -207,7 +207,7 @@ export function GridItem({
     <div
       key={`grid-item-${isMobile ? "mobile" : "desktop"}`}
       ref={itemRef}
-      className={`${className} border-accent border ${gridPositionClass} ${baseClass} ${orderClass}`.trim()}
+      className={`${className} border-muted border ${gridPositionClass} ${baseClass} ${orderClass}`.trim()}
     >
       {children}
     </div>

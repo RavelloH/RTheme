@@ -337,8 +337,8 @@ export function Table<T extends Record<string, unknown>>({
                 <RowWrapper
                   key={getRowKey(record, index)}
                   className={`
-                    ${striped && index % 2 === 1 ? "bg-muted/15" : ""}
-                    ${hoverable ? "hover:bg-muted/50 transition-colors duration-200" : ""}
+                    ${striped && index % 2 === 1 ? "bg-muted/25" : ""}
+                    ${hoverable ? "hover:bg-muted transition-colors duration-200 ease-out" : ""}
                     ${onRowClick ? "cursor-pointer" : ""}
                     ${getRowClassName(record, index)}
                   `}

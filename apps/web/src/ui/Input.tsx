@@ -168,7 +168,7 @@ export function Input({
 
       {helperText && (
         <motion.div
-          className="absolute top-4 left-0 pointer-events-none text-gray-400 text-lg whitespace-nowrap overflow-hidden text-ellipsis max-w-full"
+          className="absolute top-4 left-0 pointer-events-none text-muted-foreground text-lg whitespace-nowrap overflow-hidden text-ellipsis max-w-full"
           initial={{ opacity: 0, y: 0 }}
           animate={{
             opacity: shouldShowHelperText ? 1 : 0,

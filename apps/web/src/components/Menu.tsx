@@ -54,11 +54,7 @@ function DynamicIcon({ iconName }: { iconName: string }) {
   }, [iconName]);
 
   if (error) {
-    return (
-      <span className="text-xs bg-red-100 text-red-600 px-1 rounded">
-        {iconName}
-      </span>
-    );
+    return null;
   }
 
   if (!IconComponent) {
