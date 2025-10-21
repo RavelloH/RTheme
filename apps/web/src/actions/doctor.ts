@@ -7,6 +7,9 @@ import {
   GetDoctorHistorySchema,
   GetDoctorHistory,
   DoctorHistoryItem,
+  GetDoctorTrendsSchema,
+  GetDoctorTrends,
+  DoctorTrendItem,
 } from "@repo/shared-types/api/doctor";
 import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
@@ -392,6 +395,125 @@ export async function getDoctorHistory(
     });
   } catch (error) {
     console.error("Get doctor history error:", error);
+    return response.serverError();
+  }
+}
+
+export async function getDoctorTrends(
+  params: GetDoctorTrends,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<DoctorTrendItem[] | null>>>;
+export async function getDoctorTrends(
+  params: GetDoctorTrends,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<DoctorTrendItem[] | null>>;
+export async function getDoctorTrends(
+  { access_token, days = 30, count = 30 }: GetDoctorTrends,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<DoctorTrendItem[] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      days,
+      count,
+    },
+    GetDoctorTrendsSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 获取最近 N 天的时间范围
+    const daysAgo = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    // 获取最近 N 天和最近 N 次的并集
+    const [recentByTime, recentByCount] = await Promise.all([
+      // 按时间获取：最近 N 天
+      prisma.healthCheck.findMany({
+        where: {
+          createdAt: {
+            gte: daysAgo,
+          },
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+        select: {
+          id: true,
+          createdAt: true,
+          issues: true,
+        },
+      }),
+      // 按数量获取：最近 N 次
+      prisma.healthCheck.findMany({
+        take: count,
+        orderBy: {
+          createdAt: "desc",
+        },
+        select: {
+          id: true,
+          createdAt: true,
+          issues: true,
+        },
+      }),
+    ]);
+
+    // 合并两个结果集并去重
+    const mergedMap = new Map<number, (typeof recentByTime)[0]>();
+
+    recentByTime.forEach((record) => {
+      mergedMap.set(record.id, record);
+    });
+
+    recentByCount.forEach((record) => {
+      mergedMap.set(record.id, record);
+    });
+
+    // 转换为数组并按时间排序
+    const merged = Array.from(mergedMap.values()).sort(
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+    );
+
+    // 转换数据格式
+    const data: DoctorTrendItem[] = merged.map((record) => {
+      const issues = record.issues as HealthCheckIssue[];
+      const counts = {
+        info: 0,
+        warning: 0,
+        error: 0,
+      };
+
+      issues.forEach((issue) => {
+        counts[issue.severity]++;
+      });
+
+      return {
+        time: record.createdAt.toISOString(),
+        data: counts,
+      };
+    });
+
+    return response.ok({ data });
+  } catch (error) {
+    console.error("Get doctor trends error:", error);
     return response.serverError();
   }
 }
