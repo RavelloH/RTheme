@@ -10,25 +10,33 @@ import AreaChart, {
   type SeriesConfig,
 } from "@/components/AreaChart";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import ErrorPage from "@/app/error";
 
 export default function DoctorHistoryChart() {
   const [data, setData] = useState<DoctorTrendItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const res = await getDoctorTrends({ days: 30, count: 30 });
+      if (!res.success) {
+        setError(new Error(res.message || "获取趋势数据失败"));
+        return;
+      }
+      if (res.data) {
+        setData(res.data);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error("获取趋势数据失败"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        setIsLoading(true);
-        const res = await getDoctorTrends({ days: 30, count: 30 });
-        if (res.data) {
-          setData(res.data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch doctor trends:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
     fetchData();
   }, []);
 
@@ -67,18 +75,24 @@ export default function DoctorHistoryChart() {
       className="py-10"
       fixedHeight
     >
-      <div className="text-2xl mb-2 px-10">运行状况历史趋势</div>
       <AutoTransition type="slideUp" className="h-full">
         {isLoading ? (
           <LoadingIndicator key="loading" />
-        ) : (
-          <div className="w-full h-full" key="content">
-            <AreaChart
-              data={chartData}
-              series={series}
-              className="w-full h-full"
-            />
+        ) : error ? (
+          <div key="error" className="px-10 h-full">
+            <ErrorPage reason={error} reset={() => fetchData()} />
           </div>
+        ) : (
+          <>
+            <div className="text-2xl mb-2 px-10">运行状况历史趋势</div>
+            <div className="w-full h-full" key="content">
+              <AreaChart
+                data={chartData}
+                series={series}
+                className="w-full h-full"
+              />
+            </div>
+          </>
         )}
       </AutoTransition>
     </GridItem>

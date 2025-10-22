@@ -7,6 +7,7 @@ import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { RiRefreshLine } from "@remixicon/react";
 import { useEffect, useState } from "react";
+import ErrorPage from "@/app/error";
 
 type issue = {
   code: string;
@@ -18,23 +19,25 @@ type issue = {
 export default function DashboardDoctor() {
   const [result, setResult] = useState<issue>([]);
   const [refreshTime, setRefreshTime] = useState<Date | null>(null);
-  const [force, setForce] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchData = async (forceRefresh: boolean = false) => {
+    if (forceRefresh) {
+      setResult([]);
+    }
+    setError(null);
+    const res = await doctor({ force: forceRefresh });
+    if (!res.success) {
+      setError(new Error(res.message || "获取运行状况失败"));
+      return;
+    }
+    setResult(res.data.issues);
+    setRefreshTime(new Date(res.data.createdAt));
+  };
 
   useEffect(() => {
-    async function handler() {
-      if (force) {
-        setResult([]);
-      }
-      const res = await doctor({ force: force });
-      if (!res.data.issues) return;
-      setResult(res.data.issues);
-      setRefreshTime(new Date(res.data.createdAt));
-      if (force) {
-        setForce(false);
-      }
-    }
-    handler();
-  }, [force]);
+    fetchData();
+  }, []);
   // 统计不同严重级别的问题数量
   const errorCount = result.filter((item) => item.severity === "error").length;
   const warningCount = result.filter(
@@ -106,7 +109,7 @@ export default function DashboardDoctor() {
               {refreshTime && (
                 <div className="inline-flex items-center gap-2">
                   最近检查于: {new Date(refreshTime).toLocaleString()}
-                  <Clickable onClick={() => setForce(true)}>
+                  <Clickable onClick={() => fetchData(true)}>
                     <RiRefreshLine size={"1em"} />
                   </Clickable>
                 </div>
@@ -120,6 +123,8 @@ export default function DashboardDoctor() {
               </Link>
             </div>
           </div>
+        ) : error ? (
+          <ErrorPage reason={error} reset={() => fetchData(true)} />
         ) : (
           <LoadingIndicator key="loading" size="md" />
         )}

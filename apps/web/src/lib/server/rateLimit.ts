@@ -2,7 +2,7 @@ import "server-only";
 
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
 
-const limit = 30; // 每分钟允许的请求数
+const limit = 60; // 每分钟允许的请求数
 
 // 简化后只支持有 get 方法的 Headers 格式
 type HeadersObject = { get: (key: string) => string | null };

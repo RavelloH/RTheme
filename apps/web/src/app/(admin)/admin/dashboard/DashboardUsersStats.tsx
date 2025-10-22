@@ -8,6 +8,7 @@ import { RiRefreshLine } from "@remixicon/react";
 import { useEffect, useState } from "react";
 import { getUsersStats } from "@/actions/stats";
 import { GetUsersStatsSuccessResponse } from "@repo/shared-types/api/stats";
+import ErrorPage from "@/app/error";
 
 type stats = GetUsersStatsSuccessResponse["data"] | null;
 
@@ -15,24 +16,26 @@ export default function DashboardUsersStats() {
   const [result, setResult] = useState<stats>(null);
   const [isCache, setIsCache] = useState(true);
   const [refreshTime, setRefreshTime] = useState<Date | null>(null);
-  const [force, setForce] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchData = async (forceRefresh: boolean = false) => {
+    if (forceRefresh) {
+      setResult(null);
+    }
+    setError(null);
+    const res = await getUsersStats({ force: forceRefresh });
+    if (!res.success) {
+      setError(new Error(res.message || "获取用户统计数据失败"));
+      return;
+    }
+    setResult(res.data);
+    setIsCache(res.data.cache);
+    setRefreshTime(new Date(res.data.updatedAt));
+  };
 
   useEffect(() => {
-    async function handler() {
-      if (force) {
-        setResult(null);
-      }
-      const res = await getUsersStats({ force: force });
-      if (!res.success) return;
-      setResult(res.data);
-      setIsCache(res.data.cache);
-      setRefreshTime(new Date(res.data.updatedAt));
-      if (force) {
-        setForce(false);
-      }
-    }
-    handler();
-  }, [force]);
+    fetchData();
+  }, []);
 
   const getSummary = (result: stats) => {
     if (!result) return null;
@@ -80,13 +83,15 @@ export default function DashboardUsersStats() {
                 <div className="inline-flex items-center gap-2">
                   {isCache ? "统计缓存于" : "统计刷新于"}:{" "}
                   {new Date(refreshTime).toLocaleString()}
-                  <Clickable onClick={() => setForce(true)}>
+                  <Clickable onClick={() => fetchData(true)}>
                     <RiRefreshLine size={"1em"} />
                   </Clickable>
                 </div>
               )}
             </div>
           </div>
+        ) : error ? (
+          <ErrorPage reason={error} reset={() => fetchData(true)} />
         ) : (
           <LoadingIndicator key="loading" size="md" />
         )}

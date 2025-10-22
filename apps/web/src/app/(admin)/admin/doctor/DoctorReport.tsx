@@ -7,6 +7,7 @@ import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiRefreshLine } from "@remixicon/react";
 import { useEffect, useState } from "react";
+import ErrorPage from "@/app/error";
 
 type issue = {
   code: string;
@@ -18,7 +19,7 @@ type issue = {
 export default function DoctorReport() {
   const [result, setResult] = useState<issue>([]);
   const [refreshTime, setRefreshTime] = useState<Date | null>(null);
-  const [force, setForce] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
   // 统计不同严重级别的问题数量
   const errorCount = result.filter((item) => item.severity === "error").length;
@@ -49,21 +50,24 @@ export default function DoctorReport() {
     );
   };
 
-  useEffect(() => {
-    async function handler() {
-      if (force) {
-        setResult([]);
-      }
-      const res = await doctor({ force: force });
-      if (!res.data.issues) return;
-      setResult(res.data.issues);
-      setRefreshTime(new Date(res.data.createdAt));
-      if (force) {
-        setForce(false);
-      }
+  const fetchData = async (forceRefresh: boolean = false) => {
+    if (forceRefresh) {
+      setResult([]);
     }
-    handler();
-  }, [force]);
+    setError(null);
+    const res = await doctor({ force: forceRefresh });
+    if (!res.success) {
+      setError(new Error(res.message || "获取运行状况失败"));
+      return;
+    }
+    if (!res.data.issues) return;
+    setResult(res.data.issues);
+    setRefreshTime(new Date(res.data.createdAt));
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   return (
     <GridItem areas={[1, 2, 3, 4, 5, 6, 7, 8]} width={1.5} height={0.5}>
@@ -111,12 +115,16 @@ export default function DoctorReport() {
               {refreshTime && (
                 <div className="inline-flex items-center gap-2">
                   最近检查于: {new Date(refreshTime).toLocaleString()}
-                  <Clickable onClick={() => setForce(true)}>
+                  <Clickable onClick={() => fetchData(true)}>
                     <RiRefreshLine size={"1em"} />
                   </Clickable>
                 </div>
               )}
             </div>
+          </div>
+        ) : error ? (
+          <div className="px-10 h-full" key="error">
+            <ErrorPage reason={error} reset={() => fetchData(true)} />
           </div>
         ) : (
           <div className="h-full">
