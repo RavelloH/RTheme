@@ -5,6 +5,7 @@ import GridTable from "@/components/GridTable";
 import { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { DoctorHistoryItem } from "@repo/shared-types/api/doctor";
+import { useBroadcast } from "@/hooks/useBroadcast";
 
 type HealthCheckIssue = {
   code: string;
@@ -25,6 +26,7 @@ export default function DoctorHistoryTable() {
   >([]);
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // 处理排序变化
   const handleSortChange = (key: string, order: "asc" | "desc" | null) => {
@@ -32,6 +34,13 @@ export default function DoctorHistoryTable() {
     setSortOrder(order);
     setPage(1); // 排序变化时重置到第一页
   };
+
+  // 监听广播刷新消息
+  useBroadcast<{ type: string }>(async (message) => {
+    if (message.type === "doctor-refresh") {
+      setRefreshTrigger((prev) => prev + 1); // 触发刷新
+    }
+  });
 
   useEffect(() => {
     async function fetchData() {
@@ -121,7 +130,7 @@ export default function DoctorHistoryTable() {
     }
 
     fetchData();
-  }, [page, pageSize, sortKey, sortOrder]);
+  }, [page, pageSize, sortKey, sortOrder, refreshTrigger]);
 
   const baseColumns: TableColumn<DoctorHistoryItem>[] = [
     {

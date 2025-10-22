@@ -8,6 +8,7 @@ import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiRefreshLine } from "@remixicon/react";
 import { useEffect, useState } from "react";
 import ErrorPage from "@/app/error";
+import { useBroadcastSender } from "@/hooks/useBroadcast";
 
 type issue = {
   code: string;
@@ -20,6 +21,7 @@ export default function DoctorReport() {
   const [result, setResult] = useState<issue>([]);
   const [refreshTime, setRefreshTime] = useState<Date | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  const { broadcast } = useBroadcastSender<{ type: "doctor-refresh" }>();
 
   // 统计不同严重级别的问题数量
   const errorCount = result.filter((item) => item.severity === "error").length;
@@ -63,10 +65,16 @@ export default function DoctorReport() {
     if (!res.data.issues) return;
     setResult(res.data.issues);
     setRefreshTime(new Date(res.data.createdAt));
+
+    // 刷新成功后广播消息,通知其他组件更新
+    if (forceRefresh) {
+      await broadcast({ type: "doctor-refresh" });
+    }
   };
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

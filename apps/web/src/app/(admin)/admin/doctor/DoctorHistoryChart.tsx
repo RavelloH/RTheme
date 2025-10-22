@@ -3,7 +3,7 @@
 import { GridItem } from "@/components/RowGrid";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { getDoctorTrends } from "@/actions/doctor";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import type { DoctorTrendItem } from "@repo/shared-types/api/doctor";
 import AreaChart, {
   type AreaChartDataPoint,
@@ -11,13 +11,15 @@ import AreaChart, {
 } from "@/components/AreaChart";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import ErrorPage from "@/app/error";
+import { useBroadcast } from "@/hooks/useBroadcast";
 
 export default function DoctorHistoryChart() {
   const [data, setData] = useState<DoctorTrendItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -34,11 +36,18 @@ export default function DoctorHistoryChart() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // 监听广播刷新消息
+  useBroadcast<{ type: string }>(async (message) => {
+    if (message.type === "doctor-refresh") {
+      setRefreshTrigger((prev) => prev + 1); // 触发刷新
+    }
+  });
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [refreshTrigger, fetchData]);
 
   // 转换数据格式
   const chartData: AreaChartDataPoint[] = data.map((item) => ({

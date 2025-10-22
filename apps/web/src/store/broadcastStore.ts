@@ -16,7 +16,6 @@ export interface BroadcastState<T = unknown> {
 
 /**
  * 全局广播 store 实例
- * 用于页面过渡动画的消息传递
  */
 export const useBroadcastStore = create<BroadcastState>((set, get) => ({
   callbacks: [],
