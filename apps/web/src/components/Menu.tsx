@@ -154,7 +154,7 @@ export default function Menu({ setIsMenuOpen, menus }: MenuProps) {
                       stiffness: 200,
                     }}
                   >
-                    <div className="absolute inset-0 bg-accent z-0 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-400 ease-[cubic-bezier(0.25,0.1,0.25,1)] origin-left" />
+                    <div className="absolute inset-0 bg-muted z-0 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-400 ease-[cubic-bezier(0.25,0.1,0.25,1)] origin-left" />
                     <Link
                       href={
                         menu.link ||
@@ -196,7 +196,7 @@ export default function Menu({ setIsMenuOpen, menus }: MenuProps) {
                       stiffness: 200,
                     }}
                   >
-                    <div className="absolute inset-0 bg-accent z-0 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-400 ease-[cubic-bezier(0.25,0.1,0.25,1)] origin-left" />
+                    <div className="absolute inset-0 bg-muted z-0 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-400 ease-[cubic-bezier(0.25,0.1,0.25,1)] origin-left" />
                     <Link
                       href={
                         menu.link ||
@@ -238,7 +238,7 @@ export default function Menu({ setIsMenuOpen, menus }: MenuProps) {
                       stiffness: 200,
                     }}
                   >
-                    <div className="absolute inset-0 bg-accent z-0 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-400 ease-[cubic-bezier(0.25,0.1,0.25,1)] origin-left" />
+                    <div className="absolute inset-0 bg-muted z-0 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-400 ease-[cubic-bezier(0.25,0.1,0.25,1)] origin-left" />
                     <Link
                       href={
                         menu.link ||

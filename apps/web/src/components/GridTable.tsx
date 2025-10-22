@@ -161,7 +161,7 @@ export default function GridTable<T extends Record<string, unknown>>({
               <Clickable
                 onClick={() => onPageChange(Math.max(1, page - 1))}
                 disabled={page === 1}
-                className="px-4 py-2 rounded transition-colors hover:bg-accent"
+                className="px-4 py-2 rounded transition-colors hover:bg-muted"
                 enableHoverScale={false}
               >
                 <RiArrowLeftSLine />
@@ -176,7 +176,7 @@ export default function GridTable<T extends Record<string, unknown>>({
               <Clickable
                 onClick={() => onPageChange(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
-                className="px-4 py-2 rounded transition-colors hover:bg-accent"
+                className="px-4 py-2 rounded transition-colors hover:bg-muted"
                 enableHoverScale={false}
               >
                 <RiArrowRightSLine />
