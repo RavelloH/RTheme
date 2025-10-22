@@ -34,6 +34,8 @@ export const GetDoctorHistorySchema = z.object({
   access_token: z.string().optional(),
   page: z.number().int().positive().default(1),
   pageSize: z.number().int().positive().max(500).default(10),
+  sortBy: z.enum(["id", "createdAt", "errorCount", "warningCount"]).optional(),
+  sortOrder: z.enum(["asc", "desc"]).optional(),
 });
 export type GetDoctorHistory = z.infer<typeof GetDoctorHistorySchema>;
 registerSchema("GetDoctorHistory", GetDoctorHistorySchema);

@@ -23,15 +23,42 @@ export default function DoctorHistoryTable() {
   const [dynamicColumns, setDynamicColumns] = useState<
     TableColumn<DoctorHistoryItem>[]
   >([]);
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
+
+  // 处理排序变化
+  const handleSortChange = (key: string, order: "asc" | "desc" | null) => {
+    setSortKey(order ? key : null);
+    setSortOrder(order);
+    setPage(1); // 排序变化时重置到第一页
+  };
 
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
       try {
-        const result = await getDoctorHistory({
+        // 构建请求参数
+        const params: {
+          page: number;
+          pageSize: number;
+          sortBy?: "id" | "createdAt" | "errorCount" | "warningCount";
+          sortOrder?: "asc" | "desc";
+        } = {
           page,
           pageSize,
-        });
+        };
+
+        // 只在有有效的排序参数时才添加
+        if (sortKey && sortOrder) {
+          params.sortBy = sortKey as
+            | "id"
+            | "createdAt"
+            | "errorCount"
+            | "warningCount";
+          params.sortOrder = sortOrder;
+        }
+
+        const result = await getDoctorHistory(params);
 
         if (result.success && result.data) {
           setData(result.data);
@@ -94,7 +121,7 @@ export default function DoctorHistoryTable() {
     }
 
     fetchData();
-  }, [page, pageSize]);
+  }, [page, pageSize, sortKey, sortOrder]);
 
   const baseColumns: TableColumn<DoctorHistoryItem>[] = [
     {
@@ -199,6 +226,7 @@ export default function DoctorHistoryTable() {
       pageSize={pageSize}
       onPageChange={setPage}
       onPageSizeChange={setPageSize}
+      onSortChange={handleSortChange}
       striped
       hoverable
       bordered={false}

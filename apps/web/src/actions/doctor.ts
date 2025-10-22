@@ -318,7 +318,13 @@ export async function getDoctorHistory(
   serverConfig?: ActionConfig,
 ): Promise<ApiResponse<DoctorHistoryItem[] | null>>;
 export async function getDoctorHistory(
-  { access_token, page = 1, pageSize = 10 }: GetDoctorHistory,
+  {
+    access_token,
+    page = 1,
+    pageSize = 10,
+    sortBy,
+    sortOrder,
+  }: GetDoctorHistory,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<DoctorHistoryItem[] | null>> {
   const response = new ResponseBuilder(
@@ -334,6 +340,8 @@ export async function getDoctorHistory(
       access_token,
       page,
       pageSize,
+      sortBy,
+      sortOrder,
     },
     GetDoctorHistorySchema,
   );
@@ -357,19 +365,56 @@ export async function getDoctorHistory(
     // 获取总数
     const total = await prisma.healthCheck.count();
 
+    // 构建排序条件
+    let orderBy: { id: "asc" | "desc" } | { createdAt: "asc" | "desc" } = {
+      createdAt: "desc",
+    }; // 默认排序
+
+    if (sortBy && sortOrder) {
+      if (sortBy === "id" || sortBy === "createdAt") {
+        // 直接字段排序
+        orderBy = { [sortBy]: sortOrder } as typeof orderBy;
+      }
+      // errorCount 和 warningCount 需要在内存中排序，因为它们是计算字段
+    }
+
     // 获取分页数据
-    const records = await prisma.healthCheck.findMany({
-      skip,
-      take: pageSize,
-      orderBy: {
-        createdAt: "desc",
-      },
+    let records = await prisma.healthCheck.findMany({
+      skip: sortBy === "errorCount" || sortBy === "warningCount" ? 0 : skip,
+      take:
+        sortBy === "errorCount" || sortBy === "warningCount"
+          ? undefined
+          : pageSize,
+      orderBy,
       select: {
         id: true,
         createdAt: true,
         issues: true,
       },
     });
+
+    // 如果按 errorCount 或 warningCount 排序，需要在内存中处理
+    if (sortBy === "errorCount" || sortBy === "warningCount") {
+      const severityType = sortBy === "errorCount" ? "error" : "warning";
+
+      records.sort((a, b) => {
+        const aIssues = a.issues as HealthCheckIssue[];
+        const bIssues = b.issues as HealthCheckIssue[];
+
+        const aCount = aIssues.filter(
+          (issue) => issue.severity === severityType,
+        ).length;
+        const bCount = bIssues.filter(
+          (issue) => issue.severity === severityType,
+        ).length;
+
+        const diff = aCount - bCount;
+        return sortOrder === "asc" ? diff : -diff;
+      });
+
+      // 应用分页
+      records = records.slice(skip, skip + pageSize);
+    }
 
     // 转换数据格式
     const data: DoctorHistoryItem[] = records.map((record) => ({

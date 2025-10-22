@@ -1785,6 +1785,18 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 500
+        sortBy:
+          type: string
+          enum:
+            - id
+            - createdAt
+            - errorCount
+            - warningCount
+        sortOrder:
+          type: string
+          enum:
+            - asc
+            - desc
       required:
         - page
         - pageSize

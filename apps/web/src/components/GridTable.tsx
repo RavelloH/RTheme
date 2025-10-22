@@ -22,6 +22,8 @@ export interface GridTableProps<T extends Record<string, unknown>> {
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;
+  // 排序相关
+  onSortChange?: (key: string, order: "asc" | "desc" | null) => void;
   // 表格配置
   striped?: boolean;
   hoverable?: boolean;
@@ -51,6 +53,7 @@ export default function GridTable<T extends Record<string, unknown>>({
   pageSize,
   onPageChange,
   onPageSizeChange,
+  onSortChange,
   striped = true,
   hoverable = true,
   bordered = false,
@@ -104,6 +107,7 @@ export default function GridTable<T extends Record<string, unknown>>({
                     stickyHeader={stickyHeader}
                     maxHeight={maxHeight}
                     padding={padding}
+                    onSortChange={onSortChange}
                   />
                 </div>
               </div>
@@ -163,8 +167,10 @@ export default function GridTable<T extends Record<string, unknown>>({
                 <RiArrowLeftSLine />
               </Clickable>
 
-              <span className="">
-                第 {page} / {totalPages} 页
+              <span>
+                <AutoTransition key={page} type="fade">
+                  第 {page} / {totalPages} 页
+                </AutoTransition>
               </span>
 
               <Clickable
