@@ -160,6 +160,161 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ServerErrorResponse"
+  /api/admin/users/list:
+    get:
+      summary: 获取用户列表
+      description: 需管理员身份，分页获取用户列表，支持排序、筛选和搜索
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: 页码
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+          description: 每页数量
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            enum:
+              - uid
+              - username
+              - createdAt
+              - lastUseAt
+            default: uid
+          description: 排序字段
+        - in: query
+          name: sortOrder
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: asc
+          description: 排序方式
+        - in: query
+          name: role
+          schema:
+            type: string
+            enum:
+              - USER
+              - ADMIN
+              - EDITOR
+              - AUTHOR
+          description: 按角色筛选
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum:
+              - ACTIVE
+              - SUSPENDED
+              - NEEDS_UPDATE
+          description: 按状态筛选
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: 搜索关键词（用户名、昵称、邮箱）
+      security:
+        - BearerAuth: []
+      tags:
+        - Users
+      responses:
+        "200":
+          description: 返回用户列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetUsersListSuccessResponse"
+        "400":
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+        "401":
+          description: 未授权，Access Token 无效或不存在，权限不足
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedErrorResponse"
+        "429":
+          description: 请求过于频繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitErrorResponse"
+        "500":
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerErrorResponse"
+  /api/admin/users/trends:
+    get:
+      summary: 获取用户增长趋势数据
+      description: 需管理员身份，获取最近N天的用户增长趋势数据，包括总用户数、新增用户、活跃用户
+      parameters:
+        - in: query
+          name: days
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+            default: 30
+          description: 获取最近多少天的数据
+        - in: query
+          name: count
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 30
+          description: 数据点数量
+      security:
+        - BearerAuth: []
+      tags:
+        - Users
+      responses:
+        "200":
+          description: 返回用户趋势数据
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetUsersTrendsSuccessResponse"
+        "400":
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+        "401":
+          description: 未授权，Access Token 无效或不存在，权限不足
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedErrorResponse"
+        "429":
+          description: 请求过于频繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitErrorResponse"
+        "500":
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerErrorResponse"
   /api/auth/email-verify/resend:
     post:
       summary: 重发邮箱验证码
@@ -608,7 +763,7 @@ paths:
       security:
         - BearerAuth: []
       tags:
-        - Stats
+        - Users
       responses:
         "200":
           description: 返回用户数据
@@ -2216,6 +2371,213 @@ components:
             - active
             - new
           additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    GetUsersTrends:
+      type: object
+      properties:
+        access_token:
+          type: string
+        days:
+          default: 30
+          type: integer
+          exclusiveMinimum: true
+          maximum: 9007199254740991
+        count:
+          default: 30
+          type: integer
+          exclusiveMinimum: true
+          maximum: 9007199254740991
+      required:
+        - days
+        - count
+      additionalProperties: false
+    GetUsersTrendsSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              time:
+                type: string
+              data:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    minimum: 0
+                    maximum: 9007199254740991
+                  new:
+                    type: integer
+                    minimum: 0
+                    maximum: 9007199254740991
+                  active:
+                    type: integer
+                    minimum: 0
+                    maximum: 9007199254740991
+                required:
+                  - total
+                  - new
+                  - active
+                additionalProperties: false
+            required:
+              - time
+              - data
+            additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    GetUsersList:
+      type: object
+      properties:
+        access_token:
+          type: string
+        page:
+          default: 1
+          type: integer
+          exclusiveMinimum: true
+          maximum: 9007199254740991
+        pageSize:
+          default: 25
+          type: integer
+          exclusiveMinimum: true
+          maximum: 9007199254740991
+        sortBy:
+          default: uid
+          type: string
+          enum:
+            - uid
+            - username
+            - createdAt
+            - lastUseAt
+        sortOrder:
+          default: asc
+          type: string
+          enum:
+            - asc
+            - desc
+        role:
+          type: string
+          enum:
+            - USER
+            - ADMIN
+            - EDITOR
+            - AUTHOR
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - SUSPENDED
+            - NEEDS_UPDATE
+        search:
+          type: string
+      required:
+        - page
+        - pageSize
+        - sortBy
+        - sortOrder
+      additionalProperties: false
+    GetUsersListSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              uid:
+                type: integer
+                minimum: -9007199254740991
+                maximum: 9007199254740991
+              email:
+                type: string
+                format: email
+                pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+              emailVerified:
+                type: boolean
+              emailNotice:
+                type: boolean
+              username:
+                type: string
+              nickname:
+                nullable: true
+                type: string
+              website:
+                nullable: true
+                type: string
+              bio:
+                nullable: true
+                type: string
+              avatar:
+                nullable: true
+                type: string
+              createdAt:
+                type: string
+              lastUseAt:
+                type: string
+              role:
+                type: string
+                enum:
+                  - USER
+                  - ADMIN
+                  - EDITOR
+                  - AUTHOR
+              status:
+                type: string
+                enum:
+                  - ACTIVE
+                  - SUSPENDED
+                  - NEEDS_UPDATE
+            required:
+              - uid
+              - email
+              - emailVerified
+              - emailNotice
+              - username
+              - nickname
+              - website
+              - bio
+              - avatar
+              - createdAt
+              - lastUseAt
+              - role
+              - status
+            additionalProperties: false
       required:
         - success
         - message

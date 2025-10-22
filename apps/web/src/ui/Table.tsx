@@ -267,18 +267,23 @@ export function Table<T extends Record<string, unknown>>({
                   key={column.key}
                   className={`
                     ${getPaddingStyles()}
-                    ${getAlignClass(column.align)}
                     font-semibold
                     text-muted-foreground
                     bg-background
-                    ${!stickyHeader ? "border-b-2 border-accent" : ""}
+                    ${!stickyHeader ? "border-b-2 border-muted" : ""}
                     ${bordered ? "border-r border-border last:border-r-0" : ""}
                     ${column.sortable ? "cursor-pointer select-none hover:bg-muted/80 transition-colors" : ""}
                   `}
                   onClick={() => column.sortable && handleSort(column.key)}
                 >
                   <div
-                    className="flex items-center justify-between"
+                    className={`flex items-center gap-1 ${
+                      column.align === "center"
+                        ? "justify-center"
+                        : column.align === "right"
+                          ? "justify-end"
+                          : "justify-start"
+                    }`}
                     {...(padding > 0 && {
                       style: {
                         ...(columnIndex === 0 && {
