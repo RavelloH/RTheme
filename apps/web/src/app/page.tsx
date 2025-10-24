@@ -1,4 +1,4 @@
-import { generateMetadata } from "@/lib/shared/seo";
+import { generateMetadata } from "@/lib/server/seo";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import RowGrid, { GridItem } from "@/components/RowGrid";
 import ParallaxImageCarousel from "@/components/ParallaxImageCarousel";

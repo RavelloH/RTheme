@@ -1,7 +1,7 @@
 import HorizontalScroll from "@/components/HorizontalScroll";
 import MainLayout from "@/components/MainLayout";
 import RowGrid, { GridItem } from "@/components/RowGrid";
-import { generateMetadata } from "@/lib/shared/seo";
+import { generateMetadata } from "@/lib/server/seo";
 import DashboardDoctor from "./DashboardDoctor";
 import AdminSidebar from "@/components/AdminSidebar";
 import DashboardUsersStats from "./DashboardUsersStats";

@@ -1,4 +1,4 @@
-import { generateMetadata } from "@/lib/shared/seo";
+import { generateMetadata } from "@/lib/server/seo";
 import AdminRedirect from "./Redirect";
 
 export const metadata = await generateMetadata(

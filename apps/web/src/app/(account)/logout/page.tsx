@@ -1,4 +1,4 @@
-import { generateMetadata } from "@/lib/shared/seo";
+import { generateMetadata } from "@/lib/server/seo";
 import MainLayout from "@/components/MainLayout";
 import LogoutSheet from "./LogoutSheet";
 
