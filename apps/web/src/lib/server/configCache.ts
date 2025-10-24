@@ -11,6 +11,12 @@ export interface ConfigItem {
   updatedAt: Date;
 }
 
+// 配置值对象类型
+interface ConfigValueObject {
+  default?: unknown;
+  [key: string]: unknown;
+}
+
 // 缓存文件路径
 const CACHE_FILE_PATH = path.join(
   process.cwd(),
@@ -19,15 +25,14 @@ const CACHE_FILE_PATH = path.join(
 );
 
 /**
- * 获取配置项
+ * 获取原始配置项
  * 在开发环境中直接从数据库读取
  * 在生产环境中从缓存文件读取
  */
-export async function getConfig(key: string): Promise<ConfigItem | null> {
+export async function getRawConfig(key: string): Promise<ConfigItem | null> {
   // 检查是否为敏感配置
   if (key.startsWith("secret.")) {
-    console.warn(`拒绝访问敏感配置: ${key}`);
-    return null;
+    throw Error("无法获取敏感配置项");
   }
 
   if (process.env.NODE_ENV === "production") {
@@ -35,6 +40,63 @@ export async function getConfig(key: string): Promise<ConfigItem | null> {
   } else {
     return getConfigFromDatabase(key);
   }
+}
+
+/**
+ * 获取配置值的辅助函数
+ */
+async function getConfigValue(
+  key: string,
+  defaultValue?: unknown,
+  field?: string,
+): Promise<unknown> {
+  const config = await getRawConfig(key);
+
+  // 如果配置不存在,返回默认值
+  if (!config?.value) {
+    return defaultValue;
+  }
+
+  const configValue = config.value;
+
+  // 如果指定了字段名且配置值是对象,尝试获取指定字段
+  if (field && typeof configValue === "object" && configValue !== null) {
+    return (configValue as ConfigValueObject)[field] ?? defaultValue;
+  }
+
+  // 如果没有指定字段,但配置值是对象且有default属性,返回default值
+  if (
+    !field &&
+    typeof configValue === "object" &&
+    configValue !== null &&
+    "default" in configValue
+  ) {
+    return (configValue as ConfigValueObject).default;
+  }
+
+  // 如果配置值是对象,返回整个对象
+  if (typeof configValue === "object" && configValue !== null) {
+    return configValue;
+  }
+
+  // 返回配置值本身
+  return configValue;
+}
+
+/**
+ * 获取配置项(带泛型支持)
+ * @param key 配置键名
+ * @param defaultValue 默认值
+ * @param field 可选的字段名,用于从对象配置中获取特定字段
+ * @returns 配置值
+ */
+export async function getConfig<T = unknown>(
+  key: string,
+  defaultValue?: T,
+  field?: string,
+): Promise<T> {
+  const value = await getConfigValue(key, defaultValue, field);
+  return value as T;
 }
 
 /**

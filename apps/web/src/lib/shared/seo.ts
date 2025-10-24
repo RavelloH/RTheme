@@ -1,6 +1,6 @@
 // SEO 相关库
 import type { Metadata } from "next";
-import { getConfig } from "@/lib/server/configCache";
+import { getRawConfig } from "@/lib/server/configCache";
 
 // 默认值常量
 const DEFAULT_URL = "https://example.com";
@@ -174,7 +174,7 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   // 批量获取所有需要的配置
   const configKeys = Object.values(seoConfigMap);
-  const configs = await Promise.all(configKeys.map((key) => getConfig(key)));
+  const configs = await Promise.all(configKeys.map((key) => getRawConfig(key)));
 
   // 构建配置映射
   const configValues = Object.fromEntries(
