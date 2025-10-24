@@ -51,6 +51,7 @@ import type {
 } from "@repo/shared-types/api/auth";
 import { verifyToken } from "./captcha";
 import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
+import { getConfig } from "@/lib/server/configCache";
 
 type AuthActionEnvironment = "serverless" | "serveraction";
 type AuthActionConfig = { environment?: AuthActionEnvironment };
@@ -163,8 +164,11 @@ export async function login(
     }
 
     // 检测是否已验证邮箱
-    // TODO: 接入动态config
-    if (!user.emailVerified) {
+    const emailVerificationRequired = await getConfig<boolean>(
+      "user.email.verification.required",
+    );
+
+    if (emailVerificationRequired && !user.emailVerified) {
       return response.badRequest({
         message: "请先验证邮箱后再登录",
         error: {
@@ -318,6 +322,17 @@ export async function register(
   // 速率控制
   if (!(await limitControl(await headers()))) {
     return response.tooManyRequests();
+  }
+
+  const canRegister = await getConfig<boolean>("user.registration.enabled");
+  if (!canRegister) {
+    return response.forbidden({
+      message: "当前站点不允许注册新用户",
+      error: {
+        code: "REGISTRATION_DISABLED",
+        message: "当前站点不允许注册新用户",
+      },
+    });
   }
 
   // 验证输入参数

@@ -29,6 +29,7 @@ const CACHE_FILE_PATH = path.join(
  * 在开发环境中直接从数据库读取
  * 在生产环境中从缓存文件读取
  */
+// TODO: 改为从redis中读取
 export async function getRawConfig(key: string): Promise<ConfigItem | null> {
   // 检查是否为敏感配置
   if (key.startsWith("secret.")) {

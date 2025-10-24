@@ -1,17 +1,27 @@
+// Main Layout
+import "server-only";
+
+// Fonts
 import { Inter } from "next/font/google";
-import { ThemeProvider } from "@/components/ThemeProvider";
-import { ConfigProvider } from "@/components/ConfigProvider";
-import { MenuProvider } from "@/components/MenuProvider";
+
+// Styles
 import "./globals.css";
-import { Header } from "@/components/Header";
-import Footer from "@/components/Footer";
+
+// Server Componments
+import Header from "@/components/server/Header";
+import Footer from "@/components/server/Footer";
+
+// Client Components
+import { ThemeProvider } from "@/components/ThemeProvider";
+import { MenuProvider } from "@/components/MenuProvider";
 import { LoadingAnimation } from "@/components/LoadingAnimation";
 import { MainContent } from "@/components/MainContent";
 import ResponsiveFontScale from "@/components/ResponsiveFontScale";
-import { getActiveMenus } from "@/lib/server/menuCache";
-import { getAllConfigs } from "@/lib/server/configCache";
 import PageTransition from "@/components/PageTransition";
-import TokenManager from "../components/TokenManager";
+import TokenManager from "@/components/TokenManager";
+
+// lib
+import { getActiveMenus } from "@/lib/server/menuCache";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,10 +30,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [menus, configs] = await Promise.all([
-    getActiveMenus(),
-    getAllConfigs(),
-  ]);
+  const [menus] = await Promise.all([getActiveMenus()]);
 
   return (
     <html
@@ -41,20 +48,18 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ConfigProvider configs={configs}>
-            <MenuProvider menus={menus}>
-              <ResponsiveFontScale scaleFactor={0.017} baseSize={12}>
-                <LoadingAnimation />
-                <div className="min-h-full flex flex-col overflow-hidden">
-                  <Header menus={menus} />
-                  <MainContent>
-                    <PageTransition>{children}</PageTransition>
-                  </MainContent>
-                  <Footer menus={menus} />
-                </div>
-              </ResponsiveFontScale>
-            </MenuProvider>
-          </ConfigProvider>
+          <MenuProvider menus={menus}>
+            <ResponsiveFontScale scaleFactor={0.017} baseSize={12}>
+              <LoadingAnimation />
+              <div className="min-h-full flex flex-col overflow-hidden">
+                <Header menus={menus} />
+                <MainContent>
+                  <PageTransition>{children}</PageTransition>
+                </MainContent>
+                <Footer menus={menus} />
+              </div>
+            </ResponsiveFontScale>
+          </MenuProvider>
         </ThemeProvider>
       </body>
       <TokenManager />

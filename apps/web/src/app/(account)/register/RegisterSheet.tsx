@@ -6,13 +6,16 @@ import { CaptchaButton } from "@/components/CaptchaButton";
 import { useState } from "react";
 import { useBroadcast, useBroadcastSender } from "@/hooks/useBroadcast";
 import { register as registerAction } from "@/actions/auth";
-import { useConfig } from "@/components/ConfigProvider";
 import Link, { useNavigateWithTransition } from "@/components/Link";
 
-export default function RegisterSheet() {
+export default function RegisterSheet({
+  canRegister,
+  emailVerificationRequired,
+}: {
+  canRegister: boolean;
+  emailVerificationRequired: boolean;
+}) {
   const navigate = useNavigateWithTransition();
-  const { config } = useConfig();
-  const canRegister = config<boolean>("user.registration.enabled");
   const { broadcast } = useBroadcastSender<{ type: string }>();
 
   const [token, setToken] = useState("");
@@ -145,10 +148,6 @@ export default function RegisterSheet() {
 
     const responseData =
       result instanceof Response ? await result.json() : result;
-
-    const emailVerificationRequired = config<boolean>(
-      "user.email.verification.required",
-    );
 
     if (responseData.success) {
       // TODO：redirect传递

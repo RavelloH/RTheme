@@ -1,11 +1,10 @@
-"use client";
-
-import { useConfig } from "@/components/ConfigProvider";
-
-export default function RegisterIntro() {
-  const { config } = useConfig();
-  const canRegister = config<boolean>("user.registration.enabled");
-  const isNeedEmailVerify = config<boolean>("user.email.verification.required");
+export default function RegisterIntro({
+  canRegister,
+  isNeedEmailVerify,
+}: {
+  canRegister: boolean;
+  isNeedEmailVerify: boolean;
+}) {
   if (!canRegister) {
     return <div>此站点已关闭公开注册，请联系管理员以了解详情。</div>;
   }

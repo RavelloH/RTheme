@@ -5,6 +5,7 @@ import MainLayout from "@/components/MainLayout";
 import RegisterSheet from "./RegisterSheet";
 import Marquee from "react-fast-marquee";
 import RegisterIntro from "./RegisterIntro";
+import { getConfig } from "@/lib/server/configCache";
 
 export const metadata = await generateMetadata(
   {
@@ -16,7 +17,12 @@ export const metadata = await generateMetadata(
   },
 );
 
-export default function TestPage() {
+export default async function RegisterPage() {
+  const [canRegister, isNeedEmailVerify] = await Promise.all([
+    getConfig<boolean>("user.registration.enabled"),
+    getConfig<boolean>("user.email.verification.required"),
+  ]);
+
   return (
     <>
       <MainLayout type="horizontal">
@@ -42,7 +48,10 @@ export default function TestPage() {
               height={1}
               className="flex flex-col items-center justify-center text-center p-15"
             >
-              <RegisterSheet />
+              <RegisterSheet
+                canRegister={canRegister}
+                emailVerificationRequired={isNeedEmailVerify}
+              />
             </GridItem>
 
             <GridItem
@@ -65,7 +74,10 @@ export default function TestPage() {
               className="flex items-center px-10 text-2xl"
             >
               <div>
-                <RegisterIntro />
+                <RegisterIntro
+                  canRegister={canRegister}
+                  isNeedEmailVerify={isNeedEmailVerify}
+                />
               </div>
             </GridItem>
             <GridItem

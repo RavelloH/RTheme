@@ -7,10 +7,10 @@ import { gsap } from "gsap";
 import { useMenuStore } from "@/store/menuStore";
 import { useConsoleStore } from "@/store/consoleStore";
 import { useMobile } from "@/hooks/useMobile";
-import { Panel } from "./Panel";
-import { ConsoleButton } from "./ConsoleButton";
+import { Panel } from "../../Panel";
+import { ConsoleButton } from "../../ConsoleButton";
 import { MenuItem } from "@/lib/server/menuCache";
-import Link from "./Link";
+import Link from "../../Link";
 
 interface FooterProps {
   menus: MenuItem[];
@@ -401,7 +401,7 @@ export default function FooterDesktop({ menus }: FooterProps) {
     };
   }, [windowSize, activePathname, menus]);
 
-  return (
+  return isMobile ? null : (
     <>
       <motion.footer
         ref={footerRef}

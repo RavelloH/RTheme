@@ -5,18 +5,24 @@ import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { gsap } from "gsap";
-import Menu from "./Menu";
 import { useMenuStore } from "@/store/menuStore";
 import { useConsoleStore } from "@/store/consoleStore";
 import { useBroadcast } from "@/hooks/useBroadcast";
 import { useMobile } from "@/hooks/useMobile";
-import type { MenuItem } from "@/lib/server/menuCache";
 
+// Type
 interface TransitionMessage {
   type: "page-transition";
   direction: "left" | "right" | "up" | "down" | "unknown";
 }
 
+interface TitleTransitionProps {
+  children: React.ReactNode;
+  direction: "left" | "right" | "up" | "down" | "unknown";
+  isVisible: boolean;
+}
+
+// Components
 // 加载指示器组件
 function LoadingIndicator() {
   return (
@@ -42,12 +48,7 @@ function LoadingIndicator() {
   );
 }
 
-interface TitleTransitionProps {
-  children: React.ReactNode;
-  direction: "left" | "right" | "up" | "down" | "unknown";
-  isVisible: boolean;
-}
-
+// 标题过渡组件
 function TitleTransition({
   children,
   direction,
@@ -105,7 +106,96 @@ function TitleTransition({
   );
 }
 
-export function Header({ menus }: { menus: MenuItem[] }) {
+// 菜单按钮组件
+function MenuButton({
+  isOpen,
+  onClick,
+}: {
+  isOpen: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className="flex flex-col justify-center items-center w-full h-full relative group"
+      aria-label="菜单"
+      onClick={onClick}
+    >
+      <motion.div
+        className="relative w-8 h-8 flex flex-col justify-center items-center"
+        animate={{ rotate: isOpen ? 180 : 0 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        transition={{
+          duration: 0.5,
+          ease: "easeInOut",
+          scale: { duration: 0.2 },
+        }}
+      >
+        <svg
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          className="absolute transition-colors duration-200 group-hover:text-white group-hover:cursor-pointer"
+          fill="none"
+        >
+          <motion.path
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            d="M4 6h16"
+            style={{ transformOrigin: "4px 6px" }}
+            animate={{
+              rotate: isOpen ? 45 : 0,
+              y: isOpen ? 6 : 0,
+            }}
+            transition={{
+              duration: 0.5,
+              ease: [0.4, 0, 0.2, 1],
+              delay: isOpen ? 0.2 : 0.2,
+            }}
+          />
+          <motion.path
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            d="M4 12h16"
+            animate={{
+              opacity: isOpen ? 0 : 1,
+            }}
+            transition={{
+              duration: 0.3,
+              ease: [0.4, 0, 0.2, 1],
+              delay: isOpen ? 0 : 0.2,
+            }}
+          />
+          <motion.path
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            d="M4 18h16"
+            style={{ transformOrigin: "4px 18px" }}
+            animate={{
+              rotate: isOpen ? -45 : 0,
+              y: isOpen ? -6 : 0,
+            }}
+            transition={{
+              duration: 0.5,
+              ease: [0.4, 0, 0.2, 1],
+              delay: isOpen ? 0.2 : 0.2,
+            }}
+          />
+        </svg>
+      </motion.div>
+    </button>
+  );
+}
+
+// Main
+export default function HeaderWrapper({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { isMenuOpen, toggleMenu } = useMenuStore();
   const { setConsoleOpen } = useConsoleStore();
   const headerRef = useRef<HTMLElement>(null);
@@ -132,6 +222,10 @@ export function Header({ menus }: { menus: MenuItem[] }) {
       const { direction } = message;
       setTransitionDirection(direction);
       startTransition();
+    } else if (message?.type === "menu-close") {
+      if (isMenuOpen) {
+        toggleMenu();
+      }
     }
   });
 
@@ -206,6 +300,7 @@ export function Header({ menus }: { menus: MenuItem[] }) {
     return () => {
       window.removeEventListener("loadingComplete", handleLoadingComplete);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 初始化标题
@@ -289,99 +384,11 @@ export function Header({ menus }: { menus: MenuItem[] }) {
               className="h-full"
               style={{ paddingBottom: getHeaderHeight() }}
             >
-              <Menu
-                setIsMenuOpen={(isOpen: boolean) =>
-                  useMenuStore.getState().setMenuOpen(isOpen)
-                }
-                menus={menus}
-              />
+              {children}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
     </>
-  );
-}
-
-function MenuButton({
-  isOpen,
-  onClick,
-}: {
-  isOpen: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      className="flex flex-col justify-center items-center w-full h-full relative group"
-      aria-label="菜单"
-      onClick={onClick}
-    >
-      <motion.div
-        className="relative w-8 h-8 flex flex-col justify-center items-center"
-        animate={{ rotate: isOpen ? 180 : 0 }}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-        transition={{
-          duration: 0.5,
-          ease: "easeInOut",
-          scale: { duration: 0.2 },
-        }}
-      >
-        <svg
-          width="32"
-          height="32"
-          viewBox="0 0 24 24"
-          className="absolute transition-colors duration-200 group-hover:text-white group-hover:cursor-pointer"
-          fill="none"
-        >
-          <motion.path
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            d="M4 6h16"
-            style={{ transformOrigin: "4px 6px" }}
-            animate={{
-              rotate: isOpen ? 45 : 0,
-              y: isOpen ? 6 : 0,
-            }}
-            transition={{
-              duration: 0.5,
-              ease: [0.4, 0, 0.2, 1],
-              delay: isOpen ? 0.2 : 0.2,
-            }}
-          />
-          <motion.path
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            d="M4 12h16"
-            animate={{
-              opacity: isOpen ? 0 : 1,
-            }}
-            transition={{
-              duration: 0.3,
-              ease: [0.4, 0, 0.2, 1],
-              delay: isOpen ? 0 : 0.2,
-            }}
-          />
-          <motion.path
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            d="M4 18h16"
-            style={{ transformOrigin: "4px 18px" }}
-            animate={{
-              rotate: isOpen ? -45 : 0,
-              y: isOpen ? -6 : 0,
-            }}
-            transition={{
-              duration: 0.5,
-              ease: [0.4, 0, 0.2, 1],
-              delay: isOpen ? 0.2 : 0.2,
-            }}
-          />
-        </svg>
-      </motion.div>
-    </button>
   );
 }
