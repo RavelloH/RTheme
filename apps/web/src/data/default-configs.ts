@@ -59,11 +59,22 @@ export const defaultConfigs: DefaultConfig[] = [
     value: { default: "Your Name" },
     description: "网站作者或团队名",
   },
-  // TODO
   {
-    key: "site.theme_color",
-    value: { default: "#2dd4bf" },
-    description: "网站主题颜色，影响浏览器UI",
+    key: "site.color",
+    value: {
+      default: {
+        primary: "#2dd4bf",
+        background: {
+          light: "#ffffff",
+          dark: "#111111",
+        },
+        muted: {
+          light: "#f4f4f5",
+          dark: "#202023",
+        },
+      },
+    },
+    description: "网站颜色设置，影响页面UI、用户默认头像等",
   },
   {
     key: "site.slogan.primary",

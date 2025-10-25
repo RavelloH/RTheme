@@ -153,7 +153,7 @@ const seoConfigMap = {
   applicationName: "site.title",
   keywords: "site.seo.keywords",
   author: "site.author",
-  themeColor: "site.theme_color",
+  themeColor: "site.color",
   twitterSite: "site.seo.twitter_site",
   twitterCreator: "site.seo.twitter_creator",
   googleVerification: "site.seo.google_verification",
@@ -193,8 +193,6 @@ export async function generateMetadata(
     configValues[seoConfigMap.applicationName]?.default || "";
   const dynamicKeywords = configValues[seoConfigMap.keywords]?.default || "";
   const dynamicAuthor = configValues[seoConfigMap.author]?.default || "";
-  const dynamicThemeColor =
-    configValues[seoConfigMap.themeColor]?.default || "";
   const dynamicTwitterSite =
     configValues[seoConfigMap.twitterSite]?.default || "";
   const dynamicTwitterCreator =
@@ -303,14 +301,6 @@ export async function generateMetadata(
           : (dynamicKeywords as string).split(",").map((k: string) => k.trim())
         : defaultMetadata.keywords,
     other: {
-      "theme-color":
-        typeof dynamicThemeColor === "string"
-          ? dynamicThemeColor
-          : DEFAULT_THEME_COLOR,
-      "msapplication-TileColor":
-        typeof dynamicThemeColor === "string"
-          ? dynamicThemeColor
-          : DEFAULT_THEME_COLOR,
       "msapplication-config": "/browserconfig.xml",
       "apple-mobile-web-app-title":
         typeof dynamicAppName === "string"

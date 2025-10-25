@@ -6,6 +6,7 @@ import AdminSidebar from "@/components/AdminSidebar";
 import UsersReport from "./UsersReport";
 import UsersHistoryChart from "./UsersHistoryChart";
 import UsersTable from "./UsersTable";
+import { getConfig } from "@/lib/server/configCache";
 
 export const metadata = await generateMetadata(
   {
@@ -17,7 +18,9 @@ export const metadata = await generateMetadata(
   },
 );
 
-export default function AdminUsers() {
+export default async function AdminUsers() {
+  const mainColor = (await getConfig<{ primary: string }>("site.color"))
+    .primary;
   return (
     <MainLayout type="horizontal">
       <HorizontalScroll
@@ -33,7 +36,7 @@ export default function AdminUsers() {
           <UsersHistoryChart />
         </RowGrid>
         <RowGrid>
-          <UsersTable />
+          <UsersTable mainColor={mainColor} />
         </RowGrid>
       </HorizontalScroll>
     </MainLayout>

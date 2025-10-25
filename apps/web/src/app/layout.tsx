@@ -22,6 +22,10 @@ import TokenManager from "@/components/TokenManager";
 
 // lib
 import { getActiveMenus } from "@/lib/server/menuCache";
+import { getConfig } from "@/lib/server/configCache";
+
+// Types
+import { ColorConfig } from "@/types/config";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -30,7 +34,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [menus] = await Promise.all([getActiveMenus()]);
+  const [menus, mainColor] = await Promise.all([
+    getActiveMenus(),
+    getConfig<ColorConfig>("site.color"),
+  ]);
 
   return (
     <html
@@ -46,6 +53,7 @@ export default async function RootLayout({
           attribute="class"
           defaultTheme="system"
           enableSystem
+          mainColor={mainColor}
           disableTransitionOnChange
         >
           <MenuProvider menus={menus}>
