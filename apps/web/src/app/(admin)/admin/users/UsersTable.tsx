@@ -8,8 +8,11 @@ import type { UserListItem } from "@repo/shared-types/api/user";
 import { useBroadcast } from "@/hooks/useBroadcast";
 import Image from "next/image";
 import { RiCheckLine, RiCloseLine } from "@remixicon/react";
+import Avatar from "boring-avatars";
+import generateGradient from "@/lib/shared/gradient";
+import generateComplementary from "@/lib/shared/complementary";
 
-export default function UsersTable() {
+export default function UsersTable({ mainColor }: { mainColor: string }) {
   const [data, setData] = useState<UserListItem[]>([]);
   const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -95,17 +98,27 @@ export default function UsersTable() {
       key: "avatar",
       title: "头像",
       dataIndex: "avatar",
-      align: "center",
-      render: (value: unknown) => {
-        const avatarUrl =
-          typeof value === "string" && value ? value : "/user.jpg";
-        return (
+      align: "left",
+      render: (value: unknown, record: UserListItem) => {
+        const username = record.username;
+        return typeof value === "string" && value ? (
           <Image
-            src={avatarUrl}
+            src={value}
             alt="avatar"
             width={32}
             height={32}
             className="rounded-full object-cover"
+          />
+        ) : (
+          <Avatar
+            name={username}
+            colors={generateGradient(
+              mainColor,
+              generateComplementary(mainColor),
+              4,
+            )}
+            variant="marble"
+            size={32}
           />
         );
       },
