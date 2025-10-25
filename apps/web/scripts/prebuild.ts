@@ -11,10 +11,12 @@ const rlog = new Rlog();
 
 rlog.config.setConfigGlobal({
   logFilePath: "./logs/init.log",
+  silent: true,
 });
 
 rlog.config.setConfig({
   customColorRules: [{ reg: "NeutralPress", color: "green" }],
+  silent: false,
 });
 
 const startTime = Date.now();
