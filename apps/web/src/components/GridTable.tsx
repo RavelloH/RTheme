@@ -9,8 +9,13 @@ import Clickable from "@/ui/Clickable";
 import { Select } from "@/ui/Select";
 import { Button, ButtonProps } from "@/ui/Button";
 import { Checkbox } from "@/ui/Checkbox";
-import { RiArrowLeftSLine, RiArrowRightSLine } from "@remixicon/react";
-import { useState, useMemo, useCallback } from "react";
+import {
+  RiArrowLeftSLine,
+  RiArrowRightSLine,
+  RiSearchLine,
+  RiCloseLine,
+} from "@remixicon/react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // 操作按钮配置
@@ -38,6 +43,9 @@ export interface GridTableProps<T extends Record<string, unknown>> {
   onPageSizeChange?: (pageSize: number) => void;
   // 排序相关
   onSortChange?: (key: string, order: "asc" | "desc" | null) => void;
+  // 搜索相关
+  onSearchChange?: (search: string) => void;
+  searchPlaceholder?: string;
   // 表格配置
   striped?: boolean;
   hoverable?: boolean;
@@ -73,6 +81,8 @@ export default function GridTable<T extends Record<string, unknown>>({
   onPageChange,
   onPageSizeChange,
   onSortChange,
+  onSearchChange,
+  searchPlaceholder = "搜索...",
   striped = true,
   hoverable = true,
   bordered = false,
@@ -95,6 +105,32 @@ export default function GridTable<T extends Record<string, unknown>>({
   const [selectedKeys, setSelectedKeys] = useState<Set<string | number>>(
     new Set(),
   );
+
+  // 搜索状态管理
+  const [searchValue, setSearchValue] = useState("");
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 搜索输入变化处理（防抖）
+  useEffect(() => {
+    if (!onSearchChange) return;
+
+    // 清除之前的定时器
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // 设置新的定时器，1秒后触发搜索
+    searchTimeoutRef.current = setTimeout(() => {
+      onSearchChange(searchValue);
+    }, 1000);
+
+    // 清理函数
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchValue, onSearchChange]);
 
   // 获取行的唯一键
   const getRowKey = useCallback(
@@ -230,9 +266,68 @@ export default function GridTable<T extends Record<string, unknown>>({
         areas={[1]}
         width={24}
         height={headerHeight}
-        className="flex items-center text-2xl px-10"
+        className="flex items-center justify-between text-2xl px-10"
       >
         <div>{title}</div>
+        {onSearchChange && (
+          <div className="relative w-[15em]">
+            <input
+              title="search"
+              type="text"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              className="
+                relative w-full bg-transparent border-0
+                px-0 py-2 text-base text-white
+                focus:outline-none
+              "
+            />
+            {/* 底部横线 */}
+            <motion.div
+              className="absolute bottom-0 left-0 h-0.5 w-full"
+              initial={{ backgroundColor: "#ffffff" }}
+              animate={{
+                backgroundColor:
+                  searchValue.length > 0 ? "var(--color-primary)" : "#ffffff",
+              }}
+              transition={{
+                duration: 0.3,
+              }}
+            />
+            {/* Label - 固定位置，有输入时隐藏 */}
+            <motion.label
+              className="absolute top-2 left-0 pointer-events-none whitespace-nowrap flex items-center text-base text-white"
+              animate={{
+                opacity: searchValue.length > 0 ? 0 : 1,
+              }}
+              transition={{
+                duration: 0.2,
+              }}
+            >
+              <RiSearchLine size="1em" className="inline mr-1" />
+              {searchPlaceholder}
+            </motion.label>
+            {/* 清空按钮 - 有输入时显示在右侧 */}
+            <AnimatePresence>
+              {searchValue.length > 0 && (
+                <motion.button
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  transition={{
+                    duration: 0.3,
+                    ease: [0.68, -0.55, 0.265, 1.55],
+                  }}
+                  onClick={() => setSearchValue("")}
+                  className="absolute right-0 top-2 text-primary hover:text-white transition-colors cursor-pointer flex items-center"
+                  type="button"
+                >
+                  <RiCloseLine size="1em" />
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
       </GridItem>
 
       {/* 表格内容 */}
@@ -322,11 +417,11 @@ export default function GridTable<T extends Record<string, unknown>>({
         className="flex justify-between pl-10 pr-6"
       >
         <div className="flex items-center gap-2">
-          <AutoTransition key={totalRecords}>
+          <AutoTransition key={totalRecords} type="fade">
             共 {totalRecords} 条
           </AutoTransition>
           <span>/</span>
-          <AutoTransition key={page} type="fade">
+          <AutoTransition key={page + "" + totalRecords} type="fade">
             第 {(page - 1) * pageSize + 1}
             {" - "}
             {Math.min(page * pageSize, totalRecords)} 条

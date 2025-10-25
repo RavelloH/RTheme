@@ -30,6 +30,7 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedUsers, setSelectedUsers] = useState<(string | number)[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // 处理选中状态变化
   const handleSelectionChange = (selectedKeys: (string | number)[]) => {
@@ -95,6 +96,12 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
     setPage(1); // 排序变化时重置到第一页
   };
 
+  // 处理搜索变化
+  const handleSearchChange = (search: string) => {
+    setSearchQuery(search);
+    setPage(1); // 搜索变化时重置到第一页
+  };
+
   // 监听广播刷新消息
   useBroadcast<{ type: string }>(async (message) => {
     if (message.type === "users-refresh") {
@@ -112,6 +119,7 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
           pageSize: number;
           sortBy?: "uid" | "username" | "createdAt" | "lastUseAt";
           sortOrder?: "asc" | "desc";
+          search?: string;
         } = {
           page,
           pageSize,
@@ -125,6 +133,11 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
             | "createdAt"
             | "lastUseAt";
           params.sortOrder = sortOrder;
+        }
+
+        // 添加搜索参数
+        if (searchQuery && searchQuery.trim()) {
+          params.search = searchQuery.trim();
         }
 
         const result = await getUsersList({
@@ -148,7 +161,7 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
     }
 
     fetchData();
-  }, [page, pageSize, sortKey, sortOrder, refreshTrigger]);
+  }, [page, pageSize, sortKey, sortOrder, searchQuery, refreshTrigger]);
 
   const columns: TableColumn<UserListItem>[] = [
     {
@@ -389,6 +402,8 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
       onPageChange={setPage}
       onPageSizeChange={setPageSize}
       onSortChange={handleSortChange}
+      onSearchChange={handleSearchChange}
+      searchPlaceholder="搜索用户名、昵称或邮箱..."
       striped
       hoverable
       bordered={false}
