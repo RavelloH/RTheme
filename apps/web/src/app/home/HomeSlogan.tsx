@@ -2,6 +2,7 @@
 
 import { useMobile } from "@/hooks/useMobile";
 import Image from "next/image";
+import Avatar from "@/../public/avatar.jpg";
 import Marquee from "react-fast-marquee";
 
 export default function HomeSlogan({ slogan }: { slogan: string }) {
@@ -22,13 +23,7 @@ export default function HomeSlogan({ slogan }: { slogan: string }) {
   ) : (
     <>
       <div className="h-full aspect-square mr-4 relative">
-        <Image
-          src="/avatar.jpg"
-          alt="logo"
-          width={200}
-          height={200}
-          className="h-full w-auto object-cover"
-        />
+        <Image src={Avatar} alt="logo" className="h-full w-auto object-cover" />
       </div>
       <div
         className="flex-1 flex items-center justify-end pr-12 text-8xl"

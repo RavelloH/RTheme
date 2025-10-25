@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Avatar from "@/../public/avatar.jpg";
 import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -332,7 +333,7 @@ export default function HeaderWrapper({
         }}
       >
         <div className="flex items-center" style={{ width: getHeaderHeight() }}>
-          <Image src="/avatar.jpg" alt="Logo" width={78} height={78} />
+          <Image src={Avatar} alt="Logo" className="h-full w-auto" />
         </div>
         <div className="flex-1 flex items-center justify-center relative h-full">
           <TitleTransition
