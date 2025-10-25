@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 interface ClientDiagnosticsProps {
   errorType?: string;
   errorMessage?: string;
+  errorStack?: string;
 }
 
 interface DiagnosticsInfo {
@@ -158,6 +159,7 @@ interface DiagnosticsInfo {
 export default function ClientDiagnostics({
   errorType = "Unknown Error",
   errorMessage = "An error occurred",
+  errorStack,
 }: ClientDiagnosticsProps) {
   const [logs, setLogs] = useState<string[]>([]);
 
@@ -445,7 +447,7 @@ export default function ClientDiagnostics({
       };
 
       // Error stack trace
-      info.errorStack = new Error().stack;
+      info.errorStack = errorStack || new Error().stack;
 
       // Session information
       const sessionStorageKeys = [...Object.keys(sessionStorage)];
@@ -589,7 +591,7 @@ export default function ClientDiagnostics({
     // Ensure information collection after component mount
     const timer = setTimeout(collectErrorInfo, 100);
     return () => clearTimeout(timer);
-  }, [errorType, errorMessage]);
+  }, [errorType, errorMessage, errorStack]);
 
   if (logs.length === 0) {
     return (

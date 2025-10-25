@@ -8,7 +8,7 @@ import { RiRefreshLine } from "@remixicon/react";
 import { useEffect, useState } from "react";
 import { getUsersStats } from "@/actions/stats";
 import { GetUsersStatsSuccessResponse } from "@repo/shared-types/api/stats";
-import ErrorPage from "@/app/error";
+import ErrorPage from "@/components/ui/Error";
 
 type stats = GetUsersStatsSuccessResponse["data"] | null;
 

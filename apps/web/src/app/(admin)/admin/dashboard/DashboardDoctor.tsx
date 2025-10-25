@@ -7,7 +7,7 @@ import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { RiRefreshLine } from "@remixicon/react";
 import { useEffect, useState } from "react";
-import ErrorPage from "@/app/error";
+import ErrorPage from "@/components/ui/Error";
 
 type issue = {
   code: string;

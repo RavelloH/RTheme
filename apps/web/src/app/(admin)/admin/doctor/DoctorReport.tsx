@@ -7,7 +7,7 @@ import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiRefreshLine } from "@remixicon/react";
 import { useEffect, useState } from "react";
-import ErrorPage from "@/app/error";
+import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/useBroadcast";
 
 type issue = {

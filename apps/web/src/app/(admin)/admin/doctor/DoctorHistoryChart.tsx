@@ -10,7 +10,7 @@ import AreaChart, {
   type SeriesConfig,
 } from "@/components/AreaChart";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import ErrorPage from "@/app/error";
+import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/useBroadcast";
 
 export default function DoctorHistoryChart() {
