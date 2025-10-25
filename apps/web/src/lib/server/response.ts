@@ -187,8 +187,17 @@ function createResponseBody<T extends ApiResponseData>(
   const timestamp = new Date().toISOString();
   const requestId = generateRequestId();
 
+  // 获取当前调用栈信息
+  const stack =
+    new Error().stack
+      ?.split("\n")
+      .slice(5, 6)
+      .map((line) => line.trim())
+      .join("")
+      .split(" ")[1] || "unknown";
+
   console.log(
-    `[${timestamp}] | ${requestId} | ${success ? ":S" : ":E"} | [Res/${status || "Action"}] | ${message} ${
+    `[${timestamp}] | ${requestId} | ${success ? ":S" : ":E"} | [Res/${status || "Action"}] | ${stack} | ${message} ${
       error ? ` | ${JSON.stringify(error)}` : ""
     }`,
   );
