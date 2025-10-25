@@ -67,11 +67,6 @@ export default function UsersHistoryChart() {
     {
       key: "new",
       label: "新增用户",
-      color: "var(--color-warning)",
-    },
-    {
-      key: "active",
-      label: "活跃用户",
       color: "var(--color-success)",
     },
   ];
