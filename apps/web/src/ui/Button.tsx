@@ -70,13 +70,13 @@ export function Button({
   const getSizeStyles = () => {
     switch (size) {
       case "sm":
-        return "px-4 py-2 text-lg min-h-[36px]";
+        return "px-4 py-1 text-md min-h-[36px]";
       case "md":
         return "px-6 py-2 text-xl";
       case "lg":
         return "px-6 py-3 text-xl";
       default:
-        return "px-4 py-2 text-lg min-h-[44px]";
+        return "px-4 py-1 text-md min-h-[36px]";
     }
   };
 

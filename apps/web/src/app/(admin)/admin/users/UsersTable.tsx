@@ -1,13 +1,20 @@
 "use client";
 
 import { getUsersList } from "@/actions/user";
-import GridTable from "@/components/GridTable";
+import GridTable, { ActionButton } from "@/components/GridTable";
 import { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { UserListItem } from "@repo/shared-types/api/user";
 import { useBroadcast } from "@/hooks/useBroadcast";
 import Image from "next/image";
-import { RiCheckLine, RiCloseLine } from "@remixicon/react";
+import {
+  RiCheckLine,
+  RiCloseLine,
+  RiEditLine,
+  RiDeleteBinLine,
+  RiUserSettingsLine,
+  RiShieldUserLine,
+} from "@remixicon/react";
 import Avatar from "boring-avatars";
 import generateGradient from "@/lib/shared/gradient";
 import generateComplementary from "@/lib/shared/complementary";
@@ -22,6 +29,64 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [selectedUsers, setSelectedUsers] = useState<(string | number)[]>([]);
+
+  // 处理选中状态变化
+  const handleSelectionChange = (selectedKeys: (string | number)[]) => {
+    setSelectedUsers(selectedKeys);
+    console.log("选中的用户 UID:", selectedKeys);
+  };
+
+  // 批量操作按钮
+  const batchActions: ActionButton[] = [
+    {
+      label: "更改状态",
+      onClick: () => {
+        console.log("批量更改状态:", selectedUsers);
+        // TODO: 实现批量更改状态功能
+      },
+      icon: <RiUserSettingsLine size="1em" />,
+      variant: "ghost",
+    },
+    {
+      label: "更改角色",
+      onClick: () => {
+        console.log("批量更改角色:", selectedUsers);
+        // TODO: 实现批量更改角色功能
+      },
+      icon: <RiShieldUserLine size="1em" />,
+      variant: "ghost",
+    },
+    {
+      label: "删除",
+      onClick: () => {
+        console.log("批量删除用户:", selectedUsers);
+        // TODO: 实现批量删除功能
+      },
+      icon: <RiDeleteBinLine size="1em" />,
+      variant: "danger",
+    },
+  ];
+
+  // 行操作按钮
+  const rowActions = (record: UserListItem): ActionButton[] => [
+    {
+      onClick: () => {
+        console.log("编辑用户:", record);
+        // TODO: 实现编辑用户功能
+      },
+      icon: <RiEditLine size="1em" />,
+      variant: "ghost",
+    },
+    {
+      onClick: () => {
+        console.log("删除用户:", record);
+        // TODO: 实现删除用户功能
+      },
+      icon: <RiDeleteBinLine size="1em" />,
+      variant: "danger",
+    },
+  ];
 
   // 处理排序变化
   const handleSortChange = (key: string, order: "asc" | "desc" | null) => {
@@ -332,6 +397,11 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
       stickyHeader
       maxHeight="100%"
       padding={2.5}
+      // 启用操作模式
+      enableActions={true}
+      batchActions={batchActions}
+      rowActions={rowActions}
+      onSelectionChange={handleSelectionChange}
     />
   );
 }

@@ -9,9 +9,13 @@ export interface TableColumn<T> {
   title: string;
   dataIndex?: keyof T;
   render?: (value: unknown, record: T, index: number) => React.ReactNode;
+  /** 自定义表头渲染函数，如果提供则覆盖 title */
+  headerRender?: () => React.ReactNode;
   align?: "left" | "center" | "right";
   sortable?: boolean;
   fixed?: "left" | "right";
+  /** 列宽度 */
+  width?: string | number;
   /**
    * 是否使用等宽字体（应用于 th 和 td）
    * @default false
@@ -274,6 +278,7 @@ export function Table<T extends Record<string, unknown>>({
                     ${bordered ? "border-r border-border last:border-r-0" : ""}
                     ${column.sortable ? "cursor-pointer select-none hover:bg-muted/80 transition-colors" : ""}
                   `}
+                  style={column.width ? { width: column.width } : undefined}
                   onClick={() => column.sortable && handleSort(column.key)}
                 >
                   <div
@@ -295,7 +300,11 @@ export function Table<T extends Record<string, unknown>>({
                       },
                     })}
                   >
-                    <span>{column.title}</span>
+                    <span>
+                      {column.headerRender
+                        ? column.headerRender()
+                        : column.title}
+                    </span>
                     {column.sortable && <SortIcon columnKey={column.key} />}
                   </div>
                 </th>
@@ -359,6 +368,7 @@ export function Table<T extends Record<string, unknown>>({
                         ${column.mono ? "font-mono" : ""}
                         ${!striped ? "border-t border-border" : ""}
                       `}
+                      style={column.width ? { width: column.width } : undefined}
                     >
                       <div
                         {...(padding > 0 && {
