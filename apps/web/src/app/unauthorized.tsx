@@ -3,6 +3,7 @@ import HorizontalScroll from "@/components/HorizontalScroll";
 import LinkButton from "@/components/LinkButton";
 import MainLayout from "@/components/MainLayout";
 import RowGrid, { GridItem } from "@/components/RowGrid";
+import { RiArrowGoBackLine, RiLoginBoxLine } from "@remixicon/react";
 
 export default function UnauthorizedPage({ redirect }: { redirect?: string }) {
   return (
@@ -57,7 +58,11 @@ export default function UnauthorizedPage({ redirect }: { redirect?: string }) {
               width={14}
               height={0.1}
             >
-              <LinkButton mode="back" text="返回上一页" />
+              <LinkButton
+                mode="back"
+                text="返回上一页"
+                icon={<RiArrowGoBackLine />}
+              />
             </GridItem>
             <GridItem
               areas={[12]}
@@ -69,6 +74,7 @@ export default function UnauthorizedPage({ redirect }: { redirect?: string }) {
                 mode="link"
                 href={redirect ? `/login?redirect=${redirect}` : "/login"}
                 text="登录"
+                icon={<RiLoginBoxLine />}
               />
             </GridItem>
             <GridItem

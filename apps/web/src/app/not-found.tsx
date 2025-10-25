@@ -4,6 +4,7 @@ import RowGrid, { GridItem } from "@/components/RowGrid";
 import MainLayout from "@/components/MainLayout";
 import ClientDiagnostics from "../components/ClientDiagnostics";
 import LinkButton from "@/components/LinkButton";
+import { RiArrowGoBackLine, RiFeedbackLine } from "@remixicon/react";
 
 export const metadata = await generateMetadata({
   title: "404 Not Found",
@@ -69,7 +70,11 @@ export default function Custom404() {
               width={14}
               height={0.1}
             >
-              <LinkButton mode="back" text="返回上一页" />
+              <LinkButton
+                mode="back"
+                text="返回上一页"
+                icon={<RiArrowGoBackLine />}
+              />
             </GridItem>
             <GridItem
               areas={[12]}
@@ -77,11 +82,11 @@ export default function Custom404() {
               width={14}
               height={0.1}
             >
-              {/* TODO */}
               <LinkButton
                 mode="link"
                 href="/message?uid=1"
                 text="反馈给管理员"
+                icon={<RiFeedbackLine />}
               />
             </GridItem>
             <GridItem

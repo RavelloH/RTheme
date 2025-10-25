@@ -3,6 +3,7 @@ import ClientDiagnostics from "@/components/ClientDiagnostics";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import MainLayout from "@/components/MainLayout";
 import RowGrid, { GridItem } from "@/components/RowGrid";
+import { RiArrowGoBackLine, RiLogoutBoxLine } from "@remixicon/react";
 
 export default function ForbiddenPage({
   role,
@@ -66,7 +67,11 @@ export default function ForbiddenPage({
               width={14}
               height={0.1}
             >
-              <LinkButton mode="back" text="返回上一页" />
+              <LinkButton
+                mode="back"
+                text="返回上一页"
+                icon={<RiArrowGoBackLine />}
+              />
             </GridItem>
             <GridItem
               areas={[12]}
@@ -78,6 +83,7 @@ export default function ForbiddenPage({
                 mode="link"
                 href="/logout?redirect=/login"
                 text="切换账号"
+                icon={<RiLogoutBoxLine />}
               />
             </GridItem>
             <GridItem
