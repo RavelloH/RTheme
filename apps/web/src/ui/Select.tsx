@@ -16,6 +16,7 @@ export interface SelectProps {
   className?: string;
   disabled?: boolean;
   size?: "sm" | "md" | "lg";
+  direcation?: "down" | "up";
   placeholder?: string;
 }
 
@@ -26,6 +27,7 @@ export function Select({
   className = "",
   disabled = false,
   size = "md",
+  direcation,
   placeholder = "请选择",
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -39,12 +41,16 @@ export function Select({
   // 判断下拉框展开方向
   useEffect(() => {
     if (isOpen && containerRef.current) {
+      if (direcation) {
+        setDropdownDirection(direcation);
+        return;
+      }
       const rect = containerRef.current.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
       const isInUpperHalf = rect.top < viewportHeight / 2;
       setDropdownDirection(isInUpperHalf ? "down" : "up");
     }
-  }, [isOpen]);
+  }, [isOpen, direcation]);
 
   // 点击外部关闭下拉框
   useEffect(() => {
@@ -156,7 +162,7 @@ export function Select({
               y: dropdownDirection === "down" ? -10 : 10,
             }}
             transition={{ duration: 0.2 }}
-            className={`absolute z-50 w-full bg-muted/50 backdrop-blur-sm shadow-lg rounded overflow-hidden ${
+            className={`absolute z-60 w-full bg-background/90 border-border border-1 backdrop-blur-sm shadow-lg rounded overflow-hidden ${
               dropdownDirection === "down"
                 ? "mt-1 top-full"
                 : "mb-1 bottom-full"

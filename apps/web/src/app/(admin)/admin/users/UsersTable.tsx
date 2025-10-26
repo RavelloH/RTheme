@@ -18,6 +18,12 @@ import {
 import Avatar from "boring-avatars";
 import generateGradient from "@/lib/shared/gradient";
 import generateComplementary from "@/lib/shared/complementary";
+import { Dialog } from "@/ui/Dialog";
+import { Input } from "@/ui/Input";
+import { Select, SelectOption } from "@/ui/Select";
+import { Checkbox } from "@/ui/Checkbox";
+import { Button } from "@/ui/Button";
+import { AlertDialog } from "@/ui/AlertDialog";
 
 export default function UsersTable({ mainColor }: { mainColor: string }) {
   const [data, setData] = useState<UserListItem[]>([]);
@@ -31,6 +37,29 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedUsers, setSelectedUsers] = useState<(string | number)[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserListItem | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingUser, setDeletingUser] = useState<UserListItem | null>(null);
+  const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false);
+  const [batchStatusDialogOpen, setBatchStatusDialogOpen] = useState(false);
+  const [batchRoleDialogOpen, setBatchRoleDialogOpen] = useState(false);
+  const [batchNewStatus, setBatchNewStatus] = useState("ACTIVE");
+  const [batchNewRole, setBatchNewRole] = useState("USER");
+
+  // 编辑用户状态
+  const [formData, setFormData] = useState({
+    username: "",
+    nickname: "",
+    email: "",
+    avatar: "",
+    emailVerified: false,
+    role: "USER",
+    status: "ACTIVE",
+    website: "",
+    bio: "",
+    emailNotice: false,
+  });
 
   // 处理选中状态变化
   const handleSelectionChange = (selectedKeys: (string | number)[]) => {
@@ -38,13 +67,124 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
     console.log("选中的用户 UID:", selectedKeys);
   };
 
+  // 打开编辑对话框
+  const openEditDialog = (user: UserListItem) => {
+    setEditingUser(user);
+    setFormData({
+      username: user.username,
+      nickname: user.nickname || "",
+      email: user.email,
+      avatar: user.avatar || "",
+      emailVerified: user.emailVerified,
+      role: user.role,
+      status: user.status,
+      website: user.website || "",
+      bio: user.bio || "",
+      emailNotice: user.emailNotice,
+    });
+    setEditDialogOpen(true);
+  };
+
+  // 关闭编辑对话框
+  const closeEditDialog = () => {
+    setEditDialogOpen(false);
+    setEditingUser(null);
+  };
+
+  // 处理表单字段变化
+  const handleFieldChange = (field: string, value: string | boolean) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // 保存用户编辑
+  const handleSaveUser = () => {
+    console.log("保存用户:", formData);
+    // TODO: 实现保存用户功能
+    closeEditDialog();
+  };
+
+  // 打开删除单个用户对话框
+  const openDeleteDialog = (user: UserListItem) => {
+    setDeletingUser(user);
+    setDeleteDialogOpen(true);
+  };
+
+  // 关闭删除对话框
+  const closeDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setDeletingUser(null);
+  };
+
+  // 确认删除单个用户
+  const handleConfirmDelete = () => {
+    console.log("删除用户:", deletingUser);
+    // TODO: 实现删除用户功能
+    closeDeleteDialog();
+  };
+
+  // 打开批量删除对话框
+  const openBatchDeleteDialog = () => {
+    setBatchDeleteDialogOpen(true);
+  };
+
+  // 关闭批量删除对话框
+  const closeBatchDeleteDialog = () => {
+    setBatchDeleteDialogOpen(false);
+  };
+
+  // 确认批量删除
+  const handleConfirmBatchDelete = () => {
+    console.log("批量删除用户:", selectedUsers);
+    // TODO: 实现批量删除功能
+    closeBatchDeleteDialog();
+    setSelectedUsers([]);
+  };
+
+  // 打开批量更改状态对话框
+  const openBatchStatusDialog = () => {
+    setBatchStatusDialogOpen(true);
+  };
+
+  // 关闭批量更改状态对话框
+  const closeBatchStatusDialog = () => {
+    setBatchStatusDialogOpen(false);
+  };
+
+  // 确认批量更改状态
+  const handleConfirmBatchStatus = () => {
+    console.log("批量更改状态:", selectedUsers, "新状态:", batchNewStatus);
+    // TODO: 实现批量更改状态功能
+    closeBatchStatusDialog();
+    setSelectedUsers([]);
+  };
+
+  // 打开批量更改角色对话框
+  const openBatchRoleDialog = () => {
+    setBatchRoleDialogOpen(true);
+  };
+
+  // 关闭批量更改角色对话框
+  const closeBatchRoleDialog = () => {
+    setBatchRoleDialogOpen(false);
+  };
+
+  // 确认批量更改角色
+  const handleConfirmBatchRole = () => {
+    console.log("批量更改角色:", selectedUsers, "新角色:", batchNewRole);
+    // TODO: 实现批量更改角色功能
+    closeBatchRoleDialog();
+    setSelectedUsers([]);
+  };
+
   // 批量操作按钮
   const batchActions: ActionButton[] = [
     {
       label: "更改状态",
       onClick: () => {
-        console.log("批量更改状态:", selectedUsers);
-        // TODO: 实现批量更改状态功能
+        openBatchStatusDialog();
       },
       icon: <RiUserSettingsLine size="1em" />,
       variant: "ghost",
@@ -52,8 +192,7 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
     {
       label: "更改角色",
       onClick: () => {
-        console.log("批量更改角色:", selectedUsers);
-        // TODO: 实现批量更改角色功能
+        openBatchRoleDialog();
       },
       icon: <RiShieldUserLine size="1em" />,
       variant: "ghost",
@@ -61,8 +200,7 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
     {
       label: "删除",
       onClick: () => {
-        console.log("批量删除用户:", selectedUsers);
-        // TODO: 实现批量删除功能
+        openBatchDeleteDialog();
       },
       icon: <RiDeleteBinLine size="1em" />,
       variant: "danger",
@@ -73,16 +211,14 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
   const rowActions = (record: UserListItem): ActionButton[] => [
     {
       onClick: () => {
-        console.log("编辑用户:", record);
-        // TODO: 实现编辑用户功能
+        openEditDialog(record);
       },
       icon: <RiEditLine size="1em" />,
       variant: "ghost",
     },
     {
       onClick: () => {
-        console.log("删除用户:", record);
-        // TODO: 实现删除用户功能
+        openDeleteDialog(record);
       },
       icon: <RiDeleteBinLine size="1em" />,
       variant: "danger",
@@ -388,35 +524,319 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
     },
   ];
 
+  // 角色选项
+  const roleOptions: SelectOption[] = [
+    { value: "USER", label: "用户" },
+    { value: "AUTHOR", label: "作者" },
+    { value: "EDITOR", label: "编辑" },
+    { value: "ADMIN", label: "管理员" },
+  ];
+
+  // 状态选项
+  const statusOptions: SelectOption[] = [
+    { value: "ACTIVE", label: "正常" },
+    { value: "SUSPENDED", label: "已封禁" },
+    { value: "NEEDS_UPDATE", label: "需更新" },
+  ];
+
   return (
-    <GridTable
-      title="用户列表"
-      columns={columns}
-      data={data}
-      loading={loading}
-      rowKey="uid"
-      page={page}
-      totalPages={totalPages}
-      totalRecords={totalRecords}
-      pageSize={pageSize}
-      onPageChange={setPage}
-      onPageSizeChange={setPageSize}
-      onSortChange={handleSortChange}
-      onSearchChange={handleSearchChange}
-      searchPlaceholder="搜索用户名、昵称或邮箱..."
-      striped
-      hoverable
-      bordered={false}
-      size="sm"
-      emptyText="暂无用户记录"
-      stickyHeader
-      maxHeight="100%"
-      padding={2.5}
-      // 启用操作模式
-      enableActions={true}
-      batchActions={batchActions}
-      rowActions={rowActions}
-      onSelectionChange={handleSelectionChange}
-    />
+    <>
+      <GridTable
+        title="用户列表"
+        columns={columns}
+        data={data}
+        loading={loading}
+        rowKey="uid"
+        page={page}
+        totalPages={totalPages}
+        totalRecords={totalRecords}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        onSortChange={handleSortChange}
+        onSearchChange={handleSearchChange}
+        searchPlaceholder="搜索用户名、昵称或邮箱..."
+        striped
+        hoverable
+        bordered={false}
+        size="sm"
+        emptyText="暂无用户记录"
+        stickyHeader
+        maxHeight="100%"
+        padding={2.5}
+        // 启用操作模式
+        enableActions={true}
+        batchActions={batchActions}
+        rowActions={rowActions}
+        onSelectionChange={handleSelectionChange}
+      />
+
+      {/* 编辑用户对话框 */}
+      <Dialog
+        open={editDialogOpen}
+        onClose={closeEditDialog}
+        title={`编辑用户 - ${editingUser?.username || ""}`}
+        size="md"
+      >
+        <div className="px-6 py-6 space-y-6">
+          {/* 基本信息 */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+              基本信息
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Input
+                label="用户名"
+                value={formData.username}
+                onChange={(e) => handleFieldChange("username", e.target.value)}
+                required
+                size="sm"
+              />
+              <Input
+                label="昵称"
+                value={formData.nickname}
+                onChange={(e) => handleFieldChange("nickname", e.target.value)}
+                size="sm"
+              />
+              <Input
+                label="邮箱"
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleFieldChange("email", e.target.value)}
+                required
+                size="sm"
+              />
+              <Input
+                label="头像 URL"
+                value={formData.avatar}
+                onChange={(e) => handleFieldChange("avatar", e.target.value)}
+                size="sm"
+              />
+            </div>
+          </div>
+
+          {/* 权限设置 */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+              权限设置
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm text-foreground mb-2">
+                  角色
+                </label>
+                <Select
+                  value={formData.role}
+                  onChange={(value) =>
+                    handleFieldChange("role", value as string)
+                  }
+                  options={roleOptions}
+                  size="sm"
+                />
+                <p className="text-sm text-muted-foreground py-2">
+                  用户：正常访客权限 <br />
+                  作者：可创建和管理自己的内容 <br />
+                  编辑：可管理所有用户的内容 <br />
+                  管理员：拥有全部权限，可更改系统设置
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm text-foreground mb-2">
+                  状态
+                </label>
+                <Select
+                  value={formData.status}
+                  onChange={(value) =>
+                    handleFieldChange("status", value as string)
+                  }
+                  options={statusOptions}
+                  size="sm"
+                />
+                <p className="text-sm text-muted-foreground py-2">
+                  正常：用户可以正常使用账号 <br />
+                  已封禁：用户将无法登录和使用账号 <br />
+                  需更新：用户需重置密码后方可继续使用
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 其他信息 */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+              其他信息
+            </h3>
+            <div className="space-y-4">
+              <Input
+                label="个人网站"
+                type="url"
+                value={formData.website}
+                onChange={(e) => handleFieldChange("website", e.target.value)}
+                size="sm"
+              />
+              <Input
+                label="个人简介"
+                value={formData.bio}
+                onChange={(e) => handleFieldChange("bio", e.target.value)}
+                rows={4}
+                size="sm"
+              />
+            </div>
+          </div>
+
+          {/* 设置选项 */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+              设置选项
+            </h3>
+            <div className="space-y-3 flex flex-col">
+              <Checkbox
+                label="邮箱已验证"
+                checked={formData.emailVerified}
+                onChange={(e) =>
+                  handleFieldChange("emailVerified", e.target.checked)
+                }
+              />
+              <Checkbox
+                label="接收邮件通知"
+                checked={formData.emailNotice}
+                onChange={(e) =>
+                  handleFieldChange("emailNotice", e.target.checked)
+                }
+              />
+            </div>
+          </div>
+
+          {/* 操作按钮 */}
+          <div className="flex justify-end gap-4 pt-4 border-t border-foreground/10">
+            <Button
+              label="取消"
+              variant="ghost"
+              onClick={closeEditDialog}
+              size="sm"
+            />
+            <Button
+              label="保存"
+              variant="primary"
+              onClick={handleSaveUser}
+              size="sm"
+            />
+          </div>
+        </div>
+      </Dialog>
+
+      {/* 批量更改状态对话框 */}
+      <Dialog
+        open={batchStatusDialogOpen}
+        onClose={closeBatchStatusDialog}
+        title="批量更改状态"
+        size="sm"
+      >
+        <div className="px-6 py-6 space-y-6">
+          <p className="text-sm text-muted-foreground">
+            将为选中的 {selectedUsers.length} 个用户更改状态
+          </p>
+          <div>
+            <label className="block text-sm text-foreground mb-2">新状态</label>
+            <Select
+              value={batchNewStatus}
+              onChange={(value) => setBatchNewStatus(value as string)}
+              options={statusOptions}
+              size="sm"
+              direcation="down"
+            />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            正常：用户可以正常使用账号 <br />
+            已封禁：用户将无法登录和使用账号 <br />
+            需更新：用户需重置密码后方可继续使用
+          </p>
+          <div className="flex justify-end gap-4 pt-4 border-t border-foreground/10">
+            <Button
+              label="取消"
+              variant="ghost"
+              onClick={closeBatchStatusDialog}
+              size="sm"
+            />
+            <Button
+              label="确认"
+              variant="primary"
+              onClick={handleConfirmBatchStatus}
+              size="sm"
+            />
+          </div>
+        </div>
+      </Dialog>
+
+      {/* 批量更改角色对话框 */}
+      <Dialog
+        open={batchRoleDialogOpen}
+        onClose={closeBatchRoleDialog}
+        title="批量更改角色"
+        size="sm"
+      >
+        <div className="px-6 py-6 space-y-6">
+          <p className="text-sm text-muted-foreground">
+            将为选中的 {selectedUsers.length} 个用户更改角色
+          </p>
+          <div>
+            <label className="block text-sm text-foreground mb-2">新角色</label>
+            <Select
+              value={batchNewRole}
+              onChange={(value) => setBatchNewRole(value as string)}
+              options={roleOptions}
+              size="sm"
+              direcation="down"
+            />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            用户：正常访客权限 <br />
+            作者：可创建和管理自己的内容 <br />
+            编辑：可管理所有用户的内容 <br />
+            管理员：拥有全部权限，可更改系统设置
+          </p>
+          <div className="flex justify-end gap-4 pt-4 border-t border-foreground/10">
+            <Button
+              label="取消"
+              variant="ghost"
+              onClick={closeBatchRoleDialog}
+              size="sm"
+            />
+            <Button
+              label="确认"
+              variant="primary"
+              onClick={handleConfirmBatchRole}
+              size="sm"
+            />
+          </div>
+        </div>
+      </Dialog>
+
+      {/* 删除单个用户确认对话框 */}
+      <AlertDialog
+        open={deleteDialogOpen}
+        onClose={closeDeleteDialog}
+        onConfirm={handleConfirmDelete}
+        title="确认删除用户"
+        description={
+          deletingUser ? `确定要删除用户 "${deletingUser.username}" 吗？` : ""
+        }
+        confirmText="删除"
+        cancelText="取消"
+        variant="danger"
+      />
+
+      {/* 批量删除确认对话框 */}
+      <AlertDialog
+        open={batchDeleteDialogOpen}
+        onClose={closeBatchDeleteDialog}
+        onConfirm={handleConfirmBatchDelete}
+        title="确认批量删除"
+        description={`确定要删除选中的 ${selectedUsers.length} 个用户吗？`}
+        confirmText="删除"
+        cancelText="取消"
+        variant="danger"
+      />
+    </>
   );
 }
