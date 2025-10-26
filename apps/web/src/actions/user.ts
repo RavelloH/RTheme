@@ -7,6 +7,10 @@ import {
   GetUsersListSchema,
   GetUsersList,
   UserListItem,
+  UpdateUsersSchema,
+  UpdateUsers,
+  DeleteUsersSchema,
+  DeleteUsers,
 } from "@repo/shared-types/api/user";
 import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
@@ -191,6 +195,7 @@ export async function getUsersList(
 
     // 构建 where 条件
     const where: {
+      deletedAt: null;
       role?: "USER" | "ADMIN" | "EDITOR" | "AUTHOR";
       status?: "ACTIVE" | "SUSPENDED" | "NEEDS_UPDATE";
       OR?: Array<{
@@ -198,7 +203,9 @@ export async function getUsersList(
         nickname?: { contains: string; mode: "insensitive" };
         email?: { contains: string; mode: "insensitive" };
       }>;
-    } = {};
+    } = {
+      deletedAt: null, // 只获取未删除的用户
+    };
 
     if (role) {
       where.role = role;
@@ -279,6 +286,282 @@ export async function getUsersList(
     });
   } catch (error) {
     console.error("Get users list error:", error);
+    return response.serverError();
+  }
+}
+
+/*
+  updateUsers - 批量更新用户信息
+*/
+export async function updateUsers(
+  params: UpdateUsers,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<{ updated: number } | null>>>;
+export async function updateUsers(
+  params: UpdateUsers,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<{ updated: number } | null>>;
+export async function updateUsers(
+  {
+    access_token,
+    uids,
+    role,
+    status,
+    username,
+    nickname,
+    email,
+    avatar,
+    website,
+    bio,
+    emailVerified,
+    emailNotice,
+  }: UpdateUsers,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<{ updated: number } | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      uids,
+      role,
+      status,
+      username,
+      nickname,
+      email,
+      avatar,
+      website,
+      bio,
+      emailVerified,
+      emailNotice,
+    },
+    UpdateUsersSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    const isSingleUser = uids.length === 1;
+    const isBatchUpdate = uids.length > 1;
+
+    // 单个用户编辑模式：可以更改所有字段
+    if (isSingleUser) {
+      const targetUid = uids[0];
+
+      // 检查是否是当前用户，如果是则不允许更改角色和状态
+      const isCurrentUser = targetUid === user.uid;
+
+      // 构建更新数据
+      const updateData: {
+        username?: string;
+        nickname?: string;
+        email?: string;
+        avatar?: string | null;
+        website?: string | null;
+        bio?: string | null;
+        emailVerified?: boolean;
+        emailNotice?: boolean;
+        role?: "USER" | "ADMIN" | "EDITOR" | "AUTHOR";
+        status?: "ACTIVE" | "SUSPENDED" | "NEEDS_UPDATE";
+      } = {};
+
+      // 基本信息字段（所有情况都允许更新）
+      if (username !== undefined) updateData.username = username;
+      if (nickname !== undefined) updateData.nickname = nickname;
+      if (email !== undefined) updateData.email = email;
+      if (avatar !== undefined) updateData.avatar = avatar || null;
+      if (website !== undefined) updateData.website = website || null;
+      if (bio !== undefined) updateData.bio = bio || null;
+      if (emailVerified !== undefined) updateData.emailVerified = emailVerified;
+      if (emailNotice !== undefined) updateData.emailNotice = emailNotice;
+
+      // 角色和状态字段（当前用户不允许更改）
+      if (!isCurrentUser) {
+        if (role !== undefined) updateData.role = role;
+        if (status !== undefined) updateData.status = status;
+      } else if (role !== undefined || status !== undefined) {
+        return response.badRequest({
+          message: "不允许更改当前用户的角色和状态",
+        });
+      }
+
+      // 验证至少提供一个更新字段
+      if (Object.keys(updateData).length === 0) {
+        return response.badRequest({
+          message: "必须提供至少一个更新字段",
+        });
+      }
+
+      // 执行更新
+      const result = await prisma.user.updateMany({
+        where: {
+          uid: targetUid,
+          deletedAt: null,
+        },
+        data: updateData,
+      });
+
+      return response.ok({
+        data: { updated: result.count },
+      });
+    }
+
+    // 批量更新模式：只允许更改角色和状态
+    if (isBatchUpdate) {
+      // 批量更新时不允许更改基本信息字段
+      if (
+        username !== undefined ||
+        nickname !== undefined ||
+        email !== undefined ||
+        avatar !== undefined ||
+        website !== undefined ||
+        bio !== undefined ||
+        emailVerified !== undefined ||
+        emailNotice !== undefined
+      ) {
+        return response.badRequest({
+          message: "批量更新只允许更改角色和状态，不允许更改其他字段",
+        });
+      }
+
+      // 验证至少提供一个更新字段
+      if (!role && !status) {
+        return response.badRequest({
+          message: "必须提供至少一个更新字段（role 或 status）",
+        });
+      }
+
+      // 检查是否包含当前用户
+      if (uids.includes(user.uid)) {
+        return response.badRequest({
+          message: "不允许更改当前用户的角色和状态",
+        });
+      }
+
+      // 构建更新数据
+      const updateData: {
+        role?: "USER" | "ADMIN" | "EDITOR" | "AUTHOR";
+        status?: "ACTIVE" | "SUSPENDED" | "NEEDS_UPDATE";
+      } = {};
+
+      if (role) {
+        updateData.role = role;
+      }
+
+      if (status) {
+        updateData.status = status;
+      }
+
+      // 执行批量更新
+      const result = await prisma.user.updateMany({
+        where: {
+          uid: {
+            in: uids,
+          },
+          deletedAt: null, // 只更新未删除的用户
+        },
+        data: updateData,
+      });
+
+      return response.ok({
+        data: { updated: result.count },
+      });
+    }
+
+    return response.badRequest({
+      message: "无效的请求",
+    });
+  } catch (error) {
+    console.error("Update users error:", error);
+    return response.serverError();
+  }
+}
+
+/*
+  deleteUsers - 批量删除用户（软删除）
+*/
+export async function deleteUsers(
+  params: DeleteUsers,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<{ deleted: number } | null>>>;
+export async function deleteUsers(
+  params: DeleteUsers,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<{ deleted: number } | null>>;
+export async function deleteUsers(
+  { access_token, uids }: DeleteUsers,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<{ deleted: number } | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      uids,
+    },
+    DeleteUsersSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 检查是否包含当前用户
+    if (uids.includes(user.uid)) {
+      return response.badRequest({
+        message: "不允许删除当前用户",
+      });
+    }
+
+    // 执行软删除
+    const result = await prisma.user.updateMany({
+      where: {
+        uid: {
+          in: uids,
+        },
+        deletedAt: null, // 只删除未删除的用户
+      },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+
+    return response.ok({
+      data: { deleted: result.count },
+    });
+  } catch (error) {
+    console.error("Delete users error:", error);
     return response.serverError();
   }
 }

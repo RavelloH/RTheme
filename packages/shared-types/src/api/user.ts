@@ -79,3 +79,61 @@ registerSchema(
   "GetUsersListSuccessResponse",
   GetUsersListSuccessResponseSchema,
 );
+
+/*
+    updateUsers() Schema
+*/
+export const UpdateUsersSchema = z.object({
+  access_token: z.string().optional(),
+  uids: z.array(z.number().int().positive()).min(1, "必须提供至少一个用户 UID"),
+  // 批量操作字段（适用于多个用户）
+  role: z.enum(["USER", "ADMIN", "EDITOR", "AUTHOR"]).optional(),
+  status: z.enum(["ACTIVE", "SUSPENDED", "NEEDS_UPDATE"]).optional(),
+  // 单个用户编辑字段（仅当 uids.length === 1 时有效）
+  username: z.string().min(1).max(50).optional(),
+  nickname: z.string().max(100).optional(),
+  email: z.string().email().optional(),
+  avatar: z.string().url().optional().or(z.literal("")),
+  website: z.string().url().optional().or(z.literal("")),
+  bio: z.string().max(500).optional(),
+  emailVerified: z.boolean().optional(),
+  emailNotice: z.boolean().optional(),
+});
+export type UpdateUsers = z.infer<typeof UpdateUsersSchema>;
+registerSchema("UpdateUsers", UpdateUsersSchema);
+
+export const UpdateUsersResultSchema = z.object({
+  updated: z.number().int().nonnegative(),
+});
+export type UpdateUsersResult = z.infer<typeof UpdateUsersResultSchema>;
+
+export const UpdateUsersSuccessResponseSchema = createSuccessResponseSchema(
+  UpdateUsersResultSchema,
+);
+export type UpdateUsersSuccessResponse = z.infer<
+  typeof UpdateUsersSuccessResponseSchema
+>;
+registerSchema("UpdateUsersSuccessResponse", UpdateUsersSuccessResponseSchema);
+
+/*
+    deleteUsers() Schema
+*/
+export const DeleteUsersSchema = z.object({
+  access_token: z.string().optional(),
+  uids: z.array(z.number().int().positive()).min(1, "必须提供至少一个用户 UID"),
+});
+export type DeleteUsers = z.infer<typeof DeleteUsersSchema>;
+registerSchema("DeleteUsers", DeleteUsersSchema);
+
+export const DeleteUsersResultSchema = z.object({
+  deleted: z.number().int().nonnegative(),
+});
+export type DeleteUsersResult = z.infer<typeof DeleteUsersResultSchema>;
+
+export const DeleteUsersSuccessResponseSchema = createSuccessResponseSchema(
+  DeleteUsersResultSchema,
+);
+export type DeleteUsersSuccessResponse = z.infer<
+  typeof DeleteUsersSuccessResponseSchema
+>;
+registerSchema("DeleteUsersSuccessResponse", DeleteUsersSuccessResponseSchema);

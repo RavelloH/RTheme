@@ -6,7 +6,7 @@ import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiRefreshLine } from "@remixicon/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/useBroadcast";
 
@@ -101,20 +101,15 @@ export default function DoctorReport() {
                         ? "text-warning"
                         : "";
                   return (
-                    <>
-                      <span
-                        key={`severity-${index}`}
-                        className={`text-right ${colorClass}`}
-                      >
+                    <Fragment key={`issue-${index}`}>
+                      <span className={`text-right ${colorClass}`}>
                         {issue.severity.toUpperCase()}:
                       </span>
-                      <span key={`message-${index}`} className={colorClass}>
-                        {issue.message}：
-                      </span>
-                      <span key={`details-${index}`} className={colorClass}>
+                      <span className={colorClass}>{issue.message}：</span>
+                      <span className={colorClass}>
                         {issue.details ? `${issue.details}` : ""}
                       </span>
-                    </>
+                    </Fragment>
                   );
                 })}
               </div>
