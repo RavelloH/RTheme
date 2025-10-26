@@ -150,7 +150,7 @@ function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
   }
 
   const toastContent = (
-    <div className="fixed bottom-0 shadow-md left-1/2 -translate-x-1/2 z-[100] flex max-h-screen w-full max-w-[420px] flex-col-reverse gap-2 p-4 pointer-events-none">
+    <div className="fixed bottom-0 shadow-md left-1/2 -translate-x-1/2 z-[100] flex max-h-screen w-full max-w-[420px] flex-col-reverse gap-2 p-3 pointer-events-none">
       <AnimatePresence initial={false}>
         {toasts.map((toast) => (
           <Toast key={toast.id} toast={toast} onRemove={onRemove} />
@@ -173,25 +173,25 @@ function Toast({ toast, onRemove }: ToastProps) {
       case "success":
         return (
           <div className="flex h-5 w-5 items-center justify-center rounded-full text-success">
-            <RiCheckLine size="1em" />
+            <RiCheckLine size="2em" />
           </div>
         );
       case "error":
         return (
           <div className="flex h-5 w-5 items-center justify-center rounded-full text-error">
-            <RiCloseLine size="1em" />
+            <RiCloseLine size="2em" />
           </div>
         );
       case "warning":
         return (
           <div className="flex h-5 w-5 items-center justify-center rounded-full text-warning">
-            <RiErrorWarningLine size="1em" />
+            <RiErrorWarningLine size="2em" />
           </div>
         );
       case "info":
         return (
           <div className="flex h-5 w-5 items-center justify-center rounded-full text-foreground">
-            <RiInformationLine size="1em" />
+            <RiInformationLine size="2em" />
           </div>
         );
     }

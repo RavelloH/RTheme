@@ -247,7 +247,6 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
       if (result.success) {
         toast.success(`已删除 ${result.data?.deleted || 0} 个用户`);
         closeBatchDeleteDialog();
-        setSelectedUsers([]);
         setRefreshTrigger((prev) => prev + 1);
       } else {
         toast.error(result.message || "未知错误");
@@ -282,7 +281,6 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
       if (result.success) {
         toast.success(`已更新 ${result.data?.updated || 0} 个用户的状态`);
         closeBatchStatusDialog();
-        setSelectedUsers([]);
         setRefreshTrigger((prev) => prev + 1);
       } else {
         toast.error(result.message || "未知错误");
@@ -317,7 +315,6 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
       if (result.success) {
         toast.success(`已更新 ${result.data?.updated || 0} 个用户的角色`);
         closeBatchRoleDialog();
-        setSelectedUsers([]);
         setRefreshTrigger((prev) => prev + 1);
       } else {
         toast.error(result.message || "未知错误");
