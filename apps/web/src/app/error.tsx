@@ -15,7 +15,7 @@ export default function Error({
   error,
   reset,
 }: {
-  error: Error;
+  error: Error & { digest?: string };
   reset: () => void;
 }) {
   return (
@@ -109,8 +109,9 @@ export default function Error({
               height={1.5}
             >
               <ClientDiagnostics
-                errorType={error.name}
+                errorType={error.name + "-" + error.digest}
                 errorStack={error.stack}
+                errorMessage={error.message}
               />
             </GridItem>
           </RowGrid>
