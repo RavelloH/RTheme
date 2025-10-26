@@ -1,6 +1,6 @@
 "use client";
 
-import { getUsersList } from "@/actions/user";
+import { getUsersList, updateUsers, deleteUsers } from "@/actions/user";
 import GridTable, { ActionButton } from "@/components/GridTable";
 import { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
@@ -24,8 +24,10 @@ import { Select, SelectOption } from "@/ui/Select";
 import { Checkbox } from "@/ui/Checkbox";
 import { Button } from "@/ui/Button";
 import { AlertDialog } from "@/ui/AlertDialog";
+import { useToast } from "@/ui/Toast";
 
 export default function UsersTable({ mainColor }: { mainColor: string }) {
+  const toast = useToast();
   const [data, setData] = useState<UserListItem[]>([]);
   const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -46,6 +48,7 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
   const [batchRoleDialogOpen, setBatchRoleDialogOpen] = useState(false);
   const [batchNewStatus, setBatchNewStatus] = useState("ACTIVE");
   const [batchNewRole, setBatchNewRole] = useState("USER");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 编辑用户状态
   const [formData, setFormData] = useState({
@@ -100,10 +103,90 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
   };
 
   // 保存用户编辑
-  const handleSaveUser = () => {
-    console.log("保存用户:", formData);
-    // TODO: 实现保存用户功能
-    closeEditDialog();
+  const handleSaveUser = async () => {
+    if (!editingUser) return;
+
+    setIsSubmitting(true);
+    try {
+      // 构建只包含修改字段的更新数据
+      const updateData: {
+        uids: number[];
+        username?: string;
+        nickname?: string;
+        email?: string;
+        avatar?: string;
+        website?: string;
+        bio?: string;
+        emailVerified?: boolean;
+        emailNotice?: boolean;
+        role?: "USER" | "ADMIN" | "EDITOR" | "AUTHOR";
+        status?: "ACTIVE" | "SUSPENDED" | "NEEDS_UPDATE";
+      } = {
+        uids: [editingUser.uid],
+      };
+
+      // 只添加修改过的字段
+      if (formData.username !== editingUser.username) {
+        updateData.username = formData.username;
+      }
+      if (formData.nickname !== (editingUser.nickname || "")) {
+        updateData.nickname = formData.nickname;
+      }
+      if (formData.email !== editingUser.email) {
+        updateData.email = formData.email;
+      }
+      if (formData.avatar !== (editingUser.avatar || "")) {
+        updateData.avatar = formData.avatar;
+      }
+      if (formData.website !== (editingUser.website || "")) {
+        updateData.website = formData.website;
+      }
+      if (formData.bio !== (editingUser.bio || "")) {
+        updateData.bio = formData.bio;
+      }
+      if (formData.emailVerified !== editingUser.emailVerified) {
+        updateData.emailVerified = formData.emailVerified;
+      }
+      if (formData.emailNotice !== editingUser.emailNotice) {
+        updateData.emailNotice = formData.emailNotice;
+      }
+      if (formData.role !== editingUser.role) {
+        updateData.role = formData.role as
+          | "USER"
+          | "ADMIN"
+          | "EDITOR"
+          | "AUTHOR";
+      }
+      if (formData.status !== editingUser.status) {
+        updateData.status = formData.status as
+          | "ACTIVE"
+          | "SUSPENDED"
+          | "NEEDS_UPDATE";
+      }
+
+      // 检查是否有字段被修改
+      if (Object.keys(updateData).length === 1) {
+        // 只有 uids，没有其他字段
+        toast.info("没有字段被修改");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const result = await updateUsers(updateData);
+
+      if (result.success) {
+        toast.success(`用户 "${editingUser.username}" 已更新`);
+        closeEditDialog();
+        setRefreshTrigger((prev) => prev + 1);
+      } else {
+        toast.error(result.message || "未知错误");
+      }
+    } catch (error) {
+      console.error("更新用户失败:", error);
+      toast.error("请稍后重试");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // 打开删除单个用户对话框
@@ -119,10 +202,28 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
   };
 
   // 确认删除单个用户
-  const handleConfirmDelete = () => {
-    console.log("删除用户:", deletingUser);
-    // TODO: 实现删除用户功能
-    closeDeleteDialog();
+  const handleConfirmDelete = async () => {
+    if (!deletingUser) return;
+
+    setIsSubmitting(true);
+    try {
+      const result = await deleteUsers({
+        uids: [deletingUser.uid],
+      });
+
+      if (result.success) {
+        toast.success(`用户 "${deletingUser.username}" 已删除`);
+        closeDeleteDialog();
+        setRefreshTrigger((prev) => prev + 1);
+      } else {
+        toast.error(result.message || "未知错误");
+      }
+    } catch (error) {
+      console.error("删除用户失败:", error);
+      toast.error("请稍后重试");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // 打开批量删除对话框
@@ -136,11 +237,27 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
   };
 
   // 确认批量删除
-  const handleConfirmBatchDelete = () => {
-    console.log("批量删除用户:", selectedUsers);
-    // TODO: 实现批量删除功能
-    closeBatchDeleteDialog();
-    setSelectedUsers([]);
+  const handleConfirmBatchDelete = async () => {
+    setIsSubmitting(true);
+    try {
+      const result = await deleteUsers({
+        uids: selectedUsers.map((uid) => Number(uid)),
+      });
+
+      if (result.success) {
+        toast.success(`已删除 ${result.data?.deleted || 0} 个用户`);
+        closeBatchDeleteDialog();
+        setSelectedUsers([]);
+        setRefreshTrigger((prev) => prev + 1);
+      } else {
+        toast.error(result.message || "未知错误");
+      }
+    } catch (error) {
+      console.error("批量删除失败:", error);
+      toast.error("请稍后重试");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // 打开批量更改状态对话框
@@ -154,11 +271,28 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
   };
 
   // 确认批量更改状态
-  const handleConfirmBatchStatus = () => {
-    console.log("批量更改状态:", selectedUsers, "新状态:", batchNewStatus);
-    // TODO: 实现批量更改状态功能
-    closeBatchStatusDialog();
-    setSelectedUsers([]);
+  const handleConfirmBatchStatus = async () => {
+    setIsSubmitting(true);
+    try {
+      const result = await updateUsers({
+        uids: selectedUsers.map((uid) => Number(uid)),
+        status: batchNewStatus as "ACTIVE" | "SUSPENDED" | "NEEDS_UPDATE",
+      });
+
+      if (result.success) {
+        toast.success(`已更新 ${result.data?.updated || 0} 个用户的状态`);
+        closeBatchStatusDialog();
+        setSelectedUsers([]);
+        setRefreshTrigger((prev) => prev + 1);
+      } else {
+        toast.error(result.message || "未知错误");
+      }
+    } catch (error) {
+      console.error("批量更改状态失败:", error);
+      toast.error("请稍后重试");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // 打开批量更改角色对话框
@@ -172,11 +306,28 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
   };
 
   // 确认批量更改角色
-  const handleConfirmBatchRole = () => {
-    console.log("批量更改角色:", selectedUsers, "新角色:", batchNewRole);
-    // TODO: 实现批量更改角色功能
-    closeBatchRoleDialog();
-    setSelectedUsers([]);
+  const handleConfirmBatchRole = async () => {
+    setIsSubmitting(true);
+    try {
+      const result = await updateUsers({
+        uids: selectedUsers.map((uid) => Number(uid)),
+        role: batchNewRole as "USER" | "ADMIN" | "EDITOR" | "AUTHOR",
+      });
+
+      if (result.success) {
+        toast.success(`已更新 ${result.data?.updated || 0} 个用户的角色`);
+        closeBatchRoleDialog();
+        setSelectedUsers([]);
+        setRefreshTrigger((prev) => prev + 1);
+      } else {
+        toast.error(result.message || "未知错误");
+      }
+    } catch (error) {
+      console.error("批量更改角色失败:", error);
+      toast.error("请稍后重试");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // 批量操作按钮
@@ -394,7 +545,7 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
             : role === "EDITOR"
               ? "bg-warning/20 text-warning"
               : role === "AUTHOR"
-                ? "bg-info/20 text-info"
+                ? "bg-primary/20 text-primary"
                 : "bg-muted text-muted-foreground";
         return (
           <span
@@ -446,6 +597,7 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm text-primary hover:underline"
+              title={value}
             >
               链接
             </a>
@@ -461,7 +613,10 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
       align: "left",
       render: (value: unknown) => {
         return (
-          <span className="text-sm truncate max-w-[200px] block">
+          <span
+            className="text-sm truncate max-w-20 block"
+            title={typeof value === "string" ? value : ""}
+          >
             {value && typeof value === "string" ? value : "-"}
           </span>
         );
@@ -474,7 +629,9 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
       align: "center",
       render: (value: unknown) => {
         return value === true ? (
-          <RiCheckLine size="1.5em" />
+          <span className="flex justify-center">
+            <RiCheckLine size="1.5em" />
+          </span>
         ) : (
           <span className="flex justify-center">
             <RiCloseLine size="1.5em" className="text-muted-foreground" />
@@ -714,12 +871,15 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
               variant="ghost"
               onClick={closeEditDialog}
               size="sm"
+              disabled={isSubmitting}
             />
             <Button
               label="保存"
               variant="primary"
               onClick={handleSaveUser}
               size="sm"
+              loading={isSubmitting}
+              loadingText="保存中..."
             />
           </div>
         </div>
@@ -757,12 +917,15 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
               variant="ghost"
               onClick={closeBatchStatusDialog}
               size="sm"
+              disabled={isSubmitting}
             />
             <Button
               label="确认"
               variant="primary"
               onClick={handleConfirmBatchStatus}
               size="sm"
+              loading={isSubmitting}
+              loadingText="更新中..."
             />
           </div>
         </div>
@@ -801,12 +964,15 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
               variant="ghost"
               onClick={closeBatchRoleDialog}
               size="sm"
+              disabled={isSubmitting}
             />
             <Button
               label="确认"
               variant="primary"
               onClick={handleConfirmBatchRole}
               size="sm"
+              loading={isSubmitting}
+              loadingText="更新中..."
             />
           </div>
         </div>
@@ -824,6 +990,7 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
         confirmText="删除"
         cancelText="取消"
         variant="danger"
+        loading={isSubmitting}
       />
 
       {/* 批量删除确认对话框 */}
@@ -836,6 +1003,7 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
         confirmText="删除"
         cancelText="取消"
         variant="danger"
+        loading={isSubmitting}
       />
     </>
   );

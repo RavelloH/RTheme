@@ -15,6 +15,7 @@ export interface AlertDialogProps {
   confirmText?: string;
   cancelText?: string;
   variant?: "danger" | "warning" | "info";
+  loading?: boolean;
 }
 
 export function AlertDialog({
@@ -26,6 +27,7 @@ export function AlertDialog({
   confirmText = "确认",
   cancelText = "取消",
   variant = "danger",
+  loading = false,
 }: AlertDialogProps) {
   const [mounted, setMounted] = React.useState(false);
 
@@ -70,7 +72,7 @@ export function AlertDialog({
         };
       case "info":
         return {
-          icon: "text-info",
+          icon: "text-primary",
           iconBg: "bg-info/10",
         };
       default:
@@ -96,7 +98,7 @@ export function AlertDialog({
   const dialogContent = (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[99999] overflow-hidden">
+        <div className="fixed inset-0 z-[80] overflow-hidden">
           {/* 背景遮罩 */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -171,12 +173,15 @@ export function AlertDialog({
                       variant="ghost"
                       onClick={onClose}
                       size="sm"
+                      disabled={loading}
                     />
                     <Button
                       label={confirmText}
                       variant={getButtonVariant()}
                       onClick={onConfirm}
                       size="sm"
+                      loading={loading}
+                      loadingText="处理中..."
                     />
                   </div>
                 </div>

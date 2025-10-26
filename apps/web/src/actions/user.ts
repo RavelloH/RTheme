@@ -91,7 +91,7 @@ export async function getUsersTrends(
         const [totalUsers, activeUsers, newUsers] = await Promise.all([
           // 截止该时间点的总用户数
           prisma.user.count({
-            where: { createdAt: { lte: date } },
+            where: { createdAt: { lte: date }, deletedAt: null },
           }),
           // 该时间点前24小时活跃用户数
           prisma.user.count({
@@ -100,6 +100,7 @@ export async function getUsersTrends(
                 gte: oneDayBefore,
                 lte: date,
               },
+              deletedAt: null,
             },
           }),
           // 该时间点前24小时新增用户数
@@ -109,6 +110,7 @@ export async function getUsersTrends(
                 gte: oneDayBefore,
                 lte: date,
               },
+              deletedAt: null,
             },
           }),
         ]);
