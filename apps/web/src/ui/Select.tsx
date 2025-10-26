@@ -69,7 +69,7 @@ export function Select({
   const getSizeStyles = () => {
     switch (size) {
       case "sm":
-        return "px-3 py-1.5 text-sm";
+        return "px-2 py-1 text-md";
       case "md":
         return "px-4 py-2 text-base";
       case "lg":
@@ -87,39 +87,60 @@ export function Select({
   return (
     <div ref={containerRef} className={`relative inline-block ${className}`}>
       {/* 选择框按钮 */}
-      <motion.button
-        type="button"
-        onClick={() => !disabled && setIsOpen(!isOpen)}
-        disabled={disabled}
-        className={`
-          ${getSizeStyles()}
-          relative
-          inline-flex
-          items-center
-          justify-between
-          gap-2
-          rounded
-          bg-muted
-          text-foreground
-          transition-colors
-          hover:bg-muted/80
-          focus:outline-none
-          disabled:opacity-50
-          disabled:cursor-not-allowed
-          min-w-[120px]
-        `}
-        whileTap={!disabled ? { scale: 0.98 } : undefined}
-      >
-        <span className="flex-1 text-left">
-          {selectedOption ? selectedOption.label : placeholder}
-        </span>
-        <motion.div
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
+      <div className="relative">
+        <motion.button
+          type="button"
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          disabled={disabled}
+          className={`
+            ${getSizeStyles()}
+            relative
+            inline-flex
+            items-center
+            justify-between
+            gap-2
+            bg-transparent
+            border-0
+            text-foreground
+            focus:outline-none
+            disabled:opacity-50
+            disabled:cursor-not-allowed
+            min-w-[120px]
+            w-full
+          `}
         >
-          <RiArrowDownSLine size={20} />
-        </motion.div>
-      </motion.button>
+          <span className="flex-1 text-left">
+            {selectedOption ? selectedOption.label : placeholder}
+          </span>
+          <motion.div
+            animate={{
+              rotate: isOpen
+                ? dropdownDirection === "down"
+                  ? 180
+                  : 0
+                : dropdownDirection === "down"
+                  ? 0
+                  : 180,
+            }}
+            transition={{ duration: 0.2 }}
+          >
+            <RiArrowDownSLine size={20} />
+          </motion.div>
+        </motion.button>
+
+        {/* 底部横线 */}
+        <motion.div
+          className="absolute bottom-0 left-0 h-0.5 w-full"
+          animate={{
+            backgroundColor: isOpen
+              ? "var(--color-primary)"
+              : "var(--color-foreground)",
+          }}
+          transition={{
+            duration: 0.3,
+          }}
+        />
+      </div>
 
       {/* 下拉选项列表 */}
       <AnimatePresence>
@@ -135,10 +156,10 @@ export function Select({
               y: dropdownDirection === "down" ? -10 : 10,
             }}
             transition={{ duration: 0.2 }}
-            className={`absolute z-50 w-full rounded bg-muted shadow-lg overflow-hidden ${
+            className={`absolute z-50 w-full bg-muted/50 backdrop-blur-sm shadow-lg rounded overflow-hidden ${
               dropdownDirection === "down"
-                ? "mt-2 top-full"
-                : "mb-2 bottom-full"
+                ? "mt-1 top-full"
+                : "mb-1 bottom-full"
             }`}
           >
             <div className="max-h-[240px] overflow-y-auto overflow-x-hidden">
@@ -158,7 +179,7 @@ export function Select({
                       hover:text-primary-foreground
                       ${isSelected ? "bg-primary/20 text-primary" : "text-foreground"}
                     `}
-                    whileHover={{ scaleX: 1.1 }}
+                    whileHover={{ scaleX: 1.05 }}
                     transition={{ duration: 0.15 }}
                   >
                     {option.label}
