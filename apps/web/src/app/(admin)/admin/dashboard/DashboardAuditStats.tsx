@@ -1,7 +1,6 @@
 "use client";
 
 import { getAuditStats } from "@/actions/stats";
-import { GridItem } from "@/components/RowGrid";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
@@ -57,55 +56,53 @@ export default function DashboardAuditStats() {
   }, []);
 
   return (
-    <GridItem areas={[1, 2, 3, 4, 5, 6, 7, 8]} width={1.5} height={0.5}>
-      <AutoTransition type="scale" className="h-full">
-        {result ? (
-          <div
-            className="flex flex-col justify-between p-10 h-full"
-            key="content"
-          >
-            <div>
-              <div className="text-2xl py-2">
-                <Link href="/admin/audit-logs" presets={["hover-underline"]}>
-                  审计日志
-                </Link>
-              </div>
-              <div>
-                共 {result.total.logs} 条审计日志，涉及{" "}
-                {result.total.activeUsers} 名用户的操作记录。
-              </div>
+    <AutoTransition type="scale" className="h-full">
+      {result ? (
+        <div
+          className="flex flex-col justify-between p-10 h-full"
+          key="content"
+        >
+          <div>
+            <div className="text-2xl py-2">
+              <Link href="/admin/audit-logs" presets={["hover-underline"]}>
+                审计日志
+              </Link>
             </div>
             <div>
-              <div>
-                <span>
-                  最近24小时有 {result.recent.lastDay} 条记录，最近7天有{" "}
-                  {result.recent.last7Days} 条记录， 最近30天有{" "}
-                  {result.recent.last30Days} 条记录。
-                </span>
-              </div>
+              共 {result.total.logs} 条审计日志，涉及 {result.total.activeUsers}{" "}
+              名用户的操作记录。
             </div>
+          </div>
+          <div>
             <div>
-              {refreshTime && (
-                <div className="inline-flex items-center gap-2">
-                  {result.cache ? "统计缓存于" : "数据刷新于"}:{" "}
-                  {new Date(refreshTime).toLocaleString()}
-                  <Clickable onClick={() => fetchData(true)}>
-                    <RiRefreshLine size={"1em"} />
-                  </Clickable>
-                </div>
-              )}
+              <span>
+                最近24小时有 {result.recent.lastDay} 条记录，最近7天有{" "}
+                {result.recent.last7Days} 条记录， 最近30天有{" "}
+                {result.recent.last30Days} 条记录。
+              </span>
             </div>
           </div>
-        ) : error ? (
-          <div className="px-10 h-full" key="error">
-            <ErrorPage reason={error} reset={() => fetchData(true)} />
+          <div>
+            {refreshTime && (
+              <div className="inline-flex items-center gap-2">
+                {result.cache ? "统计缓存于" : "数据刷新于"}:{" "}
+                {new Date(refreshTime).toLocaleString()}
+                <Clickable onClick={() => fetchData(true)}>
+                  <RiRefreshLine size={"1em"} />
+                </Clickable>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="h-full">
-            <LoadingIndicator key="loading" />
-          </div>
-        )}
-      </AutoTransition>
-    </GridItem>
+        </div>
+      ) : error ? (
+        <div className="px-10 h-full" key="error">
+          <ErrorPage reason={error} reset={() => fetchData(true)} />
+        </div>
+      ) : (
+        <div className="h-full">
+          <LoadingIndicator key="loading" />
+        </div>
+      )}
+    </AutoTransition>
   );
 }

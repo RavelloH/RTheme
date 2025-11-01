@@ -6,6 +6,7 @@ import { AreaClosed, LinePath } from "@visx/shape";
 import { curveMonotoneX } from "@visx/curve";
 import { LinearGradient } from "@visx/gradient";
 import { Group } from "@visx/group";
+import { motion } from "framer-motion";
 
 export interface AreaChartDataPoint {
   time: string;
@@ -47,19 +48,6 @@ export default function AreaChart({
     data: AreaChartDataPoint;
   } | null>(null);
 
-  // 默认时间格式化函数
-  const defaultFormatTime = (time: string) => {
-    return new Date(time).toLocaleDateString("zh-CN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const timeFormatter = formatTime || defaultFormatTime;
-
   // 监听容器大小变化
   useEffect(() => {
     if (!containerRef.current) return;
@@ -78,6 +66,53 @@ export default function AreaChart({
     };
   }, []);
 
+  const margin = { top: 0, right: 0, bottom: 0, left: 0 };
+  const innerWidth = dimensions.width - margin.left - margin.right;
+  const innerHeight = dimensions.height - margin.top - margin.bottom;
+
+  // 数据访问器
+  const getDate = (d: AreaChartDataPoint) => new Date(d.time);
+  const getValue = (d: AreaChartDataPoint, key: string) => {
+    const value = d[key];
+    return typeof value === "number" ? value : 0;
+  };
+
+  // 创建比例尺
+  const xScale = scaleTime({
+    domain:
+      data.length > 0
+        ? [
+            Math.min(...data.map((d) => getDate(d).getTime())),
+            Math.max(...data.map((d) => getDate(d).getTime())),
+          ]
+        : [0, 1],
+    range: [0, innerWidth],
+  });
+
+  // 计算所有系列的最大值
+  const maxValue = Math.max(
+    ...data.flatMap((d) => series.map((s) => getValue(d, s.key))),
+    1, // 至少为 1，避免空图表
+  );
+
+  const yScale = scaleLinear({
+    domain: [0, maxValue * 1.1],
+    range: [innerHeight, 0],
+  });
+
+  // 默认时间格式化函数
+  const defaultFormatTime = (time: string) => {
+    return new Date(time).toLocaleDateString("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const timeFormatter = formatTime || defaultFormatTime;
+
   // 如果没有数据，显示提示
   if (data.length === 0) {
     return (
@@ -94,37 +129,6 @@ export default function AreaChart({
   if (dimensions.width === 0 || dimensions.height === 0) {
     return <div ref={containerRef} className={`${className}`} />;
   }
-
-  const margin = { top: 0, right: 0, bottom: 0, left: 0 };
-  const innerWidth = dimensions.width - margin.left - margin.right;
-  const innerHeight = dimensions.height - margin.top - margin.bottom;
-
-  // 数据访问器
-  const getDate = (d: AreaChartDataPoint) => new Date(d.time);
-  const getValue = (d: AreaChartDataPoint, key: string) => {
-    const value = d[key];
-    return typeof value === "number" ? value : 0;
-  };
-
-  // 创建比例尺
-  const xScale = scaleTime({
-    domain: [
-      Math.min(...data.map((d) => getDate(d).getTime())),
-      Math.max(...data.map((d) => getDate(d).getTime())),
-    ],
-    range: [0, innerWidth],
-  });
-
-  // 计算所有系列的最大值
-  const maxValue = Math.max(
-    ...data.flatMap((d) => series.map((s) => getValue(d, s.key))),
-    1, // 至少为 1，避免空图表
-  );
-
-  const yScale = scaleLinear({
-    domain: [0, maxValue * 1.1],
-    range: [innerHeight, 0],
-  });
 
   // 处理交互（鼠标或触摸）
   const handleInteraction = (
@@ -254,6 +258,27 @@ export default function AreaChart({
               </g>
             );
           })}
+
+          {/* 悬浮时的竖线指示器 */}
+          <motion.line
+            y1={0}
+            y2={innerHeight}
+            stroke={series[0]?.color || "currentColor"}
+            strokeWidth={2}
+            strokeDasharray="4 4"
+            initial={{ opacity: 0, x1: 0, x2: 0 }}
+            animate={{
+              x1: hoveredPoint ? (xScale(getDate(hoveredPoint.data)) ?? 0) : 0,
+              x2: hoveredPoint ? (xScale(getDate(hoveredPoint.data)) ?? 0) : 0,
+              opacity: hoveredPoint ? 0.6 : 0,
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 300,
+              damping: 30,
+            }}
+            pointerEvents="none"
+          />
         </Group>
       </svg>
 
