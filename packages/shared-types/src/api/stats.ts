@@ -42,3 +42,37 @@ registerSchema(
   "GetUsersStatsSuccessResponse",
   GetUsersStatsSuccessResponseSchema,
 );
+
+/*
+    getAuditStats() Schema
+*/
+export const GetAuditStatsSchema = z.object({
+  access_token: z.string().optional(),
+  force: z.boolean().default(false),
+});
+export type GetAuditStats = z.infer<typeof GetAuditStatsSchema>;
+registerSchema("GetAuditStats", GetAuditStatsSchema);
+
+export const GetAuditStatsSuccessResponseSchema = createSuccessResponseSchema(
+  z.object({
+    updatedAt: z.iso.datetime(),
+    cache: z.boolean(),
+    total: z.object({
+      logs: z.number().int().nonnegative(),
+      activeUsers: z.number().int().nonnegative(),
+    }),
+    recent: z.object({
+      lastDay: z.number().int().nonnegative(),
+      last7Days: z.number().int().nonnegative(),
+      last30Days: z.number().int().nonnegative(),
+    }),
+  }),
+);
+
+export type GetAuditStatsSuccessResponse = z.infer<
+  typeof GetAuditStatsSuccessResponseSchema
+>;
+registerSchema(
+  "GetAuditStatsSuccessResponse",
+  GetAuditStatsSuccessResponseSchema,
+);

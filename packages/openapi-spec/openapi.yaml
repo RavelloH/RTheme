@@ -7,6 +7,177 @@ servers:
   - url: http://localhost:3000
     description: 开发环境
 paths:
+  /api/admin/audit-logs:
+    get:
+      summary: 获取审计日志
+      description: 需管理员身份，分页获取系统审计日志，支持过滤和排序
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: 页码
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 10
+          description: 每页数量
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            enum:
+              - id
+              - timestamp
+              - action
+              - resource
+              - userUid
+          description: 排序字段
+        - in: query
+          name: sortOrder
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+          description: 排序顺序
+        - in: query
+          name: action
+          schema:
+            type: string
+          description: 按操作类型过滤
+        - in: query
+          name: resource
+          schema:
+            type: string
+          description: 按资源类型过滤
+        - in: query
+          name: userUid
+          schema:
+            type: integer
+          description: 按用户UID过滤
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+          description: 开始日期
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+          description: 结束日期
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: 搜索关键词（搜索描述、资源ID、IP地址、User Agent、操作类型、资源类型、用户名等）
+      security:
+        - BearerAuth: []
+      tags:
+        - Admin
+      responses:
+        "200":
+          description: 返回审计日志列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetAuditLogsSuccessResponse"
+        "400":
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+        "401":
+          description: 未授权，Access Token 无效或不存在，权限不足
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedErrorResponse"
+        "429":
+          description: 请求过于频繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitErrorResponse"
+        "500":
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerErrorResponse"
+  /api/admin/audit-logs/trends:
+    get:
+      summary: 获取审计日志趋势数据
+      description: 需管理员身份，获取最近N天和最近N次的审计日志趋势数据
+      parameters:
+        - in: query
+          name: days
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+            default: 30
+          description: 获取最近多少天的数据
+        - in: query
+          name: count
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 30
+          description: 获取最近多少次的数据
+        - in: query
+          name: groupBy
+          schema:
+            type: string
+            enum:
+              - action
+              - resource
+            default: action
+          description: 分组方式（按操作类型或资源类型）
+      security:
+        - BearerAuth: []
+      tags:
+        - Admin
+      responses:
+        "200":
+          description: 返回审计日志趋势数据
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetAuditTrendsSuccessResponse"
+        "400":
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+        "401":
+          description: 未授权，Access Token 无效或不存在，权限不足
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedErrorResponse"
+        "429":
+          description: 请求过于频繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitErrorResponse"
+        "500":
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerErrorResponse"
   /api/admin/doctor/history:
     get:
       summary: 获取自检历史记录
@@ -875,6 +1046,45 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ValidationErrorResponse"
+        "429":
+          description: 请求过于频繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitErrorResponse"
+        "500":
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerErrorResponse"
+  /api/stats/audit:
+    get:
+      summary: 获取审计日志统计数据
+      description: 需管理员身份，获取审计日志统计信息
+      parameters:
+        - in: query
+          name: force
+          schema:
+            type: boolean
+          description: 是否强制刷新缓存
+      security:
+        - BearerAuth: []
+      tags:
+        - Audit
+      responses:
+        "200":
+          description: 返回审计日志统计数据
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetAuditStatsSuccessResponse"
+        "401":
+          description: 未授权，Access Token 无效或不存在，权限不足
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedErrorResponse"
         "429":
           description: 请求过于频繁
           content:
@@ -1900,6 +2110,203 @@ components:
         - requestId
         - data
       additionalProperties: false
+    GetAuditLogs:
+      type: object
+      properties:
+        access_token:
+          type: string
+        page:
+          default: 1
+          type: integer
+          exclusiveMinimum: true
+          maximum: 9007199254740991
+        pageSize:
+          default: 10
+          type: integer
+          exclusiveMinimum: true
+          maximum: 500
+        sortBy:
+          type: string
+          enum:
+            - id
+            - timestamp
+            - action
+            - resource
+            - userUid
+        sortOrder:
+          type: string
+          enum:
+            - asc
+            - desc
+        action:
+          type: string
+        resource:
+          type: string
+        userUid:
+          type: integer
+          minimum: -9007199254740991
+          maximum: 9007199254740991
+        startDate:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        endDate:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        search:
+          type: string
+      required:
+        - page
+        - pageSize
+      additionalProperties: false
+    GetAuditLogsSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: number
+              timestamp:
+                type: string
+                format: date-time
+                pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+              action:
+                type: string
+              resource:
+                type: string
+              resourceId:
+                type: string
+              userUid:
+                nullable: true
+                type: number
+              ipAddress:
+                type: string
+              userAgent:
+                nullable: true
+                type: string
+              oldData:
+                nullable: true
+              newData:
+                nullable: true
+              description:
+                nullable: true
+                type: string
+              user:
+                nullable: true
+                type: object
+                properties:
+                  uid:
+                    type: number
+                  username:
+                    type: string
+                  nickname:
+                    nullable: true
+                    type: string
+                required:
+                  - uid
+                  - username
+                  - nickname
+                additionalProperties: false
+            required:
+              - id
+              - timestamp
+              - action
+              - resource
+              - resourceId
+              - userUid
+              - ipAddress
+              - userAgent
+              - oldData
+              - newData
+              - description
+              - user
+            additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    GetAuditTrends:
+      type: object
+      properties:
+        access_token:
+          type: string
+        days:
+          default: 30
+          type: integer
+          exclusiveMinimum: true
+          maximum: 365
+        count:
+          default: 30
+          type: integer
+          exclusiveMinimum: true
+          maximum: 1000
+        groupBy:
+          default: action
+          type: string
+          enum:
+            - action
+            - resource
+      required:
+        - days
+        - count
+        - groupBy
+      additionalProperties: false
+    GetAuditTrendsSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              time:
+                type: string
+              data:
+                type: object
+                additionalProperties:
+                  type: number
+            required:
+              - time
+              - data
+            additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
     CaptchaGetResponse:
       type: object
       properties:
@@ -2507,6 +2914,89 @@ components:
             - total
             - active
             - new
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    GetAuditStats:
+      type: object
+      properties:
+        access_token:
+          type: string
+        force:
+          default: false
+          type: boolean
+      required:
+        - force
+      additionalProperties: false
+    GetAuditStatsSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            updatedAt:
+              type: string
+              format: date-time
+              pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+            cache:
+              type: boolean
+            total:
+              type: object
+              properties:
+                logs:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                activeUsers:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+              required:
+                - logs
+                - activeUsers
+              additionalProperties: false
+            recent:
+              type: object
+              properties:
+                lastDay:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                last7Days:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                last30Days:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+              required:
+                - lastDay
+                - last7Days
+                - last30Days
+              additionalProperties: false
+          required:
+            - updatedAt
+            - cache
+            - total
+            - recent
           additionalProperties: false
       required:
         - success

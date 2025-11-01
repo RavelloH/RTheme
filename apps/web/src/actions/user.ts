@@ -19,6 +19,8 @@ import { headers } from "next/headers";
 import { validateData } from "@/lib/server/validator";
 import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
+import { logAuditEvent } from "./audit";
+import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
@@ -369,6 +371,31 @@ export async function updateUsers(
       // 检查是否是当前用户，如果是则不允许更改角色和状态
       const isCurrentUser = targetUid === user.uid;
 
+      // 先查询旧值（用于审计日志）
+      const oldUser = await prisma.user.findUnique({
+        where: {
+          uid: targetUid,
+        },
+        select: {
+          username: true,
+          nickname: true,
+          email: true,
+          avatar: true,
+          website: true,
+          bio: true,
+          emailVerified: true,
+          emailNotice: true,
+          role: true,
+          status: true,
+        },
+      });
+
+      if (!oldUser) {
+        return response.badRequest({
+          message: "用户不存在",
+        });
+      }
+
       // 构建更新数据
       const updateData: {
         username?: string;
@@ -410,6 +437,12 @@ export async function updateUsers(
         });
       }
 
+      // 构建旧值对象（只包含被更新的字段）
+      const oldData: Record<string, unknown> = {};
+      Object.keys(updateData).forEach((key) => {
+        oldData[key] = oldUser[key as keyof typeof oldUser];
+      });
+
       // 执行更新
       const result = await prisma.user.updateMany({
         where: {
@@ -418,6 +451,27 @@ export async function updateUsers(
         },
         data: updateData,
       });
+
+      // 记录审计日志
+      if (result.count > 0) {
+        await logAuditEvent({
+          user: {
+            uid: String(user.uid),
+            ipAddress: await getClientIP(),
+            userAgent: await getClientUserAgent(),
+          },
+          details: {
+            action: "UPDATE",
+            resourceType: "USER",
+            resourceId: String(targetUid),
+            vaule: {
+              old: oldData,
+              new: updateData,
+            },
+            description: `更新用户信息：${oldUser.username} (UID: ${targetUid})`,
+          },
+        });
+      }
 
       return response.ok({
         data: { updated: result.count },
@@ -456,6 +510,32 @@ export async function updateUsers(
         });
       }
 
+      // 查询旧值（用于审计日志）
+      const oldUsers = await prisma.user.findMany({
+        where: {
+          uid: {
+            in: uids,
+          },
+          deletedAt: null,
+        },
+        select: {
+          uid: true,
+          username: true,
+          role: true,
+          status: true,
+        },
+      });
+
+      // 构建旧值摘要
+      const oldData: Record<string, unknown> = {
+        users: oldUsers.map((u) => ({
+          uid: u.uid,
+          username: u.username,
+          ...(role !== undefined && { role: u.role }),
+          ...(status !== undefined && { status: u.status }),
+        })),
+      };
+
       // 构建更新数据
       const updateData: {
         role?: "USER" | "ADMIN" | "EDITOR" | "AUTHOR";
@@ -480,6 +560,27 @@ export async function updateUsers(
         },
         data: updateData,
       });
+
+      // 记录审计日志
+      if (result.count > 0) {
+        await logAuditEvent({
+          user: {
+            uid: String(user.uid),
+            ipAddress: await getClientIP(),
+            userAgent: await getClientUserAgent(),
+          },
+          details: {
+            action: "BULK_UPDATE",
+            resourceType: "USER",
+            resourceId: uids.join(","),
+            vaule: {
+              old: oldData,
+              new: updateData,
+            },
+            description: `批量更新 ${result.count} 个用户的${role ? "角色" : ""}${role && status ? "和" : ""}${status ? "状态" : ""}`,
+          },
+        });
+      }
 
       return response.ok({
         data: { updated: result.count },
@@ -546,6 +647,38 @@ export async function deleteUsers(
       });
     }
 
+    // 查询要删除的用户信息（用于审计日志）
+    const usersToDelete = await prisma.user.findMany({
+      where: {
+        uid: {
+          in: uids,
+        },
+        deletedAt: null,
+      },
+      select: {
+        uid: true,
+        username: true,
+        email: true,
+        role: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+
+    // 构建旧值记录
+    const oldData: Record<string, unknown> = {
+      users: usersToDelete.map((u) => ({
+        uid: u.uid,
+        username: u.username,
+        email: u.email,
+        role: u.role,
+        status: u.status,
+        createdAt: u.createdAt.toISOString(),
+      })),
+    };
+
+    const NOW = new Date();
+
     // 执行软删除
     const result = await prisma.user.updateMany({
       where: {
@@ -555,9 +688,30 @@ export async function deleteUsers(
         deletedAt: null, // 只删除未删除的用户
       },
       data: {
-        deletedAt: new Date(),
+        deletedAt: NOW,
       },
     });
+
+    // 记录审计日志
+    if (result.count > 0) {
+      await logAuditEvent({
+        user: {
+          uid: String(user.uid),
+          ipAddress: await getClientIP(),
+          userAgent: await getClientUserAgent(),
+        },
+        details: {
+          action: "BULK_DELETE",
+          resourceType: "USER",
+          resourceId: uids.join(","),
+          vaule: {
+            old: oldData,
+            new: { deletedAt: NOW.toISOString() },
+          },
+          description: `批量删除 ${result.count} 个用户：${usersToDelete.map((u) => u.username).join(", ")}`,
+        },
+      });
+    }
 
     return response.ok({
       data: { deleted: result.count },

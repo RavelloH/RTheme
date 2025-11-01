@@ -10,6 +10,9 @@ import {
   GetUsersStatsSuccessResponse,
   GetUsersStats,
   GetUsersStatsSchema,
+  GetAuditStatsSuccessResponse,
+  GetAuditStats,
+  GetAuditStatsSchema,
 } from "@repo/shared-types/api/stats";
 import prisma from "@/lib/server/prisma";
 import { getCache, setCache } from "@/lib/server/cache";
@@ -188,6 +191,129 @@ export async function getUsersStats(
     });
   } catch (error) {
     console.error("GetUsersStats error:", error);
+    return response.serverError();
+  }
+}
+
+export async function getAuditStats(
+  params: GetAuditStats,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<GetAuditStatsSuccessResponse["data"]>>>;
+export async function getAuditStats(
+  params: GetAuditStats,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<GetAuditStatsSuccessResponse["data"]>>;
+export async function getAuditStats(
+  { access_token, force }: GetAuditStats,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<GetAuditStatsSuccessResponse["data"] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+  const validationError = validateData(
+    {
+      access_token,
+      force,
+    },
+    GetAuditStatsSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    const CACHE_KEY = "audit_stats";
+    const CACHE_TTL = 60 * 60; // 1小时
+
+    // 如果不是强制刷新，尝试从缓存获取
+    if (!force) {
+      const cachedData = await getCache<GetAuditStatsSuccessResponse["data"]>(
+        CACHE_KEY,
+        {
+          ttl: CACHE_TTL,
+        },
+      );
+
+      if (cachedData) {
+        return response.ok({
+          data: cachedData,
+        });
+      }
+    }
+
+    // 计算时间边界
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    // 使用单次查询获取所有统计数据
+    const [totalLogs, activeUsers, recentLogs] = await Promise.all([
+      // 总日志数
+      prisma.auditLog.count(),
+
+      // 活跃用户数（产生过日志的用户数）
+      prisma.auditLog.findMany({
+        select: { userUid: true },
+        distinct: ["userUid"],
+      }),
+
+      // 最近的日志数量（按时间段）
+      prisma.$queryRaw<
+        Array<{
+          last_1d: bigint;
+          last_7d: bigint;
+          last_30d: bigint;
+        }>
+      >`
+        SELECT
+          COUNT(CASE WHEN "timestamp" >= ${oneDayAgo} THEN 1 END) as last_1d,
+          COUNT(CASE WHEN "timestamp" >= ${sevenDaysAgo} THEN 1 END) as last_7d,
+          COUNT(CASE WHEN "timestamp" >= ${thirtyDaysAgo} THEN 1 END) as last_30d
+        FROM "AuditLog"
+      `,
+    ]);
+
+    const recentStats = recentLogs[0];
+
+    // 构建响应数据
+    const data: GetAuditStatsSuccessResponse["data"] = {
+      updatedAt: now.toISOString(),
+      cache: false,
+      total: {
+        logs: totalLogs,
+        activeUsers: activeUsers.length,
+      },
+      recent: {
+        lastDay: Number(recentStats?.last_1d || 0),
+        last7Days: Number(recentStats?.last_7d || 0),
+        last30Days: Number(recentStats?.last_30d || 0),
+      },
+    };
+
+    // 保存到缓存（缓存1小时）
+    const cacheData = { ...data, cache: true };
+    await setCache(CACHE_KEY, cacheData, {
+      ttl: CACHE_TTL,
+    });
+
+    return response.ok({
+      data,
+    });
+  } catch (error) {
+    console.error("GetAuditStats error:", error);
     return response.serverError();
   }
 }

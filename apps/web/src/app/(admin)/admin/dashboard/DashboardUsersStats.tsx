@@ -67,7 +67,7 @@ export default function DashboardUsersStats() {
               </div>
               <div>{getSummary(result)}</div>
             </div>
-            <div className="grid grid-cols-[auto_auto_auto_auto] gap-x-8 gap-y-2 w-fit">
+            <div className="grid grid-cols-[auto_auto_auto_auto] gap-x-8 w-fit">
               <span className="text-right">活跃用户:</span>
               <span>今日: {result.active.lastDay}</span>
               <span>近7日: {result.active.last7Days}</span>

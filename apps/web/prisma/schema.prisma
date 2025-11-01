@@ -436,13 +436,13 @@ model PageViewArchive {
 
 // 审计日志模型 - 记录系统操作和数据变更
 model AuditLog {
-  id        String   @id @default(uuid())
+  id        Int      @id @default(autoincrement())
   timestamp DateTime @default(now())
 
   // 操作信息
   action     String @db.VarChar(50) // CREATE/UPDATE/DELETE/LOGIN/LOGOUT等
   resource   String @db.VarChar(50) // User/Post/Comment/Config等资源类型
-  resourceId String @db.VarChar(100) // 资源ID
+  resourceId String @db.VarChar(10000) // 资源ID
 
   // 操作者信息
   userUid   Int?
@@ -453,7 +453,6 @@ model AuditLog {
   // 变更详情
   oldData Json? // 变更前的数据
   newData Json? // 变更后的数据
-  changes Json? // 具体变更字段
 
   // 附加信息
   description String? @db.VarChar(500) // 操作描述
@@ -468,6 +467,7 @@ model AuditLog {
   @@index([action, resource]) // 复合索引：按操作类型和资源类型查询
   @@index([userUid, timestamp]) // 复合索引：按用户和时间查询
 }
+
 model HealthCheck {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())

@@ -1,6 +1,7 @@
 // API Schema 导出
 export * from "./api/common.js";
 export * from "./api/auth.js";
+export * from "./api/audit.js";
 export * from "./api/captcha.js";
 export * from "./api/doctor.js";
 export * from "./api/error.js";

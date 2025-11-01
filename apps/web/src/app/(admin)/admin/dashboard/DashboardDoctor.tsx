@@ -107,7 +107,7 @@ export default function DashboardDoctor() {
             <div>{renderIssues()}</div>
             <div className="flex justify-between items-center">
               {refreshTime && (
-                <div className="inline-flex items-center gap-2">
+                <div className="inline-flex items-center gap-x-2">
                   最近检查于: {new Date(refreshTime).toLocaleString()}
                   <Clickable onClick={() => fetchData(true)}>
                     <RiRefreshLine size={"1em"} />

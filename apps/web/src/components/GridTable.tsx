@@ -60,6 +60,8 @@ export interface GridTableProps<T extends Record<string, unknown>> {
   batchActions?: ActionButton[];
   rowActions?: (record: T) => ActionButton[];
   onSelectionChange?: (selectedKeys: (string | number)[]) => void;
+  // 行点击事件
+  onRowClick?: (record: T, index: number) => void;
   // GridItem 配置
   headerHeight?: number;
   contentAreas?: GridArea[];
@@ -95,6 +97,7 @@ export default function GridTable<T extends Record<string, unknown>>({
   batchActions = [],
   rowActions,
   onSelectionChange,
+  onRowClick,
   headerHeight = 0.1,
   contentAreas = createArray(2, 11),
   contentWidth = 24 / 10,
@@ -401,6 +404,7 @@ export default function GridTable<T extends Record<string, unknown>>({
                     maxHeight={maxHeight}
                     padding={padding}
                     onSortChange={onSortChange}
+                    onRowClick={onRowClick}
                   />
                 </div>
               </div>

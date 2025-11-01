@@ -1,0 +1,417 @@
+"use client";
+
+import { getAuditLogs } from "@/actions/audit";
+import GridTable from "@/components/GridTable";
+import { TableColumn } from "@/ui/Table";
+import { useEffect, useState } from "react";
+import type { AuditLogItem } from "@repo/shared-types/api/audit";
+import { useBroadcast } from "@/hooks/useBroadcast";
+import { Dialog } from "@/ui/Dialog";
+import { RiEyeLine } from "@remixicon/react";
+import Clickable from "@/ui/Clickable";
+
+export default function AuditLogTable() {
+  const [data, setData] = useState<AuditLogItem[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedLog, setSelectedLog] = useState<AuditLogItem | null>(null);
+
+  // 处理排序变化
+  const handleSortChange = (key: string, order: "asc" | "desc" | null) => {
+    setSortKey(order ? key : null);
+    setSortOrder(order);
+    setPage(1); // 排序变化时重置到第一页
+  };
+
+  // 处理搜索变化
+  const handleSearchChange = (search: string) => {
+    setSearchQuery(search);
+    setPage(1); // 搜索变化时重置到第一页
+  };
+
+  // 打开详情对话框
+  const openDetailDialog = (log: AuditLogItem) => {
+    setSelectedLog(log);
+    setDetailDialogOpen(true);
+  };
+
+  // 关闭详情对话框
+  const closeDetailDialog = () => {
+    setDetailDialogOpen(false);
+    setSelectedLog(null);
+  };
+
+  // 监听广播刷新消息
+  useBroadcast<{ type: string }>(async (message) => {
+    if (message.type === "audit-refresh") {
+      setRefreshTrigger((prev) => prev + 1); // 触发刷新
+    }
+  });
+
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      try {
+        // 构建请求参数
+        const params: {
+          page: number;
+          pageSize: number;
+          sortBy?: "id" | "timestamp" | "action" | "resource" | "userUid";
+          sortOrder?: "asc" | "desc";
+          search?: string;
+        } = {
+          page,
+          pageSize,
+        };
+
+        // 只在有有效的排序参数时才添加
+        if (sortKey && sortOrder) {
+          params.sortBy = sortKey as
+            | "id"
+            | "timestamp"
+            | "action"
+            | "resource"
+            | "userUid";
+          params.sortOrder = sortOrder;
+        }
+
+        // 添加搜索参数（全局搜索）
+        if (searchQuery && searchQuery.trim()) {
+          params.search = searchQuery.trim();
+        }
+
+        const result = await getAuditLogs(params);
+
+        if (result.success && result.data) {
+          setData(result.data);
+          setTotalRecords(result.meta?.total || 0);
+          if (result.meta) {
+            setTotalPages(result.meta.totalPages);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch audit logs:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [page, pageSize, sortKey, sortOrder, searchQuery, refreshTrigger]);
+
+  const columns: TableColumn<AuditLogItem>[] = [
+    {
+      key: "id",
+      title: "ID",
+      dataIndex: "id",
+      align: "left",
+      sortable: true,
+      mono: true,
+    },
+    {
+      key: "timestamp",
+      title: "操作时间",
+      dataIndex: "timestamp",
+      sortable: true,
+      mono: true,
+      render: (value: unknown) => {
+        if (typeof value === "string") {
+          return new Date(value).toLocaleString("zh-CN", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          });
+        }
+        return "-";
+      },
+    },
+    {
+      key: "action",
+      title: "操作类型",
+      dataIndex: "action",
+      align: "left",
+      sortable: true,
+      mono: true,
+      render: (value: unknown) => {
+        if (typeof value === "string") {
+          return <span className="font-semibold">{value}</span>;
+        }
+        return "-";
+      },
+    },
+    {
+      key: "resource",
+      title: "资源类型",
+      dataIndex: "resource",
+      align: "left",
+      sortable: true,
+      mono: true,
+    },
+    {
+      key: "resourceId",
+      title: "资源ID",
+      dataIndex: "resourceId",
+      align: "left",
+      mono: true,
+      render: (value: unknown) => {
+        if (typeof value === "string" && value.length > 20) {
+          return (
+            <span className="text-sm text-muted-foreground" title={value}>
+              {value.substring(0, 20)}...
+            </span>
+          );
+        }
+        return (
+          <span className="text-sm text-muted-foreground">{String(value)}</span>
+        );
+      },
+    },
+    {
+      key: "user",
+      title: "操作者",
+      dataIndex: "user",
+      align: "left",
+      sortable: true,
+      render: (value: unknown) => {
+        if (value && typeof value === "object" && "username" in value) {
+          const user = value as { username: string; nickname?: string | null };
+          return (
+            <span className="text-sm">
+              {user.nickname || user.username}
+              <span className="text-muted-foreground ml-1">
+                (@{user.username})
+              </span>
+            </span>
+          );
+        }
+        return <span className="text-muted-foreground">系统</span>;
+      },
+    },
+    {
+      key: "ipAddress",
+      title: "IP地址",
+      dataIndex: "ipAddress",
+      align: "left",
+      mono: true,
+    },
+    {
+      key: "description",
+      title: "描述",
+      dataIndex: "description",
+      align: "left",
+      render: (value: unknown) => {
+        if (typeof value === "string" && value) {
+          return <span className="text-sm">{value}</span>;
+        }
+        return <span className="text-muted-foreground">-</span>;
+      },
+    },
+    {
+      key: "detail",
+      title: "详情",
+      dataIndex: "id",
+      align: "center",
+      render: (value: unknown, record: AuditLogItem) => {
+        return (
+          <Clickable
+            onClick={() => openDetailDialog(record)}
+            className="text-primary hover:text-primary/80 text-sm flex items-center justify-center gap-1"
+          >
+            <RiEyeLine size="1em" />
+          </Clickable>
+        );
+      },
+    },
+  ];
+
+  return (
+    <>
+      <GridTable
+        title="审计日志"
+        columns={columns}
+        data={data}
+        loading={loading}
+        rowKey="id"
+        page={page}
+        totalPages={totalPages}
+        totalRecords={totalRecords}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        onSortChange={handleSortChange}
+        onSearchChange={handleSearchChange}
+        onRowClick={(record) => openDetailDialog(record)}
+        searchPlaceholder="搜索..."
+        striped
+        hoverable
+        bordered={false}
+        size="sm"
+        emptyText="暂无审计日志"
+        stickyHeader
+        maxHeight="100%"
+        padding={2.5}
+      />
+
+      {/* 详情对话框 */}
+      <Dialog
+        open={detailDialogOpen}
+        onClose={closeDetailDialog}
+        title={`审计日志详情 - ID: ${selectedLog?.id || ""}`}
+        size="lg"
+      >
+        {selectedLog && (
+          <div className="px-6 py-6 space-y-6">
+            {/* 基本信息 */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                基本信息
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground">ID</label>
+                  <p className="text-sm font-mono">{selectedLog.id}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">
+                    操作时间
+                  </label>
+                  <p className="text-sm font-mono">
+                    {new Date(selectedLog.timestamp).toLocaleString("zh-CN", {
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                    })}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">
+                    操作类型
+                  </label>
+                  <p className="text-sm font-semibold">{selectedLog.action}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">
+                    资源类型
+                  </label>
+                  <p className="text-sm">{selectedLog.resource}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm text-muted-foreground">
+                    资源ID
+                  </label>
+                  <p className="text-sm font-mono break-all">
+                    {selectedLog.resourceId}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 操作者信息 */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                操作者信息
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground">用户</label>
+                  <p className="text-sm">
+                    {selectedLog.user ? (
+                      <>
+                        {selectedLog.user.nickname || selectedLog.user.username}
+                        <span className="text-muted-foreground ml-1">
+                          (@{selectedLog.user.username}, UID:{" "}
+                          {selectedLog.user.uid})
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">系统操作</span>
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">
+                    IP地址
+                  </label>
+                  <p className="text-sm font-mono">{selectedLog.ipAddress}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm text-muted-foreground">
+                    User Agent
+                  </label>
+                  <p className="text-sm font-mono break-all">
+                    {selectedLog.userAgent || "-"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 操作描述 */}
+            {selectedLog.description && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                  操作描述
+                </h3>
+                <p className="text-sm">{selectedLog.description}</p>
+              </div>
+            )}
+
+            {/* 数据变更 */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                数据变更
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">
+                    变更前 (Old Data)
+                  </label>
+                  <pre className="text-xs font-mono bg-muted/50 p-3 rounded overflow-auto max-h-64">
+                    {selectedLog.oldData
+                      ? JSON.stringify(
+                          typeof selectedLog.oldData === "string"
+                            ? JSON.parse(selectedLog.oldData)
+                            : selectedLog.oldData,
+                          null,
+                          2,
+                        )
+                      : "无数据"}
+                  </pre>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">
+                    变更后 (New Data)
+                  </label>
+                  <pre className="text-xs font-mono bg-muted/50 p-3 rounded overflow-auto max-h-64">
+                    {selectedLog.newData
+                      ? JSON.stringify(
+                          typeof selectedLog.newData === "string"
+                            ? JSON.parse(selectedLog.newData)
+                            : selectedLog.newData,
+                          null,
+                          2,
+                        )
+                      : "无数据"}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </Dialog>
+    </>
+  );
+}
