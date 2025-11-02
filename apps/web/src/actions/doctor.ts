@@ -166,25 +166,28 @@ export async function doctor(
     const getRedisKeyCount = async (): Promise<{
       captcha: number;
       rateLimit: number;
+      cache: number;
       total: number;
     }> => {
       try {
         await ensureRedisConnection();
-        const [captchaChallenges, captchaTokens, rateLimitKeys] =
+        const [captchaChallenges, captchaTokens, rateLimitKeys, cacheKeys] =
           await Promise.all([
-            redis.keys("captcha:challenge:*"),
-            redis.keys("captcha:token:*"),
-            redis.keys("rate_limit:*"),
+            redis.keys("np:captcha:challenge:*"),
+            redis.keys("np:captcha:token:*"),
+            redis.keys("np:rate_limit:*"),
+            redis.keys("np:cache:*"),
           ]);
 
         return {
           captcha: captchaChallenges.length + captchaTokens.length,
           rateLimit: rateLimitKeys.length,
+          cache: cacheKeys.length,
           total: await redis.dbsize(),
         };
       } catch (error) {
         console.error("Redis key count check failed:", error);
-        return { captcha: -1, rateLimit: -1, total: -1 };
+        return { captcha: -1, rateLimit: -1, cache: -1, total: -1 };
       }
     };
 

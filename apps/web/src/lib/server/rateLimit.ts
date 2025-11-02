@@ -23,7 +23,7 @@ async function limitControl(headers: HeadersObject): Promise<boolean> {
     await ensureRedisConnection();
 
     const ip = extractIpAddress(headers);
-    const key = `rate_limit:${ip}`;
+    const key = `np:rate_limit:${ip}`;
     const currentTime = Date.now();
     const oneMinuteAgo = currentTime - 60000;
 

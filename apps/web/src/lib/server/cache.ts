@@ -397,14 +397,15 @@ export async function setBatchCache<T>(
 
 /**
  * 生成缓存键
- * @param prefix 前缀
+ * @param purpose 使用目的（如：user、post、config 等）
  * @param parts 键的各个部分
- * @returns 格式化的缓存键
+ * @returns 格式化的缓存键，格式：np:cache:{purpose}:{part1}:{part2}:...
  * @example
- * generateCacheKey("user", "stats", 123) // => "user:stats:123"
+ * generateCacheKey("user", "stats", 123) // => "np:cache:user:stats:123"
+ * generateCacheKey("post", "detail", "my-slug") // => "np:cache:post:detail:my-slug"
  */
-export function generateCacheKey(prefix: string, ...parts: unknown[]): string {
-  return [prefix, ...parts.map(String)].join(":");
+export function generateCacheKey(purpose: string, ...parts: unknown[]): string {
+  return ["np", "cache", purpose, ...parts.map(String)].join(":");
 }
 
 /**

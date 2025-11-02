@@ -19,7 +19,7 @@ const cap = new Cap({
           const ttl = Math.floor((challengeData.expires - Date.now()) / 1000);
           if (ttl > 0) {
             await redis.setex(
-              `captcha:challenge:${token}`,
+              `np:captcha:challenge:${token}`,
               ttl,
               JSON.stringify(challengeData),
             );
@@ -33,7 +33,7 @@ const cap = new Cap({
         try {
           await ensureRedisConnection();
 
-          const data = await redis.get(`captcha:challenge:${token}`);
+          const data = await redis.get(`np:captcha:challenge:${token}`);
           if (!data) {
             return null;
           }
@@ -41,7 +41,7 @@ const cap = new Cap({
           const challengeData = JSON.parse(data);
           // 检查是否过期
           if (challengeData.expires <= Date.now()) {
-            await redis.del(`captcha:challenge:${token}`);
+            await redis.del(`np:captcha:challenge:${token}`);
             return null;
           }
 
@@ -53,7 +53,7 @@ const cap = new Cap({
       },
       delete: async (token) => {
         try {
-          await redis.del(`captcha:challenge:${token}`);
+          await redis.del(`np:captcha:challenge:${token}`);
         } catch (error) {
           console.error("Redis delete challenge failed:", error);
           throw new Error(`Redis delete challenge failed: ${error}`);
@@ -73,7 +73,7 @@ const cap = new Cap({
           const ttl = Math.floor((expires - Date.now()) / 1000);
           if (ttl > 0) {
             await redis.setex(
-              `captcha:token:${tokenKey}`,
+              `np:captcha:token:${tokenKey}`,
               ttl,
               expires.toString(),
             );
@@ -87,7 +87,7 @@ const cap = new Cap({
         try {
           await ensureRedisConnection();
 
-          const data = await redis.get(`captcha:token:${tokenKey}`);
+          const data = await redis.get(`np:captcha:token:${tokenKey}`);
           if (!data) {
             return null;
           }
@@ -95,7 +95,7 @@ const cap = new Cap({
           const expires = parseInt(data, 10);
           // 检查是否过期
           if (expires <= Date.now()) {
-            await redis.del(`captcha:token:${tokenKey}`);
+            await redis.del(`np:captcha:token:${tokenKey}`);
             return null;
           }
 
@@ -107,7 +107,7 @@ const cap = new Cap({
       },
       delete: async (tokenKey) => {
         try {
-          await redis.del(`captcha:token:${tokenKey}`);
+          await redis.del(`np:captcha:token:${tokenKey}`);
         } catch (error) {
           console.error("Redis delete token failed:", error);
           throw new Error(`Redis delete token failed: ${error}`);

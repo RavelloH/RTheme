@@ -15,7 +15,7 @@ import {
   GetAuditStatsSchema,
 } from "@repo/shared-types/api/stats";
 import prisma from "@/lib/server/prisma";
-import { getCache, setCache } from "@/lib/server/cache";
+import { getCache, setCache, generateCacheKey } from "@/lib/server/cache";
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
@@ -62,7 +62,7 @@ export async function getUsersStats(
   }
 
   try {
-    const CACHE_KEY = "users_stats";
+    const CACHE_KEY = generateCacheKey("stats", "users");
     const CACHE_TTL = 60 * 60; // 1小时
 
     // 如果不是强制刷新，尝试从缓存获取
@@ -234,7 +234,7 @@ export async function getAuditStats(
   }
 
   try {
-    const CACHE_KEY = "audit_stats";
+    const CACHE_KEY = generateCacheKey("stats", "audit");
     const CACHE_TTL = 60 * 60; // 1小时
 
     // 如果不是强制刷新，尝试从缓存获取
