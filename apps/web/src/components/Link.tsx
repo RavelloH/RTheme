@@ -5,7 +5,10 @@ import { useMenu } from "@/components/MenuProvider";
 import { default as NextLink } from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { RiArrowRightDoubleLine } from "@remixicon/react";
+import {
+  RiArrowRightDoubleLine,
+  RiArrowRightUpLongLine,
+} from "@remixicon/react";
 import React from "react";
 
 type BroadcastFn = ReturnType<typeof useBroadcastSender<object>>["broadcast"];
@@ -67,6 +70,9 @@ const presetStyles = {
   arrow: {
     className: "inline-flex items-center gap-1",
   },
+  "arrow-out": {
+    className: "inline-flex items-center gap-1",
+  },
 };
 
 // 应用预设样式
@@ -88,6 +94,16 @@ function applyPresets(presets: string[] = [], children: React.ReactNode) {
       <span className="inline-flex items-center gap-1">
         {content}
         <RiArrowRightDoubleLine size={"1em"} />
+      </span>
+    );
+  }
+
+  // 处理 arrow-out 预设
+  if (presets.includes("arrow-out")) {
+    content = (
+      <span className="inline-flex items-center gap-1">
+        {content}
+        <RiArrowRightUpLongLine size={"1em"} />
       </span>
     );
   }

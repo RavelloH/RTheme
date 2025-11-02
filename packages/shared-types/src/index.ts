@@ -5,6 +5,7 @@ export * from "./api/audit.js";
 export * from "./api/captcha.js";
 export * from "./api/doctor.js";
 export * from "./api/error.js";
+export * from "./api/setting.js";
 export * from "./api/stats.js";
 export * from "./api/user.js";
 
