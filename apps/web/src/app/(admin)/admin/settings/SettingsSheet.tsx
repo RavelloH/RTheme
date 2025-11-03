@@ -11,6 +11,8 @@ import { useToast } from "@/ui/Toast";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiSaveLine, RiRefreshLine } from "@remixicon/react";
+import { getSettings, updateSettings } from "@/actions/setting";
+import runWithAuth from "@/lib/client/runWithAuth";
 
 interface SettingConfig {
   key: string;
@@ -39,22 +41,26 @@ export default function SettingSheet() {
   const fetchSettings = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/admin/settings", {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-      });
+      const result = await runWithAuth(
+        getSettings,
+        { access_token: undefined }, // 使用 cookie 中的 token
+      );
 
-      if (!response.ok) {
-        throw new Error("获取配置失败");
-      }
-
-      const result = await response.json();
-      if (result.success && result.data) {
-        setSettings(result.data);
+      // 检查是否为 Response 对象（不应该在客户端出现，但为了类型安全）
+      if (result instanceof Response) {
+        const json = await result.json();
+        if (json.success && json.data) {
+          setSettings(json.data);
+        } else {
+          throw new Error(json.message || "获取配置失败");
+        }
       } else {
-        throw new Error(result.message || "获取配置失败");
+        // 直接是 ApiResponse 对象
+        if (result.success && result.data) {
+          setSettings(result.data);
+        } else {
+          throw new Error(result.message || "获取配置失败");
+        }
       }
     } catch (error) {
       console.error("获取配置失败:", error);
@@ -258,29 +264,30 @@ export default function SettingSheet() {
         },
       );
 
-      const response = await fetch("/api/admin/settings", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          settings: settingsToUpdate,
-        }),
+      const result = await runWithAuth(updateSettings, {
+        access_token: undefined, // 使用 cookie 中的 token
+        settings: settingsToUpdate,
       });
 
-      if (!response.ok) {
-        throw new Error("保存配置失败");
-      }
-
-      const result = await response.json();
-      if (result.success) {
-        toast.success("保存成功", `已更新 ${result.data.updated} 个配置项`);
-        setEditedValues({});
-        // 重新获取配置
-        await fetchSettings();
+      // 检查是否为 Response 对象
+      if (result instanceof Response) {
+        const json = await result.json();
+        if (json.success) {
+          toast.success("保存成功", `已更新 ${json.data.updated} 个配置项`);
+          setEditedValues({});
+          await fetchSettings();
+        } else {
+          throw new Error(json.message || "保存配置失败");
+        }
       } else {
-        throw new Error(result.message || "保存配置失败");
+        // 直接是 ApiResponse 对象
+        if (result.success && result.data) {
+          toast.success("保存成功", `已更新 ${result.data.updated} 个配置项`);
+          setEditedValues({});
+          await fetchSettings();
+        } else {
+          throw new Error(result.message || "保存配置失败");
+        }
       }
     } catch (error) {
       console.error("保存配置失败:", error);

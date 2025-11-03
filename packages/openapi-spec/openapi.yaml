@@ -332,15 +332,46 @@ paths:
               schema:
                 $ref: "#/components/schemas/ServerErrorResponse"
   /api/admin/settings:
-    patch:
-      summary: 批量更新配置项
-      description: |
-        批量更新系统配置项。只允许管理员操作。
-        支持一次更新多个配置项，如果配置项不存在会自动创建。
-      tags:
-        - Settings
+    get:
+      summary: 获取所有配置项
+      description: 需管理员身份，获取系统所有配置项
       security:
         - BearerAuth: []
+      tags:
+        - Settings
+      responses:
+        "200":
+          description: 返回所有配置项
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetSettingsSuccessResponse"
+        "401":
+          description: 未授权，Access Token 无效或不存在，权限不足
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedErrorResponse"
+        "429":
+          description: 请求过于频繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitErrorResponse"
+        "500":
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerErrorResponse"
+  /api/admin/settings/set:
+    post:
+      summary: 批量更新配置项
+      description: 需管理员身份，批量更新系统配置项
+      security:
+        - BearerAuth: []
+      tags:
+        - Settings
       requestBody:
         required: true
         content:
@@ -350,10 +381,13 @@ paths:
               required:
                 - settings
               properties:
+                access_token:
+                  type: string
+                  description: 访问令牌（也可以通过 Authorization header 传递）
                 settings:
                   type: array
+                  description: 要更新的配置项列表
                   minItems: 1
-                  description: 要更新的配置项数组
                   items:
                     type: object
                     required:
@@ -362,16 +396,21 @@ paths:
                     properties:
                       key:
                         type: string
-                        minLength: 1
                         description: 配置项键名
-                        example: site.title
+                        minLength: 1
                       value:
-                        description: 配置项值，可以是任意 JSON 类型
-                        example:
-                          default: NeutralPress
+                        description: 配置项值（支持任意 JSON 类型）
+            example:
+              settings:
+                - key: site.title
+                  value: 我的网站
+                - key: site.description
+                  value: 欢迎来到我的网站
+                - key: features.comments
+                  value: true
       responses:
         "200":
-          description: 更新成功
+          description: 成功更新配置项
           content:
             application/json:
               schema:
@@ -381,7 +420,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ValidationErrorResponse"
+                $ref: "#/components/schemas/BadRequestErrorResponse"
         "401":
           description: 未授权，Access Token 无效或不存在，权限不足
           content:
