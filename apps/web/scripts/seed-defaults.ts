@@ -106,7 +106,7 @@ async function seedDefaultConfigs(prisma: PrismaClient) {
 
       // 记录添加的配置
       for (const config of configsToAdd) {
-        rlog.log(`  | Added config: ${config.key}`);
+        rlog.info(`  | Added config: ${config.key}`);
       }
     } catch (error) {
       rlog.error(`  | Batch config creation failed:`, error);
@@ -117,7 +117,7 @@ async function seedDefaultConfigs(prisma: PrismaClient) {
           await prisma.config.create({
             data: config,
           });
-          rlog.log(`  | Added config: ${config.key}`);
+          rlog.info(`  | Added config: ${config.key}`);
         } catch (individualError) {
           rlog.error(
             `  | Failed to add config ${config.key}:`,

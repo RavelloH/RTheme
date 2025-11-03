@@ -47,7 +47,7 @@ export default async function Menu({ menus }: { menus: MenuItem[] }) {
     getConfig<string>("site.slogan.secondary"),
     getConfig<string>("site.title"),
     getConfig<string[]>("site.copyright"),
-    getConfig<string>("site.author"),
+    getConfig<string>("author.name"),
     getConfig<string>("site.birthday"),
   ]);
 

@@ -8,7 +8,7 @@ import FooterDesktop from "../client/Footer/FooterDesktop";
 export default async function Footer({ menus }: { menus: MenuItem[] }) {
   const [siteBirthday, siteAuthor, siteCopyright] = await Promise.all([
     getConfig<string>("site.birthday"),
-    getConfig<string>("site.author"),
+    getConfig<string>("author.name"),
     getConfig<string[]>("site.copyright"),
   ]);
   return (

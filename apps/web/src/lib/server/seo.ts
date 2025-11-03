@@ -149,16 +149,16 @@ export const defaultMetadata: Metadata = {
 const seoConfigMap = {
   metadataBase: "site.url",
   title: "site.title",
-  description: "site.seo.description",
+  description: "seo.description",
   applicationName: "site.title",
-  keywords: "site.seo.keywords",
-  author: "site.author",
+  keywords: "seo.keywords",
+  author: "author.name",
   themeColor: "site.color",
-  twitterSite: "site.seo.twitter_site",
-  twitterCreator: "site.seo.twitter_creator",
-  googleVerification: "site.seo.google_verification",
-  category: "site.seo.category",
-  country: "site.seo.country",
+  twitterSite: "seo.twitter_site",
+  twitterCreator: "seo.twitter_creator",
+  googleVerification: "seo.google_verification",
+  category: "seo.category",
+  country: "seo.country",
 } as const;
 
 // 配置值类型定义

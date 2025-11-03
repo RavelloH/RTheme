@@ -11,6 +11,10 @@ const settings = [
     key: "site",
   },
   {
+    name: "作者信息",
+    key: "author",
+  },
+  {
     name: "SEO配置",
     key: "seo",
   },
@@ -27,16 +31,20 @@ const settings = [
     key: "media",
   },
   {
-    name: "媒体策略",
-    key: "media",
+    name: "评论策略",
+    key: "comment",
   },
   {
-    name: "媒体策略",
-    key: "media",
+    name: "通知策略",
+    key: "notice",
   },
   {
-    name: "媒体策略",
-    key: "media",
+    name: "AI 集成",
+    key: "ai",
+  },
+  {
+    name: "访问统计",
+    key: "analytics",
   },
 ];
 

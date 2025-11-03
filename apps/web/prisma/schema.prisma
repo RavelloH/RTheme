@@ -324,6 +324,7 @@ model Config {
   value       Json
   description String?  @db.VarChar(255)
   updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
 
   // 索引优化
   @@index([updatedAt])

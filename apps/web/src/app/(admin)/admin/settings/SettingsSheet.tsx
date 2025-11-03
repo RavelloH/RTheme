@@ -432,9 +432,12 @@ export default function SettingSheet() {
         typeof value === "object" && value !== null && !Array.isArray(value);
 
       if (isObject) {
-        // 如果是对象，显示标签并递归渲染子字段
+        // 如果是对象，显示标签并递归渲染子字段（跨越两列）
         fields.push(
-          <div key={currentPath.join(".")} className="relative mb-1">
+          <div
+            key={`${currentPath.join(".")}-object`}
+            className="relative col-span-2 mb-1"
+          >
             <div
               className="flex items-center"
               style={{ paddingLeft: `${level * 1.5}rem` }}
@@ -486,64 +489,60 @@ export default function SettingSheet() {
           ),
         );
       } else {
-        // 如果是叶子节点，显示字段名和 Input
+        // 如果是叶子节点，显示字段名和 Input（作为 grid 的两个子元素）
+        // 判断字段类型
+        const fieldType = typeof value === "number" ? "number" : "text";
+
         fields.push(
-          <div key={currentPath.join(".")} className="relative mb-3">
-            <div
-              className="flex items-start"
-              style={{ paddingLeft: `${level * 1.5}rem` }}
-            >
-              {level > 0 && (
-                <>
-                  {/* 垂直线从上方延伸到节点 */}
-                  <div
-                    className="absolute w-px bg-muted-foreground"
-                    style={{
-                      left: `${(level - 1) * 1.5 + 0.5}rem`,
-                      top: "-0.5rem",
-                      height: "calc(0.5rem + 0.5rem)",
-                    }}
-                  ></div>
-                  {/* 水平线 */}
-                  <div
-                    className="absolute h-px bg-muted-foreground"
-                    style={{
-                      left: `${(level - 1) * 1.5 + 0.5}rem`,
-                      top: "0.5rem",
-                      width: "1rem",
-                    }}
-                  ></div>
-                  {/* 如果不是最后一个，垂直线继续向下延伸 */}
-                  {!isLast && (
-                    <div
-                      className="absolute w-px bg-muted-foreground"
-                      style={{
-                        left: `${(level - 1) * 1.5 + 0.5}rem`,
-                        top: "0.5rem",
-                        height: "100%",
-                      }}
-                    ></div>
-                  )}
-                  <div className="w-4 shrink-0"></div>
-                </>
-              )}
-              <div className="flex-1 space-y-1">
-                <div className="text-md font-medium text-foreground">{key}</div>
-                <Input
-                  label="配置值"
-                  type="text"
-                  value={getJsonFieldValue(settingKey, currentPath)}
-                  onChange={(e) =>
-                    handleJsonFieldChange(
-                      settingKey,
-                      currentPath,
-                      e.target.value,
-                    )
-                  }
-                  size="sm"
-                />
-              </div>
+          <div
+            key={`${currentPath.join(".")}-label`}
+            className="relative flex items-end justify-end pb-2"
+            style={{ paddingLeft: `${level * 1.5}rem` }}
+          >
+            {level > 0 && (
+              <>
+                {/* 垂直线从上方延伸到节点，并继续向下到下一个元素 */}
+                <div
+                  className="absolute w-px bg-muted-foreground"
+                  style={{
+                    left: `${(level - 1) * 1.5 + 0.5}rem`,
+                    top: "0",
+                    height: isLast
+                      ? "calc(100% - 0.5rem - 0.6em)"
+                      : "calc(100% + 0.5rem)",
+                  }}
+                ></div>
+                {/* 水平线 */}
+                <div
+                  className="absolute h-px bg-muted-foreground"
+                  style={{
+                    left: `${(level - 1) * 1.5 + 0.5}rem`,
+                    bottom: "calc(0.5rem + 0.6em)",
+                    width: "1rem",
+                  }}
+                ></div>
+                <div className="w-4 shrink-0"></div>
+              </>
+            )}
+            <div className="text-md font-medium text-foreground text-right whitespace-nowrap">
+              {key}
             </div>
+          </div>,
+        );
+        fields.push(
+          <div
+            key={`${currentPath.join(".")}-input`}
+            className="flex items-start"
+          >
+            <Input
+              label="配置值"
+              type={fieldType}
+              value={getJsonFieldValue(settingKey, currentPath)}
+              onChange={(e) =>
+                handleJsonFieldChange(settingKey, currentPath, e.target.value)
+              }
+              size="sm"
+            />
           </div>,
         );
       }
@@ -601,6 +600,16 @@ export default function SettingSheet() {
       };
     }
 
+    // 如果是数字，使用 number 类型
+    if (typeof defaultValue === "number") {
+      return {
+        type: "number",
+        rows: undefined,
+        useSelect: false,
+        isJsonObject: false,
+      };
+    }
+
     // 其他类型使用单行
     return {
       type: "text",
@@ -633,6 +642,7 @@ export default function SettingSheet() {
       <GridItem
         areas={[1]}
         width={15}
+        height={0.1}
         className="flex items-center justify-between text-2xl px-10"
       >
         <AutoTransition>{getCategoryTitle()}</AutoTransition>
@@ -725,13 +735,15 @@ export default function SettingSheet() {
                         <div className="text-sm text-muted-foreground mb-2">
                           配置值
                         </div>
-                        {renderJsonFields(
-                          setting.key,
-                          extractDefaultValue(setting.value) as Record<
-                            string,
-                            unknown
-                          >,
-                        )}
+                        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
+                          {renderJsonFields(
+                            setting.key,
+                            extractDefaultValue(setting.value) as Record<
+                              string,
+                              unknown
+                            >,
+                          )}
+                        </div>
                       </div>
                     ) : (
                       // 其他类型使用 Input 组件

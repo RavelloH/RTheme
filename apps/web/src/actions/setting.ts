@@ -70,7 +70,7 @@ export async function getSettings(
     // 获取所有配置项
     const configs = await prisma.config.findMany({
       orderBy: {
-        key: "asc",
+        createdAt: "asc",
       },
     });
 
