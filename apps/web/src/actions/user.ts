@@ -253,6 +253,12 @@ export async function getUsersList(
         lastUseAt: true,
         role: true,
         status: true,
+        _count: {
+          select: {
+            posts: true,
+            comments: true,
+          },
+        },
       },
     });
 
@@ -271,6 +277,8 @@ export async function getUsersList(
       lastUseAt: user.lastUseAt.toISOString(),
       role: user.role,
       status: user.status,
+      postsCount: user._count.posts,
+      commentsCount: user._count.comments,
     }));
 
     // 计算分页元数据

@@ -66,6 +66,8 @@ export const UserListItemSchema = z.object({
   lastUseAt: z.string(),
   role: z.enum(["USER", "ADMIN", "EDITOR", "AUTHOR"]),
   status: z.enum(["ACTIVE", "SUSPENDED", "NEEDS_UPDATE"]),
+  postsCount: z.number().int().nonnegative(),
+  commentsCount: z.number().int().nonnegative(),
 });
 export type UserListItem = z.infer<typeof UserListItemSchema>;
 

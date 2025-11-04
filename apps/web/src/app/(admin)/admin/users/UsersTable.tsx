@@ -25,6 +25,7 @@ import { Checkbox } from "@/ui/Checkbox";
 import { Button } from "@/ui/Button";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { useToast } from "@/ui/Toast";
+import Link from "@/components/Link";
 
 export default function UsersTable({ mainColor }: { mainColor: string }) {
   const toast = useToast();
@@ -546,7 +547,7 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
                 : "bg-muted text-muted-foreground";
         return (
           <span
-            className={`text-xs px-2 py-1 rounded-full font-medium ${colorClass}`}
+            className={`text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap ${colorClass}`}
           >
             {role}
           </span>
@@ -574,7 +575,7 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
               : "需更新";
         return (
           <span
-            className={`text-xs px-2 py-1 rounded-full font-medium ${colorClass}`}
+            className={`text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap ${colorClass}`}
           >
             {statusText}
           </span>
@@ -633,6 +634,42 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
           <span className="flex justify-center">
             <RiCloseLine size="1.5em" className="text-muted-foreground" />
           </span>
+        );
+      },
+    },
+    {
+      key: "postsCount",
+      title: "文章数",
+      dataIndex: "postsCount",
+      align: "center",
+      render: (value: unknown, record: UserListItem) => {
+        const count = typeof value === "number" ? value : 0;
+        return (
+          <Link
+            href={`/admin/posts?uid=${record.uid}`}
+            className="text-primary"
+            presets={["hover-underline"]}
+          >
+            {count}
+          </Link>
+        );
+      },
+    },
+    {
+      key: "commentsCount",
+      title: "评论数",
+      dataIndex: "commentsCount",
+      align: "center",
+      render: (value: unknown, record: UserListItem) => {
+        const count = typeof value === "number" ? value : 0;
+        return (
+          <Link
+            href={`/admin/comments?uid=${record.uid}`}
+            className="text-primary"
+            presets={["hover-underline"]}
+          >
+            {count}
+          </Link>
         );
       },
     },

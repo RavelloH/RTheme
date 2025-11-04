@@ -139,7 +139,7 @@ export function Table<T extends Record<string, unknown>>({
   const getPaddingStyles = () => {
     switch (size) {
       case "sm":
-        return "px-3 py-2";
+        return "px-2 py-2";
       case "md":
         return "px-4 py-3";
       case "lg":
