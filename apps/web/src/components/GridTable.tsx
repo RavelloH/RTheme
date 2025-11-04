@@ -112,6 +112,7 @@ export default function GridTable<T extends Record<string, unknown>>({
   // 搜索状态管理
   const [searchValue, setSearchValue] = useState("");
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSearchValueRef = useRef<string>(""); // 记录上次触发的搜索值
 
   // 搜索输入变化处理（防抖）
   useEffect(() => {
@@ -124,7 +125,11 @@ export default function GridTable<T extends Record<string, unknown>>({
 
     // 设置新的定时器，1秒后触发搜索
     searchTimeoutRef.current = setTimeout(() => {
-      onSearchChange(searchValue);
+      // 只有当搜索值真正变化时才触发回调
+      if (searchValue !== lastSearchValueRef.current) {
+        lastSearchValueRef.current = searchValue;
+        onSearchChange(searchValue);
+      }
     }, 1000);
 
     // 清理函数
@@ -134,6 +139,16 @@ export default function GridTable<T extends Record<string, unknown>>({
       }
     };
   }, [searchValue, onSearchChange]);
+
+  // 翻页时清理选中状态
+  useEffect(() => {
+    // 翻页时清空选中状态
+    if (selectedKeys.size > 0) {
+      setSelectedKeys(new Set());
+      onSelectionChange?.([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]); // 只依赖 page，不需要依赖 selectedKeys.size 和 onSelectionChange
 
   // 获取行的唯一键
   const getRowKey = useCallback(

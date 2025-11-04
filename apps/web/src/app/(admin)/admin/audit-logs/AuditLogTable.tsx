@@ -33,8 +33,11 @@ export default function AuditLogTable() {
 
   // 处理搜索变化
   const handleSearchChange = (search: string) => {
-    setSearchQuery(search);
-    setPage(1); // 搜索变化时重置到第一页
+    // 只有当搜索内容真正变化时才更新状态和重置页码
+    if (search !== searchQuery) {
+      setSearchQuery(search);
+      setPage(1); // 搜索变化时重置到第一页
+    }
   };
 
   // 打开详情对话框
