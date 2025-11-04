@@ -6,7 +6,7 @@ import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { RiRefreshLine } from "@remixicon/react";
 import { useEffect, useState } from "react";
-import { getUsersStats } from "@/actions/stats";
+import { getUsersStats } from "@/actions/stat";
 import { GetUsersStatsSuccessResponse } from "@repo/shared-types/api/stats";
 import ErrorPage from "@/components/ui/Error";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { getUsersStats } from "@/actions/stats";
+import { getUsersStats } from "@/actions/stat";
 import { GridItem } from "@/components/RowGrid";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";

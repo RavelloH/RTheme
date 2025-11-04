@@ -1,4 +1,4 @@
-import { getAuditStats } from "@/actions/stats";
+import { getAuditStats } from "@/actions/stat";
 import ResponseBuilder from "@/lib/server/response";
 import { validateGetRequest } from "@/lib/server/request-converter";
 import { GetAuditStatsSchema } from "@repo/shared-types/api/stats";

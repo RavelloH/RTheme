@@ -1,6 +1,6 @@
 "use client";
 
-import { getAuditStats } from "@/actions/stats";
+import { getAuditStats } from "@/actions/stat";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";

@@ -8,7 +8,7 @@ import { RiRefreshLine } from "@remixicon/react";
 import { useEffect, useState } from "react";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/useBroadcast";
-import { getAuditStats } from "@/actions/stats";
+import { getAuditStats } from "@/actions/stat";
 
 type StatsData = {
   updatedAt: string;
