@@ -4,6 +4,8 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useBroadcast } from "@/hooks/useBroadcast";
 import { usePathname } from "next/navigation";
 import gsap from "gsap";
+import { useFooterStore } from "@/store/footerStore";
+import { useMobile } from "@/hooks/useMobile";
 
 interface PageTransitionProps {
   children: React.ReactNode;
@@ -22,10 +24,15 @@ export default function PageTransition({ children }: PageTransitionProps) {
     useState<TransitionState>("idle");
   const [transitionDirection, setTransitionDirection] = useState<string>("");
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const previousPathname = useRef<string>("");
   const gsapTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const lastScrollTop = useRef<number>(0);
+  const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
+  const isMobile = useMobile();
 
   const pathname = usePathname();
+  const setFooterVisible = useFooterStore((state) => state.setFooterVisible);
 
   // 监听广播消息
   useBroadcast<TransitionMessage>((message) => {
@@ -200,14 +207,78 @@ export default function PageTransition({ children }: PageTransitionProps) {
     };
   }, []);
 
+  // 滚动监听，控制 footer 显示/隐藏
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      const currentScrollTop = scrollContainer.scrollTop;
+      const scrollHeight = scrollContainer.scrollHeight;
+      const clientHeight = scrollContainer.clientHeight;
+      const scrollBottom = scrollHeight - clientHeight - currentScrollTop;
+
+      // 清除之前的超时
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+
+      // 判断滚动方向
+      const isScrollingDown = currentScrollTop > lastScrollTop.current;
+      const isScrollingUp = currentScrollTop < lastScrollTop.current;
+
+      // 滚动到底部（距离底部小于50px）
+      const isNearBottom = scrollBottom < 50;
+
+      if (isScrollingDown && !isNearBottom) {
+        // 向下滚动且不在底部：隐藏 footer
+        setFooterVisible(false);
+      } else if (isScrollingUp || isNearBottom) {
+        // 向上滚动或到达底部：显示 footer
+        setFooterVisible(true);
+      }
+
+      // 更新上次滚动位置
+      lastScrollTop.current = currentScrollTop;
+
+      // 滚动停止后一段时间，如果在顶部则显示 footer
+      scrollTimeout.current = setTimeout(() => {
+        if (currentScrollTop < 10) {
+          setFooterVisible(true);
+        }
+      }, 150);
+    };
+
+    scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      scrollContainer.removeEventListener("scroll", handleScroll);
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+    };
+  }, [setFooterVisible]);
+
+  // 路由切换时重置 footer 状态
+  useEffect(() => {
+    setFooterVisible(true);
+    lastScrollTop.current = 0;
+  }, [pathname, setFooterVisible]);
+
   return (
     <div
       ref={containerRef}
-      className="w-full h-full relative opacity-100"
+      className={`w-full ${isMobile ? "" : "h-full"} relative opacity-100`}
       // GSAP 会通过 JavaScript 设置 transform 和 opacity
       // 初始状态由 CSS 类提供
     >
-      {currentChildren}
+      <div
+        ref={scrollContainerRef}
+        className={`w-full ${isMobile ? "" : "h-full overflow-y-auto"} overflow-x-hidden`}
+        style={{ paddingBottom: isMobile ? 0 : "5em" }}
+      >
+        {currentChildren}
+      </div>
     </div>
   );
 }

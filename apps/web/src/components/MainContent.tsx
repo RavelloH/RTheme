@@ -46,8 +46,10 @@ export function MainContent({ children }: MainContentProps) {
   return (
     <main
       ref={mainRef}
-      className={`flex-1 ${isLoaded ? "translate-x-0" : "translate-x-full"}`}
-      style={{ marginTop: getHeaderHeight() }}
+      className={`${isMobile ? "min-h-screen" : "flex-1 overflow-hidden"} ${isLoaded ? "translate-x-0" : "translate-x-full"}`}
+      style={{
+        marginTop: getHeaderHeight(),
+      }}
     >
       {children}
     </main>

@@ -9,13 +9,15 @@ import "./globals.css";
 
 // Server Componments
 import Header from "@/components/server/Header";
-import Footer from "@/components/server/Footer";
+import FooterDesktopWrapper from "@/components/server/FooterDesktopWrapper";
+import FooterMobileWrapper from "@/components/server/FooterMobileWrapper";
 
 // Client Components
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { MenuProvider } from "@/components/MenuProvider";
 import { LoadingAnimation } from "@/components/LoadingAnimation";
 import { MainContent } from "@/components/MainContent";
+import { LayoutContainer } from "@/components/LayoutContainer";
 import ResponsiveFontScale from "@/components/ResponsiveFontScale";
 import PageTransition from "@/components/PageTransition";
 import TokenManager from "@/components/TokenManager";
@@ -59,13 +61,14 @@ export default async function RootLayout({
           <MenuProvider menus={menus}>
             <ResponsiveFontScale scaleFactor={0.017} baseSize={12}>
               <LoadingAnimation />
-              <div className="min-h-full flex flex-col overflow-hidden">
+              <LayoutContainer>
                 <Header menus={menus} />
                 <MainContent>
                   <PageTransition>{children}</PageTransition>
+                  <FooterMobileWrapper />
                 </MainContent>
-                <Footer menus={menus} />
-              </div>
+              </LayoutContainer>
+              <FooterDesktopWrapper menus={menus} />
             </ResponsiveFontScale>
           </MenuProvider>
         </ThemeProvider>

@@ -34,7 +34,7 @@
     --color-primary-foreground: var(--color-background);
 
     --color-secondary: oklch(0.274 0.006 286.033);
-    --color-secondary-foreground: oklch(0.985 0 0);
+    --color-secondary-foreground: oklch(0.835 0.0077 260.73);
 
     --color-muted: oklch(0.244 0.006 286.033);
     --color-muted-foreground: oklch(0.705 0.015 286.067);

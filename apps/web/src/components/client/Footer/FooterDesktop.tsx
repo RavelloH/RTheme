@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { gsap } from "gsap";
 import { useMenuStore } from "@/store/menuStore";
 import { useConsoleStore } from "@/store/consoleStore";
+import { useFooterStore } from "@/store/footerStore";
 import { useMobile } from "@/hooks/useMobile";
 import { Panel } from "../../Panel";
 import { ConsoleButton } from "../../ConsoleButton";
@@ -22,6 +23,7 @@ export default function FooterDesktop({ menus }: FooterProps) {
   const pathname = usePathname();
   const isMenuOpen = useMenuStore((state) => state.isMenuOpen);
   const { isConsoleOpen } = useConsoleStore();
+  const isFooterVisible = useFooterStore((state) => state.isFooterVisible);
   const [windowSize, setWindowSize] = useState({
     width: typeof window !== "undefined" ? window.innerWidth : 0,
     height: typeof window !== "undefined" ? window.innerHeight : 0,
@@ -405,20 +407,21 @@ export default function FooterDesktop({ menus }: FooterProps) {
     <>
       <motion.footer
         ref={footerRef}
-        className="w-full text-foreground bg-background border-y border-border flex relative z-50 h-[5em]"
+        className="w-full text-foreground bg-background border-y border-border flex fixed bottom-0 left-0 right-0 z-50 h-[5em]"
         initial={{ y: isMobile ? 112 : 80 }}
         animate={{
-          y: shouldAnimate
-            ? isMobile
-              ? 112
-              : 80
-            : isConsoleOpen
-              ? `calc(-60vh + 5em)`
-              : isLoaded
-                ? 0
-                : isMobile
-                  ? 112
-                  : 80,
+          y:
+            shouldAnimate || !isFooterVisible
+              ? isMobile
+                ? 112
+                : 80
+              : isConsoleOpen
+                ? `calc(-60vh + 5em)`
+                : isLoaded
+                  ? 0
+                  : isMobile
+                    ? 112
+                    : 80,
         }}
         transition={{
           type: "spring",

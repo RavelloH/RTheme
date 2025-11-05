@@ -12,6 +12,7 @@ export default function FooterMobile({
   siteAuthor: string;
 }) {
   const isMobile = useMobile();
+
   return isMobile ? (
     <footer className="text-muted-foreground bg-background border-t text px-10 py-10 border-border">
       <span>
