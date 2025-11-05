@@ -45,11 +45,11 @@ export default function ResponsiveFontScale({
         );
         document.documentElement.style.fontSize = `${calculatedSize}px`;
       } else {
-        // 桌面端：使用容器高度计算字体大小，与 RowGrid 的计算方式保持一致
-        const containerHeight = containerRef.current.offsetHeight;
-        const calculatedSize = Math.max(10, containerHeight * scaleFactor);
+        // 桌面端：使用视口高度计算字体大小
+        const viewportHeight = window.innerHeight;
+        const calculatedSize = Math.max(10, viewportHeight * scaleFactor);
         console.log(
-          `桌面端 - 容器高度: ${containerHeight}px, 缩放因子: ${scaleFactor}, 计算字体大小: ${calculatedSize}px`,
+          `桌面端 - 视口高度: ${viewportHeight}px, 缩放因子: ${scaleFactor}, 计算字体大小: ${calculatedSize}px`,
         );
         document.documentElement.style.fontSize = `${calculatedSize}px`;
       }
