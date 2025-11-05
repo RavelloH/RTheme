@@ -21,9 +21,11 @@ import {
 import { usePathname } from "next/navigation";
 import { useMobile } from "@/hooks/useMobile";
 import Link from "./Link";
+import { useEffect, useState } from "react";
 
 const roles = {
-  all: ["ADMIN", "EDITOR", "AUTHOR"],
+  author: ["ADMIN", "EDITOR", "AUTHOR"],
+  editor: ["ADMIN", "EDITOR"],
   admin: ["ADMIN"],
 };
 
@@ -44,37 +46,37 @@ const AdminSidebarList = [
     name: "项目管理",
     icon: <RiFolder2Fill size={"1.5em"} />,
     href: "/admin/projects",
-    role: roles.admin,
+    role: roles.editor,
   },
   {
     name: "文章管理",
     icon: <RiArticleFill size={"1.5em"} />,
     href: "/admin/posts",
-    role: roles.admin,
+    role: roles.author,
   },
   {
     name: "评论管理",
     icon: <RiMessageFill size={"1.5em"} />,
     href: "/admin/comments",
-    role: roles.admin,
+    role: roles.author,
   },
   {
     name: "标签管理",
     icon: <RiPriceTag3Fill size={"1.5em"} />,
     href: "/admin/tags",
-    role: roles.admin,
+    role: roles.editor,
   },
   {
     name: "分类管理",
     icon: <RiListView size={"1.5em"} />,
     href: "/admin/categories",
-    role: roles.admin,
+    role: roles.editor,
   },
   {
     name: "页面管理",
     icon: <RiFileFill size={"1.5em"} />,
     href: "/admin/pages",
-    role: roles.admin,
+    role: roles.editor,
   },
   {
     name: "用户管理",
@@ -86,7 +88,7 @@ const AdminSidebarList = [
     name: "媒体管理",
     icon: <RiAttachment2 size={"1.5em"} />,
     href: "/admin/media",
-    role: roles.admin,
+    role: roles.author,
   },
 
   {
@@ -99,7 +101,7 @@ const AdminSidebarList = [
     name: "访问分析",
     icon: <RiBarChart2Fill size={"1.5em"} />,
     href: "/admin/analytics",
-    role: roles.admin,
+    role: roles.editor,
   },
   {
     name: "安全中心",
@@ -130,13 +132,33 @@ const AdminSidebarList = [
 export default function AdminSidebar() {
   const pathname = usePathname();
   const isMobile = useMobile();
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    // 从 localStorage 读取用户信息
+    try {
+      const userInfo = localStorage.getItem("user_info");
+      if (userInfo) {
+        const parsed = JSON.parse(userInfo);
+        setUserRole(parsed.role);
+      }
+    } catch (error) {
+      console.error("Failed to parse user_info from localStorage:", error);
+    }
+  }, []);
+
+  // 根据用户角色过滤菜单项
+  const filteredMenuItems = AdminSidebarList.filter((item) => {
+    if (!userRole) return false; // 如果没有角色信息，不显示任何菜单
+    return item.role.includes(userRole);
+  });
 
   // 移动端：横向面包屑菜单
   if (isMobile) {
     return (
       <div className="w-full h-[4em] border-border overflow-x-auto overflow-y-hidden mb-3">
         <div className="flex items-center h-full gap-2 min-w-max">
-          {AdminSidebarList.map((item, index) => (
+          {filteredMenuItems.map((item, index) => (
             <Link
               key={index}
               href={item.href}
@@ -162,7 +184,7 @@ export default function AdminSidebar() {
   // 桌面端:垂直侧边栏
   return (
     <div className="group relative w-[5em] hover:w-[15em] h-full border-border border transition-all duration-300 ease-in-out overflow-y-auto overflow-x-hidden bg-background shrink-0">
-      {AdminSidebarList.map((item, index) => (
+      {filteredMenuItems.map((item, index) => (
         <Link
           key={index}
           href={item.href}
