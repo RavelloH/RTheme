@@ -46,8 +46,9 @@ export function Input({
   rows,
   ...props
 }: InputProps) {
+  const generatedId = useId();
   const inputId =
-    id || `input-${label.replace(/\s+/g, "-").toLowerCase()}-${useId()}`;
+    id || `input-${label.replace(/\s+/g, "-").toLowerCase()}-${generatedId}`;
   const [isFocused, setIsFocused] = useState(false);
   const [hasValue, setHasValue] = useState(!!defaultValue || !!value);
 
@@ -81,7 +82,7 @@ export function Input({
     onInput?.(e as React.FormEvent<HTMLInputElement>);
   };
 
-  const showLabel = isFocused || hasValue;
+  const showLabel = isFocused || hasValue || !!placeholder;
   const showBottomLine = isFocused || hasValue;
 
   // 计算helperText显示逻辑：label上升后且无内容时显示
@@ -206,7 +207,7 @@ export function Input({
         {label.split("").map((char, index) => (
           <motion.span
             key={index}
-            className={`inline-block ${sizeStyles.labelText} min-w-2 text-white`}
+            className={`inline-block ${sizeStyles.labelText} text-white`}
             animate={{
               color: showLabel ? "var(--color-primary)" : "#ffffff",
               y: showLabel ? sizeStyles.labelShift : 0,
@@ -222,7 +223,7 @@ export function Input({
           </motion.span>
         ))}
         <motion.span
-          className={`inline-block ${sizeStyles.labelText} min-w-2 text-white px-2`}
+          className={`inline-block ${sizeStyles.labelText} text-white px-2`}
           animate={{
             color: showLabel ? "var(--color-primary)" : "#ffffff",
             y: showLabel ? sizeStyles.labelShift : 0,

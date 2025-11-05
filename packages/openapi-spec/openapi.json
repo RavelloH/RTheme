@@ -529,6 +529,301 @@
         }
       }
     },
+    "/api/admin/posts/delete": {
+      "post": {
+        "summary": "批量删除文章",
+        "description": "需管理员/编辑/作者身份，批量删除文章",
+        "tags": [
+          "Posts"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ids"
+                ],
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "要删除的文章 ID 数组"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "删除成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "deleted": {
+                          "type": "integer",
+                          "description": "成功删除的文章数量"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/api/admin/posts": {
+      "get": {
+        "summary": "获取文章列表",
+        "description": "需管理员/编辑/作者身份，获取文章列表",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "每页数量"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "id",
+                "title",
+                "publishedAt",
+                "updatedAt",
+                "createdAt"
+              ]
+            },
+            "description": "排序字段"
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            },
+            "description": "排序方向"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "PUBLISHED",
+                "ARCHIVED"
+              ]
+            },
+            "description": "文章状态"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "搜索关键词"
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "Posts"
+        ],
+        "responses": {
+          "200": {
+            "description": "返回文章列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetPostsListSuccessResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/posts/trends": {
+      "get": {
+        "summary": "获取文章趋势数据",
+        "description": "需管理员/编辑/作者身份，获取文章增长趋势",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "统计天数（默认365天）"
+          },
+          {
+            "in": "query",
+            "name": "count",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "数据点数量（默认30个）"
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "Posts"
+        ],
+        "responses": {
+          "200": {
+            "description": "返回文章趋势数据",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetPostsTrendsSuccessResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/posts/update": {
+      "post": {
+        "summary": "批量更新文章",
+        "description": "需管理员/编辑/作者身份，批量更新文章信息",
+        "tags": [
+          "Posts"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ids"
+                ],
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "要更新的文章 ID 数组"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "DRAFT",
+                      "PUBLISHED",
+                      "ARCHIVED"
+                    ],
+                    "description": "新的状态"
+                  },
+                  "isPinned": {
+                    "type": "boolean",
+                    "description": "是否置顶"
+                  },
+                  "allowComments": {
+                    "type": "boolean",
+                    "description": "是否允许评论"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "updated": {
+                          "type": "integer",
+                          "description": "成功更新的文章数量"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
     "/api/admin/settings": {
       "get": {
         "summary": "获取所有配置项",
@@ -1927,6 +2222,72 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/GetAuditStatsSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权，Access Token 无效或不存在，权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "请求过于频繁",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务器内部错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats/posts": {
+      "get": {
+        "summary": "获取文章统计数据",
+        "description": "需管理员/编辑/作者身份，获取文章统计信息",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "force",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "是否强制刷新缓存"
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "Posts"
+        ],
+        "responses": {
+          "200": {
+            "description": "返回文章数据",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetPostsStatsSuccessResponse"
                 }
               }
             }
@@ -4732,6 +5093,149 @@
         ],
         "additionalProperties": false
       },
+      "GetPostsStats": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "force": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "force"
+        ],
+        "additionalProperties": false
+      },
+      "GetPostsStatsSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              "cache": {
+                "type": "boolean"
+              },
+              "total": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "published": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "draft": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "archived": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "total",
+                  "published",
+                  "draft",
+                  "archived"
+                ],
+                "additionalProperties": false
+              },
+              "new": {
+                "type": "object",
+                "properties": {
+                  "last7Days": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "last30Days": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "lastYear": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "last7Days",
+                  "last30Days",
+                  "lastYear"
+                ],
+                "additionalProperties": false
+              },
+              "lastPublished": {
+                "nullable": true,
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              "firstPublished": {
+                "nullable": true,
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              "averageDaysBetweenPosts": {
+                "nullable": true,
+                "type": "number"
+              }
+            },
+            "required": [
+              "updatedAt",
+              "cache",
+              "total",
+              "new",
+              "lastPublished",
+              "firstPublished",
+              "averageDaysBetweenPosts"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
       "GetUsersTrends": {
         "type": "object",
         "properties": {
@@ -5174,6 +5678,485 @@
         "additionalProperties": false
       },
       "DeleteUsersSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "deleted": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "deleted"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "GetPostsTrends": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "days": {
+            "default": 365,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "count": {
+            "default": 30,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "days",
+          "count"
+        ],
+        "additionalProperties": false
+      },
+      "GetPostsTrendsSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "time": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "new": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "draft": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "total",
+                    "new",
+                    "draft"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "time",
+                "data"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "GetPostsList": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "page": {
+            "default": 1,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "pageSize": {
+            "default": 25,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "sortBy": {
+            "default": "id",
+            "type": "string",
+            "enum": [
+              "id",
+              "title",
+              "publishedAt",
+              "updatedAt",
+              "createdAt"
+            ]
+          },
+          "sortOrder": {
+            "default": "desc",
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "ARCHIVED"
+            ]
+          },
+          "search": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "page",
+          "pageSize",
+          "sortBy",
+          "sortOrder"
+        ],
+        "additionalProperties": false
+      },
+      "GetPostsListSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "title": {
+                  "type": "string"
+                },
+                "slug": {
+                  "type": "string"
+                },
+                "excerpt": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "DRAFT",
+                    "PUBLISHED",
+                    "ARCHIVED"
+                  ]
+                },
+                "isPinned": {
+                  "type": "boolean"
+                },
+                "allowComments": {
+                  "type": "boolean"
+                },
+                "publishedAt": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                },
+                "author": {
+                  "type": "object",
+                  "properties": {
+                    "uid": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "username": {
+                      "type": "string"
+                    },
+                    "nickname": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "uid",
+                    "username",
+                    "nickname"
+                  ],
+                  "additionalProperties": false
+                },
+                "categories": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "featuredImage": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "metaTitle": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "metaDescription": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "metaKeywords": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "robotsIndex": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "slug",
+                "excerpt",
+                "status",
+                "isPinned",
+                "allowComments",
+                "publishedAt",
+                "createdAt",
+                "updatedAt",
+                "author",
+                "categories",
+                "tags",
+                "featuredImage",
+                "metaTitle",
+                "metaDescription",
+                "metaKeywords",
+                "robotsIndex"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "UpdatePosts": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "ids": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "ARCHIVED"
+            ]
+          },
+          "isPinned": {
+            "type": "boolean"
+          },
+          "allowComments": {
+            "type": "boolean"
+          },
+          "title": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "excerpt": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "featuredImage": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "metaTitle": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "metaDescription": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "metaKeywords": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "robotsIndex": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "additionalProperties": false
+      },
+      "UpdatePostsSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "updated": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "updated"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "DeletePosts": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "ids": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "additionalProperties": false
+      },
+      "DeletePostsSuccessResponse": {
         "type": "object",
         "properties": {
           "success": {

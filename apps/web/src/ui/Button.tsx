@@ -47,8 +47,9 @@ export function Button({
   type = "button",
   ...props
 }: ButtonProps) {
+  const generatedId = useId();
   const buttonId =
-    id || `button-${label.replace(/\s+/g, "-").toLowerCase()}-${useId()}`;
+    id || `button-${label.replace(/\s+/g, "-").toLowerCase()}-${generatedId}`;
 
   const getVariantStyles = () => {
     switch (variant) {

@@ -109,7 +109,7 @@ model PasswordReset {
 }
 
 model Post {
-  id            String     @id @default(uuid())
+  id            Int        @id @default(autoincrement())
   title         String
   slug          String     @unique
   content       String
@@ -178,8 +178,8 @@ model Comment {
   status    CommentStatus @default(PENDING)
 
   // 关系
-  postId String
-  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId Int
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   // 登录用户评论
   userUid     Int?
@@ -205,15 +205,15 @@ model Comment {
 
 // 媒体文件模型
 model Media {
-  id           String  @id @default(uuid())
+  id           String @id @default(uuid())
   filename     String
   originalName String
-  mimeType     String  @db.VarChar(100)
+  mimeType     String @db.VarChar(100)
   size         Int // 大小，单位字节
-  hash         String  @db.VarChar(64)
+  hash         String @db.VarChar(64)
   // 从属
-  postId       String?
-  post         Post?   @relation(fields: [postId], references: [id], onDelete: SetNull)
+  postId       Int?
+  post         Post?  @relation(fields: [postId], references: [id], onDelete: SetNull)
 
   // 图片相关
   width   Int?

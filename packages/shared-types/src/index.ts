@@ -8,6 +8,7 @@ export * from "./api/error.js";
 export * from "./api/setting.js";
 export * from "./api/stats.js";
 export * from "./api/user.js";
+export * from "./api/post.js";
 
 // 类型安全的 API 客户端工具
 export { createApiClient } from "./client.js";

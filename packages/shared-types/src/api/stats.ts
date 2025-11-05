@@ -76,3 +76,42 @@ registerSchema(
   "GetAuditStatsSuccessResponse",
   GetAuditStatsSuccessResponseSchema,
 );
+
+/*
+    getPostsStats() Schema
+*/
+export const GetPostsStatsSchema = z.object({
+  access_token: z.string().optional(),
+  force: z.boolean().default(false),
+});
+export type GetPostsStats = z.infer<typeof GetPostsStatsSchema>;
+registerSchema("GetPostsStats", GetPostsStatsSchema);
+
+export const GetPostsStatsSuccessResponseSchema = createSuccessResponseSchema(
+  z.object({
+    updatedAt: z.iso.datetime(),
+    cache: z.boolean(),
+    total: z.object({
+      total: z.number().int().nonnegative(),
+      published: z.number().int().nonnegative(),
+      draft: z.number().int().nonnegative(),
+      archived: z.number().int().nonnegative(),
+    }),
+    new: z.object({
+      last7Days: z.number().int().nonnegative(),
+      last30Days: z.number().int().nonnegative(),
+      lastYear: z.number().int().nonnegative(),
+    }),
+    lastPublished: z.iso.datetime().nullable(),
+    firstPublished: z.iso.datetime().nullable(),
+    averageDaysBetweenPosts: z.number().nullable(),
+  }),
+);
+
+export type GetPostsStatsSuccessResponse = z.infer<
+  typeof GetPostsStatsSuccessResponseSchema
+>;
+registerSchema(
+  "GetPostsStatsSuccessResponse",
+  GetPostsStatsSuccessResponseSchema,
+);

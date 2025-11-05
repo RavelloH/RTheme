@@ -63,7 +63,7 @@ export interface TableProps<T = Record<string, unknown>> {
   /**
    * 行点击事件
    */
-  onRowClick?: (record: T, index: number) => void;
+  onRowClick?: (record: T, index: number, event: React.MouseEvent) => void;
   /**
    * 自定义行类名
    */
@@ -356,7 +356,7 @@ export function Table<T extends Record<string, unknown>>({
                     ${onRowClick ? "cursor-pointer" : ""}
                     ${getRowClassName(record, index)}
                   `}
-                  onClick={() => onRowClick?.(record, index)}
+                  onClick={(e) => onRowClick?.(record, index, e)}
                   {...animationProps}
                 >
                   {columns.map((column, columnIndex) => (

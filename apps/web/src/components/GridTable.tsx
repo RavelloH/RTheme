@@ -61,7 +61,7 @@ export interface GridTableProps<T extends Record<string, unknown>> {
   rowActions?: (record: T) => ActionButton[];
   onSelectionChange?: (selectedKeys: (string | number)[]) => void;
   // 行点击事件
-  onRowClick?: (record: T, index: number) => void;
+  onRowClick?: (record: T, index: number, event: React.MouseEvent) => void;
   // GridItem 配置
   headerHeight?: number;
   contentAreas?: GridArea[];
@@ -220,7 +220,10 @@ export default function GridTable<T extends Record<string, unknown>>({
       render: (_, record) => {
         const key = getRowKey(record);
         return (
-          <div className="flex items-center justify-center">
+          <div
+            className="flex items-center justify-center"
+            data-action-cell="true"
+          >
             <Checkbox
               checked={selectedKeys.has(key)}
               onChange={(e) => handleSelectRow(key, e.target.checked)}
@@ -243,7 +246,7 @@ export default function GridTable<T extends Record<string, unknown>>({
         render: (_, record) => {
           const actions = rowActions(record);
           return (
-            <div className="flex items-center ">
+            <div className="flex items-center" data-action-cell="true">
               {actions.map((action, index) => (
                 <Clickable
                   key={index}
