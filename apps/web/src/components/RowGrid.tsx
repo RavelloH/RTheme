@@ -116,6 +116,7 @@ interface GridItemProps {
 interface RowGridProps {
   children: ReactNode;
   className?: string;
+  full?: boolean;
 }
 
 export function GridItem({
@@ -145,6 +146,9 @@ export function GridItem({
     const gridContainer = element.closest(gridSelector) as HTMLElement | null;
     if (!gridContainer) return;
 
+    // 检测父容器是否有 w-full 类（表示是 full 模式）
+    const isFullMode = !isMobile && gridContainer.classList.contains("w-full");
+
     const adjustSizes = () => {
       if (isMobile) {
         const containerWidth = gridContainer.offsetWidth;
@@ -159,7 +163,16 @@ export function GridItem({
         const itemHeight = singleRowHeight * areas.length;
         const calculatedWidth = Math.round(itemHeight * width);
 
-        element.style.width = `${calculatedWidth}px`;
+        if (isFullMode) {
+          // full 模式：使用 flex-grow 按比例分配，flex-basis 为 0
+          element.style.flexGrow = width.toString();
+          element.style.flexShrink = "1";
+          element.style.flexBasis = "0";
+          element.style.minWidth = "0";
+        } else {
+          // 默认模式：使用固定宽度
+          element.style.width = `${calculatedWidth}px`;
+        }
       }
     };
 
@@ -214,12 +227,18 @@ export function GridItem({
   );
 }
 
-export default function RowGrid({ children, className = "" }: RowGridProps) {
+export default function RowGrid({
+  children,
+  className = "",
+  full = false,
+}: RowGridProps) {
   const isMobile = useMobile();
 
   const baseClass = isMobile
     ? "grid grid-cols-12 auto-rows-max grid-flow-row gap-0 w-full"
-    : "grid grid-rows-12 auto-cols-max grid-flow-col gap-0 h-full min-w-max";
+    : full
+      ? "grid grid-rows-12 grid-flow-col gap-0 h-full w-full"
+      : "grid grid-rows-12 auto-cols-max grid-flow-col gap-0 h-full min-w-max";
 
   const combinedClassName = className ? `${baseClass} ${className}` : baseClass;
 

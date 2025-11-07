@@ -18,12 +18,18 @@ import {
 
 export type ToastType = "success" | "error" | "warning" | "info";
 
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface ToastMessage {
   id: string;
   type: ToastType;
   title: string;
   message?: string;
   duration?: number;
+  action?: ToastAction;
 }
 
 interface ToastContextType {
@@ -32,11 +38,32 @@ interface ToastContextType {
     title: string,
     message?: string,
     duration?: number,
+    action?: ToastAction,
   ) => void;
-  success: (title: string, message?: string, duration?: number) => void;
-  error: (title: string, message?: string, duration?: number) => void;
-  warning: (title: string, message?: string, duration?: number) => void;
-  info: (title: string, message?: string, duration?: number) => void;
+  success: (
+    title: string,
+    message?: string,
+    duration?: number,
+    action?: ToastAction,
+  ) => void;
+  error: (
+    title: string,
+    message?: string,
+    duration?: number,
+    action?: ToastAction,
+  ) => void;
+  warning: (
+    title: string,
+    message?: string,
+    duration?: number,
+    action?: ToastAction,
+  ) => void;
+  info: (
+    title: string,
+    message?: string,
+    duration?: number,
+    action?: ToastAction,
+  ) => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -67,6 +94,7 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
       title: string,
       message?: string,
       duration: number = 3000,
+      action?: ToastAction,
     ) => {
       const id = `toast-${Date.now()}-${Math.random()}`;
       const newToast: ToastMessage = {
@@ -75,6 +103,7 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
         title,
         message,
         duration,
+        action,
       };
 
       setToasts((prev) => {
@@ -97,29 +126,49 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
   );
 
   const success = useCallback(
-    (title: string, message?: string, duration?: number) => {
-      showToast("success", title, message, duration);
+    (
+      title: string,
+      message?: string,
+      duration?: number,
+      action?: ToastAction,
+    ) => {
+      showToast("success", title, message, duration, action);
     },
     [showToast],
   );
 
   const error = useCallback(
-    (title: string, message?: string, duration?: number) => {
-      showToast("error", title, message, duration);
+    (
+      title: string,
+      message?: string,
+      duration?: number,
+      action?: ToastAction,
+    ) => {
+      showToast("error", title, message, duration, action);
     },
     [showToast],
   );
 
   const warning = useCallback(
-    (title: string, message?: string, duration?: number) => {
-      showToast("warning", title, message, duration);
+    (
+      title: string,
+      message?: string,
+      duration?: number,
+      action?: ToastAction,
+    ) => {
+      showToast("warning", title, message, duration, action);
     },
     [showToast],
   );
 
   const info = useCallback(
-    (title: string, message?: string, duration?: number) => {
-      showToast("info", title, message, duration);
+    (
+      title: string,
+      message?: string,
+      duration?: number,
+      action?: ToastAction,
+    ) => {
+      showToast("info", title, message, duration, action);
     },
     [showToast],
   );
@@ -246,6 +295,25 @@ function Toast({ toast, onRemove }: ToastProps) {
             <div className="text-sm text-muted-foreground leading-snug">
               {toast.message}
             </div>
+          )}
+          {toast.action && (
+            <button
+              onClick={() => {
+                toast.action?.onClick();
+                onRemove(toast.id);
+              }}
+              className="
+                mt-2
+                text-sm
+                font-medium
+                text-primary
+                hover:underline
+                focus:outline-none
+                focus:underline
+              "
+            >
+              {toast.action.label}
+            </button>
           )}
         </div>
       </div>

@@ -1,8 +1,8 @@
 import HorizontalScroll from "@/components/HorizontalScroll";
 import MainLayout from "@/components/MainLayout";
-import RowGrid from "@/components/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
 import AdminSidebar from "@/components/AdminSidebar";
+import Editor from "@/components/client/Editor/Editor";
 
 export const metadata = await generateMetadata(
   {
@@ -25,6 +25,10 @@ export default async function NewPostPage() {
         snapToElements={false}
       >
         <AdminSidebar />
+        {/* // TODO: 实现类似Grid的平分效果 */}
+        <div className="w-full overflow-y-auto">
+          <Editor content="<h1>未命名文章</h1>" />
+        </div>
       </HorizontalScroll>
     </MainLayout>
   );
