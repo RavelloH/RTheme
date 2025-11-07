@@ -115,25 +115,20 @@ export default function Editor({ content }: { content?: string }) {
         "zh-CN",
       );
 
-      toast.info(
-        "已加载草稿",
-        `上次保存于 ${lastUpdated}`,
-        0, // 不自动关闭
-        {
-          label: "撤销",
-          onClick: () => {
-            clearEditorContent();
-            setInitialContent(content);
+      toast.info("已加载草稿", `上次保存于 ${lastUpdated}`, 10000, {
+        label: "撤销",
+        onClick: () => {
+          clearEditorContent();
+          setInitialContent(content);
 
-            // 清空编辑器内容，使用原始content
-            if (editor) {
-              editor.commands.setContent(content || "");
-            }
+          // 清空编辑器内容，使用原始content
+          if (editor) {
+            editor.commands.setContent(content || "");
+          }
 
-            toast.success("已撤销", "草稿已删除");
-          },
+          toast.success("已撤销", "草稿已删除");
         },
-      );
+      });
     } else {
       // 使用传入的content
       console.log("没有草稿，使用默认内容");
@@ -851,12 +846,9 @@ export default function Editor({ content }: { content?: string }) {
           />
           <div className="text-sm text-foreground/60">
             {editor ? (
-              <span>
-                字数: {editor.storage.characterCount.words()} | 字符:{" "}
-                {editor.storage.characterCount.characters()}
-              </span>
+              <span>字符: {editor.storage.characterCount.characters()}</span>
             ) : (
-              <span>字数: 0 | 字符: 0</span>
+              <span>字符: 0</span>
             )}
           </div>
         </div>

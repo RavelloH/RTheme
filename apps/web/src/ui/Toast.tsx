@@ -15,6 +15,7 @@ import {
   RiErrorWarningLine,
   RiInformationLine,
 } from "@remixicon/react";
+import { Button } from "./Button";
 
 export type ToastType = "success" | "error" | "warning" | "info";
 
@@ -214,9 +215,10 @@ function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
 interface ToastProps {
   toast: ToastMessage;
   onRemove: (id: string) => void;
+  canClose?: boolean;
 }
 
-function Toast({ toast, onRemove }: ToastProps) {
+function Toast({ toast, onRemove, canClose }: ToastProps) {
   const getIcon = () => {
     switch (toast.type) {
       case "success":
@@ -296,30 +298,30 @@ function Toast({ toast, onRemove }: ToastProps) {
               {toast.message}
             </div>
           )}
-          {toast.action && (
-            <button
-              onClick={() => {
-                toast.action?.onClick();
-                onRemove(toast.id);
-              }}
-              className="
-                mt-2
-                text-sm
-                font-medium
-                text-primary
-                hover:underline
-                focus:outline-none
-                focus:underline
-              "
-            >
-              {toast.action.label}
-            </button>
-          )}
         </div>
       </div>
-      <button
-        onClick={() => onRemove(toast.id)}
-        className="
+      {toast.action && (
+        <Button
+          label={toast.action.label}
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            toast.action?.onClick();
+            onRemove(toast.id);
+          }}
+          className="
+            flex-shrink-0
+            text-sm
+            font-medium
+            focus:outline-none
+            focus:underline
+          "
+        ></Button>
+      )}
+      {canClose && (
+        <button
+          onClick={() => onRemove(toast.id)}
+          className="
           absolute
           right-1
           top-1
@@ -336,10 +338,11 @@ function Toast({ toast, onRemove }: ToastProps) {
           focus:ring-ring
           group-hover:opacity-100
         "
-        aria-label="关闭通知"
-      >
-        <RiCloseLine size="1em" />
-      </button>
+          aria-label="关闭通知"
+        >
+          <RiCloseLine size="1em" />
+        </button>
+      )}
     </motion.div>
   );
 }
