@@ -71,7 +71,8 @@ export default function SettingSelect() {
       type: "setting-select",
       category: "site",
     });
-  }, [broadcast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 只在组件挂载时执行一次
 
   return (
     <GridItem areas={[5, 6, 7, 8, 9, 10, 11, 12]} width={1.5} height={0.5}>
