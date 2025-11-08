@@ -1,7 +1,7 @@
 /* Tiptap Editor Styles */
 
 .tiptap {
-  @apply min-h-full;
+  @apply min-h-full text-secondary-foreground;
 }
 
 /* Text Alignment */
@@ -17,6 +17,13 @@
   text-align: right;
 }
 
+.tiptap p {
+  @apply my-4 leading-relaxed;
+}
+
+.tiptap blockquote p {
+  @apply my-1;
+}
 /* Placeholder */
 .tiptap p.is-editor-empty:first-child::before {
   @apply text-foreground/30 float-left h-0 pointer-events-none;
@@ -42,20 +49,20 @@
 
 /* Blockquote */
 .tiptap blockquote {
-  @apply border-l-4 border-foreground pl-4 ml-0 opacity-80 italic;
+  @apply border-l-4 border-foreground pl-4 ml-0 opacity-80 py-2 my-4 bg-muted/50;
 }
 
 /* Code */
-.tiptap code {
-  @apply bg-foreground/10 text-foreground px-1.5 py-0.5 rounded text-sm font-mono;
+.tiptap p > code {
+  @apply bg-foreground/10 text-foreground px-1.5 py-0.5 rounded-xs text-sm font-mono hover:bg-foreground/20 transition-all select-all;
 }
 
 .tiptap pre {
-  @apply bg-foreground/10 text-foreground p-4 rounded-lg overflow-x-auto;
+  @apply bg-foreground/10 text-foreground p-4 rounded overflow-x-auto;
 }
 
 .tiptap pre code {
-  @apply bg-transparent p-0;
+  @apply bg-transparent p-0 font-mono text-sm;
 }
 
 /* Headings */
@@ -65,11 +72,11 @@
 .tiptap h4,
 .tiptap h5,
 .tiptap h6 {
-  @apply font-bold mt-6 mb-3 leading-tight;
+  @apply font-bold mt-6 mb-3 leading-tight text-foreground;
 }
 
 .tiptap h1 {
-  @apply text-4xl;
+  @apply text-4xl border-b-2 pb-2 border-border;
 }
 .tiptap h2 {
   @apply text-3xl;
@@ -109,7 +116,7 @@
 
 .tiptap th,
 .tiptap td {
-  @apply border border-foreground/20 px-3 py-2 text-left;
+  @apply border border-foreground/20 px-1 py-1 text-left;
 }
 
 .tiptap th {
@@ -117,13 +124,26 @@
 }
 
 /* Lists */
+.tiptap li > p {
+  @apply m-0;
+}
+
 .tiptap ul,
 .tiptap ol {
   @apply pl-6;
 }
 
+/* Unordered List - Multi-level styling */
 .tiptap ul {
-  @apply list-disc;
+  list-style-type: disc;
+}
+
+.tiptap :is(ul) :is(ul) {
+  list-style-type: circle;
+}
+
+.tiptap :is(ul) :is(ul) :is(ul) {
+  list-style-type: square;
 }
 
 .tiptap ol {
@@ -132,5 +152,15 @@
 
 /* Highlight */
 .tiptap mark {
-  @apply bg-yellow-200 dark:bg-yellow-800 px-1 rounded;
+  @apply bg-primary/90 font-bold text-primary-foreground rounded-xs mx-1;
+}
+
+/* Strikethrough */
+.tiptap s {
+  @apply line-through text-muted-foreground;
+}
+
+/* Bold */
+.tiptap strong {
+  @apply font-bold text-foreground;
 }

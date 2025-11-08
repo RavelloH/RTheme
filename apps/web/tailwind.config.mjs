@@ -39,7 +39,7 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Consolas', 'monospace'],
+        mono: ['var(--font-mono)', 'JetBrains Mono', 'Sarasa Mono SC', 'Noto Sans Mono CJK SC', 'Microsoft YaHei', 'Consolas', 'monospace'],
       },
       borderRadius: {
         lg: 'var(--radius)',

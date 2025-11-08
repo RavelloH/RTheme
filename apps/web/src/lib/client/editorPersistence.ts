@@ -63,7 +63,7 @@ turndownService.addRule("taskListItem", {
   },
 });
 
-// 自定义规则：表格 - 增强处理带有复杂属性的表格
+// 自定义规则:表格 - 增强处理带有复杂属性的表格,保留单元格内格式
 turndownService.addRule("customTable", {
   filter: "table",
   replacement: (content, node) => {
@@ -78,11 +78,15 @@ turndownService.addRule("customTable", {
       const tableCells = Array.from(tr.querySelectorAll("td, th"));
 
       tableCells.forEach((cell) => {
-        // 提取单元格文本内容，移除多余的空白
-        let cellText = cell.textContent?.trim() || "";
-        // 移除换行符，替换为空格
-        cellText = cellText.replace(/\n/g, " ");
-        cells.push(cellText);
+        // 使用 innerHTML 保留格式,然后通过 turndownService 转换
+        const cellHTML = (cell as HTMLElement).innerHTML;
+        // 将 HTML 转换为 Markdown,保留粗体、斜体等格式
+        let cellMarkdown = turndownService.turndown(cellHTML);
+        // 移除换行符,替换为空格,避免破坏表格结构
+        cellMarkdown = cellMarkdown.replace(/\n/g, " ").trim();
+        // 转义管道符,避免破坏表格结构
+        cellMarkdown = cellMarkdown.replace(/\|/g, "\\|");
+        cells.push(cellMarkdown);
       });
 
       if (cells.length > 0) {

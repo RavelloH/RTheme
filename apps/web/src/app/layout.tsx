@@ -3,6 +3,7 @@ import "server-only";
 
 // Fonts
 import { Inter } from "next/font/google";
+import { IBM_Plex_Mono } from "next/font/google";
 
 // Styles
 import "./globals.css";
@@ -30,6 +31,11 @@ import { getConfig } from "@/lib/server/configCache";
 import { ColorConfig } from "@/types/config";
 
 const inter = Inter({ subsets: ["latin"] });
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-mono",
+});
 
 export default async function RootLayout({
   children,
@@ -44,7 +50,7 @@ export default async function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className={`${inter.className} h-full`}
+      className={`${inter.className} ${ibmPlexMono.variable} h-full`}
       suppressHydrationWarning
     >
       <body
