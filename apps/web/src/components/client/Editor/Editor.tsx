@@ -43,7 +43,13 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { Tooltip } from "@/ui/Tooltip";
 import { Select } from "@/ui/Select";
 import { Button } from "@/ui/Button";
+import { Dialog } from "@/ui/Dialog";
+import { Input } from "@/ui/Input";
+import { Checkbox } from "@/ui/Checkbox";
 import { TiptapEditor } from "./TiptapEditor";
+import { MarkdownEditor } from "./MarkdownEditor";
+import { createPost } from "@/actions/post";
+import { useNavigateWithTransition } from "@/components/Link";
 import { TableToolbar } from "./TableToolbar";
 import { TableSizePicker } from "./TableSizePicker";
 import { TableOfContents } from "./TableOfContents";
@@ -55,20 +61,28 @@ import { useToast } from "@/ui/Toast";
 import {
   loadEditorContent,
   clearEditorContent,
+  saveEditorContent,
 } from "@/lib/client/editorPersistence";
 import type { Editor as TiptapEditorType } from "@tiptap/react";
+import type { editor } from "monaco-editor";
+import * as monacoHelpers from "./MonacoHelpers";
 
 export default function Editor({ content }: { content?: string }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [editor, setEditor] = useState<TiptapEditorType | null>(null);
+  const [monacoEditor, setMonacoEditor] =
+    useState<editor.IStandaloneCodeEditor | null>(null);
   const [isTableToolbarVisible, setIsTableToolbarVisible] = useState(false);
   const [showInvisibleChars, setShowInvisibleChars] = useState(false);
   const [showTableOfContents, setShowTableOfContents] = useState(true);
   const [initialContent, setInitialContent] = useState<string | undefined>(
     content,
   );
+  const [markdownContent, setMarkdownContent] = useState<string>("");
   const toast = useToast();
+  const navigate = useNavigateWithTransition();
   const hasLoadedFromStorage = useRef(false); // 标记是否已从storage加载
+  const isInitialMount = useRef(true); // 标记是否是首次挂载
   const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false);
   const [isLinkToolbarVisible, setIsLinkToolbarVisible] = useState(false);
   const [currentLinkUrl, setCurrentLinkUrl] = useState("");
@@ -76,6 +90,40 @@ export default function Editor({ content }: { content?: string }) {
     useState(false);
   const [currentCodeBlockLanguage, setCurrentCodeBlockLanguage] = useState("");
   const [editorType, setEditorType] = useState<string | number>("visual");
+
+  // 设置详细信息对话框状态
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 确认对话框状态
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<
+    "draft" | "publish" | null
+  >(null);
+  const [showCommitInput, setShowCommitInput] = useState(false);
+  const [commitMessage, setCommitMessage] = useState("");
+
+  // 文章详细信息表单
+  const [detailsForm, setDetailsForm] = useState({
+    title: "",
+    slug: "",
+    excerpt: "",
+    status: "DRAFT",
+    isPinned: false,
+    allowComments: true,
+    robotsIndex: true,
+    metaTitle: "",
+    metaDescription: "",
+    metaKeywords: "",
+    featuredImage: "",
+    categories: [] as string[], // 分类名称数组
+    tags: [] as string[], // 标签名称数组
+  });
+
+  // 编辑器类型切换时重置加载标记
+  useEffect(() => {
+    hasLoadedFromStorage.current = false;
+  }, [editorType]);
 
   // 编辑器状态
   const [editorState, setEditorState] = useState({
@@ -91,6 +139,47 @@ export default function Editor({ content }: { content?: string }) {
 
   // 在组件挂载时检查localStorage中是否有保存的内容（只执行一次）
   useEffect(() => {
+    // 如果是Markdown或MDX编辑器模式
+    if (editorType === "markdown" || editorType === "mdx") {
+      if (hasLoadedFromStorage.current) return;
+
+      const savedData = loadEditorContent();
+
+      if (savedData?.new?.content) {
+        setMarkdownContent(savedData.new.content);
+        hasLoadedFromStorage.current = true;
+
+        // 加载保存的配置
+        if (savedData.new.config) {
+          setDetailsForm((prev) => ({
+            ...prev,
+            ...savedData.new.config,
+          }));
+        }
+
+        // 只在首次挂载时显示toast
+        if (isInitialMount.current) {
+          const lastUpdated = new Date(
+            savedData.new.lastUpdatedAt,
+          ).toLocaleString("zh-CN");
+
+          toast.info("已加载草稿", `上次保存于 ${lastUpdated}`, 10000, {
+            label: "撤销",
+            onClick: () => {
+              clearEditorContent();
+              setMarkdownContent(content || "");
+              toast.success("已撤销", "草稿已删除");
+            },
+          });
+          isInitialMount.current = false;
+        }
+      } else {
+        setMarkdownContent(content || "");
+      }
+      return;
+    }
+
+    // Tiptap编辑器模式
     // 必须等待编辑器准备好
     if (!editor) return;
 
@@ -109,37 +198,48 @@ export default function Editor({ content }: { content?: string }) {
       setInitialContent(savedContent);
       hasLoadedFromStorage.current = true;
 
+      // 加载保存的配置
+      if (savedData.new.config) {
+        setDetailsForm((prev) => ({
+          ...prev,
+          ...savedData.new.config,
+        }));
+      }
+
       // 使用Markdown扩展的parse方法将Markdown转换为JSON
       // @ts-expect-error - markdown.parse方法可能没有类型定义
       const json = editor.markdown.parse(savedContent);
       editor.commands.setContent(json);
 
-      // 显示Toast提示
-      const lastUpdated = new Date(savedData.new.lastUpdatedAt).toLocaleString(
-        "zh-CN",
-      );
+      // 只在首次挂载时显示toast
+      if (isInitialMount.current) {
+        const lastUpdated = new Date(
+          savedData.new.lastUpdatedAt,
+        ).toLocaleString("zh-CN");
 
-      toast.info("已加载草稿", `上次保存于 ${lastUpdated}`, 10000, {
-        label: "撤销",
-        onClick: () => {
-          clearEditorContent();
-          setInitialContent(content);
+        toast.info("已加载草稿", `上次保存于 ${lastUpdated}`, 10000, {
+          label: "撤销",
+          onClick: () => {
+            clearEditorContent();
+            setInitialContent(content);
 
-          // 清空编辑器内容，使用原始content
-          if (editor) {
-            editor.commands.setContent(content || "");
-          }
+            // 清空编辑器内容，使用原始content
+            if (editor) {
+              editor.commands.setContent(content || "");
+            }
 
-          toast.success("已撤销", "草稿已删除");
-        },
-      });
+            toast.success("已撤销", "草稿已删除");
+          },
+        });
+        isInitialMount.current = false;
+      }
     } else {
       // 使用传入的content
       console.log("没有草稿，使用默认内容");
       setInitialContent(content);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor]); // 依赖editor，确保编辑器准备好后加载内容
+  }, [editor, editorType]); // 依赖editor和editorType，确保编辑器准备好后加载内容
 
   const handleEditorReady = useCallback((editorInstance: TiptapEditorType) => {
     setEditor(editorInstance);
@@ -234,104 +334,153 @@ export default function Editor({ content }: { content?: string }) {
 
   // 工具栏按钮操作
   const handleUndo = () => {
-    editor?.chain().focus().undo().run();
+    if (editorType === "visual") {
+      editor?.chain().focus().undo().run();
+    } else if (monacoEditor) {
+      monacoEditor.trigger("", "undo", null);
+    }
   };
   const handleRedo = () => {
-    editor?.chain().focus().redo().run();
+    if (editorType === "visual") {
+      editor?.chain().focus().redo().run();
+    } else if (monacoEditor) {
+      monacoEditor.trigger("", "redo", null);
+    }
   };
   const handleBold = () => {
-    editor?.chain().focus().toggleBold().run();
-    setTimeout(updateState, 0);
+    if (editorType === "visual") {
+      editor?.chain().focus().toggleBold().run();
+      setTimeout(updateState, 0);
+    } else if (monacoEditor) {
+      monacoHelpers.wrapSelection(monacoEditor, "**");
+    }
   };
   const handleItalic = () => {
-    editor?.chain().focus().toggleItalic().run();
-    setTimeout(updateState, 0);
+    if (editorType === "visual") {
+      editor?.chain().focus().toggleItalic().run();
+      setTimeout(updateState, 0);
+    } else if (monacoEditor) {
+      monacoHelpers.wrapSelection(monacoEditor, "*");
+    }
   };
   const handleStrike = () => {
-    editor?.chain().focus().toggleStrike().run();
-    setTimeout(updateState, 0);
+    if (editorType === "visual") {
+      editor?.chain().focus().toggleStrike().run();
+      setTimeout(updateState, 0);
+    } else if (monacoEditor) {
+      monacoHelpers.wrapSelection(monacoEditor, "~~");
+    }
   };
   const handleUnderline = () => {
-    editor?.chain().focus().toggleUnderline().run();
-    setTimeout(updateState, 0);
+    if (editorType === "visual") {
+      editor?.chain().focus().toggleUnderline().run();
+      setTimeout(updateState, 0);
+    } else if (monacoEditor) {
+      monacoHelpers.wrapSelection(monacoEditor, "<u>", "</u>");
+    }
   };
   const handleHighlight = () => {
-    editor?.chain().focus().toggleHighlight().run();
-    setTimeout(updateState, 0);
+    if (editorType === "visual") {
+      editor?.chain().focus().toggleHighlight().run();
+      setTimeout(updateState, 0);
+    } else if (monacoEditor) {
+      monacoHelpers.wrapSelection(monacoEditor, "<mark>", "</mark>");
+    }
   };
   const handleBlockquote = () => {
-    editor?.chain().focus().toggleBlockquote().run();
+    if (editorType === "visual") {
+      editor?.chain().focus().toggleBlockquote().run();
+    } else if (monacoEditor) {
+      monacoHelpers.toggleLinePrefix(monacoEditor, "> ");
+    }
   };
   const handleCode = () => {
-    editor?.chain().focus().toggleCode().run();
-    setTimeout(updateState, 0);
+    if (editorType === "visual") {
+      editor?.chain().focus().toggleCode().run();
+      setTimeout(updateState, 0);
+    } else if (monacoEditor) {
+      monacoHelpers.wrapSelection(monacoEditor, "`");
+    }
   };
   const handleCodeBlock = () => {
-    editor?.chain().focus().toggleCodeBlock().run();
+    if (editorType === "visual") {
+      editor?.chain().focus().toggleCodeBlock().run();
+    } else if (monacoEditor) {
+      monacoHelpers.insertCodeBlock(monacoEditor);
+    }
   };
 
   const handleInsertTable = (rows: number, cols: number) => {
-    editor
-      ?.chain()
-      .focus()
-      .insertTable({ rows, cols, withHeaderRow: rows > 1 })
-      .run();
+    if (editorType === "visual") {
+      editor
+        ?.chain()
+        .focus()
+        .insertTable({ rows, cols, withHeaderRow: rows > 1 })
+        .run();
+    } else if (monacoEditor) {
+      monacoHelpers.insertTable(monacoEditor, rows, cols);
+    }
   };
 
   const handleLinkSubmit = (text: string, url: string) => {
-    if (!editor) return;
+    if (editorType === "visual") {
+      if (!editor) return;
 
-    const isEditingExistingLink = editor.isActive("link");
+      const isEditingExistingLink = editor.isActive("link");
 
-    if (isEditingExistingLink) {
-      // 编辑现有链接
-      if (text) {
-        // 如果提供了新文字，需要替换整个链接内容
-        editor
-          .chain()
-          .focus()
-          .deleteSelection() // 删除当前选中的内容（如果有）
-          .insertContent({
-            type: "text",
-            marks: [{ type: "link", attrs: { href: url } }],
-            text: text,
-          })
-          .run();
+      if (isEditingExistingLink) {
+        // 编辑现有链接
+        if (text) {
+          // 如果提供了新文字，需要替换整个链接内容
+          editor
+            .chain()
+            .focus()
+            .deleteSelection() // 删除当前选中的内容（如果有）
+            .insertContent({
+              type: "text",
+              marks: [{ type: "link", attrs: { href: url } }],
+              text: text,
+            })
+            .run();
+        } else {
+          // 只修改URL，保持文字不变
+          editor.chain().focus().setLink({ href: url }).run();
+        }
       } else {
-        // 只修改URL，保持文字不变
-        editor.chain().focus().setLink({ href: url }).run();
-      }
-    } else {
-      // 创建新链接
-      const { from, to } = editor.state.selection;
-      const hasSelection = from !== to;
+        // 创建新链接
+        const { from, to } = editor.state.selection;
+        const hasSelection = from !== to;
 
-      if (text) {
-        // 如果提供了文字，插入新链接
-        editor
-          .chain()
-          .focus()
-          .insertContent({
-            type: "text",
-            marks: [{ type: "link", attrs: { href: url } }],
-            text: text,
-          })
-          .run();
-      } else if (hasSelection) {
-        // 如果有选中文字但没有提供新文字，则给选中的文字添加链接
-        editor.chain().focus().setLink({ href: url }).run();
-      } else {
-        // 如果没有提供文字也没有选中文字，使用 URL 作为显示文字
-        editor
-          .chain()
-          .focus()
-          .insertContent({
-            type: "text",
-            marks: [{ type: "link", attrs: { href: url } }],
-            text: url,
-          })
-          .run();
+        if (text) {
+          // 如果提供了文字，插入新链接
+          editor
+            .chain()
+            .focus()
+            .insertContent({
+              type: "text",
+              marks: [{ type: "link", attrs: { href: url } }],
+              text: text,
+            })
+            .run();
+        } else if (hasSelection) {
+          // 如果有选中文字但没有提供新文字，则给选中的文字添加链接
+          editor.chain().focus().setLink({ href: url }).run();
+        } else {
+          // 如果没有提供文字也没有选中文字，使用 URL 作为显示文字
+          editor
+            .chain()
+            .focus()
+            .insertContent({
+              type: "text",
+              marks: [{ type: "link", attrs: { href: url } }],
+              text: url,
+            })
+            .run();
+        }
       }
+    } else if (monacoEditor) {
+      // Markdown/MDX 模式
+      monacoHelpers.insertLink(monacoEditor, url, text);
     }
   };
 
@@ -389,21 +538,41 @@ export default function Editor({ content }: { content?: string }) {
     }, 10);
   };
   const handleImage = () => {
-    const url = window.prompt("输入图片地址:");
-    if (url) {
-      editor?.chain().focus().setImage({ src: url }).run();
+    if (editorType === "visual") {
+      const url = window.prompt("输入图片地址:");
+      if (url) {
+        editor?.chain().focus().setImage({ src: url }).run();
+      }
+    } else if (monacoEditor) {
+      const url = window.prompt("输入图片地址:");
+      if (url) {
+        const alt = window.prompt("输入图片描述:", "图片") || "图片";
+        monacoHelpers.insertImage(monacoEditor, url, alt);
+      }
     }
   };
   const handleHorizontalRule = () => {
-    editor?.chain().focus().setHorizontalRule().run();
+    if (editorType === "visual") {
+      editor?.chain().focus().setHorizontalRule().run();
+    } else if (monacoEditor) {
+      monacoHelpers.insertHorizontalRule(monacoEditor);
+    }
   };
   const handleSuperscript = () => {
-    editor?.chain().focus().toggleSuperscript().run();
-    setTimeout(updateState, 0);
+    if (editorType === "visual") {
+      editor?.chain().focus().toggleSuperscript().run();
+      setTimeout(updateState, 0);
+    } else if (monacoEditor) {
+      monacoHelpers.wrapSelection(monacoEditor, "<sup>", "</sup>");
+    }
   };
   const handleSubscript = () => {
-    editor?.chain().focus().toggleSubscript().run();
-    setTimeout(updateState, 0);
+    if (editorType === "visual") {
+      editor?.chain().focus().toggleSubscript().run();
+      setTimeout(updateState, 0);
+    } else if (monacoEditor) {
+      monacoHelpers.wrapSelection(monacoEditor, "<sub>", "</sub>");
+    }
   };
 
   const toggleInvisibleChars = () => {
@@ -411,15 +580,197 @@ export default function Editor({ content }: { content?: string }) {
   };
 
   const handleAlignLeft = () => {
-    editor?.chain().focus().setTextAlign("left").run();
+    if (editorType === "visual") {
+      editor?.chain().focus().setTextAlign("left").run();
+    } else if (monacoEditor) {
+      monacoHelpers.setTextAlign(monacoEditor, "left");
+    }
   };
 
   const handleAlignCenter = () => {
-    editor?.chain().focus().setTextAlign("center").run();
+    if (editorType === "visual") {
+      editor?.chain().focus().setTextAlign("center").run();
+    } else if (monacoEditor) {
+      monacoHelpers.setTextAlign(monacoEditor, "center");
+    }
   };
 
   const handleAlignRight = () => {
-    editor?.chain().focus().setTextAlign("right").run();
+    if (editorType === "visual") {
+      editor?.chain().focus().setTextAlign("right").run();
+    } else if (monacoEditor) {
+      monacoHelpers.setTextAlign(monacoEditor, "right");
+    }
+  };
+
+  // 打开设置详细信息对话框
+  const openDetailsDialog = () => {
+    setDetailsDialogOpen(true);
+  };
+
+  // 关闭设置详细信息对话框
+  const closeDetailsDialog = () => {
+    setDetailsDialogOpen(false);
+  };
+
+  // 处理表单字段变化
+  const handleDetailsFieldChange = (
+    field: string,
+    value: string | boolean | number[],
+  ) => {
+    setDetailsForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // 保存详细信息配置
+  const handleSaveDetails = async () => {
+    // 验证必填字段
+    if (!detailsForm.title.trim()) {
+      toast.error("请填写文章标题");
+      return;
+    }
+    if (!detailsForm.slug.trim()) {
+      toast.error("请填写文章 Slug");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // 获取当前编辑器内容
+      let currentContent = "";
+      if (editorType === "visual" && editor) {
+        currentContent = editor.getHTML();
+      } else if (editorType === "markdown" || editorType === "mdx") {
+        currentContent = markdownContent;
+      }
+
+      // 保存到 localStorage
+      saveEditorContent(currentContent, detailsForm, editorType !== "visual");
+
+      toast.success("详细信息已保存");
+      closeDetailsDialog();
+    } catch (error) {
+      console.error("保存详细信息失败:", error);
+      toast.error("保存失败，请稍后重试");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 打开确认对话框（保存为草稿/发布）
+  const openConfirmDialog = (action: "draft" | "publish") => {
+    setConfirmAction(action);
+    setShowCommitInput(false);
+    setCommitMessage("");
+    setConfirmDialogOpen(true);
+  };
+
+  // 关闭确认对话框
+  const closeConfirmDialog = () => {
+    setConfirmDialogOpen(false);
+    setConfirmAction(null);
+    setShowCommitInput(false);
+    setCommitMessage("");
+  };
+
+  // 从确认对话框打开详细信息设置
+  const openDetailsFromConfirm = () => {
+    closeConfirmDialog();
+    openDetailsDialog();
+  };
+
+  // 进入提交信息输入步骤
+  const handleNextStep = () => {
+    // 验证必填字段
+    if (!detailsForm.title.trim()) {
+      toast.error("请填写文章标题");
+      return;
+    }
+    if (!detailsForm.slug.trim()) {
+      toast.error("请填写文章 Slug");
+      return;
+    }
+    setShowCommitInput(true);
+  };
+
+  // 返回确认信息步骤
+  const handleBackToConfirm = () => {
+    setShowCommitInput(false);
+  };
+
+  // 最终保存/发布操作
+  const handleFinalSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      // 获取当前编辑器内容
+      let currentContent = "";
+      if (editorType === "visual" && editor) {
+        currentContent = editor.getHTML();
+      } else if (editorType === "markdown" || editorType === "mdx") {
+        currentContent = markdownContent;
+      }
+
+      // 准备提交数据
+      const status = confirmAction === "publish" ? "PUBLISHED" : "DRAFT";
+      const postData = {
+        title: detailsForm.title,
+        slug: detailsForm.slug,
+        content: currentContent,
+        excerpt: detailsForm.excerpt || undefined,
+        featuredImage: detailsForm.featuredImage || undefined,
+        status: status as "DRAFT" | "PUBLISHED",
+        isPinned: detailsForm.isPinned,
+        allowComments: detailsForm.allowComments,
+        metaTitle: detailsForm.metaTitle || undefined,
+        metaDescription: detailsForm.metaDescription || undefined,
+        metaKeywords: detailsForm.metaKeywords || undefined,
+        robotsIndex: detailsForm.robotsIndex,
+        categories:
+          detailsForm.categories.length > 0
+            ? detailsForm.categories
+            : undefined,
+        tags: detailsForm.tags.length > 0 ? detailsForm.tags : undefined,
+        commitMessage: commitMessage || undefined,
+      };
+
+      // 调用 server action
+      const result = await createPost(postData);
+
+      // 检查是否是 NextResponse
+      let response;
+      if (result instanceof Response) {
+        response = await result.json();
+      } else {
+        response = result;
+      }
+
+      // 处理结果
+      if (response.success) {
+        toast.success(
+          confirmAction === "publish" ? "文章已发布" : "草稿已保存",
+          commitMessage ? `提交信息：${commitMessage}` : undefined,
+        );
+
+        // 清除 localStorage 中的草稿
+        clearEditorContent();
+
+        closeConfirmDialog();
+
+        // 延迟导航，让用户看到成功提示
+        setTimeout(() => {
+          navigate("/admin/posts");
+        }, 1000);
+      } else {
+        toast.error(response.error?.message || "操作失败，请稍后重试");
+      }
+    } catch (error) {
+      console.error("保存失败:", error);
+      toast.error("操作失败，请稍后重试");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // 标题选项
@@ -428,37 +779,73 @@ export default function Editor({ content }: { content?: string }) {
       value: "h1",
       label: "标题 1",
       icon: <RiH1 size="1.2em" />,
-      onClick: () => editor?.chain().focus().toggleHeading({ level: 1 }).run(),
+      onClick: () => {
+        if (editorType === "visual") {
+          editor?.chain().focus().toggleHeading({ level: 1 }).run();
+        } else if (monacoEditor) {
+          monacoHelpers.setHeading(monacoEditor, 1);
+        }
+      },
     },
     {
       value: "h2",
       label: "标题 2",
       icon: <RiH2 size="1.2em" />,
-      onClick: () => editor?.chain().focus().toggleHeading({ level: 2 }).run(),
+      onClick: () => {
+        if (editorType === "visual") {
+          editor?.chain().focus().toggleHeading({ level: 2 }).run();
+        } else if (monacoEditor) {
+          monacoHelpers.setHeading(monacoEditor, 2);
+        }
+      },
     },
     {
       value: "h3",
       label: "标题 3",
       icon: <RiH3 size="1.2em" />,
-      onClick: () => editor?.chain().focus().toggleHeading({ level: 3 }).run(),
+      onClick: () => {
+        if (editorType === "visual") {
+          editor?.chain().focus().toggleHeading({ level: 3 }).run();
+        } else if (monacoEditor) {
+          monacoHelpers.setHeading(monacoEditor, 3);
+        }
+      },
     },
     {
       value: "h4",
       label: "标题 4",
       icon: <RiH4 size="1.2em" />,
-      onClick: () => editor?.chain().focus().toggleHeading({ level: 4 }).run(),
+      onClick: () => {
+        if (editorType === "visual") {
+          editor?.chain().focus().toggleHeading({ level: 4 }).run();
+        } else if (monacoEditor) {
+          monacoHelpers.setHeading(monacoEditor, 4);
+        }
+      },
     },
     {
       value: "h5",
       label: "标题 5",
       icon: <RiH5 size="1.2em" />,
-      onClick: () => editor?.chain().focus().toggleHeading({ level: 5 }).run(),
+      onClick: () => {
+        if (editorType === "visual") {
+          editor?.chain().focus().toggleHeading({ level: 5 }).run();
+        } else if (monacoEditor) {
+          monacoHelpers.setHeading(monacoEditor, 5);
+        }
+      },
     },
     {
       value: "h6",
       label: "标题 6",
       icon: <RiH6 size="1.2em" />,
-      onClick: () => editor?.chain().focus().toggleHeading({ level: 6 }).run(),
+      onClick: () => {
+        if (editorType === "visual") {
+          editor?.chain().focus().toggleHeading({ level: 6 }).run();
+        } else if (monacoEditor) {
+          monacoHelpers.setHeading(monacoEditor, 6);
+        }
+      },
     },
   ];
 
@@ -468,19 +855,37 @@ export default function Editor({ content }: { content?: string }) {
       value: "unordered",
       label: "无序列表",
       icon: <RiListUnordered size="1.2em" />,
-      onClick: () => editor?.chain().focus().toggleBulletList().run(),
+      onClick: () => {
+        if (editorType === "visual") {
+          editor?.chain().focus().toggleBulletList().run();
+        } else if (monacoEditor) {
+          monacoHelpers.toggleLinePrefix(monacoEditor, "- ");
+        }
+      },
     },
     {
       value: "ordered",
       label: "有序列表",
       icon: <RiListOrdered size="1.2em" />,
-      onClick: () => editor?.chain().focus().toggleOrderedList().run(),
+      onClick: () => {
+        if (editorType === "visual") {
+          editor?.chain().focus().toggleOrderedList().run();
+        } else if (monacoEditor) {
+          monacoHelpers.toggleLinePrefix(monacoEditor, "1. ");
+        }
+      },
     },
     {
       value: "task",
       label: "待办事项",
       icon: <RiListCheck2 size="1.2em" />,
-      onClick: () => editor?.chain().focus().toggleTaskList().run(),
+      onClick: () => {
+        if (editorType === "visual") {
+          editor?.chain().focus().toggleTaskList().run();
+        } else if (monacoEditor) {
+          monacoHelpers.toggleLinePrefix(monacoEditor, "- [ ] ");
+        }
+      },
     },
   ];
 
@@ -614,248 +1019,304 @@ export default function Editor({ content }: { content?: string }) {
         width={3.2}
         className="flex items-center justify-center px-4 gap-2 border-b border-foreground/10"
       >
-        {/* 撤销/重做按钮 */}
-        <div className="flex gap-1">
-          {toolbarButtons.map((button, index) => (
-            <Tooltip key={index} content={button.name}>
-              <Toggle size="sm" variant="default" onClick={button.action}>
-                {button.icon}
-              </Toggle>
-            </Tooltip>
-          ))}
-        </div>
-
-        <div className="w-px h-6 bg-foreground/20" />
-
-        {/* 标题下拉菜单 */}
-        <Tooltip content="标题">
-          <Dropdown
-            trigger={
-              <div className="inline-flex items-center justify-center gap-0 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 px-2">
-                <RiHeading size="1.2em" />
-              </div>
-            }
-            options={headingOptions}
-          />
-        </Tooltip>
-
-        <div className="w-px h-6 bg-foreground/20" />
-
-        {/* 文本格式化按钮组 */}
-        <div className="flex gap-1">
-          {formattingButtons.map((button, index) => (
-            <Tooltip key={index} content={button.name}>
-              <Toggle
-                size="sm"
-                variant="default"
-                pressed={button.isActive}
-                onClick={button.action}
-              >
-                {button.icon}
-              </Toggle>
-            </Tooltip>
-          ))}
-        </div>
-
-        <div className="w-px h-6 bg-foreground/20" />
-
-        {/* 对齐下拉菜单 */}
-        <Tooltip content="对齐">
-          <Dropdown
-            trigger={
-              <div className="inline-flex items-center justify-center gap-0 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 px-2">
-                <RiAlignLeft size="1.2em" />
-              </div>
-            }
-            options={alignOptions}
-          />
-        </Tooltip>
-
-        <div className="w-px h-6 bg-foreground/20" />
-
-        {/* 列表下拉菜单 */}
-        <Tooltip content="列表">
-          <Dropdown
-            trigger={
-              <div className="inline-flex items-center justify-center gap-0 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 px-2">
-                <RiListUnordered size="1.2em" />
-              </div>
-            }
-            options={listOptions}
-          />
-        </Tooltip>
-
-        <div className="w-px h-6 bg-foreground/20" />
-
-        {/* 块级元素按钮 */}
-        <div className="flex gap-1">
-          {blockButtons.map((button, index) => (
-            <Tooltip key={index} content={button.name}>
-              <Toggle
-                size="sm"
-                variant="default"
-                pressed={button.isActive}
-                onClick={button.action}
-              >
-                {button.icon}
-              </Toggle>
-            </Tooltip>
-          ))}
-
-          {/* 插入表格按钮 */}
-          <TableSizePicker
-            onSelect={handleInsertTable}
-            trigger={
-              <Tooltip content="插入表格">
-                <div className="inline-flex items-center justify-center gap-0 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 px-2">
-                  <RiTable2 size="1.2em" />
-                </div>
+        <div className="flex items-center gap-2 w-full justify-center">
+          {/* 撤销/重做按钮 */}
+          <div className="flex gap-1">
+            {toolbarButtons.map((button, index) => (
+              <Tooltip key={index} content={button.name}>
+                <Toggle
+                  size="sm"
+                  variant="default"
+                  onClick={button.action}
+                  tabIndex={-1}
+                >
+                  {button.icon}
+                </Toggle>
               </Tooltip>
-            }
-          />
-        </div>
+            ))}
+          </div>
 
-        <div className="w-px h-6 bg-foreground/20" />
+          <div className="w-px h-6 bg-foreground/20" />
 
-        {/* 插入元素按钮 */}
-        <div className="flex gap-1">
-          {/* 链接按钮 - 使用 Popover */}
-          <Tooltip content="链接">
-            <LinkPopover
-              open={isLinkPopoverOpen}
-              onOpenChange={setIsLinkPopoverOpen}
-              onSubmit={handleLinkSubmit}
-              initialText={
-                editor?.state.doc.textBetween(
-                  editor?.state.selection.from,
-                  editor?.state.selection.to,
-                  "",
-                ) || ""
+          {/* 标题下拉菜单 */}
+          <Tooltip content="标题">
+            <Dropdown
+              trigger={
+                <div className="inline-flex items-center justify-center gap-0 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 px-2">
+                  <RiHeading size="1.2em" />
+                </div>
               }
-              initialUrl={
-                editor?.isActive("link")
-                  ? editor?.getAttributes("link").href || ""
-                  : ""
-              }
-              isActive={editor?.isActive("link") || false}
+              options={headingOptions}
             />
           </Tooltip>
 
-          {insertButtons.map((button, index) => (
-            <Tooltip key={index} content={button.name}>
-              <Toggle
-                size="sm"
-                variant="default"
-                pressed={button.isActive}
-                onClick={button.action}
-              >
-                {button.icon}
-              </Toggle>
+          <div className="w-px h-6 bg-foreground/20" />
+
+          {/* 文本格式化按钮组 */}
+          <div className="flex gap-1">
+            {formattingButtons.map((button, index) => (
+              <Tooltip key={index} content={button.name}>
+                <Toggle
+                  size="sm"
+                  variant="default"
+                  pressed={button.isActive}
+                  onClick={button.action}
+                  tabIndex={-1}
+                >
+                  {button.icon}
+                </Toggle>
+              </Tooltip>
+            ))}
+          </div>
+
+          <div className="w-px h-6 bg-foreground/20" />
+
+          {/* 对齐下拉菜单 */}
+          <Tooltip content="对齐">
+            <Dropdown
+              trigger={
+                <div className="inline-flex items-center justify-center gap-0 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 px-2">
+                  <RiAlignLeft size="1.2em" />
+                </div>
+              }
+              options={alignOptions}
+            />
+          </Tooltip>
+
+          <div className="w-px h-6 bg-foreground/20" />
+
+          {/* 列表下拉菜单 */}
+          <Tooltip content="列表">
+            <Dropdown
+              trigger={
+                <div className="inline-flex items-center justify-center gap-0 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 px-2">
+                  <RiListUnordered size="1.2em" />
+                </div>
+              }
+              options={listOptions}
+            />
+          </Tooltip>
+
+          <div className="w-px h-6 bg-foreground/20" />
+
+          {/* 块级元素按钮 */}
+          <div className="flex gap-1">
+            {blockButtons.map((button, index) => (
+              <Tooltip key={index} content={button.name}>
+                <Toggle
+                  size="sm"
+                  variant="default"
+                  pressed={button.isActive}
+                  onClick={button.action}
+                  tabIndex={-1}
+                >
+                  {button.icon}
+                </Toggle>
+              </Tooltip>
+            ))}
+
+            {/* 插入表格按钮 */}
+            <TableSizePicker
+              onSelect={handleInsertTable}
+              trigger={
+                <Tooltip content="插入表格">
+                  <div className="inline-flex items-center justify-center gap-0 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 px-2">
+                    <RiTable2 size="1.2em" />
+                  </div>
+                </Tooltip>
+              }
+            />
+          </div>
+
+          <div className="w-px h-6 bg-foreground/20" />
+
+          {/* 插入元素按钮 */}
+          <div className="flex gap-1">
+            {/* 链接按钮 - 使用 Popover */}
+            <Tooltip content="链接">
+              <LinkPopover
+                open={isLinkPopoverOpen}
+                onOpenChange={setIsLinkPopoverOpen}
+                onSubmit={handleLinkSubmit}
+                initialText={
+                  editor?.state.doc.textBetween(
+                    editor?.state.selection.from,
+                    editor?.state.selection.to,
+                    "",
+                  ) || ""
+                }
+                initialUrl={
+                  editor?.isActive("link")
+                    ? editor?.getAttributes("link").href || ""
+                    : ""
+                }
+                isActive={editor?.isActive("link") || false}
+              />
             </Tooltip>
-          ))}
+
+            {insertButtons.map((button, index) => (
+              <Tooltip key={index} content={button.name}>
+                <Toggle
+                  size="sm"
+                  variant="default"
+                  pressed={button.isActive}
+                  onClick={button.action}
+                  tabIndex={-1}
+                >
+                  {button.icon}
+                </Toggle>
+              </Tooltip>
+            ))}
+          </div>
+
+          <div className="w-px h-6 bg-foreground/20" />
+
+          {/* 不可见字符按钮 - 仅在可视化编辑器中可用 */}
+          <Tooltip
+            content={
+              editorType !== "visual"
+                ? "仅可视化编辑器支持"
+                : showInvisibleChars
+                  ? "隐藏不可见字符"
+                  : "显示不可见字符"
+            }
+          >
+            <Toggle
+              size="sm"
+              variant="default"
+              pressed={showInvisibleChars}
+              onClick={toggleInvisibleChars}
+              disabled={editorType !== "visual"}
+              tabIndex={-1}
+            >
+              {showInvisibleChars ? (
+                <RiEyeOffLine size="1.2em" />
+              ) : (
+                <RiEyeLine size="1.2em" />
+              )}
+            </Toggle>
+          </Tooltip>
+
+          {/* 目录切换按钮 - 仅在可视化编辑器中可用 */}
+          <Tooltip
+            content={
+              editorType !== "visual"
+                ? "仅可视化编辑器支持"
+                : showTableOfContents
+                  ? "隐藏目录"
+                  : "显示目录"
+            }
+          >
+            <Toggle
+              size="sm"
+              variant="default"
+              pressed={showTableOfContents}
+              onClick={() => setShowTableOfContents(!showTableOfContents)}
+              disabled={editorType !== "visual"}
+              tabIndex={-1}
+            >
+              <RiMenuLine size="1.2em" />
+            </Toggle>
+          </Tooltip>
+
+          {/* 全屏按钮 */}
+          <Tooltip content={isFullscreen ? "退出全屏" : "全屏"}>
+            <Toggle
+              size="sm"
+              variant="default"
+              pressed={isFullscreen}
+              onPressedChange={toggleFullscreen}
+              tabIndex={-1}
+            >
+              {isFullscreen ? (
+                <RiFullscreenExitLine size="1.2em" />
+              ) : (
+                <RiFullscreenLine size="1.2em" />
+              )}
+            </Toggle>
+          </Tooltip>
         </div>
-
-        <div className="w-px h-6 bg-foreground/20" />
-
-        {/* 不可见字符按钮 */}
-        <Tooltip
-          content={showInvisibleChars ? "隐藏不可见字符" : "显示不可见字符"}
-        >
-          <Toggle
-            size="sm"
-            variant="default"
-            pressed={showInvisibleChars}
-            onClick={toggleInvisibleChars}
-          >
-            {showInvisibleChars ? (
-              <RiEyeOffLine size="1.2em" />
-            ) : (
-              <RiEyeLine size="1.2em" />
-            )}
-          </Toggle>
-        </Tooltip>
-
-        {/* 目录切换按钮 */}
-        <Tooltip content={showTableOfContents ? "隐藏目录" : "显示目录"}>
-          <Toggle
-            size="sm"
-            variant="default"
-            pressed={showTableOfContents}
-            onClick={() => setShowTableOfContents(!showTableOfContents)}
-          >
-            <RiMenuLine size="1.2em" />
-          </Toggle>
-        </Tooltip>
-
-        {/* 全屏按钮 */}
-        <Tooltip content={isFullscreen ? "退出全屏" : "全屏"}>
-          <Toggle
-            size="sm"
-            variant="default"
-            pressed={isFullscreen}
-            onPressedChange={toggleFullscreen}
-          >
-            {isFullscreen ? (
-              <RiFullscreenExitLine size="1.2em" />
-            ) : (
-              <RiFullscreenLine size="1.2em" />
-            )}
-          </Toggle>
-        </Tooltip>
       </GridItem>
       <GridItem
         areas={createArray(2, 11)}
         className="overflow-hidden bg-background relative"
         height={1.5}
       >
-        <TiptapEditor
-          placeholder="开始编写你的内容..."
-          content={initialContent}
-          onEditorReady={handleEditorReady}
-          className="h-full"
-          showInvisibleChars={showInvisibleChars}
-          enablePersistence={true}
-          editorConfig={{
-            editorType: String(editorType),
-            isFullscreen,
-            showTableOfContents,
-          }}
-        />
+        {editorType === "visual" ? (
+          <>
+            <TiptapEditor
+              placeholder="开始编写你的内容..."
+              content={initialContent}
+              onEditorReady={handleEditorReady}
+              className="h-full"
+              showInvisibleChars={showInvisibleChars}
+              enablePersistence={true}
+              editorConfig={{
+                ...detailsForm,
+                editorType: String(editorType),
+                isFullscreen,
+                showTableOfContents,
+              }}
+            />
 
-        {/* 表格工具栏 */}
-        {editor && (
-          <TableToolbar editor={editor} isVisible={isTableToolbarVisible} />
-        )}
+            {/* 表格工具栏 */}
+            {editor && (
+              <TableToolbar editor={editor} isVisible={isTableToolbarVisible} />
+            )}
 
-        {/* 链接工具栏 */}
-        {editor && (
-          <LinkToolbar
-            editor={editor}
-            isVisible={isLinkToolbarVisible}
-            linkUrl={currentLinkUrl}
-            onEdit={handleEditLink}
+            {/* 链接工具栏 */}
+            {editor && (
+              <LinkToolbar
+                editor={editor}
+                isVisible={isLinkToolbarVisible}
+                linkUrl={currentLinkUrl}
+                onEdit={handleEditLink}
+              />
+            )}
+
+            {/* 代码块工具栏 */}
+            {editor && (
+              <CodeBlockToolbar
+                editor={editor}
+                isVisible={isCodeBlockToolbarVisible}
+                currentLanguage={currentCodeBlockLanguage}
+              />
+            )}
+
+            {/* 列表工具栏 */}
+            {editor && <ListToolbar editor={editor} />}
+
+            {/* 目录 - 浮动在右侧 */}
+            {showTableOfContents && (
+              <div className="absolute top-0 right-8 h-full w-64 pt-8 hidden xl:block">
+                <div className="sticky top-8 max-h-[calc(100vh-8rem)] overflow-y-auto">
+                  <TableOfContents editor={editor} />
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <MarkdownEditor
+            content={markdownContent}
+            onChange={(content) => {
+              setMarkdownContent(content);
+              // 保存到localStorage (Markdown模式,直接保存不转换)
+              saveEditorContent(
+                content,
+                {
+                  ...detailsForm,
+                  editorType: String(editorType),
+                  isFullscreen,
+                  showTableOfContents,
+                },
+                true, // isMarkdown = true,直接保存Markdown
+              );
+            }}
+            mode={editorType === "mdx" ? "mdx" : "markdown"}
+            onEditorReady={(monacoInstance) => {
+              setMonacoEditor(monacoInstance);
+            }}
           />
-        )}
-
-        {/* 代码块工具栏 */}
-        {editor && (
-          <CodeBlockToolbar
-            editor={editor}
-            isVisible={isCodeBlockToolbarVisible}
-            currentLanguage={currentCodeBlockLanguage}
-          />
-        )}
-
-        {/* 列表工具栏 */}
-        {editor && <ListToolbar editor={editor} />}
-
-        {/* 目录 - 浮动在右侧 */}
-        {showTableOfContents && (
-          <div className="absolute top-0 right-8 h-full w-64 pt-8 hidden xl:block">
-            <div className="sticky top-8 max-h-[calc(100vh-8rem)] overflow-y-auto">
-              <TableOfContents editor={editor} />
-            </div>
-          </div>
         )}
       </GridItem>
 
@@ -888,11 +1349,412 @@ export default function Editor({ content }: { content?: string }) {
 
         {/* 右侧：操作按钮 */}
         <div className="flex gap-2">
-          <Button label="设置详细信息" variant="ghost" size="sm" />
-          <Button label="保存为草稿" variant="ghost" size="sm" />
-          <Button label="发布" variant="primary" size="sm" />
+          <Button
+            label="设置详细信息"
+            variant="ghost"
+            size="sm"
+            onClick={openDetailsDialog}
+          />
+          <Button
+            label="保存为草稿"
+            variant="ghost"
+            size="sm"
+            onClick={() => openConfirmDialog("draft")}
+          />
+          <Button
+            label="发布"
+            variant="primary"
+            size="sm"
+            onClick={() => openConfirmDialog("publish")}
+          />
         </div>
       </GridItem>
+
+      {/* 设置详细信息对话框 */}
+      <Dialog
+        open={detailsDialogOpen}
+        onClose={closeDetailsDialog}
+        title="文章详细信息"
+        size="lg"
+      >
+        <div className="px-6 py-6 space-y-6">
+          {/* 基本信息 */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+              基本信息
+            </h3>
+            <div className="grid grid-cols-1 gap-6">
+              <Input
+                label="标题"
+                value={detailsForm.title}
+                onChange={(e) =>
+                  handleDetailsFieldChange("title", e.target.value)
+                }
+                required
+                size="sm"
+              />
+              <Input
+                label="Slug"
+                value={detailsForm.slug}
+                onChange={(e) =>
+                  handleDetailsFieldChange("slug", e.target.value)
+                }
+                required
+                size="sm"
+                helperText="URL 路径，例如：my-first-post"
+              />
+              <Input
+                label="摘要"
+                value={detailsForm.excerpt}
+                onChange={(e) =>
+                  handleDetailsFieldChange("excerpt", e.target.value)
+                }
+                rows={3}
+                size="sm"
+              />
+            </div>
+          </div>
+
+          {/* 发布设置 */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+              发布设置
+            </h3>
+            <div className="space-y-3">
+              <Checkbox
+                label="置顶文章"
+                checked={detailsForm.isPinned}
+                onChange={(e) =>
+                  handleDetailsFieldChange("isPinned", e.target.checked)
+                }
+              />
+              <br />
+              <Checkbox
+                label="允许评论"
+                checked={detailsForm.allowComments}
+                onChange={(e) =>
+                  handleDetailsFieldChange("allowComments", e.target.checked)
+                }
+              />
+            </div>
+          </div>
+
+          {/* SEO 设置 */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+              SEO 设置
+            </h3>
+            <div className="grid grid-cols-1 gap-6">
+              <Input
+                label="SEO 标题"
+                value={detailsForm.metaTitle}
+                onChange={(e) =>
+                  handleDetailsFieldChange("metaTitle", e.target.value)
+                }
+                size="sm"
+                helperText="留空则使用文章标题"
+              />
+              <Input
+                label="SEO 描述"
+                value={detailsForm.metaDescription}
+                onChange={(e) =>
+                  handleDetailsFieldChange("metaDescription", e.target.value)
+                }
+                rows={2}
+                size="sm"
+                helperText="留空则使用文章摘要"
+              />
+              <Input
+                label="SEO 关键词"
+                value={detailsForm.metaKeywords}
+                onChange={(e) =>
+                  handleDetailsFieldChange("metaKeywords", e.target.value)
+                }
+                size="sm"
+                helperText="多个关键词用逗号分隔"
+              />
+              <Checkbox
+                label="允许搜索引擎索引"
+                checked={detailsForm.robotsIndex}
+                onChange={(e) =>
+                  handleDetailsFieldChange("robotsIndex", e.target.checked)
+                }
+              />
+            </div>
+          </div>
+
+          {/* 特色图片 */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+              特色图片
+            </h3>
+            <Input
+              label="特色图片 URL"
+              value={detailsForm.featuredImage}
+              onChange={(e) =>
+                handleDetailsFieldChange("featuredImage", e.target.value)
+              }
+              size="sm"
+              helperText="https://example.com/image.jpg"
+            />
+          </div>
+
+          {/* 操作按钮 */}
+          <div className="flex justify-end gap-4 pt-4 border-t border-foreground/10">
+            <Button
+              label="取消"
+              variant="ghost"
+              onClick={closeDetailsDialog}
+              size="sm"
+              disabled={isSubmitting}
+            />
+            <Button
+              label="保存"
+              variant="primary"
+              onClick={handleSaveDetails}
+              size="sm"
+              loading={isSubmitting}
+              loadingText="保存中..."
+            />
+          </div>
+        </div>
+      </Dialog>
+
+      {/* 确认对话框（保存为草稿/发布） */}
+      <Dialog
+        open={confirmDialogOpen}
+        onClose={closeConfirmDialog}
+        title={confirmAction === "publish" ? "确认发布" : "确认保存为草稿"}
+        size="lg"
+      >
+        <div className="px-6 py-6 space-y-6">
+          {!showCommitInput ? (
+            <>
+              {/* 确认信息展示 */}
+              <p className="text-sm text-muted-foreground mb-4">
+                请确认以下信息无误后继续。
+                <span className="text-error">标题</span>和
+                <span className="text-error">Slug</span>为必填项。
+              </p>
+
+              {/* 基本信息 - 只读展示 */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                  基本信息
+                </h3>
+                <div className="grid grid-cols-1 gap-4 bg-muted/20 p-4 rounded-lg">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      标题 <span className="text-error">*</span>
+                    </label>
+                    <p
+                      className={`text-sm ${detailsForm.title ? "text-foreground/80" : "text-muted-foreground italic"}`}
+                    >
+                      {detailsForm.title ||
+                        '（未设置，请点击"设置详细信息"填写）'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Slug <span className="text-error">*</span>
+                    </label>
+                    <p
+                      className={`text-sm font-mono ${detailsForm.slug ? "text-foreground/80" : "text-muted-foreground italic"}`}
+                    >
+                      {detailsForm.slug ||
+                        '（未设置，请点击"设置详细信息"填写）'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      摘要
+                    </label>
+                    <p className="text-sm text-foreground/80">
+                      {detailsForm.excerpt || "（未设置）"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 发布设置 - 只读展示 */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                  发布设置
+                </h3>
+                <div className="grid grid-cols-2 gap-4 bg-muted/20 p-4 rounded-lg">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      状态
+                    </label>
+                    <p className="text-sm text-foreground/80">
+                      {confirmAction === "publish"
+                        ? "已发布"
+                        : detailsForm.status === "PUBLISHED"
+                          ? "已发布"
+                          : detailsForm.status === "DRAFT"
+                            ? "草稿"
+                            : "已归档"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      置顶
+                    </label>
+                    <p className="text-sm text-foreground/80">
+                      {detailsForm.isPinned ? "是" : "否"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      允许评论
+                    </label>
+                    <p className="text-sm text-foreground/80">
+                      {detailsForm.allowComments ? "是" : "否"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      搜索引擎索引
+                    </label>
+                    <p className="text-sm text-foreground/80">
+                      {detailsForm.robotsIndex ? "允许" : "禁止"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* SEO 设置 - 只读展示 */}
+              {(detailsForm.metaTitle ||
+                detailsForm.metaDescription ||
+                detailsForm.metaKeywords) && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                    SEO 设置
+                  </h3>
+                  <div className="grid grid-cols-1 gap-4 bg-muted/20 p-4 rounded-lg">
+                    {detailsForm.metaTitle && (
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">
+                          SEO 标题
+                        </label>
+                        <p className="text-sm text-foreground/80">
+                          {detailsForm.metaTitle}
+                        </p>
+                      </div>
+                    )}
+                    {detailsForm.metaDescription && (
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">
+                          SEO 描述
+                        </label>
+                        <p className="text-sm text-foreground/80">
+                          {detailsForm.metaDescription}
+                        </p>
+                      </div>
+                    )}
+                    {detailsForm.metaKeywords && (
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">
+                          SEO 关键词
+                        </label>
+                        <p className="text-sm text-foreground/80">
+                          {detailsForm.metaKeywords}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 特色图片 - 只读展示 */}
+              {detailsForm.featuredImage && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                    特色图片
+                  </h3>
+                  <div className="bg-muted/20 p-4 rounded-lg">
+                    <p className="text-sm text-foreground/80 break-all">
+                      {detailsForm.featuredImage}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* 操作按钮 */}
+              <div className="flex justify-between gap-4 pt-4 border-t border-foreground/10">
+                <Button
+                  label="取消"
+                  variant="ghost"
+                  onClick={closeConfirmDialog}
+                  size="sm"
+                  disabled={isSubmitting}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    label="设置详细信息"
+                    variant="ghost"
+                    onClick={openDetailsFromConfirm}
+                    size="sm"
+                    disabled={isSubmitting}
+                  />
+                  <Button
+                    label="下一步"
+                    variant="primary"
+                    onClick={handleNextStep}
+                    size="sm"
+                    disabled={
+                      isSubmitting ||
+                      !detailsForm.title.trim() ||
+                      !detailsForm.slug.trim()
+                    }
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* 提交信息输入 */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                  提交信息
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  添加提交信息（可选）
+                </p>
+                <Input
+                  label="提交信息（可选）"
+                  value={commitMessage}
+                  onChange={(e) => setCommitMessage(e.target.value)}
+                  rows={3}
+                  size="sm"
+                  helperText="提交信息将帮助您追踪文章的修改历史"
+                />
+              </div>
+
+              {/* 操作按钮 */}
+              <div className="flex justify-between gap-4 pt-4 border-t border-foreground/10">
+                <Button
+                  label="上一步"
+                  variant="ghost"
+                  onClick={handleBackToConfirm}
+                  size="sm"
+                  disabled={isSubmitting}
+                />
+                <Button
+                  label={confirmAction === "publish" ? "发布" : "保存为草稿"}
+                  variant="primary"
+                  onClick={handleFinalSubmit}
+                  size="sm"
+                  loading={isSubmitting}
+                  loadingText={
+                    confirmAction === "publish" ? "发布中..." : "保存中..."
+                  }
+                />
+              </div>
+            </>
+          )}
+        </div>
+      </Dialog>
     </RowGrid>
   );
 }

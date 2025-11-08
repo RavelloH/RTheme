@@ -1,0 +1,286 @@
+/* Tiptap Editor Styles */
+
+.tiptap,
+.md-content {
+  @apply min-h-full text-secondary-foreground;
+}
+
+/* Text Alignment */
+.tiptap [style*="text-align: left"],
+.md-content [style*="text-align: left"] {
+  text-align: left;
+}
+
+.tiptap [style*="text-align: center"],
+.md-content [style*="text-align: center"] {
+  text-align: center;
+}
+
+.tiptap [style*="text-align: right"],
+.md-content [style*="text-align: right"] {
+  text-align: right;
+}
+
+.tiptap p,
+.md-content p {
+  @apply my-4 leading-relaxed;
+}
+
+.tiptap blockquote p,
+.md-content blockquote p {
+  @apply my-1;
+}
+/* Placeholder */
+.tiptap p.is-editor-empty:first-child::before,
+.md-content p.is-editor-empty:first-child::before {
+  @apply text-foreground/30 float-left h-0 pointer-events-none;
+  content: attr(data-placeholder);
+}
+
+/* Task List */
+.tiptap ul[data-type="taskList"],
+.md-content ul[data-type="taskList"] {
+  @apply list-none pl-0;
+}
+
+.tiptap ul[data-type="taskList"] li,
+.md-content ul[data-type="taskList"] li {
+  @apply flex items-start gap-2;
+}
+
+.tiptap ul[data-type="taskList"] li > label,
+.md-content ul[data-type="taskList"] li > label {
+  @apply flex-none mt-1;
+}
+
+.tiptap ul[data-type="taskList"] li > div,
+.md-content ul[data-type="taskList"] li > div {
+  @apply flex-1;
+}
+
+/* Blockquote */
+.tiptap blockquote,
+.md-content blockquote {
+  @apply border-l-4 border-foreground pl-4 ml-0 opacity-80 py-2 my-4 bg-muted/50;
+}
+
+/* Code */
+/* 行内代码样式 - 不在 pre 内的 code */
+.tiptap :not(pre) > code,
+.md-content :not(pre) > code {
+  @apply bg-foreground/10 text-foreground px-1.5 py-0.5 rounded-xs text-sm font-mono hover:bg-foreground/20 transition-all;
+}
+
+/* 代码块基础样式 */
+.tiptap pre,
+.md-content pre {
+  @apply rounded-lg overflow-hidden my-4;
+}
+
+/* Shiki 代码块样式 */
+.tiptap pre.shiki,
+.md-content pre.shiki {
+  @apply p-4 overflow-x-auto;
+}
+
+.tiptap pre.shiki code,
+.md-content pre.shiki code {
+  @apply bg-transparent p-0 font-mono text-sm leading-relaxed;
+}
+
+/* 普通代码块样式（回退） */
+.tiptap pre:not(.shiki),
+.md-content pre:not(.shiki) {
+  @apply bg-foreground/10 text-foreground p-4;
+}
+
+.tiptap pre:not(.shiki) code,
+.md-content pre:not(.shiki) code {
+  @apply bg-transparent p-0 font-mono text-sm;
+}
+
+/* Headings */
+.tiptap h1,
+.tiptap h2,
+.tiptap h3,
+.tiptap h4,
+.tiptap h5,
+.tiptap h6,
+.md-content h1,
+.md-content h2,
+.md-content h3,
+.md-content h4,
+.md-content h5,
+.md-content h6 {
+  @apply font-bold mt-6 mb-3 leading-tight text-foreground;
+}
+
+.tiptap h1,
+.md-content h1 {
+  @apply text-4xl border-b-2 pb-2 border-border;
+}
+.tiptap h2,
+.md-content h2 {
+  @apply text-3xl;
+}
+.tiptap h3,
+.md-content h3 {
+  @apply text-2xl;
+}
+.tiptap h4,
+.md-content h4 {
+  @apply text-xl;
+}
+.tiptap h5,
+.md-content h5 {
+  @apply text-lg;
+}
+.tiptap h6,
+.md-content h6 {
+  @apply text-base;
+}
+
+/* Images */
+.tiptap img,
+.md-content img {
+  @apply max-w-full h-auto rounded-lg;
+}
+
+/* Horizontal Rule */
+.tiptap hr,
+.md-content hr {
+  @apply border-t border-foreground/20 my-8;
+}
+
+/* Links */
+.tiptap a,
+.md-content a {
+  @apply text-primary underline cursor-pointer;
+}
+
+/* Tables */
+.tiptap table,
+.md-content table {
+  @apply border-collapse w-full my-4;
+}
+
+.tiptap th,
+.tiptap td,
+.md-content th,
+.md-content td {
+  @apply border border-foreground/20 px-1 py-1 text-left;
+}
+
+.tiptap th,
+.md-content th {
+  @apply bg-foreground/5 font-bold;
+}
+
+/* Lists */
+.tiptap li > p,
+.md-content li > p {
+  @apply m-0;
+}
+
+.tiptap ul,
+.tiptap ol,
+.md-content ul,
+.md-content ol {
+  @apply pl-6;
+}
+
+/* Unordered List - Multi-level styling */
+.tiptap ul,
+.md-content ul {
+  list-style-type: disc;
+}
+
+.tiptap :is(ul) :is(ul),
+.md-content :is(ul) :is(ul) {
+  list-style-type: circle;
+}
+
+.tiptap :is(ul) :is(ul) :is(ul),
+.md-content :is(ul) :is(ul) :is(ul) {
+  list-style-type: square;
+}
+
+.tiptap ol,
+.md-content ol {
+  @apply list-decimal;
+}
+
+/* Highlight */
+.tiptap mark,
+.md-content mark {
+  @apply bg-primary/90 font-bold text-primary-foreground rounded-xs mx-1;
+}
+
+/* Strikethrough */
+.tiptap s,
+.tiptap del,
+.md-content s,
+.md-content del {
+  @apply line-through text-muted-foreground;
+}
+
+/* Underline */
+.tiptap u,
+.md-content u {
+  @apply underline;
+}
+
+/* Subscript and Superscript */
+.tiptap sub,
+.md-content sub {
+  @apply text-xs align-sub;
+}
+
+.tiptap sup,
+.md-content sup {
+  @apply text-xs align-super;
+}
+
+/* Bold */
+.tiptap strong,
+.md-content strong {
+  @apply font-bold text-foreground;
+}
+
+/* Shiki 代码块暗黑模式支持 */
+/* 支持系统偏好设置的暗黑模式 */
+@media (prefers-color-scheme: dark) {
+  .tiptap .shiki,
+  .tiptap .shiki span,
+  .md-content .shiki,
+  .md-content .shiki span {
+    color: var(--shiki-dark) !important;
+    background-color: var(--shiki-dark-bg) !important;
+  }
+}
+
+/* 支持 data-theme 属性切换 */
+[data-theme="dark"] .tiptap .shiki,
+[data-theme="dark"] .tiptap .shiki span,
+[data-theme="dark"] .md-content .shiki,
+[data-theme="dark"] .md-content .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+}
+
+/* 支持基于 Class 的暗黑模式切换 */
+html.dark .tiptap .shiki,
+html.dark .tiptap .shiki span,
+html.dark .md-content .shiki,
+html.dark .md-content .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+}
+
+.dark .tiptap .shiki,
+.dark .tiptap .shiki span,
+.dark .md-content .shiki,
+.dark .md-content .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+}

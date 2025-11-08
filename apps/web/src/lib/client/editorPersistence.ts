@@ -27,6 +27,28 @@ turndownService.use(gfm);
 
 // 自定义规则必须在GFM插件之后添加,以覆盖默认行为
 
+// 自定义规则：普通列表项 - 移除额外换行
+turndownService.addRule("listItem", {
+  filter: (node) => {
+    if (node.nodeName !== "LI") return false;
+    const li = node as HTMLElement;
+    // 排除任务列表项
+    return (
+      !li.hasAttribute("data-checked") &&
+      li.querySelector('input[type="checkbox"]') === null
+    );
+  },
+  replacement: (content, _node, options) => {
+    // 清理内容，移除首尾空白和多余换行
+    const cleanContent = content.trim().replace(/\n+/g, "\n");
+
+    // 检查是否是嵌套列表
+    const prefix = options.bulletListMarker || "-";
+
+    return `${prefix} ${cleanContent}\n`;
+  },
+});
+
 // 自定义规则：任务列表 - 确保正确转换 (覆盖GFM的默认处理)
 turndownService.addRule("taskListItem", {
   filter: (node) => {
@@ -198,14 +220,18 @@ export function htmlToMarkdown(html: string): string {
 
 /**
  * 保存编辑器内容到localStorage
+ * @param content - 要保存的内容(HTML或Markdown)
+ * @param config - 编辑器配置
+ * @param isMarkdown - 是否为Markdown格式(true表示直接保存,false表示需要HTML转Markdown)
  */
 export function saveEditorContent(
-  html: string,
+  content: string,
   config: EditorConfig = {},
+  isMarkdown: boolean = false,
 ): void {
   try {
-    // 1. 将HTML转换为Markdown
-    const markdown = htmlToMarkdown(html);
+    // 1. 根据类型处理内容
+    const markdown = isMarkdown ? content : htmlToMarkdown(content);
 
     // 2. 构建存储对象
     const editorData: EditorContent = {

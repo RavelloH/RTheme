@@ -879,18 +879,29 @@ export default function HorizontalScroll({
 
       // 键盘操作处理
       const handleKeyDown = (e: KeyboardEvent) => {
-        // 检查是否在可编辑元素中，避免冲突
+        // 检查是否在可编辑元素中,或者在Monaco编辑器中,避免冲突
+        const target = e.target as HTMLElement;
+
+        // 更全面的Monaco编辑器检测
+        const isInMonacoEditor =
+          target.closest('[data-monaco-editor="true"]') !== null ||
+          target.closest(".monaco-editor") !== null ||
+          target.classList?.contains("monaco-editor") ||
+          target.classList?.contains("native-edit-context") ||
+          target.closest(".view-lines") !== null;
+
         if (
           document.activeElement?.tagName === "INPUT" ||
           document.activeElement?.tagName === "TEXTAREA" ||
-          document.activeElement?.getAttribute("contenteditable") === "true"
+          document.activeElement?.getAttribute("contenteditable") === "true" ||
+          isInMonacoEditor
         ) {
           return;
         }
 
         let scrollDelta = 0;
 
-        // 向右滚动：空格、右方向键、下方向键
+        // 向右滚动:空格、右方向键、下方向键
         if (
           e.code === "Space" ||
           e.code === "ArrowRight" ||
@@ -899,7 +910,7 @@ export default function HorizontalScroll({
           e.preventDefault();
           scrollDelta = -100; // 向右滚动为负值
         }
-        // 向左滚动：Shift+空格、左方向键、上方向键
+        // 向左滚动:Shift+空格、左方向键、上方向键
         else if (
           (e.code === "Space" && e.shiftKey) ||
           e.code === "ArrowLeft" ||

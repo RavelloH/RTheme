@@ -2,7 +2,6 @@
 
 import { useEditor, EditorContent, Editor, Extension } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import { Table } from "@tiptap/extension-table";
@@ -19,7 +18,6 @@ import InvisibleCharacters from "@tiptap/extension-invisible-characters";
 import TextAlign from "@tiptap/extension-text-align";
 import CharacterCount from "@tiptap/extension-character-count";
 import { Markdown } from "@tiptap/markdown";
-import { TrailingNode } from "@/lib/tiptap/trailing-node";
 import { useEffect, useRef } from "react";
 import {
   saveEditorContent,
@@ -220,6 +218,22 @@ export function TiptapEditor({
       onEditorReady(editor);
     }
   }, [editor, onEditorReady]);
+
+  // 监听 content prop 的变化，当从其他编辑器切换回来时更新内容
+  useEffect(() => {
+    if (!editor || !content) return;
+
+    // 检查当前内容是否与传入的 content 不同
+    // 使用 markdown.parse 将 Markdown 转换为 JSON
+    // @ts-expect-error - markdown.parse方法可能没有类型定义
+    const json = editor.markdown.parse(content);
+    const currentJson = editor.getJSON();
+
+    // 简单比较：如果内容不同，则更新
+    if (JSON.stringify(json) !== JSON.stringify(currentJson)) {
+      editor.commands.setContent(json);
+    }
+  }, [editor, content]);
 
   // 根据 showInvisibleChars 状态控制不可见字符的显示
   useEffect(() => {

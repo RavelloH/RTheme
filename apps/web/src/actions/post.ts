@@ -7,6 +7,9 @@ import {
   GetPostsListSchema,
   GetPostsList,
   PostListItem,
+  CreatePostSchema,
+  CreatePost,
+  CreatePostResult,
   UpdatePostsSchema,
   UpdatePosts,
   DeletePostsSchema,
@@ -21,6 +24,7 @@ import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
 import { logAuditEvent } from "./audit";
 import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
+import { TextVersion } from "text-version";
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
@@ -332,6 +336,181 @@ export async function getPostsList(
     });
   } catch (error) {
     console.error("Get posts list error:", error);
+    return response.serverError();
+  }
+}
+
+/*
+  createPost - 新建文章
+*/
+export async function createPost(
+  params: CreatePost,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<CreatePostResult | null>>>;
+export async function createPost(
+  params: CreatePost,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<CreatePostResult | null>>;
+export async function createPost(
+  {
+    access_token,
+    title,
+    slug,
+    content,
+    excerpt,
+    featuredImage,
+    status = "DRAFT",
+    isPinned = false,
+    allowComments = true,
+    publishedAt,
+    metaTitle,
+    metaDescription,
+    metaKeywords,
+    robotsIndex = true,
+    categories,
+    tags,
+    commitMessage,
+  }: CreatePost,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<CreatePostResult | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      title,
+      slug,
+      content,
+      excerpt,
+      featuredImage,
+      status,
+      isPinned,
+      allowComments,
+      publishedAt,
+      metaTitle,
+      metaDescription,
+      metaKeywords,
+      robotsIndex,
+      categories,
+      tags,
+      commitMessage,
+    },
+    CreatePostSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 检查 slug 是否已存在
+    const existingPost = await prisma.post.findUnique({
+      where: { slug },
+    });
+
+    if (existingPost) {
+      return response.badRequest({ message: "该 slug 已被使用" });
+    }
+
+    // 使用 text-version 创建内容版本
+    const tv = new TextVersion();
+    const now = new Date().toISOString();
+    // 如果没有提供 commitMessage，使用默认值
+    const finalCommitMessage = commitMessage || "初始版本";
+    const versionName = `${user.uid}:${now}:${finalCommitMessage}`;
+    const versionedContent = tv.commit("", content, versionName);
+
+    // 处理发布时间
+    const publishedAtDate = publishedAt ? new Date(publishedAt) : null;
+
+    // 创建文章
+    const post = await prisma.post.create({
+      data: {
+        title,
+        slug,
+        content: versionedContent,
+        excerpt: excerpt || null,
+        featuredImage: featuredImage || null,
+        status,
+        isPinned,
+        allowComments,
+        publishedAt: publishedAtDate,
+        metaTitle: metaTitle || null,
+        metaDescription: metaDescription || null,
+        metaKeywords: metaKeywords || null,
+        robotsIndex,
+        userUid: user.uid,
+        categories:
+          categories && categories.length > 0
+            ? {
+                connectOrCreate: categories.map((name) => ({
+                  where: { name },
+                  create: { name },
+                })),
+              }
+            : undefined,
+        tags:
+          tags && tags.length > 0
+            ? {
+                connectOrCreate: tags.map((name) => ({
+                  where: { name },
+                  create: { name },
+                })),
+              }
+            : undefined,
+      },
+    });
+
+    // 记录审计日志
+    await logAuditEvent({
+      user: {
+        uid: String(user.uid),
+        ipAddress: await getClientIP(),
+        userAgent: await getClientUserAgent(),
+      },
+      details: {
+        action: "CREATE",
+        resourceType: "POST",
+        resourceId: String(post.id),
+        vaule: {
+          old: null,
+          new: {
+            title,
+            slug,
+            status,
+            commitMessage,
+          },
+        },
+        description: `创建文章: ${title}`,
+        metadata: {
+          postId: post.id,
+          slug: post.slug,
+        },
+      },
+    });
+
+    return response.ok({
+      data: {
+        id: post.id,
+        slug: post.slug,
+      },
+    });
+  } catch (error) {
+    console.error("Create post error:", error);
     return response.serverError();
   }
 }

@@ -126,6 +126,45 @@ export type UpdatePostsSuccessResponse = z.infer<
 registerSchema("UpdatePostsSuccessResponse", UpdatePostsSuccessResponseSchema);
 
 /*
+    createPost() Schema
+*/
+export const CreatePostSchema = z.object({
+  access_token: z.string().optional(),
+  title: z.string().min(1, "标题不能为空").max(255, "标题过长"),
+  slug: z.string().min(1, "slug 不能为空").max(255, "slug 过长"),
+  content: z.string().min(1, "内容不能为空"),
+  excerpt: z.string().max(500, "摘要过长").optional(),
+  featuredImage: z.string().max(255, "图片 URL 过长").optional(),
+  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).default("DRAFT"),
+  isPinned: z.boolean().default(false),
+  allowComments: z.boolean().default(true),
+  publishedAt: z.string().optional(), // ISO 时间字符串
+  metaTitle: z.string().max(60, "SEO 标题过长").optional(),
+  metaDescription: z.string().max(160, "SEO 描述过长").optional(),
+  metaKeywords: z.string().max(255, "SEO 关键词过长").optional(),
+  robotsIndex: z.boolean().default(true),
+  categories: z.array(z.string()).optional(), // 分类名称数组
+  tags: z.array(z.string()).optional(), // 标签名称数组
+  commitMessage: z.string().optional(), // 版本提交信息（可选）
+});
+export type CreatePost = z.infer<typeof CreatePostSchema>;
+registerSchema("CreatePost", CreatePostSchema);
+
+export const CreatePostResultSchema = z.object({
+  id: z.number().int(),
+  slug: z.string(),
+});
+export type CreatePostResult = z.infer<typeof CreatePostResultSchema>;
+
+export const CreatePostSuccessResponseSchema = createSuccessResponseSchema(
+  CreatePostResultSchema,
+);
+export type CreatePostSuccessResponse = z.infer<
+  typeof CreatePostSuccessResponseSchema
+>;
+registerSchema("CreatePostSuccessResponse", CreatePostSuccessResponseSchema);
+
+/*
     deletePosts() Schema
 */
 export const DeletePostsSchema = z.object({

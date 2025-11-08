@@ -79,6 +79,9 @@ importers:
       '@cap.js/widget':
         specifier: ^0.1.29
         version: 0.1.29
+      '@monaco-editor/react':
+        specifier: ^4.7.0
+        version: 4.7.0(monaco-editor@0.54.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       '@prisma/client':
         specifier: 6.15.0
         version: 6.15.0(prisma@6.15.0(typescript@5.9.2))(typescript@5.9.2)
@@ -151,6 +154,9 @@ importers:
       '@tiptap/starter-kit':
         specifier: ^3.10.2
         version: 3.10.2
+      '@types/markdown-it':
+        specifier: ^14.1.2
+        version: 14.1.2
       '@types/turndown':
         specifier: ^5.0.6
         version: 5.0.6
@@ -202,9 +208,27 @@ importers:
       lucide-react:
         specifier: ^0.544.0
         version: 0.544.0(react@19.1.1)
+      markdown-it:
+        specifier: ^14.1.0
+        version: 14.1.0
+      markdown-it-mark:
+        specifier: ^4.0.0
+        version: 4.0.0
+      markdown-it-sub:
+        specifier: ^2.0.0
+        version: 2.0.0
+      markdown-it-sup:
+        specifier: ^2.0.0
+        version: 2.0.0
+      monaco-editor:
+        specifier: ^0.54.0
+        version: 0.54.0
       next:
         specifier: ^15.5.2
         version: 15.5.2(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(sass@1.92.1)
+      next-mdx-remote-client:
+        specifier: ^2.1.7
+        version: 2.1.7(@types/react@19.1.12)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(unified@11.0.5)
       postcss:
         specifier: ^8.5.6
         version: 8.5.6
@@ -220,6 +244,9 @@ importers:
       react-fast-marquee:
         specifier: ^1.6.5
         version: 1.6.5(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      remark-gfm:
+        specifier: ^4.0.1
+        version: 4.0.1
       rlog-js:
         specifier: ^1.5.2
         version: 1.5.2
@@ -229,6 +256,9 @@ importers:
       shiki:
         specifier: ^3.15.0
         version: 3.15.0
+      text-version:
+        specifier: ^1.0.2
+        version: 1.0.2(diff-match-patch@1.0.5)
       tiptap-extension-code-block-shiki:
         specifier: ^1.0.0
         version: 1.0.0(@tiptap/core@3.10.2(@tiptap/pm@3.10.2))(@tiptap/pm@3.10.2)(shiki@3.15.0)
@@ -1959,6 +1989,16 @@ packages:
   '@mixmark-io/domino@2.2.0':
     resolution: {integrity: sha512-Y28PR25bHXUg88kCV7nivXrP2Nj2RueZ3/l/jdx6J9f8J4nsEGcgX0Qe6lt7Pa+J79+kPiJU3LguR6O/6zrLOw==}
 
+  '@monaco-editor/loader@1.6.1':
+    resolution: {integrity: sha512-w3tEnj9HYEC73wtjdpR089AqkUPskFRcdkxsiSFt3SoUc3OHpmu+leP94CXBm4mHfefmhsdfI0ZQu6qJ0wgtPg==}
+
+  '@monaco-editor/react@4.7.0':
+    resolution: {integrity: sha512-cyzXQCtO47ydzxpQtCGSQGOC8Gk3ZUeBXFAxD+CWXYFo5OqZyZUonFl0DwUlTyAfRHntBfw2p3w4s9R6oe1eCA==}
+    peerDependencies:
+      monaco-editor: '>= 0.25.0 < 1'
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
   '@next/env@15.5.2':
     resolution: {integrity: sha512-Qe06ew4zt12LeO6N7j8/nULSOe3fMXE4dM6xgpBQNvdzyK1sv5y4oAP3bq4LamrvGCZtmRYnW8URFCeX5nFgGg==}
 
@@ -2716,6 +2756,9 @@ packages:
 
   '@types/debug@4.1.12':
     resolution: {integrity: sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==}
+
+  '@types/diff-match-patch@1.0.36':
+    resolution: {integrity: sha512-xFdR6tkm0MWvBfO8xXCSsinYxHcqkQUlcHeSpMC2ukzOb6lwQAfDmW+Qt0AvlGd8HpsS28qKsB+oPeJn9I39jg==}
 
   '@types/eslint-scope@3.7.7':
     resolution: {integrity: sha512-MzMFlSLBqNF2gcHWO0G1vP/YQyfvrxZ0bF+u7mzUdZ1/xK4A4sru+nraZz5i3iEIk1l1uyicaDVTB4QbbEkAYg==}
@@ -4006,6 +4049,9 @@ packages:
   devlop@1.1.0:
     resolution: {integrity: sha512-RWmIqhcFf1lRYBvNmr7qTNuyCt/7/ns2jbpp1+PalgE/rDQcBT0fioSMUpJ93irlUhC5hrg4cYqe6U+0ImW0rA==}
 
+  diff-match-patch@1.0.5:
+    resolution: {integrity: sha512-IayShXAgj/QMXgB0IWmKx+rOPuGMhqm5w6jvFxmVenXKIzRqTAAsbBPT3kWQeGANj3jGgvcvv4yK6SxqYmikgw==}
+
   diff@5.2.0:
     resolution: {integrity: sha512-uIFDxqpRZGZ6ThOk84hEfqWoHx2devRFvpTZcTHur85vImfaxUbTW9Ryh4CpCuDnToOP1CEtXKIgytHBPVff5A==}
     engines: {node: '>=0.3.1'}
@@ -4066,6 +4112,9 @@ packages:
   domhandler@5.0.3:
     resolution: {integrity: sha512-cgwlv/1iFQiFnU96XXgROh8xTeetsnJiDsTc7TYCLFd9+/WNkIqPTxiM/8pSd8VIrhXGTf1Ny1q1hquVqDJB5w==}
     engines: {node: '>= 4'}
+
+  dompurify@3.1.7:
+    resolution: {integrity: sha512-VaTstWtsneJY8xzy7DekmYWEOZcmzIe3Qb3zPd4STve1OBTa+e+WmS1ITQec1fZYXI3HCsOZZiSMpG6oxoWMWQ==}
 
   domutils@2.8.0:
     resolution: {integrity: sha512-w96Cjofp72M5IIhpjgobBimYEfoPjx1Vx0BSX9P30WBdZW2WIKU0T1Bd0kz2eNZ9ikjKgHbEyKx8BB6H1L3h3A==}
@@ -5514,6 +5563,15 @@ packages:
     resolution: {integrity: sha512-o5vL7aDWatOTX8LzaS1WMoaoxIiLRQJuIKKe2wAw6IeULDHaqbiqiggmx+pKvZDb1Sj+pE46Sn1T7lCqfFtg1Q==}
     engines: {node: '>=16'}
 
+  markdown-it-mark@4.0.0:
+    resolution: {integrity: sha512-YLhzaOsU9THO/cal0lUjfMjrqSMPjjyjChYM7oyj4DnyaXEzA8gnW6cVJeyCrCVeyesrY2PlEdUYJSPFYL4Nkg==}
+
+  markdown-it-sub@2.0.0:
+    resolution: {integrity: sha512-iCBKgwCkfQBRg2vApy9vx1C1Tu6D8XYo8NvevI3OlwzBRmiMtsJ2sXupBgEA7PPxiDwNni3qIUkhZ6j5wofDUA==}
+
+  markdown-it-sup@2.0.0:
+    resolution: {integrity: sha512-5VgmdKlkBd8sgXuoDoxMpiU+BiEt3I49GItBzzw7Mxq9CxvnhE/k09HFli09zgfFDRixDQDfDxi0mgBCXtaTvA==}
+
   markdown-it@14.1.0:
     resolution: {integrity: sha512-a54IwgWPaeBCAAsv13YgmALOF1elABB08FxO9i+r4VFk5Vl4pKokRPeX8u5TCgSsPi6ec1otfLjdOpVcgbpshg==}
     hasBin: true
@@ -5523,6 +5581,11 @@ packages:
 
   markdown-table@3.0.4:
     resolution: {integrity: sha512-wiYz4+JrLyb/DqW2hkFJxP7Vd7JuTDm77fvbM8VfEQdmSMqcImWeeRbHwZjBjIFki/VaMK2BhFi7oUUZeM5bqw==}
+
+  marked@14.0.0:
+    resolution: {integrity: sha512-uIj4+faQ+MgHgwUW1l2PsPglZLOLOT1uErt06dAPtx2kjteLAkbsd/0FiYg/MGS+i7ZKLb7w2WClxHkzOOuryQ==}
+    engines: {node: '>= 18'}
+    hasBin: true
 
   marked@16.4.2:
     resolution: {integrity: sha512-TI3V8YYWvkVf3KJe1dRkpnjs68JUPyEa5vjKrp1XEEJUAOaQc+Qj+L1qWbPd0SJuAdQkFU0h73sXXqwDYxsiDA==}
@@ -5945,6 +6008,9 @@ packages:
   moment@2.30.1:
     resolution: {integrity: sha512-uEmtNhbDOrWPFS+hdjFCBfy9f2YoyzRpwcl+DqpC6taX21FzsTLQVbMV/W7PzNSX6x/bhC1zA3c2UQ5NzH6how==}
 
+  monaco-editor@0.54.0:
+    resolution: {integrity: sha512-hx45SEUoLatgWxHKCmlLJH81xBo0uXP4sRkESUpmDQevfi+e7K1VuiSprK6UpQ8u4zOcKNiH0pMvHvlMWA/4cw==}
+
   motion-dom@12.23.12:
     resolution: {integrity: sha512-RcR4fvMCTESQBD/uKQe49D5RUeDOokkGRmz4ceaJKDBgHYtZtntC/s2vLvY38gqGaytinij/yi3hMcWVcEF5Kw==}
 
@@ -5998,6 +6064,13 @@ packages:
   neotraverse@0.6.15:
     resolution: {integrity: sha512-HZpdkco+JeXq0G+WWpMJ4NsX3pqb5O7eR9uGz3FfoFt+LYzU8iRWp49nJtud6hsDoywM8tIrDo3gjgmOqJA8LA==}
     engines: {node: '>= 10'}
+
+  next-mdx-remote-client@2.1.7:
+    resolution: {integrity: sha512-IwGYX3iwZ5UwXYIO3VQV9wE65KWC/pB8PLacmwgjYz65pydRqxIrRf70AXA6mZvR747mh4p6x+E868BhNbpP3A==}
+    engines: {node: '>=18.18.0'}
+    peerDependencies:
+      react: ^19.1
+      react-dom: ^19.1
 
   next-themes@0.4.6:
     resolution: {integrity: sha512-pZvgD5L0IEvX5/9GWyHMf3m8BKiVQwsCMHfoFosXtXBMnaS0ZnIJ9ST4b4NqLVKDEm8QBxoNNGNaBv2JNF6XNA==}
@@ -7210,6 +7283,11 @@ packages:
   remark-gfm@4.0.1:
     resolution: {integrity: sha512-1quofZ2RQ9EWdeN34S79+KExV1764+wCUGop5CPL1WGdD0ocPpu91lzPGbwWMECpEpd42kJGQwzRfyov9j4yNg==}
 
+  remark-mdx-remove-esm@1.2.1:
+    resolution: {integrity: sha512-Vz1GKmRR9u7ij8TTf88DK8dFc/mVror9YUJekl1uP+S0sTzHxGdszJMeBbh96aIR+ZiI2QRKHu2UsV+/pWj7uQ==}
+    peerDependencies:
+      unified: ^11
+
   remark-mdx@3.1.1:
     resolution: {integrity: sha512-Pjj2IYlUY3+D8x00UJsIOg5BEvfMyeI+2uLPn9VO9Wg4MEtN/VTIq2NEJQfde9PnX15KgtHyl9S0BcTnWrIuWg==}
 
@@ -7418,6 +7496,10 @@ packages:
     resolution: {integrity: sha512-dW41u5VfLXu8SJh5bwRmyYUbAoSB3c9uQh6L8h/KtsFREPWpbX1lrljJo186Jc4nmci/sGUZ9a0a0J2zgfq2hw==}
     engines: {node: '>= 0.8.0'}
 
+  serialize-error@12.0.0:
+    resolution: {integrity: sha512-ZYkZLAvKTKQXWuh5XpBw7CdbSzagarX39WyZ2H07CDLC5/KfsRGlIXV8d4+tfqX1M7916mRqR1QfNHSij+c9Pw==}
+    engines: {node: '>=18'}
+
   serialize-javascript@6.0.2:
     resolution: {integrity: sha512-Saa1xPByTTq2gdeFZYLLo+RFE35NHZkAbqZeWNd3BpzppeVisAqpDjcp8dyf6uIvEqJRd46jemmyA4iFIeVk8g==}
 
@@ -7604,6 +7686,9 @@ packages:
   standard-as-callback@2.1.0:
     resolution: {integrity: sha512-qoRRSyROncaz1z0mvYqIE4lCd9p2R90i6GxW3uZv5ucSu8tU7B5HXUP1gG8pVZsYNVaXjk8ClXHPttLyxAL48A==}
 
+  state-local@1.0.7:
+    resolution: {integrity: sha512-HTEHMNieakEnoe33shBYcZ7NX83ACUjCu8c40iOGEZsngj9zRnkqS9j1pqQPXwobB0ZcVTk27REb7COQ0UR59w==}
+
   statuses@1.5.0:
     resolution: {integrity: sha512-OpZ3zP+jT1PI7I8nemJX4AKmAX070ZkYPVWV/AaKTJl+tXCTGyVdC1a4SL8RUQYEwk/f34ZX8UTykN68FwrqAA==}
     engines: {node: '>= 0.6'}
@@ -7780,6 +7865,11 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
+  text-version@1.0.2:
+    resolution: {integrity: sha512-um1Hik1+i6bHjtK6kAfI9bqZIoftvboTjda2gKrbyVapERsvZgvi1yFHwq9Veoquv4jrHX7KJN3j7TAYRfYehA==}
+    peerDependencies:
+      diff-match-patch: ^1.0.5
+
   thenify-all@1.6.0:
     resolution: {integrity: sha512-RNxQH/qI8/t3thXJDwcstUO4zeqo64+Uy/+sNVRBx4Xn2OX+OZ9oP+iJnNFqplFra2ZUVeKCSa2oVWi3T4uVmA==}
     engines: {node: '>=0.8'}
@@ -7908,6 +7998,10 @@ packages:
     resolution: {integrity: sha512-RAH822pAdBgcNMAfWnCBU3CFZcfZ/i1eZjwFU/dsLKumyuuP3niueg2UAukXYF0E2AAoc82ZSSf9J0WQBinzHA==}
     engines: {node: '>=12.20'}
 
+  type-fest@4.41.0:
+    resolution: {integrity: sha512-TeTSQ6H5YHvpqVwBRcnLDCBnDOHWYu7IvGbHT6N8AOymcr9PJGjc1GTtiWZTYg0NCgYwvnYWEkVChQAr9bjfwA==}
+    engines: {node: '>=16'}
+
   type-is@1.6.18:
     resolution: {integrity: sha512-TkRKr9sUTxEH8MdfuCSP7VizJyzRNMjj2J2do2Jr3Kym598JVdEksuzPQCnlFPW4ky9Q+iA+ma9BGm06XQBy8g==}
     engines: {node: '>= 0.6'}
@@ -8003,6 +8097,9 @@ packages:
 
   unist-util-position@5.0.0:
     resolution: {integrity: sha512-fucsC7HjXvkB5R3kTCO7kUjRdrS0BJt3M/FPxmHMBOm8JQi2BsHAHFsy27E0EolP8rp0NzXsJ+jNPyDWvOJZPA==}
+
+  unist-util-remove@4.0.0:
+    resolution: {integrity: sha512-b4gokeGId57UVRX/eVKej5gXqGlc9+trkORhFJpu9raqZkZhU0zm8Doi05+HaiBsMEIJowL+2WtQ5ItjsngPXg==}
 
   unist-util-stringify-position@3.0.3:
     resolution: {integrity: sha512-k5GzIBZ/QatR8N5X2y+drfpWG8IDBzdnVj6OInRNWm1oXrzydiaAT2OQiA8DPRRZyAKb9b6I2a6PxYklZD0gKg==}
@@ -8123,6 +8220,9 @@ packages:
 
   vfile-location@5.0.3:
     resolution: {integrity: sha512-5yXvWDEgqeiYiBe1lbxYF7UMAIm/IcopxMHrMQDq3nvKcjPKIhZklUKL+AE7J7uApI4kwe2snsK+eI6UTj9EHg==}
+
+  vfile-matter@5.0.1:
+    resolution: {integrity: sha512-o6roP82AiX0XfkyTHyRCMXgHfltUNlXSEqCIS80f+mbAyiQBE2fxtDVMtseyytGx75sihiJFo/zR6r/4LTs2Cw==}
 
   vfile-message@3.1.4:
     resolution: {integrity: sha512-fa0Z6P8HUrQN4BZaX05SIVXic+7kE3b05PWAtPuYP9QLHsLKYR7/AlLW3NtOrpXRLeawpDLMsVkmk5DG0NXgWw==}
@@ -10672,6 +10772,17 @@ snapshots:
 
   '@mixmark-io/domino@2.2.0': {}
 
+  '@monaco-editor/loader@1.6.1':
+    dependencies:
+      state-local: 1.0.7
+
+  '@monaco-editor/react@4.7.0(monaco-editor@0.54.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)':
+    dependencies:
+      '@monaco-editor/loader': 1.6.1
+      monaco-editor: 0.54.0
+      react: 19.1.1
+      react-dom: 19.1.1(react@19.1.1)
+
   '@next/env@15.5.2': {}
 
   '@next/eslint-plugin-next@15.5.2':
@@ -11421,6 +11532,8 @@ snapshots:
   '@types/debug@4.1.12':
     dependencies:
       '@types/ms': 2.1.0
+
+  '@types/diff-match-patch@1.0.36': {}
 
   '@types/eslint-scope@3.7.7':
     dependencies:
@@ -12914,6 +13027,8 @@ snapshots:
     dependencies:
       dequal: 2.0.3
 
+  diff-match-patch@1.0.5: {}
+
   diff@5.2.0: {}
 
   dir-glob@3.0.1:
@@ -13032,6 +13147,8 @@ snapshots:
   domhandler@5.0.3:
     dependencies:
       domelementtype: 2.3.0
+
+  dompurify@3.1.7: {}
 
   domutils@2.8.0:
     dependencies:
@@ -14717,6 +14834,12 @@ snapshots:
 
   markdown-extensions@2.0.0: {}
 
+  markdown-it-mark@4.0.0: {}
+
+  markdown-it-sub@2.0.0: {}
+
+  markdown-it-sup@2.0.0: {}
+
   markdown-it@14.1.0:
     dependencies:
       argparse: 2.0.1
@@ -14731,6 +14854,8 @@ snapshots:
       repeat-string: 1.6.1
 
   markdown-table@3.0.4: {}
+
+  marked@14.0.0: {}
 
   marked@16.4.2: {}
 
@@ -15594,6 +15719,11 @@ snapshots:
 
   moment@2.30.1: {}
 
+  monaco-editor@0.54.0:
+    dependencies:
+      dompurify: 3.1.7
+      marked: 14.0.0
+
   motion-dom@12.23.12:
     dependencies:
       motion-utils: 12.23.6
@@ -15632,6 +15762,22 @@ snapshots:
   neo-async@2.6.2: {}
 
   neotraverse@0.6.15: {}
+
+  next-mdx-remote-client@2.1.7(@types/react@19.1.12)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(unified@11.0.5):
+    dependencies:
+      '@babel/code-frame': 7.27.1
+      '@mdx-js/mdx': 3.1.1
+      '@mdx-js/react': 3.1.1(@types/react@19.1.12)(react@19.1.1)
+      react: 19.1.1
+      react-dom: 19.1.1(react@19.1.1)
+      remark-mdx-remove-esm: 1.2.1(unified@11.0.5)
+      serialize-error: 12.0.0
+      vfile: 6.0.3
+      vfile-matter: 5.0.1
+    transitivePeerDependencies:
+      - '@types/react'
+      - supports-color
+      - unified
 
   next-themes@0.4.6(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
     dependencies:
@@ -17065,6 +17211,15 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  remark-mdx-remove-esm@1.2.1(unified@11.0.5):
+    dependencies:
+      '@types/mdast': 4.0.4
+      mdast-util-mdxjs-esm: 2.0.1
+      unified: 11.0.5
+      unist-util-remove: 4.0.0
+    transitivePeerDependencies:
+      - supports-color
+
   remark-mdx@3.1.1:
     dependencies:
       mdast-util-mdx: 3.0.0
@@ -17296,6 +17451,10 @@ snapshots:
       statuses: 2.0.1
     transitivePeerDependencies:
       - supports-color
+
+  serialize-error@12.0.0:
+    dependencies:
+      type-fest: 4.41.0
 
   serialize-javascript@6.0.2:
     dependencies:
@@ -17564,6 +17723,8 @@ snapshots:
 
   standard-as-callback@2.1.0: {}
 
+  state-local@1.0.7: {}
+
   statuses@1.5.0: {}
 
   statuses@2.0.1: {}
@@ -17776,6 +17937,11 @@ snapshots:
       commander: 2.20.3
       source-map-support: 0.5.21
 
+  text-version@1.0.2(diff-match-patch@1.0.5):
+    dependencies:
+      '@types/diff-match-patch': 1.0.36
+      diff-match-patch: 1.0.5
+
   thenify-all@1.6.0:
     dependencies:
       thenify: 3.3.1
@@ -17873,6 +18039,8 @@ snapshots:
   type-fest@1.4.0: {}
 
   type-fest@2.19.0: {}
+
+  type-fest@4.41.0: {}
 
   type-is@1.6.18:
     dependencies:
@@ -18000,6 +18168,12 @@ snapshots:
   unist-util-position@5.0.0:
     dependencies:
       '@types/unist': 3.0.3
+
+  unist-util-remove@4.0.0:
+    dependencies:
+      '@types/unist': 3.0.3
+      unist-util-is: 6.0.0
+      unist-util-visit-parents: 6.0.1
 
   unist-util-stringify-position@3.0.3:
     dependencies:
@@ -18135,6 +18309,11 @@ snapshots:
     dependencies:
       '@types/unist': 3.0.3
       vfile: 6.0.3
+
+  vfile-matter@5.0.1:
+    dependencies:
+      vfile: 6.0.3
+      yaml: 2.8.1
 
   vfile-message@3.1.4:
     dependencies:

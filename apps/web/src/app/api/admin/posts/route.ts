@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getPostsList } from "@/actions/post";
+import { getPostsList, createPost } from "@/actions/post";
 
 /**
  * @openapi
@@ -52,6 +52,26 @@ import { getPostsList } from "@/actions/post";
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/GetPostsListSuccessResponse'
+ *   post:
+ *     summary: 新建文章
+ *     description: 需管理员/编辑/作者身份，创建新文章
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreatePost'
+ *     security:
+ *       - BearerAuth: []
+ *     tags:
+ *       - Posts
+ *     responses:
+ *       200:
+ *         description: 返回创建的文章信息
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CreatePostSuccessResponse'
  */
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -83,4 +103,52 @@ export async function GET(request: NextRequest) {
     },
     { environment: "serverless" },
   );
+}
+
+export async function POST(request: NextRequest) {
+  const access_token = request.headers
+    .get("authorization")
+    ?.replace("Bearer ", "");
+
+  try {
+    const body = await request.json();
+
+    return createPost(
+      {
+        access_token,
+        title: body.title,
+        slug: body.slug,
+        content: body.content,
+        excerpt: body.excerpt,
+        featuredImage: body.featuredImage,
+        status: body.status,
+        isPinned: body.isPinned,
+        allowComments: body.allowComments,
+        publishedAt: body.publishedAt,
+        metaTitle: body.metaTitle,
+        metaDescription: body.metaDescription,
+        metaKeywords: body.metaKeywords,
+        robotsIndex: body.robotsIndex,
+        categories: body.categories,
+        tags: body.tags,
+        commitMessage: body.commitMessage,
+      },
+      { environment: "serverless" },
+    );
+  } catch (error) {
+    console.error("Parse request body error:", error);
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: {
+          code: "BAD_REQUEST",
+          message: "无效的请求数据",
+        },
+      }),
+      {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }
 }
