@@ -50,6 +50,7 @@ import { TableOfContents } from "./TableOfContents";
 import { ListToolbar } from "./ListToolbar";
 import { LinkPopover } from "./LinkPopover";
 import { LinkToolbar } from "./LinkToolbar";
+import { CodeBlockToolbar } from "./CodeBlockToolbar";
 import { useToast } from "@/ui/Toast";
 import {
   loadEditorContent,
@@ -71,6 +72,9 @@ export default function Editor({ content }: { content?: string }) {
   const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false);
   const [isLinkToolbarVisible, setIsLinkToolbarVisible] = useState(false);
   const [currentLinkUrl, setCurrentLinkUrl] = useState("");
+  const [isCodeBlockToolbarVisible, setIsCodeBlockToolbarVisible] =
+    useState(false);
+  const [currentCodeBlockLanguage, setCurrentCodeBlockLanguage] = useState("");
   const [editorType, setEditorType] = useState<string | number>("visual");
 
   // 编辑器状态
@@ -165,6 +169,16 @@ export default function Editor({ content }: { content?: string }) {
       } else {
         setCurrentLinkUrl("");
       }
+
+      // 检查是否在代码块内
+      const isCodeBlock = editorInstance.isActive("codeBlock");
+      setIsCodeBlockToolbarVisible(isCodeBlock);
+      if (isCodeBlock) {
+        const attrs = editorInstance.getAttributes("codeBlock");
+        setCurrentCodeBlockLanguage(attrs.language || "");
+      } else {
+        setCurrentCodeBlockLanguage("");
+      }
     };
 
     // 监听编辑器更新事件，实时更新按钮状态
@@ -205,6 +219,16 @@ export default function Editor({ content }: { content?: string }) {
       setCurrentLinkUrl(attrs.href || "");
     } else {
       setCurrentLinkUrl("");
+    }
+
+    // 检查是否在代码块内
+    const isCodeBlock = editor.isActive("codeBlock");
+    setIsCodeBlockToolbarVisible(isCodeBlock);
+    if (isCodeBlock) {
+      const attrs = editor.getAttributes("codeBlock");
+      setCurrentCodeBlockLanguage(attrs.language || "");
+    } else {
+      setCurrentCodeBlockLanguage("");
     }
   };
 
@@ -810,6 +834,15 @@ export default function Editor({ content }: { content?: string }) {
             isVisible={isLinkToolbarVisible}
             linkUrl={currentLinkUrl}
             onEdit={handleEditLink}
+          />
+        )}
+
+        {/* 代码块工具栏 */}
+        {editor && (
+          <CodeBlockToolbar
+            editor={editor}
+            isVisible={isCodeBlockToolbarVisible}
+            currentLanguage={currentCodeBlockLanguage}
           />
         )}
 

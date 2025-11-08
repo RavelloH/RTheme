@@ -57,11 +57,26 @@
   @apply bg-foreground/10 text-foreground px-1.5 py-0.5 rounded-xs text-sm font-mono hover:bg-foreground/20 transition-all select-all;
 }
 
+/* 代码块基础样式 */
 .tiptap pre {
-  @apply bg-foreground/10 text-foreground p-4 rounded overflow-x-auto;
+  @apply rounded-lg overflow-hidden my-4;
 }
 
-.tiptap pre code {
+/* Shiki 代码块样式 */
+.tiptap pre.shiki {
+  @apply p-4 overflow-x-auto;
+}
+
+.tiptap pre.shiki code {
+  @apply bg-transparent p-0 font-mono text-sm leading-relaxed;
+}
+
+/* 普通代码块样式（回退） */
+.tiptap pre:not(.shiki) {
+  @apply bg-foreground/10 text-foreground p-4;
+}
+
+.tiptap pre:not(.shiki) code {
   @apply bg-transparent p-0 font-mono text-sm;
 }
 
@@ -163,4 +178,34 @@
 /* Bold */
 .tiptap strong {
   @apply font-bold text-foreground;
+}
+
+/* Shiki 代码块暗黑模式支持 */
+/* 支持系统偏好设置的暗黑模式 */
+@media (prefers-color-scheme: dark) {
+  .tiptap .shiki,
+  .tiptap .shiki span {
+    color: var(--shiki-dark) !important;
+    background-color: var(--shiki-dark-bg) !important;
+  }
+}
+
+/* 支持 data-theme 属性切换 */
+[data-theme="dark"] .tiptap .shiki,
+[data-theme="dark"] .tiptap .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+}
+
+/* 支持基于 Class 的暗黑模式切换 */
+html.dark .tiptap .shiki,
+html.dark .tiptap .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+}
+
+.dark .tiptap .shiki,
+.dark .tiptap .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
 }

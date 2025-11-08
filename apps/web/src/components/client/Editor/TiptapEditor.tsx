@@ -25,6 +25,7 @@ import {
   saveEditorContent,
   type EditorConfig,
 } from "@/lib/client/editorPersistence";
+import CodeBlockShiki from "tiptap-extension-code-block-shiki";
 
 // 自定义扩展：双击空格退出链接
 const ExitLinkOnDoubleSpace = Extension.create({
@@ -115,8 +116,16 @@ export function TiptapEditor({
         heading: {
           levels: [1, 2, 3, 4, 5, 6],
         },
+        link: false,
       }),
-      Underline,
+      CodeBlockShiki.configure({
+        defaultTheme: "light-plus",
+        themes: {
+          light: "light-plus",
+          dark: "dark-plus",
+        },
+        defaultLanguage: null,
+      }),
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
@@ -173,10 +182,6 @@ export function TiptapEditor({
       TextAlign.configure({
         types: ["heading", "paragraph"],
         alignments: ["left", "center", "right"],
-      }),
-      TrailingNode.configure({
-        node: "paragraph",
-        notAfter: ["paragraph"],
       }),
       CharacterCount,
       Markdown,

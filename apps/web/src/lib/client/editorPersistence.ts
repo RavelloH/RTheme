@@ -1,6 +1,5 @@
 import TurndownService from "turndown";
 import { gfm } from "turndown-plugin-gfm";
-
 export interface EditorConfig {
   [key: string]: unknown;
 }
