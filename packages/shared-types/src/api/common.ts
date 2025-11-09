@@ -95,10 +95,38 @@ export function getAllRegisteredSchemas(): SchemaDefinition[] {
   }));
 }
 
+// 通用错误响应 Schemas（只定义 error.ts 中没有的）
+export const BadRequestErrorResponseSchema = BaseResponseSchema.extend({
+  success: z.literal(false),
+  data: z.null(),
+  error: ApiErrorSchema.extend({
+    code: z.literal("BAD_REQUEST"),
+  }),
+});
+
+export const ForbiddenErrorResponseSchema = BaseResponseSchema.extend({
+  success: z.literal(false),
+  data: z.null(),
+  error: ApiErrorSchema.extend({
+    code: z.literal("FORBIDDEN"),
+  }),
+});
+
+export const NotFoundErrorResponseSchema = BaseResponseSchema.extend({
+  success: z.literal(false),
+  data: z.null(),
+  error: ApiErrorSchema.extend({
+    code: z.literal("NOT_FOUND"),
+  }),
+});
+
 // 自动注册当前模块的schemas
 registerSchema("ApiResponse", ApiResponseSchema);
 registerSchema("ErrorResponse", ApiErrorSchema);
 registerSchema("Pagination", PaginationSchema);
+registerSchema("BadRequestErrorResponse", BadRequestErrorResponseSchema);
+registerSchema("ForbiddenErrorResponse", ForbiddenErrorResponseSchema);
+registerSchema("NotFoundErrorResponse", NotFoundErrorResponseSchema);
 
 // 定义允许的响应数据类型
 export type ApiResponseData =

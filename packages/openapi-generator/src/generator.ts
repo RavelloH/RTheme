@@ -116,7 +116,9 @@ interface OpenAPISpec {
   paths: Record<string, any>;
   components: {
     schemas: Record<string, any>;
+    securitySchemes?: Record<string, any>;
   };
+  security?: Array<Record<string, any>>;
 }
 
 export async function generateOpenAPISpec(): Promise<OpenAPISpec> {
@@ -136,6 +138,14 @@ export async function generateOpenAPISpec(): Promise<OpenAPISpec> {
     paths: {},
     components: {
       schemas: {},
+      securitySchemes: {
+        BearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+          description: "JWT 访问令牌认证",
+        },
+      },
     },
   };
 
@@ -159,6 +169,9 @@ export async function generateOpenAPISpec(): Promise<OpenAPISpec> {
     // 导入所有API模块来触发schema注册
     await import("@repo/shared-types/api/common");
     await import("@repo/shared-types/api/auth");
+    await import("@repo/shared-types/api/post");
+    await import("@repo/shared-types/api/user");
+    await import("@repo/shared-types/api/audit");
     // 你可以在这里添加更多的API模块导入
 
     // 获取所有已注册的schemas

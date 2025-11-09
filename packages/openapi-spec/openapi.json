@@ -858,6 +858,204 @@
         }
       }
     },
+    "/api/admin/posts/{slug}": {
+      "get": {
+        "summary": "获取文章详情",
+        "description": "需管理员/编辑/作者身份，通过 slug 获取单个文章的详细信息",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "文章的唯一标识符"
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "Posts"
+        ],
+        "responses": {
+          "200": {
+            "description": "返回文章详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetPostDetailSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "403": {
+            "description": "无权访问此文章"
+          },
+          "404": {
+            "description": "文章不存在"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      },
+      "patch": {
+        "summary": "更新文章",
+        "description": "需管理员/编辑/作者身份，通过 slug 更新单个文章",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "文章的唯一标识符"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "newSlug": {
+                    "type": "string",
+                    "description": "新的 slug（如果需要修改）"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "文章标题"
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "文章内容"
+                  },
+                  "excerpt": {
+                    "type": "string",
+                    "description": "文章摘要"
+                  },
+                  "featuredImage": {
+                    "type": "string",
+                    "description": "特色图片 URL"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "DRAFT",
+                      "PUBLISHED",
+                      "ARCHIVED"
+                    ],
+                    "description": "文章状态"
+                  },
+                  "isPinned": {
+                    "type": "boolean",
+                    "description": "是否置顶"
+                  },
+                  "allowComments": {
+                    "type": "boolean",
+                    "description": "是否允许评论"
+                  },
+                  "publishedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "发布时间"
+                  },
+                  "metaTitle": {
+                    "type": "string",
+                    "description": "SEO 标题"
+                  },
+                  "metaDescription": {
+                    "type": "string",
+                    "description": "SEO 描述"
+                  },
+                  "metaKeywords": {
+                    "type": "string",
+                    "description": "SEO 关键词"
+                  },
+                  "robotsIndex": {
+                    "type": "boolean",
+                    "description": "是否允许搜索引擎索引"
+                  },
+                  "categories": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "文章分类"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "文章标签"
+                  },
+                  "commitMessage": {
+                    "type": "string",
+                    "description": "版本提交信息"
+                  },
+                  "postMode": {
+                    "type": "string",
+                    "enum": [
+                      "MARKDOWN",
+                      "MDX"
+                    ],
+                    "description": "文章编辑器模式"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "Posts"
+        ],
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatePostSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "403": {
+            "description": "无权修改此文章"
+          },
+          "404": {
+            "description": "文章不存在"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
     "/api/admin/settings": {
       "get": {
         "summary": "获取所有配置项",
@@ -2571,6 +2769,198 @@
           "page",
           "pageSize",
           "sortOrder"
+        ],
+        "additionalProperties": false
+      },
+      "BadRequestErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              null
+            ]
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "BAD_REQUEST"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "field": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data",
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "ForbiddenErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              null
+            ]
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "FORBIDDEN"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "field": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data",
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "NotFoundErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              null
+            ]
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "NOT_FOUND"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "field": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data",
+          "error"
         ],
         "additionalProperties": false
       },
@@ -6713,6 +7103,14 @@
           "data"
         ],
         "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT 访问令牌认证"
       }
     }
   }
