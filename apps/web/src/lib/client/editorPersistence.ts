@@ -5,7 +5,7 @@ export interface EditorConfig {
 }
 
 export interface EditorContent {
-  new: {
+  [key: string]: {
     content: string;
     lastUpdatedAt: string;
     config: EditorConfig;
@@ -223,40 +223,47 @@ export function htmlToMarkdown(html: string): string {
  * @param content - 要保存的内容(HTML或Markdown)
  * @param config - 编辑器配置
  * @param isMarkdown - 是否为Markdown格式(true表示直接保存,false表示需要HTML转Markdown)
+ * @param key - 存储的键名,默认为"new"
  */
 export function saveEditorContent(
   content: string,
   config: EditorConfig = {},
   isMarkdown: boolean = false,
+  key: string = "new",
 ): void {
   try {
     // 1. 根据类型处理内容
     const markdown = isMarkdown ? content : htmlToMarkdown(content);
 
-    // 2. 构建存储对象
-    const editorData: EditorContent = {
-      new: {
-        content: markdown,
-        lastUpdatedAt: new Date().toISOString(),
-        config,
-      },
+    // 2. 读取现有数据
+    const existingData = loadAllEditorContent() || {};
+
+    // 3. 更新指定键的数据
+    existingData[key] = {
+      content: markdown,
+      lastUpdatedAt: new Date().toISOString(),
+      config,
     };
 
-    // 3. 保存到localStorage
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(editorData));
+    // 4. 保存到localStorage
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(existingData));
   } catch (error) {
     console.error("Failed to save editor content:", error);
   }
 }
 
 /**
- * 从localStorage读取编辑器内容
+ * 从localStorage读取指定键的编辑器内容
+ * @param key - 要读取的键名,默认为"new"
  */
-export function loadEditorContent(): EditorContent | null {
+export function loadEditorContent(
+  key: string = "new",
+): EditorContent[string] | null {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     if (!data) return null;
-    return JSON.parse(data) as EditorContent;
+    const allContent = JSON.parse(data) as EditorContent;
+    return allContent[key] || null;
   } catch (error) {
     console.error("Failed to load editor content:", error);
     return null;
@@ -264,11 +271,35 @@ export function loadEditorContent(): EditorContent | null {
 }
 
 /**
- * 清除localStorage中的编辑器内容
+ * 从localStorage读取所有编辑器内容
  */
-export function clearEditorContent(): void {
+export function loadAllEditorContent(): EditorContent | null {
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (!data) return null;
+    return JSON.parse(data) as EditorContent;
+  } catch (error) {
+    console.error("Failed to load all editor content:", error);
+    return null;
+  }
+}
+
+/**
+ * 清除localStorage中指定键的编辑器内容
+ * @param key - 要清除的键名,如果不提供则清除所有内容
+ */
+export function clearEditorContent(key?: string): void {
+  try {
+    if (!key) {
+      localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+
+    const data = loadAllEditorContent();
+    if (data && data[key]) {
+      delete data[key];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
   } catch (error) {
     console.error("Failed to clear editor content:", error);
   }

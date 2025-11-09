@@ -27,7 +27,7 @@ export default async function NewPostPage() {
         <AdminSidebar />
         {/* // TODO: 实现类似Grid的平分效果 */}
         <div className="w-full overflow-y-auto">
-          <Editor content="<h1>未命名文章</h1>" />
+          <Editor content="# 未命名文章" />
         </div>
       </HorizontalScroll>
     </MainLayout>

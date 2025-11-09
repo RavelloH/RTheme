@@ -90,6 +90,53 @@ registerSchema(
 );
 
 /*
+    getPostDetail() Schema
+*/
+export const GetPostDetailSchema = z.object({
+  access_token: z.string().optional(),
+  slug: z.string().min(1, "slug 不能为空"),
+});
+export type GetPostDetail = z.infer<typeof GetPostDetailSchema>;
+registerSchema("GetPostDetail", GetPostDetailSchema);
+
+export const PostDetailSchema = z.object({
+  id: z.number().int(),
+  title: z.string(),
+  slug: z.string(),
+  content: z.string(),
+  excerpt: z.string().nullable(),
+  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]),
+  isPinned: z.boolean(),
+  allowComments: z.boolean(),
+  publishedAt: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  author: z.object({
+    uid: z.number().int(),
+    username: z.string(),
+    nickname: z.string().nullable(),
+  }),
+  categories: z.array(z.string()),
+  tags: z.array(z.string()),
+  featuredImage: z.string().nullable(),
+  metaTitle: z.string().nullable(),
+  metaDescription: z.string().nullable(),
+  metaKeywords: z.string().nullable(),
+  robotsIndex: z.boolean(),
+});
+export type PostDetail = z.infer<typeof PostDetailSchema>;
+
+export const GetPostDetailSuccessResponseSchema =
+  createSuccessResponseSchema(PostDetailSchema);
+export type GetPostDetailSuccessResponse = z.infer<
+  typeof GetPostDetailSuccessResponseSchema
+>;
+registerSchema(
+  "GetPostDetailSuccessResponse",
+  GetPostDetailSuccessResponseSchema,
+);
+
+/*
     updatePosts() Schema
 */
 export const UpdatePostsSchema = z.object({
@@ -163,6 +210,46 @@ export type CreatePostSuccessResponse = z.infer<
   typeof CreatePostSuccessResponseSchema
 >;
 registerSchema("CreatePostSuccessResponse", CreatePostSuccessResponseSchema);
+
+/*
+    updatePost() Schema - 更新单篇文章
+*/
+export const UpdatePostSchema = z.object({
+  access_token: z.string().optional(),
+  slug: z.string().min(1, "slug 不能为空"), // 用于标识要更新的文章
+  title: z.string().min(1, "标题不能为空").max(255, "标题过长").optional(),
+  newSlug: z.string().min(1, "slug 不能为空").max(255, "slug 过长").optional(), // 新的 slug（如果要修改）
+  content: z.string().min(1, "内容不能为空").optional(),
+  excerpt: z.string().max(500, "摘要过长").optional(),
+  featuredImage: z.string().max(255, "图片 URL 过长").optional(),
+  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
+  isPinned: z.boolean().optional(),
+  allowComments: z.boolean().optional(),
+  publishedAt: z.string().optional(), // ISO 时间字符串
+  metaTitle: z.string().max(60, "SEO 标题过长").optional(),
+  metaDescription: z.string().max(160, "SEO 描述过长").optional(),
+  metaKeywords: z.string().max(255, "SEO 关键词过长").optional(),
+  robotsIndex: z.boolean().optional(),
+  categories: z.array(z.string()).optional(), // 分类名称数组
+  tags: z.array(z.string()).optional(), // 标签名称数组
+  commitMessage: z.string().optional(), // 版本提交信息（可选）
+});
+export type UpdatePost = z.infer<typeof UpdatePostSchema>;
+registerSchema("UpdatePost", UpdatePostSchema);
+
+export const UpdatePostResultSchema = z.object({
+  id: z.number().int(),
+  slug: z.string(),
+});
+export type UpdatePostResult = z.infer<typeof UpdatePostResultSchema>;
+
+export const UpdatePostSuccessResponseSchema = createSuccessResponseSchema(
+  UpdatePostResultSchema,
+);
+export type UpdatePostSuccessResponse = z.infer<
+  typeof UpdatePostSuccessResponseSchema
+>;
+registerSchema("UpdatePostSuccessResponse", UpdatePostSuccessResponseSchema);
 
 /*
     deletePosts() Schema

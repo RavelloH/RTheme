@@ -247,7 +247,6 @@ export default function PostsTable() {
       if (result.success) {
         toast.success(`已删除 ${result.data?.deleted || 0} 篇文章`);
         closeBatchDeleteDialog();
-        setSelectedPosts([]);
         setRefreshTrigger((prev) => prev + 1);
       } else {
         toast.error(result.message || "未知错误");
@@ -282,7 +281,6 @@ export default function PostsTable() {
       if (result.success) {
         toast.success(`已更新 ${result.data?.updated || 0} 篇文章的状态`);
         closeBatchStatusDialog();
-        setSelectedPosts([]);
         setRefreshTrigger((prev) => prev + 1);
       } else {
         toast.error(result.message || "未知错误");
@@ -319,7 +317,6 @@ export default function PostsTable() {
           `已${batchNewCommentsStatus ? "开启" : "关闭"} ${result.data?.updated || 0} 篇文章的评论功能`,
         );
         closeBatchCommentsDialog();
-        setSelectedPosts([]);
         setRefreshTrigger((prev) => prev + 1);
       } else {
         toast.error(result.message || "未知错误");
@@ -356,7 +353,6 @@ export default function PostsTable() {
           `已${batchNewPinnedStatus ? "置顶" : "取消置顶"} ${result.data?.updated || 0} 篇文章`,
         );
         closeBatchPinnedDialog();
-        setSelectedPosts([]);
         setRefreshTrigger((prev) => prev + 1);
       } else {
         toast.error(result.message || "未知错误");

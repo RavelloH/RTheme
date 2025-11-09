@@ -163,7 +163,7 @@ export default function AdminSidebar() {
               key={index}
               href={item.href}
               className={`flex items-center gap-2 px-3 py-2 shrink-0 transition-all duration-200 ${
-                pathname === item.href
+                pathname.startsWith(item.href)
                   ? "bg-primary text-primary-foreground shadow-md"
                   : "bg-muted/50 hover:bg-muted"
               }`}
@@ -188,7 +188,7 @@ export default function AdminSidebar() {
         <Link
           key={index}
           href={item.href}
-          className={`h-[3em] border border-border flex items-center cursor-pointer relative group/item ${pathname === item.href ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+          className={`h-[3em] border border-border flex items-center cursor-pointer relative group/item ${pathname.startsWith(item.href) ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
         >
           <div className="w-[5em] flex items-center justify-center shrink-0 group-hover/item:scale-[1.2] transition-transform duration-300">
             {item.icon}

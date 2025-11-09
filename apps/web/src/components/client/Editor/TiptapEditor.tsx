@@ -92,6 +92,7 @@ export interface TiptapEditorProps {
   showInvisibleChars?: boolean;
   enablePersistence?: boolean; // 是否启用持久化
   editorConfig?: EditorConfig; // 编辑器配置
+  storageKey?: string; // localStorage 键名
 }
 
 export function TiptapEditor({
@@ -103,6 +104,7 @@ export function TiptapEditor({
   showInvisibleChars = false,
   enablePersistence = false,
   editorConfig = {},
+  storageKey = "new",
 }: TiptapEditorProps) {
   // 用于跟踪是否是首次渲染，避免初始化时触发保存
   const isFirstRender = useRef(true);
@@ -203,7 +205,7 @@ export function TiptapEditor({
       // 如果启用了持久化,保存到localStorage
       // 跳过首次渲染时的保存，避免覆盖刚加载的草稿
       if (enablePersistence && !isFirstRender.current) {
-        saveEditorContent(html, editorConfig);
+        saveEditorContent(html, editorConfig, false, storageKey);
       }
 
       // 标记首次渲染已完成

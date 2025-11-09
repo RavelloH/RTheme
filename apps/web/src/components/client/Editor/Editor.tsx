@@ -48,7 +48,7 @@ import { Input } from "@/ui/Input";
 import { Checkbox } from "@/ui/Checkbox";
 import { TiptapEditor } from "./TiptapEditor";
 import { MarkdownEditor } from "./MarkdownEditor";
-import { createPost } from "@/actions/post";
+import { createPost, updatePost } from "@/actions/post";
 import { useNavigateWithTransition } from "@/components/Link";
 import { TableToolbar } from "./TableToolbar";
 import { TableSizePicker } from "./TableSizePicker";
@@ -67,7 +67,31 @@ import type { Editor as TiptapEditorType } from "@tiptap/react";
 import type { editor } from "monaco-editor";
 import * as monacoHelpers from "./MonacoHelpers";
 
-export default function Editor({ content }: { content?: string }) {
+export default function Editor({
+  content,
+  storageKey = "new",
+  initialData,
+  isEditMode = false,
+}: {
+  content?: string;
+  storageKey?: string;
+  initialData?: {
+    title?: string;
+    slug?: string;
+    excerpt?: string;
+    status?: string;
+    isPinned?: boolean;
+    allowComments?: boolean;
+    robotsIndex?: boolean;
+    metaTitle?: string;
+    metaDescription?: string;
+    metaKeywords?: string;
+    featuredImage?: string;
+    categories?: string[];
+    tags?: string[];
+  };
+  isEditMode?: boolean;
+}) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [editor, setEditor] = useState<TiptapEditorType | null>(null);
   const [monacoEditor, setMonacoEditor] =
@@ -125,6 +149,16 @@ export default function Editor({ content }: { content?: string }) {
     hasLoadedFromStorage.current = false;
   }, [editorType]);
 
+  // 初始化表单数据
+  useEffect(() => {
+    if (initialData) {
+      setDetailsForm((prev) => ({
+        ...prev,
+        ...initialData,
+      }));
+    }
+  }, [initialData]);
+
   // 编辑器状态
   const [editorState, setEditorState] = useState({
     isBold: false,
@@ -143,30 +177,30 @@ export default function Editor({ content }: { content?: string }) {
     if (editorType === "markdown" || editorType === "mdx") {
       if (hasLoadedFromStorage.current) return;
 
-      const savedData = loadEditorContent();
+      const savedData = loadEditorContent(storageKey);
 
-      if (savedData?.new?.content) {
-        setMarkdownContent(savedData.new.content);
+      if (savedData?.content) {
+        setMarkdownContent(savedData.content);
         hasLoadedFromStorage.current = true;
 
         // 加载保存的配置
-        if (savedData.new.config) {
+        if (savedData.config) {
           setDetailsForm((prev) => ({
             ...prev,
-            ...savedData.new.config,
+            ...savedData.config,
           }));
         }
 
         // 只在首次挂载时显示toast
         if (isInitialMount.current) {
-          const lastUpdated = new Date(
-            savedData.new.lastUpdatedAt,
-          ).toLocaleString("zh-CN");
+          const lastUpdated = new Date(savedData.lastUpdatedAt).toLocaleString(
+            "zh-CN",
+          );
 
           toast.info("已加载草稿", `上次保存于 ${lastUpdated}`, 10000, {
             label: "撤销",
             onClick: () => {
-              clearEditorContent();
+              clearEditorContent(storageKey);
               setMarkdownContent(content || "");
               toast.success("已撤销", "草稿已删除");
             },
@@ -186,23 +220,23 @@ export default function Editor({ content }: { content?: string }) {
     // 如果已经加载过，直接返回
     if (hasLoadedFromStorage.current) return;
 
-    const savedData = loadEditorContent();
+    const savedData = loadEditorContent(storageKey);
 
     console.log("检查localStorage:", savedData);
 
-    if (savedData?.new?.content) {
+    if (savedData?.content) {
       // 如果有保存的内容，使用它
-      const savedContent = savedData.new.content;
+      const savedContent = savedData.content;
       console.log("加载草稿内容:", savedContent);
 
       setInitialContent(savedContent);
       hasLoadedFromStorage.current = true;
 
       // 加载保存的配置
-      if (savedData.new.config) {
+      if (savedData.config) {
         setDetailsForm((prev) => ({
           ...prev,
-          ...savedData.new.config,
+          ...savedData.config,
         }));
       }
 
@@ -213,14 +247,14 @@ export default function Editor({ content }: { content?: string }) {
 
       // 只在首次挂载时显示toast
       if (isInitialMount.current) {
-        const lastUpdated = new Date(
-          savedData.new.lastUpdatedAt,
-        ).toLocaleString("zh-CN");
+        const lastUpdated = new Date(savedData.lastUpdatedAt).toLocaleString(
+          "zh-CN",
+        );
 
         toast.info("已加载草稿", `上次保存于 ${lastUpdated}`, 10000, {
           label: "撤销",
           onClick: () => {
-            clearEditorContent();
+            clearEditorContent(storageKey);
             setInitialContent(content);
 
             // 清空编辑器内容，使用原始content
@@ -647,7 +681,12 @@ export default function Editor({ content }: { content?: string }) {
       }
 
       // 保存到 localStorage
-      saveEditorContent(currentContent, detailsForm, editorType !== "visual");
+      saveEditorContent(
+        currentContent,
+        detailsForm,
+        editorType !== "visual",
+        storageKey,
+      );
 
       toast.success("详细信息已保存");
       closeDetailsDialog();
@@ -705,38 +744,67 @@ export default function Editor({ content }: { content?: string }) {
     setIsSubmitting(true);
     try {
       // 获取当前编辑器内容
-      let currentContent = "";
-      if (editorType === "visual" && editor) {
-        currentContent = editor.getHTML();
-      } else if (editorType === "markdown" || editorType === "mdx") {
-        currentContent = markdownContent;
+      const currentContent =
+        JSON.parse(localStorage.getItem("editor") || "{}")[storageKey]
+          ?.content || "";
+
+      let result;
+
+      if (isEditMode) {
+        // 编辑模式：使用详细信息中设置的状态
+        const status = detailsForm.status as "DRAFT" | "PUBLISHED" | "ARCHIVED";
+
+        const updateData = {
+          slug: storageKey, // 使用 storageKey 作为当前文章的 slug
+          title: detailsForm.title,
+          newSlug:
+            detailsForm.slug !== storageKey ? detailsForm.slug : undefined,
+          content: currentContent,
+          excerpt: detailsForm.excerpt || undefined,
+          featuredImage: detailsForm.featuredImage || undefined,
+          status,
+          isPinned: detailsForm.isPinned,
+          allowComments: detailsForm.allowComments,
+          metaTitle: detailsForm.metaTitle || undefined,
+          metaDescription: detailsForm.metaDescription || undefined,
+          metaKeywords: detailsForm.metaKeywords || undefined,
+          robotsIndex: detailsForm.robotsIndex,
+          categories:
+            detailsForm.categories.length > 0
+              ? detailsForm.categories
+              : undefined,
+          tags: detailsForm.tags.length > 0 ? detailsForm.tags : undefined,
+          commitMessage: commitMessage || undefined,
+        };
+
+        result = await updatePost(updateData);
+      } else {
+        // 新建模式：根据按钮类型决定状态
+        const status = confirmAction === "publish" ? "PUBLISHED" : "DRAFT";
+
+        const postData = {
+          title: detailsForm.title,
+          slug: detailsForm.slug,
+          content: currentContent,
+          excerpt: detailsForm.excerpt || undefined,
+          featuredImage: detailsForm.featuredImage || undefined,
+          status: status as "DRAFT" | "PUBLISHED",
+          isPinned: detailsForm.isPinned,
+          allowComments: detailsForm.allowComments,
+          metaTitle: detailsForm.metaTitle || undefined,
+          metaDescription: detailsForm.metaDescription || undefined,
+          metaKeywords: detailsForm.metaKeywords || undefined,
+          robotsIndex: detailsForm.robotsIndex,
+          categories:
+            detailsForm.categories.length > 0
+              ? detailsForm.categories
+              : undefined,
+          tags: detailsForm.tags.length > 0 ? detailsForm.tags : undefined,
+          commitMessage: commitMessage || undefined,
+        };
+
+        result = await createPost(postData);
       }
-
-      // 准备提交数据
-      const status = confirmAction === "publish" ? "PUBLISHED" : "DRAFT";
-      const postData = {
-        title: detailsForm.title,
-        slug: detailsForm.slug,
-        content: currentContent,
-        excerpt: detailsForm.excerpt || undefined,
-        featuredImage: detailsForm.featuredImage || undefined,
-        status: status as "DRAFT" | "PUBLISHED",
-        isPinned: detailsForm.isPinned,
-        allowComments: detailsForm.allowComments,
-        metaTitle: detailsForm.metaTitle || undefined,
-        metaDescription: detailsForm.metaDescription || undefined,
-        metaKeywords: detailsForm.metaKeywords || undefined,
-        robotsIndex: detailsForm.robotsIndex,
-        categories:
-          detailsForm.categories.length > 0
-            ? detailsForm.categories
-            : undefined,
-        tags: detailsForm.tags.length > 0 ? detailsForm.tags : undefined,
-        commitMessage: commitMessage || undefined,
-      };
-
-      // 调用 server action
-      const result = await createPost(postData);
 
       // 检查是否是 NextResponse
       let response;
@@ -748,13 +816,28 @@ export default function Editor({ content }: { content?: string }) {
 
       // 处理结果
       if (response.success) {
-        toast.success(
-          confirmAction === "publish" ? "文章已发布" : "草稿已保存",
-          commitMessage ? `提交信息：${commitMessage}` : undefined,
-        );
+        if (isEditMode) {
+          // 编辑模式：根据状态显示不同提示
+          const statusText =
+            detailsForm.status === "PUBLISHED"
+              ? "已发布"
+              : detailsForm.status === "ARCHIVED"
+                ? "已归档"
+                : "草稿";
+          toast.success(
+            `文章已保存为${statusText}`,
+            commitMessage ? `提交信息：${commitMessage}` : undefined,
+          );
+        } else {
+          // 新建模式：根据按钮类型显示不同提示
+          toast.success(
+            confirmAction === "publish" ? "文章已发布" : "草稿已保存",
+            commitMessage ? `提交信息：${commitMessage}` : undefined,
+          );
+        }
 
         // 清除 localStorage 中的草稿
-        clearEditorContent();
+        clearEditorContent(storageKey);
 
         closeConfirmDialog();
 
@@ -1257,6 +1340,7 @@ export default function Editor({ content }: { content?: string }) {
                 isFullscreen,
                 showTableOfContents,
               }}
+              storageKey={storageKey}
             />
 
             {/* 表格工具栏 */}
@@ -1310,6 +1394,7 @@ export default function Editor({ content }: { content?: string }) {
                   showTableOfContents,
                 },
                 true, // isMarkdown = true,直接保存Markdown
+                storageKey,
               );
             }}
             mode={editorType === "mdx" ? "mdx" : "markdown"}
@@ -1350,23 +1435,34 @@ export default function Editor({ content }: { content?: string }) {
         {/* 右侧：操作按钮 */}
         <div className="flex gap-2">
           <Button
-            label="设置详细信息"
+            label={isEditMode ? "更改详细信息" : "设置详细信息"}
             variant="ghost"
             size="sm"
             onClick={openDetailsDialog}
           />
-          <Button
-            label="保存为草稿"
-            variant="ghost"
-            size="sm"
-            onClick={() => openConfirmDialog("draft")}
-          />
-          <Button
-            label="发布"
-            variant="primary"
-            size="sm"
-            onClick={() => openConfirmDialog("publish")}
-          />
+          {isEditMode ? (
+            <Button
+              label="保存"
+              variant="primary"
+              size="sm"
+              onClick={() => openConfirmDialog("draft")}
+            />
+          ) : (
+            <>
+              <Button
+                label="保存为草稿"
+                variant="ghost"
+                size="sm"
+                onClick={() => openConfirmDialog("draft")}
+              />
+              <Button
+                label="发布"
+                variant="primary"
+                size="sm"
+                onClick={() => openConfirmDialog("publish")}
+              />
+            </>
+          )}
         </div>
       </GridItem>
 
@@ -1421,6 +1517,28 @@ export default function Editor({ content }: { content?: string }) {
               发布设置
             </h3>
             <div className="space-y-3">
+              {isEditMode && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground/80 mb-2">
+                      文章状态
+                    </label>
+                    <Select
+                      value={detailsForm.status}
+                      onChange={(value) =>
+                        handleDetailsFieldChange("status", String(value))
+                      }
+                      options={[
+                        { value: "DRAFT", label: "草稿" },
+                        { value: "PUBLISHED", label: "已发布" },
+                        { value: "ARCHIVED", label: "已归档" },
+                      ]}
+                      size="sm"
+                    />
+                  </div>
+                  <br />
+                </>
+              )}
               <Checkbox
                 label="置顶文章"
                 checked={detailsForm.isPinned}
@@ -1520,11 +1638,17 @@ export default function Editor({ content }: { content?: string }) {
         </div>
       </Dialog>
 
-      {/* 确认对话框（保存为草稿/发布） */}
+      {/* 确认对话框 */}
       <Dialog
         open={confirmDialogOpen}
         onClose={closeConfirmDialog}
-        title={confirmAction === "publish" ? "确认发布" : "确认保存为草稿"}
+        title={
+          isEditMode
+            ? "确认保存"
+            : confirmAction === "publish"
+              ? "确认发布"
+              : "确认保存为草稿"
+        }
         size="lg"
       >
         <div className="px-6 py-6 space-y-6">
@@ -1551,7 +1675,7 @@ export default function Editor({ content }: { content?: string }) {
                       className={`text-sm ${detailsForm.title ? "text-foreground/80" : "text-muted-foreground italic"}`}
                     >
                       {detailsForm.title ||
-                        '（未设置，请点击"设置详细信息"填写）'}
+                        `（未设置，请点击"${isEditMode ? "更改" : "设置"}详细信息"填写）`}
                     </p>
                   </div>
                   <div>
@@ -1562,9 +1686,23 @@ export default function Editor({ content }: { content?: string }) {
                       className={`text-sm font-mono ${detailsForm.slug ? "text-foreground/80" : "text-muted-foreground italic"}`}
                     >
                       {detailsForm.slug ||
-                        '（未设置，请点击"设置详细信息"填写）'}
+                        `（未设置，请点击"${isEditMode ? "更改" : "设置"}详细信息"填写）`}
                     </p>
                   </div>
+                  {isEditMode && (
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">
+                        文章状态
+                      </label>
+                      <p className="text-sm text-foreground/80">
+                        {detailsForm.status === "DRAFT"
+                          ? "草稿"
+                          : detailsForm.status === "PUBLISHED"
+                            ? "已发布"
+                            : "已归档"}
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1">
                       摘要
@@ -1691,7 +1829,7 @@ export default function Editor({ content }: { content?: string }) {
                 />
                 <div className="flex gap-2">
                   <Button
-                    label="设置详细信息"
+                    label={isEditMode ? "更改详细信息" : "设置详细信息"}
                     variant="ghost"
                     onClick={openDetailsFromConfirm}
                     size="sm"
@@ -1741,13 +1879,23 @@ export default function Editor({ content }: { content?: string }) {
                   disabled={isSubmitting}
                 />
                 <Button
-                  label={confirmAction === "publish" ? "发布" : "保存为草稿"}
+                  label={
+                    isEditMode
+                      ? "保存"
+                      : confirmAction === "publish"
+                        ? "发布"
+                        : "保存为草稿"
+                  }
                   variant="primary"
                   onClick={handleFinalSubmit}
                   size="sm"
                   loading={isSubmitting}
                   loadingText={
-                    confirmAction === "publish" ? "发布中..." : "保存中..."
+                    isEditMode
+                      ? "保存中..."
+                      : confirmAction === "publish"
+                        ? "发布中..."
+                        : "保存中..."
                   }
                 />
               </div>

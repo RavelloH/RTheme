@@ -7,9 +7,15 @@ import {
   GetPostsListSchema,
   GetPostsList,
   PostListItem,
+  GetPostDetailSchema,
+  GetPostDetail,
+  PostDetail,
   CreatePostSchema,
   CreatePost,
   CreatePostResult,
+  UpdatePostSchema,
+  UpdatePost,
+  UpdatePostResult,
   UpdatePostsSchema,
   UpdatePosts,
   DeletePostsSchema,
@@ -341,6 +347,135 @@ export async function getPostsList(
 }
 
 /*
+  getPostDetail - 获取文章详情
+*/
+export async function getPostDetail(
+  params: GetPostDetail,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<PostDetail | null>>>;
+export async function getPostDetail(
+  params: GetPostDetail,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<PostDetail | null>>;
+export async function getPostDetail(
+  { access_token, slug }: GetPostDetail,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<PostDetail | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      slug,
+    },
+    GetPostDetailSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 查找文章
+    const post = await prisma.post.findUnique({
+      where: {
+        slug,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        content: true,
+        excerpt: true,
+        status: true,
+        isPinned: true,
+        allowComments: true,
+        publishedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        featuredImage: true,
+        metaTitle: true,
+        metaDescription: true,
+        metaKeywords: true,
+        robotsIndex: true,
+        author: {
+          select: {
+            uid: true,
+            username: true,
+            nickname: true,
+          },
+        },
+        categories: {
+          select: {
+            name: true,
+          },
+        },
+        tags: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!post) {
+      return response.notFound({ message: "文章不存在" });
+    }
+
+    // 使用 text-version 获取最新版本的内容
+    const tv = new TextVersion();
+    const latestContent = tv.latest(post.content);
+
+    // 转换数据格式
+    const data: PostDetail = {
+      id: post.id,
+      title: post.title,
+      slug: post.slug,
+      content: latestContent,
+      excerpt: post.excerpt,
+      status: post.status,
+      isPinned: post.isPinned,
+      allowComments: post.allowComments,
+      publishedAt: post.publishedAt?.toISOString() || null,
+      createdAt: post.createdAt.toISOString(),
+      updatedAt: post.updatedAt.toISOString(),
+      featuredImage: post.featuredImage,
+      metaTitle: post.metaTitle,
+      metaDescription: post.metaDescription,
+      metaKeywords: post.metaKeywords,
+      robotsIndex: post.robotsIndex,
+      author: {
+        uid: post.author.uid,
+        username: post.author.username,
+        nickname: post.author.nickname,
+      },
+      categories: post.categories.map((cat) => cat.name),
+      tags: post.tags.map((tag) => tag.name),
+    };
+
+    return response.ok({ data });
+  } catch (error) {
+    console.error("Get post detail error:", error);
+    return response.serverError();
+  }
+}
+
+/*
   createPost - 新建文章
 */
 export async function createPost(
@@ -434,8 +569,14 @@ export async function createPost(
     const versionName = `${user.uid}:${now}:${finalCommitMessage}`;
     const versionedContent = tv.commit("", content, versionName);
 
-    // 处理发布时间
-    const publishedAtDate = publishedAt ? new Date(publishedAt) : null;
+    // 处理发布时间：如果状态是 PUBLISHED 且没有提供 publishedAt，则使用当前时间
+    let publishedAtDate: Date | null = null;
+    if (status === "PUBLISHED") {
+      publishedAtDate = publishedAt ? new Date(publishedAt) : new Date();
+    } else if (publishedAt) {
+      // 如果不是 PUBLISHED 状态但提供了 publishedAt，也保存它
+      publishedAtDate = new Date(publishedAt);
+    }
 
     // 创建文章
     const post = await prisma.post.create({
@@ -511,6 +652,250 @@ export async function createPost(
     });
   } catch (error) {
     console.error("Create post error:", error);
+    return response.serverError();
+  }
+}
+
+/*
+  updatePost - 更新文章
+*/
+export async function updatePost(
+  params: UpdatePost,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<UpdatePostResult | null>>>;
+export async function updatePost(
+  params: UpdatePost,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<UpdatePostResult | null>>;
+export async function updatePost(
+  {
+    access_token,
+    slug,
+    newSlug,
+    title,
+    content,
+    excerpt,
+    featuredImage,
+    status,
+    isPinned,
+    allowComments,
+    publishedAt,
+    metaTitle,
+    metaDescription,
+    metaKeywords,
+    robotsIndex,
+    categories,
+    tags,
+    commitMessage,
+  }: UpdatePost,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<UpdatePostResult | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      slug,
+      newSlug,
+      title,
+      content,
+      excerpt,
+      featuredImage,
+      status,
+      isPinned,
+      allowComments,
+      publishedAt,
+      metaTitle,
+      metaDescription,
+      metaKeywords,
+      robotsIndex,
+      categories,
+      tags,
+      commitMessage,
+    },
+    UpdatePostSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 查找要更新的文章
+    const existingPost = await prisma.post.findUnique({
+      where: { slug, deletedAt: null },
+      select: {
+        id: true,
+        content: true,
+        status: true,
+        publishedAt: true,
+        categories: { select: { name: true } },
+        tags: { select: { name: true } },
+      },
+    });
+
+    if (!existingPost) {
+      return response.notFound({ message: "文章不存在" });
+    }
+
+    // 如果要修改 slug，检查新 slug 是否已被占用
+    if (newSlug && newSlug !== slug) {
+      const slugExists = await prisma.post.findUnique({
+        where: { slug: newSlug },
+      });
+
+      if (slugExists) {
+        return response.badRequest({ message: "新的 slug 已被使用" });
+      }
+    }
+
+    // 使用 text-version 处理内容版本
+    let versionedContent = existingPost.content;
+    if (content !== undefined) {
+      const tv = new TextVersion();
+      const now = new Date().toISOString();
+      const finalCommitMessage = commitMessage || "更新内容";
+      const versionName = `${user.uid}:${now}:${finalCommitMessage}`;
+      versionedContent = tv.commit(existingPost.content, content, versionName);
+    }
+
+    // 构建更新数据
+    const updateData: {
+      title?: string;
+      slug?: string;
+      content?: string;
+      excerpt?: string | null;
+      featuredImage?: string | null;
+      status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+      isPinned?: boolean;
+      allowComments?: boolean;
+      publishedAt?: Date | null;
+      metaTitle?: string | null;
+      metaDescription?: string | null;
+      metaKeywords?: string | null;
+      robotsIndex?: boolean;
+    } = {};
+
+    if (title !== undefined) updateData.title = title;
+    if (newSlug !== undefined) updateData.slug = newSlug;
+    if (content !== undefined) updateData.content = versionedContent;
+    if (excerpt !== undefined) updateData.excerpt = excerpt || null;
+    if (featuredImage !== undefined)
+      updateData.featuredImage = featuredImage || null;
+    if (status !== undefined) updateData.status = status;
+    if (isPinned !== undefined) updateData.isPinned = isPinned;
+    if (allowComments !== undefined) updateData.allowComments = allowComments;
+
+    // 处理发布时间的逻辑
+    if (status !== undefined) {
+      if (status === "PUBLISHED") {
+        // 如果状态改为 PUBLISHED
+        if (!existingPost.publishedAt) {
+          // 如果之前没有发布时间，设置为当前时间或提供的时间
+          updateData.publishedAt = publishedAt
+            ? new Date(publishedAt)
+            : new Date();
+        } else if (publishedAt !== undefined) {
+          // 如果之前有发布时间，但提供了新的发布时间，使用新的
+          updateData.publishedAt = publishedAt
+            ? new Date(publishedAt)
+            : existingPost.publishedAt;
+        }
+        // 否则保持原有的 publishedAt 不变
+      } else {
+        // 如果状态改为 DRAFT 或 ARCHIVED
+        if (publishedAt !== undefined) {
+          // 如果明确提供了 publishedAt，使用它
+          updateData.publishedAt = publishedAt ? new Date(publishedAt) : null;
+        }
+        // 否则保持原有的 publishedAt 不变
+      }
+    } else if (publishedAt !== undefined) {
+      // 如果只是修改 publishedAt 而没有修改 status
+      updateData.publishedAt = publishedAt ? new Date(publishedAt) : null;
+    }
+
+    if (metaTitle !== undefined) updateData.metaTitle = metaTitle || null;
+    if (metaDescription !== undefined)
+      updateData.metaDescription = metaDescription || null;
+    if (metaKeywords !== undefined)
+      updateData.metaKeywords = metaKeywords || null;
+    if (robotsIndex !== undefined) updateData.robotsIndex = robotsIndex;
+
+    // 更新文章
+    const updatedPost = await prisma.post.update({
+      where: { id: existingPost.id },
+      data: {
+        ...updateData,
+        // 处理分类
+        ...(categories !== undefined && {
+          categories: {
+            set: [], // 先清空所有关联
+            connectOrCreate: categories.map((name) => ({
+              where: { name },
+              create: { name },
+            })),
+          },
+        }),
+        // 处理标签
+        ...(tags !== undefined && {
+          tags: {
+            set: [], // 先清空所有关联
+            connectOrCreate: tags.map((name) => ({
+              where: { name },
+              create: { name },
+            })),
+          },
+        }),
+      },
+    });
+
+    // 记录审计日志
+    await logAuditEvent({
+      user: {
+        uid: String(user.uid),
+        ipAddress: await getClientIP(),
+        userAgent: await getClientUserAgent(),
+      },
+      details: {
+        action: "UPDATE",
+        resourceType: "POST",
+        resourceId: String(updatedPost.id),
+        vaule: {
+          old: { slug },
+          new: updateData,
+        },
+        description: `更新文章: ${title || slug}`,
+        metadata: {
+          postId: updatedPost.id,
+          slug: updatedPost.slug,
+          ...(commitMessage && { commitMessage }),
+        },
+      },
+    });
+
+    return response.ok({
+      data: {
+        id: updatedPost.id,
+        slug: updatedPost.slug,
+      },
+    });
+  } catch (error) {
+    console.error("Update post error:", error);
     return response.serverError();
   }
 }
@@ -597,6 +982,7 @@ export async function updatePosts(
       metaDescription?: string;
       metaKeywords?: string;
       robotsIndex?: boolean;
+      publishedAt?: Date;
     } = {};
 
     if (status !== undefined) updateData.status = status;
@@ -615,6 +1001,29 @@ export async function updatePosts(
     // 如果没有要更新的字段
     if (Object.keys(updateData).length === 0) {
       return response.badRequest({ message: "没有要更新的字段" });
+    }
+
+    // 如果状态更改为已发布，需要处理 publishedAt
+    if (status === "PUBLISHED") {
+      // 获取要更新的文章，检查哪些文章还没有 publishedAt
+      const posts = await prisma.post.findMany({
+        where: {
+          id: { in: ids },
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          publishedAt: true,
+        },
+      });
+
+      // 检查是否所有文章都已有 publishedAt
+      const hasUnpublishedPosts = posts.some((post) => !post.publishedAt);
+
+      // 如果有文章没有 publishedAt，则设置为当前时间
+      if (hasUnpublishedPosts) {
+        updateData.publishedAt = new Date();
+      }
     }
 
     // 执行批量更新
