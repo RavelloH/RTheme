@@ -749,10 +749,23 @@ export async function createPost(
         vaule: {
           old: null,
           new: {
+            id: post.id,
             title,
             slug,
+            excerpt,
+            featuredImage,
             status,
-            commitMessage,
+            isPinned,
+            allowComments,
+            publishedAt: publishedAtDate?.toISOString() || null,
+            metaTitle,
+            metaDescription,
+            metaKeywords,
+            robotsIndex,
+            postMode,
+            categories,
+            tags,
+            versionName,
           },
         },
         description: `创建文章: ${title}`,
@@ -861,9 +874,20 @@ export async function updatePost(
       where: { slug, deletedAt: null },
       select: {
         id: true,
+        title: true,
+        slug: true,
         content: true,
+        excerpt: true,
+        featuredImage: true,
         status: true,
+        isPinned: true,
+        allowComments: true,
         publishedAt: true,
+        metaTitle: true,
+        metaDescription: true,
+        metaKeywords: true,
+        robotsIndex: true,
+        postMode: true,
         userUid: true, // 需要获取作者 uid 以进行权限检查
         categories: { select: { name: true } },
         tags: { select: { name: true } },
@@ -892,12 +916,25 @@ export async function updatePost(
 
     // 使用 text-version 处理内容版本
     let versionedContent = existingPost.content;
+    let newVersionName: string | undefined;
+    let oldVersionName: string | undefined;
+
     if (content !== undefined) {
       const tv = new TextVersion();
       const now = new Date().toISOString();
       const finalCommitMessage = commitMessage || "更新内容";
-      const versionName = `${user.uid}:${now}:${finalCommitMessage}`;
-      versionedContent = tv.commit(existingPost.content, content, versionName);
+      newVersionName = `${user.uid}:${now}:${finalCommitMessage}`;
+      versionedContent = tv.commit(
+        existingPost.content,
+        content,
+        newVersionName,
+      );
+
+      // 获取旧版本名称
+      const versionLog = tv.log(existingPost.content);
+      if (versionLog.length > 0) {
+        oldVersionName = versionLog[versionLog.length - 1]?.version;
+      }
     }
 
     // 构建更新数据
@@ -994,6 +1031,112 @@ export async function updatePost(
     });
 
     // 记录审计日志
+    // 构建审计日志的 old 和 new 值，只记录被修改的字段（排除 content）
+    const auditOldValue: Record<
+      string,
+      string | number | boolean | null | string[]
+    > = {};
+    const auditNewValue: Record<
+      string,
+      string | number | boolean | null | string[]
+    > = {};
+
+    if (title !== undefined && title !== existingPost.title) {
+      auditOldValue.title = existingPost.title;
+      auditNewValue.title = title;
+    }
+    if (newSlug !== undefined && newSlug !== existingPost.slug) {
+      auditOldValue.slug = existingPost.slug;
+      auditNewValue.slug = newSlug;
+    }
+    if (excerpt !== undefined && excerpt !== existingPost.excerpt) {
+      auditOldValue.excerpt = existingPost.excerpt;
+      auditNewValue.excerpt = excerpt;
+    }
+    if (
+      featuredImage !== undefined &&
+      featuredImage !== existingPost.featuredImage
+    ) {
+      auditOldValue.featuredImage = existingPost.featuredImage;
+      auditNewValue.featuredImage = featuredImage;
+    }
+    if (status !== undefined && status !== existingPost.status) {
+      auditOldValue.status = existingPost.status;
+      auditNewValue.status = status;
+    }
+    if (isPinned !== undefined && isPinned !== existingPost.isPinned) {
+      auditOldValue.isPinned = existingPost.isPinned;
+      auditNewValue.isPinned = isPinned;
+    }
+    if (
+      allowComments !== undefined &&
+      allowComments !== existingPost.allowComments
+    ) {
+      auditOldValue.allowComments = existingPost.allowComments;
+      auditNewValue.allowComments = allowComments;
+    }
+    if (updateData.publishedAt !== undefined) {
+      const oldPublishedAt = existingPost.publishedAt?.toISOString() || null;
+      const newPublishedAt =
+        updateData.publishedAt instanceof Date
+          ? updateData.publishedAt.toISOString()
+          : null;
+      if (oldPublishedAt !== newPublishedAt) {
+        auditOldValue.publishedAt = oldPublishedAt;
+        auditNewValue.publishedAt = newPublishedAt;
+      }
+    }
+    if (metaTitle !== undefined && metaTitle !== existingPost.metaTitle) {
+      auditOldValue.metaTitle = existingPost.metaTitle;
+      auditNewValue.metaTitle = metaTitle;
+    }
+    if (
+      metaDescription !== undefined &&
+      metaDescription !== existingPost.metaDescription
+    ) {
+      auditOldValue.metaDescription = existingPost.metaDescription;
+      auditNewValue.metaDescription = metaDescription;
+    }
+    if (
+      metaKeywords !== undefined &&
+      metaKeywords !== existingPost.metaKeywords
+    ) {
+      auditOldValue.metaKeywords = existingPost.metaKeywords;
+      auditNewValue.metaKeywords = metaKeywords;
+    }
+    if (robotsIndex !== undefined && robotsIndex !== existingPost.robotsIndex) {
+      auditOldValue.robotsIndex = existingPost.robotsIndex;
+      auditNewValue.robotsIndex = robotsIndex;
+    }
+    if (postMode !== undefined && postMode !== existingPost.postMode) {
+      auditOldValue.postMode = existingPost.postMode;
+      auditNewValue.postMode = postMode;
+    }
+    if (categories !== undefined) {
+      const oldCategories = existingPost.categories.map((c) => c.name);
+      const categoriesChanged =
+        JSON.stringify(oldCategories.sort()) !==
+        JSON.stringify(categories.sort());
+      if (categoriesChanged) {
+        auditOldValue.categories = oldCategories;
+        auditNewValue.categories = categories;
+      }
+    }
+    if (tags !== undefined) {
+      const oldTags = existingPost.tags.map((t) => t.name);
+      const tagsChanged =
+        JSON.stringify(oldTags.sort()) !== JSON.stringify(tags.sort());
+      if (tagsChanged) {
+        auditOldValue.tags = oldTags;
+        auditNewValue.tags = tags;
+      }
+    }
+    // 如果更新了内容，记录版本号
+    if (content !== undefined && oldVersionName && newVersionName) {
+      auditOldValue.versionName = oldVersionName;
+      auditNewValue.versionName = newVersionName;
+    }
+
     await logAuditEvent({
       user: {
         uid: String(user.uid),
@@ -1005,14 +1148,14 @@ export async function updatePost(
         resourceType: "POST",
         resourceId: String(updatedPost.id),
         vaule: {
-          old: { slug },
-          new: updateData,
+          old: auditOldValue,
+          new: auditNewValue,
         },
-        description: `更新文章: ${title || slug}`,
+        description: `更新文章: ${updatedPost.title}`,
         metadata: {
           postId: updatedPost.id,
           slug: updatedPost.slug,
-          ...(commitMessage && { commitMessage }),
+          fieldsModifiedCount: Object.keys(auditNewValue).length,
         },
       },
     });
@@ -1159,6 +1302,31 @@ export async function updatePosts(
       return response.badRequest({ message: "没有要更新的字段" });
     }
 
+    // 查询要更新的文章的旧值（用于审计日志）
+    const postsBeforeUpdate = await prisma.post.findMany({
+      where: {
+        id: { in: ids },
+        deletedAt: null,
+        ...(user.role === "AUTHOR" && { userUid: user.uid }),
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        featuredImage: true,
+        status: true,
+        isPinned: true,
+        allowComments: true,
+        publishedAt: true,
+        metaTitle: true,
+        metaDescription: true,
+        metaKeywords: true,
+        robotsIndex: true,
+        postMode: true,
+      },
+    });
+
     // 如果状态更改为已发布，需要处理 publishedAt
     if (status === "PUBLISHED") {
       // 获取要更新的文章，检查哪些文章还没有 publishedAt
@@ -1214,6 +1382,62 @@ export async function updatePosts(
     });
 
     // 记录审计日志
+    // 构建审计日志的 old 和 new 值，只记录被修改的字段
+    const auditOldValue: Record<
+      string,
+      string | number | boolean | null | string[]
+    > = {};
+    const auditNewValue: Record<
+      string,
+      string | number | boolean | null | string[]
+    > = {};
+
+    // 汇总所有文章的旧值（取第一个文章的值作为代表，如果值不同则显示为数组）
+    if (postsBeforeUpdate.length > 0) {
+      const fieldKeys = Object.keys(updateData) as Array<
+        keyof typeof updateData
+      >;
+      const firstPost = postsBeforeUpdate[0];
+
+      if (firstPost) {
+        for (const key of fieldKeys) {
+          if (key === "publishedAt") {
+            // 处理 publishedAt 字段
+            const oldValues = postsBeforeUpdate.map(
+              (p) => p.publishedAt?.toISOString() || null,
+            );
+            const uniqueOldValues = [...new Set(oldValues)];
+            // 如果只有一个唯一值，直接使用；否则过滤掉 null 后作为数组
+            if (uniqueOldValues.length === 1) {
+              auditOldValue[key] = uniqueOldValues[0] ?? null;
+            } else {
+              auditOldValue[key] = uniqueOldValues.filter(
+                (v): v is string => v !== null,
+              );
+            }
+            const newValue = updateData[key];
+            auditNewValue[key] =
+              newValue instanceof Date
+                ? newValue.toISOString()
+                : (newValue ?? null);
+          } else if (key in firstPost) {
+            // 其他字段
+            const oldValues = postsBeforeUpdate.map(
+              (p) => (p as Record<string, unknown>)[key],
+            );
+            const uniqueOldValues = [
+              ...new Set(oldValues.map((v) => JSON.stringify(v))),
+            ].map((v) => JSON.parse(v));
+            auditOldValue[key] =
+              uniqueOldValues.length === 1
+                ? (uniqueOldValues[0] ?? null)
+                : uniqueOldValues;
+            auditNewValue[key] = updateData[key] ?? null;
+          }
+        }
+      }
+    }
+
     await logAuditEvent({
       user: {
         uid: String(user.uid),
@@ -1225,13 +1449,14 @@ export async function updatePosts(
         resourceType: "POST",
         resourceId: ids.join(","),
         vaule: {
-          old: null,
-          new: updateData,
+          old: auditOldValue,
+          new: auditNewValue,
         },
         description: `批量更新文章: ${ids.length} 篇`,
         metadata: {
           count: result.count,
           idsCount: ids.length,
+          fieldsModifiedCount: Object.keys(auditNewValue).length,
         },
       },
     });
@@ -1289,19 +1514,23 @@ export async function deletePosts(
   }
 
   try {
+    // 查询要删除的文章的基本信息（用于审计日志）
+    const postsToDelete = await prisma.post.findMany({
+      where: {
+        id: { in: ids },
+        deletedAt: null,
+        ...(user.role === "AUTHOR" && { userUid: user.uid }),
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        userUid: true,
+      },
+    });
+
     // AUTHOR 权限：需要验证所有要删除的文章都属于该用户
     if (user.role === "AUTHOR") {
-      const postsToDelete = await prisma.post.findMany({
-        where: {
-          id: { in: ids },
-          deletedAt: null,
-        },
-        select: {
-          id: true,
-          userUid: true,
-        },
-      });
-
       // 检查是否所有文章都属于当前用户
       const hasUnauthorizedPost = postsToDelete.some(
         (post) => post.userUid !== user.uid,
@@ -1346,13 +1575,20 @@ export async function deletePosts(
         resourceType: "POST",
         resourceId: ids.join(","),
         vaule: {
-          old: { ids },
+          old: {
+            posts: postsToDelete.map((p) => ({
+              id: p.id,
+              title: p.title,
+              slug: p.slug,
+            })),
+          },
           new: null,
         },
         description: `批量删除文章: ${ids.length} 篇`,
         metadata: {
           count: result.count,
           idsCount: ids.length,
+          deletedPostsCount: postsToDelete.length,
         },
       },
     });
@@ -1751,6 +1987,11 @@ export async function resetPostToVersion(
     );
     const deletedCount = currentVersionCount - targetIndex - 1;
 
+    // 获取将被删除的版本列表
+    const deletedVersions = versionLog
+      .slice(targetIndex + 1)
+      .map((v) => v.version);
+
     // 执行 reset
     const newContent = tv.reset(post.content, targetVersion.version);
 
@@ -1772,8 +2013,15 @@ export async function resetPostToVersion(
         resourceType: "POST_VERSION",
         resourceId: String(post.id),
         vaule: {
-          old: { versionCount: currentVersionCount },
-          new: { versionCount: targetIndex + 1 },
+          old: {
+            versionCount: currentVersionCount,
+            latestVersion: versionLog[versionLog.length - 1]?.version || "",
+            deletedVersionsCount: deletedVersions.length,
+          },
+          new: {
+            versionCount: targetIndex + 1,
+            latestVersion: targetVersion.version,
+          },
         },
         description: `重置文章版本: ${slug}`,
         metadata: {
@@ -1874,6 +2122,11 @@ export async function squashPostToVersion(
     );
     const compressedCount = targetIndex;
 
+    // 获取将被压缩的版本列表
+    const compressedVersions = versionLog
+      .slice(0, targetIndex)
+      .map((v) => v.version);
+
     // 执行 squash
     const newContent = tv.squash(post.content, targetVersion.version);
 
@@ -1895,8 +2148,15 @@ export async function squashPostToVersion(
         resourceType: "POST_VERSION",
         resourceId: String(post.id),
         vaule: {
-          old: { versionCount: versionLog.length },
-          new: { versionCount: versionLog.length - compressedCount },
+          old: {
+            versionCount: versionLog.length,
+            oldestVersion: versionLog[0]?.version || "",
+            compressedVersionsCount: compressedVersions.length,
+          },
+          new: {
+            versionCount: versionLog.length - compressedCount,
+            oldestVersion: targetVersion.version,
+          },
         },
         description: `压缩文章版本: ${slug}`,
         metadata: {
