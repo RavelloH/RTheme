@@ -75,6 +75,7 @@ export const PostListItemSchema = z.object({
   metaDescription: z.string().nullable(),
   metaKeywords: z.string().nullable(),
   robotsIndex: z.boolean(),
+  postMode: z.enum(["MARKDOWN", "MDX"]),
 });
 export type PostListItem = z.infer<typeof PostListItemSchema>;
 
@@ -123,6 +124,7 @@ export const PostDetailSchema = z.object({
   metaDescription: z.string().nullable(),
   metaKeywords: z.string().nullable(),
   robotsIndex: z.boolean(),
+  postMode: z.enum(["MARKDOWN", "MDX"]),
 });
 export type PostDetail = z.infer<typeof PostDetailSchema>;
 
@@ -155,6 +157,7 @@ export const UpdatePostsSchema = z.object({
   metaDescription: z.string().max(160).optional(),
   metaKeywords: z.string().max(255).optional(),
   robotsIndex: z.boolean().optional(),
+  postMode: z.enum(["MARKDOWN", "MDX"]).optional(),
 });
 export type UpdatePosts = z.infer<typeof UpdatePostsSchema>;
 registerSchema("UpdatePosts", UpdatePostsSchema);
@@ -193,6 +196,7 @@ export const CreatePostSchema = z.object({
   categories: z.array(z.string()).optional(), // 分类名称数组
   tags: z.array(z.string()).optional(), // 标签名称数组
   commitMessage: z.string().optional(), // 版本提交信息（可选）
+  postMode: z.enum(["MARKDOWN", "MDX"]).default("MARKDOWN"), // 编辑器模式
 });
 export type CreatePost = z.infer<typeof CreatePostSchema>;
 registerSchema("CreatePost", CreatePostSchema);
@@ -233,6 +237,7 @@ export const UpdatePostSchema = z.object({
   categories: z.array(z.string()).optional(), // 分类名称数组
   tags: z.array(z.string()).optional(), // 标签名称数组
   commitMessage: z.string().optional(), // 版本提交信息（可选）
+  postMode: z.enum(["MARKDOWN", "MDX"]).optional(), // 编辑器模式
 });
 export type UpdatePost = z.infer<typeof UpdatePostSchema>;
 registerSchema("UpdatePost", UpdatePostSchema);

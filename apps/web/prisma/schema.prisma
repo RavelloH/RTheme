@@ -122,6 +122,7 @@ model Post {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   deletedAt     DateTime?
+  postMode      PostMode   @default(MARKDOWN)
 
   userUid Int
 
@@ -516,4 +517,9 @@ enum MenuCategory {
 enum MenuStatus {
   ACTIVE
   SUSPENDED
+}
+
+enum PostMode {
+  MARKDOWN
+  MDX
 }

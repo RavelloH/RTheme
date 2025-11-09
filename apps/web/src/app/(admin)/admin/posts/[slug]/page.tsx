@@ -73,6 +73,7 @@ export default async function EditPostPage(props: Props) {
               featuredImage: post.featuredImage || "",
               categories: post.categories,
               tags: post.tags,
+              postMode: post.postMode,
             }}
           />
         </div>

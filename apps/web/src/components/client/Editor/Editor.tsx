@@ -89,6 +89,7 @@ export default function Editor({
     featuredImage?: string;
     categories?: string[];
     tags?: string[];
+    postMode?: "MARKDOWN" | "MDX";
   };
   isEditMode?: boolean;
 }) {
@@ -113,7 +114,30 @@ export default function Editor({
   const [isCodeBlockToolbarVisible, setIsCodeBlockToolbarVisible] =
     useState(false);
   const [currentCodeBlockLanguage, setCurrentCodeBlockLanguage] = useState("");
-  const [editorType, setEditorType] = useState<string | number>("visual");
+
+  // 初始化编辑器类型，从 localStorage 加载上次使用的编辑器类型
+  const [editorType, setEditorType] = useState<string | number>(() => {
+    try {
+      const savedData = localStorage.getItem("editor");
+      if (savedData) {
+        const editorData = JSON.parse(savedData);
+        const savedEditorType = editorData[storageKey]?.config?.editorType;
+        if (savedEditorType) {
+          return savedEditorType;
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load editor type from localStorage:", error);
+    }
+
+    // 如果 localStorage 中没有信息，根据文章的 postMode 来选择编辑器
+    if (isEditMode && initialData?.postMode) {
+      // MARKDOWN 模式使用可视化编辑器，MDX 模式使用 MDX 编辑器
+      return initialData.postMode === "MARKDOWN" ? "visual" : "mdx";
+    }
+
+    return "visual"; // 默认值
+  });
 
   // 设置详细信息对话框状态
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -683,7 +707,7 @@ export default function Editor({
       // 保存到 localStorage
       saveEditorContent(
         currentContent,
-        detailsForm,
+        { ...detailsForm, editorType }, // 保存编辑器类型
         editorType !== "visual",
         storageKey,
       );
@@ -748,6 +772,12 @@ export default function Editor({
         JSON.parse(localStorage.getItem("editor") || "{}")[storageKey]
           ?.content || "";
 
+      // 确定编辑器模式：visual 和 markdown 都视为 MARKDOWN，mdx 视为 MDX
+      const postMode: "MARKDOWN" | "MDX" =
+        editorType === "visual" || editorType === "markdown"
+          ? "MARKDOWN"
+          : "MDX";
+
       let result;
 
       if (isEditMode) {
@@ -775,6 +805,7 @@ export default function Editor({
               : undefined,
           tags: detailsForm.tags.length > 0 ? detailsForm.tags : undefined,
           commitMessage: commitMessage || undefined,
+          postMode,
         };
 
         result = await updatePost(updateData);
@@ -801,6 +832,7 @@ export default function Editor({
               : undefined,
           tags: detailsForm.tags.length > 0 ? detailsForm.tags : undefined,
           commitMessage: commitMessage || undefined,
+          postMode,
         };
 
         result = await createPost(postData);
@@ -1660,6 +1692,21 @@ export default function Editor({
                 <span className="text-error">标题</span>和
                 <span className="text-error">Slug</span>为必填项。
               </p>
+
+              {/* 编辑器类型提示 */}
+              <div className="mb-4">
+                <p className="text-sm text-muted-foreground">
+                  根据当前所选编辑器，内容将以{" "}
+                  <span className="font-medium text-primary">
+                    {editorType === "visual"
+                      ? "Markdown"
+                      : editorType === "markdown"
+                        ? "Markdown"
+                        : "MDX"}
+                  </span>{" "}
+                  模式保存。
+                </p>
+              </div>
 
               {/* 基本信息 - 只读展示 */}
               <div className="space-y-4">

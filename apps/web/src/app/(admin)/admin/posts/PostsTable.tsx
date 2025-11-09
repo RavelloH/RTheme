@@ -65,6 +65,7 @@ export default function PostsTable() {
     metaDescription: "",
     metaKeywords: "",
     featuredImage: "",
+    postMode: "MARKDOWN" as "MARKDOWN" | "MDX",
   });
 
   // 处理选中状态变化
@@ -88,6 +89,7 @@ export default function PostsTable() {
       metaDescription: post.metaDescription || "",
       metaKeywords: post.metaKeywords || "",
       featuredImage: post.featuredImage || "",
+      postMode: post.postMode,
     });
     setEditDialogOpen(true);
   };
@@ -125,6 +127,7 @@ export default function PostsTable() {
         metaDescription?: string;
         metaKeywords?: string;
         robotsIndex?: boolean;
+        postMode?: "MARKDOWN" | "MDX";
       } = {
         ids: [editingPost.id],
       };
@@ -164,6 +167,9 @@ export default function PostsTable() {
       }
       if (formData.robotsIndex !== editingPost.robotsIndex) {
         updateData.robotsIndex = formData.robotsIndex;
+      }
+      if (formData.postMode !== editingPost.postMode) {
+        updateData.postMode = formData.postMode;
       }
 
       if (Object.keys(updateData).length === 1) {
@@ -693,6 +699,11 @@ export default function PostsTable() {
     { value: "ARCHIVED", label: "已归档" },
   ];
 
+  const postModeOptions: SelectOption[] = [
+    { value: "MARKDOWN", label: "Markdown" },
+    { value: "MDX", label: "MDX" },
+  ];
+
   return (
     <>
       <GridTable
@@ -788,6 +799,23 @@ export default function PostsTable() {
                   已发布：文章将在前台显示 <br />
                   草稿：文章仅后台可见，不会公开 <br />
                   已归档：文章不会显示在文章列表中，但仍可正常访问
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm text-foreground mb-2">
+                  编辑器模式
+                </label>
+                <Select
+                  value={formData.postMode}
+                  onChange={(value) =>
+                    handleFieldChange("postMode", value as string)
+                  }
+                  options={postModeOptions}
+                  size="sm"
+                />
+                <p className="text-sm text-muted-foreground mt-4">
+                  Markdown：标准 Markdown 格式 <br />
+                  MDX：支持在 Markdown 中使用 React 组件
                 </p>
               </div>
               <div className="space-y-3 flex flex-col justify-center">

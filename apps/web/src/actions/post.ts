@@ -279,6 +279,7 @@ export async function getPostsList(
         metaDescription: true,
         metaKeywords: true,
         robotsIndex: true,
+        postMode: true,
         author: {
           select: {
             uid: true,
@@ -316,6 +317,7 @@ export async function getPostsList(
       metaDescription: post.metaDescription,
       metaKeywords: post.metaKeywords,
       robotsIndex: post.robotsIndex,
+      postMode: post.postMode,
       author: {
         uid: post.author.uid,
         username: post.author.username,
@@ -413,6 +415,7 @@ export async function getPostDetail(
         metaDescription: true,
         metaKeywords: true,
         robotsIndex: true,
+        postMode: true,
         author: {
           select: {
             uid: true,
@@ -459,6 +462,7 @@ export async function getPostDetail(
       metaDescription: post.metaDescription,
       metaKeywords: post.metaKeywords,
       robotsIndex: post.robotsIndex,
+      postMode: post.postMode,
       author: {
         uid: post.author.uid,
         username: post.author.username,
@@ -505,6 +509,7 @@ export async function createPost(
     categories,
     tags,
     commitMessage,
+    postMode = "MARKDOWN",
   }: CreatePost,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<CreatePostResult | null>> {
@@ -535,6 +540,7 @@ export async function createPost(
       categories,
       tags,
       commitMessage,
+      postMode,
     },
     CreatePostSchema,
   );
@@ -594,6 +600,7 @@ export async function createPost(
         metaDescription: metaDescription || null,
         metaKeywords: metaKeywords || null,
         robotsIndex,
+        postMode,
         userUid: user.uid,
         categories:
           categories && categories.length > 0
@@ -687,6 +694,7 @@ export async function updatePost(
     categories,
     tags,
     commitMessage,
+    postMode,
   }: UpdatePost,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<UpdatePostResult | null>> {
@@ -718,6 +726,7 @@ export async function updatePost(
       categories,
       tags,
       commitMessage,
+      postMode,
     },
     UpdatePostSchema,
   );
@@ -788,6 +797,7 @@ export async function updatePost(
       metaDescription?: string | null;
       metaKeywords?: string | null;
       robotsIndex?: boolean;
+      postMode?: "MARKDOWN" | "MDX";
     } = {};
 
     if (title !== undefined) updateData.title = title;
@@ -799,6 +809,7 @@ export async function updatePost(
     if (status !== undefined) updateData.status = status;
     if (isPinned !== undefined) updateData.isPinned = isPinned;
     if (allowComments !== undefined) updateData.allowComments = allowComments;
+    if (postMode !== undefined) updateData.postMode = postMode;
 
     // 处理发布时间的逻辑
     if (status !== undefined) {
@@ -926,6 +937,7 @@ export async function updatePosts(
     metaDescription,
     metaKeywords,
     robotsIndex,
+    postMode,
   }: UpdatePosts,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<{ updated: number } | null>> {
@@ -952,6 +964,7 @@ export async function updatePosts(
       metaDescription,
       metaKeywords,
       robotsIndex,
+      postMode,
     },
     UpdatePostsSchema,
   );
@@ -983,6 +996,7 @@ export async function updatePosts(
       metaKeywords?: string;
       robotsIndex?: boolean;
       publishedAt?: Date;
+      postMode?: "MARKDOWN" | "MDX";
     } = {};
 
     if (status !== undefined) updateData.status = status;
@@ -997,6 +1011,7 @@ export async function updatePosts(
       updateData.metaDescription = metaDescription;
     if (metaKeywords !== undefined) updateData.metaKeywords = metaKeywords;
     if (robotsIndex !== undefined) updateData.robotsIndex = robotsIndex;
+    if (postMode !== undefined) updateData.postMode = postMode;
 
     // 如果没有要更新的字段
     if (Object.keys(updateData).length === 0) {
