@@ -86,23 +86,53 @@ export async function getPostsTrends(
     const now = new Date();
     const daysAgo = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
-    // 生成日期序列
-    const datePoints: Date[] = [];
-    const interval = Math.floor((days * 24 * 60 * 60 * 1000) / count);
+    // 查询最近 count 篇文章的最早创建时间
+    const recentPosts = await prisma.post.findMany({
+      where: {
+        deletedAt: null,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: count,
+      select: {
+        createdAt: true,
+      },
+    });
 
-    for (let i = 0; i < count; i++) {
-      datePoints.push(new Date(daysAgo.getTime() + i * interval));
+    // 确定实际的起始时间：取 daysAgo 和最近 count 篇文章中最早的时间
+    let startDate = daysAgo;
+    if (recentPosts.length === count) {
+      const oldestRecentPost = recentPosts[recentPosts.length - 1];
+      if (oldestRecentPost && oldestRecentPost.createdAt < daysAgo) {
+        // 如果最近 count 篇文章的时间跨度超过 days 天，扩展起始时间
+        startDate = oldestRecentPost.createdAt;
+      }
     }
-    datePoints.push(now); // 确保包含当前时间点
+
+    // 计算时间跨度（天数）
+    const actualDays = Math.ceil(
+      (now.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000),
+    );
+
+    // 生成每日数据点
+    const datePoints: Date[] = [];
+    for (let i = 0; i <= actualDays; i++) {
+      datePoints.push(new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000));
+    }
 
     // 为每个时间点计算统计数据
     const allTrendData: PostTrendItem[] = await Promise.all(
-      datePoints.map(async (date) => {
-        const oneDayBefore = new Date(date.getTime() - 24 * 60 * 60 * 1000);
+      datePoints.map(async (date, index) => {
+        // 前一个数据点的时间
+        const prevDate =
+          index > 0
+            ? datePoints[index - 1]
+            : new Date(date.getTime() - 24 * 60 * 60 * 1000);
 
         // total: 全站文章总数
         // personal: 当前用户的文章数
-        // new: 全站新增文章数
+        // new: 全站新增文章数（相比上一个数据点）
         const [totalPosts, myPosts, newPosts] = await Promise.all([
           // 截止该时间点的总文章数（全站）
           prisma.post.count({
@@ -119,11 +149,11 @@ export async function getPostsTrends(
               userUid: user.uid,
             },
           }),
-          // 该时间点前24小时新增文章数（全站）
+          // 自上一个数据点以来新增的文章数（全站）
           prisma.post.count({
             where: {
               createdAt: {
-                gte: oneDayBefore,
+                gt: prevDate,
                 lte: date,
               },
               deletedAt: null,
@@ -135,40 +165,15 @@ export async function getPostsTrends(
           time: date.toISOString(),
           data: {
             total: totalPosts,
-            personal: myPosts, // personal 字段表示"我的文章数"
+            personal: myPosts,
             new: newPosts,
           },
         };
       }),
     );
 
-    // 过滤出有变化的数据点（只保留 total 或 personal 发生变化的点）
-    const trendData: PostTrendItem[] = [];
-    let lastTotal = -1;
-    let lastPersonal = -1;
-
-    for (const item of allTrendData) {
-      if (
-        item.data.total !== lastTotal ||
-        item.data.personal !== lastPersonal
-      ) {
-        trendData.push(item);
-        lastTotal = item.data.total;
-        lastPersonal = item.data.personal;
-      }
-    }
-
-    // 确保至少返回第一个和最后一个数据点
-    if (trendData.length === 0 && allTrendData.length > 0) {
-      const firstItem = allTrendData[0];
-      if (firstItem) trendData.push(firstItem);
-      if (allTrendData.length > 1) {
-        const lastItem = allTrendData[allTrendData.length - 1];
-        if (lastItem) trendData.push(lastItem);
-      }
-    }
-
-    return response.ok({ data: trendData });
+    // 直接返回所有数据点，不进行过滤
+    return response.ok({ data: allTrendData });
   } catch (error) {
     console.error("Get posts trends error:", error);
     return response.serverError();

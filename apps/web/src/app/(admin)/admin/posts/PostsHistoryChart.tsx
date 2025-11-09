@@ -49,50 +49,37 @@ export default function PostsHistoryChart() {
     fetchData();
   }, [refreshTrigger, fetchData]);
 
-  // 转换数据格式 - 扩展数据以填补日期间隙
-  const expandedData: AreaChartDataPoint[] = [];
-
-  if (data.length > 0) {
-    for (let i = 0; i < data.length - 1; i++) {
-      const current = data[i];
-      const next = data[i + 1];
-
-      if (current && next) {
-        expandedData.push({
-          time: current.time,
-          total: current.data.total,
-          new: current.data.new,
-          personal: current.data.personal,
-        });
-
-        // 在两个数据点之间插入中间点（保持当前值）
-        const currentTime = new Date(current.time).getTime();
-        const nextTime = new Date(next.time).getTime();
-        const interval = (nextTime - currentTime) / 2;
-
-        if (interval > 24 * 60 * 60 * 1000) {
-          // 如果间隔大于1天，添加中间点
-          expandedData.push({
-            time: new Date(currentTime + interval).toISOString(),
-            total: current.data.total,
-            new: 0,
-            personal: current.data.personal,
-          });
-        }
-      }
-    }
-
-    // 添加最后一个数据点
-    const lastItem = data[data.length - 1];
-    if (lastItem) {
-      expandedData.push({
-        time: lastItem.time,
-        total: lastItem.data.total,
-        new: lastItem.data.new,
-        personal: lastItem.data.personal,
-      });
+  // 转换数据格式，智能过滤：
+  // 1. 找到第一个非零点
+  // 2. 保留该点之前的最后一个零点（如果存在）作为基线
+  // 3. 保留从该零点开始的所有后续数据
+  let firstNonZeroIndex = -1;
+  for (let i = 0; i < data.length; i++) {
+    const item = data[i];
+    if (
+      item &&
+      (item.data.total > 0 || item.data.new > 0 || item.data.personal > 0)
+    ) {
+      firstNonZeroIndex = i;
+      break;
     }
   }
+
+  // 计算起始索引：第一个非零点之前的最后一个零点
+  // 如果第一个非零点是索引 0，则从 0 开始
+  // 如果没有非零点，返回空数组
+  const startIndex =
+    firstNonZeroIndex > 0 ? firstNonZeroIndex - 1 : firstNonZeroIndex;
+
+  const chartData: AreaChartDataPoint[] =
+    startIndex >= 0
+      ? data.slice(startIndex).map((item) => ({
+          time: item.time,
+          total: item.data.total,
+          new: item.data.new,
+          personal: item.data.personal,
+        }))
+      : [];
 
   const series: SeriesConfig[] = [
     {
@@ -132,7 +119,7 @@ export default function PostsHistoryChart() {
             <div className="text-2xl mb-2 px-10">文章增长趋势</div>
             <div className="w-full h-full" key="content">
               <AreaChart
-                data={expandedData}
+                data={chartData}
                 series={series}
                 className="w-full h-full"
               />
