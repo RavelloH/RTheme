@@ -203,6 +203,7 @@ export default function PostHistoryPage() {
   const rowActions = (record: PostHistoryItem): ActionButton[] => {
     const actions: ActionButton[] = [
       {
+        label: "预览此版本",
         onClick: () =>
           navigate(
             `/admin/posts/${slug}/preview/${encodeURIComponent(record.timestamp)}`,
@@ -211,6 +212,7 @@ export default function PostHistoryPage() {
         variant: "ghost",
       },
       {
+        label: "查看源代码",
         onClick: () =>
           navigate(
             `/admin/posts/${slug}/source/${encodeURIComponent(record.timestamp)}`,
@@ -219,6 +221,7 @@ export default function PostHistoryPage() {
         variant: "ghost",
       },
       {
+        label: "与上一版本对比",
         onClick: () => {
           const currentIndex = data.findIndex(
             (item) => item.timestamp === record.timestamp,
@@ -242,12 +245,14 @@ export default function PostHistoryPage() {
     // 只有管理员才能 Reset 和 Squash
     if (userRole === "ADMIN") {
       actions.push({
+        label: "重置到此版本",
         onClick: () => openResetDialog(record),
         icon: <RiRefreshLine size="1em" />,
         variant: "ghost",
       });
 
       actions.push({
+        label: "压缩到此版本",
         onClick: () => openSquashDialog(record),
         icon: <RiArchiveLine size="1em" />,
         variant: "danger",

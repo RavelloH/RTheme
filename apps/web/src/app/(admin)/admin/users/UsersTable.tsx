@@ -359,6 +359,7 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
   // 行操作按钮
   const rowActions = (record: UserListItem): ActionButton[] => [
     {
+      label: "编辑",
       onClick: () => {
         openEditDialog(record);
       },
@@ -366,6 +367,7 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
       variant: "ghost",
     },
     {
+      label: "删除",
       onClick: () => {
         openDeleteDialog(record);
       },

@@ -419,36 +419,43 @@ export default function PostsTable() {
   // 行操作按钮
   const rowActions = (record: PostListItem): ActionButton[] => [
     {
+      label: "预览",
       onClick: () => navigate(`/admin/posts/${record.slug}/preview`),
       icon: <RiEyeLine size="1em" />,
       variant: "ghost",
     },
     {
+      label: "查看源代码",
       onClick: () => navigate(`/admin/posts/${record.slug}/source`),
       icon: <RiCodeSSlashLine size="1em" />,
       variant: "ghost",
     },
     {
+      label: "编辑内容",
       onClick: () => navigate("/admin/posts/" + record.slug),
       icon: <RiFileEditLine size="1em" />,
       variant: "ghost",
     },
     {
+      label: "快速编辑",
       onClick: () => openEditDialog(record),
       icon: <RiEditLine size="1em" />,
       variant: "ghost",
     },
     {
+      label: "历史版本",
       onClick: () => navigate("/admin/posts/" + record.slug + "/history"),
       icon: <RiHistoryLine size="1em" />,
       variant: "ghost",
     },
     {
+      label: "数据分析",
       onClick: () => navigate("/admin/analytics?postId=" + record.slug),
       icon: <RiBarChartBoxLine size="1em" />,
       variant: "ghost",
     },
     {
+      label: "删除",
       onClick: () => openDeleteDialog(record),
       icon: <RiDeleteBinLine size="1em" />,
       variant: "danger",

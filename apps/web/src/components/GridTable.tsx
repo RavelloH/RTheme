@@ -9,6 +9,7 @@ import Clickable from "@/ui/Clickable";
 import { Select } from "@/ui/Select";
 import { Button, ButtonProps } from "@/ui/Button";
 import { Checkbox } from "@/ui/Checkbox";
+import { Tooltip } from "@/ui/Tooltip";
 import {
   RiArrowLeftSLine,
   RiArrowRightSLine,
@@ -20,7 +21,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 // 操作按钮配置
 export interface ActionButton {
-  label?: string; // label 改为可选，用于批量操作按钮
+  label: string; // 按钮标签，用于批量操作按钮文字和行操作的 tooltip
   onClick: () => void;
   icon?: React.ReactNode;
   variant?: ButtonProps["variant"];
@@ -248,18 +249,19 @@ export default function GridTable<T extends Record<string, unknown>>({
           return (
             <div className="flex items-center" data-action-cell="true">
               {actions.map((action, index) => (
-                <Clickable
-                  key={index}
-                  onClick={action.onClick}
-                  className={`
-                    p-2 rounded transition-colors
-                    ${action.disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-muted"}
-                    ${action.variant === "danger" ? "text-error" : ""}
-                  `}
-                  disabled={action.disabled}
-                >
-                  {action.icon}
-                </Clickable>
+                <Tooltip key={index} content={action.label} placement="top">
+                  <Clickable
+                    onClick={action.onClick}
+                    className={`
+                      p-2 rounded transition-colors
+                      ${action.disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-muted"}
+                      ${action.variant === "danger" ? "text-error" : ""}
+                    `}
+                    disabled={action.disabled}
+                  >
+                    {action.icon}
+                  </Clickable>
+                </Tooltip>
               ))}
             </div>
           );
