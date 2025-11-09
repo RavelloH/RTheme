@@ -100,20 +100,26 @@ export async function getPostsTrends(
       datePoints.map(async (date) => {
         const oneDayBefore = new Date(date.getTime() - 24 * 60 * 60 * 1000);
 
-        const [totalPosts, draftPosts, newPosts] = await Promise.all([
-          // 截止该时间点的总文章数
-          prisma.post.count({
-            where: { createdAt: { lte: date }, deletedAt: null },
-          }),
-          // 该时间点的草稿数
+        // total: 全站文章总数
+        // personal: 当前用户的文章数
+        // new: 全站新增文章数
+        const [totalPosts, myPosts, newPosts] = await Promise.all([
+          // 截止该时间点的总文章数（全站）
           prisma.post.count({
             where: {
               createdAt: { lte: date },
-              status: "DRAFT",
               deletedAt: null,
             },
           }),
-          // 该时间点前24小时新增文章数
+          // 截止该时间点当前用户的文章数
+          prisma.post.count({
+            where: {
+              createdAt: { lte: date },
+              deletedAt: null,
+              userUid: user.uid,
+            },
+          }),
+          // 该时间点前24小时新增文章数（全站）
           prisma.post.count({
             where: {
               createdAt: {
@@ -129,23 +135,26 @@ export async function getPostsTrends(
           time: date.toISOString(),
           data: {
             total: totalPosts,
-            draft: draftPosts,
+            personal: myPosts, // personal 字段表示"我的文章数"
             new: newPosts,
           },
         };
       }),
     );
 
-    // 过滤出有变化的数据点（只保留 total 或 draft 发生变化的点）
+    // 过滤出有变化的数据点（只保留 total 或 personal 发生变化的点）
     const trendData: PostTrendItem[] = [];
     let lastTotal = -1;
-    let lastDraft = -1;
+    let lastPersonal = -1;
 
     for (const item of allTrendData) {
-      if (item.data.total !== lastTotal || item.data.draft !== lastDraft) {
+      if (
+        item.data.total !== lastTotal ||
+        item.data.personal !== lastPersonal
+      ) {
         trendData.push(item);
         lastTotal = item.data.total;
-        lastDraft = item.data.draft;
+        lastPersonal = item.data.personal;
       }
     }
 
@@ -230,6 +239,7 @@ export async function getPostsList(
     const where: {
       deletedAt: null;
       status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+      userUid?: number; // AUTHOR 只能看到自己的文章
       OR?: Array<{
         title?: { contains: string; mode: "insensitive" };
         slug?: { contains: string; mode: "insensitive" };
@@ -238,6 +248,11 @@ export async function getPostsList(
     } = {
       deletedAt: null, // 只获取未删除的文章
     };
+
+    // AUTHOR 只能查看自己的文章
+    if (user.role === "AUTHOR") {
+      where.userUid = user.uid;
+    }
 
     if (status) {
       where.status = status;
@@ -416,6 +431,7 @@ export async function getPostDetail(
         metaKeywords: true,
         robotsIndex: true,
         postMode: true,
+        userUid: true, // 需要获取作者 uid 以进行权限检查
         author: {
           select: {
             uid: true,
@@ -438,6 +454,11 @@ export async function getPostDetail(
 
     if (!post) {
       return response.notFound({ message: "文章不存在" });
+    }
+
+    // AUTHOR 只能查看自己的文章
+    if (user.role === "AUTHOR" && post.userUid !== user.uid) {
+      return response.forbidden({ message: "无权访问此文章" });
     }
 
     // 使用 text-version 获取最新版本的内容
@@ -752,6 +773,7 @@ export async function updatePost(
         content: true,
         status: true,
         publishedAt: true,
+        userUid: true, // 需要获取作者 uid 以进行权限检查
         categories: { select: { name: true } },
         tags: { select: { name: true } },
       },
@@ -759,6 +781,11 @@ export async function updatePost(
 
     if (!existingPost) {
       return response.notFound({ message: "文章不存在" });
+    }
+
+    // AUTHOR 只能更新自己的文章
+    if (user.role === "AUTHOR" && existingPost.userUid !== user.uid) {
+      return response.forbidden({ message: "无权修改此文章" });
     }
 
     // 如果要修改 slug，检查新 slug 是否已被占用
@@ -982,6 +1009,29 @@ export async function updatePosts(
   }
 
   try {
+    // AUTHOR 权限：需要验证所有要更新的文章都属于该用户
+    if (user.role === "AUTHOR") {
+      const postsToUpdate = await prisma.post.findMany({
+        where: {
+          id: { in: ids },
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          userUid: true,
+        },
+      });
+
+      // 检查是否所有文章都属于当前用户
+      const hasUnauthorizedPost = postsToUpdate.some(
+        (post) => post.userUid !== user.uid,
+      );
+
+      if (hasUnauthorizedPost) {
+        return response.forbidden({ message: "无权修改部分文章" });
+      }
+    }
+
     // 构建更新数据
     const updateData: {
       status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
@@ -1021,11 +1071,22 @@ export async function updatePosts(
     // 如果状态更改为已发布，需要处理 publishedAt
     if (status === "PUBLISHED") {
       // 获取要更新的文章，检查哪些文章还没有 publishedAt
+      const whereCondition: {
+        id: { in: number[] };
+        deletedAt: null;
+        userUid?: number;
+      } = {
+        id: { in: ids },
+        deletedAt: null,
+      };
+
+      // AUTHOR 只能更新自己的文章
+      if (user.role === "AUTHOR") {
+        whereCondition.userUid = user.uid;
+      }
+
       const posts = await prisma.post.findMany({
-        where: {
-          id: { in: ids },
-          deletedAt: null,
-        },
+        where: whereCondition,
         select: {
           id: true,
           publishedAt: true,
@@ -1042,11 +1103,22 @@ export async function updatePosts(
     }
 
     // 执行批量更新
+    const updateWhereCondition: {
+      id: { in: number[] };
+      deletedAt: null;
+      userUid?: number;
+    } = {
+      id: { in: ids },
+      deletedAt: null,
+    };
+
+    // AUTHOR 只能更新自己的文章
+    if (user.role === "AUTHOR") {
+      updateWhereCondition.userUid = user.uid;
+    }
+
     const result = await prisma.post.updateMany({
-      where: {
-        id: { in: ids },
-        deletedAt: null,
-      },
+      where: updateWhereCondition,
       data: updateData,
     });
 
@@ -1126,12 +1198,46 @@ export async function deletePosts(
   }
 
   try {
+    // AUTHOR 权限：需要验证所有要删除的文章都属于该用户
+    if (user.role === "AUTHOR") {
+      const postsToDelete = await prisma.post.findMany({
+        where: {
+          id: { in: ids },
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          userUid: true,
+        },
+      });
+
+      // 检查是否所有文章都属于当前用户
+      const hasUnauthorizedPost = postsToDelete.some(
+        (post) => post.userUid !== user.uid,
+      );
+
+      if (hasUnauthorizedPost) {
+        return response.forbidden({ message: "无权删除部分文章" });
+      }
+    }
+
     // 软删除：设置 deletedAt 字段
+    const deleteWhereCondition: {
+      id: { in: number[] };
+      deletedAt: null;
+      userUid?: number;
+    } = {
+      id: { in: ids },
+      deletedAt: null,
+    };
+
+    // AUTHOR 只能删除自己的文章
+    if (user.role === "AUTHOR") {
+      deleteWhereCondition.userUid = user.uid;
+    }
+
     const result = await prisma.post.updateMany({
-      where: {
-        id: { in: ids },
-        deletedAt: null,
-      },
+      where: deleteWhereCondition,
       data: {
         deletedAt: new Date(),
       },

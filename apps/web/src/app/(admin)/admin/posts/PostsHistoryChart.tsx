@@ -62,7 +62,7 @@ export default function PostsHistoryChart() {
           time: current.time,
           total: current.data.total,
           new: current.data.new,
-          draft: current.data.draft,
+          personal: current.data.personal,
         });
 
         // 在两个数据点之间插入中间点（保持当前值）
@@ -76,7 +76,7 @@ export default function PostsHistoryChart() {
             time: new Date(currentTime + interval).toISOString(),
             total: current.data.total,
             new: 0,
-            draft: current.data.draft,
+            personal: current.data.personal,
           });
         }
       }
@@ -89,12 +89,11 @@ export default function PostsHistoryChart() {
         time: lastItem.time,
         total: lastItem.data.total,
         new: lastItem.data.new,
-        draft: lastItem.data.draft,
+        personal: lastItem.data.personal,
       });
     }
   }
 
-  // 配置系列
   const series: SeriesConfig[] = [
     {
       key: "total",
@@ -107,8 +106,8 @@ export default function PostsHistoryChart() {
       color: "var(--color-success)",
     },
     {
-      key: "draft",
-      label: "草稿数",
+      key: "personal",
+      label: "我的文章",
       color: "var(--color-warning)",
     },
   ];

@@ -51,6 +51,20 @@ export default function PostsTable() {
   const [batchNewPinnedStatus, setBatchNewPinnedStatus] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigateWithTransition();
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  // 从 localStorage 读取用户角色
+  useEffect(() => {
+    try {
+      const userInfo = localStorage.getItem("user_info");
+      if (userInfo) {
+        const parsed = JSON.parse(userInfo);
+        setUserRole(parsed.role);
+      }
+    } catch (error) {
+      console.error("Failed to parse user_info from localStorage:", error);
+    }
+  }, []);
 
   // 编辑文章状态
   const [formData, setFormData] = useState({
@@ -707,7 +721,7 @@ export default function PostsTable() {
   return (
     <>
       <GridTable
-        title="文章列表"
+        title={userRole === "AUTHOR" ? "我的文章" : "文章列表"}
         columns={columns}
         data={data}
         loading={loading}

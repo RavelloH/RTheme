@@ -17,7 +17,7 @@ export const PostTrendItemSchema = z.object({
   data: z.object({
     total: z.number().int().nonnegative(),
     new: z.number().int().nonnegative(),
-    draft: z.number().int().nonnegative(),
+    personal: z.number().int().nonnegative(),
   }),
 });
 export type PostTrendItem = z.infer<typeof PostTrendItemSchema>;
