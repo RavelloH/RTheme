@@ -878,7 +878,7 @@ export default function Editor({
           navigate("/admin/posts");
         }, 1000);
       } else {
-        toast.error(response.error?.message || "操作失败，请稍后重试");
+        toast.error(response.message || "操作失败，请稍后重试");
       }
     } catch (error) {
       console.error("保存失败:", error);
