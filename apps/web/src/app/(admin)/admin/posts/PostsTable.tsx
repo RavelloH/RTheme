@@ -15,6 +15,9 @@ import {
   RiPushpinLine,
   RiUnpinLine,
   RiBarChartBoxLine,
+  RiHistoryLine,
+  RiEyeLine,
+  RiCodeSSlashLine,
 } from "@remixicon/react";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
@@ -416,6 +419,16 @@ export default function PostsTable() {
   // 行操作按钮
   const rowActions = (record: PostListItem): ActionButton[] => [
     {
+      onClick: () => navigate(`/admin/posts/${record.slug}/preview`),
+      icon: <RiEyeLine size="1em" />,
+      variant: "ghost",
+    },
+    {
+      onClick: () => navigate(`/admin/posts/${record.slug}/source`),
+      icon: <RiCodeSSlashLine size="1em" />,
+      variant: "ghost",
+    },
+    {
       onClick: () => navigate("/admin/posts/" + record.slug),
       icon: <RiFileEditLine size="1em" />,
       variant: "ghost",
@@ -423,6 +436,11 @@ export default function PostsTable() {
     {
       onClick: () => openEditDialog(record),
       icon: <RiEditLine size="1em" />,
+      variant: "ghost",
+    },
+    {
+      onClick: () => navigate("/admin/posts/" + record.slug + "/history"),
+      icon: <RiHistoryLine size="1em" />,
       variant: "ghost",
     },
     {

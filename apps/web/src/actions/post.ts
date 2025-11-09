@@ -20,6 +20,20 @@ import {
   UpdatePosts,
   DeletePostsSchema,
   DeletePosts,
+  GetPostHistorySchema,
+  GetPostHistory,
+  PostHistoryItem,
+  PostHistoryWithStats,
+  PostHistoryStats,
+  GetPostVersionSchema,
+  GetPostVersion,
+  PostVersionDetail,
+  ResetPostToVersionSchema,
+  ResetPostToVersion,
+  ResetPostToVersionResult,
+  SquashPostToVersionSchema,
+  SquashPostToVersion,
+  SquashPostToVersionResult,
 } from "@repo/shared-types/api/post";
 import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
@@ -31,6 +45,78 @@ import { authVerify } from "@/lib/server/auth-verify";
 import { logAuditEvent } from "./audit";
 import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
 import { TextVersion } from "text-version";
+
+/*
+  辅助函数：解析版本名称
+  格式: "userUid:ISO时间:提交信息"
+  例如: "1:2025-01-09T12:55:38.259Z:初始版本"
+*/
+function parseVersionName(versionStr: string): {
+  userUid: number;
+  timestamp: string;
+  commitMessage: string;
+} {
+  // 找到第一个冒号，分隔 userUid
+  const firstColonIndex = versionStr.indexOf(":");
+  if (firstColonIndex === -1) {
+    throw new Error(`Invalid version format: ${versionStr}`);
+  }
+
+  const userUidStr = versionStr.substring(0, firstColonIndex);
+  const rest = versionStr.substring(firstColonIndex + 1);
+
+  // 找到 ISO 时间结束的位置（通常是 Z: 或 +XX:XX: 之后）
+  // ISO 8601 格式以 Z 或 +/-HH:MM 结尾
+  let timestampEndIndex = -1;
+
+  // 查找 Z: 模式（UTC 时间）
+  const zIndex = rest.indexOf("Z:");
+  if (zIndex !== -1) {
+    timestampEndIndex = zIndex + 1; // 包含 Z
+  } else {
+    // 查找时区偏移模式（+08:00: 或 -05:00:）
+    const timezoneMatch = rest.match(/[+-]\d{2}:\d{2}:/);
+    if (timezoneMatch && timezoneMatch.index !== undefined) {
+      timestampEndIndex = timezoneMatch.index + timezoneMatch[0].length - 1;
+    }
+  }
+
+  if (timestampEndIndex === -1) {
+    throw new Error(`Invalid version format (timestamp): ${versionStr}`);
+  }
+
+  const timestamp = rest.substring(0, timestampEndIndex);
+  const commitMessage = rest.substring(timestampEndIndex + 1); // +1 跳过冒号
+
+  if (!userUidStr || !timestamp) {
+    throw new Error(`Invalid version format: ${versionStr}`);
+  }
+
+  const userUid = parseInt(userUidStr, 10);
+
+  if (isNaN(userUid)) {
+    throw new Error(`Invalid userUid in version: ${versionStr}`);
+  }
+
+  return { userUid, timestamp, commitMessage };
+}
+
+/*
+  辅助函数：根据 timestamp 查找版本
+*/
+function findVersionByTimestamp(
+  versionLog: Array<{ version: string; isSnapshot: boolean }>,
+  timestamp: string,
+): { version: string; isSnapshot: boolean } | undefined {
+  return versionLog.find((v) => {
+    try {
+      const parsed = parseVersionName(v.version);
+      return parsed.timestamp === timestamp;
+    } catch {
+      return false;
+    }
+  });
+}
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
@@ -1276,6 +1362,559 @@ export async function deletePosts(
     });
   } catch (error) {
     console.error("Delete posts error:", error);
+    return response.serverError();
+  }
+}
+
+/*
+  getPostHistory - 获取文章历史版本列表
+*/
+export async function getPostHistory(
+  params: GetPostHistory,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<PostHistoryWithStats | null>>>;
+export async function getPostHistory(
+  params: GetPostHistory,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<PostHistoryWithStats | null>>;
+export async function getPostHistory(
+  {
+    access_token,
+    slug,
+    page = 1,
+    pageSize = 25,
+    sortBy = "timestamp",
+    sortOrder = "desc",
+  }: GetPostHistory,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<PostHistoryWithStats | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      slug,
+      page,
+      pageSize,
+      sortBy,
+      sortOrder,
+    },
+    GetPostHistorySchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 查找文章
+    const post = await prisma.post.findUnique({
+      where: {
+        slug,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        content: true,
+        userUid: true,
+      },
+    });
+
+    if (!post) {
+      return response.notFound({ message: "文章不存在" });
+    }
+
+    // AUTHOR 只能查看自己的文章历史
+    if (user.role === "AUTHOR" && post.userUid !== user.uid) {
+      return response.forbidden({ message: "无权访问此文章的历史记录" });
+    }
+
+    // 使用 text-version 获取版本历史
+    const tv = new TextVersion();
+    const versionLog = tv.log(post.content);
+
+    // 解析版本名称并关联用户信息
+    const historyItems: PostHistoryItem[] = [];
+
+    for (const versionInfo of versionLog) {
+      try {
+        // 使用辅助函数解析版本名称
+        const { userUid, timestamp, commitMessage } = parseVersionName(
+          versionInfo.version,
+        );
+
+        // 查询用户信息
+        const versionUser = await prisma.user.findUnique({
+          where: { uid: userUid },
+          select: {
+            uid: true,
+            username: true,
+            nickname: true,
+          },
+        });
+
+        if (!versionUser) {
+          throw new Error(`User not found: ${userUid}`);
+        }
+
+        historyItems.push({
+          versionName: versionInfo.version,
+          timestamp,
+          commitMessage,
+          userUid: versionUser.uid,
+          username: versionUser.username,
+          nickname: versionUser.nickname,
+          isSnapshot: versionInfo.isSnapshot,
+        });
+      } catch (error) {
+        console.error("Failed to parse version:", versionInfo.version, error);
+        throw error;
+      }
+    }
+
+    // 排序
+    if (sortOrder === "desc") {
+      historyItems.reverse();
+    }
+
+    // 计算统计信息（基于全部版本，而非分页后的数据）
+    const stats: PostHistoryStats = {
+      totalEdits: historyItems.length,
+      editTimestamps: historyItems.map((item) => item.timestamp),
+      editors: Array.from(
+        new Map(
+          historyItems.map((item) => [
+            item.userUid,
+            {
+              userUid: item.userUid,
+              username: item.username,
+              nickname: item.nickname,
+            },
+          ]),
+        ).values(),
+      ),
+    };
+
+    // 分页
+    const total = historyItems.length;
+    const skip = (page - 1) * pageSize;
+    const paginatedItems = historyItems.slice(skip, skip + pageSize);
+
+    // 计算分页元数据
+    const totalPages = Math.ceil(total / pageSize);
+    const meta = {
+      page,
+      pageSize,
+      total,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
+    };
+
+    return response.ok({
+      data: {
+        stats,
+        versions: paginatedItems,
+      },
+      meta,
+    });
+  } catch (error) {
+    console.error("Get post history error:", error);
+    return response.serverError();
+  }
+}
+
+/*
+  getPostVersion - 获取指定版本的内容
+*/
+export async function getPostVersion(
+  params: GetPostVersion,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<PostVersionDetail | null>>>;
+export async function getPostVersion(
+  params: GetPostVersion,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<PostVersionDetail | null>>;
+export async function getPostVersion(
+  { access_token, slug, timestamp }: GetPostVersion,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<PostVersionDetail | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      slug,
+      timestamp,
+    },
+    GetPostVersionSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 查找文章
+    const post = await prisma.post.findUnique({
+      where: {
+        slug,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        content: true,
+        userUid: true,
+      },
+    });
+
+    if (!post) {
+      return response.notFound({ message: "文章不存在" });
+    }
+
+    // AUTHOR 只能查看自己的文章历史
+    if (user.role === "AUTHOR" && post.userUid !== user.uid) {
+      return response.forbidden({ message: "无权访问此文章的历史记录" });
+    }
+
+    // 使用 text-version 获取版本历史
+    const tv = new TextVersion();
+    const versionLog = tv.log(post.content);
+
+    // 如果没有提供 timestamp，获取最新版本（列表中的最后一个）
+    let targetVersion: { version: string; isSnapshot: boolean } | undefined;
+
+    if (timestamp) {
+      // 查找匹配的版本
+      targetVersion = findVersionByTimestamp(versionLog, timestamp);
+    } else {
+      // 未提供 timestamp，获取最新版本（列表中的最后一个元素）
+      targetVersion = versionLog[versionLog.length - 1];
+    }
+
+    if (!targetVersion) {
+      return response.notFound({
+        message: timestamp ? "版本不存在" : "文章没有版本历史",
+      });
+    }
+
+    // 获取该版本的内容
+    const versionContent = tv.show(post.content, targetVersion.version);
+
+    if (versionContent === null) {
+      return response.notFound({ message: "无法读取版本内容" });
+    }
+
+    // 解析版本名称
+    const {
+      userUid,
+      timestamp: versionTimestamp,
+      commitMessage,
+    } = parseVersionName(targetVersion.version);
+
+    // 查询用户信息
+    const versionUser = await prisma.user.findUnique({
+      where: { uid: userUid },
+      select: {
+        uid: true,
+        username: true,
+        nickname: true,
+      },
+    });
+
+    if (!versionUser) {
+      throw new Error(`User not found: ${userUid}`);
+    }
+
+    const data: PostVersionDetail = {
+      versionName: targetVersion.version,
+      timestamp: versionTimestamp,
+      commitMessage,
+      userUid: versionUser.uid,
+      username: versionUser.username,
+      nickname: versionUser.nickname,
+      isSnapshot: targetVersion.isSnapshot,
+      content: versionContent,
+    };
+
+    return response.ok({ data });
+  } catch (error) {
+    console.error("Get post version error:", error);
+    return response.serverError();
+  }
+}
+
+/*
+  resetPostToVersion - 重置文章到指定版本
+*/
+export async function resetPostToVersion(
+  params: ResetPostToVersion,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<ResetPostToVersionResult | null>>>;
+export async function resetPostToVersion(
+  params: ResetPostToVersion,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<ResetPostToVersionResult | null>>;
+export async function resetPostToVersion(
+  { access_token, slug, timestamp }: ResetPostToVersion,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<ResetPostToVersionResult | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      slug,
+      timestamp,
+    },
+    ResetPostToVersionSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证 - 只有管理员可以重置版本
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 查找文章
+    const post = await prisma.post.findUnique({
+      where: {
+        slug,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        content: true,
+      },
+    });
+
+    if (!post) {
+      return response.notFound({ message: "文章不存在" });
+    }
+
+    // 使用 text-version 获取版本历史
+    const tv = new TextVersion();
+    const versionLog = tv.log(post.content);
+
+    // 查找匹配的版本
+    const targetVersion = findVersionByTimestamp(versionLog, timestamp);
+
+    if (!targetVersion) {
+      return response.notFound({ message: "版本不存在" });
+    }
+
+    // 计算将被删除的版本数量
+    const currentVersionCount = versionLog.length;
+    const targetIndex = versionLog.findIndex(
+      (v) => v.version === targetVersion.version,
+    );
+    const deletedCount = currentVersionCount - targetIndex - 1;
+
+    // 执行 reset
+    const newContent = tv.reset(post.content, targetVersion.version);
+
+    // 更新文章内容
+    await prisma.post.update({
+      where: { id: post.id },
+      data: { content: newContent },
+    });
+
+    // 记录审计日志
+    await logAuditEvent({
+      user: {
+        uid: String(user.uid),
+        ipAddress: await getClientIP(),
+        userAgent: await getClientUserAgent(),
+      },
+      details: {
+        action: "RESET",
+        resourceType: "POST_VERSION",
+        resourceId: String(post.id),
+        vaule: {
+          old: { versionCount: currentVersionCount },
+          new: { versionCount: targetIndex + 1 },
+        },
+        description: `重置文章版本: ${slug}`,
+        metadata: {
+          slug,
+          targetVersion: targetVersion.version,
+          deletedVersionsCount: deletedCount,
+        },
+      },
+    });
+
+    return response.ok({
+      data: {
+        slug,
+        deletedVersionsCount: deletedCount,
+      },
+    });
+  } catch (error) {
+    console.error("Reset post to version error:", error);
+    return response.serverError();
+  }
+}
+
+/*
+  squashPostToVersion - 压缩历史到指定版本
+*/
+export async function squashPostToVersion(
+  params: SquashPostToVersion,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<SquashPostToVersionResult | null>>>;
+export async function squashPostToVersion(
+  params: SquashPostToVersion,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<SquashPostToVersionResult | null>>;
+export async function squashPostToVersion(
+  { access_token, slug, timestamp }: SquashPostToVersion,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<SquashPostToVersionResult | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      slug,
+      timestamp,
+    },
+    SquashPostToVersionSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证 - 只有管理员可以压缩版本
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 查找文章
+    const post = await prisma.post.findUnique({
+      where: {
+        slug,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        content: true,
+      },
+    });
+
+    if (!post) {
+      return response.notFound({ message: "文章不存在" });
+    }
+
+    // 使用 text-version 获取版本历史
+    const tv = new TextVersion();
+    const versionLog = tv.log(post.content);
+
+    // 查找匹配的版本
+    const targetVersion = findVersionByTimestamp(versionLog, timestamp);
+
+    if (!targetVersion) {
+      return response.notFound({ message: "版本不存在" });
+    }
+
+    // 计算将被压缩的版本数量
+    const targetIndex = versionLog.findIndex(
+      (v) => v.version === targetVersion.version,
+    );
+    const compressedCount = targetIndex;
+
+    // 执行 squash
+    const newContent = tv.squash(post.content, targetVersion.version);
+
+    // 更新文章内容
+    await prisma.post.update({
+      where: { id: post.id },
+      data: { content: newContent },
+    });
+
+    // 记录审计日志
+    await logAuditEvent({
+      user: {
+        uid: String(user.uid),
+        ipAddress: await getClientIP(),
+        userAgent: await getClientUserAgent(),
+      },
+      details: {
+        action: "SQUASH",
+        resourceType: "POST_VERSION",
+        resourceId: String(post.id),
+        vaule: {
+          old: { versionCount: versionLog.length },
+          new: { versionCount: versionLog.length - compressedCount },
+        },
+        description: `压缩文章版本: ${slug}`,
+        metadata: {
+          slug,
+          targetVersion: targetVersion.version,
+          compressedVersionsCount: compressedCount,
+        },
+      },
+    });
+
+    return response.ok({
+      data: {
+        slug,
+        compressedVersionsCount: compressedCount,
+      },
+    });
+  } catch (error) {
+    console.error("Squash post to version error:", error);
     return response.serverError();
   }
 }

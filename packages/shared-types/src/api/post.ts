@@ -278,3 +278,152 @@ export type DeletePostsSuccessResponse = z.infer<
   typeof DeletePostsSuccessResponseSchema
 >;
 registerSchema("DeletePostsSuccessResponse", DeletePostsSuccessResponseSchema);
+
+/*
+    getPostHistory() Schema - 获取文章历史版本列表
+*/
+export const GetPostHistorySchema = z.object({
+  access_token: z.string().optional(),
+  slug: z.string().min(1, "slug 不能为空"),
+  page: z.number().int().positive().default(1),
+  pageSize: z.number().int().positive().max(100).default(25),
+  sortBy: z.enum(["timestamp"]).optional().default("timestamp"),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
+});
+export type GetPostHistory = z.infer<typeof GetPostHistorySchema>;
+registerSchema("GetPostHistory", GetPostHistorySchema);
+
+export const PostHistoryItemSchema = z.object({
+  versionName: z.string(), // 完整版本名: userUid:timestamp:commitMessage
+  timestamp: z.string(), // ISO 日期字符串，用作版本唯一标识
+  commitMessage: z.string(), // 提交信息
+  userUid: z.number().int(), // 提交者 UID
+  username: z.string(), // 提交者用户名
+  nickname: z.string().nullable(), // 提交者昵称
+  isSnapshot: z.boolean(), // 是否为快照版本
+});
+export type PostHistoryItem = z.infer<typeof PostHistoryItemSchema>;
+
+// 文章历史统计信息
+export const PostHistoryStatsSchema = z.object({
+  totalEdits: z.number().int().nonnegative(), // 总编辑次数
+  editTimestamps: z.array(z.string()), // 编辑时间列表（ISO 日期字符串）
+  editors: z.array(
+    z.object({
+      userUid: z.number().int(),
+      username: z.string(),
+      nickname: z.string().nullable(),
+    }),
+  ), // 编辑人列表（去重）
+});
+export type PostHistoryStats = z.infer<typeof PostHistoryStatsSchema>;
+
+// 带统计信息的历史响应数据
+export const PostHistoryWithStatsSchema = z.object({
+  stats: PostHistoryStatsSchema, // 统计信息
+  versions: z.array(PostHistoryItemSchema), // 版本列表（已分页）
+});
+export type PostHistoryWithStats = z.infer<typeof PostHistoryWithStatsSchema>;
+
+export const GetPostHistorySuccessResponseSchema = createSuccessResponseSchema(
+  PostHistoryWithStatsSchema,
+);
+export type GetPostHistorySuccessResponse = z.infer<
+  typeof GetPostHistorySuccessResponseSchema
+>;
+registerSchema(
+  "GetPostHistorySuccessResponse",
+  GetPostHistorySuccessResponseSchema,
+);
+
+/*
+    getPostVersion() Schema - 获取指定版本的内容
+*/
+export const GetPostVersionSchema = z.object({
+  access_token: z.string().optional(),
+  slug: z.string().min(1, "slug 不能为空"),
+  timestamp: z.string().optional(), // ISO 日期字符串，未提供时返回最新版本
+});
+export type GetPostVersion = z.infer<typeof GetPostVersionSchema>;
+registerSchema("GetPostVersion", GetPostVersionSchema);
+
+export const PostVersionDetailSchema = z.object({
+  versionName: z.string(),
+  timestamp: z.string(),
+  commitMessage: z.string(),
+  userUid: z.number().int(),
+  username: z.string(),
+  nickname: z.string().nullable(),
+  isSnapshot: z.boolean(),
+  content: z.string(), // 该版本的完整内容
+});
+export type PostVersionDetail = z.infer<typeof PostVersionDetailSchema>;
+
+export const GetPostVersionSuccessResponseSchema = createSuccessResponseSchema(
+  PostVersionDetailSchema,
+);
+export type GetPostVersionSuccessResponse = z.infer<
+  typeof GetPostVersionSuccessResponseSchema
+>;
+registerSchema(
+  "GetPostVersionSuccessResponse",
+  GetPostVersionSuccessResponseSchema,
+);
+
+/*
+    resetPostToVersion() Schema - 重置文章到指定版本
+*/
+export const ResetPostToVersionSchema = z.object({
+  access_token: z.string().optional(),
+  slug: z.string().min(1, "slug 不能为空"),
+  timestamp: z.string().min(1, "timestamp 不能为空"),
+});
+export type ResetPostToVersion = z.infer<typeof ResetPostToVersionSchema>;
+registerSchema("ResetPostToVersion", ResetPostToVersionSchema);
+
+export const ResetPostToVersionResultSchema = z.object({
+  slug: z.string(),
+  deletedVersionsCount: z.number().int().nonnegative(),
+});
+export type ResetPostToVersionResult = z.infer<
+  typeof ResetPostToVersionResultSchema
+>;
+
+export const ResetPostToVersionSuccessResponseSchema =
+  createSuccessResponseSchema(ResetPostToVersionResultSchema);
+export type ResetPostToVersionSuccessResponse = z.infer<
+  typeof ResetPostToVersionSuccessResponseSchema
+>;
+registerSchema(
+  "ResetPostToVersionSuccessResponse",
+  ResetPostToVersionSuccessResponseSchema,
+);
+
+/*
+    squashPostToVersion() Schema - 压缩历史到指定版本
+*/
+export const SquashPostToVersionSchema = z.object({
+  access_token: z.string().optional(),
+  slug: z.string().min(1, "slug 不能为空"),
+  timestamp: z.string().min(1, "timestamp 不能为空"),
+});
+export type SquashPostToVersion = z.infer<typeof SquashPostToVersionSchema>;
+registerSchema("SquashPostToVersion", SquashPostToVersionSchema);
+
+export const SquashPostToVersionResultSchema = z.object({
+  slug: z.string(),
+  compressedVersionsCount: z.number().int().nonnegative(),
+});
+export type SquashPostToVersionResult = z.infer<
+  typeof SquashPostToVersionResultSchema
+>;
+
+export const SquashPostToVersionSuccessResponseSchema =
+  createSuccessResponseSchema(SquashPostToVersionResultSchema);
+export type SquashPostToVersionSuccessResponse = z.infer<
+  typeof SquashPostToVersionSuccessResponseSchema
+>;
+registerSchema(
+  "SquashPostToVersionSuccessResponse",
+  SquashPostToVersionSuccessResponseSchema,
+);

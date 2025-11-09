@@ -162,13 +162,18 @@ export function Select({
               y: dropdownDirection === "down" ? -10 : 10,
             }}
             transition={{ duration: 0.2 }}
-            className={`absolute z-60 w-full bg-background/90 border-border border-1 backdrop-blur-sm shadow-lg rounded overflow-hidden ${
+            className={`absolute z-[60] w-full bg-background/90 border-border border-1 backdrop-blur-sm shadow-lg rounded overflow-hidden ${
               dropdownDirection === "down"
                 ? "mt-1 top-full"
                 : "mb-1 bottom-full"
             }`}
           >
             <div className="max-h-[240px] overflow-y-auto overflow-x-hidden">
+              {options.length === 0 && (
+                <div className="px-4 py-2 text-muted-foreground text-sm">
+                  暂无选项
+                </div>
+              )}
               {options.map((option) => {
                 const isSelected = option.value === value;
                 return (

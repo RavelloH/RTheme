@@ -583,44 +583,6 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
       },
     },
     {
-      key: "website",
-      title: "网站",
-      dataIndex: "website",
-      align: "left",
-      render: (value: unknown) => {
-        if (value && typeof value === "string") {
-          return (
-            <a
-              href={value}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-primary hover:underline"
-              title={value}
-            >
-              链接
-            </a>
-          );
-        }
-        return <span className="text-muted-foreground">-</span>;
-      },
-    },
-    {
-      key: "bio",
-      title: "简介",
-      dataIndex: "bio",
-      align: "left",
-      render: (value: unknown) => {
-        return (
-          <span
-            className="text-sm truncate max-w-20 block"
-            title={typeof value === "string" ? value : ""}
-          >
-            {value && typeof value === "string" ? value : "-"}
-          </span>
-        );
-      },
-    },
-    {
       key: "emailNotice",
       title: "邮件通知",
       dataIndex: "emailNotice",

@@ -132,6 +132,7 @@ export async function POST(request: NextRequest) {
         categories: body.categories,
         tags: body.tags,
         commitMessage: body.commitMessage,
+        postMode: body.postMode,
       },
       { environment: "serverless" },
     );
