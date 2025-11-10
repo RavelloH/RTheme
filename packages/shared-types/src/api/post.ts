@@ -49,6 +49,7 @@ export const GetPostsListSchema = z.object({
   search: z.string().optional(),
   // 筛选参数
   id: z.number().int().optional(),
+  authorUid: z.number().int().optional(),
   isPinned: z.array(z.boolean()).optional(),
   allowComments: z.array(z.boolean()).optional(),
   robotsIndex: z.array(z.boolean()).optional(),

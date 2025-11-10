@@ -6517,6 +6517,11 @@
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
           },
+          "authorUid": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
           "isPinned": {
             "type": "array",
             "items": {

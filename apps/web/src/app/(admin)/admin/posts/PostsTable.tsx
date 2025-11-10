@@ -520,6 +520,13 @@ export default function PostsTable() {
       placeholder: "输入文章 ID",
     },
     {
+      key: "authorUid",
+      label: "作者 UID",
+      type: "input",
+      inputType: "number",
+      placeholder: "输入作者 UID",
+    },
+    {
       key: "status",
       label: "状态",
       type: "checkboxGroup",
@@ -594,6 +601,7 @@ export default function PostsTable() {
           sortOrder?: "asc" | "desc";
           search?: string;
           id?: number;
+          authorUid?: number;
           status?: ("DRAFT" | "PUBLISHED" | "ARCHIVED")[];
           isPinned?: boolean[];
           allowComments?: boolean[];
@@ -626,6 +634,13 @@ export default function PostsTable() {
         // 添加筛选参数
         if (filterValues.id && typeof filterValues.id === "string") {
           params.id = parseInt(filterValues.id, 10);
+        }
+
+        if (
+          filterValues.authorUid &&
+          typeof filterValues.authorUid === "string"
+        ) {
+          params.authorUid = parseInt(filterValues.authorUid, 10);
         }
 
         if (filterValues.status && Array.isArray(filterValues.status)) {

@@ -287,6 +287,7 @@ export async function getPostsList(
     status,
     search,
     id,
+    authorUid,
     isPinned,
     allowComments,
     robotsIndex,
@@ -317,6 +318,7 @@ export async function getPostsList(
       status,
       search,
       id,
+      authorUid,
       isPinned,
       allowComments,
       robotsIndex,
@@ -375,6 +377,9 @@ export async function getPostsList(
     // AUTHOR 只能查看自己的文章
     if (user.role === "AUTHOR") {
       where.userUid = user.uid;
+    } else if (authorUid !== undefined) {
+      // 非 AUTHOR 角色可以按作者 UID 筛选
+      where.userUid = authorUid;
     }
 
     if (id !== undefined) {

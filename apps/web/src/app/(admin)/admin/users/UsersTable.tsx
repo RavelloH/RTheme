@@ -775,7 +775,7 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
         const count = typeof value === "number" ? value : 0;
         return (
           <Link
-            href={`/admin/posts?uid=${record.uid}`}
+            href={`/admin/posts?authorUid=${record.uid}`}
             className="text-primary"
             presets={["hover-underline"]}
           >
