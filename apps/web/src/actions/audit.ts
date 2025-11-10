@@ -74,9 +74,12 @@ export async function getAuditLogs(
     pageSize = 10,
     sortBy,
     sortOrder,
+    id,
     action,
     resource,
     userUid,
+    timestampStart,
+    timestampEnd,
     startDate,
     endDate,
     search,
@@ -98,9 +101,12 @@ export async function getAuditLogs(
       pageSize,
       sortBy,
       sortOrder,
+      id,
       action,
       resource,
       userUid,
+      timestampStart,
+      timestampEnd,
       startDate,
       endDate,
       search,
@@ -126,6 +132,7 @@ export async function getAuditLogs(
 
     // 构建过滤条件
     const where: {
+      id?: number;
       action?: string;
       resource?: string;
       userUid?: number;
@@ -150,13 +157,20 @@ export async function getAuditLogs(
       }>;
     } = {};
 
+    if (id) where.id = id;
     if (action) where.action = action;
     if (resource) where.resource = resource;
     if (userUid) where.userUid = userUid;
-    if (startDate || endDate) {
+
+    // 优先使用 timestampStart/End，向后兼容 startDate/endDate
+    const effectiveStartDate = timestampStart || startDate;
+    const effectiveEndDate = timestampEnd || endDate;
+
+    if (effectiveStartDate || effectiveEndDate) {
       where.timestamp = {};
-      if (startDate) where.timestamp.gte = new Date(startDate);
-      if (endDate) where.timestamp.lte = new Date(endDate);
+      if (effectiveStartDate)
+        where.timestamp.gte = new Date(effectiveStartDate);
+      if (effectiveEndDate) where.timestamp.lte = new Date(effectiveEndDate);
     }
 
     // 通用搜索：搜索描述、资源ID、IP地址、User Agent、操作类型、资源类型、用户信息

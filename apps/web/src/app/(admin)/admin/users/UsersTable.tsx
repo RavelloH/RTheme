@@ -1,7 +1,7 @@
 "use client";
 
 import { getUsersList, updateUsers, deleteUsers } from "@/actions/user";
-import GridTable, { ActionButton } from "@/components/GridTable";
+import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
 import { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { UserListItem } from "@repo/shared-types/api/user";
@@ -40,6 +40,9 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedUsers, setSelectedUsers] = useState<(string | number)[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterValues, setFilterValues] = useState<
+    Record<string, string | string[] | { start?: string; end?: string }>
+  >({});
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserListItem | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -389,6 +392,79 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
     setPage(1); // 搜索变化时重置到第一页
   };
 
+  // 处理筛选变化
+  const handleFilterChange = (
+    filters: Record<
+      string,
+      string | string[] | { start?: string; end?: string }
+    >,
+  ) => {
+    setFilterValues(filters);
+    setPage(1); // 筛选变化时重置到第一页
+  };
+
+  // 筛选配置
+  const filterConfig: FilterConfig[] = [
+    {
+      key: "uid",
+      label: "用户 ID",
+      type: "input",
+      inputType: "number",
+      placeholder: "输入用户 ID",
+    },
+    {
+      key: "role",
+      label: "角色",
+      type: "checkboxGroup",
+      options: [
+        { value: "USER", label: "用户" },
+        { value: "AUTHOR", label: "作者" },
+        { value: "EDITOR", label: "编辑" },
+        { value: "ADMIN", label: "管理员" },
+      ],
+    },
+    {
+      key: "status",
+      label: "状态",
+      type: "checkboxGroup",
+      options: [
+        { value: "ACTIVE", label: "正常" },
+        { value: "SUSPENDED", label: "已封禁" },
+        { value: "NEEDS_UPDATE", label: "需更新" },
+      ],
+    },
+    {
+      key: "emailVerified",
+      label: "邮箱验证状态",
+      type: "checkboxGroup",
+      options: [
+        { value: "true", label: "已验证" },
+        { value: "false", label: "未验证" },
+      ],
+    },
+    {
+      key: "emailNotice",
+      label: "邮件通知",
+      type: "checkboxGroup",
+      options: [
+        { value: "true", label: "已启用" },
+        { value: "false", label: "已禁用" },
+      ],
+    },
+    {
+      key: "createdAt",
+      label: "创建时间",
+      type: "dateRange",
+      dateFields: { start: "createdAtStart", end: "createdAtEnd" },
+    },
+    {
+      key: "lastUseAt",
+      label: "最后活跃时间",
+      type: "dateRange",
+      dateFields: { start: "lastUseAtStart", end: "lastUseAtEnd" },
+    },
+  ];
+
   // 监听广播刷新消息
   useBroadcast<{ type: string }>(async (message) => {
     if (message.type === "users-refresh") {
@@ -407,6 +483,15 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
           sortBy?: "uid" | "username" | "createdAt" | "lastUseAt";
           sortOrder?: "asc" | "desc";
           search?: string;
+          uid?: number;
+          role?: ("USER" | "ADMIN" | "EDITOR" | "AUTHOR")[];
+          status?: ("ACTIVE" | "SUSPENDED" | "NEEDS_UPDATE")[];
+          emailVerified?: boolean[];
+          emailNotice?: boolean[];
+          createdAtStart?: string;
+          createdAtEnd?: string;
+          lastUseAtStart?: string;
+          lastUseAtEnd?: string;
         } = {
           page,
           pageSize,
@@ -425,6 +510,78 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
         // 添加搜索参数
         if (searchQuery && searchQuery.trim()) {
           params.search = searchQuery.trim();
+        }
+
+        // 添加筛选参数
+        if (filterValues.uid && typeof filterValues.uid === "string") {
+          params.uid = parseInt(filterValues.uid, 10);
+        }
+
+        if (filterValues.role && Array.isArray(filterValues.role)) {
+          params.role = filterValues.role as (
+            | "USER"
+            | "ADMIN"
+            | "EDITOR"
+            | "AUTHOR"
+          )[];
+        }
+
+        if (filterValues.status && Array.isArray(filterValues.status)) {
+          params.status = filterValues.status as (
+            | "ACTIVE"
+            | "SUSPENDED"
+            | "NEEDS_UPDATE"
+          )[];
+        }
+
+        if (
+          filterValues.emailVerified &&
+          Array.isArray(filterValues.emailVerified)
+        ) {
+          params.emailVerified = filterValues.emailVerified.map(
+            (v) => v === "true",
+          );
+        }
+
+        if (
+          filterValues.emailNotice &&
+          Array.isArray(filterValues.emailNotice)
+        ) {
+          params.emailNotice = filterValues.emailNotice.map(
+            (v) => v === "true",
+          );
+        }
+
+        if (
+          filterValues.createdAt &&
+          typeof filterValues.createdAt === "object"
+        ) {
+          const dateRange = filterValues.createdAt as {
+            start?: string;
+            end?: string;
+          };
+          if (dateRange.start) {
+            params.createdAtStart = dateRange.start;
+          }
+          if (dateRange.end) {
+            params.createdAtEnd = dateRange.end;
+          }
+        }
+
+        if (
+          filterValues.lastUseAt &&
+          typeof filterValues.lastUseAt === "object"
+        ) {
+          const dateRange = filterValues.lastUseAt as {
+            start?: string;
+            end?: string;
+          };
+          if (dateRange.start) {
+            params.lastUseAtStart = dateRange.start;
+          }
+          if (dateRange.end) {
+            params.lastUseAtEnd = dateRange.end;
+          }
         }
 
         const result = await getUsersList({
@@ -448,7 +605,15 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
     }
 
     fetchData();
-  }, [page, pageSize, sortKey, sortOrder, searchQuery, refreshTrigger]);
+  }, [
+    page,
+    pageSize,
+    sortKey,
+    sortOrder,
+    searchQuery,
+    filterValues,
+    refreshTrigger,
+  ]);
 
   const columns: TableColumn<UserListItem>[] = [
     {
@@ -711,6 +876,8 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
         onSortChange={handleSortChange}
         onSearchChange={handleSearchChange}
         searchPlaceholder="搜索用户名、昵称或邮箱..."
+        filterConfig={filterConfig}
+        onFilterChange={handleFilterChange}
         striped
         hoverable
         bordered={false}

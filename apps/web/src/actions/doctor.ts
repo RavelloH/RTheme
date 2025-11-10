@@ -327,6 +327,11 @@ export async function getDoctorHistory(
     pageSize = 10,
     sortBy,
     sortOrder,
+    id,
+    errorCount,
+    warningCount,
+    createdAtStart,
+    createdAtEnd,
   }: GetDoctorHistory,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<DoctorHistoryItem[] | null>> {
@@ -345,6 +350,11 @@ export async function getDoctorHistory(
       pageSize,
       sortBy,
       sortOrder,
+      id,
+      errorCount,
+      warningCount,
+      createdAtStart,
+      createdAtEnd,
     },
     GetDoctorHistorySchema,
   );
@@ -365,8 +375,27 @@ export async function getDoctorHistory(
     // 计算偏移量
     const skip = (page - 1) * pageSize;
 
-    // 获取总数
-    const total = await prisma.healthCheck.count();
+    // 构建 where 条件
+    const where: {
+      id?: number;
+      createdAt?: {
+        gte?: Date;
+        lte?: Date;
+      };
+    } = {};
+
+    if (id !== undefined) {
+      where.id = id;
+    }
+
+    if (createdAtStart || createdAtEnd) {
+      where.createdAt = {};
+      if (createdAtStart) where.createdAt.gte = new Date(createdAtStart);
+      if (createdAtEnd) where.createdAt.lte = new Date(createdAtEnd);
+    }
+
+    // 获取总数（应用基础筛选）
+    const total = await prisma.healthCheck.count({ where });
 
     // 构建排序条件
     let orderBy: { id: "asc" | "desc" } | { createdAt: "asc" | "desc" } = {
@@ -383,11 +412,21 @@ export async function getDoctorHistory(
 
     // 获取分页数据
     let records = await prisma.healthCheck.findMany({
-      skip: sortBy === "errorCount" || sortBy === "warningCount" ? 0 : skip,
+      skip:
+        sortBy === "errorCount" ||
+        sortBy === "warningCount" ||
+        errorCount !== undefined ||
+        warningCount !== undefined
+          ? 0
+          : skip,
       take:
-        sortBy === "errorCount" || sortBy === "warningCount"
+        sortBy === "errorCount" ||
+        sortBy === "warningCount" ||
+        errorCount !== undefined ||
+        warningCount !== undefined
           ? undefined
           : pageSize,
+      where,
       orderBy,
       select: {
         id: true,
@@ -396,26 +435,59 @@ export async function getDoctorHistory(
       },
     });
 
-    // 如果按 errorCount 或 warningCount 排序，需要在内存中处理
-    if (sortBy === "errorCount" || sortBy === "warningCount") {
-      const severityType = sortBy === "errorCount" ? "error" : "warning";
+    // 如果需要按 errorCount 或 warningCount 筛选或排序，需要在内存中处理
+    if (
+      sortBy === "errorCount" ||
+      sortBy === "warningCount" ||
+      errorCount !== undefined ||
+      warningCount !== undefined
+    ) {
+      // 先应用筛选
+      if (errorCount !== undefined || warningCount !== undefined) {
+        records = records.filter((record) => {
+          const issues = record.issues as HealthCheckIssue[];
+          const actualErrorCount = issues.filter(
+            (issue) => issue.severity === "error",
+          ).length;
+          const actualWarningCount = issues.filter(
+            (issue) => issue.severity === "warning",
+          ).length;
 
-      records.sort((a, b) => {
-        const aIssues = a.issues as HealthCheckIssue[];
-        const bIssues = b.issues as HealthCheckIssue[];
+          let matchesError = true;
+          let matchesWarning = true;
 
-        const aCount = aIssues.filter(
-          (issue) => issue.severity === severityType,
-        ).length;
-        const bCount = bIssues.filter(
-          (issue) => issue.severity === severityType,
-        ).length;
+          if (errorCount !== undefined) {
+            matchesError = actualErrorCount === errorCount;
+          }
+          if (warningCount !== undefined) {
+            matchesWarning = actualWarningCount === warningCount;
+          }
 
-        const diff = aCount - bCount;
-        return sortOrder === "asc" ? diff : -diff;
-      });
+          return matchesError && matchesWarning;
+        });
+      }
 
-      // 应用分页
+      // 再应用排序
+      if (sortBy === "errorCount" || sortBy === "warningCount") {
+        const severityType = sortBy === "errorCount" ? "error" : "warning";
+
+        records.sort((a, b) => {
+          const aIssues = a.issues as HealthCheckIssue[];
+          const bIssues = b.issues as HealthCheckIssue[];
+
+          const aCount = aIssues.filter(
+            (issue) => issue.severity === severityType,
+          ).length;
+          const bCount = bIssues.filter(
+            (issue) => issue.severity === severityType,
+          ).length;
+
+          const diff = aCount - bCount;
+          return sortOrder === "asc" ? diff : -diff;
+        });
+      }
+
+      // 最后应用分页
       records = records.slice(skip, skip + pageSize);
     }
 

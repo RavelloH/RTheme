@@ -286,6 +286,16 @@ export async function getPostsList(
     sortOrder = "desc",
     status,
     search,
+    id,
+    isPinned,
+    allowComments,
+    robotsIndex,
+    publishedAtStart,
+    publishedAtEnd,
+    updatedAtStart,
+    updatedAtEnd,
+    createdAtStart,
+    createdAtEnd,
   }: GetPostsList,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<PostListItem[] | null>> {
@@ -306,6 +316,16 @@ export async function getPostsList(
       sortOrder,
       status,
       search,
+      id,
+      isPinned,
+      allowComments,
+      robotsIndex,
+      publishedAtStart,
+      publishedAtEnd,
+      updatedAtStart,
+      updatedAtEnd,
+      createdAtStart,
+      createdAtEnd,
     },
     GetPostsListSchema,
   );
@@ -329,13 +349,25 @@ export async function getPostsList(
     // 构建 where 条件
     const where: {
       deletedAt: null;
-      status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+      id?: number;
+      status?: { in: ("DRAFT" | "PUBLISHED" | "ARCHIVED")[] };
+      isPinned?: boolean;
+      allowComments?: boolean;
+      robotsIndex?: boolean;
+      publishedAt?: { gte?: Date; lte?: Date };
+      updatedAt?: { gte?: Date; lte?: Date };
+      createdAt?: { gte?: Date; lte?: Date };
       userUid?: number; // AUTHOR 只能看到自己的文章
-      OR?: Array<{
-        title?: { contains: string; mode: "insensitive" };
-        slug?: { contains: string; mode: "insensitive" };
-        excerpt?: { contains: string; mode: "insensitive" };
-      }>;
+      OR?: Array<
+        | {
+            title?: { contains: string; mode: "insensitive" };
+            slug?: { contains: string; mode: "insensitive" };
+            excerpt?: { contains: string; mode: "insensitive" };
+          }
+        | { isPinned?: boolean }
+        | { allowComments?: boolean }
+        | { robotsIndex?: boolean }
+      >;
     } = {
       deletedAt: null, // 只获取未删除的文章
     };
@@ -345,8 +377,50 @@ export async function getPostsList(
       where.userUid = user.uid;
     }
 
-    if (status) {
-      where.status = status;
+    if (id !== undefined) {
+      where.id = id;
+    }
+
+    if (status && status.length > 0) {
+      where.status = { in: status };
+    }
+
+    // 对于布尔字段，如果数组包含两个值，表示不筛选；如果只有一个值，直接使用该值
+    if (isPinned && isPinned.length === 1) {
+      where.isPinned = isPinned[0];
+    } else if (isPinned && isPinned.length === 2) {
+      // 包含 true 和 false，不需要筛选
+      // 不设置 where.isPinned
+    }
+
+    if (allowComments && allowComments.length === 1) {
+      where.allowComments = allowComments[0];
+    } else if (allowComments && allowComments.length === 2) {
+      // 包含 true 和 false，不需要筛选
+    }
+
+    if (robotsIndex && robotsIndex.length === 1) {
+      where.robotsIndex = robotsIndex[0];
+    } else if (robotsIndex && robotsIndex.length === 2) {
+      // 包含 true 和 false，不需要筛选
+    }
+
+    if (publishedAtStart || publishedAtEnd) {
+      where.publishedAt = {};
+      if (publishedAtStart) where.publishedAt.gte = new Date(publishedAtStart);
+      if (publishedAtEnd) where.publishedAt.lte = new Date(publishedAtEnd);
+    }
+
+    if (updatedAtStart || updatedAtEnd) {
+      where.updatedAt = {};
+      if (updatedAtStart) where.updatedAt.gte = new Date(updatedAtStart);
+      if (updatedAtEnd) where.updatedAt.lte = new Date(updatedAtEnd);
+    }
+
+    if (createdAtStart || createdAtEnd) {
+      where.createdAt = {};
+      if (createdAtStart) where.createdAt.gte = new Date(createdAtStart);
+      if (createdAtEnd) where.createdAt.lte = new Date(createdAtEnd);
     }
 
     if (search && search.trim()) {

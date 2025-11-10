@@ -1,7 +1,7 @@
 "use client";
 
 import { getDoctorHistory } from "@/actions/doctor";
-import GridTable from "@/components/GridTable";
+import GridTable, { FilterConfig } from "@/components/GridTable";
 import { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { DoctorHistoryItem } from "@repo/shared-types/api/doctor";
@@ -27,6 +27,9 @@ export default function DoctorHistoryTable() {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [filterValues, setFilterValues] = useState<
+    Record<string, string | string[] | { start?: string; end?: string }>
+  >({});
 
   // 处理排序变化
   const handleSortChange = (key: string, order: "asc" | "desc" | null) => {
@@ -34,6 +37,48 @@ export default function DoctorHistoryTable() {
     setSortOrder(order);
     setPage(1); // 排序变化时重置到第一页
   };
+
+  // 处理筛选变化
+  const handleFilterChange = (
+    filters: Record<
+      string,
+      string | string[] | { start?: string; end?: string }
+    >,
+  ) => {
+    setFilterValues(filters);
+    setPage(1); // 筛选变化时重置到第一页
+  };
+
+  // 筛选配置
+  const filterConfig: FilterConfig[] = [
+    {
+      key: "id",
+      label: "记录 ID",
+      type: "input",
+      inputType: "number",
+      placeholder: "输入记录 ID",
+    },
+    {
+      key: "errorCount",
+      label: "错误数",
+      type: "input",
+      inputType: "number",
+      placeholder: "输入错误数",
+    },
+    {
+      key: "warningCount",
+      label: "警告数",
+      type: "input",
+      inputType: "number",
+      placeholder: "输入警告数",
+    },
+    {
+      key: "createdAt",
+      label: "检查时间",
+      type: "dateRange",
+      dateFields: { start: "createdAtStart", end: "createdAtEnd" },
+    },
+  ];
 
   // 监听广播刷新消息
   useBroadcast<{ type: string }>(async (message) => {
@@ -52,6 +97,11 @@ export default function DoctorHistoryTable() {
           pageSize: number;
           sortBy?: "id" | "createdAt" | "errorCount" | "warningCount";
           sortOrder?: "asc" | "desc";
+          id?: number;
+          errorCount?: number;
+          warningCount?: number;
+          createdAtStart?: string;
+          createdAtEnd?: string;
         } = {
           page,
           pageSize,
@@ -65,6 +115,41 @@ export default function DoctorHistoryTable() {
             | "errorCount"
             | "warningCount";
           params.sortOrder = sortOrder;
+        }
+
+        // 添加筛选参数
+        if (filterValues.id && typeof filterValues.id === "string") {
+          params.id = parseInt(filterValues.id, 10);
+        }
+
+        if (
+          filterValues.errorCount &&
+          typeof filterValues.errorCount === "string"
+        ) {
+          params.errorCount = parseInt(filterValues.errorCount, 10);
+        }
+
+        if (
+          filterValues.warningCount &&
+          typeof filterValues.warningCount === "string"
+        ) {
+          params.warningCount = parseInt(filterValues.warningCount, 10);
+        }
+
+        if (
+          filterValues.createdAt &&
+          typeof filterValues.createdAt === "object"
+        ) {
+          const dateRange = filterValues.createdAt as {
+            start?: string;
+            end?: string;
+          };
+          if (dateRange.start) {
+            params.createdAtStart = dateRange.start;
+          }
+          if (dateRange.end) {
+            params.createdAtEnd = dateRange.end;
+          }
         }
 
         const result = await getDoctorHistory(params);
@@ -130,7 +215,7 @@ export default function DoctorHistoryTable() {
     }
 
     fetchData();
-  }, [page, pageSize, sortKey, sortOrder, refreshTrigger]);
+  }, [page, pageSize, sortKey, sortOrder, filterValues, refreshTrigger]);
 
   const baseColumns: TableColumn<DoctorHistoryItem>[] = [
     {
@@ -236,6 +321,8 @@ export default function DoctorHistoryTable() {
       onPageChange={setPage}
       onPageSizeChange={setPageSize}
       onSortChange={handleSortChange}
+      filterConfig={filterConfig}
+      onFilterChange={handleFilterChange}
       striped
       hoverable
       bordered={false}

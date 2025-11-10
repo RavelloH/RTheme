@@ -45,8 +45,19 @@ export const GetPostsListSchema = z.object({
     .optional()
     .default("id"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
-  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
+  status: z.array(z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"])).optional(),
   search: z.string().optional(),
+  // 筛选参数
+  id: z.number().int().optional(),
+  isPinned: z.array(z.boolean()).optional(),
+  allowComments: z.array(z.boolean()).optional(),
+  robotsIndex: z.array(z.boolean()).optional(),
+  publishedAtStart: z.string().datetime().optional(),
+  publishedAtEnd: z.string().datetime().optional(),
+  updatedAtStart: z.string().datetime().optional(),
+  updatedAtEnd: z.string().datetime().optional(),
+  createdAtStart: z.string().datetime().optional(),
+  createdAtEnd: z.string().datetime().optional(),
 });
 export type GetPostsList = z.infer<typeof GetPostsListSchema>;
 registerSchema("GetPostsList", GetPostsListSchema);

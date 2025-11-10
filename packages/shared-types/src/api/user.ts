@@ -45,8 +45,15 @@ export const GetUsersListSchema = z.object({
     .optional()
     .default("uid"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("asc"),
-  role: z.enum(["USER", "ADMIN", "EDITOR", "AUTHOR"]).optional(),
-  status: z.enum(["ACTIVE", "SUSPENDED", "NEEDS_UPDATE"]).optional(),
+  uid: z.number().int().positive().optional(),
+  role: z.array(z.enum(["USER", "ADMIN", "EDITOR", "AUTHOR"])).optional(),
+  status: z.array(z.enum(["ACTIVE", "SUSPENDED", "NEEDS_UPDATE"])).optional(),
+  emailVerified: z.array(z.boolean()).optional(),
+  emailNotice: z.array(z.boolean()).optional(),
+  createdAtStart: z.string().optional(),
+  createdAtEnd: z.string().optional(),
+  lastUseAtStart: z.string().optional(),
+  lastUseAtEnd: z.string().optional(),
   search: z.string().optional(),
 });
 export type GetUsersList = z.infer<typeof GetUsersListSchema>;

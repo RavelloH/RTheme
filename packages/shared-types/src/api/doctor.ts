@@ -36,6 +36,12 @@ export const GetDoctorHistorySchema = z.object({
   pageSize: z.number().int().positive().max(500).default(10),
   sortBy: z.enum(["id", "createdAt", "errorCount", "warningCount"]).optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
+  // 筛选参数
+  id: z.number().int().optional(),
+  errorCount: z.number().int().optional(),
+  warningCount: z.number().int().optional(),
+  createdAtStart: z.string().datetime().optional(),
+  createdAtEnd: z.string().datetime().optional(),
 });
 export type GetDoctorHistory = z.infer<typeof GetDoctorHistorySchema>;
 registerSchema("GetDoctorHistory", GetDoctorHistorySchema);

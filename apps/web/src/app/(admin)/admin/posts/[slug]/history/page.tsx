@@ -338,7 +338,7 @@ export default function PostHistoryPage() {
       render: (value: unknown, record: PostHistoryItem) => {
         return (
           <Link
-            href={`/admin/users?search=${record.username}`}
+            href={`/admin/users?uid=${record.userUid}`}
             presets={["hover-underline"]}
             title={`@${record.username}`}
           >
@@ -456,7 +456,7 @@ export default function PostHistoryPage() {
                             {stats.editors.map((editor, index) => (
                               <span key={editor.userUid}>
                                 <Link
-                                  href={`/admin/users?search=${editor.username}`}
+                                  href={`/admin/users?uid=${editor.userUid}`}
                                   presets={["hover-underline"]}
                                 >
                                   {editor.nickname || `@${editor.username}`}

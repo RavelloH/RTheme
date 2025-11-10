@@ -153,8 +153,15 @@ export async function getUsersList(
     pageSize = 25,
     sortBy = "uid",
     sortOrder = "asc",
+    uid,
     role,
     status,
+    emailVerified,
+    emailNotice,
+    createdAtStart,
+    createdAtEnd,
+    lastUseAtStart,
+    lastUseAtEnd,
     search,
   }: GetUsersList,
   serverConfig?: ActionConfig,
@@ -174,8 +181,15 @@ export async function getUsersList(
       pageSize,
       sortBy,
       sortOrder,
+      uid,
       role,
       status,
+      emailVerified,
+      emailNotice,
+      createdAtStart,
+      createdAtEnd,
+      lastUseAtStart,
+      lastUseAtEnd,
       search,
     },
     GetUsersListSchema,
@@ -200,8 +214,13 @@ export async function getUsersList(
     // 构建 where 条件
     const where: {
       deletedAt: null;
-      role?: "USER" | "ADMIN" | "EDITOR" | "AUTHOR";
-      status?: "ACTIVE" | "SUSPENDED" | "NEEDS_UPDATE";
+      uid?: number;
+      role?: { in: ("USER" | "ADMIN" | "EDITOR" | "AUTHOR")[] };
+      status?: { in: ("ACTIVE" | "SUSPENDED" | "NEEDS_UPDATE")[] };
+      emailVerified?: boolean;
+      emailNotice?: boolean;
+      createdAt?: { gte?: Date; lte?: Date };
+      lastUseAt?: { gte?: Date; lte?: Date };
       OR?: Array<{
         username?: { contains: string; mode: "insensitive" };
         nickname?: { contains: string; mode: "insensitive" };
@@ -211,20 +230,58 @@ export async function getUsersList(
       deletedAt: null, // 只获取未删除的用户
     };
 
-    if (role) {
-      where.role = role;
+    if (uid) {
+      where.uid = uid;
     }
 
-    if (status) {
-      where.status = status;
+    if (role && role.length > 0) {
+      where.role = { in: role };
+    }
+
+    if (status && status.length > 0) {
+      where.status = { in: status };
+    }
+
+    // 布尔字段的多选处理
+    if (emailVerified && emailVerified.length === 1) {
+      // 只选择一个值时，直接添加为 where 条件
+      (where as { emailVerified?: boolean }).emailVerified = emailVerified[0];
+    }
+    // 如果选择了两个值（true 和 false），相当于不筛选，不添加条件
+
+    if (emailNotice && emailNotice.length === 1) {
+      // 只选择一个值时，直接添加为 where 条件
+      (where as { emailNotice?: boolean }).emailNotice = emailNotice[0];
+    }
+    // 如果选择了两个值（true 和 false），相当于不筛选，不添加条件
+
+    if (createdAtStart || createdAtEnd) {
+      where.createdAt = {};
+      if (createdAtStart) {
+        where.createdAt.gte = new Date(createdAtStart);
+      }
+      if (createdAtEnd) {
+        where.createdAt.lte = new Date(createdAtEnd);
+      }
+    }
+
+    if (lastUseAtStart || lastUseAtEnd) {
+      where.lastUseAt = {};
+      if (lastUseAtStart) {
+        where.lastUseAt.gte = new Date(lastUseAtStart);
+      }
+      if (lastUseAtEnd) {
+        where.lastUseAt.lte = new Date(lastUseAtEnd);
+      }
     }
 
     if (search && search.trim()) {
-      where.OR = [
+      if (!where.OR) where.OR = [];
+      where.OR.push(
         { username: { contains: search.trim(), mode: "insensitive" } },
         { nickname: { contains: search.trim(), mode: "insensitive" } },
         { email: { contains: search.trim(), mode: "insensitive" } },
-      ];
+      );
     }
 
     // 获取总数

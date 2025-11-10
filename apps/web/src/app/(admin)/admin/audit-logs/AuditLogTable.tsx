@@ -1,7 +1,7 @@
 "use client";
 
 import { getAuditLogs } from "@/actions/audit";
-import GridTable from "@/components/GridTable";
+import GridTable, { FilterConfig } from "@/components/GridTable";
 import { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { AuditLogItem } from "@repo/shared-types/api/audit";
@@ -21,6 +21,9 @@ export default function AuditLogTable() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterValues, setFilterValues] = useState<
+    Record<string, string | string[] | { start?: string; end?: string }>
+  >({});
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<AuditLogItem | null>(null);
 
@@ -39,6 +42,55 @@ export default function AuditLogTable() {
       setPage(1); // 搜索变化时重置到第一页
     }
   };
+
+  // 处理筛选变化
+  const handleFilterChange = (
+    filters: Record<
+      string,
+      string | string[] | { start?: string; end?: string }
+    >,
+  ) => {
+    setFilterValues(filters);
+    setPage(1); // 筛选变化时重置到第一页
+  };
+
+  // 筛选配置
+  const filterConfig: FilterConfig[] = [
+    {
+      key: "id",
+      label: "日志 ID",
+      type: "input",
+      inputType: "number",
+      placeholder: "输入日志 ID",
+    },
+    {
+      key: "action",
+      label: "操作类型",
+      type: "input",
+      inputType: "text",
+      placeholder: "例如：CREATE、UPDATE、DELETE",
+    },
+    {
+      key: "resource",
+      label: "资源类型",
+      type: "input",
+      inputType: "text",
+      placeholder: "例如：POST、USER、COMMENT",
+    },
+    {
+      key: "userUid",
+      label: "操作者 UID",
+      type: "input",
+      inputType: "number",
+      placeholder: "输入用户 UID",
+    },
+    {
+      key: "timestamp",
+      label: "操作时间",
+      type: "dateRange",
+      dateFields: { start: "timestampStart", end: "timestampEnd" },
+    },
+  ];
 
   // 打开详情对话框
   const openDetailDialog = (log: AuditLogItem) => {
@@ -70,6 +122,12 @@ export default function AuditLogTable() {
           sortBy?: "id" | "timestamp" | "action" | "resource" | "userUid";
           sortOrder?: "asc" | "desc";
           search?: string;
+          id?: number;
+          action?: string;
+          resource?: string;
+          userUid?: number;
+          timestampStart?: string;
+          timestampEnd?: string;
         } = {
           page,
           pageSize,
@@ -91,6 +149,42 @@ export default function AuditLogTable() {
           params.search = searchQuery.trim();
         }
 
+        // 添加筛选参数
+        if (filterValues.id && typeof filterValues.id === "string") {
+          params.id = parseInt(filterValues.id, 10);
+        }
+
+        if (filterValues.action && typeof filterValues.action === "string") {
+          params.action = filterValues.action.trim();
+        }
+
+        if (
+          filterValues.resource &&
+          typeof filterValues.resource === "string"
+        ) {
+          params.resource = filterValues.resource.trim();
+        }
+
+        if (filterValues.userUid && typeof filterValues.userUid === "string") {
+          params.userUid = parseInt(filterValues.userUid, 10);
+        }
+
+        if (
+          filterValues.timestamp &&
+          typeof filterValues.timestamp === "object"
+        ) {
+          const dateRange = filterValues.timestamp as {
+            start?: string;
+            end?: string;
+          };
+          if (dateRange.start) {
+            params.timestampStart = dateRange.start;
+          }
+          if (dateRange.end) {
+            params.timestampEnd = dateRange.end;
+          }
+        }
+
         const result = await getAuditLogs(params);
 
         if (result.success && result.data) {
@@ -108,7 +202,15 @@ export default function AuditLogTable() {
     }
 
     fetchData();
-  }, [page, pageSize, sortKey, sortOrder, searchQuery, refreshTrigger]);
+  }, [
+    page,
+    pageSize,
+    sortKey,
+    sortOrder,
+    searchQuery,
+    filterValues,
+    refreshTrigger,
+  ]);
 
   const columns: TableColumn<AuditLogItem>[] = [
     {
@@ -256,6 +358,8 @@ export default function AuditLogTable() {
         onSearchChange={handleSearchChange}
         onRowClick={(record) => openDetailDialog(record)}
         searchPlaceholder="搜索..."
+        filterConfig={filterConfig}
+        onFilterChange={handleFilterChange}
         striped
         hoverable
         bordered={false}

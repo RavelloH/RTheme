@@ -1,7 +1,7 @@
 "use client";
 
 import { getPostsList, updatePosts, deletePosts } from "@/actions/post";
-import GridTable, { ActionButton } from "@/components/GridTable";
+import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
 import { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { PostListItem } from "@repo/shared-types/api/post";
@@ -41,6 +41,9 @@ export default function PostsTable() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedPosts, setSelectedPosts] = useState<(string | number)[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterValues, setFilterValues] = useState<
+    Record<string, string | string[] | { start?: string; end?: string }>
+  >({});
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<PostListItem | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -496,6 +499,83 @@ export default function PostsTable() {
     setPage(1);
   };
 
+  // 处理筛选变化
+  const handleFilterChange = (
+    filters: Record<
+      string,
+      string | string[] | { start?: string; end?: string }
+    >,
+  ) => {
+    setFilterValues(filters);
+    setPage(1); // 筛选变化时重置到第一页
+  };
+
+  // 筛选配置
+  const filterConfig: FilterConfig[] = [
+    {
+      key: "id",
+      label: "文章 ID",
+      type: "input",
+      inputType: "number",
+      placeholder: "输入文章 ID",
+    },
+    {
+      key: "status",
+      label: "状态",
+      type: "checkboxGroup",
+      options: [
+        { value: "PUBLISHED", label: "已发布" },
+        { value: "DRAFT", label: "草稿" },
+        { value: "ARCHIVED", label: "已归档" },
+      ],
+    },
+    {
+      key: "isPinned",
+      label: "置顶状态",
+      type: "checkboxGroup",
+      options: [
+        { value: "true", label: "已置顶" },
+        { value: "false", label: "未置顶" },
+      ],
+    },
+    {
+      key: "allowComments",
+      label: "评论状态",
+      type: "checkboxGroup",
+      options: [
+        { value: "true", label: "允许评论" },
+        { value: "false", label: "禁止评论" },
+      ],
+    },
+    {
+      key: "robotsIndex",
+      label: "搜索引擎索引",
+      type: "checkboxGroup",
+      options: [
+        { value: "true", label: "允许索引" },
+        { value: "false", label: "禁止索引" },
+      ],
+    },
+    {
+      key: "publishedAt",
+      label: "发布时间",
+      type: "dateRange",
+      dateFields: { start: "publishedAtStart", end: "publishedAtEnd" },
+    },
+    {
+      key: "updatedAt",
+      label: "更新时间",
+      type: "dateRange",
+      dateFields: { start: "updatedAtStart", end: "updatedAtEnd" },
+    },
+    {
+      key: "createdAt",
+      label: "创建时间",
+      type: "dateRange",
+      dateFields: { start: "createdAtStart", end: "createdAtEnd" },
+    },
+  ];
+
   // 监听广播刷新消息
   useBroadcast<{ type: string }>(async (message) => {
     if (message.type === "posts-refresh") {
@@ -513,6 +593,17 @@ export default function PostsTable() {
           sortBy?: "id" | "title" | "publishedAt" | "updatedAt" | "createdAt";
           sortOrder?: "asc" | "desc";
           search?: string;
+          id?: number;
+          status?: ("DRAFT" | "PUBLISHED" | "ARCHIVED")[];
+          isPinned?: boolean[];
+          allowComments?: boolean[];
+          robotsIndex?: boolean[];
+          publishedAtStart?: string;
+          publishedAtEnd?: string;
+          updatedAtStart?: string;
+          updatedAtEnd?: string;
+          createdAtStart?: string;
+          createdAtEnd?: string;
         } = {
           page,
           pageSize,
@@ -530,6 +621,91 @@ export default function PostsTable() {
 
         if (searchQuery && searchQuery.trim()) {
           params.search = searchQuery.trim();
+        }
+
+        // 添加筛选参数
+        if (filterValues.id && typeof filterValues.id === "string") {
+          params.id = parseInt(filterValues.id, 10);
+        }
+
+        if (filterValues.status && Array.isArray(filterValues.status)) {
+          params.status = filterValues.status as (
+            | "DRAFT"
+            | "PUBLISHED"
+            | "ARCHIVED"
+          )[];
+        }
+
+        if (filterValues.isPinned && Array.isArray(filterValues.isPinned)) {
+          params.isPinned = filterValues.isPinned.map((v) =>
+            typeof v === "string" ? v === "true" : Boolean(v),
+          );
+        }
+
+        if (
+          filterValues.allowComments &&
+          Array.isArray(filterValues.allowComments)
+        ) {
+          params.allowComments = filterValues.allowComments.map((v) =>
+            typeof v === "string" ? v === "true" : Boolean(v),
+          );
+        }
+
+        if (
+          filterValues.robotsIndex &&
+          Array.isArray(filterValues.robotsIndex)
+        ) {
+          params.robotsIndex = filterValues.robotsIndex.map((v) =>
+            typeof v === "string" ? v === "true" : Boolean(v),
+          );
+        }
+
+        if (
+          filterValues.publishedAt &&
+          typeof filterValues.publishedAt === "object"
+        ) {
+          const dateRange = filterValues.publishedAt as {
+            start?: string;
+            end?: string;
+          };
+          if (dateRange.start) {
+            params.publishedAtStart = dateRange.start;
+          }
+          if (dateRange.end) {
+            params.publishedAtEnd = dateRange.end;
+          }
+        }
+
+        if (
+          filterValues.updatedAt &&
+          typeof filterValues.updatedAt === "object"
+        ) {
+          const dateRange = filterValues.updatedAt as {
+            start?: string;
+            end?: string;
+          };
+          if (dateRange.start) {
+            params.updatedAtStart = dateRange.start;
+          }
+          if (dateRange.end) {
+            params.updatedAtEnd = dateRange.end;
+          }
+        }
+
+        if (
+          filterValues.createdAt &&
+          typeof filterValues.createdAt === "object"
+        ) {
+          const dateRange = filterValues.createdAt as {
+            start?: string;
+            end?: string;
+          };
+          if (dateRange.start) {
+            params.createdAtStart = dateRange.start;
+          }
+          if (dateRange.end) {
+            params.createdAtEnd = dateRange.end;
+          }
         }
 
         const result = await getPostsList({
@@ -553,7 +729,15 @@ export default function PostsTable() {
     }
 
     fetchData();
-  }, [page, pageSize, sortKey, sortOrder, searchQuery, refreshTrigger]);
+  }, [
+    page,
+    pageSize,
+    sortKey,
+    sortOrder,
+    searchQuery,
+    filterValues,
+    refreshTrigger,
+  ]);
 
   const columns: TableColumn<PostListItem>[] = [
     {
@@ -593,7 +777,7 @@ export default function PostsTable() {
         const author = record.author;
         return (
           <Link
-            href={`/admin/users?search=${author.username}`}
+            href={`/admin/users?uid=${author.uid}`}
             presets={["hover-underline"]}
             title={`@${author.username}`}
           >
@@ -760,6 +944,8 @@ export default function PostsTable() {
         onSortChange={handleSortChange}
         onSearchChange={handleSearchChange}
         searchPlaceholder="搜索标题、Slug 或摘要..."
+        filterConfig={filterConfig}
+        onFilterChange={handleFilterChange}
         striped
         hoverable
         bordered={false}

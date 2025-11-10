@@ -15,9 +15,13 @@ import {
   RiArrowRightSLine,
   RiSearchLine,
   RiCloseLine,
+  RiFilterLine,
 } from "@remixicon/react";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Dialog } from "@/ui/Dialog";
+import { Input } from "@/ui/Input";
+import { SelectOption } from "@/ui/Select";
 
 // 操作按钮配置
 export interface ActionButton {
@@ -27,6 +31,17 @@ export interface ActionButton {
   variant?: ButtonProps["variant"];
   disabled?: boolean;
   loading?: boolean;
+}
+
+// 筛选配置
+export interface FilterConfig {
+  key: string; // 筛选字段的 key，对应 URL 参数名
+  label: string; // 显示标签
+  type: "checkboxGroup" | "input" | "dateRange"; // 筛选类型
+  options?: SelectOption[]; // checkboxGroup 类型时的选项
+  placeholder?: string; // input 类型的占位符
+  inputType?: "text" | "number"; // input 的具体类型
+  dateFields?: { start: string; end: string }; // dateRange 类型时的字段名
 }
 
 export interface GridTableProps<T extends Record<string, unknown>> {
@@ -47,6 +62,14 @@ export interface GridTableProps<T extends Record<string, unknown>> {
   // 搜索相关
   onSearchChange?: (search: string) => void;
   searchPlaceholder?: string;
+  // 筛选相关
+  filterConfig?: FilterConfig[]; // 筛选字段配置
+  onFilterChange?: (
+    filters: Record<
+      string,
+      string | string[] | { start?: string; end?: string }
+    >,
+  ) => void; // 筛选回调
   // 表格配置
   striped?: boolean;
   hoverable?: boolean;
@@ -86,6 +109,8 @@ export default function GridTable<T extends Record<string, unknown>>({
   onSortChange,
   onSearchChange,
   searchPlaceholder = "搜索...",
+  filterConfig,
+  onFilterChange,
   striped = true,
   hoverable = true,
   bordered = false,
@@ -114,6 +139,65 @@ export default function GridTable<T extends Record<string, unknown>>({
   const [searchValue, setSearchValue] = useState("");
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSearchValueRef = useRef<string>(""); // 记录上次触发的搜索值
+
+  // 筛选状态管理
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [filterValues, setFilterValues] = useState<
+    Record<string, string | string[] | { start?: string; end?: string }>
+  >({});
+  const [tempFilterValues, setTempFilterValues] = useState<
+    Record<string, string | string[] | { start?: string; end?: string }>
+  >({});
+
+  // 从 URL 读取初始筛选参数
+  useEffect(() => {
+    if (typeof window === "undefined" || !filterConfig) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialFilters: Record<
+      string,
+      string | string[] | { start?: string; end?: string }
+    > = {};
+
+    filterConfig.forEach((config) => {
+      if (config.type === "checkboxGroup") {
+        // 多选：URL 格式为 key=value1,value2,value3
+        const value = urlParams.get(config.key);
+        if (value) {
+          initialFilters[config.key] = value.split(",");
+        }
+      } else if (config.type === "dateRange" && config.dateFields) {
+        // 时间区间：分别读取开始和结束时间
+        const startValue = urlParams.get(config.dateFields.start);
+        const endValue = urlParams.get(config.dateFields.end);
+        if (startValue || endValue) {
+          initialFilters[config.key] = {
+            start: startValue || undefined,
+            end: endValue || undefined,
+          };
+        }
+      } else if (config.type === "input") {
+        // 单个输入框
+        const value = urlParams.get(config.key);
+        if (value !== null) {
+          initialFilters[config.key] = value;
+        }
+      }
+    });
+
+    if (Object.keys(initialFilters).length > 0) {
+      setFilterValues(initialFilters);
+      setTempFilterValues(initialFilters);
+      // 通知父组件初始筛选条件
+      onFilterChange?.(initialFilters);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 只在首次加载时执行
+
+  // 判断是否有激活的筛选
+  const hasActiveFilters = useMemo(() => {
+    return Object.keys(filterValues).length > 0;
+  }, [filterValues]);
 
   // 搜索输入变化处理（防抖）
   useEffect(() => {
@@ -190,6 +274,172 @@ export default function GridTable<T extends Record<string, unknown>>({
     },
     [selectedKeys, onSelectionChange],
   );
+
+  // 打开筛选对话框
+  const openFilterDialog = useCallback(() => {
+    setTempFilterValues({ ...filterValues });
+    setFilterDialogOpen(true);
+  }, [filterValues]);
+
+  // 关闭筛选对话框
+  const closeFilterDialog = useCallback(() => {
+    setFilterDialogOpen(false);
+  }, []);
+
+  // 更新临时筛选值
+  const updateTempFilterValue = useCallback(
+    (
+      key: string,
+      value: string | string[] | { start?: string; end?: string },
+    ) => {
+      setTempFilterValues((prev) => ({
+        ...prev,
+        [key]: value,
+      }));
+    },
+    [],
+  );
+
+  // 切换 checkbox 选项
+  const toggleCheckboxOption = useCallback((key: string, option: string) => {
+    setTempFilterValues((prev) => {
+      const currentValue = prev[key];
+      const currentArray = Array.isArray(currentValue) ? currentValue : [];
+
+      if (currentArray.includes(option)) {
+        // 移除该选项
+        const newArray = currentArray.filter((v) => v !== option);
+        if (newArray.length === 0) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { [key]: _, ...rest } = prev;
+          return rest;
+        }
+        return { ...prev, [key]: newArray };
+      } else {
+        // 添加该选项
+        return { ...prev, [key]: [...currentArray, option] };
+      }
+    });
+  }, []);
+
+  // 应用筛选
+  const applyFilters = useCallback(() => {
+    // 移除空值
+    const cleanedFilters: Record<
+      string,
+      string | string[] | { start?: string; end?: string }
+    > = {};
+    Object.entries(tempFilterValues).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        // checkboxGroup: 只保留非空数组
+        if (value.length > 0) {
+          cleanedFilters[key] = value;
+        }
+      } else if (
+        typeof value === "object" &&
+        value !== null &&
+        "start" in value
+      ) {
+        // dateRange: 至少有一个时间才保留
+        if (value.start || value.end) {
+          cleanedFilters[key] = value;
+        }
+      } else if (value !== "" && value !== undefined && value !== null) {
+        // input: 非空字符串
+        cleanedFilters[key] = value as string;
+      }
+    });
+
+    setFilterValues(cleanedFilters);
+
+    // 更新 URL 参数
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      const params = url.searchParams;
+
+      // 清除旧的筛选参数
+      filterConfig?.forEach((config) => {
+        params.delete(config.key);
+        if (config.type === "dateRange" && config.dateFields) {
+          params.delete(config.dateFields.start);
+          params.delete(config.dateFields.end);
+        }
+      });
+
+      // 添加新的筛选参数
+      Object.entries(cleanedFilters).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          // checkboxGroup: 用逗号连接
+          params.set(key, value.join(","));
+        } else if (
+          typeof value === "object" &&
+          value !== null &&
+          "start" in value
+        ) {
+          // dateRange: 分别设置开始和结束时间
+          const config = filterConfig?.find((c) => c.key === key);
+          if (config?.type === "dateRange" && config.dateFields) {
+            if (value.start) {
+              params.set(config.dateFields.start, value.start);
+            }
+            if (value.end) {
+              params.set(config.dateFields.end, value.end);
+            }
+          }
+        } else {
+          // input: 直接设置
+          params.set(key, String(value));
+        }
+      });
+
+      // 使用 pushState 更新 URL，不刷新页面
+      window.history.pushState({}, "", url.toString());
+    }
+
+    // 通知父组件
+    onFilterChange?.(cleanedFilters);
+
+    // 重置到第一页
+    onPageChange(1);
+
+    closeFilterDialog();
+  }, [
+    tempFilterValues,
+    filterConfig,
+    onFilterChange,
+    onPageChange,
+    closeFilterDialog,
+  ]);
+
+  // 重置筛选
+  const resetFilters = useCallback(() => {
+    setTempFilterValues({});
+    setFilterValues({});
+
+    // 清除 URL 参数
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      const params = url.searchParams;
+
+      filterConfig?.forEach((config) => {
+        params.delete(config.key);
+        if (config.type === "dateRange" && config.dateFields) {
+          params.delete(config.dateFields.start);
+          params.delete(config.dateFields.end);
+        }
+      });
+
+      window.history.pushState({}, "", url.toString());
+    }
+
+    // 通知父组件
+    onFilterChange?.({});
+
+    // 重置到第一页
+    onPageChange(1);
+
+    closeFilterDialog();
+  }, [filterConfig, onFilterChange, onPageChange, closeFilterDialog]);
 
   // 是否全选
   const isAllSelected = useMemo(() => {
@@ -292,65 +542,84 @@ export default function GridTable<T extends Record<string, unknown>>({
         className="flex items-center justify-between text-2xl px-10"
       >
         <div>{title}</div>
-        {onSearchChange && (
-          <div className="relative w-[15em]">
-            <input
-              title="search"
-              type="text"
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              className="
-                relative w-full bg-transparent border-0
-                px-0 py-2 text-base text-white
-                focus:outline-none
-              "
-            />
-            {/* 底部横线 */}
-            <motion.div
-              className="absolute bottom-0 left-0 h-0.5 w-full"
-              initial={{ backgroundColor: "#ffffff" }}
-              animate={{
-                backgroundColor:
-                  searchValue.length > 0 ? "var(--color-primary)" : "#ffffff",
-              }}
-              transition={{
-                duration: 0.3,
-              }}
-            />
-            {/* Label - 固定位置，有输入时隐藏 */}
-            <motion.label
-              className="absolute top-2 left-0 pointer-events-none whitespace-nowrap flex items-center text-base text-white"
-              animate={{
-                opacity: searchValue.length > 0 ? 0 : 1,
-              }}
-              transition={{
-                duration: 0.2,
-              }}
+        <div className="flex items-center gap-4">
+          {onSearchChange && (
+            <div className="relative w-[15em]">
+              <input
+                title="search"
+                type="text"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                className="
+                  relative w-full bg-transparent border-0
+                  px-0 py-2 text-base text-white
+                  focus:outline-none
+                "
+              />
+              {/* 底部横线 */}
+              <motion.div
+                className="absolute bottom-0 left-0 h-0.5 w-full"
+                initial={{ backgroundColor: "#ffffff" }}
+                animate={{
+                  backgroundColor:
+                    searchValue.length > 0 ? "var(--color-primary)" : "#ffffff",
+                }}
+                transition={{
+                  duration: 0.3,
+                }}
+              />
+              {/* Label - 固定位置，有输入时隐藏 */}
+              <motion.label
+                className="absolute top-2 left-0 pointer-events-none whitespace-nowrap flex items-center text-base text-white"
+                animate={{
+                  opacity: searchValue.length > 0 ? 0 : 1,
+                }}
+                transition={{
+                  duration: 0.2,
+                }}
+              >
+                <RiSearchLine size="1em" className="inline mr-1" />
+                {searchPlaceholder}
+              </motion.label>
+              {/* 清空按钮 - 有输入时显示在右侧 */}
+              <AnimatePresence>
+                {searchValue.length > 0 && (
+                  <motion.button
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{
+                      duration: 0.3,
+                      ease: [0.68, -0.55, 0.265, 1.55],
+                    }}
+                    onClick={() => setSearchValue("")}
+                    className="absolute right-0 top-2 text-primary hover:text-white transition-colors cursor-pointer flex items-center"
+                    type="button"
+                  >
+                    <RiCloseLine size="1em" />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+          {filterConfig && filterConfig.length > 0 && (
+            <Tooltip
+              content={hasActiveFilters ? "筛选（已激活）" : "筛选"}
+              placement="bottom"
             >
-              <RiSearchLine size="1em" className="inline mr-1" />
-              {searchPlaceholder}
-            </motion.label>
-            {/* 清空按钮 - 有输入时显示在右侧 */}
-            <AnimatePresence>
-              {searchValue.length > 0 && (
-                <motion.button
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  transition={{
-                    duration: 0.3,
-                    ease: [0.68, -0.55, 0.265, 1.55],
-                  }}
-                  onClick={() => setSearchValue("")}
-                  className="absolute right-0 top-2 text-primary hover:text-white transition-colors cursor-pointer flex items-center"
-                  type="button"
-                >
-                  <RiCloseLine size="1em" />
-                </motion.button>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
+              <Clickable
+                onClick={openFilterDialog}
+                className={`
+                  p-2 rounded transition-colors inline-flex
+                  ${hasActiveFilters ? "text-background bg-foreground" : "hover:bg-muted"}
+                `}
+                hoverScale={1.1}
+              >
+                <RiFilterLine size="1em" />
+              </Clickable>
+            </Tooltip>
+          )}
+        </div>
       </GridItem>
 
       {/* 表格内容 */}
@@ -502,6 +771,143 @@ export default function GridTable<T extends Record<string, unknown>>({
           )}
         </div>
       </GridItem>
+
+      {/* 筛选 Dialog */}
+      <Dialog
+        open={filterDialogOpen}
+        onClose={closeFilterDialog}
+        title="筛选条件"
+        size="md"
+      >
+        <div className="px-6 py-6 space-y-6">
+          <div className="space-y-6">
+            {filterConfig?.map((config) => (
+              <div key={config.key}>
+                {config.type !== "input" && (
+                  <label className="block text-sm font-medium text-foreground mb-3">
+                    {config.label}
+                  </label>
+                )}
+                {config.type === "checkboxGroup" && config.options && (
+                  <div className="flex gap-4">
+                    {config.options.map((option) => {
+                      const currentValue = tempFilterValues[config.key];
+                      const currentArray = Array.isArray(currentValue)
+                        ? currentValue
+                        : [];
+                      return (
+                        <Checkbox
+                          key={option.value}
+                          label={option.label}
+                          checked={currentArray.includes(String(option.value))}
+                          onChange={() =>
+                            toggleCheckboxOption(
+                              config.key,
+                              String(option.value),
+                            )
+                          }
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+                {config.type === "input" && (
+                  <Input
+                    label={config.label}
+                    value={(tempFilterValues[config.key] as string) || ""}
+                    onChange={(e) =>
+                      updateTempFilterValue(config.key, e.target.value)
+                    }
+                    helperText={config.placeholder}
+                    type={config.inputType || "text"}
+                    size="sm"
+                  />
+                )}
+                {config.type === "dateRange" && config.dateFields && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Input
+                        label="开始时间"
+                        type="datetime-local"
+                        value={
+                          ((
+                            tempFilterValues[config.key] as
+                              | {
+                                  start?: string;
+                                  end?: string;
+                                }
+                              | undefined
+                          )?.start || "") as string
+                        }
+                        onChange={(e) => {
+                          const currentValue = tempFilterValues[config.key] as
+                            | { start?: string; end?: string }
+                            | undefined;
+                          updateTempFilterValue(config.key, {
+                            start: e.target.value || undefined,
+                            end: currentValue?.end,
+                          });
+                        }}
+                        size="sm"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        label="结束时间"
+                        type="datetime-local"
+                        value={
+                          ((
+                            tempFilterValues[config.key] as
+                              | {
+                                  start?: string;
+                                  end?: string;
+                                }
+                              | undefined
+                          )?.end || "") as string
+                        }
+                        onChange={(e) => {
+                          const currentValue = tempFilterValues[config.key] as
+                            | { start?: string; end?: string }
+                            | undefined;
+                          updateTempFilterValue(config.key, {
+                            start: currentValue?.start,
+                            end: e.target.value || undefined,
+                          });
+                        }}
+                        size="sm"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* 操作按钮 */}
+          <div className="flex justify-between pt-4 border-t border-foreground/10">
+            <Button
+              label="重置"
+              variant="ghost"
+              onClick={resetFilters}
+              size="sm"
+            />
+            <div className="flex gap-4">
+              <Button
+                label="取消"
+                variant="ghost"
+                onClick={closeFilterDialog}
+                size="sm"
+              />
+              <Button
+                label="确认"
+                variant="primary"
+                onClick={applyFilters}
+                size="sm"
+              />
+            </div>
+          </div>
+        </div>
+      </Dialog>
     </>
   );
 }

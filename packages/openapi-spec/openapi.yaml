@@ -2853,6 +2853,10 @@ components:
           enum:
             - asc
             - desc
+        id:
+          type: integer
+          minimum: -9007199254740991
+          maximum: 9007199254740991
         action:
           type: string
         resource:
@@ -2861,6 +2865,14 @@ components:
           type: integer
           minimum: -9007199254740991
           maximum: 9007199254740991
+        timestampStart:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        timestampEnd:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
         startDate:
           type: string
           format: date-time
@@ -3211,6 +3223,26 @@ components:
           enum:
             - asc
             - desc
+        id:
+          type: integer
+          minimum: -9007199254740991
+          maximum: 9007199254740991
+        errorCount:
+          type: integer
+          minimum: -9007199254740991
+          maximum: 9007199254740991
+        warningCount:
+          type: integer
+          minimum: -9007199254740991
+          maximum: 9007199254740991
+        createdAtStart:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        createdAtEnd:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
       required:
         - page
         - pageSize
@@ -4031,19 +4063,43 @@ components:
           enum:
             - asc
             - desc
+        uid:
+          type: integer
+          exclusiveMinimum: true
+          maximum: 9007199254740991
         role:
-          type: string
-          enum:
-            - USER
-            - ADMIN
-            - EDITOR
-            - AUTHOR
+          type: array
+          items:
+            type: string
+            enum:
+              - USER
+              - ADMIN
+              - EDITOR
+              - AUTHOR
         status:
+          type: array
+          items:
+            type: string
+            enum:
+              - ACTIVE
+              - SUSPENDED
+              - NEEDS_UPDATE
+        emailVerified:
+          type: array
+          items:
+            type: boolean
+        emailNotice:
+          type: array
+          items:
+            type: boolean
+        createdAtStart:
           type: string
-          enum:
-            - ACTIVE
-            - SUSPENDED
-            - NEEDS_UPDATE
+        createdAtEnd:
+          type: string
+        lastUseAtStart:
+          type: string
+        lastUseAtEnd:
+          type: string
         search:
           type: string
       required:
@@ -4389,13 +4445,55 @@ components:
             - asc
             - desc
         status:
-          type: string
-          enum:
-            - DRAFT
-            - PUBLISHED
-            - ARCHIVED
+          type: array
+          items:
+            type: string
+            enum:
+              - DRAFT
+              - PUBLISHED
+              - ARCHIVED
         search:
           type: string
+        id:
+          type: integer
+          minimum: -9007199254740991
+          maximum: 9007199254740991
+        isPinned:
+          type: array
+          items:
+            type: boolean
+        allowComments:
+          type: array
+          items:
+            type: boolean
+        robotsIndex:
+          type: array
+          items:
+            type: boolean
+        publishedAtStart:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        publishedAtEnd:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        updatedAtStart:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        updatedAtEnd:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        createdAtStart:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        createdAtEnd:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
       required:
         - page
         - pageSize

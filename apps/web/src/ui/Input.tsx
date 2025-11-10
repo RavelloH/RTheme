@@ -18,6 +18,7 @@ export interface InputProps
   tips?: string;
   size?: "sm" | "md";
   rows?: number;
+  labelAlwaysFloating?: boolean; // label 始终浮起（无高亮效果）
 }
 
 export function Input({
@@ -44,6 +45,7 @@ export function Input({
   readOnly = false,
   size = "md",
   rows,
+  labelAlwaysFloating = false,
   ...props
 }: InputProps) {
   const generatedId = useId();
@@ -53,6 +55,13 @@ export function Input({
   const [hasValue, setHasValue] = useState(!!defaultValue || !!value);
 
   const isTextarea = rows !== undefined && rows > 1;
+
+  // 自动启用 labelAlwaysFloating 的条件：
+  // 1. 有 placeholder
+  // 2. 类型是时间/日期相关（这些类型有默认的占位符）
+  const timeRelatedTypes = ["date", "datetime-local", "time", "month", "week"];
+  const autoFloating = !!placeholder || timeRelatedTypes.includes(type);
+  const shouldLabelFloat = labelAlwaysFloating || autoFloating;
 
   const handleFocus = (
     e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -82,8 +91,10 @@ export function Input({
     onInput?.(e as React.FormEvent<HTMLInputElement>);
   };
 
-  const showLabel = isFocused || hasValue || !!placeholder;
+  const showLabel = shouldLabelFloat || isFocused || hasValue || !!placeholder;
   const showBottomLine = isFocused || hasValue;
+  // label 高亮：聚焦或有值时显示主题色
+  const showLabelHighlight = isFocused || hasValue;
 
   // 计算helperText显示逻辑：label上升后且无内容时显示
   const labelAnimationDuration = 0.3 + label.length * 0.02; // 基础动画时长 + 字符延迟
@@ -191,14 +202,21 @@ export function Input({
         {icon && (
           <motion.span
             className={`inline-block ${sizeStyles.labelIcon} min-w-2 text-white pr-1`}
+            initial={
+              shouldLabelFloat
+                ? { color: "#ffffff", y: sizeStyles.labelShift }
+                : undefined
+            }
             animate={{
-              color: showLabel ? "var(--color-primary)" : "#ffffff",
+              color: showLabelHighlight ? "var(--color-primary)" : "#ffffff",
               y: showLabel ? sizeStyles.labelShift : 0,
             }}
             transition={{
-              duration: 0.3,
-              ease: [0.68, -0.55, 0.265, 1.55],
-              delay: 0,
+              color: { duration: 0.3 },
+              y: {
+                duration: shouldLabelFloat ? 0 : 0.3,
+                ease: [0.68, -0.55, 0.265, 1.55],
+              },
             }}
           >
             {icon}
@@ -208,15 +226,24 @@ export function Input({
           <motion.span
             key={index}
             className={`inline-block ${sizeStyles.labelText} text-white`}
+            initial={
+              shouldLabelFloat
+                ? { color: "#ffffff", y: sizeStyles.labelShift, opacity: 1 }
+                : undefined
+            }
             animate={{
-              color: showLabel ? "var(--color-primary)" : "#ffffff",
+              color: showLabelHighlight ? "var(--color-primary)" : "#ffffff",
               y: showLabel ? sizeStyles.labelShift : 0,
               opacity: 1,
             }}
             transition={{
-              duration: 0.3,
-              ease: [0.68, -0.55, 0.265, 1.55],
-              delay: index * 0.02,
+              color: { duration: 0.3 },
+              opacity: { duration: 0.3 },
+              y: {
+                duration: shouldLabelFloat ? 0 : 0.3,
+                ease: [0.68, -0.55, 0.265, 1.55],
+                delay: shouldLabelFloat ? 0 : index * 0.02,
+              },
             }}
           >
             {char === " " ? "\u00A0" : char}
@@ -224,14 +251,23 @@ export function Input({
         ))}
         <motion.span
           className={`inline-block ${sizeStyles.labelText} text-white px-2`}
+          initial={
+            shouldLabelFloat
+              ? { color: "#ffffff", y: sizeStyles.labelShift, opacity: 1 }
+              : undefined
+          }
           animate={{
-            color: showLabel ? "var(--color-primary)" : "#ffffff",
+            color: showLabelHighlight ? "var(--color-primary)" : "#ffffff",
             y: showLabel ? sizeStyles.labelShift : 0,
             opacity: 1,
           }}
           transition={{
-            duration: 0.3,
-            ease: [0.68, -0.55, 0.265, 1.55],
+            color: { duration: 0.3 },
+            opacity: { duration: 0.3 },
+            y: {
+              duration: shouldLabelFloat ? 0 : 0.3,
+              ease: [0.68, -0.55, 0.265, 1.55],
+            },
           }}
         >
           <AutoTransition duration={0.3}>{tips}</AutoTransition>

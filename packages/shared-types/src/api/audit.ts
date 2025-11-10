@@ -13,9 +13,13 @@ export const GetAuditLogsSchema = z.object({
     .optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
   // 过滤条件
+  id: z.number().int().optional(),
   action: z.string().optional(),
   resource: z.string().optional(),
   userUid: z.number().int().optional(),
+  timestampStart: z.string().datetime().optional(),
+  timestampEnd: z.string().datetime().optional(),
+  // 保留旧的 startDate 和 endDate 以保持向后兼容
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
   // 通用搜索（搜索描述、资源ID、IP地址等）
