@@ -3,8 +3,14 @@
  * 用于将中文和英文文本转换为 URL 友好的 slug 格式
  */
 import "server-only";
-import { pinyin as pinyinPro, addDict } from "pinyin-pro";
+import {
+  pinyin as pinyinPro,
+  addDict,
+  segment,
+  OutputFormat,
+} from "pinyin-pro";
 import CompleteDict from "@pinyin-pro/data/complete";
+import { getConfig } from "./configCache";
 
 addDict(CompleteDict);
 
@@ -13,7 +19,7 @@ addDict(CompleteDict);
  * @param text - 输入文本
  * @returns slug 格式的字符串 (例如: "zheshi-yipian-wenzhang")
  */
-export function slugify(text: string): string {
+export async function slugify(text: string): Promise<string> {
   if (!text || typeof text !== "string") {
     return "";
   }
@@ -25,39 +31,59 @@ export function slugify(text: string): string {
     return "";
   }
 
-  // 1. 将中文转换为拼音，英文保持不变
-  // pinyin-pro 会自动处理混合文本，中文转拼音，非中文保持原样
-  const pinyinText = pinyinPro(text, {
-    toneType: "none", // 不带音调
-    type: "array", // 返回数组格式
-    nonZh: "consecutive", // 非中文字符连续输出
-  });
-
-  // 2. 处理每个部分
-  const processedWords = pinyinText
-    .map((word: string) => {
-      // 去除空白字符
-      word = word.trim();
-      if (!word) return "";
-
-      // 统一转换为小写并清理
-      return word
-        .toLowerCase()
-        .replace(/\s+/g, "-") // 空格替换为连字符
-        .replace(/[^a-z0-9-]/g, ""); // 删除除小写字母、数字、连字符外的所有字符
+  // 获取配置，决定是否进行分词处理
+  const enableSegment = await getConfig<boolean>("content.slug.segment");
+  if (enableSegment) {
+    const pinyinText = segment(text, {
+      toneType: "none",
+      nonZh: "consecutive",
+      separator: "-",
+      format: OutputFormat.AllString,
     })
-    .filter((word: string) => word !== ""); // 过滤空字符串
+      .result.toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
 
-  // 3. 连接所有处理后的词
-  let slug = processedWords.join("-");
+    const slug = pinyinText
+      .replace(/[^a-z0-9-]/g, "")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "");
 
-  // 4. 清理和规范化
-  slug = slug
-    .replace(/[^a-z0-9-]/g, "") // 再次确保只包含小写字母、数字和连字符
-    .replace(/-+/g, "-") // 将多个连续的连字符替换为一个
-    .replace(/^-+|-+$/g, ""); // 去除首尾的连字符
+    return slug;
+  } else {
+    // 1. 将中文转换为拼音，英文保持不变
+    const pinyinText = pinyinPro(text, {
+      toneType: "none", // 不带音调
+      type: "array", // 返回数组格式
+      nonZh: "consecutive", // 非中文字符连续输出
+    });
 
-  return slug;
+    // 2. 处理每个部分
+    const processedWords = pinyinText
+      .map((word: string) => {
+        // 去除空白字符
+        word = word.trim();
+        if (!word) return "";
+
+        // 统一转换为小写并清理
+        return word
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-z0-9-]/g, "");
+      })
+      .filter((word: string) => word !== "");
+
+    // 3. 连接所有处理后的词
+    let slug = processedWords.join("-");
+
+    // 4. 清理和规范化
+    slug = slug
+      .replace(/[^a-z0-9-]/g, "")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+    return slug;
+  }
 }
 
 /**

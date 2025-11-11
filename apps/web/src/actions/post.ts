@@ -798,25 +798,29 @@ export async function createPost(
         categories:
           categories && categories.length > 0
             ? {
-                connectOrCreate: categories.map((name) => {
-                  const slug = slugify(name);
-                  return {
-                    where: { name },
-                    create: { name, slug },
-                  };
-                }),
+                connectOrCreate: await Promise.all(
+                  categories.map(async (name) => {
+                    const slug = await slugify(name);
+                    return {
+                      where: { name },
+                      create: { name, slug },
+                    };
+                  }),
+                ),
               }
             : undefined,
         tags:
           tags && tags.length > 0
             ? {
-                connectOrCreate: tags.map((name) => {
-                  const slug = slugify(name);
-                  return {
-                    where: { name },
-                    create: { name, slug },
-                  };
-                }),
+                connectOrCreate: await Promise.all(
+                  tags.map(async (name) => {
+                    const slug = await slugify(name);
+                    return {
+                      where: { name },
+                      create: { name, slug },
+                    };
+                  }),
+                ),
               }
             : undefined,
       },
@@ -1098,26 +1102,30 @@ export async function updatePost(
         ...(categories !== undefined && {
           categories: {
             set: [], // 先清空所有关联
-            connectOrCreate: categories.map((name) => {
-              const slug = slugify(name);
-              return {
-                where: { name },
-                create: { name, slug },
-              };
-            }),
+            connectOrCreate: await Promise.all(
+              categories.map(async (name) => {
+                const slug = await slugify(name);
+                return {
+                  where: { name },
+                  create: { name, slug },
+                };
+              }),
+            ),
           },
         }),
         // 处理标签
         ...(tags !== undefined && {
           tags: {
             set: [], // 先清空所有关联
-            connectOrCreate: tags.map((name) => {
-              const slug = slugify(name);
-              return {
-                where: { name },
-                create: { name, slug },
-              };
-            }),
+            connectOrCreate: await Promise.all(
+              tags.map(async (name) => {
+                const slug = await slugify(name);
+                return {
+                  where: { name },
+                  create: { name, slug },
+                };
+              }),
+            ),
           },
         }),
       },

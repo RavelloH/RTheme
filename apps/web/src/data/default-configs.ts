@@ -218,6 +218,12 @@ export const defaultConfigs: DefaultConfig[] = [
     value: { default: true },
     description: "是否启用文章目录",
   },
+  {
+    key: "content.slug.segment",
+    value: { default: false },
+    description:
+      "是否对自动转换的拼音slug进行分词处理。例如：zheshi-yipian-wenzhang 而不是 zhe-shi-yi-pian-wen-zhang",
+  },
   // =====================================
   // 媒体相关配置
   // =====================================

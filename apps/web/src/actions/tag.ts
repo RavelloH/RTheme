@@ -463,7 +463,7 @@ export async function createTag(
       }
     } else {
       // 用户未提供 slug，从 name 自动生成
-      finalSlug = slugify(name);
+      finalSlug = await slugify(name);
 
       if (!finalSlug) {
         return response.badRequest({ message: "无法从标签名生成有效的 slug" });
