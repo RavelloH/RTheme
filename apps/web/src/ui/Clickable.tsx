@@ -63,7 +63,7 @@ export default function Clickable({
 
   return (
     <motion.div
-      className={`inline-block ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"} ${className}`}
+      className={`inline-flex ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"} ${className}`}
       onClick={handleClick}
       whileHover={
         !disabled && enableHoverScale ? { scale: hoverScale } : undefined

@@ -263,7 +263,7 @@ export default function TagsReport() {
               }
               required
               size="sm"
-              placeholder="输入标签名称"
+              helperText="输入标签名称"
             />
             <Input
               label="Slug（可选）"
@@ -275,11 +275,10 @@ export default function TagsReport() {
                 }))
               }
               size="sm"
-              placeholder="留空则自动从标签名生成"
               helperText="只能包含小写字母、数字和连字符，留空则自动生成"
             />
             <Input
-              label="描述"
+              label="描述（可选）"
               value={createFormData.description}
               onChange={(e) =>
                 setCreateFormData((prev) => ({
@@ -289,7 +288,7 @@ export default function TagsReport() {
               }
               rows={3}
               size="sm"
-              placeholder="选填，标签的描述信息"
+              helperText="将修改在 Tags 页面的描述信息"
             />
           </div>
 
