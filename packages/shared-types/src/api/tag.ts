@@ -15,6 +15,7 @@ export const GetTagsListSchema = z.object({
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
   search: z.string().optional(),
   // 筛选参数
+  postIds: z.array(z.number().int().positive()).optional(), // 筛选包含指定文章的标签
   hasZeroPosts: z.boolean().optional(), // 筛选无文章关联的标签
   createdAtStart: z.string().datetime().optional(),
   createdAtEnd: z.string().datetime().optional(),
@@ -160,6 +161,32 @@ export type DeleteTagsSuccessResponse = z.infer<
   typeof DeleteTagsSuccessResponseSchema
 >;
 registerSchema("DeleteTagsSuccessResponse", DeleteTagsSuccessResponseSchema);
+
+/*
+    searchTags() Schema - 轻量级标签搜索
+*/
+export const SearchTagsSchema = z.object({
+  access_token: z.string().optional(),
+  query: z.string().min(1, "搜索关键词不能为空"),
+  limit: z.number().int().positive().default(10), // 默认返回10条结果
+});
+export type SearchTags = z.infer<typeof SearchTagsSchema>;
+registerSchema("SearchTags", SearchTagsSchema);
+
+export const SearchTagItemSchema = z.object({
+  slug: z.string(),
+  name: z.string(),
+  postCount: z.number().int().nonnegative(),
+});
+export type SearchTagItem = z.infer<typeof SearchTagItemSchema>;
+
+export const SearchTagsSuccessResponseSchema = createSuccessResponseSchema(
+  z.array(SearchTagItemSchema),
+);
+export type SearchTagsSuccessResponse = z.infer<
+  typeof SearchTagsSuccessResponseSchema
+>;
+registerSchema("SearchTagsSuccessResponse", SearchTagsSuccessResponseSchema);
 
 /*
     getTagsDistribution() Schema - 用于环形图展示

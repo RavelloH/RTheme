@@ -130,7 +130,7 @@ export function Select({
             }}
             transition={{ duration: 0.2 }}
           >
-            <RiArrowDownSLine size={20} />
+            <RiArrowDownSLine size={"1.25em"} />
           </motion.div>
         </motion.button>
 

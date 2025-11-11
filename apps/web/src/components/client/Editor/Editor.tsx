@@ -46,6 +46,7 @@ import { Button } from "@/ui/Button";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import { Checkbox } from "@/ui/Checkbox";
+import { TagInput, SelectedTag } from "@/components/client/Tag/TagInput";
 import { TiptapEditor } from "./TiptapEditor";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { createPost, updatePost } from "@/actions/post";
@@ -165,7 +166,7 @@ export default function Editor({
     metaKeywords: "",
     featuredImage: "",
     categories: [] as string[], // 分类名称数组
-    tags: [] as string[], // 标签名称数组
+    tags: [] as SelectedTag[], // 使用 SelectedTag 类型
   });
 
   // 编辑器类型切换时重置加载标记
@@ -179,6 +180,14 @@ export default function Editor({
       setDetailsForm((prev) => ({
         ...prev,
         ...initialData,
+        // 将 string[] tags 转换为 SelectedTag[]
+        tags: initialData.tags
+          ? initialData.tags.map((name) => ({
+              name,
+              slug: name.toLowerCase().replace(/\s+/g, "-"),
+              isNew: false,
+            }))
+          : [],
       }));
     }
   }, [initialData]);
@@ -674,7 +683,7 @@ export default function Editor({
   // 处理表单字段变化
   const handleDetailsFieldChange = (
     field: string,
-    value: string | boolean | number[],
+    value: string | boolean | number[] | SelectedTag[],
   ) => {
     setDetailsForm((prev) => ({
       ...prev,
@@ -767,6 +776,29 @@ export default function Editor({
   const handleFinalSubmit = async () => {
     setIsSubmitting(true);
     try {
+      // 先创建新的 tags（如果有）
+      const newTags = detailsForm.tags.filter((tag) => tag.isNew);
+      if (newTags.length > 0) {
+        const accessToken = localStorage.getItem("access_token");
+        const { createTag } = await import("@/actions/tag");
+
+        // 并行创建所有新 tags
+        await Promise.all(
+          newTags.map(async (tag) => {
+            try {
+              await createTag({
+                access_token: accessToken || undefined,
+                name: tag.name,
+                // slug 会自动从 name 生成
+              });
+            } catch (error) {
+              console.error(`创建标签 "${tag.name}" 失败:`, error);
+              // 即使创建失败也继续，因为可能是重复创建
+            }
+          }),
+        );
+      }
+
       // 获取当前编辑器内容
       const currentContent =
         JSON.parse(localStorage.getItem("editor") || "{}")[storageKey]
@@ -779,6 +811,9 @@ export default function Editor({
           : "MDX";
 
       let result;
+
+      // 将 SelectedTag[] 转换为 string[]（只传递名称）
+      const tagNames = detailsForm.tags.map((tag) => tag.name);
 
       if (isEditMode) {
         // 编辑模式：使用详细信息中设置的状态
@@ -803,7 +838,7 @@ export default function Editor({
             detailsForm.categories.length > 0
               ? detailsForm.categories
               : undefined,
-          tags: detailsForm.tags.length > 0 ? detailsForm.tags : undefined,
+          tags: tagNames.length > 0 ? tagNames : undefined,
           commitMessage: commitMessage || undefined,
           postMode,
         };
@@ -830,7 +865,7 @@ export default function Editor({
             detailsForm.categories.length > 0
               ? detailsForm.categories
               : undefined,
-          tags: detailsForm.tags.length > 0 ? detailsForm.tags : undefined,
+          tags: tagNames.length > 0 ? tagNames : undefined,
           commitMessage: commitMessage || undefined,
           postMode,
         };
@@ -1538,6 +1573,13 @@ export default function Editor({
                   handleDetailsFieldChange("excerpt", e.target.value)
                 }
                 rows={3}
+                size="sm"
+              />
+              <TagInput
+                label="标签"
+                value={detailsForm.tags}
+                onChange={(tags) => handleDetailsFieldChange("tags", tags)}
+                helperText="输入关键词搜索现有标签，或直接创建新标签"
                 size="sm"
               />
             </div>

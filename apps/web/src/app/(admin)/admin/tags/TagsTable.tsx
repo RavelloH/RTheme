@@ -278,6 +278,13 @@ export default function TagsTable() {
   // 筛选配置
   const filterConfig: FilterConfig[] = [
     {
+      key: "postId",
+      label: "文章 ID",
+      type: "input",
+      placeholder: "输入文章 ID，多个用英文逗号分隔",
+      inputType: "text",
+    },
+    {
       key: "hasZeroPosts",
       label: "文章关联",
       type: "checkboxGroup",
@@ -317,6 +324,7 @@ export default function TagsTable() {
           sortBy?: "slug" | "name" | "postCount" | "createdAt" | "updatedAt";
           sortOrder?: "asc" | "desc";
           search?: string;
+          postIds?: number[];
           hasZeroPosts?: boolean;
           createdAtStart?: string;
           createdAtEnd?: string;
@@ -342,6 +350,20 @@ export default function TagsTable() {
         }
 
         // 添加筛选参数
+        // 处理 postId 参数（支持逗号分隔的多个 ID）
+        if (filterValues.postId && typeof filterValues.postId === "string") {
+          const postIdStr = filterValues.postId.trim();
+          if (postIdStr) {
+            const postIds = postIdStr
+              .split(",")
+              .map((id) => parseInt(id.trim(), 10))
+              .filter((id) => !isNaN(id) && id > 0);
+            if (postIds.length > 0) {
+              params.postIds = postIds;
+            }
+          }
+        }
+
         if (
           filterValues.hasZeroPosts &&
           Array.isArray(filterValues.hasZeroPosts) &&

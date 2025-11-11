@@ -45,6 +45,7 @@ import { authVerify } from "@/lib/server/auth-verify";
 import { logAuditEvent } from "./audit";
 import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
 import { TextVersion } from "text-version";
+import { slugify } from "@/lib/server/slugify";
 
 /*
   辅助函数：解析版本名称
@@ -480,6 +481,7 @@ export async function getPostsList(
         tags: {
           select: {
             name: true,
+            slug: true,
           },
         },
       },
@@ -509,7 +511,7 @@ export async function getPostsList(
         nickname: post.author.nickname,
       },
       categories: post.categories.map((cat) => cat.name),
-      tags: post.tags.map((tag) => tag.name),
+      tags: post.tags.map((tag) => ({ name: tag.name, slug: tag.slug })),
     }));
 
     // 计算分页元数据
@@ -796,19 +798,25 @@ export async function createPost(
         categories:
           categories && categories.length > 0
             ? {
-                connectOrCreate: categories.map((name) => ({
-                  where: { name },
-                  create: { name },
-                })),
+                connectOrCreate: categories.map((name) => {
+                  const slug = slugify(name);
+                  return {
+                    where: { name },
+                    create: { name, slug },
+                  };
+                }),
               }
             : undefined,
         tags:
           tags && tags.length > 0
             ? {
-                connectOrCreate: tags.map((name) => ({
-                  where: { name },
-                  create: { name },
-                })),
+                connectOrCreate: tags.map((name) => {
+                  const slug = slugify(name);
+                  return {
+                    where: { name },
+                    create: { name, slug },
+                  };
+                }),
               }
             : undefined,
       },
@@ -1090,20 +1098,26 @@ export async function updatePost(
         ...(categories !== undefined && {
           categories: {
             set: [], // 先清空所有关联
-            connectOrCreate: categories.map((name) => ({
-              where: { name },
-              create: { name },
-            })),
+            connectOrCreate: categories.map((name) => {
+              const slug = slugify(name);
+              return {
+                where: { name },
+                create: { name, slug },
+              };
+            }),
           },
         }),
         // 处理标签
         ...(tags !== undefined && {
           tags: {
             set: [], // 先清空所有关联
-            connectOrCreate: tags.map((name) => ({
-              where: { name },
-              create: { name },
-            })),
+            connectOrCreate: tags.map((name) => {
+              const slug = slugify(name);
+              return {
+                where: { name },
+                create: { name, slug },
+              };
+            }),
           },
         }),
       },

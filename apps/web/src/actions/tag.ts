@@ -16,6 +16,9 @@ import {
   GetTagsDistributionSchema,
   GetTagsDistribution,
   TagDistributionItem,
+  SearchTagsSchema,
+  SearchTags,
+  SearchTagItem,
 } from "@repo/shared-types/api/tag";
 import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
@@ -58,6 +61,7 @@ export async function getTagsList(
     sortBy = "postCount",
     sortOrder = "desc",
     search,
+    postIds,
     hasZeroPosts,
     createdAtStart,
     createdAtEnd,
@@ -82,6 +86,7 @@ export async function getTagsList(
       sortBy,
       sortOrder,
       search,
+      postIds,
       hasZeroPosts,
       createdAtStart,
       createdAtEnd,
@@ -110,7 +115,7 @@ export async function getTagsList(
     const where: {
       AND?: Array<{
         name?: { contains: string; mode: "insensitive" };
-        posts?: { none: object };
+        posts?: { none: object } | { some: { id: { in: number[] } } };
         createdAt?: { gte?: Date; lte?: Date };
         updatedAt?: { gte?: Date; lte?: Date };
       }>;
@@ -124,6 +129,19 @@ export async function getTagsList(
         name: {
           contains: search.trim(),
           mode: "insensitive" as const,
+        },
+      });
+    }
+
+    // 筛选包含指定文章的标签
+    if (postIds && postIds.length > 0) {
+      conditions.push({
+        posts: {
+          some: {
+            id: {
+              in: postIds,
+            },
+          },
         },
       });
     }
@@ -416,9 +434,9 @@ export async function createTag(
 
   if (validationError) return response.badRequest(validationError);
 
-  // 身份验证
+  // 身份验证 - 允许 AUTHOR、EDITOR、ADMIN 创建标签
   const user = await authVerify({
-    allowedRoles: ["ADMIN", "EDITOR"],
+    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
     accessToken: access_token,
   });
 
@@ -883,6 +901,124 @@ export async function getTagsDistribution(
     });
   } catch (error) {
     console.error("GetTagsDistribution error:", error);
+    return response.serverError();
+  }
+}
+
+/*
+  searchTags - 搜索标签（轻量级，用于自动补全）
+*/
+export async function searchTags(
+  params: SearchTags,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<SearchTagItem[] | null>>>;
+export async function searchTags(
+  params: SearchTags,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<SearchTagItem[] | null>>;
+export async function searchTags(
+  { access_token, query, limit = 10 }: SearchTags,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<SearchTagItem[] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      query,
+      limit,
+    },
+    SearchTagsSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证 - 允许 AUTHOR、EDITOR、ADMIN
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 搜索标签：支持 name 和 slug 的模糊匹配
+    const tags = await prisma.tag.findMany({
+      where: {
+        OR: [
+          {
+            name: {
+              contains: query.trim(),
+              mode: "insensitive",
+            },
+          },
+          {
+            slug: {
+              contains: query.trim(),
+              mode: "insensitive",
+            },
+          },
+        ],
+      },
+      take: limit,
+      select: {
+        slug: true,
+        name: true,
+        posts: {
+          where: {
+            deletedAt: null,
+          },
+          select: {
+            id: true,
+          },
+        },
+      },
+      orderBy: [
+        // 优先返回完全匹配的结果
+        { name: "asc" },
+      ],
+    });
+
+    // 转换为响应格式
+    const searchResults: SearchTagItem[] = tags.map((tag) => ({
+      slug: tag.slug,
+      name: tag.name,
+      postCount: tag.posts.length,
+    }));
+
+    // 按相似度排序：完全匹配 > 开头匹配 > 包含匹配
+    const lowerQuery = query.toLowerCase().trim();
+    searchResults.sort((a, b) => {
+      const aNameLower = a.name.toLowerCase();
+      const bNameLower = b.name.toLowerCase();
+
+      // 完全匹配优先
+      if (aNameLower === lowerQuery) return -1;
+      if (bNameLower === lowerQuery) return 1;
+
+      // 开头匹配次之
+      const aStartsWith = aNameLower.startsWith(lowerQuery);
+      const bStartsWith = bNameLower.startsWith(lowerQuery);
+      if (aStartsWith && !bStartsWith) return -1;
+      if (!aStartsWith && bStartsWith) return 1;
+
+      // 最后按文章数量排序（更常用的标签优先）
+      return b.postCount - a.postCount;
+    });
+
+    return response.ok({
+      data: searchResults,
+    });
+  } catch (error) {
+    console.error("SearchTags error:", error);
     return response.serverError();
   }
 }

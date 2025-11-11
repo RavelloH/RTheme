@@ -1,6 +1,12 @@
 "use client";
 
-import { getPostsList, updatePosts, deletePosts } from "@/actions/post";
+import {
+  getPostsList,
+  updatePost,
+  updatePosts,
+  deletePosts,
+} from "@/actions/post";
+import { createTag } from "@/actions/tag";
 import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
 import { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
@@ -27,6 +33,7 @@ import { Button } from "@/ui/Button";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { useToast } from "@/ui/Toast";
 import Link, { useNavigateWithTransition } from "@/components/Link";
+import { TagInput, SelectedTag } from "@/components/client/Tag/TagInput";
 
 export default function PostsTable() {
   const toast = useToast();
@@ -86,6 +93,7 @@ export default function PostsTable() {
     metaKeywords: "",
     featuredImage: "",
     postMode: "MARKDOWN" as "MARKDOWN" | "MDX",
+    tags: [] as SelectedTag[],
   });
 
   // 处理选中状态变化
@@ -110,6 +118,13 @@ export default function PostsTable() {
       metaKeywords: post.metaKeywords || "",
       featuredImage: post.featuredImage || "",
       postMode: post.postMode,
+      tags: post.tags
+        ? post.tags.map((tag) => ({
+            name: tag.name,
+            slug: tag.slug,
+            isNew: false,
+          }))
+        : [],
     });
     setEditDialogOpen(true);
   };
@@ -121,7 +136,10 @@ export default function PostsTable() {
   };
 
   // 处理表单字段变化
-  const handleFieldChange = (field: string, value: string | boolean) => {
+  const handleFieldChange = (
+    field: string,
+    value: string | boolean | SelectedTag[],
+  ) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -134,71 +152,107 @@ export default function PostsTable() {
 
     setIsSubmitting(true);
     try {
-      const updateData: {
-        ids: number[];
-        title?: string;
-        slug?: string;
-        excerpt?: string;
-        status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
-        isPinned?: boolean;
-        allowComments?: boolean;
-        featuredImage?: string;
-        metaTitle?: string;
-        metaDescription?: string;
-        metaKeywords?: string;
-        robotsIndex?: boolean;
-        postMode?: "MARKDOWN" | "MDX";
-      } = {
-        ids: [editingPost.id],
-      };
+      // 先创建新标签
+      const newTags = formData.tags.filter((tag) => tag.isNew);
+      if (newTags.length > 0) {
+        const accessToken = localStorage.getItem("access_token");
 
-      if (formData.title !== editingPost.title) {
-        updateData.title = formData.title;
-      }
-      if (formData.slug !== editingPost.slug) {
-        updateData.slug = formData.slug;
-      }
-      if (formData.excerpt !== (editingPost.excerpt || "")) {
-        updateData.excerpt = formData.excerpt;
-      }
-      if (formData.status !== editingPost.status) {
-        updateData.status = formData.status as
-          | "DRAFT"
-          | "PUBLISHED"
-          | "ARCHIVED";
-      }
-      if (formData.isPinned !== editingPost.isPinned) {
-        updateData.isPinned = formData.isPinned;
-      }
-      if (formData.allowComments !== editingPost.allowComments) {
-        updateData.allowComments = formData.allowComments;
-      }
-      if (formData.featuredImage !== (editingPost.featuredImage || "")) {
-        updateData.featuredImage = formData.featuredImage;
-      }
-      if (formData.metaTitle !== (editingPost.metaTitle || "")) {
-        updateData.metaTitle = formData.metaTitle;
-      }
-      if (formData.metaDescription !== (editingPost.metaDescription || "")) {
-        updateData.metaDescription = formData.metaDescription;
-      }
-      if (formData.metaKeywords !== (editingPost.metaKeywords || "")) {
-        updateData.metaKeywords = formData.metaKeywords;
-      }
-      if (formData.robotsIndex !== editingPost.robotsIndex) {
-        updateData.robotsIndex = formData.robotsIndex;
-      }
-      if (formData.postMode !== editingPost.postMode) {
-        updateData.postMode = formData.postMode;
+        await Promise.all(
+          newTags.map(async (tag) => {
+            try {
+              await createTag({
+                access_token: accessToken || undefined,
+                name: tag.name,
+              });
+            } catch (error) {
+              console.error(`创建标签 "${tag.name}" 失败:`, error);
+            }
+          }),
+        );
       }
 
-      if (Object.keys(updateData).length === 1) {
+      // 将 SelectedTag[] 转换为 string[]
+      const tagNames = formData.tags.map((tag) => tag.name);
+
+      // 检查 tags 是否有变化（比较名称数组）
+      const currentTagNames = editingPost.tags.map((tag) => tag.name);
+      const tagsChanged =
+        JSON.stringify(currentTagNames.sort()) !==
+        JSON.stringify(tagNames.sort());
+
+      // 检查其他字段是否有变化
+      const hasChanges =
+        formData.title !== editingPost.title ||
+        formData.slug !== editingPost.slug ||
+        formData.excerpt !== (editingPost.excerpt || "") ||
+        formData.status !== editingPost.status ||
+        formData.isPinned !== editingPost.isPinned ||
+        formData.allowComments !== editingPost.allowComments ||
+        formData.featuredImage !== (editingPost.featuredImage || "") ||
+        formData.metaTitle !== (editingPost.metaTitle || "") ||
+        formData.metaDescription !== (editingPost.metaDescription || "") ||
+        formData.metaKeywords !== (editingPost.metaKeywords || "") ||
+        formData.robotsIndex !== editingPost.robotsIndex ||
+        formData.postMode !== editingPost.postMode ||
+        tagsChanged;
+
+      if (!hasChanges) {
         toast.info("没有字段被修改");
         setIsSubmitting(false);
         return;
       }
 
-      const result = await updatePosts(updateData);
+      const accessToken = localStorage.getItem("access_token");
+
+      // 使用 updatePost 而不是 updatePosts
+      const result = await updatePost({
+        access_token: accessToken || undefined,
+        slug: editingPost.slug,
+        title:
+          formData.title !== editingPost.title ? formData.title : undefined,
+        newSlug: formData.slug !== editingPost.slug ? formData.slug : undefined,
+        excerpt:
+          formData.excerpt !== (editingPost.excerpt || "")
+            ? formData.excerpt
+            : undefined,
+        status:
+          formData.status !== editingPost.status
+            ? (formData.status as "DRAFT" | "PUBLISHED" | "ARCHIVED")
+            : undefined,
+        isPinned:
+          formData.isPinned !== editingPost.isPinned
+            ? formData.isPinned
+            : undefined,
+        allowComments:
+          formData.allowComments !== editingPost.allowComments
+            ? formData.allowComments
+            : undefined,
+        featuredImage:
+          formData.featuredImage !== (editingPost.featuredImage || "")
+            ? formData.featuredImage
+            : undefined,
+        metaTitle:
+          formData.metaTitle !== (editingPost.metaTitle || "")
+            ? formData.metaTitle
+            : undefined,
+        metaDescription:
+          formData.metaDescription !== (editingPost.metaDescription || "")
+            ? formData.metaDescription
+            : undefined,
+        metaKeywords:
+          formData.metaKeywords !== (editingPost.metaKeywords || "")
+            ? formData.metaKeywords
+            : undefined,
+        robotsIndex:
+          formData.robotsIndex !== editingPost.robotsIndex
+            ? formData.robotsIndex
+            : undefined,
+        postMode:
+          formData.postMode !== editingPost.postMode
+            ? formData.postMode
+            : undefined,
+        tags: tagsChanged ? tagNames : undefined,
+      });
 
       if (result.success) {
         toast.success(`文章 "${editingPost.title}" 已更新`);
@@ -820,12 +874,16 @@ export default function PostsTable() {
       title: "标签",
       dataIndex: "tags",
       align: "center",
-      render: (value: unknown) => {
+      render: (value: unknown, record: PostListItem) => {
         const tags = Array.isArray(value) ? value : [];
         return (
-          <span className="text-sm truncate max-w-20 block">
-            {tags.length > 0 ? tags.join(", ") : "-"}
-          </span>
+          <Link
+            href={`/admin/tags/?postId=${record.id}`}
+            presets={["hover-underline"]}
+            className="text-primary"
+          >
+            {tags.length}
+          </Link>
         );
       },
     },
@@ -1012,6 +1070,13 @@ export default function PostsTable() {
                 value={formData.excerpt}
                 onChange={(e) => handleFieldChange("excerpt", e.target.value)}
                 rows={3}
+                size="sm"
+              />
+              <TagInput
+                label="标签"
+                value={formData.tags}
+                onChange={(tags) => handleFieldChange("tags", tags)}
+                helperText="输入关键词搜索现有标签，或直接创建新标签"
                 size="sm"
               />
             </div>

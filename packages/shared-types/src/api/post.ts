@@ -80,7 +80,12 @@ export const PostListItemSchema = z.object({
     nickname: z.string().nullable(),
   }),
   categories: z.array(z.string()),
-  tags: z.array(z.string()),
+  tags: z.array(
+    z.object({
+      name: z.string(),
+      slug: z.string(),
+    }),
+  ),
   // SEO 和其他字段
   featuredImage: z.string().nullable(),
   metaTitle: z.string().nullable(),

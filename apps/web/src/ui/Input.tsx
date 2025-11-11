@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useId } from "react";
+import React, { useState, useId, forwardRef } from "react";
 import { motion } from "framer-motion";
 import { AutoTransition } from "./AutoTransition";
 
@@ -21,33 +21,39 @@ export interface InputProps
   labelAlwaysFloating?: boolean; // label 始终浮起（无高亮效果）
 }
 
-export function Input({
-  label,
-  icon,
-  id,
-  error = false,
-  helperText,
-  className = "",
-  type = "text",
-  required = false,
-  tips,
-  minLength,
-  maxLength,
-  pattern,
-  placeholder,
-  value,
-  defaultValue,
-  onChange,
-  onInput,
-  onFocus,
-  onBlur,
-  disabled = false,
-  readOnly = false,
-  size = "md",
-  rows,
-  labelAlwaysFloating = false,
-  ...props
-}: InputProps) {
+export const Input = forwardRef<
+  HTMLInputElement | HTMLTextAreaElement,
+  InputProps
+>(function Input(
+  {
+    label,
+    icon,
+    id,
+    error = false,
+    helperText,
+    className = "",
+    type = "text",
+    required = false,
+    tips,
+    minLength,
+    maxLength,
+    pattern,
+    placeholder,
+    value,
+    defaultValue,
+    onChange,
+    onInput,
+    onFocus,
+    onBlur,
+    disabled = false,
+    readOnly = false,
+    size = "md",
+    rows,
+    labelAlwaysFloating = false,
+    ...props
+  },
+  ref,
+) {
   const generatedId = useId();
   const inputId =
     id || `input-${label.replace(/\s+/g, "-").toLowerCase()}-${generatedId}`;
@@ -141,6 +147,7 @@ export function Input({
     <div className={`relative w-full ${sizeStyles.container} ${className}`}>
       {isTextarea ? (
         <textarea
+          ref={ref as React.Ref<HTMLTextAreaElement>}
           id={inputId}
           required={required}
           minLength={minLength}
@@ -160,6 +167,7 @@ export function Input({
         />
       ) : (
         <input
+          ref={ref as React.Ref<HTMLInputElement>}
           type={type}
           id={inputId}
           required={required}
@@ -298,4 +306,4 @@ export function Input({
       )}
     </div>
   );
-}
+});
