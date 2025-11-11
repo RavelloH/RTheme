@@ -16,6 +16,7 @@
     "@cap.js/server": "^4.0.2",
     "@cap.js/widget": "^0.1.29",
     "@monaco-editor/react": "^4.7.0",
+    "@pinyin-pro/data": "^1.2.0",
     "@prisma/client": "6.15.0",
     "@remixicon/react": "^4.6.0",
     "@repo/shared-types": "workspace:*",

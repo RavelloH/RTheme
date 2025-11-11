@@ -3,7 +3,10 @@
  * 用于将中文和英文文本转换为 URL 友好的 slug 格式
  */
 import "server-only";
-import { pinyin as pinyinPro } from "pinyin-pro";
+import { pinyin as pinyinPro, addDict } from "pinyin-pro";
+import CompleteDict from "@pinyin-pro/data/complete";
+
+addDict(CompleteDict);
 
 /**
  * 将中文文本通过拼音转换为 slug 格式

@@ -82,6 +82,9 @@ importers:
       '@monaco-editor/react':
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.54.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      '@pinyin-pro/data':
+        specifier: ^1.2.0
+        version: 1.2.0
       '@prisma/client':
         specifier: 6.15.0
         version: 6.15.0(prisma@6.15.0(typescript@5.9.2))(typescript@5.9.2)
@@ -2150,6 +2153,9 @@ packages:
   '@phc/format@1.0.0':
     resolution: {integrity: sha512-m7X9U6BG2+J+R1lSOdCiITLLrxm+cWlNI3HUFA92oLO77ObGNzaKdh8pMLqdZcshtkKuV84olNNXDfMc4FezBQ==}
     engines: {node: '>=10'}
+
+  '@pinyin-pro/data@1.2.0':
+    resolution: {integrity: sha512-Aw59BsYYV6jD1oMbT7eikQkmNssCBr548DLI+YOAGo6XWPR3Bxq1Zokj6RBLM5zCVT35yuvjo6Tv5q7VdTNZQQ==}
 
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
@@ -10885,6 +10891,8 @@ snapshots:
     optional: true
 
   '@phc/format@1.0.0': {}
+
+  '@pinyin-pro/data@1.2.0': {}
 
   '@pkgjs/parseargs@0.11.0':
     optional: true
