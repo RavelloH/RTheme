@@ -7,6 +7,7 @@ import AdminSidebar from "@/components/AdminSidebar";
 import DashboardUsersStats from "./DashboardUsersStats";
 import DashboardAuditStats from "./DashboardAuditStats";
 import DashboardPostsStats from "./DashboardPostsStats";
+import DashboardTagsStats from "./DashboardTagsStats";
 
 export const metadata = await generateMetadata(
   {
@@ -41,6 +42,11 @@ export default function AdminDashboard() {
           <GridItem areas={[1, 2, 3, 4]} width={3} height={0.5}>
             <DashboardUsersStats />
           </GridItem>
+          <GridItem areas={[9, 10, 11, 12]} width={3} height={0.5}>
+            <DashboardTagsStats />
+          </GridItem>
+        </RowGrid>
+        <RowGrid>
           <GridItem areas={[9, 10, 11, 12]} width={3} height={0.5}>
             <DashboardAuditStats />
           </GridItem>

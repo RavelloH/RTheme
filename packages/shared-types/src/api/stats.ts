@@ -115,3 +115,44 @@ registerSchema(
   "GetPostsStatsSuccessResponse",
   GetPostsStatsSuccessResponseSchema,
 );
+
+/*
+    getTagsStats() Schema
+*/
+export const GetTagsStatsSchema = z.object({
+  access_token: z.string().optional(),
+  force: z.boolean().default(false),
+});
+export type GetTagsStats = z.infer<typeof GetTagsStatsSchema>;
+registerSchema("GetTagsStats", GetTagsStatsSchema);
+
+export const GetTagsStatsSuccessResponseSchema = createSuccessResponseSchema(
+  z.object({
+    updatedAt: z.iso.datetime(),
+    cache: z.boolean(),
+    total: z.object({
+      total: z.number().int().nonnegative(),
+      withPosts: z.number().int().nonnegative(),
+      withoutPosts: z.number().int().nonnegative(),
+    }),
+    new: z.object({
+      last7Days: z.number().int().nonnegative(),
+      last30Days: z.number().int().nonnegative(),
+      lastYear: z.number().int().nonnegative(),
+    }),
+    topTags: z.array(
+      z.object({
+        name: z.string(),
+        postCount: z.number().int().nonnegative(),
+      }),
+    ),
+  }),
+);
+
+export type GetTagsStatsSuccessResponse = z.infer<
+  typeof GetTagsStatsSuccessResponseSchema
+>;
+registerSchema(
+  "GetTagsStatsSuccessResponse",
+  GetTagsStatsSuccessResponseSchema,
+);

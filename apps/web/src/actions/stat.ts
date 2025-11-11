@@ -16,6 +16,9 @@ import {
   GetPostsStatsSuccessResponse,
   GetPostsStats,
   GetPostsStatsSchema,
+  GetTagsStatsSuccessResponse,
+  GetTagsStats,
+  GetTagsStatsSchema,
 } from "@repo/shared-types/api/stats";
 import prisma from "@/lib/server/prisma";
 import { getCache, setCache, generateCacheKey } from "@/lib/server/cache";
@@ -509,6 +512,152 @@ export async function getPostsStats(
     });
   } catch (error) {
     console.error("GetPostsStats error:", error);
+    return response.serverError();
+  }
+}
+
+export async function getTagsStats(
+  params: GetTagsStats,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<GetTagsStatsSuccessResponse["data"]>>>;
+export async function getTagsStats(
+  params: GetTagsStats,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<GetTagsStatsSuccessResponse["data"]>>;
+export async function getTagsStats(
+  { access_token, force }: GetTagsStats,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<GetTagsStatsSuccessResponse["data"] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+  const validationError = validateData(
+    {
+      access_token,
+      force,
+    },
+    GetTagsStatsSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    const CACHE_KEY = generateCacheKey("stats", "tags");
+    const CACHE_TTL = 60 * 60; // 1小时
+
+    // 如果不是强制刷新，尝试从缓存获取
+    if (!force) {
+      const cachedData = await getCache<GetTagsStatsSuccessResponse["data"]>(
+        CACHE_KEY,
+        {
+          ttl: CACHE_TTL,
+        },
+      );
+
+      if (cachedData) {
+        return response.ok({
+          data: cachedData,
+        });
+      }
+    }
+
+    // 计算时间边界
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+
+    // 使用一次原生 SQL 查询获取标签统计数据
+    const [totalTags, tagsWithPosts, newTagsStats, topTags] = await Promise.all(
+      [
+        // 总标签数
+        prisma.tag.count(),
+
+        // 有文章关联的标签数（使用 DISTINCT）
+        prisma.$queryRaw<Array<{ count: bigint }>>`
+        SELECT COUNT(DISTINCT "A") as count
+        FROM "_PostToTag"
+      `,
+
+        // 新增标签统计
+        prisma.$queryRaw<
+          Array<{
+            new_7d: bigint;
+            new_30d: bigint;
+            new_1y: bigint;
+          }>
+        >`
+        SELECT
+          COUNT(CASE WHEN "createdAt" >= ${sevenDaysAgo} THEN 1 END) as new_7d,
+          COUNT(CASE WHEN "createdAt" >= ${thirtyDaysAgo} THEN 1 END) as new_30d,
+          COUNT(CASE WHEN "createdAt" >= ${oneYearAgo} THEN 1 END) as new_1y
+        FROM "Tag"
+      `,
+
+        // 使用最多的前5个标签
+        prisma.$queryRaw<Array<{ name: string; post_count: bigint }>>`
+        SELECT
+          t.name,
+          COUNT(pt."A") as post_count
+        FROM "Tag" t
+        LEFT JOIN "_PostToTag" pt ON t.name = pt."B"
+        LEFT JOIN "Post" p ON pt."A" = p.id
+        WHERE p."deletedAt" IS NULL OR p."deletedAt" IS NOT NULL
+        GROUP BY t.name
+        HAVING COUNT(pt."A") > 0
+        ORDER BY post_count DESC
+        LIMIT 5
+      `,
+      ],
+    );
+
+    const tagsWithPostsCount = Number(tagsWithPosts[0]?.count || 0);
+    const newStats = newTagsStats[0];
+
+    // 构建响应数据
+    const data: GetTagsStatsSuccessResponse["data"] = {
+      updatedAt: now.toISOString(),
+      cache: false,
+      total: {
+        total: totalTags,
+        withPosts: tagsWithPostsCount,
+        withoutPosts: totalTags - tagsWithPostsCount,
+      },
+      new: {
+        last7Days: Number(newStats?.new_7d || 0),
+        last30Days: Number(newStats?.new_30d || 0),
+        lastYear: Number(newStats?.new_1y || 0),
+      },
+      topTags: topTags.map((tag) => ({
+        name: tag.name,
+        postCount: Number(tag.post_count),
+      })),
+    };
+
+    // 保存到缓存（缓存1小时）
+    const cacheData = { ...data, cache: true };
+    await setCache(CACHE_KEY, cacheData, {
+      ttl: CACHE_TTL,
+    });
+
+    return response.ok({
+      data,
+    });
+  } catch (error) {
+    console.error("GetTagsStats error:", error);
     return response.serverError();
   }
 }

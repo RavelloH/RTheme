@@ -153,7 +153,8 @@ model Post {
 }
 
 model Tag {
-  name        String   @id @unique
+  slug        String   @id @unique
+  name        String   @unique
   description String?  @db.VarChar(255)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -161,7 +162,8 @@ model Tag {
 }
 
 model Category {
-  name        String   @id @unique
+  slug        String   @id @unique
+  name        String   @unique
   description String?  @db.VarChar(255)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

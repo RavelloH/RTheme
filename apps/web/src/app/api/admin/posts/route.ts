@@ -98,7 +98,9 @@ export async function GET(request: NextRequest) {
           | "updatedAt"
           | "createdAt") || "id",
       sortOrder: (sortOrder as "asc" | "desc") || "desc",
-      status: status as "DRAFT" | "PUBLISHED" | "ARCHIVED" | undefined,
+      status: status
+        ? ([status] as ("DRAFT" | "PUBLISHED" | "ARCHIVED")[])
+        : undefined,
       search: search || undefined,
     },
     { environment: "serverless" },
