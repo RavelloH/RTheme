@@ -586,10 +586,12 @@ export async function getTagsStats(
         // 总标签数
         prisma.tag.count(),
 
-        // 有文章关联的标签数（使用 DISTINCT）
+        // 有文章关联的标签数（只统计未删除的文章）
         prisma.$queryRaw<Array<{ count: bigint }>>`
-        SELECT COUNT(DISTINCT "A") as count
-        FROM "_PostToTag"
+        SELECT COUNT(DISTINCT pt."B") as count
+        FROM "_PostToTag" pt
+        INNER JOIN "Post" p ON pt."A" = p.id
+        WHERE p."deletedAt" IS NULL
       `,
 
         // 新增标签统计
@@ -607,17 +609,16 @@ export async function getTagsStats(
         FROM "Tag"
       `,
 
-        // 使用最多的前5个标签
+        // 使用最多的前5个标签（只统计未删除的文章）
         prisma.$queryRaw<Array<{ name: string; post_count: bigint }>>`
         SELECT
           t.name,
           COUNT(pt."A") as post_count
         FROM "Tag" t
-        LEFT JOIN "_PostToTag" pt ON t.name = pt."B"
-        LEFT JOIN "Post" p ON pt."A" = p.id
-        WHERE p."deletedAt" IS NULL OR p."deletedAt" IS NOT NULL
+        INNER JOIN "_PostToTag" pt ON t.name = pt."B"
+        INNER JOIN "Post" p ON pt."A" = p.id
+        WHERE p."deletedAt" IS NULL
         GROUP BY t.name
-        HAVING COUNT(pt."A") > 0
         ORDER BY post_count DESC
         LIMIT 5
       `,
