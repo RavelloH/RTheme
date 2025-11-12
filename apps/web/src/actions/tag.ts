@@ -871,18 +871,18 @@ export async function getTagsDistribution(
     // 获取前 N 个标签
     const topTags = tagsWithCount.slice(0, limit);
 
-    // 计算总文章数（去重）
-    const totalPosts = await prisma.post.count({
-      where: {
-        deletedAt: null,
-      },
-    });
+    // 计算所有有文章的标签的文章数总和（注意：这里会有重复计数，因为一篇文章可能有多个标签）
+    const totalTaggedPosts = tagsWithCount.reduce(
+      (sum, tag) => sum + tag.postCount,
+      0,
+    );
 
     // 计算百分比
     const distribution: TagDistributionItem[] = topTags.map((tag) => ({
       name: tag.name,
       postCount: tag.postCount,
-      percentage: totalPosts > 0 ? (tag.postCount / totalPosts) * 100 : 0,
+      percentage:
+        totalTaggedPosts > 0 ? (tag.postCount / totalTaggedPosts) * 100 : 0,
     }));
 
     // 如果有其他标签，添加"其他"类别
@@ -892,7 +892,8 @@ export async function getTagsDistribution(
       distribution.push({
         name: "其他",
         postCount: otherCount,
-        percentage: totalPosts > 0 ? (otherCount / totalPosts) * 100 : 0,
+        percentage:
+          totalTaggedPosts > 0 ? (otherCount / totalTaggedPosts) * 100 : 0,
       });
     }
 

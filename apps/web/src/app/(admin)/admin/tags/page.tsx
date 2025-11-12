@@ -6,6 +6,7 @@ import AdminSidebar from "@/components/AdminSidebar";
 import TagsReport from "./TagsReport";
 import TagsDistributionChart from "./TagsDistributionChart";
 import TagsTable from "./TagsTable";
+import { getConfig } from "@/lib/server/configCache";
 
 export const metadata = await generateMetadata(
   {
@@ -18,6 +19,8 @@ export const metadata = await generateMetadata(
 );
 
 export default async function AdminTags() {
+  const mainColor = (await getConfig<{ primary: string }>("site.color"))
+    .primary;
   return (
     <MainLayout type="horizontal">
       <HorizontalScroll
@@ -30,7 +33,7 @@ export default async function AdminTags() {
         <AdminSidebar />
         <RowGrid>
           <TagsReport />
-          <TagsDistributionChart />
+          <TagsDistributionChart mainColor={mainColor} />
         </RowGrid>
         <RowGrid>
           <TagsTable />

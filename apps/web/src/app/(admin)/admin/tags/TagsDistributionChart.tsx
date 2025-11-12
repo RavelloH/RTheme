@@ -9,8 +9,14 @@ import DonutChart, { type DonutChartDataPoint } from "@/components/DonutChart";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/useBroadcast";
+import generateGradient from "@/lib/shared/gradient";
+import generateComplementary from "@/lib/shared/complementary";
 
-export default function TagsDistributionChart() {
+export default function TagsDistributionChart({
+  mainColor,
+}: {
+  mainColor: string;
+}) {
   const [data, setData] = useState<TagDistributionItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -77,7 +83,12 @@ export default function TagsDistributionChart() {
                 className="w-full h-full"
                 showLegend={true}
                 showLabels={false}
-                formatValue={(value) => `${value} 篇`}
+                formatValue={(value) => `${value} 个`}
+                colors={generateGradient(
+                  mainColor,
+                  generateComplementary(mainColor),
+                  10,
+                )}
               />
             </div>
           </>

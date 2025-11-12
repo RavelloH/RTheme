@@ -5,6 +5,8 @@ import { Pie } from "@visx/shape";
 import { Group } from "@visx/group";
 import { scaleOrdinal } from "@visx/scale";
 import { motion, AnimatePresence } from "framer-motion";
+import generateGradient from "@/lib/shared/gradient";
+import generateComplementary from "@/lib/shared/complementary";
 
 export interface DonutChartDataPoint {
   name: string;
@@ -33,9 +35,12 @@ export default function DonutChart({
 }: DonutChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const [hoveredSlice, setHoveredSlice] = useState<DonutChartDataPoint | null>(
-    null,
-  );
+  const [hoveredSlice, setHoveredSlice] = useState<{
+    x: number;
+    y: number;
+    screenY: number;
+    data: DonutChartDataPoint;
+  } | null>(null);
 
   // 监听容器大小变化
   useEffect(() => {
@@ -56,18 +61,11 @@ export default function DonutChart({
   }, []);
 
   // 默认颜色方案
-  const defaultColors = [
-    "oklch(var(--p))",
-    "oklch(var(--s))",
-    "oklch(var(--a))",
-    "oklch(var(--in))",
-    "oklch(var(--su))",
-    "oklch(var(--wa))",
-    "oklch(var(--er))",
-    "#8B5CF6",
-    "#EC4899",
-    "#F59E0B",
-  ];
+  const defaultColors = generateGradient(
+    "#2dd4bf",
+    generateComplementary("#2dd4bf"),
+    10,
+  );
 
   const colorScale = scaleOrdinal({
     domain: data.map((d) => d.name),
@@ -115,12 +113,28 @@ export default function DonutChart({
                 const hasSpaceForLabel = arc.endAngle - arc.startAngle >= 0.1;
                 const arcPath = pie.path(arc) || "";
                 const arcFill = colorScale(arc.data.name);
-                const isHovered = hoveredSlice?.name === arc.data.name;
+                const isHovered = hoveredSlice?.data.name === arc.data.name;
+
+                // 处理鼠标移动
+                const handleMouseMove = (
+                  event: React.MouseEvent<SVGGElement>,
+                ) => {
+                  const svgElement = event.currentTarget.closest("svg");
+                  if (!svgElement) return;
+
+                  const rect = svgElement.getBoundingClientRect();
+                  setHoveredSlice({
+                    x: event.clientX - rect.left,
+                    y: event.clientY - rect.top,
+                    screenY: event.clientY,
+                    data: arc.data,
+                  });
+                };
 
                 return (
                   <g
                     key={`arc-${arc.data.name}-${index}`}
-                    onMouseEnter={() => setHoveredSlice(arc.data)}
+                    onMouseMove={handleMouseMove}
                     onMouseLeave={() => setHoveredSlice(null)}
                     style={{ cursor: "pointer" }}
                   >
@@ -169,7 +183,7 @@ export default function DonutChart({
             fontWeight="bold"
             dy="-0.5em"
           >
-            {hoveredSlice ? hoveredSlice.name : "总计"}
+            {hoveredSlice ? hoveredSlice.data.name : "总计"}
           </text>
           <text
             textAnchor="middle"
@@ -179,72 +193,36 @@ export default function DonutChart({
             dy="1em"
           >
             {hoveredSlice
-              ? formatValue(hoveredSlice.value)
+              ? formatValue(hoveredSlice.data.value)
               : formatValue(total)}
           </text>
-          {hoveredSlice && hoveredSlice.percentage !== undefined && (
-            <text
-              textAnchor="middle"
-              fill="currentColor"
-              opacity={0.7}
-              fontSize={14}
-              dy="2.5em"
-            >
-              {hoveredSlice.percentage.toFixed(1)}%
-            </text>
-          )}
         </Group>
       </svg>
-
-      {/* 图例 */}
-      {showLegend && (
-        <div className="absolute bottom-0 left-0 right-0 flex flex-wrap justify-center gap-3 px-4 pb-4">
-          {data.map((item, index) => (
-            <motion.div
-              key={`legend-${item.name}`}
-              className="flex items-center gap-2 text-xs cursor-pointer"
-              onMouseEnter={() => setHoveredSlice(item)}
-              onMouseLeave={() => setHoveredSlice(null)}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{
-                  backgroundColor: colorScale(item.name),
-                  opacity: hoveredSlice?.name === item.name ? 0.8 : 1,
-                }}
-              />
-              <span
-                className={`${hoveredSlice?.name === item.name ? "font-semibold" : ""}`}
-              >
-                {item.name}
-              </span>
-            </motion.div>
-          ))}
-        </div>
-      )}
 
       {/* Tooltip */}
       <AnimatePresence>
         {hoveredSlice && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="absolute top-4 left-4 bg-background/95 backdrop-blur-sm border border-foreground/10 rounded-lg px-4 py-3 shadow-lg"
+          <div
+            className="absolute pointer-events-none bg-background/95 backdrop-blur-sm border border-foreground/10 rounded-lg px-4 py-3 shadow-lg z-10"
+            style={{
+              left: `${Math.min(hoveredSlice.x + 10, dimensions.width - 150)}px`,
+              // 根据鼠标在屏幕中的位置决定菜单方向：上半部分向下，下半部分向上
+              ...(hoveredSlice.screenY < window.innerHeight / 2
+                ? { top: `${hoveredSlice.y + 10}px` }
+                : { bottom: `${dimensions.height - hoveredSlice.y + 10}px` }),
+              transform: "translateZ(0)", // 强制 GPU 加速
+            }}
           >
-            <div className="text-sm font-medium">{hoveredSlice.name}</div>
+            <div className="text-sm font-medium">{hoveredSlice.data.name}</div>
             <div className="text-lg font-bold mt-1">
-              {formatValue(hoveredSlice.value)}
+              {formatValue(hoveredSlice.data.value)}
             </div>
-            {hoveredSlice.percentage !== undefined && (
+            {hoveredSlice.data.percentage !== undefined && (
               <div className="text-xs text-muted-foreground mt-1">
-                占比: {hoveredSlice.percentage.toFixed(2)}%
+                占比: {hoveredSlice.data.percentage.toFixed(2)}%
               </div>
             )}
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

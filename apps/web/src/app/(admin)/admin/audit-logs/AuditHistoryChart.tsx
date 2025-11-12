@@ -16,8 +16,14 @@ import AreaChart, {
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/useBroadcast";
+import generateGradient from "@/lib/shared/gradient";
+import generateComplementary from "@/lib/shared/complementary";
 
-export default function AuditHistoryChart() {
+export default function AuditHistoryChart({
+  mainColor,
+}: {
+  mainColor: string;
+}) {
   const [data, setData] = useState<AuditTrendItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -69,18 +75,15 @@ export default function AuditHistoryChart() {
     }));
 
     // 为每个键生成一个颜色
-    const colors = [
-      "var(--color-primary)",
-      "var(--color-warning)",
-      "var(--color-error)",
-      "var(--color-success)",
-      "var(--color-info)",
-      "#8b5cf6",
-      "#ec4899",
-      "#f59e0b",
-      "#10b981",
-      "#3b82f6",
-    ];
+    let colors = generateGradient(
+      mainColor,
+      generateComplementary(mainColor),
+      10,
+    );
+
+    colors = colors.flatMap((_, i, a) =>
+      i < a.length / 2 ? [a[i], a[i + a.length / 2]] : [],
+    ) as string[];
 
     // 配置系列
     const series: StackedBarSeriesConfig[] = Array.from(allKeys).map(
