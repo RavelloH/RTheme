@@ -111,7 +111,7 @@ export const Input = forwardRef<
     if (size === "sm") {
       return {
         container: "mt-6",
-        input: "py-2 text-base",
+        input: "pb-2 mt-2 text-base",
         labelTop: "top-2",
         labelText: "text-base",
         labelIcon: "text-base",
@@ -123,7 +123,7 @@ export const Input = forwardRef<
     // md (默认)
     return {
       container: "mt-8",
-      input: "py-3 text-xl",
+      input: "pb-3 mt-3 text-xl",
       labelTop: "top-3",
       labelText: "text-xl",
       labelIcon: "text-xl",
