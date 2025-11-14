@@ -186,6 +186,7 @@ export default function TagsTable() {
         toast.success(`已删除 ${result.data?.deleted || 0} 个标签`);
         closeBatchDeleteDialog();
         setRefreshTrigger((prev) => prev + 1);
+        setSelectedTags([]);
       } else {
         toast.error(result.message || "未知错误");
       }

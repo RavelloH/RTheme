@@ -344,6 +344,7 @@ export default function PostsTable() {
         toast.success(`已删除 ${result.data?.deleted || 0} 篇文章`);
         closeBatchDeleteDialog();
         setRefreshTrigger((prev) => prev + 1);
+        setSelectedPosts([]);
       } else {
         toast.error(result.message || "未知错误");
       }
@@ -378,6 +379,7 @@ export default function PostsTable() {
         toast.success(`已更新 ${result.data?.updated || 0} 篇文章的状态`);
         closeBatchStatusDialog();
         setRefreshTrigger((prev) => prev + 1);
+        setSelectedPosts([]);
       } else {
         toast.error(result.message || "未知错误");
       }
@@ -414,6 +416,7 @@ export default function PostsTable() {
         );
         closeBatchCommentsDialog();
         setRefreshTrigger((prev) => prev + 1);
+        setSelectedPosts([]);
       } else {
         toast.error(result.message || "未知错误");
       }
@@ -450,6 +453,7 @@ export default function PostsTable() {
         );
         closeBatchPinnedDialog();
         setRefreshTrigger((prev) => prev + 1);
+        setSelectedPosts([]);
       } else {
         toast.error(result.message || "未知错误");
       }
