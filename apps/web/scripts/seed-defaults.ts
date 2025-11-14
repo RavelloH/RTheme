@@ -9,11 +9,9 @@ import { type PrismaClient } from "@prisma/client";
 const rlog = new RLog();
 
 // 从数据文件导入默认配置
-import {
-  defaultConfigs,
-  defaultPages,
-  defaultMenus,
-} from "../src/data/default-configs.js";
+import { defaultConfigs } from "../src/data/default-configs.js";
+import { defaultPages } from "../src/data/default-pages.js";
+import { defaultMenus } from "../src/data/default-menus.js";
 
 async function seedDefaults() {
   try {
@@ -162,13 +160,15 @@ async function seedDefaultPagesAndMenus(prisma: PrismaClient) {
         id: page.id,
         title: page.title,
         slug: page.slug,
-        content: page.content || {},
+        content: page.content || "",
+        contentType: page.contentType || "MARKDOWN",
+        config: page.config || null,
         excerpt: page.excerpt,
         status: page.status,
         metaTitle: page.metaTitle,
         metaDescription: page.metaDescription,
         metaKeywords: page.metaKeywords,
-        isDefault: page.isDefault || false,
+        isSystemPage: page.isSystemPage || false,
       });
       pagesAddedCount++;
     } else {

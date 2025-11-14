@@ -171,15 +171,14 @@ model Category {
 
   // 层级关系
   parentId Int?
-  parent   Category?   @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
-  children Category[]  @relation("CategoryHierarchy")
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children Category[] @relation("CategoryHierarchy")
 
   posts Post[]
 
   // 唯一约束：同一父分类下 slug 和 name 唯一
   @@unique([parentId, slug])
   @@unique([parentId, name])
-
   // 索引优化
   @@index([parentId])
   @@index([slug])
@@ -284,25 +283,30 @@ model StorageProvider {
 
 // 静态页面模型
 model Page {
-  id        String     @id @default(uuid())
-  title     String
-  slug      String     @unique
-  content   Json
-  config    Json?
-  excerpt   String?    @db.VarChar(500)
-  status    PageStatus @default(DRAFT)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  isDefault Boolean    @default(false)
+  id          String          @id @default(uuid())
+  title       String
+  slug        String          @unique
+  content     String          @db.Text // 页面内容（Markdown/HTML/MDX）
+  contentType PageContentType @default(MARKDOWN)
+  config      Json? // 页面配置（用于系统页面的显示设置，如布局模式、每页数量等）
+  excerpt     String?         @db.VarChar(500)
+  status      PageStatus      @default(DRAFT)
+  deletedAt   DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  // 是否为系统预设页面（如文章列表、分类列表等功能页面）
+  isSystemPage Boolean @default(false)
 
   // SEO
   metaTitle       String? @db.VarChar(60)
   metaDescription String? @db.VarChar(160)
   metaKeywords    String? @db.VarChar(255)
+  robotsIndex     Boolean @default(true)
 
   // 创建者
   userUid Int?
-  author  User? @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+  author  User? @relation(fields: [userUid], references: [uid], onDelete: SetNull)
 
   // 导航关系
   menus Menu[]
@@ -539,5 +543,11 @@ enum MenuStatus {
 
 enum PostMode {
   MARKDOWN
+  MDX
+}
+
+enum PageContentType {
+  MARKDOWN
+  HTML
   MDX
 }
