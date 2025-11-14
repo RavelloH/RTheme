@@ -28,6 +28,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import { SelectOption } from "@/ui/Select";
+import { useMobile } from "@/hooks/useMobile";
 
 // 操作按钮配置
 export interface ActionButton {
@@ -136,6 +137,9 @@ export default function GridTable<T extends Record<string, unknown>>({
   contentHeight = 2,
   footerHeight = 0.1,
 }: GridTableProps<T>) {
+  // 检测是否为移动设备
+  const isMobile = useMobile();
+
   // 选中状态管理
   const [selectedKeys, setSelectedKeys] = useState<Set<string | number>>(
     new Set(),
@@ -143,6 +147,7 @@ export default function GridTable<T extends Record<string, unknown>>({
 
   // 搜索状态管理
   const [searchValue, setSearchValue] = useState("");
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSearchValueRef = useRef<string>(""); // 记录上次触发的搜索值
 
@@ -550,63 +555,81 @@ export default function GridTable<T extends Record<string, unknown>>({
         <div>{title}</div>
         <div className="flex items-center gap-4">
           {onSearchChange && (
-            <div className="relative w-[15em]">
-              <input
-                title="search"
-                type="text"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                className="
+            <>
+              {isMobile ? (
+                // 移动端：显示搜索图标
+                <Tooltip content="搜索" placement="bottom">
+                  <Clickable
+                    onClick={() => setSearchDialogOpen(true)}
+                    className="p-2 rounded transition-colors hover:bg-muted inline-flex"
+                    hoverScale={1.1}
+                  >
+                    <RiSearchLine size="1em" />
+                  </Clickable>
+                </Tooltip>
+              ) : (
+                // 桌面端：显示搜索输入框
+                <div className="relative w-[15em]">
+                  <input
+                    title="search"
+                    type="text"
+                    value={searchValue}
+                    onChange={(e) => setSearchValue(e.target.value)}
+                    className="
                   relative w-full bg-transparent border-0
                   px-0 py-2 text-base text-white
                   focus:outline-none
                 "
-              />
-              {/* 底部横线 */}
-              <motion.div
-                className="absolute bottom-0 left-0 h-0.5 w-full"
-                initial={{ backgroundColor: "#ffffff" }}
-                animate={{
-                  backgroundColor:
-                    searchValue.length > 0 ? "var(--color-primary)" : "#ffffff",
-                }}
-                transition={{
-                  duration: 0.3,
-                }}
-              />
-              {/* Label - 固定位置，有输入时隐藏 */}
-              <motion.label
-                className="absolute top-2 left-0 pointer-events-none whitespace-nowrap flex items-center text-base text-white"
-                animate={{
-                  opacity: searchValue.length > 0 ? 0 : 1,
-                }}
-                transition={{
-                  duration: 0.2,
-                }}
-              >
-                <RiSearchLine size="1em" className="inline mr-1" />
-                {searchPlaceholder}
-              </motion.label>
-              {/* 清空按钮 - 有输入时显示在右侧 */}
-              <AnimatePresence>
-                {searchValue.length > 0 && (
-                  <motion.button
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -10 }}
+                  />
+                  {/* 底部横线 */}
+                  <motion.div
+                    className="absolute bottom-0 left-0 h-0.5 w-full"
+                    initial={{ backgroundColor: "#ffffff" }}
+                    animate={{
+                      backgroundColor:
+                        searchValue.length > 0
+                          ? "var(--color-primary)"
+                          : "#ffffff",
+                    }}
                     transition={{
                       duration: 0.3,
-                      ease: [0.68, -0.55, 0.265, 1.55],
                     }}
-                    onClick={() => setSearchValue("")}
-                    className="absolute right-0 top-2 text-primary hover:text-white transition-colors cursor-pointer flex items-center"
-                    type="button"
+                  />
+                  {/* Label - 固定位置，有输入时隐藏 */}
+                  <motion.label
+                    className="absolute top-2 left-0 pointer-events-none whitespace-nowrap flex items-center text-base text-white"
+                    animate={{
+                      opacity: searchValue.length > 0 ? 0 : 1,
+                    }}
+                    transition={{
+                      duration: 0.2,
+                    }}
                   >
-                    <RiCloseLine size="1em" />
-                  </motion.button>
-                )}
-              </AnimatePresence>
-            </div>
+                    <RiSearchLine size="1em" className="inline mr-1" />
+                    {searchPlaceholder}
+                  </motion.label>
+                  {/* 清空按钮 - 有输入时显示在右侧 */}
+                  <AnimatePresence>
+                    {searchValue.length > 0 && (
+                      <motion.button
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        transition={{
+                          duration: 0.3,
+                          ease: [0.68, -0.55, 0.265, 1.55],
+                        }}
+                        onClick={() => setSearchValue("")}
+                        className="absolute right-0 top-2 text-primary hover:text-white transition-colors cursor-pointer flex items-center"
+                        type="button"
+                      >
+                        <RiCloseLine size="1em" />
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+            </>
           )}
           {filterConfig && filterConfig.length > 0 && (
             <Tooltip
@@ -911,6 +934,40 @@ export default function GridTable<T extends Record<string, unknown>>({
                 size="sm"
               />
             </div>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* 搜索 Dialog（移动端） */}
+      <Dialog
+        open={searchDialogOpen}
+        onClose={() => setSearchDialogOpen(false)}
+        title="搜索"
+        size="sm"
+      >
+        <div className="px-6 py-6">
+          <Input
+            label="搜索关键词"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            helperText={searchPlaceholder}
+            type="text"
+            size="md"
+            autoFocus
+          />
+          <div className="flex justify-end gap-4 pt-6 border-t border-foreground/10 mt-6">
+            <Button
+              label="取消"
+              variant="ghost"
+              onClick={() => setSearchDialogOpen(false)}
+              size="sm"
+            />
+            <Button
+              label="搜索"
+              variant="primary"
+              onClick={() => setSearchDialogOpen(false)}
+              size="sm"
+            />
           </div>
         </div>
       </Dialog>
