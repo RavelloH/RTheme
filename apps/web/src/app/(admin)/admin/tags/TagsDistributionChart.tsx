@@ -63,7 +63,7 @@ export default function TagsDistributionChart({
     <GridItem
       areas={[7, 8, 9, 10, 11, 12]}
       width={2}
-      height={0.5}
+      height={0.8}
       className="py-10"
       fixedHeight
     >

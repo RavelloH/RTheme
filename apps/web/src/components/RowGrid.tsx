@@ -235,7 +235,7 @@ export default function RowGrid({
   const isMobile = useMobile();
 
   const baseClass = isMobile
-    ? "grid grid-cols-12 auto-rows-max grid-flow-row gap-0 w-full"
+    ? "grid grid-cols-12 auto-rows-max grid-flow-row w-full pb-8"
     : full
       ? "grid grid-rows-12 grid-flow-col gap-0 h-full w-full"
       : "grid grid-rows-12 auto-cols-max grid-flow-col gap-0 h-full min-w-max";

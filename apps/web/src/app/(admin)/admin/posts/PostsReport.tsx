@@ -104,7 +104,7 @@ export default function PostsReport() {
 
   return (
     <>
-      <GridItem areas={[1, 2, 3, 4, 5, 6]} width={2} height={0.5}>
+      <GridItem areas={[1, 2, 3, 4, 5, 6]} width={2} height={0.8}>
         <AutoTransition type="scale" className="h-full">
           {result ? (
             <div
@@ -230,7 +230,7 @@ export default function PostsReport() {
           )}
         </AutoTransition>
       </GridItem>
-      <GridItem areas={[7, 8]} width={6} height={0.5}>
+      <GridItem areas={[7, 8]} width={6} height={0.2}>
         <AutoTransition type="scale" className="h-full">
           <Link
             href="/admin/posts/new"

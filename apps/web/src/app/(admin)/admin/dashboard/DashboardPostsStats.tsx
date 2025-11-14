@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { getPostsStats } from "@/actions/stat";
 import { GetPostsStatsSuccessResponse } from "@repo/shared-types/api/stats";
 import ErrorPage from "@/components/ui/Error";
+import { useMobile } from "@/hooks/useMobile";
 
 type stats = GetPostsStatsSuccessResponse["data"] | null;
 
@@ -40,6 +41,7 @@ export default function DashboardPostsStats() {
   const [isCache, setIsCache] = useState(true);
   const [refreshTime, setRefreshTime] = useState<Date | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  const isMobile = useMobile();
 
   const fetchData = async (forceRefresh: boolean = false) => {
     if (forceRefresh) {
@@ -162,44 +164,46 @@ export default function DashboardPostsStats() {
           )}
         </AutoTransition>
       </div>
-      <div className="h-full aspect-square flex flex-col border-border border-l text-2xl">
-        <AutoTransition className="h-full flex flex-col" type="scale">
-          {result ? (
-            <>
-              <Link
-                href="/admin/posts/new"
-                className="flex-1 flex gap-2 items-center justify-center border-border border-b hover:bg-primary hover:text-primary-foreground transition-all"
+      {!isMobile && (
+        <div className="h-full aspect-square flex flex-col border-border border-l text-2xl">
+          <AutoTransition className="h-full flex flex-col" type="scale">
+            {result ? (
+              <>
+                <Link
+                  href="/admin/posts/new"
+                  className="flex-1 flex gap-2 items-center justify-center border-border border-b hover:bg-primary hover:text-primary-foreground transition-all"
+                >
+                  <RiStickyNoteAddFill size="1.1em" /> 新建文章
+                </Link>
+                <Link
+                  href="/admin/projects/new"
+                  className="flex-1 flex gap-2 items-center justify-center border-border border-b hover:bg-primary hover:text-primary-foreground transition-all"
+                >
+                  <RiFolderAddFill size="1.1em" /> 新建项目
+                </Link>
+                <Link
+                  href="/admin/media?upload"
+                  className="flex-1 flex gap-2 items-center justify-center hover:bg-primary hover:text-primary-foreground transition-all"
+                >
+                  <RiUpload2Fill size="1.1em" /> 上传媒体
+                </Link>
+              </>
+            ) : error ? (
+              <div
+                key="error"
+                className="flex items-center justify-center h-full"
+              />
+            ) : (
+              <div
+                key="loading"
+                className="flex items-center justify-center h-full"
               >
-                <RiStickyNoteAddFill size="1.1em" /> 新建文章
-              </Link>
-              <Link
-                href="/admin/projects/new"
-                className="flex-1 flex gap-2 items-center justify-center border-border border-b hover:bg-primary hover:text-primary-foreground transition-all"
-              >
-                <RiFolderAddFill size="1.1em" /> 新建项目
-              </Link>
-              <Link
-                href="/admin/media?upload"
-                className="flex-1 flex gap-2 items-center justify-center hover:bg-primary hover:text-primary-foreground transition-all"
-              >
-                <RiUpload2Fill size="1.1em" /> 上传媒体
-              </Link>
-            </>
-          ) : error ? (
-            <div
-              key="error"
-              className="flex items-center justify-center h-full"
-            />
-          ) : (
-            <div
-              key="loading"
-              className="flex items-center justify-center h-full"
-            >
-              <LoadingIndicator size="md" />
-            </div>
-          )}
-        </AutoTransition>
-      </div>
+                <LoadingIndicator size="md" />
+              </div>
+            )}
+          </AutoTransition>
+        </div>
+      )}
     </div>
   );
 }

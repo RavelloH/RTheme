@@ -261,7 +261,7 @@ export default function CategoriesReport({
           )}
         </AutoTransition>
       </GridItem>
-      <GridItem areas={[5, 6]} width={6} height={0.5}>
+      <GridItem areas={[5, 6]} width={6} height={0.2}>
         <AutoTransition type="scale" className="h-full">
           <button
             onClick={openCreateDialog}
