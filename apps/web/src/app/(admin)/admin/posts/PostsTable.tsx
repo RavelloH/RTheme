@@ -34,6 +34,7 @@ import { AlertDialog } from "@/ui/AlertDialog";
 import { useToast } from "@/ui/Toast";
 import Link, { useNavigateWithTransition } from "@/components/Link";
 import { TagInput, SelectedTag } from "@/components/client/Tag/TagInput";
+import { CategoryInput } from "@/components/client/Category/CategoryInput";
 
 export default function PostsTable() {
   const toast = useToast();
@@ -94,6 +95,7 @@ export default function PostsTable() {
     featuredImage: "",
     postMode: "MARKDOWN" as "MARKDOWN" | "MDX",
     tags: [] as SelectedTag[],
+    category: null as string | null, // 单个分类
   });
 
   // 处理选中状态变化
@@ -125,6 +127,7 @@ export default function PostsTable() {
             isNew: false,
           }))
         : [],
+      category: post.categories?.[0] || null, // 只取第一个分类
     });
     setEditDialogOpen(true);
   };
@@ -138,7 +141,7 @@ export default function PostsTable() {
   // 处理表单字段变化
   const handleFieldChange = (
     field: string,
-    value: string | boolean | SelectedTag[],
+    value: string | boolean | SelectedTag[] | string | null,
   ) => {
     setFormData((prev) => ({
       ...prev,
@@ -171,7 +174,7 @@ export default function PostsTable() {
         );
       }
 
-      // 将 SelectedTag[] 转换为 string[]
+      // 将 SelectedTag[] 转换为 string[](只包含名称)
       const tagNames = formData.tags.map((tag) => tag.name);
 
       // 检查 tags 是否有变化（比较名称数组）
@@ -179,6 +182,13 @@ export default function PostsTable() {
       const tagsChanged =
         JSON.stringify(currentTagNames.sort()) !==
         JSON.stringify(tagNames.sort());
+
+      // 检查 categories 是否有变化
+      const currentCategories = editingPost.categories || [];
+      const newCategory = formData.category;
+      const categoriesChanged =
+        (currentCategories.length === 0 && newCategory !== null) ||
+        (currentCategories.length > 0 && newCategory !== currentCategories[0]);
 
       // 检查其他字段是否有变化
       const hasChanges =
@@ -194,7 +204,8 @@ export default function PostsTable() {
         formData.metaKeywords !== (editingPost.metaKeywords || "") ||
         formData.robotsIndex !== editingPost.robotsIndex ||
         formData.postMode !== editingPost.postMode ||
-        tagsChanged;
+        tagsChanged ||
+        categoriesChanged;
 
       if (!hasChanges) {
         toast.info("没有字段被修改");
@@ -252,6 +263,11 @@ export default function PostsTable() {
             ? formData.postMode
             : undefined,
         tags: tagsChanged ? tagNames : undefined,
+        categories: categoriesChanged
+          ? formData.category
+            ? [formData.category]
+            : []
+          : undefined,
       });
 
       if (result.success) {
@@ -1077,6 +1093,12 @@ export default function PostsTable() {
                 value={formData.tags}
                 onChange={(tags) => handleFieldChange("tags", tags)}
                 helperText="输入关键词搜索现有标签，或直接创建新标签"
+                size="sm"
+              />
+              <CategoryInput
+                label="分类"
+                value={formData.category}
+                onChange={(category) => handleFieldChange("category", category)}
                 size="sm"
               />
             </div>

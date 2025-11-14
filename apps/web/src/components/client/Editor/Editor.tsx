@@ -47,6 +47,7 @@ import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import { Checkbox } from "@/ui/Checkbox";
 import { TagInput, SelectedTag } from "@/components/client/Tag/TagInput";
+import { CategoryInput } from "@/components/client/Category/CategoryInput";
 import { TiptapEditor } from "./TiptapEditor";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { createPost, updatePost } from "@/actions/post";
@@ -165,7 +166,7 @@ export default function Editor({
     metaDescription: "",
     metaKeywords: "",
     featuredImage: "",
-    categories: [] as string[], // 分类名称数组
+    category: null as string | null, // 单个分类
     tags: [] as SelectedTag[], // 使用 SelectedTag 类型
   });
 
@@ -180,6 +181,8 @@ export default function Editor({
       setDetailsForm((prev) => ({
         ...prev,
         ...initialData,
+        // 将 string[] categories 转换为 string | null
+        category: initialData.categories?.[0] || null,
         // 将 string[] tags 转换为 SelectedTag[]
         tags: initialData.tags
           ? initialData.tags.map((name) => ({
@@ -683,7 +686,7 @@ export default function Editor({
   // 处理表单字段变化
   const handleDetailsFieldChange = (
     field: string,
-    value: string | boolean | number[] | SelectedTag[],
+    value: string | boolean | number[] | SelectedTag[] | string | null,
   ) => {
     setDetailsForm((prev) => ({
       ...prev,
@@ -834,10 +837,7 @@ export default function Editor({
           metaDescription: detailsForm.metaDescription || undefined,
           metaKeywords: detailsForm.metaKeywords || undefined,
           robotsIndex: detailsForm.robotsIndex,
-          categories:
-            detailsForm.categories.length > 0
-              ? detailsForm.categories
-              : undefined,
+          categories: detailsForm.category ? [detailsForm.category] : undefined,
           tags: tagNames.length > 0 ? tagNames : undefined,
           commitMessage: commitMessage || undefined,
           postMode,
@@ -861,10 +861,7 @@ export default function Editor({
           metaDescription: detailsForm.metaDescription || undefined,
           metaKeywords: detailsForm.metaKeywords || undefined,
           robotsIndex: detailsForm.robotsIndex,
-          categories:
-            detailsForm.categories.length > 0
-              ? detailsForm.categories
-              : undefined,
+          categories: detailsForm.category ? [detailsForm.category] : undefined,
           tags: tagNames.length > 0 ? tagNames : undefined,
           commitMessage: commitMessage || undefined,
           postMode,
@@ -1573,6 +1570,14 @@ export default function Editor({
                   handleDetailsFieldChange("excerpt", e.target.value)
                 }
                 rows={3}
+                size="sm"
+              />
+              <CategoryInput
+                label="分类"
+                value={detailsForm.category}
+                onChange={(category) =>
+                  handleDetailsFieldChange("category", category)
+                }
                 size="sm"
               />
               <TagInput

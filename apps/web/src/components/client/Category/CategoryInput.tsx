@@ -3,22 +3,15 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "../../../ui/Input";
-import { TagChip } from "./TagChip";
-import { RiAddLine, RiPriceTag3Line } from "@remixicon/react";
-import { searchTags } from "@/actions/tag";
-import type { SearchTagItem } from "@repo/shared-types/api/tag";
+import { RiFolderLine, RiCloseLine, RiAddLine } from "@remixicon/react";
+import { searchCategories } from "@/actions/category";
+import type { SearchCategoryItem } from "@repo/shared-types/api/category";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { AutoResizer } from "@/ui/AutoResizer";
 
-export interface SelectedTag {
-  name: string;
-  slug: string;
-  isNew: boolean; // 是否为新创建的标签
-}
-
-export interface TagInputProps {
-  value: SelectedTag[];
-  onChange: (tags: SelectedTag[]) => void;
+export interface CategoryInputProps {
+  value: string | null; // 单个分类路径，如 "技术/前端/React"
+  onChange: (category: string | null, categoryId?: number | null) => void;
   label?: string;
   placeholder?: string;
   helperText?: string;
@@ -27,17 +20,17 @@ export interface TagInputProps {
   size?: "sm" | "md";
 }
 
-export function TagInput({
-  value = [],
+export function CategoryInput({
+  value = null,
   onChange,
-  label = "标签",
-  helperText,
+  label = "分类",
+  helperText = "搜索或创建分类，使用「/」分隔创建多层分类",
   className = "",
   disabled = false,
   size = "md",
-}: TagInputProps) {
+}: CategoryInputProps) {
   const [inputValue, setInputValue] = useState("");
-  const [searchResults, setSearchResults] = useState<SearchTagItem[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchCategoryItem[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -49,64 +42,94 @@ export function TagInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 过滤搜索结果，移除已选中的标签
-  const filteredSearchResults = React.useMemo(() => {
-    return searchResults.filter(
-      (tag) => !value.some((selected) => selected.slug === tag.slug),
-    );
-  }, [searchResults, value]);
+  // 判断是否有完全匹配的结果
+  const hasExactMatch = React.useMemo(() => {
+    // 格式化用户输入，统一格式为 "A / B / C"（带空格）
+    const normalizeInput = (input: string) => {
+      return input
+        .split("/")
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .join(" / ")
+        .toLowerCase();
+    };
 
-  // 判断是否有完全匹配的结果（在过滤后的结果中）
-  const hasExactMatch = filteredSearchResults.some(
-    (tag) => tag.name.toLowerCase() === inputValue.toLowerCase().trim(),
-  );
+    const normalizedInput = normalizeInput(inputValue.trim());
+
+    return searchResults.some((category) => {
+      const fullPath =
+        category.path.length > 0
+          ? `${category.path.join(" / ")} / ${category.name}`
+          : category.name;
+      return fullPath.toLowerCase() === normalizedInput;
+    });
+  }, [searchResults, inputValue]);
 
   // 构建下拉列表选项
   const dropdownOptions = React.useMemo(() => {
-    const options: Array<SearchTagItem | { type: "create"; name: string }> = [];
+    const options: Array<
+      SearchCategoryItem | { type: "create"; name: string; displayName: string }
+    > = [];
 
-    // 如果输入不为空且没有完全匹配，添加"创建新标签"选项
+    // 如果输入不为空且没有完全匹配，添加"创建新分类"选项
     if (inputValue.trim() && !hasExactMatch) {
-      options.push({ type: "create", name: inputValue.trim() });
+      const trimmedInput = inputValue.trim();
+      // 检查是否包含层级分隔符
+      const hasHierarchy = trimmedInput.includes("/");
+      let displayName = trimmedInput;
+
+      // 如果包含层级，格式化显示（统一为带空格的格式）
+      if (hasHierarchy) {
+        const parts = trimmedInput
+          .split("/")
+          .map((p) => p.trim())
+          .filter(Boolean);
+        displayName = parts.join(" / ");
+      }
+
+      options.push({
+        type: "create",
+        name: displayName, // 使用格式化后的名称
+        displayName: displayName,
+      });
     }
 
-    // 添加过滤后的搜索结果
-    options.push(...filteredSearchResults);
+    // 直接添加搜索结果，不重新排序（依赖后端的智能排序）
+    options.push(...searchResults);
 
     return options;
-  }, [inputValue, filteredSearchResults, hasExactMatch]);
+  }, [inputValue, searchResults, hasExactMatch]);
 
   // 防抖搜索
-  const performSearch = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      setIsDropdownOpen(false);
-      return;
-    }
-
-    setIsSearching(true);
-    try {
-      // 从 localStorage 获取 access_token
-      const accessToken = localStorage.getItem("access_token");
-
-      const result = await searchTags({
-        access_token: accessToken || undefined,
-        query: query.trim(),
-        limit: 10,
-      });
-
-      if (result.success && result.data) {
-        setSearchResults(result.data);
-        setIsDropdownOpen(true);
-        setSelectedIndex(0);
+  const performSearch = useCallback(
+    async (query: string) => {
+      if (!query.trim() || value) {
+        setSearchResults([]);
+        setIsDropdownOpen(false);
+        return;
       }
-    } catch (error) {
-      console.error("搜索标签失败:", error);
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
-  }, []);
+
+      setIsSearching(true);
+      try {
+        const result = await searchCategories({
+          query: query.trim(),
+          limit: 10, // 增加限制以显示更多相关结果
+        });
+
+        if (result.success && result.data) {
+          setSearchResults(result.data);
+          setIsDropdownOpen(true);
+          setSelectedIndex(0);
+        }
+      } catch (error) {
+        console.error("搜索分类失败:", error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    },
+    [value],
+  );
 
   // 输入变化时，防抖搜索
   useEffect(() => {
@@ -155,37 +178,28 @@ export function TagInput({
   //   };
   // }, [isDropdownOpen]);
 
-  // 选择标签
-  const handleSelectTag = (
-    tag: SearchTagItem | { type: "create"; name: string },
+  // 选择分类
+  const handleSelectCategory = (
+    category:
+      | SearchCategoryItem
+      | { type: "create"; name: string; displayName: string },
   ) => {
-    if ("type" in tag && tag.type === "create") {
-      // 创建新标签
-      const newTag: SelectedTag = {
-        name: tag.name,
-        slug: tag.name
-          .toLowerCase()
-          .replace(/\s+/g, "-")
-          .replace(/[^\w-]/g, ""),
-        isNew: true,
-      };
-
-      // 检查是否已存在
-      if (!value.some((t) => t.slug === newTag.slug)) {
-        onChange([...value, newTag]);
-      }
+    if ("type" in category && category.type === "create") {
+      // 创建新分类，格式化为带空格的格式，不传递 ID（因为是新建的）
+      const formattedPath = category.name
+        .split("/")
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .join(" / ");
+      onChange(formattedPath, null);
     } else {
-      // 选择现有标签
-      const searchTag = tag as SearchTagItem;
-      const existingTag: SelectedTag = {
-        name: searchTag.name,
-        slug: searchTag.slug,
-        isNew: false,
-      };
-
-      if (!value.some((t) => t.slug === existingTag.slug)) {
-        onChange([...value, existingTag]);
-      }
+      // 选择现有分类，统一为带空格的格式，并传递分类 ID
+      const searchCategory = category as SearchCategoryItem;
+      const fullPath =
+        searchCategory.path.length > 0
+          ? `${searchCategory.path.join(" / ")} / ${searchCategory.name}`
+          : searchCategory.name;
+      onChange(fullPath, searchCategory.id);
     }
 
     // 清空输入和搜索结果
@@ -193,14 +207,13 @@ export function TagInput({
     setSearchResults([]);
     setIsDropdownOpen(false);
     setSelectedIndex(0);
-
-    // 重新聚焦输入框
-    inputRef.current?.focus();
   };
 
-  // 移除标签
-  const handleRemoveTag = (slug: string) => {
-    onChange(value.filter((tag) => tag.slug !== slug));
+  // 清除选择
+  const handleClear = () => {
+    onChange(null, null);
+    setInputValue("");
+    inputRef.current?.focus();
   };
 
   // 键盘导航
@@ -229,7 +242,7 @@ export function TagInput({
       case "Enter":
         e.preventDefault();
         if (dropdownOptions[selectedIndex]) {
-          handleSelectTag(dropdownOptions[selectedIndex]);
+          handleSelectCategory(dropdownOptions[selectedIndex]);
         }
         break;
 
@@ -241,25 +254,46 @@ export function TagInput({
     }
   };
 
+  // 计算显示值
+  const displayValue = value || inputValue;
+
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       {/* 输入框 */}
-      <Input
-        ref={inputRef}
-        label={label}
-        helperText={helperText}
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onFocus={() => {
-          if (inputValue.trim() && searchResults.length > 0) {
-            setIsDropdownOpen(true);
-          }
-        }}
-        disabled={disabled}
-        size={size}
-        labelAlwaysFloating={value.length > 0}
-      />
+      <div className="relative">
+        <Input
+          ref={inputRef}
+          label={label}
+          helperText={helperText}
+          value={displayValue}
+          onChange={(e) => {
+            if (!value) {
+              setInputValue(e.target.value);
+            }
+          }}
+          onKeyDown={handleKeyDown}
+          onFocus={() => {
+            if (!value && inputValue.trim() && searchResults.length > 0) {
+              setIsDropdownOpen(true);
+            }
+          }}
+          disabled={disabled}
+          readOnly={!!value}
+          size={size}
+        />
+
+        {/* 清除按钮 */}
+        {value && !disabled && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors z-10"
+            aria-label="清除选择"
+          >
+            <RiCloseLine size={"1.25em"} />
+          </button>
+        )}
+      </div>
 
       {/* 下拉搜索结果 */}
       <AnimatePresence>
@@ -291,15 +325,21 @@ export function TagInput({
                       "type" in option && option.type === "create";
                     const isSelected = index === selectedIndex;
 
+                    // 检查是否是层级分类
+                    const hasHierarchy =
+                      isCreateOption &&
+                      "displayName" in option &&
+                      option.displayName.includes(" / ");
+
                     return (
                       <motion.button
                         key={
                           isCreateOption
                             ? `create-${option.name}`
-                            : (option as SearchTagItem).slug
+                            : (option as SearchCategoryItem).id
                         }
                         type="button"
-                        onClick={() => handleSelectTag(option)}
+                        onClick={() => handleSelectCategory(option)}
                         className={`
                           w-full px-4 py-2.5
                           text-left
@@ -321,28 +361,40 @@ export function TagInput({
                                 size={"1.25em"}
                                 className="flex-shrink-0"
                               />
-                              <span className="font-medium truncate">
-                                创建新标签 &quot;{option.name}&quot;
-                              </span>
+                              <div className="flex gap-0.5 min-w-0">
+                                <span className="font-medium truncate">
+                                  {hasHierarchy
+                                    ? "创建层级分类："
+                                    : "创建新分类："}
+                                </span>
+                                <span
+                                  className={`truncate ${
+                                    isSelected ? "opacity-90" : "opacity-70"
+                                  }`}
+                                >
+                                  {"displayName" in option
+                                    ? option.displayName
+                                    : option}
+                                </span>
+                              </div>
                             </>
                           ) : (
                             <>
-                              <RiPriceTag3Line
+                              <RiFolderLine
                                 size={"1.25em"}
                                 className="flex-shrink-0"
                               />
                               <span className="truncate">
-                                {option.name}
-                                <span className="text-sm opacity-70 ml-1">
-                                  ({(option as SearchTagItem).slug})
-                                </span>
+                                {(option as SearchCategoryItem).path.length > 0
+                                  ? `${(option as SearchCategoryItem).path.join(" / ")} / ${option.name}`
+                                  : option.name}
                               </span>
                             </>
                           )}
                         </div>
                         {!isCreateOption && (
                           <span className="text-sm opacity-70 ml-2 flex-shrink-0">
-                            {(option as SearchTagItem).postCount}
+                            {(option as SearchCategoryItem).postCount}
                           </span>
                         )}
                       </motion.button>
@@ -354,28 +406,6 @@ export function TagInput({
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* 已选标签 */}
-      {value.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          className="mt-3 flex flex-wrap gap-2"
-        >
-          <AnimatePresence>
-            {value.map((tag) => (
-              <TagChip
-                key={tag.slug}
-                name={tag.name}
-                slug={tag.slug}
-                isNew={tag.isNew}
-                onRemove={() => handleRemoveTag(tag.slug)}
-              />
-            ))}
-          </AnimatePresence>
-        </motion.div>
-      )}
     </div>
   );
 }

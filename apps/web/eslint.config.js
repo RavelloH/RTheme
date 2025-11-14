@@ -4,7 +4,7 @@ import { nextJsConfig } from "@repo/eslint-config/next-js";
 export default [
   // Ignore generated code (Prisma client/runtime)
   {
-    ignores: ["src/generated/**"],
+    ignores: ["src/generated/**", ".next/**"],
   },
   ...nextJsConfig,
 ];

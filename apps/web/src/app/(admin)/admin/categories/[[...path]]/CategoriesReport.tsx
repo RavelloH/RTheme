@@ -1,12 +1,12 @@
 "use client";
 
-import { getTagsStats } from "@/actions/stat";
-import { createTag } from "@/actions/tag";
+import { getCategoriesStats } from "@/actions/stat";
+import { createCategory } from "@/actions/category";
 import { GridItem } from "@/components/RowGrid";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { RiRefreshLine, RiAddLine } from "@remixicon/react";
+import { RiRefreshLine, RiAddLine, RiArrowLeftSLine } from "@remixicon/react";
 import { useEffect, useState } from "react";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/useBroadcast";
@@ -14,14 +14,20 @@ import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import { Button } from "@/ui/Button";
 import { useToast } from "@/ui/Toast";
+import { useNavigateWithTransition } from "@/components/Link";
 
 type StatsData = {
   updatedAt: string;
   cache: boolean;
   total: {
     total: number;
+    topLevel: number;
     withPosts: number;
     withoutPosts: number;
+  };
+  depth: {
+    maxDepth: number;
+    avgDepth: number;
   };
   new: {
     last7Days: number;
@@ -30,12 +36,31 @@ type StatsData = {
   };
 };
 
-export default function TagsReport() {
+type CurrentCategory = {
+  id: number;
+  slug: string;
+  name: string;
+  description: string | null;
+  parentId: number | null;
+} | null;
+
+type Props = {
+  parentId: number | null;
+  categoryPath: string[];
+  currentCategory: CurrentCategory;
+};
+
+export default function CategoriesReport({
+  parentId,
+  categoryPath,
+  currentCategory,
+}: Props) {
   const toast = useToast();
+  const navigate = useNavigateWithTransition();
   const [result, setResult] = useState<StatsData | null>(null);
   const [refreshTime, setRefreshTime] = useState<Date | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const { broadcast } = useBroadcastSender<{ type: "tags-refresh" }>();
+  const { broadcast } = useBroadcastSender<{ type: "categories-refresh" }>();
 
   // 创建对话框
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -51,9 +76,9 @@ export default function TagsReport() {
       setResult(null);
     }
     setError(null);
-    const res = await getTagsStats({ force: forceRefresh });
+    const res = await getCategoriesStats({ force: forceRefresh });
     if (!res.success) {
-      setError(new Error(res.message || "获取标签统计失败"));
+      setError(new Error(res.message || "获取分类统计失败"));
       return;
     }
     if (!res.data) return;
@@ -62,7 +87,7 @@ export default function TagsReport() {
 
     // 刷新成功后广播消息,通知其他组件更新
     if (forceRefresh) {
-      await broadcast({ type: "tags-refresh" });
+      await broadcast({ type: "categories-refresh" });
     }
   };
 
@@ -82,30 +107,31 @@ export default function TagsReport() {
     setCreateDialogOpen(false);
   };
 
-  // 创建标签
-  const handleCreateTag = async () => {
+  // 创建分类
+  const handleCreateCategory = async () => {
     if (!createFormData.name.trim()) {
-      toast.error("标签名称不能为空");
+      toast.error("分类名称不能为空");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const result = await createTag({
+      const result = await createCategory({
         name: createFormData.name.trim(),
         slug: createFormData.slug.trim() || undefined,
         description: createFormData.description.trim() || undefined,
+        parentId: parentId,
       });
 
       if (result.success) {
-        toast.success(`标签 "${createFormData.name}" 已创建`);
+        toast.success(`分类 "${createFormData.name}" 已创建`);
         closeCreateDialog();
         fetchData(true); // 刷新统计数据
       } else {
         toast.error(result.message || "未知错误");
       }
     } catch (error) {
-      console.error("创建标签失败:", error);
+      console.error("创建分类失败:", error);
       toast.error("请稍后重试");
     } finally {
       setIsSubmitting(false);
@@ -122,26 +148,55 @@ export default function TagsReport() {
               key="content"
             >
               <div>
-                <div className="text-2xl py-2">标签统计</div>
-                <div>
-                  当前共有 {result.total.total} 个标签
-                  {result.total.total > 0 &&
-                    (() => {
-                      const parts = [
-                        result.total.withPosts > 0 &&
-                          `${result.total.withPosts} 个被使用`,
-                        result.total.withoutPosts > 0 &&
-                          `${result.total.withoutPosts} 个未被使用`,
-                      ].filter(Boolean);
-                      return parts.length > 0
-                        ? `，其中 ${parts.join("、")}`
-                        : "";
-                    })()}
-                  。
+                <div className="flex justify-between items-center gap-x-4 py-2">
+                  <h1 className="text-2xl text-foreground">分类统计</h1>
+                  {currentCategory && (
+                    <Clickable
+                      onClick={() => {
+                        if (categoryPath.length === 1) {
+                          navigate("/admin/categories");
+                        } else {
+                          const parentPath = categoryPath
+                            .slice(0, -1)
+                            .join("/");
+                          navigate(`/admin/categories/${parentPath}`);
+                        }
+                      }}
+                    >
+                      <RiArrowLeftSLine size="2em" />
+                    </Clickable>
+                  )}
                 </div>
-              </div>
-              <div>
                 <div className="space-y-2">
+                  <div>
+                    {currentCategory && (
+                      <>正在查看&quot;{currentCategory.name}&quot;的子分类。</>
+                    )}
+                  </div>
+                  <div>
+                    当前共有 {result.total.total} 个分类
+                    {result.total.total > 0 &&
+                      (() => {
+                        const parts = [
+                          result.total.topLevel > 0 &&
+                            `${result.total.topLevel} 个顶级分类`,
+                          result.total.withPosts > 0 &&
+                            `${result.total.withPosts} 个有文章`,
+                          result.total.withoutPosts > 0 &&
+                            `${result.total.withoutPosts} 个无文章`,
+                        ].filter(Boolean);
+                        return parts.length > 0
+                          ? `，其中 ${parts.join("、")}`
+                          : "";
+                      })()}
+                    。
+                  </div>
+                  {!currentCategory && result.depth.maxDepth > 0 && (
+                    <div>
+                      最大层级深度：{result.depth.maxDepth}，平均深度：
+                      {result.depth.avgDepth.toFixed(1)}
+                    </div>
+                  )}
                   {result.new.last7Days > 0 ||
                   result.new.last30Days > 0 ||
                   result.new.lastYear > 0 ? (
@@ -171,15 +226,15 @@ export default function TagsReport() {
                         }
                         return parts.length > 0
                           ? parts.join("，") + "。"
-                          : "近一年没有新增标签。";
+                          : "近一年没有新增分类。";
                       })()}
                     </div>
                   ) : (
-                    <div>近一年没有新增标签。</div>
+                    <div>近一年没有新增分类。</div>
                   )}
 
                   {result.total.total === 0 && (
-                    <div className="text-muted-foreground">暂无标签数据。</div>
+                    <div className="text-muted-foreground">暂无分类数据。</div>
                   )}
                 </div>
               </div>
@@ -212,22 +267,29 @@ export default function TagsReport() {
             onClick={openCreateDialog}
             className="h-full w-full flex gap-2 items-center justify-center text-2xl hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
           >
-            <RiAddLine size="1.1em" /> 新建标签
+            <RiAddLine size="1.1em" />{" "}
+            {currentCategory
+              ? `在"${currentCategory.name}"下新建分类`
+              : "新建顶级分类"}
           </button>
         </AutoTransition>
       </GridItem>
 
-      {/* 创建标签对话框 */}
+      {/* 创建分类对话框 */}
       <Dialog
         open={createDialogOpen}
         onClose={closeCreateDialog}
-        title="新建标签"
+        title={
+          currentCategory
+            ? `在"${currentCategory.name}"下新建分类`
+            : "新建顶级分类"
+        }
         size="md"
       >
         <div className="px-6 py-6 space-y-6">
           <div className="space-y-4">
             <Input
-              label="标签名称"
+              label="分类名称"
               value={createFormData.name}
               onChange={(e) =>
                 setCreateFormData((prev) => ({
@@ -237,7 +299,7 @@ export default function TagsReport() {
               }
               required
               size="sm"
-              helperText="输入标签名称"
+              helperText="输入分类名称"
             />
             <Input
               label="Slug（可选）"
@@ -262,7 +324,7 @@ export default function TagsReport() {
               }
               rows={3}
               size="sm"
-              helperText="将修改在 Tags 页面的描述信息"
+              helperText="分类的简短描述"
             />
           </div>
 
@@ -277,7 +339,7 @@ export default function TagsReport() {
             <Button
               label="创建"
               variant="primary"
-              onClick={handleCreateTag}
+              onClick={handleCreateCategory}
               size="sm"
               loading={isSubmitting}
               loadingText="创建中..."

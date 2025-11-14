@@ -48,6 +48,67 @@ import { TextVersion } from "text-version";
 import { slugify } from "@/lib/server/slugify";
 
 /*
+  辅助函数：根据路径查找或创建分类
+  支持层级路径，如 "技术/前端/Next.js"
+  返回最终分类的 ID
+*/
+async function findOrCreateCategoryByPath(path: string): Promise<number> {
+  // 按 / 拆分路径，移除空白部分
+  const parts = path
+    .split("/")
+    .map((p) => p.trim())
+    .filter((p) => p);
+
+  if (parts.length === 0) {
+    throw new Error("Invalid category path");
+  }
+
+  let currentParentId: number | null = null;
+  let currentCategoryId: number | null = null;
+
+  // 逐层查找或创建分类
+  for (const name of parts) {
+    // 查找当前层级的分类
+    let category: {
+      id: number;
+      slug: string;
+      name: string;
+      description: string | null;
+      parentId: number | null;
+      createdAt: Date;
+      updatedAt: Date;
+    } | null = await prisma.category.findFirst({
+      where: {
+        name,
+        parentId: currentParentId,
+      },
+    });
+
+    // 如果不存在则创建
+    if (!category) {
+      const slug = await slugify(name);
+      category = await prisma.category.create({
+        data: {
+          name,
+          slug,
+          parentId: currentParentId,
+        },
+      });
+    }
+
+    // 更新父分类 ID，继续下一层
+    currentCategoryId = category.id;
+    currentParentId = category.id;
+  }
+
+  if (currentCategoryId === null) {
+    throw new Error("Failed to create category");
+  }
+
+  return currentCategoryId;
+}
+
+/*
   辅助函数：解析版本名称
   格式: "userUid:ISO时间:提交信息"
   例如: "1:2025-01-09T12:55:38.259Z:初始版本"
@@ -798,13 +859,12 @@ export async function createPost(
         categories:
           categories && categories.length > 0
             ? {
-                connectOrCreate: await Promise.all(
-                  categories.map(async (name) => {
-                    const slug = await slugify(name);
-                    return {
-                      where: { name },
-                      create: { name, slug },
-                    };
+                connect: await Promise.all(
+                  categories.map(async (pathOrName) => {
+                    // 使用路径查找或创建分类（支持 "技术/前端/Next.js" 格式）
+                    const categoryId =
+                      await findOrCreateCategoryByPath(pathOrName);
+                    return { id: categoryId };
                   }),
                 ),
               }
@@ -1102,13 +1162,11 @@ export async function updatePost(
         ...(categories !== undefined && {
           categories: {
             set: [], // 先清空所有关联
-            connectOrCreate: await Promise.all(
-              categories.map(async (name) => {
-                const slug = await slugify(name);
-                return {
-                  where: { name },
-                  create: { name, slug },
-                };
+            connect: await Promise.all(
+              categories.map(async (pathOrName) => {
+                // 使用路径查找或创建分类（支持 "技术/前端/Next.js" 格式）
+                const categoryId = await findOrCreateCategoryByPath(pathOrName);
+                return { id: categoryId };
               }),
             ),
           },

@@ -104,27 +104,6 @@ export default function DashboardTagsStats() {
             </div>
             <div className="space-y-1">
               <div>{getNewTagsDescription(result)}</div>
-              {result.topTags.length > 0 && (
-                <div>
-                  <div className="font-semibold mt-2 mb-1">
-                    使用最多的标签：
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {result.topTags.slice(0, 3).map((tag, index) => (
-                      <span
-                        key={tag.name}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-sm"
-                      >
-                        <span className="font-medium">{index + 1}.</span>
-                        <span>{tag.name}</span>
-                        <span className="text-xs opacity-70">
-                          ({tag.postCount})
-                        </span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
             <div className="flex justify-between items-center">
               {refreshTime && (

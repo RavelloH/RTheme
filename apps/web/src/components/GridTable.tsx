@@ -1,5 +1,12 @@
 "use client";
 
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import { GridItem, GridArea } from "@/components/RowGrid";
 import { createArray } from "@/lib/client/createArray";
 import { Table, TableColumn } from "@/ui/Table";
@@ -17,7 +24,6 @@ import {
   RiCloseLine,
   RiFilterLine,
 } from "@remixicon/react";
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
@@ -45,7 +51,7 @@ export interface FilterConfig {
 }
 
 export interface GridTableProps<T extends Record<string, unknown>> {
-  title: string;
+  title: React.ReactNode;
   columns: TableColumn<T>[];
   data: T[];
   loading?: boolean;

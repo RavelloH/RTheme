@@ -140,12 +140,6 @@ export const GetTagsStatsSuccessResponseSchema = createSuccessResponseSchema(
       last30Days: z.number().int().nonnegative(),
       lastYear: z.number().int().nonnegative(),
     }),
-    topTags: z.array(
-      z.object({
-        name: z.string(),
-        postCount: z.number().int().nonnegative(),
-      }),
-    ),
   }),
 );
 
@@ -155,4 +149,45 @@ export type GetTagsStatsSuccessResponse = z.infer<
 registerSchema(
   "GetTagsStatsSuccessResponse",
   GetTagsStatsSuccessResponseSchema,
+);
+
+/*
+    getCategoriesStats() Schema
+*/
+export const GetCategoriesStatsSchema = z.object({
+  access_token: z.string().optional(),
+  force: z.boolean().default(false),
+});
+export type GetCategoriesStats = z.infer<typeof GetCategoriesStatsSchema>;
+registerSchema("GetCategoriesStats", GetCategoriesStatsSchema);
+
+export const GetCategoriesStatsSuccessResponseSchema =
+  createSuccessResponseSchema(
+    z.object({
+      updatedAt: z.iso.datetime(),
+      cache: z.boolean(),
+      total: z.object({
+        total: z.number().int().nonnegative(),
+        topLevel: z.number().int().nonnegative(), // 顶级分类数
+        withPosts: z.number().int().nonnegative(),
+        withoutPosts: z.number().int().nonnegative(),
+      }),
+      depth: z.object({
+        maxDepth: z.number().int().nonnegative(), // 最大层级深度
+        avgDepth: z.number().nonnegative(), // 平均层级深度
+      }),
+      new: z.object({
+        last7Days: z.number().int().nonnegative(),
+        last30Days: z.number().int().nonnegative(),
+        lastYear: z.number().int().nonnegative(),
+      }),
+    }),
+  );
+
+export type GetCategoriesStatsSuccessResponse = z.infer<
+  typeof GetCategoriesStatsSuccessResponseSchema
+>;
+registerSchema(
+  "GetCategoriesStatsSuccessResponse",
+  GetCategoriesStatsSuccessResponseSchema,
 );

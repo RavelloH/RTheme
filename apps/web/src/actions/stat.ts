@@ -19,6 +19,9 @@ import {
   GetTagsStatsSuccessResponse,
   GetTagsStats,
   GetTagsStatsSchema,
+  GetCategoriesStatsSuccessResponse,
+  GetCategoriesStats,
+  GetCategoriesStatsSchema,
 } from "@repo/shared-types/api/stats";
 import prisma from "@/lib/server/prisma";
 import { getCache, setCache, generateCacheKey } from "@/lib/server/cache";
@@ -581,49 +584,33 @@ export async function getTagsStats(
     const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
 
     // 使用一次原生 SQL 查询获取标签统计数据
-    const [totalTags, tagsWithPosts, newTagsStats, topTags] = await Promise.all(
-      [
-        // 总标签数
-        prisma.tag.count(),
+    const [totalTags, tagsWithPosts, newTagsStats] = await Promise.all([
+      // 总标签数
+      prisma.tag.count(),
 
-        // 有文章关联的标签数（只统计未删除的文章）
-        prisma.$queryRaw<Array<{ count: bigint }>>`
+      // 有文章关联的标签数（只统计未删除的文章）
+      prisma.$queryRaw<Array<{ count: bigint }>>`
         SELECT COUNT(DISTINCT pt."B") as count
         FROM "_PostToTag" pt
         INNER JOIN "Post" p ON pt."A" = p.id
         WHERE p."deletedAt" IS NULL
       `,
 
-        // 新增标签统计
-        prisma.$queryRaw<
-          Array<{
-            new_7d: bigint;
-            new_30d: bigint;
-            new_1y: bigint;
-          }>
-        >`
+      // 新增标签统计
+      prisma.$queryRaw<
+        Array<{
+          new_7d: bigint;
+          new_30d: bigint;
+          new_1y: bigint;
+        }>
+      >`
         SELECT
           COUNT(CASE WHEN "createdAt" >= ${sevenDaysAgo} THEN 1 END) as new_7d,
           COUNT(CASE WHEN "createdAt" >= ${thirtyDaysAgo} THEN 1 END) as new_30d,
           COUNT(CASE WHEN "createdAt" >= ${oneYearAgo} THEN 1 END) as new_1y
         FROM "Tag"
       `,
-
-        // 使用最多的前5个标签（只统计未删除的文章）
-        prisma.$queryRaw<Array<{ name: string; post_count: bigint }>>`
-        SELECT
-          t.name,
-          COUNT(pt."A") as post_count
-        FROM "Tag" t
-        INNER JOIN "_PostToTag" pt ON t.name = pt."B"
-        INNER JOIN "Post" p ON pt."A" = p.id
-        WHERE p."deletedAt" IS NULL
-        GROUP BY t.name
-        ORDER BY post_count DESC
-        LIMIT 5
-      `,
-      ],
-    );
+    ]);
 
     const tagsWithPostsCount = Number(tagsWithPosts[0]?.count || 0);
     const newStats = newTagsStats[0];
@@ -642,10 +629,6 @@ export async function getTagsStats(
         last30Days: Number(newStats?.new_30d || 0),
         lastYear: Number(newStats?.new_1y || 0),
       },
-      topTags: topTags.map((tag) => ({
-        name: tag.name,
-        postCount: Number(tag.post_count),
-      })),
     };
 
     // 保存到缓存（缓存1小时）
@@ -659,6 +642,209 @@ export async function getTagsStats(
     });
   } catch (error) {
     console.error("GetTagsStats error:", error);
+    return response.serverError();
+  }
+}
+
+export async function getCategoriesStats(
+  params: GetCategoriesStats,
+  serverConfig: { environment: "serverless" },
+): Promise<
+  NextResponse<ApiResponse<GetCategoriesStatsSuccessResponse["data"]>>
+>;
+export async function getCategoriesStats(
+  params: GetCategoriesStats,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<GetCategoriesStatsSuccessResponse["data"]>>;
+export async function getCategoriesStats(
+  { access_token, force }: GetCategoriesStats,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<GetCategoriesStatsSuccessResponse["data"] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+  const validationError = validateData(
+    {
+      access_token,
+      force,
+    },
+    GetCategoriesStatsSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    const CACHE_KEY = generateCacheKey("stats", "categories");
+    const CACHE_TTL = 60 * 60; // 1小时
+
+    // 如果不是强制刷新，尝试从缓存获取
+    if (!force) {
+      const cachedData = await getCache<
+        GetCategoriesStatsSuccessResponse["data"]
+      >(CACHE_KEY, {
+        ttl: CACHE_TTL,
+      });
+
+      if (cachedData) {
+        return response.ok({
+          data: cachedData,
+        });
+      }
+    }
+
+    // 计算时间边界
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+
+    // 获取所有分类及其关联信息
+    const [
+      totalCategories,
+      topLevelCategories,
+      categoriesWithPosts,
+      newCategoriesStats,
+    ] = await Promise.all([
+      // 总分类数
+      prisma.category.count(),
+
+      // 顶级分类数（无父分类）
+      prisma.category.count({
+        where: {
+          parentId: null,
+        },
+      }),
+
+      // 有文章关联的分类数
+      prisma.$queryRaw<Array<{ count: bigint }>>`
+        SELECT COUNT(DISTINCT pc."B") as count
+        FROM "_CategoryToPost" pc
+        INNER JOIN "Post" p ON pc."A" = p.id
+        WHERE p."deletedAt" IS NULL
+      `,
+
+      // 新增分类统计
+      prisma.$queryRaw<
+        Array<{
+          new_7d: bigint;
+          new_30d: bigint;
+          new_1y: bigint;
+        }>
+      >`
+        SELECT
+          COUNT(CASE WHEN "createdAt" >= ${sevenDaysAgo} THEN 1 END) as new_7d,
+          COUNT(CASE WHEN "createdAt" >= ${thirtyDaysAgo} THEN 1 END) as new_30d,
+          COUNT(CASE WHEN "createdAt" >= ${oneYearAgo} THEN 1 END) as new_1y
+        FROM "Category"
+      `,
+    ]);
+
+    const categoriesWithPostsCount = Number(categoriesWithPosts[0]?.count || 0);
+    const newStats = newCategoriesStats[0];
+
+    // 获取所有分类以计算深度和热门分类
+    const allCategories = await prisma.category.findMany({
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        parentId: true,
+        _count: {
+          select: {
+            posts: {
+              where: {
+                deletedAt: null,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // 使用 Map 缓存深度计算结果，避免重复计算
+    const depthCache = new Map<number, number>();
+
+    const calculateDepth = (
+      categoryId: number,
+      visited = new Set<number>(),
+    ): number => {
+      // 检查缓存
+      if (depthCache.has(categoryId)) {
+        return depthCache.get(categoryId)!;
+      }
+
+      // 防止循环引用
+      if (visited.has(categoryId)) return 0;
+      visited.add(categoryId);
+
+      const category = allCategories.find((c) => c.id === categoryId);
+      if (!category || category.parentId === null) {
+        depthCache.set(categoryId, 0);
+        return 0;
+      }
+
+      const depth = 1 + calculateDepth(category.parentId, visited);
+      depthCache.set(categoryId, depth);
+      return depth;
+    };
+
+    let maxDepth = 0;
+    let totalDepth = 0;
+
+    for (const category of allCategories) {
+      const depth = calculateDepth(category.id);
+      if (depth > maxDepth) maxDepth = depth;
+      totalDepth += depth;
+    }
+
+    const avgDepth =
+      allCategories.length > 0 ? totalDepth / allCategories.length : 0;
+
+    // 构建响应数据
+    const data: GetCategoriesStatsSuccessResponse["data"] = {
+      updatedAt: now.toISOString(),
+      cache: false,
+      total: {
+        total: totalCategories,
+        topLevel: topLevelCategories,
+        withPosts: categoriesWithPostsCount,
+        withoutPosts: totalCategories - categoriesWithPostsCount,
+      },
+      depth: {
+        maxDepth,
+        avgDepth,
+      },
+      new: {
+        last7Days: Number(newStats?.new_7d || 0),
+        last30Days: Number(newStats?.new_30d || 0),
+        lastYear: Number(newStats?.new_1y || 0),
+      },
+    };
+
+    // 保存到缓存（缓存1小时）
+    const cacheData = { ...data, cache: true };
+    await setCache(CACHE_KEY, cacheData, {
+      ttl: CACHE_TTL,
+    });
+
+    return response.ok({
+      data,
+    });
+  } catch (error) {
+    console.error("GetCategoriesStats error:", error);
     return response.serverError();
   }
 }

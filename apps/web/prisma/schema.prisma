@@ -162,12 +162,28 @@ model Tag {
 }
 
 model Category {
-  slug        String   @id @unique
-  name        String   @unique
+  id          Int      @id @default(autoincrement())
+  slug        String
+  name        String
   description String?  @db.VarChar(255)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  posts       Post[]
+
+  // 层级关系
+  parentId Int?
+  parent   Category?   @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children Category[]  @relation("CategoryHierarchy")
+
+  posts Post[]
+
+  // 唯一约束：同一父分类下 slug 和 name 唯一
+  @@unique([parentId, slug])
+  @@unique([parentId, name])
+
+  // 索引优化
+  @@index([parentId])
+  @@index([slug])
+  @@index([createdAt])
 }
 
 // 评论模型
