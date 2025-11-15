@@ -34,7 +34,7 @@ import { getPagesList, createPage } from "@/actions/page";
  *         name: status
  *         schema:
  *           type: string
- *           enum: [DRAFT, ACTIVE, SUSPENDED]
+ *           enum: [ACTIVE, SUSPENDED]
  *         description: 页面状态
  *       - in: query
  *         name: search
@@ -91,28 +91,29 @@ export async function GET(request: NextRequest) {
     .get("authorization")
     ?.replace("Bearer ", "");
 
-  return getPagesList({
-    access_token,
-    page: page ? parseInt(page) : 1,
-    pageSize: pageSize ? parseInt(pageSize) : 25,
-    sortBy:
-      (sortBy as "id" | "title" | "slug" | "createdAt" | "updatedAt") || "id",
-    sortOrder: (sortOrder as "asc" | "desc") || "desc",
-    status: status
-      ? ([status] as ("DRAFT" | "ACTIVE" | "SUSPENDED")[])
-      : undefined,
-    search: search || undefined,
-    isSystemPage: isSystemPage
-      ? ([isSystemPage].map((v) => v === "true") as boolean[])
-      : undefined,
-    robotsIndex: robotsIndex
-      ? ([robotsIndex].map((v) => v === "true") as boolean[])
-      : undefined,
-    createdAtStart: createdAtStart || undefined,
-    createdAtEnd: createdAtEnd || undefined,
-    updatedAtStart: updatedAtStart || undefined,
-    updatedAtEnd: updatedAtEnd || undefined,
-  });
+  return getPagesList(
+    {
+      access_token,
+      page: page ? parseInt(page) : 1,
+      pageSize: pageSize ? parseInt(pageSize) : 25,
+      sortBy:
+        (sortBy as "id" | "title" | "slug" | "createdAt" | "updatedAt") || "id",
+      sortOrder: (sortOrder as "asc" | "desc") || "desc",
+      status: status ? ([status] as ("ACTIVE" | "SUSPENDED")[]) : undefined,
+      search: search || undefined,
+      isSystemPage: isSystemPage
+        ? ([isSystemPage].map((v) => v === "true") as boolean[])
+        : undefined,
+      robotsIndex: robotsIndex
+        ? ([robotsIndex].map((v) => v === "true") as boolean[])
+        : undefined,
+      createdAtStart: createdAtStart || undefined,
+      createdAtEnd: createdAtEnd || undefined,
+      updatedAtStart: updatedAtStart || undefined,
+      updatedAtEnd: updatedAtEnd || undefined,
+    },
+    { environment: "serverless" },
+  );
 }
 
 export async function POST(request: NextRequest) {
@@ -123,21 +124,24 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    return createPage({
-      access_token,
-      title: body.title,
-      slug: body.slug,
-      content: body.content,
-      contentType: body.contentType,
-      excerpt: body.excerpt,
-      config: body.config,
-      status: body.status,
-      metaTitle: body.metaTitle,
-      metaDescription: body.metaDescription,
-      metaKeywords: body.metaKeywords,
-      robotsIndex: body.robotsIndex,
-      isSystemPage: body.isSystemPage,
-    });
+    return createPage(
+      {
+        access_token,
+        title: body.title,
+        slug: body.slug,
+        content: body.content,
+        contentType: body.contentType,
+        excerpt: body.excerpt,
+        config: body.config,
+        status: body.status,
+        metaTitle: body.metaTitle,
+        metaDescription: body.metaDescription,
+        metaKeywords: body.metaKeywords,
+        robotsIndex: body.robotsIndex,
+        isSystemPage: body.isSystemPage,
+      },
+      { environment: "serverless" },
+    );
   } catch (error) {
     console.error("Parse request body error:", error);
     return new Response(

@@ -1113,7 +1113,6 @@
             "schema": {
               "type": "string",
               "enum": [
-                "DRAFT",
                 "ACTIVE",
                 "SUSPENDED"
               ]
@@ -1289,7 +1288,6 @@
                   "status": {
                     "type": "string",
                     "enum": [
-                      "DRAFT",
                       "ACTIVE",
                       "SUSPENDED"
                     ],

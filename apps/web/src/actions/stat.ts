@@ -23,6 +23,11 @@ import {
   GetCategoriesStats,
   GetCategoriesStatsSchema,
 } from "@repo/shared-types/api/stats";
+import {
+  GetPagesStatsSuccessResponse,
+  GetPagesStats,
+  GetPagesStatsSchema,
+} from "@repo/shared-types/api/page";
 import prisma from "@/lib/server/prisma";
 import { getCache, setCache, generateCacheKey } from "@/lib/server/cache";
 
@@ -846,5 +851,141 @@ export async function getCategoriesStats(
   } catch (error) {
     console.error("GetCategoriesStats error:", error);
     return response.serverError();
+  }
+}
+
+export async function getPagesStats(
+  params: GetPagesStats,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<GetPagesStatsSuccessResponse["data"]>>>;
+export async function getPagesStats(
+  params: GetPagesStats,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<GetPagesStatsSuccessResponse["data"]>>;
+export async function getPagesStats(
+  { access_token, force }: GetPagesStats,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<GetPagesStatsSuccessResponse["data"] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      force,
+    },
+    GetPagesStatsSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 验证用户身份（仅管理员）
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized({ message: "需要管理员权限" });
+  }
+
+  try {
+    const CACHE_KEY = generateCacheKey("stats", "pages");
+    const CACHE_TTL = 60 * 60; // 1小时
+
+    // 如果不是强制刷新，尝试从缓存获取
+    if (!force) {
+      const cachedData = await getCache<GetPagesStatsSuccessResponse["data"]>(
+        CACHE_KEY,
+        {
+          ttl: CACHE_TTL,
+        },
+      );
+
+      if (cachedData) {
+        return response.ok({
+          data: cachedData,
+        });
+      }
+    }
+
+    // 获取页面统计数据
+    const [totalStats, statusStats, systemPageStats] = await Promise.all([
+      // 总数统计
+      prisma.page.count({
+        where: {
+          deletedAt: null,
+        },
+      }),
+      // 状态统计
+      prisma.page.groupBy({
+        by: ["status"],
+        where: {
+          deletedAt: null,
+        },
+        _count: {
+          status: true,
+        },
+      }),
+      // 系统页面统计
+      prisma.page.groupBy({
+        by: ["isSystemPage"],
+        where: {
+          deletedAt: null,
+        },
+        _count: {
+          isSystemPage: true,
+        },
+      }),
+    ]);
+
+    // 统计各状态数量
+    const statusCounts = statusStats.reduce(
+      (acc, item) => {
+        acc[item.status] = item._count.status;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
+    // 统计系统/自定义页面数量
+    const systemCounts = systemPageStats.reduce(
+      (acc, item) => {
+        acc[item.isSystemPage ? "system" : "custom"] = item._count.isSystemPage;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
+    const now = new Date();
+    const statsData = {
+      updatedAt: now.toISOString(),
+      cache: false, // 实时查询
+      total: {
+        total: totalStats,
+        active: statusCounts.ACTIVE || 0,
+        suspended: statusCounts.SUSPENDED || 0,
+        system: systemCounts.system || 0,
+        custom: systemCounts.custom || 0,
+      },
+    };
+
+    // 保存到缓存（缓存1小时）
+    const cacheData = { ...statsData, cache: true };
+    await setCache(CACHE_KEY, cacheData, {
+      ttl: CACHE_TTL,
+    });
+
+    return response.ok({
+      data: statsData,
+    });
+  } catch (error) {
+    console.error("获取页面统计失败:", error);
+    return response.serverError({ message: "获取页面统计失败" });
   }
 }

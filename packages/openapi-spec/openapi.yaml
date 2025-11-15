@@ -706,7 +706,6 @@ paths:
           schema:
             type: string
             enum:
-              - DRAFT
               - ACTIVE
               - SUSPENDED
           description: 页面状态
@@ -820,7 +819,6 @@ paths:
                 status:
                   type: string
                   enum:
-                    - DRAFT
                     - ACTIVE
                     - SUSPENDED
                   description: 页面状态

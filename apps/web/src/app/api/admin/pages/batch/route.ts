@@ -54,12 +54,15 @@ export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
 
-    return updatePages({
-      access_token,
-      ids: body.ids,
-      status: body.status,
-      robotsIndex: body.robotsIndex,
-    });
+    return updatePages(
+      {
+        access_token,
+        ids: body.ids,
+        status: body.status,
+        robotsIndex: body.robotsIndex,
+      },
+      { environment: "serverless" },
+    );
   } catch (error) {
     console.error("Parse request body error:", error);
     return new Response(
@@ -86,10 +89,13 @@ export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json();
 
-    return deletePages({
-      access_token,
-      ids: body.ids,
-    });
+    return deletePages(
+      {
+        access_token,
+        ids: body.ids,
+      },
+      { environment: "serverless" },
+    );
   } catch (error) {
     console.error("Parse request body error:", error);
     return new Response(

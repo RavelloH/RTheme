@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getPagesStats } from "@/actions/page";
+import { getPagesStats } from "@/actions/stat";
 
 /**
  * @openapi
@@ -33,8 +33,11 @@ export async function GET(request: NextRequest) {
     .get("authorization")
     ?.replace("Bearer ", "");
 
-  return getPagesStats({
-    access_token,
-    force,
-  });
+  return getPagesStats(
+    {
+      access_token,
+      force,
+    },
+    { environment: "serverless" },
+  );
 }

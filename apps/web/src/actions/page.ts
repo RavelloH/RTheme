@@ -1,9 +1,6 @@
 "use server";
 import { NextResponse } from "next/server";
 import {
-  GetPagesStatsSchema,
-  GetPagesStats,
-  PagesStatsData,
   GetPagesListSchema,
   GetPagesList,
   PageListItem,
@@ -30,105 +27,31 @@ import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
 import { logAuditEvent } from "./audit";
 import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
-import { slugify } from "@/lib/server/slugify";
 
-/*
-    getPagesStats() - 获取页面统计信息
-*/
-export async function getPagesStats(params: GetPagesStats) {
-  const response = new ResponseBuilder("serveraction");
-
-  if (!(await limitControl(await headers()))) {
-    return response.tooManyRequests();
-  }
-
-  const validationError = validateData(params, GetPagesStatsSchema);
-  if (validationError) {
-    return response.badRequest({ error: validationError.error });
-  }
-
-  // 验证用户身份（仅管理员）
-  const authResult = await authVerify({
-    accessToken: params.access_token,
-    allowedRoles: ["ADMIN"],
-  });
-  if (!authResult) {
-    return response.unauthorized({ message: "需要管理员权限" });
-  }
-
-  try {
-    // 获取页面统计数据
-    const [totalStats, statusStats, systemPageStats] = await Promise.all([
-      // 总数统计
-      prisma.page.count({
-        where: {
-          deletedAt: null,
-        },
-      }),
-      // 状态统计
-      prisma.page.groupBy({
-        by: ["status"],
-        where: {
-          deletedAt: null,
-        },
-        _count: {
-          status: true,
-        },
-      }),
-      // 系统页面统计
-      prisma.page.groupBy({
-        by: ["isSystemPage"],
-        where: {
-          deletedAt: null,
-        },
-        _count: {
-          isSystemPage: true,
-        },
-      }),
-    ]);
-
-    // 统计各状态数量
-    const statusCounts = statusStats.reduce(
-      (acc, item) => {
-        acc[item.status] = item._count.status;
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
-
-    // 统计系统/自定义页面数量
-    const systemCounts = systemPageStats.reduce(
-      (acc, item) => {
-        acc[item.isSystemPage ? "system" : "custom"] = item._count.isSystemPage;
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
-
-    const statsData: PagesStatsData = {
-      updatedAt: new Date().toISOString(),
-      cache: false, // 实时查询
-      total: {
-        total: totalStats,
-        active: statusCounts.ACTIVE || 0,
-        suspended: statusCounts.SUSPENDED || 0,
-        system: systemCounts.system || 0,
-        custom: systemCounts.custom || 0,
-      },
-    };
-
-    return response.ok({ data: statsData });
-  } catch (error) {
-    console.error("获取页面统计失败:", error);
-    return response.serverError({ message: "获取页面统计失败" });
-  }
-}
+type ActionEnvironment = "serverless" | "serveraction";
+type ActionConfig = { environment?: ActionEnvironment };
+type ActionResult<T extends ApiResponseData> =
+  | NextResponse<ApiResponse<T>>
+  | ApiResponse<T>;
 
 /*
     getPagesList() - 获取页面列表
 */
-export async function getPagesList(params: GetPagesList) {
-  const response = new ResponseBuilder("serveraction");
+export async function getPagesList(
+  params: GetPagesList,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<PageListItem[] | null>>>;
+export async function getPagesList(
+  params: GetPagesList,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<PageListItem[] | null>>;
+export async function getPagesList(
+  params: GetPagesList,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<PageListItem[] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
 
   if (!(await limitControl(await headers()))) {
     return response.tooManyRequests();
@@ -165,16 +88,30 @@ export async function getPagesList(params: GetPagesList) {
     } = params;
 
     // 构建查询条件
-    const where: any = {
+    const where: {
+      deletedAt: null;
+      OR?: Array<{
+        title?: { contains: string; mode: "insensitive" };
+        slug?: { contains: string; mode: "insensitive" };
+        excerpt?: { contains: string; mode: "insensitive" };
+      }>;
+      status?: { in: ("ACTIVE" | "SUSPENDED")[] };
+      isSystemPage?: boolean;
+      robotsIndex?: boolean;
+      createdAt?: { gte?: Date; lte?: Date };
+      updatedAt?: { gte?: Date; lte?: Date };
+    } = {
       deletedAt: null,
     };
 
     // 搜索条件
     if (search && search.trim()) {
       where.OR = [
-        { title: { contains: search.trim() } },
-        { slug: { contains: search.trim() } },
-        { excerpt: { contains: search.trim() } },
+        {
+          title: { contains: search.trim(), mode: "insensitive" },
+          slug: { contains: search.trim(), mode: "insensitive" },
+          excerpt: { contains: search.trim(), mode: "insensitive" },
+        },
       ];
     }
 
@@ -184,13 +121,17 @@ export async function getPagesList(params: GetPagesList) {
     }
 
     // 系统页面筛选
-    if (isSystemPage && isSystemPage.length > 0) {
-      where.isSystemPage = { in: isSystemPage };
+    if (isSystemPage && isSystemPage.length === 1) {
+      where.isSystemPage = isSystemPage[0];
+    } else if (isSystemPage && isSystemPage.length === 2) {
+      // 包含 true 和 false，不需要筛选
     }
 
     // 搜索引擎索引筛选
-    if (robotsIndex && robotsIndex.length > 0) {
-      where.robotsIndex = { in: robotsIndex };
+    if (robotsIndex && robotsIndex.length === 1) {
+      where.robotsIndex = robotsIndex[0];
+    } else if (robotsIndex && robotsIndex.length === 2) {
+      // 包含 true 和 false，不需要筛选
     }
 
     // 创建时间范围筛选
@@ -224,7 +165,21 @@ export async function getPagesList(params: GetPagesList) {
         },
         skip: (page - 1) * pageSize,
         take: pageSize,
-        include: {
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          content: true,
+          contentType: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+          metaTitle: true,
+          metaDescription: true,
+          metaKeywords: true,
+          robotsIndex: true,
+          isSystemPage: true,
+          config: true,
           author: {
             select: {
               uid: true,
@@ -246,7 +201,15 @@ export async function getPagesList(params: GetPagesList) {
       contentType: page.contentType,
       createdAt: page.createdAt.toISOString(),
       updatedAt: page.updatedAt.toISOString(),
-      author: page.author || {
+      author: (
+        page as {
+          author?: {
+            uid: number | null;
+            username: string | null;
+            nickname: string | null;
+          } | null;
+        }
+      ).author || {
         uid: null,
         username: null,
         nickname: null,
@@ -282,8 +245,21 @@ export async function getPagesList(params: GetPagesList) {
 /*
     getPageDetail() - 获取页面详情
 */
-export async function getPageDetail(params: GetPageDetail) {
-  const response = new ResponseBuilder("serveraction");
+export async function getPageDetail(
+  params: GetPageDetail,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<PageDetail | null>>>;
+export async function getPageDetail(
+  params: GetPageDetail,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<PageDetail | null>>;
+export async function getPageDetail(
+  params: GetPageDetail,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<PageDetail | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
 
   if (!(await limitControl(await headers()))) {
     return response.tooManyRequests();
@@ -310,7 +286,21 @@ export async function getPageDetail(params: GetPageDetail) {
         slug: params.slug,
         deletedAt: null,
       },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        content: true,
+        contentType: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        metaTitle: true,
+        metaDescription: true,
+        metaKeywords: true,
+        robotsIndex: true,
+        isSystemPage: true,
+        config: true,
         author: {
           select: {
             uid: true,
@@ -334,7 +324,15 @@ export async function getPageDetail(params: GetPageDetail) {
       status: page.status,
       createdAt: page.createdAt.toISOString(),
       updatedAt: page.updatedAt.toISOString(),
-      author: page.author || {
+      author: (
+        page as {
+          author?: {
+            uid: number | null;
+            username: string | null;
+            nickname: string | null;
+          } | null;
+        }
+      ).author || {
         uid: null,
         username: null,
         nickname: null,
@@ -357,8 +355,21 @@ export async function getPageDetail(params: GetPageDetail) {
 /*
     createPage() - 创建页面
 */
-export async function createPage(params: CreatePage) {
-  const response = new ResponseBuilder("serveraction");
+export async function createPage(
+  params: CreatePage,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<CreatePageResult | null>>>;
+export async function createPage(
+  params: CreatePage,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<CreatePageResult | null>>;
+export async function createPage(
+  params: CreatePage,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<CreatePageResult | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
 
   if (!(await limitControl(await headers()))) {
     return response.tooManyRequests();
@@ -384,7 +395,6 @@ export async function createPage(params: CreatePage) {
       slug,
       content,
       contentType,
-      excerpt,
       config,
       status,
       metaTitle,
@@ -469,8 +479,21 @@ export async function createPage(params: CreatePage) {
 /*
     updatePage() - 更新单个页面
 */
-export async function updatePage(params: UpdatePage) {
-  const response = new ResponseBuilder("serveraction");
+export async function updatePage(
+  params: UpdatePage,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<UpdatePageResult | null>>>;
+export async function updatePage(
+  params: UpdatePage,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<UpdatePageResult | null>>;
+export async function updatePage(
+  params: UpdatePage,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<UpdatePageResult | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
 
   if (!(await limitControl(await headers()))) {
     return response.tooManyRequests();
@@ -492,6 +515,8 @@ export async function updatePage(params: UpdatePage) {
 
   try {
     const slug = params.slug;
+    // 从参数中移除 access_token，保留更新数据
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { access_token, ...updateData } = params;
 
     // 获取原始页面
@@ -528,7 +553,8 @@ export async function updatePage(params: UpdatePage) {
         return response.conflict({ message: "新 Slug 已存在" });
       }
 
-      (updateData as any).slug = updateData.newSlug;
+      // 设置新的 slug
+      (updateData as UpdatePage & { slug?: string }).slug = updateData.newSlug;
       delete updateData.newSlug;
     }
 
@@ -595,8 +621,21 @@ export async function updatePage(params: UpdatePage) {
 /*
     updatePages() - 批量更新页面
 */
-export async function updatePages(params: UpdatePages) {
-  const response = new ResponseBuilder("serveraction");
+export async function updatePages(
+  params: UpdatePages,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<{ updated: number } | null>>>;
+export async function updatePages(
+  params: UpdatePages,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<{ updated: number } | null>>;
+export async function updatePages(
+  params: UpdatePages,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<{ updated: number } | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
 
   if (!(await limitControl(await headers()))) {
     return response.tooManyRequests();
@@ -698,8 +737,21 @@ export async function updatePages(params: UpdatePages) {
 /*
     deletePages() - 批量删除页面
 */
-export async function deletePages(params: DeletePages) {
-  const response = new ResponseBuilder("serveraction");
+export async function deletePages(
+  params: DeletePages,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<{ deleted: number } | null>>>;
+export async function deletePages(
+  params: DeletePages,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<{ deleted: number } | null>>;
+export async function deletePages(
+  params: DeletePages,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<{ deleted: number } | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
 
   if (!(await limitControl(await headers()))) {
     return response.tooManyRequests();

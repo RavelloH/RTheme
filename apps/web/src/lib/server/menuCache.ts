@@ -22,17 +22,17 @@ export interface PageItem {
   id: string;
   title: string;
   slug: string;
-  content: unknown;
+  content: string;
   config?: unknown | null;
-  excerpt?: string | null;
-  status: "DRAFT" | "ACTIVE" | "SUSPENDED";
+  status: "ACTIVE" | "SUSPENDED";
   createdAt: Date;
   updatedAt: Date;
-  isDefault: boolean;
+  isSystemPage: boolean;
   metaTitle?: string | null;
   metaDescription?: string | null;
   metaKeywords?: string | null;
-  userUid?: number | null;
+  robotsIndex: boolean;
+  userUid: number | null;
 }
 
 // 缓存文件路径
@@ -81,17 +81,17 @@ async function getMenusFromDatabase(): Promise<MenuItem[]> {
           id: string;
           title: string;
           slug: string;
-          content: unknown;
+          content: string;
           config?: unknown | null;
-          excerpt?: string | null;
-          status: "DRAFT" | "ACTIVE" | "SUSPENDED";
+          status: "ACTIVE" | "SUSPENDED";
           createdAt: Date;
           updatedAt: Date;
-          isDefault: boolean;
+          isSystemPage: boolean;
           metaTitle?: string | null;
           metaDescription?: string | null;
           metaKeywords?: string | null;
-          userUid?: number | null;
+          robotsIndex: boolean;
+          userUid: number | null;
         } | null;
       }) => ({
         id: menu.id,
@@ -111,14 +111,14 @@ async function getMenusFromDatabase(): Promise<MenuItem[]> {
               slug: menu.page.slug,
               content: menu.page.content,
               config: menu.page.config,
-              excerpt: menu.page.excerpt,
               status: menu.page.status,
               createdAt: menu.page.createdAt,
               updatedAt: menu.page.updatedAt,
-              isDefault: menu.page.isDefault,
+              isSystemPage: menu.page.isSystemPage,
               metaTitle: menu.page.metaTitle,
               metaDescription: menu.page.metaDescription,
               metaKeywords: menu.page.metaKeywords,
+              robotsIndex: menu.page.robotsIndex,
               userUid: menu.page.userUid,
             }
           : null,

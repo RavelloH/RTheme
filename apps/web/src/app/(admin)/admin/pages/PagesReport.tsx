@@ -1,6 +1,6 @@
 "use client";
 
-import { getPagesStats } from "@/actions/page";
+import { getPagesStats } from "@/actions/stat";
 import runWithAuth from "@/lib/client/runWithAuth";
 import { GridItem } from "@/components/RowGrid";
 import { AutoTransition } from "@/ui/AutoTransition";

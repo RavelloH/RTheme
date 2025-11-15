@@ -73,7 +73,7 @@ import { getPageDetail, updatePage } from "@/actions/page";
  *                 description: 页面配置（系统页面使用）
  *               status:
  *                 type: string
- *                 enum: [DRAFT, ACTIVE, SUSPENDED]
+ *                 enum: [ACTIVE, SUSPENDED]
  *                 description: 页面状态
  *               metaTitle:
  *                 type: string
@@ -119,10 +119,13 @@ export async function GET(
     .get("authorization")
     ?.replace("Bearer ", "");
 
-  return getPageDetail({
-    access_token,
-    slug,
-  });
+  return getPageDetail(
+    {
+      access_token,
+      slug,
+    },
+    { environment: "serverless" },
+  );
 }
 
 export async function PATCH(
@@ -137,21 +140,24 @@ export async function PATCH(
   try {
     const body = await request.json();
 
-    return updatePage({
-      access_token,
-      slug,
-      newSlug: body.newSlug,
-      title: body.title,
-      content: body.content,
-      contentType: body.contentType,
-      excerpt: body.excerpt,
-      config: body.config,
-      status: body.status,
-      metaTitle: body.metaTitle,
-      metaDescription: body.metaDescription,
-      metaKeywords: body.metaKeywords,
-      robotsIndex: body.robotsIndex,
-    });
+    return updatePage(
+      {
+        access_token,
+        slug,
+        newSlug: body.newSlug,
+        title: body.title,
+        content: body.content,
+        contentType: body.contentType,
+        excerpt: body.excerpt,
+        config: body.config,
+        status: body.status,
+        metaTitle: body.metaTitle,
+        metaDescription: body.metaDescription,
+        metaKeywords: body.metaKeywords,
+        robotsIndex: body.robotsIndex,
+      },
+      { environment: "serverless" },
+    );
   } catch (error) {
     console.error("Parse request body error:", error);
     return new Response(

@@ -6,7 +6,7 @@ import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { RiRefreshLine } from "@remixicon/react";
 import { useCallback, useEffect, useState } from "react";
-import { getPagesStats } from "@/actions/page";
+import { getPagesStats } from "@/actions/stat";
 import runWithAuth from "@/lib/client/runWithAuth";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/useBroadcast";
