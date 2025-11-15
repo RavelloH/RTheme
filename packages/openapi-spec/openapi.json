@@ -989,6 +989,370 @@
         }
       }
     },
+    "/api/admin/pages/batch": {
+      "patch": {
+        "summary": "批量更新页面",
+        "description": "需管理员身份，批量更新页面",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePages"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "Pages"
+        ],
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatePagesSuccessResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "批量删除页面",
+        "description": "需管理员身份，批量删除页面（系统页面不会被删除）",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletePages"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "Pages"
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletePagesSuccessResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/pages": {
+      "get": {
+        "summary": "获取页面列表",
+        "description": "需管理员身份，获取页面列表",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "每页数量"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "id",
+                "title",
+                "slug",
+                "createdAt",
+                "updatedAt"
+              ]
+            },
+            "description": "排序字段"
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            },
+            "description": "排序方向"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "ACTIVE",
+                "SUSPENDED"
+              ]
+            },
+            "description": "页面状态"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "搜索关键词"
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "Pages"
+        ],
+        "responses": {
+          "200": {
+            "description": "返回页面列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetPagesListSuccessResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "新建页面",
+        "description": "需管理员身份，创建新页面",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePage"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "Pages"
+        ],
+        "responses": {
+          "200": {
+            "description": "返回创建的页面信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePageSuccessResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/pages/{slug}": {
+      "get": {
+        "summary": "获取页面详情",
+        "description": "需管理员身份，通过 slug 获取单个页面的详细信息",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "页面的唯一标识符"
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "Pages"
+        ],
+        "responses": {
+          "200": {
+            "description": "返回页面详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetPageDetailSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "403": {
+            "description": "无权访问此页面"
+          },
+          "404": {
+            "description": "页面不存在"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      },
+      "patch": {
+        "summary": "更新页面",
+        "description": "需管理员身份，通过 slug 更新单个页面",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "页面的唯一标识符"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "newSlug": {
+                    "type": "string",
+                    "description": "新的 slug（如果需要修改）"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "页面标题"
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "页面内容"
+                  },
+                  "contentType": {
+                    "type": "string",
+                    "enum": [
+                      "MARKDOWN",
+                      "HTML",
+                      "MDX"
+                    ],
+                    "description": "内容类型"
+                  },
+                  "excerpt": {
+                    "type": "string",
+                    "description": "页面摘要"
+                  },
+                  "config": {
+                    "type": "object",
+                    "description": "页面配置（系统页面使用）"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "DRAFT",
+                      "ACTIVE",
+                      "SUSPENDED"
+                    ],
+                    "description": "页面状态"
+                  },
+                  "metaTitle": {
+                    "type": "string",
+                    "description": "SEO 标题"
+                  },
+                  "metaDescription": {
+                    "type": "string",
+                    "description": "SEO 描述"
+                  },
+                  "metaKeywords": {
+                    "type": "string",
+                    "description": "SEO 关键词"
+                  },
+                  "robotsIndex": {
+                    "type": "boolean",
+                    "description": "是否允许搜索引擎索引"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "Pages"
+        ],
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatePageSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "403": {
+            "description": "无权修改此页面"
+          },
+          "404": {
+            "description": "页面不存在"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
     "/api/admin/posts/delete": {
       "post": {
         "summary": "批量删除文章",
@@ -3482,6 +3846,43 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ServerErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats/pages": {
+      "get": {
+        "summary": "获取页面统计信息",
+        "description": "需管理员身份，获取页面统计数据",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "force",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "是否强制刷新缓存"
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "Pages"
+        ],
+        "responses": {
+          "200": {
+            "description": "返回页面统计信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetPagesStatsSuccessResponse"
                 }
               }
             }

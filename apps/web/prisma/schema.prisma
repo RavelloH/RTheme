@@ -286,16 +286,15 @@ model Page {
   id          String          @id @default(uuid())
   title       String
   slug        String          @unique
-  content     String          @db.Text // 页面内容（Markdown/HTML/MDX）
+  content     String          @db.Text
   contentType PageContentType @default(MARKDOWN)
-  config      Json? // 页面配置（用于系统页面的显示设置，如布局模式、每页数量等）
-  excerpt     String?         @db.VarChar(500)
-  status      PageStatus      @default(DRAFT)
+  config      Json?
+  status      PageStatus      @default(ACTIVE)
   deletedAt   DateTime?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
-  // 是否为系统预设页面（如文章列表、分类列表等功能页面）
+  // 是否为系统预设页面
   isSystemPage Boolean @default(false)
 
   // SEO
@@ -518,7 +517,6 @@ enum PostStatus {
 }
 
 enum PageStatus {
-  DRAFT
   ACTIVE
   SUSPENDED
 }

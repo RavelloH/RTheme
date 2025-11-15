@@ -75,17 +75,17 @@ export default function Home() {
             >
               <div>
                 <div className="text-7xl" data-fade-char>
-                  <p>
-                    RavelloH \ <wbr /> 拉韦洛
-                  </p>
+                  <p>NeutralPress | 中性色</p>
                 </div>
                 <div className="block mt-4" data-line-reveal>
-                  <div>CTFer，</div>
-                  <div>Web 全栈，</div>
-                  <div>开源爱好者，</div>
-                  <div>React 拥护者，</div>
-                  <div>Node 爬虫工程师，</div>
-                  <div>NeutralPress 开发者。</div>
+                  <div>专为博客而打造的CMS系统。</div>
+                  <div>独特的横板滚动布局，</div>
+                  <div>完整的后台管理功能，</div>
+                  <div>便捷的可视化编辑器，</div>
+                  <div>方便的媒体管理面板，</div>
+                  <div>强大的内置访问统计，</div>
+                  <div>经济的无服务器模式，</div>
+                  <div>可靠的系统安全防御。</div>
                 </div>
               </div>
               <div>
@@ -177,10 +177,10 @@ export default function Home() {
             >
               <div className="text-2xl block">
                 <div data-fade-word>
-                  Next.js / React / TailwindCSS / Serverless / Node.js / NPM /
-                  TypeScript / Express.js / MongoDB / PostgreSQL / Redis /
-                  Docker / Kubernetes / GraphQL / REST / API / Webpack / Vite /
-                  Jest / Cypress ...
+                  React / Next.js / TypeScript / JavaScript / TailwindCSS /
+                  Node.js / Express.js / Serverless / GraphQL / PostgreSQL /
+                  MySQL / Redis / Docker / Kubernetes / Webpack / Vite / C / C++
+                  / C# / Jest / Cypress / Shell ...
                 </div>
               </div>
             </GridItem>
