@@ -9,6 +9,8 @@ import MainLayout from "@/components/MainLayout";
 import HomeTitle from "./home/HomeTitle";
 import HomeSlogan from "./home/HomeSlogan";
 import LinkButton from "@/components/LinkButton";
+import { getSystemPageConfig, getBlocksAreas } from "@/lib/server/pageCache";
+import { createPageConfigBuilder } from "@/lib/server/pageUtils";
 
 export const metadata = await generateMetadata(
   {
@@ -20,7 +22,10 @@ export const metadata = await generateMetadata(
   },
 );
 
-export default function Home() {
+export default async function Home() {
+  // 获取系统页面配置
+  const systemConfig = await getSystemPageConfig("/");
+  const config = createPageConfigBuilder(systemConfig);
   return (
     <>
       <MainLayout type="horizontal">
@@ -58,56 +63,78 @@ export default function Home() {
               <HomeSlogan slogan={"Beginning of meditation."} />
             </GridItem>
           </RowGrid>
-          <RowGrid>
-            <GridItem
-              areas={[1]}
-              width={14}
-              height={0.1}
-              className="bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl h-full"
-            >
-              <span>Welcome. I&apos;m...</span>
-            </GridItem>
-            <GridItem
-              areas={[2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
-              width={1.4}
-              height={1}
-              className="px-10 py-15 text-2xl flex flex-col justify-between"
-            >
-              <div>
-                <div className="text-7xl" data-fade-char>
-                  <p>NeutralPress | 中性色</p>
+          {config.isBlockEnabled(1) && (
+            <RowGrid>
+              {config.getBlockHeader(1) && (
+                <GridItem
+                  areas={[1]}
+                  width={14}
+                  height={0.1}
+                  className="bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl h-full"
+                >
+                  <span>{config.getBlockHeader(1)}</span>
+                </GridItem>
+              )}
+
+              <GridItem
+                areas={getBlocksAreas(
+                  1,
+                  !!config.getBlockHeader(1),
+                  !!(
+                    config.getBlockFooterLink(1) || config.getBlockFooterDesc(1)
+                  ),
+                )}
+                width={
+                  14 /
+                  getBlocksAreas(
+                    1,
+                    !!config.getBlockHeader(1),
+                    !!(
+                      config.getBlockFooterLink(1) ||
+                      config.getBlockFooterDesc(1)
+                    ),
+                  ).length
+                }
+                height={1}
+                className="px-10 py-15 text-2xl flex flex-col justify-between"
+              >
+                <div>
+                  <div className="text-7xl" data-fade-char>
+                    <p>{config.getBlockTitle(1)}</p>
+                  </div>
+                  <div className="block mt-4" data-line-reveal>
+                    {config.getBlockContent(1).map((line, index) => (
+                      <div key={index}>{line}</div>
+                    ))}
+                  </div>
                 </div>
-                <div className="block mt-4" data-line-reveal>
-                  <div>专为博客而打造的CMS系统。</div>
-                  <div>独特的横板滚动布局，</div>
-                  <div>完整的后台管理功能，</div>
-                  <div>便捷的可视化编辑器，</div>
-                  <div>方便的媒体管理面板，</div>
-                  <div>强大的内置访问统计，</div>
-                  <div>经济的无服务器模式，</div>
-                  <div>可靠的系统安全防御。</div>
+                <div>
+                  <div className="mt-10">
+                    {config.getBlockContent(1, "bottom").map((line, index) => (
+                      <div key={index} data-fade-char>
+                        {line}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div>
-                <div className="mt-10">
-                  <div data-fade-char>共有文章 1128 篇，</div>
-                  <div data-fade-char>收录作品 12 件。</div>
-                </div>
-              </div>
-            </GridItem>
-            <GridItem
-              areas={[12]}
-              width={14}
-              height={0.1}
-              className="flex items-center uppercase text-2xl"
-            >
-              <LinkButton
-                mode="link"
-                href="/about"
-                text="Learn more about me"
-              />
-            </GridItem>
-          </RowGrid>
+              </GridItem>
+              {(config.getBlockFooterLink(1) ||
+                config.getBlockFooterDesc(1)) && (
+                <GridItem
+                  areas={[12]}
+                  width={14}
+                  height={0.1}
+                  className="flex items-center uppercase text-2xl"
+                >
+                  <LinkButton
+                    mode="link"
+                    href={config.getBlockFooterLink(1)}
+                    text={config.getBlockFooterDesc(1)}
+                  />
+                </GridItem>
+              )}
+            </RowGrid>
+          )}
           <RowGrid>
             <GridItem
               areas={[1, 2, 3, 4, 5, 6]}
@@ -167,7 +194,9 @@ export default function Home() {
               mobileIndex={2}
               className="flex items-center px-10 text-2xl bg-primary text-primary-foreground uppercase"
             >
-              <span data-fade-word>My main tech stack includes</span>
+              <span data-fade-word>
+                {config.getComponentHeader("works-description")}
+              </span>
             </GridItem>
             <GridItem
               areas={[2, 3, 4, 5, 6]}
@@ -177,10 +206,7 @@ export default function Home() {
             >
               <div className="text-2xl block">
                 <div data-fade-word>
-                  React / Next.js / TypeScript / JavaScript / TailwindCSS /
-                  Node.js / Express.js / Serverless / GraphQL / PostgreSQL /
-                  MySQL / Redis / Docker / Kubernetes / Webpack / Vite / C / C++
-                  / C# / Jest / Cypress / Shell ...
+                  {config.getComponentContent("works-description")}
                 </div>
               </div>
             </GridItem>
@@ -239,20 +265,11 @@ export default function Home() {
               className="flex items-center px-10 py-15"
             >
               <div className="text-2xl block" data-line-reveal>
-                <div>不止这些。</div>
-                <div>想要查看更多？</div>
-                <div>前往我的 Github 来查看我的所有项目，</div>
-                <div>或者在 Projects 页面看看相关描述。</div>
-                <br />
-                <div data-fade>
-                  Github:
-                  <Link
-                    href="https://github.com/RavelloH"
-                    className="underline"
-                  >
-                    @RavelloH
-                  </Link>
-                </div>
+                {config
+                  .getComponentContentArray("works-summary")
+                  ?.map((item, index) => {
+                    return <div key={index}>{item || " "}</div>;
+                  })}
               </div>
             </GridItem>
             <GridItem
@@ -264,11 +281,86 @@ export default function Home() {
             >
               <LinkButton
                 mode="link"
-                href="/projects"
-                text="View more projects"
+                href={config.getComponentFooterLink("works-summary", "/works")}
+                text={config.getComponentFooterDesc(
+                  "works-summary",
+                  "View more projects",
+                )}
               />
             </GridItem>
           </RowGrid>
+          {config.isBlockEnabled(2) && (
+            <RowGrid>
+              {config.getBlockHeader(2) && (
+                <GridItem
+                  areas={[1]}
+                  width={14}
+                  height={0.1}
+                  className="bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl h-full"
+                >
+                  <span>{config.getBlockHeader(2)}</span>
+                </GridItem>
+              )}
+
+              <GridItem
+                areas={getBlocksAreas(
+                  2,
+                  !!config.getBlockHeader(2),
+                  !!(
+                    config.getBlockFooterLink(2) || config.getBlockFooterDesc(2)
+                  ),
+                )}
+                width={
+                  14 /
+                  getBlocksAreas(
+                    2,
+                    !!config.getBlockHeader(2),
+                    !!(
+                      config.getBlockFooterLink(2) ||
+                      config.getBlockFooterDesc(2)
+                    ),
+                  ).length
+                }
+                height={1}
+                className="px-10 py-15 text-2xl flex flex-col justify-between"
+              >
+                <div>
+                  <div className="text-7xl" data-fade-char>
+                    <p>{config.getBlockTitle(2)}</p>
+                  </div>
+                  <div className="block mt-4" data-line-reveal>
+                    {config.getBlockContent(2).map((line, index) => (
+                      <div key={index}>{line}</div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="mt-10">
+                    {config.getBlockContent(2, "bottom").map((line, index) => (
+                      <div key={index} data-fade-char>
+                        {line}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </GridItem>
+              {(config.getBlockFooterLink(2) ||
+                config.getBlockFooterDesc(2)) && (
+                <GridItem
+                  areas={[12]}
+                  width={14}
+                  height={0.1}
+                  className="flex items-center uppercase text-2xl"
+                >
+                  <LinkButton
+                    mode="link"
+                    href={config.getBlockFooterLink(2)}
+                    text={config.getBlockFooterDesc(2)}
+                  />
+                </GridItem>
+              )}
+            </RowGrid>
+          )}
           <RowGrid>
             <GridItem
               areas={[1, 2, 3]}
@@ -352,6 +444,78 @@ export default function Home() {
               </div>
             </GridItem>
           </RowGrid>
+          {config.isBlockEnabled(3) && (
+            <RowGrid>
+              {config.getBlockHeader(3) && (
+                <GridItem
+                  areas={[1]}
+                  width={14}
+                  height={0.1}
+                  className="bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl h-full"
+                >
+                  <span>{config.getBlockHeader(3)}</span>
+                </GridItem>
+              )}
+
+              <GridItem
+                areas={getBlocksAreas(
+                  3,
+                  !!config.getBlockHeader(3),
+                  !!(
+                    config.getBlockFooterLink(3) || config.getBlockFooterDesc(3)
+                  ),
+                )}
+                width={
+                  14 /
+                  getBlocksAreas(
+                    3,
+                    !!config.getBlockHeader(3),
+                    !!(
+                      config.getBlockFooterLink(3) ||
+                      config.getBlockFooterDesc(3)
+                    ),
+                  ).length
+                }
+                height={1}
+                className="px-10 py-15 text-2xl flex flex-col justify-between"
+              >
+                <div>
+                  <div className="text-7xl" data-fade-char>
+                    <p>{config.getBlockTitle(3)}</p>
+                  </div>
+                  <div className="block mt-4" data-line-reveal>
+                    {config.getBlockContent(3).map((line, index) => (
+                      <div key={index}>{line}</div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="mt-10">
+                    {config.getBlockContent(3, "bottom").map((line, index) => (
+                      <div key={index} data-fade-char>
+                        {line}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </GridItem>
+              {(config.getBlockFooterLink(3) ||
+                config.getBlockFooterDesc(3)) && (
+                <GridItem
+                  areas={[12]}
+                  width={14}
+                  height={0.1}
+                  className="flex items-center uppercase text-2xl"
+                >
+                  <LinkButton
+                    mode="link"
+                    href={config.getBlockFooterLink(3)}
+                    text={config.getBlockFooterDesc(3)}
+                  />
+                </GridItem>
+              )}
+            </RowGrid>
+          )}
           <RowGrid>
             <GridItem
               areas={[1, 2, 3, 4, 5]}
@@ -431,56 +595,78 @@ export default function Home() {
               </div>
             </GridItem>
           </RowGrid>
-          <RowGrid>
-            <GridItem
-              areas={[1]}
-              width={14}
-              height={0.1}
-              className="bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl"
-            >
-              <span>Want to...</span>
-            </GridItem>
-            <GridItem
-              areas={[2, 3, 4, 5, 6, 7, 8, 9, 10, 11]}
-              width={1.4}
-              height={1}
-              className="px-10 py-15 text-2xl flex flex-col justify-between"
-            >
-              <div>
-                <div className="text-7xl" data-fade-char>
-                  Contact me / 联系我
-                </div>
-                <div className="block mt-4" data-line-reveal>
-                  <div>学习交流?</div>
-                  <div>洽谈合作?</div>
-                  <div>交个朋友?</div>
-                  <div>......</div>
-                  <div>欢迎通过邮箱联系我：</div>
-                  <div>
-                    <Link href="mailto:me@ravelloh.com">me@ravelloh.com</Link>
+          {config.isBlockEnabled(4) && (
+            <RowGrid>
+              {config.getBlockHeader(4) && (
+                <GridItem
+                  areas={[1]}
+                  width={14}
+                  height={0.1}
+                  className="bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl h-full"
+                >
+                  <span>{config.getBlockHeader(4)}</span>
+                </GridItem>
+              )}
+
+              <GridItem
+                areas={getBlocksAreas(
+                  4,
+                  !!config.getBlockHeader(4),
+                  !!(
+                    config.getBlockFooterLink(4) || config.getBlockFooterDesc(4)
+                  ),
+                )}
+                width={
+                  14 /
+                  getBlocksAreas(
+                    4,
+                    !!config.getBlockHeader(4),
+                    !!(
+                      config.getBlockFooterLink(4) ||
+                      config.getBlockFooterDesc(4)
+                    ),
+                  ).length
+                }
+                height={1}
+                className="px-10 py-15 text-2xl flex flex-col justify-between"
+              >
+                <div>
+                  <div className="text-7xl" data-fade-char>
+                    <p>{config.getBlockTitle(4)}</p>
+                  </div>
+                  <div className="block mt-4" data-line-reveal>
+                    {config.getBlockContent(4).map((line, index) => (
+                      <div key={index}>{line}</div>
+                    ))}
                   </div>
                 </div>
-              </div>
-              <div>
-                <div className="mt-10">
-                  <div data-fade-char>或者，不用那么正式，</div>
-                  <div data-fade-char>直接使用下方的站内信系统和我聊聊。</div>
+                <div>
+                  <div className="mt-10">
+                    {config.getBlockContent(4, "bottom").map((line, index) => (
+                      <div key={index} data-fade-char>
+                        {line}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </GridItem>
-            <GridItem
-              areas={[12]}
-              width={14}
-              height={0.1}
-              className="flex items-center uppercase text-2xl"
-            >
-              <LinkButton
-                mode="link"
-                href="/message?uid=1"
-                text="Start chatting with me"
-              />
-            </GridItem>
-          </RowGrid>
+              </GridItem>
+              {(config.getBlockFooterLink(4) ||
+                config.getBlockFooterDesc(4)) && (
+                <GridItem
+                  areas={[12]}
+                  width={14}
+                  height={0.1}
+                  className="flex items-center uppercase text-2xl"
+                >
+                  <LinkButton
+                    mode="link"
+                    href={config.getBlockFooterLink(4)}
+                    text={config.getBlockFooterDesc(4)}
+                  />
+                </GridItem>
+              )}
+            </RowGrid>
+          )}
         </HorizontalScroll>
       </MainLayout>
     </>

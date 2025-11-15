@@ -55,7 +55,7 @@ export default function DashboardPagesStats() {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, []); // 移除 fetchData 依赖，只在组件挂载时执行一次
 
   const getSummary = (result: StatsData) => {
     if (!result) return null;
