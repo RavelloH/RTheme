@@ -9,6 +9,7 @@ import DashboardAuditStats from "./DashboardAuditStats";
 import DashboardPostsStats from "./DashboardPostsStats";
 import DashboardTagsStats from "./DashboardTagsStats";
 import DashboardCategoriesStats from "./DashboardCategoriesStats";
+import DashboardPagesStats from "./DashboardPagesStats";
 
 export const metadata = await generateMetadata(
   {
@@ -38,10 +39,25 @@ export default function AdminDashboard() {
           <GridItem areas={[5, 6, 7, 8]} width={3} height={0.5}>
             <DashboardPostsStats />
           </GridItem>
+          <GridItem areas={[9, 10, 11, 12]} width={3} height={0.5}>
+            <div className="flex items-center justify-center h-full">
+              访问统计图表
+            </div>
+          </GridItem>
         </RowGrid>
         <RowGrid>
           <GridItem areas={[1, 2, 3, 4]} width={3} height={0.5}>
             <DashboardUsersStats />
+          </GridItem>
+          <GridItem areas={[5, 6, 7, 8]} width={3} height={0.5}>
+            <div className="flex items-center justify-center h-full">
+              评论信息图表
+            </div>
+          </GridItem>
+          <GridItem areas={[9, 10, 11, 12]} width={3} height={0.5}>
+            <div className="flex items-center justify-center h-full">
+              媒体统计图表
+            </div>
           </GridItem>
         </RowGrid>
         <RowGrid>
@@ -50,6 +66,21 @@ export default function AdminDashboard() {
           </GridItem>
           <GridItem areas={[5, 6, 7, 8]} width={3} height={0.5}>
             <DashboardCategoriesStats />
+          </GridItem>
+          <GridItem areas={[9, 10, 11, 12]} width={3} height={0.5}>
+            <div className="flex items-center justify-center h-full">
+              作品信息图表
+            </div>
+          </GridItem>
+        </RowGrid>
+        <RowGrid>
+          <GridItem areas={[1, 2, 3, 4]} width={3} height={0.5}>
+            <DashboardPagesStats />
+          </GridItem>
+          <GridItem areas={[5, 6, 7, 8]} width={3} height={0.5}>
+            <div className="flex items-center justify-center h-full">
+              安全信息统计
+            </div>
           </GridItem>
           <GridItem areas={[9, 10, 11, 12]} width={3} height={0.5}>
             <DashboardAuditStats />
