@@ -9,13 +9,33 @@ import MainLayout from "@/components/MainLayout";
 import HomeTitle from "./home/HomeTitle";
 import HomeSlogan from "./home/HomeSlogan";
 import LinkButton from "@/components/LinkButton";
-import { getSystemPageConfig, getBlocksAreas } from "@/lib/server/pageCache";
+import {
+  getSystemPageConfig,
+  getBlocksAreas,
+  getRawPage,
+} from "@/lib/server/pageCache";
 import { createPageConfigBuilder } from "@/lib/server/pageUtils";
+import Custom404 from "./not-found";
+import { getConfig } from "@/lib/server/configCache";
+
+// 获取系统页面配置
+const page = await getRawPage("/");
+const config = createPageConfigBuilder(getSystemPageConfig(page));
+
+// 获取配置
+const [siteTitle, siteSlogan] = await Promise.all([
+  getConfig<string>("site.title"),
+  getConfig<string>("site.slogan.primary"),
+]);
 
 export const metadata = await generateMetadata(
   {
-    title: "首页",
-    description: "欢迎访问我们的网站",
+    title: page?.title,
+    description: page?.metaDescription,
+    keywords: page?.metaKeywords,
+    robots: {
+      index: page?.robotsIndex,
+    },
   },
   {
     pathname: "/",
@@ -23,9 +43,9 @@ export const metadata = await generateMetadata(
 );
 
 export default async function Home() {
-  // 获取系统页面配置
-  const systemConfig = await getSystemPageConfig("/");
-  const config = createPageConfigBuilder(systemConfig);
+  if (!page || page.status !== "ACTIVE" || page.deletedAt) {
+    return <Custom404 />;
+  }
   return (
     <>
       <MainLayout type="horizontal">
@@ -52,7 +72,7 @@ export default async function Home() {
               height={0.3}
               className="flex items-center text-8xl overflow-hidden"
             >
-              <HomeTitle title={"RavelloH's Blog"} />
+              <HomeTitle title={siteTitle} />
             </GridItem>
             <GridItem
               areas={[10, 11, 12]}
@@ -60,7 +80,7 @@ export default async function Home() {
               height={0.3}
               className=" flex items-center justify-start text-8xl"
             >
-              <HomeSlogan slogan={"Beginning of meditation."} />
+              <HomeSlogan slogan={siteSlogan} />
             </GridItem>
           </RowGrid>
           {config.isBlockEnabled(1) && (

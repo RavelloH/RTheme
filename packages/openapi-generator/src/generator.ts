@@ -169,9 +169,16 @@ export async function generateOpenAPISpec(): Promise<OpenAPISpec> {
     // 导入所有API模块来触发schema注册
     await import("@repo/shared-types/api/common");
     await import("@repo/shared-types/api/auth");
+    await import("@repo/shared-types/api/page");
     await import("@repo/shared-types/api/post");
     await import("@repo/shared-types/api/user");
     await import("@repo/shared-types/api/audit");
+    await import("@repo/shared-types/api/setting");
+    await import("@repo/shared-types/api/tag");
+    await import("@repo/shared-types/api/category");
+    await import("@repo/shared-types/api/captcha");
+    await import("@repo/shared-types/api/doctor");
+    await import("@repo/shared-types/api/stats");
     // 你可以在这里添加更多的API模块导入
 
     // 获取所有已注册的schemas
