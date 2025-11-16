@@ -749,8 +749,63 @@ export default function HorizontalScroll({
           content.querySelectorAll("[data-line-reveal]");
 
         lineRevealElements.forEach((element) => {
-          // 获取所有直接子元素作为"行"
-          const lines = Array.from(element.children) as HTMLElement[];
+          // 处理文本换行：获取所有直接子元素作为"行"，如果没有子元素则创建文本行
+          let lines: HTMLElement[] = [];
+
+          if (element.children.length === 0) {
+            // 如果没有子元素，说明是纯文本，需要按换行符分割
+            const text = element.textContent || "";
+            const textLines = text
+              .split("\n")
+              .filter((line) => line.trim().length > 0);
+
+            // 清空原内容
+            element.innerHTML = "";
+
+            // 为每行文本创建一个 span 元素
+            textLines.forEach((lineText, index) => {
+              const span = document.createElement("span");
+              span.textContent = lineText;
+              span.style.display = "block";
+              element.appendChild(span);
+
+              // 如果不是最后一行，添加一个空行用于换行
+              if (index < textLines.length - 1) {
+                const emptySpan = document.createElement("span");
+                emptySpan.innerHTML = "&nbsp;";
+                emptySpan.style.display = "block";
+                emptySpan.style.height = "0.1em";
+                element.appendChild(emptySpan);
+              }
+            });
+
+            lines = Array.from(element.children) as HTMLElement[];
+          } else {
+            // 如果有子元素，检查是否需要插入换行
+            lines = Array.from(element.children) as HTMLElement[];
+
+            // 检查是否有空白的子元素（内容为空格或完全为空）
+            let hasEmptyElements = false;
+            lines.forEach((child) => {
+              const text = child.textContent || "";
+              if (text.trim() === "" || text === " ") {
+                hasEmptyElements = true;
+              }
+            });
+
+            if (hasEmptyElements) {
+              // 如果有空白子元素，直接在这些元素中插入换行符
+              lines.forEach((child) => {
+                const text = child.textContent || "";
+                if (text.trim() === "" || text === " ") {
+                  // 将空白元素的内容设置为换行符
+                  child.innerHTML = "&nbsp;";
+                  child.style.display = "block";
+                  child.style.height = "1em"; // 设置高度为1em，确保有可见的空行效果
+                }
+              });
+            }
+          }
 
           // 初始状态：隐藏所有行
           lines.forEach((line) => {
@@ -1344,8 +1399,63 @@ export default function HorizontalScroll({
             content.querySelectorAll("[data-line-reveal]");
 
           lineRevealElements.forEach((element) => {
-            // 获取所有直接子元素作为"行"
-            const lines = Array.from(element.children) as HTMLElement[];
+            // 处理文本换行：获取所有直接子元素作为"行"，如果没有子元素则创建文本行
+            let lines: HTMLElement[] = [];
+
+            if (element.children.length === 0) {
+              // 如果没有子元素，说明是纯文本，需要按换行符分割
+              const text = element.textContent || "";
+              const textLines = text
+                .split("\n")
+                .filter((line) => line.trim().length > 0);
+
+              // 清空原内容
+              element.innerHTML = "";
+
+              // 为每行文本创建一个 span 元素
+              textLines.forEach((lineText, index) => {
+                const span = document.createElement("span");
+                span.textContent = lineText;
+                span.style.display = "block";
+                element.appendChild(span);
+
+                // 如果不是最后一行，添加一个空行用于换行
+                if (index < textLines.length - 1) {
+                  const emptySpan = document.createElement("span");
+                  emptySpan.innerHTML = "&nbsp;";
+                  emptySpan.style.display = "block";
+                  emptySpan.style.height = "0.1em";
+                  element.appendChild(emptySpan);
+                }
+              });
+
+              lines = Array.from(element.children) as HTMLElement[];
+            } else {
+              // 如果有子元素，检查是否有空白的子元素需要插入换行
+              lines = Array.from(element.children) as HTMLElement[];
+
+              // 检查是否有空白的子元素（内容为空格或完全为空）
+              let hasEmptyElements = false;
+              lines.forEach((child) => {
+                const text = child.textContent || "";
+                if (text.trim() === "" || text === " ") {
+                  hasEmptyElements = true;
+                }
+              });
+
+              if (hasEmptyElements) {
+                // 如果有空白子元素，直接在这些元素中插入换行符
+                lines.forEach((child) => {
+                  const text = child.textContent || "";
+                  if (text.trim() === "" || text === " ") {
+                    // 将空白元素的内容设置为换行符
+                    child.innerHTML = "&nbsp;";
+                    child.style.display = "block";
+                    child.style.height = "1em"; // 设置高度为1em，确保有可见的空行效果
+                  }
+                });
+              }
+            }
 
             // 初始状态：隐藏所有行
             lines.forEach((line) => {

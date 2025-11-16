@@ -124,7 +124,7 @@ export default async function Home() {
                   </div>
                   <div className="block mt-4" data-line-reveal>
                     {config.getBlockContent(1).map((line, index) => (
-                      <div key={index}>{line}</div>
+                      <div key={index}>{line || " "}</div>
                     ))}
                   </div>
                 </div>
@@ -132,7 +132,7 @@ export default async function Home() {
                   <div className="mt-10">
                     {config.getBlockContent(1, "bottom").map((line, index) => (
                       <div key={index} data-fade-char>
-                        {line}
+                        {line || " "}
                       </div>
                     ))}
                   </div>
@@ -350,7 +350,7 @@ export default async function Home() {
                   </div>
                   <div className="block mt-4" data-line-reveal>
                     {config.getBlockContent(2).map((line, index) => (
-                      <div key={index}>{line}</div>
+                      <div key={index}>{line || " "}</div>
                     ))}
                   </div>
                 </div>
@@ -358,7 +358,7 @@ export default async function Home() {
                   <div className="mt-10">
                     {config.getBlockContent(2, "bottom").map((line, index) => (
                       <div key={index} data-fade-char>
-                        {line}
+                        {line || " "}
                       </div>
                     ))}
                   </div>
@@ -505,7 +505,7 @@ export default async function Home() {
                   </div>
                   <div className="block mt-4" data-line-reveal>
                     {config.getBlockContent(3).map((line, index) => (
-                      <div key={index}>{line}</div>
+                      <div key={index}>{line || " "}</div>
                     ))}
                   </div>
                 </div>
@@ -513,7 +513,7 @@ export default async function Home() {
                   <div className="mt-10">
                     {config.getBlockContent(3, "bottom").map((line, index) => (
                       <div key={index} data-fade-char>
-                        {line}
+                        {line || " "}
                       </div>
                     ))}
                   </div>
@@ -656,7 +656,7 @@ export default async function Home() {
                   </div>
                   <div className="block mt-4" data-line-reveal>
                     {config.getBlockContent(4).map((line, index) => (
-                      <div key={index}>{line}</div>
+                      <div key={index}>{line || " "}</div>
                     ))}
                   </div>
                 </div>
@@ -664,7 +664,7 @@ export default async function Home() {
                   <div className="mt-10">
                     {config.getBlockContent(4, "bottom").map((line, index) => (
                       <div key={index} data-fade-char>
-                        {line}
+                        {line || " "}
                       </div>
                     ))}
                   </div>

@@ -321,10 +321,12 @@ export default function PagesTable() {
     }
 
     if (Array.isArray(originalValue)) {
-      return rawValue
-        .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0);
+      // 保留用户输入的确切内容，包括行尾空格和空行
+      // 只有当输入为空时才返回空数组
+      if (rawValue === "") {
+        return [];
+      }
+      return rawValue.split("\n");
     }
 
     if (typeof originalValue === "string" && isDateString(originalValue)) {
