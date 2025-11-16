@@ -160,6 +160,17 @@ function executeNavigationWithTransition(
   }, 500);
 }
 
+// 提取路径末尾的数字
+function extractTrailingNumber(path: string): number | null {
+  const segments = path.split("/").filter((segment) => segment !== "");
+  if (segments.length === 0) return null;
+
+  const lastSegment = segments[segments.length - 1];
+  const numberMatch = lastSegment?.match(/^(\d+)$/);
+
+  return numberMatch ? parseInt(numberMatch[1] || "0", 10) : null;
+}
+
 // 判断水平方向导航
 function handleHorizontalNavigation(
   oldPath: string,
@@ -186,6 +197,32 @@ function handleHorizontalNavigation(
   const isLeft = leftMenus.some((menu) => menu.slug === targetSlug);
   const isRight = rightMenus.some((menu) => menu.slug === targetSlug);
   const isHome = targetSlug === "" || newPath === "/";
+
+  // 新增：检查路径末尾数字比较
+  const oldNumber = extractTrailingNumber(oldPath);
+  const newNumber = extractTrailingNumber(newPath);
+
+  if (oldNumber !== null && newNumber !== null) {
+    // 如果两个路径的末尾都是数字，比较它们的大小
+    const oldPathWithoutNumber = oldPath.replace(/\/\d+$/, "");
+    const newPathWithoutNumber = newPath.replace(/\/\d+$/, "");
+
+    // 确保是同一路径的不同页码
+    if (oldPathWithoutNumber === newPathWithoutNumber) {
+      let direction: "up" | "down" | "unknown";
+
+      if (newNumber > oldNumber) {
+        direction = "down"; // 数字增大，向上滑动
+      } else if (newNumber < oldNumber) {
+        direction = "up"; // 数字减小，向下滑动
+      } else {
+        direction = "unknown"; // 数字相同
+      }
+
+      executeNavigationWithTransition(newPath, router, broadcast, direction);
+      return;
+    }
+  }
 
   // MAIN 菜单与其他菜单之间的导航
   if (oldIsMainMenu !== newIsMainMenu) {

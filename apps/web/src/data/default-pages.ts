@@ -41,7 +41,7 @@ export const defaultPages: DefaultPage[] = [
         {
           id: 1,
           description:
-            "自定义块1，显示在Slogen与“作品”之间。正文下半部分将显示文章、作品计数。使用 {works} 来表示作品数，{posts} 来表示文章数",
+            "自定义块1，显示在Slogen与“作品”之间。正文下半部分可显示文章、作品计数。",
           enabled: true,
           content: {
             header: {
@@ -66,7 +66,8 @@ export const defaultPages: DefaultPage[] = [
                 ],
                 bottom: ["共有文章 {posts} 篇，", "收录作品 {works} 件。"],
               },
-              description: "正文文本，分别显示在正文顶部和底部",
+              description:
+                "正文文本，分别显示在正文顶部和底部。使用 {works} 来表示作品数，{posts} 来表示文章数",
             },
             footer: {
               value: {
@@ -236,7 +237,78 @@ export const defaultPages: DefaultPage[] = [
     slug: "/posts",
     content: "",
     contentType: "MARKDOWN",
-    config: {},
+    config: {
+      blocks: [
+        {
+          id: 1,
+          description:
+            "自定义块1，显示在页面开头。可显示文章统计信息。标题下方将显示搜索栏。",
+          enabled: true,
+          content: {
+            header: {
+              value: "Thoughts. Notes. Stories.",
+              description: "头部显示文本",
+            },
+            title: {
+              value: "Posts / 文章",
+              description: "标题文本",
+            },
+            content: {
+              value: {
+                top: [
+                  "记录 & 索引所有文章。",
+                  "",
+                  "最近更新于 {lastPublishDays} 天前。",
+                  "自 {firstPublishAt} 以来，共索引 {posts} 篇文章。",
+                ],
+                bottom: [
+                  "第 {page} 页，共 {totalPage} 页。",
+                  "正在查看第 {firstPage} - {lastPage} 篇文章。",
+                ],
+              },
+              description:
+                "正文文本，分别显示在正文顶部和底部。使用 {lastPublishDays} 来表示距离上次更新所过的天数，{firstPublishAt} 来表示首次发布的日期，{posts} 来表示文章数，{page} 当前页码，{totalPage} 总页数，{firstPage} 当前页首篇文章序号，{lastPage} 当前页末篇文章序号",
+            },
+            footer: {
+              value: {
+                link: "",
+                description: "",
+              },
+              description: "底部显示文本，可提供链接用于跳转",
+            },
+          },
+        },
+        {
+          id: 2,
+          description: "自定义块2，显示在页面结尾。",
+          enabled: false,
+          content: {
+            header: {
+              value: "",
+              description: "头部显示文本",
+            },
+            title: {
+              value: "",
+              description: "标题文本",
+            },
+            content: {
+              value: {
+                top: [""],
+                bottom: [""],
+              },
+              description: "正文文本，分别显示在正文顶部和底部",
+            },
+            footer: {
+              value: {
+                link: "",
+                description: "",
+              },
+              description: "底部显示文本，可提供链接用于跳转",
+            },
+          },
+        },
+      ],
+    },
     status: "ACTIVE",
     isSystemPage: true,
     // SEO 字段

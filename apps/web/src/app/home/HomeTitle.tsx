@@ -20,8 +20,13 @@ export default function HomeTitle({ title }: { title: string }) {
       <span className="px-6">/</span>
     </Marquee>
   ) : (
-    <div data-fade data-parallax="-0.5" className="p-12 font-bold">
-      <span>{title}</span>
+    <div
+      data-fade
+      data-parallax="-0.5"
+      className="p-12 font-bold"
+      data-fade-char
+    >
+      <h1>{title}</h1>
     </div>
   );
 }
