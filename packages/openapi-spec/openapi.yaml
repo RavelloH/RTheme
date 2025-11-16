@@ -822,9 +822,6 @@ paths:
                     - ACTIVE
                     - SUSPENDED
                   description: 页面状态
-                metaTitle:
-                  type: string
-                  description: SEO 标题
                 metaDescription:
                   type: string
                   description: SEO 描述
@@ -1233,9 +1230,6 @@ paths:
                   type: string
                   format: date-time
                   description: 发布时间
-                metaTitle:
-                  type: string
-                  description: SEO 标题
                 metaDescription:
                   type: string
                   description: SEO 描述
@@ -5665,9 +5659,6 @@ components:
               featuredImage:
                 nullable: true
                 type: string
-              metaTitle:
-                nullable: true
-                type: string
               metaDescription:
                 nullable: true
                 type: string
@@ -5696,7 +5687,6 @@ components:
               - categories
               - tags
               - featuredImage
-              - metaTitle
               - metaDescription
               - metaKeywords
               - robotsIndex
@@ -5796,9 +5786,6 @@ components:
             featuredImage:
               nullable: true
               type: string
-            metaTitle:
-              nullable: true
-              type: string
             metaDescription:
               nullable: true
               type: string
@@ -5828,7 +5815,6 @@ components:
             - categories
             - tags
             - featuredImage
-            - metaTitle
             - metaDescription
             - metaKeywords
             - robotsIndex
@@ -5873,9 +5859,6 @@ components:
         featuredImage:
           type: string
           maxLength: 255
-        metaTitle:
-          type: string
-          maxLength: 60
         metaDescription:
           type: string
           maxLength: 160
@@ -5961,9 +5944,6 @@ components:
           type: boolean
         publishedAt:
           type: string
-        metaTitle:
-          type: string
-          maxLength: 60
         metaDescription:
           type: string
           maxLength: 160
@@ -6071,9 +6051,6 @@ components:
           type: boolean
         publishedAt:
           type: string
-        metaTitle:
-          type: string
-          maxLength: 60
         metaDescription:
           type: string
           maxLength: 160

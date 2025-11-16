@@ -38,7 +38,6 @@ interface PageItem {
   createdAt: Date;
   updatedAt: Date;
   isDefault: boolean;
-  metaTitle?: string | null;
   metaDescription?: string | null;
   metaKeywords?: string | null;
   userUid?: number | null;
@@ -128,7 +127,6 @@ async function generateMenuCache() {
           createdAt: Date;
           updatedAt: Date;
           isDefault: boolean;
-          metaTitle?: string | null;
           metaDescription?: string | null;
           metaKeywords?: string | null;
           userUid?: number | null;
@@ -156,7 +154,6 @@ async function generateMenuCache() {
               createdAt: menu.page.createdAt,
               updatedAt: menu.page.updatedAt,
               isDefault: menu.page.isDefault,
-              metaTitle: menu.page.metaTitle,
               metaDescription: menu.page.metaDescription,
               metaKeywords: menu.page.metaKeywords,
               userUid: menu.page.userUid,

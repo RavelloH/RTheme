@@ -67,7 +67,6 @@ export default async function EditPostPage(props: Props) {
               isPinned: post.isPinned,
               allowComments: post.allowComments,
               robotsIndex: post.robotsIndex,
-              metaTitle: post.metaTitle || "",
               metaDescription: post.metaDescription || "",
               metaKeywords: post.metaKeywords || "",
               featuredImage: post.featuredImage || "",

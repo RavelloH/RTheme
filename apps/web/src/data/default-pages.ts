@@ -9,17 +9,18 @@ type JsonObject = { [key: string]: JsonValue };
 type JsonArray = JsonValue[];
 
 export interface DefaultPage {
-  id: string;
+  id: string; // UUID 字符串，用于指定特定 ID
   title: string;
   slug: string;
   content: string; // Markdown/HTML/MDX 文本内容
   contentType?: "MARKDOWN" | "HTML" | "MDX";
   config?: JsonValue; // 页面配置（用于系统页面的显示设置）
-  excerpt?: string;
   status: "DRAFT" | "ACTIVE" | "SUSPENDED";
-  metaTitle?: string;
+  // SEO 字段
   metaDescription?: string;
   metaKeywords?: string;
+  robotsIndex?: boolean; // SEO 索引控制
+  // 系统字段
   isSystemPage?: boolean; // 是否为系统预设页面
 }
 
@@ -206,9 +207,13 @@ export const defaultPages: DefaultPage[] = [
         },
       ],
     },
-    excerpt: "欢迎来到 NeutralPress - 现代化的内容管理系统",
     status: "ACTIVE",
     isSystemPage: true,
+    // SEO 字段
+    metaDescription:
+      "NeutralPress 是专为博客和内容创作者设计的现代化CMS系统，提供完整的内容管理、发布和分析功能",
+    metaKeywords: "CMS, 内容管理系统, 博客, NeutralPress, 现代化, 内容创作",
+    robotsIndex: true,
   },
   {
     id: "projects-page",
@@ -217,9 +222,13 @@ export const defaultPages: DefaultPage[] = [
     content: "",
     contentType: "MARKDOWN",
     config: {},
-    excerpt: "作品展示页面",
     status: "ACTIVE",
     isSystemPage: true,
+    // SEO 字段
+    metaDescription:
+      "展示个人和团队的项目作品集，包含开源项目、商业案例和技术实践",
+    metaKeywords: "作品集, 项目, 开源, 技术实践, 案例展示, 个人项目",
+    robotsIndex: true,
   },
   {
     id: "posts-page",
@@ -228,9 +237,13 @@ export const defaultPages: DefaultPage[] = [
     content: "",
     contentType: "MARKDOWN",
     config: {},
-    excerpt: "文章列表页面",
     status: "ACTIVE",
     isSystemPage: true,
+    // SEO 字段
+    metaDescription:
+      "分享技术见解、开发经验和行业思考的博客文章，涵盖前端、后端、系统设计等多个领域",
+    metaKeywords: "博客, 技术文章, 开发经验, 前端, 后端, 系统设计, 技术分享",
+    robotsIndex: true,
   },
   {
     id: "categories-page",
@@ -239,9 +252,12 @@ export const defaultPages: DefaultPage[] = [
     content: "",
     contentType: "MARKDOWN",
     config: {},
-    excerpt: "文章分类页面",
     status: "ACTIVE",
     isSystemPage: true,
+    // SEO 字段
+    metaDescription: "按主题和领域分类整理的文章列表，方便快速找到感兴趣的内容",
+    metaKeywords: "文章分类, 内容分类, 主题导航, 文章目录",
+    robotsIndex: true,
   },
   {
     id: "tags-page",
@@ -250,9 +266,12 @@ export const defaultPages: DefaultPage[] = [
     content: "",
     contentType: "MARKDOWN",
     config: {},
-    excerpt: "文章标签页面",
     status: "ACTIVE",
     isSystemPage: true,
+    // SEO 字段
+    metaDescription: "通过标签快速发现相关文章，标签云展示内容的分布和热点话题",
+    metaKeywords: "标签, 标签云, 关键词, 文章标签, 内容索引",
+    robotsIndex: true,
   },
   {
     id: "friends-page",
@@ -261,9 +280,13 @@ export const defaultPages: DefaultPage[] = [
     content: "",
     contentType: "MARKDOWN",
     config: {},
-    excerpt: "友情链接页面",
     status: "ACTIVE",
     isSystemPage: true,
+    // SEO 字段
+    metaDescription:
+      "推荐的优秀网站、技术博客和合作伙伴，包含高质量的技术资源和创意作品",
+    metaKeywords: "友情链接, 推荐网站, 技术博客, 合作伙伴, 网站导航",
+    robotsIndex: true,
   },
   {
     id: "about-page",
@@ -272,8 +295,12 @@ export const defaultPages: DefaultPage[] = [
     content: "",
     contentType: "MARKDOWN",
     config: {},
-    excerpt: "关于页面",
     status: "ACTIVE",
     isSystemPage: true,
+    // SEO 字段
+    metaDescription:
+      "了解 NeutralPress 团队的故事、使命和愿景，以及我们如何为内容创作者提供更好的工具",
+    metaKeywords: "关于我们, 团队介绍, 公司简介, 使命愿景, 团队故事",
+    robotsIndex: true,
   },
 ];

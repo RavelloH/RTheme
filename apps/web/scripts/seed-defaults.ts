@@ -163,12 +163,11 @@ async function seedDefaultPagesAndMenus(prisma: PrismaClient) {
         content: page.content || "",
         contentType: page.contentType || "MARKDOWN",
         config: page.config || null,
-        excerpt: page.excerpt,
         status: page.status,
-        metaTitle: page.metaTitle,
         metaDescription: page.metaDescription,
         metaKeywords: page.metaKeywords,
         isSystemPage: page.isSystemPage || false,
+        robotsIndex: page.robotsIndex ?? true,
       });
       pagesAddedCount++;
     } else {

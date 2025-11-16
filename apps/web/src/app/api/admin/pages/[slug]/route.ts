@@ -75,9 +75,6 @@ import { getPageDetail, updatePage } from "@/actions/page";
  *                 type: string
  *                 enum: [ACTIVE, SUSPENDED]
  *                 description: 页面状态
- *               metaTitle:
- *                 type: string
- *                 description: SEO 标题
  *               metaDescription:
  *                 type: string
  *                 description: SEO 描述
@@ -148,10 +145,8 @@ export async function PATCH(
         title: body.title,
         content: body.content,
         contentType: body.contentType,
-        excerpt: body.excerpt,
         config: body.config,
         status: body.status,
-        metaTitle: body.metaTitle,
         metaDescription: body.metaDescription,
         metaKeywords: body.metaKeywords,
         robotsIndex: body.robotsIndex,

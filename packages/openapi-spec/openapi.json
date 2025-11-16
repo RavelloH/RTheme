@@ -1293,10 +1293,6 @@
                     ],
                     "description": "页面状态"
                   },
-                  "metaTitle": {
-                    "type": "string",
-                    "description": "SEO 标题"
-                  },
                   "metaDescription": {
                     "type": "string",
                     "description": "SEO 描述"
@@ -1937,10 +1933,6 @@
                     "type": "string",
                     "format": "date-time",
                     "description": "发布时间"
-                  },
-                  "metaTitle": {
-                    "type": "string",
-                    "description": "SEO 标题"
                   },
                   "metaDescription": {
                     "type": "string",
@@ -8357,10 +8349,6 @@
                   "nullable": true,
                   "type": "string"
                 },
-                "metaTitle": {
-                  "nullable": true,
-                  "type": "string"
-                },
                 "metaDescription": {
                   "nullable": true,
                   "type": "string"
@@ -8395,7 +8383,6 @@
                 "categories",
                 "tags",
                 "featuredImage",
-                "metaTitle",
                 "metaDescription",
                 "metaKeywords",
                 "robotsIndex",
@@ -8534,10 +8521,6 @@
                 "nullable": true,
                 "type": "string"
               },
-              "metaTitle": {
-                "nullable": true,
-                "type": "string"
-              },
               "metaDescription": {
                 "nullable": true,
                 "type": "string"
@@ -8573,7 +8556,6 @@
               "categories",
               "tags",
               "featuredImage",
-              "metaTitle",
               "metaDescription",
               "metaKeywords",
               "robotsIndex",
@@ -8633,10 +8615,6 @@
           "featuredImage": {
             "type": "string",
             "maxLength": 255
-          },
-          "metaTitle": {
-            "type": "string",
-            "maxLength": 60
           },
           "metaDescription": {
             "type": "string",
@@ -8753,10 +8731,6 @@
           },
           "publishedAt": {
             "type": "string"
-          },
-          "metaTitle": {
-            "type": "string",
-            "maxLength": 60
           },
           "metaDescription": {
             "type": "string",
@@ -8902,10 +8876,6 @@
           },
           "publishedAt": {
             "type": "string"
-          },
-          "metaTitle": {
-            "type": "string",
-            "maxLength": 60
           },
           "metaDescription": {
             "type": "string",

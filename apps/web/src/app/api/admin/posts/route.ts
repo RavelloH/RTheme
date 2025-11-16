@@ -127,7 +127,6 @@ export async function POST(request: NextRequest) {
         isPinned: body.isPinned,
         allowComments: body.allowComments,
         publishedAt: body.publishedAt,
-        metaTitle: body.metaTitle,
         metaDescription: body.metaDescription,
         metaKeywords: body.metaKeywords,
         robotsIndex: body.robotsIndex,

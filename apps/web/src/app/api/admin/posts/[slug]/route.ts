@@ -81,9 +81,6 @@ import { getPostDetail, updatePost } from "@/actions/post";
  *                 type: string
  *                 format: date-time
  *                 description: 发布时间
- *               metaTitle:
- *                 type: string
- *                 description: SEO 标题
  *               metaDescription:
  *                 type: string
  *                 description: SEO 描述
@@ -176,7 +173,6 @@ export async function PATCH(
         isPinned: body.isPinned,
         allowComments: body.allowComments,
         publishedAt: body.publishedAt,
-        metaTitle: body.metaTitle,
         metaDescription: body.metaDescription,
         metaKeywords: body.metaKeywords,
         robotsIndex: body.robotsIndex,

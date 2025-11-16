@@ -231,6 +231,9 @@ export function saveEditorContent(
   isMarkdown: boolean = false,
   key: string = "new",
 ): void {
+  // 检查是否在浏览器环境
+  if (typeof window === "undefined") return;
+
   try {
     // 1. 根据类型处理内容
     const markdown = isMarkdown ? content : htmlToMarkdown(content);
@@ -259,6 +262,9 @@ export function saveEditorContent(
 export function loadEditorContent(
   key: string = "new",
 ): EditorContent[string] | null {
+  // 检查是否在浏览器环境
+  if (typeof window === "undefined") return null;
+
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     if (!data) return null;
@@ -274,6 +280,9 @@ export function loadEditorContent(
  * 从localStorage读取所有编辑器内容
  */
 export function loadAllEditorContent(): EditorContent | null {
+  // 检查是否在浏览器环境
+  if (typeof window === "undefined") return null;
+
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     if (!data) return null;
@@ -289,6 +298,9 @@ export function loadAllEditorContent(): EditorContent | null {
  * @param key - 要清除的键名,如果不提供则清除所有内容
  */
 export function clearEditorContent(key?: string): void {
+  // 检查是否在浏览器环境
+  if (typeof window === "undefined") return;
+
   try {
     if (!key) {
       localStorage.removeItem(STORAGE_KEY);

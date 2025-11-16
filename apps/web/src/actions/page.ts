@@ -93,7 +93,7 @@ export async function getPagesList(
       OR?: Array<{
         title?: { contains: string; mode: "insensitive" };
         slug?: { contains: string; mode: "insensitive" };
-        excerpt?: { contains: string; mode: "insensitive" };
+        metaDescription?: { contains: string; mode: "insensitive" };
       }>;
       status?: { in: ("ACTIVE" | "SUSPENDED")[] };
       isSystemPage?: boolean;
@@ -110,7 +110,7 @@ export async function getPagesList(
         {
           title: { contains: search.trim(), mode: "insensitive" },
           slug: { contains: search.trim(), mode: "insensitive" },
-          excerpt: { contains: search.trim(), mode: "insensitive" },
+          metaDescription: { contains: search.trim(), mode: "insensitive" },
         },
       ];
     }
@@ -174,7 +174,6 @@ export async function getPagesList(
           status: true,
           createdAt: true,
           updatedAt: true,
-          metaTitle: true,
           metaDescription: true,
           metaKeywords: true,
           robotsIndex: true,
@@ -214,7 +213,6 @@ export async function getPagesList(
         username: null,
         nickname: null,
       },
-      metaTitle: page.metaTitle,
       metaDescription: page.metaDescription,
       metaKeywords: page.metaKeywords,
       robotsIndex: page.robotsIndex,
@@ -295,7 +293,6 @@ export async function getPageDetail(
         status: true,
         createdAt: true,
         updatedAt: true,
-        metaTitle: true,
         metaDescription: true,
         metaKeywords: true,
         robotsIndex: true,
@@ -338,7 +335,6 @@ export async function getPageDetail(
         nickname: null,
       },
       config: page.config,
-      metaTitle: page.metaTitle,
       metaDescription: page.metaDescription,
       metaKeywords: page.metaKeywords,
       robotsIndex: page.robotsIndex,
@@ -397,7 +393,6 @@ export async function createPage(
       contentType,
       config,
       status,
-      metaTitle,
       metaDescription,
       metaKeywords,
       robotsIndex,
@@ -425,7 +420,6 @@ export async function createPage(
         contentType,
         config,
         status,
-        metaTitle,
         metaDescription,
         metaKeywords,
         robotsIndex,

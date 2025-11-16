@@ -522,7 +522,6 @@ export async function getPostsList(
         createdAt: true,
         updatedAt: true,
         featuredImage: true,
-        metaTitle: true,
         metaDescription: true,
         metaKeywords: true,
         robotsIndex: true,
@@ -561,7 +560,6 @@ export async function getPostsList(
       createdAt: post.createdAt.toISOString(),
       updatedAt: post.updatedAt.toISOString(),
       featuredImage: post.featuredImage,
-      metaTitle: post.metaTitle,
       metaDescription: post.metaDescription,
       metaKeywords: post.metaKeywords,
       robotsIndex: post.robotsIndex,
@@ -659,7 +657,6 @@ export async function getPostDetail(
         createdAt: true,
         updatedAt: true,
         featuredImage: true,
-        metaTitle: true,
         metaDescription: true,
         metaKeywords: true,
         robotsIndex: true,
@@ -712,7 +709,6 @@ export async function getPostDetail(
       createdAt: post.createdAt.toISOString(),
       updatedAt: post.updatedAt.toISOString(),
       featuredImage: post.featuredImage,
-      metaTitle: post.metaTitle,
       metaDescription: post.metaDescription,
       metaKeywords: post.metaKeywords,
       robotsIndex: post.robotsIndex,
@@ -756,7 +752,6 @@ export async function createPost(
     isPinned = false,
     allowComments = true,
     publishedAt,
-    metaTitle,
     metaDescription,
     metaKeywords,
     robotsIndex = true,
@@ -787,7 +782,6 @@ export async function createPost(
       isPinned,
       allowComments,
       publishedAt,
-      metaTitle,
       metaDescription,
       metaKeywords,
       robotsIndex,
@@ -850,7 +844,6 @@ export async function createPost(
         isPinned,
         allowComments,
         publishedAt: publishedAtDate,
-        metaTitle: metaTitle || null,
         metaDescription: metaDescription || null,
         metaKeywords: metaKeywords || null,
         robotsIndex,
@@ -909,7 +902,6 @@ export async function createPost(
             isPinned,
             allowComments,
             publishedAt: publishedAtDate?.toISOString() || null,
-            metaTitle,
             metaDescription,
             metaKeywords,
             robotsIndex,
@@ -963,7 +955,6 @@ export async function updatePost(
     isPinned,
     allowComments,
     publishedAt,
-    metaTitle,
     metaDescription,
     metaKeywords,
     robotsIndex,
@@ -995,7 +986,6 @@ export async function updatePost(
       isPinned,
       allowComments,
       publishedAt,
-      metaTitle,
       metaDescription,
       metaKeywords,
       robotsIndex,
@@ -1034,7 +1024,6 @@ export async function updatePost(
         isPinned: true,
         allowComments: true,
         publishedAt: true,
-        metaTitle: true,
         metaDescription: true,
         metaKeywords: true,
         robotsIndex: true,
@@ -1099,7 +1088,6 @@ export async function updatePost(
       isPinned?: boolean;
       allowComments?: boolean;
       publishedAt?: Date | null;
-      metaTitle?: string | null;
       metaDescription?: string | null;
       metaKeywords?: string | null;
       robotsIndex?: boolean;
@@ -1146,7 +1134,6 @@ export async function updatePost(
       updateData.publishedAt = publishedAt ? new Date(publishedAt) : null;
     }
 
-    if (metaTitle !== undefined) updateData.metaTitle = metaTitle || null;
     if (metaDescription !== undefined)
       updateData.metaDescription = metaDescription || null;
     if (metaKeywords !== undefined)
@@ -1244,10 +1231,6 @@ export async function updatePost(
         auditOldValue.publishedAt = oldPublishedAt;
         auditNewValue.publishedAt = newPublishedAt;
       }
-    }
-    if (metaTitle !== undefined && metaTitle !== existingPost.metaTitle) {
-      auditOldValue.metaTitle = existingPost.metaTitle;
-      auditNewValue.metaTitle = metaTitle;
     }
     if (
       metaDescription !== undefined &&
@@ -1353,7 +1336,6 @@ export async function updatePosts(
     slug,
     excerpt,
     featuredImage,
-    metaTitle,
     metaDescription,
     metaKeywords,
     robotsIndex,
@@ -1380,7 +1362,6 @@ export async function updatePosts(
       slug,
       excerpt,
       featuredImage,
-      metaTitle,
       metaDescription,
       metaKeywords,
       robotsIndex,
@@ -1434,7 +1415,6 @@ export async function updatePosts(
       slug?: string;
       excerpt?: string;
       featuredImage?: string;
-      metaTitle?: string;
       metaDescription?: string;
       metaKeywords?: string;
       robotsIndex?: boolean;
@@ -1449,7 +1429,6 @@ export async function updatePosts(
     if (slug !== undefined) updateData.slug = slug;
     if (excerpt !== undefined) updateData.excerpt = excerpt;
     if (featuredImage !== undefined) updateData.featuredImage = featuredImage;
-    if (metaTitle !== undefined) updateData.metaTitle = metaTitle;
     if (metaDescription !== undefined)
       updateData.metaDescription = metaDescription;
     if (metaKeywords !== undefined) updateData.metaKeywords = metaKeywords;
@@ -1478,7 +1457,6 @@ export async function updatePosts(
         isPinned: true,
         allowComments: true,
         publishedAt: true,
-        metaTitle: true,
         metaDescription: true,
         metaKeywords: true,
         robotsIndex: true,

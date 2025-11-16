@@ -127,7 +127,6 @@ model Post {
   userUid Int
 
   // SEO
-  metaTitle       String? @db.VarChar(60)
   metaDescription String? @db.VarChar(160)
   metaKeywords    String? @db.VarChar(255)
   robotsIndex     Boolean @default(true)
@@ -298,7 +297,6 @@ model Page {
   isSystemPage Boolean @default(false)
 
   // SEO
-  metaTitle       String? @db.VarChar(60)
   metaDescription String? @db.VarChar(160)
   metaKeywords    String? @db.VarChar(255)
   robotsIndex     Boolean @default(true)

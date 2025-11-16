@@ -28,7 +28,6 @@ export interface PageItem {
   createdAt: Date;
   updatedAt: Date;
   isSystemPage: boolean;
-  metaTitle?: string | null;
   metaDescription?: string | null;
   metaKeywords?: string | null;
   robotsIndex: boolean;
@@ -87,7 +86,6 @@ async function getMenusFromDatabase(): Promise<MenuItem[]> {
           createdAt: Date;
           updatedAt: Date;
           isSystemPage: boolean;
-          metaTitle?: string | null;
           metaDescription?: string | null;
           metaKeywords?: string | null;
           robotsIndex: boolean;
@@ -115,7 +113,6 @@ async function getMenusFromDatabase(): Promise<MenuItem[]> {
               createdAt: menu.page.createdAt,
               updatedAt: menu.page.updatedAt,
               isSystemPage: menu.page.isSystemPage,
-              metaTitle: menu.page.metaTitle,
               metaDescription: menu.page.metaDescription,
               metaKeywords: menu.page.metaKeywords,
               robotsIndex: menu.page.robotsIndex,

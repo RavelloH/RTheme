@@ -88,7 +88,6 @@ export const PostListItemSchema = z.object({
   ),
   // SEO 和其他字段
   featuredImage: z.string().nullable(),
-  metaTitle: z.string().nullable(),
   metaDescription: z.string().nullable(),
   metaKeywords: z.string().nullable(),
   robotsIndex: z.boolean(),
@@ -137,7 +136,6 @@ export const PostDetailSchema = z.object({
   categories: z.array(z.string()),
   tags: z.array(z.string()),
   featuredImage: z.string().nullable(),
-  metaTitle: z.string().nullable(),
   metaDescription: z.string().nullable(),
   metaKeywords: z.string().nullable(),
   robotsIndex: z.boolean(),
@@ -170,7 +168,6 @@ export const UpdatePostsSchema = z.object({
   slug: z.string().optional(),
   excerpt: z.string().max(500).optional(),
   featuredImage: z.string().max(255).optional(),
-  metaTitle: z.string().max(60).optional(),
   metaDescription: z.string().max(160).optional(),
   metaKeywords: z.string().max(255).optional(),
   robotsIndex: z.boolean().optional(),
@@ -206,7 +203,6 @@ export const CreatePostSchema = z.object({
   isPinned: z.boolean().default(false),
   allowComments: z.boolean().default(true),
   publishedAt: z.string().optional(), // ISO 时间字符串
-  metaTitle: z.string().max(60, "SEO 标题过长").optional(),
   metaDescription: z.string().max(160, "SEO 描述过长").optional(),
   metaKeywords: z.string().max(255, "SEO 关键词过长").optional(),
   robotsIndex: z.boolean().default(true),
@@ -247,7 +243,6 @@ export const UpdatePostSchema = z.object({
   isPinned: z.boolean().optional(),
   allowComments: z.boolean().optional(),
   publishedAt: z.string().optional(), // ISO 时间字符串
-  metaTitle: z.string().max(60, "SEO 标题过长").optional(),
   metaDescription: z.string().max(160, "SEO 描述过长").optional(),
   metaKeywords: z.string().max(255, "SEO 关键词过长").optional(),
   robotsIndex: z.boolean().optional(),

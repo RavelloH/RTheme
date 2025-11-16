@@ -86,7 +86,6 @@ export interface PageItem {
   createdAt: Date;
   updatedAt: Date;
   isSystemPage: boolean;
-  metaTitle: string | null;
   metaDescription: string | null;
   metaKeywords: string | null;
   robotsIndex: boolean;
@@ -170,14 +169,12 @@ export async function getPageConfig<T = unknown>(
 
 /**
  * 获取系统页面配置（类型安全）
- * @param slug 页面 slug
+ * @param page 页面对象（来自 getRawPage 的结果）
  * @returns 系统页面配置对象
  */
-export async function getSystemPageConfig(
-  slug: string,
-): Promise<SystemPageConfig | null> {
-  const page = await getRawPage(slug);
-
+export function getSystemPageConfig(
+  page: PageItem | null,
+): SystemPageConfig | null {
   if (!page?.config || typeof page.config !== "object") {
     return null;
   }
@@ -234,7 +231,6 @@ async function getPageFromDatabase(slug: string): Promise<PageItem | null> {
       createdAt: page.createdAt,
       updatedAt: page.updatedAt,
       isSystemPage: page.isSystemPage,
-      metaTitle: page.metaTitle,
       metaDescription: page.metaDescription,
       metaKeywords: page.metaKeywords,
       robotsIndex: page.robotsIndex,
@@ -285,7 +281,6 @@ async function getPageByIdFromDatabase(id: string): Promise<PageItem | null> {
       createdAt: page.createdAt,
       updatedAt: page.updatedAt,
       isSystemPage: page.isSystemPage,
-      metaTitle: page.metaTitle,
       metaDescription: page.metaDescription,
       metaKeywords: page.metaKeywords,
       robotsIndex: page.robotsIndex,
@@ -432,7 +427,6 @@ async function getAllPagesFromDatabase(): Promise<Record<string, PageItem>> {
         createdAt: Date;
         updatedAt: Date;
         isSystemPage: boolean;
-        metaTitle: string | null;
         metaDescription: string | null;
         metaKeywords: string | null;
         robotsIndex: boolean;
@@ -450,7 +444,6 @@ async function getAllPagesFromDatabase(): Promise<Record<string, PageItem>> {
           createdAt: page.createdAt,
           updatedAt: page.updatedAt,
           isSystemPage: page.isSystemPage,
-          metaTitle: page.metaTitle,
           metaDescription: page.metaDescription,
           metaKeywords: page.metaKeywords,
           robotsIndex: page.robotsIndex,

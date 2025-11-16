@@ -89,7 +89,6 @@ export default function PostsTable() {
     isPinned: false,
     allowComments: true,
     robotsIndex: true,
-    metaTitle: "",
     metaDescription: "",
     metaKeywords: "",
     featuredImage: "",
@@ -115,7 +114,6 @@ export default function PostsTable() {
       isPinned: post.isPinned,
       allowComments: post.allowComments,
       robotsIndex: post.robotsIndex,
-      metaTitle: post.metaTitle || "",
       metaDescription: post.metaDescription || "",
       metaKeywords: post.metaKeywords || "",
       featuredImage: post.featuredImage || "",
@@ -199,7 +197,6 @@ export default function PostsTable() {
         formData.isPinned !== editingPost.isPinned ||
         formData.allowComments !== editingPost.allowComments ||
         formData.featuredImage !== (editingPost.featuredImage || "") ||
-        formData.metaTitle !== (editingPost.metaTitle || "") ||
         formData.metaDescription !== (editingPost.metaDescription || "") ||
         formData.metaKeywords !== (editingPost.metaKeywords || "") ||
         formData.robotsIndex !== editingPost.robotsIndex ||
@@ -241,10 +238,6 @@ export default function PostsTable() {
         featuredImage:
           formData.featuredImage !== (editingPost.featuredImage || "")
             ? formData.featuredImage
-            : undefined,
-        metaTitle:
-          formData.metaTitle !== (editingPost.metaTitle || "")
-            ? formData.metaTitle
             : undefined,
         metaDescription:
           formData.metaDescription !== (editingPost.metaDescription || "")
@@ -1175,13 +1168,6 @@ export default function PostsTable() {
             </h3>
             <div className="grid grid-cols-1 gap-6">
               <Input
-                label="SEO 标题"
-                value={formData.metaTitle}
-                onChange={(e) => handleFieldChange("metaTitle", e.target.value)}
-                size="sm"
-                helperText="留空则使用文章标题"
-              />
-              <Input
                 label="SEO 描述"
                 value={formData.metaDescription}
                 onChange={(e) =>
@@ -1189,7 +1175,7 @@ export default function PostsTable() {
                 }
                 rows={2}
                 size="sm"
-                helperText="留空则使用文章摘要"
+                helperText="用于搜索引擎结果展示"
               />
               <Input
                 label="SEO 关键词"

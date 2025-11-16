@@ -85,7 +85,6 @@ export default function Editor({
     isPinned?: boolean;
     allowComments?: boolean;
     robotsIndex?: boolean;
-    metaTitle?: string;
     metaDescription?: string;
     metaKeywords?: string;
     featuredImage?: string;
@@ -117,19 +116,22 @@ export default function Editor({
     useState(false);
   const [currentCodeBlockLanguage, setCurrentCodeBlockLanguage] = useState("");
 
-  // 初始化编辑器类型，从 localStorage 加载上次使用的编辑器类型
+  // 初始化编辑器类型，从 localStorage 加载上次使用的编辑器类型（仅在客户端）
   const [editorType, setEditorType] = useState<string | number>(() => {
-    try {
-      const savedData = localStorage.getItem("editor");
-      if (savedData) {
-        const editorData = JSON.parse(savedData);
-        const savedEditorType = editorData[storageKey]?.config?.editorType;
-        if (savedEditorType) {
-          return savedEditorType;
+    // 检查是否在浏览器环境
+    if (typeof window !== "undefined") {
+      try {
+        const savedData = localStorage.getItem("editor");
+        if (savedData) {
+          const editorData = JSON.parse(savedData);
+          const savedEditorType = editorData[storageKey]?.config?.editorType;
+          if (savedEditorType) {
+            return savedEditorType;
+          }
         }
+      } catch (error) {
+        console.error("Failed to load editor type from localStorage:", error);
       }
-    } catch (error) {
-      console.error("Failed to load editor type from localStorage:", error);
     }
 
     // 如果 localStorage 中没有信息，根据文章的 postMode 来选择编辑器
@@ -162,7 +164,6 @@ export default function Editor({
     isPinned: false,
     allowComments: true,
     robotsIndex: true,
-    metaTitle: "",
     metaDescription: "",
     metaKeywords: "",
     featuredImage: "",
@@ -802,10 +803,17 @@ export default function Editor({
         );
       }
 
-      // 获取当前编辑器内容
-      const currentContent =
-        JSON.parse(localStorage.getItem("editor") || "{}")[storageKey]
-          ?.content || "";
+      // 获取当前编辑器内容（仅在客户端）
+      let currentContent = "";
+      if (typeof window !== "undefined") {
+        try {
+          currentContent =
+            JSON.parse(localStorage.getItem("editor") || "{}")[storageKey]
+              ?.content || "";
+        } catch (error) {
+          console.error("Failed to parse localStorage data:", error);
+        }
+      }
 
       // 确定编辑器模式：visual 和 markdown 都视为 MARKDOWN，mdx 视为 MDX
       const postMode: "MARKDOWN" | "MDX" =
@@ -833,7 +841,6 @@ export default function Editor({
           status,
           isPinned: detailsForm.isPinned,
           allowComments: detailsForm.allowComments,
-          metaTitle: detailsForm.metaTitle || undefined,
           metaDescription: detailsForm.metaDescription || undefined,
           metaKeywords: detailsForm.metaKeywords || undefined,
           robotsIndex: detailsForm.robotsIndex,
@@ -857,7 +864,6 @@ export default function Editor({
           status: status as "DRAFT" | "PUBLISHED",
           isPinned: detailsForm.isPinned,
           allowComments: detailsForm.allowComments,
-          metaTitle: detailsForm.metaTitle || undefined,
           metaDescription: detailsForm.metaDescription || undefined,
           metaKeywords: detailsForm.metaKeywords || undefined,
           robotsIndex: detailsForm.robotsIndex,
@@ -1643,15 +1649,6 @@ export default function Editor({
             </h3>
             <div className="grid grid-cols-1 gap-6">
               <Input
-                label="SEO 标题"
-                value={detailsForm.metaTitle}
-                onChange={(e) =>
-                  handleDetailsFieldChange("metaTitle", e.target.value)
-                }
-                size="sm"
-                helperText="留空则使用文章标题"
-              />
-              <Input
                 label="SEO 描述"
                 value={detailsForm.metaDescription}
                 onChange={(e) =>
@@ -1856,24 +1853,12 @@ export default function Editor({
               </div>
 
               {/* SEO 设置 - 只读展示 */}
-              {(detailsForm.metaTitle ||
-                detailsForm.metaDescription ||
-                detailsForm.metaKeywords) && (
+              {(detailsForm.metaDescription || detailsForm.metaKeywords) && (
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
                     SEO 设置
                   </h3>
                   <div className="grid grid-cols-1 gap-4 bg-muted/20 p-4 rounded-lg">
-                    {detailsForm.metaTitle && (
-                      <div>
-                        <label className="block text-sm font-medium text-foreground mb-1">
-                          SEO 标题
-                        </label>
-                        <p className="text-sm text-foreground/80">
-                          {detailsForm.metaTitle}
-                        </p>
-                      </div>
-                    )}
                     {detailsForm.metaDescription && (
                       <div>
                         <label className="block text-sm font-medium text-foreground mb-1">

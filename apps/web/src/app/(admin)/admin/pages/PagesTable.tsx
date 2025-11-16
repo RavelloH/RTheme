@@ -30,7 +30,6 @@ import { useToast } from "@/ui/Toast";
 import { useNavigateWithTransition } from "@/components/Link";
 
 type ConfigRecord = Record<string, unknown>;
-type PageWithExcerpt = PageListItem & { excerpt?: string | null };
 
 const isConfigObject = (value: unknown): value is ConfigRecord =>
   typeof value === "object" && value !== null;
@@ -71,22 +70,13 @@ const setValueAtPath = (
   setValueAtPath(newChild, rest, val);
 };
 
-const isPageWithExcerpt = (
-  page: PageListItem | null,
-): page is PageWithExcerpt => !!page && "excerpt" in page;
-
-const getPageExcerpt = (page?: PageListItem | null): string =>
-  page && isPageWithExcerpt(page) ? (page.excerpt ?? "") : "";
-
 interface PageFormState {
   title: string;
   slug: string;
-  excerpt: string;
   status: PageListItem["status"];
   contentType: PageListItem["contentType"];
   content: string;
   config: ConfigRecord | null;
-  metaTitle: string;
   metaDescription: string;
   metaKeywords: string;
   robotsIndex: boolean;
@@ -203,12 +193,10 @@ export default function PagesTable() {
   const [formData, setFormData] = useState<PageFormState>({
     title: "",
     slug: "",
-    excerpt: "",
     status: "ACTIVE",
     contentType: "MARKDOWN",
     content: "",
     config: null,
-    metaTitle: "",
     metaDescription: "",
     metaKeywords: "",
     robotsIndex: true,
@@ -690,14 +678,12 @@ export default function PagesTable() {
     setFormData({
       title: pageItem.title,
       slug: pageItem.slug,
-      excerpt: getPageExcerpt(pageItem),
       status: pageItem.status,
       contentType: pageItem.contentType,
       content: "",
       config: isConfigObject(pageItem.config)
         ? (pageItem.config as ConfigRecord)
         : null,
-      metaTitle: pageItem.metaTitle || "",
       metaDescription: pageItem.metaDescription || "",
       metaKeywords: pageItem.metaKeywords || "",
       robotsIndex: pageItem.robotsIndex,
@@ -725,10 +711,8 @@ export default function PagesTable() {
       const hasChanges =
         formData.title !== editingPage.title ||
         (!editingPage.isSystemPage && formData.slug !== editingPage.slug) ||
-        formData.excerpt !== getPageExcerpt(editingPage) ||
         formData.status !== editingPage.status ||
         formData.contentType !== editingPage.contentType ||
-        formData.metaTitle !== (editingPage.metaTitle || "") ||
         formData.metaDescription !== (editingPage.metaDescription || "") ||
         formData.metaKeywords !== (editingPage.metaKeywords || "") ||
         formData.robotsIndex !== editingPage.robotsIndex ||
@@ -750,10 +734,6 @@ export default function PagesTable() {
           !editingPage.isSystemPage && formData.slug !== editingPage.slug
             ? formData.slug
             : undefined,
-        excerpt:
-          formData.excerpt !== getPageExcerpt(editingPage)
-            ? formData.excerpt
-            : undefined,
         status:
           formData.status !== editingPage.status
             ? (formData.status as "ACTIVE" | "SUSPENDED")
@@ -767,10 +747,6 @@ export default function PagesTable() {
           JSON.stringify(finalConfig ?? {}) !==
           JSON.stringify(editingPage.config || {})
             ? (finalConfig ?? undefined)
-            : undefined,
-        metaTitle:
-          formData.metaTitle !== (editingPage.metaTitle || "")
-            ? formData.metaTitle
             : undefined,
         metaDescription:
           formData.metaDescription !== (editingPage.metaDescription || "")
@@ -1357,7 +1333,7 @@ export default function PagesTable() {
         onPageSizeChange={setPageSize}
         onSortChange={handleSortChange}
         onSearchChange={handleSearchChange}
-        searchPlaceholder="搜索标题、路径或摘要..."
+        searchPlaceholder="搜索标题、路径或描述..."
         filterConfig={filterConfig}
         onFilterChange={handleFilterChange}
         striped
@@ -1389,7 +1365,7 @@ export default function PagesTable() {
                 基本信息
               </h3>
               <p className="text-sm text-muted-foreground">
-                顶部信息与路径设置保持与设置面板一致的排列方式。
+                页面标题、SEO设置与路径配置。
               </p>
             </div>
             <div className="space-y-4">
@@ -1399,6 +1375,33 @@ export default function PagesTable() {
                 onChange={(e) => handleFieldChange("title", e.target.value)}
                 required
                 size="sm"
+                helperText="页面标题，也用于SEO标题"
+              />
+              <Input
+                label="SEO 描述"
+                value={formData.metaDescription}
+                onChange={(e) =>
+                  handleFieldChange("metaDescription", e.target.value)
+                }
+                rows={2}
+                size="sm"
+                helperText="用于搜索引擎结果展示，也作为页面摘要"
+              />
+              <Input
+                label="SEO 关键词"
+                value={formData.metaKeywords}
+                onChange={(e) =>
+                  handleFieldChange("metaKeywords", e.target.value)
+                }
+                size="sm"
+                helperText="多个关键词用逗号分隔"
+              />
+              <Checkbox
+                label="允许搜索引擎索引"
+                checked={formData.robotsIndex}
+                onChange={(e) =>
+                  handleFieldChange("robotsIndex", e.target.checked)
+                }
               />
               {!editingPage?.isSystemPage && (
                 <div className="space-y-2">
@@ -1414,13 +1417,6 @@ export default function PagesTable() {
                   </p>
                 </div>
               )}
-              <Input
-                label="摘要"
-                value={formData.excerpt}
-                onChange={(e) => handleFieldChange("excerpt", e.target.value)}
-                rows={3}
-                size="sm"
-              />
             </div>
           </section>
 
@@ -1529,45 +1525,6 @@ export default function PagesTable() {
                 激活：页面将在前台显示 <br />
                 暂停：页面将不会显示，也无法被索引
               </p>
-            </div>
-          </section>
-
-          <section className="space-y-4">
-            <h3 className="text-lg font-semibold text-foreground">SEO 设置</h3>
-            <div className="space-y-4">
-              <Input
-                label="SEO 标题"
-                value={formData.metaTitle}
-                onChange={(e) => handleFieldChange("metaTitle", e.target.value)}
-                size="sm"
-                helperText="留空则使用页面标题"
-              />
-              <Input
-                label="SEO 描述"
-                value={formData.metaDescription}
-                onChange={(e) =>
-                  handleFieldChange("metaDescription", e.target.value)
-                }
-                rows={2}
-                size="sm"
-                helperText="留空则使用页面摘要"
-              />
-              <Input
-                label="SEO 关键词"
-                value={formData.metaKeywords}
-                onChange={(e) =>
-                  handleFieldChange("metaKeywords", e.target.value)
-                }
-                size="sm"
-                helperText="多个关键词用逗号分隔"
-              />
-              <Checkbox
-                label="允许搜索引擎索引"
-                checked={formData.robotsIndex}
-                onChange={(e) =>
-                  handleFieldChange("robotsIndex", e.target.checked)
-                }
-              />
             </div>
           </section>
 
