@@ -248,53 +248,55 @@ export default async function PostsPage({
           </RowGrid>
         )}
 
-        {Array(Math.ceil(posts.length / 4))
-          .fill(0)
-          .map((_, rowIndex) => (
-            <RowGrid key={rowIndex}>
-              {Array.from({ length: 4 }, (_, index) => {
-                const postIndex = rowIndex * 4 + index;
-                const post = posts[postIndex];
+        <RowGrid>
+          {Array(Math.ceil(posts.length / 4))
+            .fill(0)
+            .map((_, rowIndex) => (
+              <>
+                {Array.from({ length: 4 }, (_, index) => {
+                  const postIndex = rowIndex * 4 + index;
+                  const post = posts[postIndex];
 
-                return (
-                  <GridItem
-                    key={post ? post.slug : `empty-${postIndex}`}
-                    areas={createArray(index * 3 + 1, (index + 1) * 3)}
-                    width={4}
-                    height={0.4}
-                    className=""
-                  >
-                    {post ? (
-                      <PostCard
-                        title={post.title}
-                        slug={post.slug}
-                        isPinned={post.isPinned}
-                        date={
-                          post.publishedAt
-                            ? new Date(post.publishedAt)
-                                .toLocaleDateString("zh-CN", {
-                                  year: "numeric",
-                                  month: "2-digit",
-                                  day: "2-digit",
-                                })
-                                .replace(/\//g, "/")
-                            : ""
-                        }
-                        category={post.categories}
-                        tags={post.tags}
-                        cover={post.featuredImage || ""}
-                        summary={post.excerpt || ""}
-                      />
-                    ) : (
-                      <EmptyPostCard
-                        direction={index % 2 === 0 ? "left" : "right"}
-                      />
-                    )}
-                  </GridItem>
-                );
-              })}
-            </RowGrid>
-          ))}
+                  return (
+                    <GridItem
+                      key={post ? post.slug : `empty-${postIndex}`}
+                      areas={createArray(index * 3 + 1, (index + 1) * 3)}
+                      width={4}
+                      height={0.4}
+                      className=""
+                    >
+                      {post ? (
+                        <PostCard
+                          title={post.title}
+                          slug={post.slug}
+                          isPinned={post.isPinned}
+                          date={
+                            post.publishedAt
+                              ? new Date(post.publishedAt)
+                                  .toLocaleDateString("zh-CN", {
+                                    year: "numeric",
+                                    month: "2-digit",
+                                    day: "2-digit",
+                                  })
+                                  .replace(/\//g, "/")
+                              : ""
+                          }
+                          category={post.categories}
+                          tags={post.tags}
+                          cover={post.featuredImage || ""}
+                          summary={post.excerpt || ""}
+                        />
+                      ) : (
+                        <EmptyPostCard
+                          direction={index % 2 === 0 ? "left" : "right"}
+                        />
+                      )}
+                    </GridItem>
+                  );
+                })}
+              </>
+            ))}
+        </RowGrid>
 
         {/* 分页导航 */}
         <PaginationNav

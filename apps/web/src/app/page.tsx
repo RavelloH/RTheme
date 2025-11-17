@@ -493,7 +493,7 @@ export default async function Home() {
             >
               <Link
                 href="/posts"
-                className="flex items-center justify-between group px-10 py-15 "
+                className="flex items-center justify-between group px-10 py-15 h-full"
               >
                 <div className="block" data-line-reveal>
                   <div className="text-4xl relative inline box-decoration-clone bg-[linear-gradient(white,white)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]">
