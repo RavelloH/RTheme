@@ -143,7 +143,11 @@ export default function CategoriesTable({
         id: editingCategory.id,
       };
 
-      if (editFormData.newSlug !== editingCategory.slug) {
+      // 只有非"未分类"分类才能更新 slug
+      if (
+        editingCategory.slug !== "uncategorized" &&
+        editFormData.newSlug !== editingCategory.slug
+      ) {
         updateData.newSlug = editFormData.newSlug;
       }
       if (editFormData.newName !== editingCategory.name) {
@@ -152,7 +156,11 @@ export default function CategoriesTable({
       if (editFormData.description !== (editingCategory.description || "")) {
         updateData.description = editFormData.description || undefined;
       }
-      if (editFormData.parentId !== editingCategory.parentId) {
+      // "未分类"分类不允许修改父分类
+      if (
+        editingCategory.slug !== "uncategorized" &&
+        editFormData.parentId !== editingCategory.parentId
+      ) {
         updateData.parentId = editFormData.parentId;
       }
 
@@ -186,6 +194,11 @@ export default function CategoriesTable({
 
   // 打开移动单个分类对话框
   const openMoveDialog = (category: CategoryListItem) => {
+    // 检查是否为"未分类"分类，禁止移动
+    if (category.slug === "uncategorized") {
+      toast.error('系统保留分类"未分类"不允许移动');
+      return;
+    }
     setMovingCategory(category);
     setMoveTargetParentId(category.parentId);
     setMoveTargetCategoryPath(category.parentName || null);
@@ -228,6 +241,11 @@ export default function CategoriesTable({
 
   // 打开删除单个分类对话框
   const openDeleteDialog = (category: CategoryListItem) => {
+    // 检查是否为"未分类"分类，禁止删除
+    if (category.slug === "uncategorized") {
+      toast.error('系统保留分类"未分类"不允许删除');
+      return;
+    }
     setDeletingCategory(category);
     setDeleteDialogOpen(true);
   };
@@ -269,6 +287,17 @@ export default function CategoriesTable({
 
   // 打开批量移动对话框
   const openBatchMoveDialog = () => {
+    // 检查是否包含"未分类"分类
+    const hasUncategorized = selectedCategories.some((id) => {
+      const category = data.find((item) => item.id === Number(id));
+      return category?.slug === "uncategorized";
+    });
+
+    if (hasUncategorized) {
+      toast.error('选中的分类包含系统保留分类"未分类"，不允许移动');
+      return;
+    }
+
     setMoveTargetParentId(parentId);
     setMoveTargetCategoryPath(currentCategory?.name || null);
     setBatchMoveDialogOpen(true);
@@ -308,6 +337,17 @@ export default function CategoriesTable({
 
   // 打开批量删除对话框
   const openBatchDeleteDialog = () => {
+    // 检查是否包含"未分类"分类
+    const hasUncategorized = selectedCategories.some((id) => {
+      const category = data.find((item) => item.id === Number(id));
+      return category?.slug === "uncategorized";
+    });
+
+    if (hasUncategorized) {
+      toast.error('选中的分类包含系统保留分类"未分类"，不允许删除');
+      return;
+    }
+
     setBatchDeleteDialogOpen(true);
   };
 
@@ -363,43 +403,51 @@ export default function CategoriesTable({
   ];
 
   // 行操作按钮
-  const rowActions = (record: CategoryListItem): ActionButton[] => [
-    {
-      label: "查看文章",
-      onClick: () => {
-        navigate(`/admin/posts?category=${record.id}`);
+  const rowActions = (record: CategoryListItem): ActionButton[] => {
+    const actions: ActionButton[] = [
+      {
+        label: "查看文章",
+        onClick: () => {
+          navigate(`/admin/posts?category=${record.id}`);
+        },
+        icon: <RiFileListLine size="1em" />,
+        variant: "ghost",
       },
-      icon: <RiFileListLine size="1em" />,
-      variant: "ghost",
-    },
-    {
-      label: "查看子分类",
-      onClick: () => {
-        const newPath = [...categoryPath, record.slug].join("/");
-        navigate(`/admin/categories/${newPath}`);
+      {
+        label: "查看子分类",
+        onClick: () => {
+          const newPath = [...categoryPath, record.slug].join("/");
+          navigate(`/admin/categories/${newPath}`);
+        },
+        icon: <RiFolder3Line size="1em" />,
+        variant: "ghost",
       },
-      icon: <RiFolder3Line size="1em" />,
-      variant: "ghost",
-    },
-    {
-      label: "编辑",
-      onClick: () => openEditDialog(record),
-      icon: <RiEditLine size="1em" />,
-      variant: "ghost",
-    },
-    {
-      label: "移动",
-      onClick: () => openMoveDialog(record),
-      icon: <RiFolderTransferLine size="1em" />,
-      variant: "ghost",
-    },
-    {
-      label: "删除",
-      onClick: () => openDeleteDialog(record),
-      icon: <RiDeleteBinLine size="1em" />,
-      variant: "danger",
-    },
-  ];
+      {
+        label: "编辑",
+        onClick: () => openEditDialog(record),
+        icon: <RiEditLine size="1em" />,
+        variant: "ghost",
+      },
+    ];
+
+    // "未分类"分类不允许移动和删除
+    if (record.slug !== "uncategorized") {
+      actions.push({
+        label: "移动",
+        onClick: () => openMoveDialog(record),
+        icon: <RiFolderTransferLine size="1em" />,
+        variant: "ghost",
+      });
+      actions.push({
+        label: "删除",
+        onClick: () => openDeleteDialog(record),
+        icon: <RiDeleteBinLine size="1em" />,
+        variant: "danger",
+      });
+    }
+
+    return actions;
+  };
 
   // 处理行点击事件
   const handleRowClick = (
@@ -872,19 +920,22 @@ export default function CategoriesTable({
       >
         <div className="px-6 py-6 space-y-6">
           <div className="space-y-4">
-            <Input
-              label="Slug"
-              value={editFormData.newSlug}
-              onChange={(e) =>
-                setEditFormData((prev) => ({
-                  ...prev,
-                  newSlug: e.target.value,
-                }))
-              }
-              required
-              size="sm"
-              helperText="只能包含小写字母、数字和连字符"
-            />
+            {/* 只有非"未分类"分类才显示 Slug 字段 */}
+            {editingCategory?.slug !== "uncategorized" && (
+              <Input
+                label="Slug"
+                value={editFormData.newSlug}
+                onChange={(e) =>
+                  setEditFormData((prev) => ({
+                    ...prev,
+                    newSlug: e.target.value,
+                  }))
+                }
+                required
+                size="sm"
+                helperText="只能包含小写字母、数字和连字符"
+              />
+            )}
             <Input
               label="分类名称"
               value={editFormData.newName}
@@ -897,9 +948,16 @@ export default function CategoriesTable({
               required
               size="sm"
             />
-            <p className="text-sm text-muted-foreground">
-              更改分类名称或 slug 会影响所有使用该分类的文章，请谨慎修改。
-            </p>
+            {/* 为"未分类"分类显示特殊提示 */}
+            {editingCategory?.slug === "uncategorized" ? (
+              <p className="text-sm text-muted-foreground">
+                此分类为系统默认分类，部分字段无法修改。
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                更改分类名称或 slug 会影响所有使用该分类的文章，请谨慎修改。
+              </p>
+            )}
             <Input
               label="描述"
               value={editFormData.description}
@@ -912,20 +970,23 @@ export default function CategoriesTable({
               rows={3}
               size="sm"
             />
-            <CategoryInput
-              label="父分类"
-              value={editFormData.parentCategoryPath}
-              onChange={(categoryPath, categoryId) =>
-                setEditFormData((prev) => ({
-                  ...prev,
-                  parentId: categoryId || null,
-                  parentCategoryPath: categoryPath,
-                }))
-              }
-              placeholder="搜索或创建父分类（留空表示顶级分类）"
-              size="sm"
-              helperText="搜索并选择父分类，或留空表示顶级分类"
-            />
+            {/* "未分类"分类不允许设置父分类 */}
+            {editingCategory?.slug !== "uncategorized" && (
+              <CategoryInput
+                label="父分类"
+                value={editFormData.parentCategoryPath}
+                onChange={(categoryPath, categoryId) =>
+                  setEditFormData((prev) => ({
+                    ...prev,
+                    parentId: categoryId || null,
+                    parentCategoryPath: categoryPath,
+                  }))
+                }
+                placeholder="搜索或创建父分类（留空表示顶级分类）"
+                size="sm"
+                helperText="搜索并选择父分类，或留空表示顶级分类"
+              />
+            )}
           </div>
 
           <div className="flex justify-end gap-4 pt-4 border-t border-foreground/10">

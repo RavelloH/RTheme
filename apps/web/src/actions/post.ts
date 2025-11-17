@@ -109,6 +109,37 @@ async function findOrCreateCategoryByPath(path: string): Promise<number> {
 }
 
 /*
+  辅助函数：获取或创建"未分类"分类
+  返回"未分类"分类的 ID
+*/
+async function getOrCreateUncategorizedCategory(): Promise<number> {
+  const uncategorizedName = "未分类";
+  const uncategorizedSlug = "uncategorized";
+
+  // 先查找是否已存在"未分类"分类
+  let category = await prisma.category.findFirst({
+    where: {
+      slug: uncategorizedSlug,
+      parentId: null, // 确保是根级分类
+    },
+  });
+
+  // 如果不存在则创建
+  if (!category) {
+    category = await prisma.category.create({
+      data: {
+        name: uncategorizedName,
+        slug: uncategorizedSlug,
+        description: "自动分配给未指定分类的文章",
+        parentId: null,
+      },
+    });
+  }
+
+  return category.id;
+}
+
+/*
   辅助函数：解析版本名称
   格式: "userUid:ISO时间:提交信息"
   例如: "1:2025-01-09T12:55:38.259Z:初始版本"
@@ -832,6 +863,26 @@ export async function createPost(
       publishedAtDate = new Date(publishedAt);
     }
 
+    // 处理分类：如果没有提供分类，自动分配到"未分类"
+    let categoryConnections;
+    if (categories && categories.length > 0) {
+      categoryConnections = {
+        connect: await Promise.all(
+          categories.map(async (pathOrName) => {
+            // 使用路径查找或创建分类（支持 "技术/前端/Next.js" 格式）
+            const categoryId = await findOrCreateCategoryByPath(pathOrName);
+            return { id: categoryId };
+          }),
+        ),
+      };
+    } else {
+      // 没有分类时，自动分配到"未分类"
+      const uncategorizedId = await getOrCreateUncategorizedCategory();
+      categoryConnections = {
+        connect: [{ id: uncategorizedId }],
+      };
+    }
+
     // 创建文章
     const post = await prisma.post.create({
       data: {
@@ -849,19 +900,7 @@ export async function createPost(
         robotsIndex,
         postMode,
         userUid: user.uid,
-        categories:
-          categories && categories.length > 0
-            ? {
-                connect: await Promise.all(
-                  categories.map(async (pathOrName) => {
-                    // 使用路径查找或创建分类（支持 "技术/前端/Next.js" 格式）
-                    const categoryId =
-                      await findOrCreateCategoryByPath(pathOrName);
-                    return { id: categoryId };
-                  }),
-                ),
-              }
-            : undefined,
+        categories: categoryConnections,
         tags:
           tags && tags.length > 0
             ? {
@@ -1140,24 +1179,39 @@ export async function updatePost(
       updateData.metaKeywords = metaKeywords || null;
     if (robotsIndex !== undefined) updateData.robotsIndex = robotsIndex;
 
+    // 处理分类更新
+    let categoryUpdateData;
+    if (categories !== undefined) {
+      if (categories.length > 0) {
+        // 提供了具体的分类列表
+        categoryUpdateData = {
+          set: [], // 先清空所有关联
+          connect: await Promise.all(
+            categories.map(async (pathOrName) => {
+              // 使用路径查找或创建分类（支持 "技术/前端/Next.js" 格式）
+              const categoryId = await findOrCreateCategoryByPath(pathOrName);
+              return { id: categoryId };
+            }),
+          ),
+        };
+      } else {
+        // 明确传入了空数组，清空所有分类并分配到"未分类"
+        const uncategorizedId = await getOrCreateUncategorizedCategory();
+        categoryUpdateData = {
+          set: [], // 先清空所有关联
+          connect: [{ id: uncategorizedId }],
+        };
+      }
+    }
+    // 如果 categories === undefined，则保持原有分类不变
+
     // 更新文章
     const updatedPost = await prisma.post.update({
       where: { id: existingPost.id },
       data: {
         ...updateData,
         // 处理分类
-        ...(categories !== undefined && {
-          categories: {
-            set: [], // 先清空所有关联
-            connect: await Promise.all(
-              categories.map(async (pathOrName) => {
-                // 使用路径查找或创建分类（支持 "技术/前端/Next.js" 格式）
-                const categoryId = await findOrCreateCategoryByPath(pathOrName);
-                return { id: categoryId };
-              }),
-            ),
-          },
-        }),
+        ...(categoryUpdateData && { categories: categoryUpdateData }),
         // 处理标签
         ...(tags !== undefined && {
           tags: {

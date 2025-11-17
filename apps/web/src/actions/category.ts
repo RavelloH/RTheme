@@ -910,6 +910,13 @@ export async function updateCategory(
 
     // 处理 slug 更新
     if (newSlug) {
+      // 检查是否为"未分类"分类，禁止修改其 slug
+      if (category.slug === "uncategorized" && newSlug !== category.slug) {
+        return response.badRequest({
+          message: "不允许修改系统分类的 slug",
+        });
+      }
+
       const sanitizedSlug = sanitizeUserSlug(newSlug);
       if (!isValidSlug(sanitizedSlug)) {
         return response.badRequest({ message: "Slug 格式不正确" });
@@ -961,6 +968,12 @@ export async function updateCategory(
 
     // 处理父分类更新
     if (resolvedParentId !== undefined) {
+      // 检查是否为"未分类"分类，禁止设置父分类
+      if (category.slug === "uncategorized" && resolvedParentId !== null) {
+        return response.badRequest({
+          message: "不允许移动系统分类到其他分类下",
+        });
+      }
       updateData.parentId = resolvedParentId;
     }
 
@@ -1082,6 +1095,21 @@ export async function deleteCategories(
   }
 
   try {
+    // 检查是否包含"未分类"分类，禁止删除
+    const uncategorizedCategories = await prisma.category.findMany({
+      where: {
+        id: { in: ids },
+        slug: "uncategorized",
+      },
+      select: { id: true, name: true },
+    });
+
+    if (uncategorizedCategories.length > 0) {
+      return response.badRequest({
+        message: `不允许删除系统保留分类"${uncategorizedCategories[0]?.name}"`,
+      });
+    }
+
     // 统计将要级联删除的子分类数量
     let cascadeDeleted = 0;
     for (const id of ids) {
@@ -1196,6 +1224,20 @@ export async function moveCategories(
   }
 
   try {
+    // 检查是否包含"未分类"分类，禁止移动
+    const uncategorizedCategories = await prisma.category.findMany({
+      where: {
+        id: { in: ids },
+        slug: "uncategorized",
+      },
+      select: { id: true, name: true },
+    });
+
+    if (uncategorizedCategories.length > 0) {
+      return response.badRequest({
+        message: `不允许移动系统保留分类"${uncategorizedCategories[0]?.name}"`,
+      });
+    }
     // 如果提供了 targetParentSlug，查找对应的 targetParentId
     let resolvedTargetParentId = targetParentId;
     if (targetParentSlug !== undefined && targetParentId === undefined) {
