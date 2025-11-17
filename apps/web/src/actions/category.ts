@@ -47,6 +47,7 @@ import {
   countDirectChildren,
   countAllDescendants,
   findCategoryByPath,
+  batchGetCategoryPaths,
 } from "@/lib/server/category-utils";
 
 type ActionEnvironment = "serverless" | "serveraction";
@@ -224,7 +225,7 @@ export async function getCategoriesList(
       where.AND = conditions;
     }
 
-    // 获取分类及关联信息
+    // 获取分类及关联信息（分页）
     const categories = await prisma.category.findMany({
       where,
       skip,
@@ -259,39 +260,114 @@ export async function getCategoriesList(
       },
     });
 
-    // 处理每个分类的统计数据
-    const categoryList: CategoryListItem[] = await Promise.all(
-      categories.map(async (category) => {
-        const directPostCount = category.posts.length;
-        const directChildCount = category.children.length;
+    // 收集所有需要统计的分类ID（当前页分类 + 其子孙分类）
+    const categoryIdsToProcess = new Set<number>();
+    categories.forEach((category) => {
+      categoryIdsToProcess.add(category.id);
+      category.children.forEach((child) => {
+        categoryIdsToProcess.add(child.id);
+      });
+    });
 
-        // 递归统计总文章数和总子分类数
-        const totalPostCount = await countCategoryPosts(category.id);
-        const totalChildCount = await countAllDescendants(category.id);
+    // 一次性获取所有相关分类的完整数据
+    const allRelevantCategories = await prisma.category.findMany({
+      where: {
+        id: { in: Array.from(categoryIdsToProcess) },
+      },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        description: true,
+        parentId: true,
+        createdAt: true,
+        updatedAt: true,
+        posts: {
+          where: {
+            deletedAt: null,
+          },
+          select: {
+            id: true,
+          },
+        },
+        children: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
 
-        // 获取路径和深度
-        const path = await getCategoryPath(category.id);
-        const depth = await calculateCategoryDepth(category.id);
-
-        return {
-          id: category.id,
-          slug: category.slug,
-          name: category.name,
-          description: category.description,
-          parentId: category.parentId,
-          parentSlug: category.parent?.slug || null,
-          parentName: category.parent?.name || null,
-          directPostCount,
-          totalPostCount,
-          directChildCount,
-          totalChildCount,
-          depth,
-          path,
-          createdAt: category.createdAt.toISOString(),
-          updatedAt: category.updatedAt.toISOString(),
-        };
-      }),
+    // 批量获取路径信息（只需1次额外查询）
+    const categoryPathsMap = await batchGetCategoryPaths(
+      Array.from(categoryIdsToProcess),
     );
+
+    // 构建分类映射
+    const categoryMap = new Map<number, (typeof allRelevantCategories)[0]>();
+    allRelevantCategories.forEach((category) => {
+      categoryMap.set(category.id, category);
+    });
+
+    // 辅助函数：递归计算总文章数（使用内存数据）
+    const calculateTotalPosts = (categoryId: number): number => {
+      const category = categoryMap.get(categoryId);
+      if (!category) return 0;
+
+      const directPosts = category.posts.length;
+      const childPosts = category.children.reduce(
+        (sum, child) => sum + calculateTotalPosts(child.id),
+        0,
+      );
+
+      return directPosts + childPosts;
+    };
+
+    // 辅助函数：递归计算总子分类数
+    const calculateTotalChildren = (categoryId: number): number => {
+      const category = categoryMap.get(categoryId);
+      if (!category) return 0;
+
+      const directChildren = category.children.length;
+      const grandChildren = category.children.reduce(
+        (sum, child) => sum + calculateTotalChildren(child.id),
+        0,
+      );
+
+      return directChildren + grandChildren;
+    };
+
+    // 处理每个分类的统计数据（使用内存数据，无需额外查询）
+    const categoryList: CategoryListItem[] = categories.map((category) => {
+      const directPostCount = category.posts.length;
+      const directChildCount = category.children.length;
+
+      // 使用内存数据计算统计信息
+      const totalPostCount = calculateTotalPosts(category.id);
+      const totalChildCount = calculateTotalChildren(category.id);
+
+      // 获取路径和深度
+      const path = categoryPathsMap.get(category.id) || [];
+      const depth = path.length;
+
+      return {
+        id: category.id,
+        slug: category.slug,
+        name: category.name,
+        description: category.description,
+        parentId: category.parentId,
+        parentSlug: category.parent?.slug || null,
+        parentName: category.parent?.name || null,
+        directPostCount,
+        totalPostCount,
+        directChildCount,
+        totalChildCount,
+        depth,
+        path: path.map((item) => item.slug),
+        createdAt: category.createdAt.toISOString(),
+        updatedAt: category.updatedAt.toISOString(),
+      };
+    });
 
     // 内存排序（因为某些字段是计算出来的）
     categoryList.sort((a, b) => {
