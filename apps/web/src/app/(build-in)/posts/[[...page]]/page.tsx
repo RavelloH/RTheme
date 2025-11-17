@@ -11,6 +11,7 @@ import {
   getSystemPageConfig,
 } from "@/lib/server/pageCache";
 import { createPageConfigBuilder } from "@/lib/server/pageUtils";
+import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import prisma from "@/lib/server/prisma";
 import { generateMetadata } from "@/lib/server/seo";
 import { Input } from "@/ui/Input";
@@ -99,6 +100,7 @@ export default async function PostsPage({
       publishedAt: true,
       categories: {
         select: {
+          id: true,
           name: true,
           slug: true,
         },
@@ -122,10 +124,48 @@ export default async function PostsPage({
     take: PRE_PAGE_SIZE,
   });
 
+  // 收集所有分类ID，批量获取路径
+  const allCategoryIds = new Set<number>();
+  posts.forEach((post) => {
+    post.categories.forEach((category) => {
+      allCategoryIds.add(category.id);
+    });
+  });
+
+  // 批量获取所有分类路径（只需1次额外查询）
+  const categoryPathsMap = await batchGetCategoryPaths(
+    Array.from(allCategoryIds),
+  );
+
+  // 为文章构建完整的分类路径数组
+  // 将每个分类的完整路径展开为多个分类项，父分类在前，子分类在后
+  const postsWithExpandedCategories = posts.map((post) => {
+    const expandedCategories: { name: string; slug: string }[] = [];
+
+    post.categories.forEach((category) => {
+      const fullPath = categoryPathsMap.get(category.id) || [];
+      // 将完整路径的每个级别都作为一个单独的分类项添加到数组中
+      fullPath.forEach((pathItem) => {
+        // 检查是否已经存在，避免重复添加同一分类路径
+        if (!expandedCategories.some((cat) => cat.slug === pathItem.slug)) {
+          expandedCategories.push({
+            name: pathItem.name,
+            slug: pathItem.slug,
+          });
+        }
+      });
+    });
+
+    return {
+      ...post,
+      categories: expandedCategories,
+    };
+  });
+
   // 计算总页数：基于所有已发布文章数量计算
   const totalPages = Math.ceil(totalPosts / PRE_PAGE_SIZE);
 
-  if (posts.length === 0) return <Custom404 />;
+  if (postsWithExpandedCategories.length === 0) return <Custom404 />;
 
   return (
     <MainLayout type="horizontal">
@@ -249,13 +289,13 @@ export default async function PostsPage({
         )}
 
         <RowGrid>
-          {Array(Math.ceil(posts.length / 4))
+          {Array(Math.ceil(postsWithExpandedCategories.length / 4))
             .fill(0)
             .map((_, rowIndex) => (
               <>
                 {Array.from({ length: 4 }, (_, index) => {
                   const postIndex = rowIndex * 4 + index;
-                  const post = posts[postIndex];
+                  const post = postsWithExpandedCategories[postIndex];
 
                   return (
                     <GridItem

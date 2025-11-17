@@ -426,3 +426,75 @@ export async function countAllDescendants(categoryId: number): Promise<number> {
   const descendantIds = await getAllDescendantIds(categoryId);
   return descendantIds.length;
 }
+
+/**
+ * 批量获取分类路径映射
+ * @param categoryIds 需要获取路径的分类ID数组
+ * @returns Map<categoryId, fullPath> 完整路径映射
+ */
+export async function batchGetCategoryPaths(
+  categoryIds: number[],
+): Promise<Map<number, { name: string; slug: string }[]>> {
+  if (categoryIds.length === 0) {
+    return new Map();
+  }
+
+  // 方案：一次性获取所有分类（假设分类总数不会太多）
+  // 对于内容管理系统来说，分类数量通常是有限的，这个方案是可行的
+  const allCategories = await prisma.category.findMany({
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      parentId: true,
+    },
+    orderBy: {
+      id: "asc",
+    },
+  });
+
+  // 构建ID到分类的映射
+  const categoryMap = new Map(
+    allCategories.map((cat) => [
+      cat.id,
+      { name: cat.name, slug: cat.slug, parentId: cat.parentId },
+    ]),
+  );
+
+  // 为每个请求的分类计算路径
+  const pathMap = new Map<number, { name: string; slug: string }[]>();
+
+  for (const categoryId of categoryIds) {
+    const path = buildPathFromCache(categoryId, categoryMap);
+    pathMap.set(categoryId, path);
+  }
+
+  return pathMap;
+}
+
+/**
+ * 从缓存构建路径
+ */
+function buildPathFromCache(
+  categoryId: number,
+  categoryMap: Map<
+    number,
+    { name: string; slug: string; parentId: number | null }
+  >,
+): { name: string; slug: string }[] {
+  const path: { name: string; slug: string }[] = [];
+  let currentId: number | null = categoryId;
+  let iterationCount = 0;
+  const maxIterations = 100; // 防止循环引用的安全措施
+
+  while (currentId !== null && iterationCount < maxIterations) {
+    const category = categoryMap.get(currentId);
+    if (!category) break;
+
+    path.unshift({ name: category.name, slug: category.slug });
+    currentId = category.parentId;
+    iterationCount++;
+  }
+
+  return path;
+}
