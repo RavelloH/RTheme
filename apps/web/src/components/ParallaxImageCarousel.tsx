@@ -29,7 +29,7 @@ interface AspectRatioOption {
  *
  * 特性：
  * - 图片从右往左排列，第一张图片在最右侧
- * - 自动重复图片以达到至少200%容器宽度
+ * - 动态创建图片实例，确保视口中始终有图片显示
  * - 根据图片原始宽高比自适应尺寸（使用Tailwind CSS aspect-ratio类）
  * - 支持视差滚动效果
  * - 预加载图片并获取真实尺寸
@@ -42,8 +42,15 @@ export default function ParallaxImageCarousel({
   alt = "Parallax image",
 }: ParallaxImageCarouselProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [processedImages, setProcessedImages] = useState<string[]>([]);
   const [imageDimensions, setImageDimensions] = useState<ImageDimension[]>([]);
+  const [visibleImageInstances, setVisibleImageInstances] = useState<Array<{
+    id: string;
+    src: string;
+    originalIndex: number;
+    position: number;
+  }>>([]);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(0);
 
   // 获取最接近的aspect-ratio类名
   const getAspectRatioClass = (ratio: number): string => {
@@ -73,6 +80,26 @@ export default function ParallaxImageCarousel({
 
     return closest.class;
   };
+
+  // 容器尺寸监听
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const updateContainerSize = () => {
+      const container = containerRef.current;
+      if (container) {
+        setContainerWidth(container.offsetWidth);
+        setContainerHeight(container.offsetHeight);
+      }
+    };
+
+    updateContainerSize();
+
+    const resizeObserver = new ResizeObserver(updateContainerSize);
+    resizeObserver.observe(containerRef.current);
+
+    return () => resizeObserver.disconnect();
+  }, []);
 
   // 预加载图片并获取尺寸
   useEffect(() => {
@@ -110,32 +137,53 @@ export default function ParallaxImageCarousel({
     loadImageDimensions();
   }, [images]);
 
-  // 计算需要重复的图片数组以达到至少200%宽度
+  // 动态计算可见图片实例
   useEffect(() => {
-    if (!imageDimensions.length || !containerRef.current) return;
+    if (!imageDimensions.length || !containerWidth || !containerHeight) return;
 
-    const container = containerRef.current;
-    const containerWidth = container.offsetWidth;
-    const targetWidth = containerWidth * 2; // 200%
-
-    // 计算一轮图片的总宽度（假设容器高度为100%）
-    const containerHeight = container.offsetHeight || 400; // 默认高度
-    const singleRoundWidth = imageDimensions.reduce(
+    // 计算单个循环图片序列的总宽度
+    const singleCycleWidth = imageDimensions.reduce(
       (total, dimension) => total + containerHeight * dimension.aspectRatio,
       0,
     );
 
-    // 计算需要重复多少轮
-    const repetitions = Math.ceil(targetWidth / singleRoundWidth);
+    // 计算需要的图片实例：确保覆盖容器宽度 + 左右缓冲区
+    const bufferWidth = containerWidth * 0.5; // 左右各25%缓冲
+    const targetWidth = containerWidth + bufferWidth * 2;
 
-    // 生成重复的图片数组
-    const repeated: string[] = [];
-    for (let i = 0; i < repetitions; i++) {
-      repeated.push(...images);
+    // 计算需要多少个完整循环
+    const cyclesNeeded = Math.ceil(targetWidth / singleCycleWidth) + 1; // 多加一个循环确保无缝切换
+
+    // 生成图片实例
+    const instances: Array<{
+      id: string;
+      src: string;
+      originalIndex: number;
+      position: number;
+    }> = [];
+
+    for (let cycle = 0; cycle < cyclesNeeded; cycle++) {
+      for (let imgIndex = 0; imgIndex < images.length; imgIndex++) {
+        const dimension = imageDimensions[imgIndex];
+        if (!dimension) continue;
+
+        const position = cycle * singleCycleWidth +
+          imageDimensions.slice(0, imgIndex).reduce(
+            (total, dim) => total + containerHeight * dim.aspectRatio,
+            0
+          );
+
+        instances.push({
+          id: `${cycle}-${imgIndex}`,
+          src: images[imgIndex]!,
+          originalIndex: imgIndex,
+          position,
+        });
+      }
     }
 
-    setProcessedImages(repeated);
-  }, [images, imageDimensions]);
+    setVisibleImageInstances(instances);
+  }, [images, imageDimensions, containerWidth, containerHeight]);
 
   // 如果没有图片，返回空
   if (!images.length) {
@@ -148,10 +196,8 @@ export default function ParallaxImageCarousel({
       className={`group h-full flex flex-row-reverse overflow-visible opacity-25 ${className}`}
       data-parallax={parallaxSpeed.toString()}
     >
-      {processedImages.map((src, index) => {
-        // 获取对应的原始图片尺寸
-        const originalIndex = index % images.length;
-        const dimension = imageDimensions[originalIndex];
+      {visibleImageInstances.map((instance) => {
+        const dimension = imageDimensions[instance.originalIndex];
 
         if (!dimension) return null;
 
@@ -159,13 +205,17 @@ export default function ParallaxImageCarousel({
 
         return (
           <div
-            key={`${src}-${index}`}
+            key={instance.id}
             className={`h-full flex-shrink-0 relative ${aspectRatioClass}`}
+            style={{
+              width: `${containerHeight * dimension.aspectRatio}px`,
+              flexBasis: `${containerHeight * dimension.aspectRatio}px`,
+            }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={src}
-              alt={`${alt} ${originalIndex + 1}`}
+              src={instance.src}
+              alt={`${alt} ${instance.originalIndex + 1}`}
               className="h-full w-full object-cover"
               loading="lazy"
             />

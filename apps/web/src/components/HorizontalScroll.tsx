@@ -280,12 +280,9 @@ export default function HorizontalScroll({
             const elementRightInContainer =
               elementLeftInContainer + elementRect.width;
 
-            // 定义视口范围：从右边界向左扩展100px作为"准备区域"
-            const viewportPreparationZone = containerWidth + 100; // 右边界外100px开始准备
-
-            // 检查元素是否在视口范围内（包括准备区域）
+            // 检查元素是否在视口范围内（只有真正可见的元素）
             const isInViewportArea =
-              elementLeftInContainer < viewportPreparationZone &&
+              elementLeftInContainer < containerWidth &&
               elementRightInContainer > 0;
 
             if (isInViewportArea) {
@@ -309,15 +306,26 @@ export default function HorizontalScroll({
               const parallaxX =
                 elementState.initialX + relativeMovement * elementState.speed;
               gsap.set(element, { x: parallaxX });
-            } else if (elementLeftInContainer >= viewportPreparationZone) {
-              // 元素还未进入准备区域，重置状态
+            } else if (elementLeftInContainer >= containerWidth) {
+              // 元素还未进入视口，重置状态
               if (elementState.hasEnteredViewport) {
                 elementState.hasEnteredViewport = false;
                 elementState.viewportEntryX = 0;
-                // 保持当前位置，不重置到初始位置
+                elementState.initialX = 0;
+                // 重置元素位置
+                gsap.set(element, { x: 0 });
               }
             }
-            // 如果元素已经完全离开左侧视口，保持最后的视差位置
+            // 如果元素已经完全离开左侧视口，重置状态
+            else if (elementRightInContainer <= 0) {
+              if (elementState.hasEnteredViewport) {
+                elementState.hasEnteredViewport = false;
+                elementState.viewportEntryX = 0;
+                elementState.initialX = 0;
+                // 重置元素位置
+                gsap.set(element, { x: 0 });
+              }
+            }
           });
         };
 
