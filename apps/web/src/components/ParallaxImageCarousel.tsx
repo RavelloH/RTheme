@@ -43,12 +43,14 @@ export default function ParallaxImageCarousel({
 }: ParallaxImageCarouselProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [imageDimensions, setImageDimensions] = useState<ImageDimension[]>([]);
-  const [visibleImageInstances, setVisibleImageInstances] = useState<Array<{
-    id: string;
-    src: string;
-    originalIndex: number;
-    position: number;
-  }>>([]);
+  const [visibleImageInstances, setVisibleImageInstances] = useState<
+    Array<{
+      id: string;
+      src: string;
+      originalIndex: number;
+      position: number;
+    }>
+  >([]);
   const [containerWidth, setContainerWidth] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
 
@@ -167,11 +169,14 @@ export default function ParallaxImageCarousel({
         const dimension = imageDimensions[imgIndex];
         if (!dimension) continue;
 
-        const position = cycle * singleCycleWidth +
-          imageDimensions.slice(0, imgIndex).reduce(
-            (total, dim) => total + containerHeight * dim.aspectRatio,
-            0
-          );
+        const position =
+          cycle * singleCycleWidth +
+          imageDimensions
+            .slice(0, imgIndex)
+            .reduce(
+              (total, dim) => total + containerHeight * dim.aspectRatio,
+              0,
+            );
 
         instances.push({
           id: `${cycle}-${imgIndex}`,

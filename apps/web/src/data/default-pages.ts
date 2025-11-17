@@ -258,7 +258,7 @@ export const defaultPages: DefaultPage[] = [
                 top: [
                   "记录 & 索引所有文章。",
                   "",
-                  "最近更新于 {lastPublishDays} 天前。",
+                  "最近更新于 {lastPublishDays}。",
                   "自 {firstPublishAt} 以来，共索引 {posts} 篇文章。",
                 ],
                 bottom: [

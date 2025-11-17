@@ -14,6 +14,7 @@ import { createPageConfigBuilder } from "@/lib/server/pageUtils";
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import prisma from "@/lib/server/prisma";
 import { generateMetadata } from "@/lib/server/seo";
+import { formatRelativeTime } from "@/lib/shared/relativeTime";
 import { Input } from "@/ui/Input";
 import { RiSearch2Line } from "@remixicon/react";
 import Custom404 from "@/app/not-found";
@@ -224,10 +225,7 @@ export default async function PostsPage({
                       {line
                         .replaceAll(
                           "{lastPublishDays}",
-                          String(
-                            new Date().getDate() -
-                              new Date(newestDate || "").getDate(),
-                          ),
+                          formatRelativeTime(newestDate),
                         )
                         .replaceAll(
                           "{firstPublishAt}",
