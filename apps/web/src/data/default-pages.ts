@@ -513,7 +513,7 @@ export const defaultPages: DefaultPage[] = [
             content: {
               value: {
                 top: [
-                  "整理 & 索引所有分类。",
+                  "整理 & 索引所有标签。",
                   "",
                   "最近更新于 {lastUpdatedDays}。",
                   "共索引 {tags} 个标签。",
@@ -530,6 +530,91 @@ export const defaultPages: DefaultPage[] = [
               },
               description:
                 "底部显示文本，将始终显示随机页面的链接。修改link无效，但description可自定义",
+            },
+          },
+        },
+        {
+          id: 2,
+          description: "自定义块2，显示在页面结尾。",
+          enabled: false,
+          content: {
+            header: {
+              value: "",
+              description: "头部显示文本",
+            },
+            title: {
+              value: "",
+              description: "标题文本",
+            },
+            content: {
+              value: {
+                top: [""],
+                bottom: [""],
+              },
+              description: "正文文本，分别显示在正文顶部和底部",
+            },
+            footer: {
+              value: {
+                link: "",
+                description: "",
+              },
+              description: "底部显示文本，可提供链接用于跳转",
+            },
+          },
+        },
+      ],
+    },
+    status: "ACTIVE",
+    isSystemPage: true,
+    // SEO 字段
+    metaDescription: "通过标签快速发现相关文章，标签云展示内容的分布和热点话题",
+    metaKeywords: "标签, 标签云, 关键词, 文章标签, 内容索引",
+    robotsIndex: true,
+  },
+  {
+    id: "child-tags-page",
+    title: "标签",
+    slug: "/tags/[slug]",
+    content: "",
+    contentType: "MARKDOWN",
+    config: {
+      blocks: [
+        {
+          id: 1,
+          description: "自定义块1，显示在页面开头。可显示标签统计信息。",
+          enabled: true,
+          content: {
+            header: {
+              value: "Keywords. Connections. Traces.",
+              description: "头部显示文本",
+            },
+            title: {
+              value: "标签：{tagName}",
+              description: "标题文本",
+            },
+            content: {
+              value: {
+                top: [
+                  "整理 & 索引 {tag} 下的所有文章。",
+                  "",
+                  "此标签共包含 {posts} 个文章。",
+                ],
+                bottom: [
+                  "当前正在查看 {pageInfo}。",
+                  "第 {page} 页，共 {totalPage} 页。",
+                  "正在查看第 {firstPage} - {lastPage} 篇文章。",
+                ],
+              },
+              description:
+                "正文文本，分别显示在正文顶部和底部。使用 {tag} 来表示当前标签名称，{posts} 来表示文章数，{pageInfo} 来表示当前页信息，{page} 当前页码，{totalPage} 总页数，{firstPage} 当前页首篇文章序号，{lastPage} 当前页末篇文章序号",
+            },
+            footer: {
+              value: {
+                link: "",
+                description: "Back / 返回标签列表",
+              },
+              description:
+                "底部显示文本，将始终显示返回标签列表的链接。修改link无效，但description可自定义",
             },
           },
         },
