@@ -115,13 +115,14 @@ export default function PostCard({
                 </span>
               </span>
             )}
-            {/* 在分类后面显示的标签（hover时出现） */}
+            {/* 在分类后面显示的标签（hover时出现，移动版不显示） */}
             {summary && tags?.length !== 0 && (
               <span
                 className="flex items-center gap-1 opacity-0 transition-all duration-300 group-hover:opacity-100 ml-3
                 transform translate-y-2 group-hover:translate-y-0
                 [transform-style:preserve-3d] group-hover:[transform:perspective(1000px)_translateY(0)_rotateX(0deg)]
-                [transform:perspective(1000px)_translateY(8px)_rotateX(15deg)]"
+                [transform:perspective(1000px)_translateY(8px)_rotateX(15deg)]
+                md:hidden"
               >
                 <RiPriceTagLine size={"1em"} />
                 {tags?.map((tag, index) => (
@@ -138,9 +139,10 @@ export default function PostCard({
               </span>
             )}
           </div>
-          <div className="relative h-8">
-            {summary && tags?.length !== 0 && (
-              <div className="text-xl text-white/90 absolute inset-0 transition-all duration-300 group-hover:opacity-0 group-hover:-translate-y-2">
+          {/* 移动版：标签和摘要同时显示 */}
+          <div className="md:hidden">
+            {tags?.length !== 0 && (
+              <div className="text-xl text-white/90 h-8">
                 <span className="flex items-center gap-1">
                   <RiPriceTagLine size={"1em"} data-fade />
                   {tags?.map((tag, index) => (
@@ -157,6 +159,39 @@ export default function PostCard({
                   ))}
                 </span>
               </div>
+            )}
+            {summary && (
+              <div className="text-lg text-white/90 pt-2">
+                <div className="line-clamp-1">{summary}</div>
+              </div>
+            )}
+          </div>
+
+          {/* 桌面版：hover切换效果 */}
+          <div className="hidden md:block relative h-8">
+            {summary && tags?.length !== 0 && (
+              <>
+                <div className="text-xl text-white/90 absolute inset-0 transition-all duration-300 group-hover:opacity-0 group-hover:-translate-y-2">
+                  <span className="flex items-center gap-1">
+                    <RiPriceTagLine size={"1em"} data-fade />
+                    {tags?.map((tag, index) => (
+                      <span key={tag.slug}>
+                        <Link
+                          href={`/tags/${tag.slug}`}
+                          className="hover:text-primary transition-colors text-white"
+                          data-fade-word
+                        >
+                          #{tag.name}
+                        </Link>
+                        {index < tags.length - 1 && " "}
+                      </span>
+                    ))}
+                  </span>
+                </div>
+                <div className="text-lg text-white/90 absolute inset-0 transition-all duration-300 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0">
+                  <div className="line-clamp-1">{summary}</div>
+                </div>
+              </>
             )}
             {/* 如果没有summary，正常显示标签 */}
             {!summary && tags?.length !== 0 && (
@@ -178,8 +213,9 @@ export default function PostCard({
                 </span>
               </div>
             )}
-            {summary && (
-              <div className="text-lg text-white/90 absolute inset-0 transition-all duration-300 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0">
+            {/* 只有summary没有标签的情况 */}
+            {summary && !tags?.length && (
+              <div className="text-lg text-white/90">
                 <div className="line-clamp-1">{summary}</div>
               </div>
             )}
