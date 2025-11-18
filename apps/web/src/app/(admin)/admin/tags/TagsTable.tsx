@@ -42,6 +42,7 @@ export default function TagsTable() {
     name: "",
     newName: "",
     description: "",
+    featuredImage: "",
   });
 
   // 删除对话框
@@ -65,6 +66,7 @@ export default function TagsTable() {
       name: tag.name,
       newName: tag.name,
       description: tag.description || "",
+      featuredImage: tag.featuredImage || "",
     });
     setEditDialogOpen(true);
   };
@@ -86,6 +88,7 @@ export default function TagsTable() {
         newSlug?: string;
         newName?: string;
         description?: string;
+        featuredImage?: string | null;
       } = {
         slug: editingTag.slug,
       };
@@ -99,11 +102,15 @@ export default function TagsTable() {
       if (editFormData.description !== (editingTag.description || "")) {
         updateData.description = editFormData.description || undefined;
       }
+      if (editFormData.featuredImage !== (editingTag.featuredImage || "")) {
+        updateData.featuredImage = editFormData.featuredImage || null;
+      }
 
       if (
         !updateData.newSlug &&
         !updateData.newName &&
-        updateData.description === undefined
+        updateData.description === undefined &&
+        updateData.featuredImage === undefined
       ) {
         toast.info("没有字段被修改");
         setIsSubmitting(false);
@@ -617,6 +624,18 @@ export default function TagsTable() {
               }
               rows={3}
               size="sm"
+            />
+            <Input
+              label="特色图片"
+              value={editFormData.featuredImage}
+              onChange={(e) =>
+                setEditFormData((prev) => ({
+                  ...prev,
+                  featuredImage: e.target.value,
+                }))
+              }
+              size="sm"
+              helperText="标签的特色图片地址，用于展示在标签页面"
             />
           </div>
 

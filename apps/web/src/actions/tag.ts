@@ -195,6 +195,7 @@ export async function getTagsList(
         slug: true,
         name: true,
         description: true,
+        featuredImage: true,
         createdAt: true,
         updatedAt: true,
         posts: {
@@ -213,6 +214,7 @@ export async function getTagsList(
       slug: tag.slug,
       name: tag.name,
       description: tag.description,
+      featuredImage: tag.featuredImage,
       postCount: tag.posts.length,
       createdAt: tag.createdAt.toISOString(),
       updatedAt: tag.updatedAt.toISOString(),
@@ -353,6 +355,7 @@ export async function getTagDetail(
       slug: tag.slug,
       name: tag.name,
       description: tag.description,
+      featuredImage: tag.featuredImage,
       postCount: tag.posts.length,
       createdAt: tag.createdAt.toISOString(),
       updatedAt: tag.updatedAt.toISOString(),
@@ -385,6 +388,7 @@ export async function createTag(
       slug: string;
       name: string;
       description: string | null;
+      featuredImage: string | null;
       createdAt: string;
       updatedAt: string;
     } | null>
@@ -398,18 +402,20 @@ export async function createTag(
     slug: string;
     name: string;
     description: string | null;
+    featuredImage: string | null;
     createdAt: string;
     updatedAt: string;
   } | null>
 >;
 export async function createTag(
-  { access_token, name, slug: userSlug, description }: CreateTag,
+  { access_token, name, slug: userSlug, description, featuredImage }: CreateTag,
   serverConfig?: ActionConfig,
 ): Promise<
   ActionResult<{
     slug: string;
     name: string;
     description: string | null;
+    featuredImage: string | null;
     createdAt: string;
     updatedAt: string;
   } | null>
@@ -428,6 +434,7 @@ export async function createTag(
       name,
       slug: userSlug,
       description,
+      featuredImage,
     },
     CreateTagSchema,
   );
@@ -501,6 +508,7 @@ export async function createTag(
         slug: finalSlug,
         name,
         description: description || null,
+        featuredImage: featuredImage || null,
       },
     });
 
@@ -532,6 +540,7 @@ export async function createTag(
         slug: newTag.slug,
         name: newTag.name,
         description: newTag.description,
+        featuredImage: newTag.featuredImage,
         createdAt: newTag.createdAt.toISOString(),
         updatedAt: newTag.updatedAt.toISOString(),
       },
@@ -555,6 +564,7 @@ export async function updateTag(
       slug: string;
       name: string;
       description: string | null;
+      featuredImage: string | null;
       updatedAt: string;
     } | null>
   >
@@ -571,7 +581,14 @@ export async function updateTag(
   } | null>
 >;
 export async function updateTag(
-  { access_token, slug, newSlug, newName, description }: UpdateTag,
+  {
+    access_token,
+    slug,
+    newSlug,
+    newName,
+    description,
+    featuredImage,
+  }: UpdateTag,
   serverConfig?: ActionConfig,
 ): Promise<
   ActionResult<{
@@ -596,6 +613,7 @@ export async function updateTag(
       newSlug,
       newName,
       description,
+      featuredImage,
     },
     UpdateTagSchema,
   );
@@ -668,6 +686,7 @@ export async function updateTag(
         ...(finalNewSlug ? { slug: finalNewSlug } : {}),
         ...(newName && newName !== existingTag.name ? { name: newName } : {}),
         ...(description !== undefined ? { description } : {}),
+        ...(featuredImage !== undefined ? { featuredImage } : {}),
       },
     });
 
@@ -687,11 +706,13 @@ export async function updateTag(
             slug: existingTag.slug,
             name: existingTag.name,
             description: existingTag.description,
+            featuredImage: existingTag.featuredImage,
           },
           new: {
             slug: updatedTag.slug,
             name: updatedTag.name,
             description: updatedTag.description,
+            featuredImage: updatedTag.featuredImage,
           },
         },
         description: "更新标签",
@@ -703,6 +724,7 @@ export async function updateTag(
         slug: updatedTag.slug,
         name: updatedTag.name,
         description: updatedTag.description,
+        featuredImage: updatedTag.featuredImage,
         updatedAt: updatedTag.updatedAt.toISOString(),
       },
       message: "标签更新成功",

@@ -235,6 +235,7 @@ export async function getCategoriesList(
         slug: true,
         name: true,
         description: true,
+        featuredImage: true,
         parentId: true,
         createdAt: true,
         updatedAt: true,
@@ -279,6 +280,7 @@ export async function getCategoriesList(
         slug: true,
         name: true,
         description: true,
+        featuredImage: true,
         parentId: true,
         createdAt: true,
         updatedAt: true,
@@ -355,6 +357,7 @@ export async function getCategoriesList(
         slug: category.slug,
         name: category.name,
         description: category.description,
+        featuredImage: category.featuredImage,
         parentId: category.parentId,
         parentSlug: category.parent?.slug || null,
         parentName: category.parent?.name || null,
@@ -456,6 +459,7 @@ export async function getCategoryDetail(
       slug: string;
       name: string;
       description: string | null;
+      featuredImage: string | null;
       parentId: number | null;
       createdAt: Date;
       updatedAt: Date;
@@ -481,7 +485,15 @@ export async function getCategoryDetail(
         // 获取完整的分类信息，包括关联数据
         category = await prisma.category.findUnique({
           where: { id: foundCategory.id },
-          include: {
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            description: true,
+            featuredImage: true,
+            parentId: true,
+            createdAt: true,
+            updatedAt: true,
             parent: {
               select: {
                 slug: true,
@@ -522,7 +534,15 @@ export async function getCategoryDetail(
       // 使用 slug 查找
       category = await prisma.category.findFirst({
         where: { slug },
-        include: {
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          description: true,
+          featuredImage: true,
+          parentId: true,
+          createdAt: true,
+          updatedAt: true,
           parent: {
             select: {
               slug: true,
@@ -587,6 +607,7 @@ export async function getCategoryDetail(
       slug: category.slug,
       name: category.name,
       description: category.description,
+      featuredImage: category.featuredImage,
       parentId: category.parentId,
       parentSlug: category.parent?.slug || null,
       parentName: category.parent?.name || null,
@@ -669,6 +690,7 @@ export async function createCategory(
     name,
     slug: userSlug,
     description,
+    featuredImage,
     parentId,
     parentSlug,
   }: CreateCategory,
@@ -698,6 +720,7 @@ export async function createCategory(
       name,
       slug: userSlug,
       description,
+      featuredImage,
       parentId,
       parentSlug,
     },
@@ -791,6 +814,7 @@ export async function createCategory(
         slug: finalSlug,
         name,
         description: description ?? null,
+        featuredImage: featuredImage ?? null,
         parentId: resolvedParentId ?? null,
       },
     });
@@ -824,6 +848,7 @@ export async function createCategory(
         slug: category.slug,
         name: category.name,
         description: category.description,
+        featuredImage: category.featuredImage,
         parentId: category.parentId,
         createdAt: category.createdAt.toISOString(),
         updatedAt: category.updatedAt.toISOString(),
@@ -848,6 +873,7 @@ export async function updateCategory(
       slug: string;
       name: string;
       description: string | null;
+      featuredImage: string | null;
       parentId: number | null;
       updatedAt: string;
     } | null>
@@ -874,6 +900,7 @@ export async function updateCategory(
     newSlug,
     newName,
     description,
+    featuredImage,
     parentId,
     parentSlug,
   }: UpdateCategory,
@@ -904,6 +931,7 @@ export async function updateCategory(
       newSlug,
       newName,
       description,
+      featuredImage,
       parentId,
       parentSlug,
     },
@@ -981,6 +1009,7 @@ export async function updateCategory(
       slug?: string;
       name?: string;
       description?: string | null;
+      featuredImage?: string | null;
       parentId?: number | null;
     } = {};
 
@@ -1042,6 +1071,11 @@ export async function updateCategory(
       updateData.description = description;
     }
 
+    // 处理特色图片更新
+    if (featuredImage !== undefined) {
+      updateData.featuredImage = featuredImage;
+    }
+
     // 处理父分类更新
     if (resolvedParentId !== undefined) {
       // 检查是否为"未分类"分类，禁止设置父分类
@@ -1097,6 +1131,7 @@ export async function updateCategory(
         slug: updatedCategory.slug,
         name: updatedCategory.name,
         description: updatedCategory.description,
+        featuredImage: updatedCategory.featuredImage,
         parentId: updatedCategory.parentId,
         updatedAt: updatedCategory.updatedAt.toISOString(),
       },

@@ -77,6 +77,7 @@ export default function CategoriesTable({
     newSlug: "",
     newName: "",
     description: "",
+    featuredImage: "",
     parentId: null as number | null,
     parentCategoryPath: null as string | null,
   });
@@ -115,6 +116,7 @@ export default function CategoriesTable({
       newSlug: category.slug,
       newName: category.name,
       description: category.description || "",
+      featuredImage: category.featuredImage || "",
       parentId: category.parentId,
       parentCategoryPath: category.parentName || null,
     });
@@ -138,6 +140,7 @@ export default function CategoriesTable({
         newSlug?: string;
         newName?: string;
         description?: string;
+        featuredImage?: string | null;
         parentId?: number | null;
       } = {
         id: editingCategory.id,
@@ -156,6 +159,11 @@ export default function CategoriesTable({
       if (editFormData.description !== (editingCategory.description || "")) {
         updateData.description = editFormData.description || undefined;
       }
+      if (
+        editFormData.featuredImage !== (editingCategory.featuredImage || "")
+      ) {
+        updateData.featuredImage = editFormData.featuredImage || null;
+      }
       // "未分类"分类不允许修改父分类
       if (
         editingCategory.slug !== "uncategorized" &&
@@ -168,6 +176,7 @@ export default function CategoriesTable({
         !updateData.newSlug &&
         !updateData.newName &&
         updateData.description === undefined &&
+        updateData.featuredImage === undefined &&
         updateData.parentId === undefined
       ) {
         toast.info("没有字段被修改");
@@ -969,6 +978,18 @@ export default function CategoriesTable({
               }
               rows={3}
               size="sm"
+            />
+            <Input
+              label="特色图片"
+              value={editFormData.featuredImage}
+              onChange={(e) =>
+                setEditFormData((prev) => ({
+                  ...prev,
+                  featuredImage: e.target.value,
+                }))
+              }
+              size="sm"
+              helperText="分类的特色图片地址，用于展示在分类页面"
             />
             {/* "未分类"分类不允许设置父分类 */}
             {editingCategory?.slug !== "uncategorized" && (

@@ -6546,6 +6546,9 @@ components:
               description:
                 nullable: true
                 type: string
+              featuredImage:
+                nullable: true
+                type: string
               postCount:
                 type: integer
                 minimum: 0
@@ -6558,6 +6561,7 @@ components:
               - slug
               - name
               - description
+              - featuredImage
               - postCount
               - createdAt
               - updatedAt
@@ -6605,6 +6609,9 @@ components:
             description:
               nullable: true
               type: string
+            featuredImage:
+              nullable: true
+              type: string
             postCount:
               type: integer
               minimum: 0
@@ -6642,6 +6649,7 @@ components:
             - slug
             - name
             - description
+            - featuredImage
             - postCount
             - createdAt
             - updatedAt
@@ -6667,6 +6675,10 @@ components:
           type: string
           maxLength: 200
         description:
+          nullable: true
+          type: string
+          maxLength: 255
+        featuredImage:
           nullable: true
           type: string
           maxLength: 255
@@ -6698,6 +6710,9 @@ components:
             description:
               nullable: true
               type: string
+            featuredImage:
+              nullable: true
+              type: string
             createdAt:
               type: string
             updatedAt:
@@ -6706,6 +6721,7 @@ components:
             - slug
             - name
             - description
+            - featuredImage
             - createdAt
             - updatedAt
           additionalProperties: false
@@ -6733,6 +6749,10 @@ components:
           minLength: 1
           maxLength: 100
         description:
+          nullable: true
+          type: string
+          maxLength: 255
+        featuredImage:
           nullable: true
           type: string
           maxLength: 255
@@ -6764,12 +6784,16 @@ components:
             description:
               nullable: true
               type: string
+            featuredImage:
+              nullable: true
+              type: string
             updatedAt:
               type: string
           required:
             - slug
             - name
             - description
+            - featuredImage
             - updatedAt
           additionalProperties: false
       required:
@@ -7043,6 +7067,9 @@ components:
               description:
                 nullable: true
                 type: string
+              featuredImage:
+                nullable: true
+                type: string
               parentId:
                 nullable: true
                 type: integer
@@ -7087,6 +7114,7 @@ components:
               - slug
               - name
               - description
+              - featuredImage
               - parentId
               - parentSlug
               - parentName
@@ -7148,6 +7176,9 @@ components:
             name:
               type: string
             description:
+              nullable: true
+              type: string
+            featuredImage:
               nullable: true
               type: string
             parentId:
@@ -7242,6 +7273,7 @@ components:
             - slug
             - name
             - description
+            - featuredImage
             - parentId
             - parentSlug
             - parentName
@@ -7276,6 +7308,10 @@ components:
           type: string
           maxLength: 200
         description:
+          nullable: true
+          type: string
+          maxLength: 255
+        featuredImage:
           nullable: true
           type: string
           maxLength: 255
@@ -7318,6 +7354,9 @@ components:
             description:
               nullable: true
               type: string
+            featuredImage:
+              nullable: true
+              type: string
             parentId:
               nullable: true
               type: integer
@@ -7332,6 +7371,7 @@ components:
             - slug
             - name
             - description
+            - featuredImage
             - parentId
             - createdAt
             - updatedAt
@@ -7363,6 +7403,10 @@ components:
           minLength: 1
           maxLength: 100
         description:
+          nullable: true
+          type: string
+          maxLength: 255
+        featuredImage:
           nullable: true
           type: string
           maxLength: 255
@@ -7406,6 +7450,9 @@ components:
             description:
               nullable: true
               type: string
+            featuredImage:
+              nullable: true
+              type: string
             parentId:
               nullable: true
               type: integer
@@ -7418,6 +7465,7 @@ components:
             - slug
             - name
             - description
+            - featuredImage
             - parentId
             - updatedAt
           additionalProperties: false
@@ -7736,7 +7784,7 @@ components:
         data:
           type: array
           items:
-            $ref$ref: "#/components/schemas/CategoryTreeItem"
+            $ref: "#/definitions/__schema0"
       required:
         - success
         - message
@@ -7745,7 +7793,7 @@ components:
         - data
       additionalProperties: false
       definitions:
-        CategoryTreeItem:
+        __schema0:
           type: object
           properties:
             id:
@@ -7775,7 +7823,7 @@ components:
             children:
               type: array
               items:
-                $ref$ref: "#/components/schemas/CategoryTreeItem"
+                $ref: "#/definitions/__schema0"
           required:
             - id
             - slug

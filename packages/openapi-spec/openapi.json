@@ -9551,6 +9551,10 @@
                   "nullable": true,
                   "type": "string"
                 },
+                "featuredImage": {
+                  "nullable": true,
+                  "type": "string"
+                },
                 "postCount": {
                   "type": "integer",
                   "minimum": 0,
@@ -9567,6 +9571,7 @@
                 "slug",
                 "name",
                 "description",
+                "featuredImage",
                 "postCount",
                 "createdAt",
                 "updatedAt"
@@ -9633,6 +9638,10 @@
                 "nullable": true,
                 "type": "string"
               },
+              "featuredImage": {
+                "nullable": true,
+                "type": "string"
+              },
               "postCount": {
                 "type": "integer",
                 "minimum": 0,
@@ -9683,6 +9692,7 @@
               "slug",
               "name",
               "description",
+              "featuredImage",
               "postCount",
               "createdAt",
               "updatedAt",
@@ -9716,6 +9726,11 @@
             "maxLength": 200
           },
           "description": {
+            "nullable": true,
+            "type": "string",
+            "maxLength": 255
+          },
+          "featuredImage": {
             "nullable": true,
             "type": "string",
             "maxLength": 255
@@ -9759,6 +9774,10 @@
                 "nullable": true,
                 "type": "string"
               },
+              "featuredImage": {
+                "nullable": true,
+                "type": "string"
+              },
               "createdAt": {
                 "type": "string"
               },
@@ -9770,6 +9789,7 @@
               "slug",
               "name",
               "description",
+              "featuredImage",
               "createdAt",
               "updatedAt"
             ],
@@ -9806,6 +9826,11 @@
             "maxLength": 100
           },
           "description": {
+            "nullable": true,
+            "type": "string",
+            "maxLength": 255
+          },
+          "featuredImage": {
             "nullable": true,
             "type": "string",
             "maxLength": 255
@@ -9849,6 +9874,10 @@
                 "nullable": true,
                 "type": "string"
               },
+              "featuredImage": {
+                "nullable": true,
+                "type": "string"
+              },
               "updatedAt": {
                 "type": "string"
               }
@@ -9857,6 +9886,7 @@
               "slug",
               "name",
               "description",
+              "featuredImage",
               "updatedAt"
             ],
             "additionalProperties": false
@@ -10225,6 +10255,10 @@
                   "nullable": true,
                   "type": "string"
                 },
+                "featuredImage": {
+                  "nullable": true,
+                  "type": "string"
+                },
                 "parentId": {
                   "nullable": true,
                   "type": "integer",
@@ -10282,6 +10316,7 @@
                 "slug",
                 "name",
                 "description",
+                "featuredImage",
                 "parentId",
                 "parentSlug",
                 "parentName",
@@ -10364,6 +10399,10 @@
                 "type": "string"
               },
               "description": {
+                "nullable": true,
+                "type": "string"
+              },
+              "featuredImage": {
                 "nullable": true,
                 "type": "string"
               },
@@ -10489,6 +10528,7 @@
               "slug",
               "name",
               "description",
+              "featuredImage",
               "parentId",
               "parentSlug",
               "parentName",
@@ -10531,6 +10571,11 @@
             "maxLength": 200
           },
           "description": {
+            "nullable": true,
+            "type": "string",
+            "maxLength": 255
+          },
+          "featuredImage": {
             "nullable": true,
             "type": "string",
             "maxLength": 255
@@ -10588,6 +10633,10 @@
                 "nullable": true,
                 "type": "string"
               },
+              "featuredImage": {
+                "nullable": true,
+                "type": "string"
+              },
               "parentId": {
                 "nullable": true,
                 "type": "integer",
@@ -10606,6 +10655,7 @@
               "slug",
               "name",
               "description",
+              "featuredImage",
               "parentId",
               "createdAt",
               "updatedAt"
@@ -10647,6 +10697,11 @@
             "maxLength": 100
           },
           "description": {
+            "nullable": true,
+            "type": "string",
+            "maxLength": 255
+          },
+          "featuredImage": {
             "nullable": true,
             "type": "string",
             "maxLength": 255
@@ -10705,6 +10760,10 @@
                 "nullable": true,
                 "type": "string"
               },
+              "featuredImage": {
+                "nullable": true,
+                "type": "string"
+              },
               "parentId": {
                 "nullable": true,
                 "type": "integer",
@@ -10720,6 +10779,7 @@
               "slug",
               "name",
               "description",
+              "featuredImage",
               "parentId",
               "updatedAt"
             ],
@@ -11160,7 +11220,7 @@
         ],
         "additionalProperties": false,
         "definitions": {
-          "CategoryTreeItem": {
+          "__schema0": {
             "type": "object",
             "properties": {
               "id": {

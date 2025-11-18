@@ -41,6 +41,7 @@ export const CategoryListItemSchema = z.object({
   slug: z.string(),
   name: z.string(),
   description: z.string().nullable(),
+  featuredImage: z.string().nullable(),
   parentId: z.number().int().nullable(),
   parentSlug: z.string().nullable(),
   parentName: z.string().nullable(),
@@ -81,6 +82,7 @@ export const CategoryDetailSchema = z.object({
   slug: z.string(),
   name: z.string(),
   description: z.string().nullable(),
+  featuredImage: z.string().nullable(),
   parentId: z.number().int().nullable(),
   parentSlug: z.string().nullable(),
   parentName: z.string().nullable(),
@@ -131,6 +133,11 @@ export const CreateCategorySchema = z.object({
   name: z.string().min(1, "分类名不能为空").max(100, "分类名最多100个字符"),
   slug: z.string().max(200, "Slug 最多200个字符").optional(), // slug 可选，如果不提供则自动生成
   description: z.string().max(255, "描述最多255个字符").optional().nullable(),
+  featuredImage: z
+    .string()
+    .max(255, "特色图片最多255个字符")
+    .optional()
+    .nullable(),
   parentId: z.number().int().nullable().optional(), // 父分类 ID，null 或不提供表示顶级分类
   parentSlug: z.string().optional(), // 使用 slug 指定父分类（与 parentId 二选一）
 });
@@ -143,6 +150,7 @@ export const CreateCategorySuccessResponseSchema = createSuccessResponseSchema(
     slug: z.string(),
     name: z.string(),
     description: z.string().nullable(),
+    featuredImage: z.string().nullable(),
     parentId: z.number().int().nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),
@@ -174,6 +182,11 @@ export const UpdateCategorySchema = z.object({
     .max(100, "分类名最多100个字符")
     .optional(),
   description: z.string().max(255, "描述最多255个字符").optional().nullable(),
+  featuredImage: z
+    .string()
+    .max(255, "特色图片最多255个字符")
+    .optional()
+    .nullable(),
   parentId: z.number().int().nullable().optional(), // 更新父分类（移动分类）
   parentSlug: z.string().nullable().optional(), // 使用 slug 指定新父分类
 });
@@ -186,6 +199,7 @@ export const UpdateCategorySuccessResponseSchema = createSuccessResponseSchema(
     slug: z.string(),
     name: z.string(),
     description: z.string().nullable(),
+    featuredImage: z.string().nullable(),
     parentId: z.number().int().nullable(),
     updatedAt: z.string(),
   }),

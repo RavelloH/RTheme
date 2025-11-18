@@ -29,6 +29,7 @@ export const TagListItemSchema = z.object({
   slug: z.string(),
   name: z.string(),
   description: z.string().nullable(),
+  featuredImage: z.string().nullable(),
   postCount: z.number().int().nonnegative(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -57,6 +58,7 @@ export const TagDetailSchema = z.object({
   slug: z.string(),
   name: z.string(),
   description: z.string().nullable(),
+  featuredImage: z.string().nullable(),
   postCount: z.number().int().nonnegative(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -89,6 +91,11 @@ export const CreateTagSchema = z.object({
   name: z.string().min(1, "标签名不能为空").max(100, "标签名最多100个字符"),
   slug: z.string().max(200, "Slug 最多200个字符").optional(), // slug 可选，如果不提供则自动生成
   description: z.string().max(255, "描述最多255个字符").optional().nullable(),
+  featuredImage: z
+    .string()
+    .max(255, "特色图片最多255个字符")
+    .optional()
+    .nullable(),
 });
 export type CreateTag = z.infer<typeof CreateTagSchema>;
 registerSchema("CreateTag", CreateTagSchema);
@@ -98,6 +105,7 @@ export const CreateTagSuccessResponseSchema = createSuccessResponseSchema(
     slug: z.string(),
     name: z.string(),
     description: z.string().nullable(),
+    featuredImage: z.string().nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),
   }),
@@ -124,6 +132,11 @@ export const UpdateTagSchema = z.object({
     .max(100, "标签名最多100个字符")
     .optional(),
   description: z.string().max(255, "描述最多255个字符").optional().nullable(),
+  featuredImage: z
+    .string()
+    .max(255, "特色图片最多255个字符")
+    .optional()
+    .nullable(),
 });
 export type UpdateTag = z.infer<typeof UpdateTagSchema>;
 registerSchema("UpdateTag", UpdateTagSchema);
@@ -133,6 +146,7 @@ export const UpdateTagSuccessResponseSchema = createSuccessResponseSchema(
     slug: z.string(),
     name: z.string(),
     description: z.string().nullable(),
+    featuredImage: z.string().nullable(),
     updatedAt: z.string(),
   }),
 );
