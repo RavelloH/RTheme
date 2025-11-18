@@ -327,7 +327,8 @@ export const defaultPages: DefaultPage[] = [
       blocks: [
         {
           id: 1,
-          description: "自定义块1，显示在页面开头。可显示分类统计信息。",
+          description:
+            "自定义块1，显示在页面开头。可显示分类统计信息。底部文本的最后一行将始终显示路径",
           enabled: true,
           content: {
             header: {
@@ -347,10 +348,10 @@ export const defaultPages: DefaultPage[] = [
                   "共索引 {categories} 个分类，",
                   "其中包含 {root} 个根分类，{child} 个子分类。",
                 ],
-                bottom: ["当前正在查看 {pageInfo}。", "路径：{path}"],
+                bottom: ["当前正在查看 {pageInfo}。"],
               },
               description:
-                "正文文本，分别显示在正文顶部和底部。使用 {lastUpdatedDays} 来表示距离上次更新所过的天数，{categories} 来表示分类数，{root} 来表示根分类数，{child} 来表示子分类数，{pageInfo} 来表示当前页信息，{path} 来表示当前路径",
+                "正文文本，分别显示在正文顶部和底部。使用 {lastUpdatedDays} 来表示距离上次更新所过的天数，{categories} 来表示分类数，{root} 来表示根分类数，{child} 来表示子分类数，{pageInfo} 来表示当前页信息。",
             },
             footer: {
               value: {
