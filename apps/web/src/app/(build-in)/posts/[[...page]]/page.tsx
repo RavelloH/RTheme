@@ -92,9 +92,10 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: {
-  params: { page?: string[] };
+  params: Promise<{ page?: string[] }>;
 }) {
-  const currentPage = parseInt(params.page?.[1] || "1");
+  const resolvedParams = await params;
+  const currentPage = parseInt(resolvedParams.page?.[1] || "1");
 
   return await generateSEOMetadata(
     {
@@ -127,9 +128,10 @@ export async function generateMetadata({
 export default async function PostsPage({
   params,
 }: {
-  params: { page?: string[] };
+  params: Promise<{ page?: string[] }>;
 }) {
-  const page = params.page?.[1] || "1";
+  const resolvedParams = await params;
+  const page = resolvedParams.page?.[1] || "1";
 
   // 计算分页
   const currentPage = parseInt(page);

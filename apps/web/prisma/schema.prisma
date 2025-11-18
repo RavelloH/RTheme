@@ -152,23 +152,23 @@ model Post {
 }
 
 model Tag {
-  slug         String   @id @unique
-  name         String   @unique
-  description  String?  @db.VarChar(255)
-  featuredImage String? @db.VarChar(255)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  posts        Post[]
+  slug          String   @id @unique
+  name          String   @unique
+  description   String?  @db.VarChar(255)
+  featuredImage String?  @db.VarChar(255)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  posts         Post[]
 }
 
 model Category {
-  id           Int      @id @default(autoincrement())
-  slug         String
-  name         String
-  description  String?  @db.VarChar(255)
-  featuredImage String? @db.VarChar(255)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            Int      @id @default(autoincrement())
+  slug          String
+  name          String
+  description   String?  @db.VarChar(255)
+  featuredImage String?  @db.VarChar(255)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // 层级关系
   parentId Int?

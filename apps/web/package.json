@@ -71,6 +71,7 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-fast-marquee": "^1.6.5",
+    "rehype-slug": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "rlog-js": "^1.5.2",
     "server-only": "^0.0.1",
