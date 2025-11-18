@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 
 interface ParallaxImageCarouselProps {
   /** 图片URL数组 */
@@ -103,40 +104,20 @@ export default function ParallaxImageCarousel({
     return () => resizeObserver.disconnect();
   }, []);
 
-  // 预加载图片并获取尺寸
+  // images 变化时，先用默认 16:9 占位
   useEffect(() => {
-    if (!images.length) return;
+    if (!images.length) {
+      setImageDimensions([]);
+      return;
+    }
 
-    const loadImageDimensions = async () => {
-      const dimensions = await Promise.all(
-        images.map(
-          (src) =>
-            new Promise<ImageDimension>((resolve) => {
-              const img = document.createElement("img");
-              img.onload = () => {
-                resolve({
-                  width: img.naturalWidth,
-                  height: img.naturalHeight,
-                  aspectRatio: img.naturalWidth / img.naturalHeight,
-                });
-              };
-              img.onerror = () => {
-                // 如果图片加载失败，使用默认比例
-                resolve({
-                  width: 16,
-                  height: 9,
-                  aspectRatio: 16 / 9,
-                });
-              };
-              img.src = src;
-            }),
-        ),
-      );
-
-      setImageDimensions(dimensions);
-    };
-
-    loadImageDimensions();
+    setImageDimensions(
+      images.map(() => ({
+        width: 16,
+        height: 9,
+        aspectRatio: 16 / 9,
+      })),
+    );
   }, [images]);
 
   // 动态计算可见图片实例
@@ -217,12 +198,33 @@ export default function ParallaxImageCarousel({
               flexBasis: `${containerHeight * dimension.aspectRatio}px`,
             }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={instance.src}
               alt={`${alt} ${instance.originalIndex + 1}`}
-              className="h-full w-full object-cover"
+              fill
+              className="object-cover"
               loading="lazy"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              onLoadingComplete={(imgEl) => {
+                const w = imgEl.naturalWidth || 16;
+                const h = imgEl.naturalHeight || 9;
+                const ar = h ? w / h : 16 / 9;
+
+                // 只在需要时更新，避免无意义的重算
+                setImageDimensions((prev) => {
+                  const cur = prev[instance.originalIndex];
+                  if (!cur || cur.width !== w || cur.height !== h) {
+                    const next = [...prev];
+                    next[instance.originalIndex] = {
+                      width: w,
+                      height: h,
+                      aspectRatio: ar,
+                    };
+                    return next;
+                  }
+                  return prev;
+                });
+              }}
             />
           </div>
         );
