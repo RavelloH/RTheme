@@ -14,10 +14,10 @@ import {
 import { createPageConfigBuilder } from "@/lib/server/pageUtils";
 import prisma from "@/lib/server/prisma";
 import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
-import { formatRelativeTime } from "@/lib/shared/relativeTime";
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import ParallaxImageCarousel from "@/components/ParallaxImageCarousel";
 import Link from "@/components/Link";
+import DynamicReplace from "@/components/client/DynamicReplace";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { RiArrowLeftSLine } from "@remixicon/react";
@@ -585,21 +585,38 @@ export default async function CategorySlugPage({
                   </h1>
                 </div>
                 <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
-                  {config.getBlockContent(1).map((line, index) => (
-                    <div key={index}>
-                      {line
-                        .replaceAll("{categoryName}", currentCategoryData.name)
-                        .replaceAll(
-                          "{lastUpdatedDays}",
-                          formatRelativeTime(lastUpdatedDate),
-                        )
-                        .replaceAll(
-                          "{categories}",
-                          String(totalChildCategories),
-                        )
-                        .replaceAll("{posts}", String(totalPosts)) || " "}
-                    </div>
-                  ))}
+                  {config.getBlockContent(1).map((line, index) => {
+                    // 检查是否包含需要动态处理的占位符
+                    if (line.includes("{lastUpdatedDays}")) {
+                      return (
+                        <DynamicReplace
+                          key={index}
+                          text={line}
+                          params={[
+                            ["{categoryName}", currentCategoryData.name],
+                            ["{categories}", String(totalChildCategories)],
+                            ["{posts}", String(totalPosts)],
+                            ["__date", lastUpdatedDate.toISOString()],
+                          ]}
+                        />
+                      );
+                    } else {
+                      return (
+                        <div key={index}>
+                          {line
+                            .replaceAll(
+                              "{categoryName}",
+                              currentCategoryData.name,
+                            )
+                            .replaceAll(
+                              "{categories}",
+                              String(totalChildCategories),
+                            )
+                            .replaceAll("{posts}", String(totalPosts)) || " "}
+                        </div>
+                      );
+                    }
+                  })}
                 </div>
               </div>
               <div>

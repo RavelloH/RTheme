@@ -11,11 +11,11 @@ import {
 import { createPageConfigBuilder } from "@/lib/server/pageUtils";
 import prisma from "@/lib/server/prisma";
 import { generateMetadata } from "@/lib/server/seo";
-import { formatRelativeTime } from "@/lib/shared/relativeTime";
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import ParallaxImageCarousel from "@/components/ParallaxImageCarousel";
 import Link from "@/components/Link";
 import CategoriesRandomPage from "./CategoriesRandomPage";
+import DynamicReplace from "@/components/client/DynamicReplace";
 
 // 获取系统页面配置
 const page = await getRawPage("/categories");
@@ -207,18 +207,33 @@ export default async function CategoryIndex() {
                   <h1>{config.getBlockTitle(1)}</h1>
                 </div>
                 <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
-                  {config.getBlockContent(1).map((line, index) => (
-                    <div key={index}>
-                      {line
-                        .replaceAll(
-                          "{lastUpdatedDays}",
-                          formatRelativeTime(lastUpdatedDate),
-                        )
-                        .replaceAll("{categories}", String(totalCategories))
-                        .replaceAll("{root}", String(rootCategories))
-                        .replaceAll("{child}", String(childCategories)) || " "}
-                    </div>
-                  ))}
+                  {config.getBlockContent(1).map((line, index) => {
+                    // 检查是否包含需要动态处理的占位符
+                    if (line.includes("{lastUpdatedDays}")) {
+                      return (
+                        <DynamicReplace
+                          key={index}
+                          text={line}
+                          params={[
+                            ["{categories}", String(totalCategories)],
+                            ["{root}", String(rootCategories)],
+                            ["{child}", String(childCategories)],
+                            ["__date", lastUpdatedDate.toISOString()],
+                          ]}
+                        />
+                      );
+                    } else {
+                      return (
+                        <div key={index}>
+                          {line
+                            .replaceAll("{categories}", String(totalCategories))
+                            .replaceAll("{root}", String(rootCategories))
+                            .replaceAll("{child}", String(childCategories)) ||
+                            " "}
+                        </div>
+                      );
+                    }
+                  })}
                 </div>
               </div>
               <div>

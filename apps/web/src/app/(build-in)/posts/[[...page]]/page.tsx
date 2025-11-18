@@ -14,11 +14,11 @@ import { createPageConfigBuilder } from "@/lib/server/pageUtils";
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import prisma from "@/lib/server/prisma";
 import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
-import { formatRelativeTime } from "@/lib/shared/relativeTime";
 import { Input } from "@/ui/Input";
 import { RiSearch2Line } from "@remixicon/react";
 import Custom404 from "@/app/not-found";
 import EmptyPostCard from "@/components/EmptyPostCard";
+import DynamicReplace from "@/components/client/DynamicReplace";
 
 // 获取系统页面配置
 const pageConfig = await getRawPage("/posts");
@@ -267,27 +267,52 @@ export default async function PostsPage({
                   icon={<RiSearch2Line size={"1em"} />}
                 />
                 <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
-                  {config.getBlockContent(1).map((line, index) => (
-                    <div key={index}>
-                      {line
-                        .replaceAll(
-                          "{lastPublishDays}",
-                          formatRelativeTime(newestDate),
-                        )
-                        .replaceAll(
-                          "{firstPublishAt}",
-                          new Date(oldestDate || "").toLocaleDateString(
-                            "zh-CN",
-                            {
-                              year: "numeric",
-                              month: "2-digit",
-                              day: "2-digit",
-                            },
-                          ),
-                        )
-                        .replaceAll("{posts}", String(totalPosts)) || " "}
-                    </div>
-                  ))}
+                  {config.getBlockContent(1).map((line, index) => {
+                    // 检查是否包含需要动态处理的占位符
+                    if (line.includes("{lastPublishDays}")) {
+                      return (
+                        <DynamicReplace
+                          key={index}
+                          text={line}
+                          params={[
+                            [
+                              "{firstPublishAt}",
+                              oldestDate
+                                ? new Date(oldestDate).toLocaleDateString(
+                                    "zh-CN",
+                                    {
+                                      year: "numeric",
+                                      month: "2-digit",
+                                      day: "2-digit",
+                                    },
+                                  )
+                                : "",
+                            ],
+                            ["{posts}", String(totalPosts)],
+                            ["__date", newestDate?.toISOString() || ""],
+                          ]}
+                        />
+                      );
+                    } else {
+                      return (
+                        <div key={index}>
+                          {line
+                            .replaceAll(
+                              "{firstPublishAt}",
+                              new Date(oldestDate || "").toLocaleDateString(
+                                "zh-CN",
+                                {
+                                  year: "numeric",
+                                  month: "2-digit",
+                                  day: "2-digit",
+                                },
+                              ),
+                            )
+                            .replaceAll("{posts}", String(totalPosts)) || " "}
+                        </div>
+                      );
+                    }
+                  })}
                 </div>
               </div>
               <div>
