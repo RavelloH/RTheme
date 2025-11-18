@@ -167,9 +167,17 @@ interface ConfigValue {
   [key: string]: unknown;
 }
 
+// 扩展的 Metadata 类型，支持分页
+interface ExtendedMetadata extends Metadata {
+  pagination?: {
+    next?: string;
+    prev?: string;
+  };
+}
+
 // 生成动态SEO配置的异步函数
 export async function generateMetadata(
-  overrides: Partial<Metadata> = {},
+  overrides: Partial<ExtendedMetadata> = {},
   options?: { pathname?: string },
 ): Promise<Metadata> {
   // 批量获取所有需要的配置
@@ -320,6 +328,33 @@ export async function generateMetadata(
 
   // 处理页面级别的标题覆盖
   const processedOverrides = { ...overrides };
+
+  // 如果提供了分页信息，添加到 other 中以生成正确的 link 标签
+  if (overrides.pagination) {
+    // 从 overrides 中移除 pagination，因为它不是标准的 Metadata 字段
+    const { pagination, ...overridesWithoutPagination } = overrides;
+
+    // 构建 prev/next 链接并添加到 other 中
+    const otherMetadata: Record<string, string | number | (string | number)[]> =
+      {
+        ...processedOverrides.other,
+        ...defaultMetadata.other,
+      };
+
+    // 使用标准的 rel prev/next 格式
+    if (pagination.prev) {
+      otherMetadata.prev = pagination.prev;
+    }
+
+    if (pagination.next) {
+      otherMetadata.next = pagination.next;
+    }
+
+    processedOverrides.other = otherMetadata;
+
+    // 更新 processedOverrides，排除 pagination
+    Object.assign(processedOverrides, overridesWithoutPagination);
+  }
 
   // 如果覆盖参数中包含标题，确保使用模板格式
   if (overrides.title) {
