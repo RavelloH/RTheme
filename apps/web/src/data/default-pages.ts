@@ -495,7 +495,75 @@ export const defaultPages: DefaultPage[] = [
     slug: "/tags",
     content: "",
     contentType: "MARKDOWN",
-    config: {},
+    config: {
+      blocks: [
+        {
+          id: 1,
+          description: "自定义块1，显示在页面开头。可显示标签统计信息。",
+          enabled: true,
+          content: {
+            header: {
+              value: "Keywords. Connections. Traces.",
+              description: "头部显示文本",
+            },
+            title: {
+              value: "Tags / 标签",
+              description: "标题文本",
+            },
+            content: {
+              value: {
+                top: [
+                  "整理 & 索引所有分类。",
+                  "",
+                  "最近更新于 {lastUpdatedDays}。",
+                  "共索引 {tags} 个标签。",
+                ],
+                bottom: ["当前正在查看 {pageInfo}。"],
+              },
+              description:
+                "正文文本，分别显示在正文顶部和底部。使用 {lastUpdatedDays} 来表示距离上次更新所过的天数，{tags} 来表示标签数，{page} 当前页码，{totalPage} 总页数，{firstTag} 当前页首个标签序号，{lastTag} 当前页末个标签序号",
+            },
+            footer: {
+              value: {
+                link: "",
+                description: "Random / 随便看看",
+              },
+              description:
+                "底部显示文本，将始终显示随机页面的链接。修改link无效，但description可自定义",
+            },
+          },
+        },
+        {
+          id: 2,
+          description: "自定义块2，显示在页面结尾。",
+          enabled: false,
+          content: {
+            header: {
+              value: "",
+              description: "头部显示文本",
+            },
+            title: {
+              value: "",
+              description: "标题文本",
+            },
+            content: {
+              value: {
+                top: [""],
+                bottom: [""],
+              },
+              description: "正文文本，分别显示在正文顶部和底部",
+            },
+            footer: {
+              value: {
+                link: "",
+                description: "",
+              },
+              description: "底部显示文本，可提供链接用于跳转",
+            },
+          },
+        },
+      ],
+    },
     status: "ACTIVE",
     isSystemPage: true,
     // SEO 字段

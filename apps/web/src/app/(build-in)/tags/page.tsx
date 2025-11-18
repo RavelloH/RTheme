@@ -1,0 +1,263 @@
+import HorizontalScroll from "@/components/HorizontalScroll";
+import LinkButton from "@/components/LinkButton";
+import MainLayout from "@/components/MainLayout";
+import RowGrid, { GridItem } from "@/components/RowGrid";
+import {
+  getBlocksAreas,
+  getRawPage,
+  getSystemPageConfig,
+} from "@/lib/server/pageCache";
+import { createPageConfigBuilder } from "@/lib/server/pageUtils";
+import prisma from "@/lib/server/prisma";
+import { generateMetadata } from "@/lib/server/seo";
+import Link from "@/components/Link";
+import TagsRandomPage from "./TagsRandomPage";
+import DynamicReplace from "@/components/client/DynamicReplace";
+import TagContainer from "./TagContainer";
+
+// 获取系统页面配置
+const page = await getRawPage("/tags");
+const config = createPageConfigBuilder(getSystemPageConfig(page));
+
+// 获取所有标签数据
+const allTags = await prisma.tag.findMany({
+  select: {
+    slug: true,
+    name: true,
+    description: true,
+    featuredImage: true,
+    createdAt: true,
+    updatedAt: true,
+    posts: {
+      where: {
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+      },
+    },
+  },
+});
+
+// 处理标签统计数据
+const processedTags = allTags.map((tag) => ({
+  slug: tag.slug,
+  name: tag.name,
+  description: tag.description,
+  featuredImage: tag.featuredImage,
+  postCount: tag.posts.length,
+  createdAt: tag.createdAt.toISOString(),
+  updatedAt: tag.updatedAt.toISOString(),
+}));
+
+// 过滤和排序标签
+const tags = processedTags
+  .filter((tag) => tag.postCount > 0) // 过滤掉没有文章的标签
+  .sort((a, b) => b.postCount - a.postCount); // 按文章数降序排序
+
+// 计算标签统计数据
+const totalTags = tags.length;
+const lastUpdatedDate = new Date(); // 当前服务器时间
+
+const pageInfo = "标签列表";
+
+export const metadata = await generateMetadata(
+  {
+    title: page?.title,
+    description: page?.metaDescription,
+    keywords: page?.metaKeywords,
+    robots: {
+      index: page?.robotsIndex,
+    },
+  },
+  {
+    pathname: "/tags",
+  },
+);
+
+export default async function TagsIndex() {
+  return (
+    <MainLayout type="horizontal">
+      <HorizontalScroll
+        className="h-full"
+        enableParallax={true}
+        enableFadeElements={true}
+        enableLineReveal={true}
+        snapToElements={false}
+      >
+        {config.isBlockEnabled(1) && (
+          <RowGrid>
+            {config.getBlockHeader(1) && (
+              <GridItem
+                areas={[1]}
+                width={14}
+                height={0.1}
+                className="bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl h-full"
+              >
+                <span>{config.getBlockHeader(1)}</span>
+              </GridItem>
+            )}
+
+            <GridItem
+              areas={getBlocksAreas(
+                1,
+                !!config.getBlockHeader(1),
+                !!(
+                  config.getBlockFooterLink(1) || config.getBlockFooterDesc(1)
+                ),
+              )}
+              width={
+                14 /
+                getBlocksAreas(
+                  1,
+                  !!config.getBlockHeader(1),
+                  !!(
+                    config.getBlockFooterLink(1) || config.getBlockFooterDesc(1)
+                  ),
+                ).length
+              }
+              height={1}
+              className="px-10 py-15 text-2xl flex flex-col justify-between"
+            >
+              <div>
+                <div className="text-7xl" data-fade-char>
+                  <h1>{config.getBlockTitle(1)}</h1>
+                </div>
+                <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
+                  {config.getBlockContent(1).map((line, index) => {
+                    // 检查是否包含需要动态处理的占位符
+                    if (line.includes("{lastUpdatedDays}")) {
+                      return (
+                        <DynamicReplace
+                          key={index}
+                          text={line}
+                          params={[
+                            ["{tags}", String(totalTags)],
+                            ["__date", lastUpdatedDate.toISOString()],
+                          ]}
+                        />
+                      );
+                    } else {
+                      return (
+                        <div key={index}>
+                          {line.replaceAll("{tags}", String(totalTags)) || " "}
+                        </div>
+                      );
+                    }
+                  })}
+                </div>
+              </div>
+              <div>
+                <div className="mt-10">
+                  {config.getBlockContent(1, "bottom").map((line, index) => (
+                    <div key={index} data-fade-char>
+                      {line.replaceAll("{pageInfo}", pageInfo) || " "}
+                    </div>
+                  ))}
+                  <div>
+                    路径：
+                    <Link href={"/tags"} presets={["hover-underline"]}>
+                      标签列表
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </GridItem>
+            {(config.getBlockFooterLink(1) || config.getBlockFooterDesc(1)) && (
+              <GridItem
+                areas={[12]}
+                width={14}
+                height={0.1}
+                className="flex items-center uppercase text-2xl"
+              >
+                <TagsRandomPage
+                  options={tags.map((tag) => {
+                    return `/tags/${tag.slug}`;
+                  })}
+                  text={config.getBlockFooterDesc(1)}
+                />
+              </GridItem>
+            )}
+          </RowGrid>
+        )}
+
+        <RowGrid>
+          {tags.map((tag) => (
+            <TagContainer key={tag.slug} tag={tag} />
+          ))}
+        </RowGrid>
+
+        {config.isBlockEnabled(2) && (
+          <RowGrid>
+            {config.getBlockHeader(2) && (
+              <GridItem
+                areas={[1]}
+                width={14}
+                height={0.1}
+                className="bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl h-full"
+              >
+                <span>{config.getBlockHeader(2)}</span>
+              </GridItem>
+            )}
+
+            <GridItem
+              areas={getBlocksAreas(
+                2,
+                !!config.getBlockHeader(2),
+                !!(
+                  config.getBlockFooterLink(2) || config.getBlockFooterDesc(2)
+                ),
+              )}
+              width={
+                14 /
+                getBlocksAreas(
+                  2,
+                  !!config.getBlockHeader(2),
+                  !!(
+                    config.getBlockFooterLink(2) || config.getBlockFooterDesc(2)
+                  ),
+                ).length
+              }
+              height={1}
+              className="px-10 py-15 text-2xl flex flex-col justify-between"
+            >
+              <div>
+                <div className="text-7xl" data-fade-char>
+                  <p>{config.getBlockTitle(2)}</p>
+                </div>
+                <div className="block mt-4" data-line-reveal>
+                  {config.getBlockContent(2).map((line, index) => (
+                    <div key={index}>{line || " "}</div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="mt-10">
+                  {config.getBlockContent(2, "bottom").map((line, index) => (
+                    <div key={index} data-fade-char>
+                      {line || " "}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </GridItem>
+            {(config.getBlockFooterLink(2) || config.getBlockFooterDesc(2)) && (
+              <GridItem
+                areas={[12]}
+                width={14}
+                height={0.1}
+                className="flex items-center uppercase text-2xl"
+              >
+                <LinkButton
+                  mode="link"
+                  href={config.getBlockFooterLink(2)}
+                  text={config.getBlockFooterDesc(2)}
+                />
+              </GridItem>
+            )}
+          </RowGrid>
+        )}
+      </HorizontalScroll>
+    </MainLayout>
+  );
+}
