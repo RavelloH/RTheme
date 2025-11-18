@@ -106,13 +106,16 @@ export default function ParallaxImageCarousel({
 
   // images 变化时，先用默认 16:9 占位
   useEffect(() => {
-    if (!images.length) {
+    // 过滤掉无效图片
+    const validImages = images.filter((img) => img && img.trim() !== "");
+
+    if (!validImages.length) {
       setImageDimensions([]);
       return;
     }
 
     setImageDimensions(
-      images.map(() => ({
+      validImages.map(() => ({
         width: 16,
         height: 9,
         aspectRatio: 16 / 9,
@@ -123,6 +126,10 @@ export default function ParallaxImageCarousel({
   // 动态计算可见图片实例
   useEffect(() => {
     if (!imageDimensions.length || !containerWidth || !containerHeight) return;
+
+    // 过滤出有效图片
+    const validImages = images.filter((img) => img && img.trim() !== "");
+    if (!validImages.length) return;
 
     // 计算单个循环图片序列的总宽度
     const singleCycleWidth = imageDimensions.reduce(
@@ -145,15 +152,20 @@ export default function ParallaxImageCarousel({
       position: number;
     }> = [];
 
+    let validImageIndex = 0; // 用于追踪有效图片的索引
+
     for (let cycle = 0; cycle < cyclesNeeded; cycle++) {
       for (let imgIndex = 0; imgIndex < images.length; imgIndex++) {
-        const dimension = imageDimensions[imgIndex];
+        const image = images[imgIndex];
+        if (!image || image.trim() === "") continue; // 跳过无效图片
+
+        const dimension = imageDimensions[validImageIndex];
         if (!dimension) continue;
 
         const position =
           cycle * singleCycleWidth +
           imageDimensions
-            .slice(0, imgIndex)
+            .slice(0, validImageIndex)
             .reduce(
               (total, dim) => total + containerHeight * dim.aspectRatio,
               0,
@@ -161,18 +173,21 @@ export default function ParallaxImageCarousel({
 
         instances.push({
           id: `${cycle}-${imgIndex}`,
-          src: images[imgIndex]!,
-          originalIndex: imgIndex,
+          src: image,
+          originalIndex: validImageIndex,
           position,
         });
+
+        validImageIndex++;
       }
+      validImageIndex = 0; // 重置有效图片索引，开始下一个循环
     }
 
     setVisibleImageInstances(instances);
   }, [images, imageDimensions, containerWidth, containerHeight]);
 
-  // 如果没有图片，返回空
-  if (!images.length) {
+  // 如果没有图片，或者所有图片都无效，返回空
+  if (!images.length || images.every((img) => !img || img.trim() === "")) {
     return null;
   }
 

@@ -15,13 +15,13 @@ import { createPageConfigBuilder } from "@/lib/server/pageUtils";
 import prisma from "@/lib/server/prisma";
 import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
-import ParallaxImageCarousel from "@/components/ParallaxImageCarousel";
 import Link from "@/components/Link";
 import DynamicReplace from "@/components/client/DynamicReplace";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { RiArrowLeftSLine } from "@remixicon/react";
 import { cache } from "react";
+import CategoryContainer from "../CategoryContainer";
 
 // 缓存函数：获取所有分类的完整数据
 const getCategoriesWithFullData = cache(async () => {
@@ -693,49 +693,7 @@ export default async function CategorySlugPage({
         {childCategories.length > 0 && (
           <RowGrid>
             {childCategories.map((category) => (
-              <GridItem
-                key={category.id}
-                areas={createArray(1, 12)}
-                width={3 / 12}
-                className="overflow-hidden block relative group"
-              >
-                <Link
-                  href={`/categories/${fullPath}/${category.slug}`}
-                  className="h-full block relative"
-                >
-                  <ParallaxImageCarousel
-                    images={[category.featuredImage || ""]}
-                    alt={`${category.name} 分类展示`}
-                  />
-
-                  <div className="p-15 absolute inset-0 z-10 flex flex-col justify-between items-center text-center">
-                    <div className="space-y-2">
-                      <div className="text-5xl opacity-0">
-                        <div>{category.totalPostCount}</div>
-                      </div>
-                    </div>
-
-                    <div className="flex-1 flex items-center justify-center">
-                      <h3
-                        className="text-5xl text-white transition-all duration-300 ease-out tracking-[0.2em] group-hover:scale-110 group-hover:tracking-[0.4em]"
-                        data-fade-char
-                        style={{
-                          writingMode: "vertical-rl",
-                          textOrientation: "mixed",
-                        }}
-                      >
-                        {category.name}
-                      </h3>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="text-5xl text-foreground/20 transition-all duration-300 ease-out group-hover:text-foreground/50">
-                        <div>{category.totalPostCount}</div>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              </GridItem>
+              <CategoryContainer key={category.id} category={category} />
             ))}
           </RowGrid>
         )}
