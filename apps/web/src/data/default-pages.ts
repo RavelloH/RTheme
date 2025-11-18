@@ -356,6 +356,94 @@ export const defaultPages: DefaultPage[] = [
             footer: {
               value: {
                 link: "",
+                description: "Random / 随便看看",
+              },
+              description:
+                "底部显示文本，将始终显示随机页面的链接。修改link无效，但description可自定义",
+            },
+          },
+        },
+        {
+          id: 2,
+          description: "自定义块2，显示在页面结尾。",
+          enabled: false,
+          content: {
+            header: {
+              value: "",
+              description: "头部显示文本",
+            },
+            title: {
+              value: "",
+              description: "标题文本",
+            },
+            content: {
+              value: {
+                top: [""],
+                bottom: [""],
+              },
+              description: "正文文本，分别显示在正文顶部和底部",
+            },
+            footer: {
+              value: {
+                link: "",
+                description: "",
+              },
+              description: "底部显示文本，可提供链接用于跳转",
+            },
+          },
+        },
+      ],
+    },
+    status: "ACTIVE",
+    isSystemPage: true,
+    // SEO 字段
+    metaDescription: "按主题和领域分类整理的文章列表，方便快速找到感兴趣的内容",
+    metaKeywords: "文章分类, 内容分类, 主题导航, 文章目录",
+    robotsIndex: true,
+  },
+  {
+    id: "child-categories-page",
+    title: "子分类",
+    slug: "/categories/[slug]",
+    content: "",
+    contentType: "MARKDOWN",
+    config: {
+      blocks: [
+        {
+          id: 1,
+          description:
+            "自定义块1，显示在页面开头。可显示分类统计信息。底部文本的最后一行将始终显示路径",
+          enabled: true,
+          content: {
+            header: {
+              value: "Topics. Themes. Paths.",
+              description: "头部显示文本",
+            },
+            title: {
+              value: "分类：{categoryName}",
+              description: "标题文本，其中 {categoryName} 显示当前分类名称",
+            },
+            content: {
+              value: {
+                top: [
+                  "整理 & 索引 {categoryName} 下的所有子分类及文章。",
+                  "",
+                  "最近更新于 {lastUpdatedDays}。",
+                  "此分类共包含 {categories} 个子分类，",
+                  "{posts} 篇文章。",
+                ],
+                bottom: [
+                  "当前正在查看 {pageInfo}。",
+                  "第 {page} 页，共 {totalPage} 页。",
+                  "正在查看第 {firstPage} - {lastPage} 篇文章。",
+                ],
+              },
+              description:
+                "正文文本，分别显示在正文顶部和底部。使用 {categoryName} 来表示当前分类名称，{lastUpdatedDays} 来表示距离上次更新所过的天数，{categories} 来表示子分类数，{posts} 来表示文章数，{pageInfo} 来表示当前页信息，{page} 当前页码，{totalPage} 总页数，{firstPage} 当前页首篇文章序号，{lastPage} 当前页末篇文章序号",
+            },
+            footer: {
+              value: {
+                link: "",
                 description: "Back / 返回上一级分类",
               },
               description:

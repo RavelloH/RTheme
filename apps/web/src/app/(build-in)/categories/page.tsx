@@ -248,6 +248,7 @@ export default async function CategoryIndex() {
                   options={categories.map((category) => {
                     return `/categories/${category.slug}`;
                   })}
+                  text={config.getBlockFooterDesc(1)}
                 />
               </GridItem>
             )}
