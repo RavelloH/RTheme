@@ -1,3 +1,4 @@
+import React from "react";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import LinkButton from "@/components/LinkButton";
 import MainLayout from "@/components/MainLayout";
@@ -362,7 +363,7 @@ export default async function PostsPage({
           {Array(Math.ceil(postsWithExpandedCategories.length / 4))
             .fill(0)
             .map((_, rowIndex) => (
-              <>
+              <React.Fragment key={rowIndex}>
                 {Array.from({ length: 4 }, (_, index) => {
                   const postIndex = rowIndex * 4 + index;
                   const post = postsWithExpandedCategories[postIndex];
@@ -404,7 +405,7 @@ export default async function PostsPage({
                     </GridItem>
                   );
                 })}
-              </>
+              </React.Fragment>
             ))}
         </RowGrid>
 
