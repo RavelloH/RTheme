@@ -13,7 +13,7 @@ import {
 import { createPageConfigBuilder } from "@/lib/server/pageUtils";
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import prisma from "@/lib/server/prisma";
-import { generateMetadata } from "@/lib/server/seo";
+import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
 import { formatRelativeTime } from "@/lib/shared/relativeTime";
 import { Input } from "@/ui/Input";
 import { RiSearch2Line } from "@remixicon/react";
@@ -21,8 +21,8 @@ import Custom404 from "@/app/not-found";
 import EmptyPostCard from "@/components/EmptyPostCard";
 
 // 获取系统页面配置
-const page = await getRawPage("/posts");
-const config = createPageConfigBuilder(getSystemPageConfig(page));
+const pageConfig = await getRawPage("/posts");
+const config = createPageConfigBuilder(getSystemPageConfig(pageConfig));
 
 const PRE_PAGE_SIZE = 20;
 
@@ -60,21 +60,68 @@ const totalPosts = pinnedPostsCount + totalRegularPosts;
 const newestDate = dateRange._max.publishedAt;
 const oldestDate = dateRange._min.publishedAt;
 
-// 获取Posts列表
-
-export const metadata = await generateMetadata(
-  {
-    title: page?.title,
-    description: page?.metaDescription,
-    keywords: page?.metaKeywords,
-    robots: {
-      index: page?.robotsIndex,
+// 导出 generateStaticParams 函数供 Next.js SSG 使用
+export async function generateStaticParams() {
+  // 获取已发布文章总数
+  const totalPosts = await prisma.post.count({
+    where: {
+      status: "PUBLISHED",
+      deletedAt: null,
     },
-  },
-  {
-    pathname: "/posts",
-  },
-);
+  });
+
+  // 计算总页数
+  const totalPages = Math.ceil(totalPosts / PRE_PAGE_SIZE);
+
+  // 生成所有页面的参数
+  const params = [];
+
+  // 第1页（根路径 /posts）
+  params.push({ page: [] });
+
+  // 其他页面（/posts/2, /posts/3, ...）
+  for (let i = 2; i <= totalPages; i++) {
+    params.push({ page: [i.toString()] });
+  }
+
+  return params;
+}
+
+// 导出 generateMetadata 函数供 Next.js 使用
+export async function generateMetadata({
+  params,
+}: {
+  params: { page?: string[] };
+}) {
+  const currentPage = parseInt(params.page?.[1] || "1");
+
+  return await generateSEOMetadata(
+    {
+      title:
+        pageConfig?.title + (currentPage > 1 ? ` - 第${currentPage}页` : ""),
+      description: pageConfig?.metaDescription,
+      keywords: pageConfig?.metaKeywords,
+      robots: {
+        index: pageConfig?.robotsIndex,
+      },
+      pagination: {
+        next:
+          totalPosts > PRE_PAGE_SIZE * currentPage
+            ? `/posts/${currentPage + 1}`
+            : undefined,
+        prev:
+          currentPage > 1
+            ? currentPage === 2
+              ? `/posts`
+              : `/posts/${currentPage - 1}`
+            : undefined,
+      },
+    },
+    {
+      pathname: currentPage === 1 ? "/posts" : `/posts/${currentPage}`,
+    },
+  );
+}
 
 export default async function PostsPage({
   params,
