@@ -47,7 +47,6 @@ model User {
   refreshTokens RefreshToken[]
 
   // 索引优化
-  @@index([email])
   @@index([username])
   @@index([role])
   @@index([status])
@@ -142,7 +141,6 @@ model Post {
   // @@index([userUid, status]) // 复合索引：按作者和状态查询
 
   // 索引优化
-  @@index([slug])
   @@index([status])
   @@index([userUid])
   @@index([isPinned])
@@ -152,7 +150,7 @@ model Post {
 }
 
 model Tag {
-  slug          String   @id @unique
+  slug          String   @id
   name          String   @unique
   description   String?  @db.VarChar(255)
   featuredImage String?  @db.VarChar(255)
@@ -224,22 +222,28 @@ model Comment {
 
 // 媒体文件模型
 model Media {
-  id           String @id @default(uuid())
-  filename     String
+  id           Int       @id @default(autoincrement())
+  fileName     String
   originalName String
-  mimeType     String @db.VarChar(100)
+  mimeType     String    @db.VarChar(100)
   size         Int // 大小，单位字节
-  hash         String @db.VarChar(64)
+  shortHash    String    @db.VarChar(12)
+  hash         String    @db.VarChar(64)
+  mediaType    MediaType @default(IMAGE)
   // 从属
-  postId       Int?
-  post         Post?  @relation(fields: [postId], references: [id], onDelete: SetNull)
+  posts        Post[]
 
   // 图片相关
-  width   Int?
-  height  Int?
-  altText String? @db.VarChar(255)
+  width       Int?
+  height      Int?
+  altText     String? @db.VarChar(255)
+  blur        String? @db.VarChar(2048)
+  thumbnails  Json
+  exif        Json
+  inGallery   Boolean @default(false)
+  isOptimized Boolean @default(false)
 
-  url               String   @db.VarChar(500)
+  storageUrl        String   @db.VarChar(500)
   createdAt         DateTime @default(now())
   storageProviderId String
 
@@ -248,12 +252,13 @@ model Media {
   user            User            @relation(fields: [userUid], references: [uid], onDelete: Cascade)
   StorageProvider StorageProvider @relation(fields: [storageProviderId], references: [id], onDelete: Restrict)
 
-  @@unique([hash])
+  @@unique([shortHash])
   // 索引优化
+  @@index([shortHash])
+  @@index([inGallery])
   @@index([userUid])
-  @@index([mimeType])
   @@index([createdAt])
-  @@index([filename])
+  @@index([fileName])
 }
 
 model StorageProvider {
@@ -454,7 +459,6 @@ model PageViewArchive {
   // 索引优化
   @@index([path])
   @@index([date])
-  @@index([path, date]) // 复合索引：按路径和日期查询
 }
 
 // 审计日志模型 - 记录系统操作和数据变更
@@ -465,7 +469,7 @@ model AuditLog {
   // 操作信息
   action     String @db.VarChar(50) // CREATE/UPDATE/DELETE/LOGIN/LOGOUT等
   resource   String @db.VarChar(50) // User/Post/Comment/Config等资源类型
-  resourceId String @db.VarChar(10000) // 资源ID
+  resourceId String @db.VarChar(255) // 资源ID
 
   // 操作者信息
   userUid   Int?
@@ -548,4 +552,11 @@ enum PageContentType {
   MARKDOWN
   HTML
   MDX
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+  FILE
 }
