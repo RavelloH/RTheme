@@ -146,34 +146,10 @@ export default async function PostPage({ params }: PageProps) {
           </span>
         </div>
 
-        {/* 文章标题和元信息 */}
-        <div className="p-10 border-border border">
-          <h1 className="text-5xl md:text-7xl mb-2">{post.title}</h1>
-          <div className="text-xl md:text-2xl font-mono py-3 opacity-70">
-            #{post.slug}
-          </div>
-
-          {/* 标签 */}
-          {post.tags.length > 0 && (
-            <div className="text-lg mt-4 flex flex-wrap gap-2">
-              {post.tags.map((tag) => (
-                <Link
-                  key={tag.slug}
-                  href={"/tags/" + tag.slug}
-                  className="bg-muted text-muted-foreground transition-all px-3 py-2 rounded-sm inline-flex gap-1 items-center hover:bg-muted/70 hover:text-foreground"
-                >
-                  <RiHashtag size={"1em"} />
-                  {tag.name}
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* 特色图片 */}
-        {post.featuredImage && (
-          <div className="px-10 pt-6">
-            <div className="relative aspect-video rounded-lg overflow-hidden">
+        {/* 文章标题和元信息 - 封面图作为背景，上方留空显示封面 */}
+        <div className={`relative ${post.featuredImage ? "pt-[25em]" : ""}`}>
+          {post.featuredImage && (
+            <div className="absolute inset-0 z-0">
               <Image
                 src={post.featuredImage}
                 alt={post.title}
@@ -181,9 +157,37 @@ export default async function PostPage({ params }: PageProps) {
                 className="object-cover"
                 priority
               />
+              {/* 渐变遮罩，确保文字可读性 */}
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/90 to-transparent" />
             </div>
+          )}
+
+          {/* 文章标题和标签内容 */}
+          <div
+            className={`relative z-10 p-10 border-border border-b ${post.featuredImage ? "" : "pt-12"}`}
+          >
+            <h1 className="text-5xl md:text-7xl mb-2">{post.title}</h1>
+            <div className="text-xl md:text-2xl font-mono pt-3 text-muted-foreground">
+              #{post.slug}
+            </div>
+
+            {/* 标签 */}
+            {post.tags.length > 0 && (
+              <div className="text-lg pt-3 mt-4 flex flex-wrap gap-2">
+                {post.tags.map((tag) => (
+                  <Link
+                    key={tag.slug}
+                    href={"/tags/" + tag.slug}
+                    className="bg-muted text-muted-foreground transition-all px-3 py-2 rounded-sm inline-flex gap-1 items-center hover:bg-muted/70 hover:text-foreground"
+                  >
+                    <RiHashtag size={"1em"} />
+                    {tag.name}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         {/* 摘要 */}
         {post.excerpt && (
