@@ -118,11 +118,11 @@ export default function PostCard({
             {/* 在分类后面显示的标签（hover时出现，移动版不显示） */}
             {summary && tags?.length !== 0 && (
               <span
-                className="flex items-center gap-1 opacity-0 transition-all duration-300 group-hover:opacity-100 ml-3
+                className="items-center gap-1 opacity-0 transition-all duration-300 group-hover:opacity-100 ml-3
                 transform translate-y-2 group-hover:translate-y-0
                 [transform-style:preserve-3d] group-hover:[transform:perspective(1000px)_translateY(0)_rotateX(0deg)]
                 [transform:perspective(1000px)_translateY(8px)_rotateX(15deg)]
-                md:hidden"
+                hidden md:inline-flex"
               >
                 <RiPriceTagLine size={"1em"} />
                 {tags?.map((tag, index) => (
