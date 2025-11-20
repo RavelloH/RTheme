@@ -44,11 +44,14 @@ export interface ActionButton {
 export interface FilterConfig {
   key: string; // 筛选字段的 key，对应 URL 参数名
   label: string; // 显示标签
-  type: "checkboxGroup" | "input" | "dateRange"; // 筛选类型
+  type: "checkboxGroup" | "input" | "dateRange" | "range"; // 筛选类型
   options?: SelectOption[]; // checkboxGroup 类型时的选项
   placeholder?: string; // input 类型的占位符
   inputType?: "text" | "number"; // input 的具体类型
   dateFields?: { start: string; end: string }; // dateRange 类型时的字段名
+  rangeFields?: { min: string; max: string }; // range 类型时的字段名
+  placeholderMin?: string; // range 类型最小值占位符
+  placeholderMax?: string; // range 类型最大值占位符
 }
 
 export interface GridTableProps<T extends Record<string, unknown>> {
@@ -884,6 +887,62 @@ export default function GridTable<T extends Record<string, unknown>>({
                       <Input
                         label="结束时间"
                         type="datetime-local"
+                        value={
+                          ((
+                            tempFilterValues[config.key] as
+                              | {
+                                  start?: string;
+                                  end?: string;
+                                }
+                              | undefined
+                          )?.end || "") as string
+                        }
+                        onChange={(e) => {
+                          const currentValue = tempFilterValues[config.key] as
+                            | { start?: string; end?: string }
+                            | undefined;
+                          updateTempFilterValue(config.key, {
+                            start: currentValue?.start,
+                            end: e.target.value || undefined,
+                          });
+                        }}
+                        size="sm"
+                      />
+                    </div>
+                  </div>
+                )}
+                {config.type === "range" && config.rangeFields && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Input
+                        label={config.placeholderMin || "最小值"}
+                        type={config.inputType || "number"}
+                        value={
+                          ((
+                            tempFilterValues[config.key] as
+                              | {
+                                  start?: string;
+                                  end?: string;
+                                }
+                              | undefined
+                          )?.start || "") as string
+                        }
+                        onChange={(e) => {
+                          const currentValue = tempFilterValues[config.key] as
+                            | { start?: string; end?: string }
+                            | undefined;
+                          updateTempFilterValue(config.key, {
+                            start: e.target.value || undefined,
+                            end: currentValue?.end,
+                          });
+                        }}
+                        size="sm"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        label={config.placeholderMax || "最大值"}
+                        type={config.inputType || "number"}
                         value={
                           ((
                             tempFilterValues[config.key] as
