@@ -58,7 +58,12 @@ export const Input = forwardRef<
   const inputId =
     id || `input-${label.replace(/\s+/g, "-").toLowerCase()}-${generatedId}`;
   const [isFocused, setIsFocused] = useState(false);
-  const [hasValue, setHasValue] = useState(!!defaultValue || !!value);
+  // 检查是否为受控组件（value prop 被传递）
+  const isControlled = value !== undefined;
+  const [internalHasValue, setInternalHasValue] = useState(!!defaultValue);
+
+  // 在受控模式下，直接使用 value；在非受控模式下，使用内部状态
+  const hasValue = isControlled ? !!value : internalHasValue;
 
   const isTextarea = rows !== undefined && rows > 1;
 
@@ -86,14 +91,22 @@ export const Input = forwardRef<
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
-    setHasValue(!!e.target.value);
+    // 只在非受控模式下更新内部状态
+    if (!isControlled) {
+      setInternalHasValue(!!e.target.value);
+    }
     onChange?.(e as React.ChangeEvent<HTMLInputElement>);
   };
 
   const handleInput = (
     e: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
-    setHasValue(!!(e.target as HTMLInputElement | HTMLTextAreaElement).value);
+    // 只在非受控模式下更新内部状态
+    if (!isControlled) {
+      setInternalHasValue(
+        !!(e.target as HTMLInputElement | HTMLTextAreaElement).value,
+      );
+    }
     onInput?.(e as React.FormEvent<HTMLInputElement>);
   };
 

@@ -7,9 +7,6 @@ import {
   RiVideoLine,
   RiMusicLine,
   RiFileLine,
-  RiHardDriveLine,
-  RiCalendarLine,
-  RiUserLine,
   RiServerLine,
 } from "@remixicon/react";
 import { RiExternalLinkLine, RiFileCopyLine } from "@remixicon/react";

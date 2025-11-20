@@ -24,7 +24,7 @@ const DEFAULT_REFRESH_PARAMS: RefreshToken = {
 };
 
 // Extracts the unified ApiResponse regardless of server action return type.
-async function resolveApiResponse<T extends ApiResponseData>(
+export async function resolveApiResponse<T extends ApiResponseData>(
   result: PossibleResult<T>,
 ): Promise<ApiResponse<T> | undefined> {
   if (result instanceof Response) {

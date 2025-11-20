@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { RiListCheck, RiMenuLine, RiCloseLine } from "@remixicon/react";
+import { RiListCheck } from "@remixicon/react";
 
 interface TocItem {
   id: string;
