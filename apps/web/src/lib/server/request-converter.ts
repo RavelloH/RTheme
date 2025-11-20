@@ -81,3 +81,47 @@ export function validateGetRequest<T>(
   // 使用现有的验证函数验证数据
   return validateRequestData(data, schema);
 }
+
+/**
+ * 验证POST请求
+ * 自动从请求体中提取数据并验证
+ */
+export function validatePostRequest<T>(
+  request: Request,
+  schema: z.ZodSchema<T>,
+): { success: true; data: T } | NextResponse {
+  return validateRequestData(request, schema);
+}
+
+/**
+ * 验证PUT请求
+ * 自动从请求体中提取数据并验证
+ */
+export function validatePutRequest<T>(
+  request: Request,
+  schema: z.ZodSchema<T>,
+): { success: true; data: T } | NextResponse {
+  return validateRequestData(request, schema);
+}
+
+/**
+ * 验证PATCH请求
+ * 自动从请求体中提取数据并验证
+ */
+export function validatePatchRequest<T>(
+  request: Request,
+  schema: z.ZodSchema<T>,
+): { success: true; data: T } | NextResponse {
+  return validateRequestData(request, schema);
+}
+
+/**
+ * 验证DELETE请求
+ * 自动从请求体中提取数据并验证
+ */
+export function validateDeleteRequest<T>(
+  request: Request,
+  schema: z.ZodSchema<T>,
+): { success: true; data: T } | NextResponse {
+  return validateRequestData(request, schema);
+}

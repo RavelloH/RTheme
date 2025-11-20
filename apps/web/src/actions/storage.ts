@@ -1,0 +1,716 @@
+"use server";
+
+import { NextResponse } from "next/server";
+import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
+import ResponseBuilder from "@/lib/server/response";
+import limitControl from "@/lib/server/rateLimit";
+import { headers } from "next/headers";
+import { validateData } from "@/lib/server/validator";
+import { authVerify } from "@/lib/server/auth-verify";
+import {
+  GetStorageList,
+  GetStorageListSchema,
+  GetStorageDetail,
+  GetStorageDetailSchema,
+  CreateStorage,
+  CreateStorageSchema,
+  UpdateStorage,
+  UpdateStorageSchema,
+  DeleteStorage,
+  DeleteStorageSchema,
+  ToggleStorageStatus,
+  ToggleStorageStatusSchema,
+  SetDefaultStorage,
+  SetDefaultStorageSchema,
+  GetStorageListResponse,
+  GetStorageDetailResponse,
+  CreateStorageResponseWrapper,
+  UpdateStorageResponseWrapper,
+  DeleteStorageResponseWrapper,
+  ToggleStorageStatusResponseWrapper,
+  SetDefaultStorageResponseWrapper,
+} from "@repo/shared-types/api/storage";
+import prisma from "@/lib/server/prisma";
+
+type ActionEnvironment = "serverless" | "serveraction";
+type ActionConfig = { environment?: ActionEnvironment };
+type ActionResult<T extends ApiResponseData> =
+  | NextResponse<ApiResponse<T>>
+  | ApiResponse<T>;
+
+// ============================================================================
+// Get Storage List
+// ============================================================================
+
+export async function getStorageList(
+  params: GetStorageList,
+  serverConfig: { environment: "serverless" },
+): Promise<ActionResult<GetStorageListResponse["data"] | null>>;
+export async function getStorageList(
+  params: GetStorageList,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<GetStorageListResponse["data"] | null>>;
+export async function getStorageList(
+  {
+    access_token,
+    page,
+    pageSize,
+    sortBy,
+    sortOrder,
+    search,
+    type,
+    isActive,
+    isDefault,
+  }: GetStorageList,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<GetStorageListResponse["data"] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      page,
+      pageSize,
+      sortBy,
+      sortOrder,
+      search,
+      type,
+      isActive,
+      isDefault,
+    },
+    GetStorageListSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    const skip = (page - 1) * pageSize;
+    const where: Record<string, unknown> = {};
+
+    // 搜索条件
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { displayName: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    // 类型筛选
+    if (type !== undefined) {
+      where.type = type;
+    }
+
+    // 状态筛选
+    if (isActive !== undefined) {
+      where.isActive = isActive;
+    }
+
+    // 默认存储筛选
+    if (isDefault !== undefined) {
+      where.isDefault = isDefault;
+    }
+
+    // 获取总数和数据
+    const [total, storageProviders] = await Promise.all([
+      prisma.storageProvider.count({ where }),
+      prisma.storageProvider.findMany({
+        where,
+        skip,
+        take: pageSize,
+        orderBy: { [sortBy]: sortOrder },
+        include: {
+          _count: {
+            select: {
+              media: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    const items = storageProviders.map((provider) => ({
+      id: provider.id,
+      name: provider.name,
+      type: provider.type,
+      displayName: provider.displayName,
+      baseUrl: provider.baseUrl,
+      isActive: provider.isActive,
+      isDefault: provider.isDefault,
+      maxFileSize: provider.maxFileSize,
+      pathTemplate: provider.pathTemplate,
+      mediaCount: provider._count.media,
+      createdAt: provider.createdAt.toISOString(),
+      updatedAt: provider.updatedAt.toISOString(),
+    }));
+
+    return response.ok({
+      data: items,
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+        hasNext: page < Math.ceil(total / pageSize),
+        hasPrev: page > 1,
+      },
+    });
+  } catch (error) {
+    console.error("GetStorageList error:", error);
+    return response.serverError();
+  }
+}
+
+// ============================================================================
+// Get Storage Detail
+// ============================================================================
+
+export async function getStorageDetail(
+  params: GetStorageDetail,
+  serverConfig: { environment: "serverless" },
+): Promise<ActionResult<GetStorageDetailResponse["data"] | null>>;
+export async function getStorageDetail(
+  params: GetStorageDetail,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<GetStorageDetailResponse["data"] | null>>;
+export async function getStorageDetail(
+  { access_token, id }: GetStorageDetail,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<GetStorageDetailResponse["data"] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      id,
+    },
+    GetStorageDetailSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    const storageProvider = await prisma.storageProvider.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: {
+            media: true,
+          },
+        },
+      },
+    });
+
+    if (!storageProvider) {
+      return response.notFound();
+    }
+
+    const data = {
+      id: storageProvider.id,
+      name: storageProvider.name,
+      type: storageProvider.type,
+      displayName: storageProvider.displayName,
+      baseUrl: storageProvider.baseUrl,
+      isActive: storageProvider.isActive,
+      isDefault: storageProvider.isDefault,
+      maxFileSize: storageProvider.maxFileSize,
+      pathTemplate: storageProvider.pathTemplate,
+      config: storageProvider.config,
+      mediaCount: storageProvider._count.media,
+      createdAt: storageProvider.createdAt.toISOString(),
+      updatedAt: storageProvider.updatedAt.toISOString(),
+    };
+
+    return response.ok({ data });
+  } catch (error) {
+    console.error("GetStorageDetail error:", error);
+    return response.serverError();
+  }
+}
+
+// ============================================================================
+// Create Storage
+// ============================================================================
+
+export async function createStorage(
+  params: CreateStorage,
+  serverConfig: { environment: "serverless" },
+): Promise<ActionResult<CreateStorageResponseWrapper["data"] | null>>;
+export async function createStorage(
+  params: CreateStorage,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<CreateStorageResponseWrapper["data"] | null>>;
+export async function createStorage(
+  {
+    access_token,
+    name,
+    type,
+    displayName,
+    baseUrl,
+    isActive,
+    isDefault,
+    maxFileSize,
+    pathTemplate,
+    config,
+  }: CreateStorage,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<CreateStorageResponseWrapper["data"] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      name,
+      type,
+      displayName,
+      baseUrl,
+      isActive,
+      isDefault,
+      maxFileSize,
+      pathTemplate,
+      config,
+    },
+    CreateStorageSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 如果设置为默认存储，先将其他存储的isDefault设为false
+    if (isDefault) {
+      await prisma.storageProvider.updateMany({
+        where: { isDefault: true },
+        data: { isDefault: false },
+      });
+    }
+
+    const storageProvider = await prisma.storageProvider.create({
+      data: {
+        name,
+        type,
+        displayName,
+        baseUrl,
+        isActive,
+        isDefault,
+        maxFileSize,
+        pathTemplate,
+        config: config || {},
+      },
+    });
+
+    const data = {
+      id: storageProvider.id,
+      name: storageProvider.name,
+      type: storageProvider.type,
+      displayName: storageProvider.displayName,
+      baseUrl: storageProvider.baseUrl,
+      isActive: storageProvider.isActive,
+      isDefault: storageProvider.isDefault,
+      maxFileSize: storageProvider.maxFileSize,
+      pathTemplate: storageProvider.pathTemplate,
+      createdAt: storageProvider.createdAt.toISOString(),
+      updatedAt: storageProvider.updatedAt.toISOString(),
+    };
+
+    return response.ok({ data });
+  } catch (error: unknown) {
+    console.error("CreateStorage error:", error);
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "P2002"
+    ) {
+      return response.conflict({ message: "存储名称已存在" });
+    }
+    return response.serverError();
+  }
+}
+
+// ============================================================================
+// Update Storage
+// ============================================================================
+
+export async function updateStorage(
+  params: UpdateStorage,
+  serverConfig: { environment: "serverless" },
+): Promise<ActionResult<UpdateStorageResponseWrapper["data"] | null>>;
+export async function updateStorage(
+  params: UpdateStorage,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<UpdateStorageResponseWrapper["data"] | null>>;
+export async function updateStorage(
+  {
+    access_token,
+    id,
+    name,
+    displayName,
+    baseUrl,
+    isActive,
+    isDefault,
+    maxFileSize,
+    pathTemplate,
+    config,
+  }: UpdateStorage,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<UpdateStorageResponseWrapper["data"] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      id,
+      name,
+      displayName,
+      baseUrl,
+      isActive,
+      isDefault,
+      maxFileSize,
+      pathTemplate,
+      config,
+    },
+    UpdateStorageSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 检查存储是否存在
+    const existingStorage = await prisma.storageProvider.findUnique({
+      where: { id },
+    });
+
+    if (!existingStorage) {
+      return response.notFound();
+    }
+
+    // 如果设置为默认存储，先将其他存储的isDefault设为false
+    if (isDefault && !existingStorage.isDefault) {
+      await prisma.storageProvider.updateMany({
+        where: { isDefault: true },
+        data: { isDefault: false },
+      });
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (name !== undefined) updateData.name = name;
+    if (displayName !== undefined) updateData.displayName = displayName;
+    if (baseUrl !== undefined) updateData.baseUrl = baseUrl;
+    if (isActive !== undefined) updateData.isActive = isActive;
+    if (isDefault !== undefined) updateData.isDefault = isDefault;
+    if (maxFileSize !== undefined) updateData.maxFileSize = maxFileSize;
+    if (pathTemplate !== undefined) updateData.pathTemplate = pathTemplate;
+    if (config !== undefined) updateData.config = config;
+
+    const storageProvider = await prisma.storageProvider.update({
+      where: { id },
+      data: updateData,
+    });
+
+    const data = {
+      id: storageProvider.id,
+      name: storageProvider.name,
+      type: storageProvider.type,
+      displayName: storageProvider.displayName,
+      baseUrl: storageProvider.baseUrl,
+      isActive: storageProvider.isActive,
+      isDefault: storageProvider.isDefault,
+      maxFileSize: storageProvider.maxFileSize,
+      pathTemplate: storageProvider.pathTemplate,
+      config: storageProvider.config,
+      updatedAt: storageProvider.updatedAt.toISOString(),
+    };
+
+    return response.ok({ data });
+  } catch (error: unknown) {
+    console.error("UpdateStorage error:", error);
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "P2002"
+    ) {
+      return response.conflict({ message: "存储名称已存在" });
+    }
+    return response.serverError();
+  }
+}
+
+// ============================================================================
+// Delete Storage
+// ============================================================================
+
+export async function deleteStorage(
+  params: DeleteStorage,
+  serverConfig: { environment: "serverless" },
+): Promise<ActionResult<DeleteStorageResponseWrapper["data"] | null>>;
+export async function deleteStorage(
+  params: DeleteStorage,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<DeleteStorageResponseWrapper["data"] | null>>;
+export async function deleteStorage(
+  { access_token, ids }: DeleteStorage,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<DeleteStorageResponseWrapper["data"] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      ids,
+    },
+    DeleteStorageSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 检查是否有媒体文件关联
+    const mediaCount = await prisma.media.count({
+      where: {
+        storageProviderId: {
+          in: ids,
+        },
+      },
+    });
+
+    if (mediaCount > 0) {
+      return response.badRequest({
+        message: "无法删除已有关联媒体文件的存储提供商",
+      });
+    }
+
+    const result = await prisma.storageProvider.deleteMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+    });
+
+    const data = {
+      deleted: result.count,
+      ids,
+    };
+
+    return response.ok({ data });
+  } catch (error) {
+    console.error("DeleteStorage error:", error);
+    return response.serverError();
+  }
+}
+
+// ============================================================================
+// Toggle Storage Status
+// ============================================================================
+
+export async function toggleStorageStatus(
+  params: ToggleStorageStatus,
+  serverConfig: { environment: "serverless" },
+): Promise<ActionResult<ToggleStorageStatusResponseWrapper["data"]>>;
+export async function toggleStorageStatus(
+  params: ToggleStorageStatus,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<ToggleStorageStatusResponseWrapper["data"]>>;
+export async function toggleStorageStatus(
+  { access_token, id, isActive }: ToggleStorageStatus,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<ToggleStorageStatusResponseWrapper["data"] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      id,
+      isActive,
+    },
+    ToggleStorageStatusSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    const storageProvider = await prisma.storageProvider.update({
+      where: { id },
+      data: { isActive },
+    });
+
+    const data = {
+      id: storageProvider.id,
+      isActive: storageProvider.isActive,
+      updatedAt: storageProvider.updatedAt.toISOString(),
+    };
+
+    return response.ok({ data });
+  } catch (error) {
+    console.error("ToggleStorageStatus error:", error);
+    return response.serverError();
+  }
+}
+
+// ============================================================================
+// Set Default Storage
+// ============================================================================
+
+export async function setDefaultStorage(
+  params: SetDefaultStorage,
+  serverConfig: { environment: "serverless" },
+): Promise<ActionResult<SetDefaultStorageResponseWrapper["data"]>>;
+export async function setDefaultStorage(
+  params: SetDefaultStorage,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<SetDefaultStorageResponseWrapper["data"]>>;
+export async function setDefaultStorage(
+  { access_token, id }: SetDefaultStorage,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<SetDefaultStorageResponseWrapper["data"] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      id,
+    },
+    SetDefaultStorageSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      // 先将所有存储设为非默认
+      await tx.storageProvider.updateMany({
+        where: { isDefault: true },
+        data: { isDefault: false },
+      });
+
+      // 将指定存储设为默认
+      await tx.storageProvider.update({
+        where: { id },
+        data: { isDefault: true },
+      });
+    });
+
+    const data = {
+      id,
+      isDefault: true,
+      updatedAt: new Date().toISOString(),
+    };
+
+    return response.ok({ data });
+  } catch (error) {
+    console.error("SetDefaultStorage error:", error);
+    return response.serverError();
+  }
+}

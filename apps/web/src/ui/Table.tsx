@@ -100,8 +100,8 @@ interface SortState {
 }
 
 export function Table<T extends Record<string, unknown>>({
-  columns,
-  data,
+  columns = [],
+  data = [],
   className = "",
   striped = false,
   hoverable = true,
