@@ -20,10 +20,13 @@ export default function BackLink({
   }, []);
 
   const handleClick = () => {
-    if (referer) {
-      navigate(referer);
-    } else if (window.history.length > 1) {
+    // 优先尝试浏览器历史后退（更准确地返回上一页），
+    // 如果没有历史记录，再使用 document.referrer 作为回退，
+    // 最后退回首页。
+    if (window.history.length > 1) {
       router.back();
+    } else if (referer) {
+      navigate(referer);
     } else {
       navigate("/");
     }
