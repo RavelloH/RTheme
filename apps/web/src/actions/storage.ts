@@ -31,12 +31,168 @@ import {
   SetDefaultStorageResponseWrapper,
 } from "@repo/shared-types/api/storage";
 import prisma from "@/lib/server/prisma";
+import { deleteObject, uploadObject } from "@/lib/server/oss";
+import type { StorageProviderType } from "@/template/storages";
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
 type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
+
+// ---------------------------------------------------------------------------
+// Storage connectivity check: upload a tiny file then delete
+// ---------------------------------------------------------------------------
+
+async function verifyStorageConnectivity(params: {
+  type: StorageProviderType;
+  baseUrl: string;
+  pathTemplate?: string;
+  config: unknown;
+  skip?: boolean;
+}) {
+  if (params.skip) return;
+
+  const pathTemplate = params.pathTemplate || "/{year}/{month}/{filename}";
+  const testFile = {
+    buffer: Buffer.from("healthcheck"),
+    filename: "healthcheck.txt",
+    contentType: "text/plain",
+  };
+
+  const basePayload = {
+    baseUrl: params.baseUrl,
+    pathTemplate,
+    ensureUniqueName: true,
+    file: testFile,
+  } as const;
+
+  try {
+    let result;
+    switch (params.type) {
+      case "LOCAL":
+        result = await uploadObject({
+          ...basePayload,
+          type: "LOCAL",
+          config: params.config as unknown as {
+            rootDir: string;
+            createDirIfNotExists?: boolean;
+            fileMode?: string | number;
+            dirMode?: string | number;
+          },
+        });
+        await deleteObject({
+          type: "LOCAL",
+          baseUrl: params.baseUrl,
+          pathTemplate,
+          config: params.config as unknown as {
+            rootDir: string;
+            createDirIfNotExists?: boolean;
+            fileMode?: string | number;
+            dirMode?: string | number;
+          },
+          key: result.key,
+        });
+        break;
+      case "AWS_S3":
+        result = await uploadObject({
+          ...basePayload,
+          type: "AWS_S3",
+          config: params.config as unknown as {
+            accessKeyId: string;
+            secretAccessKey: string;
+            region: string;
+            bucket: string;
+            endpoint?: string;
+            basePath?: string;
+            forcePathStyle?: boolean | string;
+            acl?: string;
+          },
+        });
+        await deleteObject({
+          type: "AWS_S3",
+          baseUrl: params.baseUrl,
+          pathTemplate,
+          config: params.config as unknown as {
+            accessKeyId: string;
+            secretAccessKey: string;
+            region: string;
+            bucket: string;
+            endpoint?: string;
+            basePath?: string;
+            forcePathStyle?: boolean | string;
+            acl?: string;
+          },
+          key: result.key,
+        });
+        break;
+      case "VERCEL_BLOB":
+        result = await uploadObject({
+          ...basePayload,
+          type: "VERCEL_BLOB",
+          config: params.config as unknown as {
+            token: string;
+            basePath?: string;
+            access?: "public" | "private";
+            cacheControl?: string;
+          },
+        });
+        await deleteObject({
+          type: "VERCEL_BLOB",
+          baseUrl: params.baseUrl,
+          pathTemplate,
+          config: params.config as unknown as {
+            token: string;
+            basePath?: string;
+            access?: "public" | "private";
+            cacheControl?: string;
+          },
+          key: result.key,
+        });
+        break;
+      case "GITHUB_PAGES":
+        {
+          const githubConfig =
+            (params.config as {
+              owner: string;
+              repo: string;
+              branch: string;
+              token: string;
+              basePath?: string;
+              committerName?: string;
+              committerEmail?: string;
+              apiBaseUrl?: string;
+              commitMessageTemplate?: string;
+            }) || {};
+          const commitMessageTemplate =
+            githubConfig.commitMessageTemplate ||
+            "chore(cms): storage healthcheck {{filename}}";
+
+          result = await uploadObject({
+            ...basePayload,
+            type: "GITHUB_PAGES",
+            config: { ...githubConfig, commitMessageTemplate },
+          });
+          await deleteObject({
+            type: "GITHUB_PAGES",
+            baseUrl: params.baseUrl,
+            pathTemplate,
+            config: { ...githubConfig, commitMessageTemplate },
+            key: result.key,
+          });
+        }
+        break;
+      default:
+        throw new Error(
+          `Unsupported storage type: ${params.type satisfies never}`,
+        );
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "连接测试失败，未知错误";
+    throw new Error(`存储连通性校验失败：${message}`);
+  }
+}
 
 // ============================================================================
 // Get Storage List
@@ -45,11 +201,11 @@ type ActionResult<T extends ApiResponseData> =
 export async function getStorageList(
   params: GetStorageList,
   serverConfig: { environment: "serverless" },
-): Promise<ActionResult<GetStorageListResponse["data"] | null>>;
+): Promise<NextResponse<ApiResponse<GetStorageListResponse["data"] | null>>>;
 export async function getStorageList(
   params: GetStorageList,
   serverConfig?: ActionConfig,
-): Promise<ActionResult<GetStorageListResponse["data"] | null>>;
+): Promise<ApiResponse<GetStorageListResponse["data"] | null>>;
 export async function getStorageList(
   {
     access_token,
@@ -183,11 +339,11 @@ export async function getStorageList(
 export async function getStorageDetail(
   params: GetStorageDetail,
   serverConfig: { environment: "serverless" },
-): Promise<ActionResult<GetStorageDetailResponse["data"] | null>>;
+): Promise<NextResponse<ApiResponse<GetStorageDetailResponse["data"] | null>>>;
 export async function getStorageDetail(
   params: GetStorageDetail,
   serverConfig?: ActionConfig,
-): Promise<ActionResult<GetStorageDetailResponse["data"] | null>>;
+): Promise<ApiResponse<GetStorageDetailResponse["data"] | null>>;
 export async function getStorageDetail(
   { access_token, id }: GetStorageDetail,
   serverConfig?: ActionConfig,
@@ -266,11 +422,13 @@ export async function getStorageDetail(
 export async function createStorage(
   params: CreateStorage,
   serverConfig: { environment: "serverless" },
-): Promise<ActionResult<CreateStorageResponseWrapper["data"] | null>>;
+): Promise<
+  NextResponse<ApiResponse<CreateStorageResponseWrapper["data"] | null>>
+>;
 export async function createStorage(
   params: CreateStorage,
   serverConfig?: ActionConfig,
-): Promise<ActionResult<CreateStorageResponseWrapper["data"] | null>>;
+): Promise<ApiResponse<CreateStorageResponseWrapper["data"] | null>>;
 export async function createStorage(
   {
     access_token,
@@ -286,9 +444,8 @@ export async function createStorage(
   }: CreateStorage,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<CreateStorageResponseWrapper["data"] | null>> {
-  const response = new ResponseBuilder(
-    serverConfig?.environment || "serveraction",
-  );
+  const environment = serverConfig?.environment || "serveraction";
+  const response = new ResponseBuilder(environment);
 
   if (!(await limitControl(await headers()))) {
     return response.tooManyRequests();
@@ -323,7 +480,18 @@ export async function createStorage(
   }
 
   try {
-    // 如果设置为默认存储，先将其他存储的isDefault设为false
+    // Connectivity check: fail fast to avoid saving bad configs
+    const pathTpl = pathTemplate || "/{year}/{month}/{filename}";
+    const shouldTest = isActive !== false;
+    await verifyStorageConnectivity({
+      type,
+      baseUrl,
+      pathTemplate: pathTpl,
+      config: config || {},
+      skip: !shouldTest,
+    });
+
+    // If set as default, clear other defaults first
     if (isDefault) {
       await prisma.storageProvider.updateMany({
         where: { isDefault: true },
@@ -363,6 +531,15 @@ export async function createStorage(
   } catch (error: unknown) {
     console.error("CreateStorage error:", error);
     if (
+      error instanceof Error &&
+      error.message.includes("存储连通性校验失败")
+    ) {
+      return response.badRequest({
+        message: error.message,
+        error: { code: "BAD_REQUEST", message: error.message },
+      });
+    }
+    if (
       error &&
       typeof error === "object" &&
       "code" in error &&
@@ -381,11 +558,13 @@ export async function createStorage(
 export async function updateStorage(
   params: UpdateStorage,
   serverConfig: { environment: "serverless" },
-): Promise<ActionResult<UpdateStorageResponseWrapper["data"] | null>>;
+): Promise<
+  NextResponse<ApiResponse<UpdateStorageResponseWrapper["data"] | null>>
+>;
 export async function updateStorage(
   params: UpdateStorage,
   serverConfig?: ActionConfig,
-): Promise<ActionResult<UpdateStorageResponseWrapper["data"] | null>>;
+): Promise<ApiResponse<UpdateStorageResponseWrapper["data"] | null>>;
 export async function updateStorage(
   {
     access_token,
@@ -401,9 +580,8 @@ export async function updateStorage(
   }: UpdateStorage,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<UpdateStorageResponseWrapper["data"] | null>> {
-  const response = new ResponseBuilder(
-    serverConfig?.environment || "serveraction",
-  );
+  const environment = serverConfig?.environment || "serveraction";
+  const response = new ResponseBuilder(environment);
 
   if (!(await limitControl(await headers()))) {
     return response.tooManyRequests();
@@ -438,7 +616,6 @@ export async function updateStorage(
   }
 
   try {
-    // 检查存储是否存在
     const existingStorage = await prisma.storageProvider.findUnique({
       where: { id },
     });
@@ -447,7 +624,23 @@ export async function updateStorage(
       return response.notFound();
     }
 
-    // 如果设置为默认存储，先将其他存储的isDefault设为false
+    // Connectivity check: skip when disabling, otherwise block bad configs
+    const effectiveBaseUrl = baseUrl ?? existingStorage.baseUrl;
+    const effectivePathTemplate =
+      pathTemplate ??
+      existingStorage.pathTemplate ??
+      "/{year}/{month}/{filename}";
+    const effectiveConfig = config ?? existingStorage.config ?? {};
+    const shouldTest = (isActive ?? existingStorage.isActive) !== false;
+    await verifyStorageConnectivity({
+      type: existingStorage.type,
+      baseUrl: effectiveBaseUrl,
+      pathTemplate: effectivePathTemplate,
+      config: effectiveConfig,
+      skip: !shouldTest,
+    });
+
+    // If set as default, clear other defaults first
     if (isDefault && !existingStorage.isDefault) {
       await prisma.storageProvider.updateMany({
         where: { isDefault: true },
@@ -488,6 +681,15 @@ export async function updateStorage(
   } catch (error: unknown) {
     console.error("UpdateStorage error:", error);
     if (
+      error instanceof Error &&
+      error.message.includes("存储连通性校验失败")
+    ) {
+      return response.badRequest({
+        message: error.message,
+        error: { code: "BAD_REQUEST", message: error.message },
+      });
+    }
+    if (
       error &&
       typeof error === "object" &&
       "code" in error &&
@@ -506,11 +708,13 @@ export async function updateStorage(
 export async function deleteStorage(
   params: DeleteStorage,
   serverConfig: { environment: "serverless" },
-): Promise<ActionResult<DeleteStorageResponseWrapper["data"] | null>>;
+): Promise<
+  NextResponse<ApiResponse<DeleteStorageResponseWrapper["data"] | null>>
+>;
 export async function deleteStorage(
   params: DeleteStorage,
   serverConfig?: ActionConfig,
-): Promise<ActionResult<DeleteStorageResponseWrapper["data"] | null>>;
+): Promise<ApiResponse<DeleteStorageResponseWrapper["data"] | null>>;
 export async function deleteStorage(
   { access_token, ids }: DeleteStorage,
   serverConfig?: ActionConfig,
@@ -586,11 +790,13 @@ export async function deleteStorage(
 export async function toggleStorageStatus(
   params: ToggleStorageStatus,
   serverConfig: { environment: "serverless" },
-): Promise<ActionResult<ToggleStorageStatusResponseWrapper["data"]>>;
+): Promise<
+  NextResponse<ApiResponse<ToggleStorageStatusResponseWrapper["data"]>>
+>;
 export async function toggleStorageStatus(
   params: ToggleStorageStatus,
   serverConfig?: ActionConfig,
-): Promise<ActionResult<ToggleStorageStatusResponseWrapper["data"]>>;
+): Promise<ApiResponse<ToggleStorageStatusResponseWrapper["data"]>>;
 export async function toggleStorageStatus(
   { access_token, id, isActive }: ToggleStorageStatus,
   serverConfig?: ActionConfig,
@@ -650,11 +856,11 @@ export async function toggleStorageStatus(
 export async function setDefaultStorage(
   params: SetDefaultStorage,
   serverConfig: { environment: "serverless" },
-): Promise<ActionResult<SetDefaultStorageResponseWrapper["data"]>>;
+): Promise<NextResponse<ApiResponse<SetDefaultStorageResponseWrapper["data"]>>>;
 export async function setDefaultStorage(
   params: SetDefaultStorage,
   serverConfig?: ActionConfig,
-): Promise<ActionResult<SetDefaultStorageResponseWrapper["data"]>>;
+): Promise<ApiResponse<SetDefaultStorageResponseWrapper["data"]>>;
 export async function setDefaultStorage(
   { access_token, id }: SetDefaultStorage,
   serverConfig?: ActionConfig,
