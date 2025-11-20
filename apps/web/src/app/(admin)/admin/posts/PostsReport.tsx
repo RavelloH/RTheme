@@ -9,6 +9,7 @@ import { RiRefreshLine, RiStickyNoteAddFill } from "@remixicon/react";
 import { useEffect, useState } from "react";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/useBroadcast";
+import runWithAuth from "@/lib/client/runWithAuth";
 import Link from "@/components/Link";
 
 type StatsData = {
@@ -82,14 +83,14 @@ export default function PostsReport() {
       setResult(null);
     }
     setError(null);
-    const res = await getPostsStats({ force: forceRefresh });
-    if (!res.success) {
-      setError(new Error(res.message || "获取文章统计失败"));
+    const res = await runWithAuth(getPostsStats, { force: forceRefresh });
+    if (!res || !("data" in res) || !res.data) {
+      setError(new Error("获取文章统计失败"));
       return;
     }
-    if (!res.data) return;
-    setResult(res.data);
-    setRefreshTime(new Date(res.data.updatedAt));
+    const data = res.data;
+    setResult(data);
+    setRefreshTime(new Date(data.updatedAt));
 
     // 刷新成功后广播消息,通知其他组件更新
     if (forceRefresh) {
