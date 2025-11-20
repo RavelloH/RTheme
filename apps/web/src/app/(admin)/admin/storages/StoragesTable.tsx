@@ -6,6 +6,7 @@ import {
   deleteStorage,
   toggleStorageStatus,
   setDefaultStorage,
+  getStorageDetail,
 } from "@/actions/storage";
 import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
 import runWithAuth from "@/lib/client/runWithAuth";
@@ -30,6 +31,13 @@ import { Switch } from "@/ui/Switch";
 import { Button } from "@/ui/Button";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { useToast } from "@/ui/Toast";
+import {
+  StorageConfigFields,
+  StorageConfigValues,
+  createStorageConfigValues,
+  storageConfigValuesToPayload,
+} from "./StorageConfigFields";
+import { StorageProviderType } from "@/template/storages";
 
 interface StorageFormState {
   name: string;
@@ -39,7 +47,7 @@ interface StorageFormState {
   isDefault: boolean;
   maxFileSize: number;
   pathTemplate: string;
-  config: string; // JSON string
+  config: StorageConfigValues;
 }
 
 const STORAGE_TYPES: SelectOption[] = [
@@ -76,9 +84,10 @@ export default function StoragesTable() {
     isDefault: false,
     maxFileSize: 52428800,
     pathTemplate: "/{year}/{month}/{filename}",
-    config: "{}",
+    config: createStorageConfigValues("LOCAL"),
   });
   const [submitting, setSubmitting] = useState(false);
+  const [configLoading, setConfigLoading] = useState(false);
   const { success: toastSuccess, error: toastError } = useToast();
   useBroadcast<{ type: "storages-refresh" }>((message) => {
     if (message?.type === "storages-refresh") {
@@ -134,7 +143,7 @@ export default function StoragesTable() {
     fetchData();
   }, [fetchData]);
 
-  const handleEdit = (record: StorageListItem) => {
+  const handleEdit = async (record: StorageListItem) => {
     setEditingStorage(record);
     setFormData({
       name: record.name,
@@ -144,15 +153,56 @@ export default function StoragesTable() {
       isDefault: record.isDefault,
       maxFileSize: record.maxFileSize,
       pathTemplate: record.pathTemplate,
-      config: "{}", // 需要获取详细信息
+      config: createStorageConfigValues(record.type as StorageProviderType),
     });
     setEditDialogOpen(true);
+
+    setConfigLoading(true);
+    try {
+      const detailResult = await runWithAuth(getStorageDetail, {
+        id: record.id,
+      });
+
+      if (detailResult && "data" in detailResult && detailResult.data) {
+        const detail = detailResult.data;
+        setFormData({
+          name: detail.name,
+          displayName: detail.displayName,
+          baseUrl: detail.baseUrl,
+          isActive: detail.isActive,
+          isDefault: detail.isDefault,
+          maxFileSize: detail.maxFileSize,
+          pathTemplate: detail.pathTemplate,
+          config: createStorageConfigValues(
+            detail.type as StorageProviderType,
+            (detail.config as Record<string, unknown>) || {},
+          ),
+        });
+      } else {
+        toastError("获取配置失败", "无法获取存储配置详情");
+      }
+    } catch (error) {
+      console.error("获取存储详情失败:", error);
+      toastError("获取配置失败", "请稍后重试");
+    } finally {
+      setConfigLoading(false);
+    }
   };
 
   const handleDelete = (records: StorageListItem[]) => {
     if (records.length === 0) return;
     setEditingStorage(records[0] || null);
     setDeleteDialogOpen(true);
+  };
+
+  const handleConfigValueChange = (key: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      config: {
+        ...prev.config,
+        [key]: value,
+      },
+    }));
   };
 
   const handleToggleStatus = async (record: StorageListItem) => {
@@ -194,15 +244,7 @@ export default function StoragesTable() {
 
     setSubmitting(true);
     try {
-      let configValue;
-      try {
-        configValue = JSON.parse(formData.config);
-      } catch {
-        toastError("配置格式错误", "请输入有效的JSON格式");
-        setSubmitting(false);
-        return;
-      }
-
+      const configValue = storageConfigValuesToPayload(formData.config);
       const result = await runWithAuth(updateStorage, {
         id: editingStorage.id,
         name: formData.name,
@@ -247,6 +289,26 @@ export default function StoragesTable() {
     }
   };
 
+  const handleRowClick = (
+    record: StorageListItem,
+    index: number,
+    event: React.MouseEvent,
+  ) => {
+    // 检查点击目标，避免在点击链接、按钮或操作区时触发
+    const target = event.target as HTMLElement;
+    const isClickable =
+      target.tagName === "A" ||
+      target.tagName === "BUTTON" ||
+      target.closest("a") ||
+      target.closest("button") ||
+      target.closest('[role="button"]') ||
+      target.closest('[data-action-cell="true"]'); // 排除操作列和复选框列
+
+    if (!isClickable) {
+      handleEdit(record);
+    }
+  };
+
   const columns: TableColumn<StorageListItem>[] = [
     {
       title: "名称",
@@ -283,12 +345,12 @@ export default function StoragesTable() {
           <div className="flex items-center gap-2">
             {isActive ? (
               <>
-                <RiCheckLine className="text-green-500" />
+                <RiCheckLine className="text-green-500" size="1em" />
                 <span>激活</span>
               </>
             ) : (
               <>
-                <RiCloseLine className="text-red-500" />
+                <RiCloseLine className="text-red-500" size="1em" />
                 <span>停用</span>
               </>
             )}
@@ -306,8 +368,8 @@ export default function StoragesTable() {
           <div className="flex items-center gap-2">
             {isDefault ? (
               <>
-                <RiStarFill className="text-yellow-500" />
                 <span>是</span>
+                <RiStarFill className="text-yellow-500" size="1em" />
               </>
             ) : (
               <span>否</span>
@@ -361,7 +423,7 @@ export default function StoragesTable() {
         const records = data.filter((item) => selectedKeys.includes(item.id));
         handleDelete(records);
       },
-      icon: <RiDeleteBinLine />,
+      icon: <RiDeleteBinLine size="1em" />,
       variant: "danger",
       disabled: selectedKeys.length === 0,
     },
@@ -371,23 +433,27 @@ export default function StoragesTable() {
     {
       label: "编辑",
       onClick: () => handleEdit(record),
-      icon: <RiEditLine />,
+      icon: <RiEditLine size="1em" />,
     },
     {
       label: record.isActive ? "停用" : "激活",
       onClick: () => handleToggleStatus(record),
-      icon: record.isActive ? <RiEyeOffLine /> : <RiEyeLine />,
+      icon: record.isActive ? (
+        <RiEyeOffLine size="1em" />
+      ) : (
+        <RiEyeLine size="1em" />
+      ),
     },
     {
       label: "设为默认",
       onClick: () => handleSetDefault(record),
-      icon: <RiStarLine />,
+      icon: <RiStarLine size="1em" />,
       disabled: record.isDefault,
     },
     {
       label: "删除",
       onClick: () => handleDelete([record]),
-      icon: <RiDeleteBinLine />,
+      icon: <RiDeleteBinLine size="1em" />,
       variant: "danger",
     },
   ];
@@ -423,7 +489,7 @@ export default function StoragesTable() {
         onSelectionChange={(selectedKeys) =>
           setSelectedKeys(selectedKeys as string[])
         }
-        onRowClick={(record) => handleEdit(record)}
+        onRowClick={handleRowClick}
         striped
         hoverable
         bordered={false}
@@ -438,13 +504,15 @@ export default function StoragesTable() {
         open={editDialogOpen}
         onClose={() => setEditDialogOpen(false)}
         title="编辑存储配置"
+        size="lg"
       >
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 p-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium">名称</label>
               <Input
                 label="存储名称"
+                size="sm"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
@@ -456,6 +524,7 @@ export default function StoragesTable() {
               <label className="text-sm font-medium">显示名称</label>
               <Input
                 label="显示名称"
+                size="sm"
                 value={formData.displayName}
                 onChange={(e) =>
                   setFormData({ ...formData, displayName: e.target.value })
@@ -469,6 +538,7 @@ export default function StoragesTable() {
             <label className="text-sm font-medium">基础URL</label>
             <Input
               label="基础URL"
+              size="sm"
               value={formData.baseUrl}
               onChange={(e) =>
                 setFormData({ ...formData, baseUrl: e.target.value })
@@ -482,6 +552,7 @@ export default function StoragesTable() {
               <label className="text-sm font-medium">最大文件大小</label>
               <Input
                 label="最大文件大小"
+                size="sm"
                 type="number"
                 value={formData.maxFileSize}
                 onChange={(e) =>
@@ -499,6 +570,7 @@ export default function StoragesTable() {
             <div>
               <label className="text-sm font-medium">路径模板</label>
               <Input
+                size="sm"
                 label="路径模板"
                 value={formData.pathTemplate}
                 onChange={(e) =>
@@ -517,6 +589,7 @@ export default function StoragesTable() {
                 setFormData({ ...formData, isActive: Boolean(checked) })
               }
             />
+            <br />
             <Switch
               label="设为默认存储"
               checked={formData.isDefault}
@@ -526,37 +599,45 @@ export default function StoragesTable() {
             />
           </div>
 
-          <div>
-            <label className="text-sm font-medium">配置 (JSON)</label>
-            <Input
-              label="配置 (JSON)"
-              value={formData.config}
-              onChange={(
-                e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-              ) => setFormData({ ...formData, config: e.target.value })}
-              placeholder="{}"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              请输入有效的JSON格式配置
-            </p>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-sm font-medium">
+              <span>配置</span>
+              {configLoading && (
+                <span className="text-xs text-muted-foreground">
+                  配置加载中...
+                </span>
+              )}
+            </div>
+            {editingStorage ? (
+              <StorageConfigFields
+                type={editingStorage.type as StorageProviderType}
+                values={formData.config}
+                onChange={handleConfigValueChange}
+                disabled={configLoading}
+              />
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                请选择要编辑的存储提供商后再调整配置。
+              </p>
+            )}
           </div>
-        </div>
-
-        <div className="flex justify-end gap-2">
-          <Button
-            label="取消"
-            variant="outline"
-            onClick={() => setEditDialogOpen(false)}
-          >
-            取消
-          </Button>
-          <Button
-            label={submitting ? "保存中..." : "保存"}
-            onClick={handleFormSubmit}
-            disabled={submitting}
-          >
-            {submitting ? "保存中..." : "保存"}
-          </Button>
+          <div className="flex justify-end gap-4 pt-4 border-t border-foreground/10">
+            <Button
+              label="取消"
+              variant="ghost"
+              onClick={() => setEditDialogOpen(false)}
+              size="sm"
+              disabled={submitting}
+            />
+            <Button
+              label="保存"
+              variant="primary"
+              onClick={handleFormSubmit}
+              size="sm"
+              loading={submitting}
+              loadingText="保存中..."
+            />
+          </div>
         </div>
       </Dialog>
 

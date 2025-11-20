@@ -1,16 +1,15 @@
 "use client";
 
 import { getStorageStats } from "@/actions/stat";
-import runWithAuth from "@/lib/client/runWithAuth";
 import { GridItem } from "@/components/RowGrid";
+import ErrorPage from "@/components/ui/Error";
+import { useBroadcastSender } from "@/hooks/useBroadcast";
+import runWithAuth from "@/lib/client/runWithAuth";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiRefreshLine } from "@remixicon/react";
 import { useEffect, useState } from "react";
-import ErrorPage from "@/components/ui/Error";
-import { useBroadcastSender } from "@/hooks/useBroadcast";
-import { Dialog } from "@/ui/Dialog";
 
 type StatsData = {
   updatedAt: string;
@@ -35,6 +34,53 @@ type StatsData = {
   };
 };
 
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};
+
+const getTypeLabel = (type: string): string => {
+  const labels: Record<string, string> = {
+    LOCAL: "本地存储",
+    AWS_S3: "AWS S3",
+    GITHUB_PAGES: "GitHub Pages",
+    VERCEL_BLOB: "Vercel Blob",
+  };
+  return labels[type] || type;
+};
+
+const getProvidersSummary = (total: StatsData["total"]) => {
+  const parts = [
+    total.active > 0 && `${total.active} 个已启用`,
+    total.inactive > 0 && `${total.inactive} 个停用中`,
+    total.default > 0 && `${total.default} 个默认存储`,
+  ].filter(Boolean);
+  if (total.total === 0) return "暂无可用的存储提供者。";
+  return `当前共有 ${total.total} 个存储提供者，${parts.join("，")}。`;
+};
+
+const getTypeSummary = (types: StatsData["byType"]) => {
+  if (!types.length) return "暂未添加任何类型的存储提供者。";
+  const summaries = types.map((item) => {
+    const files =
+      item.mediaCount > 0 ? `，保存了 ${item.mediaCount} 个文件` : "";
+    const active =
+      item.active > 0 && item.active !== item.count
+        ? `，其中 ${item.active} 个启用`
+        : "";
+    return `${getTypeLabel(item.type)}：${item.count} 个${active}${files}`;
+  });
+  return summaries.join("；");
+};
+
+const getMediaSummary = (storage: StatsData["storage"]) => {
+  if (storage.totalMediaFiles === 0) return "尚未上传媒体文件。";
+  return `媒体库共有 ${storage.totalMediaFiles} 个文件，平均大小 ${formatFileSize(storage.averageFileSize)}。`;
+};
+
 export default function StoragesInfo() {
   const [result, setResult] = useState<StatsData | null>(null);
   const [refreshTime, setRefreshTime] = useState<Date | null>(null);
@@ -55,7 +101,7 @@ export default function StoragesInfo() {
     setResult(data);
     setRefreshTime(new Date(data.updatedAt));
 
-    // 刷新成功后广播消息,通知其他组件更新
+    // 刷新成功后广播消息，通知其他组件同步
     if (forceRefresh) {
       await broadcast({ type: "storages-refresh" });
     }
@@ -65,24 +111,6 @@ export default function StoragesInfo() {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return "0 B";
-    const k = 1024;
-    const sizes = ["B", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-  };
-
-  const getTypeLabel = (type: string): string => {
-    const labels: Record<string, string> = {
-      LOCAL: "本地存储",
-      AWS_S3: "AWS S3",
-      GITHUB_PAGES: "GitHub Pages",
-      VERCEL_BLOB: "Vercel Blob",
-    };
-    return labels[type] || type;
-  };
 
   return (
     <>
@@ -95,62 +123,18 @@ export default function StoragesInfo() {
             >
               <div>
                 <div className="text-2xl py-2">存储统计</div>
-                <div>
-                  当前共有 {result.total.total} 个存储提供商
-                  {result.total.total > 0 &&
-                    (() => {
-                      const parts = [
-                        result.total.active > 0 &&
-                          `${result.total.active} 个已激活`,
-                        result.total.inactive > 0 &&
-                          `${result.total.inactive} 个已停用`,
-                      ].filter(Boolean);
-                      return parts.length > 0
-                        ? `，其中 ${parts.join("、")}`
-                        : "";
-                    })()}
-                  。
-                </div>
+                <div>{getProvidersSummary(result.total)}</div>
               </div>
               <div>
-                <div className="space-y-2">
-                  <div>
-                    {result.total.default > 0 ? (
-                      <>当前有 {result.total.default} 个默认存储提供商。</>
-                    ) : (
-                      "暂未设置默认存储提供商。"
-                    )}
-                  </div>
-
-                  {result.byType.length > 0 && (
-                    <div>
-                      <div>按类型分布：</div>
-                      <div className="ml-4">
-                        {result.byType.map((type) => (
-                          <div key={type.type} className="text-sm">
-                            {getTypeLabel(type.type)}: {type.count} 个
-                            {type.mediaCount > 0 && (
-                              <>，{type.mediaCount} 个文件</>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {result.storage.totalMediaFiles > 0 && (
-                    <div>
-                      总共存储了 {result.storage.totalMediaFiles} 个媒体文件，
-                      平均文件大小{" "}
-                      {formatFileSize(result.storage.averageFileSize)}。
-                    </div>
-                  )}
+                <div className="space-y-3 leading-relaxed">
+                  <div>{getTypeSummary(result.byType)}</div>
+                  <div>{getMediaSummary(result.storage)}</div>
                 </div>
               </div>
               <div>
                 {refreshTime && (
                   <div className="inline-flex items-center gap-2">
-                    最近更新于: {new Date(refreshTime).toLocaleString()}
+                    最近更新: {new Date(refreshTime).toLocaleString()}
                     {result?.cache && " (缓存)"}
                     <Clickable onClick={() => fetchData(true)}>
                       <RiRefreshLine size={"1em"} />
@@ -168,21 +152,6 @@ export default function StoragesInfo() {
               <LoadingIndicator key="loading" />
             </div>
           )}
-        </AutoTransition>
-      </GridItem>
-      <GridItem areas={[7, 8]} width={6} height={0.2}>
-        <AutoTransition type="scale" className="h-full">
-          <Dialog open={false} onClose={() => {}} title="新建存储提供商">
-            <div className="py-4">
-              <p className="text-muted-foreground">
-                在这里配置新的存储提供商。支持本地存储、云存储等多种类型。
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                详细配置指南，请参阅文档。
-              </p>
-            </div>
-            {/* TODO: 添加创建存储的表单 */}
-          </Dialog>
         </AutoTransition>
       </GridItem>
     </>

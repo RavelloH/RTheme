@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useId } from "react";
+import React, { useId, useState } from "react";
 import { motion } from "framer-motion";
 
 export interface SwitchProps
@@ -16,6 +16,39 @@ export interface SwitchProps
   disabled?: boolean;
   size?: "sm" | "md" | "lg";
 }
+
+type SwitchSize = "sm" | "md" | "lg";
+type SizeTokens = {
+  trackWidth: number;
+  trackHeight: number;
+  thumbSize: number;
+  padding: number;
+  text: string;
+};
+
+const SIZE_MAP: Record<SwitchSize, SizeTokens> = {
+  sm: {
+    trackWidth: 36,
+    trackHeight: 20,
+    thumbSize: 16,
+    padding: 2,
+    text: "text-sm",
+  },
+  md: {
+    trackWidth: 46,
+    trackHeight: 26,
+    thumbSize: 20,
+    padding: 2,
+    text: "text-base",
+  },
+  lg: {
+    trackWidth: 60,
+    trackHeight: 32,
+    thumbSize: 26,
+    padding: 3,
+    text: "text-lg",
+  },
+};
 
 export function Switch({
   label,
@@ -33,151 +66,121 @@ export function Switch({
   const switchId =
     id ||
     `switch-${label ? label.replace(/\s+/g, "-").toLowerCase() : "unlabeled"}-${generatedId}`;
+  const labelId = label ? `${switchId}-label` : undefined;
 
-  const getSizeStyles = () => {
-    switch (size) {
-      case "sm":
-        return {
-          container: "text-sm",
-          track: "w-8 h-4",
-          thumb: "w-3 h-3",
-          translate: "translate-x-4",
-        };
-      case "md":
-        return {
-          container: "text-base",
-          track: "w-11 h-6",
-          thumb: "w-5 h-5",
-          translate: "translate-x-5",
-        };
-      case "lg":
-        return {
-          container: "text-lg",
-          track: "w-14 h-7",
-          thumb: "w-6 h-6",
-          translate: "translate-x-7",
-        };
-      default:
-        return {
-          container: "text-base",
-          track: "w-11 h-6",
-          thumb: "w-5 h-5",
-          translate: "translate-x-5",
-        };
-    }
-  };
+  const sizeTokens = SIZE_MAP[(size ?? "md") as SwitchSize] ?? SIZE_MAP.md;
+  const thumbTranslate =
+    sizeTokens.trackWidth - sizeTokens.thumbSize - sizeTokens.padding * 2;
 
-  const sizeStyles = getSizeStyles();
   const isControlled = checked !== undefined;
-  const [internalChecked, setInternalChecked] = React.useState(
-    defaultChecked || false,
+  const [internalChecked, setInternalChecked] = useState(
+    defaultChecked ?? false,
   );
   const isChecked = isControlled ? checked : internalChecked;
 
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newChecked = event.target.checked;
-
+  const emitChange = (nextChecked: boolean) => {
     if (!isControlled) {
-      setInternalChecked(newChecked);
+      setInternalChecked(nextChecked);
     }
+    onCheckedChange?.(nextChecked);
+    if (onChange) {
+      const syntheticEvent = {
+        target: { checked: nextChecked },
+        currentTarget: { checked: nextChecked },
+      } as React.ChangeEvent<HTMLInputElement>;
+      onChange(syntheticEvent);
+    }
+  };
 
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextChecked = event.target.checked;
+    if (!isControlled) {
+      setInternalChecked(nextChecked);
+    }
     onChange?.(event);
-    onCheckedChange?.(newChecked);
+    onCheckedChange?.(nextChecked);
   };
 
   const handleToggle = () => {
     if (disabled) return;
+    emitChange(!isChecked);
+  };
 
-    const newChecked = !isChecked;
-
-    if (!isControlled) {
-      setInternalChecked(newChecked);
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handleToggle();
     }
-
-    onCheckedChange?.(newChecked);
-
-    // 触发 onChange 事件以保持兼容性
-    const syntheticEvent = {
-      target: { checked: newChecked },
-    } as React.ChangeEvent<HTMLInputElement>;
-    onChange?.(syntheticEvent);
   };
 
   return (
-    <div className={`relative inline-flex items-center ${className}`}>
-      <label
-        htmlFor={switchId}
+    <div
+      className={`inline-flex items-center gap-3 ${
+        disabled ? "opacity-60" : ""
+      } ${className}`}
+    >
+      <input
+        type="checkbox"
+        id={switchId}
+        checked={isChecked}
+        onChange={handleInputChange}
+        disabled={disabled}
+        className="sr-only"
+        tabIndex={-1}
+        {...props}
+      />
+
+      <button
+        type="button"
+        role="switch"
+        aria-checked={isChecked ? "true" : "false"}
+        aria-disabled={disabled ? "true" : "false"}
+        aria-labelledby={labelId}
+        onClick={handleToggle}
+        onKeyDown={handleKeyDown}
+        disabled={disabled}
         className={`
-          relative flex items-center ${label ? "gap-3" : ""} cursor-pointer select-none
-          ${sizeStyles.container}
-          ${disabled ? "opacity-50 cursor-not-allowed" : ""}
+          relative inline-flex items-center rounded-sm transition-all
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background
+          ${disabled ? "cursor-not-allowed" : "cursor-pointer"}
         `}
+        style={{
+          width: sizeTokens.trackWidth,
+          height: sizeTokens.trackHeight,
+          padding: sizeTokens.padding,
+        }}
       >
-        <input
-          type="checkbox"
-          id={switchId}
-          checked={isChecked}
-          onChange={handleChange}
-          disabled={disabled}
-          className="sr-only"
-          {...props}
+        <span
+          className={`absolute inset-0 rounded-sm transition-colors duration-200 ${
+            isChecked
+              ? "bg-primary"
+              : "bg-foreground/30 dark:bg-muted-foreground/40"
+          } ${disabled ? "opacity-70" : ""}`}
         />
-
-        {/* 开关轨道 */}
-        <motion.div
-          className={`
-            relative inline-flex items-center rounded-full
-            ${sizeStyles.track}
-            bg-muted-foreground/30
-            transition-colors duration-200
-            ${disabled ? "" : "hover:bg-muted-foreground/40"}
-            cursor-pointer
-          `}
-          animate={{
-            backgroundColor: isChecked
-              ? "var(--color-primary)"
-              : "var(--color-muted-foreground)",
+        <motion.span
+          className="relative rounded-sm bg-background shadow-md"
+          style={{
+            width: sizeTokens.thumbSize,
+            height: sizeTokens.thumbSize,
           }}
-          transition={{ duration: 0.2 }}
-          onClick={handleToggle}
-        >
-          {/* 开关滑块 */}
-          <motion.div
-            className={`
-              inline-block rounded-full bg-background shadow-lg
-              ${sizeStyles.thumb}
-            `}
-            animate={{
-              x: isChecked
-                ? parseInt(sizeStyles.translate.replace("translate-x-", ""))
-                : 0,
-            }}
-            transition={{
-              type: "spring",
-              stiffness: 500,
-              damping: 30,
-            }}
-            style={{
-              position: "absolute",
-              left: size === "sm" ? "2px" : size === "md" ? "3px" : "4px",
-            }}
-          />
-        </motion.div>
+          animate={{ x: isChecked ? thumbTranslate : 0 }}
+          transition={{
+            type: "spring",
+            stiffness: 500,
+            damping: 30,
+          }}
+        />
+      </button>
 
-        {/* 标签文字 */}
-        {label && (
-          <motion.span
-            className="text-foreground select-none"
-            animate={{
-              color: disabled
-                ? "var(--color-muted-foreground)"
-                : "var(--color-foreground)",
-            }}
-          >
-            {label}
-          </motion.span>
-        )}
-      </label>
+      {label && (
+        <span
+          id={labelId}
+          className={`text-foreground select-none ${sizeTokens.text}`}
+          onClick={() => !disabled && handleToggle()}
+        >
+          {label}
+        </span>
+      )}
     </div>
   );
 }

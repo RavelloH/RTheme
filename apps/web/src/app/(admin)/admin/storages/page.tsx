@@ -6,6 +6,7 @@ import AdminSidebar from "@/components/AdminSidebar";
 import StoragesInfo from "./StoragesInfo";
 import StoragesTable from "./StoragesTable";
 import Link from "@/components/Link";
+import StoragesAdd from "./StoragesAdd";
 
 export const metadata = await generateMetadata(
   {
@@ -30,6 +31,7 @@ export default async function AdminStorages() {
         <AdminSidebar />
         <RowGrid>
           <StoragesInfo />
+          <StoragesAdd />
           <GridItem areas={[9, 10, 11, 12]} width={3} height={0.5} fixedHeight>
             <div className="w-full h-full p-10 flex flex-col justify-between">
               <div>

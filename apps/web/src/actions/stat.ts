@@ -45,11 +45,11 @@ type ActionResult<T extends ApiResponseData> =
 export async function getUsersStats(
   params: GetUsersStats,
   serverConfig: { environment: "serverless" },
-): Promise<ActionResult<GetUsersStatsSuccessResponse["data"]>>;
+): Promise<NextResponse<ApiResponse<GetUsersStatsSuccessResponse["data"]>>>;
 export async function getUsersStats(
   params: GetUsersStats,
   serverConfig?: ActionConfig,
-): Promise<ActionResult<GetUsersStatsSuccessResponse["data"]>>;
+): Promise<ApiResponse<GetUsersStatsSuccessResponse["data"]>>;
 export async function getUsersStats(
   { access_token, force }: GetUsersStats,
   serverConfig?: ActionConfig,
@@ -94,7 +94,9 @@ export async function getUsersStats(
       );
 
       if (cachedData) {
-        return response.ok({ data: cachedData });
+        return response.ok({
+          data: cachedData,
+        });
       }
     }
 
@@ -203,7 +205,9 @@ export async function getUsersStats(
       ttl: CACHE_TTL,
     });
 
-    return response.ok({ data });
+    return response.ok({
+      data,
+    });
   } catch (error) {
     console.error("GetUsersStats error:", error);
     return response.serverError();
@@ -213,11 +217,11 @@ export async function getUsersStats(
 export async function getAuditStats(
   params: GetAuditStats,
   serverConfig: { environment: "serverless" },
-): Promise<ActionResult<GetAuditStatsSuccessResponse["data"]>>;
+): Promise<NextResponse<ApiResponse<GetAuditStatsSuccessResponse["data"]>>>;
 export async function getAuditStats(
   params: GetAuditStats,
   serverConfig?: ActionConfig,
-): Promise<ActionResult<GetAuditStatsSuccessResponse["data"]>>;
+): Promise<ApiResponse<GetAuditStatsSuccessResponse["data"]>>;
 export async function getAuditStats(
   { access_token, force }: GetAuditStats,
   serverConfig?: ActionConfig,
@@ -262,7 +266,9 @@ export async function getAuditStats(
       );
 
       if (cachedData) {
-        return response.ok({ data: cachedData });
+        return response.ok({
+          data: cachedData,
+        });
       }
     }
 
@@ -322,7 +328,9 @@ export async function getAuditStats(
       ttl: CACHE_TTL,
     });
 
-    return response.ok({ data });
+    return response.ok({
+      data,
+    });
   } catch (error) {
     console.error("GetAuditStats error:", error);
     return response.serverError();
@@ -332,11 +340,11 @@ export async function getAuditStats(
 export async function getPostsStats(
   params: GetPostsStats,
   serverConfig: { environment: "serverless" },
-): Promise<ActionResult<GetPostsStatsSuccessResponse["data"]>>;
+): Promise<NextResponse<ApiResponse<GetPostsStatsSuccessResponse["data"]>>>;
 export async function getPostsStats(
   params: GetPostsStats,
   serverConfig?: ActionConfig,
-): Promise<ActionResult<GetPostsStatsSuccessResponse["data"]>>;
+): Promise<ApiResponse<GetPostsStatsSuccessResponse["data"]>>;
 export async function getPostsStats(
   { access_token, force }: GetPostsStats,
   serverConfig?: ActionConfig,
@@ -381,7 +389,9 @@ export async function getPostsStats(
       );
 
       if (cachedData) {
-        return response.ok({ data: cachedData });
+        return response.ok({
+          data: cachedData,
+        });
       }
     }
 
@@ -510,7 +520,9 @@ export async function getPostsStats(
       ttl: CACHE_TTL,
     });
 
-    return response.ok({ data });
+    return response.ok({
+      data,
+    });
   } catch (error) {
     console.error("GetPostsStats error:", error);
     return response.serverError();
@@ -520,11 +532,11 @@ export async function getPostsStats(
 export async function getTagsStats(
   params: GetTagsStats,
   serverConfig: { environment: "serverless" },
-): Promise<ActionResult<GetTagsStatsSuccessResponse["data"]>>;
+): Promise<NextResponse<ApiResponse<GetTagsStatsSuccessResponse["data"]>>>;
 export async function getTagsStats(
   params: GetTagsStats,
   serverConfig?: ActionConfig,
-): Promise<ActionResult<GetTagsStatsSuccessResponse["data"]>>;
+): Promise<ApiResponse<GetTagsStatsSuccessResponse["data"]>>;
 export async function getTagsStats(
   { access_token, force }: GetTagsStats,
   serverConfig?: ActionConfig,
@@ -569,7 +581,9 @@ export async function getTagsStats(
       );
 
       if (cachedData) {
-        return response.ok({ data: cachedData });
+        return response.ok({
+          data: cachedData,
+        });
       }
     }
 
@@ -633,7 +647,9 @@ export async function getTagsStats(
       ttl: CACHE_TTL,
     });
 
-    return response.ok({ data });
+    return response.ok({
+      data,
+    });
   } catch (error) {
     console.error("GetTagsStats error:", error);
     return response.serverError();
@@ -643,11 +659,13 @@ export async function getTagsStats(
 export async function getCategoriesStats(
   params: GetCategoriesStats,
   serverConfig: { environment: "serverless" },
-): Promise<ActionResult<GetCategoriesStatsSuccessResponse["data"]>>;
+): Promise<
+  NextResponse<ApiResponse<GetCategoriesStatsSuccessResponse["data"]>>
+>;
 export async function getCategoriesStats(
   params: GetCategoriesStats,
   serverConfig?: ActionConfig,
-): Promise<ActionResult<GetCategoriesStatsSuccessResponse["data"]>>;
+): Promise<ApiResponse<GetCategoriesStatsSuccessResponse["data"]>>;
 export async function getCategoriesStats(
   { access_token, force }: GetCategoriesStats,
   serverConfig?: ActionConfig,
@@ -691,7 +709,9 @@ export async function getCategoriesStats(
       });
 
       if (cachedData) {
-        return response.ok({ data: cachedData });
+        return response.ok({
+          data: cachedData,
+        });
       }
     }
 
@@ -830,7 +850,9 @@ export async function getCategoriesStats(
       ttl: CACHE_TTL,
     });
 
-    return response.ok({ data });
+    return response.ok({
+      data,
+    });
   } catch (error) {
     console.error("GetCategoriesStats error:", error);
     return response.serverError();
@@ -840,11 +862,11 @@ export async function getCategoriesStats(
 export async function getPagesStats(
   params: GetPagesStats,
   serverConfig: { environment: "serverless" },
-): Promise<ActionResult<GetPagesStatsSuccessResponse["data"]>>;
+): Promise<NextResponse<ApiResponse<GetPagesStatsSuccessResponse["data"]>>>;
 export async function getPagesStats(
   params: GetPagesStats,
   serverConfig?: ActionConfig,
-): Promise<ActionResult<GetPagesStatsSuccessResponse["data"]>>;
+): Promise<ApiResponse<GetPagesStatsSuccessResponse["data"]>>;
 export async function getPagesStats(
   { access_token, force }: GetPagesStats,
   serverConfig?: ActionConfig,
@@ -891,7 +913,9 @@ export async function getPagesStats(
       );
 
       if (cachedData) {
-        return response.ok({ data: cachedData });
+        return response.ok({
+          data: cachedData,
+        });
       }
     }
 
@@ -974,11 +998,11 @@ export async function getPagesStats(
 export async function getStorageStats(
   params: GetStorageStats,
   serverConfig: { environment: "serverless" },
-): Promise<ActionResult<GetStorageStatsSuccessResponse["data"]>>;
+): Promise<NextResponse<ApiResponse<GetStorageStatsSuccessResponse["data"]>>>;
 export async function getStorageStats(
   params: GetStorageStats,
   serverConfig?: ActionConfig,
-): Promise<ActionResult<GetStorageStatsSuccessResponse["data"]>>;
+): Promise<ApiResponse<GetStorageStatsSuccessResponse["data"]>>;
 export async function getStorageStats(
   { access_token, force }: GetStorageStats,
   serverConfig?: ActionConfig,
@@ -1025,82 +1049,124 @@ export async function getStorageStats(
       );
 
       if (cachedData) {
-        return response.ok({ data: cachedData });
+        return response.ok({
+          data: cachedData,
+        });
       }
     }
 
     const now = new Date();
 
-    // 获取存储统计数据
-    const [totalStats, typeStats, totalMediaFiles, totalMediaSize] =
-      await Promise.all([
-        // 总体统计
-        prisma.storageProvider.findMany({
-          select: {
-            isActive: true,
-            isDefault: true,
-          },
-        }),
+    // 使用原生 SQL 查询获取所有存储统计数据
+    const [storageStats, mediaStats] = await Promise.all([
+      // 存储提供商统计
+      prisma.$queryRaw<
+        Array<{
+          type: string;
+          total_count: bigint;
+          active_count: bigint;
+          default_count: bigint;
+        }>
+      >`
+        SELECT
+          type,
+          COUNT(*) as total_count,
+          COUNT(CASE WHEN "isActive" = true THEN 1 END) as active_count,
+          COUNT(CASE WHEN "isDefault" = true THEN 1 END) as default_count
+        FROM "StorageProvider"
+        GROUP BY type
+      `,
 
-        // 按类型统计
-        prisma.storageProvider.groupBy({
-          by: ["type"],
-          _count: {
-            id: true,
-          },
-          where: {
-            isActive: true,
-          },
-        }),
+      // 媒体文件统计
+      prisma.$queryRaw<
+        Array<{
+          storage_provider_type: string;
+          media_count: bigint;
+          total_size: bigint;
+          average_size: bigint;
+        }>
+      >`
+        SELECT
+          sp.type as storage_provider_type,
+          COUNT(m.id) as media_count,
+          COALESCE(SUM(m.size), 0) as total_size,
+          COALESCE(AVG(m.size), 0) as average_size
+        FROM "StorageProvider" sp
+        LEFT JOIN "Media" m ON sp.id = m."storageProviderId"
+        GROUP BY sp.type
+        ORDER BY sp.type
+      `,
+    ]);
 
-        // 总媒体文件数
-        prisma.media.count(),
-
-        // 总媒体文件大小
-        prisma.media.aggregate({
-          _sum: {
-            size: true,
-          },
-        }),
-      ]);
-
-    // 计算总体统计
-    const total = {
-      total: totalStats.length,
-      active: totalStats.filter((s) => s.isActive).length,
-      inactive: totalStats.filter((s) => !s.isActive).length,
-      default: totalStats.filter((s) => s.isDefault).length,
+    // 计算总计数据
+    const totalStats = {
+      total: 0,
+      active: 0,
+      inactive: 0,
+      default: 0,
     };
 
-    // 按类型统计详细信息
-    const byType = await Promise.all(
-      typeStats.map(async (stat) => {
-        const mediaCount = await prisma.media.count({
-          where: {
-            StorageProvider: {
-              type: stat.type,
-              isActive: true,
-            },
-          },
-        });
+    // 构建 byType 数据
+    const byType: Array<{
+      type: "LOCAL" | "AWS_S3" | "GITHUB_PAGES" | "VERCEL_BLOB";
+      count: number;
+      active: number;
+      mediaCount: number;
+    }> = [];
 
-        return {
-          type: stat.type,
-          count: stat._count.id,
-          active: stat._count.id,
-          mediaCount,
-        };
-      }),
+    // 创建媒体统计映射
+    const mediaStatsMap = new Map(
+      mediaStats.map((stat) => [
+        stat.storage_provider_type,
+        {
+          mediaCount: Number(stat.media_count),
+          totalSize: Number(stat.total_size),
+        },
+      ]),
     );
 
-    // 计算存储信息
+    // 聚合存储统计结果
+    storageStats.forEach((stat) => {
+      const totalCount = Number(stat.total_count);
+      const activeCount = Number(stat.active_count);
+      const defaultCount = Number(stat.default_count);
+
+      totalStats.total += totalCount;
+      totalStats.active += activeCount;
+      totalStats.inactive += totalCount - activeCount;
+      totalStats.default += defaultCount;
+
+      const mediaInfo = mediaStatsMap.get(stat.type) || {
+        mediaCount: 0,
+        totalSize: 0,
+      };
+
+      byType.push({
+        type: stat.type as "LOCAL" | "AWS_S3" | "GITHUB_PAGES" | "VERCEL_BLOB",
+        count: totalCount,
+        active: activeCount,
+        mediaCount: mediaInfo.mediaCount,
+      });
+    });
+
+    // 计算存储统计数据
     const storage = {
-      totalProviders: totalStats.length,
-      activeProviders: total.active,
-      totalMediaFiles,
+      totalProviders: totalStats.total,
+      activeProviders: totalStats.active,
+      totalMediaFiles: Array.from(mediaStatsMap.values()).reduce(
+        (sum, info) => sum + info.mediaCount,
+        0,
+      ),
       averageFileSize:
-        totalMediaFiles > 0
-          ? (totalMediaSize._sum.size || 0) / totalMediaFiles
+        Array.from(mediaStatsMap.values()).length > 0
+          ? Array.from(mediaStatsMap.values()).reduce(
+              (sum, info) => sum + info.totalSize,
+              0,
+            ) /
+            Array.from(mediaStatsMap.values()).reduce(
+              (sum, info) => sum + info.mediaCount,
+              1,
+            )
           : 0,
     };
 
@@ -1108,7 +1174,7 @@ export async function getStorageStats(
     const data: GetStorageStatsSuccessResponse["data"] = {
       updatedAt: now.toISOString(),
       cache: false,
-      total,
+      total: totalStats,
       byType,
       storage,
     };
@@ -1119,9 +1185,11 @@ export async function getStorageStats(
       ttl: CACHE_TTL,
     });
 
-    return response.ok({ data });
+    return response.ok({
+      data,
+    });
   } catch (error) {
     console.error("GetStorageStats error:", error);
-    return response.serverError();
+    return response.serverError({ message: "获取存储统计失败" });
   }
 }
