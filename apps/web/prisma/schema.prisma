@@ -262,18 +262,19 @@ model Media {
 }
 
 model StorageProvider {
-  id          String  @id @default(uuid())
-  name        String  @unique @db.VarChar(50) // local/aws-s3/aliyun-oss/qcloud-cos
-  displayName String  @db.VarChar(100) // 显示名称
-  isActive    Boolean @default(true) // 是否启用
-  isDefault   Boolean @default(false) // 是否为默认存储
+  id          String              @id @default(uuid())
+  name        String              @unique @db.VarChar(50) // local/aws-s3/aliyun-oss/qcloud-cos
+  type        StorageProviderType @default(LOCAL) // 存储提供商类型
+  displayName String              @db.VarChar(100) // 显示名称
+  baseUrl     String              @db.VarChar(255) // 基础访问URL
+  isActive    Boolean             @default(true) // 是否启用
+  isDefault   Boolean             @default(false) // 是否为默认存储
 
   // 配置信息
   config Json // 存储配置
 
   // 限制设置
-  maxFileSize  Int      @default(10485760) // 最大文件大小(字节) 默认10MB
-  allowedTypes String[] @db.VarChar(50) // 允许的文件类型
+  maxFileSize Int @default(52428800) // 最大文件大小(字节) 默认50MB
 
   // 路径模板
   pathTemplate String @default("/{year}/{month}/{filename}") // 路径生成模板
@@ -559,4 +560,11 @@ enum MediaType {
   VIDEO
   AUDIO
   FILE
+}
+
+enum StorageProviderType {
+  LOCAL
+  AWS_S3
+  GITHUB_PAGES
+  VERCEL_BLOB
 }

@@ -18,7 +18,7 @@
     "@monaco-editor/react": "^4.7.0",
     "@pinyin-pro/data": "^1.2.0",
     "@prisma/client": "6.15.0",
-    "@remixicon/react": "^4.6.0",
+    "@remixicon/react": "^4.7.0",
     "@repo/shared-types": "workspace:*",
     "@tiptap/extension-character-count": "^3.10.2",
     "@tiptap/extension-dropcursor": "^3.10.2",

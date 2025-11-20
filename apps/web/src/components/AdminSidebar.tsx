@@ -6,9 +6,13 @@ import {
   RiBarChart2Fill,
   RiDashboardHorizontalFill,
   RiFileFill,
+  RiFileInfoFill,
   RiFileShieldFill,
   RiFolder2Fill,
+  RiHardDrive3Fill,
+  RiInformationFill,
   RiListView,
+  RiMenuFill,
   RiMessageFill,
   RiPriceTag3Fill,
   RiSave3Fill,
@@ -22,6 +26,7 @@ import { usePathname } from "next/navigation";
 import { useMobile } from "@/hooks/useMobile";
 import Link from "./Link";
 import { useEffect, useState } from "react";
+import "./AdminSidebar.css";
 
 const roles = {
   author: ["ADMIN", "EDITOR", "AUTHOR"],
@@ -79,6 +84,12 @@ const AdminSidebarList = [
     role: roles.editor,
   },
   {
+    name: "菜单管理",
+    icon: <RiMenuFill size={"1.5em"} />,
+    href: "/admin/menus",
+    role: roles.editor,
+  },
+  {
     name: "用户管理",
     icon: <RiUserFill size={"1.5em"} />,
     href: "/admin/users",
@@ -90,7 +101,12 @@ const AdminSidebarList = [
     href: "/admin/media",
     role: roles.author,
   },
-
+  {
+    name: "存储管理",
+    icon: <RiHardDrive3Fill size={"1.5em"} />,
+    href: "/admin/storages",
+    role: roles.admin,
+  },
   {
     name: "友情链接管理",
     icon: <RiTeamFill size={"1.5em"} />,
@@ -110,15 +126,27 @@ const AdminSidebarList = [
     role: roles.admin,
   },
   {
+    name: "审计日志",
+    icon: <RiFileShieldFill size={"1.5em"} />,
+    href: "/admin/audit-logs",
+    role: roles.admin,
+  },
+  {
     name: "备份还原",
     icon: <RiSave3Fill size={"1.5em"} />,
     href: "/admin/backups",
     role: roles.admin,
   },
   {
-    name: "审计日志",
-    icon: <RiFileShieldFill size={"1.5em"} />,
-    href: "/admin/audit-logs",
+    name: "系统信息",
+    icon: <RiInformationFill size={"1.5em"} />,
+    href: "/admin/system",
+    role: roles.admin,
+  },
+  {
+    name: "版本信息",
+    icon: <RiFileInfoFill size={"1.5em"} />,
+    href: "/admin/version",
     role: roles.admin,
   },
   {
@@ -183,7 +211,7 @@ export default function AdminSidebar() {
 
   // 桌面端:垂直侧边栏
   return (
-    <div className="group relative w-[5em] hover:w-[15em] h-full border-border border transition-all duration-300 ease-in-out overflow-y-auto overflow-x-hidden bg-background shrink-0">
+    <div className="group admin-sidebar relative w-[5em] hover:w-[15em] h-full border-border border transition-all duration-300 ease-in-out overflow-y-auto overflow-x-hidden bg-background shrink-0 overflow-scroll">
       {filteredMenuItems.map((item, index) => (
         <Link
           key={index}

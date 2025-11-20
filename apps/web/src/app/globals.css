@@ -54,35 +54,53 @@
   }
 }
 
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
 /* 自定义滚动条样式 */
-::-webkit-scrollbar {
+::-webkit-scrollbar,
+.scrollbar-default::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-::-webkit-scrollbar-track {
+::-webkit-scrollbar-track,
+.scrollbar-default::-webkit-scrollbar-track {
   background: var(--color-background);
   border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb {
+::-webkit-scrollbar-thumb,
+.scrollbar-default::-webkit-scrollbar-thumb {
   background: var(--color-muted-foreground);
   border-radius: 4px;
   opacity: 0.6;
   transition: opacity 0.2s ease;
 }
 
-::-webkit-scrollbar-thumb:hover {
+::-webkit-scrollbar-thumb:hover,
+.scrollbar-default::-webkit-scrollbar-thumb:hover {
   background: var(--color-foreground);
   opacity: 0.8;
 }
 
-::-webkit-scrollbar-corner {
+::-webkit-scrollbar-corner,
+.scrollbar-default::-webkit-scrollbar-corner {
   background: var(--color-background);
 }
 
 /* Firefox 滚动条样式 */
 * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-muted-foreground) var(--color-background);
+}
+
+.scrollbar-default {
   scrollbar-width: thin;
   scrollbar-color: var(--color-muted-foreground) var(--color-background);
 }

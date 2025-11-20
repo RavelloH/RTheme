@@ -1,0 +1,36 @@
+/* AdminSidebar 专用样式 */
+.admin-sidebar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.admin-sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-sidebar:hover {
+  -ms-overflow-style: thin; /* IE and Edge */
+  scrollbar-width: thin; /* Firefox */
+}
+
+.admin-sidebar:hover::-webkit-scrollbar {
+  display: block;
+  width: 8px;
+}
+
+.admin-sidebar:hover::-webkit-scrollbar-track {
+  background: var(--color-background);
+  border-radius: 4px;
+}
+
+.admin-sidebar:hover::-webkit-scrollbar-thumb {
+  background: var(--color-muted-foreground);
+  border-radius: 4px;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.admin-sidebar:hover::-webkit-scrollbar-thumb:hover {
+  background: var(--color-foreground);
+  opacity: 0.8;
+}

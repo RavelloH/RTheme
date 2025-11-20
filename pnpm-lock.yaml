@@ -89,8 +89,8 @@ importers:
         specifier: 6.15.0
         version: 6.15.0(prisma@6.15.0(typescript@5.9.2))(typescript@5.9.2)
       '@remixicon/react':
-        specifier: ^4.6.0
-        version: 4.6.0(react@19.1.1)
+        specifier: ^4.7.0
+        version: 4.7.0(react@19.1.1)
       '@repo/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
@@ -2233,8 +2233,8 @@ packages:
   '@remirror/core-constants@3.0.0':
     resolution: {integrity: sha512-42aWfPrimMfDKDi4YegyS7x+/0tlzaqwPQCULLanv3DMIlu96KTJR0fM5isWX2UViOqlGnX6YFgqWepcX+XMNg==}
 
-  '@remixicon/react@4.6.0':
-    resolution: {integrity: sha512-bY56maEgT5IYUSRotqy9h03IAKJC85vlKtWFg2FKzfs8JPrkdBAYSa9dxoUSKFwGzup8Ux6vjShs9Aec3jvr2w==}
+  '@remixicon/react@4.7.0':
+    resolution: {integrity: sha512-ODBQjdbOjnFguCqctYkpDjERXOInNaBnRPDKfZOBvbzExBAwr2BaH/6AHFTg/UAFzBDkwtylfMT8iKPAkLwPLQ==}
     peerDependencies:
       react: '>=18.2.0'
 
@@ -10996,7 +10996,7 @@ snapshots:
 
   '@remirror/core-constants@3.0.0': {}
 
-  '@remixicon/react@4.6.0(react@19.1.1)':
+  '@remixicon/react@4.7.0(react@19.1.1)':
     dependencies:
       react: 19.1.1
 
