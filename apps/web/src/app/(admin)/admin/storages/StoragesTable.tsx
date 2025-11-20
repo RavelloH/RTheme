@@ -9,7 +9,7 @@ import {
   getStorageDetail,
 } from "@/actions/storage";
 import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
-import runWithAuth from "@/lib/client/runWithAuth";
+import runWithAuth, { resolveApiResponse } from "@/lib/client/runWithAuth";
 import { TableColumn } from "@/ui/Table";
 import React, { useCallback, useEffect, useState } from "react";
 import type { StorageListItem } from "@repo/shared-types/api/storage";
@@ -27,6 +27,9 @@ import {
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import { SelectOption } from "@/ui/Select";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { AutoResizer } from "@/ui/AutoResizer";
 import { Switch } from "@/ui/Switch";
 import { Button } from "@/ui/Button";
 import { AlertDialog } from "@/ui/AlertDialog";
@@ -124,12 +127,16 @@ export default function StoragesTable() {
         isDefault: isDefaultParam,
       });
 
-      if (result && "data" in result && result.data) {
+      const response = await resolveApiResponse(result);
+
+      if (response && response.success) {
         // API 返回遵循 shared-types 中的 Paginated Response：
-        // result.data 是条目数组，分页信息在 result.meta 中
-        setData(result.data as StorageListItem[]);
-        setTotalPages((result.meta?.totalPages as number) || 1);
-        setTotalRecords((result.meta?.total as number) || 0);
+        // response.data 是条目数组，分页信息在 response.meta 中
+        setData(response.data as StorageListItem[]);
+        setTotalPages((response.meta?.totalPages as number) || 1);
+        setTotalRecords((response.meta?.total as number) || 0);
+      } else if (response && !response.success) {
+        toastError("获取存储列表失败", response.message || "未知错误");
       }
     } catch (e: unknown) {
       console.error("获取存储列表失败:", e);
@@ -145,6 +152,7 @@ export default function StoragesTable() {
 
   const handleEdit = async (record: StorageListItem) => {
     setEditingStorage(record);
+    // 立即设置基本表单数据（从列表项中获得）
     setFormData({
       name: record.name,
       displayName: record.displayName,
@@ -157,33 +165,34 @@ export default function StoragesTable() {
     });
     setEditDialogOpen(true);
 
+    // 异步加载详细配置（主要是 config 字段）
     setConfigLoading(true);
     try {
       const detailResult = await runWithAuth(getStorageDetail, {
         id: record.id,
       });
 
-      if (detailResult && "data" in detailResult && detailResult.data) {
-        const detail = detailResult.data;
-        setFormData({
-          name: detail.name,
-          displayName: detail.displayName,
-          baseUrl: detail.baseUrl,
-          isActive: detail.isActive,
-          isDefault: detail.isDefault,
-          maxFileSize: detail.maxFileSize,
-          pathTemplate: detail.pathTemplate,
+      const detailResponse = await resolveApiResponse(detailResult);
+
+      if (detailResponse && detailResponse.success && detailResponse.data) {
+        const detail = detailResponse.data;
+        // 只更新配置字段，保持其他字段不变
+        setFormData((prev) => ({
+          ...prev,
           config: createStorageConfigValues(
             detail.type as StorageProviderType,
             (detail.config as Record<string, unknown>) || {},
           ),
-        });
-      } else {
-        toastError("获取配置失败", "无法获取存储配置详情");
+        }));
+      } else if (detailResponse && !detailResponse.success) {
+        toastError(
+          "获取详细配置失败",
+          detailResponse.message || "无法获取存储配置详情",
+        );
       }
     } catch (error) {
       console.error("获取存储详情失败:", error);
-      toastError("获取配置失败", "请稍后重试");
+      toastError("获取详细配置失败", "请稍后重试");
     } finally {
       setConfigLoading(false);
     }
@@ -212,12 +221,16 @@ export default function StoragesTable() {
         isActive: !record.isActive,
       });
 
-      if (result && "data" in result) {
+      const response = await resolveApiResponse(result);
+
+      if (response && response.success) {
         toastSuccess(
           record.isActive ? "存储已停用" : "存储已激活",
           `${record.displayName} 状态已更新`,
         );
         fetchData();
+      } else if (response && !response.success) {
+        toastError("操作失败", response.message || "无法更新存储状态");
       }
     } catch {
       toastError("操作失败", "无法更新存储状态");
@@ -230,9 +243,13 @@ export default function StoragesTable() {
         id: record.id,
       });
 
-      if (result && "data" in result) {
+      const response = await resolveApiResponse(result);
+
+      if (response && response.success) {
         toastSuccess("默认存储已更新", `${record.displayName} 已设为默认存储`);
         fetchData();
+      } else if (response && !response.success) {
+        toastError("操作失败", response.message || "无法设置默认存储");
       }
     } catch {
       toastError("操作失败", "无法设置默认存储");
@@ -257,10 +274,14 @@ export default function StoragesTable() {
         config: configValue,
       });
 
-      if (result && "data" in result) {
+      const response = await resolveApiResponse(result);
+
+      if (response && response.success) {
         toastSuccess("存储已更新", `${formData.displayName} 配置已保存`);
         setEditDialogOpen(false);
         fetchData();
+      } else if (response && !response.success) {
+        toastError("更新失败", response.message || "无法保存存储配置");
       }
     } catch {
       toastError("更新失败", "无法保存存储配置");
@@ -277,11 +298,15 @@ export default function StoragesTable() {
         ids: [editingStorage.id],
       });
 
-      if (result && "data" in result) {
+      const response = await resolveApiResponse(result);
+
+      if (response && response.success) {
         toastSuccess("存储已删除", `${editingStorage?.displayName} 已被删除`);
         setDeleteDialogOpen(false);
         setSelectedKeys([]);
         fetchData();
+      } else if (response && !response.success) {
+        toastError("删除失败", response.message || "无法删除存储");
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -506,139 +531,152 @@ export default function StoragesTable() {
         title="编辑存储配置"
         size="lg"
       >
-        <div className="space-y-4 p-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">名称</label>
-              <Input
-                label="存储名称"
-                size="sm"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                placeholder="存储名称"
-              />
+        <AutoResizer duration={0.4} ease="easeInOut" initial={true}>
+          <div className="space-y-4 p-6">
+            {/* 基本字段 - 立即可见 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">名称</label>
+                <Input
+                  label="存储名称"
+                  size="sm"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  placeholder="存储名称"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">显示名称</label>
+                <Input
+                  label="显示名称"
+                  size="sm"
+                  value={formData.displayName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, displayName: e.target.value })
+                  }
+                  placeholder="显示名称"
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-sm font-medium">显示名称</label>
-              <Input
-                label="显示名称"
-                size="sm"
-                value={formData.displayName}
-                onChange={(e) =>
-                  setFormData({ ...formData, displayName: e.target.value })
-                }
-                placeholder="显示名称"
-              />
-            </div>
-          </div>
 
-          <div>
-            <label className="text-sm font-medium">基础URL</label>
-            <Input
-              label="基础URL"
-              size="sm"
-              value={formData.baseUrl}
-              onChange={(e) =>
-                setFormData({ ...formData, baseUrl: e.target.value })
-              }
-              placeholder="https://example.com"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium">最大文件大小</label>
+              <label className="text-sm font-medium">基础URL</label>
               <Input
-                label="最大文件大小"
+                label="基础URL"
                 size="sm"
-                type="number"
-                value={formData.maxFileSize}
+                value={formData.baseUrl}
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    maxFileSize: parseInt(e.target.value) || 0,
-                  })
+                  setFormData({ ...formData, baseUrl: e.target.value })
                 }
-                placeholder="52428800"
+                placeholder="https://example.com"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                字节数，默认 50MB
-              </p>
             </div>
-            <div>
-              <label className="text-sm font-medium">路径模板</label>
-              <Input
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">最大文件大小</label>
+                <Input
+                  label="最大文件大小"
+                  size="sm"
+                  type="number"
+                  value={formData.maxFileSize}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      maxFileSize: parseInt(e.target.value) || 0,
+                    })
+                  }
+                  placeholder="52428800"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  字节数，默认 50MB
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">路径模板</label>
+                <Input
+                  size="sm"
+                  label="路径模板"
+                  value={formData.pathTemplate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, pathTemplate: e.target.value })
+                  }
+                  placeholder="/{year}/{month}/{filename}"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Switch
+                label="激活存储"
+                checked={formData.isActive}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, isActive: Boolean(checked) })
+                }
+              />
+              <br />
+              <Switch
+                label="设为默认存储"
+                checked={formData.isDefault}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, isDefault: Boolean(checked) })
+                }
+              />
+            </div>
+
+            {/* 配置字段 - 异步加载 */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm font-medium">
+                <span>配置</span>
+                {configLoading && (
+                  <span className="text-xs text-muted-foreground">
+                    配置加载中...
+                  </span>
+                )}
+              </div>
+              <AutoTransition
+                type="slideUp"
+                key={configLoading ? "loading" : "loaded"}
+              >
+                {configLoading ? (
+                  <div className="py-8">
+                    <LoadingIndicator />
+                  </div>
+                ) : editingStorage ? (
+                  <StorageConfigFields
+                    type={editingStorage.type as StorageProviderType}
+                    values={formData.config}
+                    onChange={handleConfigValueChange}
+                    disabled={false}
+                  />
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    请选择要编辑的存储提供商后再调整配置。
+                  </p>
+                )}
+              </AutoTransition>
+            </div>
+            <div className="flex justify-end gap-4 pt-4 border-t border-foreground/10">
+              <Button
+                label="取消"
+                variant="ghost"
+                onClick={() => setEditDialogOpen(false)}
                 size="sm"
-                label="路径模板"
-                value={formData.pathTemplate}
-                onChange={(e) =>
-                  setFormData({ ...formData, pathTemplate: e.target.value })
-                }
-                placeholder="/{year}/{month}/{filename}"
+                disabled={submitting}
+              />
+              <Button
+                label="保存"
+                variant="primary"
+                onClick={handleFormSubmit}
+                size="sm"
+                loading={submitting}
+                loadingText="保存中..."
               />
             </div>
           </div>
-
-          <div className="space-y-2">
-            <Switch
-              label="激活存储"
-              checked={formData.isActive}
-              onCheckedChange={(checked) =>
-                setFormData({ ...formData, isActive: Boolean(checked) })
-              }
-            />
-            <br />
-            <Switch
-              label="设为默认存储"
-              checked={formData.isDefault}
-              onCheckedChange={(checked) =>
-                setFormData({ ...formData, isDefault: Boolean(checked) })
-              }
-            />
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between text-sm font-medium">
-              <span>配置</span>
-              {configLoading && (
-                <span className="text-xs text-muted-foreground">
-                  配置加载中...
-                </span>
-              )}
-            </div>
-            {editingStorage ? (
-              <StorageConfigFields
-                type={editingStorage.type as StorageProviderType}
-                values={formData.config}
-                onChange={handleConfigValueChange}
-                disabled={configLoading}
-              />
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                请选择要编辑的存储提供商后再调整配置。
-              </p>
-            )}
-          </div>
-          <div className="flex justify-end gap-4 pt-4 border-t border-foreground/10">
-            <Button
-              label="取消"
-              variant="ghost"
-              onClick={() => setEditDialogOpen(false)}
-              size="sm"
-              disabled={submitting}
-            />
-            <Button
-              label="保存"
-              variant="primary"
-              onClick={handleFormSubmit}
-              size="sm"
-              loading={submitting}
-              loadingText="保存中..."
-            />
-          </div>
-        </div>
+        </AutoResizer>
       </Dialog>
 
       {/* 删除确认对话框 */}
