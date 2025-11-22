@@ -8,7 +8,12 @@ import { Select } from "@/ui/Select";
 import { useToast, ToastProvider } from "@/ui/Toast";
 import { useBroadcastSender } from "@/hooks/useBroadcast";
 import { getStorageList } from "@/actions/storage";
-import { RiImageAddFill, RiUploadCloudFill, RiCheckFill, RiCloseFill } from "@remixicon/react";
+import {
+  RiImageAddFill,
+  RiUploadCloudFill,
+  RiCheckFill,
+  RiCloseFill,
+} from "@remixicon/react";
 
 type ProcessMode = "lossy" | "lossless" | "original";
 
@@ -58,7 +63,9 @@ function MediaAddInner() {
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [storageProviders, setStorageProviders] = useState<StorageProvider[]>([]);
+  const [storageProviders, setStorageProviders] = useState<StorageProvider[]>(
+    [],
+  );
   const [selectedStorageId, setSelectedStorageId] = useState<string>("");
   const [loadingProviders, setLoadingProviders] = useState(false);
   const [userRole, setUserRole] = useState<string>("");
@@ -97,16 +104,18 @@ function MediaAddInner() {
             setStorageProviders(response.data);
             // 自动选择默认存储提供商
             const defaultStorage = response.data.find(
-              (s: StorageProvider) => s.isDefault
+              (s: StorageProvider) => s.isDefault,
             );
             if (defaultStorage) {
               setSelectedStorageId(defaultStorage.id);
-            } else if (response.data.length > 0) {
+            } else if (response.data.length > 0 && response.data[0]) {
               setSelectedStorageId(response.data[0].id);
             }
           }
         })
-        .catch((err) => console.error("Failed to fetch storage providers:", err))
+        .catch((err) =>
+          console.error("Failed to fetch storage providers:", err),
+        )
         .finally(() => setLoadingProviders(false));
     }
   }, [userRole]);
@@ -168,9 +177,14 @@ function MediaAddInner() {
     return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
   };
 
-  const calculateCompressionRatio = (original: number, processed: number): string => {
+  const calculateCompressionRatio = (
+    original: number,
+    processed: number,
+  ): string => {
     const ratio = ((original - processed) / original) * 100;
-    return ratio > 0 ? `-${ratio.toFixed(1)}%` : `+${Math.abs(ratio).toFixed(1)}%`;
+    return ratio > 0
+      ? `-${ratio.toFixed(1)}%`
+      : `+${Math.abs(ratio).toFixed(1)}%`;
   };
 
   const handleUpload = async () => {
@@ -184,7 +198,7 @@ function MediaAddInner() {
     try {
       // 标记为上传中
       setFiles((prev) =>
-        prev.map((f) => ({ ...f, status: "uploading" as const }))
+        prev.map((f) => ({ ...f, status: "uploading" as const })),
       );
 
       // 构建 FormData
@@ -212,7 +226,7 @@ function MediaAddInner() {
         setFiles((prev) =>
           prev.map((f) => {
             const uploadResult = result.data.find(
-              (r: UploadMediaResult) => r.originalName === f.file.name
+              (r: UploadMediaResult) => r.originalName === f.file.name,
             );
             if (uploadResult) {
               return {
@@ -227,19 +241,16 @@ function MediaAddInner() {
               status: "error" as const,
               error: "上传失败",
             };
-          })
+          }),
         );
 
-        toastSuccess(
-          "上传成功",
-          `成功上传 ${result.data.length} 个文件`
-        );
+        toastSuccess("上传成功", `成功上传 ${result.data.length} 个文件`);
         await broadcast({ type: "media-refresh" });
       } else {
         const message = result.message || "上传失败";
         toastError(message);
         setFiles((prev) =>
-          prev.map((f) => ({ ...f, status: "error" as const, error: message }))
+          prev.map((f) => ({ ...f, status: "error" as const, error: message })),
         );
       }
     } catch (error) {
@@ -250,7 +261,7 @@ function MediaAddInner() {
           ...f,
           status: "error" as const,
           error: "上传失败",
-        }))
+        })),
       );
     } finally {
       setUploading(false);
@@ -287,7 +298,7 @@ function MediaAddInner() {
               ) : (
                 <Select
                   value={selectedStorageId}
-                  onChange={(value) => setSelectedStorageId(value)}
+                  onChange={(value) => setSelectedStorageId(String(value))}
                   options={storageProviders.map((provider) => ({
                     value: provider.id,
                     label: `${provider.displayName}${provider.isDefault ? " (默认)" : ""}`,
@@ -365,7 +376,10 @@ function MediaAddInner() {
                 : "border-border hover:border-primary/50"
             }`}
           >
-            <RiUploadCloudFill className="mx-auto mb-4 text-muted-foreground" size={48} />
+            <RiUploadCloudFill
+              className="mx-auto mb-4 text-muted-foreground"
+              size={48}
+            />
             <div className="text-lg font-medium mb-2">
               拖拽文件到此处或点击选择
             </div>
@@ -431,22 +445,21 @@ function MediaAddInner() {
                             {formatBytes(uploadFile.processedSize)}
                             <span
                               className={
-                                uploadFile.processedSize < uploadFile.originalSize
+                                uploadFile.processedSize <
+                                uploadFile.originalSize
                                   ? "text-green-500 ml-1"
                                   : "text-orange-500 ml-1"
                               }
                             >
                               {calculateCompressionRatio(
                                 uploadFile.originalSize,
-                                uploadFile.processedSize
+                                uploadFile.processedSize,
                               )}
                             </span>
                           </>
                         )}
                         {uploadFile.result?.isDuplicate && (
-                          <span className="text-orange-500 ml-2">
-                            （去重）
-                          </span>
+                          <span className="text-orange-500 ml-2">（去重）</span>
                         )}
                       </div>
                       {uploadFile.error && (

@@ -211,7 +211,7 @@ const components: MDXComponents = {
   }: {
     src?: string;
     alt?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   }) => {
     // 对于外部 URL，需要特殊处理
     const isExternal = typeof src === "string" && src.startsWith("http");

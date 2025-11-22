@@ -32,7 +32,7 @@ export interface MediaResolveResult {
  * @returns 媒体信息或 null
  */
 export async function getMediaByShortHash(
-  shortHash: string
+  shortHash: string,
 ): Promise<MediaResolveResult | null> {
   // TODO: 未来可在此处添加 Redis 缓存层
   // const cached = await redis.get(`np:media:${shortHash}`);
@@ -76,7 +76,7 @@ export async function getMediaByShortHash(
  * @returns 媒体信息映射
  */
 export async function getMediaByShortHashes(
-  shortHashes: string[]
+  shortHashes: string[],
 ): Promise<Map<string, MediaResolveResult>> {
   const mediaList = await prisma.media.findMany({
     where: {

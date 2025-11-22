@@ -2,7 +2,8 @@
 
 import { useMobile } from "@/hooks/useMobile";
 
-export function Panel({ onClose }: { onClose: () => void }) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function Panel({ onClose: _onClose }: { onClose: () => void }) {
   const isMobile = useMobile();
 
   // 根据设备类型获取高度值

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { scaleTime, scaleLinear, scaleBand } from "@visx/scale";
+import { scaleLinear, scaleBand } from "@visx/scale";
 import { BarStack } from "@visx/shape";
 import { Group } from "@visx/group";
 
@@ -92,7 +92,6 @@ export default function StackedBarChart({
   const innerHeight = dimensions.height - margin.top - margin.bottom;
 
   // 数据访问器
-  const getDate = (d: StackedBarChartDataPoint) => new Date(d.time);
   const getValue = (d: StackedBarChartDataPoint, key: string) => {
     const value = d[key];
     return typeof value === "number" ? value : 0;

@@ -102,7 +102,7 @@ export function verifySignature(shortHash: string, signature: string): boolean {
   const expectedSignature = generateSignature(shortHash);
   return crypto.timingSafeEqual(
     Buffer.from(expectedSignature),
-    Buffer.from(signature)
+    Buffer.from(signature),
   );
 }
 
@@ -128,7 +128,9 @@ export function generateImageId(shortHash: string): string {
 export function generateSignedImageId(shortHash: string): string {
   // 确保仅在服务器端运行
   if (typeof window !== "undefined") {
-    throw new Error("generateSignedImageId can only be used on the server side");
+    throw new Error(
+      "generateSignedImageId can only be used on the server side",
+    );
   }
 
   return generateImageId(shortHash);
@@ -140,7 +142,7 @@ export function generateSignedImageId(shortHash: string): string {
  * @returns { shortHash, signature } 或 null（格式无效）
  */
 export function parseImageId(
-  imageId: string
+  imageId: string,
 ): { shortHash: string; signature: string } | null {
   const expectedLength = SHORT_HASH_LENGTH + SIGNATURE_LENGTH;
   if (imageId.length !== expectedLength) {

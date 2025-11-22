@@ -89,9 +89,10 @@ export default function MediaPreviewDialog({
 
   // 构建预览URL
   const previewUrl = `/p/${media.imageId}`;
-  const previewFullUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/p/${media.imageId}`
-    : `/p/${media.imageId}`;
+  const previewFullUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/p/${media.imageId}`
+      : `/p/${media.imageId}`;
   const originalUrl = media.storageUrl; // storageUrl 已经是完整路径
 
   return (
@@ -109,6 +110,7 @@ export default function MediaPreviewDialog({
               预览
             </h3>
             <div className="bg-muted/30 rounded-lg p-4 flex items-center justify-center min-h-[200px]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={previewUrl}
                 alt={media.altText || media.originalName}

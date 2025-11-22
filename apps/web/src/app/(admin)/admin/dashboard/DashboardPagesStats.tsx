@@ -55,7 +55,8 @@ export default function DashboardPagesStats() {
 
   useEffect(() => {
     fetchData();
-  }, []); // 移除 fetchData 依赖，只在组件挂载时执行一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const getSummary = (result: StatsData) => {
     if (!result) return null;

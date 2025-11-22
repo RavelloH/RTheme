@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
 
@@ -62,7 +62,7 @@ export function Tooltip({
   }, []);
 
   // 计算 Tooltip 位置
-  const calculatePosition = () => {
+  const calculatePosition = useCallback(() => {
     if (!triggerRef.current || !tooltipRef.current) return;
 
     const triggerRect = triggerRef.current.getBoundingClientRect();
@@ -105,7 +105,7 @@ export function Tooltip({
     }
 
     setPosition({ x, y });
-  };
+  }, [placement]);
 
   // 显示 Tooltip
   const showTooltip = () => {
@@ -164,7 +164,7 @@ export function Tooltip({
         }
       };
     }
-  }, [isVisible]);
+  }, [isVisible, calculatePosition]);
 
   // 清理定时器
   useEffect(() => {

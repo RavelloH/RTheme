@@ -54,7 +54,7 @@ export function getPageBlockValue<T = unknown>(
   fieldPath: string,
   defaultValue?: T,
 ): T | null {
-  const block = getPageBlock(config, blockId) as any;
+  const block = getPageBlock(config, blockId) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   if (!block) {
     return defaultValue ?? null;
@@ -98,7 +98,7 @@ export function getPageComponentValue<T = unknown>(
   fieldPath: string,
   defaultValue?: T,
 ): T | null {
-  const component = getPageComponent(config, componentId) as any;
+  const component = getPageComponent(config, componentId) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   if (!component) {
     return defaultValue ?? null;
@@ -138,7 +138,7 @@ export function isPageBlockEnabled(
   config: SystemPageConfig | null,
   blockId: number,
 ): boolean {
-  const block = getPageBlock(config, blockId) as any;
+  const block = getPageBlock(config, blockId) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
   return block?.enabled ?? false;
 }
 
@@ -413,7 +413,7 @@ export class PageConfigBuilder {
    * @returns 启用状态，如果 block 不存在则返回 null
    */
   getBlockStatus(blockId: number): boolean | null {
-    const block = getPageBlock(this.config, blockId) as any;
+    const block = getPageBlock(this.config, blockId) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     return block ? block.enabled : null;
   }
 
@@ -426,7 +426,9 @@ export class PageConfigBuilder {
       return [];
     }
 
-    return this.config.blocks.filter((block: any) => block.enabled);
+    return this.config.blocks.filter(
+      (block: unknown) => (block as { enabled: boolean }).enabled,
+    );
   }
 
   /**
@@ -438,7 +440,9 @@ export class PageConfigBuilder {
       return [];
     }
 
-    return this.config.blocks.filter((block: any) => !block.enabled);
+    return this.config.blocks.filter(
+      (block: unknown) => !(block as { enabled: boolean }).enabled,
+    );
   }
 
   /**
@@ -451,7 +455,7 @@ export class PageConfigBuilder {
     }
 
     const enabled = this.config.blocks.filter(
-      (block: any) => block.enabled,
+      (block: unknown) => (block as { enabled: boolean }).enabled,
     ).length;
     const disabled = this.config.blocks.length - enabled;
 

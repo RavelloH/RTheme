@@ -7,7 +7,6 @@ import fs from "fs";
 import path from "path";
 import { pathToFileURL } from "url";
 import RLog from "rlog-js";
-import { type PrismaClient } from "@prisma/client";
 
 const rlog = new RLog();
 
@@ -60,7 +59,8 @@ async function generateMenuCache() {
     }
 
     // 动态导入 Prisma 客户端以避免初始化问题
-    let prisma: PrismaClient;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let prisma: any;
     try {
       // 使用 pathToFileURL 确保跨平台兼容性
       const clientPath = path.join(

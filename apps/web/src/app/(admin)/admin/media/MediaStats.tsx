@@ -3,8 +3,7 @@
 import { GridItem } from "@/components/RowGrid";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { getMediaStats } from "@/actions/media";
-import { useEffect, useState, useCallback } from "react";
-import type { MediaStats } from "@repo/shared-types/api/media";
+import { useEffect, useState } from "react";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/useBroadcast";
@@ -53,15 +52,6 @@ export default function MediaStats() {
         return;
       }
       if (!res.data) return;
-
-      // 格式化文件大小
-      const formatFileSize = (bytes: number) => {
-        if (bytes === 0) return "0 B";
-        const k = 1024;
-        const sizes = ["B", "KB", "MB", "GB", "TB"];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-      };
 
       // 获取文件类型名称
       const getFileTypeName = (type: string) => {
@@ -116,7 +106,6 @@ export default function MediaStats() {
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger]);
 
   // 格式化文件大小

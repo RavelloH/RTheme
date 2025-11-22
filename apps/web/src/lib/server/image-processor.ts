@@ -114,8 +114,12 @@ async function generateBlurPlaceholder(buffer: Buffer): Promise<string> {
 
   // 计算缩放尺寸（短边 10px）
   const isPortrait = metadata.height > metadata.width;
-  const targetWidth = isPortrait ? 10 : Math.round((10 * metadata.width) / metadata.height);
-  const targetHeight = isPortrait ? Math.round((10 * metadata.height) / metadata.width) : 10;
+  const targetWidth = isPortrait
+    ? 10
+    : Math.round((10 * metadata.width) / metadata.height);
+  const targetHeight = isPortrait
+    ? Math.round((10 * metadata.height) / metadata.width)
+    : 10;
 
   const blurBuffer = await image
     .resize(targetWidth, targetHeight, {
@@ -176,7 +180,8 @@ async function extractExif(buffer: Buffer): Promise<Record<string, unknown>> {
  */
 async function processLossy(
   buffer: Buffer,
-  originalFilename: string
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _originalFilename: string,
 ): Promise<ProcessedImage> {
   const image = sharp(buffer);
 
@@ -225,7 +230,8 @@ async function processLossy(
  */
 async function processLossless(
   buffer: Buffer,
-  originalFilename: string
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _originalFilename: string,
 ): Promise<ProcessedImage> {
   const image = sharp(buffer);
 
@@ -275,7 +281,7 @@ async function processLossless(
 async function processOriginal(
   buffer: Buffer,
   originalFilename: string,
-  mimeType: string
+  mimeType: string,
 ): Promise<ProcessedImage> {
   const image = sharp(buffer);
 
@@ -295,7 +301,9 @@ async function processOriginal(
   const blur = await generateBlurPlaceholder(buffer);
 
   // 提取扩展名
-  const extension = getExtensionFromMimeType(mimeType) || getExtensionFromFilename(originalFilename);
+  const extension =
+    getExtensionFromMimeType(mimeType) ||
+    getExtensionFromFilename(originalFilename);
 
   return {
     buffer,
@@ -357,9 +365,10 @@ export async function processImage(
   buffer: Buffer,
   originalFilename: string,
   mimeType: string,
-  mode: ProcessMode
+  mode: ProcessMode,
 ): Promise<ProcessedImage> {
   // 验证文件类型
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (!SUPPORTED_IMAGE_FORMATS.includes(mimeType as any)) {
     throw new Error(`不支持的图片格式: ${mimeType}`);
   }

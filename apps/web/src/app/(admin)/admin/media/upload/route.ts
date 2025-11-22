@@ -1,7 +1,11 @@
 import { NextRequest } from "next/server";
 import ResponseBuilder from "@/lib/server/response";
 import { authVerify } from "@/lib/server/auth-verify";
-import { processImage, SUPPORTED_IMAGE_FORMATS, type ProcessMode } from "@/lib/server/image-processor";
+import {
+  processImage,
+  SUPPORTED_IMAGE_FORMATS,
+  type ProcessMode,
+} from "@/lib/server/image-processor";
 import { uploadObject } from "@/lib/server/oss";
 import { generateSignedImageId } from "@/lib/server/image-crypto";
 import prisma from "@/lib/server/prisma";
@@ -91,14 +95,19 @@ export async function POST(request: NextRequest): Promise<Response> {
     // 解析 multipart/form-data
     const formData = await request.formData();
     const mode = (formData.get("mode") as string) || "lossy";
-    const storageProviderId = formData.get("storageProviderId") as string | null;
+    const storageProviderId = formData.get("storageProviderId") as
+      | string
+      | null;
     const files = formData.getAll("files") as File[];
 
     // 验证模式
     if (!["lossy", "lossless", "original"].includes(mode)) {
       return response.badRequest({
         message: "无效的处理模式",
-        error: { code: "INVALID_MODE", message: "处理模式必须为: lossy/lossless/original" },
+        error: {
+          code: "INVALID_MODE",
+          message: "处理模式必须为: lossy/lossless/original",
+        },
       }) as Response;
     }
 
@@ -153,6 +162,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     for (const file of files) {
       try {
         // 验证文件类型
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (!SUPPORTED_IMAGE_FORMATS.includes(file.type as any)) {
           console.warn(`跳过不支持的文件类型: ${file.name} (${file.type})`);
           continue;
@@ -161,7 +171,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         // 验证文件大小
         if (file.size > storageProvider.maxFileSize) {
           console.warn(
-            `跳过超大文件: ${file.name} (${file.size} > ${storageProvider.maxFileSize})`
+            `跳过超大文件: ${file.name} (${file.size} > ${storageProvider.maxFileSize})`,
           );
           continue;
         }
@@ -175,7 +185,7 @@ export async function POST(request: NextRequest): Promise<Response> {
           buffer,
           file.name,
           file.type,
-          mode as ProcessMode
+          mode as ProcessMode,
         );
 
         // 检查去重
@@ -216,6 +226,7 @@ export async function POST(request: NextRequest): Promise<Response> {
           type: storageProvider.type,
           baseUrl: storageProvider.baseUrl,
           pathTemplate: storageProvider.pathTemplate,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           config: storageProvider.config as any,
           file: {
             buffer: processed.buffer,
@@ -238,6 +249,7 @@ export async function POST(request: NextRequest): Promise<Response> {
             height: processed.height,
             blur: processed.blur,
             thumbnails: {},
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             exif: processed.exif as any,
             inGallery: false,
             isOptimized: mode !== "original",

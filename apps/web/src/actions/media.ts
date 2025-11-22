@@ -27,7 +27,11 @@ import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
 import { logAuditEvent } from "./audit";
 import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
-import { processImage, type ProcessMode, SUPPORTED_IMAGE_FORMATS } from "@/lib/server/image-processor";
+import {
+  processImage,
+  type ProcessMode,
+  SUPPORTED_IMAGE_FORMATS,
+} from "@/lib/server/image-processor";
 import { uploadObject } from "@/lib/server/oss";
 import { generateSignedImageId } from "@/lib/server/image-crypto";
 
@@ -952,7 +956,10 @@ export async function uploadMedia(
   if (!["lossy", "lossless", "original"].includes(mode)) {
     return response.badRequest({
       message: "无效的处理模式",
-      error: { code: "INVALID_MODE", message: `处理模式必须为 lossy/lossless/original` },
+      error: {
+        code: "INVALID_MODE",
+        message: `处理模式必须为 lossy/lossless/original`,
+      },
     });
   }
 
@@ -989,15 +996,18 @@ export async function uploadMedia(
     for (const file of files) {
       try {
         // 验证文件类型
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (!SUPPORTED_IMAGE_FORMATS.includes(file.mimeType as any)) {
-          console.warn(`跳过不支持的文件类型: ${file.originalName} (${file.mimeType})`);
+          console.warn(
+            `跳过不支持的文件类型: ${file.originalName} (${file.mimeType})`,
+          );
           continue;
         }
 
         // 验证文件大小
         if (file.originalSize > storageProvider.maxFileSize) {
           console.warn(
-            `跳过超大文件: ${file.originalName} (${file.originalSize} > ${storageProvider.maxFileSize})`
+            `跳过超大文件: ${file.originalName} (${file.originalSize} > ${storageProvider.maxFileSize})`,
           );
           continue;
         }
@@ -1007,7 +1017,7 @@ export async function uploadMedia(
           file.buffer,
           file.originalName,
           file.mimeType,
-          mode
+          mode,
         );
 
         // 检查去重
@@ -1048,6 +1058,7 @@ export async function uploadMedia(
           type: storageProvider.type,
           baseUrl: storageProvider.baseUrl,
           pathTemplate: storageProvider.pathTemplate,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           config: storageProvider.config as any,
           file: {
             buffer: processed.buffer,
@@ -1070,6 +1081,7 @@ export async function uploadMedia(
             height: processed.height,
             blur: processed.blur,
             thumbnails: {},
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             exif: processed.exif as any, // Prisma JsonValue 类型转换
             inGallery: false,
             isOptimized: mode !== "original",
@@ -1139,4 +1151,3 @@ export async function uploadMedia(
     return response.serverError();
   }
 }
-

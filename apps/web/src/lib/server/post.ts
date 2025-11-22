@@ -205,9 +205,9 @@ export async function serializeMDX(
 
     // 处理不同的结果类型
     if ("compiledSource" in result) {
-      return { content: (result as any).compiledSource };
+      return { content: (result as { compiledSource: string }).compiledSource };
     } else if ("content" in result) {
-      return { content: (result as any).content };
+      return { content: (result as { content: string }).content };
     } else {
       throw new Error("无法获取序列化后的内容");
     }

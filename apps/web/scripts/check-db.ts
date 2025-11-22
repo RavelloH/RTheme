@@ -5,9 +5,9 @@ import { config } from "dotenv";
 import Rlog from "rlog-js";
 import path from "path";
 import { pathToFileURL } from "url";
-import { type PrismaClient } from "@prisma/client";
 
-let prisma: PrismaClient;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let prisma: any;
 
 // 加载 .env 文件
 config({

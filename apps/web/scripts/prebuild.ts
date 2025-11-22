@@ -55,6 +55,11 @@ try {
   await generateMenuCache();
   rlog.log();
 
+  rlog.log("Starting page cache generation...");
+  const { generatePageCache } = await import("./generate-page-cache.js");
+  await generatePageCache();
+  rlog.log();
+
   // 完成 PreBuild
   const endTime = Date.now();
   rlog.success("✓ NeutralPress initialization completed successfully!");
