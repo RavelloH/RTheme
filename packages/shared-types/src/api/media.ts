@@ -45,18 +45,29 @@ export const MediaListItemSchema = z.object({
   mimeType: z.string(),
   size: z.number(),
   shortHash: z.string(),
+  imageId: z.string(), // 12位带签名的图片ID
   mediaType: z.enum(["IMAGE", "VIDEO", "AUDIO", "FILE"]),
   width: z.number().nullable(),
   height: z.number().nullable(),
   altText: z.string().nullable(),
   inGallery: z.boolean(),
   isOptimized: z.boolean(),
+  storageUrl: z.string(),
   createdAt: z.string(),
   user: z
     .object({
       uid: z.number(),
       username: z.string(),
       nickname: z.string().nullable(),
+    })
+    .nullable(),
+  storageProvider: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      displayName: z.string(),
+      type: z.string(),
+      baseUrl: z.string(),
     })
     .nullable(),
 });
@@ -81,6 +92,7 @@ export const MediaDetailSchema = z.object({
   mimeType: z.string(),
   size: z.number(),
   shortHash: z.string(),
+  imageId: z.string(), // 12位带签名的图片ID
   hash: z.string(),
   mediaType: z.enum(["IMAGE", "VIDEO", "AUDIO", "FILE"]),
   width: z.number().nullable(),

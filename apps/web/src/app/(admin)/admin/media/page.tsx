@@ -6,6 +6,7 @@ import AdminSidebar from "@/components/AdminSidebar";
 import MediaStats from "./MediaStats";
 import MediaStatsChart from "./MediaStatsChart";
 import MediaTable from "./MediaTable";
+import MediaAdd from "./MediaAdd";
 
 export const metadata = await generateMetadata(
   {
@@ -31,6 +32,7 @@ export default function MediaAdminPage() {
         <RowGrid>
           {/* 媒体内容统计 */}
           <MediaStats />
+          <MediaAdd />
           {/* 媒体内容趋势统计图表 */}
           <MediaStatsChart />
         </RowGrid>

@@ -2,17 +2,18 @@
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
   "globalEnv": [
-    "NODE_ENV", 
-    "DATABASE_URL", 
+    "NODE_ENV",
+    "DATABASE_URL",
     "REDIS_URL",
     "BUFFER",
     "PEPPER",
     "ARGON2_TIME_COST",
-    "ARGON2_MEMORY_COST", 
+    "ARGON2_MEMORY_COST",
     "ARGON2_PARALLELISM",
     "ARGON2_HASH_LENGTH",
     "JWT_PRIVATE_KEY",
-    "JWT_PUBLIC_KEY"
+    "JWT_PUBLIC_KEY",
+    "MASTER_SECRET"
   ],
   "tasks": {
     "build": {
@@ -30,7 +31,8 @@
         "ARGON2_PARALLELISM",
         "ARGON2_HASH_LENGTH",
         "JWT_PRIVATE_KEY",
-        "JWT_PUBLIC_KEY"
+        "JWT_PUBLIC_KEY",
+        "MASTER_SECRET"
       ]
     },
     "lint": {
@@ -44,7 +46,8 @@
         "ARGON2_PARALLELISM",
         "ARGON2_HASH_LENGTH",
         "JWT_PRIVATE_KEY",
-        "JWT_PUBLIC_KEY"
+        "JWT_PUBLIC_KEY",
+        "MASTER_SECRET"
       ]
     },
     "check-types": {
@@ -58,7 +61,8 @@
         "ARGON2_PARALLELISM",
         "ARGON2_HASH_LENGTH",
         "JWT_PRIVATE_KEY",
-        "JWT_PUBLIC_KEY"
+        "JWT_PUBLIC_KEY",
+        "MASTER_SECRET"
       ]
     },
     "dev": {
@@ -75,7 +79,8 @@
         "ARGON2_PARALLELISM",
         "ARGON2_HASH_LENGTH",
         "JWT_PRIVATE_KEY",
-        "JWT_PUBLIC_KEY"
+        "JWT_PUBLIC_KEY",
+        "MASTER_SECRET"
       ]
     },
     "@repo/openapi-generator#dev": {

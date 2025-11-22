@@ -27,6 +27,9 @@ import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
 import { logAuditEvent } from "./audit";
 import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
+import { processImage, type ProcessMode, SUPPORTED_IMAGE_FORMATS } from "@/lib/server/image-processor";
+import { uploadObject } from "@/lib/server/oss";
+import { generateSignedImageId } from "@/lib/server/image-crypto";
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
@@ -205,12 +208,22 @@ export async function getMediaList(
         altText: true,
         inGallery: true,
         isOptimized: true,
+        storageUrl: true,
         createdAt: true,
         user: {
           select: {
             uid: true,
             username: true,
             nickname: true,
+          },
+        },
+        StorageProvider: {
+          select: {
+            id: true,
+            name: true,
+            displayName: true,
+            type: true,
+            baseUrl: true,
           },
         },
       },
@@ -225,14 +238,25 @@ export async function getMediaList(
       mimeType: item.mimeType,
       size: item.size,
       shortHash: item.shortHash,
+      imageId: generateSignedImageId(item.shortHash), // 生成带签名的12位ID
       mediaType: item.mediaType,
       width: item.width,
       height: item.height,
       altText: item.altText,
       inGallery: item.inGallery,
       isOptimized: item.isOptimized,
+      storageUrl: item.storageUrl,
       createdAt: item.createdAt.toISOString(),
       user: item.user,
+      storageProvider: item.StorageProvider
+        ? {
+            id: item.StorageProvider.id,
+            name: item.StorageProvider.name,
+            displayName: item.StorageProvider.displayName,
+            type: item.StorageProvider.type,
+            baseUrl: item.StorageProvider.baseUrl,
+          }
+        : null,
     }));
 
     // 获取总数
@@ -335,6 +359,7 @@ export async function getMediaDetail(
       mimeType: media.mimeType,
       size: media.size,
       shortHash: media.shortHash,
+      imageId: generateSignedImageId(media.shortHash), // 生成带签名的12位ID
       hash: media.hash,
       mediaType: media.mediaType,
       width: media.width,
@@ -722,24 +747,24 @@ export async function getMediaStats(
       total_size: number;
     }>;
 
-    // 构建类型分布
+    // 构建类型分布（确保数字类型）
     const typeDistribution = typeStats.map((stat) => ({
       type: stat.mediaType as "IMAGE" | "VIDEO" | "AUDIO" | "FILE",
-      count: stat._count.id,
-      size: stat._sum.size || 0,
+      count: Number(stat._count.id),
+      size: Number(stat._sum.size || 0),
     }));
 
-    // 构建每日统计（确保按日期顺序）
+    // 构建每日统计（确保按日期顺序，确保数字类型）
     const formattedDailyStats = dailyStats.reverse().map((stat) => ({
       date: stat.date,
-      totalFiles: stat.total_files,
-      newFiles: stat.new_files,
-      totalSize: stat.total_size,
+      totalFiles: Number(stat.total_files),
+      newFiles: Number(stat.new_files),
+      totalSize: Number(stat.total_size),
     }));
 
     const mediaStats: MediaStats = {
-      totalFiles: totalStats._count.id,
-      totalSize: totalStats._sum.size || 0,
+      totalFiles: Number(totalStats._count.id),
+      totalSize: Number(totalStats._sum.size || 0),
       typeDistribution,
       dailyStats: formattedDailyStats,
     };
@@ -832,12 +857,12 @@ export async function getMediaTrends(
       total_files: number;
     }>;
 
-    // 转换为响应格式
+    // 转换为响应格式（确保数字类型）
     const trends: MediaTrendItem[] = dailyTrends.map((trend) => ({
       time: trend.time,
       data: {
-        total: trend.total_files,
-        new: trend.new_files,
+        total: Number(trend.total_files),
+        new: Number(trend.new_files),
       },
     }));
 
@@ -849,3 +874,269 @@ export async function getMediaTrends(
     return response.serverError();
   }
 }
+
+// ============================================================================
+// 上传媒体文件
+// ============================================================================
+
+export interface UploadMediaFile {
+  /** 文件 buffer */
+  buffer: Buffer;
+  /** 原始文件名 */
+  originalName: string;
+  /** MIME 类型 */
+  mimeType: string;
+  /** 原始文件大小 */
+  originalSize: number;
+}
+
+export interface UploadMediaParams {
+  /** 访问令牌 */
+  access_token: string;
+  /** 文件列表 */
+  files: UploadMediaFile[];
+  /** 处理模式 */
+  mode: ProcessMode;
+  /** 存储提供商 ID（可选，不传则使用默认） */
+  storageProviderId?: string;
+}
+
+export interface UploadMediaResult {
+  /** 媒体 ID */
+  id: number;
+  /** 原始文件名 */
+  originalName: string;
+  /** 短哈希 */
+  shortHash: string;
+  /** 图片 ID（用于访问） */
+  imageId: string;
+  /** 访问 URL */
+  url: string;
+  /** 原始文件大小 */
+  originalSize: number;
+  /** 处理后文件大小 */
+  processedSize: number;
+  /** 是否为去重复用 */
+  isDuplicate: boolean;
+  /** 宽度 */
+  width: number | null;
+  /** 高度 */
+  height: number | null;
+}
+
+/**
+ * 上传媒体文件（批量）
+ */
+export async function uploadMedia(
+  params: UploadMediaParams,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<UploadMediaResult[] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers()))) {
+    return response.tooManyRequests();
+  }
+
+  const { access_token, files, mode, storageProviderId } = params;
+
+  // 验证参数
+  if (!files || files.length === 0) {
+    return response.badRequest({
+      message: "请至少上传一个文件",
+      error: { code: "NO_FILES", message: "文件列表为空" },
+    });
+  }
+
+  if (!["lossy", "lossless", "original"].includes(mode)) {
+    return response.badRequest({
+      message: "无效的处理模式",
+      error: { code: "INVALID_MODE", message: `处理模式必须为 lossy/lossless/original` },
+    });
+  }
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 获取存储提供商
+    const storageProvider = storageProviderId
+      ? await prisma.storageProvider.findUnique({
+          where: { id: storageProviderId, isActive: true },
+        })
+      : await prisma.storageProvider.findFirst({
+          where: { isDefault: true, isActive: true },
+        });
+
+    if (!storageProvider) {
+      return response.badRequest({
+        message: "未找到可用的存储提供商",
+        error: { code: "NO_STORAGE", message: "请先配置存储提供商" },
+      });
+    }
+
+    const results: UploadMediaResult[] = [];
+
+    // 处理每个文件
+    for (const file of files) {
+      try {
+        // 验证文件类型
+        if (!SUPPORTED_IMAGE_FORMATS.includes(file.mimeType as any)) {
+          console.warn(`跳过不支持的文件类型: ${file.originalName} (${file.mimeType})`);
+          continue;
+        }
+
+        // 验证文件大小
+        if (file.originalSize > storageProvider.maxFileSize) {
+          console.warn(
+            `跳过超大文件: ${file.originalName} (${file.originalSize} > ${storageProvider.maxFileSize})`
+          );
+          continue;
+        }
+
+        // 处理图片
+        const processed = await processImage(
+          file.buffer,
+          file.originalName,
+          file.mimeType,
+          mode
+        );
+
+        // 检查去重
+        const existingMedia = await prisma.media.findFirst({
+          where: { hash: processed.hash },
+          select: {
+            id: true,
+            originalName: true,
+            shortHash: true,
+            storageUrl: true,
+            width: true,
+            height: true,
+            size: true,
+          },
+        });
+
+        if (existingMedia) {
+          // 文件已存在，直接返回现有记录
+          const imageId = generateSignedImageId(existingMedia.shortHash);
+          results.push({
+            id: existingMedia.id,
+            originalName: existingMedia.originalName,
+            shortHash: existingMedia.shortHash,
+            imageId,
+            url: `/p/${imageId}`,
+            originalSize: file.originalSize,
+            processedSize: existingMedia.size,
+            isDuplicate: true,
+            width: existingMedia.width,
+            height: existingMedia.height,
+          });
+          continue;
+        }
+
+        // 上传到 OSS
+        const fileName = `${processed.shortHash}.${processed.extension}`;
+        const uploadResult = await uploadObject({
+          type: storageProvider.type,
+          baseUrl: storageProvider.baseUrl,
+          pathTemplate: storageProvider.pathTemplate,
+          config: storageProvider.config as any,
+          file: {
+            buffer: processed.buffer,
+            filename: fileName,
+            contentType: processed.mimeType,
+          },
+        });
+
+        // 保存到数据库
+        const media = await prisma.media.create({
+          data: {
+            fileName,
+            originalName: file.originalName,
+            mimeType: processed.mimeType,
+            size: processed.size,
+            shortHash: processed.shortHash,
+            hash: processed.hash,
+            mediaType: "IMAGE",
+            width: processed.width,
+            height: processed.height,
+            blur: processed.blur,
+            thumbnails: {},
+            exif: processed.exif as any, // Prisma JsonValue 类型转换
+            inGallery: false,
+            isOptimized: mode !== "original",
+            storageUrl: uploadResult.url,
+            storageProviderId: storageProvider.id,
+            userUid: user.uid,
+          },
+        });
+
+        // 记录审计日志
+        await logAuditEvent({
+          user: {
+            uid: String(user.uid),
+            ipAddress: (await getClientIP()) || "Unknown",
+            userAgent: (await getClientUserAgent()) || "Unknown",
+          },
+          details: {
+            action: "UPLOAD_MEDIA",
+            resourceType: "Media",
+            resourceId: String(media.id),
+            vaule: {
+              old: null,
+              new: {
+                fileName: media.fileName,
+                originalName: media.originalName,
+                mode,
+                originalSize: file.originalSize,
+                processedSize: processed.size,
+              },
+            },
+            description: `上传图片: ${file.originalName} (模式: ${mode})`,
+          },
+        });
+
+        const imageId = generateSignedImageId(processed.shortHash);
+        results.push({
+          id: media.id,
+          originalName: media.originalName,
+          shortHash: media.shortHash,
+          imageId,
+          url: `/p/${imageId}`,
+          originalSize: file.originalSize,
+          processedSize: processed.size,
+          isDuplicate: false,
+          width: media.width,
+          height: media.height,
+        });
+      } catch (fileError) {
+        console.error(`处理文件失败: ${file.originalName}`, fileError);
+        // 继续处理下一个文件
+      }
+    }
+
+    if (results.length === 0) {
+      return response.badRequest({
+        message: "没有成功上传的文件",
+        error: { code: "NO_SUCCESS", message: "所有文件都处理失败" },
+      });
+    }
+
+    return response.ok({
+      data: results,
+      message: `成功上传 ${results.length} 个文件`,
+    });
+  } catch (error) {
+    console.error("UploadMedia error:", error);
+    return response.serverError();
+  }
+}
+

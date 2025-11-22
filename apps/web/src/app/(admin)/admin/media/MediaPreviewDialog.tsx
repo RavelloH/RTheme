@@ -88,8 +88,11 @@ export default function MediaPreviewDialog({
   };
 
   // 构建预览URL
-  const previewUrl = `/p/${media.shortHash}`;
-  const originalUrl = `${media.storageUrl}${media.fileName}`;
+  const previewUrl = `/p/${media.imageId}`;
+  const previewFullUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/p/${media.imageId}`
+    : `/p/${media.imageId}`;
+  const originalUrl = media.storageUrl; // storageUrl 已经是完整路径
 
   return (
     <Dialog
@@ -251,10 +254,19 @@ export default function MediaPreviewDialog({
               </div>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">存储路径</label>
-              <p className="text-sm font-mono text-muted-foreground">
-                {media.storageUrl}
-              </p>
+              <label className="text-sm text-muted-foreground">预览链接</label>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-sm font-mono text-muted-foreground break-all">
+                  {previewFullUrl}
+                </p>
+                <button
+                  onClick={() => copyToClipboard(previewFullUrl)}
+                  className="inline-flex items-center gap-2 px-2 py-1 text-sm bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90 whitespace-nowrap"
+                >
+                  <RiFileCopyLine size="1em" />
+                  复制
+                </button>
+              </div>
             </div>
             <div className="md:col-span-2">
               <label className="text-sm text-muted-foreground">原始链接</label>

@@ -38,5 +38,6 @@ yarn-error.log*
 *.pem
 .vscode
 CLAUDE.md
+AGENTS.md
 .claude
 apps/web/logs/init.log

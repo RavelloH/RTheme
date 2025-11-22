@@ -438,7 +438,7 @@ export default function MediaTable() {
           return (
             <div className="w-12 h-12 bg-muted rounded-lg overflow-hidden flex items-center justify-center">
               <Image
-                src={`/p/${record.shortHash}`}
+                src={`/p/${record.imageId}`}
                 alt={record.altText || record.originalName}
                 width={48}
                 height={48}
