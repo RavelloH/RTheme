@@ -15,25 +15,12 @@ import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
 
 const response = new ResponseBuilder("serverless");
 
-interface UploadResult {
-  id: number;
-  originalName: string;
-  shortHash: string;
-  imageId: string;
-  url: string;
-  originalSize: number;
-  processedSize: number;
-  isDuplicate: boolean;
-  width: number | null;
-  height: number | null;
-}
-
 /**
  * @openapi
  * /admin/media/upload:
  *   post:
- *     summary: 上传媒体文件
- *     description: 上传图片文件，支持批量上传和多种处理模式
+ *     summary: 上传单个媒体文件
+ *     description: 上传单个图片文件，支持多种处理模式
  *     tags: [Media]
  *     security:
  *       - bearerAuth: []
@@ -44,15 +31,16 @@ interface UploadResult {
  *           schema:
  *             type: object
  *             properties:
- *               files:
- *                 type: array
- *                 items:
- *                   type: string
- *                   format: binary
+ *               file:
+ *                 type: string
+ *                 format: binary
  *               mode:
  *                 type: string
  *                 enum: [lossy, lossless, original]
  *                 default: lossy
+ *               storageProviderId:
+ *                 type: string
+ *                 description: 存储提供商ID（可选）
  *     responses:
  *       200:
  *         description: 上传成功
@@ -98,7 +86,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     const storageProviderId = formData.get("storageProviderId") as
       | string
       | null;
-    const files = formData.getAll("files") as File[];
+    const file = formData.get("file") as File | null;
 
     // 验证模式
     if (!["lossy", "lossless", "original"].includes(mode)) {
@@ -112,10 +100,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     // 验证文件
-    if (!files || files.length === 0) {
+    if (!file) {
       return response.badRequest({
-        message: "请至少上传一个文件",
-        error: { code: "NO_FILES", message: "文件列表为空" },
+        message: "请上传一个文件",
+        error: { code: "NO_FILE", message: "未找到文件" },
       }) as Response;
     }
 
@@ -156,163 +144,177 @@ export async function POST(request: NextRequest): Promise<Response> {
       }) as Response;
     }
 
-    const results: UploadResult[] = [];
-
-    // 处理每个文件
-    for (const file of files) {
-      try {
-        // 验证文件类型
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (!SUPPORTED_IMAGE_FORMATS.includes(file.type as any)) {
-          console.warn(`跳过不支持的文件类型: ${file.name} (${file.type})`);
-          continue;
-        }
-
-        // 验证文件大小
-        if (file.size > storageProvider.maxFileSize) {
-          console.warn(
-            `跳过超大文件: ${file.name} (${file.size} > ${storageProvider.maxFileSize})`,
-          );
-          continue;
-        }
-
-        // 读取文件内容
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        // 处理图片
-        const processed = await processImage(
-          buffer,
-          file.name,
-          file.type,
-          mode as ProcessMode,
-        );
-
-        // 检查去重
-        const existingMedia = await prisma.media.findFirst({
-          where: { hash: processed.hash },
-          select: {
-            id: true,
-            originalName: true,
-            shortHash: true,
-            storageUrl: true,
-            width: true,
-            height: true,
-            size: true,
+    // 验证文件类型
+    // 在 original 模式下，接受所有图片格式
+    if (mode === "original") {
+      // 只检查是否为图片类型
+      if (!file.type.startsWith("image/")) {
+        return response.badRequest({
+          message: `不是图片文件: ${file.type || "未知"}`,
+          error: {
+            code: "NOT_IMAGE",
+            message: "只能上传图片文件",
           },
-        });
+        }) as Response;
+      }
+    } else {
+      // lossy/lossless 模式需要 sharp 支持的格式
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (!SUPPORTED_IMAGE_FORMATS.includes(file.type as any)) {
+        // 检查是否是 HEIC/HEIF 格式（浏览器可能识别为 application/octet-stream）
+        const ext = file.name.split(".").pop()?.toLowerCase();
+        const isHeicHeif = ext === "heic" || ext === "heif";
 
-        if (existingMedia) {
-          // 文件已存在，直接返回现有记录
-          const imageId = generateSignedImageId(existingMedia.shortHash);
-          results.push({
-            id: existingMedia.id,
-            originalName: existingMedia.originalName,
-            shortHash: existingMedia.shortHash,
-            imageId,
-            url: `/p/${imageId}`,
-            originalSize: file.size,
-            processedSize: existingMedia.size,
-            isDuplicate: true,
-            width: existingMedia.width,
-            height: existingMedia.height,
-          });
-          continue;
-        }
-
-        // 上传到 OSS
-        const fileName = `${processed.shortHash}.${processed.extension}`;
-        const uploadResult = await uploadObject({
-          type: storageProvider.type,
-          baseUrl: storageProvider.baseUrl,
-          pathTemplate: storageProvider.pathTemplate,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          config: storageProvider.config as any,
-          file: {
-            buffer: processed.buffer,
-            filename: fileName,
-            contentType: processed.mimeType,
+        return response.badRequest({
+          message: isHeicHeif
+            ? "HEIC/HEIF 格式请选择「保留原片」模式上传"
+            : `不支持的图片格式: ${file.type || "未知"}，请选择「保留原片」模式`,
+          error: {
+            code: "UNSUPPORTED_FORMAT",
+            message: isHeicHeif
+              ? "HEIC/HEIF 格式请选择「保留原片」模式上传"
+              : `不支持的图片格式，请选择「保留原片」模式`,
           },
-        });
-
-        // 保存到数据库
-        const media = await prisma.media.create({
-          data: {
-            fileName,
-            originalName: file.name,
-            mimeType: processed.mimeType,
-            size: processed.size,
-            shortHash: processed.shortHash,
-            hash: processed.hash,
-            mediaType: "IMAGE",
-            width: processed.width,
-            height: processed.height,
-            blur: processed.blur,
-            thumbnails: {},
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            exif: processed.exif as any,
-            inGallery: false,
-            isOptimized: mode !== "original",
-            storageUrl: uploadResult.url,
-            storageProviderId: storageProvider.id,
-            userUid: user.uid,
-          },
-        });
-
-        // 记录审计日志
-        await logAuditEvent({
-          user: {
-            uid: String(user.uid),
-            ipAddress: (await getClientIP()) || "Unknown",
-            userAgent: (await getClientUserAgent()) || "Unknown",
-          },
-          details: {
-            action: "UPLOAD_MEDIA",
-            resourceType: "Media",
-            resourceId: String(media.id),
-            vaule: {
-              old: null,
-              new: {
-                fileName: media.fileName,
-                originalName: media.originalName,
-                mode,
-                originalSize: file.size,
-                processedSize: processed.size,
-              },
-            },
-            description: `上传图片: ${file.name} (模式: ${mode})`,
-          },
-        });
-
-        const imageId = generateSignedImageId(processed.shortHash);
-        results.push({
-          id: media.id,
-          originalName: media.originalName,
-          shortHash: media.shortHash,
-          imageId,
-          url: `/p/${imageId}`,
-          originalSize: file.size,
-          processedSize: processed.size,
-          isDuplicate: false,
-          width: media.width,
-          height: media.height,
-        });
-      } catch (fileError) {
-        console.error(`处理文件失败: ${file.name}`, fileError);
-        // 继续处理下一个文件
+        }) as Response;
       }
     }
 
-    if (results.length === 0) {
+    // 验证文件大小
+    if (file.size > storageProvider.maxFileSize) {
       return response.badRequest({
-        message: "没有成功上传的文件",
-        error: { code: "NO_SUCCESS", message: "所有文件都处理失败" },
+        message: `文件大小超出限制: ${(file.size / 1024 / 1024).toFixed(2)}MB，最大允许 ${(storageProvider.maxFileSize / 1024 / 1024).toFixed(2)}MB`,
+        error: {
+          code: "FILE_TOO_LARGE",
+          message: `文件大小超出限制，最大允许 ${(storageProvider.maxFileSize / 1024 / 1024).toFixed(2)}MB`,
+        },
       }) as Response;
     }
 
+    // 读取文件内容
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // 处理图片
+    const processed = await processImage(
+      buffer,
+      file.name,
+      file.type,
+      mode as ProcessMode,
+    );
+
+    // 检查去重
+    const existingMedia = await prisma.media.findFirst({
+      where: { hash: processed.hash },
+      select: {
+        id: true,
+        originalName: true,
+        shortHash: true,
+        storageUrl: true,
+        width: true,
+        height: true,
+        size: true,
+      },
+    });
+
+    if (existingMedia) {
+      // 文件已存在，直接返回现有记录
+      const imageId = generateSignedImageId(existingMedia.shortHash);
+      return response.ok({
+        data: {
+          id: existingMedia.id,
+          originalName: existingMedia.originalName,
+          shortHash: existingMedia.shortHash,
+          imageId,
+          url: `/p/${imageId}`,
+          originalSize: file.size,
+          processedSize: existingMedia.size,
+          isDuplicate: true,
+          width: existingMedia.width,
+          height: existingMedia.height,
+        },
+        message: "文件已存在（已去重）",
+      }) as Response;
+    }
+
+    // 上传到 OSS
+    const fileName = `${processed.shortHash}.${processed.extension}`;
+    const uploadResult = await uploadObject({
+      type: storageProvider.type,
+      baseUrl: storageProvider.baseUrl,
+      pathTemplate: storageProvider.pathTemplate,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      config: storageProvider.config as any,
+      file: {
+        buffer: processed.buffer,
+        filename: fileName,
+        contentType: processed.mimeType,
+      },
+    });
+
+    // 保存到数据库
+    const media = await prisma.media.create({
+      data: {
+        fileName,
+        originalName: file.name,
+        mimeType: processed.mimeType,
+        size: processed.size,
+        shortHash: processed.shortHash,
+        hash: processed.hash,
+        mediaType: "IMAGE",
+        width: processed.width,
+        height: processed.height,
+        blur: processed.blur,
+        thumbnails: {},
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        exif: processed.exif as any,
+        inGallery: false,
+        isOptimized: mode !== "original",
+        storageUrl: uploadResult.url,
+        storageProviderId: storageProvider.id,
+        userUid: user.uid,
+      },
+    });
+
+    // 记录审计日志
+    await logAuditEvent({
+      user: {
+        uid: String(user.uid),
+        ipAddress: (await getClientIP()) || "Unknown",
+        userAgent: (await getClientUserAgent()) || "Unknown",
+      },
+      details: {
+        action: "UPLOAD_MEDIA",
+        resourceType: "Media",
+        resourceId: String(media.id),
+        vaule: {
+          old: null,
+          new: {
+            fileName: media.fileName,
+            originalName: media.originalName,
+            mode,
+            originalSize: file.size,
+            processedSize: processed.size,
+          },
+        },
+        description: `上传图片: ${file.name} (模式: ${mode})`,
+      },
+    });
+
+    const imageId = generateSignedImageId(processed.shortHash);
     return response.ok({
-      data: results,
-      message: `成功上传 ${results.length} 个文件`,
+      data: {
+        id: media.id,
+        originalName: media.originalName,
+        shortHash: media.shortHash,
+        imageId,
+        url: `/p/${imageId}`,
+        originalSize: file.size,
+        processedSize: processed.size,
+        isDuplicate: false,
+        width: media.width,
+        height: media.height,
+      },
+      message: "上传成功",
     }) as Response;
   } catch (error) {
     console.error("Upload route error:", error);

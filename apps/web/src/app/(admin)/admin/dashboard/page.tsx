@@ -10,6 +10,7 @@ import DashboardPostsStats from "./DashboardPostsStats";
 import DashboardTagsStats from "./DashboardTagsStats";
 import DashboardCategoriesStats from "./DashboardCategoriesStats";
 import DashboardPagesStats from "./DashboardPagesStats";
+import DashboardMediaStats from "./DashboardMediaStats";
 
 export const metadata = await generateMetadata(
   {
@@ -55,9 +56,7 @@ export default function AdminDashboard() {
             </div>
           </GridItem>
           <GridItem areas={[9, 10, 11, 12]} width={3} height={0.5}>
-            <div className="flex items-center justify-center h-full">
-              媒体统计图表
-            </div>
+            <DashboardMediaStats />
           </GridItem>
         </RowGrid>
         <RowGrid>

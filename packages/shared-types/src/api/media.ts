@@ -43,31 +43,22 @@ export const MediaListItemSchema = z.object({
   fileName: z.string(),
   originalName: z.string(),
   mimeType: z.string(),
-  size: z.number(),
-  shortHash: z.string(),
   imageId: z.string(), // 12位带签名的图片ID
+  shortHash: z.string(),
   mediaType: z.enum(["IMAGE", "VIDEO", "AUDIO", "FILE"]),
+  size: z.number(),
   width: z.number().nullable(),
   height: z.number().nullable(),
   altText: z.string().nullable(),
+  blur: z.string().nullable(),
   inGallery: z.boolean(),
-  isOptimized: z.boolean(),
-  storageUrl: z.string(),
   createdAt: z.string(),
+  postsCount: z.number(), // 关联文章数量
   user: z
     .object({
       uid: z.number(),
       username: z.string(),
       nickname: z.string().nullable(),
-    })
-    .nullable(),
-  storageProvider: z
-    .object({
-      id: z.string(),
-      name: z.string(),
-      displayName: z.string(),
-      type: z.string(),
-      baseUrl: z.string(),
     })
     .nullable(),
 });
@@ -173,11 +164,14 @@ export type DeleteMediaResponse = z.infer<typeof DeleteMediaResponseSchema>;
 export const GetMediaStatsSchema = z.object({
   access_token: z.string().optional(),
   days: z.number().int().min(1).max(365).default(30),
+  force: z.boolean().default(false),
 });
 
 export type GetMediaStats = z.infer<typeof GetMediaStatsSchema>;
 
 export const MediaStatsSchema = z.object({
+  updatedAt: z.string(),
+  cache: z.boolean(),
   totalFiles: z.number(),
   totalSize: z.number(),
   typeDistribution: z.array(

@@ -34,6 +34,7 @@ import {
 } from "@/lib/server/image-processor";
 import { uploadObject } from "@/lib/server/oss";
 import { generateSignedImageId } from "@/lib/server/image-crypto";
+import { getCache, setCache, generateCacheKey } from "@/lib/server/cache";
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
@@ -204,15 +205,14 @@ export async function getMediaList(
         fileName: true,
         originalName: true,
         mimeType: true,
-        size: true,
         shortHash: true,
         mediaType: true,
+        size: true,
         width: true,
         height: true,
         altText: true,
+        blur: true,
         inGallery: true,
-        isOptimized: true,
-        storageUrl: true,
         createdAt: true,
         user: {
           select: {
@@ -221,13 +221,9 @@ export async function getMediaList(
             nickname: true,
           },
         },
-        StorageProvider: {
+        _count: {
           select: {
-            id: true,
-            name: true,
-            displayName: true,
-            type: true,
-            baseUrl: true,
+            posts: true,
           },
         },
       },
@@ -240,27 +236,18 @@ export async function getMediaList(
       fileName: item.fileName,
       originalName: item.originalName,
       mimeType: item.mimeType,
-      size: item.size,
-      shortHash: item.shortHash,
       imageId: generateSignedImageId(item.shortHash), // 生成带签名的12位ID
+      shortHash: item.shortHash,
       mediaType: item.mediaType,
+      size: item.size,
       width: item.width,
       height: item.height,
       altText: item.altText,
+      blur: item.blur,
       inGallery: item.inGallery,
-      isOptimized: item.isOptimized,
-      storageUrl: item.storageUrl,
       createdAt: item.createdAt.toISOString(),
+      postsCount: item._count.posts,
       user: item.user,
-      storageProvider: item.StorageProvider
-        ? {
-            id: item.StorageProvider.id,
-            name: item.StorageProvider.name,
-            displayName: item.StorageProvider.displayName,
-            type: item.StorageProvider.type,
-            baseUrl: item.StorageProvider.baseUrl,
-          }
-        : null,
     }));
 
     // 获取总数
@@ -683,7 +670,7 @@ export async function getMediaStats(
   serverConfig?: ActionConfig,
 ): Promise<ApiResponse<MediaStats | null>>;
 export async function getMediaStats(
-  { access_token, days = 30 }: GetMediaStats,
+  { access_token, days = 30, force = false }: GetMediaStats,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<MediaStats | null>> {
   const response = new ResponseBuilder(
@@ -698,6 +685,7 @@ export async function getMediaStats(
     {
       access_token,
       days,
+      force,
     },
     GetMediaStatsSchema,
   );
@@ -715,6 +703,22 @@ export async function getMediaStats(
   }
 
   try {
+    const CACHE_KEY = generateCacheKey("stats", "media", String(days));
+    const CACHE_TTL = 60 * 60; // 1小时
+
+    // 如果不是强制刷新，尝试从缓存获取
+    if (!force) {
+      const cachedData = await getCache<MediaStats>(CACHE_KEY, {
+        ttl: CACHE_TTL,
+      });
+
+      if (cachedData) {
+        return response.ok({
+          data: cachedData,
+        });
+      }
+    }
+
     const now = new Date();
     const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
@@ -767,11 +771,19 @@ export async function getMediaStats(
     }));
 
     const mediaStats: MediaStats = {
+      updatedAt: now.toISOString(),
+      cache: false,
       totalFiles: Number(totalStats._count.id),
       totalSize: Number(totalStats._sum.size || 0),
       typeDistribution,
       dailyStats: formattedDailyStats,
     };
+
+    // 保存到缓存（缓存1小时）
+    const cacheData = { ...mediaStats, cache: true };
+    await setCache(CACHE_KEY, cacheData, {
+      ttl: CACHE_TTL,
+    });
 
     return response.ok({
       data: mediaStats,

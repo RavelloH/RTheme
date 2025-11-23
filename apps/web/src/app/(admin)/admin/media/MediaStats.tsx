@@ -11,6 +11,8 @@ import Clickable from "@/ui/Clickable";
 import { RiRefreshLine } from "@remixicon/react";
 
 type StatsData = {
+  updatedAt: string;
+  cache: boolean;
   totalFiles: number;
   totalSize: number;
   averageDailyNew: number;
@@ -24,11 +26,11 @@ type StatsData = {
     last7Days: number;
     last30Days: number;
   };
-  updatedAt: string;
 };
 
 export default function MediaStats() {
   const [result, setResult] = useState<StatsData | null>(null);
+  const [isCache, setIsCache] = useState(true);
   const [refreshTime, setRefreshTime] = useState<Date | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -46,7 +48,7 @@ export default function MediaStats() {
     }
     setError(null);
     try {
-      const res = await getMediaStats({ days: 30 });
+      const res = await getMediaStats({ days: 30, force: forceRefresh });
       if (!res.success) {
         setError(new Error(res.message || "获取媒体统计失败"));
         return;
@@ -83,6 +85,8 @@ export default function MediaStats() {
           : 0;
 
       const formattedData: StatsData = {
+        updatedAt: res.data.updatedAt,
+        cache: res.data.cache,
         totalFiles: res.data.totalFiles,
         totalSize: res.data.totalSize,
         averageDailyNew,
@@ -94,11 +98,11 @@ export default function MediaStats() {
           last7Days,
           last30Days,
         },
-        updatedAt: new Date().toISOString(),
       };
 
       setResult(formattedData);
-      setRefreshTime(new Date());
+      setIsCache(res.data.cache);
+      setRefreshTime(new Date(res.data.updatedAt));
     } catch (err) {
       setError(err instanceof Error ? err : new Error("获取统计数据失败"));
     }
@@ -118,7 +122,7 @@ export default function MediaStats() {
   };
 
   return (
-    <GridItem areas={[1, 2, 3, 4]} width={3} height={0.5}>
+    <GridItem areas={[1, 2, 3, 4, 5, 6]} width={2} height={0.5}>
       <AutoTransition type="scale" className="h-full">
         {result ? (
           <div
@@ -206,7 +210,8 @@ export default function MediaStats() {
             <div>
               {refreshTime && (
                 <div className="inline-flex items-center gap-2">
-                  最近更新于: {refreshTime.toLocaleString()}
+                  {isCache ? "统计缓存于" : "统计刷新于"}:{" "}
+                  {refreshTime.toLocaleString()}
                   <Clickable onClick={() => fetchData(true)}>
                     <RiRefreshLine size="1em" />
                   </Clickable>
