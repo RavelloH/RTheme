@@ -606,7 +606,7 @@ export default function MediaPreviewDialog({
                 />
                 <Button
                   label="复制链接"
-                  onClick={() => copyToClipboard(previewUrl)}
+                  onClick={() => copyToClipboard(previewFullUrl)}
                   variant="ghost"
                   size="sm"
                   icon={<RiFileCopyLine size="1em" />}

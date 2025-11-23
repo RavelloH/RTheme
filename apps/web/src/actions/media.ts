@@ -140,6 +140,12 @@ export async function getMediaList(
             },
           },
           {
+            fileName: {
+              contains: search.trim(),
+              mode: "insensitive" as const,
+            },
+          },
+          {
             altText: {
               contains: search.trim(),
               mode: "insensitive" as const,

@@ -774,7 +774,7 @@ export default function MediaTable() {
         onSortChange={handleSortChange}
         onSearchChange={handleSearchChange}
         onRowClick={handleRowClick}
-        searchPlaceholder="搜索文件名或替代文本..."
+        searchPlaceholder="搜索显示名称、原始文件名或替代文本..."
         filterConfig={filterConfig}
         onFilterChange={handleFilterChange}
         striped
