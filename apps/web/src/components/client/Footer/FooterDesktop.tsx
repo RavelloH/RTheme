@@ -12,6 +12,7 @@ import { Panel } from "../../Panel";
 import { ConsoleButton } from "../../ConsoleButton";
 import { MenuItem } from "@/lib/server/menuCache";
 import Link from "../../Link";
+import { LoginButton } from "../../UserInfo";
 
 interface FooterProps {
   menus: MenuItem[];
@@ -433,36 +434,7 @@ export default function FooterDesktop({ menus }: FooterProps) {
         }}
       >
         <div className="h-full border-r border-border flex items-center justify-center w-[5em]">
-          <button
-            className="flex flex-col justify-center items-center w-full h-full relative group"
-            aria-label="登录"
-          >
-            <motion.div
-              className="relative w-6 h-6 flex flex-col justify-center items-center"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              transition={{
-                duration: 0.5,
-                ease: "easeInOut",
-                scale: { duration: 0.2 },
-              }}
-            >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="absolute transition-colors duration-200 group-hover:text-white group-hover:cursor-pointer"
-              >
-                <circle cx="12" cy="7" r="4" />
-                <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
-              </svg>
-            </motion.div>
-          </button>
+          <LoginButton />
         </div>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-muted-foreground relative">

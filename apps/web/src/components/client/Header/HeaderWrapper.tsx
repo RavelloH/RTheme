@@ -256,6 +256,9 @@ export default function HeaderWrapper({
       setTimeout(() => {
         setTransitionState("idle");
       }, 100);
+    } else if (transitionState === "idle") {
+      // 没有过渡动画时，直接更新标题
+      updateTitle();
     }
 
     previousPathname.current = pathname;
@@ -275,6 +278,30 @@ export default function HeaderWrapper({
 
     setDisplayTitle(cleanTitle);
   };
+
+  // 监听 document.title 变化
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    // 创建一个 MutationObserver 来监听 title 元素的变化
+    const titleElement = document.querySelector("title");
+    if (!titleElement) return;
+
+    const observer = new MutationObserver(() => {
+      updateTitle();
+    });
+
+    // 监听 title 元素的子节点变化（文本内容）
+    observer.observe(titleElement, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   // 监听加载完成事件
   useEffect(() => {
