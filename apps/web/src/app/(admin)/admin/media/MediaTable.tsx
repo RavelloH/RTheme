@@ -311,9 +311,9 @@ export default function MediaTable() {
 
       if (result.success) {
         toast.success(`已删除 ${result.data?.deleted || 0} 个文件`);
+        setSelectedMedia([]);
         closeBatchDeleteDialog();
         setRefreshTrigger((prev) => prev + 1);
-        setSelectedMedia([]);
       } else {
         toast.error(result.message || "删除失败");
       }

@@ -205,6 +205,9 @@ importers:
       dotenv:
         specifier: ^17.2.2
         version: 17.2.2
+      exif-reader:
+        specifier: ^2.0.2
+        version: 2.0.2
       framer-motion:
         specifier: ^12.23.12
         version: 12.23.12(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
@@ -4881,6 +4884,9 @@ packages:
 
   exenv@1.2.2:
     resolution: {integrity: sha512-Z+ktTxTwv9ILfgKCk32OX3n/doe+OcLTRtqK9pcL+JsP3J1/VW8Uvl4ZjLlKqeW4rzK4oesDOGMEMRIZqtP4Iw==}
+
+  exif-reader@2.0.2:
+    resolution: {integrity: sha512-CVFqcwdwFe2GnbbW7/Q7sUhVP5Ilaw7fuXQc6ad3AbX20uGfHhXTpkF/hQHPrtOuys9elFVgsUkvwfhfvjDa1A==}
 
   express@4.21.2:
     resolution: {integrity: sha512-28HqgMZAmih1Czt9ny7qr6ek2qddF4FclbMzwhCREB6OFfH+rXAnuNCwo1/wFvrtbgsQDb4kSbX9de9lFbrXnA==}
@@ -14968,6 +14974,8 @@ snapshots:
       strip-final-newline: 2.0.0
 
   exenv@1.2.2: {}
+
+  exif-reader@2.0.2: {}
 
   express@4.21.2:
     dependencies:
