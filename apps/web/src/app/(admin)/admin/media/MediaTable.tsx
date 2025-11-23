@@ -8,7 +8,7 @@ import {
 } from "@/actions/media";
 import GridTable, { FilterConfig, ActionButton } from "@/components/GridTable";
 import { TableColumn } from "@/ui/Table";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef, memo } from "react";
 import type { MediaListItem, MediaDetail } from "@repo/shared-types/api/media";
 import { useBroadcast } from "@/hooks/useBroadcast";
 import { Dialog } from "@/ui/Dialog";
@@ -21,6 +21,12 @@ import {
   RiVideoLine,
   RiMusicLine,
   RiFileLine,
+  RiGridLine,
+  RiListUnordered,
+  RiSearchLine,
+  RiCloseLine,
+  RiArrowLeftSLine,
+  RiArrowRightSLine,
 } from "@remixicon/react";
 import MediaPreviewDialog from "./MediaPreviewDialog";
 import { Input } from "@/ui/Input";
@@ -29,6 +35,176 @@ import { Button } from "@/ui/Button";
 import { useToast } from "@/ui/Toast";
 import Link from "@/components/Link";
 import CMSImage from "@/components/CMSImage";
+import { GridItem } from "@/components/RowGrid";
+import { createArray } from "@/lib/client/createArray";
+import { Checkbox } from "@/ui/Checkbox";
+import { Tooltip } from "@/ui/Tooltip";
+import Clickable from "@/ui/Clickable";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { motion, AnimatePresence } from "framer-motion";
+import { Select } from "@/ui/Select";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
+
+// 提取图片卡片为独立组件并使用 memo
+const MediaGridItem = memo(
+  ({
+    item,
+    isSelected,
+    onSelect,
+    onPreview,
+    formatFileSize,
+    getFileTypeIcon,
+    actions,
+  }: {
+    item: MediaListItem;
+    isSelected: boolean;
+    onSelect: (id: string | number, checked: boolean) => void;
+    onPreview: (item: MediaListItem) => void;
+    formatFileSize: (bytes: number) => string;
+    getFileTypeIcon: (type: string) => React.ReactNode;
+    actions: Array<{
+      label: string;
+      icon: React.ReactNode;
+      onClick: () => void;
+      variant?: "primary" | "danger" | "ghost" | "outline";
+    }>;
+  }) => {
+    const renderTooltipContent = () => {
+      return (
+        <div className="space-y-1 min-w-[200px]">
+          <div className="font-medium truncate">{item.originalName}</div>
+          <div className="text-xs text-muted-foreground">
+            {item.width && item.height && (
+              <div>
+                尺寸: {item.width} × {item.height}
+              </div>
+            )}
+            <div>大小: {formatFileSize(item.size)}</div>
+            <div>
+              上传:{" "}
+              {new Date(item.createdAt).toLocaleString("zh-CN", {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <Tooltip content={renderTooltipContent()} placement="top" delay={300}>
+        <div
+          className={`
+            relative aspect-square cursor-pointer overflow-hidden bg-muted/30
+            group transition-all duration-150
+            ${
+              isSelected
+                ? "border-2 border-primary"
+                : "border-2 border-transparent hover:border-foreground/30"
+            }
+          `}
+          onClick={(e) => {
+            const target = e.target as HTMLElement;
+            const isCheckboxClick = target.closest('[data-checkbox="true"]');
+            const isActionClick = target.closest('[data-action="true"]');
+            if (!isCheckboxClick && !isActionClick) {
+              onPreview(item);
+            }
+          }}
+        >
+          {/* 图片 */}
+          {item.mediaType === "IMAGE" && item.width && item.height ? (
+            <CMSImage
+              src={`/p/${item.imageId}`}
+              alt={item.altText || item.originalName}
+              fill
+              blur={item.blur}
+              className="object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+              {getFileTypeIcon(item.mediaType)}
+            </div>
+          )}
+
+          {/* 复选框 */}
+          <div
+            className={`
+              absolute top-2 right-2 z-10
+              transition-opacity duration-150
+              ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}
+            `}
+            data-checkbox="true"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            <div className="rounded p-1">
+              <Checkbox
+                checked={isSelected}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  onSelect(item.id, e.target.checked);
+                }}
+                size="lg"
+              />
+            </div>
+          </div>
+
+          {/* 底部操作栏 */}
+          <div
+            className={`
+              absolute bottom-0 left-0 right-0 z-10
+              bg-background/80 backdrop-blur-sm
+              transform transition-transform duration-200 ease-out
+              ${isSelected ? "translate-y-0" : "translate-y-full group-hover:translate-y-0"}
+            `}
+            data-action="true"
+          >
+            <div className="flex items-center justify-center gap-2 px-2 py-2">
+              {actions.map((action, index) => (
+                <Tooltip key={index} content={action.label} placement="top">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      action.onClick();
+                    }}
+                    className={`
+                      p-2 rounded transition-colors
+                      ${
+                        action.variant === "danger"
+                          ? "hover:bg-red-500/20 hover:text-red-500"
+                          : "hover:bg-muted"
+                      }
+                    `}
+                    aria-label={action.label}
+                  >
+                    {action.icon}
+                  </button>
+                </Tooltip>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Tooltip>
+    );
+  },
+  (prevProps, nextProps) => {
+    // 自定义比较函数：返回 true 表示 props 相等（不重新渲染）
+    // 只比较数据相关的 props，不比较函数 props（函数引用可能变化但功能相同）
+    return (
+      prevProps.item.id === nextProps.item.id &&
+      prevProps.isSelected === nextProps.isSelected &&
+      prevProps.item.imageId === nextProps.item.imageId
+    );
+  },
+);
+
+MediaGridItem.displayName = "MediaGridItem";
 
 export default function MediaTable() {
   const toast = useToast();
@@ -37,7 +213,8 @@ export default function MediaTable() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(100); // 默认 100
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid"); // 新增视图模式
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -45,7 +222,9 @@ export default function MediaTable() {
   const [filterValues, setFilterValues] = useState<
     Record<string, string | string[] | { start?: string; end?: string }>
   >({});
-  const [selectedMedia, setSelectedMedia] = useState<(string | number)[]>([]);
+  const [selectedMedia, setSelectedMedia] = useState<Set<string | number>>(
+    new Set(),
+  ); // 改为 Set
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedMediaItem, setSelectedMediaItem] =
@@ -60,11 +239,35 @@ export default function MediaTable() {
     inGallery: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchValue, setSearchValue] = useState(""); // 搜索输入框的值
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSearchValueRef = useRef<string>("");
+
+  // 搜索输入变化处理（防抖）
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      if (searchValue !== lastSearchValueRef.current) {
+        lastSearchValueRef.current = searchValue;
+        setSearchQuery(searchValue);
+        setPage(1);
+      }
+    }, 1000);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchValue]);
 
   // 处理选中状态变化
   const handleSelectionChange = useCallback(
     (selectedKeys: (string | number)[]) => {
-      setSelectedMedia(selectedKeys);
+      setSelectedMedia(new Set(selectedKeys));
     },
     [],
   );
@@ -304,14 +507,14 @@ export default function MediaTable() {
     setIsSubmitting(true);
     try {
       const result = await deleteMedia({
-        ids: selectedMedia.map((id) =>
+        ids: Array.from(selectedMedia).map((id) =>
           typeof id === "number" ? id : Number(id),
         ),
       });
 
       if (result.success) {
         toast.success(`已删除 ${result.data?.deleted || 0} 个文件`);
-        setSelectedMedia([]);
+        setSelectedMedia(new Set());
         closeBatchDeleteDialog();
         setRefreshTrigger((prev) => prev + 1);
       } else {
@@ -757,39 +960,325 @@ export default function MediaTable() {
     [openDetailDialog, openEditDialog, openDeleteDialog],
   );
 
+  // 单选
+  const handleSelectItem = useCallback(
+    (id: string | number, checked: boolean) => {
+      setSelectedMedia((prev) => {
+        const newSelectedMedia = new Set(prev);
+        if (checked) {
+          newSelectedMedia.add(id);
+        } else {
+          newSelectedMedia.delete(id);
+        }
+        return newSelectedMedia;
+      });
+    },
+    [], // 不依赖 selectedMedia，使用函数式更新
+  );
+
+  // 视图切换器组件
+  const viewModeToggle = useMemo(
+    () => (
+      <div className="flex items-center gap-1 bg-muted/30 rounded p-1 text-base">
+        <Tooltip content="网格视图" placement="bottom">
+          <Clickable
+            onClick={() => setViewMode("grid")}
+            className={`p-2 rounded transition-colors ${
+              viewMode === "grid"
+                ? "bg-foreground text-background"
+                : "hover:bg-muted"
+            }`}
+            hoverScale={1.05}
+          >
+            <RiGridLine size="1em" />
+          </Clickable>
+        </Tooltip>
+        <Tooltip content="表格视图" placement="bottom">
+          <Clickable
+            onClick={() => setViewMode("table")}
+            className={`p-2 rounded transition-colors ${
+              viewMode === "table"
+                ? "bg-foreground text-background"
+                : "hover:bg-muted"
+            }`}
+            hoverScale={1.05}
+          >
+            <RiListUnordered size="1em" />
+          </Clickable>
+        </Tooltip>
+      </div>
+    ),
+    [viewMode],
+  );
+
   return (
     <>
-      <GridTable
-        title="媒体文件管理"
-        columns={columns}
-        data={data}
-        loading={loading}
-        rowKey="id"
-        page={page}
-        totalPages={totalPages}
-        totalRecords={totalRecords}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-        onSortChange={handleSortChange}
-        onSearchChange={handleSearchChange}
-        onRowClick={handleRowClick}
-        searchPlaceholder="搜索显示名称、原始文件名或替代文本..."
-        filterConfig={filterConfig}
-        onFilterChange={handleFilterChange}
-        striped
-        hoverable
-        bordered={false}
-        size="sm"
-        emptyText="暂无媒体文件"
-        stickyHeader
-        maxHeight="100%"
-        padding={2.5}
-        enableActions={true}
-        batchActions={batchActions}
-        rowActions={rowActions}
-        onSelectionChange={handleSelectionChange}
-      />
+      <AutoTransition
+        key={viewMode}
+        type="fade"
+        duration={0.3}
+        className="contents"
+      >
+        {viewMode === "table" ? (
+          <GridTable
+            title={
+              <div className="flex items-center gap-4">
+                <span>媒体文件管理</span>
+                {/* 视图切换 */}
+                {viewModeToggle}
+              </div>
+            }
+            columns={columns}
+            data={data}
+            loading={loading}
+            rowKey="id"
+            page={page}
+            totalPages={totalPages}
+            totalRecords={totalRecords}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            onSortChange={handleSortChange}
+            onSearchChange={handleSearchChange}
+            onRowClick={handleRowClick}
+            searchPlaceholder="搜索显示名称、原始文件名或替代文本..."
+            filterConfig={filterConfig}
+            onFilterChange={handleFilterChange}
+            striped
+            hoverable
+            bordered={false}
+            size="sm"
+            emptyText="暂无媒体文件"
+            stickyHeader
+            maxHeight="100%"
+            padding={2.5}
+            enableActions={true}
+            batchActions={batchActions}
+            rowActions={rowActions}
+            onSelectionChange={handleSelectionChange}
+          />
+        ) : (
+          <>
+            {/* 表头 */}
+            <GridItem
+              areas={[1]}
+              width={24}
+              height={0.1}
+              className="flex items-center justify-between text-2xl px-10"
+            >
+              <div className="flex items-center gap-4">
+                <span>媒体文件管理</span>
+                {/* 视图切换 */}
+                {viewModeToggle}
+              </div>
+              <div className="flex items-center gap-4">
+                {/* 搜索框 */}
+                <div className="relative w-[15em]">
+                  <input
+                    title="search"
+                    type="text"
+                    value={searchValue}
+                    onChange={(e) => setSearchValue(e.target.value)}
+                    className="
+                    relative w-full bg-transparent border-0
+                    px-0 py-2 text-base text-white
+                    focus:outline-none
+                  "
+                  />
+                  <motion.div
+                    className="absolute bottom-0 left-0 h-0.5 w-full"
+                    initial={{ backgroundColor: "#ffffff" }}
+                    animate={{
+                      backgroundColor:
+                        searchValue.length > 0
+                          ? "var(--color-primary)"
+                          : "#ffffff",
+                    }}
+                    transition={{ duration: 0.3 }}
+                  />
+                  <motion.label
+                    className="absolute top-2 left-0 pointer-events-none whitespace-nowrap flex items-center text-base text-white"
+                    animate={{
+                      opacity: searchValue.length > 0 ? 0 : 1,
+                    }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <RiSearchLine size="1em" className="inline mr-1" />
+                    搜索显示名称、原始文件名或替代文本...
+                  </motion.label>
+                  <AnimatePresence>
+                    {searchValue.length > 0 && (
+                      <motion.button
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        transition={{
+                          duration: 0.3,
+                          ease: [0.68, -0.55, 0.265, 1.55],
+                        }}
+                        onClick={() => setSearchValue("")}
+                        className="absolute right-0 top-2 text-primary hover:text-white transition-colors cursor-pointer flex items-center"
+                        type="button"
+                      >
+                        <RiCloseLine size="1em" />
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </GridItem>
+
+            {/* 内容区 */}
+            <GridItem areas={createArray(2, 11)} width={24 / 10} height={2}>
+              <div className="flex flex-col h-full">
+                {/* 批量操作栏 */}
+                <AnimatePresence>
+                  {selectedMedia.size > 0 && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{
+                        height: { duration: 0.3, ease: "easeInOut" },
+                        opacity: { duration: 0.2, ease: "easeInOut" },
+                      }}
+                      className="overflow-hidden"
+                    >
+                      <div className="flex items-center justify-between px-10 py-2 border-b border-muted">
+                        <div className="flex items-center gap-4">
+                          <AutoTransition key={selectedMedia.size}>
+                            <span className="text-primary">
+                              已选中 {selectedMedia.size} 项
+                            </span>
+                          </AutoTransition>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {batchActions.map((action, index) => (
+                            <Button
+                              key={index}
+                              label={action.label || "操作"}
+                              variant={action.variant || "outline"}
+                              size="sm"
+                              icon={action.icon}
+                              onClick={action.onClick}
+                              disabled={
+                                action.disabled || selectedMedia.size === 0
+                              }
+                              loading={action.loading}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* 网格内容 */}
+                <div className="flex-1 overflow-auto px-10 py-6">
+                  {loading ? (
+                    <div className="h-full">
+                      <LoadingIndicator />
+                    </div>
+                  ) : data.length === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-muted-foreground">暂无媒体文件</div>
+                    </div>
+                  ) : (
+                    <div
+                      className="grid gap-4"
+                      style={{
+                        gridTemplateColumns:
+                          "repeat(auto-fill, minmax(10em, 1fr))",
+                      }}
+                    >
+                      {data.map((item) => (
+                        <MediaGridItem
+                          key={item.id}
+                          item={item}
+                          isSelected={selectedMedia.has(item.id)}
+                          onSelect={handleSelectItem}
+                          onPreview={openDetailDialog}
+                          formatFileSize={formatFileSize}
+                          getFileTypeIcon={getFileTypeIcon}
+                          actions={rowActions(item)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </GridItem>
+
+            {/* 表尾分页 */}
+            <GridItem
+              areas={[12]}
+              width={24}
+              height={0.1}
+              className="flex justify-between pl-10 pr-6"
+            >
+              <div className="flex items-center gap-2">
+                <AutoTransition key={totalRecords} type="fade">
+                  共 {totalRecords} 条
+                </AutoTransition>
+                <span>/</span>
+                <AutoTransition key={page + "" + totalRecords} type="fade">
+                  第 {(page - 1) * pageSize + 1}
+                  {" - "}
+                  {Math.min(page * pageSize, totalRecords)} 条
+                </AutoTransition>
+                <span>/</span>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={pageSize}
+                    onChange={(value) => {
+                      setPageSize(Number(value));
+                      setPage(1);
+                    }}
+                    options={[
+                      { value: 10, label: "10 条/页" },
+                      { value: 25, label: "25 条/页" },
+                      { value: 50, label: "50 条/页" },
+                      { value: 100, label: "100 条/页" },
+                      { value: 250, label: "250 条/页" },
+                      { value: 500, label: "500 条/页" },
+                    ]}
+                    size="sm"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center">
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2">
+                    <Clickable
+                      onClick={() => setPage(Math.max(1, page - 1))}
+                      disabled={page === 1}
+                      className="px-4 py-2 rounded transition-colors hover:bg-muted"
+                      enableHoverScale={false}
+                    >
+                      <RiArrowLeftSLine />
+                    </Clickable>
+
+                    <span>
+                      <AutoTransition key={page} type="fade">
+                        第 {page} / {totalPages} 页
+                      </AutoTransition>
+                    </span>
+
+                    <Clickable
+                      onClick={() => setPage(Math.min(totalPages, page + 1))}
+                      disabled={page === totalPages}
+                      className="px-4 py-2 rounded transition-colors hover:bg-muted"
+                      enableHoverScale={false}
+                    >
+                      <RiArrowRightSLine />
+                    </Clickable>
+                  </div>
+                )}
+              </div>
+            </GridItem>
+          </>
+        )}
+      </AutoTransition>
 
       {/* 详情对话框 */}
       <MediaPreviewDialog
@@ -879,7 +1368,7 @@ export default function MediaTable() {
         open={batchDeleteDialogOpen}
         onClose={closeBatchDeleteDialog}
         title="确认批量删除"
-        description={`确定要删除选中的 ${selectedMedia.length} 个文件吗？此操作不可撤销。`}
+        description={`确定要删除选中的 ${selectedMedia.size} 个文件吗？此操作不可撤销。`}
         confirmText="删除"
         cancelText="取消"
         onConfirm={handleConfirmBatchDelete}

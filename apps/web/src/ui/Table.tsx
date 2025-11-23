@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { memo } from "react";
 import { motion } from "framer-motion";
 import { AutoTransition } from "./AutoTransition";
 
@@ -99,6 +99,108 @@ interface SortState {
   order: "asc" | "desc" | null;
 }
 
+// Memo 化的表格行组件 - 使用非泛型类型避免类型复杂度
+interface MemoTableRowProps {
+  record: Record<string, unknown>;
+  index: number;
+  columns: TableColumn<Record<string, unknown>>[];
+  striped: boolean;
+  hoverable: boolean;
+  onRowClick?: (
+    record: Record<string, unknown>,
+    index: number,
+    event: React.MouseEvent,
+  ) => void;
+  rowClassName: string;
+  animateRows: boolean;
+  getPaddingStyles: () => string;
+  getAlignClass: (align?: "left" | "center" | "right") => string;
+  renderCellContent: (
+    column: TableColumn<Record<string, unknown>>,
+    record: Record<string, unknown>,
+    index: number,
+  ) => React.ReactNode;
+  padding: number;
+  getRowKey: (
+    record: Record<string, unknown>,
+    index: number,
+  ) => string | number;
+}
+
+const MemoTableRow = memo(
+  ({
+    record,
+    index,
+    columns,
+    striped,
+    hoverable,
+    onRowClick,
+    rowClassName,
+    animateRows,
+    getPaddingStyles,
+    getAlignClass,
+    renderCellContent,
+    padding,
+    getRowKey,
+  }: MemoTableRowProps) => {
+    const RowWrapper = animateRows ? motion.tr : "tr";
+    const animationProps = animateRows
+      ? {
+          initial: { opacity: 0, y: -10 },
+          animate: { opacity: 1, y: 0 },
+          transition: {
+            duration: 0.1,
+            delay: Math.min(index * 0.01, 0.5),
+          },
+        }
+      : {};
+
+    return (
+      <RowWrapper
+        key={getRowKey(record, index)}
+        className={`
+        ${striped && index % 2 === 1 ? "bg-muted/25" : ""}
+        ${hoverable ? "hover:bg-muted transition-colors duration-200 ease-out" : ""}
+        ${onRowClick ? "cursor-pointer" : ""}
+        ${rowClassName}
+      `}
+        onClick={(e: React.MouseEvent) => onRowClick?.(record, index, e)}
+        {...(animationProps as Record<string, unknown>)}
+      >
+        {columns.map((column, columnIndex) => (
+          <td
+            key={column.key}
+            className={`
+            ${getPaddingStyles()}
+            ${getAlignClass(column.align)}
+            ${column.mono ? "font-mono" : ""}
+            ${!striped ? "border-t border-border" : ""}
+          `}
+            style={column.width ? { width: column.width } : undefined}
+          >
+            <div
+              {...(padding > 0 && {
+                style: {
+                  ...(columnIndex === 0 && {
+                    paddingLeft: `${padding}em`,
+                  }),
+                  ...(columnIndex === columns.length - 1 && {
+                    paddingRight: `${padding}em`,
+                  }),
+                },
+              })}
+            >
+              {renderCellContent(column, record, index) as React.ReactNode}
+            </div>
+          </td>
+        ))}
+      </RowWrapper>
+    );
+  },
+);
+
+MemoTableRow.displayName = "MemoTableRow";
+
 export function Table<T extends Record<string, unknown>>({
   columns = [],
   data = [],
@@ -123,7 +225,7 @@ export function Table<T extends Record<string, unknown>>({
     order: null,
   });
 
-  const getSizeStyles = () => {
+  const getSizeStyles = React.useCallback(() => {
     switch (size) {
       case "sm":
         return "text-sm";
@@ -134,9 +236,9 @@ export function Table<T extends Record<string, unknown>>({
       default:
         return "text-base";
     }
-  };
+  }, [size]);
 
-  const getPaddingStyles = () => {
+  const getPaddingStyles = React.useCallback(() => {
     switch (size) {
       case "sm":
         return "px-2 py-2";
@@ -147,19 +249,26 @@ export function Table<T extends Record<string, unknown>>({
       default:
         return "px-4 py-3";
     }
-  };
+  }, [size]);
 
-  const getRowKey = (record: T, index: number): string | number => {
-    if (!rowKey) return index;
-    if (typeof rowKey === "function") return rowKey(record);
-    const value = record[rowKey];
-    return String(value);
-  };
+  const getRowKey = React.useCallback(
+    (record: T, index: number): string | number => {
+      if (!rowKey) return index;
+      if (typeof rowKey === "function") return rowKey(record);
+      const value = record[rowKey];
+      return String(value);
+    },
+    [rowKey],
+  );
 
-  const getRowClassName = (record: T, index: number): string => {
-    if (typeof rowClassName === "function") return rowClassName(record, index);
-    return rowClassName || "";
-  };
+  const getRowClassName = React.useCallback(
+    (record: T, index: number): string => {
+      if (typeof rowClassName === "function")
+        return rowClassName(record, index);
+      return rowClassName || "";
+    },
+    [rowClassName],
+  );
 
   const handleSort = (columnKey: string) => {
     let newOrder: "asc" | "desc" | null = "asc";
@@ -180,35 +289,37 @@ export function Table<T extends Record<string, unknown>>({
     onSortChange?.(columnKey, newOrder);
   };
 
-  const renderCellContent = (
-    column: TableColumn<T>,
-    record: T,
-    index: number,
-  ): React.ReactNode => {
-    if (column.render) {
-      return column.render(
-        column.dataIndex ? record[column.dataIndex] : record,
-        record,
-        index,
-      );
-    }
-    const value = column.dataIndex ? record[column.dataIndex] : "";
-    // 将值转换为可渲染的类型
-    if (value === null || value === undefined) return "";
-    if (typeof value === "object") return JSON.stringify(value);
-    return String(value);
-  };
+  const renderCellContent = React.useCallback(
+    (column: TableColumn<T>, record: T, index: number): React.ReactNode => {
+      if (column.render) {
+        return column.render(
+          column.dataIndex ? record[column.dataIndex] : record,
+          record,
+          index,
+        );
+      }
+      const value = column.dataIndex ? record[column.dataIndex] : "";
+      // 将值转换为可渲染的类型
+      if (value === null || value === undefined) return "";
+      if (typeof value === "object") return JSON.stringify(value);
+      return String(value);
+    },
+    [],
+  );
 
-  const getAlignClass = (align?: "left" | "center" | "right") => {
-    switch (align) {
-      case "center":
-        return "text-center";
-      case "right":
-        return "text-right";
-      default:
-        return "text-left";
-    }
-  };
+  const getAlignClass = React.useCallback(
+    (align?: "left" | "center" | "right") => {
+      switch (align) {
+        case "center":
+          return "text-center";
+        case "right":
+          return "text-right";
+        default:
+          return "text-left";
+      }
+    },
+    [],
+  );
 
   const SortIcon = ({ columnKey }: { columnKey: string }) => {
     const isActive = sortState.key === columnKey;
@@ -334,67 +445,45 @@ export function Table<T extends Record<string, unknown>>({
               </td>
             </tr>
           ) : (
-            data.map((record, index) => {
-              const RowWrapper = animateRows ? motion.tr : "tr";
-              const animationProps = animateRows
-                ? {
-                    initial: { opacity: 0, y: -10 },
-                    animate: { opacity: 1, y: 0 },
-                    transition: {
-                      duration: 0.1,
-                      delay: Math.min(index * 0.01, 0.5),
-                    },
-                  }
-                : {};
-
-              return (
-                <RowWrapper
-                  key={getRowKey(record, index)}
-                  className={`
-                    ${striped && index % 2 === 1 ? "bg-muted/25" : ""}
-                    ${hoverable ? "hover:bg-muted transition-colors duration-200 ease-out" : ""}
-                    ${onRowClick ? "cursor-pointer" : ""}
-                    ${getRowClassName(record, index)}
-                  `}
-                  onClick={(e) => onRowClick?.(record, index, e)}
-                  {...animationProps}
-                >
-                  {columns.map((column, columnIndex) => (
-                    <td
-                      key={column.key}
-                      className={`
-                        ${getPaddingStyles()}
-                        ${getAlignClass(column.align)}
-                        ${column.mono ? "font-mono" : ""}
-                        ${!striped ? "border-t border-border" : ""}
-                      `}
-                      style={column.width ? { width: column.width } : undefined}
-                    >
-                      <div
-                        {...(padding > 0 && {
-                          style: {
-                            ...(columnIndex === 0 && {
-                              paddingLeft: `${padding}em`,
-                            }),
-                            ...(columnIndex === columns.length - 1 && {
-                              paddingRight: `${padding}em`,
-                            }),
-                          },
-                        })}
-                      >
-                        {
-                          renderCellContent(
-                            column,
-                            record,
-                            index,
-                          ) as React.ReactNode
-                        }
-                      </div>
-                    </td>
-                  ))}
-                </RowWrapper>
-              );
-            })
+            data.map((record, index) => (
+              <MemoTableRow
+                key={getRowKey(record, index)}
+                record={record as Record<string, unknown>}
+                index={index}
+                columns={
+                  columns as unknown as TableColumn<Record<string, unknown>>[]
+                }
+                striped={striped}
+                hoverable={hoverable}
+                onRowClick={
+                  onRowClick as
+                    | ((
+                        record: Record<string, unknown>,
+                        index: number,
+                        event: React.MouseEvent,
+                      ) => void)
+                    | undefined
+                }
+                rowClassName={getRowClassName(record, index)}
+                animateRows={animateRows}
+                getPaddingStyles={getPaddingStyles}
+                getAlignClass={getAlignClass}
+                renderCellContent={
+                  renderCellContent as (
+                    column: TableColumn<Record<string, unknown>>,
+                    record: Record<string, unknown>,
+                    index: number,
+                  ) => React.ReactNode
+                }
+                padding={padding}
+                getRowKey={
+                  getRowKey as (
+                    record: Record<string, unknown>,
+                    index: number,
+                  ) => string | number
+                }
+              />
+            ))
           )}
         </tbody>
       </table>
