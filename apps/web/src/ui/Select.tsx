@@ -75,7 +75,7 @@ export function Select({
   const getSizeStyles = () => {
     switch (size) {
       case "sm":
-        return "px-2 py-1 text-md";
+        return "px-4 py-1.5 text-md";
       case "md":
         return "px-4 py-2 text-base";
       case "lg":
@@ -190,7 +190,7 @@ export function Select({
                       hover:text-primary-foreground
                       ${isSelected ? "bg-primary/20 text-primary" : "text-foreground"}
                     `}
-                    whileHover={{ scaleX: 1.05 }}
+                    whileHover={{ scaleX: 1.02 }}
                     transition={{ duration: 0.15 }}
                   >
                     {option.label}
