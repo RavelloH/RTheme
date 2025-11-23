@@ -182,7 +182,7 @@ export default function DashboardPostsStats() {
                   <RiFolderAddFill size="1.1em" /> 新建项目
                 </Link>
                 <Link
-                  href="/admin/media?upload"
+                  href="/admin/media?action=upload"
                   className="flex-1 flex gap-2 items-center justify-center hover:bg-primary hover:text-primary-foreground transition-all"
                 >
                   <RiUpload2Fill size="1.1em" /> 上传媒体

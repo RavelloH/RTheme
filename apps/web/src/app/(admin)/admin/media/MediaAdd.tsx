@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { GridItem } from "@/components/RowGrid";
 import { Dialog } from "@/ui/Dialog";
 import { Button } from "@/ui/Button";
@@ -65,6 +66,7 @@ interface UploadFile {
   previewUrl?: string;
   uploadProgress?: number; // 0-100
   imageLoadError?: boolean; // 图片预览加载失败
+  customName?: string; // 用户自定义的文件名
 }
 
 // 圆形进度条组件
@@ -117,6 +119,19 @@ function MediaAddInner() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { success: toastSuccess, error: toastError } = useToast();
   const { broadcast } = useBroadcastSender<{ type: "media-refresh" }>();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // 检测 action=upload 参数，自动打开上传对话框
+  useEffect(() => {
+    if (searchParams.get("action") === "upload") {
+      setDialogOpen(true);
+      // 移除查询参数
+      const url = new URL(window.location.href);
+      url.searchParams.delete("action");
+      router.replace(url.pathname + url.search, { scroll: false });
+    }
+  }, [searchParams, router]);
 
   // 从 localStorage 获取用户角色
   useEffect(() => {
@@ -190,6 +205,46 @@ function MediaAddInner() {
 
     setFiles((prev) => [...prev, ...newFiles]);
   };
+
+  // 处理粘贴事件
+  const handlePaste = (e: ClipboardEvent) => {
+    if (!dialogOpen || uploading) return;
+
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    const imageFiles: File[] = [];
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) {
+          // 为粘贴的图片生成默认文件名
+          const ext = file.type.split("/")[1] || "png";
+          const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+          const namedFile = new File([file], `粘贴的图片_${timestamp}.${ext}`, {
+            type: file.type,
+          });
+          imageFiles.push(namedFile);
+        }
+      }
+    }
+
+    if (imageFiles.length > 0) {
+      e.preventDefault();
+      const dataTransfer = new DataTransfer();
+      imageFiles.forEach((file) => dataTransfer.items.add(file));
+      handleFileSelect(dataTransfer.files);
+    }
+  };
+
+  // 监听粘贴事件
+  useEffect(() => {
+    if (dialogOpen) {
+      document.addEventListener("paste", handlePaste);
+      return () => document.removeEventListener("paste", handlePaste);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dialogOpen, uploading]);
 
   // 组件卸载时清理所有预览 URL
   useEffect(() => {
@@ -269,7 +324,17 @@ function MediaAddInner() {
 
     try {
       const formData = new FormData();
-      formData.append("file", uploadFile.file);
+
+      // 如果有自定义文件名，创建新的 File 对象
+      let fileToUpload = uploadFile.file;
+      if (uploadFile.customName) {
+        fileToUpload = new File([uploadFile.file], uploadFile.customName, {
+          type: uploadFile.file.type,
+          lastModified: uploadFile.file.lastModified,
+        });
+      }
+
+      formData.append("file", fileToUpload);
       formData.append("mode", mode);
 
       // 如果选择了存储提供商，添加到 FormData
@@ -510,6 +575,41 @@ function MediaAddInner() {
     );
   };
 
+  // 更新自定义文件名
+  const updateFileName = (id: string, newName: string) => {
+    setFiles((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, customName: newName } : f)),
+    );
+  };
+
+  // 获取显示的文件名
+  const getDisplayFileName = (uploadFile: UploadFile): string => {
+    return uploadFile.customName || uploadFile.file.name;
+  };
+
+  // 处理文件名编辑
+  const handleFileNameBlur = (
+    id: string,
+    e: React.FocusEvent<HTMLDivElement>,
+  ) => {
+    const newName = e.currentTarget.textContent?.trim() || "";
+    if (newName) {
+      updateFileName(id, newName);
+    } else {
+      // 如果为空，恢复原始文件名
+      e.currentTarget.textContent =
+        files.find((f) => f.id === id)?.file.name || "";
+    }
+  };
+
+  // 处理回车键
+  const handleFileNameKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.currentTarget.blur();
+    }
+  };
+
   return (
     <>
       <GridItem areas={[7, 8]} width={6} height={0.2}>
@@ -601,7 +701,7 @@ function MediaAddInner() {
               size="4em"
             />
             <div className="text-lg font-medium mb-2">
-              拖拽文件到此处或点击选择
+              拖拽、粘贴文件到此处，或点击选择
             </div>
             <div className="text-sm text-muted-foreground mb-4">
               <AutoTransition>
@@ -649,7 +749,7 @@ function MediaAddInner() {
                             <Image
                               unoptimized
                               src={uploadFile.previewUrl}
-                              alt={uploadFile.file.name}
+                              alt={getDisplayFileName(uploadFile)}
                               className="w-full h-full object-cover"
                               width={56}
                               height={56}
@@ -666,8 +766,20 @@ function MediaAddInner() {
 
                       {/* 文件信息 */}
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate mb-1">
-                          {uploadFile.file.name}
+                        <div
+                          contentEditable={
+                            uploadFile.status === "pending" && !uploading
+                          }
+                          suppressContentEditableWarning
+                          onBlur={(e) => handleFileNameBlur(uploadFile.id, e)}
+                          onKeyDown={handleFileNameKeyDown}
+                          className={`text-sm font-medium truncate mb-1 outline-none ${
+                            uploadFile.status === "pending" && !uploading
+                              ? "cursor-text focus:underline"
+                              : ""
+                          }`}
+                        >
+                          {getDisplayFileName(uploadFile)}
                         </div>
 
                         {uploadFile.error ? (
@@ -751,7 +863,7 @@ function MediaAddInner() {
                           type="button"
                           onClick={() => retryFile(uploadFile.id)}
                           className="flex-shrink-0 p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-muted-foreground disabled:hover:bg-transparent"
-                          aria-label={`重试 ${uploadFile.file.name}`}
+                          aria-label={`重试 ${getDisplayFileName(uploadFile)}`}
                           title="重试上传"
                           disabled={uploading}
                         >
@@ -762,7 +874,7 @@ function MediaAddInner() {
                           type="button"
                           onClick={() => removeFile(uploadFile.id)}
                           className="flex-shrink-0 p-2 text-muted-foreground hover:text-error hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-muted-foreground disabled:hover:bg-transparent"
-                          aria-label={`删除 ${uploadFile.file.name}`}
+                          aria-label={`删除 ${getDisplayFileName(uploadFile)}`}
                           title="删除此文件"
                           disabled={
                             uploading ||
