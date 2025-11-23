@@ -5,6 +5,7 @@ import { GridItem } from "@/components/RowGrid";
 import { Dialog } from "@/ui/Dialog";
 import { Button } from "@/ui/Button";
 import { Select } from "@/ui/Select";
+import { SegmentedControl } from "@/ui/SegmentedControl";
 import { useToast, ToastProvider } from "@/ui/Toast";
 import { useBroadcastSender } from "@/hooks/useBroadcast";
 import { getStorageList } from "@/actions/storage";
@@ -558,53 +559,29 @@ function MediaAddInner() {
             <label className="text-sm font-medium text-muted-foreground">
               处理模式
             </label>
-            <div className="grid grid-cols-3 gap-4">
-              <button
-                type="button"
-                onClick={() => setMode("lossy")}
-                disabled={uploading}
-                className={`p-4 border rounded-lg transition-all ${
-                  mode === "lossy"
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border hover:border-primary/50"
-                }`}
-              >
-                <div className="font-semibold mb-1">有损优化</div>
-                <div className="text-xs text-muted-foreground">
-                  AVIF 格式，高压缩率
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("lossless")}
-                disabled={uploading}
-                className={`p-4 border rounded-lg transition-all ${
-                  mode === "lossless"
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border hover:border-primary/50"
-                }`}
-              >
-                <div className="font-semibold mb-1">无损转换</div>
-                <div className="text-xs text-muted-foreground">
-                  WebP 无损，保留元数据
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("original")}
-                disabled={uploading}
-                className={`p-4 border rounded-lg transition-all ${
-                  mode === "original"
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border hover:border-primary/50"
-                }`}
-              >
-                <div className="font-semibold mb-1">保留原片</div>
-                <div className="text-xs text-muted-foreground">
-                  支持所有图片格式
-                </div>
-              </button>
-            </div>
+            <SegmentedControl
+              value={mode}
+              onChange={setMode}
+              disabled={uploading}
+              options={[
+                {
+                  value: "lossy",
+                  label: "有损优化",
+                  description: "压缩为 AVIF 格式，节省占用",
+                },
+                {
+                  value: "lossless",
+                  label: "无损转换",
+                  description: "无损转换为 WebP ，并保留元数据",
+                },
+                {
+                  value: "original",
+                  label: "保留原片",
+                  description: "以原始格式上传，不做处理",
+                },
+              ]}
+              columns={3}
+            />
           </div>
 
           {/* 文件选择区域 */}
