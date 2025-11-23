@@ -15,6 +15,7 @@ import {
   RiCloseFill,
   RiFileDamageFill,
   RiRestartLine,
+  RiLoader4Line,
 } from "@remixicon/react";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
@@ -423,22 +424,43 @@ function MediaAddInner() {
       let successCount = 0;
       let failCount = 0;
 
-      // 分批并发上传
-      for (let i = 0; i < filesToUpload.length; i += CONCURRENT_LIMIT) {
-        const batch = filesToUpload.slice(i, i + CONCURRENT_LIMIT);
-        const results = await Promise.allSettled(
-          batch.map((file) => uploadSingleFile(file)),
-        );
+      // 创建文件队列（使用索引而非修改数组）
+      let currentIndex = 0;
+      const totalFiles = filesToUpload.length;
+
+      // 上传单个文件并递归处理队列
+      const uploadNext = async (): Promise<void> => {
+        // 从队列中取出下一个文件
+        const index = currentIndex++;
+        if (index >= totalFiles) {
+          return; // 队列已空
+        }
+
+        const file = filesToUpload[index];
+        if (!file) return;
+
+        // 上传当前文件
+        const result = await uploadSingleFile(file);
 
         // 统计结果
-        results.forEach((result) => {
-          if (result.status === "fulfilled" && result.value.success) {
-            successCount++;
-          } else {
-            failCount++;
-          }
-        });
+        if (result.success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+
+        // 立即开始上传下一个文件（递归）
+        await uploadNext();
+      };
+
+      // 启动初始的并发上传任务（最多 CONCURRENT_LIMIT 个）
+      const initialTasks = [];
+      for (let i = 0; i < Math.min(CONCURRENT_LIMIT, totalFiles); i++) {
+        initialTasks.push(uploadNext());
       }
+
+      // 等待所有并发链完成
+      await Promise.all(initialTasks);
 
       // 显示上传结果
       if (successCount > 0 && failCount === 0) {
@@ -721,7 +743,10 @@ function MediaAddInner() {
                           )}
                           {uploadFile.status === "processing" && (
                             <div className="flex flex-col items-center gap-1">
-                              <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
+                              <RiLoader4Line
+                                className="animate-spin text-primary"
+                                size="1.5em"
+                              />
                             </div>
                           )}
                           {uploadFile.status === "success" && (
