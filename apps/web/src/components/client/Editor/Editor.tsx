@@ -69,6 +69,7 @@ import {
 import type { Editor as TiptapEditorType } from "@tiptap/react";
 import type { editor } from "monaco-editor";
 import * as monacoHelpers from "./MonacoHelpers";
+import CMSImage from "@/components/CMSImage";
 
 export default function Editor({
   content,
@@ -314,54 +315,108 @@ export default function Editor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, editorType]); // 依赖editor和editorType，确保编辑器准备好后加载内容
 
-  const handleEditorReady = useCallback((editorInstance: TiptapEditorType) => {
-    setEditor(editorInstance);
-
-    // 初始化状态
-    const updateEditorState = () => {
-      setEditorState({
-        isBold: editorInstance.isActive("bold"),
-        isItalic: editorInstance.isActive("italic"),
-        isStrike: editorInstance.isActive("strike"),
-        isUnderline: editorInstance.isActive("underline"),
-        isHighlight: editorInstance.isActive("highlight"),
-        isCode: editorInstance.isActive("code"),
-        isSuperscript: editorInstance.isActive("superscript"),
-        isSubscript: editorInstance.isActive("subscript"),
-      });
-
-      // 检查是否在表格内
-      setIsTableToolbarVisible(editorInstance.isActive("table"));
-
-      // 检查是否在链接上
-      const isLink = editorInstance.isActive("link");
-      setIsLinkToolbarVisible(isLink);
-      if (isLink) {
-        const attrs = editorInstance.getAttributes("link");
-        setCurrentLinkUrl(attrs.href || "");
-      } else {
-        setCurrentLinkUrl("");
+  // 从编辑器内容中提取第一个 H1 标题
+  const extractTitleFromEditor = useCallback(
+    (editorInstance: TiptapEditorType) => {
+      const json = editorInstance.getJSON();
+      if (json.content) {
+        for (const node of json.content) {
+          if (node.type === "heading" && node.attrs?.level === 1) {
+            // 提取文本内容
+            const text =
+              (node.content as Array<{ text?: string }> | undefined)
+                ?.map((c) => c.text || "")
+                .join("") || "";
+            return text;
+          }
+        }
       }
+      return "";
+    },
+    [],
+  );
 
-      // 检查是否在代码块内
-      const isCodeBlock = editorInstance.isActive("codeBlock");
-      setIsCodeBlockToolbarVisible(isCodeBlock);
-      if (isCodeBlock) {
-        const attrs = editorInstance.getAttributes("codeBlock");
-        setCurrentCodeBlockLanguage(attrs.language || "");
-      } else {
-        setCurrentCodeBlockLanguage("");
+  // 从 Markdown 内容中提取第一个 H1 标题
+  const extractTitleFromMarkdown = useCallback((content: string) => {
+    const lines = content.split("\n");
+    for (const line of lines) {
+      const match = line.match(/^#\s+(.+)$/);
+      if (match && match[1]) {
+        return match[1].trim();
       }
-    };
-
-    // 监听编辑器更新事件，实时更新按钮状态
-    editorInstance.on("selectionUpdate", updateEditorState);
-    editorInstance.on("update", updateEditorState);
-    editorInstance.on("transaction", updateEditorState);
-
-    // 初始化状态
-    updateEditorState();
+    }
+    return "";
   }, []);
+
+  const handleEditorReady = useCallback(
+    (editorInstance: TiptapEditorType) => {
+      setEditor(editorInstance);
+
+      // 初始化状态
+      const updateEditorState = () => {
+        setEditorState({
+          isBold: editorInstance.isActive("bold"),
+          isItalic: editorInstance.isActive("italic"),
+          isStrike: editorInstance.isActive("strike"),
+          isUnderline: editorInstance.isActive("underline"),
+          isHighlight: editorInstance.isActive("highlight"),
+          isCode: editorInstance.isActive("code"),
+          isSuperscript: editorInstance.isActive("superscript"),
+          isSubscript: editorInstance.isActive("subscript"),
+        });
+
+        // 检查是否在表格内
+        setIsTableToolbarVisible(editorInstance.isActive("table"));
+
+        // 检查是否在链接上
+        const isLink = editorInstance.isActive("link");
+        setIsLinkToolbarVisible(isLink);
+        if (isLink) {
+          const attrs = editorInstance.getAttributes("link");
+          setCurrentLinkUrl(attrs.href || "");
+        } else {
+          setCurrentLinkUrl("");
+        }
+
+        // 检查是否在代码块内
+        const isCodeBlock = editorInstance.isActive("codeBlock");
+        setIsCodeBlockToolbarVisible(isCodeBlock);
+        if (isCodeBlock) {
+          const attrs = editorInstance.getAttributes("codeBlock");
+          setCurrentCodeBlockLanguage(attrs.language || "");
+        } else {
+          setCurrentCodeBlockLanguage("");
+        }
+      };
+
+      // 同步编辑器中的 H1 标题到表单
+      const syncTitleFromEditor = () => {
+        const title = extractTitleFromEditor(editorInstance);
+        if (title) {
+          setDetailsForm((prev) => {
+            if (prev.title !== title) {
+              return { ...prev, title };
+            }
+            return prev;
+          });
+        }
+      };
+
+      // 监听编辑器更新事件，实时更新按钮状态
+      editorInstance.on("selectionUpdate", updateEditorState);
+      editorInstance.on("update", () => {
+        updateEditorState();
+        syncTitleFromEditor();
+      });
+      editorInstance.on("transaction", updateEditorState);
+
+      // 初始化状态
+      updateEditorState();
+      // 初始化时同步标题
+      syncTitleFromEditor();
+    },
+    [extractTitleFromEditor],
+  );
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
@@ -707,6 +762,62 @@ export default function Editor({
     setDetailsDialogOpen(false);
   };
 
+  // 更新编辑器中的第一个 H1 标题
+  const updateEditorTitle = useCallback(
+    (newTitle: string) => {
+      if (editorType === "visual" && editor) {
+        const json = editor.getJSON();
+        if (json.content) {
+          let found = false;
+          for (let i = 0; i < json.content.length; i++) {
+            const node = json.content[i];
+            if (node && node.type === "heading" && node.attrs?.level === 1) {
+              // 更新现有的 H1
+              json.content[i] = {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: newTitle }],
+              } as unknown as typeof node;
+              found = true;
+              break;
+            }
+          }
+          if (!found && newTitle) {
+            // 如果没有 H1，在开头插入一个
+            json.content.unshift({
+              type: "heading",
+              attrs: { level: 1 },
+              content: [{ type: "text", text: newTitle }],
+            } as unknown as (typeof json.content)[0]);
+          }
+          editor.commands.setContent(json);
+        }
+      } else if (
+        (editorType === "markdown" || editorType === "mdx") &&
+        monacoEditor
+      ) {
+        const content = markdownContent;
+        const lines = content.split("\n");
+        let found = false;
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          if (line && line.match(/^#\s+/)) {
+            lines[i] = `# ${newTitle}`;
+            found = true;
+            break;
+          }
+        }
+        if (!found && newTitle) {
+          lines.unshift(`# ${newTitle}`, "");
+        }
+        const newContent = lines.join("\n");
+        setMarkdownContent(newContent);
+        monacoEditor.setValue(newContent);
+      }
+    },
+    [editor, editorType, monacoEditor, markdownContent],
+  );
+
   // 处理表单字段变化
   const handleDetailsFieldChange = (
     field: string,
@@ -716,6 +827,11 @@ export default function Editor({
       ...prev,
       [field]: value,
     }));
+
+    // 如果修改的是标题，同步到编辑器
+    if (field === "title" && typeof value === "string") {
+      updateEditorTitle(value);
+    }
   };
 
   // 保存详细信息配置
@@ -723,10 +839,6 @@ export default function Editor({
     // 验证必填字段
     if (!detailsForm.title.trim()) {
       toast.error("请填写文章标题");
-      return;
-    }
-    if (!detailsForm.slug.trim()) {
-      toast.error("请填写文章 Slug");
       return;
     }
 
@@ -785,10 +897,6 @@ export default function Editor({
     // 验证必填字段
     if (!detailsForm.title.trim()) {
       toast.error("请填写文章标题");
-      return;
-    }
-    if (!detailsForm.slug.trim()) {
-      toast.error("请填写文章 Slug");
       return;
     }
     setShowCommitInput(true);
@@ -1478,6 +1586,18 @@ export default function Editor({
             content={markdownContent}
             onChange={(content) => {
               setMarkdownContent(content);
+
+              // 同步标题到表单
+              const title = extractTitleFromMarkdown(content);
+              if (title) {
+                setDetailsForm((prev) => {
+                  if (prev.title !== title) {
+                    return { ...prev, title };
+                  }
+                  return prev;
+                });
+              }
+
               // 保存到localStorage (Markdown模式,直接保存不转换)
               saveEditorContent(
                 content,
@@ -1494,6 +1614,16 @@ export default function Editor({
             mode={editorType === "mdx" ? "mdx" : "markdown"}
             onEditorReady={(monacoInstance) => {
               setMonacoEditor(monacoInstance);
+              // 初始化时同步标题
+              const title = extractTitleFromMarkdown(markdownContent);
+              if (title) {
+                setDetailsForm((prev) => {
+                  if (prev.title !== title) {
+                    return { ...prev, title };
+                  }
+                  return prev;
+                });
+              }
             }}
           />
         )}
@@ -1599,9 +1729,8 @@ export default function Editor({
                 onChange={(e) =>
                   handleDetailsFieldChange("slug", e.target.value)
                 }
-                required
                 size="sm"
-                helperText="URL 路径，例如：my-first-post"
+                helperText="URL 路径，例如：my-first-post。留空将从标题自动生成"
               />
               <Input
                 label="摘要"
@@ -1769,8 +1898,7 @@ export default function Editor({
               {/* 确认信息展示 */}
               <p className="text-sm text-muted-foreground mb-4">
                 请确认以下信息无误后继续。
-                <span className="text-error">标题</span>和
-                <span className="text-error">Slug</span>为必填项。
+                <span className="text-error">标题</span>为必填项。
               </p>
 
               {/* 编辑器类型提示 */}
@@ -1807,13 +1935,12 @@ export default function Editor({
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1">
-                      Slug <span className="text-error">*</span>
+                      Slug
                     </label>
                     <p
                       className={`text-sm font-mono ${detailsForm.slug ? "text-foreground/80" : "text-muted-foreground italic"}`}
                     >
-                      {detailsForm.slug ||
-                        `（未设置，请点击"${isEditMode ? "更改" : "设置"}详细信息"填写）`}
+                      {detailsForm.slug || "（未设置，将从标题自动生成）"}
                     </p>
                   </div>
                   {isEditMode && (
@@ -1836,6 +1963,24 @@ export default function Editor({
                     </label>
                     <p className="text-sm text-foreground/80">
                       {detailsForm.excerpt || "（未设置）"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      分类
+                    </label>
+                    <p className="text-sm text-foreground/80">
+                      {detailsForm.category || "（未设置，将分配到「未分类」）"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      标签
+                    </label>
+                    <p className="text-sm text-foreground/80">
+                      {detailsForm.tags.length > 0
+                        ? detailsForm.tags.map((tag) => tag.name).join("、")
+                        : "（未设置）"}
                     </p>
                   </div>
                 </div>
@@ -1920,18 +2065,29 @@ export default function Editor({
               )}
 
               {/* 特色图片 - 只读展示 */}
-              {detailsForm.featuredImage && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-                    特色图片
-                  </h3>
-                  <div className="bg-muted/20 p-4 rounded-lg">
-                    <p className="text-sm text-foreground/80 break-all">
-                      {detailsForm.featuredImage}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                  特色图片
+                </h3>
+                <div className="bg-muted/20 p-4 rounded-lg">
+                  {detailsForm.featuredImage ? (
+                    <div className="space-y-2">
+                      <CMSImage
+                        src={detailsForm.featuredImage}
+                        alt="特色图片预览"
+                        className="max-h-40 rounded-md object-cover"
+                      />
+                      <p className="text-xs text-foreground/60 break-all">
+                        {detailsForm.featuredImage}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">
+                      （未设置）
                     </p>
-                  </div>
+                  )}
                 </div>
-              )}
+              </div>
 
               {/* 操作按钮 */}
               <div className="flex justify-between gap-4 pt-4 border-t border-foreground/10">
@@ -1955,11 +2111,7 @@ export default function Editor({
                     variant="primary"
                     onClick={handleNextStep}
                     size="sm"
-                    disabled={
-                      isSubmitting ||
-                      !detailsForm.title.trim() ||
-                      !detailsForm.slug.trim()
-                    }
+                    disabled={isSubmitting || !detailsForm.title.trim()}
                   />
                 </div>
               </div>

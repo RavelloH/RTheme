@@ -35,6 +35,7 @@ import { useToast } from "@/ui/Toast";
 import Link, { useNavigateWithTransition } from "@/components/Link";
 import { TagInput, SelectedTag } from "@/components/client/Tag/TagInput";
 import { CategoryInput } from "@/components/client/Category/CategoryInput";
+import MediaSelector from "@/components/client/MediaSelector";
 
 export default function PostsTable() {
   const toast = useToast();
@@ -1201,14 +1202,16 @@ export default function PostsTable() {
             <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
               特色图片
             </h3>
-            <Input
-              label="特色图片 URL"
+            <MediaSelector
+              label="特色图片"
               value={formData.featuredImage}
-              onChange={(e) =>
-                handleFieldChange("featuredImage", e.target.value)
+              onChange={(url) =>
+                handleFieldChange(
+                  "featuredImage",
+                  Array.isArray(url) ? url[0] || "" : url,
+                )
               }
-              size="sm"
-              helperText="https://example.com/image.jpg"
+              helperText="选择或上传文章的特色图片，将显示在文章列表和详情页顶部"
             />
           </div>
 

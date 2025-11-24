@@ -6446,7 +6446,6 @@ components:
           maxLength: 255
         slug:
           type: string
-          minLength: 1
           maxLength: 255
         content:
           type: string
@@ -6499,7 +6498,6 @@ components:
             - MDX
       required:
         - title
-        - slug
         - content
         - status
         - isPinned

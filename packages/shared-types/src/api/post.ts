@@ -195,7 +195,7 @@ registerSchema("UpdatePostsSuccessResponse", UpdatePostsSuccessResponseSchema);
 export const CreatePostSchema = z.object({
   access_token: z.string().optional(),
   title: z.string().min(1, "标题不能为空").max(255, "标题过长"),
-  slug: z.string().min(1, "slug 不能为空").max(255, "slug 过长"),
+  slug: z.string().max(255, "slug 过长").optional(), // 可选，未提供时从标题自动生成
   content: z.string().min(1, "内容不能为空"),
   excerpt: z.string().max(500, "摘要过长").optional(),
   featuredImage: z.string().max(255, "图片 URL 过长").optional(),

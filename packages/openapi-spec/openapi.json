@@ -9566,7 +9566,6 @@
           },
           "slug": {
             "type": "string",
-            "minLength": 1,
             "maxLength": 255
           },
           "content": {
@@ -9639,7 +9638,6 @@
         },
         "required": [
           "title",
-          "slug",
           "content",
           "status",
           "isPinned",

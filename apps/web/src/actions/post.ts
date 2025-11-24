@@ -837,9 +837,12 @@ export async function createPost(
   }
 
   try {
+    // 如果没有提供 slug，从标题自动生成
+    const finalSlug = slug || (await slugify(title));
+
     // 检查 slug 是否已存在
     const existingPost = await prisma.post.findUnique({
-      where: { slug },
+      where: { slug: finalSlug },
     });
 
     if (existingPost) {
@@ -887,7 +890,7 @@ export async function createPost(
     const post = await prisma.post.create({
       data: {
         title,
-        slug,
+        slug: finalSlug,
         content: versionedContent,
         excerpt: excerpt || null,
         featuredImage: featuredImage || null,
@@ -934,7 +937,7 @@ export async function createPost(
           new: {
             id: post.id,
             title,
-            slug,
+            slug: finalSlug,
             excerpt,
             featuredImage,
             status,
