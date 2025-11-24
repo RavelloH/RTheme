@@ -68,8 +68,12 @@ import {
 } from "@/lib/client/editorPersistence";
 import type { Editor as TiptapEditorType } from "@tiptap/react";
 import type { editor } from "monaco-editor";
-import * as monacoHelpers from "./MonacoHelpers";
 import CMSImage from "@/components/CMSImage";
+import {
+  createAdapterManager,
+  type AdapterManager,
+  type EditorState as AdapterEditorState,
+} from "./adapters";
 
 export default function Editor({
   content,
@@ -118,6 +122,9 @@ export default function Editor({
     useState(false);
   const [currentCodeBlockLanguage, setCurrentCodeBlockLanguage] = useState("");
   const [isImageSelectorOpen, setIsImageSelectorOpen] = useState(false);
+
+  // 适配器管理器
+  const adapterManagerRef = useRef<AdapterManager | null>(null);
 
   // 初始化编辑器类型，从 localStorage 加载上次使用的编辑器类型（仅在客户端）
   const [editorType, setEditorType] = useState<string | number>(() => {
@@ -200,7 +207,7 @@ export default function Editor({
   }, [initialData]);
 
   // 编辑器状态
-  const [editorState, setEditorState] = useState({
+  const [editorState, setEditorState] = useState<AdapterEditorState>({
     isBold: false,
     isItalic: false,
     isStrike: false,
@@ -209,7 +216,50 @@ export default function Editor({
     isCode: false,
     isSuperscript: false,
     isSubscript: false,
+    isBlockquote: false,
+    isCodeBlock: false,
+    isTable: false,
+    isLink: false,
+    isBulletList: false,
+    isOrderedList: false,
+    isTaskList: false,
+    headingLevel: null,
+    textAlign: null,
+    currentLinkUrl: "",
+    currentCodeBlockLanguage: "",
   });
+
+  // 初始化适配器管理器
+  useEffect(() => {
+    if (!adapterManagerRef.current) {
+      adapterManagerRef.current = createAdapterManager(
+        {
+          storageKey,
+          enablePersistence: true,
+        },
+        {
+          onStateChange: (state) => {
+            setEditorState(state);
+            // 更新工具栏相关状态
+            setIsTableToolbarVisible(state.isTable);
+            setIsLinkToolbarVisible(state.isLink);
+            setCurrentLinkUrl(state.currentLinkUrl);
+            setIsCodeBlockToolbarVisible(state.isCodeBlock);
+            setCurrentCodeBlockLanguage(state.currentCodeBlockLanguage);
+          },
+          onContentChange: () => {
+            // 内容变化时的处理
+            console.log("Content changed via adapter");
+          },
+        },
+      );
+    }
+
+    return () => {
+      adapterManagerRef.current?.destroy();
+      adapterManagerRef.current = null;
+    };
+  }, [storageKey]);
 
   // 在组件挂载时检查localStorage中是否有保存的内容（只执行一次）
   useEffect(() => {
@@ -352,42 +402,10 @@ export default function Editor({
     (editorInstance: TiptapEditorType) => {
       setEditor(editorInstance);
 
-      // 初始化状态
-      const updateEditorState = () => {
-        setEditorState({
-          isBold: editorInstance.isActive("bold"),
-          isItalic: editorInstance.isActive("italic"),
-          isStrike: editorInstance.isActive("strike"),
-          isUnderline: editorInstance.isActive("underline"),
-          isHighlight: editorInstance.isActive("highlight"),
-          isCode: editorInstance.isActive("code"),
-          isSuperscript: editorInstance.isActive("superscript"),
-          isSubscript: editorInstance.isActive("subscript"),
-        });
-
-        // 检查是否在表格内
-        setIsTableToolbarVisible(editorInstance.isActive("table"));
-
-        // 检查是否在链接上
-        const isLink = editorInstance.isActive("link");
-        setIsLinkToolbarVisible(isLink);
-        if (isLink) {
-          const attrs = editorInstance.getAttributes("link");
-          setCurrentLinkUrl(attrs.href || "");
-        } else {
-          setCurrentLinkUrl("");
-        }
-
-        // 检查是否在代码块内
-        const isCodeBlock = editorInstance.isActive("codeBlock");
-        setIsCodeBlockToolbarVisible(isCodeBlock);
-        if (isCodeBlock) {
-          const attrs = editorInstance.getAttributes("codeBlock");
-          setCurrentCodeBlockLanguage(attrs.language || "");
-        } else {
-          setCurrentCodeBlockLanguage("");
-        }
-      };
+      // 注册到适配器管理器
+      if (adapterManagerRef.current) {
+        adapterManagerRef.current.registerTiptapEditor(editorInstance);
+      }
 
       // 同步编辑器中的 H1 标题到表单
       const syncTitleFromEditor = () => {
@@ -402,16 +420,11 @@ export default function Editor({
         }
       };
 
-      // 监听编辑器更新事件，实时更新按钮状态
-      editorInstance.on("selectionUpdate", updateEditorState);
+      // 监听编辑器更新事件，同步标题
       editorInstance.on("update", () => {
-        updateEditorState();
         syncTitleFromEditor();
       });
-      editorInstance.on("transaction", updateEditorState);
 
-      // 初始化状态
-      updateEditorState();
       // 初始化时同步标题
       syncTitleFromEditor();
     },
@@ -422,194 +435,59 @@ export default function Editor({
     setIsFullscreen(!isFullscreen);
   };
 
-  // 更新编辑器状态的辅助函数
-  const updateState = () => {
-    if (!editor) return;
-    setEditorState({
-      isBold: editor.isActive("bold"),
-      isItalic: editor.isActive("italic"),
-      isStrike: editor.isActive("strike"),
-      isUnderline: editor.isActive("underline"),
-      isHighlight: editor.isActive("highlight"),
-      isCode: editor.isActive("code"),
-      isSuperscript: editor.isActive("superscript"),
-      isSubscript: editor.isActive("subscript"),
-    });
-
-    // 检查是否在表格内
-    setIsTableToolbarVisible(editor.isActive("table"));
-
-    // 检查是否在链接上
-    const isLink = editor.isActive("link");
-    setIsLinkToolbarVisible(isLink);
-    if (isLink) {
-      const attrs = editor.getAttributes("link");
-      setCurrentLinkUrl(attrs.href || "");
-    } else {
-      setCurrentLinkUrl("");
-    }
-
-    // 检查是否在代码块内
-    const isCodeBlock = editor.isActive("codeBlock");
-    setIsCodeBlockToolbarVisible(isCodeBlock);
-    if (isCodeBlock) {
-      const attrs = editor.getAttributes("codeBlock");
-      setCurrentCodeBlockLanguage(attrs.language || "");
-    } else {
-      setCurrentCodeBlockLanguage("");
-    }
-  };
-
-  // 工具栏按钮操作
+  // 工具栏按钮操作 - 通过适配器管理器执行
   const handleUndo = () => {
-    if (editorType === "visual") {
-      editor?.chain().focus().undo().run();
-    } else if (monacoEditor) {
-      monacoEditor.trigger("", "undo", null);
-    }
+    adapterManagerRef.current?.executeCommand("undo");
   };
+
   const handleRedo = () => {
-    if (editorType === "visual") {
-      editor?.chain().focus().redo().run();
-    } else if (monacoEditor) {
-      monacoEditor.trigger("", "redo", null);
-    }
+    adapterManagerRef.current?.executeCommand("redo");
   };
+
   const handleBold = () => {
-    if (editorType === "visual") {
-      editor?.chain().focus().toggleBold().run();
-      setTimeout(updateState, 0);
-    } else if (monacoEditor) {
-      monacoHelpers.wrapSelection(monacoEditor, "**");
-    }
+    adapterManagerRef.current?.executeCommand("bold");
   };
+
   const handleItalic = () => {
-    if (editorType === "visual") {
-      editor?.chain().focus().toggleItalic().run();
-      setTimeout(updateState, 0);
-    } else if (monacoEditor) {
-      monacoHelpers.wrapSelection(monacoEditor, "*");
-    }
+    adapterManagerRef.current?.executeCommand("italic");
   };
+
   const handleStrike = () => {
-    if (editorType === "visual") {
-      editor?.chain().focus().toggleStrike().run();
-      setTimeout(updateState, 0);
-    } else if (monacoEditor) {
-      monacoHelpers.wrapSelection(monacoEditor, "~~");
-    }
+    adapterManagerRef.current?.executeCommand("strike");
   };
+
   const handleUnderline = () => {
-    if (editorType === "visual") {
-      editor?.chain().focus().toggleUnderline().run();
-      setTimeout(updateState, 0);
-    } else if (monacoEditor) {
-      monacoHelpers.wrapSelection(monacoEditor, "<u>", "</u>");
-    }
+    adapterManagerRef.current?.executeCommand("underline");
   };
+
   const handleHighlight = () => {
-    if (editorType === "visual") {
-      editor?.chain().focus().toggleHighlight().run();
-      setTimeout(updateState, 0);
-    } else if (monacoEditor) {
-      monacoHelpers.wrapSelection(monacoEditor, "<mark>", "</mark>");
-    }
+    adapterManagerRef.current?.executeCommand("highlight");
   };
+
   const handleBlockquote = () => {
-    if (editorType === "visual") {
-      editor?.chain().focus().toggleBlockquote().run();
-    } else if (monacoEditor) {
-      monacoHelpers.toggleLinePrefix(monacoEditor, "> ");
-    }
+    adapterManagerRef.current?.executeCommand("blockquote");
   };
+
   const handleCode = () => {
-    if (editorType === "visual") {
-      editor?.chain().focus().toggleCode().run();
-      setTimeout(updateState, 0);
-    } else if (monacoEditor) {
-      monacoHelpers.wrapSelection(monacoEditor, "`");
-    }
+    adapterManagerRef.current?.executeCommand("code");
   };
+
   const handleCodeBlock = () => {
-    if (editorType === "visual") {
-      editor?.chain().focus().toggleCodeBlock().run();
-    } else if (monacoEditor) {
-      monacoHelpers.insertCodeBlock(monacoEditor);
-    }
+    adapterManagerRef.current?.executeCommand("codeBlock");
   };
 
   const handleInsertTable = (rows: number, cols: number) => {
-    if (editorType === "visual") {
-      editor
-        ?.chain()
-        .focus()
-        .insertTable({ rows, cols, withHeaderRow: rows > 1 })
-        .run();
-    } else if (monacoEditor) {
-      monacoHelpers.insertTable(monacoEditor, rows, cols);
-    }
+    adapterManagerRef.current?.executeCommandWithParams("insertTable", {
+      rows,
+      cols,
+    });
   };
 
   const handleLinkSubmit = (text: string, url: string) => {
-    if (editorType === "visual") {
-      if (!editor) return;
-
-      const isEditingExistingLink = editor.isActive("link");
-
-      if (isEditingExistingLink) {
-        // 编辑现有链接
-        if (text) {
-          // 如果提供了新文字，需要替换整个链接内容
-          editor
-            .chain()
-            .focus()
-            .deleteSelection() // 删除当前选中的内容（如果有）
-            .insertContent({
-              type: "text",
-              marks: [{ type: "link", attrs: { href: url } }],
-              text: text,
-            })
-            .run();
-        } else {
-          // 只修改URL，保持文字不变
-          editor.chain().focus().setLink({ href: url }).run();
-        }
-      } else {
-        // 创建新链接
-        const { from, to } = editor.state.selection;
-        const hasSelection = from !== to;
-
-        if (text) {
-          // 如果提供了文字，插入新链接
-          editor
-            .chain()
-            .focus()
-            .insertContent({
-              type: "text",
-              marks: [{ type: "link", attrs: { href: url } }],
-              text: text,
-            })
-            .run();
-        } else if (hasSelection) {
-          // 如果有选中文字但没有提供新文字，则给选中的文字添加链接
-          editor.chain().focus().setLink({ href: url }).run();
-        } else {
-          // 如果没有提供文字也没有选中文字，使用 URL 作为显示文字
-          editor
-            .chain()
-            .focus()
-            .insertContent({
-              type: "text",
-              marks: [{ type: "link", attrs: { href: url } }],
-              text: url,
-            })
-            .run();
-        }
-      }
-    } else if (monacoEditor) {
-      // Markdown/MDX 模式
-      monacoHelpers.insertLink(monacoEditor, url, text);
-    }
+    adapterManagerRef.current?.executeCommandWithParams("insertLink", {
+      text,
+      url,
+    });
   };
 
   const handleEditLink = () => {
@@ -674,54 +552,26 @@ export default function Editor({
 
     const urls = Array.isArray(url) ? url : [url];
 
-    if (editorType === "visual" && editor) {
-      // 在可视化编辑器中批量插入图片
-      // 构建要插入的内容数组
-      const content = urls.flatMap((imageUrl) => [
-        {
-          type: "image",
-          attrs: {
-            src: imageUrl,
-          },
-        },
-        {
-          type: "paragraph",
-        },
-      ]);
-
-      // 一次性插入所有内容
-      editor.chain().focus().insertContent(content).run();
-    } else if (monacoEditor) {
-      // 在 Markdown/MDX 编辑器中批量插入图片
-      urls.forEach((imageUrl) => {
-        monacoHelpers.insertImage(monacoEditor, imageUrl, "图片");
+    urls.forEach((imageUrl) => {
+      adapterManagerRef.current?.executeCommandWithParams("insertImage", {
+        url: imageUrl,
+        alt: "图片",
       });
-    }
+    });
 
     setIsImageSelectorOpen(false);
   };
+
   const handleHorizontalRule = () => {
-    if (editorType === "visual") {
-      editor?.chain().focus().setHorizontalRule().run();
-    } else if (monacoEditor) {
-      monacoHelpers.insertHorizontalRule(monacoEditor);
-    }
+    adapterManagerRef.current?.executeCommand("horizontalRule");
   };
+
   const handleSuperscript = () => {
-    if (editorType === "visual") {
-      editor?.chain().focus().toggleSuperscript().run();
-      setTimeout(updateState, 0);
-    } else if (monacoEditor) {
-      monacoHelpers.wrapSelection(monacoEditor, "<sup>", "</sup>");
-    }
+    adapterManagerRef.current?.executeCommand("superscript");
   };
+
   const handleSubscript = () => {
-    if (editorType === "visual") {
-      editor?.chain().focus().toggleSubscript().run();
-      setTimeout(updateState, 0);
-    } else if (monacoEditor) {
-      monacoHelpers.wrapSelection(monacoEditor, "<sub>", "</sub>");
-    }
+    adapterManagerRef.current?.executeCommand("subscript");
   };
 
   const toggleInvisibleChars = () => {
@@ -729,27 +579,15 @@ export default function Editor({
   };
 
   const handleAlignLeft = () => {
-    if (editorType === "visual") {
-      editor?.chain().focus().setTextAlign("left").run();
-    } else if (monacoEditor) {
-      monacoHelpers.setTextAlign(monacoEditor, "left");
-    }
+    adapterManagerRef.current?.executeCommand("alignLeft");
   };
 
   const handleAlignCenter = () => {
-    if (editorType === "visual") {
-      editor?.chain().focus().setTextAlign("center").run();
-    } else if (monacoEditor) {
-      monacoHelpers.setTextAlign(monacoEditor, "center");
-    }
+    adapterManagerRef.current?.executeCommand("alignCenter");
   };
 
   const handleAlignRight = () => {
-    if (editorType === "visual") {
-      editor?.chain().focus().setTextAlign("right").run();
-    } else if (monacoEditor) {
-      monacoHelpers.setTextAlign(monacoEditor, "right");
-    }
+    adapterManagerRef.current?.executeCommand("alignRight");
   };
 
   // 打开设置详细信息对话框
@@ -844,13 +682,8 @@ export default function Editor({
 
     setIsSubmitting(true);
     try {
-      // 获取当前编辑器内容
-      let currentContent = "";
-      if (editorType === "visual" && editor) {
-        currentContent = editor.getHTML();
-      } else if (editorType === "markdown" || editorType === "mdx") {
-        currentContent = markdownContent;
-      }
+      // 获取当前编辑器内容（通过适配器）
+      const currentContent = adapterManagerRef.current?.getContent() || "";
 
       // 保存到 localStorage
       saveEditorContent(
@@ -934,15 +767,21 @@ export default function Editor({
         );
       }
 
-      // 获取当前编辑器内容（仅在客户端）
+      // 获取当前编辑器内容（通过适配器，仅在客户端）
       let currentContent = "";
       if (typeof window !== "undefined") {
         try {
-          currentContent =
-            JSON.parse(localStorage.getItem("editor") || "{}")[storageKey]
-              ?.content || "";
+          // 优先从适配器获取内容
+          currentContent = adapterManagerRef.current?.getContent() || "";
+
+          // 如果适配器没有内容，尝试从 localStorage 读取
+          if (!currentContent) {
+            currentContent =
+              JSON.parse(localStorage.getItem("editor") || "{}")[storageKey]
+                ?.content || "";
+          }
         } catch (error) {
-          console.error("Failed to parse localStorage data:", error);
+          console.error("Failed to get editor content:", error);
         }
       }
 
@@ -1064,11 +903,9 @@ export default function Editor({
       label: "标题 1",
       icon: <RiH1 size="1.2em" />,
       onClick: () => {
-        if (editorType === "visual") {
-          editor?.chain().focus().toggleHeading({ level: 1 }).run();
-        } else if (monacoEditor) {
-          monacoHelpers.setHeading(monacoEditor, 1);
-        }
+        adapterManagerRef.current?.executeCommandWithParams("heading", {
+          level: 1,
+        });
       },
     },
     {
@@ -1076,11 +913,9 @@ export default function Editor({
       label: "标题 2",
       icon: <RiH2 size="1.2em" />,
       onClick: () => {
-        if (editorType === "visual") {
-          editor?.chain().focus().toggleHeading({ level: 2 }).run();
-        } else if (monacoEditor) {
-          monacoHelpers.setHeading(monacoEditor, 2);
-        }
+        adapterManagerRef.current?.executeCommandWithParams("heading", {
+          level: 2,
+        });
       },
     },
     {
@@ -1088,11 +923,9 @@ export default function Editor({
       label: "标题 3",
       icon: <RiH3 size="1.2em" />,
       onClick: () => {
-        if (editorType === "visual") {
-          editor?.chain().focus().toggleHeading({ level: 3 }).run();
-        } else if (monacoEditor) {
-          monacoHelpers.setHeading(monacoEditor, 3);
-        }
+        adapterManagerRef.current?.executeCommandWithParams("heading", {
+          level: 3,
+        });
       },
     },
     {
@@ -1100,11 +933,9 @@ export default function Editor({
       label: "标题 4",
       icon: <RiH4 size="1.2em" />,
       onClick: () => {
-        if (editorType === "visual") {
-          editor?.chain().focus().toggleHeading({ level: 4 }).run();
-        } else if (monacoEditor) {
-          monacoHelpers.setHeading(monacoEditor, 4);
-        }
+        adapterManagerRef.current?.executeCommandWithParams("heading", {
+          level: 4,
+        });
       },
     },
     {
@@ -1112,11 +943,9 @@ export default function Editor({
       label: "标题 5",
       icon: <RiH5 size="1.2em" />,
       onClick: () => {
-        if (editorType === "visual") {
-          editor?.chain().focus().toggleHeading({ level: 5 }).run();
-        } else if (monacoEditor) {
-          monacoHelpers.setHeading(monacoEditor, 5);
-        }
+        adapterManagerRef.current?.executeCommandWithParams("heading", {
+          level: 5,
+        });
       },
     },
     {
@@ -1124,11 +953,9 @@ export default function Editor({
       label: "标题 6",
       icon: <RiH6 size="1.2em" />,
       onClick: () => {
-        if (editorType === "visual") {
-          editor?.chain().focus().toggleHeading({ level: 6 }).run();
-        } else if (monacoEditor) {
-          monacoHelpers.setHeading(monacoEditor, 6);
-        }
+        adapterManagerRef.current?.executeCommandWithParams("heading", {
+          level: 6,
+        });
       },
     },
   ];
@@ -1140,11 +967,7 @@ export default function Editor({
       label: "无序列表",
       icon: <RiListUnordered size="1.2em" />,
       onClick: () => {
-        if (editorType === "visual") {
-          editor?.chain().focus().toggleBulletList().run();
-        } else if (monacoEditor) {
-          monacoHelpers.toggleLinePrefix(monacoEditor, "- ");
-        }
+        adapterManagerRef.current?.executeCommand("bulletList");
       },
     },
     {
@@ -1152,11 +975,7 @@ export default function Editor({
       label: "有序列表",
       icon: <RiListOrdered size="1.2em" />,
       onClick: () => {
-        if (editorType === "visual") {
-          editor?.chain().focus().toggleOrderedList().run();
-        } else if (monacoEditor) {
-          monacoHelpers.toggleLinePrefix(monacoEditor, "1. ");
-        }
+        adapterManagerRef.current?.executeCommand("orderedList");
       },
     },
     {
@@ -1164,11 +983,7 @@ export default function Editor({
       label: "待办事项",
       icon: <RiListCheck2 size="1.2em" />,
       onClick: () => {
-        if (editorType === "visual") {
-          editor?.chain().focus().toggleTaskList().run();
-        } else if (monacoEditor) {
-          monacoHelpers.toggleLinePrefix(monacoEditor, "- [ ] ");
-        }
+        adapterManagerRef.current?.executeCommand("taskList");
       },
     },
   ];
@@ -1252,7 +1067,7 @@ export default function Editor({
       icon: <RiDoubleQuotesL size="1.2em" />,
       action: handleBlockquote,
       name: "引用",
-      isActive: editor?.isActive("blockquote") || false,
+      isActive: editorState.isBlockquote,
     },
     {
       icon: <RiCodeLine size="1.2em" />,
@@ -1265,7 +1080,7 @@ export default function Editor({
       icon: <RiCodeSSlashLine size="1.2em" />,
       action: handleCodeBlock,
       name: "代码块",
-      isActive: editor?.isActive("codeBlock") || false,
+      isActive: editorState.isCodeBlock,
     },
   ];
 
@@ -1614,6 +1429,18 @@ export default function Editor({
             mode={editorType === "mdx" ? "mdx" : "markdown"}
             onEditorReady={(monacoInstance) => {
               setMonacoEditor(monacoInstance);
+
+              // 注册到适配器管理器
+              if (adapterManagerRef.current) {
+                if (editorType === "mdx") {
+                  adapterManagerRef.current.registerMDXEditor(monacoInstance);
+                } else {
+                  adapterManagerRef.current.registerMarkdownEditor(
+                    monacoInstance,
+                  );
+                }
+              }
+
               // 初始化时同步标题
               const title = extractTitleFromMarkdown(markdownContent);
               if (title) {
@@ -1643,13 +1470,13 @@ export default function Editor({
             options={[
               { value: "visual", label: "可视化编辑器" },
               { value: "markdown", label: "Markdown" },
-              { value: "mdx", label: "MDX" },
+              { value: "mdx", label: "MDX (Beta)" },
             ]}
             size="sm"
           />
           <div className="text-sm text-foreground/60">
-            {editor ? (
-              <span>字符: {editor.storage.characterCount.characters()}</span>
+            {adapterManagerRef.current ? (
+              <span>字符: {adapterManagerRef.current.getContent().length}</span>
             ) : (
               <span>字符: 0</span>
             )}

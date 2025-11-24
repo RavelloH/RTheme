@@ -234,6 +234,74 @@ export function insertCodeBlock(
 }
 
 /**
+ * 设置当前代码块的语言
+ */
+export function setCodeBlockLanguage(
+  editor: editor.IStandaloneCodeEditor,
+  language: string,
+) {
+  const model = editor.getModel();
+  if (!model) return;
+
+  const position = editor.getPosition();
+  if (!position) return;
+
+  // 向上查找代码块开始标记
+  let startLine = -1;
+  for (let i = position.lineNumber; i >= 1; i--) {
+    const lineContent = model.getLineContent(i);
+    if (lineContent.startsWith("```")) {
+      startLine = i;
+      break;
+    }
+  }
+
+  if (startLine === -1) {
+    console.warn("Not inside a code block");
+    return;
+  }
+
+  // 向下查找代码块结束标记（确认这确实是一个有效的代码块）
+  let endLine = -1;
+  for (let i = startLine + 1; i <= model.getLineCount(); i++) {
+    const lineContent = model.getLineContent(i);
+    if (lineContent.startsWith("```")) {
+      endLine = i;
+      break;
+    }
+  }
+
+  if (endLine === -1) {
+    console.warn("Code block not closed");
+    return;
+  }
+
+  // 检查光标是否在这个代码块内
+  if (position.lineNumber < startLine || position.lineNumber > endLine) {
+    console.warn("Not inside a code block");
+    return;
+  }
+
+  // 获取开始行的内容并替换语言标识符
+  const startLineContent = model.getLineContent(startLine);
+  const newStartLineContent = `\`\`\`${language}`;
+
+  editor.executeEdits("", [
+    {
+      range: {
+        startLineNumber: startLine,
+        startColumn: 1,
+        endLineNumber: startLine,
+        endColumn: startLineContent.length + 1,
+      },
+      text: newStartLineContent,
+    },
+  ]);
+
+  editor.focus();
+}
+
+/**
  * 插入链接
  */
 export function insertLink(
