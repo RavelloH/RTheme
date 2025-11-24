@@ -238,6 +238,69 @@ export abstract class BaseMonacoAdapter implements IEditorAdapter {
         break;
       }
 
+      case "insertImages": {
+        const { urls, alt } = params as { urls: string[]; alt?: string };
+        // 批量插入图片，每个图片之间添加换行
+        const imageMarkdown = urls
+          .map((url) => `![${alt || "图片"}](${url})`)
+          .join("\n\n");
+        const selection = this.editor.getSelection();
+        if (selection) {
+          this.editor.executeEdits("insert-images", [
+            {
+              range: selection,
+              text: imageMarkdown,
+            },
+          ]);
+          // 移动光标到插入内容之后
+          const newPosition = {
+            lineNumber: selection.startLineNumber,
+            column: selection.startColumn + imageMarkdown.length,
+          };
+          this.editor.setPosition(newPosition);
+        }
+        break;
+      }
+
+      case "editImage": {
+        // Monaco 编辑器中编辑图片 alt 文本
+        const { alt } = params as { alt: string };
+        const selection = this.editor.getSelection();
+        if (selection) {
+          const model = this.editor.getModel();
+          if (model) {
+            const lineContent = model.getLineContent(selection.startLineNumber);
+            // 匹配 Markdown 图片语法 ![alt](url)
+            const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+            let match;
+            while ((match = imageRegex.exec(lineContent)) !== null) {
+              const matchStart = match.index;
+              const matchEnd = matchStart + match[0].length;
+              // 检查光标是否在这个图片标记内
+              if (
+                selection.startColumn > matchStart &&
+                selection.startColumn <= matchEnd
+              ) {
+                const newImageMarkdown = `![${alt}](${match[2]})`;
+                this.editor.executeEdits("edit-image-alt", [
+                  {
+                    range: {
+                      startLineNumber: selection.startLineNumber,
+                      startColumn: matchStart + 1,
+                      endLineNumber: selection.startLineNumber,
+                      endColumn: matchEnd + 1,
+                    },
+                    text: newImageMarkdown,
+                  },
+                ]);
+                break;
+              }
+            }
+          }
+        }
+        break;
+      }
+
       case "setCodeBlockLanguage": {
         const { language } = params as { language: string };
         monacoHelpers.setCodeBlockLanguage(this.editor, language);

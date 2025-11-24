@@ -59,6 +59,7 @@ import { TableOfContents } from "./TableOfContents";
 import { ListToolbar } from "./ListToolbar";
 import { LinkPopover } from "./LinkPopover";
 import { LinkToolbar } from "./LinkToolbar";
+import { ImageToolbar } from "./ImageToolbar";
 import { CodeBlockToolbar } from "./CodeBlockToolbar";
 import { useToast } from "@/ui/Toast";
 import {
@@ -118,6 +119,9 @@ export default function Editor({
   const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false);
   const [isLinkToolbarVisible, setIsLinkToolbarVisible] = useState(false);
   const [currentLinkUrl, setCurrentLinkUrl] = useState("");
+  const [isImageToolbarVisible, setIsImageToolbarVisible] = useState(false);
+  const [currentImageSrc, setCurrentImageSrc] = useState("");
+  const [currentImageAlt, setCurrentImageAlt] = useState("");
   const [isCodeBlockToolbarVisible, setIsCodeBlockToolbarVisible] =
     useState(false);
   const [currentCodeBlockLanguage, setCurrentCodeBlockLanguage] = useState("");
@@ -220,12 +224,15 @@ export default function Editor({
     isCodeBlock: false,
     isTable: false,
     isLink: false,
+    isImage: false,
     isBulletList: false,
     isOrderedList: false,
     isTaskList: false,
     headingLevel: null,
     textAlign: null,
     currentLinkUrl: "",
+    currentImageSrc: "",
+    currentImageAlt: "",
     currentCodeBlockLanguage: "",
   });
 
@@ -244,6 +251,9 @@ export default function Editor({
             setIsTableToolbarVisible(state.isTable);
             setIsLinkToolbarVisible(state.isLink);
             setCurrentLinkUrl(state.currentLinkUrl);
+            setIsImageToolbarVisible(state.isImage);
+            setCurrentImageSrc(state.currentImageSrc);
+            setCurrentImageAlt(state.currentImageAlt);
             setIsCodeBlockToolbarVisible(state.isCodeBlock);
             setCurrentCodeBlockLanguage(state.currentCodeBlockLanguage);
           },
@@ -543,6 +553,11 @@ export default function Editor({
       setIsLinkPopoverOpen(true);
     }, 10);
   };
+
+  const handleEditImageAlt = (alt: string) => {
+    adapterManagerRef.current?.executeCommandWithParams("editImage", { alt });
+  };
+
   const handleImage = () => {
     setIsImageSelectorOpen(true);
   };
@@ -552,12 +567,31 @@ export default function Editor({
 
     const urls = Array.isArray(url) ? url : [url];
 
-    urls.forEach((imageUrl) => {
-      adapterManagerRef.current?.executeCommandWithParams("insertImage", {
-        url: imageUrl,
+    // 过滤掉空的 URL
+    const validUrls = urls.filter((u) => u && u.trim());
+
+    if (validUrls.length === 0) {
+      console.warn("No valid image URLs provided");
+      return;
+    }
+
+    console.log("Inserting images:", validUrls);
+
+    // 使用批量插入命令，一次性插入所有图片
+    if (validUrls.length > 1) {
+      adapterManagerRef.current?.executeCommandWithParams("insertImages", {
+        urls: validUrls,
         alt: "图片",
       });
-    });
+    } else {
+      const firstUrl = validUrls[0];
+      if (firstUrl) {
+        adapterManagerRef.current?.executeCommandWithParams("insertImage", {
+          url: firstUrl,
+          alt: "图片",
+        });
+      }
+    }
 
     setIsImageSelectorOpen(false);
   };
@@ -1372,6 +1406,17 @@ export default function Editor({
                 isVisible={isLinkToolbarVisible}
                 linkUrl={currentLinkUrl}
                 onEdit={handleEditLink}
+              />
+            )}
+
+            {/* 图片工具栏 */}
+            {editor && (
+              <ImageToolbar
+                editor={editor}
+                isVisible={isImageToolbarVisible}
+                imageSrc={currentImageSrc}
+                imageAlt={currentImageAlt}
+                onEditAlt={handleEditImageAlt}
               />
             )}
 

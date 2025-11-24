@@ -284,3 +284,13 @@ html.dark .md-content .shiki span {
   color: var(--shiki-dark) !important;
   background-color: var(--shiki-dark-bg) !important;
 }
+
+/* 图片 */
+.tiptap img,
+.md-content img {
+  max-width: 100%;
+  max-height: 40em;
+  margin: 1em auto;
+  height: auto;
+  border-radius: 0.5rem;
+}

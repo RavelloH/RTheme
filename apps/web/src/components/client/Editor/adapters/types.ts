@@ -28,6 +28,7 @@ export interface EditorState {
   isCodeBlock: boolean;
   isTable: boolean;
   isLink: boolean;
+  isImage: boolean;
 
   // 列表状态
   isBulletList: boolean;
@@ -42,6 +43,10 @@ export interface EditorState {
 
   // 当前链接 URL
   currentLinkUrl: string;
+
+  // 当前图片信息
+  currentImageSrc: string;
+  currentImageAlt: string;
 
   // 代码块语言
   currentCodeBlockLanguage: string;
@@ -63,12 +68,15 @@ export const defaultEditorState: EditorState = {
   isCodeBlock: false,
   isTable: false,
   isLink: false,
+  isImage: false,
   isBulletList: false,
   isOrderedList: false,
   isTaskList: false,
   headingLevel: null,
   textAlign: null,
   currentLinkUrl: "",
+  currentImageSrc: "",
+  currentImageAlt: "",
   currentCodeBlockLanguage: "",
 };
 
@@ -116,6 +124,8 @@ export interface CommandWithParams {
   insertLink: { text: string; url: string };
   editLink: { url: string };
   insertImage: { url: string; alt?: string };
+  insertImages: { urls: string[]; alt?: string };
+  editImage: { alt: string };
   setCodeBlockLanguage: { language: string };
 }
 
