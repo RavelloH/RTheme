@@ -172,9 +172,11 @@ export default async function PostPage({ params }: PageProps) {
             </div>
 
             {/* 标签 */}
-            {post.tags.length > 0 && (
-              <div className="text-lg pt-3 mt-4 flex flex-wrap gap-2">
-                {post.tags.map((tag) => (
+            <div
+              className={`text-lg pt-3 mt-4 flex flex-wrap gap-2 ${post.tags.length === 0 ? "invisible" : ""}`}
+            >
+              {post.tags.length > 0 ? (
+                post.tags.map((tag) => (
                   <Link
                     key={tag.slug}
                     href={"/tags/" + tag.slug}
@@ -183,9 +185,15 @@ export default async function PostPage({ params }: PageProps) {
                     <RiHashtag size={"1em"} />
                     {tag.name}
                   </Link>
-                ))}
-              </div>
-            )}
+                ))
+              ) : (
+                // 占位标签，保持高度
+                <span className="bg-muted text-muted-foreground px-3 py-2 rounded-sm inline-flex gap-1 items-center">
+                  <RiHashtag size={"1em"} />
+                  占位标签
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
