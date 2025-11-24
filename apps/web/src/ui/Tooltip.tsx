@@ -211,7 +211,7 @@ export function Tooltip({
     <>
       <div
         ref={triggerRef}
-        className={`inline-block ${className}`}
+        className={className || "inline-block"}
         {...triggerProps}
       >
         {children}
@@ -227,7 +227,7 @@ export function Tooltip({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.15 }}
-                className="fixed z-50"
+                className="fixed z-[100]"
                 style={{
                   left: `${position.x}px`,
                   top: `${position.y}px`,

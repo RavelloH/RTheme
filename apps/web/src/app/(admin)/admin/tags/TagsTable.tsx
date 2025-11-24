@@ -14,6 +14,7 @@ import { AlertDialog } from "@/ui/AlertDialog";
 import { useToast } from "@/ui/Toast";
 import Link from "@/components/Link";
 import { useNavigateWithTransition } from "../../../../components/Link";
+import MediaSelector from "@/components/client/MediaSelector";
 
 export default function TagsTable() {
   const toast = useToast();
@@ -625,17 +626,16 @@ export default function TagsTable() {
               rows={3}
               size="sm"
             />
-            <Input
+            <MediaSelector
               label="特色图片"
               value={editFormData.featuredImage}
-              onChange={(e) =>
+              onChange={(url) =>
                 setEditFormData((prev) => ({
                   ...prev,
-                  featuredImage: e.target.value,
+                  featuredImage: Array.isArray(url) ? url[0] || "" : url,
                 }))
               }
-              size="sm"
-              helperText="标签的特色图片地址，用于展示在标签页面"
+              helperText="标签的特色图片，用于展示在标签页面"
             />
           </div>
 

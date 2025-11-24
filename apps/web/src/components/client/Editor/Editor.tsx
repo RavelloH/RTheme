@@ -48,6 +48,7 @@ import { Input } from "@/ui/Input";
 import { Checkbox } from "@/ui/Checkbox";
 import { TagInput, SelectedTag } from "@/components/client/Tag/TagInput";
 import { CategoryInput } from "@/components/client/Category/CategoryInput";
+import MediaSelector from "@/components/client/MediaSelector";
 import { TiptapEditor } from "./TiptapEditor";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { createPost, updatePost } from "@/actions/post";
@@ -115,6 +116,7 @@ export default function Editor({
   const [isCodeBlockToolbarVisible, setIsCodeBlockToolbarVisible] =
     useState(false);
   const [currentCodeBlockLanguage, setCurrentCodeBlockLanguage] = useState("");
+  const [isImageSelectorOpen, setIsImageSelectorOpen] = useState(false);
 
   // 初始化编辑器类型，从 localStorage 加载上次使用的编辑器类型（仅在客户端）
   const [editorType, setEditorType] = useState<string | number>(() => {
@@ -609,18 +611,39 @@ export default function Editor({
     }, 10);
   };
   const handleImage = () => {
-    if (editorType === "visual") {
-      const url = window.prompt("输入图片地址:");
-      if (url) {
-        editor?.chain().focus().setImage({ src: url }).run();
-      }
+    setIsImageSelectorOpen(true);
+  };
+
+  const handleImageSelect = (url: string | string[]) => {
+    if (!url) return;
+
+    const urls = Array.isArray(url) ? url : [url];
+
+    if (editorType === "visual" && editor) {
+      // 在可视化编辑器中批量插入图片
+      // 构建要插入的内容数组
+      const content = urls.flatMap((imageUrl) => [
+        {
+          type: "image",
+          attrs: {
+            src: imageUrl,
+          },
+        },
+        {
+          type: "paragraph",
+        },
+      ]);
+
+      // 一次性插入所有内容
+      editor.chain().focus().insertContent(content).run();
     } else if (monacoEditor) {
-      const url = window.prompt("输入图片地址:");
-      if (url) {
-        const alt = window.prompt("输入图片描述:", "图片") || "图片";
-        monacoHelpers.insertImage(monacoEditor, url, alt);
-      }
+      // 在 Markdown/MDX 编辑器中批量插入图片
+      urls.forEach((imageUrl) => {
+        monacoHelpers.insertImage(monacoEditor, imageUrl, "图片");
+      });
     }
+
+    setIsImageSelectorOpen(false);
   };
   const handleHorizontalRule = () => {
     if (editorType === "visual") {
@@ -1390,6 +1413,7 @@ export default function Editor({
           </Tooltip>
         </div>
       </GridItem>
+
       <GridItem
         areas={createArray(2, 11)}
         className="overflow-hidden bg-background relative"
@@ -1501,6 +1525,16 @@ export default function Editor({
             )}
           </div>
         </div>
+
+        {/* 图片选择器 - 用于在编辑器中插入图片 */}
+        <MediaSelector
+          open={isImageSelectorOpen}
+          onOpenChange={setIsImageSelectorOpen}
+          onChange={handleImageSelect}
+          multiple
+          hideTrigger
+          defaultTab="upload"
+        />
 
         {/* 右侧：操作按钮 */}
         <div className="flex gap-2">
@@ -1682,14 +1716,16 @@ export default function Editor({
             <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
               特色图片
             </h3>
-            <Input
-              label="特色图片 URL"
+            <MediaSelector
+              label="特色图片"
               value={detailsForm.featuredImage}
-              onChange={(e) =>
-                handleDetailsFieldChange("featuredImage", e.target.value)
+              onChange={(url) =>
+                handleDetailsFieldChange(
+                  "featuredImage",
+                  Array.isArray(url) ? url[0] || "" : url,
+                )
               }
-              size="sm"
-              helperText="https://example.com/image.jpg"
+              helperText="选择或上传文章的特色图片，将显示在文章列表和详情页顶部"
             />
           </div>
 

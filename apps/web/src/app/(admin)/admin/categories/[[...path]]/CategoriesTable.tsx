@@ -27,6 +27,7 @@ import { useToast } from "@/ui/Toast";
 import Link from "@/components/Link";
 import { useNavigateWithTransition } from "@/components/Link";
 import { CategoryInput } from "@/components/client/Category/CategoryInput";
+import MediaSelector from "@/components/client/MediaSelector";
 
 type CurrentCategory = {
   id: number;
@@ -979,17 +980,16 @@ export default function CategoriesTable({
               rows={3}
               size="sm"
             />
-            <Input
+            <MediaSelector
               label="特色图片"
               value={editFormData.featuredImage}
-              onChange={(e) =>
+              onChange={(url) =>
                 setEditFormData((prev) => ({
                   ...prev,
-                  featuredImage: e.target.value,
+                  featuredImage: Array.isArray(url) ? url[0] || "" : url,
                 }))
               }
-              size="sm"
-              helperText="分类的特色图片地址，用于展示在分类页面"
+              helperText="分类的特色图片，用于展示在分类页面"
             />
             {/* "未分类"分类不允许设置父分类 */}
             {editingCategory?.slug !== "uncategorized" && (

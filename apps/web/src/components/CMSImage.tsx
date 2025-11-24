@@ -17,10 +17,19 @@ interface CMSImageProps
   height?: number;
   /** 是否填充父容器 */
   fill?: boolean;
-  /** 是否优化（默认 true） */
+  /** 是否优化（默认 true，外部图片会自动设置为 false） */
   optimized?: boolean;
   /** blur 占位图数据（需要是完整的 data URL 格式） */
   blur?: string | null;
+}
+
+/**
+ * 检查是否是 CMS 内置图片
+ * @param url 图片 URL
+ * @returns 是否是 CMS 内置图片
+ */
+function isCMSImage(url: string): boolean {
+  return url.startsWith("/p/");
 }
 
 export default function CMSImage({
@@ -28,7 +37,7 @@ export default function CMSImage({
   width,
   height,
   fill,
-  optimized = true,
+  optimized,
   blur,
   alt,
   onError,
@@ -36,6 +45,12 @@ export default function CMSImage({
   ...rest
 }: CMSImageProps) {
   const [hasError, setHasError] = useState(false);
+
+  // 判断是否是 CMS 内部图片
+  const isInternalImage = isCMSImage(src);
+
+  // 外部图片默认不优化，内部图片默认优化
+  const shouldOptimize = optimized !== undefined ? optimized : isInternalImage;
 
   // 检查 blur 是否是有效的 data URL
   const isValidBlur = blur && blur.startsWith("data:");
@@ -67,7 +82,7 @@ export default function CMSImage({
       src={src}
       {...(fill ? { fill: true } : { width, height })}
       alt={alt}
-      unoptimized={!optimized}
+      unoptimized={!shouldOptimize}
       placeholder={isValidBlur ? "blur" : "empty"}
       blurDataURL={isValidBlur ? blur : undefined}
       onError={handleError}
