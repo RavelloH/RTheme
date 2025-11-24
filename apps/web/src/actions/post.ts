@@ -48,6 +48,38 @@ import { TextVersion } from "text-version";
 import { slugify } from "@/lib/server/slugify";
 
 /*
+  辅助函数：从内容中提取内部图片链接并返回对应的 Media ID
+  图片链接格式：/p/{8位shortHash}{4位签名}
+  例如：/p/5DIMkhLbkAfO，其中 5DIMkhLb 是 shortHash，kAfO 是签名
+*/
+async function extractInternalMediaFromContent(
+  content: string,
+): Promise<number[]> {
+  // 1. 提取所有 /p/ 开头的图片链接（匹配 /p/ 后跟12位字符）
+  const imageRegex = /\/p\/([a-zA-Z0-9_-]{12})/g;
+  const matches = [...content.matchAll(imageRegex)];
+
+  if (matches.length === 0) {
+    return [];
+  }
+
+  // 2. 提取所有 shortHash（前8位）并去重
+  const shortHashes = [...new Set(matches.map((m) => m[1]!.substring(0, 8)))];
+
+  // 3. 一次性查询所有匹配的 media（单次数据库查询，使用索引）
+  const mediaList = await prisma.media.findMany({
+    where: {
+      shortHash: { in: shortHashes },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  return mediaList.map((m) => m.id);
+}
+
+/*
   辅助函数：根据路径查找或创建分类
   支持层级路径，如 "技术/前端/Next.js"
   返回最终分类的 ID
@@ -886,6 +918,9 @@ export async function createPost(
       };
     }
 
+    // 提取内容中的内部图片链接
+    const mediaIds = await extractInternalMediaFromContent(content);
+
     // 创建文章
     const post = await prisma.post.create({
       data: {
@@ -916,6 +951,12 @@ export async function createPost(
                     };
                   }),
                 ),
+              }
+            : undefined,
+        media:
+          mediaIds.length > 0
+            ? {
+                connect: mediaIds.map((id) => ({ id })),
               }
             : undefined,
       },
@@ -1119,6 +1160,12 @@ export async function updatePost(
       }
     }
 
+    // 提取内容中的内部图片链接（如果更新了内容）
+    let mediaIds: number[] | undefined;
+    if (content !== undefined) {
+      mediaIds = await extractInternalMediaFromContent(content);
+    }
+
     // 构建更新数据
     const updateData: {
       title?: string;
@@ -1228,6 +1275,13 @@ export async function updatePost(
                 };
               }),
             ),
+          },
+        }),
+        // 处理媒体关联（如果更新了内容）
+        ...(mediaIds !== undefined && {
+          media: {
+            set: [], // 先清空所有关联
+            connect: mediaIds.map((id) => ({ id })),
           },
         }),
       },

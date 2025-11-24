@@ -111,6 +111,13 @@ export const MediaDetailSchema = z.object({
       displayName: z.string(),
     })
     .nullable(),
+  posts: z.array(
+    z.object({
+      id: z.number(),
+      title: z.string(),
+      slug: z.string(),
+    }),
+  ),
 });
 
 export type MediaDetail = z.infer<typeof MediaDetailSchema>;

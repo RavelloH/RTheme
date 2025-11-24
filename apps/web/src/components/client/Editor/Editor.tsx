@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { createArray } from "@/lib/client/createArray";
@@ -69,7 +70,6 @@ import {
 } from "@/lib/client/editorPersistence";
 import type { Editor as TiptapEditorType } from "@tiptap/react";
 import type { editor } from "monaco-editor";
-import CMSImage from "@/components/CMSImage";
 import {
   createAdapterManager,
   type AdapterManager,
@@ -1943,11 +1943,11 @@ export default function Editor({
                 </h3>
                 <div className="bg-muted/20 p-4 rounded-lg">
                   {detailsForm.featuredImage ? (
-                    <div className="space-y-2">
-                      <CMSImage
+                    <div className="space-y-2 ">
+                      <img
                         src={detailsForm.featuredImage}
                         alt="特色图片预览"
-                        className="max-h-40 rounded-md object-cover"
+                        className="w-full max-h-[20em] rounded-md object-cover"
                       />
                       <p className="text-xs text-foreground/60 break-all">
                         {detailsForm.featuredImage}

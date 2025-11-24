@@ -337,6 +337,16 @@ export async function getMediaDetail(
             displayName: true,
           },
         },
+        posts: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+          },
+          where: {
+            deletedAt: null, // 只获取未删除的文章
+          },
+        },
       },
     });
 
@@ -384,6 +394,11 @@ export async function getMediaDetail(
             displayName: media.StorageProvider.displayName,
           }
         : null,
+      posts: media.posts.map((post) => ({
+        id: post.id,
+        title: post.title,
+        slug: post.slug,
+      })),
     };
 
     return response.ok({

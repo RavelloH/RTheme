@@ -20,6 +20,7 @@ import {
   RiDownloadLine,
 } from "@remixicon/react";
 import CMSImage from "@/components/CMSImage";
+import Link from "@/components/Link";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { useState, useEffect } from "react";
@@ -719,6 +720,32 @@ export default function MediaPreviewDialog({
               </div>
             </div>
           </div>
+
+          {/* 文章使用信息 */}
+          {isMediaDetail(media) && media.posts && media.posts.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                使用此媒体的文章 ({media.posts.length})
+              </h3>
+              <div>
+                {media.posts.map((post) => (
+                  <div
+                    key={post.id}
+                    className="flex items-center gap-2 p-1 rounded hover:bg-muted/30 transition-colors"
+                  >
+                    <span className="text-sm text-muted-foreground">•</span>
+                    <Link
+                      href={`/admin/posts/edit/${post.slug}`}
+                      className="text-sm hover:text-primary transition-colors flex-1"
+                      presets={["hover-underline"]}
+                    >
+                      {post.title}
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* 上传者信息 */}
           <AutoResizer>
