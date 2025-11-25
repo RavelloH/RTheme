@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { RiListCheck } from "@remixicon/react";
+import { RiListCheck, RiArrowUpLine, RiArrowDownLine } from "@remixicon/react";
 import Link from "./Link";
+import Clickable from "@/ui/Clickable";
 
 interface TocItem {
   id: string;
@@ -28,6 +29,14 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
     width: 0,
     top: 0,
   });
+  const [highlightStyle, setHighlightStyle] = useState({
+    top: 0,
+    height: 0,
+    opacity: 0,
+  });
+  const navRef = useRef<HTMLElement>(null);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
 
   // 将 em 单位转换为像素值
   const emToPx = (em: number): number => {
@@ -67,7 +76,7 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
       return `${safeBaseSlug}-${headingCounter}`;
     };
 
-    headings.forEach((heading, index) => {
+    headings.forEach((heading) => {
       const text = heading.textContent || "";
       // 将 h1 当作 h2 处理，其他级别保持不变
       const originalLevel = parseInt(heading.tagName.substring(1)); // h1 -> 1, h2 -> 2, etc.
@@ -77,19 +86,6 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
       const level = Math.max(1, adjustedLevel - 1);
 
       const id = generateSlug(text);
-
-      // 调试信息
-      if (process.env.NODE_ENV === "development") {
-        console.log("TOC Debug: 生成目录项", {
-          index,
-          text,
-          originalLevel,
-          adjustedLevel,
-          level,
-          id,
-          tocItemCount: items.length + 1,
-        });
-      }
 
       items.push({ id, text, level });
     });
@@ -154,6 +150,9 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
     const scrollTarget: EventTarget = (scrollContainer ||
       window) as EventTarget;
 
+    // 保存滚动容器引用供后续使用
+    scrollContainerRef.current = scrollContainer;
+
     // 记录目录的尺寸和位置
     const updateDimensions = () => {
       if (tocRef.current && containerRef.current) {
@@ -173,6 +172,27 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
     window.addEventListener("resize", updateDimensions);
 
     const handleScroll = () => {
+      // 计算滚动百分比
+      let progress = 0;
+      if (scrollContainer) {
+        // 如果有滚动容器，使用容器的滚动信息
+        const containerHeight = scrollContainer.clientHeight;
+        const contentHeight = scrollContainer.scrollHeight;
+        const scrollTop = scrollContainer.scrollTop;
+        const scrollableHeight = contentHeight - containerHeight;
+        progress =
+          scrollableHeight > 0 ? (scrollTop / scrollableHeight) * 100 : 0;
+      } else {
+        // 否则使用 window 的滚动信息
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const scrollableHeight = documentHeight - windowHeight;
+        progress =
+          scrollableHeight > 0 ? (scrollTop / scrollableHeight) * 100 : 0;
+      }
+      setScrollProgress(Math.min(100, Math.max(0, progress)));
+
       // 更新活动标题 - 使用 id 直接匹配，因为标题元素现在有了正确的 id
       const headings = document.querySelectorAll(
         "h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]",
@@ -181,28 +201,10 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
 
       let currentActiveId = "";
 
-      // 调试信息
-      if (process.env.NODE_ENV === "development") {
-        console.log("TOC Debug: 查找目录项", {
-          tocItemsCount: tocItems.length,
-          headingsCount: headings.length,
-          activeThreshold: activeThreshold,
-        });
-      }
-
       headings.forEach((heading) => {
         const rect = heading.getBoundingClientRect();
         if (rect.top <= activeThreshold) {
           currentActiveId = heading.id;
-
-          if (process.env.NODE_ENV === "development") {
-            console.log("TOC Debug: 找到匹配标题", {
-              headingId: heading.id,
-              headingText: heading.textContent,
-              rectTop: rect.top,
-              isActive: heading.id === currentActiveId,
-            });
-          }
         }
       });
 
@@ -254,45 +256,100 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
     };
   }, [isMobile, tocItems]); // 添加 tocItems 作为依赖，因为需要访问目录项数据
 
-  // 点击目录项 - 基于文本内容查找目标标题元素
-  const handleTocClick = (id: string) => {
-    // 在目录项中找到对应的文本内容
-    const targetItem = tocItems.find((item) => item.id === id);
-    if (!targetItem) return;
+  // 更新高亮指示器位置
+  useEffect(() => {
+    if (
+      isMobile ||
+      isCollapsed ||
+      !activeId ||
+      !navRef.current ||
+      !tocRef.current
+    ) {
+      setHighlightStyle((prev) => ({ ...prev, opacity: 0 }));
+      return;
+    }
 
-    // 在页面中查找具有相同文本内容的标题元素
-    const allHeadings = document.querySelectorAll("h1, h2, h3, h4, h5, h6");
-    const targetHeading = Array.from(allHeadings).find(
-      (heading) => heading.textContent === targetItem.text,
-    );
+    // 查找当前激活的目录项元素
+    const activeElement = navRef.current.querySelector(
+      `a[href="#${activeId}"]`,
+    ) as HTMLElement;
 
-    if (targetHeading) {
-      const offset = 80; // 导航栏高度偏移，适当增加偏移避免被遮挡
-      const elementPosition =
-        targetHeading.getBoundingClientRect().top + window.pageYOffset;
-      const offsetPosition = elementPosition - offset;
+    if (activeElement && tocRef.current) {
+      // 使用 getBoundingClientRect 获取相对于 tocRef 的位置
+      const tocRect = tocRef.current.getBoundingClientRect();
+      const activeRect = activeElement.getBoundingClientRect();
 
-      // 滚动到目标位置
-      window.scrollTo({
-        top: offsetPosition,
+      // 计算相对于 tocRef 容器的位置
+      const top = activeRect.top - tocRect.top;
+      const height = activeRect.height;
+
+      setHighlightStyle({
+        top,
+        height,
+        opacity: 1,
+      });
+    } else {
+      setHighlightStyle((prev) => ({ ...prev, opacity: 0 }));
+    }
+  }, [activeId, isCollapsed, isMobile, tocItems]);
+
+  // 移动端滚动进度监听
+  useEffect(() => {
+    if (!isMobile) {
+      return;
+    }
+
+    const handleScroll = () => {
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const scrollableHeight = documentHeight - windowHeight;
+      const progress =
+        scrollableHeight > 0 ? (scrollTop / scrollableHeight) * 100 : 0;
+      setScrollProgress(Math.min(100, Math.max(0, progress)));
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll(); // 初始化
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [isMobile]);
+
+  // 回到顶部
+  const scrollToTop = () => {
+    const scrollContainer = scrollContainerRef.current;
+    if (scrollContainer) {
+      scrollContainer.scrollTo({
+        top: 0,
         behavior: "smooth",
       });
-
-      // 开发环境调试信息
-      if (process.env.NODE_ENV === "development") {
-        console.log("TOC Debug: 点击跳转", {
-          targetId: id,
-          targetText: targetItem.text,
-          offsetPosition,
-          elementPosition,
-        });
-      }
     } else {
-      // 开发环境警告信息
-      if (process.env.NODE_ENV === "development") {
-        console.warn("TOC Debug: 未找到目标标题元素", {
-          targetId: id,
-          targetText: targetItem.text,
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  // 前往底部评论区
+  const scrollToComments = () => {
+    const commentsSection = document.querySelector("#comments");
+    if (commentsSection) {
+      commentsSection.scrollIntoView({ behavior: "smooth" });
+    } else {
+      // 如果没有评论区，滚动到页面底部
+      const scrollContainer = scrollContainerRef.current;
+      if (scrollContainer) {
+        scrollContainer.scrollTo({
+          top: scrollContainer.scrollHeight,
+          behavior: "smooth",
+        });
+      } else {
+        window.scrollTo({
+          top: document.documentElement.scrollHeight,
+          behavior: "smooth",
         });
       }
     }
@@ -341,6 +398,52 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
                 );
               })}
             </nav>
+
+            {/* 滚动进度和导航按钮 */}
+            <div className="mt-4 pt-4 space-y-3 relative">
+              {/* 进度条分隔线 */}
+              <div className="absolute top-0 left-0 right-0 h-0.5 bg-border">
+                <div
+                  className="h-full bg-primary transition-all duration-300 ease-out"
+                  style={{ width: `${scrollProgress}%` }}
+                />
+              </div>
+
+              {/* 进度百分比 */}
+              <div className="text-xs text-muted-foreground font-medium font-mono">
+                {scrollProgress.toFixed(0)} %
+              </div>
+
+              {/* 导航按钮 */}
+              <div className="flex gap-2">
+                <Clickable
+                  onClick={() => {
+                    scrollToTop();
+                    setIsCollapsed(false);
+                  }}
+                  className="flex-1"
+                  hoverScale={1.05}
+                >
+                  <div className="w-full px-3 py-2 text-xs bg-muted text-foreground rounded transition-colors flex items-center justify-center gap-1">
+                    <RiArrowUpLine size="1em" />
+                    <span>顶部</span>
+                  </div>
+                </Clickable>
+                <Clickable
+                  onClick={() => {
+                    scrollToComments();
+                    setIsCollapsed(false);
+                  }}
+                  className="flex-1"
+                  hoverScale={1.05}
+                >
+                  <div className="w-full px-3 py-2 text-xs bg-muted text-foreground rounded transition-colors flex items-center justify-center gap-1">
+                    <RiArrowDownLine size="1em" />
+                    <span>评论</span>
+                  </div>
+                </Clickable>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -371,9 +474,9 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
       {/* 目录元素 - 同一个元素切换固定/非固定状态 */}
       <div
         ref={tocRef}
-        className={`border-l-2 border-border ${isCollapsed ? "w-12" : "w-64"} overflow-x-hidden`}
+        className={`${isCollapsed ? "w-12" : "w-64"} overflow-x-hidden relative`}
         style={{
-          position: isFixed ? "fixed" : "static",
+          position: isFixed ? "fixed" : "relative",
           top: isFixed ? `${tocDimensions.top}px` : "auto",
           left: isFixed ? `${tocDimensions.left}px` : "auto",
           width: isFixed ? `${tocDimensions.width}px` : "auto",
@@ -384,18 +487,51 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
         }}
         data-fixed={isFixed}
       >
+        {/* 左侧边框 - 使用绝对定位 */}
+        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-border" />
+
+        {/* 动态高亮指示器 */}
+        {!isCollapsed && (
+          <div
+            className="absolute left-0 bg-primary transition-all duration-300 ease-out pointer-events-none z-10"
+            style={{
+              top: `${highlightStyle.top}px`,
+              height: `${highlightStyle.height}px`,
+              width: "2px", // 与边框相同的宽度
+              opacity: highlightStyle.opacity,
+            }}
+          />
+        )}
+
         <div className="p-4 bg-background">
           <div className="flex items-center justify-between mb-4">
             {!isCollapsed && (
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <RiListCheck size="1.2em" />
-                目录
-              </h3>
+              <div className="flex items-center justify-between w-full">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <RiListCheck size="1.2em" />
+                  目录
+                </h3>
+                <div>
+                  {/* 导航按钮 */}
+                  <div className="flex gap-2">
+                    <Clickable onClick={scrollToTop} hoverScale={1.2}>
+                      <div className="text-xs text-secondary-foreground hover:text-foreground">
+                        <RiArrowUpLine size="2em" />
+                      </div>
+                    </Clickable>
+                    <Clickable onClick={scrollToComments} hoverScale={1.2}>
+                      <div className="text-xs  text-secondary-foreground hover:text-foreground">
+                        <RiArrowDownLine size="2em" />
+                      </div>
+                    </Clickable>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
           {!isCollapsed && (
-            <nav className="space-y-1">
+            <nav ref={navRef} className="space-y-1 relative">
               {tocItems.map((item) => {
                 const isActive = activeId === item.id;
                 const marginLeft = (item.level - 1) * 12;
@@ -417,6 +553,24 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
                 );
               })}
             </nav>
+          )}
+
+          {/* 滚动进度和导航按钮 */}
+          {!isCollapsed && (
+            <div className="mt-6 pt-4 space-y-3 relative">
+              {/* 进度条分隔线 */}
+              <div className="absolute top-0 left-0 right-0 h-0.5 bg-border">
+                <div
+                  className="h-full bg-primary transition-all duration-300 ease-out"
+                  style={{ width: `${scrollProgress}%` }}
+                />
+              </div>
+
+              {/* 进度百分比 */}
+              <div className="text-xs text-muted-foreground font-medium font-mono">
+                {scrollProgress.toFixed(0)} %
+              </div>
+            </div>
           )}
         </div>
       </div>
