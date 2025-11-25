@@ -241,7 +241,115 @@ const components: MDXComponents = {
   },
 };
 
+// 全局标题计数器
+let headingCounter = 0;
+
+// 重置标题计数器（每次渲染新内容时调用）
+const resetHeadingCounter = () => {
+  headingCounter = 0;
+};
+
+// 生成带数字后缀的 slug（避免CSS选择器问题）
+const generateSlug = (text: string): string => {
+  headingCounter++;
+  const baseSlug = text
+    .toLowerCase()
+    .replace(/[^\w\u4e00-\u9fa5\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  // 确保baseSlug不为空，如果为空使用 'heading'
+  const safeBaseSlug = baseSlug || "heading";
+
+  // 将数字放在后缀，避免CSS选择器以数字开头的问题
+  return `${safeBaseSlug}-${headingCounter}`;
+};
+
+// 将标题组件添加到 components 对象中
+// h1 组件渲染为 h2（因为文章内容通常不需要 h1）
+components.h1 = ({
+  children,
+  ...props
+}: React.ComponentPropsWithoutRef<"h1">) => {
+  const text = React.Children.toArray(children).join("");
+  const id = generateSlug(text);
+  return (
+    <h2 id={id} {...props}>
+      {children}
+    </h2>
+  );
+};
+
+components.h2 = ({
+  children,
+  ...props
+}: React.ComponentPropsWithoutRef<"h2">) => {
+  const text = React.Children.toArray(children).join("");
+  const id = generateSlug(text);
+  return (
+    <h2 id={id} {...props}>
+      {children}
+    </h2>
+  );
+};
+
+components.h3 = ({
+  children,
+  ...props
+}: React.ComponentPropsWithoutRef<"h3">) => {
+  const text = React.Children.toArray(children).join("");
+  const id = generateSlug(text);
+  return (
+    <h3 id={id} {...props}>
+      {children}
+    </h3>
+  );
+};
+
+components.h4 = ({
+  children,
+  ...props
+}: React.ComponentPropsWithoutRef<"h4">) => {
+  const text = React.Children.toArray(children).join("");
+  const id = generateSlug(text);
+  return (
+    <h4 id={id} {...props}>
+      {children}
+    </h4>
+  );
+};
+
+components.h5 = ({
+  children,
+  ...props
+}: React.ComponentPropsWithoutRef<"h5">) => {
+  const text = React.Children.toArray(children).join("");
+  const id = generateSlug(text);
+  return (
+    <h5 id={id} {...props}>
+      {children}
+    </h5>
+  );
+};
+
+components.h6 = ({
+  children,
+  ...props
+}: React.ComponentPropsWithoutRef<"h6">) => {
+  const text = React.Children.toArray(children).join("");
+  const id = generateSlug(text);
+  return (
+    <h6 id={id} {...props}>
+      {children}
+    </h6>
+  );
+};
+
 export default function MDXRenderer({ source, mode }: MDXRendererProps) {
+  // 重置标题计数器，确保每次渲染新内容时都从1开始
+  resetHeadingCounter();
+
   if (mode === "mdx") {
     return (
       <div className="max-w-4xl mx-auto">
@@ -250,11 +358,36 @@ export default function MDXRenderer({ source, mode }: MDXRendererProps) {
     );
   }
 
-  // Markdown 模式：直接渲染 HTML
+  // Markdown 模式：处理标题 id 后渲染 HTML
+  const processMarkdownHeadings = (html: string): string => {
+    // 重置计数器以确保 Markdown 模式也从头开始
+    resetHeadingCounter();
+
+    return html.replace(
+      /<h([1-6])([^>]*)>(.*?)<\/h[1-6]>/g,
+      (match, level, attrs, content) => {
+        // 提取纯文本内容
+        const textContent = content.replace(/<[^>]*>/g, "");
+        const id = generateSlug(textContent);
+
+        // 将 h1 转换为 h2，其他级别保持不变
+        const finalLevel = level === "1" ? "2" : level;
+
+        // 如果已经有 id 属性，只处理标签转换
+        if (attrs.includes("id=")) {
+          return `<h${finalLevel}${attrs}>${content}</h${finalLevel}>`;
+        }
+
+        // 添加 id 并转换标签
+        return `<h${finalLevel}${attrs} id="${id}">${content}</h${finalLevel}>`;
+      },
+    );
+  };
+
   return (
     <div
       className="max-w-4xl mx-auto md-content"
-      dangerouslySetInnerHTML={{ __html: source }}
+      dangerouslySetInnerHTML={{ __html: processMarkdownHeadings(source) }}
     />
   );
 }

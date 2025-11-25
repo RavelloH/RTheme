@@ -69,7 +69,12 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
 
     headings.forEach((heading, index) => {
       const text = heading.textContent || "";
-      const level = parseInt(heading.tagName.substring(1)); // h1 -> 1, h2 -> 2, etc.
+      // 将 h1 当作 h2 处理，其他级别保持不变
+      const originalLevel = parseInt(heading.tagName.substring(1)); // h1 -> 1, h2 -> 2, etc.
+      const adjustedLevel = originalLevel === 1 ? 2 : originalLevel;
+
+      // 将所有目录层级减 1，使层级从 1 开始
+      const level = Math.max(1, adjustedLevel - 1);
 
       const id = generateSlug(text);
 
@@ -78,6 +83,8 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
         console.log("TOC Debug: 生成目录项", {
           index,
           text,
+          originalLevel,
+          adjustedLevel,
           level,
           id,
           tocItemCount: items.length + 1,
