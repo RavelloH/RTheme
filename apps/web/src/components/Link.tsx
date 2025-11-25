@@ -25,7 +25,13 @@ function handleSpecialLinks(newPath: string): boolean {
   if (newPath.startsWith("#")) {
     const anchor = document.querySelector(newPath);
     if (anchor) {
+      // 更新URL地址栏（添加hash）
+      window.history.pushState(null, "", newPath);
+      // 平滑滚动到锚点位置
       anchor.scrollIntoView({ behavior: "smooth" });
+    } else {
+      // 即使找不到锚点元素，也要更新URL
+      window.history.pushState(null, "", newPath);
     }
     return true;
   }
