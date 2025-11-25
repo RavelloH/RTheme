@@ -91,7 +91,7 @@ export default function Custom404() {
             </GridItem>
             <GridItem
               areas={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}
-              className="px-10 py-20 text-foreground"
+              className="px-10 flex items-center text-foreground"
               width={2}
               height={1.5}
             >
