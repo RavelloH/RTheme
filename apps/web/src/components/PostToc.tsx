@@ -37,6 +37,11 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
   const navRef = useRef<HTMLElement>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
   const scrollContainerRef = useRef<HTMLElement | null>(null);
+  const [showTopGradient, setShowTopGradient] = useState(false);
+  const [showBottomGradient, setShowBottomGradient] = useState(false);
+  const isScrollingRef = useRef(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isUserClickRef = useRef(false);
 
   // 将 em 单位转换为像素值
   const emToPx = (em: number): number => {
@@ -269,29 +274,167 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
       return;
     }
 
+    // 清理之前的滚动定时器
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = null;
+    }
+
     // 查找当前激活的目录项元素
     const activeElement = navRef.current.querySelector(
       `a[href="#${activeId}"]`,
     ) as HTMLElement;
 
     if (activeElement && tocRef.current) {
-      // 使用 getBoundingClientRect 获取相对于 tocRef 的位置
-      const tocRect = tocRef.current.getBoundingClientRect();
-      const activeRect = activeElement.getBoundingClientRect();
+      // 判断 nav 是否可滚动
+      const isScrollable =
+        navRef.current.scrollHeight > navRef.current.clientHeight;
 
-      // 计算相对于 tocRef 容器的位置
-      const top = activeRect.top - tocRect.top;
-      const height = activeRect.height;
+      // 更新高亮指示器的函数
+      const updateHighlight = () => {
+        if (navRef.current && tocRef.current && activeElement) {
+          // 使用 getBoundingClientRect 获取相对于 tocRef 的位置
+          const tocRect = tocRef.current.getBoundingClientRect();
+          const activeRect = activeElement.getBoundingClientRect();
+          const navRect = navRef.current.getBoundingClientRect();
 
-      setHighlightStyle({
-        top,
-        height,
-        opacity: 1,
-      });
+          // 计算相对于 tocRef 容器的位置
+          const top = activeRect.top - tocRect.top;
+          const height = activeRect.height;
+
+          // 检查高亮项是否在目录可视区域内
+          const isInView =
+            activeRect.top >= navRect.top &&
+            activeRect.bottom <= navRect.bottom;
+
+          setHighlightStyle({
+            top,
+            height,
+            opacity: isInView ? 1 : 0,
+          });
+        }
+        isScrollingRef.current = false;
+      };
+
+      // 如果是用户点击触发的，在1000ms内不更新指示器
+      if (isUserClickRef.current) {
+        return;
+      }
+
+      if (isScrollable) {
+        // 计算目标滚动位置
+        const targetOffset = emToPx(5);
+        const elementOffsetTop = activeElement.offsetTop;
+        const rawDesiredScrollTop = elementOffsetTop - targetOffset;
+
+        // 限制在合法滚动范围内
+        const maxScrollTop =
+          navRef.current.scrollHeight - navRef.current.clientHeight;
+        const desiredScrollTop = Math.max(
+          0,
+          Math.min(rawDesiredScrollTop, maxScrollTop),
+        );
+        const currentScrollTop = navRef.current.scrollTop;
+
+        // 判断是否真的需要滚动（差异大于 1px）
+        const needsScroll = Math.abs(desiredScrollTop - currentScrollTop) > 1;
+
+        if (needsScroll) {
+          // 如果正在滚动中，延迟执行新的滚动
+          if (isScrollingRef.current) {
+            scrollTimeoutRef.current = setTimeout(() => {
+              if (navRef.current) {
+                navRef.current.scrollTo({
+                  top: desiredScrollTop,
+                  behavior: "smooth",
+                });
+                isScrollingRef.current = true;
+                scrollTimeoutRef.current = setTimeout(updateHighlight, 200);
+              }
+            }, 100);
+            return () => {
+              if (scrollTimeoutRef.current) {
+                clearTimeout(scrollTimeoutRef.current);
+              }
+            };
+          }
+
+          // 如果需要滚动，先触发滚动，然后延迟更新指示器
+          isScrollingRef.current = true;
+          navRef.current.scrollTo({
+            top: desiredScrollTop,
+            behavior: "smooth",
+          });
+
+          // 等待滚动完成后再更新高亮指示器位置
+          scrollTimeoutRef.current = setTimeout(updateHighlight, 400);
+          return () => {
+            if (scrollTimeoutRef.current) {
+              clearTimeout(scrollTimeoutRef.current);
+            }
+          };
+        } else {
+          // 如果不需要滚动，立即更新指示器
+          updateHighlight();
+        }
+      } else {
+        // 如果不可滚动，立即更新指示器
+        updateHighlight();
+      }
     } else {
       setHighlightStyle((prev) => ({ ...prev, opacity: 0 }));
     }
   }, [activeId, isCollapsed, isMobile, tocItems]);
+
+  // 监听目录滚动，更新渐变遮罩显示状态
+  useEffect(() => {
+    if (isMobile || isCollapsed || !navRef.current) {
+      setShowTopGradient(false);
+      setShowBottomGradient(false);
+      return;
+    }
+
+    let rafId: number | null = null;
+
+    const updateGradients = () => {
+      if (!navRef.current) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = navRef.current;
+      const isScrollable = scrollHeight > clientHeight;
+
+      if (!isScrollable) {
+        setShowTopGradient(false);
+        setShowBottomGradient(false);
+        return;
+      }
+
+      // 显示顶部渐变：不在顶部时显示
+      setShowTopGradient(scrollTop > 10);
+
+      // 显示底部渐变：不在底部时显示
+      setShowBottomGradient(scrollTop < scrollHeight - clientHeight - 10);
+    };
+
+    const handleScroll = () => {
+      // 使用 requestAnimationFrame 优化性能
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+      rafId = requestAnimationFrame(updateGradients);
+    };
+
+    updateGradients();
+
+    const nav = navRef.current;
+    nav.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      nav.removeEventListener("scroll", handleScroll);
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+    };
+  }, [isMobile, isCollapsed, tocItems]);
 
   // 移动端滚动进度监听
   useEffect(() => {
@@ -385,7 +528,14 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
                   <a
                     key={item.id}
                     href={`#${item.id}`}
-                    onClick={() => setIsCollapsed(false)}
+                    onClick={() => {
+                      isUserClickRef.current = true;
+                      setIsCollapsed(false);
+                      // 延迟重置标记，确保页面滚动完成
+                      setTimeout(() => {
+                        isUserClickRef.current = false;
+                      }, 1000);
+                    }}
                     className={`block w-full text-left px-2 py-1 rounded text-sm transition-colors ${
                       isActive
                         ? "bg-primary text-primary-foreground font-medium"
@@ -474,7 +624,7 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
       {/* 目录元素 - 同一个元素切换固定/非固定状态 */}
       <div
         ref={tocRef}
-        className={`${isCollapsed ? "w-12" : "w-64"} overflow-x-hidden relative`}
+        className={`${isCollapsed ? "w-12" : "w-64"} overflow-hidden relative`}
         style={{
           position: isFixed ? "fixed" : "relative",
           top: isFixed ? `${tocDimensions.top}px` : "auto",
@@ -482,7 +632,6 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
           width: isFixed ? `${tocDimensions.width}px` : "auto",
           height: isFixed ? `${tocDimensions.height}px` : "auto", // 固定时保持相同高度
           maxHeight: "calc(100vh - 180px)", // 两种状态都限制最大高度
-          overflowY: "auto", // 两种状态都允许滚动
           zIndex: isFixed ? 40 : "auto",
         }}
         data-fixed={isFixed}
@@ -531,28 +680,54 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
           </div>
 
           {!isCollapsed && (
-            <nav ref={navRef} className="space-y-1 relative">
-              {tocItems.map((item) => {
-                const isActive = activeId === item.id;
-                const marginLeft = (item.level - 1) * 12;
+            <div className="relative">
+              {/* 顶部渐变遮罩 */}
+              <div
+                className={`absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-background via-background/80 to-transparent pointer-events-none z-20 transition-opacity duration-300 ${
+                  showTopGradient ? "opacity-100" : "opacity-0"
+                }`}
+              />
 
-                return (
-                  <Link
-                    key={item.id}
-                    href={`#${item.id}`}
-                    className={`block w-full text-left px-2 py-1 rounded text-sm transition-colors truncate ${
-                      isActive
-                        ? "text-foreground font-bold"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    style={{ marginLeft: `${marginLeft}px` }}
-                    title={item.text}
-                  >
-                    {item.text}
-                  </Link>
-                );
-              })}
-            </nav>
+              {/* 底部渐变遮罩 */}
+              <div
+                className={`absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none z-20 transition-opacity duration-300 ${
+                  showBottomGradient ? "opacity-100" : "opacity-0"
+                }`}
+              />
+
+              <nav
+                ref={navRef}
+                className="space-y-1 relative max-h-[40vh] overflow-y-auto overflow-x-hidden scrollbar-hide"
+              >
+                {tocItems.map((item) => {
+                  const isActive = activeId === item.id;
+                  const marginLeft = (item.level - 1) * 12;
+
+                  return (
+                    <Link
+                      key={item.id}
+                      href={`#${item.id}`}
+                      onClick={() => {
+                        isUserClickRef.current = true;
+                        // 延迟重置标记，确保页面滚动完成
+                        setTimeout(() => {
+                          isUserClickRef.current = false;
+                        }, 1000);
+                      }}
+                      className={`block w-full text-left px-2 py-1 rounded text-sm transition-colors truncate ${
+                        isActive
+                          ? "text-foreground font-bold"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      style={{ marginLeft: `${marginLeft}px` }}
+                      title={item.text}
+                    >
+                      {item.text}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
           )}
 
           {/* 滚动进度和导航按钮 */}
