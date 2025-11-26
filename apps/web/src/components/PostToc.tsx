@@ -12,11 +12,18 @@ interface TocItem {
 }
 
 interface PostTocProps {
-  content: string;
+  /**
+   * 内容容器的选择器，默认为 '.md-content' 或 '.max-w-4xl'
+   * PostToc 会从这个容器中自动提取标题
+   */
+  contentSelector?: string;
   isMobile?: boolean;
 }
 
-export default function PostToc({ content, isMobile = false }: PostTocProps) {
+export default function PostToc({
+  contentSelector = ".md-content, .max-w-4xl",
+  isMobile = false,
+}: PostTocProps) {
   const [tocItems, setTocItems] = useState<TocItem[]>([]);
   const [activeId, setActiveId] = useState<string>("");
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -52,51 +59,40 @@ export default function PostToc({ content, isMobile = false }: PostTocProps) {
     return em * fontSize;
   };
 
-  // 提取目录
+  // 从 DOM 中提取目录
   useEffect(() => {
     const items: TocItem[] = [];
 
-    // 创建一个临时的 DOM 元素来解析内容
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = content;
+    // 查找内容容器
+    const contentContainer = document.querySelector(contentSelector);
+    if (!contentContainer) {
+      console.warn(`PostToc: 未找到内容容器 "${contentSelector}"`);
+      return;
+    }
 
-    // 查找所有标题元素
-    const headings = tempDiv.querySelectorAll("h1, h2, h3, h4, h5, h6");
-
-    // 生成与 MDXRenderer 中相同的 ID 格式（数字后缀）
-    let headingCounter = 0;
-    const generateSlug = (text: string): string => {
-      headingCounter++;
-      const baseSlug = text
-        .toLowerCase()
-        .replace(/[^\w\u4e00-\u9fa5\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "");
-
-      // 确保baseSlug不为空，如果为空使用 'heading'
-      const safeBaseSlug = baseSlug || "heading";
-
-      // 将数字放在后缀，避免CSS选择器以数字开头的问题
-      return `${safeBaseSlug}-${headingCounter}`;
-    };
+    // 查找所有已渲染的标题元素（只查找带 id 的标题）
+    const headings = contentContainer.querySelectorAll(
+      "h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]",
+    );
 
     headings.forEach((heading) => {
       const text = heading.textContent || "";
-      // 将 h1 当作 h2 处理，其他级别保持不变
+      const id = heading.id;
+
+      // 获取原始标题级别
       const originalLevel = parseInt(heading.tagName.substring(1)); // h1 -> 1, h2 -> 2, etc.
+
+      // 将 h1 当作 h2 处理，其他级别保持不变
       const adjustedLevel = originalLevel === 1 ? 2 : originalLevel;
 
       // 将所有目录层级减 1，使层级从 1 开始
       const level = Math.max(1, adjustedLevel - 1);
 
-      const id = generateSlug(text);
-
       items.push({ id, text, level });
     });
 
     setTocItems(items);
-  }, [content]);
+  }, [contentSelector]); // 只依赖选择器，不依赖 content
 
   // 处理页面加载时的hash
   useEffect(() => {

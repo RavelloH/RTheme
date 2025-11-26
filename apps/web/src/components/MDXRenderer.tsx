@@ -3,6 +3,7 @@ import { MDXComponents } from "next-mdx-remote-client/rsc";
 import { codeToHtml } from "shiki";
 import React from "react";
 import Image from "next/image";
+import { createHeadingProcessor } from "@/lib/shared/headingUtils";
 
 interface MDXRendererProps {
   source: string;
@@ -215,12 +216,20 @@ const components: MDXComponents = {
   }) => {
     // 对于外部 URL，需要特殊处理
     const isExternal = typeof src === "string" && src.startsWith("http");
+
+    // Next.js Image 组件需要明确的宽高
+    const imgWidth = 800;
+    const imgHeight = 400;
+
     if (isExternal) {
       return (
         <Image
           src={src}
           alt={alt || ""}
+          width={imgWidth}
+          height={imgHeight}
           className="max-w-full h-auto rounded-lg shadow-sm my-4"
+          unoptimized // 外部图片使用 unoptimized
           {...props}
         />
       );
@@ -231,8 +240,8 @@ const components: MDXComponents = {
         <Image
           src={src || ""}
           alt={alt || ""}
-          width={800}
-          height={400}
+          width={imgWidth}
+          height={imgHeight}
           className="rounded-lg shadow-sm object-contain"
           {...props}
         />
@@ -241,153 +250,63 @@ const components: MDXComponents = {
   },
 };
 
-// 全局标题计数器
-let headingCounter = 0;
+/**
+ * 创建标题组件工厂函数
+ * 使用统一的 heading processor 生成 ID
+ */
+const createHeadingComponent = (
+  level: "h1" | "h2" | "h3" | "h4" | "h5" | "h6",
+  processor: ReturnType<typeof createHeadingProcessor>,
+) => {
+  return ({
+    children,
+    ...props
+  }: React.ComponentPropsWithoutRef<typeof level>) => {
+    const text = React.Children.toArray(children).join("");
+    const id = processor.generateSlug(text);
 
-// 重置标题计数器（每次渲染新内容时调用）
-const resetHeadingCounter = () => {
-  headingCounter = 0;
-};
+    // h1 渲染为 h2（文章内容通常不需要 h1）
+    const Tag = level === "h1" ? "h2" : level;
 
-// 生成带数字后缀的 slug（避免CSS选择器问题）
-const generateSlug = (text: string): string => {
-  headingCounter++;
-  const baseSlug = text
-    .toLowerCase()
-    .replace(/[^\w\u4e00-\u9fa5\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-
-  // 确保baseSlug不为空，如果为空使用 'heading'
-  const safeBaseSlug = baseSlug || "heading";
-
-  // 将数字放在后缀，避免CSS选择器以数字开头的问题
-  return `${safeBaseSlug}-${headingCounter}`;
-};
-
-// 将标题组件添加到 components 对象中
-// h1 组件渲染为 h2（因为文章内容通常不需要 h1）
-components.h1 = ({
-  children,
-  ...props
-}: React.ComponentPropsWithoutRef<"h1">) => {
-  const text = React.Children.toArray(children).join("");
-  const id = generateSlug(text);
-  return (
-    <h2 id={id} {...props}>
-      {children}
-    </h2>
-  );
-};
-
-components.h2 = ({
-  children,
-  ...props
-}: React.ComponentPropsWithoutRef<"h2">) => {
-  const text = React.Children.toArray(children).join("");
-  const id = generateSlug(text);
-  return (
-    <h2 id={id} {...props}>
-      {children}
-    </h2>
-  );
-};
-
-components.h3 = ({
-  children,
-  ...props
-}: React.ComponentPropsWithoutRef<"h3">) => {
-  const text = React.Children.toArray(children).join("");
-  const id = generateSlug(text);
-  return (
-    <h3 id={id} {...props}>
-      {children}
-    </h3>
-  );
-};
-
-components.h4 = ({
-  children,
-  ...props
-}: React.ComponentPropsWithoutRef<"h4">) => {
-  const text = React.Children.toArray(children).join("");
-  const id = generateSlug(text);
-  return (
-    <h4 id={id} {...props}>
-      {children}
-    </h4>
-  );
-};
-
-components.h5 = ({
-  children,
-  ...props
-}: React.ComponentPropsWithoutRef<"h5">) => {
-  const text = React.Children.toArray(children).join("");
-  const id = generateSlug(text);
-  return (
-    <h5 id={id} {...props}>
-      {children}
-    </h5>
-  );
-};
-
-components.h6 = ({
-  children,
-  ...props
-}: React.ComponentPropsWithoutRef<"h6">) => {
-  const text = React.Children.toArray(children).join("");
-  const id = generateSlug(text);
-  return (
-    <h6 id={id} {...props}>
-      {children}
-    </h6>
-  );
+    return (
+      <Tag id={id} {...props}>
+        {children}
+      </Tag>
+    );
+  };
 };
 
 export default function MDXRenderer({ source, mode }: MDXRendererProps) {
-  // 重置标题计数器，确保每次渲染新内容时都从1开始
-  resetHeadingCounter();
+  // 为每次渲染创建独立的 heading processor
+  const headingProcessor = createHeadingProcessor();
+  headingProcessor.reset();
+
+  // 动态创建标题组件
+  const mdxComponents: MDXComponents = {
+    ...components,
+    h1: createHeadingComponent("h1", headingProcessor),
+    h2: createHeadingComponent("h2", headingProcessor),
+    h3: createHeadingComponent("h3", headingProcessor),
+    h4: createHeadingComponent("h4", headingProcessor),
+    h5: createHeadingComponent("h5", headingProcessor),
+    h6: createHeadingComponent("h6", headingProcessor),
+  };
 
   if (mode === "mdx") {
     return (
       <div className="max-w-4xl mx-auto">
-        <MDXRemote source={source} components={components} />
+        <MDXRemote source={source} components={mdxComponents} />
       </div>
     );
   }
 
-  // Markdown 模式：处理标题 id 后渲染 HTML
-  const processMarkdownHeadings = (html: string): string => {
-    // 重置计数器以确保 Markdown 模式也从头开始
-    resetHeadingCounter();
-
-    return html.replace(
-      /<h([1-6])([^>]*)>(.*?)<\/h[1-6]>/g,
-      (match, level, attrs, content) => {
-        // 提取纯文本内容
-        const textContent = content.replace(/<[^>]*>/g, "");
-        const id = generateSlug(textContent);
-
-        // 将 h1 转换为 h2，其他级别保持不变
-        const finalLevel = level === "1" ? "2" : level;
-
-        // 如果已经有 id 属性，只处理标签转换
-        if (attrs.includes("id=")) {
-          return `<h${finalLevel}${attrs}>${content}</h${finalLevel}>`;
-        }
-
-        // 添加 id 并转换标签
-        return `<h${finalLevel}${attrs} id="${id}">${content}</h${finalLevel}>`;
-      },
-    );
-  };
+  // Markdown 模式：使用相同的 heading processor 处理 HTML
+  const processedHtml = headingProcessor.processHtmlHeadings(source);
 
   return (
     <div
       className="max-w-4xl mx-auto md-content"
-      dangerouslySetInnerHTML={{ __html: processMarkdownHeadings(source) }}
+      dangerouslySetInnerHTML={{ __html: processedHtml }}
     />
   );
 }

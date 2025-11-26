@@ -172,11 +172,9 @@ export default async function PostPage({ params }: PageProps) {
             </div>
 
             {/* 标签 */}
-            <div
-              className={`text-lg pt-3 mt-4 flex flex-wrap gap-2 ${post.tags.length === 0 ? "invisible" : ""}`}
-            >
-              {post.tags.length > 0 ? (
-                post.tags.map((tag) => (
+            {post.tags.length > 0 ? (
+              <div className="text-lg pt-3 mt-4 flex flex-wrap gap-2">
+                {post.tags.map((tag) => (
                   <Link
                     key={tag.slug}
                     href={"/tags/" + tag.slug}
@@ -185,15 +183,17 @@ export default async function PostPage({ params }: PageProps) {
                     <RiHashtag size={"1em"} />
                     {tag.name}
                   </Link>
-                ))
-              ) : (
-                // 占位标签，保持高度
+                ))}
+              </div>
+            ) : post.featuredImage ? (
+              // 只在有背景图时创建占位，保持布局稳定
+              <div className="text-lg pt-3 mt-4 flex flex-wrap gap-2 invisible">
                 <span className="bg-muted text-muted-foreground px-3 py-2 rounded-sm inline-flex gap-1 items-center">
                   <RiHashtag size={"1em"} />
                   占位标签
                 </span>
-              )}
-            </div>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -222,12 +222,12 @@ export default async function PostPage({ params }: PageProps) {
             />
           </div>
           <div className="flex-[2] hidden lg:block max-w-screen">
-            <PostToc content={renderedContent.html} />
+            <PostToc />
           </div>
 
           {/* 移动端目录按钮 */}
           <div className="lg:hidden fixed bottom-6 right-6 z-40">
-            <PostToc content={renderedContent.html} isMobile={true} />
+            <PostToc isMobile={true} />
           </div>
         </div>
 
