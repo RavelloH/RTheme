@@ -18,6 +18,7 @@ import { createPageConfigBuilder } from "@/lib/server/pageUtils";
 import Custom404 from "./not-found";
 import { getConfig } from "@/lib/server/configCache";
 import { RiArrowRightSLine } from "@remixicon/react";
+import { batchQueryMediaFiles, processImageUrl } from "@/lib/shared/imageUtils";
 
 // 获取系统页面配置
 const page = await getRawPage("/");
@@ -47,6 +48,18 @@ export default async function Home() {
   if (!page || page.status !== "ACTIVE" || page.deletedAt) {
     return <Custom404 />;
   }
+
+  // 收集主页面的硬编码图片URL
+  const hardcodedImageUrls = [
+    "https://raw.ravelloh.top/20250228/meteor.webp",
+    "https://raw.ravelloh.top/post/image.1ovfmxsmre.webp",
+    "https://raw.ravelloh.top/rtheme/categories.webp",
+    "https://raw.ravelloh.top/20250323/image.2obow0upmh.webp",
+    "https://raw.ravelloh.top/20250228/image.86tsfdpaf3.webp",
+  ];
+
+  // 批量查询媒体文件
+  const homePageMediaFileMap = await batchQueryMediaFiles(hardcodedImageUrls);
   return (
     <>
       <MainLayout type="horizontal">
@@ -425,7 +438,10 @@ export default async function Home() {
                   { name: "Minecraft", slug: "minecraft" },
                   { name: "Meteor", slug: "meteor" },
                 ]}
-                cover="https://raw.ravelloh.top/20250228/meteor.webp"
+                cover={processImageUrl(
+                  "https://raw.ravelloh.top/20250228/meteor.webp",
+                  homePageMediaFileMap,
+                )}
                 summary="本文档详细介绍了 Minecraft Meteor 的安装、配置和使用方法，帮助玩家轻松上手这一强大的模组管理工具。"
               />
             </GridItem>
@@ -440,7 +456,10 @@ export default async function Home() {
                   { name: "设计", slug: "design" },
                 ]}
                 tags={[{ name: "search", slug: "search" }]}
-                cover="https://raw.ravelloh.top/post/image.1ovfmxsmre.webp"
+                cover={processImageUrl(
+                  "https://raw.ravelloh.top/post/image.1ovfmxsmre.webp",
+                  homePageMediaFileMap,
+                )}
                 summary="介绍如何使用 Meilisearch 为站点实现高效搜索，包括索引、查询和性能调优。"
               />
             </GridItem>
@@ -459,7 +478,10 @@ export default async function Home() {
                   { name: "nextjs", slug: "nextjs" },
                   { name: "ui", slug: "ui" },
                 ]}
-                cover="https://raw.ravelloh.top/rtheme/categories.webp"
+                cover={processImageUrl(
+                  "https://raw.ravelloh.top/rtheme/categories.webp",
+                  homePageMediaFileMap,
+                )}
                 summary="一款基于现代前端栈打造的高颜值计时器组件，展示了设计与交互的最佳实践。"
               />
             </GridItem>
@@ -473,7 +495,10 @@ export default async function Home() {
                   { name: "nextjs", slug: "nextjs" },
                   { name: "rtheme", slug: "rtheme" },
                 ]}
-                cover="https://raw.ravelloh.top/20250323/image.2obow0upmh.webp"
+                cover={processImageUrl(
+                  "https://raw.ravelloh.top/20250323/image.2obow0upmh.webp",
+                  homePageMediaFileMap,
+                )}
                 summary="演示如何使用 Next.js Server Actions 来触发并管理页面的动态重部署流程。"
               />
             </GridItem>
@@ -487,7 +512,10 @@ export default async function Home() {
                   { name: "网络安全", slug: "network-security" },
                 ]}
                 tags={[{ name: "wireshark", slug: "wireshark" }]}
-                cover="https://raw.ravelloh.top/20250228/image.86tsfdpaf3.webp"
+                cover={processImageUrl(
+                  "https://raw.ravelloh.top/20250228/image.86tsfdpaf3.webp",
+                  homePageMediaFileMap,
+                )}
                 summary="使用 Wireshark 捕获与分析流量，帮助个人或小团队进行基线检测与漏洞排查。"
               />
             </GridItem>

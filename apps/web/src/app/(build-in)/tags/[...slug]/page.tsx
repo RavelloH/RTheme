@@ -21,6 +21,7 @@ import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { RiArrowLeftSLine } from "@remixicon/react";
 import { cache } from "react";
+import { batchQueryMediaFiles, processImageUrl } from "@/lib/shared/imageUtils";
 
 // 缓存函数：获取标签的基本信息
 const getTagBasicInfo = cache(async (slug: string) => {
@@ -213,6 +214,14 @@ export default async function TagSlugPage({ params }: TagSlugPageProps) {
     PRE_PAGE_SIZE,
   );
 
+  // 收集所有文章的featuredImage进行批量查询
+  const allPostImageUrls = posts
+    .map((post) => post.featuredImage)
+    .filter((image): image is string => image !== null);
+
+  // 批量查询媒体文件
+  const postMediaFileMap = await batchQueryMediaFiles(allPostImageUrls);
+
   // 计算总页数
   const totalPages = Math.ceil(totalPosts / PRE_PAGE_SIZE);
 
@@ -392,7 +401,14 @@ export default async function TagSlugPage({ params }: TagSlugPageProps) {
                             }
                             category={post.categories}
                             tags={post.tags}
-                            cover={post.featuredImage || ""}
+                            cover={
+                              post.featuredImage
+                                ? processImageUrl(
+                                    post.featuredImage,
+                                    postMediaFileMap,
+                                  )
+                                : []
+                            }
                             summary={post.excerpt || ""}
                           />
                         ) : (

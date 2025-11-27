@@ -20,6 +20,7 @@ import { RiSearch2Line } from "@remixicon/react";
 import Custom404 from "@/app/not-found";
 import EmptyPostCard from "@/components/EmptyPostCard";
 import DynamicReplace from "@/components/client/DynamicReplace";
+import { batchQueryMediaFiles, processImageUrl } from "@/lib/shared/imageUtils";
 
 // 获取系统页面配置
 const pageConfig = await getRawPage("/posts");
@@ -174,6 +175,14 @@ export default async function PostsPage({
     skip: (currentPage - 1) * PRE_PAGE_SIZE,
     take: PRE_PAGE_SIZE,
   });
+
+  // 收集所有文章的featuredImage进行批量查询
+  const allPostImageUrls = posts
+    .map((post) => post.featuredImage)
+    .filter((image): image is string => image !== null);
+
+  // 批量查询媒体文件
+  const mediaFileMap = await batchQueryMediaFiles(allPostImageUrls);
 
   // 收集所有分类ID，批量获取路径
   const allCategoryIds = new Set<number>();
@@ -396,7 +405,14 @@ export default async function PostsPage({
                           }
                           category={post.categories}
                           tags={post.tags}
-                          cover={post.featuredImage || ""}
+                          cover={
+                            post.featuredImage
+                              ? processImageUrl(
+                                  post.featuredImage,
+                                  mediaFileMap,
+                                )
+                              : []
+                          }
                           summary={post.excerpt || ""}
                         />
                       ) : (

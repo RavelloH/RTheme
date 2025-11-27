@@ -4,8 +4,8 @@ import {
   RiPushpin2Fill,
   RiTimeLine,
 } from "@remixicon/react";
-import Image from "next/image";
 import Link from "./Link";
+import CMSImage from "./CMSImage";
 
 interface PostCardProps {
   title: string;
@@ -13,7 +13,14 @@ interface PostCardProps {
   date?: string;
   category?: { name: string; slug: string }[];
   tags?: { name: string; slug: string }[];
-  cover?: string;
+  cover?:
+    | Array<{
+        url: string;
+        width?: number;
+        height?: number;
+        blur?: string;
+      }>
+    | string;
   summary?: string;
   isPinned?: boolean;
   className?: string;
@@ -44,6 +51,13 @@ export default function PostCard({
     }
   };
 
+  // 处理封面图片数据
+  const coverImage = Array.isArray(cover)
+    ? cover[0]
+    : cover
+      ? { url: cover }
+      : null;
+
   return (
     <Link href={"/posts/" + slug}>
       <div className={`h-full w-full relative group ${className}`}>
@@ -64,15 +78,19 @@ export default function PostCard({
         )}
 
         {/* 背景图片 */}
-        {cover && (
+        {coverImage && (
           <>
             <div className="absolute inset-0">
-              <Image
-                src={cover}
+              <CMSImage
+                src={coverImage.url}
                 alt={title}
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                optimized={!!(coverImage.width && coverImage.height)}
+                width={coverImage.width}
+                height={coverImage.height}
+                blur={coverImage.blur}
                 priority={false}
               />
             </div>

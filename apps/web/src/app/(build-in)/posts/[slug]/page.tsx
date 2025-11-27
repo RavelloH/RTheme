@@ -9,7 +9,7 @@ import {
   RiCalendarLine,
   RiEye2Line,
 } from "@remixicon/react";
-import Image from "next/image";
+import CMSImage from "@/components/CMSImage";
 import MDXRenderer from "@/components/MDXRenderer";
 import PostToc from "@/components/PostToc";
 import { getPublishedPost, renderPostContent } from "@/lib/server/post";
@@ -19,6 +19,7 @@ import {
   getCategoryNamePath,
   getCategoryPath,
 } from "@/lib/server/category-utils";
+import { batchQueryMediaFiles, processImageUrl } from "@/lib/shared/imageUtils";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -49,7 +50,7 @@ export async function generateMetadata({ params }: PageProps) {
 export default async function PostPage({ params }: PageProps) {
   const { slug } = await params;
 
-  let post, renderedContent, categoryPath, categorySlugPath;
+  let post, renderedContent, categoryPath, categorySlugPath, postMediaFileMap;
 
   try {
     // 获取文章数据
@@ -69,6 +70,12 @@ export default async function PostPage({ params }: PageProps) {
 
     // 渲染文章内容
     renderedContent = await renderPostContent(post);
+
+    // 查询文章特色图片的媒体文件信息
+    postMediaFileMap = new Map();
+    if (post.featuredImage) {
+      postMediaFileMap = await batchQueryMediaFiles([post.featuredImage]);
+    }
   } catch {
     // 如果文章不存在或未发布，返回 404
     notFound();
@@ -150,14 +157,36 @@ export default async function PostPage({ params }: PageProps) {
         <div className={`relative ${post.featuredImage ? "pt-[25em]" : ""}`}>
           {post.featuredImage && (
             <div className="absolute inset-0 z-0">
-              <Image
-                src={post.featuredImage}
-                alt={post.title}
-                loading="eager"
-                fill
-                className="object-cover"
-                priority
-              />
+              {(() => {
+                const processedImages = processImageUrl(
+                  post.featuredImage,
+                  postMediaFileMap,
+                );
+                const imageData = processedImages[0];
+                return imageData ? (
+                  <CMSImage
+                    src={imageData.url}
+                    alt={post.title}
+                    fill
+                    className="object-cover"
+                    sizes="100vw"
+                    optimized={!!(imageData.width && imageData.height)}
+                    width={imageData.width}
+                    height={imageData.height}
+                    blur={imageData.blur}
+                    priority
+                  />
+                ) : (
+                  <CMSImage
+                    src={post.featuredImage}
+                    alt={post.title}
+                    fill
+                    className="object-cover"
+                    sizes="100vw"
+                    priority
+                  />
+                );
+              })()}
               {/* 渐变遮罩，确保文字可读性 */}
               <div className="absolute inset-0 bg-gradient-to-t from-background via-background/90 to-transparent" />
             </div>

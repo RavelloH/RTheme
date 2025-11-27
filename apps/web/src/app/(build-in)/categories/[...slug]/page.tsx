@@ -512,6 +512,14 @@ export default async function CategorySlugPage({
   const { posts, totalPosts, postCategoryPathsMap } =
     await getCategoryPostsData(targetCategoryIds, currentPage, PRE_PAGE_SIZE);
 
+  // 收集所有文章的featuredImage进行批量查询
+  const allPostImageUrls = posts
+    .map((post) => post.featuredImage)
+    .filter((image): image is string => image !== null);
+
+  // 批量查询文章图片的媒体文件（复用之前的mediaFileMap变量名以避免冲突，这里使用postMediaFileMap）
+  const postMediaFileMap = await batchQueryMediaFiles(allPostImageUrls);
+
   // postCategoryPathsMap 已经在 getCategoryPostsData 中获取了
 
   // 为文章构建完整的分类路径数组
@@ -753,7 +761,14 @@ export default async function CategorySlugPage({
                             }
                             category={post.categories}
                             tags={post.tags}
-                            cover={post.featuredImage || ""}
+                            cover={
+                              post.featuredImage
+                                ? processImageUrl(
+                                    post.featuredImage,
+                                    postMediaFileMap,
+                                  )
+                                : []
+                            }
                             summary={post.excerpt || ""}
                           />
                         ) : (
