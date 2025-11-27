@@ -112,12 +112,28 @@
 .md-content h4,
 .md-content h5,
 .md-content h6 {
-  @apply font-bold mt-6 mb-3 leading-tight text-foreground;
+  @apply font-bold mt-6 mb-3 leading-tight text-foreground scroll-mt-20;
+}
+
+/* 首个标题去除上边距 */
+.tiptap h1:first-child,
+.tiptap h2:first-child,
+.tiptap h3:first-child,
+.tiptap h4:first-child,
+.tiptap h5:first-child,
+.tiptap h6:first-child,
+.md-content h1:first-child,
+.md-content h2:first-child,
+.md-content h3:first-child,
+.md-content h4:first-child,
+.md-content h5:first-child,
+.md-content h6:first-child {
+  @apply mt-0;
 }
 
 .tiptap h1,
 .md-content h1 {
-  @apply text-4xl border-b-2 pb-2 border-border;
+  @apply text-4xl border-b-2 pb-2 border-border mt-8 mb-4;
 }
 .tiptap h2,
 .md-content h2 {
@@ -125,19 +141,19 @@
 }
 .tiptap h3,
 .md-content h3 {
-  @apply text-2xl;
+  @apply text-2xl mt-4 mb-2;
 }
 .tiptap h4,
 .md-content h4 {
-  @apply text-xl;
+  @apply text-xl mt-3 mb-2;
 }
 .tiptap h5,
 .md-content h5 {
-  @apply text-lg;
+  @apply text-lg mt-2 mb-1;
 }
 .tiptap h6,
 .md-content h6 {
-  @apply text-base;
+  @apply text-base mt-2 mb-1;
 }
 
 /* Images */

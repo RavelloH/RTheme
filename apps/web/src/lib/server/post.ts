@@ -4,11 +4,6 @@ import { TextVersion } from "text-version";
 import remarkGfm from "remark-gfm";
 import rehypeSlug from "rehype-slug";
 import { serialize } from "next-mdx-remote-client/serialize";
-import MarkdownIt from "markdown-it";
-import markdownItMark from "markdown-it-mark";
-import markdownItSub from "markdown-it-sub";
-import markdownItSup from "markdown-it-sup";
-import { codeToHtml } from "shiki";
 
 export interface PostData {
   id: number;
@@ -46,7 +41,7 @@ export interface PostData {
 }
 
 export interface RenderedContent {
-  html: string;
+  content: string;
   mode: "markdown" | "mdx";
 }
 
@@ -118,69 +113,6 @@ export async function getPublishedPost(slug: string): Promise<PostData> {
 }
 
 /**
- * 渲染 Markdown 内容为 HTML
- */
-export async function renderMarkdown(content: string): Promise<string> {
-  // 初始化 markdown-it 实例
-  const md = new MarkdownIt({
-    html: true, // 启用 HTML 标签
-    linkify: true, // 自动转换 URL 为链接
-    typographer: true, // 启用一些语言中立的替换 + 引号美化
-    breaks: false, // 转换段落里的 '\n' 到 <br>
-  })
-    .use(markdownItMark) // 支持 ==高亮==
-    .use(markdownItSub) // 支持 ~下标~
-    .use(markdownItSup); // 支持 ^上标^
-
-  // 渲染 markdown
-  let html = md.render(content);
-
-  // 使用 Shiki 高亮代码块
-  const codeBlockRegex =
-    /<pre><code class="language-(\w+)">([\s\S]*?)<\/code><\/pre>/g;
-  const matches = Array.from(html.matchAll(codeBlockRegex));
-
-  // 并行处理所有代码块高亮
-  const highlightedBlocks = await Promise.all(
-    matches.map(async (match) => {
-      const [fullMatch, lang, code] = match;
-
-      // 跳过无效匹配
-      if (!lang || !code) return { fullMatch, highlighted: fullMatch };
-
-      // 解码 HTML 实体
-      const decodedCode = code
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/&amp;/g, "&")
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'");
-
-      try {
-        const highlighted = await codeToHtml(decodedCode, {
-          lang: lang as string,
-          themes: {
-            light: "light-plus",
-            dark: "dark-plus",
-          },
-        });
-        return { fullMatch, highlighted };
-      } catch (err) {
-        console.error(`Failed to highlight code block (${lang}):`, err);
-        return { fullMatch, highlighted: fullMatch };
-      }
-    }),
-  );
-
-  // 替换所有高亮的代码块
-  for (const { fullMatch, highlighted } of highlightedBlocks) {
-    html = html.replace(fullMatch, highlighted);
-  }
-
-  return html;
-}
-
-/**
  * 序列化 MDX 内容
  */
 export async function serializeMDX(
@@ -223,16 +155,16 @@ export async function serializeMDX(
 export async function renderPostContent(
   post: PostData,
 ): Promise<RenderedContent> {
-  // 使用 text-version 获取最新版本的内容
+  // text-version 获取最新版本的内容
   const tv = new TextVersion();
   const latestContent = tv.latest(post.content);
 
   if (post.postMode === "MARKDOWN") {
-    const html = await renderMarkdown(latestContent);
-    return { html, mode: "markdown" };
+    // Markdown 模式：直接返回原始内容，由 react-markdown 在组件中渲染
+    return { content: latestContent, mode: "markdown" };
   } else if (post.postMode === "MDX") {
     const mdxSource = await serializeMDX(latestContent);
-    return { html: mdxSource.content, mode: "mdx" };
+    return { content: mdxSource.content, mode: "mdx" };
   } else {
     throw new Error(`Unsupported post mode: ${post.postMode}`);
   }

@@ -217,7 +217,7 @@ export default async function PostPage({ params }: PageProps) {
         <div className="px-10 max-w-7xl mx-auto pt-10 flex gap-6 relative">
           <div className="flex-[8]">
             <MDXRenderer
-              source={renderedContent.html}
+              source={renderedContent.content}
               mode={renderedContent.mode}
             />
           </div>

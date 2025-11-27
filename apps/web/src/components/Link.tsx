@@ -118,9 +118,8 @@ function applyPresets(presets: string[] = [], children: React.ReactNode) {
   if (presets.includes("hover-underline")) {
     return (
       <span className={className}>
-        <span className="relative inline-block">
+        <span className="relative inline box-decoration-clone bg-[linear-gradient(currentColor,currentColor)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]">
           {content}
-          <span className="absolute bottom-0 left-0 w-full h-0.5 bg-current transform scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-300 ease-out"></span>
         </span>
       </span>
     );
