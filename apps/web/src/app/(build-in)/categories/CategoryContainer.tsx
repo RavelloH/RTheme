@@ -14,7 +14,15 @@ export default function CategoryContainer({
     slug: string;
     name: string;
     description: string | null;
-    featuredImage: string | null;
+    featuredImage:
+      | Array<{
+          url: string;
+          width?: number;
+          height?: number;
+          blur?: string;
+        }>
+      | string
+      | null;
     totalPostCount: number;
     totalChildCount: number;
     path: string[];
@@ -37,7 +45,13 @@ export default function CategoryContainer({
         className="h-full block relative"
       >
         <ParallaxImageCarousel
-          images={[category.featuredImage || ""]}
+          images={
+            Array.isArray(category.featuredImage)
+              ? category.featuredImage
+              : category.featuredImage
+                ? [{ url: category.featuredImage }]
+                : []
+          }
           alt={`${category.name} 分类展示`}
         />
 

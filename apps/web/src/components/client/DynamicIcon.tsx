@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { RiExternalLinkFill } from "@remixicon/react";
 import type { RemixiconComponentType } from "@remixicon/react";
 
 // URL匹配规则和对应图标名称
@@ -169,9 +168,9 @@ export function DynamicIcon({
     const iconName = matchIconName(url);
 
     if (!iconName) {
-      // 没有匹配的图标，使用默认外链图标
+      // 没有匹配的图标，不显示任何内容
       if (isMounted) {
-        setIconComponent(() => RiExternalLinkFill as RemixiconComponentType);
+        setIconComponent(null);
         setLoading(false);
       }
       return;
@@ -183,8 +182,8 @@ export function DynamicIcon({
         setIconComponent(() => component);
         setLoading(false);
       } else if (isMounted) {
-        // 加载失败，使用默认外链图标
-        setIconComponent(() => RiExternalLinkFill as RemixiconComponentType);
+        // 加载失败，不显示任何内容
+        setIconComponent(null);
         setLoading(false);
       }
     });
@@ -194,7 +193,7 @@ export function DynamicIcon({
     };
   }, [url]);
 
-  if (loading || !IconComponent) {
+  if (loading) {
     // 加载中显示占位符
     return (
       <span
@@ -202,6 +201,11 @@ export function DynamicIcon({
         style={{ display: "inline-block", width: size, height: size }}
       />
     );
+  }
+
+  if (!IconComponent) {
+    // 没有匹配的图标，不显示任何内容
+    return null;
   }
 
   return <IconComponent size={size} className={className} />;

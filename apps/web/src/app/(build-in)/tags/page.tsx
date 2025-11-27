@@ -14,6 +14,7 @@ import Link from "@/components/Link";
 import TagsRandomPage from "./TagsRandomPage";
 import DynamicReplace from "@/components/client/DynamicReplace";
 import TagContainer from "./TagContainer";
+import { batchQueryMediaFiles, processImageUrl } from "@/lib/shared/imageUtils";
 
 // 获取系统页面配置
 const page = await getRawPage("/tags");
@@ -39,12 +40,22 @@ const allTags = await prisma.tag.findMany({
   },
 });
 
+// 收集所有内部链接的哈希
+const allImageUrls = allTags
+  .map((tag) => tag.featuredImage)
+  .filter((image): image is string => image !== null); // 过滤空值并进行类型守卫;
+
+// 批量查询媒体文件
+const mediaFileMap = await batchQueryMediaFiles(allImageUrls);
+
 // 处理标签统计数据
 const processedTags = allTags.map((tag) => ({
   slug: tag.slug,
   name: tag.name,
   description: tag.description,
-  featuredImage: tag.featuredImage,
+  featuredImage: tag.featuredImage
+    ? processImageUrl(tag.featuredImage, mediaFileMap)
+    : [],
   postCount: tag.posts.length,
   createdAt: tag.createdAt.toISOString(),
   updatedAt: tag.updatedAt.toISOString(),

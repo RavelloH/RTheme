@@ -23,6 +23,7 @@ import { Metadata } from "next";
 import { RiArrowLeftSLine } from "@remixicon/react";
 import { cache } from "react";
 import CategoryContainer from "../CategoryContainer";
+import { batchQueryMediaFiles, processImageUrl } from "@/lib/shared/imageUtils";
 
 // 缓存函数：获取所有分类的完整数据
 const getCategoriesWithFullData = cache(async () => {
@@ -352,6 +353,14 @@ export default async function CategorySlugPage({
 
   // 获取所有分类数据（使用缓存函数）
   const allCategories = await getCategoriesWithFullData();
+
+  // 收集所有分类的featuredImage进行批量查询
+  const allCategoryImageUrls = allCategories
+    .map((category) => category.featuredImage)
+    .filter((image): image is string => image !== null);
+
+  // 批量查询媒体文件
+  const mediaFileMap = await batchQueryMediaFiles(allCategoryImageUrls);
 
   // 查找当前分类：根据路径层级查找
   // 首先尝试查找最深层级的分类（最后一个slug）
@@ -694,7 +703,15 @@ export default async function CategorySlugPage({
         {childCategories.length > 0 && (
           <RowGrid>
             {childCategories.map((category) => (
-              <CategoryContainer key={category.id} category={category} />
+              <CategoryContainer
+                key={category.id}
+                category={{
+                  ...category,
+                  featuredImage: category.featuredImage
+                    ? processImageUrl(category.featuredImage, mediaFileMap)
+                    : [],
+                }}
+              />
             ))}
           </RowGrid>
         )}

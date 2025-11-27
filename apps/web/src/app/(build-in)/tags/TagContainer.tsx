@@ -13,7 +13,15 @@ export default function TagContainer({
     slug: string;
     name: string;
     description: string | null;
-    featuredImage: string | null;
+    featuredImage:
+      | Array<{
+          url: string;
+          width?: number;
+          height?: number;
+          blur?: string;
+        }>
+      | string
+      | null;
     postCount: number;
     createdAt: string;
     updatedAt: string;
@@ -31,7 +39,13 @@ export default function TagContainer({
     >
       <Link href={`/tags/${tag.slug}`} className="h-full block relative">
         <ParallaxImageCarousel
-          images={[tag.featuredImage || ""]}
+          images={
+            Array.isArray(tag.featuredImage)
+              ? tag.featuredImage
+              : tag.featuredImage
+                ? [{ url: tag.featuredImage }]
+                : []
+          }
           alt={`${tag.name} 标签展示`}
         />
 

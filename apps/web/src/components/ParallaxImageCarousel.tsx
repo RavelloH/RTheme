@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import CMSImage from "./CMSImage";
 
 interface ParallaxImageCarouselProps {
-  /** 图片URL数组 */
-  images: string[];
+  /** 图片对象数组 */
+  images: Array<{
+    url: string;
+    width?: number;
+    height?: number;
+    blur?: string;
+  }>;
   /** 自定义CSS类名 */
   className?: string;
   /** 视差滚动速度，负值表示反向滚动 */
@@ -104,10 +109,12 @@ export default function ParallaxImageCarousel({
     return () => resizeObserver.disconnect();
   }, []);
 
-  // images 变化时，先用默认 16:9 占位
+  // images 变化时，处理图片尺寸信息
   useEffect(() => {
     // 过滤掉无效图片
-    const validImages = images.filter((img) => img && img.trim() !== "");
+    const validImages = images.filter(
+      (img) => img && img.url && img.url.trim() !== "",
+    );
 
     if (!validImages.length) {
       setImageDimensions([]);
@@ -115,11 +122,22 @@ export default function ParallaxImageCarousel({
     }
 
     setImageDimensions(
-      validImages.map(() => ({
-        width: 16,
-        height: 9,
-        aspectRatio: 16 / 9,
-      })),
+      validImages.map((img) => {
+        // 如果有明确的尺寸信息，使用实际尺寸
+        if (img.width && img.height) {
+          return {
+            width: img.width,
+            height: img.height,
+            aspectRatio: img.width / img.height,
+          };
+        }
+        // 默认 16:9 占位
+        return {
+          width: 16,
+          height: 9,
+          aspectRatio: 16 / 9,
+        };
+      }),
     );
   }, [images]);
 
@@ -128,7 +146,9 @@ export default function ParallaxImageCarousel({
     if (!imageDimensions.length || !containerWidth || !containerHeight) return;
 
     // 过滤出有效图片
-    const validImages = images.filter((img) => img && img.trim() !== "");
+    const validImages = images.filter(
+      (img) => img && img.url && img.url.trim() !== "",
+    );
     if (!validImages.length) return;
 
     // 计算单个循环图片序列的总宽度
@@ -156,8 +176,9 @@ export default function ParallaxImageCarousel({
 
     for (let cycle = 0; cycle < cyclesNeeded; cycle++) {
       for (let imgIndex = 0; imgIndex < images.length; imgIndex++) {
-        const image = images[imgIndex];
-        if (!image || image.trim() === "") continue; // 跳过无效图片
+        const imageData = images[imgIndex];
+        if (!imageData || !imageData.url || imageData.url.trim() === "")
+          continue; // 跳过无效图片
 
         const dimension = imageDimensions[validImageIndex];
         if (!dimension) continue;
@@ -173,7 +194,7 @@ export default function ParallaxImageCarousel({
 
         instances.push({
           id: `${cycle}-${imgIndex}`,
-          src: image,
+          src: imageData.url,
           originalIndex: validImageIndex,
           position,
         });
@@ -187,7 +208,10 @@ export default function ParallaxImageCarousel({
   }, [images, imageDimensions, containerWidth, containerHeight]);
 
   // 如果没有图片，或者所有图片都无效，返回空
-  if (!images.length || images.every((img) => !img || img.trim() === "")) {
+  if (
+    !images.length ||
+    images.every((img) => !img || !img.url || img.url.trim() === "")
+  ) {
     return null;
   }
 
@@ -199,6 +223,9 @@ export default function ParallaxImageCarousel({
     >
       {visibleImageInstances.map((instance) => {
         const dimension = imageDimensions[instance.originalIndex];
+        const originalImageData = images.find(
+          (img) => img.url === instance.src,
+        );
 
         if (!dimension) return null;
 
@@ -213,32 +240,40 @@ export default function ParallaxImageCarousel({
               flexBasis: `${containerHeight * dimension.aspectRatio}px`,
             }}
           >
-            <Image
+            <CMSImage
               src={instance.src}
               alt={`${alt} ${instance.originalIndex + 1}`}
               fill
               className="object-cover"
               loading="lazy"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              optimized={
+                !!(originalImageData?.width && originalImageData?.height)
+              }
+              width={originalImageData?.width}
+              height={originalImageData?.height}
+              blur={originalImageData?.blur}
               onLoadingComplete={(imgEl) => {
-                const w = imgEl.naturalWidth || 16;
-                const h = imgEl.naturalHeight || 9;
-                const ar = h ? w / h : 16 / 9;
+                // 只在没有预定义尺寸时更新尺寸信息
+                if (!originalImageData?.width || !originalImageData?.height) {
+                  const w = imgEl.naturalWidth || 16;
+                  const h = imgEl.naturalHeight || 9;
+                  const ar = h ? w / h : 16 / 9;
 
-                // 只在需要时更新，避免无意义的重算
-                setImageDimensions((prev) => {
-                  const cur = prev[instance.originalIndex];
-                  if (!cur || cur.width !== w || cur.height !== h) {
-                    const next = [...prev];
-                    next[instance.originalIndex] = {
-                      width: w,
-                      height: h,
-                      aspectRatio: ar,
-                    };
-                    return next;
-                  }
-                  return prev;
-                });
+                  setImageDimensions((prev) => {
+                    const cur = prev[instance.originalIndex];
+                    if (!cur || cur.width !== w || cur.height !== h) {
+                      const next = [...prev];
+                      next[instance.originalIndex] = {
+                        width: w,
+                        height: h,
+                        aspectRatio: ar,
+                      };
+                      return next;
+                    }
+                    return prev;
+                  });
+                }
               }}
             />
           </div>

@@ -153,6 +153,7 @@ export default async function PostPage({ params }: PageProps) {
               <Image
                 src={post.featuredImage}
                 alt={post.title}
+                loading="eager"
                 fill
                 className="object-cover"
                 priority

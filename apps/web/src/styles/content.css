@@ -177,19 +177,30 @@
 /* Tables */
 .tiptap table,
 .md-content table {
-  @apply border-collapse w-full my-4;
+  @apply border-collapse w-full my-4 text-base border border-border;
 }
 
-.tiptap th,
-.tiptap td,
-.md-content th,
-.md-content td {
-  @apply border border-foreground/20 px-1 py-1 text-left;
+/* 表头样式 - 与 Table 组件保持一致 */
+.tiptap thead,
+.md-content thead {
+  @apply border-b-2 border-muted bg-foreground/5;
 }
 
 .tiptap th,
 .md-content th {
-  @apply bg-foreground/5 font-bold;
+  @apply px-4 py-3 font-semibold text-muted-foreground text-left border-r border-border last:border-r-0;
+}
+
+/* 表格单元格样式 - 与 Table 组件保持一致 */
+.tiptap td,
+.md-content td {
+  @apply px-4 py-3 text-left border-t border-border border-r last:border-r-0;
+}
+
+/* 表格行 hover 效果 */
+.tiptap tbody tr,
+.md-content tbody tr {
+  @apply hover:bg-muted/50 transition-colors duration-200 ease-out;
 }
 
 /* Lists */

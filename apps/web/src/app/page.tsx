@@ -166,8 +166,8 @@ export default async function Home() {
             >
               <ParallaxImageCarousel
                 images={[
-                  "https://raw.ravelloh.top/rtheme/fork.webp",
-                  "https://raw.ravelloh.top/rtheme/fork.webp",
+                  { url: "https://raw.ravelloh.top/rtheme/fork.webp" },
+                  { url: "https://raw.ravelloh.top/rtheme/fork.webp" },
                 ]}
                 alt="RTheme showcase"
               />
@@ -241,8 +241,12 @@ export default async function Home() {
             >
               <ParallaxImageCarousel
                 images={[
-                  "https://raw.ravelloh.top/20250724/image.8hgs168oya.webp",
-                  "https://raw.ravelloh.top/20250724/image.2yynl10qrg.webp",
+                  {
+                    url: "https://raw.ravelloh.top/20250724/image.8hgs168oya.webp",
+                  },
+                  {
+                    url: "https://raw.ravelloh.top/20250724/image.2yynl10qrg.webp",
+                  },
                 ]}
                 alt="RTheme showcase"
               />
@@ -265,7 +269,9 @@ export default async function Home() {
             >
               <ParallaxImageCarousel
                 images={[
-                  "https://raw.ravelloh.top/20250325/image.7p3rq9hok6.webp",
+                  {
+                    url: "https://raw.ravelloh.top/20250325/image.7p3rq9hok6.webp",
+                  },
                 ]}
                 alt="RTheme showcase"
               />

@@ -15,6 +15,7 @@ import Link from "@/components/Link";
 import CategoriesRandomPage from "./CategoriesRandomPage";
 import DynamicReplace from "@/components/client/DynamicReplace";
 import CategoryContainer from "./CategoryContainer";
+import { batchQueryMediaFiles, processImageUrl } from "@/lib/shared/imageUtils";
 
 // 获取系统页面配置
 const page = await getRawPage("/categories");
@@ -52,6 +53,14 @@ const allCategories = await prisma.category.findMany({
     },
   },
 });
+
+// 收集所有内部链接的哈希
+const allImageUrls = allCategories
+  .map((category) => category.featuredImage)
+  .filter((image): image is string => image !== null); // 过滤空值并进行类型守卫;
+
+// 批量查询媒体文件
+const mediaFileMap = await batchQueryMediaFiles(allImageUrls);
 
 // 过滤出根分类
 const rawCategories = allCategories.filter(
@@ -112,7 +121,9 @@ const processedCategories = rawCategories.map((category) => {
     slug: category.slug,
     name: category.name,
     description: category.description,
-    featuredImage: category.featuredImage,
+    featuredImage: category.featuredImage
+      ? processImageUrl(category.featuredImage, mediaFileMap)
+      : [],
     totalPostCount,
     totalChildCount,
     path: path.map((item) => item.slug), // 转换为 slug 数组
