@@ -9,7 +9,7 @@ import {
   RiArrowRightDoubleLine,
   RiArrowRightUpLongLine,
 } from "@remixicon/react";
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 type BroadcastFn = ReturnType<typeof useBroadcastSender<object>>["broadcast"];
 type GetLeftRightMenusFn = ReturnType<typeof useMenu>["getLeftRightMenus"];
@@ -79,13 +79,39 @@ const presetStyles = {
   "arrow-out": {
     className: "inline-flex items-center gap-1",
   },
+  hash: {
+    className: "",
+  },
+  "dynamic-icon": {
+    className: "inline-flex items-center gap-1",
+  },
 };
 
 // 应用预设样式
-function applyPresets(presets: string[] = [], children: React.ReactNode) {
+function applyPresets(
+  presets: string[] = [],
+  children: React.ReactNode,
+  href?: string,
+  DynamicIconComponent?: React.ComponentType<{
+    url: string;
+    size: string;
+    className: string;
+  }> | null,
+) {
   if (presets.length === 0) return children;
 
-  const className = presets
+  // 获取除了特殊预设外的其他预设的 className
+  const otherPresets = presets.filter(
+    (p) =>
+      ![
+        "hover-underline",
+        "arrow",
+        "arrow-out",
+        "hash",
+        "dynamic-icon",
+      ].includes(p),
+  );
+  const className = otherPresets
     .map(
       (preset) => presetStyles[preset as keyof typeof presetStyles]?.className,
     )
@@ -94,34 +120,80 @@ function applyPresets(presets: string[] = [], children: React.ReactNode) {
 
   let content = children;
 
-  // 处理 arrow 预设
+  // 处理 hash 预设
+  if (presets.includes("hash")) {
+    // 检查 children 是否是字符串且已经包含 #
+    const childrenText = typeof children === "string" ? children : "";
+    const hasHash = childrenText.startsWith("#");
+
+    if (!hasHash) {
+      content = (
+        <>
+          <span className="text-current opacity-70 mr-1">#</span>
+          {content}
+        </>
+      );
+    }
+  }
+
+  // 处理 arrow 预设（只在行内显示）
   if (presets.includes("arrow")) {
     content = (
-      <span className="inline-flex items-center gap-1">
+      <>
         {content}
-        <RiArrowRightDoubleLine size={"1em"} />
-      </span>
+        <RiArrowRightDoubleLine size={"1em"} className="inline-block ml-1" />
+      </>
     );
   }
 
-  // 处理 arrow-out 预设
+  // 处理 arrow-out 预设（只在行内显示）
   if (presets.includes("arrow-out")) {
     content = (
-      <span className="inline-flex items-center gap-1">
+      <>
         {content}
-        <RiArrowRightUpLongLine size={"1em"} />
-      </span>
+        <RiArrowRightUpLongLine size={"1em"} className="inline-block ml-1" />
+      </>
     );
   }
 
   // 处理 hover-underline 预设
   if (presets.includes("hover-underline")) {
+    // 如果同时有动态图标，图标应该在下划线外面
+    if (presets.includes("dynamic-icon") && DynamicIconComponent && href) {
+      return (
+        <span className={className}>
+          <DynamicIconComponent
+            url={href}
+            size={"1em"}
+            className="inline-block mr-1"
+          />
+          <span className="relative inline box-decoration-clone bg-[linear-gradient(currentColor,currentColor)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]">
+            {content}
+          </span>
+        </span>
+      );
+    }
+
     return (
       <span className={className}>
         <span className="relative inline box-decoration-clone bg-[linear-gradient(currentColor,currentColor)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]">
           {content}
         </span>
       </span>
+    );
+  }
+
+  // 处理动态图标预设（只在没有 hover-underline 时才在这里处理）
+  if (presets.includes("dynamic-icon") && DynamicIconComponent && href) {
+    content = (
+      <>
+        <DynamicIconComponent
+          url={href}
+          size={"1em"}
+          className="inline-block mr-1"
+        />
+        {content}
+      </>
     );
   }
 
@@ -352,8 +424,8 @@ export default function Link({ children, presets, ...props }: CustomLinkProps) {
     e.preventDefault();
   };
 
-  // 应用预设样式
-  const styledChildren = applyPresets(presets, children);
+  // 检查是否需要动态图标
+  const needsDynamicIcon = presets?.includes("dynamic-icon");
 
   // 合并 className
   const combinedClassName = [
@@ -363,12 +435,83 @@ export default function Link({ children, presets, ...props }: CustomLinkProps) {
     .filter(Boolean)
     .join(" ");
 
+  // 如果需要动态图标，使用客户端组件
+  if (needsDynamicIcon) {
+    return (
+      <DynamicIconLink
+        {...props}
+        presets={presets}
+        className={combinedClassName}
+        onNavigate={handleNavigation}
+      >
+        {children}
+      </DynamicIconLink>
+    );
+  }
+
+  // 应用预设样式（不带动态图标）
+  const styledChildren = applyPresets(presets, children);
+
   return (
     <NextLink
       {...props}
       className={combinedClassName}
       onNavigate={handleNavigation}
     >
+      {styledChildren}
+    </NextLink>
+  );
+}
+
+// 动态图标链接客户端组件
+function DynamicIconLink({
+  children,
+  presets,
+  onNavigate,
+  ...props
+}: CustomLinkProps & {
+  onNavigate?: (e: { preventDefault: () => void }) => void;
+}) {
+  const [DynamicIcon, setDynamicIcon] = useState<
+    typeof import("./client/DynamicIcon").DynamicIcon | null
+  >(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    // 动态导入 DynamicIcon 组件
+    import("./client/DynamicIcon")
+      .then((module) => {
+        if (isMounted) {
+          setDynamicIcon(() => module.DynamicIcon);
+          setLoading(false);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load DynamicIcon:", error);
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const href = props.href?.toString() || "";
+
+  // 应用预设样式（带动态图标）
+  const styledChildren = applyPresets(
+    presets,
+    children,
+    href,
+    loading ? null : DynamicIcon,
+  );
+
+  return (
+    <NextLink {...props} onNavigate={onNavigate}>
       {styledChildren}
     </NextLink>
   );

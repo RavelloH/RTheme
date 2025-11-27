@@ -43,7 +43,7 @@ const CodeBlock = async ({
     });
 
     return (
-      <pre className="shiki bg-foreground/5 p-4 rounded-lg overflow-x-auto">
+      <pre className="shiki">
         <code>{code}</code>
       </pre>
     );
@@ -56,11 +56,7 @@ const CodeBlock = async ({
 const InlineCode = ({ children }: { children?: string | string[] }) => {
   const text = Array.isArray(children) ? children.join("") : String(children);
 
-  return (
-    <code className="px-1.5 py-0.5 rounded bg-foreground/10 text-foreground font-mono text-sm">
-      {text}
-    </code>
-  );
+  return <code>{text}</code>;
 };
 
 /**
@@ -71,27 +67,24 @@ const ImageComponent = ({
   alt,
   width,
   height,
+  ...props
 }: {
   src?: string;
   alt?: string;
   width?: string | number;
   height?: string | number;
-}) => {
+} & React.HTMLAttributes<HTMLDivElement>) => {
   const imgSrc = typeof src === "string" ? src : "";
   const imgWidth = width ? Number(width) : 800;
   const imgHeight = height ? Number(height) : 400;
-  const imgAlt =
-    alt || (imgSrc ? imgSrc.split("/").pop()?.split("?")[0] || "图片" : "图片");
+  const imgAlt = alt || "";
 
   return (
-    <div className="relative my-4">
-      <CMSImage
-        src={imgSrc}
-        alt={imgAlt}
-        width={imgWidth}
-        height={imgHeight}
-        className="rounded-lg shadow-sm object-contain w-full h-auto"
-      />
+    <div {...props}>
+      <CMSImage src={imgSrc} alt={imgAlt} width={imgWidth} height={imgHeight} />
+      <div className="text-center text-muted-foreground text-sm mb-2">
+        {imgAlt}
+      </div>
     </div>
   );
 };
@@ -102,10 +95,11 @@ const ImageComponent = ({
 const LinkComponent = ({
   children,
   href,
+  ...props
 }: {
   children?: React.ReactNode;
   href?: string;
-}) => {
+} & React.HTMLAttributes<HTMLAnchorElement>) => {
   const isExternal = href?.startsWith("http");
 
   return (
@@ -113,7 +107,12 @@ const LinkComponent = ({
       href={href || ""}
       target={isExternal ? "_blank" : undefined}
       rel={isExternal ? "noopener noreferrer" : undefined}
-      presets={["hover-underline"]}
+      presets={[
+        "hover-underline",
+        isExternal ? "arrow-out" : "arrow",
+        isExternal ? "dynamic-icon" : "",
+      ]}
+      {...props}
     >
       {children}
     </Link>
@@ -123,10 +122,13 @@ const LinkComponent = ({
 /**
  * 表格组件 - 统一配置
  */
-const TableComponent = ({ children }: { children?: React.ReactNode }) => (
-  <div className="overflow-x-auto my-6">
-    <table className="min-w-full border-collapse">{children}</table>
-  </div>
+const TableComponent = ({
+  children,
+  ...props
+}: {
+  children?: React.ReactNode;
+} & React.TableHTMLAttributes<HTMLTableElement>) => (
+  <table {...props}>{children}</table>
 );
 
 /**
@@ -158,61 +160,114 @@ const BASE_COMPONENTS = {
 
   // 表格
   table: TableComponent,
-  thead: ({ children }: { children?: React.ReactNode }) => (
-    <thead className="bg-foreground/5">{children}</thead>
+  thead: ({
+    children,
+    ...props
+  }: {
+    children?: React.ReactNode;
+  } & React.HTMLAttributes<HTMLTableSectionElement>) => (
+    <thead {...props}>{children}</thead>
   ),
-  tbody: ({ children }: { children?: React.ReactNode }) => (
-    <tbody>{children}</tbody>
+  tbody: ({
+    children,
+    ...props
+  }: {
+    children?: React.ReactNode;
+  } & React.HTMLAttributes<HTMLTableSectionElement>) => (
+    <tbody {...props}>{children}</tbody>
   ),
-  tr: ({ children }: { children?: React.ReactNode }) => (
-    <tr className="border-b border-foreground/10">{children}</tr>
+  tr: ({
+    children,
+    ...props
+  }: {
+    children?: React.ReactNode;
+  } & React.HTMLAttributes<HTMLTableRowElement>) => (
+    <tr {...props}>{children}</tr>
   ),
-  th: ({ children }: { children?: React.ReactNode }) => (
-    <th className="px-4 py-2 text-left font-semibold border border-foreground/20">
-      {children}
-    </th>
+  th: ({
+    children,
+    ...props
+  }: {
+    children?: React.ReactNode;
+  } & React.ThHTMLAttributes<HTMLTableHeaderCellElement>) => (
+    <th {...props}>{children}</th>
   ),
-  td: ({ children }: { children?: React.ReactNode }) => (
-    <td className="px-4 py-2 border border-foreground/20">{children}</td>
+  td: ({
+    children,
+    ...props
+  }: {
+    children?: React.ReactNode;
+  } & React.TdHTMLAttributes<HTMLTableDataCellElement>) => (
+    <td {...props}>{children}</td>
   ),
 
-  // 其他元素（与 content.css 样式保持一致）
-  p: ({ children }: { children?: React.ReactNode }) => (
-    <p className="my-4 leading-relaxed">{children}</p>
+  // 其他元素（样式由 content.css 处理）
+  p: ({
+    children,
+    ...props
+  }: {
+    children?: React.ReactNode;
+  } & React.HTMLAttributes<HTMLParagraphElement>) => (
+    <p {...props}>{children}</p>
   ),
-  ul: ({ children }: { children?: React.ReactNode }) => (
-    <ul className="list-disc list-inside my-4 space-y-1">{children}</ul>
+  ul: ({
+    children,
+    ...props
+  }: {
+    children?: React.ReactNode;
+  } & React.HTMLAttributes<HTMLUListElement>) => <ul {...props}>{children}</ul>,
+  ol: ({
+    children,
+    ...props
+  }: {
+    children?: React.ReactNode;
+  } & React.HTMLAttributes<HTMLOListElement>) => <ol {...props}>{children}</ol>,
+  li: ({
+    children,
+    ...props
+  }: {
+    children?: React.ReactNode;
+  } & React.LiHTMLAttributes<HTMLLIElement>) => <li {...props}>{children}</li>,
+  blockquote: ({
+    children,
+    ...props
+  }: {
+    children?: React.ReactNode;
+  } & React.BlockquoteHTMLAttributes<HTMLElement>) => (
+    <blockquote {...props}>{children}</blockquote>
   ),
-  ol: ({ children }: { children?: React.ReactNode }) => (
-    <ol className="list-decimal list-inside my-4 space-y-1">{children}</ol>
-  ),
-  li: ({ children }: { children?: React.ReactNode }) => (
-    <li className="my-1">{children}</li>
-  ),
-  blockquote: ({ children }: { children?: React.ReactNode }) => (
-    <blockquote className="border-l-4 border-foreground/20 pl-4 my-4 italic">
-      {children}
-    </blockquote>
-  ),
-  hr: () => <hr className="border-foreground/20 my-8" />,
+  hr: ({ ...props }: React.HTMLAttributes<HTMLHRElement>) => <hr {...props} />,
 
-  // MDX 特有元素（删除线、下划线、高亮、上下标）
-  del: ({ children }: { children?: React.ReactNode }) => (
-    <del className="line-through text-muted-foreground">{children}</del>
+  // MDX 特有元素（样式由 content.css 处理）
+  del: ({
+    children,
+    ...props
+  }: { children?: React.ReactNode } & React.DelHTMLAttributes<HTMLElement>) => (
+    <del {...props}>{children}</del>
   ),
-  u: ({ children }: { children?: React.ReactNode }) => (
-    <u className="underline">{children}</u>
+  u: ({
+    children,
+    ...props
+  }: { children?: React.ReactNode } & React.HTMLAttributes<HTMLElement>) => (
+    <u {...props}>{children}</u>
   ),
-  mark: ({ children }: { children?: React.ReactNode }) => (
-    <mark className="bg-yellow-200 dark:bg-yellow-800 px-1 rounded">
-      {children}
-    </mark>
+  mark: ({
+    children,
+    ...props
+  }: {
+    children?: React.ReactNode;
+  } & React.HTMLAttributes<HTMLElement>) => <mark {...props}>{children}</mark>,
+  sup: ({
+    children,
+    ...props
+  }: { children?: React.ReactNode } & React.HTMLAttributes<HTMLElement>) => (
+    <sup {...props}>{children}</sup>
   ),
-  sup: ({ children }: { children?: React.ReactNode }) => (
-    <sup className="text-xs align-super">{children}</sup>
-  ),
-  sub: ({ children }: { children?: React.ReactNode }) => (
-    <sub className="text-xs align-sub">{children}</sub>
+  sub: ({
+    children,
+    ...props
+  }: { children?: React.ReactNode } & React.HTMLAttributes<HTMLElement>) => (
+    <sub {...props}>{children}</sub>
   ),
 } as const;
 
