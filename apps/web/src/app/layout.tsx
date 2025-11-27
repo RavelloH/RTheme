@@ -30,9 +30,10 @@ import { getConfig } from "@/lib/server/configCache";
 // Types
 import { ColorConfig } from "@/types/config";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], display: "swap" });
 const ibmPlexMono = IBM_Plex_Mono({
   subsets: ["latin"],
+  display: "swap",
   weight: ["400", "500", "600", "700"],
   variable: "--font-mono",
 });

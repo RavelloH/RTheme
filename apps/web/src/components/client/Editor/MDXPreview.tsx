@@ -21,13 +21,10 @@ import type { SerializeResult } from "next-mdx-remote-client/serialize";
 import type { MDXComponents } from "next-mdx-remote-client/csr";
 import { codeToHtml } from "shiki";
 import remarkGfm from "remark-gfm";
-import MarkdownIt from "markdown-it";
-import markdownItMark from "markdown-it-mark";
-import markdownItSub from "markdown-it-sub";
-import markdownItSup from "markdown-it-sup";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { RiAlertLine, RiRefreshLine } from "@remixicon/react";
 import Clickable from "@/ui/Clickable";
+import MarkdownRenderer from "../MarkdownRenderer";
 
 export interface MDXPreviewProps {
   content: string;
@@ -282,9 +279,6 @@ export function MDXPreview({
   className = "",
   onScroll,
 }: MDXPreviewProps) {
-  // Markdown 模式状态
-  const [markdownHtml, setMarkdownHtml] = useState<string>("");
-
   // MDX 模式状态
   const [mdxSource, setMdxSource] = useState<SerializeResult<
     Record<string, unknown>,
@@ -298,85 +292,9 @@ export function MDXPreview({
   // 重置错误状态
   const handleResetError = () => {
     setRenderError(null);
-    setMarkdownHtml("");
     setMdxSource(null);
     setRetryKey((prev) => prev + 1); // 触发重新渲染
   };
-
-  // Markdown 模式渲染
-  useEffect(() => {
-    if (mode !== "markdown") return;
-
-    const renderMarkdown = async () => {
-      try {
-        setRenderError(null);
-
-        // 初始化 markdown-it 实例
-        const md = new MarkdownIt({
-          html: true, // 启用 HTML 标签
-          linkify: true, // 自动转换 URL 为链接
-          typographer: true, // 启用一些语言中立的替换 + 引号美化
-          breaks: false, // 转换段落里的 '\n' 到 <br>
-        })
-          .use(markdownItMark) // 支持 ==高亮==
-          .use(markdownItSub) // 支持 ~下标~
-          .use(markdownItSup); // 支持 ^上标^
-
-        // 渲染 markdown
-        let html = md.render(content);
-
-        // 使用 Shiki 高亮代码块
-        const codeBlockRegex =
-          /<pre><code class="language-(\w+)">([\s\S]*?)<\/code><\/pre>/g;
-        const matches = Array.from(html.matchAll(codeBlockRegex));
-
-        // 并行处理所有代码块高亮
-        const highlightedBlocks = await Promise.all(
-          matches.map(async (match) => {
-            const [fullMatch, lang, code] = match;
-
-            // 跳过无效匹配
-            if (!lang || !code) return { fullMatch, highlighted: fullMatch };
-
-            // 解码 HTML 实体
-            const decodedCode = code
-              .replace(/&lt;/g, "<")
-              .replace(/&gt;/g, ">")
-              .replace(/&amp;/g, "&")
-              .replace(/&quot;/g, '"')
-              .replace(/&#39;/g, "'");
-
-            try {
-              const highlighted = await codeToHtml(decodedCode, {
-                lang: lang as string,
-                themes: {
-                  light: "light-plus",
-                  dark: "dark-plus",
-                },
-              });
-              return { fullMatch, highlighted };
-            } catch (err) {
-              console.error(`Failed to highlight code block (${lang}):`, err);
-              return { fullMatch, highlighted: fullMatch };
-            }
-          }),
-        );
-
-        // 替换所有高亮的代码块
-        for (const { fullMatch, highlighted } of highlightedBlocks) {
-          html = html.replace(fullMatch, highlighted);
-        }
-
-        setMarkdownHtml(html);
-      } catch (err) {
-        console.error("Markdown rendering error:", err);
-        setRenderError(err instanceof Error ? err : new Error("渲染失败"));
-      }
-    };
-
-    const timeoutId = setTimeout(renderMarkdown, 300);
-    return () => clearTimeout(timeoutId);
-  }, [content, mode, retryKey]);
 
   // MDX 模式渲染
   useEffect(() => {
@@ -453,19 +371,12 @@ export function MDXPreview({
       <RenderError error={renderError} onReset={handleResetError} />
     );
   } else if (mode === "markdown") {
-    // Markdown 模式: 使用 dangerouslySetInnerHTML 渲染 HTML
-    if (markdownHtml) {
-      renderedContent = (
-        <MDXErrorBoundary onReset={handleResetError}>
-          <div
-            className="max-w-4xl mx-auto"
-            dangerouslySetInnerHTML={{ __html: markdownHtml }}
-          />
-        </MDXErrorBoundary>
-      );
-    } else {
-      renderedContent = <div className="text-foreground/50">加载中...</div>;
-    }
+    // Markdown 模式: 使用 MarkdownRenderer 渲染
+    renderedContent = (
+      <MDXErrorBoundary onReset={handleResetError}>
+        <MarkdownRenderer source={content} />
+      </MDXErrorBoundary>
+    );
   } else {
     // MDX 模式: 使用 hydrate 渲染
     if (mdxSource) {

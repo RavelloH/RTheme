@@ -10,7 +10,7 @@ import rehypeRaw from "rehype-raw";
 import {
   getMarkdownComponents,
   getMDXComponents,
-} from "@/lib/shared/renderAdapter";
+} from "@/components/server/renderAdapter";
 
 interface MDXRendererProps {
   source: string;

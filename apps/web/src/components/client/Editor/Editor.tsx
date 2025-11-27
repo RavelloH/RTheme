@@ -375,6 +375,21 @@ export default function Editor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, editorType]); // 依赖editor和editorType，确保编辑器准备好后加载内容
 
+  // 监控 markdownContent 变化并同步到 Monaco
+  useEffect(() => {
+    if (
+      monacoEditor &&
+      markdownContent &&
+      (editorType === "markdown" || editorType === "mdx")
+    ) {
+      const currentMonacoContent = monacoEditor.getValue();
+      if (currentMonacoContent !== markdownContent) {
+        monacoEditor.setValue(markdownContent);
+        monacoEditor.setPosition({ lineNumber: 1, column: 1 });
+      }
+    }
+  }, [markdownContent, monacoEditor, editorType]);
+
   // 从编辑器内容中提取第一个 H1 标题
   const extractTitleFromEditor = useCallback(
     (editorInstance: TiptapEditorType) => {
@@ -1483,6 +1498,20 @@ export default function Editor({
                   adapterManagerRef.current.registerMarkdownEditor(
                     monacoInstance,
                   );
+                }
+              }
+
+              // 强制同步内容到 Monaco
+              if (markdownContent && markdownContent.trim()) {
+                monacoInstance.setValue(markdownContent);
+                monacoInstance.setPosition({ lineNumber: 1, column: 1 });
+              } else {
+                // 如果 markdownContent 为空，尝试从 localStorage 重新加载
+                const savedData = loadEditorContent(storageKey);
+                if (savedData?.content) {
+                  monacoInstance.setValue(savedData.content);
+                  monacoInstance.setPosition({ lineNumber: 1, column: 1 });
+                  setMarkdownContent(savedData.content);
                 }
               }
 

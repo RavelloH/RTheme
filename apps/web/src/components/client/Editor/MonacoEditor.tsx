@@ -105,6 +105,11 @@ export function MonacoEditor({
           contextmenu: true,
           quickSuggestions: true,
           acceptSuggestionOnEnter: "on",
+          tabCompletion: "on",
+          formatOnPaste: true, // 确保粘贴内容被正确处理
+          formatOnType: true, // 自动格式化
+          insertSpaces: false, // 保留制表符
+          detectIndentation: false, // 禁用自动缩进检测
         }}
       />
     </div>
