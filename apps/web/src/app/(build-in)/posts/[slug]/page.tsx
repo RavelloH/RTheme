@@ -19,7 +19,12 @@ import {
   getCategoryNamePath,
   getCategoryPath,
 } from "@/lib/server/category-utils";
-import { batchQueryMediaFiles, processImageUrl } from "@/lib/shared/imageUtils";
+import {
+  batchQueryMediaFiles,
+  processImageUrl,
+  extractInternalHashes,
+} from "@/lib/shared/imageUtils";
+import ImageLightbox from "@/components/client/ImageLightbox";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -73,9 +78,26 @@ export default async function PostPage({ params }: PageProps) {
 
     // 查询文章特色图片的媒体文件信息
     postMediaFileMap = new Map();
+    const allImageUrls = new Set<string>();
+
     if (post.featuredImage) {
       postMediaFileMap = await batchQueryMediaFiles([post.featuredImage]);
+      allImageUrls.add(post.featuredImage);
     }
+
+    // 查询文章内容中的所有图片
+    const contentImageHashes = extractInternalHashes(post.content);
+    contentImageHashes.forEach((hash) => {
+      allImageUrls.add(`/p/${hash.fullHash}`);
+    });
+
+    // 批量查询文章内容中的所有图片媒体信息
+    const contentMediaFileMap = await batchQueryMediaFiles(
+      Array.from(allImageUrls),
+    );
+
+    // 合并媒体文件映射
+    postMediaFileMap = new Map([...postMediaFileMap, ...contentMediaFileMap]);
   } catch {
     // 如果文章不存在或未发布，返回 404
     notFound();
@@ -100,6 +122,7 @@ export default async function PostPage({ params }: PageProps) {
 
   return (
     <MainLayout type="vertical" nopadding>
+      <ImageLightbox />
       <div className="h-full w-full">
         {/* 文章头部信息 */}
         <div className="p-10 text-xl flex flex-wrap gap-2 bg-primary text-primary-foreground">
@@ -249,6 +272,7 @@ export default async function PostPage({ params }: PageProps) {
             <MDXRenderer
               source={renderedContent.content}
               mode={renderedContent.mode}
+              mediaFileMap={postMediaFileMap}
             />
           </div>
           <div className="flex-[2] hidden lg:block max-w-screen">

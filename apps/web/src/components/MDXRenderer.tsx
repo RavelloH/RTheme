@@ -15,14 +15,22 @@ import {
 interface MDXRendererProps {
   source: string;
   mode: "markdown" | "mdx";
+  mediaFileMap?: Map<string, any>;
 }
 
-export default function MDXRenderer({ source, mode }: MDXRendererProps) {
+export default function MDXRenderer({
+  source,
+  mode,
+  mediaFileMap,
+}: MDXRendererProps) {
   if (mode === "mdx") {
     // MDX 模式：使用 next-mdx-remote 渲染
     return (
       <div className="max-w-4xl mx-auto">
-        <MDXRemote source={source} components={getMDXComponents()} />
+        <MDXRemote
+          source={source}
+          components={getMDXComponents(mediaFileMap)}
+        />
       </div>
     );
   }
@@ -33,7 +41,7 @@ export default function MDXRenderer({ source, mode }: MDXRendererProps) {
       <Markdown
         remarkPlugins={[remarkGfm, remarkMath, remarkBreaks]}
         rehypePlugins={[rehypeKatex, rehypeSlug, rehypeRaw]}
-        components={getMarkdownComponents()}
+        components={getMarkdownComponents(mediaFileMap)}
       >
         {source}
       </Markdown>

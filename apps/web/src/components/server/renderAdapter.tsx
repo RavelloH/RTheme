@@ -4,6 +4,7 @@ import Link from "@/components/Link";
 import { codeToHtml } from "shiki";
 import type { Components } from "react-markdown";
 import type { MDXComponents } from "next-mdx-remote-client/rsc";
+import { processImageUrl, type MediaFileInfo } from "@/lib/shared/imageUtils";
 
 /**
  * 渲染适配器
@@ -60,6 +61,17 @@ const InlineCode = ({ children }: { children?: string | string[] }) => {
 };
 
 /**
+ * 图片组件的 Props 类型
+ */
+interface ImageComponentProps {
+  src?: string;
+  alt?: string;
+  width?: string | number;
+  height?: string | number;
+  mediaFileMap?: Map<string, MediaFileInfo>;
+}
+
+/**
  * 图片组件 - 统一配置
  */
 const ImageComponent = ({
@@ -67,21 +79,44 @@ const ImageComponent = ({
   alt,
   width,
   height,
-  ...props
-}: {
-  src?: string;
-  alt?: string;
-  width?: string | number;
-  height?: string | number;
-} & React.HTMLAttributes<HTMLDivElement>) => {
+  mediaFileMap,
+}: ImageComponentProps) => {
   const imgSrc = typeof src === "string" ? src : "";
-  const imgWidth = width ? Number(width) : 800;
-  const imgHeight = height ? Number(height) : 400;
   const imgAlt = alt || "";
 
+  // 尝试从媒体文件映射中获取图片信息
+  let imgWidth = width ? Number(width) : undefined;
+  let imgHeight = height ? Number(height) : undefined;
+  let blur: string | undefined;
+
+  if (mediaFileMap && imgSrc) {
+    // 使用 processImageUrl 处理图片URL
+    const processedImages = processImageUrl(imgSrc, mediaFileMap);
+    const imageInfo = processedImages[0];
+
+    if (imageInfo) {
+      imgWidth = imageInfo.width || imgWidth;
+      imgHeight = imageInfo.height || imgHeight;
+      blur = imageInfo.blur || blur;
+    }
+  }
+
+  // 如果没有获取到尺寸信息，使用默认值
+  imgWidth = imgWidth || 800;
+  imgHeight = imgHeight || 400;
+
   return (
-    <div {...props}>
-      <CMSImage src={imgSrc} alt={imgAlt} width={imgWidth} height={imgHeight} />
+    <div>
+      <CMSImage
+        src={imgSrc}
+        alt={imgAlt}
+        width={imgWidth}
+        height={imgHeight}
+        blur={blur}
+        optimized={!!(blur && imgWidth && imgHeight)}
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        data-lightbox="true"
+      />
       <div className="text-center text-muted-foreground text-sm mb-2">
         {imgAlt}
       </div>
@@ -132,155 +167,185 @@ const TableComponent = ({
 );
 
 /**
- * 统一的基础组件配置
- * 适用于 Markdown 和 MDX 两种模式
+ * 创建统一的基础组件配置
+ * 支持传递媒体文件映射
  */
-const BASE_COMPONENTS = {
-  // 代码处理
-  pre: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
-  code: ({
-    children,
-    className,
-  }: {
-    children?: string | string[];
-    className?: string;
-  }) => {
-    // 如果有 className (通常是 language-*), 说明是代码块
-    if (className) {
-      return <CodeBlock className={className}>{children as string}</CodeBlock>;
-    }
-    return <InlineCode>{children as string}</InlineCode>;
-  },
+const createBaseComponents = (mediaFileMap?: Map<string, MediaFileInfo>) =>
+  ({
+    // 代码处理
+    pre: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+    code: ({
+      children,
+      className,
+    }: {
+      children?: string | string[];
+      className?: string;
+    }) => {
+      // 如果有 className (通常是 language-*), 说明是代码块
+      if (className) {
+        return (
+          <CodeBlock className={className}>{children as string}</CodeBlock>
+        );
+      }
+      return <InlineCode>{children as string}</InlineCode>;
+    },
 
-  // 链接
-  a: LinkComponent,
+    // 链接
+    a: LinkComponent,
 
-  // 图片
-  img: ImageComponent,
+    // 图片
+    img: (props: React.ImgHTMLAttributes<HTMLImageElement>) => {
+      const { src, alt, width, height } = props;
+      return (
+        <ImageComponent
+          src={typeof src === "string" ? src : undefined}
+          alt={alt}
+          width={width}
+          height={height}
+          mediaFileMap={mediaFileMap}
+        />
+      );
+    },
 
-  // 表格
-  table: TableComponent,
-  thead: ({
-    children,
-    ...props
-  }: {
-    children?: React.ReactNode;
-  } & React.HTMLAttributes<HTMLTableSectionElement>) => (
-    <thead {...props}>{children}</thead>
-  ),
-  tbody: ({
-    children,
-    ...props
-  }: {
-    children?: React.ReactNode;
-  } & React.HTMLAttributes<HTMLTableSectionElement>) => (
-    <tbody {...props}>{children}</tbody>
-  ),
-  tr: ({
-    children,
-    ...props
-  }: {
-    children?: React.ReactNode;
-  } & React.HTMLAttributes<HTMLTableRowElement>) => (
-    <tr {...props}>{children}</tr>
-  ),
-  th: ({
-    children,
-    ...props
-  }: {
-    children?: React.ReactNode;
-  } & React.ThHTMLAttributes<HTMLTableHeaderCellElement>) => (
-    <th {...props}>{children}</th>
-  ),
-  td: ({
-    children,
-    ...props
-  }: {
-    children?: React.ReactNode;
-  } & React.TdHTMLAttributes<HTMLTableDataCellElement>) => (
-    <td {...props}>{children}</td>
-  ),
+    // 表格
+    table: TableComponent,
+    thead: ({
+      children,
+      ...props
+    }: {
+      children?: React.ReactNode;
+    } & React.HTMLAttributes<HTMLTableSectionElement>) => (
+      <thead {...props}>{children}</thead>
+    ),
+    tbody: ({
+      children,
+      ...props
+    }: {
+      children?: React.ReactNode;
+    } & React.HTMLAttributes<HTMLTableSectionElement>) => (
+      <tbody {...props}>{children}</tbody>
+    ),
+    tr: ({
+      children,
+      ...props
+    }: {
+      children?: React.ReactNode;
+    } & React.HTMLAttributes<HTMLTableRowElement>) => (
+      <tr {...props}>{children}</tr>
+    ),
+    th: ({
+      children,
+      ...props
+    }: {
+      children?: React.ReactNode;
+    } & React.ThHTMLAttributes<HTMLTableHeaderCellElement>) => (
+      <th {...props}>{children}</th>
+    ),
+    td: ({
+      children,
+      ...props
+    }: {
+      children?: React.ReactNode;
+    } & React.TdHTMLAttributes<HTMLTableDataCellElement>) => (
+      <td {...props}>{children}</td>
+    ),
 
-  // 其他元素（样式由 content.css 处理）
-  p: ({
-    children,
-    ...props
-  }: {
-    children?: React.ReactNode;
-  } & React.HTMLAttributes<HTMLParagraphElement>) => (
-    <p {...props}>{children}</p>
-  ),
-  ul: ({
-    children,
-    ...props
-  }: {
-    children?: React.ReactNode;
-  } & React.HTMLAttributes<HTMLUListElement>) => <ul {...props}>{children}</ul>,
-  ol: ({
-    children,
-    ...props
-  }: {
-    children?: React.ReactNode;
-  } & React.HTMLAttributes<HTMLOListElement>) => <ol {...props}>{children}</ol>,
-  li: ({
-    children,
-    ...props
-  }: {
-    children?: React.ReactNode;
-  } & React.LiHTMLAttributes<HTMLLIElement>) => <li {...props}>{children}</li>,
-  blockquote: ({
-    children,
-    ...props
-  }: {
-    children?: React.ReactNode;
-  } & React.BlockquoteHTMLAttributes<HTMLElement>) => (
-    <blockquote {...props}>{children}</blockquote>
-  ),
-  hr: ({ ...props }: React.HTMLAttributes<HTMLHRElement>) => <hr {...props} />,
+    // 其他元素（样式由 content.css 处理）
+    p: ({
+      children,
+      ...props
+    }: {
+      children?: React.ReactNode;
+    } & React.HTMLAttributes<HTMLParagraphElement>) => (
+      <p {...props}>{children}</p>
+    ),
+    ul: ({
+      children,
+      ...props
+    }: {
+      children?: React.ReactNode;
+    } & React.HTMLAttributes<HTMLUListElement>) => (
+      <ul {...props}>{children}</ul>
+    ),
+    ol: ({
+      children,
+      ...props
+    }: {
+      children?: React.ReactNode;
+    } & React.HTMLAttributes<HTMLOListElement>) => (
+      <ol {...props}>{children}</ol>
+    ),
+    li: ({
+      children,
+      ...props
+    }: {
+      children?: React.ReactNode;
+    } & React.LiHTMLAttributes<HTMLLIElement>) => (
+      <li {...props}>{children}</li>
+    ),
+    blockquote: ({
+      children,
+      ...props
+    }: {
+      children?: React.ReactNode;
+    } & React.BlockquoteHTMLAttributes<HTMLElement>) => (
+      <blockquote {...props}>{children}</blockquote>
+    ),
+    hr: ({ ...props }: React.HTMLAttributes<HTMLHRElement>) => (
+      <hr {...props} />
+    ),
 
-  // MDX 特有元素（样式由 content.css 处理）
-  del: ({
-    children,
-    ...props
-  }: { children?: React.ReactNode } & React.DelHTMLAttributes<HTMLElement>) => (
-    <del {...props}>{children}</del>
-  ),
-  u: ({
-    children,
-    ...props
-  }: { children?: React.ReactNode } & React.HTMLAttributes<HTMLElement>) => (
-    <u {...props}>{children}</u>
-  ),
-  mark: ({
-    children,
-    ...props
-  }: {
-    children?: React.ReactNode;
-  } & React.HTMLAttributes<HTMLElement>) => <mark {...props}>{children}</mark>,
-  sup: ({
-    children,
-    ...props
-  }: { children?: React.ReactNode } & React.HTMLAttributes<HTMLElement>) => (
-    <sup {...props}>{children}</sup>
-  ),
-  sub: ({
-    children,
-    ...props
-  }: { children?: React.ReactNode } & React.HTMLAttributes<HTMLElement>) => (
-    <sub {...props}>{children}</sub>
-  ),
-} as const;
+    // MDX 特有元素（样式由 content.css 处理）
+    del: ({
+      children,
+      ...props
+    }: {
+      children?: React.ReactNode;
+    } & React.DelHTMLAttributes<HTMLElement>) => (
+      <del {...props}>{children}</del>
+    ),
+    u: ({
+      children,
+      ...props
+    }: { children?: React.ReactNode } & React.HTMLAttributes<HTMLElement>) => (
+      <u {...props}>{children}</u>
+    ),
+    mark: ({
+      children,
+      ...props
+    }: {
+      children?: React.ReactNode;
+    } & React.HTMLAttributes<HTMLElement>) => (
+      <mark {...props}>{children}</mark>
+    ),
+    sup: ({
+      children,
+      ...props
+    }: { children?: React.ReactNode } & React.HTMLAttributes<HTMLElement>) => (
+      <sup {...props}>{children}</sup>
+    ),
+    sub: ({
+      children,
+      ...props
+    }: { children?: React.ReactNode } & React.HTMLAttributes<HTMLElement>) => (
+      <sub {...props}>{children}</sub>
+    ),
+  }) as const;
 
 /**
  * 获取 react-markdown 的组件配置
  */
-export function getMarkdownComponents(): Components {
-  return BASE_COMPONENTS as Components;
+export function getMarkdownComponents(
+  mediaFileMap?: Map<string, MediaFileInfo>,
+): Components {
+  return createBaseComponents(mediaFileMap) as Components;
 }
 
 /**
  * 获取 MDX 的组件配置
  */
-export function getMDXComponents(): MDXComponents {
-  return BASE_COMPONENTS as MDXComponents;
+export function getMDXComponents(
+  mediaFileMap?: Map<string, MediaFileInfo>,
+): MDXComponents {
+  return createBaseComponents(mediaFileMap) as MDXComponents;
 }
