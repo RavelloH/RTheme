@@ -119,3 +119,19 @@
 .dark {
   scrollbar-color: var(--color-muted-foreground) var(--color-background);
 }
+
+.loading-dots span {
+  animation: breath-frames 1.5s infinite ease-in-out;
+}
+
+@keyframes breath-frames {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+  100% {
+    opacity: 1;
+  }
+}

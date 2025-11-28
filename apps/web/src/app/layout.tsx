@@ -43,9 +43,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [menus, mainColor] = await Promise.all([
+  const [menus, mainColor, siteName] = await Promise.all([
     getActiveMenus(),
     getConfig<ColorConfig>("site.color"),
+    getConfig<string>("site.name"),
   ]);
 
   return (
@@ -67,7 +68,7 @@ export default async function RootLayout({
         >
           <MenuProvider menus={menus}>
             <ResponsiveFontScale scaleFactor={0.017} baseSize={12}>
-              <LoadingAnimation />
+              <LoadingAnimation siteName={siteName} />
               <LayoutContainer>
                 <Header menus={menus} />
                 <MainContent>

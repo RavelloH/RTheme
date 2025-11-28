@@ -1,44 +1,101 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { LoadingProgress } from "./LoadingProgress";
+import { useRef, useState } from "react";
 import { PageLoadManager } from "./PageLoadManager";
+import { AutoTransition } from "@/ui/AutoTransition";
+import gsap from "gsap";
 
-export function LoadingAnimation() {
-  const [showLoading, setShowLoading] = useState(true);
-  const [pageLoaded, setPageLoaded] = useState(false);
-  const [progressComplete, setProgressComplete] = useState(false);
+interface LoadingAnimationProps {
+  siteName?: string;
+}
+
+export function LoadingAnimation({ siteName }: LoadingAnimationProps) {
+  const overlayRef = useRef<HTMLDivElement>(null);
   const hasTriggeredRef = useRef(false);
+  const [loadingText, setLoadingText] = useState("LOADING...");
 
   const handlePageLoadComplete = () => {
-    setPageLoaded(true);
+    if (hasTriggeredRef.current || !overlayRef.current) return;
+    hasTriggeredRef.current = true;
+
+    // 先将文字改为 LOAD COMPLETED.
+    setLoadingText("LOAD COMPLETED.");
+
+    // 等待文字切换动画完成后再淡出整个遮罩
+    setTimeout(() => {
+      if (!overlayRef.current) return;
+
+      gsap.to(overlayRef.current, {
+        opacity: 0,
+        duration: 0.5,
+        ease: "power2.out",
+        onComplete: () => {
+          // 触发所有组件的动画
+          const event = new CustomEvent("loadingComplete");
+          window.dispatchEvent(event);
+        },
+      });
+    }, 900);
   };
 
-  const handleProgressComplete = () => {
-    setProgressComplete(true);
-  };
-
-  // 监听两个状态，当都完成时触发动画
-  useEffect(() => {
-    if (pageLoaded && progressComplete && !hasTriggeredRef.current) {
-      hasTriggeredRef.current = true;
-      setShowLoading(false);
-
-      // 触发所有组件的动画
-      const event = new CustomEvent("loadingComplete");
-      window.dispatchEvent(event);
+  // 渲染 LOADING... 文字，将三个点分别用 span 包裹
+  const renderLoadingText = () => {
+    if (loadingText === "LOADING...") {
+      return (
+        <>
+          LOADING
+          <span className="loading-dots">
+            <span style={{ animationDelay: "0.2s" }}>.</span>
+            <span style={{ animationDelay: "0.3s" }}>.</span>
+            <span style={{ animationDelay: "0.4s" }}>.</span>
+          </span>
+        </>
+      );
     }
-  }, [pageLoaded, progressComplete]);
 
-  // 如果不显示加载界面，返回null
-  if (!showLoading) {
-    return null;
-  }
+    return (
+      <>
+        LOAD{" "}
+        <span
+          style={{
+            background:
+              "linear-gradient(90deg, var(--color-foreground), var(--color-primary))",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}
+        >
+          COMPLETED.
+        </span>
+      </>
+    );
+  };
 
   return (
     <>
       <PageLoadManager onLoadComplete={handlePageLoadComplete} />
-      <LoadingProgress onComplete={handleProgressComplete} />
+      <div
+        ref={overlayRef}
+        className="fixed inset-0 z-[9999] bg-background pointer-events-none flex items-center justify-center"
+        style={{ opacity: 1 }}
+      >
+        <div className="border-foreground border-y py-5">
+          {/* 站点名称 */}
+          <h1 className="text-6xl md:text-7xl font-bold mb-1 text-foreground">
+            {siteName || "RAVELLOH'S BLOG"}
+          </h1>
+
+          {/* 加载状态文字，带渐变效果 */}
+          <AutoTransition type="fade" duration={0.3} initial={false}>
+            <p
+              key={loadingText}
+              className="text-5xl md:text-6xl font-bold text-foreground"
+            >
+              {renderLoadingText()}
+            </p>
+          </AutoTransition>
+        </div>
+      </div>
     </>
   );
 }

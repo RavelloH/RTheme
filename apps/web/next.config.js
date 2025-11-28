@@ -4,9 +4,7 @@ const nextConfig = {
     remotePatterns: [new URL("https://raw.ravelloh.top/**")],
   },
   experimental: {
-    serverActions: {
-      bodySizeLimit: "50mb",
-    },
+    optimizePackageImports: ["@remixicon/react"],
   },
   // 排除 sharp 的 Linux 二进制文件，避免 Windows 上的权限错误
   outputFileTracingExcludes: {

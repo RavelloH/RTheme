@@ -10,7 +10,7 @@ interface MainContentProps {
 
 export function MainContent({ children }: MainContentProps) {
   const mainRef = useRef<HTMLElement>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [, setIsLoaded] = useState(false);
   const isMobile = useMobile();
 
   // 根据设备类型获取高度值
@@ -21,14 +21,14 @@ export function MainContent({ children }: MainContentProps) {
     const handleLoadingComplete = () => {
       setIsLoaded(true);
 
-      // 使用GSAP动画从右侧滑入
+      // 使用GSAP透明度渐变动画，延迟等待Header和Footer完成
       if (mainRef.current) {
         gsap.fromTo(
           mainRef.current,
-          { x: "100%" },
+          { opacity: 0 },
           {
-            x: "0%",
-            duration: 0.8,
+            opacity: 1,
+            duration: 0.6,
             ease: "power2.out",
             delay: 0.4, // 在Header和Footer之后
           },
@@ -46,9 +46,10 @@ export function MainContent({ children }: MainContentProps) {
   return (
     <main
       ref={mainRef}
-      className={`${isMobile ? "min-h-screen" : "flex-1 overflow-hidden"} ${isLoaded ? "translate-x-0" : "translate-x-full"}`}
+      className={`${isMobile ? "min-h-screen" : "flex-1 overflow-hidden"}`}
       style={{
         marginTop: getHeaderHeight(),
+        opacity: 0,
       }}
     >
       {children}

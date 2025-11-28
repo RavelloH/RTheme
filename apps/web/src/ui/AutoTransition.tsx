@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence, TargetAndTransition } from "framer-motion";
 
 export type TransitionType =
@@ -68,6 +68,16 @@ export function AutoTransition({
   initial = true,
   customVariants,
 }: AutoTransitionProps) {
+  // 追踪是否已经完成首次渲染
+  const [hasRendered, setHasRendered] = useState(false);
+
+  // 使用 useEffect 在首次渲染后设置标记
+  useEffect(() => {
+    if (!hasRendered) {
+      setHasRendered(true);
+    }
+  }, [hasRendered]);
+
   // 使用 useMemo 优化 key 生成
   const key = useMemo(() => {
     if (!children) return "empty";
@@ -102,12 +112,15 @@ export function AutoTransition({
   // 选择动画变体
   const selectedVariants = customVariants || transitionVariants[type];
 
+  // 判断是否应该播放入场动画
+  const shouldAnimate = initial || hasRendered;
+
   return (
     <AnimatePresence mode="wait">
       <motion.div
         key={key}
         className={className}
-        initial={initial ? selectedVariants.initial : false}
+        initial={shouldAnimate ? selectedVariants.initial : false}
         animate={selectedVariants.animate}
         exit={selectedVariants.exit}
         transition={{ duration }}
