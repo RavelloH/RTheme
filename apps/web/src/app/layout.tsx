@@ -46,7 +46,7 @@ export default async function RootLayout({
   const [menus, mainColor, siteName] = await Promise.all([
     getActiveMenus(),
     getConfig<ColorConfig>("site.color"),
-    getConfig<string>("site.name"),
+    getConfig<string>("site.title"),
   ]);
 
   return (

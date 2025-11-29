@@ -79,21 +79,35 @@ export function LoadingAnimation({ siteName }: LoadingAnimationProps) {
         className="fixed inset-0 z-[9999] bg-background pointer-events-none flex items-center justify-center"
         style={{ opacity: 1 }}
       >
-        <div className="border-foreground border-y py-5">
+        <div className="border-foreground border-y py-5 flex flex-col items-start">
           {/* 站点名称 */}
-          <h1 className="text-6xl md:text-7xl font-bold mb-1 text-foreground">
-            {siteName || "RAVELLOH'S BLOG"}
+          <h1 className="text-6xl md:text-7xl font-bold mb-1 text-foreground whitespace-nowrap uppercase">
+            {siteName}
           </h1>
 
           {/* 加载状态文字，带渐变效果 */}
-          <AutoTransition type="fade" duration={0.3} initial={false}>
-            <p
-              key={loadingText}
-              className="text-5xl md:text-6xl font-bold text-foreground"
-            >
-              {renderLoadingText()}
-            </p>
-          </AutoTransition>
+          {/* 使用 grid 布局，确保两个状态的文字占据相同的空间 */}
+          <div className="grid">
+            <div className="relative" style={{ gridArea: "1 / 1" }}>
+              {/* 隐藏的参考元素，确保容器宽度至少为 "LOAD COMPLETED." 的宽度 */}
+              <p
+                className="text-5xl md:text-6xl font-bold text-foreground invisible whitespace-nowrap"
+                aria-hidden="true"
+              >
+                LOAD COMPLETED.
+              </p>
+            </div>
+            <div style={{ gridArea: "1 / 1" }}>
+              <AutoTransition type="fade" duration={0.3} initial={false}>
+                <p
+                  key={loadingText}
+                  className="text-5xl md:text-6xl font-bold text-foreground whitespace-nowrap"
+                >
+                  {renderLoadingText()}
+                </p>
+              </AutoTransition>
+            </div>
+          </div>
         </div>
       </div>
     </>
