@@ -214,6 +214,9 @@ importers:
       ioredis:
         specifier: ^5.7.0
         version: 5.7.0
+      js-md5:
+        specifier: ^0.8.3
+        version: 0.8.3
       jsonwebtoken:
         specifier: ^9.0.2
         version: 9.0.2
@@ -5786,6 +5789,9 @@ packages:
   js-levenshtein@1.1.6:
     resolution: {integrity: sha512-X2BB11YZtrRqY4EnQcLX5Rh373zbK4alC1FW7D7MBhL2gtcC17cTnr6DmfHZeS0s2rTHjUTMMHfG7gO8SSdw+g==}
     engines: {node: '>=0.10.0'}
+
+  js-md5@0.8.3:
+    resolution: {integrity: sha512-qR0HB5uP6wCuRMrWPTrkMaev7MJZwJuuw4fnwAzRgP4J4/F8RwtodOKpGp4XpqsLBFzzgqIO42efFAyz2Et6KQ==}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -16091,6 +16097,8 @@ snapshots:
       '@sideway/pinpoint': 2.0.0
 
   js-levenshtein@1.1.6: {}
+
+  js-md5@0.8.3: {}
 
   js-tokens@4.0.0: {}
 

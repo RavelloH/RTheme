@@ -6,7 +6,6 @@ import { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { UserListItem } from "@repo/shared-types/api/user";
 import { useBroadcast } from "@/hooks/useBroadcast";
-import Image from "next/image";
 import {
   RiCheckLine,
   RiCloseLine,
@@ -15,7 +14,6 @@ import {
   RiUserSettingsLine,
   RiShieldUserLine,
 } from "@remixicon/react";
-import Avatar from "boring-avatars";
 import generateGradient from "@/lib/shared/gradient";
 import generateComplementary from "@/lib/shared/complementary";
 import { Dialog } from "@/ui/Dialog";
@@ -26,6 +24,7 @@ import { Button } from "@/ui/Button";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { useToast } from "@/ui/Toast";
 import Link from "@/components/Link";
+import UserAvatar from "@/components/UserAvatar";
 
 export default function UsersTable({ mainColor }: { mainColor: string }) {
   const toast = useToast();
@@ -634,24 +633,20 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
       align: "left",
       render: (value: unknown, record: UserListItem) => {
         const username = record.username;
-        return typeof value === "string" && value ? (
-          <Image
-            src={value}
-            alt="avatar"
-            width={32}
-            height={32}
-            className="rounded-full object-cover"
-          />
-        ) : (
-          <Avatar
-            name={username}
+        return (
+          <UserAvatar
+            username={username}
+            email={record.email}
+            avatarUrl={
+              typeof value === "string" ? value || undefined : undefined
+            }
+            size={32}
+            shape="circle"
             colors={generateGradient(
               mainColor,
               generateComplementary(mainColor),
               4,
             )}
-            variant="marble"
-            size={32}
           />
         );
       },

@@ -10,6 +10,8 @@ interface UserInfo {
   role: string;
   exp: string;
   lastRefresh: string;
+  avatar?: string | null;
+  email?: string | null;
 }
 
 interface BroadcastMessage {
@@ -152,6 +154,8 @@ export default function TokenManager() {
             role: response.data.userInfo.role,
             exp: response.data.userInfo.exp || userInfo.exp,
             lastRefresh: now.toISOString(),
+            avatar: response.data.userInfo.avatar ?? userInfo.avatar ?? null,
+            email: response.data.userInfo.email ?? userInfo.email ?? null,
           };
           localStorage.setItem("user_info", JSON.stringify(updatedUserInfo));
 
