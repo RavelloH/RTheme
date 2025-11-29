@@ -76,12 +76,12 @@ export function LoadingAnimation({ siteName }: LoadingAnimationProps) {
       <PageLoadManager onLoadComplete={handlePageLoadComplete} />
       <div
         ref={overlayRef}
-        className="fixed inset-0 z-[9999] bg-background pointer-events-none flex items-center justify-center"
+        className="fixed inset-0 z-[9999] bg-background pointer-events-none flex items-center justify-center uppercase"
         style={{ opacity: 1 }}
       >
         <div className="border-foreground border-y py-5 flex flex-col items-start">
           {/* 站点名称 */}
-          <h1 className="text-6xl md:text-7xl font-bold mb-1 text-foreground whitespace-nowrap uppercase">
+          <h1 className="text-6xl md:text-7xl font-bold mb-1 text-foreground whitespace-nowrap">
             {siteName}
           </h1>
 

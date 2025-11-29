@@ -115,8 +115,8 @@ export function Menu({
 interface MenuItemContextValue {
   menuId: string;
   isOpen: boolean;
-  triggerRef: React.RefObject<HTMLButtonElement>;
-  contentRef: React.RefObject<HTMLDivElement>;
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
+  contentRef: React.RefObject<HTMLDivElement | null>;
   openMenu: () => void;
   closeMenu: () => void;
   toggleMenu: () => void;
@@ -151,8 +151,8 @@ export function MenuItem({
   disabled = false,
 }: MenuItemProps) {
   const menuContext = useMenuContext("MenuItem");
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
   const isOpen = menuContext.openMenuId === value && !disabled;
 
   const openMenu = useCallback(() => {
@@ -643,8 +643,8 @@ interface MenuSubContextValue {
   isOpen: boolean;
   openSub: () => void;
   closeSub: () => void;
-  triggerRef: React.RefObject<HTMLDivElement>;
-  contentRef: React.RefObject<HTMLDivElement>;
+  triggerRef: React.RefObject<HTMLDivElement | null>;
+  contentRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const MenuSubContext = createContext<MenuSubContextValue | null>(null);
@@ -668,9 +668,9 @@ export interface MenuSubProps {
  */
 export function MenuSub({ children }: MenuSubProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const triggerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const closeTimeoutRef = useRef<NodeJS.Timeout>();
+  const triggerRef = useRef<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const openSub = useCallback(() => {
     if (closeTimeoutRef.current) {
