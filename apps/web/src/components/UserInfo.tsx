@@ -150,7 +150,7 @@ export function LoginButton() {
           zIndex: isConsoleOpen ? 65 : "auto",
         }}
       >
-        <div className="relative w-full h-full flex flex-col justify-center items-center overflow-hidden">
+        <div className="relative flex flex-col justify-center items-center overflow-hidden">
           {userInfo ? (
             <UserAvatar
               username={userInfo.nickname || userInfo.username || "user"}
@@ -170,7 +170,7 @@ export function LoginButton() {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="transition-colors duration-200 group-hover:text-white group-hover:cursor-pointer"
+              className="transition-colors duration-200 w-6 h-6 group-hover:text-white group-hover:cursor-pointer"
             >
               <circle cx="12" cy="7" r="4" />
               <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
