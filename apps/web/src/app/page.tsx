@@ -5,6 +5,7 @@ import ParallaxImageCarousel from "@/components/ParallaxImageCarousel";
 import Marquee from "react-fast-marquee";
 import Link from "@/components/Link";
 import PostCard from "@/components/PostCard";
+import EmptyPostCard from "@/components/EmptyPostCard";
 import MainLayout from "@/components/MainLayout";
 import HomeTitle from "./home/HomeTitle";
 import HomeSlogan from "./home/HomeSlogan";
@@ -15,10 +16,12 @@ import {
   getRawPage,
 } from "@/lib/server/pageCache";
 import { createPageConfigBuilder } from "@/lib/server/pageUtils";
+import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import Custom404 from "./not-found";
 import { getConfig } from "@/lib/server/configCache";
 import { RiArrowRightSLine } from "@remixicon/react";
 import { batchQueryMediaFiles, processImageUrl } from "@/lib/shared/imageUtils";
+import prisma from "@/lib/server/prisma";
 
 // 获取系统页面配置
 const page = await getRawPage("/");
@@ -49,17 +52,232 @@ export default async function Home() {
     return <Custom404 />;
   }
 
-  // 收集主页面的硬编码图片URL
-  const hardcodedImageUrls = [
-    "https://raw.ravelloh.top/20250228/meteor.webp",
-    "https://raw.ravelloh.top/post/image.1ovfmxsmre.webp",
-    "https://raw.ravelloh.top/rtheme/categories.webp",
-    "https://raw.ravelloh.top/20250323/image.2obow0upmh.webp",
-    "https://raw.ravelloh.top/20250228/image.86tsfdpaf3.webp",
+  // 获取首页展示的文章（最多5篇）
+  const homePosts = await prisma.post.findMany({
+    where: {
+      status: "PUBLISHED",
+      deletedAt: null,
+    },
+    select: {
+      title: true,
+      slug: true,
+      excerpt: true,
+      featuredImage: true,
+      isPinned: true,
+      publishedAt: true,
+      categories: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      },
+      tags: {
+        select: {
+          name: true,
+          slug: true,
+        },
+      },
+    },
+    orderBy: [
+      {
+        isPinned: "desc", // 置顶文章优先
+      },
+      {
+        publishedAt: "desc", // 然后按发布时间倒序
+      },
+    ],
+    take: 5, // 最多取5篇文章
+  });
+
+  // 获取文章总数用于展示
+  const totalPosts = await prisma.post.count({
+    where: {
+      status: "PUBLISHED",
+      deletedAt: null,
+    },
+  });
+
+  // 收集所有文章的featuredImage进行批量查询
+  const homePostImageUrls = homePosts
+    .map((post) => post.featuredImage)
+    .filter((image): image is string => image !== null);
+
+  const homePageMediaFileMap = await batchQueryMediaFiles([
+    ...homePostImageUrls,
+  ]);
+
+  // 收集所有分类ID，批量获取路径
+  const allCategoryIds = new Set<number>();
+  homePosts.forEach((post) => {
+    post.categories.forEach((category) => {
+      allCategoryIds.add(category.id);
+    });
+  });
+
+  // 批量获取所有分类路径
+  const categoryPathsMap = await batchGetCategoryPaths(
+    Array.from(allCategoryIds),
+  );
+
+  // 为文章构建完整的分类路径数组
+  const postsWithExpandedCategories = homePosts.map((post) => {
+    const expandedCategories: { name: string; slug: string }[] = [];
+
+    post.categories.forEach((category) => {
+      const fullPath = categoryPathsMap.get(category.id) || [];
+      // 将完整路径的每个级别都作为一个单独的分类项添加到数组中
+      fullPath.forEach((pathItem) => {
+        // 检查是否已经存在，避免重复添加同一分类路径
+        if (!expandedCategories.some((cat) => cat.slug === pathItem.slug)) {
+          expandedCategories.push({
+            name: pathItem.name,
+            slug: pathItem.slug,
+          });
+        }
+      });
+    });
+
+    return {
+      ...post,
+      categories: expandedCategories,
+    };
+  });
+
+  // 创建固定长度的文章数组（5个），不足的用 null 填充
+  const displayPosts: ((typeof postsWithExpandedCategories)[0] | null)[] = [
+    ...postsWithExpandedCategories,
+    ...Array(Math.max(0, 5 - postsWithExpandedCategories.length)).fill(null),
   ];
 
-  // 批量查询媒体文件
-  const homePageMediaFileMap = await batchQueryMediaFiles(hardcodedImageUrls);
+  const [tagResults, categoryResults] = await Promise.all([
+    prisma.tag.findMany({
+      select: {
+        slug: true,
+        name: true,
+        posts: {
+          where: {
+            deletedAt: null,
+          },
+          select: {
+            id: true,
+          },
+        },
+      },
+    }),
+    prisma.category.findMany({
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        parentId: true,
+        posts: {
+          where: {
+            deletedAt: null,
+          },
+          select: {
+            id: true,
+          },
+        },
+        children: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  type DisplayTag = {
+    slug: string;
+    name: string;
+    postCount: number;
+    isPlaceholder?: boolean;
+  };
+
+  const processedTags: DisplayTag[] = tagResults
+    .map((tag) => ({
+      slug: tag.slug,
+      name: tag.name,
+      postCount: tag.posts.length,
+    }))
+    .filter((tag) => tag.postCount > 0)
+    .sort((a, b) => b.postCount - a.postCount)
+    .slice(0, 6);
+
+  const displayTags: DisplayTag[] = [
+    ...processedTags,
+    ...Array.from(
+      { length: Math.max(0, 6 - processedTags.length) },
+      (_, i) => ({
+        slug: `placeholder-tag-${i}`,
+        name: "---",
+        postCount: 0,
+        isPlaceholder: true,
+      }),
+    ),
+  ];
+
+  type DisplayCategory = {
+    id: number;
+    slug: string;
+    name: string;
+    totalPostCount: number;
+    isPlaceholder?: boolean;
+  };
+
+  const categoryMap = new Map<number, (typeof categoryResults)[0]>();
+  categoryResults.forEach((category) => {
+    categoryMap.set(category.id, category);
+  });
+
+  const calculateCategoryPosts = (categoryId: number): number => {
+    const category = categoryMap.get(categoryId);
+    if (!category) return 0;
+
+    const directPosts = category.posts.length;
+    const childPosts = category.children.reduce(
+      (sum, child) => sum + calculateCategoryPosts(child.id),
+      0,
+    );
+
+    return directPosts + childPosts;
+  };
+
+  const sortedRootCategories: DisplayCategory[] = categoryResults
+    .filter((category) => category.parentId === null)
+    .map((category) => ({
+      id: category.id,
+      slug: category.slug,
+      name: category.name,
+      totalPostCount: calculateCategoryPosts(category.id),
+    }))
+    .filter((category) => category.totalPostCount > 0)
+    .sort((a, b) => {
+      if (a.slug === "uncategorized") return 1;
+      if (b.slug === "uncategorized") return -1;
+      return b.totalPostCount - a.totalPostCount;
+    });
+
+  const categoriesToShow: DisplayCategory[] = sortedRootCategories
+    .slice(0, 7)
+    .filter((category) => category.slug !== "uncategorized")
+    .slice(0, 6);
+
+  const displayCategories: DisplayCategory[] = [
+    ...categoriesToShow,
+    ...Array.from(
+      { length: Math.max(0, 6 - categoriesToShow.length) },
+      (_, i) => ({
+        id: -1 - i,
+        slug: `placeholder-category-${i}`,
+        name: "---",
+        totalPostCount: 0,
+        isPlaceholder: true,
+      }),
+    ),
+  ];
+
   return (
     <>
       <MainLayout type="horizontal">
@@ -146,7 +364,7 @@ export default async function Home() {
                   <div className="mt-10">
                     {config.getBlockContent(1, "bottom").map((line, index) => (
                       <div key={index} data-fade-char>
-                        {line || " "}
+                        {line.replaceAll("{posts}", String(totalPosts)) || " "}
                       </div>
                     ))}
                   </div>
@@ -425,100 +643,183 @@ export default async function Home() {
                 文章&nbsp;&nbsp;/&nbsp;&nbsp;
               </Marquee>
             </GridItem>
+
+            {/* 第一篇文章 */}
             <GridItem areas={[7, 8, 9]} width={4} height={0.4} className="">
-              <PostCard
-                title="Minecraft Meteor 使用指南 Minecraft Meteor 使用指南 "
-                slug="minecraft-meteor-guide"
-                date="2025/08/01"
-                category={[
-                  { name: "游戏", slug: "game" },
-                  { name: "文档", slug: "docs" },
-                ]}
-                tags={[
-                  { name: "Minecraft", slug: "minecraft" },
-                  { name: "Meteor", slug: "meteor" },
-                ]}
-                cover={processImageUrl(
-                  "https://raw.ravelloh.top/20250228/meteor.webp",
-                  homePageMediaFileMap,
-                )}
-                summary="本文档详细介绍了 Minecraft Meteor 的安装、配置和使用方法，帮助玩家轻松上手这一强大的模组管理工具。"
-              />
+              {displayPosts[0] ? (
+                <PostCard
+                  title={displayPosts[0].title}
+                  slug={displayPosts[0].slug}
+                  isPinned={displayPosts[0].isPinned}
+                  date={
+                    displayPosts[0].publishedAt
+                      ? new Date(displayPosts[0].publishedAt)
+                          .toLocaleDateString("zh-CN", {
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                          })
+                          .replace(/\//g, "/")
+                      : ""
+                  }
+                  category={displayPosts[0].categories}
+                  tags={displayPosts[0].tags}
+                  cover={
+                    displayPosts[0].featuredImage
+                      ? processImageUrl(
+                          displayPosts[0].featuredImage,
+                          homePageMediaFileMap,
+                        )
+                      : []
+                  }
+                  summary={displayPosts[0].excerpt || ""}
+                />
+              ) : (
+                <EmptyPostCard direction="left" />
+              )}
             </GridItem>
 
+            {/* 第二篇文章 */}
             <GridItem areas={[10, 11, 12]} width={4} height={0.4} className="">
-              <PostCard
-                title="使用Meilisearch实现全站搜索"
-                slug="meilisearch-site-search"
-                date="2025/06/25"
-                category={[
-                  { name: "技术", slug: "tech" },
-                  { name: "设计", slug: "design" },
-                ]}
-                tags={[{ name: "search", slug: "search" }]}
-                cover={processImageUrl(
-                  "https://raw.ravelloh.top/post/image.1ovfmxsmre.webp",
-                  homePageMediaFileMap,
-                )}
-                summary="介绍如何使用 Meilisearch 为站点实现高效搜索，包括索引、查询和性能调优。"
-              />
+              {displayPosts[1] ? (
+                <PostCard
+                  title={displayPosts[1].title}
+                  slug={displayPosts[1].slug}
+                  isPinned={displayPosts[1].isPinned}
+                  date={
+                    displayPosts[1].publishedAt
+                      ? new Date(displayPosts[1].publishedAt)
+                          .toLocaleDateString("zh-CN", {
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                          })
+                          .replace(/\//g, "/")
+                      : ""
+                  }
+                  category={displayPosts[1].categories}
+                  tags={displayPosts[1].tags}
+                  cover={
+                    displayPosts[1].featuredImage
+                      ? processImageUrl(
+                          displayPosts[1].featuredImage,
+                          homePageMediaFileMap,
+                        )
+                      : []
+                  }
+                  summary={displayPosts[1].excerpt || ""}
+                />
+              ) : (
+                <EmptyPostCard direction="right" />
+              )}
             </GridItem>
 
+            {/* 第三篇文章 */}
             <GridItem areas={[1, 2, 3]} width={4} height={0.4} className="">
-              <PostCard
-                title="Timepulse：现代化高颜值计时器"
-                slug="timepulse-modern-timer"
-                date="2025/04/03"
-                category={[
-                  { name: "技术", slug: "tech" },
-                  { name: "设计", slug: "design" },
-                  { name: "文档", slug: "docs" },
-                ]}
-                tags={[
-                  { name: "nextjs", slug: "nextjs" },
-                  { name: "ui", slug: "ui" },
-                ]}
-                cover={processImageUrl(
-                  "https://raw.ravelloh.top/rtheme/categories.webp",
-                  homePageMediaFileMap,
-                )}
-                summary="一款基于现代前端栈打造的高颜值计时器组件，展示了设计与交互的最佳实践。"
-              />
+              {displayPosts[2] ? (
+                <PostCard
+                  title={displayPosts[2].title}
+                  slug={displayPosts[2].slug}
+                  isPinned={displayPosts[2].isPinned}
+                  date={
+                    displayPosts[2].publishedAt
+                      ? new Date(displayPosts[2].publishedAt)
+                          .toLocaleDateString("zh-CN", {
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                          })
+                          .replace(/\//g, "/")
+                      : ""
+                  }
+                  category={displayPosts[2].categories}
+                  tags={displayPosts[2].tags}
+                  cover={
+                    displayPosts[2].featuredImage
+                      ? processImageUrl(
+                          displayPosts[2].featuredImage,
+                          homePageMediaFileMap,
+                        )
+                      : []
+                  }
+                  summary={displayPosts[2].excerpt || ""}
+                />
+              ) : (
+                <EmptyPostCard direction="left" />
+              )}
             </GridItem>
+
+            {/* 第四篇文章 */}
             <GridItem areas={[4, 5, 6]} width={4} height={0.4} className="">
-              <PostCard
-                title="Nextjs使用Server Action实现动态页面重部署"
-                slug="nextjs-server-action-redeploy"
-                date="2025/04/03"
-                category={[{ name: "技术", slug: "tech" }]}
-                tags={[
-                  { name: "nextjs", slug: "nextjs" },
-                  { name: "rtheme", slug: "rtheme" },
-                ]}
-                cover={processImageUrl(
-                  "https://raw.ravelloh.top/20250323/image.2obow0upmh.webp",
-                  homePageMediaFileMap,
-                )}
-                summary="演示如何使用 Next.js Server Actions 来触发并管理页面的动态重部署流程。"
-              />
+              {displayPosts[3] ? (
+                <PostCard
+                  title={displayPosts[3].title}
+                  slug={displayPosts[3].slug}
+                  isPinned={displayPosts[3].isPinned}
+                  date={
+                    displayPosts[3].publishedAt
+                      ? new Date(displayPosts[3].publishedAt)
+                          .toLocaleDateString("zh-CN", {
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                          })
+                          .replace(/\//g, "/")
+                      : ""
+                  }
+                  category={displayPosts[3].categories}
+                  tags={displayPosts[3].tags}
+                  cover={
+                    displayPosts[3].featuredImage
+                      ? processImageUrl(
+                          displayPosts[3].featuredImage,
+                          homePageMediaFileMap,
+                        )
+                      : []
+                  }
+                  summary={displayPosts[3].excerpt || ""}
+                />
+              ) : (
+                <EmptyPostCard direction="right" />
+              )}
             </GridItem>
+
+            {/* 第五篇文章 */}
             <GridItem areas={[7, 8, 9]} width={4} height={0.4} className="">
-              <PostCard
-                title="使用Wireshark进行自我网络安全审计"
-                slug="wireshark-network-audit"
-                date="2025/02/25"
-                category={[
-                  { name: "技术", slug: "tech" },
-                  { name: "网络安全", slug: "network-security" },
-                ]}
-                tags={[{ name: "wireshark", slug: "wireshark" }]}
-                cover={processImageUrl(
-                  "https://raw.ravelloh.top/20250228/image.86tsfdpaf3.webp",
-                  homePageMediaFileMap,
-                )}
-                summary="使用 Wireshark 捕获与分析流量，帮助个人或小团队进行基线检测与漏洞排查。"
-              />
+              {displayPosts[4] ? (
+                <PostCard
+                  title={displayPosts[4].title}
+                  slug={displayPosts[4].slug}
+                  isPinned={displayPosts[4].isPinned}
+                  date={
+                    displayPosts[4].publishedAt
+                      ? new Date(displayPosts[4].publishedAt)
+                          .toLocaleDateString("zh-CN", {
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                          })
+                          .replace(/\//g, "/")
+                      : ""
+                  }
+                  category={displayPosts[4].categories}
+                  tags={displayPosts[4].tags}
+                  cover={
+                    displayPosts[4].featuredImage
+                      ? processImageUrl(
+                          displayPosts[4].featuredImage,
+                          homePageMediaFileMap,
+                        )
+                      : []
+                  }
+                  summary={displayPosts[4].excerpt || ""}
+                />
+              ) : (
+                <EmptyPostCard direction="left" />
+              )}
             </GridItem>
+
+            {/* "查看全部文章"按钮 */}
             <GridItem
               areas={[10, 11, 12]}
               width={4}
@@ -533,7 +834,7 @@ export default async function Home() {
                   <div className="text-4xl relative inline box-decoration-clone bg-[linear-gradient(white,white)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]">
                     查看全部文章
                   </div>
-                  <div className="text-2xl">共 1128 篇文章</div>
+                  <div className="text-2xl">共 {totalPosts} 篇文章</div>
                 </div>
                 <div className="relative w-20 h-20">
                   <RiArrowRightSLine
@@ -635,27 +936,20 @@ export default async function Home() {
                 className="flex flex-col gap-2 justify-center items-center"
                 data-line-reveal
               >
-                <Link href="/tags/xxx">
-                  <div className=" hover:scale-110 transition-all">
-                    #Minecraft x 130
-                  </div>
+                {displayTags.map((tag, index) =>
+                  tag.isPlaceholder ? (
+                    <div key={tag.slug + index}>---</div>
+                  ) : (
+                    <Link key={tag.slug} href={`/tags/${tag.slug}`}>
+                      <div className=" hover:scale-110 transition-all">
+                        #{tag.name} x {tag.postCount}
+                      </div>
+                    </Link>
+                  ),
+                )}
+                <Link href="/tags">
+                  <div>...</div>
                 </Link>
-                <Link href="/tags/xxx">
-                  <div>#dasdsa x 20</div>
-                </Link>
-                <Link href="/tags/xxx">
-                  <div>#dsadsadqweqw x 13</div>
-                </Link>
-                <Link href="/tags/xxx">
-                  <div>#ewqeqwewqew x 11</div>
-                </Link>
-                <Link href="/tags/xxx">
-                  <div>#Mizxczxcczx x 4</div>
-                </Link>
-                <Link href="/tags/xxx">
-                  <div>#xzczxcraft x 2</div>
-                </Link>
-                <div>...</div>
               </div>
             </GridItem>
             <GridItem
@@ -668,27 +962,23 @@ export default async function Home() {
                 className="flex flex-col gap-2 justify-center items-center"
                 data-line-reveal
               >
-                <Link href="/tags/xxx">
-                  <div className=" hover:scale-110 transition-all">
-                    #Minecraft x 130
-                  </div>
+                {displayCategories.map((category, index) =>
+                  category.isPlaceholder ? (
+                    <div key={category.slug + index}>---</div>
+                  ) : (
+                    <Link
+                      key={category.slug}
+                      href={`/categories/${category.slug}`}
+                    >
+                      <div className=" hover:scale-110 transition-all">
+                        {category.name} x {category.totalPostCount}
+                      </div>
+                    </Link>
+                  ),
+                )}
+                <Link href="/categories">
+                  <div>...</div>
                 </Link>
-                <Link href="/tags/xxx">
-                  <div>#dasdsa x 20</div>
-                </Link>
-                <Link href="/tags/xxx">
-                  <div>#dsadsadqweqw x 13</div>
-                </Link>
-                <Link href="/tags/xxx">
-                  <div>#ewqeqwewqew x 11</div>
-                </Link>
-                <Link href="/tags/xxx">
-                  <div>#Mizxczxcczx x 4</div>
-                </Link>
-                <Link href="/tags/xxx">
-                  <div>#xzczxcraft x 2</div>
-                </Link>
-                <div>...</div>
               </div>
             </GridItem>
             <GridItem
