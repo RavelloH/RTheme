@@ -11,11 +11,12 @@ import {
   getMarkdownComponents,
   getMDXComponents,
 } from "@/components/server/renderAdapter";
+import { MediaFileInfo } from "@/lib/shared/imageUtils";
 
 interface MDXRendererProps {
   source: string;
   mode: "markdown" | "mdx";
-  mediaFileMap?: Map<string, any>;
+  mediaFileMap?: Map<string, MediaFileInfo>;
 }
 
 export default function MDXRenderer({
