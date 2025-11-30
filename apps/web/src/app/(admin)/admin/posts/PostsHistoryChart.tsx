@@ -83,9 +83,9 @@ export default function PostsHistoryChart() {
 
   const series: SeriesConfig[] = [
     {
-      key: "total",
-      label: "总文章数",
-      color: "var(--color-primary)",
+      key: "personal",
+      label: "我的文章",
+      color: "var(--color-warning)",
     },
     {
       key: "new",
@@ -93,9 +93,9 @@ export default function PostsHistoryChart() {
       color: "var(--color-success)",
     },
     {
-      key: "personal",
-      label: "我的文章",
-      color: "var(--color-warning)",
+      key: "total",
+      label: "总文章数",
+      color: "var(--color-primary)",
     },
   ];
 

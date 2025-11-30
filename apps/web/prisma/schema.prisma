@@ -47,7 +47,6 @@ model User {
   refreshTokens RefreshToken[]
 
   // 索引优化
-  @@index([username])
   @@index([role])
   @@index([status])
   @@index([createdAt])
@@ -204,6 +203,7 @@ model Comment {
   // 未登录用户评论
   authorName  String?   @db.VarChar(50)
   authorEmail String?   @db.VarChar(255)
+  authorWebsite String? @db.VarChar(255)
   // 嵌套评论
   parentId    String?
   parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
@@ -254,7 +254,6 @@ model Media {
 
   @@unique([shortHash])
   // 索引优化
-  @@index([shortHash])
   @@index([inGallery])
   @@index([userUid])
   @@index([createdAt])
@@ -285,7 +284,6 @@ model StorageProvider {
   media Media[]
 
   @@index([isActive])
-  @@index([isDefault])
 }
 
 // 静态页面模型
@@ -317,7 +315,6 @@ model Page {
   menus Menu[]
 
   // 索引优化
-  @@index([slug])
   @@index([status])
   @@index([userUid])
   @@index([createdAt])
