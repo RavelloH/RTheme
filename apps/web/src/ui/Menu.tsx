@@ -12,6 +12,7 @@ import React, {
   ReactNode,
   HTMLAttributes,
 } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { RiArrowRightSLine, RiCheckLine } from "@remixicon/react";
 
@@ -254,17 +255,21 @@ export const MenuTrigger = forwardRef<HTMLButtonElement, MenuTriggerProps>(
     const itemContext = useMenuItemContext("MenuTrigger");
     const menuContext = useMenuContext("MenuTrigger");
 
-    const handleClick = () => {
-      itemContext.toggleMenu();
-    };
+    const handleClick = useCallback(
+      (e: React.MouseEvent) => {
+        e.stopPropagation();
+        itemContext.toggleMenu();
+      },
+      [itemContext],
+    );
 
-    const handleMouseEnter = () => {
+    const handleMouseEnter = useCallback(() => {
       if (menuContext.orientation === "horizontal" && menuContext.openMenuId) {
         itemContext.openMenu();
       }
-    };
+    }, [menuContext.orientation, menuContext.openMenuId, itemContext]);
 
-    const mergedRef = useCallback(
+    const setRef = useCallback(
       (node: HTMLButtonElement | null) => {
         itemContext.triggerRef.current = node;
         if (typeof forwardedRef === "function") {
@@ -277,19 +282,63 @@ export const MenuTrigger = forwardRef<HTMLButtonElement, MenuTriggerProps>(
     );
 
     if (asChild && React.isValidElement(children)) {
-      return React.cloneElement(children, {
-        ref: mergedRef,
-        onClick: handleClick,
-        onMouseEnter: handleMouseEnter,
+      const child = children as React.ReactElement<
+        React.HTMLAttributes<HTMLElement>
+      >;
+
+      // 合并 className
+      const mergedClassName = [
+        (child.props as React.HTMLAttributes<HTMLElement>).className,
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      const childProps = {
+        ...child.props,
+        ref: (node: HTMLButtonElement | null) => {
+          setRef(node);
+          // 处理子元素的原始 ref
+          const childRef = (
+            child as React.ReactElement & { ref?: React.Ref<HTMLButtonElement> }
+          ).ref;
+          if (typeof childRef === "function") {
+            childRef(node);
+          } else if (
+            childRef &&
+            typeof childRef === "object" &&
+            "current" in childRef
+          ) {
+            (
+              childRef as React.MutableRefObject<HTMLButtonElement | null>
+            ).current = node;
+          }
+        },
+        className: mergedClassName || undefined,
+        onClick: (e: React.MouseEvent) => {
+          handleClick(e);
+          // 调用原始 onClick
+          if (child.props.onClick) {
+            (child.props.onClick as (e: React.MouseEvent) => void)(e);
+          }
+        },
+        onMouseEnter: (e: React.MouseEvent) => {
+          handleMouseEnter();
+          // 调用原始 onMouseEnter
+          if (child.props.onMouseEnter) {
+            (child.props.onMouseEnter as (e: React.MouseEvent) => void)(e);
+          }
+        },
         "data-state": itemContext.isOpen ? "open" : "closed",
         "aria-expanded": itemContext.isOpen,
-        ...props,
-      } as React.HTMLAttributes<HTMLElement>);
+      };
+
+      return React.cloneElement(child, childProps);
     }
 
     return (
       <button
-        ref={mergedRef}
+        ref={setRef}
         type="button"
         onClick={handleClick}
         onMouseEnter={handleMouseEnter}
@@ -351,91 +400,223 @@ export function MenuContent({
     top: number;
     left: number;
   } | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [hasCalculated, setHasCalculated] = useState(false);
+  const [showAbove, setShowAbove] = useState(false);
+
+  // 确保只在客户端挂载后才渲染 Portal
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // 计算位置
   useEffect(() => {
     if (!itemContext.isOpen) {
       setPosition(null);
+      setHasCalculated(false);
+      setShowAbove(false);
       return;
     }
 
     const updatePosition = () => {
       const trigger = itemContext.triggerRef.current;
-      if (!trigger) return;
+      const content = itemContext.contentRef.current;
+      if (!trigger) {
+        return;
+      }
 
       const triggerRect = trigger.getBoundingClientRect();
+
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
       let top = 0;
       let left = 0;
 
+      // 获取菜单的实际高度
+      const actualMenuHeight = content?.offsetHeight || 0;
+
+      // 如果还没有实际高度，不要设置位置
+      if (actualMenuHeight === 0) {
+        return;
+      }
+
+      const menuHeight = actualMenuHeight;
+
+      // 判断应该在上方还是下方显示
+      const spaceBelow = viewportHeight - triggerRect.bottom;
+      const spaceAbove = triggerRect.top;
+      const shouldShowAbove =
+        spaceBelow < menuHeight && spaceAbove > spaceBelow;
+
+      // 更新显示方向状态
+      setShowAbove(shouldShowAbove);
+
       if (menuContext.orientation === "horizontal") {
-        // 水平菜单：内容显示在下方
-        top = triggerRect.bottom + sideOffset;
+        // 水平菜单：根据空间决定显示在上方或下方
+        if (shouldShowAbove) {
+          // 菜单底部紧贴按钮顶部
+          top = triggerRect.top - menuHeight - sideOffset;
+        } else {
+          // 菜单顶部紧贴按钮底部
+          top = triggerRect.bottom + sideOffset;
+        }
 
         switch (align) {
           case "start":
             left = triggerRect.left + alignOffset;
             break;
           case "center":
-            left = triggerRect.left + triggerRect.width / 2 + alignOffset;
+            left =
+              triggerRect.left +
+              triggerRect.width / 2 -
+              minWidth / 2 +
+              alignOffset;
             break;
           case "end":
-            left = triggerRect.right + alignOffset;
+            left = triggerRect.right - minWidth + alignOffset;
             break;
         }
       } else {
-        // 垂直菜单：内容显示在右侧
-        top = triggerRect.top + alignOffset;
-        left = triggerRect.right + sideOffset;
+        // 垂直菜单：根据空间决定显示在上方或下方
+        if (shouldShowAbove) {
+          // 菜单底部紧贴按钮顶部
+          top = triggerRect.top - menuHeight - sideOffset;
+        } else {
+          // 菜单顶部紧贴按钮底部
+          top = triggerRect.bottom + sideOffset;
+        }
+
+        switch (align) {
+          case "start":
+            left = triggerRect.left + alignOffset;
+            break;
+          case "center":
+            left =
+              triggerRect.left +
+              triggerRect.width / 2 -
+              minWidth / 2 +
+              alignOffset;
+            break;
+          case "end":
+            left = triggerRect.right - minWidth + alignOffset;
+            break;
+        }
+      }
+
+      // 边界检测：确保菜单不会超出屏幕
+
+      // 检测右边界
+      if (left + minWidth > viewportWidth) {
+        left = viewportWidth - minWidth - 8; // 8px 边距
+      }
+
+      // 检测左边界
+      if (left < 8) {
+        left = 8; // 8px 边距
+      }
+
+      // 检测上边界
+      if (top < 8) {
+        top = 8;
+      }
+
+      // 检测下边界
+      if (top + menuHeight > viewportHeight) {
+        top = viewportHeight - menuHeight - 8;
       }
 
       setPosition({ top, left });
+      setHasCalculated(true);
     };
 
+    // 初次计算
     updatePosition();
+
+    // 监听菜单内容的大小变化
+    let resizeObserver: ResizeObserver | null = null;
+
+    // 使用延迟来确保 DOM 已经渲染
+    const timeoutId = setTimeout(() => {
+      const content = itemContext.contentRef.current;
+      if (content) {
+        resizeObserver = new ResizeObserver(() => {
+          updatePosition();
+        });
+        resizeObserver.observe(content);
+        // 立即计算一次
+        updatePosition();
+      }
+    }, 0);
+
+    // 额外使用多个 RAF 确保能获取到正确的尺寸
+    const rafId1 = requestAnimationFrame(() => {
+      updatePosition();
+    });
+
+    const rafId2 = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        updatePosition();
+      });
+    });
+
     window.addEventListener("resize", updatePosition);
     window.addEventListener("scroll", updatePosition, true);
 
     return () => {
+      clearTimeout(timeoutId);
+      resizeObserver?.disconnect();
+      cancelAnimationFrame(rafId1);
+      cancelAnimationFrame(rafId2);
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
   }, [
     itemContext.isOpen,
     itemContext.triggerRef,
+    itemContext.contentRef,
     menuContext.orientation,
     align,
     sideOffset,
     alignOffset,
+    minWidth,
   ]);
 
-  return (
+  if (!mounted) return null;
+
+  // 根据显示方向调整动画
+  const animationY = showAbove ? 4 : -4;
+
+  const content = (
     <AnimatePresence>
-      {itemContext.isOpen && position && (
+      {itemContext.isOpen && (
         <motion.div
           ref={itemContext.contentRef}
-          initial={{ opacity: 0, scale: 0.95, y: -10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: -10 }}
-          transition={{ duration: 0.15, ease: "easeOut" }}
+          initial={{ opacity: 0, scale: 0.98, y: animationY }}
+          animate={{
+            opacity: hasCalculated ? 1 : 0,
+            scale: hasCalculated ? 1 : 0.98,
+            y: hasCalculated ? 0 : animationY,
+          }}
+          exit={{ opacity: 0, scale: 0.98, y: animationY }}
+          transition={{ duration: 0.12, ease: "easeOut" }}
           style={{
             position: "fixed",
-            top: position.top,
-            left:
-              align === "center"
-                ? position.left - minWidth / 2
-                : align === "end"
-                  ? position.left - minWidth
-                  : position.left,
+            top: position?.top ?? 0,
+            left: position?.left ?? 0,
             minWidth: `${minWidth}px`,
+            maxWidth: `${minWidth}px`,
+            maxHeight: "400px",
+            overflowX: "hidden",
+            overflowY: "auto",
+            visibility: hasCalculated ? "visible" : "hidden",
           }}
           className={`
             z-50
+            rounded-sm
             bg-background
             border
-            border-foreground/10
-            rounded-sm
-            shadow-2xl
-            backdrop-blur-xl
+            border-border
             py-1
             ${className}
           `}
@@ -445,6 +626,8 @@ export function MenuContent({
       )}
     </AnimatePresence>
   );
+
+  return createPortal(content, document.body);
 }
 
 // ============================================
@@ -495,22 +678,29 @@ export function MenuAction({
         px-3
         py-2
         text-left
-        text-md
+        text-sm
         transition-colors
-        hover:bg-foreground/10
+        duration-100
+        hover:bg-foreground/5
         focus:outline-none
-        focus-visible:bg-foreground/10
+        focus-visible:bg-foreground/5
+        active:bg-foreground/10
         disabled:opacity-50
         disabled:cursor-not-allowed
+        disabled:hover:bg-transparent
         ${className}
       `}
     >
-      <div className="flex items-center gap-2 flex-1">
-        {icon && <span className="flex-shrink-0 w-4 h-4">{icon}</span>}
-        <span>{children}</span>
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        {icon && (
+          <span className="flex items-center justify-center flex-shrink-0 w-4 h-4 text-foreground/60">
+            {icon}
+          </span>
+        )}
+        <span className="truncate">{children}</span>
       </div>
       {shortcut && (
-        <span className="text-xs text-foreground/50 tracking-wider">
+        <span className="text-xs text-muted-foreground tracking-wider font-mono flex-shrink-0">
           {shortcut}
         </span>
       )}
@@ -595,10 +785,7 @@ export interface MenuSeparatorProps {
  */
 export function MenuSeparator({ className = "" }: MenuSeparatorProps) {
   return (
-    <div
-      role="separator"
-      className={`my-1 h-px bg-foreground/10 ${className}`}
-    />
+    <div role="separator" className={`my-1 h-px bg-border ${className}`} />
   );
 }
 
@@ -621,12 +808,12 @@ export function MenuLabel({ children, className = "" }: MenuLabelProps) {
     <div
       className={`
         px-3
-        py-1.5
+        pt-2
+        pb-1
         text-xs
         font-medium
-        text-foreground/50
-        tracking-widest
-        uppercase
+        text-muted-foreground
+        tracking-wide
         ${className}
       `}
     >
@@ -801,6 +988,12 @@ export function MenuSubContent({
     top: number;
     left: number;
   } | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // 确保只在客户端挂载后才渲染 Portal
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!subContext.isOpen) {
@@ -829,7 +1022,9 @@ export function MenuSubContent({
     };
   }, [subContext.isOpen, subContext.triggerRef]);
 
-  return (
+  if (!mounted) return null;
+
+  const content = (
     <AnimatePresence>
       {subContext.isOpen && position && (
         <motion.div
@@ -863,4 +1058,6 @@ export function MenuSubContent({
       )}
     </AnimatePresence>
   );
+
+  return createPortal(content, document.body);
 }
