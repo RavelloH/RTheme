@@ -25,6 +25,10 @@ import {
   extractInternalHashes,
 } from "@/lib/shared/imageUtils";
 import ImageLightbox from "@/components/client/ImageLightbox";
+import { getConfig } from "@/lib/server/configCache";
+import React from "react";
+import CommentsSection from "@/components/client/CommentsSection";
+import { ToastProvider } from "@/ui/Toast";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -56,6 +60,25 @@ export default async function PostPage({ params }: PageProps) {
   const { slug } = await params;
 
   let post, renderedContent, categoryPath, categorySlugPath, postMediaFileMap;
+  const [
+    commentEnabled,
+    placeholder,
+    anonymousEnabled,
+    anonymousEmailRequired,
+    anonymousWebsiteEnabled,
+    reviewAll,
+    reviewAnonymous,
+    locateEnabled,
+  ] = await Promise.all([
+    getConfig<boolean>("comment.enable", true),
+    getConfig<string>("comment.placeholder", "输入评论内容..."),
+    getConfig<boolean>("comment.anonymous.enable", true),
+    getConfig<boolean>("comment.anonymous.email.required", true),
+    getConfig<boolean>("comment.anonymous.website.enable", true),
+    getConfig<boolean>("comment.review.enable", false),
+    getConfig<boolean>("comment.anonymous.review.enable", false),
+    getConfig<boolean>("comment.locate.enable", false),
+  ]);
 
   try {
     // 获取文章数据
@@ -267,40 +290,57 @@ export default async function PostPage({ params }: PageProps) {
         )}
 
         {/* 文章内容 */}
-        <div className="px-10 max-w-7xl mx-auto pt-10 flex gap-6 relative">
-          <div className="flex-[8]">
+        <div className="px-10 max-w-7xl mx-auto pt-10 flex gap-6 relative h-full">
+          <div className="flex-[8] h-full">
             <MDXRenderer
               source={renderedContent.content}
               mode={renderedContent.mode}
               mediaFileMap={postMediaFileMap}
             />
+            {/* 文章底部信息 */}
+            <div className="px-10 max-w-7xl mx-auto mt-12 pb-10 border-t pt-8">
+              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                <span>发布于: {formatDate(post.publishedAt!)}</span>
+                <span>创建于: {formatDate(post.createdAt)}</span>
+                <span>最后更新: {formatDate(post.updatedAt)}</span>
+                {post.allowComments && (
+                  <span className="text-green-600 dark:text-green-400">
+                    允许评论
+                  </span>
+                )}
+                {post.isPinned && (
+                  <span className="text-orange-600 dark:text-orange-400">
+                    置顶文章
+                  </span>
+                )}
+              </div>
+            </div>
+            {/* 评论区 */}
+            {commentEnabled && (
+              <ToastProvider>
+                <CommentsSection
+                  slug={post.slug}
+                  allowComments={post.allowComments}
+                  commentConfig={{
+                    placeholder,
+                    anonymousEnabled,
+                    anonymousEmailRequired,
+                    anonymousWebsiteEnabled,
+                    reviewAll,
+                    reviewAnonymous,
+                    locateEnabled,
+                  }}
+                />
+              </ToastProvider>
+            )}
           </div>
-          <div className="flex-[2] hidden lg:block max-w-screen">
+          <div className="flex-[2] hidden lg:block max-w-screen h-full sticky top-10 self-start">
             <PostToc />
           </div>
 
           {/* 移动端目录按钮 */}
           <div className="lg:hidden fixed bottom-6 right-6 z-40">
             <PostToc isMobile={true} />
-          </div>
-        </div>
-
-        {/* 文章底部信息 */}
-        <div className="px-10 max-w-7xl mx-auto mt-12 pb-10 border-t pt-8">
-          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-            <span>发布于: {formatDate(post.publishedAt!)}</span>
-            <span>创建于: {formatDate(post.createdAt)}</span>
-            <span>最后更新: {formatDate(post.updatedAt)}</span>
-            {post.allowComments && (
-              <span className="text-green-600 dark:text-green-400">
-                允许评论
-              </span>
-            )}
-            {post.isPinned && (
-              <span className="text-orange-600 dark:text-orange-400">
-                置顶文章
-              </span>
-            )}
           </div>
         </div>
       </div>

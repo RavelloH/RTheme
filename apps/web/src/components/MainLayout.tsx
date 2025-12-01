@@ -18,9 +18,7 @@ export default function MainLayout({
       className={
         type === "horizontal" && !isMobile
           ? "h-[calc(100vh-10em)] overflow-y-hidden"
-          : "overflow-y-auto " +
-            (className ? ` ${className}` : "") +
-            (nopadding ? "" : " py-8 px-6")
+          : (className ? ` ${className}` : "") + (nopadding ? "" : " py-8 px-6")
       }
     >
       {children}

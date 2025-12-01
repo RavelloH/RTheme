@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { RiListCheck, RiArrowUpLine, RiArrowDownLine } from "@remixicon/react";
 import Link from "./Link";
 import Clickable from "@/ui/Clickable";
@@ -29,13 +29,6 @@ export default function PostToc({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null); // 包裹容器
   const tocRef = useRef<HTMLDivElement>(null); // 目录元素
-  const [isFixed, setIsFixed] = useState(false);
-  const [tocDimensions, setTocDimensions] = useState({
-    height: 0,
-    left: 0,
-    width: 0,
-    top: 0,
-  });
   const [highlightStyle, setHighlightStyle] = useState({
     top: 0,
     height: 0,
@@ -58,6 +51,32 @@ export default function PostToc({
     );
     return em * fontSize;
   };
+
+  // 查找实际的滚动容器（找最外层的）
+  const findScrollContainer = useCallback(
+    (element: HTMLElement): HTMLElement | null => {
+      let parent = element.parentElement;
+      let level = 0;
+      let lastScrollContainer: HTMLElement | null = null; // 记录最后（最外层）找到的滚动容器
+
+      while (parent) {
+        level++;
+        const overflow = window.getComputedStyle(parent).overflowY;
+
+        if (overflow === "auto" || overflow === "scroll") {
+          lastScrollContainer = parent; // 记录这个滚动容器，继续向上查找
+        }
+
+        parent = parent.parentElement;
+        if (level > 20) {
+          break;
+        }
+      }
+
+      return lastScrollContainer;
+    },
+    [],
+  );
 
   // 从 DOM 中提取目录
   useEffect(() => {
@@ -124,53 +143,13 @@ export default function PostToc({
       return;
     }
 
-    // 查找实际的滚动容器（找最外层的）
-    const findScrollContainer = (element: HTMLElement): HTMLElement | null => {
-      let parent = element.parentElement;
-      let level = 0;
-      let lastScrollContainer: HTMLElement | null = null; // 记录最后（最外层）找到的滚动容器
-
-      while (parent) {
-        level++;
-        const overflow = window.getComputedStyle(parent).overflowY;
-
-        if (overflow === "auto" || overflow === "scroll") {
-          lastScrollContainer = parent; // 记录这个滚动容器，继续向上查找
-        }
-
-        parent = parent.parentElement;
-        if (level > 20) {
-          break;
-        }
-      }
-
-      return lastScrollContainer;
-    };
-
-    const scrollContainer = findScrollContainer(containerRef.current);
+    const fallbackContainer = findScrollContainer(containerRef.current);
+    const scrollContainer = scrollContainerRef.current || fallbackContainer;
     const scrollTarget: EventTarget = (scrollContainer ||
       window) as EventTarget;
 
     // 保存滚动容器引用供后续使用
     scrollContainerRef.current = scrollContainer;
-
-    // 记录目录的尺寸和位置
-    const updateDimensions = () => {
-      if (tocRef.current && containerRef.current) {
-        const tocRect = tocRef.current.getBoundingClientRect();
-        const containerRect = containerRef.current.getBoundingClientRect();
-        const dimensions = {
-          height: tocRect.height,
-          left: containerRect.left,
-          width: containerRect.width,
-          top: Math.max(containerRect.top),
-        };
-        setTocDimensions(dimensions);
-      }
-    };
-
-    updateDimensions();
-    window.addEventListener("resize", updateDimensions);
 
     const handleScroll = () => {
       // 计算滚动百分比
@@ -210,52 +189,22 @@ export default function PostToc({
       });
 
       setActiveId(currentActiveId);
-
-      // 处理固定定位
-      if (!containerRef.current) {
-        return;
-      }
-
-      const rect = containerRef.current.getBoundingClientRect();
-      const fixedThreshold = emToPx(7.5); // 7.5em ≈ 120px (基于 16px 基准字体)
-      const shouldBeFixed = rect.top <= fixedThreshold;
-
-      setIsFixed((prevFixed) => {
-        if (shouldBeFixed !== prevFixed) {
-          // 在切换到固定状态的瞬间，记录目录的当前位置
-          if (
-            !prevFixed &&
-            shouldBeFixed &&
-            tocRef.current &&
-            containerRef.current
-          ) {
-            const tocRect = tocRef.current.getBoundingClientRect();
-            const containerRect = containerRef.current.getBoundingClientRect();
-            const fixedTopOffset = emToPx(2.5); // 2.5em ≈ 40px (基于 16px 基准字体)
-            setTocDimensions({
-              height: tocRect.height,
-              left: containerRect.left,
-              width: containerRect.width,
-              top: fixedTopOffset,
-            });
-          }
-        }
-        return shouldBeFixed;
-      });
     };
 
     scrollTarget.addEventListener("scroll", handleScroll as EventListener, {
       passive: true,
     });
 
-    handleScroll(); // 初始检查
+    const initialCheckTimer = setTimeout(() => {
+      handleScroll();
+    }, 100);
 
     // 清理函数
     return () => {
+      clearTimeout(initialCheckTimer);
       scrollTarget.removeEventListener("scroll", handleScroll as EventListener);
-      window.removeEventListener("resize", updateDimensions);
     };
-  }, [isMobile, tocItems]); // 添加 tocItems 作为依赖，因为需要访问目录项数据
+  }, [findScrollContainer, isMobile, tocItems]); // 添加 tocItems 作为依赖，因为需要访问目录项数据
 
   // 更新高亮指示器位置
   useEffect(() => {
@@ -609,28 +558,14 @@ export default function PostToc({
   }
 
   return (
-    // 包裹容器 - 在固定时保持布局空间
     <div
       ref={containerRef}
-      className={`transition-all duration-300 ${isCollapsed ? "w-12" : "w-64"}`}
-      style={{
-        height: isFixed ? `${tocDimensions.height}px` : "auto",
-      }}
+      className={`transition-all duration-300 h-full ${isCollapsed ? "w-12" : "w-64"}`}
     >
-      {/* 目录元素 - 同一个元素切换固定/非固定状态 */}
       <div
         ref={tocRef}
         className={`${isCollapsed ? "w-12" : "w-64"} overflow-hidden relative`}
-        style={{
-          position: isFixed ? "fixed" : "relative",
-          top: isFixed ? `${tocDimensions.top}px` : "auto",
-          left: isFixed ? `${tocDimensions.left}px` : "auto",
-          width: isFixed ? `${tocDimensions.width}px` : "auto",
-          height: isFixed ? `${tocDimensions.height}px` : "auto", // 固定时保持相同高度
-          maxHeight: "calc(100vh - 180px)", // 两种状态都限制最大高度
-          zIndex: isFixed ? 40 : "auto",
-        }}
-        data-fixed={isFixed}
+        style={{ maxHeight: "calc(100vh - 180px)" }}
       >
         {/* 左侧边框 - 使用绝对定位 */}
         <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-border" />
@@ -642,7 +577,7 @@ export default function PostToc({
             style={{
               top: `${highlightStyle.top}px`,
               height: `${highlightStyle.height}px`,
-              width: "2px", // 与边框相同的宽度
+              width: "2px",
               opacity: highlightStyle.opacity,
             }}
           />
@@ -656,20 +591,17 @@ export default function PostToc({
                   <RiListCheck size="1.2em" />
                   目录
                 </h3>
-                <div>
-                  {/* 导航按钮 */}
-                  <div className="flex gap-2">
-                    <Clickable onClick={scrollToTop} hoverScale={1.2}>
-                      <div className="text-xs text-secondary-foreground hover:text-foreground">
-                        <RiArrowUpLine size="2em" />
-                      </div>
-                    </Clickable>
-                    <Clickable onClick={scrollToComments} hoverScale={1.2}>
-                      <div className="text-xs  text-secondary-foreground hover:text-foreground">
-                        <RiArrowDownLine size="2em" />
-                      </div>
-                    </Clickable>
-                  </div>
+                <div className="flex gap-2">
+                  <Clickable onClick={scrollToTop} hoverScale={1.2}>
+                    <div className="text-xs text-secondary-foreground hover:text-foreground">
+                      <RiArrowUpLine size="2em" />
+                    </div>
+                  </Clickable>
+                  <Clickable onClick={scrollToComments} hoverScale={1.2}>
+                    <div className="text-xs  text-secondary-foreground hover:text-foreground">
+                      <RiArrowDownLine size="2em" />
+                    </div>
+                  </Clickable>
                 </div>
               </div>
             )}
@@ -729,15 +661,12 @@ export default function PostToc({
           {/* 滚动进度和导航按钮 */}
           {!isCollapsed && (
             <div className="mt-6 pt-4 space-y-3 relative">
-              {/* 进度条分隔线 */}
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-border">
                 <div
                   className="h-full bg-primary transition-all duration-300 ease-out"
                   style={{ width: `${scrollProgress}%` }}
                 />
               </div>
-
-              {/* 进度百分比 */}
               <div className="text-xs text-muted-foreground font-medium font-mono">
                 {scrollProgress.toFixed(0)} %
               </div>
