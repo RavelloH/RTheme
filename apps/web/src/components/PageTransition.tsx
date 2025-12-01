@@ -128,9 +128,15 @@ export default function PageTransition({ children }: PageTransitionProps) {
       transitionState === "waiting" &&
       pathname !== previousPathname.current
     ) {
-      // pathname 变化，更新内容并开始进入动画
+      // pathname 变化，更新内容
       setCurrentChildren(children);
-      startEnterAnimation();
+
+      // 延迟10ms后开始进入动画，确保DOM稳定
+      const delayTimer = setTimeout(() => {
+        startEnterAnimation();
+      }, 10);
+
+      return () => clearTimeout(delayTimer);
     }
   }, [pathname, transitionState, children, startEnterAnimation]);
 
@@ -275,6 +281,7 @@ export default function PageTransition({ children }: PageTransitionProps) {
       <div
         ref={scrollContainerRef}
         className={`w-full ${isMobile ? "" : "h-full overflow-y-auto"} overflow-x-hidden`}
+        id="scroll-container"
         style={{ paddingBottom: isMobile ? 0 : "5em" }}
       >
         {currentChildren}
