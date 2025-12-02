@@ -155,18 +155,6 @@ const LinkComponent = ({
 };
 
 /**
- * 表格组件 - 统一配置
- */
-const TableComponent = ({
-  children,
-  ...props
-}: {
-  children?: React.ReactNode;
-} & React.TableHTMLAttributes<HTMLTableElement>) => (
-  <table {...props}>{children}</table>
-);
-
-/**
  * 创建统一的基础组件配置
  * 支持传递媒体文件映射
  */
@@ -208,128 +196,171 @@ const createBaseComponents = (mediaFileMap?: Map<string, MediaFileInfo>) =>
     },
 
     // 表格
-    table: TableComponent,
-    thead: ({
+    table: ({
       children,
+      node: _node,
       ...props
     }: {
       children?: React.ReactNode;
+      node?: unknown;
+    } & React.TableHTMLAttributes<HTMLTableElement>) => (
+      <table {...props}>{children}</table>
+    ),
+    thead: ({
+      children,
+      node: _node,
+      ...props
+    }: {
+      children?: React.ReactNode;
+      node?: unknown;
     } & React.HTMLAttributes<HTMLTableSectionElement>) => (
       <thead {...props}>{children}</thead>
     ),
     tbody: ({
       children,
+      node: _node,
       ...props
     }: {
       children?: React.ReactNode;
+      node?: unknown;
     } & React.HTMLAttributes<HTMLTableSectionElement>) => (
       <tbody {...props}>{children}</tbody>
     ),
     tr: ({
       children,
+      node: _node,
       ...props
     }: {
       children?: React.ReactNode;
+      node?: unknown;
     } & React.HTMLAttributes<HTMLTableRowElement>) => (
       <tr {...props}>{children}</tr>
     ),
     th: ({
       children,
+      node: _node,
       ...props
     }: {
       children?: React.ReactNode;
+      node?: unknown;
     } & React.ThHTMLAttributes<HTMLTableHeaderCellElement>) => (
       <th {...props}>{children}</th>
     ),
     td: ({
       children,
+      node: _node,
       ...props
     }: {
       children?: React.ReactNode;
+      node?: unknown;
     } & React.TdHTMLAttributes<HTMLTableDataCellElement>) => (
       <td {...props}>{children}</td>
     ),
 
     // 其他元素（样式由 content.css 处理）
+    // 注意：react-markdown 和 MDX 会传递 node 属性（AST 节点），需要过滤掉避免渲染到 HTML
     p: ({
       children,
+      node: _node,
       ...props
     }: {
       children?: React.ReactNode;
+      node?: unknown;
     } & React.HTMLAttributes<HTMLParagraphElement>) => (
       <p {...props}>{children}</p>
     ),
     ul: ({
       children,
+      node: _node,
       ...props
     }: {
       children?: React.ReactNode;
+      node?: unknown;
     } & React.HTMLAttributes<HTMLUListElement>) => (
       <ul {...props}>{children}</ul>
     ),
     ol: ({
       children,
+      node: _node,
       ...props
     }: {
       children?: React.ReactNode;
+      node?: unknown;
     } & React.HTMLAttributes<HTMLOListElement>) => (
       <ol {...props}>{children}</ol>
     ),
     li: ({
       children,
+      node: _node,
       ...props
     }: {
       children?: React.ReactNode;
+      node?: unknown;
     } & React.LiHTMLAttributes<HTMLLIElement>) => (
       <li {...props}>{children}</li>
     ),
     blockquote: ({
       children,
+      node: _node,
       ...props
     }: {
       children?: React.ReactNode;
+      node?: unknown;
     } & React.BlockquoteHTMLAttributes<HTMLElement>) => (
       <blockquote {...props}>{children}</blockquote>
     ),
-    hr: ({ ...props }: React.HTMLAttributes<HTMLHRElement>) => (
+    hr: ({
+      node: _node,
+      ...props
+    }: { node?: unknown } & React.HTMLAttributes<HTMLHRElement>) => (
       <hr {...props} />
     ),
 
     // MDX 特有元素（样式由 content.css 处理）
     del: ({
       children,
+      node: _node,
       ...props
     }: {
       children?: React.ReactNode;
+      node?: unknown;
     } & React.DelHTMLAttributes<HTMLElement>) => (
       <del {...props}>{children}</del>
     ),
     u: ({
       children,
-      ...props
-    }: { children?: React.ReactNode } & React.HTMLAttributes<HTMLElement>) => (
-      <u {...props}>{children}</u>
-    ),
-    mark: ({
-      children,
+      node: _node,
       ...props
     }: {
       children?: React.ReactNode;
+      node?: unknown;
+    } & React.HTMLAttributes<HTMLElement>) => <u {...props}>{children}</u>,
+    mark: ({
+      children,
+      node: _node,
+      ...props
+    }: {
+      children?: React.ReactNode;
+      node?: unknown;
     } & React.HTMLAttributes<HTMLElement>) => (
       <mark {...props}>{children}</mark>
     ),
     sup: ({
       children,
+      node: _node,
       ...props
-    }: { children?: React.ReactNode } & React.HTMLAttributes<HTMLElement>) => (
-      <sup {...props}>{children}</sup>
-    ),
+    }: {
+      children?: React.ReactNode;
+      node?: unknown;
+    } & React.HTMLAttributes<HTMLElement>) => <sup {...props}>{children}</sup>,
     sub: ({
       children,
+      node: _node,
       ...props
-    }: { children?: React.ReactNode } & React.HTMLAttributes<HTMLElement>) => (
-      <sub {...props}>{children}</sub>
-    ),
+    }: {
+      children?: React.ReactNode;
+      node?: unknown;
+    } & React.HTMLAttributes<HTMLElement>) => <sub {...props}>{children}</sub>,
   }) as const;
 
 /**

@@ -300,6 +300,7 @@ export default async function PostPage({ params }: PageProps) {
               source={renderedContent.content}
               mode={renderedContent.mode}
               mediaFileMap={postMediaFileMap}
+              skipFirstH1
             />
             {/* 文章底部信息 */}
             <div className="max-w-7xl mx-auto mt-12 border-t-2 py-8 border-border">
