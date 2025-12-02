@@ -7,6 +7,7 @@ export * from "./api/doctor.js";
 export * from "./api/error.js";
 export * from "./api/setting.js";
 export * from "./api/stats.js";
+export * from "./api/system.js";
 export * from "./api/user.js";
 export * from "./api/post.js";
 export * from "./api/tag.js";
