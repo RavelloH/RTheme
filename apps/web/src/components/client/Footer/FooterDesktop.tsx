@@ -66,24 +66,13 @@ export default function FooterDesktop({ menus }: FooterProps) {
     };
 
     const handleLoadingComplete = () => {
-      setIsLoaded(true);
       // 标记页面已加载完成
       document.body.setAttribute("data-loading-complete", "true");
-
-      // 使用GSAP动画从下方滑入
-      if (footerRef.current) {
-        const footerHeight = isMobile ? 112 : 80; // 6em * 16px = 112px, 5em * 16px = 80px
-        gsap.fromTo(
-          footerRef.current,
-          { y: footerHeight },
-          {
-            y: 0,
-            duration: 0.8,
-            ease: "power2.out",
-            delay: 0.2, // 稍微延迟，让Header先动画
-          },
-        );
-      }
+      // 延迟设置 isLoaded，让 framer-motion 的 spring 动画自然进行
+      // 这避免了 GSAP 和 framer-motion 的动画冲突
+      setTimeout(() => {
+        setIsLoaded(true);
+      }, 200); // 与 Header 动画延迟保持一致
     };
 
     // 检查初始加载状态
@@ -94,7 +83,7 @@ export default function FooterDesktop({ menus }: FooterProps) {
     return () => {
       window.removeEventListener("loadingComplete", handleLoadingComplete);
     };
-  }, [isMobile]);
+  }, []);
 
   useEffect(() => {
     if (isMenuOpen) {

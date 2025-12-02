@@ -23,6 +23,7 @@ export default function PageTransition({ children }: PageTransitionProps) {
   const [transitionState, setTransitionState] =
     useState<TransitionState>("idle");
   const [transitionDirection, setTransitionDirection] = useState<string>("");
+  const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const previousPathname = useRef<string>("");
@@ -33,6 +34,24 @@ export default function PageTransition({ children }: PageTransitionProps) {
 
   const pathname = usePathname();
   const setFooterVisible = useFooterStore((state) => state.setFooterVisible);
+
+  // 监听首次加载完成事件
+  useEffect(() => {
+    const handleLoadingComplete = () => {
+      setIsInitialLoadComplete(true);
+    };
+
+    // 检查是否已经加载完成
+    const isAlreadyLoaded = document.body.hasAttribute("data-loading-complete");
+    if (isAlreadyLoaded) {
+      setIsInitialLoadComplete(true);
+    }
+
+    window.addEventListener("loadingComplete", handleLoadingComplete);
+    return () => {
+      window.removeEventListener("loadingComplete", handleLoadingComplete);
+    };
+  }, []);
 
   // 监听广播消息
   useBroadcast<TransitionMessage>((message) => {
@@ -219,6 +238,9 @@ export default function PageTransition({ children }: PageTransitionProps) {
     if (!scrollContainer) return;
 
     const handleScroll = () => {
+      // 首次加载完成前不处理滚动事件，避免 footer 抖动
+      if (!isInitialLoadComplete) return;
+
       const currentScrollTop = scrollContainer.scrollTop;
       const scrollHeight = scrollContainer.scrollHeight;
       const clientHeight = scrollContainer.clientHeight;
@@ -263,13 +285,16 @@ export default function PageTransition({ children }: PageTransitionProps) {
         clearTimeout(scrollTimeout.current);
       }
     };
-  }, [setFooterVisible]);
+  }, [setFooterVisible, isInitialLoadComplete]);
 
   // 路由切换时重置 footer 状态
   useEffect(() => {
+    // 首次加载完成前不重置 footer 状态，避免抖动
+    if (!isInitialLoadComplete) return;
+
     setFooterVisible(true);
     lastScrollTop.current = 0;
-  }, [pathname, setFooterVisible]);
+  }, [pathname, setFooterVisible, isInitialLoadComplete]);
 
   return (
     <div
