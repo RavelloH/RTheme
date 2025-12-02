@@ -19,6 +19,7 @@ interface UserAvatarProps {
   username: string;
   avatarUrl?: string | null;
   email?: string | null;
+  emailMd5?: string | null;
   size?: number;
   shape?: AvatarShape;
   className?: string;
@@ -32,6 +33,7 @@ export default function UserAvatar({
   username,
   avatarUrl,
   email,
+  emailMd5,
   size = 32,
   shape = "circle",
   className = "",
@@ -54,8 +56,17 @@ export default function UserAvatar({
         candidates.push(avatarUrl);
       }
 
+      // 优先使用服务器端计算的 MD5
+      if (emailMd5) {
+        candidates.push(
+          `https://cravatar.cn/avatar/${emailMd5}?d=404`,
+          `https://gravatar.cn/avatar/${emailMd5}?d=404`,
+        );
+      }
+
+      // 如果没有服务器端 MD5，则在客户端计算
       const normalizedEmail = email?.trim().toLowerCase();
-      if (normalizedEmail) {
+      if (normalizedEmail && !emailMd5) {
         try {
           const hash = md5Hex(normalizedEmail);
           if (cancelled) return;
@@ -81,7 +92,7 @@ export default function UserAvatar({
     return () => {
       cancelled = true;
     };
-  }, [avatarUrl, email]);
+  }, [avatarUrl, email, emailMd5]);
 
   useEffect(() => {
     setUseFallback(avatarUrls.length === 0);

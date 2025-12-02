@@ -3,14 +3,23 @@ import { Button } from "@/ui/Button";
 import { useEffect, useState } from "react";
 import { useBroadcast, useBroadcastSender } from "@/hooks/useBroadcast";
 
+interface CaptchaButtonProps extends React.ComponentProps<typeof Button> {
+  /**
+   * 自定义验证过程中的文本，如果未提供则使用默认文本 "正在执行安全验证"
+   */
+  verificationText?: string;
+}
+
 export function CaptchaButton({
   loading: externalLoading,
   loadingText: externalLoadingText,
+  verificationText,
   ...props
-}: React.ComponentProps<typeof Button>) {
+}: CaptchaButtonProps) {
   const [internalLoading, setInternalLoading] = useState<number | boolean>(0);
-  const [internalLoadingText, setInternalLoadingText] =
-    useState<string>("正在执行安全验证");
+  const [internalLoadingText, setInternalLoadingText] = useState<string>(
+    verificationText || "正在执行安全验证",
+  );
   const { broadcast } = useBroadcastSender<object>();
 
   // 自身进度 0-99 时使用自身，100 时优先使用外部
@@ -45,6 +54,10 @@ export function CaptchaButton({
   });
 
   useEffect(() => {
+    setInternalLoadingText(verificationText || "正在执行安全验证");
+  }, [verificationText]);
+
+  useEffect(() => {
     solve();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -53,7 +66,7 @@ export function CaptchaButton({
   useBroadcast((message: { type: string }) => {
     if (message?.type === "captcha-reset") {
       setInternalLoading(0);
-      setInternalLoadingText("正在执行安全验证");
+      setInternalLoadingText(verificationText || "正在执行安全验证");
       reset();
       solve();
     }

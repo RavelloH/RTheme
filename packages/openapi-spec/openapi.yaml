@@ -3168,6 +3168,8 @@ components:
               type: boolean
             hasPrev:
               type: boolean
+            nextCursor:
+              type: string
           required:
             - page
             - pageSize
@@ -8368,21 +8370,21 @@ components:
           type: string
           minLength: 1
         pageSize:
-          default: 20
+          default: 10
           type: integer
           minimum: 1
           maximum: 50
-        cursorId:
+        maxDepth:
+          default: 3
+          type: integer
+          minimum: 1
+          maximum: 10
+        cursor:
           type: string
-          format: uuid
-          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-        cursorCreatedAt:
-          type: string
-          format: date-time
-          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
       required:
         - slug
         - pageSize
+        - maxDepth
       additionalProperties: false
     CommentListResponse:
       type: object
@@ -8459,6 +8461,9 @@ components:
                     format: uri
                   isAnonymous:
                     type: boolean
+                  emailMd5:
+                    nullable: true
+                    type: string
                 required:
                   - uid
                   - username
@@ -8466,6 +8471,7 @@ components:
                   - avatar
                   - displayName
                   - isAnonymous
+                  - emailMd5
                 additionalProperties: false
               location:
                 nullable: true
@@ -8484,6 +8490,20 @@ components:
                   - id
                   - authorName
                 additionalProperties: false
+              depth:
+                default: 0
+                type: integer
+                minimum: 0
+                maximum: 9007199254740991
+              path:
+                default: ""
+                type: string
+              sortKey:
+                default: ""
+                type: string
+              hasMore:
+                default: false
+                type: boolean
             required:
               - id
               - postSlug
@@ -8495,6 +8515,10 @@ components:
               - replyCount
               - author
               - location
+              - depth
+              - path
+              - sortKey
+              - hasMore
             additionalProperties: false
         meta:
           type: object
@@ -8516,6 +8540,8 @@ components:
               type: boolean
             hasPrev:
               type: boolean
+            nextCursor:
+              type: string
           required:
             - page
             - pageSize
@@ -8531,6 +8557,22 @@ components:
         - requestId
         - data
         - meta
+      additionalProperties: false
+    GetDeepReplies:
+      type: object
+      properties:
+        commentId:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        maxDepth:
+          default: 3
+          type: integer
+          minimum: 1
+          maximum: 10
+      required:
+        - commentId
+        - maxDepth
       additionalProperties: false
     CreateComment:
       type: object
@@ -8639,6 +8681,9 @@ components:
                   format: uri
                 isAnonymous:
                   type: boolean
+                emailMd5:
+                  nullable: true
+                  type: string
               required:
                 - uid
                 - username
@@ -8646,6 +8691,7 @@ components:
                 - avatar
                 - displayName
                 - isAnonymous
+                - emailMd5
               additionalProperties: false
             location:
               nullable: true
@@ -8664,6 +8710,20 @@ components:
                 - id
                 - authorName
               additionalProperties: false
+            depth:
+              default: 0
+              type: integer
+              minimum: 0
+              maximum: 9007199254740991
+            path:
+              default: ""
+              type: string
+            sortKey:
+              default: ""
+              type: string
+            hasMore:
+              default: false
+              type: boolean
           required:
             - id
             - postSlug
@@ -8675,6 +8735,10 @@ components:
             - replyCount
             - author
             - location
+            - depth
+            - path
+            - sortKey
+            - hasMore
           additionalProperties: false
       required:
         - success
@@ -8768,6 +8832,9 @@ components:
                     format: uri
                   isAnonymous:
                     type: boolean
+                  emailMd5:
+                    nullable: true
+                    type: string
                 required:
                   - uid
                   - username
@@ -8775,6 +8842,7 @@ components:
                   - avatar
                   - displayName
                   - isAnonymous
+                  - emailMd5
                 additionalProperties: false
               location:
                 nullable: true
@@ -8793,6 +8861,20 @@ components:
                   - id
                   - authorName
                 additionalProperties: false
+              depth:
+                default: 0
+                type: integer
+                minimum: 0
+                maximum: 9007199254740991
+              path:
+                default: ""
+                type: string
+              sortKey:
+                default: ""
+                type: string
+              hasMore:
+                default: false
+                type: boolean
             required:
               - id
               - postSlug
@@ -8804,6 +8886,10 @@ components:
               - replyCount
               - author
               - location
+              - depth
+              - path
+              - sortKey
+              - hasMore
             additionalProperties: false
       required:
         - success
@@ -8819,22 +8905,14 @@ components:
           type: string
           format: uuid
           pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-        pageSize:
-          default: 20
+        maxDepth:
+          default: 3
           type: integer
           minimum: 1
-          maximum: 50
-        cursorId:
-          type: string
-          format: uuid
-          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-        cursorCreatedAt:
-          type: string
-          format: date-time
-          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+          maximum: 10
       required:
         - commentId
-        - pageSize
+        - maxDepth
       additionalProperties: false
     UpdateCommentStatus:
       type: object
@@ -9003,6 +9081,9 @@ components:
                     format: uri
                   isAnonymous:
                     type: boolean
+                  emailMd5:
+                    nullable: true
+                    type: string
                 required:
                   - uid
                   - username
@@ -9010,6 +9091,7 @@ components:
                   - avatar
                   - displayName
                   - isAnonymous
+                  - emailMd5
                 additionalProperties: false
               location:
                 nullable: true
@@ -9028,6 +9110,20 @@ components:
                   - id
                   - authorName
                 additionalProperties: false
+              depth:
+                default: 0
+                type: integer
+                minimum: 0
+                maximum: 9007199254740991
+              path:
+                default: ""
+                type: string
+              sortKey:
+                default: ""
+                type: string
+              hasMore:
+                default: false
+                type: boolean
               email:
                 nullable: true
                 type: string
@@ -9048,6 +9144,10 @@ components:
               - replyCount
               - author
               - location
+              - depth
+              - path
+              - sortKey
+              - hasMore
               - email
               - ipAddress
               - userAgent
@@ -9072,6 +9172,8 @@ components:
               type: boolean
             hasPrev:
               type: boolean
+            nextCursor:
+              type: string
           required:
             - page
             - pageSize

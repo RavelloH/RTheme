@@ -209,6 +209,12 @@ model Comment {
   parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies     Comment[] @relation("CommentReplies")
 
+  // 层级树形结构字段
+  depth      Int    @default(0)                        // 层级深度 (0=顶级评论)
+  path       String @default("") @db.VarChar(2000)    // 物化路径，如 "rootId/parentId/selfId"
+  sortKey    String @default("") @db.VarChar(500)     // DFS 排序键，保证树形顺序
+  replyCount Int    @default(0)                        // 直接子评论数量
+
   // 索引优化
   @@index([postId])
   @@index([userUid])
@@ -218,6 +224,9 @@ model Comment {
   @@index([postId, status]) // 复合索引：按文章和状态查询
   @@index([userUid, status]) // 复合索引：按用户和状态查询
   @@index([status, createdAt]) // 复合索引：按状态和时间查询
+  @@index([postId, status, sortKey]) // 复合索引：按 DFS 顺序查询评论树
+  @@index([postId, status, depth]) // 复合索引：按层级过滤
+  @@index([path]) // 物化路径索引：用于查找子树
 }
 
 // 媒体文件模型

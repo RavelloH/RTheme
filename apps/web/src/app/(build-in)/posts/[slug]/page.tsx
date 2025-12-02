@@ -8,6 +8,8 @@ import {
   RiUserLine,
   RiCalendarLine,
   RiEye2Line,
+  RiEditLine,
+  RiInformationLine,
 } from "@remixicon/react";
 import CMSImage from "@/components/CMSImage";
 import MDXRenderer from "@/components/MDXRenderer";
@@ -69,6 +71,7 @@ export default async function PostPage({ params }: PageProps) {
     reviewAll,
     reviewAnonymous,
     locateEnabled,
+    siteURL,
   ] = await Promise.all([
     getConfig<boolean>("comment.enable", true),
     getConfig<string>("comment.placeholder", "输入评论内容..."),
@@ -78,6 +81,7 @@ export default async function PostPage({ params }: PageProps) {
     getConfig<boolean>("comment.review.enable", false),
     getConfig<boolean>("comment.anonymous.review.enable", false),
     getConfig<boolean>("comment.locate.enable", false),
+    getConfig<boolean>("site.url"),
   ]);
 
   try {
@@ -298,21 +302,40 @@ export default async function PostPage({ params }: PageProps) {
               mediaFileMap={postMediaFileMap}
             />
             {/* 文章底部信息 */}
-            <div className="px-10 max-w-7xl mx-auto mt-12 pb-10 border-t pt-8">
-              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                <span>发布于: {formatDate(post.publishedAt!)}</span>
-                <span>创建于: {formatDate(post.createdAt)}</span>
-                <span>最后更新: {formatDate(post.updatedAt)}</span>
-                {post.allowComments && (
-                  <span className="text-green-600 dark:text-green-400">
-                    允许评论
+            <div className="max-w-7xl mx-auto mt-12 border-t-2 py-8 border-border">
+              <div className="text-sm text-muted-foreground space-y-2">
+                <div className="flex flex-wrap gap-4 ">
+                  <span className="flex gap-1 items-center">
+                    <RiCalendarLine size={"1em"} />
+                    {formatDate(post.publishedAt!)}
                   </span>
-                )}
-                {post.isPinned && (
-                  <span className="text-orange-600 dark:text-orange-400">
-                    置顶文章
+                  <span>{"/"}</span>
+                  <span className="flex gap-1 items-center">
+                    <RiEditLine size="1em" />
+                    {formatDate(post.updatedAt)}
                   </span>
-                )}
+                  <span>{"/"}</span>
+                  <span>{post.title}</span>
+                </div>
+                <div className="flex flex-wrap gap-4 ">
+                  <span className="flex gap-1 items-center">
+                    <RiUserLine size={"1em"} />
+                    {post.author.nickname
+                      ? `${post.author.nickname} (@${post.author.username})`
+                      : `@${post.author.username}`}
+                  </span>
+                  <span>{"/"}</span>
+                  <span>{siteURL + "/posts/" + slug}</span>
+                </div>
+                <div className="flex-warp gap-1 items-center flex">
+                  <RiInformationLine size="1em" />
+                  原创内容使用
+                  <span className="px-1">
+                    知识共享 署名-非商业性使用-相同方式共享 4.0 (CC BY-NC-ND
+                    4.0)
+                  </span>
+                  协议授权。转载请注明出处。
+                </div>
               </div>
             </div>
             {/* 评论区 */}

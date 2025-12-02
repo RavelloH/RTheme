@@ -22,6 +22,7 @@ export const CommentAuthorSchema = z.object({
   displayName: z.string(),
   website: z.string().url().nullable().optional(),
   isAnonymous: z.boolean(),
+  emailMd5: z.string().nullable(),
 });
 
 export type CommentAuthor = z.infer<typeof CommentAuthorSchema>;
@@ -47,26 +48,22 @@ export const CommentItemSchema = z.object({
   author: CommentAuthorSchema,
   location: z.string().nullable(),
   replyTo: CommentReplyRefSchema.optional(),
+  // 层级树形结构字段
+  depth: z.number().int().nonnegative().default(0),
+  path: z.string().default(""),
+  sortKey: z.string().default(""),
+  hasMore: z.boolean().default(false), // 是否有未加载的深层子评论
+  descendantCount: z.number().int().nonnegative().default(0), // 当前已加载的后代评论数量
 });
 
 export type CommentItem = z.infer<typeof CommentItemSchema>;
 
-export const GetPostCommentsSchema = z
-  .object({
-    slug: z.string().min(1, "slug 不能为空"),
-    pageSize: z.number().int().min(1).max(50).default(20),
-    cursorId: z.string().uuid().optional(),
-    cursorCreatedAt: z.string().datetime().optional(),
-  })
-  .refine(
-    (data) =>
-      (!data.cursorId && !data.cursorCreatedAt) ||
-      (Boolean(data.cursorId) && Boolean(data.cursorCreatedAt)),
-    {
-      message: "cursorId 与 cursorCreatedAt 需同时提供",
-      path: ["cursorId"],
-    },
-  );
+export const GetPostCommentsSchema = z.object({
+  slug: z.string().min(1, "slug 不能为空"),
+  pageSize: z.number().int().min(1).max(50).default(10),
+  maxDepth: z.number().int().min(1).max(10).default(3), // 预加载的最大层级深度
+  cursor: z.string().optional(), // sortKey 游标
+});
 
 export type GetPostComments = z.infer<typeof GetPostCommentsSchema>;
 registerSchema("GetPostComments", GetPostCommentsSchema);
@@ -77,6 +74,15 @@ export const CommentListResponseSchema = createPaginatedResponseSchema(
 
 export type CommentListResponse = z.infer<typeof CommentListResponseSchema>;
 registerSchema("CommentListResponse", CommentListResponseSchema);
+
+// 获取深层回复的请求参数
+export const GetDeepRepliesSchema = z.object({
+  commentId: z.string().uuid(),
+  maxDepth: z.number().int().min(1).max(10).default(3), // 相对于当前评论的最大深度
+});
+
+export type GetDeepReplies = z.infer<typeof GetDeepRepliesSchema>;
+registerSchema("GetDeepReplies", GetDeepRepliesSchema);
 
 export const CreateCommentSchema = z.object({
   slug: z.string().min(1, "slug 不能为空"),
@@ -114,22 +120,10 @@ export type CommentContextResponse = z.infer<
 >;
 registerSchema("CommentContextResponse", CommentContextResponseSchema);
 
-export const GetCommentRepliesSchema = z
-  .object({
-    commentId: z.string().uuid(),
-    pageSize: z.number().int().min(1).max(50).default(20),
-    cursorId: z.string().uuid().optional(),
-    cursorCreatedAt: z.string().datetime().optional(),
-  })
-  .refine(
-    (data) =>
-      (!data.cursorId && !data.cursorCreatedAt) ||
-      (Boolean(data.cursorId) && Boolean(data.cursorCreatedAt)),
-    {
-      message: "cursorId 与 cursorCreatedAt 需同时提供",
-      path: ["cursorId"],
-    },
-  );
+export const GetCommentRepliesSchema = z.object({
+  commentId: z.string().uuid(),
+  maxDepth: z.number().int().min(1).max(10).default(3), // 相对于当前评论的最大深度
+});
 
 export type GetCommentReplies = z.infer<typeof GetCommentRepliesSchema>;
 registerSchema("GetCommentReplies", GetCommentRepliesSchema);

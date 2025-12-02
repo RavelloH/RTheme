@@ -38,10 +38,19 @@ import { verifyToken } from "./captcha";
 import { getConfig } from "@/lib/server/configCache";
 import type { UserRole } from "@/lib/server/auth-verify";
 import prisma from "@/lib/server/prisma";
+import crypto from "crypto";
 import type { Prisma } from ".prisma/client";
 import { getCache, setCache, generateCacheKey } from "@/lib/server/cache";
 
 const COMMENT_ROLES: UserRole[] = ["USER", "ADMIN", "EDITOR", "AUTHOR"];
+
+// 计算 MD5 哈希值的辅助函数
+function calculateMD5(text: string): string {
+  return crypto
+    .createHash("md5")
+    .update(text.toLowerCase().trim())
+    .digest("hex");
+}
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
@@ -126,6 +135,11 @@ const commentSelect = {
   authorEmail: true,
   authorWebsite: true,
   ipAddress: true,
+  // 层级树形结构字段
+  depth: true,
+  path: true,
+  sortKey: true,
+  replyCount: true,
   user: {
     select: {
       uid: true,
@@ -141,9 +155,6 @@ const commentSelect = {
       authorName: true,
       user: { select: { nickname: true, username: true } },
     },
-  },
-  _count: {
-    select: { replies: true },
   },
 } satisfies Prisma.CommentSelect;
 
@@ -162,6 +173,7 @@ async function mapCommentToItem(
   comment: PublicComment,
   currentUid: number | null,
   showLocation: boolean,
+  maxDepth?: number, // 用于判断是否有更多深层子评论
 ): Promise<CommentItem> {
   const displayName =
     comment.user?.nickname ||
@@ -172,6 +184,29 @@ async function mapCommentToItem(
     ? await resolveIpLocation(comment.ipAddress)
     : null;
 
+  // 计算邮箱的 MD5 值
+  const emailMd5 = comment.authorEmail
+    ? calculateMD5(comment.authorEmail)
+    : null;
+
+  // 判断是否有未加载的深层子评论
+  const hasMore =
+    maxDepth !== undefined &&
+    comment.replyCount > 0 &&
+    comment.depth >= maxDepth - 1;
+
+  // 从数据库查询此评论的所有后代数量（使用 path 前缀匹配）
+  const descendantCount = await prisma.comment.count({
+    where: {
+      path: { startsWith: comment.path + "/" },
+      deletedAt: null,
+      OR: [
+        { status: "APPROVED" },
+        ...(currentUid ? [{ userUid: currentUid }] : []),
+      ],
+    },
+  });
+
   return {
     id: comment.id,
     postSlug: comment.post.slug,
@@ -180,7 +215,7 @@ async function mapCommentToItem(
     status: comment.status,
     createdAt: comment.createdAt.toISOString(),
     mine: comment.userUid !== null && comment.userUid === currentUid,
-    replyCount: comment._count?.replies ?? 0,
+    replyCount: comment.replyCount,
     author: {
       uid: comment.user?.uid ?? null,
       username: comment.user?.username ?? null,
@@ -189,6 +224,7 @@ async function mapCommentToItem(
       website: comment.user?.website ?? comment.authorWebsite ?? null,
       displayName,
       isAnonymous: !comment.user,
+      emailMd5,
     },
     location,
     replyTo: comment.parent
@@ -201,6 +237,12 @@ async function mapCommentToItem(
             "匿名",
         }
       : null,
+    // 层级树形结构字段
+    depth: comment.depth,
+    path: comment.path,
+    sortKey: comment.sortKey,
+    hasMore,
+    descendantCount,
   };
 }
 
@@ -232,8 +274,7 @@ export async function getPostComments(
   const validationError = validateData(params, GetPostCommentsSchema);
   if (validationError) return response.badRequest(validationError);
 
-  const { slug, pageSize, cursorId, cursorCreatedAt } = params;
-  const cursorDate = cursorCreatedAt ? new Date(cursorCreatedAt) : null;
+  const { slug, pageSize, maxDepth, cursor } = params;
 
   const commentEnabled = await getConfig<boolean>("comment.enable", true);
   if (!commentEnabled) {
@@ -251,50 +292,97 @@ export async function getPostComments(
   const authUser = await authVerify({ allowedRoles: COMMENT_ROLES });
   const currentUid = authUser?.uid ?? null;
 
-  const commentWhere: Prisma.CommentWhereInput = {
+  // 1. 首先获取顶级评论（分页）
+  const rootWhere: Prisma.CommentWhereInput = {
     postId: post.id,
     deletedAt: null,
+    parentId: null, // 仅顶级评论
     OR: [
       { status: "APPROVED" },
       ...(currentUid ? [{ userUid: currentUid }] : []),
     ],
+    ...(cursor ? { sortKey: { gt: cursor } } : {}),
   };
 
-  if (cursorId && cursorDate) {
-    commentWhere.AND = [
-      {
-        OR: [
-          { createdAt: { gt: cursorDate } },
-          { createdAt: cursorDate, id: { gt: cursorId } },
-        ],
-      },
-    ];
-  }
-
-  const [total, rawComments, showLocation] = await Promise.all([
-    prisma.comment.count({ where: commentWhere }),
+  const [rootComments, showLocation] = await Promise.all([
     prisma.comment.findMany({
-      where: commentWhere,
-      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      where: rootWhere,
+      orderBy: { sortKey: "asc" },
       take: pageSize + 1,
       select: commentSelect,
     }),
     getConfig<boolean>("comment.locate.enable", false),
   ]);
 
-  const hasNext = rawComments.length > pageSize;
-  const sliced = rawComments.slice(0, pageSize);
-  const data: CommentItem[] = [];
-  for (const c of sliced) {
-    data.push(await mapCommentToItem(c, currentUid, showLocation));
+  const hasNext = rootComments.length > pageSize;
+  const slicedRoots = rootComments.slice(0, pageSize);
+
+  if (slicedRoots.length === 0) {
+    return response.ok({
+      data: [] as unknown as CommentListResponse["data"],
+      meta: {
+        page: 1,
+        pageSize,
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false,
+      },
+    });
   }
 
-  const meta = buildPaginationMeta({
-    page: cursorId ? 2 : 1,
-    pageSize,
-    total,
-    hasNext,
+  // 2. 获取这些顶级评论下 depth < maxDepth 的所有子评论
+  const rootIds = slicedRoots.map((c) => c.id);
+  const pathPatterns = rootIds.map((id) => `${id}%`);
+
+  // 构建 OR 条件查询所有子评论
+  const childrenWhere: Prisma.CommentWhereInput = {
+    postId: post.id,
+    deletedAt: null,
+    depth: { gt: 0, lt: maxDepth }, // depth 1 到 maxDepth-1
+    OR: [
+      { status: "APPROVED" },
+      ...(currentUid ? [{ userUid: currentUid }] : []),
+    ],
+    AND: [
+      {
+        OR: pathPatterns.map((pattern) => ({
+          path: { startsWith: pattern.replace("%", "") },
+        })),
+      },
+    ],
+  };
+
+  const childComments = await prisma.comment.findMany({
+    where: childrenWhere,
+    orderBy: { sortKey: "asc" },
+    select: commentSelect,
   });
+
+  // 3. 合并并按 sortKey 排序
+  const allComments = [...slicedRoots, ...childComments].sort((a, b) =>
+    a.sortKey.localeCompare(b.sortKey),
+  );
+
+  // 4. 转换为响应格式
+  const data: CommentItem[] = [];
+  for (const c of allComments) {
+    data.push(await mapCommentToItem(c, currentUid, showLocation, maxDepth));
+  }
+
+  // 5. 计算分页元数据
+  const lastRoot = slicedRoots[slicedRoots.length - 1];
+  const nextCursor = hasNext ? lastRoot?.sortKey : undefined;
+
+  const meta = {
+    page: cursor ? 2 : 1,
+    pageSize,
+    total: data.length,
+    totalPages: hasNext ? 2 : 1,
+    hasNext,
+    hasPrev: !!cursor,
+    nextCursor,
+  };
 
   return response.ok({
     data: data as unknown as CommentListResponse["data"],
@@ -378,11 +466,17 @@ export async function getCommentReplies(
   const validationError = validateData(params, GetCommentRepliesSchema);
   if (validationError) return response.badRequest(validationError);
 
-  const { commentId, cursorId, cursorCreatedAt, pageSize } = params;
-  const cursorDate = cursorCreatedAt ? new Date(cursorCreatedAt) : null;
+  const { commentId, maxDepth } = params;
+
+  // 获取父评论信息
   const parent = await prisma.comment.findUnique({
     where: { id: commentId, deletedAt: null },
-    select: { post: { select: { slug: true } } },
+    select: {
+      id: true,
+      depth: true,
+      path: true,
+      post: { select: { slug: true } },
+    },
   });
   if (!parent) return response.notFound({ message: "评论不存在" });
 
@@ -390,48 +484,38 @@ export async function getCommentReplies(
   const currentUid = authUser?.uid ?? null;
   const showLocation = await getConfig<boolean>("comment.locate.enable", false);
 
+  // 获取该评论下所有深层子评论（相对深度限制）
+  const maxAbsoluteDepth = parent.depth + maxDepth;
+  const pathPrefix = parent.path ? `${parent.path}/` : `${parent.id}/`;
+
   const where: Prisma.CommentWhereInput = {
-    parentId: commentId,
     deletedAt: null,
+    path: { startsWith: pathPrefix },
+    depth: { gt: parent.depth, lte: maxAbsoluteDepth },
     OR: [
       { status: "APPROVED" },
       ...(currentUid ? [{ userUid: currentUid }] : []),
     ],
   };
 
-  if (cursorId && cursorDate) {
-    where.AND = [
-      {
-        OR: [
-          { createdAt: { gt: cursorDate } },
-          { createdAt: cursorDate, id: { gt: cursorId } },
-        ],
-      },
-    ];
-  }
+  const rawComments = await prisma.comment.findMany({
+    where,
+    orderBy: { sortKey: "asc" },
+    select: commentSelect,
+  });
 
-  const [total, rawComments] = await Promise.all([
-    prisma.comment.count({ where }),
-    prisma.comment.findMany({
-      where,
-      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-      take: pageSize + 1,
-      select: commentSelect,
-    }),
-  ]);
-
-  const hasNext = rawComments.length > pageSize;
-  const sliced = rawComments.slice(0, pageSize);
   const data: CommentItem[] = [];
-  for (const c of sliced) {
-    data.push(await mapCommentToItem(c, currentUid, showLocation));
+  for (const c of rawComments) {
+    data.push(
+      await mapCommentToItem(c, currentUid, showLocation, maxAbsoluteDepth),
+    );
   }
 
   const meta = buildPaginationMeta({
-    page: cursorId ? 2 : 1,
-    pageSize,
-    total,
-    hasNext,
+    page: 1,
+    pageSize: data.length || 1,
+    total: data.length,
+    hasNext: false,
   });
 
   return response.ok({
@@ -510,11 +594,11 @@ export async function createComment(
   }
 
   if (parentId) {
-    const parent = await prisma.comment.findUnique({
+    const parentComment = await prisma.comment.findUnique({
       where: { id: parentId, deletedAt: null },
-      select: { postId: true },
+      select: { postId: true, depth: true, path: true, sortKey: true },
     });
-    if (!parent || parent.postId !== post.id) {
+    if (!parentComment || parentComment.postId !== post.id) {
       return response.badRequest({ message: "回复目标不存在" });
     }
   }
@@ -538,6 +622,30 @@ export async function createComment(
       })
     : null;
 
+  // 计算层级树形结构字段
+  let depth = 0;
+  let path = "";
+  let sortKey = "";
+
+  if (parentId) {
+    const parentComment = await prisma.comment.findUnique({
+      where: { id: parentId },
+      select: { depth: true, path: true, sortKey: true, replyCount: true },
+    });
+    if (parentComment) {
+      depth = parentComment.depth + 1;
+      // sortKey 基于父评论的 sortKey + 兄弟数量
+      const siblingIndex = parentComment.replyCount + 1;
+      sortKey = `${parentComment.sortKey}.${String(siblingIndex).padStart(4, "0")}`;
+    }
+  } else {
+    // 顶级评论：计算当前文章的顶级评论数量
+    const rootCount = await prisma.comment.count({
+      where: { postId: post.id, parentId: null },
+    });
+    sortKey = String(rootCount + 1).padStart(4, "0");
+  }
+
   const record = await prisma.comment.create({
     data: {
       content,
@@ -550,12 +658,53 @@ export async function createComment(
       authorWebsite:
         dbUser?.website || (allowAnonWebsite ? authorWebsite || null : null),
       ipAddress,
+      depth,
+      path: "", // 先创建记录，稍后更新 path
+      sortKey,
+      replyCount: 0,
     },
+    select: { id: true },
+  });
+
+  // 更新 path（需要包含自身 id）
+  if (parentId) {
+    const parentComment = await prisma.comment.findUnique({
+      where: { id: parentId },
+      select: { path: true },
+    });
+    path = parentComment?.path
+      ? `${parentComment.path}/${record.id}`
+      : `${parentId}/${record.id}`;
+  } else {
+    path = record.id;
+  }
+
+  // 更新评论的 path
+  await prisma.comment.update({
+    where: { id: record.id },
+    data: { path },
+  });
+
+  // 更新父评论的 replyCount
+  if (parentId) {
+    await prisma.comment.update({
+      where: { id: parentId },
+      data: { replyCount: { increment: 1 } },
+    });
+  }
+
+  // 重新获取完整记录
+  const fullRecord = await prisma.comment.findUnique({
+    where: { id: record.id },
     select: commentSelect,
   });
 
+  if (!fullRecord) {
+    return response.serverError();
+  }
+
   const showLocation = await getConfig<boolean>("comment.locate.enable", false);
-  const mapped = await mapCommentToItem(record, currentUid, showLocation);
+  const mapped = await mapCommentToItem(fullRecord, currentUid, showLocation);
 
   return response.created({ data: mapped as unknown as CommentItem });
 }

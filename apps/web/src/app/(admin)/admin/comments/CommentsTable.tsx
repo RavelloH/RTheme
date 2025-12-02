@@ -106,13 +106,20 @@ export default function CommentsTable() {
     searchQuery,
     sortKey,
     sortOrder,
-    refreshTrigger,
     toastError,
   ]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // 通过 broadcast 通知刷新时，重新获取数据
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      fetchData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTrigger]);
 
   useBroadcast<{ type: string }>((message) => {
     if (message.type === "comments-refresh") {
@@ -174,12 +181,16 @@ export default function CommentsTable() {
               record.author.displayName}
           </span>
           {record.author.uid ? (
-            <span className="text-muted-foreground text-xs">
+            <Link
+              href={`/admin/users?uid=${record.author.uid}`}
+              presets={["hover-underline"]}
+              className="text-muted-foreground text-xs"
+            >
               UID: {record.author.uid}
-            </span>
+            </Link>
           ) : (
             record.email && (
-              <span className="text-muted-foreground text-xs">
+              <span className="text-muted-foreground text-xs truncate max-w-[120px]">
                 {record.email}
               </span>
             )
@@ -191,7 +202,19 @@ export default function CommentsTable() {
       key: "content",
       title: "内容",
       render: (_, record) => (
-        <div className="line-clamp-3 max-w-xl text-sm">{record.content}</div>
+        <div className="max-w-xl text-sm">
+          {record.replyTo && (
+            <span className="text-muted-foreground text-xs mr-1">
+              回复 @{record.replyTo.authorName}:
+            </span>
+          )}
+          {(record.depth ?? 0) > 0 && (
+            <span className="text-muted-foreground/60 text-xs mr-1">
+              [L{record.depth}]
+            </span>
+          )}
+          <span className="line-clamp-2">{record.content}</span>
+        </div>
       ),
     },
     {
@@ -200,15 +223,29 @@ export default function CommentsTable() {
       sortable: true,
       render: (_, record) => (
         <span
-          className={
+          className={`text-xs ${
             record.status === "APPROVED"
               ? "text-green-600"
               : record.status === "PENDING"
                 ? "text-orange-500"
-                : "text-red-500"
-          }
+                : record.status === "SPAM"
+                  ? "text-gray-500"
+                  : "text-red-500"
+          }`}
         >
           {statusLabels[record.status]}
+        </span>
+      ),
+    },
+    {
+      key: "replyCount",
+      title: "回复",
+      align: "center",
+      render: (_, record) => (
+        <span
+          className={`text-xs ${record.replyCount > 0 ? "text-primary" : "text-muted-foreground"}`}
+        >
+          {record.replyCount}
         </span>
       ),
     },
@@ -217,12 +254,13 @@ export default function CommentsTable() {
       title: "文章",
       sortable: true,
       render: (_, record) => (
-        <div className="text-sm max-w-xs">
+        <div className="text-xs max-w-[160px]">
           <Link
             href={`/posts/${record.postSlug}`}
             target="_blank"
             presets={["hover-underline"]}
             title={record.postTitle || record.postSlug}
+            className="line-clamp-1"
           >
             {record.postTitle || record.postSlug}
           </Link>
@@ -234,9 +272,9 @@ export default function CommentsTable() {
       title: "IP",
       align: "center",
       render: (_, record) => (
-        <div className="text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground font-mono">
           {record.ipAddress || "-"}
-        </div>
+        </span>
       ),
     },
     {
@@ -245,9 +283,9 @@ export default function CommentsTable() {
       sortable: true,
       mono: true,
       render: (_, record) => (
-        <div className="text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           {new Date(record.createdAt).toLocaleString("zh-CN")}
-        </div>
+        </span>
       ),
     },
   ];
@@ -422,126 +460,175 @@ export default function CommentsTable() {
         size="lg"
       >
         {selectedComment && (
-          <div className="px-6 py-6 space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+          <div className="px-6 py-6 space-y-5 text-sm">
+            {/* 父评论上下文 */}
+            {selectedComment.replyTo && (
+              <div className="text-muted-foreground border-l-2 border-primary/50 pl-3">
+                回复{" "}
+                <span className="font-medium text-foreground">
+                  @{selectedComment.replyTo.authorName}
+                </span>
+                <span className="text-xs ml-2 font-mono">
+                  ({selectedComment.replyTo.id})
+                </span>
+              </div>
+            )}
+
+            {/* 基本信息 */}
+            <div className="space-y-2">
+              <h3 className="font-medium text-foreground border-b border-border pb-1">
                 基本信息
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
                 <div>
-                  <p className="text-sm text-muted-foreground">状态</p>
-                  <p className="text-sm font-medium">
+                  <span className="text-muted-foreground">状态：</span>
+                  <span
+                    className={
+                      selectedComment.status === "APPROVED"
+                        ? "text-green-600"
+                        : selectedComment.status === "PENDING"
+                          ? "text-orange-500"
+                          : selectedComment.status === "SPAM"
+                            ? "text-gray-500"
+                            : "text-red-500"
+                    }
+                  >
                     {statusLabels[selectedComment.status]}
-                  </p>
+                  </span>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">时间</p>
-                  <p className="text-sm font-mono">
+                  <span className="text-muted-foreground">层级：</span>
+                  <span>
+                    {(selectedComment.depth ?? 0) === 0
+                      ? "顶级评论"
+                      : `L${selectedComment.depth}`}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">回复数：</span>
+                  <span>{selectedComment.replyCount}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">时间：</span>
+                  <span className="font-mono text-xs">
                     {new Date(selectedComment.createdAt).toLocaleString(
                       "zh-CN",
                     )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">文章</p>
-                  <Link
-                    href={`/posts/${selectedComment.postSlug}`}
-                    target="_blank"
-                    presets={["hover-underline"]}
-                    className="text-primary text-sm"
-                  >
-                    {selectedComment.postTitle || selectedComment.postSlug}
-                  </Link>
-                  <p className="text-xs text-muted-foreground font-mono truncate">
-                    {selectedComment.postSlug}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">父评论</p>
-                  <p className="text-sm font-mono">
-                    {selectedComment.replyTo?.id || "顶级评论"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">回复数量</p>
-                  <p className="text-sm">{selectedComment.replyCount}</p>
+                  </span>
                 </div>
               </div>
+              <div>
+                <span className="text-muted-foreground">文章：</span>
+                <Link
+                  href={`/posts/${selectedComment.postSlug}`}
+                  target="_blank"
+                  presets={["hover-underline"]}
+                  className="text-primary"
+                >
+                  {selectedComment.postTitle || selectedComment.postSlug}
+                </Link>
+              </div>
+              {selectedComment.path && (
+                <div>
+                  <span className="text-muted-foreground">路径：</span>
+                  <span className="font-mono text-xs break-all">
+                    {selectedComment.path}
+                  </span>
+                </div>
+              )}
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+            {/* 作者信息 */}
+            <div className="space-y-2">
+              <h3 className="font-medium text-foreground border-b border-border pb-1">
                 作者信息
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 <div>
-                  <p className="text-sm text-muted-foreground">显示名称</p>
-                  <p className="text-sm">
-                    {selectedComment.author.displayName}
-                  </p>
+                  <span className="text-muted-foreground">昵称：</span>
+                  <span>{selectedComment.author.displayName}</span>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">邮箱</p>
-                  <p className="text-sm">
+                  <span className="text-muted-foreground">UID：</span>
+                  {selectedComment.author.uid ? (
+                    <Link
+                      href={`/admin/users?uid=${selectedComment.author.uid}`}
+                      presets={["hover-underline"]}
+                      className="text-primary"
+                    >
+                      {selectedComment.author.uid}
+                    </Link>
+                  ) : (
+                    <span className="text-muted-foreground">匿名</span>
+                  )}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">邮箱：</span>
+                  <span>
                     {selectedComment.email || (
                       <span className="text-muted-foreground">-</span>
                     )}
-                  </p>
+                  </span>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">UID</p>
-                  <p className="text-sm">
-                    {selectedComment.author.uid ? (
-                      <Link
-                        href={`/admin/users?uid=${selectedComment.author.uid}`}
-                        presets={["hover-underline"]}
-                        className="text-primary"
-                      >
-                        {selectedComment.author.uid}
-                      </Link>
-                    ) : (
-                      <span className="text-muted-foreground">匿名</span>
-                    )}
-                  </p>
+                  <span className="text-muted-foreground">网站：</span>
+                  {selectedComment.author.website ? (
+                    <Link
+                      href={selectedComment.author.website}
+                      target="_blank"
+                      presets={["hover-underline"]}
+                      className="text-primary break-all"
+                    >
+                      {selectedComment.author.website}
+                    </Link>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">网站</p>
-                  <p className="text-sm break-all">
-                    {selectedComment.author.website || (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">IP 地址</p>
-                  <p className="text-sm font-mono">
+                  <span className="text-muted-foreground">IP：</span>
+                  <span className="font-mono text-xs">
                     {selectedComment.ipAddress || "-"}
-                  </p>
+                  </span>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">地理位置</p>
-                  <p className="text-sm">
+                  <span className="text-muted-foreground">位置：</span>
+                  <span>
                     {selectedComment.location || (
                       <span className="text-muted-foreground">-</span>
                     )}
-                  </p>
+                  </span>
                 </div>
-                <div className="md:col-span-2">
-                  <p className="text-sm text-muted-foreground">User Agent</p>
-                  <p className="text-xs font-mono break-all">
-                    {selectedComment.userAgent || "-"}
-                  </p>
-                </div>
+              </div>
+              <div>
+                <span className="text-muted-foreground">UA：</span>
+                <span className="font-mono text-xs break-all">
+                  {selectedComment.userAgent || "-"}
+                </span>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+            {/* 评论内容 */}
+            <div className="space-y-2">
+              <h3 className="font-medium text-foreground border-b border-border pb-1">
                 评论内容
               </h3>
-              <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
+              <p className="whitespace-pre-wrap break-words leading-relaxed">
                 {selectedComment.content}
               </p>
+            </div>
+
+            {/* ID 信息 */}
+            <div className="space-y-1 text-xs text-muted-foreground">
+              <div>
+                评论 ID: <span className="font-mono">{selectedComment.id}</span>
+              </div>
+              {selectedComment.parentId && (
+                <div>
+                  父评论 ID:{" "}
+                  <span className="font-mono">{selectedComment.parentId}</span>
+                </div>
+              )}
             </div>
           </div>
         )}

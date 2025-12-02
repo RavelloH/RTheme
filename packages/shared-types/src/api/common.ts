@@ -8,6 +8,7 @@ export const PaginationMetaSchema = z.object({
   totalPages: z.number().min(0),
   hasNext: z.boolean(),
   hasPrev: z.boolean(),
+  nextCursor: z.string().optional(), // 用于游标分页
 });
 
 // 错误详情 Schema

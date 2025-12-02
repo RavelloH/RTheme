@@ -5099,6 +5099,9 @@
               },
               "hasPrev": {
                 "type": "boolean"
+              },
+              "nextCursor": {
+                "type": "string"
               }
             },
             "required": [
@@ -12152,25 +12155,25 @@
             "minLength": 1
           },
           "pageSize": {
-            "default": 20,
+            "default": 10,
             "type": "integer",
             "minimum": 1,
             "maximum": 50
           },
-          "cursorId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          "maxDepth": {
+            "default": 3,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
           },
-          "cursorCreatedAt": {
-            "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          "cursor": {
+            "type": "string"
           }
         },
         "required": [
           "slug",
-          "pageSize"
+          "pageSize",
+          "maxDepth"
         ],
         "additionalProperties": false
       },
@@ -12269,6 +12272,10 @@
                     },
                     "isAnonymous": {
                       "type": "boolean"
+                    },
+                    "emailMd5": {
+                      "nullable": true,
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -12277,7 +12284,8 @@
                     "nickname",
                     "avatar",
                     "displayName",
-                    "isAnonymous"
+                    "isAnonymous",
+                    "emailMd5"
                   ],
                   "additionalProperties": false
                 },
@@ -12303,6 +12311,24 @@
                     "authorName"
                   ],
                   "additionalProperties": false
+                },
+                "depth": {
+                  "default": 0,
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "path": {
+                  "default": "",
+                  "type": "string"
+                },
+                "sortKey": {
+                  "default": "",
+                  "type": "string"
+                },
+                "hasMore": {
+                  "default": false,
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -12315,7 +12341,11 @@
                 "mine",
                 "replyCount",
                 "author",
-                "location"
+                "location",
+                "depth",
+                "path",
+                "sortKey",
+                "hasMore"
               ],
               "additionalProperties": false
             }
@@ -12345,6 +12375,9 @@
               },
               "hasPrev": {
                 "type": "boolean"
+              },
+              "nextCursor": {
+                "type": "string"
               }
             },
             "required": [
@@ -12365,6 +12398,27 @@
           "requestId",
           "data",
           "meta"
+        ],
+        "additionalProperties": false
+      },
+      "GetDeepReplies": {
+        "type": "object",
+        "properties": {
+          "commentId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "maxDepth": {
+            "default": 3,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          }
+        },
+        "required": [
+          "commentId",
+          "maxDepth"
         ],
         "additionalProperties": false
       },
@@ -12506,6 +12560,10 @@
                   },
                   "isAnonymous": {
                     "type": "boolean"
+                  },
+                  "emailMd5": {
+                    "nullable": true,
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -12514,7 +12572,8 @@
                   "nickname",
                   "avatar",
                   "displayName",
-                  "isAnonymous"
+                  "isAnonymous",
+                  "emailMd5"
                 ],
                 "additionalProperties": false
               },
@@ -12540,6 +12599,24 @@
                   "authorName"
                 ],
                 "additionalProperties": false
+              },
+              "depth": {
+                "default": 0,
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "path": {
+                "default": "",
+                "type": "string"
+              },
+              "sortKey": {
+                "default": "",
+                "type": "string"
+              },
+              "hasMore": {
+                "default": false,
+                "type": "boolean"
               }
             },
             "required": [
@@ -12552,7 +12629,11 @@
               "mine",
               "replyCount",
               "author",
-              "location"
+              "location",
+              "depth",
+              "path",
+              "sortKey",
+              "hasMore"
             ],
             "additionalProperties": false
           }
@@ -12675,6 +12756,10 @@
                     },
                     "isAnonymous": {
                       "type": "boolean"
+                    },
+                    "emailMd5": {
+                      "nullable": true,
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -12683,7 +12768,8 @@
                     "nickname",
                     "avatar",
                     "displayName",
-                    "isAnonymous"
+                    "isAnonymous",
+                    "emailMd5"
                   ],
                   "additionalProperties": false
                 },
@@ -12709,6 +12795,24 @@
                     "authorName"
                   ],
                   "additionalProperties": false
+                },
+                "depth": {
+                  "default": 0,
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "path": {
+                  "default": "",
+                  "type": "string"
+                },
+                "sortKey": {
+                  "default": "",
+                  "type": "string"
+                },
+                "hasMore": {
+                  "default": false,
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -12721,7 +12825,11 @@
                 "mine",
                 "replyCount",
                 "author",
-                "location"
+                "location",
+                "depth",
+                "path",
+                "sortKey",
+                "hasMore"
               ],
               "additionalProperties": false
             }
@@ -12744,26 +12852,16 @@
             "format": "uuid",
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
-          "pageSize": {
-            "default": 20,
+          "maxDepth": {
+            "default": 3,
             "type": "integer",
             "minimum": 1,
-            "maximum": 50
-          },
-          "cursorId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "cursorCreatedAt": {
-            "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+            "maximum": 10
           }
         },
         "required": [
           "commentId",
-          "pageSize"
+          "maxDepth"
         ],
         "additionalProperties": false
       },
@@ -12985,6 +13083,10 @@
                     },
                     "isAnonymous": {
                       "type": "boolean"
+                    },
+                    "emailMd5": {
+                      "nullable": true,
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -12993,7 +13095,8 @@
                     "nickname",
                     "avatar",
                     "displayName",
-                    "isAnonymous"
+                    "isAnonymous",
+                    "emailMd5"
                   ],
                   "additionalProperties": false
                 },
@@ -13020,6 +13123,24 @@
                   ],
                   "additionalProperties": false
                 },
+                "depth": {
+                  "default": 0,
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "path": {
+                  "default": "",
+                  "type": "string"
+                },
+                "sortKey": {
+                  "default": "",
+                  "type": "string"
+                },
+                "hasMore": {
+                  "default": false,
+                  "type": "boolean"
+                },
                 "email": {
                   "nullable": true,
                   "type": "string"
@@ -13044,6 +13165,10 @@
                 "replyCount",
                 "author",
                 "location",
+                "depth",
+                "path",
+                "sortKey",
+                "hasMore",
                 "email",
                 "ipAddress",
                 "userAgent"
@@ -13076,6 +13201,9 @@
               },
               "hasPrev": {
                 "type": "boolean"
+              },
+              "nextCursor": {
+                "type": "string"
               }
             },
             "required": [
