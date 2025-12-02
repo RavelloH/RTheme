@@ -358,7 +358,9 @@ export default async function PostPage({ params }: PageProps) {
               </ToastProvider>
             )}
           </div>
+          {/* 侧边栏容器 */}
           <div className="flex-[2] hidden lg:block max-w-screen h-full sticky top-10 self-start">
+            {/* 目录（包含视口内容卡片） */}
             <PostToc />
           </div>
 

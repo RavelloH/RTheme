@@ -1,14 +1,39 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { RiListCheck, RiArrowUpLine, RiArrowDownLine } from "@remixicon/react";
+import {
+  RiListCheck,
+  RiArrowUpLine,
+  RiArrowDownLine,
+  RiLinkM,
+  RiSuperscript2,
+} from "@remixicon/react";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "./Link";
 import Clickable from "@/ui/Clickable";
+import { Tooltip } from "@/ui/Tooltip";
+import { AutoResizer } from "@/ui/AutoResizer";
+import { AutoTransition } from "@/ui/AutoTransition";
 
 interface TocItem {
   id: string;
   text: string;
   level: number;
+}
+
+/**
+ * 视口内的动态内容项类型
+ */
+interface ViewportContentItem {
+  type: "link" | "code" | "footnote";
+  id: string;
+  href?: string;
+  text?: string;
+  isExternal?: boolean;
+  language?: string;
+  code?: string;
+  footnoteId?: string;
+  footnoteContent?: string;
 }
 
 interface PostTocProps {
@@ -42,6 +67,9 @@ export default function PostToc({
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isUserClickRef = useRef(false);
+
+  // 视口内容相关状态
+  const [viewportItems, setViewportItems] = useState<ViewportContentItem[]>([]);
 
   // 将 em 单位转换为像素值
   const emToPx = (em: number): number => {
@@ -77,6 +105,112 @@ export default function PostToc({
     },
     [],
   );
+
+  // 检测元素是否在视口内
+  const isElementInViewport = useCallback(
+    (element: Element, scrollContainer: HTMLElement | null): boolean => {
+      const rect = element.getBoundingClientRect();
+
+      if (scrollContainer) {
+        const containerRect = scrollContainer.getBoundingClientRect();
+        return (
+          rect.top < containerRect.bottom &&
+          rect.bottom > containerRect.top &&
+          rect.left < containerRect.right &&
+          rect.right > containerRect.left
+        );
+      }
+
+      return (
+        rect.top < window.innerHeight &&
+        rect.bottom > 0 &&
+        rect.left < window.innerWidth &&
+        rect.right > 0
+      );
+    },
+    [],
+  );
+
+  // 扫描视口内的内容
+  const scanViewportContent = useCallback(() => {
+    const contentContainer = document.querySelector(contentSelector);
+    if (!contentContainer) return;
+
+    const items: ViewportContentItem[] = [];
+    const seenIds = new Set<string>();
+
+    // 1. 扫描链接
+    const links = contentContainer.querySelectorAll("a[href]");
+    links.forEach((link, index) => {
+      if (!isElementInViewport(link, scrollContainerRef.current)) return;
+
+      const href = link.getAttribute("href") || "";
+      const text = link.textContent?.trim() || href;
+
+      if (!href || href.startsWith("#")) return;
+
+      const id = `link-${index}-${href.slice(0, 20)}`;
+      if (seenIds.has(id)) return;
+      seenIds.add(id);
+
+      const isExternal =
+        href.startsWith("http://") || href.startsWith("https://");
+
+      items.push({
+        type: "link",
+        id,
+        href,
+        text: text.length > 40 ? text.slice(0, 40) + "..." : text,
+        isExternal,
+      });
+    });
+
+    // 2. 扫描文中的脚注引用链接，获取对应脚注内容
+    const footnoteRefs = contentContainer.querySelectorAll(
+      'a[data-footnote-ref][href^="#user-content-fn"], a[data-footnote-ref][href^="#fn"]',
+    );
+    footnoteRefs.forEach((ref) => {
+      if (!isElementInViewport(ref, scrollContainerRef.current)) return;
+
+      const href = ref.getAttribute("href");
+      if (!href) return;
+
+      // 获取脚注 ID（去掉 # 前缀）
+      const footnoteId = href.slice(1);
+
+      const id = `footnote-${footnoteId}`;
+      if (seenIds.has(id)) return;
+      seenIds.add(id);
+
+      // 查找对应的脚注内容
+      const footnoteElement = document.querySelector(`#${footnoteId}`);
+      if (!footnoteElement) return;
+
+      // 获取脚注内容，移除返回链接的文本
+      const clonedElement = footnoteElement.cloneNode(true) as HTMLElement;
+      // 移除返回链接
+      clonedElement
+        .querySelectorAll("a[data-footnote-backref]")
+        .forEach((el) => el.remove());
+      const content = clonedElement.textContent?.trim() || "";
+
+      // 从引用链接元素中获取显示的数字（如 1, 2, 3）
+      const refText = ref.textContent?.trim() || "";
+      // 提取纯数字
+      const footnoteNumber = refText.match(/\d+/)?.[0] || "?";
+
+      items.push({
+        type: "footnote",
+        id,
+        footnoteId,
+        footnoteContent: content,
+        // 存储脚注编号用于显示
+        text: footnoteNumber,
+      });
+    });
+
+    setViewportItems(items);
+  }, [contentSelector, isElementInViewport]);
 
   // 从 DOM 中提取目录
   useEffect(() => {
@@ -189,6 +323,9 @@ export default function PostToc({
       });
 
       setActiveId(currentActiveId);
+
+      // 同时扫描视口内容
+      scanViewportContent();
     };
 
     scrollTarget.addEventListener("scroll", handleScroll as EventListener, {
@@ -204,7 +341,7 @@ export default function PostToc({
       clearTimeout(initialCheckTimer);
       scrollTarget.removeEventListener("scroll", handleScroll as EventListener);
     };
-  }, [findScrollContainer, isMobile, tocItems]); // 添加 tocItems 作为依赖，因为需要访问目录项数据
+  }, [findScrollContainer, isMobile, tocItems, scanViewportContent]); // 添加 tocItems 作为依赖，因为需要访问目录项数据
 
   // 更新高亮指示器位置
   useEffect(() => {
@@ -672,6 +809,109 @@ export default function PostToc({
               </div>
             </div>
           )}
+          <AutoResizer>
+            <AutoTransition>
+              {/* 视口内容卡片 */}
+              {!isCollapsed && viewportItems.length > 0 && (
+                <div className="space-y-1 max-h-[30vh] overflow-y-auto scrollbar-hide scroll-smooth pt-4 border-t border-border mt-4 pb-4">
+                  <AnimatePresence mode="popLayout">
+                    {viewportItems.slice(0, 5).map((item) => {
+                      const commonProps = {
+                        initial: { opacity: 0, y: -8 },
+                        animate: { opacity: 1, y: 0 },
+                        exit: { opacity: 0, y: 8 },
+                        transition: {
+                          duration: 0.2,
+                          ease: [0.25, 0.1, 0.25, 1] as const,
+                        },
+                        layout: true,
+                      };
+
+                      switch (item.type) {
+                        case "link":
+                          return (
+                            <Tooltip
+                              key={item.id}
+                              content={
+                                <div className="text-sm break-all">
+                                  <div className="font-medium mb-1">
+                                    {item.text}
+                                  </div>
+                                  <div className="text-muted-foreground">
+                                    {item.href}
+                                  </div>
+                                </div>
+                              }
+                              placement="left"
+                              maxWidth="300px"
+                            >
+                              <motion.div
+                                {...commonProps}
+                                className="group flex items-center gap-2 text-xs p-1.5 rounded hover:bg-muted/50 transition-colors overflow-hidden"
+                              >
+                                <RiLinkM
+                                  size="0.9em"
+                                  className="text-muted-foreground shrink-0"
+                                />
+                                <span className="truncate text-muted-foreground">
+                                  {item.text}
+                                </span>
+                              </motion.div>
+                            </Tooltip>
+                          );
+
+                        case "footnote": {
+                          return (
+                            <Tooltip
+                              key={item.id}
+                              content={
+                                <div className="text-sm">
+                                  {item.footnoteContent}
+                                </div>
+                              }
+                              placement="left"
+                              maxWidth="300px"
+                            >
+                              <motion.div
+                                {...commonProps}
+                                className="group text-xs p-1.5 rounded hover:bg-muted/50 transition-colors overflow-hidden"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <RiSuperscript2
+                                    size="0.9em"
+                                    className="text-muted-foreground shrink-0"
+                                  />
+                                  <span className="shrink-0 font-mono">
+                                    {item.text || "?"}
+                                  </span>
+                                  <span className="text-muted-foreground truncate">
+                                    {item.footnoteContent}
+                                  </span>
+                                </div>
+                              </motion.div>
+                            </Tooltip>
+                          );
+                        }
+
+                        default:
+                          return null;
+                      }
+                    })}
+                  </AnimatePresence>
+                  <AutoTransition>
+                    {viewportItems.length > 5 && (
+                      <div
+                        className="text-xs text-muted-foreground pl-1.5 pt-1"
+                        key={viewportItems.length}
+                      >
+                        +{viewportItems.length - 5} 项
+                      </div>
+                    )}
+                  </AutoTransition>
+                </div>
+              )}
+            </AutoTransition>
+          </AutoResizer>
         </div>
       </div>
     </div>
