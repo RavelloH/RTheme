@@ -269,12 +269,19 @@ export default function CommentsTable() {
     },
     {
       key: "ipAddress",
-      title: "IP",
+      title: "IP / 归属地",
       align: "center",
       render: (_, record) => (
-        <span className="text-xs text-muted-foreground font-mono">
-          {record.ipAddress || "-"}
-        </span>
+        <div className="flex flex-col items-center text-xs">
+          <span className="text-muted-foreground font-mono">
+            {record.ipAddress || "-"}
+          </span>
+          {record.location && (
+            <span className="text-muted-foreground/80 truncate max-w-[120px]">
+              {record.location}
+            </span>
+          )}
+        </div>
       ),
     },
     {
