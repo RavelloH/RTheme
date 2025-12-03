@@ -13845,6 +13845,698 @@
         ],
         "additionalProperties": false
       },
+      "GetSecurityOverview": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetSecurityOverviewSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "activeIPs": {
+                "type": "number"
+              },
+              "bannedIPs": {
+                "type": "number"
+              },
+              "currentHourRequests": {
+                "type": "number"
+              },
+              "hourlyTrends": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "hour": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "hour",
+                    "count"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "rateLimitedIPs": {
+                "type": "number"
+              },
+              "totalRequests": {
+                "type": "number"
+              },
+              "totalSuccess": {
+                "type": "number"
+              },
+              "totalError": {
+                "type": "number"
+              },
+              "last24hSuccess": {
+                "type": "number"
+              },
+              "last24hError": {
+                "type": "number"
+              },
+              "last24hActiveHours": {
+                "type": "number"
+              },
+              "last30dSuccess": {
+                "type": "number"
+              },
+              "last30dError": {
+                "type": "number"
+              },
+              "last30dActiveDays": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "activeIPs",
+              "bannedIPs",
+              "currentHourRequests",
+              "hourlyTrends",
+              "rateLimitedIPs"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "GetIPList": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "page": {
+            "default": 1,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "pageSize": {
+            "default": 20,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 100
+          },
+          "filter": {
+            "default": "all",
+            "type": "string",
+            "enum": [
+              "all",
+              "banned",
+              "rate-limited",
+              "active"
+            ]
+          },
+          "sortBy": {
+            "default": "realtimeCount",
+            "type": "string",
+            "enum": [
+              "ip",
+              "requestCount",
+              "realtimeCount",
+              "last24hCount",
+              "lastRequest"
+            ]
+          },
+          "sortOrder": {
+            "default": "desc",
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "search": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "page",
+          "pageSize",
+          "filter",
+          "sortBy",
+          "sortOrder"
+        ],
+        "additionalProperties": false
+      },
+      "IPInfo": {
+        "type": "object",
+        "properties": {
+          "ip": {
+            "type": "string"
+          },
+          "requestCount": {
+            "type": "number"
+          },
+          "realtimeCount": {
+            "type": "number"
+          },
+          "last24hCount": {
+            "type": "number"
+          },
+          "lastRequest": {
+            "type": "number"
+          },
+          "isBanned": {
+            "type": "boolean"
+          },
+          "banExpiry": {
+            "type": "number"
+          },
+          "banReason": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ip",
+          "requestCount",
+          "lastRequest",
+          "isBanned"
+        ],
+        "additionalProperties": false
+      },
+      "GetIPListSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "ip": {
+                      "type": "string"
+                    },
+                    "requestCount": {
+                      "type": "number"
+                    },
+                    "realtimeCount": {
+                      "type": "number"
+                    },
+                    "last24hCount": {
+                      "type": "number"
+                    },
+                    "lastRequest": {
+                      "type": "number"
+                    },
+                    "isBanned": {
+                      "type": "boolean"
+                    },
+                    "banExpiry": {
+                      "type": "number"
+                    },
+                    "banReason": {
+                      "type": "string"
+                    },
+                    "location": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ip",
+                    "requestCount",
+                    "lastRequest",
+                    "isBanned"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "total": {
+                "type": "number"
+              },
+              "page": {
+                "type": "number"
+              },
+              "pageSize": {
+                "type": "number"
+              },
+              "totalPages": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "items",
+              "total",
+              "page",
+              "pageSize",
+              "totalPages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "BanIP": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "ip": {
+            "type": "string",
+            "minLength": 1
+          },
+          "duration": {
+            "default": 3600,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ip",
+          "duration"
+        ],
+        "additionalProperties": false
+      },
+      "BanIPSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "ip": {
+                "type": "string"
+              },
+              "bannedUntil": {
+                "type": "number"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ip",
+              "bannedUntil"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "UnbanIP": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "ip": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "ip"
+        ],
+        "additionalProperties": false
+      },
+      "UnbanIPSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "ip": {
+                "type": "string"
+              },
+              "unbanned": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "ip",
+              "unbanned"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "GetEndpointStats": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "hours": {
+            "default": 24,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 168
+          }
+        },
+        "required": [
+          "hours"
+        ],
+        "additionalProperties": false
+      },
+      "GetEndpointStatsSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "endpoints": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "endpoint": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "number"
+                    },
+                    "percentage": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "endpoint",
+                    "count",
+                    "percentage"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "totalRequests": {
+                "type": "number"
+              },
+              "timeRange": {
+                "type": "object",
+                "properties": {
+                  "start": {
+                    "type": "number"
+                  },
+                  "end": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "start",
+                  "end"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "endpoints",
+              "totalRequests",
+              "timeRange"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "GetRequestTrends": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "hours": {
+            "default": 24,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 720
+          },
+          "granularity": {
+            "default": "hour",
+            "type": "string",
+            "enum": [
+              "minute",
+              "hour"
+            ]
+          }
+        },
+        "required": [
+          "hours",
+          "granularity"
+        ],
+        "additionalProperties": false
+      },
+      "GetRequestTrendsSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "time": {
+                  "type": "string"
+                },
+                "timestamp": {
+                  "type": "number"
+                },
+                "count": {
+                  "type": "number"
+                },
+                "success": {
+                  "type": "number"
+                },
+                "error": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "time",
+                "timestamp",
+                "count"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "ClearRateLimit": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "ip": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "ip"
+        ],
+        "additionalProperties": false
+      },
+      "ClearRateLimitSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "ip": {
+                "type": "string"
+              },
+              "cleared": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "ip",
+              "cleared"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
       "GetPagesStats": {
         "type": "object",
         "properties": {

@@ -73,7 +73,7 @@ export default function SystemDiskChart() {
                 <div className="w-1/2 h-full">
                   <DonutChart
                     data={getDiskChartData()}
-                    colors={getStatusColors()}
+                    colors={["var(--color-primary)", "var(--color-muted)"]}
                     innerRadius={0.65}
                     formatValue={(value) => formatBytes(value)}
                     className="w-full h-full"
@@ -83,7 +83,12 @@ export default function SystemDiskChart() {
                 {/* 右侧：详细信息 */}
                 <div className="w-1/2 space-y-3">
                   <div className="text-center mb-4">
-                    <div className="text-4xl font-bold">
+                    <div
+                      className="text-4xl font-bold"
+                      style={{
+                        color: getStatusColors()[0],
+                      }}
+                    >
                       {systemInfo.disk.usagePercent}%
                     </div>
                     <div className="text-muted-foreground text-sm">使用率</div>

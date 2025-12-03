@@ -12,6 +12,7 @@ import DashboardCategoriesStats from "./DashboardCategoriesStats";
 import DashboardPagesStats from "./DashboardPagesStats";
 import DashboardMediaStats from "./DashboardMediaStats";
 import DashboardCommentsStats from "./DashboardCommentsStats";
+import DashboardSecurityStats from "./DashboardSecurityStats";
 
 export const metadata = await generateMetadata(
   {
@@ -76,9 +77,7 @@ export default function AdminDashboard() {
             <DashboardPagesStats />
           </GridItem>
           <GridItem areas={[5, 6, 7, 8]} width={3} height={0.5}>
-            <div className="flex items-center justify-center h-full">
-              安全信息统计
-            </div>
+            <DashboardSecurityStats />
           </GridItem>
           <GridItem areas={[9, 10, 11, 12]} width={3} height={0.5}>
             <DashboardAuditStats />
