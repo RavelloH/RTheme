@@ -6,6 +6,7 @@ import { createSuccessResponseSchema, registerSchema } from "./common.js";
 */
 export const GetSecurityOverviewSchema = z.object({
   access_token: z.string().optional(),
+  force: z.boolean().optional(), // 强制刷新，忽略缓存
 });
 export type GetSecurityOverview = z.infer<typeof GetSecurityOverviewSchema>;
 registerSchema("GetSecurityOverview", GetSecurityOverviewSchema);
@@ -44,6 +45,9 @@ export const SecurityOverviewDataSchema = z.object({
   last30dError: z.number().optional(),
   // 最近30天实际有数据的天数
   last30dActiveDays: z.number().optional(),
+  // 缓存信息
+  cache: z.boolean(), // 是否来自缓存
+  updatedAt: z.string(), // 数据更新时间
 });
 export type SecurityOverviewData = z.infer<typeof SecurityOverviewDataSchema>;
 

@@ -9649,6 +9649,8 @@ components:
       properties:
         access_token:
           type: string
+        force:
+          type: boolean
       additionalProperties: false
     GetSecurityOverviewSuccessResponse:
       type: object
@@ -9707,12 +9709,18 @@ components:
               type: number
             last30dActiveDays:
               type: number
+            cache:
+              type: boolean
+            updatedAt:
+              type: string
           required:
             - activeIPs
             - bannedIPs
             - currentHourRequests
             - hourlyTrends
             - rateLimitedIPs
+            - cache
+            - updatedAt
           additionalProperties: false
       required:
         - success

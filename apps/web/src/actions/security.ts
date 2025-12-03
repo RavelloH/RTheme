@@ -27,6 +27,7 @@ import limitControl from "@/lib/server/rateLimit";
 import { validateData } from "@/lib/server/validator";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
 import { authVerify } from "@/lib/server/auth-verify";
+import { getCache, setCache, generateCacheKey } from "@/lib/server/cache";
 
 const RATE_LIMIT = 60; // 与 rateLimit.ts 保持一致
 
@@ -129,6 +130,22 @@ export async function getSecurityOverview(
   }
 
   try {
+    const CACHE_KEY = generateCacheKey("stats", "security");
+    const CACHE_TTL = 5 * 60; // 5分钟缓存（安全数据需要相对实时）
+
+    // 如果不是强制刷新，尝试从缓存获取
+    if (!params.force) {
+      const cachedData = await getCache<SecurityOverviewData>(CACHE_KEY, {
+        ttl: CACHE_TTL,
+      });
+
+      if (cachedData) {
+        return response.ok({
+          data: cachedData,
+        }) as ApiResponse<SecurityOverviewData | null>;
+      }
+    }
+
     await ensureRedisConnection();
 
     const currentTime = Date.now();
@@ -230,23 +247,30 @@ export async function getSecurityOverview(
 
     const last30dActiveDays = activeDaysSet.size;
 
+    const resultData: SecurityOverviewData = {
+      activeIPs,
+      bannedIPs: banKeys.length,
+      currentHourRequests,
+      hourlyTrends,
+      rateLimitedIPs,
+      totalRequests,
+      totalSuccess,
+      totalError,
+      last24hSuccess,
+      last24hError,
+      last24hActiveHours,
+      last30dSuccess,
+      last30dError,
+      last30dActiveDays,
+      cache: false,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // 写入缓存
+    await setCache(CACHE_KEY, resultData, { ttl: CACHE_TTL });
+
     return response.ok({
-      data: {
-        activeIPs,
-        bannedIPs: banKeys.length,
-        currentHourRequests,
-        hourlyTrends,
-        rateLimitedIPs,
-        totalRequests,
-        totalSuccess,
-        totalError,
-        last24hSuccess,
-        last24hError,
-        last24hActiveHours,
-        last30dSuccess,
-        last30dError,
-        last30dActiveDays,
-      },
+      data: resultData,
     }) as ApiResponse<SecurityOverviewData | null>;
   } catch (error) {
     console.error("获取安全概览失败:", error);

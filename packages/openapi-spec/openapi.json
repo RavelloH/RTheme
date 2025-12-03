@@ -13850,6 +13850,9 @@
         "properties": {
           "access_token": {
             "type": "string"
+          },
+          "force": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -13934,6 +13937,12 @@
               },
               "last30dActiveDays": {
                 "type": "number"
+              },
+              "cache": {
+                "type": "boolean"
+              },
+              "updatedAt": {
+                "type": "string"
               }
             },
             "required": [
@@ -13941,7 +13950,9 @@
               "bannedIPs",
               "currentHourRequests",
               "hourlyTrends",
-              "rateLimitedIPs"
+              "rateLimitedIPs",
+              "cache",
+              "updatedAt"
             ],
             "additionalProperties": false
           }

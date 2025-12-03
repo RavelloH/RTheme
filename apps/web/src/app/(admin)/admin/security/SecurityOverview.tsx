@@ -31,6 +31,7 @@ const calcErrorRate = (
 
 export default function SecurityOverview() {
   const [result, setResult] = useState<SecurityOverviewData | null>(null);
+  const [isCache, setIsCache] = useState(true);
   const [refreshTime, setRefreshTime] = useState<Date | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const { broadcast } = useBroadcastSender<{ type: "security-refresh" }>();
@@ -40,14 +41,15 @@ export default function SecurityOverview() {
       setResult(null);
     }
     setError(null);
-    const res = await getSecurityOverview({});
+    const res = await getSecurityOverview({ force: forceRefresh });
     if (!res.success) {
       setError(new Error(res.message || "获取安全概览失败"));
       return;
     }
     if (!res.data) return;
     setResult(res.data);
-    setRefreshTime(new Date());
+    setIsCache(res.data.cache);
+    setRefreshTime(new Date(res.data.updatedAt));
 
     if (forceRefresh) {
       await broadcast({ type: "security-refresh" });
@@ -140,7 +142,8 @@ export default function SecurityOverview() {
             <div>
               {refreshTime && (
                 <div className="inline-flex items-center gap-2">
-                  最近更新于: {refreshTime.toLocaleString()}
+                  {isCache ? "最近缓存于" : "统计缓存于"}:{" "}
+                  {refreshTime.toLocaleString()}
                   <Clickable onClick={() => fetchData(true)}>
                     <RiRefreshLine size={"1em"} />
                   </Clickable>

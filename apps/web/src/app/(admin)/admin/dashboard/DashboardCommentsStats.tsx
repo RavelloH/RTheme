@@ -175,8 +175,8 @@ export default function DashboardCommentsStats() {
           <div>
             {refreshTime && (
               <div className="inline-flex items-center gap-2">
-                最近更新于: {new Date(refreshTime).toLocaleString()}
-                {result.cache && " (缓存)"}
+                {result.cache ? "最近缓存于" : "统计缓存于"}:{" "}
+                {new Date(refreshTime).toLocaleString()}
                 <Clickable onClick={() => fetchData(true)}>
                   <RiRefreshLine size={"1em"} />
                 </Clickable>
