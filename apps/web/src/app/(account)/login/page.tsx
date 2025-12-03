@@ -4,6 +4,7 @@ import RowGrid, { GridItem } from "@/components/RowGrid";
 import MainLayout from "@/components/MainLayout";
 import Marquee from "react-fast-marquee";
 import LoginSheet from "./LoginSheet";
+import { Suspense } from "react";
 
 export const metadata = await generateMetadata(
   {
@@ -41,7 +42,13 @@ export default function TestPage() {
               height={1}
               className="flex flex-col items-center justify-center text-center p-15"
             >
-              <LoginSheet />
+              <Suspense
+                fallback={
+                  <div className="text-muted-foreground">加载中...</div>
+                }
+              >
+                <LoginSheet />
+              </Suspense>
             </GridItem>
 
             <GridItem

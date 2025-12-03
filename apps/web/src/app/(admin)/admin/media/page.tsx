@@ -8,6 +8,7 @@ import MediaStatsChart from "./MediaStatsChart";
 import MediaTable from "./MediaTable";
 import MediaAdd from "./MediaAdd";
 import { ToastProvider } from "@/ui/Toast";
+import { Suspense } from "react";
 
 export const metadata = await generateMetadata(
   {
@@ -33,7 +34,9 @@ export default function MediaAdminPage() {
         <RowGrid>
           {/* 媒体内容统计 */}
           <MediaStats />
-          <MediaAdd />
+          <Suspense fallback={null}>
+            <MediaAdd />
+          </Suspense>
           {/* 媒体内容趋势统计图表 */}
           <MediaStatsChart />
         </RowGrid>
