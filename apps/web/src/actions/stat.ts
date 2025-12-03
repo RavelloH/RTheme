@@ -57,7 +57,7 @@ export async function getUsersStats(
   const response = new ResponseBuilder(
     serverConfig?.environment || "serveraction",
   );
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getUsersStats"))) {
     return response.tooManyRequests();
   }
   const validationError = validateData(
@@ -229,7 +229,7 @@ export async function getAuditStats(
   const response = new ResponseBuilder(
     serverConfig?.environment || "serveraction",
   );
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getAuditStats"))) {
     return response.tooManyRequests();
   }
   const validationError = validateData(
@@ -352,7 +352,7 @@ export async function getPostsStats(
   const response = new ResponseBuilder(
     serverConfig?.environment || "serveraction",
   );
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getPostsStats"))) {
     return response.tooManyRequests();
   }
   const validationError = validateData(
@@ -544,7 +544,7 @@ export async function getTagsStats(
   const response = new ResponseBuilder(
     serverConfig?.environment || "serveraction",
   );
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getTagsStats"))) {
     return response.tooManyRequests();
   }
   const validationError = validateData(
@@ -673,7 +673,7 @@ export async function getCategoriesStats(
   const response = new ResponseBuilder(
     serverConfig?.environment || "serveraction",
   );
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getCategoriesStats"))) {
     return response.tooManyRequests();
   }
   const validationError = validateData(
@@ -875,7 +875,7 @@ export async function getPagesStats(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getPagesStats"))) {
     return response.tooManyRequests();
   }
 
@@ -1011,7 +1011,7 @@ export async function getStorageStats(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getStorageStats"))) {
     return response.tooManyRequests();
   }
 

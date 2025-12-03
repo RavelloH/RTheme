@@ -76,7 +76,7 @@ export async function login(
   );
 
   // 速率控制
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "login"))) {
     return response.tooManyRequests();
   }
 
@@ -324,7 +324,7 @@ export async function register(
   );
 
   // 速率控制
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "register"))) {
     return response.tooManyRequests();
   }
 
@@ -436,7 +436,7 @@ export async function refresh(
   );
 
   // 速率控制
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "refresh"))) {
     return response.tooManyRequests();
   }
 
@@ -581,7 +581,7 @@ export async function verifyEmail(
   );
 
   // 速率控制
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "verifyEmail"))) {
     return response.tooManyRequests();
   }
 
@@ -677,7 +677,7 @@ export async function changePassword(
   );
 
   // 速率控制
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "changePassword"))) {
     return response.tooManyRequests();
   }
 
@@ -790,7 +790,7 @@ export async function requestPasswordReset(
     serverConfig?.environment || "serveraction",
   );
   // 速率控制
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "requestPasswordReset"))) {
     return response.tooManyRequests();
   }
   // 验证输入参数
@@ -868,7 +868,7 @@ export async function resetPassword(
   );
 
   // 速率控制
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "resetPassword"))) {
     return response.tooManyRequests();
   }
 
@@ -973,7 +973,7 @@ export async function resendEmailVerification(
   );
 
   // 速率控制
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "resendEmailVerification"))) {
     return response.tooManyRequests();
   }
 
@@ -1061,7 +1061,7 @@ export async function logout(
     serverConfig?.environment || "serveraction",
   );
   // 速率控制
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "logout"))) {
     return response.tooManyRequests();
   }
 

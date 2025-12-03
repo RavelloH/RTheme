@@ -90,7 +90,7 @@ export async function getCategoriesList(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getCategoriesList"))) {
     return response.tooManyRequests();
   }
 
@@ -427,7 +427,7 @@ export async function getCategoryDetail(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getCategoryDetail"))) {
     return response.tooManyRequests();
   }
 
@@ -710,7 +710,7 @@ export async function createCategory(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "createCategory"))) {
     return response.tooManyRequests();
   }
 
@@ -919,7 +919,7 @@ export async function updateCategory(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "updateCategory"))) {
     return response.tooManyRequests();
   }
 
@@ -1181,7 +1181,7 @@ export async function deleteCategories(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "deleteCategories"))) {
     return response.tooManyRequests();
   }
 
@@ -1308,7 +1308,7 @@ export async function moveCategories(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "moveCategories"))) {
     return response.tooManyRequests();
   }
 
@@ -1473,7 +1473,7 @@ export async function searchCategories(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "searchCategories"))) {
     return response.tooManyRequests();
   }
 
@@ -1813,7 +1813,7 @@ export async function getCategoriesDistribution(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getCategoriesDistribution"))) {
     return response.tooManyRequests();
   }
 
@@ -1928,7 +1928,7 @@ export async function getCategoriesTree(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getCategoriesTree"))) {
     return response.tooManyRequests();
   }
 

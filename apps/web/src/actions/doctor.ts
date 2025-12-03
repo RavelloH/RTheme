@@ -48,7 +48,7 @@ export async function doctor(
   const response = new ResponseBuilder(
     serverConfig?.environment || "serveraction",
   );
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "doctor"))) {
     return response.tooManyRequests();
   }
   const validationError = validateData(
@@ -339,7 +339,7 @@ export async function getDoctorHistory(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getDoctorHistory"))) {
     return response.tooManyRequests();
   }
 
@@ -535,7 +535,7 @@ export async function getDoctorTrends(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getDoctorTrends"))) {
     return response.tooManyRequests();
   }
 

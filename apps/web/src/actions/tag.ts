@@ -74,7 +74,7 @@ export async function getTagsList(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getTagsList"))) {
     return response.tooManyRequests();
   }
 
@@ -305,7 +305,7 @@ export async function getTagDetail(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getTagDetail"))) {
     return response.tooManyRequests();
   }
 
@@ -424,7 +424,7 @@ export async function createTag(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "createTag"))) {
     return response.tooManyRequests();
   }
 
@@ -602,7 +602,7 @@ export async function updateTag(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "updateTag"))) {
     return response.tooManyRequests();
   }
 
@@ -756,7 +756,7 @@ export async function deleteTags(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "deleteTags"))) {
     return response.tooManyRequests();
   }
 
@@ -841,7 +841,7 @@ export async function getTagsDistribution(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getTagsDistribution"))) {
     return response.tooManyRequests();
   }
 
@@ -947,7 +947,7 @@ export async function searchTags(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "searchTags"))) {
     return response.tooManyRequests();
   }
 

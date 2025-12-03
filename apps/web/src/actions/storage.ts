@@ -224,7 +224,7 @@ export async function getStorageList(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getStorageList"))) {
     return response.tooManyRequests();
   }
 
@@ -352,7 +352,7 @@ export async function getStorageDetail(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getStorageDetail"))) {
     return response.tooManyRequests();
   }
 
@@ -447,7 +447,7 @@ export async function createStorage(
   const environment = serverConfig?.environment || "serveraction";
   const response = new ResponseBuilder(environment);
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "createStorage"))) {
     return response.tooManyRequests();
   }
 
@@ -583,7 +583,7 @@ export async function updateStorage(
   const environment = serverConfig?.environment || "serveraction";
   const response = new ResponseBuilder(environment);
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "updateStorage"))) {
     return response.tooManyRequests();
   }
 
@@ -723,7 +723,7 @@ export async function deleteStorage(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "deleteStorage"))) {
     return response.tooManyRequests();
   }
 
@@ -805,7 +805,7 @@ export async function toggleStorageStatus(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "toggleStorageStatus"))) {
     return response.tooManyRequests();
   }
 
@@ -869,7 +869,7 @@ export async function setDefaultStorage(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "setDefaultStorage"))) {
     return response.tooManyRequests();
   }
 

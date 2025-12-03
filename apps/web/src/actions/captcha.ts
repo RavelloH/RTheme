@@ -127,7 +127,7 @@ export async function createChallenge(serverConfig?: {
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "createChallenge"))) {
     return response.tooManyRequests();
   }
 
@@ -166,7 +166,7 @@ export async function verifyChallenge(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "verifyChallenge"))) {
     return response.tooManyRequests();
   }
 

@@ -90,7 +90,7 @@ export async function getAuditLogs(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getAuditLogs"))) {
     return response.tooManyRequests();
   }
 
@@ -282,7 +282,7 @@ export async function getAuditTrends(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getAuditTrends"))) {
     return response.tooManyRequests();
   }
 

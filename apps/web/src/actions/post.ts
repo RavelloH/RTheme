@@ -268,7 +268,7 @@ export async function getPostsTrends(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getPostsTrends"))) {
     return response.tooManyRequests();
   }
 
@@ -429,7 +429,7 @@ export async function getPostsList(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getPostsList"))) {
     return response.tooManyRequests();
   }
 
@@ -676,7 +676,7 @@ export async function getPostDetail(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getPostDetail"))) {
     return response.tooManyRequests();
   }
 
@@ -829,7 +829,7 @@ export async function createPost(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "createPost"))) {
     return response.tooManyRequests();
   }
 
@@ -1052,7 +1052,7 @@ export async function updatePost(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "updatePost"))) {
     return response.tooManyRequests();
   }
 
@@ -1458,7 +1458,7 @@ export async function updatePosts(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "updatePosts"))) {
     return response.tooManyRequests();
   }
 
@@ -1737,7 +1737,7 @@ export async function deletePosts(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "deletePosts"))) {
     return response.tooManyRequests();
   }
 
@@ -1876,7 +1876,7 @@ export async function getPostHistory(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getPostHistory"))) {
     return response.tooManyRequests();
   }
 
@@ -2041,7 +2041,7 @@ export async function getPostVersion(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getPostVersion"))) {
     return response.tooManyRequests();
   }
 
@@ -2175,7 +2175,7 @@ export async function resetPostToVersion(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "resetPostToVersion"))) {
     return response.tooManyRequests();
   }
 
@@ -2311,7 +2311,7 @@ export async function squashPostToVersion(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "squashPostToVersion"))) {
     return response.tooManyRequests();
   }
 

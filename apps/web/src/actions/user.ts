@@ -47,7 +47,7 @@ export async function getUsersTrends(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getUsersTrends"))) {
     return response.tooManyRequests();
   }
 
@@ -170,7 +170,7 @@ export async function getUsersList(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getUsersList"))) {
     return response.tooManyRequests();
   }
 
@@ -391,7 +391,7 @@ export async function updateUsers(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "updateUsers"))) {
     return response.tooManyRequests();
   }
 
@@ -680,7 +680,7 @@ export async function deleteUsers(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "deleteUsers"))) {
     return response.tooManyRequests();
   }
 

@@ -250,7 +250,7 @@ export async function getSystemInfo(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getSystemInfo"))) {
     return response.tooManyRequests();
   }
 

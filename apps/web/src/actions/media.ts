@@ -76,7 +76,7 @@ export async function getMediaList(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getMediaList"))) {
     return response.tooManyRequests();
   }
 
@@ -295,7 +295,7 @@ export async function getMediaDetail(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getMediaDetail"))) {
     return response.tooManyRequests();
   }
 
@@ -455,7 +455,7 @@ export async function updateMedia(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "updateMedia"))) {
     return response.tooManyRequests();
   }
 
@@ -578,7 +578,7 @@ export async function deleteMedia(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "deleteMedia"))) {
     return response.tooManyRequests();
   }
 
@@ -698,7 +698,7 @@ export async function getMediaStats(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getMediaStats"))) {
     return response.tooManyRequests();
   }
 
@@ -834,7 +834,7 @@ export async function getMediaTrends(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getMediaTrends"))) {
     return response.tooManyRequests();
   }
 
@@ -972,7 +972,7 @@ export async function uploadMedia(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "uploadMedia"))) {
     return response.tooManyRequests();
   }
 

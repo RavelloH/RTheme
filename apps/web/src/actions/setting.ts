@@ -43,7 +43,7 @@ export async function getSettings(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getSettings"))) {
     return response.tooManyRequests();
   }
 
@@ -108,7 +108,7 @@ export async function updateSettings(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "updateSettings"))) {
     return response.tooManyRequests();
   }
 

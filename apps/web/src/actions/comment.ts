@@ -320,7 +320,7 @@ export async function getPostComments(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getPostComments"))) {
     return response.tooManyRequests();
   }
 
@@ -451,7 +451,7 @@ export async function getCommentContext(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getCommentContext"))) {
     return response.tooManyRequests();
   }
 
@@ -512,7 +512,7 @@ export async function getCommentReplies(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getCommentReplies"))) {
     return response.tooManyRequests();
   }
 
@@ -585,7 +585,7 @@ export async function createComment(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "createComment"))) {
     return response.tooManyRequests();
   }
 
@@ -770,7 +770,7 @@ export async function updateCommentStatus(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "updateCommentStatus"))) {
     return response.tooManyRequests();
   }
 
@@ -800,7 +800,7 @@ export async function deleteComments(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "deleteComments"))) {
     return response.tooManyRequests();
   }
 
@@ -838,7 +838,7 @@ export async function getCommentsAdmin(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getCommentsAdmin"))) {
     return response.tooManyRequests();
   }
 
@@ -936,7 +936,7 @@ export async function getCommentHistory(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getCommentHistory"))) {
     return response.tooManyRequests();
   }
 
@@ -1035,7 +1035,7 @@ export async function getCommentStats(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getCommentStats"))) {
     return response.tooManyRequests();
   }
 

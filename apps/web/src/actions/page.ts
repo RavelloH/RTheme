@@ -53,7 +53,7 @@ export async function getPagesList(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getPagesList"))) {
     return response.tooManyRequests();
   }
 
@@ -259,7 +259,7 @@ export async function getPageDetail(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "getPageDetail"))) {
     return response.tooManyRequests();
   }
 
@@ -367,7 +367,7 @@ export async function createPage(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "createPage"))) {
     return response.tooManyRequests();
   }
 
@@ -489,7 +489,7 @@ export async function updatePage(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "updatePage"))) {
     return response.tooManyRequests();
   }
 
@@ -631,7 +631,7 @@ export async function updatePages(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "updatePages"))) {
     return response.tooManyRequests();
   }
 
@@ -747,7 +747,7 @@ export async function deletePages(
     serverConfig?.environment || "serveraction",
   );
 
-  if (!(await limitControl(await headers()))) {
+  if (!(await limitControl(await headers(), "deletePages"))) {
     return response.tooManyRequests();
   }
 
