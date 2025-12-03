@@ -40,16 +40,14 @@ export default function UserAvatar({
   colors,
   variant = "marble",
 }: UserAvatarProps) {
-  const [avatarUrls, setAvatarUrls] = useState<string[]>([]);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [useFallback, setUseFallback] = useState(false);
+  const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    const prepareUrls = async () => {
-      setUseFallback(false);
-      setActiveIndex(0);
+    const prepareAndLoadUrls = async () => {
+      // 重置状态
+      setLoadedUrl(null);
 
       const candidates: string[] = [];
       if (avatarUrl) {
@@ -81,35 +79,37 @@ export default function UserAvatar({
         }
       }
 
-      if (!cancelled) {
-        setAvatarUrls(candidates);
-        setUseFallback(!candidates.length);
+      // 逐个尝试加载图片
+      for (const url of candidates) {
+        if (cancelled) break;
+
+        try {
+          // 使用 Image 对象预加载
+          await new Promise<void>((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve();
+            img.onerror = () => reject();
+            img.src = url;
+          });
+
+          // 加载成功，更新状态
+          if (!cancelled) {
+            setLoadedUrl(url);
+            break;
+          }
+        } catch {
+          // 加载失败，继续尝试下一个
+          continue;
+        }
       }
     };
 
-    void prepareUrls();
+    void prepareAndLoadUrls();
 
     return () => {
       cancelled = true;
     };
   }, [avatarUrl, email, emailMd5]);
-
-  useEffect(() => {
-    setUseFallback(avatarUrls.length === 0);
-  }, [avatarUrls]);
-
-  const handleError = () => {
-    setActiveIndex((prev) => {
-      const nextIndex = prev + 1;
-      if (nextIndex < avatarUrls.length) {
-        return nextIndex;
-      }
-      setUseFallback(true);
-      return prev;
-    });
-  };
-
-  const activeUrl = !useFallback ? avatarUrls[activeIndex] : undefined;
 
   const displayName = useMemo(
     () => username || email || "avatar",
@@ -122,14 +122,13 @@ export default function UserAvatar({
       className={`inline-block overflow-hidden ${borderRadiusClass} ${className}`}
       style={{ width: size, height: size }}
     >
-      {activeUrl ? (
+      {loadedUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={activeUrl}
+          src={loadedUrl}
           alt={`${displayName} avatar`}
           width={size}
           height={size}
-          onError={handleError}
           className={`h-full w-full object-cover ${borderRadiusClass}`}
         />
       ) : (
