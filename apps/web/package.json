@@ -63,7 +63,7 @@
     "js-md5": "^0.8.3",
     "jsonwebtoken": "^9.0.2",
     "monaco-editor": "^0.54.0",
-    "next": "^15.5.2",
+    "next": "^15.5.7",
     "next-mdx-remote-client": "^2.1.7",
     "node-ip2region": "^1.0.2",
     "pinyin-pro": "^3.27.0",
@@ -104,9 +104,9 @@
     "concurrently": "^9.2.1",
     "cross-env": "^7.0.3",
     "eslint": "^9.35.0",
+    "eslint-config-next": "^15.5.2",
     "tailwindcss": "^4.1.13",
     "tsx": "^4.20.5",
-    "typescript": "5.9.2",
-    "eslint-config-next": "^15.5.2"
+    "typescript": "5.9.2"
   }
 }

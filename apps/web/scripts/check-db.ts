@@ -5,6 +5,7 @@ import { config } from "dotenv";
 import Rlog from "rlog-js";
 import path from "path";
 import { pathToFileURL } from "url";
+import { execSync } from "child_process";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let prisma: any;
@@ -80,6 +81,23 @@ async function checkEnvironment() {
 
 // 初始化 Prisma 客户端
 async function initializePrismaClient() {
+  // 运行生成
+  rlog.info("> Generating Prisma client...");
+  const output = execSync("npx prisma generate", {
+    stdio: "pipe",
+    cwd: process.cwd(),
+    encoding: "utf-8",
+  });
+
+  rlog.success("  Prisma migrate deploy completed successfully");
+
+  // 如果输出包含有用信息，显示它
+  if (output && output.trim()) {
+    const lines = output.trim().split("\n");
+    lines.forEach((line) => {
+      rlog.info(`  | ${line.trim()}`);
+    });
+  }
   try {
     const clientPath = path.join(
       process.cwd(),
