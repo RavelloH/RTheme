@@ -4,7 +4,7 @@ import { GridItem } from "@/components/RowGrid";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { RiRefreshLine, RiComputerLine } from "@remixicon/react";
+import { RiRefreshLine } from "@remixicon/react";
 import ErrorPage from "@/components/ui/Error";
 import { useSystemInfo } from "./useSystemInfo";
 import { useState, useEffect } from "react";

@@ -2,7 +2,6 @@
 
 import { useMobile } from "@/hooks/useMobile";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function Panel({ onClose: _onClose }: { onClose: () => void }) {
   const isMobile = useMobile();
 

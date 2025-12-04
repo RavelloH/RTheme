@@ -351,7 +351,6 @@ export default function MediaTable() {
         // 移除该选项
         const newArray = currentArray.filter((v) => v !== option);
         if (newArray.length === 0) {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { [key]: _, ...rest } = prev;
           return rest;
         }

@@ -106,7 +106,6 @@ export default function SettingSheet() {
 
       // 如果新值与原始值相同，从 editedValues 中移除
       if (value === originalValue) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { [key]: _, ...rest } = prev;
         return rest;
       }
@@ -161,7 +160,6 @@ export default function SettingSheet() {
       // 检查是否与原始值相同
       const originalValue = extractDefaultValue(setting.value);
       if (JSON.stringify(currentJson) === JSON.stringify(originalValue)) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { [settingKey]: _, ...rest } = prev;
         return rest;
       }

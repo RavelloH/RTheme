@@ -7,7 +7,7 @@
     "dev": "next dev --turbopack --port 3000",
     "build": "pnpm prebuild && next build",
     "start": "next start",
-    "lint": "next lint --max-warnings 0",
+    "lint": "eslint --max-warnings 0 .",
     "check-types": "tsc --noEmit",
     "gen-prisma": "prisma generate",
     "prebuild": "cross-env NODE_ENV=production tsx scripts/prebuild.ts"
@@ -106,6 +106,7 @@
     "eslint": "^9.35.0",
     "tailwindcss": "^4.1.13",
     "tsx": "^4.20.5",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "eslint-config-next": "^15.5.2"
   }
 }

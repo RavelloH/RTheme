@@ -29,7 +29,7 @@ export default function DonutChart({
   className = "",
   innerRadius = 0.6,
   colors,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   showLegend: _showLegend = true,
   showLabels = false,
   formatValue = (value: number) => value.toString(),

@@ -180,7 +180,7 @@ async function extractExif(buffer: Buffer): Promise<Record<string, unknown>> {
  */
 async function processLossy(
   buffer: Buffer,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   _originalFilename: string,
 ): Promise<ProcessedImage> {
   const image = sharp(buffer);
@@ -230,7 +230,7 @@ async function processLossy(
  */
 async function processLossless(
   buffer: Buffer,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   _originalFilename: string,
 ): Promise<ProcessedImage> {
   const image = sharp(buffer);
