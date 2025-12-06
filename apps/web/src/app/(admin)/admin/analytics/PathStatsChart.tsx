@@ -44,12 +44,7 @@ export default function PathStatsChart({
       <AutoTransition type="slideUp" className="h-full">
         {paths ? (
           <div key="content" className="flex flex-col h-full p-10">
-            <div className="text-2xl mb-4">
-              热门路径
-              <span className="text-base text-muted-foreground ml-4">
-                Top {paths.length}
-              </span>
-            </div>
+            <div className="text-2xl mb-4">访问路径</div>
 
             {paths.length === 0 ? (
               <div className="flex-1 flex items-center justify-center text-muted-foreground">

@@ -117,7 +117,7 @@ async function withRetry<T>(
 /**
  * 批量写入 PageView 数据到数据库
  */
-async function flushEventsToDatabase() {
+export async function flushEventsToDatabase() {
   try {
     // 从 Redis 获取前 50 条记录
     const events = await withRetry(() =>

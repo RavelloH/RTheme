@@ -63,14 +63,6 @@ export default function DimensionStats({
               </div>
             ) : (
               <div className="flex-1 flex gap-6 min-h-0">
-                {/* 环形图 */}
-                <div className="flex-shrink-0 w-48 h-48 flex items-center justify-center">
-                  <DonutChart
-                    data={chartData}
-                    colors={colors}
-                    showLabels={false}
-                  />
-                </div>{" "}
                 {/* 列表 */}
                 <div className="flex-1 overflow-y-auto pr-2">
                   <div className="text-2xl mb-4">{title}</div>
@@ -100,6 +92,14 @@ export default function DimensionStats({
                       </div>
                     ))}
                   </div>
+                </div>
+                {/* 环形图 */}
+                <div className="flex-shrink-0 w-48 h-48 flex items-center justify-center">
+                  <DonutChart
+                    data={chartData}
+                    colors={colors}
+                    showLabels={false}
+                  />
                 </div>
               </div>
             )}

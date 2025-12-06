@@ -19,6 +19,7 @@ import { validateData } from "@/lib/server/validator";
 import prisma from "@/lib/server/prisma";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
 import { authVerify } from "@/lib/server/auth-verify";
+import { flushEventsToDatabase } from "./analytics";
 
 type HealthCheckIssue = {
   code: string;
@@ -197,6 +198,7 @@ export async function doctor(
     // TODO: 长期草稿
     // TODO: 待审核内容积压
     const [
+      _,
       dbSize,
       dbLatency,
       dbConnections,
@@ -204,6 +206,7 @@ export async function doctor(
       redisMemory,
       redisKeys,
     ] = await Promise.all([
+      flushEventsToDatabase(),
       getDBSize(),
       getDBLatency(),
       getDBConnectionCount(),
