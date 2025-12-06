@@ -34,6 +34,7 @@ import limitControl from "@/lib/server/rateLimit";
 import { validateData } from "@/lib/server/validator";
 import { authVerify } from "@/lib/server/auth-verify";
 import { getClientIP } from "@/lib/server/getClientInfo";
+import { resolveIpLocation } from "@/lib/server/ip-utils";
 import { verifyToken } from "./captcha";
 import { getConfig } from "@/lib/server/configCache";
 import type { UserRole } from "@/lib/server/auth-verify";
@@ -57,96 +58,6 @@ type ActionConfig = { environment?: ActionEnvironment };
 type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
-
-let ipSearcher: {
-  btreeSearchSync?: (ip: string) => { region?: string };
-  binarySearchSync?: (ip: string) => { region?: string };
-} | null = null;
-
-/**
- * 检查 IP 是否为 IPv4 格式
- */
-function isIPv4(ip: string): boolean {
-  const parts = ip.split(".");
-  if (parts.length !== 4) return false;
-  return parts.every((part) => {
-    const num = Number(part);
-    return Number.isInteger(num) && num >= 0 && num <= 255;
-  });
-}
-
-/**
- * 检查 IP 是否为内网/本地 IP
- */
-function isPrivateIP(ip: string): boolean {
-  // IPv6 本地地址
-  if (ip === "::1" || ip === "::ffff:127.0.0.1") return true;
-
-  // IPv4 本地/内网地址
-  if (ip.startsWith("127.")) return true; // 回环地址
-  if (ip.startsWith("10.")) return true; // A 类私有地址
-  if (ip.startsWith("192.168.")) return true; // C 类私有地址
-  if (ip.startsWith("172.")) {
-    // B 类私有地址 172.16.0.0 - 172.31.255.255
-    const second = parseInt(ip.split(".")[1] ?? "0", 10);
-    if (second >= 16 && second <= 31) return true;
-  }
-  if (ip.startsWith("169.254.")) return true; // 链路本地地址
-
-  return false;
-}
-
-function getIpSearcher() {
-  if (ipSearcher) return ipSearcher;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const IP2Region = require("node-ip2region");
-    // 使用 path.join 在运行时构建数据库路径，避免 bundler 将 .db 文件作为模块处理
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const path = require("path");
-    const dbPath = path.join(
-      process.cwd(),
-      "node_modules/node-ip2region/data/ip2region.db",
-    );
-    ipSearcher = IP2Region.create(dbPath);
-    return ipSearcher;
-  } catch (error) {
-    console.error("加载 ip2region 失败:", error);
-    return null;
-  }
-}
-
-function resolveIpLocation(ip: string | null): string | null {
-  if (!ip || ip === "unknown") return null;
-
-  // 跳过内网/本地 IP
-  if (isPrivateIP(ip)) return null;
-
-  // ip2region 仅支持 IPv4
-  if (!isIPv4(ip)) return null;
-
-  try {
-    const searcher = getIpSearcher();
-    if (!searcher) return null;
-
-    const regionResult =
-      (searcher.btreeSearchSync?.(ip) as { region?: string } | undefined) ||
-      (searcher.binarySearchSync?.(ip) as { region?: string } | undefined);
-
-    const regionText = regionResult?.region;
-    if (!regionText) return null;
-    // ip2region 格式: 国家|区域|省份|城市|运营商
-    // 只保留地名部分（前4项），去掉运营商（第5项）和 "0" 占位符
-    const parts = regionText.split("|");
-    const locationParts = parts
-      .slice(0, 4) // 只取前4项：国家、区域、省份、城市
-      .filter((part) => part && part !== "0");
-    return locationParts.length ? locationParts.join(" ") : null;
-  } catch (error) {
-    console.error("IP 归属地解析失败:", error);
-    return null;
-  }
-}
 
 async function loadPostId(slug: string) {
   const post = await prisma.post.findUnique({
@@ -235,7 +146,16 @@ async function mapCommentToItem(
     comment.user?.username ||
     comment.authorName ||
     "匿名";
-  const location = showLocation ? resolveIpLocation(comment.ipAddress) : null;
+
+  // 解析 IP 归属地
+  const locationData = showLocation
+    ? resolveIpLocation(comment.ipAddress)
+    : null;
+  const location = locationData
+    ? [locationData.country, locationData.region, locationData.city]
+        .filter(Boolean)
+        .join(" ") || null
+    : null;
 
   // 计算邮箱的 MD5 值
   const emailMd5 = comment.authorEmail

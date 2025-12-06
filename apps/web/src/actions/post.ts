@@ -565,13 +565,21 @@ export async function getPostsList(
     const total = await prisma.post.count({ where });
 
     // 构建排序条件
-    const orderBy = { [sortBy]: sortOrder };
+    // 按浏览量排序时先不排序,后续在应用层排序
+    // 其他字段使用数据库排序
+    const orderBy =
+      sortBy === "viewCount"
+        ? [{ id: "desc" as const }] // 临时按 ID 排序
+        : [{ [sortBy]: sortOrder }];
 
-    // 获取分页数据
+    // 获取分页数据 - 浏览量排序时需要获取更多数据用于排序
+    const fetchSize = sortBy === "viewCount" ? total : pageSize;
+    const fetchSkip = sortBy === "viewCount" ? 0 : skip;
+
     const posts = await prisma.post.findMany({
       where,
-      skip,
-      take: pageSize,
+      skip: fetchSkip,
+      take: fetchSize,
       orderBy,
       select: {
         id: true,
@@ -607,11 +615,16 @@ export async function getPostsList(
             slug: true,
           },
         },
+        viewCount: {
+          select: {
+            cachedCount: true,
+          },
+        },
       },
     });
 
     // 转换数据格式
-    const data: PostListItem[] = posts.map((post) => ({
+    let data: PostListItem[] = posts.map((post) => ({
       id: post.id,
       title: post.title,
       slug: post.slug,
@@ -634,7 +647,22 @@ export async function getPostsList(
       },
       categories: post.categories.map((cat) => cat.name),
       tags: post.tags.map((tag) => ({ name: tag.name, slug: tag.slug })),
+      viewCount: post.viewCount?.cachedCount || 0,
     }));
+
+    // 如果按浏览量排序，在应用层进行排序和分页
+    if (sortBy === "viewCount") {
+      // 排序：按 viewCount 排序，NULL 值视为 0
+      data.sort((a, b) => {
+        const diff = (b.viewCount || 0) - (a.viewCount || 0);
+        if (diff !== 0) return sortOrder === "desc" ? diff : -diff;
+        // viewCount 相同时按 id 排序
+        return sortOrder === "desc" ? b.id - a.id : a.id - b.id;
+      });
+
+      // 应用分页
+      data = data.slice(skip, skip + pageSize);
+    }
 
     // 计算分页元数据
     const totalPages = Math.ceil(total / pageSize);

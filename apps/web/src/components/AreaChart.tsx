@@ -102,13 +102,27 @@ export default function AreaChart({
 
   // 默认时间格式化函数
   const defaultFormatTime = (time: string) => {
-    return new Date(time).toLocaleDateString("zh-CN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const date = new Date(time);
+    if (isNaN(date.getTime())) {
+      return time; // 如果无法解析，返回原始字符串
+    }
+
+    // 检查是否包含时间部分（小时不为0或者时间戳精确到小时）
+    const hasTime = time.includes("T") || time.includes(":");
+
+    if (hasTime) {
+      return date.toLocaleDateString("zh-CN", {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } else {
+      return date.toLocaleDateString("zh-CN", {
+        month: "2-digit",
+        day: "2-digit",
+      });
+    }
   };
 
   const timeFormatter = formatTime || defaultFormatTime;

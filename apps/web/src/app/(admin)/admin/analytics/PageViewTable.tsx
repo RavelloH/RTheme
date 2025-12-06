@@ -1,0 +1,564 @@
+"use client";
+
+import { getPageViews } from "@/actions/analytics";
+import GridTable, { FilterConfig } from "@/components/GridTable";
+import { TableColumn } from "@/ui/Table";
+import { useEffect, useState } from "react";
+import type { PageViewItem } from "@repo/shared-types";
+import { Dialog } from "@/ui/Dialog";
+import { RiEyeLine } from "@remixicon/react";
+import Clickable from "@/ui/Clickable";
+
+export default function PageViewTable() {
+  const [data, setData] = useState<PageViewItem[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterValues, setFilterValues] = useState<
+    Record<string, string | string[] | { start?: string; end?: string }>
+  >({});
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedView, setSelectedView] = useState<PageViewItem | null>(null);
+
+  // 处理排序变化
+  const handleSortChange = (key: string, order: "asc" | "desc" | null) => {
+    setSortKey(order ? key : null);
+    setSortOrder(order);
+    setPage(1);
+  };
+
+  // 处理搜索变化
+  const handleSearchChange = (search: string) => {
+    if (search !== searchQuery) {
+      setSearchQuery(search);
+      setPage(1);
+    }
+  };
+
+  // 处理筛选变化
+  const handleFilterChange = (
+    filters: Record<
+      string,
+      string | string[] | { start?: string; end?: string }
+    >,
+  ) => {
+    setFilterValues(filters);
+    setPage(1);
+  };
+
+  // 筛选配置
+  const filterConfig: FilterConfig[] = [
+    {
+      key: "path",
+      label: "访问路径",
+      type: "input",
+      inputType: "text",
+      placeholder: "例如：/posts/example",
+    },
+    {
+      key: "visitorId",
+      label: "访客ID",
+      type: "input",
+      inputType: "text",
+      placeholder: "输入访客ID",
+    },
+    {
+      key: "country",
+      label: "国家",
+      type: "input",
+      inputType: "text",
+      placeholder: "例如：中国",
+    },
+    {
+      key: "city",
+      label: "城市",
+      type: "input",
+      inputType: "text",
+      placeholder: "例如：北京",
+    },
+    {
+      key: "deviceType",
+      label: "设备类型",
+      type: "input",
+      inputType: "text",
+      placeholder: "例如：mobile、desktop",
+    },
+    {
+      key: "browser",
+      label: "浏览器",
+      type: "input",
+      inputType: "text",
+      placeholder: "例如：Chrome、Firefox",
+    },
+    {
+      key: "timestamp",
+      label: "访问时间",
+      type: "dateRange",
+      dateFields: { start: "timestampStart", end: "timestampEnd" },
+    },
+  ];
+
+  // 打开详情对话框
+  const openDetailDialog = (view: PageViewItem) => {
+    setSelectedView(view);
+    setDetailDialogOpen(true);
+  };
+
+  // 关闭详情对话框
+  const closeDetailDialog = () => {
+    setDetailDialogOpen(false);
+    setSelectedView(null);
+  };
+
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      try {
+        const params: {
+          page: number;
+          pageSize: number;
+          sortBy?:
+            | "id"
+            | "timestamp"
+            | "path"
+            | "visitorId"
+            | "country"
+            | "city";
+          sortOrder?: "asc" | "desc";
+          search?: string;
+          path?: string;
+          visitorId?: string;
+          country?: string;
+          region?: string;
+          city?: string;
+          deviceType?: string;
+          browser?: string;
+          os?: string;
+          timestampStart?: string;
+          timestampEnd?: string;
+        } = {
+          page,
+          pageSize,
+        };
+
+        if (sortKey && sortOrder) {
+          params.sortBy = sortKey as
+            | "id"
+            | "timestamp"
+            | "path"
+            | "visitorId"
+            | "country"
+            | "city";
+          params.sortOrder = sortOrder;
+        }
+
+        if (searchQuery && searchQuery.trim()) {
+          params.search = searchQuery.trim();
+        }
+
+        if (filterValues.path && typeof filterValues.path === "string") {
+          params.path = filterValues.path.trim();
+        }
+
+        if (
+          filterValues.visitorId &&
+          typeof filterValues.visitorId === "string"
+        ) {
+          params.visitorId = filterValues.visitorId.trim();
+        }
+
+        if (filterValues.country && typeof filterValues.country === "string") {
+          params.country = filterValues.country.trim();
+        }
+
+        if (filterValues.region && typeof filterValues.region === "string") {
+          params.region = filterValues.region.trim();
+        }
+
+        if (filterValues.city && typeof filterValues.city === "string") {
+          params.city = filterValues.city.trim();
+        }
+
+        if (
+          filterValues.deviceType &&
+          typeof filterValues.deviceType === "string"
+        ) {
+          params.deviceType = filterValues.deviceType.trim();
+        }
+
+        if (filterValues.browser && typeof filterValues.browser === "string") {
+          params.browser = filterValues.browser.trim();
+        }
+
+        if (filterValues.os && typeof filterValues.os === "string") {
+          params.os = filterValues.os.trim();
+        }
+
+        if (
+          filterValues.timestamp &&
+          typeof filterValues.timestamp === "object"
+        ) {
+          const dateRange = filterValues.timestamp as {
+            start?: string;
+            end?: string;
+          };
+          if (dateRange.start) {
+            params.timestampStart = dateRange.start;
+          }
+          if (dateRange.end) {
+            params.timestampEnd = dateRange.end;
+          }
+        }
+
+        const result = await getPageViews(params);
+
+        // @ts-expect-error - Server action returns ApiResponse in server action mode
+        if (result.success && result.data) {
+          // @ts-expect-error - Server action returns ApiResponse in server action mode
+          setData(result.data);
+          // @ts-expect-error - Server action returns ApiResponse in server action mode
+          setTotalRecords(result.meta?.total || 0);
+          // @ts-expect-error - Server action returns ApiResponse in server action mode
+          if (result.meta) {
+            // @ts-expect-error - Server action returns ApiResponse in server action mode
+            setTotalPages(result.meta.totalPages);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch page views:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [page, pageSize, sortKey, sortOrder, searchQuery, filterValues]);
+
+  const columns: TableColumn<PageViewItem>[] = [
+    {
+      key: "timestamp",
+      title: "访问时间",
+      dataIndex: "timestamp",
+      sortable: true,
+      mono: true,
+      render: (value: unknown) => {
+        if (typeof value === "string" || value instanceof Date) {
+          return new Date(value).toLocaleString("zh-CN", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          });
+        }
+        return "-";
+      },
+    },
+    {
+      key: "path",
+      title: "访问路径",
+      dataIndex: "path",
+      align: "left",
+      sortable: true,
+      mono: true,
+      render: (value: unknown) => {
+        if (typeof value === "string") {
+          if (value.length > 40) {
+            return (
+              <span className="text-sm" title={value}>
+                {value.substring(0, 40)}...
+              </span>
+            );
+          }
+          return <span className="text-sm">{value}</span>;
+        }
+        return "-";
+      },
+    },
+    {
+      key: "visitorId",
+      title: "访客ID",
+      dataIndex: "visitorId",
+      align: "left",
+      sortable: true,
+      mono: true,
+      render: (value: unknown) => {
+        if (typeof value === "string") {
+          return (
+            <span className="text-xs text-muted-foreground" title={value}>
+              {value.substring(0, 12)}...
+            </span>
+          );
+        }
+        return "-";
+      },
+    },
+    {
+      key: "country",
+      title: "国家",
+      dataIndex: "country",
+      align: "left",
+      sortable: true,
+      render: (value: unknown) => {
+        return (
+          <span className="text-sm">
+            {value ? (
+              String(value)
+            ) : (
+              <span className="text-muted-foreground">-</span>
+            )}
+          </span>
+        );
+      },
+    },
+    {
+      key: "city",
+      title: "城市",
+      dataIndex: "city",
+      align: "left",
+      sortable: true,
+      render: (value: unknown) => {
+        return (
+          <span className="text-sm">
+            {value ? (
+              String(value)
+            ) : (
+              <span className="text-muted-foreground">-</span>
+            )}
+          </span>
+        );
+      },
+    },
+    {
+      key: "deviceType",
+      title: "设备",
+      dataIndex: "deviceType",
+      align: "left",
+      render: (value: unknown) => {
+        return (
+          <span className="text-sm">
+            {value ? (
+              String(value)
+            ) : (
+              <span className="text-muted-foreground">-</span>
+            )}
+          </span>
+        );
+      },
+    },
+    {
+      key: "browser",
+      title: "浏览器",
+      dataIndex: "browser",
+      align: "left",
+      render: (value: unknown) => {
+        return (
+          <span className="text-sm">
+            {value ? (
+              String(value)
+            ) : (
+              <span className="text-muted-foreground">-</span>
+            )}
+          </span>
+        );
+      },
+    },
+    {
+      key: "detail",
+      title: "详情",
+      dataIndex: "id",
+      align: "center",
+      render: (value: unknown, record: PageViewItem) => {
+        return (
+          <Clickable
+            onClick={() => openDetailDialog(record)}
+            className="text-primary hover:text-primary/80 text-sm flex items-center justify-center gap-1"
+          >
+            <RiEyeLine size="1em" />
+          </Clickable>
+        );
+      },
+    },
+  ];
+
+  return (
+    <>
+      <GridTable
+        title="访问记录"
+        columns={columns as unknown as TableColumn<Record<string, unknown>>[]}
+        data={data as unknown as Record<string, unknown>[]}
+        loading={loading}
+        rowKey="id"
+        page={page}
+        totalPages={totalPages}
+        totalRecords={totalRecords}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        onSortChange={handleSortChange}
+        onSearchChange={handleSearchChange}
+        onRowClick={(record) =>
+          openDetailDialog(record as unknown as PageViewItem)
+        }
+        searchPlaceholder="搜索路径、访客ID、国家、城市..."
+        filterConfig={filterConfig}
+        onFilterChange={handleFilterChange}
+        striped
+        hoverable
+        bordered={false}
+        size="sm"
+        emptyText="暂无访问记录"
+        stickyHeader
+        maxHeight="100%"
+        padding={2.5}
+      />
+
+      {/* 详情对话框 */}
+      <Dialog
+        open={detailDialogOpen}
+        onClose={closeDetailDialog}
+        title={`访问记录详情 - ID: ${selectedView?.id || ""}`}
+        size="lg"
+      >
+        {selectedView && (
+          <div className="px-6 py-6 space-y-6">
+            {/* 基本信息 */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                基本信息
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground">ID</label>
+                  <p className="text-sm font-mono">{selectedView.id}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">
+                    访问时间
+                  </label>
+                  <p className="text-sm font-mono">
+                    {new Date(selectedView.timestamp).toLocaleString("zh-CN", {
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                    })}
+                  </p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm text-muted-foreground">
+                    访问路径
+                  </label>
+                  <p className="text-sm font-mono break-all">
+                    {selectedView.path}
+                  </p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm text-muted-foreground">
+                    访客ID
+                  </label>
+                  <p className="text-sm font-mono break-all">
+                    {selectedView.visitorId}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">
+                    IP地址
+                  </label>
+                  <p className="text-sm font-mono">{selectedView.ipAddress}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm text-muted-foreground">
+                    来源页面
+                  </label>
+                  <p className="text-sm font-mono break-all">
+                    {selectedView.referer || "-"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 地理位置信息 */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                地理位置
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground">国家</label>
+                  <p className="text-sm">{selectedView.country || "-"}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">地区</label>
+                  <p className="text-sm">{selectedView.region || "-"}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">城市</label>
+                  <p className="text-sm">{selectedView.city || "-"}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* 设备与浏览器信息 */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                设备与浏览器
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground">
+                    设备类型
+                  </label>
+                  <p className="text-sm">{selectedView.deviceType || "-"}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">
+                    浏览器
+                  </label>
+                  <p className="text-sm">{selectedView.browser || "-"}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">
+                    操作系统
+                  </label>
+                  <p className="text-sm">{selectedView.os || "-"}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">
+                    屏幕尺寸
+                  </label>
+                  <p className="text-sm">{selectedView.screenSize || "-"}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* 其他信息 */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                其他信息
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground">语言</label>
+                  <p className="text-sm">{selectedView.language || "-"}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">时区</label>
+                  <p className="text-sm">{selectedView.timezone || "-"}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </Dialog>
+    </>
+  );
+}

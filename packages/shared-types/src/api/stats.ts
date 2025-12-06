@@ -191,3 +191,46 @@ registerSchema(
   "GetCategoriesStatsSuccessResponse",
   GetCategoriesStatsSuccessResponseSchema,
 );
+
+/*
+    getVisitStats() Schema
+*/
+export const GetVisitStatsSchema = z.object({
+  access_token: z.string().optional(),
+  force: z.boolean().default(false),
+});
+export type GetVisitStats = z.infer<typeof GetVisitStatsSchema>;
+registerSchema("GetVisitStats", GetVisitStatsSchema);
+
+export const GetVisitStatsSuccessResponseSchema = createSuccessResponseSchema(
+  z.object({
+    updatedAt: z.iso.datetime(),
+    cache: z.boolean(),
+    last24Hours: z.object({
+      visitors: z.number().int().nonnegative(), // 访客数
+      views: z.number().int().nonnegative(), // 访问次数
+      averageDuration: z.number().nonnegative(), // 平均停留时间（秒）
+      bounceRate: z.number().nonnegative(), // 跳出率（百分比）
+    }),
+    totalViews: z.object({
+      total: z.number().int().nonnegative(), // 总访问量
+      last7Days: z.number().int().nonnegative(), // 最近7天
+      last30Days: z.number().int().nonnegative(), // 最近30天
+      averagePerDay: z.number().nonnegative(), // 平均每天
+    }),
+    totalVisitors: z.object({
+      total: z.number().int().nonnegative(), // 总独立访客
+      last7Days: z.number().int().nonnegative(), // 最近7天
+      last30Days: z.number().int().nonnegative(), // 最近30天
+      averagePerDay: z.number().nonnegative(), // 平均每天
+    }),
+  }),
+);
+
+export type GetVisitStatsSuccessResponse = z.infer<
+  typeof GetVisitStatsSuccessResponseSchema
+>;
+registerSchema(
+  "GetVisitStatsSuccessResponse",
+  GetVisitStatsSuccessResponseSchema,
+);

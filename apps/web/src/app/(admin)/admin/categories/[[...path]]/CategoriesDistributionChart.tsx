@@ -90,7 +90,6 @@ export default function CategoriesDistributionChart({
               <DonutChart
                 data={chartData}
                 className="w-full h-full"
-                showLegend={true}
                 showLabels={false}
                 formatValue={(value) => `${value} 篇`}
                 colors={generateGradient(

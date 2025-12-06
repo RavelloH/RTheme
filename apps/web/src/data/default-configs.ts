@@ -332,12 +332,18 @@ export const defaultConfigs: DefaultConfig[] = [
     description: "AI 配置信息。参考文档设置",
   },
   // =====================================
-  // AI 集成
+  // 访问统计
   // =====================================
   {
     key: "analytics.enable",
     value: { default: true },
     description: "是否启用内建访问统计系统",
+  },
+  {
+    key: "analytics.timezone",
+    value: { default: "UTC" },
+    description:
+      "访问统计使用的时区。用于确定归档数据的日期边界。例如：UTC、Asia/Shanghai、America/New_York。不会影响已归档的数据",
   },
   {
     key: "analytics.precisionDays",

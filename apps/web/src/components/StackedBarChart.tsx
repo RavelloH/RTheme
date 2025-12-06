@@ -44,10 +44,29 @@ export default function StackedBarChart({
     data: StackedBarChartDataPoint;
   } | null>(null);
 
-  // 默认时间格式化函数 - 显示为月/日格式
+  // 默认时间格式化函数
   const defaultFormatTime = (time: string) => {
     const date = new Date(time);
-    return `${date.getMonth() + 1}/${date.getDate()}`;
+    if (isNaN(date.getTime())) {
+      return time; // 如果无法解析，返回原始字符串
+    }
+
+    // 检查是否包含时间部分（小时不为0或者时间戳精确到小时）
+    const hasTime = time.includes("T") || time.includes(":");
+
+    if (hasTime) {
+      return date.toLocaleDateString("zh-CN", {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } else {
+      return date.toLocaleDateString("zh-CN", {
+        month: "2-digit",
+        day: "2-digit",
+      });
+    }
   };
 
   const timeFormatter = formatTime || defaultFormatTime;

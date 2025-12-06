@@ -137,6 +137,7 @@ model Post {
   media      Media[]
 
   // 访问统计关系
+  viewCount ViewCountCache?
   // @@index([userUid, status]) // 复合索引：按作者和状态查询
 
   // 索引优化
@@ -198,22 +199,22 @@ model Comment {
   post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   // 登录用户评论
-  userUid     Int?
-  user        User?     @relation(fields: [userUid], references: [uid], onDelete: SetNull)
+  userUid       Int?
+  user          User?     @relation(fields: [userUid], references: [uid], onDelete: SetNull)
   // 未登录用户评论
-  authorName  String?   @db.VarChar(50)
-  authorEmail String?   @db.VarChar(255)
-  authorWebsite String? @db.VarChar(255)
+  authorName    String?   @db.VarChar(50)
+  authorEmail   String?   @db.VarChar(255)
+  authorWebsite String?   @db.VarChar(255)
   // 嵌套评论
-  parentId    String?
-  parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies     Comment[] @relation("CommentReplies")
+  parentId      String?
+  parent        Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies       Comment[] @relation("CommentReplies")
 
   // 层级树形结构字段
-  depth      Int    @default(0)                        // 层级深度 (0=顶级评论)
-  path       String @default("") @db.VarChar(2000)    // 物化路径，如 "rootId/parentId/selfId"
-  sortKey    String @default("") @db.VarChar(500)     // DFS 排序键，保证树形顺序
-  replyCount Int    @default(0)                        // 直接子评论数量
+  depth      Int    @default(0) // 层级深度 (0=顶级评论)
+  path       String @default("") @db.VarChar(2000) // 物化路径，如 "rootId/parentId/selfId"
+  sortKey    String @default("") @db.VarChar(500) // DFS 排序键，保证树形顺序
+  replyCount Int    @default(0) // 直接子评论数量
 
   // 索引优化
   @@index([postId])
@@ -397,10 +398,13 @@ model ViewCountCache {
   path         String   @id @db.VarChar(500) // 路径作为主键
   cachedCount  Int      @default(0) // 缓存的访问总数
   lastArchived DateTime @default(now()) // 上次存档时间
-  lastUpdated  DateTime @updatedAt // 最后更新时间
+  lastUpdated  DateTime @updatedAt // 上次更新时间
+
+  // 文章关系
+  postSlug String? @unique
+  post     Post?   @relation(fields: [postSlug], references: [slug], onDelete: Cascade, onUpdate: Cascade)
 
   // 索引优化
-  @@index([lastUpdated])
   @@index([lastArchived])
   @@index([cachedCount])
 }
@@ -416,6 +420,11 @@ model PageView {
   userAgent String? @db.VarChar(1000)
   referer   String? @db.VarChar(500)
 
+  // 地理位置信息（由 IP 解析得到）
+  country String? @db.VarChar(100) // 国家，如 "中国"
+  region  String? @db.VarChar(100) // 省份/州
+  city    String? @db.VarChar(100) // 城市
+
   // 设备和浏览器信息
   browser        String? @db.VarChar(50)
   browserVersion String? @db.VarChar(20)
@@ -429,12 +438,18 @@ model PageView {
   timezone   String? @db.VarChar(50)
 
   // 会话和访客跟踪
-  visitorId String @db.VarChar(100) // 访客ID
+  visitorId String  @db.VarChar(100) // 访客ID
+  sessionId String? @db.VarChar(100) // 会话ID
+  duration  Int?    @default(0) // 停留时长（秒）
 
   // 索引优化
   @@index([path, timestamp])
   @@index([timestamp])
   @@index([visitorId])
+  @@index([sessionId])
+  @@index([country, timestamp]) // 按国家统计
+  @@index([region, timestamp]) // 按地区统计
+  @@index([city, timestamp]) // 按城市统计
 }
 
 // 页面浏览存档表 - 压缩存储历史浏览数据
@@ -446,9 +461,15 @@ model PageViewArchive {
   // 汇总统计数据
   totalViews     Int @default(0)
   uniqueVisitors Int @default(0)
+  totalSessions  Int @default(0)
+  bounces        Int @default(0) // 跳出次数（单页会话）
+  totalDuration  Int @default(0) // 总停留时长（秒）
 
-  ipStats      Json?
   refererStats Json?
+
+  countryStats Json?
+  regionStats  Json?
+  cityStats    Json?
 
   deviceStats  Json?
   browserStats Json?
@@ -457,8 +478,6 @@ model PageViewArchive {
   screenStats   Json?
   languageStats Json?
   timezoneStats Json?
-
-  userAgentStats Json?
 
   createdAt DateTime @default(now())
 

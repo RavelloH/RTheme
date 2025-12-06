@@ -22,6 +22,9 @@ import {
   GetCategoriesStatsSuccessResponse,
   GetCategoriesStats,
   GetCategoriesStatsSchema,
+  GetVisitStatsSuccessResponse,
+  GetVisitStats,
+  GetVisitStatsSchema,
 } from "@repo/shared-types/api/stats";
 import {
   GetPagesStatsSuccessResponse,
@@ -1191,5 +1194,335 @@ export async function getStorageStats(
   } catch (error) {
     console.error("GetStorageStats error:", error);
     return response.serverError({ message: "获取存储统计失败" });
+  }
+}
+
+export async function getVisitStats(
+  params: GetVisitStats,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<GetVisitStatsSuccessResponse["data"]>>>;
+export async function getVisitStats(
+  params: GetVisitStats,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<GetVisitStatsSuccessResponse["data"]>>;
+export async function getVisitStats(
+  { access_token, force }: GetVisitStats,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<GetVisitStatsSuccessResponse["data"] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "getVisitStats"))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      force,
+    },
+    GetVisitStatsSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    const CACHE_KEY = generateCacheKey("stats", "visit");
+    const CACHE_TTL = 60 * 60; // 1小时
+
+    // 如果不是强制刷新，尝试从缓存获取
+    if (!force) {
+      const cachedData = await getCache<GetVisitStatsSuccessResponse["data"]>(
+        CACHE_KEY,
+        {
+          ttl: CACHE_TTL,
+        },
+      );
+
+      if (cachedData) {
+        return response.ok({
+          data: cachedData,
+        });
+      }
+    }
+
+    const now = new Date();
+    const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const last7DaysStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const last30DaysStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    // 查询最近24小时的 PageView 数据
+    const last24HoursPageViews = await prisma.pageView.findMany({
+      where: {
+        timestamp: {
+          gte: last24Hours,
+        },
+      },
+      select: {
+        visitorId: true,
+        timestamp: true,
+        path: true,
+      },
+    });
+
+    // 计算最近24小时的统计（使用与analytics.ts相同的会话计算逻辑）
+    const uniqueVisitors24h = new Set(
+      last24HoursPageViews.map((pv) => pv.visitorId),
+    ).size;
+    const totalViews24h = last24HoursPageViews.length;
+
+    // 计算会话和跳出率（参考 analytics.ts 的实现）
+    const SESSION_TIMEOUT = 30 * 60 * 1000; // 30分钟会话超时
+    const visitorSessions = new Map<
+      string,
+      Array<{ path: string; timestamp: Date }>
+    >();
+
+    for (const view of last24HoursPageViews) {
+      if (!visitorSessions.has(view.visitorId)) {
+        visitorSessions.set(view.visitorId, []);
+      }
+      visitorSessions.get(view.visitorId)!.push({
+        path: view.path,
+        timestamp: view.timestamp,
+      });
+    }
+
+    let totalSessions24h = 0;
+    let bounces24h = 0;
+    let totalDuration24h = 0;
+    let sessionsWithDuration24h = 0;
+
+    for (const views of visitorSessions.values()) {
+      if (views.length === 0) continue;
+
+      views.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+      let sessionPageCount = 0;
+      let sessionStartTime = views[0]!.timestamp.getTime();
+
+      for (let i = 0; i < views.length; i++) {
+        const currentView = views[i]!;
+        const currentTime = currentView.timestamp.getTime();
+
+        if (
+          i === 0 ||
+          currentTime - views[i - 1]!.timestamp.getTime() > SESSION_TIMEOUT
+        ) {
+          if (i > 0) {
+            totalSessions24h++;
+            if (sessionPageCount === 1) {
+              bounces24h++;
+            }
+            if (sessionPageCount > 1) {
+              const duration =
+                views[i - 1]!.timestamp.getTime() - sessionStartTime;
+              totalDuration24h += duration;
+              sessionsWithDuration24h++;
+            }
+          }
+          sessionPageCount = 1;
+          sessionStartTime = currentTime;
+        } else {
+          sessionPageCount++;
+        }
+      }
+
+      totalSessions24h++;
+      if (sessionPageCount === 1) {
+        bounces24h++;
+      }
+      if (sessionPageCount > 1) {
+        const duration =
+          views[views.length - 1]!.timestamp.getTime() - sessionStartTime;
+        totalDuration24h += duration;
+        sessionsWithDuration24h++;
+      }
+    }
+
+    const bounceRate24h =
+      totalSessions24h > 0 ? (bounces24h / totalSessions24h) * 100 : 0;
+    const averageDuration24h =
+      sessionsWithDuration24h > 0
+        ? Math.round(totalDuration24h / sessionsWithDuration24h / 1000)
+        : 0;
+
+    // 查询总访问量和独立访客（包括精确数据和归档数据）
+    const [totalPageViews, totalArchive, last7DaysArchive, last30DaysArchive] =
+      await Promise.all([
+        // 精确数据的总数
+        prisma.pageView.count(),
+
+        // 所有归档数据
+        prisma.pageViewArchive.aggregate({
+          _sum: {
+            totalViews: true,
+            uniqueVisitors: true,
+          },
+        }),
+
+        // 最近7天归档数据
+        prisma.pageViewArchive.aggregate({
+          where: {
+            date: {
+              gte: last7DaysStart,
+            },
+          },
+          _sum: {
+            totalViews: true,
+            uniqueVisitors: true,
+          },
+        }),
+
+        // 最近30天归档数据
+        prisma.pageViewArchive.aggregate({
+          where: {
+            date: {
+              gte: last30DaysStart,
+            },
+          },
+          _sum: {
+            totalViews: true,
+            uniqueVisitors: true,
+          },
+        }),
+      ]);
+
+    // 查询精确数据中的独立访客总数
+    const allVisitors = await prisma.pageView.findMany({
+      select: {
+        visitorId: true,
+      },
+      distinct: ["visitorId"],
+    });
+
+    // 查询最近7天和30天的精确数据
+    const [last7DaysPageViews, last30DaysPageViews] = await Promise.all([
+      prisma.pageView.findMany({
+        where: {
+          timestamp: {
+            gte: last7DaysStart,
+          },
+        },
+        select: {
+          visitorId: true,
+        },
+      }),
+      prisma.pageView.findMany({
+        where: {
+          timestamp: {
+            gte: last30DaysStart,
+          },
+        },
+        select: {
+          visitorId: true,
+        },
+      }),
+    ]);
+
+    // 合并精确数据和归档数据
+    const totalViewsCount =
+      totalPageViews + (totalArchive._sum.totalViews || 0);
+    const totalVisitorsCount =
+      allVisitors.length + (totalArchive._sum.uniqueVisitors || 0);
+
+    const last7DaysViewsCount =
+      last7DaysPageViews.length + (last7DaysArchive._sum.totalViews || 0);
+    const last7DaysVisitorsCount =
+      new Set(last7DaysPageViews.map((pv) => pv.visitorId)).size +
+      (last7DaysArchive._sum.uniqueVisitors || 0);
+
+    const last30DaysViewsCount =
+      last30DaysPageViews.length + (last30DaysArchive._sum.totalViews || 0);
+    const last30DaysVisitorsCount =
+      new Set(last30DaysPageViews.map((pv) => pv.visitorId)).size +
+      (last30DaysArchive._sum.uniqueVisitors || 0);
+
+    // 获取第一条记录的日期来计算平均值
+    const firstRecord = await prisma.pageViewArchive.findFirst({
+      orderBy: {
+        date: "asc",
+      },
+      select: {
+        date: true,
+      },
+    });
+
+    const firstPageView = await prisma.pageView.findFirst({
+      orderBy: {
+        timestamp: "asc",
+      },
+      select: {
+        timestamp: true,
+      },
+    });
+
+    // 计算总天数（从第一条记录到现在）
+    let totalDays = 1;
+    if (firstRecord || firstPageView) {
+      const earliestDate = [firstRecord?.date, firstPageView?.timestamp].filter(
+        Boolean,
+      ) as Date[];
+
+      if (earliestDate.length > 0) {
+        const earliest = new Date(
+          Math.min(...earliestDate.map((d) => d.getTime())),
+        );
+        totalDays = Math.max(
+          1,
+          Math.ceil(
+            (now.getTime() - earliest.getTime()) / (1000 * 60 * 60 * 24),
+          ),
+        );
+      }
+    }
+
+    // 构建响应数据
+    const data: GetVisitStatsSuccessResponse["data"] = {
+      updatedAt: now.toISOString(),
+      cache: false,
+      last24Hours: {
+        visitors: uniqueVisitors24h,
+        views: totalViews24h,
+        averageDuration: Math.round(averageDuration24h),
+        bounceRate: Math.round(bounceRate24h * 10) / 10,
+      },
+      totalViews: {
+        total: totalViewsCount,
+        last7Days: last7DaysViewsCount,
+        last30Days: last30DaysViewsCount,
+        averagePerDay: Math.round((totalViewsCount / totalDays) * 10) / 10,
+      },
+      totalVisitors: {
+        total: totalVisitorsCount,
+        last7Days: last7DaysVisitorsCount,
+        last30Days: last30DaysVisitorsCount,
+        averagePerDay: Math.round((totalVisitorsCount / totalDays) * 10) / 10,
+      },
+    };
+
+    // 保存到缓存（缓存1小时）
+    const cacheData = { ...data, cache: true };
+    await setCache(CACHE_KEY, cacheData, {
+      ttl: CACHE_TTL,
+    });
+
+    return response.ok({
+      data,
+    });
+  } catch (error) {
+    console.error("GetVisitStats error:", error);
+    return response.serverError({ message: "获取访问统计失败" });
   }
 }

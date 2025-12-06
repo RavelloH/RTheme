@@ -14,6 +14,8 @@ export * from "./api/tag.js";
 export * from "./api/category.js";
 export * from "./api/comment.js";
 export * from "./api/security.js";
+export * from "./api/analytics.js";
+export * from "./api/analytics-stats.js";
 
 // 类型安全的 API 客户端工具
 export { createApiClient } from "./client.js";

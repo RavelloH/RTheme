@@ -19,7 +19,6 @@ interface DonutChartProps {
   className?: string;
   innerRadius?: number; // 内圆半径比例（0-1），默认 0.6
   colors?: string[]; // 颜色数组
-  showLegend?: boolean; // 是否显示图例
   showLabels?: boolean; // 是否在图表上显示标签
   formatValue?: (value: number) => string; // 自定义值格式化函数
 }
@@ -29,8 +28,6 @@ export default function DonutChart({
   className = "",
   innerRadius = 0.6,
   colors,
-
-  showLegend: _showLegend = true,
   showLabels = false,
   formatValue = (value: number) => value.toString(),
 }: DonutChartProps) {
@@ -184,7 +181,7 @@ export default function DonutChart({
             fontWeight="bold"
             dy="-0.5em"
           >
-            {hoveredSlice ? hoveredSlice.data.name : "总计"}
+            {hoveredSlice ? "数量" : "总计"}
           </text>
           <text
             textAnchor="middle"

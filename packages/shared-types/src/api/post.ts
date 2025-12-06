@@ -41,7 +41,7 @@ export const GetPostsListSchema = z.object({
   page: z.number().int().positive().default(1),
   pageSize: z.number().int().positive().default(25),
   sortBy: z
-    .enum(["id", "title", "publishedAt", "updatedAt", "createdAt"])
+    .enum(["id", "title", "publishedAt", "updatedAt", "createdAt", "viewCount"])
     .optional()
     .default("id"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
@@ -92,6 +92,8 @@ export const PostListItemSchema = z.object({
   metaKeywords: z.string().nullable(),
   robotsIndex: z.boolean(),
   postMode: z.enum(["MARKDOWN", "MDX"]),
+  // 统计数据
+  viewCount: z.number().int().default(0),
 });
 export type PostListItem = z.infer<typeof PostListItemSchema>;
 

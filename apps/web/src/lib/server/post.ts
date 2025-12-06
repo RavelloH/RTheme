@@ -38,6 +38,7 @@ export interface PostData {
   _count: {
     comments: number;
   };
+  viewCount: number;
 }
 
 export interface RenderedContent {
@@ -102,6 +103,11 @@ export async function getPublishedPost(slug: string): Promise<PostData> {
           },
         },
       },
+      viewCount: {
+        select: {
+          cachedCount: true,
+        },
+      },
     },
   });
 
@@ -109,7 +115,10 @@ export async function getPublishedPost(slug: string): Promise<PostData> {
     notFound();
   }
 
-  return post;
+  return {
+    ...post,
+    viewCount: post.viewCount?.cachedCount || 0,
+  };
 }
 
 /**

@@ -26,7 +26,7 @@ export default function ErrorPage({
             <RiRefreshLine size={"3em"} />
           </Clickable>
         ) : (
-          <div className="inline-block">
+          <div>
             <RiAlertLine size={"3em"} key="icon" />
           </div>
         )}

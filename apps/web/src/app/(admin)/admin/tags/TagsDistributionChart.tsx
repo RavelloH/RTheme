@@ -81,7 +81,6 @@ export default function TagsDistributionChart({
               <DonutChart
                 data={chartData}
                 className="w-full h-full"
-                showLegend={true}
                 showLabels={false}
                 formatValue={(value) => `${value} 个`}
                 colors={generateGradient(

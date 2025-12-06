@@ -665,7 +665,13 @@ export default function PostsTable() {
         const params: {
           page: number;
           pageSize: number;
-          sortBy?: "id" | "title" | "publishedAt" | "updatedAt" | "createdAt";
+          sortBy?:
+            | "id"
+            | "title"
+            | "publishedAt"
+            | "updatedAt"
+            | "createdAt"
+            | "viewCount";
           sortOrder?: "asc" | "desc";
           search?: string;
           id?: number;
@@ -959,6 +965,21 @@ export default function PostsTable() {
         ) : (
           <span className="flex justify-center">
             <RiCloseLine size="1.5em" className="text-muted-foreground" />
+          </span>
+        );
+      },
+    },
+    {
+      key: "viewCount",
+      title: "浏览量",
+      dataIndex: "viewCount",
+      align: "center",
+      sortable: true,
+      mono: true,
+      render: (value: unknown) => {
+        return (
+          <span className="text-sm">
+            {typeof value === "number" ? value.toLocaleString() : 0}
           </span>
         );
       },

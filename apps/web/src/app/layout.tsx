@@ -22,6 +22,7 @@ import { LayoutContainer } from "@/components/LayoutContainer";
 import ResponsiveFontScale from "@/components/ResponsiveFontScale";
 import PageTransition from "@/components/PageTransition";
 import TokenManager from "@/components/TokenManager";
+import { AnalyticsTracker } from "@/components/client/AnalyticsTracker";
 
 // lib
 import { getActiveMenus } from "@/lib/server/menuCache";
@@ -43,10 +44,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [menus, mainColor, siteName] = await Promise.all([
+  const [menus, mainColor, siteName, enableAnalytics] = await Promise.all([
     getActiveMenus(),
     getConfig<ColorConfig>("site.color"),
     getConfig<string>("site.title"),
+    getConfig<boolean>("analytics.enable"),
   ]);
 
   return (
@@ -80,6 +82,7 @@ export default async function RootLayout({
             </ResponsiveFontScale>
           </MenuProvider>
         </ThemeProvider>
+        {enableAnalytics && <AnalyticsTracker />}
       </body>
       <TokenManager />
     </html>
