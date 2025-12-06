@@ -59,14 +59,14 @@ export default function RequestTrendsChart() {
   // 配置系列
   const series: SeriesConfig[] = [
     {
-      key: "requests",
-      label: "总请求",
-      color: "var(--color-primary)",
-    },
-    {
       key: "errors",
       label: "错误请求",
       color: "var(--color-error)",
+    },
+    {
+      key: "requests",
+      label: "总请求",
+      color: "var(--color-primary)",
     },
   ];
 
