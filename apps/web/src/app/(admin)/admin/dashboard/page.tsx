@@ -46,8 +46,6 @@ export default function AdminDashboard() {
           <GridItem areas={[9, 10, 11, 12]} width={3} height={0.5}>
             <DashboardVisitStats />
           </GridItem>
-        </RowGrid>
-        <RowGrid>
           <GridItem areas={[1, 2, 3, 4]} width={3} height={0.5}>
             <DashboardUsersStats />
           </GridItem>
@@ -57,8 +55,6 @@ export default function AdminDashboard() {
           <GridItem areas={[9, 10, 11, 12]} width={3} height={0.5}>
             <DashboardMediaStats />
           </GridItem>
-        </RowGrid>
-        <RowGrid>
           <GridItem areas={[1, 2, 3, 4]} width={3} height={0.5}>
             <DashboardTagsStats />
           </GridItem>
@@ -70,8 +66,6 @@ export default function AdminDashboard() {
               作品信息图表
             </div>
           </GridItem>
-        </RowGrid>
-        <RowGrid>
           <GridItem areas={[1, 2, 3, 4]} width={3} height={0.5}>
             <DashboardPagesStats />
           </GridItem>

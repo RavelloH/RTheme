@@ -157,10 +157,10 @@ export default function DonutChart({
                         x={centroidX}
                         y={centroidY}
                         dy=".33em"
-                        fontSize={12}
                         textAnchor="middle"
                         fill="white"
                         style={{ pointerEvents: "none" }}
+                        className="text-base"
                       >
                         {arc.data.percentage !== undefined
                           ? `${arc.data.percentage.toFixed(1)}%`
@@ -177,16 +177,15 @@ export default function DonutChart({
           <text
             textAnchor="middle"
             fill="currentColor"
-            fontSize={16}
+            className="text-base"
             fontWeight="bold"
-            dy="-0.5em"
           >
             {hoveredSlice ? "数量" : "总计"}
           </text>
           <text
             textAnchor="middle"
             fill="currentColor"
-            fontSize={24}
+            className="text-xl"
             fontWeight="bold"
             dy="1em"
           >

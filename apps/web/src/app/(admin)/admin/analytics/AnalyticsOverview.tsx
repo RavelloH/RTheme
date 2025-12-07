@@ -19,7 +19,7 @@ export default function AnalyticsOverview({
   onTimeRangeChange,
 }: AnalyticsOverviewProps) {
   return (
-    <GridItem areas={[1, 2, 3, 4]} width={3} height={0.6}>
+    <GridItem areas={[1, 2, 3, 4]} width={3} height={0.8}>
       <AutoTransition type="scale" className="h-full">
         {overview ? (
           <AnimatePresence mode="wait">

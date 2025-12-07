@@ -79,9 +79,19 @@ export function LoadingAnimation({ siteName }: LoadingAnimationProps) {
         className="fixed inset-0 z-[9999] bg-background pointer-events-none flex items-center justify-center uppercase"
         style={{ opacity: 1 }}
       >
-        <div className="border-foreground border-y py-5 flex flex-col items-start">
+        <div
+          className="border-foreground border-y flex flex-col items-start"
+          style={{ paddingTop: "20px", paddingBottom: "20px" }}
+        >
           {/* 站点名称 */}
-          <h1 className="text-6xl md:text-7xl font-bold mb-1 text-foreground whitespace-nowrap">
+          <h1
+            className="font-bold text-foreground whitespace-nowrap"
+            style={{
+              fontSize: "clamp(36px, 8vw, 72px)",
+              lineHeight: "1",
+              marginBottom: "4px",
+            }}
+          >
             {siteName}
           </h1>
 
@@ -91,7 +101,8 @@ export function LoadingAnimation({ siteName }: LoadingAnimationProps) {
             <div className="relative" style={{ gridArea: "1 / 1" }}>
               {/* 隐藏的参考元素，确保容器宽度至少为 "LOAD COMPLETED." 的宽度 */}
               <p
-                className="text-5xl md:text-6xl font-bold text-foreground invisible whitespace-nowrap"
+                className="font-bold text-foreground invisible whitespace-nowrap"
+                style={{ fontSize: "clamp(28px, 6vw, 56px)", lineHeight: "1" }}
                 aria-hidden="true"
               >
                 LOAD COMPLETED.
@@ -101,7 +112,11 @@ export function LoadingAnimation({ siteName }: LoadingAnimationProps) {
               <AutoTransition type="fade" duration={0.3} initial={false}>
                 <p
                   key={loadingText}
-                  className="text-5xl md:text-6xl font-bold text-foreground whitespace-nowrap"
+                  className="font-bold text-foreground whitespace-nowrap"
+                  style={{
+                    fontSize: "clamp(28px, 6vw, 56px)",
+                    lineHeight: "1",
+                  }}
                 >
                   {renderLoadingText()}
                 </p>

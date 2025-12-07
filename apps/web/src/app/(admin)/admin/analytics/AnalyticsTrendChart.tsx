@@ -74,7 +74,7 @@ export default function AnalyticsTrendChart({
   };
 
   return (
-    <GridItem areas={[9, 10, 11, 12]} width={3} height={0.8}>
+    <GridItem areas={[9, 10, 11, 12]} width={3} height={0.5}>
       <AutoTransition type="slideUp" className="h-full">
         {!loading && chartData.length > 0 ? (
           <div key="content" className="flex flex-col h-full pt-10">

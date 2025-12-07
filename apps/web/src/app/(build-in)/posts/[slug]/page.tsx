@@ -152,7 +152,7 @@ export default async function PostPage({ params }: PageProps) {
       <ImageLightbox />
       <div className="h-full w-full">
         {/* 文章头部信息 */}
-        <div className="p-10 text-xl flex flex-wrap gap-2 bg-primary text-primary-foreground">
+        <div className="py-10 px-6 md:px-10 text-xl flex flex-wrap gap-2 bg-primary text-primary-foreground">
           <span className="flex items-center gap-1">
             <RiCalendarLine size={"1em"} />
             <span>{formatDate(post.publishedAt || post.createdAt)}</span>
@@ -244,7 +244,7 @@ export default async function PostPage({ params }: PageProps) {
 
           {/* 文章标题和标签内容 */}
           <div
-            className={`relative z-10 p-10 border-border border-b ${post.featuredImage ? "" : "pt-12"}`}
+            className={`relative z-10 py-10 px-6 md:px-10 border-border border-b ${post.featuredImage ? "" : "pt-12"}`}
           >
             <h1 className="text-5xl md:text-7xl mb-2">{post.title}</h1>
             <div className="text-xl md:text-2xl font-mono pt-3 text-muted-foreground">
@@ -294,8 +294,8 @@ export default async function PostPage({ params }: PageProps) {
         )}
 
         {/* 文章内容 */}
-        <div className="px-10 max-w-7xl mx-auto pt-10 flex gap-6 relative h-full">
-          <div className="flex-[8] h-full">
+        <div className="px-6 md:px-10 max-w-7xl mx-auto pt-10 flex gap-6 relative h-full">
+          <div className="flex-[8] h-full min-w-0">
             <MDXRenderer
               source={renderedContent.content}
               mode={renderedContent.mode}
@@ -328,7 +328,7 @@ export default async function PostPage({ params }: PageProps) {
                   <span>{"/"}</span>
                   <span>{siteURL + "/posts/" + slug}</span>
                 </div>
-                <div className="flex-warp gap-1 items-center flex">
+                <div className="flex flex-wrap gap-1 items-center">
                   <RiInformationLine size="1em" />
                   原创内容使用
                   <span className="px-1">

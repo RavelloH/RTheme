@@ -37,12 +37,8 @@ export default function SystemInfoPage() {
         <RowGrid>
           <SystemMemoryChart />
           <SystemCpuInfo />
-        </RowGrid>
-        <RowGrid>
           <SystemDiskChart />
           <SystemProcessInfo />
-        </RowGrid>
-        <RowGrid>
           <SystemNetworkInfo />
         </RowGrid>
       </HorizontalScroll>

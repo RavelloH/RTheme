@@ -11,10 +11,13 @@ const VISITOR_ID_KEY = "visitor_id";
  */
 function generateVisitorId(): string {
   // 优先使用 crypto.randomUUID()，不可用时回退到自定义实现
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
     return crypto.randomUUID();
   }
-  
+
   // 回退方案：生成符合 UUID v4 格式的字符串
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;

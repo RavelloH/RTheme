@@ -65,7 +65,7 @@ export default function MDXRenderer({
   if (mode === "mdx") {
     // MDX 模式：使用 next-mdx-remote 渲染
     return (
-      <div className="max-w-4xl mx-auto">
+      <div className="w-full max-w-4xl mx-auto">
         <MDXRemote
           source={processedSource}
           components={getMDXComponents(mediaFileMap)}
@@ -76,7 +76,7 @@ export default function MDXRenderer({
 
   // Markdown 模式：使用 react-markdown 渲染
   return (
-    <div className="max-w-4xl mx-auto md-content">
+    <div className="w-full max-w-4xl mx-auto md-content">
       <Markdown
         remarkPlugins={[remarkGfm, remarkMath, remarkBreaks]}
         rehypePlugins={[rehypeKatex, rehypeSlug, rehypeRaw]}

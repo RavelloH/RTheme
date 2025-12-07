@@ -170,7 +170,7 @@ export default function SystemOverview() {
           )}
         </AutoTransition>
       </GridItem>
-      <GridItem areas={[9, 10, 11, 12]} width={9 / 4} height={0.8}>
+      <GridItem areas={[9, 10, 11, 12]} width={9 / 4} height={0.5}>
         <div className="h-full w-full flex flex-col justify-center p-10 gap-2">
           <p>此处的系统信息检测将每15s刷新一次。</p>
           <p>

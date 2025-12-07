@@ -52,7 +52,7 @@ export default function DimensionStats({
             : [9, 10, 11, 12]
       }
       width={3}
-      height={0.8}
+      height={0.5}
     >
       <AutoTransition type="slideUp" className="h-full">
         {displayItems && chartData ? (

@@ -3,6 +3,8 @@
 .tiptap,
 .md-content {
   @apply min-h-full text-secondary-foreground;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Text Alignment */
@@ -23,7 +25,7 @@
 
 .tiptap p,
 .md-content p {
-  @apply my-4 leading-relaxed;
+  @apply my-4 leading-relaxed text-xl md:text-base;
 }
 
 .tiptap blockquote p,
@@ -68,13 +70,15 @@
 /* 行内代码样式 - 不在 pre 内的 code */
 .tiptap :not(pre) > code,
 .md-content :not(pre) > code {
-  @apply bg-foreground/10 text-foreground px-1.5 py-0.5 rounded-xs text-sm font-mono hover:bg-foreground/20 transition-all;
+  @apply bg-foreground/10 text-foreground px-1.5 py-0.5 rounded-xs text-lg md:text-sm font-mono hover:bg-foreground/20 transition-all;
 }
 
 /* 代码块基础样式 */
 .tiptap pre,
 .md-content pre {
   @apply rounded-lg overflow-hidden my-4;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 /* Shiki 代码块样式 */
@@ -85,7 +89,7 @@
 
 .tiptap pre.shiki code,
 .md-content pre.shiki code {
-  @apply bg-transparent p-0 font-mono text-sm leading-relaxed;
+  @apply bg-transparent p-0 font-mono text-lg md:text-sm leading-relaxed;
 }
 
 /* 普通代码块样式（回退） */
@@ -96,7 +100,7 @@
 
 .tiptap pre:not(.shiki) code,
 .md-content pre:not(.shiki) code {
-  @apply bg-transparent p-0 font-mono text-sm;
+  @apply bg-transparent p-0 font-mono text-lg md:text-sm;
 }
 
 /* Headings */
@@ -133,27 +137,27 @@
 
 .tiptap h1,
 .md-content h1 {
-  @apply text-4xl border-b-2 pb-2 border-border mt-8 mb-4;
+  @apply text-6xl md:text-4xl border-b-2 pb-2 border-border mt-8 mb-4;
 }
 .tiptap h2,
 .md-content h2 {
-  @apply text-3xl;
+  @apply text-5xl md:text-3xl;
 }
 .tiptap h3,
 .md-content h3 {
-  @apply text-2xl mt-4 mb-2;
+  @apply text-4xl md:text-2xl mt-4 mb-2;
 }
 .tiptap h4,
 .md-content h4 {
-  @apply text-xl mt-3 mb-2;
+  @apply text-3xl md:text-xl mt-3 mb-2;
 }
 .tiptap h5,
 .md-content h5 {
-  @apply text-lg mt-2 mb-1;
+  @apply text-2xl md:text-lg mt-2 mb-1;
 }
 .tiptap h6,
 .md-content h6 {
-  @apply text-base mt-2 mb-1;
+  @apply text-xl mt-2 mb-1 md:text-base;
 }
 
 /* Images */
@@ -214,7 +218,7 @@
 .tiptap ol,
 .md-content ul,
 .md-content ol {
-  @apply pl-6;
+  @apply pl-6 text-xl md:text-base;
 }
 
 /* Unordered List - Multi-level styling */
