@@ -6,6 +6,7 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ["@remixicon/react"],
   },
+  allowedDevOrigins: ["198.18.0.1"],
   // 排除 sharp 的 Linux 二进制文件，避免 Windows 上的权限错误
   outputFileTracingExcludes: {
     "*": [
