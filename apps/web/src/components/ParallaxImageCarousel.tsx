@@ -218,7 +218,7 @@ export default function ParallaxImageCarousel({
   return (
     <div
       ref={containerRef}
-      className={`group h-full flex flex-row-reverse overflow-visible opacity-25 ${className}`}
+      className={`group h-full md:flex md:flex-row-reverse overflow-visible opacity-25 ${className}`}
       data-parallax={parallaxSpeed.toString()}
     >
       {visibleImageInstances.map((instance) => {
@@ -234,10 +234,16 @@ export default function ParallaxImageCarousel({
         return (
           <div
             key={instance.id}
-            className={`h-full flex-shrink-0 relative ${aspectRatioClass}`}
+            className={`h-full w-full md:w-auto flex-shrink-0 relative ${aspectRatioClass}`}
             style={{
-              width: `${containerHeight * dimension.aspectRatio}px`,
-              flexBasis: `${containerHeight * dimension.aspectRatio}px`,
+              width:
+                window.innerWidth >= 768
+                  ? `${containerHeight * dimension.aspectRatio}px`
+                  : undefined,
+              flexBasis:
+                window.innerWidth >= 768
+                  ? `${containerHeight * dimension.aspectRatio}px`
+                  : undefined,
             }}
           >
             <CMSImage
