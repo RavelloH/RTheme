@@ -158,6 +158,13 @@ export default function LoginSheet() {
     }
   };
 
+  // 处理回车键提交
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !buttonLoading) {
+      login();
+    }
+  };
+
   return (
     <>
       <Input
@@ -171,6 +178,7 @@ export default function LoginSheet() {
           setUsername(e.target.value);
           validateUsername(e.target.value);
         }}
+        onKeyPress={handleKeyPress}
       />
       <Input
         label="Password / 密码"
@@ -184,6 +192,7 @@ export default function LoginSheet() {
           setPassword(e.target.value);
           validatePassword(e.target.value);
         }}
+        onKeyPress={handleKeyPress}
       />
       <hr />
       <div className="pt-10 w-full">

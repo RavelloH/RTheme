@@ -175,6 +175,13 @@ export default function RegisterSheet({
     }
   };
 
+  // 处理回车键提交
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !buttonLoading && canRegister) {
+      register();
+    }
+  };
+
   return (
     <>
       <Input
@@ -188,6 +195,7 @@ export default function RegisterSheet({
           setUsername(e.target.value);
           validateUsername(e.target.value);
         }}
+        onKeyPress={handleKeyPress}
       />
       <Input
         label="Email / 邮箱"
@@ -200,6 +208,7 @@ export default function RegisterSheet({
           setEmail(e.target.value);
           validateEmail(e.target.value);
         }}
+        onKeyPress={handleKeyPress}
       />
       <Input
         label="Password / 密码"
@@ -213,6 +222,7 @@ export default function RegisterSheet({
           setPassword(e.target.value);
           validatePassword(e.target.value);
         }}
+        onKeyPress={handleKeyPress}
       />
       <hr />
       <div className="pt-10 w-full">
