@@ -250,14 +250,17 @@ async function archivePageViews() {
       return;
     }
 
-    // 按 path 和日期分组聚合
+    // 按日期分组聚合（不再按 path 分组）
     const archiveMap = new Map<
       string,
       {
-        path: string;
         date: Date;
         totalViews: number;
         uniqueVisitors: Set<string>;
+        totalSessions: number;
+        bounces: number;
+        totalDuration: number;
+        pathStats: Map<string, { views: number; visitors: Set<string> }>;
         refererStats: Map<string, number>;
         countryStats: Map<string, number>;
         regionStats: Map<string, number>;
@@ -268,22 +271,26 @@ async function archivePageViews() {
         screenStats: Map<string, number>;
         languageStats: Map<string, number>;
         timezoneStats: Map<string, number>;
+        // 用于会话分析的临时数据
+        visitorSessions: Map<string, Array<{ path: string; timestamp: Date }>>;
       }
     >();
 
     for (const view of pageViewsToArchive) {
       // 计算该记录在指定时区的日期
       const dateInTimezone = getDateInTimezone(view.timestamp, timezone);
-      const dateKey = dateInTimezone.toISOString().split("T")[0];
-      const key = `${view.path}:${dateKey}`;
+      const dateKey = dateInTimezone.toISOString().split("T")[0]!;
 
-      let stats = archiveMap.get(key);
+      let stats = archiveMap.get(dateKey);
       if (!stats) {
         stats = {
-          path: view.path,
           date: dateInTimezone,
           totalViews: 0,
           uniqueVisitors: new Set(),
+          totalSessions: 0,
+          bounces: 0,
+          totalDuration: 0,
+          pathStats: new Map(),
           refererStats: new Map(),
           countryStats: new Map(),
           regionStats: new Map(),
@@ -294,13 +301,31 @@ async function archivePageViews() {
           screenStats: new Map(),
           languageStats: new Map(),
           timezoneStats: new Map(),
+          visitorSessions: new Map(),
         };
-        archiveMap.set(key, stats);
+        archiveMap.set(dateKey, stats);
       }
 
       // 聚合统计
       stats.totalViews++;
       stats.uniqueVisitors.add(view.visitorId);
+
+      // 聚合路径统计
+      if (!stats.pathStats.has(view.path)) {
+        stats.pathStats.set(view.path, { views: 0, visitors: new Set() });
+      }
+      const pathStat = stats.pathStats.get(view.path)!;
+      pathStat.views++;
+      pathStat.visitors.add(view.visitorId);
+
+      // 收集会话数据
+      if (!stats.visitorSessions.has(view.visitorId)) {
+        stats.visitorSessions.set(view.visitorId, []);
+      }
+      stats.visitorSessions.get(view.visitorId)!.push({
+        path: view.path,
+        timestamp: view.timestamp,
+      });
 
       // 聚合各维度统计
       // referer: 只记录有值的外部来源
@@ -318,20 +343,90 @@ async function archivePageViews() {
       incrementMapCount(stats.timezoneStats, view.timezone || "unknown");
     }
 
-    // 批量插入或更新归档数据
+    // 计算会话统计并批量插入或更新归档数据
+    const SESSION_TIMEOUT = 30 * 60 * 1000; // 30分钟会话超时
+
     for (const stats of archiveMap.values()) {
+      // 计算会话相关指标
+      let totalSessions = 0;
+      let bounces = 0;
+      let totalDuration = 0;
+      let _sessionsWithDuration = 0;
+
+      // 分析每个访客的会话
+      for (const views of stats.visitorSessions.values()) {
+        if (views.length === 0) continue;
+
+        // 按时间排序
+        views.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+        let sessionPageCount = 0;
+        let sessionStartTime = views[0]!.timestamp.getTime();
+
+        for (let i = 0; i < views.length; i++) {
+          const currentView = views[i]!;
+          const currentTime = currentView.timestamp.getTime();
+
+          if (
+            i === 0 ||
+            currentTime - views[i - 1]!.timestamp.getTime() > SESSION_TIMEOUT
+          ) {
+            // 新会话开始
+            if (i > 0) {
+              // 保存上一个会话的统计
+              totalSessions++;
+              if (sessionPageCount === 1) {
+                bounces++;
+              }
+              if (sessionPageCount > 1) {
+                const duration =
+                  views[i - 1]!.timestamp.getTime() - sessionStartTime;
+                totalDuration += duration;
+                _sessionsWithDuration++;
+              }
+            }
+            sessionPageCount = 1;
+            sessionStartTime = currentTime;
+          } else {
+            sessionPageCount++;
+          }
+        }
+
+        // 保存最后一个会话
+        totalSessions++;
+        if (sessionPageCount === 1) {
+          bounces++;
+        }
+        if (sessionPageCount > 1) {
+          const duration =
+            views[views.length - 1]!.timestamp.getTime() - sessionStartTime;
+          totalDuration += duration;
+          _sessionsWithDuration++;
+        }
+      }
+
+      // 转换路径统计为 JSON 格式
+      const pathStatsJson: Record<string, { views: number; visitors: number }> =
+        {};
+      for (const [path, pathData] of stats.pathStats.entries()) {
+        pathStatsJson[path] = {
+          views: pathData.views,
+          visitors: pathData.visitors.size,
+        };
+      }
+
       await prisma.pageViewArchive.upsert({
         where: {
-          path_date: {
-            path: stats.path,
-            date: stats.date,
-          },
+          date: stats.date,
         },
         create: {
-          path: stats.path,
           date: stats.date,
           totalViews: stats.totalViews,
           uniqueVisitors: stats.uniqueVisitors.size,
+          totalSessions,
+          bounces,
+          totalDuration: Math.round(totalDuration / 1000), // 转换为秒
+          pathStats: pathStatsJson,
           refererStats: Object.fromEntries(stats.refererStats),
           countryStats: Object.fromEntries(stats.countryStats),
           regionStats: Object.fromEntries(stats.regionStats),
@@ -346,6 +441,10 @@ async function archivePageViews() {
         update: {
           totalViews: stats.totalViews,
           uniqueVisitors: stats.uniqueVisitors.size,
+          totalSessions,
+          bounces,
+          totalDuration: Math.round(totalDuration / 1000), // 转换为秒
+          pathStats: pathStatsJson,
           refererStats: Object.fromEntries(stats.refererStats),
           countryStats: Object.fromEntries(stats.countryStats),
           regionStats: Object.fromEntries(stats.regionStats),
@@ -752,10 +851,13 @@ export async function getAnalyticsStats(
 
     // 2. 如果需要，查询归档数据
     let archivedData: Array<{
-      path: string;
       date: Date;
       totalViews: number;
       uniqueVisitors: number;
+      totalSessions: number;
+      bounces: number;
+      totalDuration: number;
+      pathStats: Record<string, { views: number; visitors: number }> | null;
       refererStats: Record<string, number> | null;
       countryStats: Record<string, number> | null;
       regionStats: Record<string, number> | null;
@@ -777,10 +879,13 @@ export async function getAnalyticsStats(
         },
       },
       select: {
-        path: true,
         date: true,
         totalViews: true,
         uniqueVisitors: true,
+        totalSessions: true,
+        bounces: true,
+        totalDuration: true,
+        pathStats: true,
         refererStats: true,
         countryStats: true,
         regionStats: true,
@@ -795,6 +900,10 @@ export async function getAnalyticsStats(
     });
     archivedData = rawArchived.map((item) => ({
       ...item,
+      pathStats: item.pathStats as Record<
+        string,
+        { views: number; visitors: number }
+      > | null,
       refererStats: item.refererStats as Record<string, number> | null,
       countryStats: item.countryStats as Record<string, number> | null,
       regionStats: item.regionStats as Record<string, number> | null,
@@ -1008,11 +1117,13 @@ export async function getAnalyticsStats(
     for (const view of pageViews) {
       pathCountMap.set(view.path, (pathCountMap.get(view.path) || 0) + 1);
     }
+    // 从归档数据的 pathStats 中提取路径统计
     for (const archive of archivedData) {
-      pathCountMap.set(
-        archive.path,
-        (pathCountMap.get(archive.path) || 0) + archive.totalViews,
-      );
+      if (archive.pathStats) {
+        for (const [path, stats] of Object.entries(archive.pathStats)) {
+          pathCountMap.set(path, (pathCountMap.get(path) || 0) + stats.views);
+        }
+      }
     }
 
     const totalPathViews = Array.from(pathCountMap.values()).reduce(

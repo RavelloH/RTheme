@@ -439,14 +439,12 @@ model PageView {
 
   // 会话和访客跟踪
   visitorId String  @db.VarChar(100) // 访客ID
-  sessionId String? @db.VarChar(100) // 会话ID
   duration  Int?    @default(0) // 停留时长（秒）
 
   // 索引优化
   @@index([path, timestamp])
   @@index([timestamp])
   @@index([visitorId])
-  @@index([sessionId])
   @@index([country, timestamp]) // 按国家统计
   @@index([region, timestamp]) // 按地区统计
   @@index([city, timestamp]) // 按城市统计
@@ -455,8 +453,7 @@ model PageView {
 // 页面浏览存档表 - 压缩存储历史浏览数据
 model PageViewArchive {
   id   String   @id @default(uuid())
-  path String   @db.VarChar(500)
-  date DateTime @db.Date // 存档日期
+  date DateTime @db.Date @unique // 存档日期(每天一条记录)
 
   // 汇总统计数据
   totalViews     Int @default(0)
@@ -464,6 +461,9 @@ model PageViewArchive {
   totalSessions  Int @default(0)
   bounces        Int @default(0) // 跳出次数（单页会话）
   totalDuration  Int @default(0) // 总停留时长（秒）
+
+  // 路径统计(聚合所有路径的访问数据)
+  pathStats Json? // { "path1": { views: 100, visitors: 50 }, "path2": { ... } }
 
   refererStats Json?
 
@@ -481,9 +481,7 @@ model PageViewArchive {
 
   createdAt DateTime @default(now())
 
-  @@unique([path, date])
   // 索引优化
-  @@index([path])
   @@index([date])
 }
 
