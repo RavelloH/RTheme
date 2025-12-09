@@ -178,3 +178,112 @@ export async function renderPostContent(
     throw new Error(`Unsupported post mode: ${post.postMode}`);
   }
 }
+
+export interface AdjacentPostData {
+  title: string;
+  slug: string;
+  publishedAt: Date | null;
+  categories: Array<{
+    name: string;
+    slug: string;
+  }>;
+  tags: Array<{
+    name: string;
+    slug: string;
+  }>;
+  featuredImage: string | null;
+  excerpt: string | null;
+  isPinned: boolean;
+}
+
+export interface AdjacentPosts {
+  previous: AdjacentPostData | null;
+  next: AdjacentPostData | null;
+}
+
+/**
+ * 获取相邻的文章（上一篇和下一篇）
+ * 基于发布时间排序
+ */
+export async function getAdjacentPosts(
+  currentSlug: string,
+): Promise<AdjacentPosts> {
+  // 首先获取当前文章的发布时间
+  const currentPost = await prisma.post.findUnique({
+    where: { slug: currentSlug },
+    select: { publishedAt: true },
+  });
+
+  if (!currentPost?.publishedAt) {
+    return { previous: null, next: null };
+  }
+
+  const baseWhere = {
+    status: "PUBLISHED" as const,
+    deletedAt: null,
+    publishedAt: { not: null },
+  };
+
+  // 获取上一篇文章（发布时间早于当前文章的最新一篇）
+  const previousPost = await prisma.post.findFirst({
+    where: {
+      ...baseWhere,
+      publishedAt: { lt: currentPost.publishedAt },
+    },
+    orderBy: { publishedAt: "desc" },
+    select: {
+      title: true,
+      slug: true,
+      publishedAt: true,
+      featuredImage: true,
+      excerpt: true,
+      isPinned: true,
+      categories: {
+        select: {
+          name: true,
+          slug: true,
+        },
+      },
+      tags: {
+        select: {
+          name: true,
+          slug: true,
+        },
+      },
+    },
+  });
+
+  // 获取下一篇文章（发布时间晚于当前文章的最早一篇）
+  const nextPost = await prisma.post.findFirst({
+    where: {
+      ...baseWhere,
+      publishedAt: { gt: currentPost.publishedAt },
+    },
+    orderBy: { publishedAt: "asc" },
+    select: {
+      title: true,
+      slug: true,
+      publishedAt: true,
+      featuredImage: true,
+      excerpt: true,
+      isPinned: true,
+      categories: {
+        select: {
+          name: true,
+          slug: true,
+        },
+      },
+      tags: {
+        select: {
+          name: true,
+          slug: true,
+        },
+      },
+    },
+  });
+
+  return {
+    previous: previousPost,
+    next: nextPost,
+  };
+}

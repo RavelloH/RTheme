@@ -14,7 +14,11 @@ import {
 import CMSImage from "@/components/CMSImage";
 import MDXRenderer from "@/components/MDXRenderer";
 import PostToc from "@/components/PostToc";
-import { getPublishedPost, renderPostContent } from "@/lib/server/post";
+import {
+  getPublishedPost,
+  renderPostContent,
+  getAdjacentPosts,
+} from "@/lib/server/post";
 import { notFound } from "next/navigation";
 import Link from "@/components/Link";
 import {
@@ -31,6 +35,7 @@ import { getConfig } from "@/lib/server/configCache";
 import React from "react";
 import CommentsSection from "@/components/client/CommentsSection";
 import { ToastProvider } from "@/ui/Toast";
+import AdjacentPostCard from "@/components/AdjacentPostCard";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -61,7 +66,12 @@ export async function generateMetadata({ params }: PageProps) {
 export default async function PostPage({ params }: PageProps) {
   const { slug } = await params;
 
-  let post, renderedContent, categoryPath, categorySlugPath, postMediaFileMap;
+  let post,
+    renderedContent,
+    categoryPath,
+    categorySlugPath,
+    postMediaFileMap,
+    adjacentPosts;
   const [
     commentEnabled,
     placeholder,
@@ -85,8 +95,11 @@ export default async function PostPage({ params }: PageProps) {
   ]);
 
   try {
-    // 获取文章数据
-    post = await getPublishedPost(slug);
+    // 获取文章数据和相邻文章
+    [post, adjacentPosts] = await Promise.all([
+      getPublishedPost(slug),
+      getAdjacentPosts(slug),
+    ]);
 
     // 获取所有分类的路径
     if (post.categories.length > 0) {
@@ -108,8 +121,15 @@ export default async function PostPage({ params }: PageProps) {
     const allImageUrls = new Set<string>();
 
     if (post.featuredImage) {
-      postMediaFileMap = await batchQueryMediaFiles([post.featuredImage]);
       allImageUrls.add(post.featuredImage);
+    }
+
+    // 添加相邻文章的封面图片
+    if (adjacentPosts.previous?.featuredImage) {
+      allImageUrls.add(adjacentPosts.previous.featuredImage);
+    }
+    if (adjacentPosts.next?.featuredImage) {
+      allImageUrls.add(adjacentPosts.next.featuredImage);
     }
 
     // 查询文章内容中的所有图片
@@ -118,13 +138,8 @@ export default async function PostPage({ params }: PageProps) {
       allImageUrls.add(`/p/${hash.fullHash}`);
     });
 
-    // 批量查询文章内容中的所有图片媒体信息
-    const contentMediaFileMap = await batchQueryMediaFiles(
-      Array.from(allImageUrls),
-    );
-
-    // 合并媒体文件映射
-    postMediaFileMap = new Map([...postMediaFileMap, ...contentMediaFileMap]);
+    // 批量查询所有图片媒体信息
+    postMediaFileMap = await batchQueryMediaFiles(Array.from(allImageUrls));
   } catch {
     // 如果文章不存在或未发布，返回 404
     notFound();
@@ -339,6 +354,61 @@ export default async function PostPage({ params }: PageProps) {
                 </div>
               </div>
             </div>
+            {/* 上一篇和下一篇文章 */}
+            {(adjacentPosts.previous || adjacentPosts.next) && (
+              <div className="max-w-7xl mx-auto mt-12 pt-8 relative">
+                {/* 渐变分隔线 */}
+                <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-l from-transparent via-border to-transparent" />
+                <h2 className="text-2xl font-bold mb-6">继续阅读</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 h-48">
+                  {adjacentPosts.previous && (
+                    <div className="flex items-center justify-start h-full w-full">
+                      <AdjacentPostCard
+                        title={adjacentPosts.previous.title}
+                        slug={adjacentPosts.previous.slug}
+                        date={
+                          adjacentPosts.previous.publishedAt?.toISOString() ||
+                          ""
+                        }
+                        category={adjacentPosts.previous.categories}
+                        tags={adjacentPosts.previous.tags}
+                        cover={
+                          adjacentPosts.previous.featuredImage
+                            ? processImageUrl(
+                                adjacentPosts.previous.featuredImage,
+                                postMediaFileMap,
+                              )
+                            : undefined
+                        }
+                        direction="previous"
+                      />
+                    </div>
+                  )}
+                  {adjacentPosts.next && (
+                    <div className="flex items-center justify-end h-full w-full">
+                      <AdjacentPostCard
+                        title={adjacentPosts.next.title}
+                        slug={adjacentPosts.next.slug}
+                        date={
+                          adjacentPosts.next.publishedAt?.toISOString() || ""
+                        }
+                        category={adjacentPosts.next.categories}
+                        tags={adjacentPosts.next.tags}
+                        cover={
+                          adjacentPosts.next.featuredImage
+                            ? processImageUrl(
+                                adjacentPosts.next.featuredImage,
+                                postMediaFileMap,
+                              )
+                            : undefined
+                        }
+                        direction="next"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             {/* 评论区 */}
             {commentEnabled && (
               <ToastProvider>

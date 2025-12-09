@@ -57,6 +57,7 @@ export default function DimensionStats({
       <AutoTransition type="slideUp" className="h-full">
         {displayItems && chartData ? (
           <div key="content" className="flex flex-col h-full p-10">
+            <div className="text-2xl mb-4">{title}</div>
             {displayItems.length === 0 ? (
               <div className="flex-1 flex items-center justify-center text-muted-foreground">
                 暂无数据
