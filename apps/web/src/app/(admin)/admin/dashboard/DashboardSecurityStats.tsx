@@ -124,7 +124,7 @@ export default function DashboardSecurityStats() {
         >
           <div>
             <div className="text-2xl py-2">
-              <Link href="/admin/security" className="hover:underline">
+              <Link href="/admin/security" presets={["hover-underline"]}>
                 安全中心
               </Link>
             </div>

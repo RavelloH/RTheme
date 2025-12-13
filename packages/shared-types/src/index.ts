@@ -16,6 +16,10 @@ export * from "./api/comment.js";
 export * from "./api/security.js";
 export * from "./api/analytics.js";
 export * from "./api/analytics-stats.js";
+export * from "./api/page.js";
+export * from "./api/storage.js";
+export * from "./api/media.js";
+export * from "./api/menu.js";
 
 // 类型安全的 API 客户端工具
 export { createApiClient } from "./client.js";

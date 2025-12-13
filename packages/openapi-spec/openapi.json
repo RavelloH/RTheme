@@ -15551,6 +15551,2093 @@
           "data"
         ],
         "additionalProperties": false
+      },
+      "GetStorageList": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "page": {
+            "default": 1,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "pageSize": {
+            "default": 25,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "sortBy": {
+            "default": "createdAt",
+            "type": "string",
+            "enum": [
+              "id",
+              "name",
+              "type",
+              "createdAt",
+              "updatedAt"
+            ]
+          },
+          "sortOrder": {
+            "default": "desc",
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "search": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "LOCAL",
+              "AWS_S3",
+              "GITHUB_PAGES",
+              "VERCEL_BLOB"
+            ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "isDefault": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "page",
+          "pageSize",
+          "sortBy",
+          "sortOrder"
+        ],
+        "additionalProperties": false
+      },
+      "GetStorageDetail": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "CreateStorage": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "type": {
+            "default": "LOCAL",
+            "type": "string",
+            "enum": [
+              "LOCAL",
+              "AWS_S3",
+              "GITHUB_PAGES",
+              "VERCEL_BLOB"
+            ]
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "baseUrl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "isActive": {
+            "default": true,
+            "type": "boolean"
+          },
+          "isDefault": {
+            "default": false,
+            "type": "boolean"
+          },
+          "maxFileSize": {
+            "default": 52428800,
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "pathTemplate": {
+            "default": "/{year}/{month}/{filename}",
+            "type": "string"
+          },
+          "config": {}
+        },
+        "required": [
+          "name",
+          "type",
+          "displayName",
+          "baseUrl",
+          "isActive",
+          "isDefault",
+          "maxFileSize",
+          "pathTemplate"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateStorage": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "baseUrl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "maxFileSize": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "pathTemplate": {
+            "type": "string"
+          },
+          "config": {}
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "DeleteStorage": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "ids": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "additionalProperties": false
+      },
+      "ToggleStorageStatus": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "isActive"
+        ],
+        "additionalProperties": false
+      },
+      "SetDefaultStorage": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "GetStorageStats": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "force": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "StorageListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "LOCAL",
+              "AWS_S3",
+              "GITHUB_PAGES",
+              "VERCEL_BLOB"
+            ]
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "baseUrl": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "maxFileSize": {
+            "type": "number"
+          },
+          "pathTemplate": {
+            "type": "string"
+          },
+          "mediaCount": {
+            "type": "number"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "displayName",
+          "baseUrl",
+          "isActive",
+          "isDefault",
+          "maxFileSize",
+          "pathTemplate",
+          "mediaCount",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "StorageDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "LOCAL",
+              "AWS_S3",
+              "GITHUB_PAGES",
+              "VERCEL_BLOB"
+            ]
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "baseUrl": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "maxFileSize": {
+            "type": "number"
+          },
+          "pathTemplate": {
+            "type": "string"
+          },
+          "config": {},
+          "mediaCount": {
+            "type": "number"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "displayName",
+          "baseUrl",
+          "isActive",
+          "isDefault",
+          "maxFileSize",
+          "pathTemplate",
+          "config",
+          "mediaCount",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "CreateStorageResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "LOCAL",
+              "AWS_S3",
+              "GITHUB_PAGES",
+              "VERCEL_BLOB"
+            ]
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "baseUrl": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "maxFileSize": {
+            "type": "number"
+          },
+          "pathTemplate": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "displayName",
+          "baseUrl",
+          "isActive",
+          "isDefault",
+          "maxFileSize",
+          "pathTemplate",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateStorageResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "LOCAL",
+              "AWS_S3",
+              "GITHUB_PAGES",
+              "VERCEL_BLOB"
+            ]
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "baseUrl": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "maxFileSize": {
+            "type": "number"
+          },
+          "pathTemplate": {
+            "type": "string"
+          },
+          "config": {},
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "displayName",
+          "baseUrl",
+          "isActive",
+          "isDefault",
+          "maxFileSize",
+          "pathTemplate",
+          "config",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "DeleteStorageResponse": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "number"
+          },
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "deleted",
+          "ids"
+        ],
+        "additionalProperties": false
+      },
+      "ToggleStorageStatusResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "isActive",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "SetDefaultStorageResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "isDefault",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "GetStorageStatsSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "updatedAt": {
+                "type": "string"
+              },
+              "cache": {
+                "type": "boolean"
+              },
+              "total": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "number"
+                  },
+                  "active": {
+                    "type": "number"
+                  },
+                  "inactive": {
+                    "type": "number"
+                  },
+                  "default": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "total",
+                  "active",
+                  "inactive",
+                  "default"
+                ],
+                "additionalProperties": false
+              },
+              "byType": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "LOCAL",
+                        "AWS_S3",
+                        "GITHUB_PAGES",
+                        "VERCEL_BLOB"
+                      ]
+                    },
+                    "count": {
+                      "type": "number"
+                    },
+                    "active": {
+                      "type": "number"
+                    },
+                    "mediaCount": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "count",
+                    "active",
+                    "mediaCount"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "storage": {
+                "type": "object",
+                "properties": {
+                  "totalProviders": {
+                    "type": "number"
+                  },
+                  "activeProviders": {
+                    "type": "number"
+                  },
+                  "totalMediaFiles": {
+                    "type": "number"
+                  },
+                  "averageFileSize": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "totalProviders",
+                  "activeProviders",
+                  "totalMediaFiles",
+                  "averageFileSize"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "updatedAt",
+              "cache",
+              "total",
+              "byType",
+              "storage"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "GetMediaList": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "page": {
+            "default": 1,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "pageSize": {
+            "default": 25,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "sortBy": {
+            "default": "createdAt",
+            "type": "string",
+            "enum": [
+              "id",
+              "createdAt",
+              "size",
+              "originalName"
+            ]
+          },
+          "sortOrder": {
+            "default": "desc",
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "search": {
+            "type": "string"
+          },
+          "mediaType": {
+            "type": "string",
+            "enum": [
+              "IMAGE",
+              "VIDEO",
+              "AUDIO",
+              "FILE"
+            ]
+          },
+          "userUid": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "sizeMin": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "sizeMax": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "inGallery": {
+            "type": "boolean"
+          },
+          "isOptimized": {
+            "type": "boolean"
+          },
+          "createdAtStart": {
+            "type": "string"
+          },
+          "createdAtEnd": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "page",
+          "pageSize",
+          "sortBy",
+          "sortOrder"
+        ],
+        "additionalProperties": false
+      },
+      "GetMediaDetail": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateMedia": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "originalName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "altText": {
+            "nullable": true,
+            "type": "string",
+            "maxLength": 255
+          },
+          "inGallery": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "DeleteMedia": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "ids": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "additionalProperties": false
+      },
+      "GetMediaStats": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "days": {
+            "default": 30,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 365
+          },
+          "force": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "days",
+          "force"
+        ],
+        "additionalProperties": false
+      },
+      "GetMediaTrends": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "days": {
+            "default": 30,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 365
+          },
+          "count": {
+            "default": 30,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "days",
+          "count"
+        ],
+        "additionalProperties": false
+      },
+      "MediaListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "originalName": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "imageId": {
+            "type": "string"
+          },
+          "shortHash": {
+            "type": "string"
+          },
+          "mediaType": {
+            "type": "string",
+            "enum": [
+              "IMAGE",
+              "VIDEO",
+              "AUDIO",
+              "FILE"
+            ]
+          },
+          "size": {
+            "type": "number"
+          },
+          "width": {
+            "nullable": true,
+            "type": "number"
+          },
+          "height": {
+            "nullable": true,
+            "type": "number"
+          },
+          "altText": {
+            "nullable": true,
+            "type": "string"
+          },
+          "blur": {
+            "nullable": true,
+            "type": "string"
+          },
+          "inGallery": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "postsCount": {
+            "type": "number"
+          },
+          "user": {
+            "nullable": true,
+            "type": "object",
+            "properties": {
+              "uid": {
+                "type": "number"
+              },
+              "username": {
+                "type": "string"
+              },
+              "nickname": {
+                "nullable": true,
+                "type": "string"
+              }
+            },
+            "required": [
+              "uid",
+              "username",
+              "nickname"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "fileName",
+          "originalName",
+          "mimeType",
+          "imageId",
+          "shortHash",
+          "mediaType",
+          "size",
+          "width",
+          "height",
+          "altText",
+          "blur",
+          "inGallery",
+          "createdAt",
+          "postsCount",
+          "user"
+        ],
+        "additionalProperties": false
+      },
+      "MediaDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "originalName": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "size": {
+            "type": "number"
+          },
+          "shortHash": {
+            "type": "string"
+          },
+          "imageId": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "mediaType": {
+            "type": "string",
+            "enum": [
+              "IMAGE",
+              "VIDEO",
+              "AUDIO",
+              "FILE"
+            ]
+          },
+          "width": {
+            "nullable": true,
+            "type": "number"
+          },
+          "height": {
+            "nullable": true,
+            "type": "number"
+          },
+          "altText": {
+            "nullable": true,
+            "type": "string"
+          },
+          "blur": {
+            "nullable": true,
+            "type": "string"
+          },
+          "thumbnails": {
+            "nullable": true
+          },
+          "exif": {
+            "nullable": true
+          },
+          "inGallery": {
+            "type": "boolean"
+          },
+          "isOptimized": {
+            "type": "boolean"
+          },
+          "storageUrl": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "storageProviderId": {
+            "type": "string"
+          },
+          "user": {
+            "nullable": true,
+            "type": "object",
+            "properties": {
+              "uid": {
+                "type": "number"
+              },
+              "username": {
+                "type": "string"
+              },
+              "nickname": {
+                "nullable": true,
+                "type": "string"
+              }
+            },
+            "required": [
+              "uid",
+              "username",
+              "nickname"
+            ],
+            "additionalProperties": false
+          },
+          "storageProvider": {
+            "nullable": true,
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "displayName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "displayName"
+            ],
+            "additionalProperties": false
+          },
+          "posts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "number"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "slug": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "slug"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "fileName",
+          "originalName",
+          "mimeType",
+          "size",
+          "shortHash",
+          "imageId",
+          "hash",
+          "mediaType",
+          "width",
+          "height",
+          "altText",
+          "blur",
+          "thumbnails",
+          "exif",
+          "inGallery",
+          "isOptimized",
+          "storageUrl",
+          "createdAt",
+          "storageProviderId",
+          "user",
+          "storageProvider",
+          "posts"
+        ],
+        "additionalProperties": false
+      },
+      "MediaStats": {
+        "type": "object",
+        "properties": {
+          "updatedAt": {
+            "type": "string"
+          },
+          "cache": {
+            "type": "boolean"
+          },
+          "totalFiles": {
+            "type": "number"
+          },
+          "totalSize": {
+            "type": "number"
+          },
+          "typeDistribution": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "IMAGE",
+                    "VIDEO",
+                    "AUDIO",
+                    "FILE"
+                  ]
+                },
+                "count": {
+                  "type": "number"
+                },
+                "size": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "count",
+                "size"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "dailyStats": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string"
+                },
+                "totalFiles": {
+                  "type": "number"
+                },
+                "newFiles": {
+                  "type": "number"
+                },
+                "totalSize": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "date",
+                "totalFiles",
+                "newFiles",
+                "totalSize"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "updatedAt",
+          "cache",
+          "totalFiles",
+          "totalSize",
+          "typeDistribution",
+          "dailyStats"
+        ],
+        "additionalProperties": false
+      },
+      "MediaTrendItem": {
+        "type": "object",
+        "properties": {
+          "time": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "number"
+              },
+              "new": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "total",
+              "new"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "time",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "GetMenusStats": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "force": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "force"
+        ],
+        "additionalProperties": false
+      },
+      "GetMenusStatsSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "updatedAt": {
+                "type": "string"
+              },
+              "cache": {
+                "type": "boolean"
+              },
+              "total": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "active": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "suspended": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "main": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "common": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "outsite": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "total",
+                  "active",
+                  "suspended",
+                  "main",
+                  "common",
+                  "outsite"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "updatedAt",
+              "cache",
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "GetMenusList": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "page": {
+            "default": 1,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "pageSize": {
+            "default": 25,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "sortBy": {
+            "default": "order",
+            "type": "string",
+            "enum": [
+              "name",
+              "order",
+              "createdAt",
+              "updatedAt"
+            ]
+          },
+          "sortOrder": {
+            "default": "asc",
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "status": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "SUSPENDED"
+              ]
+            }
+          },
+          "category": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "MAIN",
+                "COMMON",
+                "OUTSITE"
+              ]
+            }
+          },
+          "search": {
+            "type": "string"
+          },
+          "createdAtStart": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "createdAtEnd": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "updatedAtStart": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "updatedAtEnd": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "page",
+          "pageSize",
+          "sortBy",
+          "sortOrder"
+        ],
+        "additionalProperties": false
+      },
+      "GetMenusListSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "icon": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "link": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "slug": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ACTIVE",
+                    "SUSPENDED"
+                  ]
+                },
+                "order": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "category": {
+                  "type": "string",
+                  "enum": [
+                    "MAIN",
+                    "COMMON",
+                    "OUTSITE"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                },
+                "page": {
+                  "nullable": true,
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "slug",
+                    "title"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "icon",
+                "link",
+                "slug",
+                "status",
+                "order",
+                "category",
+                "createdAt",
+                "updatedAt",
+                "page"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "GetMenuDetail": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "GetMenuDetailSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "icon": {
+                "nullable": true,
+                "type": "string"
+              },
+              "link": {
+                "nullable": true,
+                "type": "string"
+              },
+              "slug": {
+                "nullable": true,
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ACTIVE",
+                  "SUSPENDED"
+                ]
+              },
+              "order": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "category": {
+                "type": "string",
+                "enum": [
+                  "MAIN",
+                  "COMMON",
+                  "OUTSITE"
+                ]
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              },
+              "page": {
+                "nullable": true,
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "slug": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "slug",
+                  "title"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "icon",
+              "link",
+              "slug",
+              "status",
+              "order",
+              "category",
+              "createdAt",
+              "updatedAt",
+              "page"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "CreateMenu": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "icon": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "link": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "slug": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "status": {
+            "default": "ACTIVE",
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "SUSPENDED"
+            ]
+          },
+          "order": {
+            "default": 0,
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "category": {
+            "default": "COMMON",
+            "type": "string",
+            "enum": [
+              "MAIN",
+              "COMMON",
+              "OUTSITE"
+            ]
+          },
+          "pageId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "status",
+          "order",
+          "category"
+        ],
+        "additionalProperties": false
+      },
+      "CreateMenuSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateMenu": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "icon": {
+            "nullable": true,
+            "type": "string",
+            "maxLength": 100
+          },
+          "link": {
+            "nullable": true,
+            "type": "string",
+            "maxLength": 255
+          },
+          "slug": {
+            "nullable": true,
+            "type": "string",
+            "maxLength": 100
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "SUSPENDED"
+            ]
+          },
+          "order": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "MAIN",
+              "COMMON",
+              "OUTSITE"
+            ]
+          },
+          "pageId": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateMenuSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateMenus": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "ids": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "SUSPENDED"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "MAIN",
+              "COMMON",
+              "OUTSITE"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "icon": {
+            "nullable": true,
+            "type": "string",
+            "maxLength": 100
+          },
+          "link": {
+            "nullable": true,
+            "type": "string",
+            "maxLength": 255
+          },
+          "slug": {
+            "nullable": true,
+            "type": "string",
+            "maxLength": 100
+          },
+          "order": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "pageId": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateMenusSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "updated": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "updated"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "DeleteMenus": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "ids": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "additionalProperties": false
+      },
+      "DeleteMenusSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "deleted": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "deleted"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
       }
     },
     "securitySchemes": {
