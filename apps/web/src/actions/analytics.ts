@@ -1059,7 +1059,8 @@ export async function getAnalyticsStats(
     if (isHourlyMode) {
       // 小时模式：按小时初始化
       const totalHours = calculatedDays; // 在小时模式下，calculatedDays 实际存储的是小时数
-      for (let i = 0; i < totalHours; i++) {
+      // 包含当前小时，所以是 <= totalHours
+      for (let i = 0; i <= totalHours; i++) {
         const hourDate = new Date(startDate.getTime() + i * 60 * 60 * 1000);
         const hourKey = hourDate.toISOString().substring(0, 13) + ":00:00.000Z"; // YYYY-MM-DDTHH:00:00.000Z 格式
         dailyTrendMap.set(hourKey, { views: 0, visitors: new Set() });
@@ -1147,7 +1148,8 @@ export async function getAnalyticsStats(
     // 初始化所有时间点
     if (isHourlyMode) {
       // 小时模式：按小时初始化
-      for (let i = 0; i < calculatedDays; i++) {
+      // 包含当前小时，所以是 <= calculatedDays
+      for (let i = 0; i <= calculatedDays; i++) {
         const hourDate = new Date(startDate.getTime() + i * 60 * 60 * 1000);
         const hourKey = hourDate.toISOString().substring(0, 13) + ":00:00.000Z"; // YYYY-MM-DDTHH:00:00.000Z 格式
         dailyPathTrendMap.set(hourKey, {});
@@ -1525,8 +1527,8 @@ export async function getRealTimeStats(
       { views: number; visitors: Set<string> }
     >();
 
-    // 初始化所有分钟桶
-    for (let i = 0; i < minutes; i++) {
+    // 初始化所有分钟桶（包含当前分钟）
+    for (let i = 0; i <= minutes; i++) {
       const minuteTime = new Date(startTime.getTime() + i * 60 * 1000);
       // 格式化为 YYYY-MM-DDTHH:mm:00.000Z
       const minuteKey = new Date(
