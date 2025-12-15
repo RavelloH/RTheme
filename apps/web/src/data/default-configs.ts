@@ -282,6 +282,17 @@ export const defaultConfigs: DefaultConfig[] = [
     description: "[可选] 邮件通知发信地址。留空以关闭邮件通知功能",
   },
   {
+    key: "notice.email.from.name",
+    value: { default: "NeutralPress" },
+    description: "邮件发件人显示名称",
+  },
+  {
+    key: "notice.email.replyTo",
+    value: { default: "" },
+    description:
+      "[可选] 邮件回复地址。如果留空，则使用 notice.email 作为回复地址",
+  },
+  {
     key: "notice.email.resend.apiKey",
     value: { default: "" },
     description:

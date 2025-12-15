@@ -401,8 +401,33 @@ export async function register(
       });
     }
 
-    // TODO: 发送验证邮件
-    // TODO: 接入动态config
+    // 发送验证邮件
+
+    try {
+      const { sendEmail } = await import("@/lib/server/email");
+      const { renderEmail } = await import("@/emails/utils");
+      const { EmailVerificationTemplate } = await import("@/emails/templates");
+      const siteName = (await getConfig<string>("site.name")) || "NeutralPress";
+      const siteUrl = (await getConfig<string>("site.url")) || "";
+
+      const emailComponent = EmailVerificationTemplate({
+        username: user.nickname || user.username,
+        verificationCode: emailVerifyCode.split("-")[0]!, // 只显示6位数字，不显示时间戳
+        siteName,
+        siteUrl,
+      });
+
+      const { html, text } = await renderEmail(emailComponent);
+
+      await sendEmail({
+        to: user.email,
+        subject: "验证您的邮箱",
+        html,
+        text,
+      });
+    } catch (error) {
+      console.error("发送验证邮件失败:", error);
+    }
 
     return response.ok({
       message: "注册成功，请检查邮箱以验证账户",
@@ -1028,7 +1053,39 @@ export async function resendEmailVerification(
       },
     });
 
-    // TODO: 发送验证邮件
+    // 发送验证邮件
+    try {
+      const { sendEmail } = await import("@/lib/server/email");
+      const { renderEmail } = await import("@/emails/utils");
+      const { EmailVerificationTemplate } = await import("@/emails/templates");
+      const siteName = (await getConfig<string>("site.name")) || "NeutralPress";
+      const siteUrl = (await getConfig<string>("site.url")) || "";
+
+      const emailComponent = EmailVerificationTemplate({
+        username: user.email,
+        verificationCode: emailVerifyCode.split("-")[0]!, // 只显示6位数字，不显示时间戳
+        siteName,
+        siteUrl,
+      });
+
+      const { html, text } = await renderEmail(emailComponent);
+
+      await sendEmail({
+        to: user.email,
+        subject: "验证您的邮箱",
+        html,
+        text,
+      });
+    } catch (error) {
+      console.error("发送验证邮件失败:", error);
+      return response.serverError({
+        message: "发送失败，请稍后重试",
+        error: {
+          code: "EMAIL_SENDING_FAILED",
+          message: "发送失败，请稍后重试",
+        },
+      });
+    }
 
     return response.ok({
       message: "验证码已重新发送，请检查邮箱",

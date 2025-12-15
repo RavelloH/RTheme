@@ -16,9 +16,10 @@ import { LoginButton } from "../../UserInfo";
 
 interface FooterProps {
   menus: MenuItem[];
+  mainColor: string;
 }
 
-export default function FooterDesktop({ menus }: FooterProps) {
+export default function FooterDesktop({ menus, mainColor }: FooterProps) {
   const [shouldAnimate, setShouldAnimate] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const pathname = usePathname();
@@ -423,7 +424,7 @@ export default function FooterDesktop({ menus }: FooterProps) {
         }}
       >
         <div className="h-full border-r border-border flex items-center justify-center w-[5em]">
-          <LoginButton />
+          <LoginButton mainColor={mainColor} />
         </div>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-muted-foreground relative">

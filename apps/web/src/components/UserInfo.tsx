@@ -21,6 +21,8 @@ import {
   RiLoginBoxLine,
   RiUserAddLine,
 } from "@remixicon/react";
+import generateGradient from "@/lib/shared/gradient";
+import generateComplementary from "@/lib/shared/complementary";
 
 type StoredUserInfo = {
   uid?: number;
@@ -79,7 +81,7 @@ const parseUserInfo = (raw: string | null): StoredUserInfo | null => {
 };
 
 // 登录按钮组件，包含菜单状态管理
-export function LoginButton() {
+export function LoginButton({ mainColor }: { mainColor: string }) {
   const navigate = useNavigateWithTransition();
   const [userInfo, setUserInfo] = useState<StoredUserInfo | null>(null);
   const { isConsoleOpen } = useConsoleStore();
@@ -130,6 +132,11 @@ export function LoginButton() {
                   email={userInfo.email}
                   shape="square"
                   size={AVATAR_SIZE}
+                  colors={generateGradient(
+                    mainColor,
+                    generateComplementary(mainColor),
+                    4,
+                  )}
                   className="h-full w-full transition-transform duration-200 group-hover:scale-105"
                 />
               ) : (
