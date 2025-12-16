@@ -52,6 +52,7 @@ import type {
 import { verifyToken } from "./captcha";
 import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
 import { getConfig } from "@/lib/server/configCache";
+import { logAuditEvent } from "./audit";
 
 type AuthActionEnvironment = "serverless" | "serveraction";
 type AuthActionConfig = { environment?: AuthActionEnvironment };
@@ -380,6 +381,11 @@ export async function register(
     const hashedPassword = await hashPassword(password);
     // 生成邮箱验证码
     const emailVerifyCode = emailUtils.generate();
+
+    // 获取客户端信息用于审计日志
+    const clientIP = await getClientIP();
+    const clientUserAgent = await getClientUserAgent();
+
     // 创建用户
     const user = await prisma.user.create({
       data: {
@@ -389,6 +395,35 @@ export async function register(
         password: hashedPassword,
         emailVerifyCode,
       },
+    });
+
+    // 记录审计日志
+    after(async () => {
+      try {
+        await logAuditEvent({
+          user: {
+            uid: user.uid.toString(),
+            ipAddress: clientIP,
+            userAgent: clientUserAgent,
+          },
+          details: {
+            action: "CREATE",
+            resourceType: "USER",
+            resourceId: user.uid.toString(),
+            vaule: {
+              old: null,
+              new: {
+                username: user.username,
+                email: user.email,
+                nickname: user.nickname,
+              },
+            },
+            description: `用户注册成功 - ${username}`,
+          },
+        });
+      } catch (error) {
+        console.error("Failed to log audit event:", error);
+      }
     });
 
     // 赋予第一个注册用户管理员权限
@@ -667,6 +702,36 @@ export async function verifyEmail(
           emailVerifyCode: null,
         },
       });
+
+      // 获取客户端信息用于审计日志
+      const clientIP = await getClientIP();
+      const clientUserAgent = await getClientUserAgent();
+
+      // 记录审计日志
+      after(async () => {
+        try {
+          await logAuditEvent({
+            user: {
+              uid: user.uid.toString(),
+              ipAddress: clientIP,
+              userAgent: clientUserAgent,
+            },
+            details: {
+              action: "UPDATE",
+              resourceType: "USER",
+              resourceId: user.uid.toString(),
+              vaule: {
+                old: { emailVerified: false },
+                new: { emailVerified: true },
+              },
+              description: `用户邮箱验证成功 - ${email}`,
+            },
+          });
+        } catch (error) {
+          console.error("Failed to log audit event:", error);
+        }
+      });
+
       return response.ok({
         message: "邮箱验证成功",
       });
@@ -789,6 +854,36 @@ export async function changePassword(
     await prisma.refreshToken.deleteMany({
       where: { userUid: user.uid },
     });
+
+    // 获取客户端信息用于审计日志
+    const clientIP = await getClientIP();
+    const clientUserAgent = await getClientUserAgent();
+
+    // 记录审计日志
+    after(async () => {
+      try {
+        await logAuditEvent({
+          user: {
+            uid: user.uid.toString(),
+            ipAddress: clientIP,
+            userAgent: clientUserAgent,
+          },
+          details: {
+            action: "UPDATE",
+            resourceType: "USER",
+            resourceId: user.uid.toString(),
+            vaule: {
+              old: { passwordChanged: false },
+              new: { passwordChanged: true },
+            },
+            description: `用户修改密码 - uid: ${user.uid}`,
+          },
+        });
+      } catch (error) {
+        console.error("Failed to log audit event:", error);
+      }
+    });
+
     // 返回成功结果
     return response.ok({
       message: "密码修改成功",
@@ -1042,6 +1137,35 @@ export async function resetPassword(
     // 注销所有会话
     await prisma.refreshToken.deleteMany({
       where: { userUid: passwordReset.userUid },
+    });
+
+    // 获取客户端信息用于审计日志
+    const clientIP = await getClientIP();
+    const clientUserAgent = await getClientUserAgent();
+
+    // 记录审计日志
+    after(async () => {
+      try {
+        await logAuditEvent({
+          user: {
+            uid: passwordReset.userUid.toString(),
+            ipAddress: clientIP,
+            userAgent: clientUserAgent,
+          },
+          details: {
+            action: "UPDATE",
+            resourceType: "USER",
+            resourceId: passwordReset.userUid.toString(),
+            vaule: {
+              old: { passwordReset: false },
+              new: { passwordReset: true },
+            },
+            description: `用户通过重置链接修改密码 - ${passwordReset.user.username}`,
+          },
+        });
+      } catch (error) {
+        console.error("Failed to log audit event:", error);
+      }
     });
 
     // 发送密码修改通知邮件

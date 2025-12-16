@@ -5,6 +5,7 @@ import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
 import type SMTPTransport from "nodemailer/lib/smtp-transport";
 import { getConfig } from "./configCache";
+import { randomInt } from "crypto";
 
 // 验证码相关常量
 const MAX_VERIFY_DURATION = 15 * 60 * 1000; // 15分钟
@@ -15,9 +16,11 @@ const MAX_VERIFY_DURATION = 15 * 60 * 1000; // 15分钟
 
 /**
  * 生成验证码（6位数字 + 时间戳）
+ * 使用 crypto.randomInt 确保密码学安全性
  */
 function generate(): string {
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  // 使用密码学安全的随机数生成器
+  const code = randomInt(100000, 1000000).toString();
   const timestamp = Date.now();
   return code + "-" + timestamp;
 }

@@ -133,18 +133,19 @@ export default function ResetPasswordSheet() {
 
     if (responseData.success) {
       setRequestButtonLoadingText("重置链接已发送，请检查邮箱");
+      // 成功发送后不重置按钮状态，保持加载状态
     } else {
       setRequestButtonLoadingText(
         responseData.message || "发送失败，请稍后重试",
       );
+      // 失败时才重置按钮状态和验证码
+      setTimeout(() => {
+        setRequestButtonLoading(false);
+        setRequestButtonVariant("secondary");
+        setRequestButtonLabel("发送重置链接");
+        broadcast({ type: "captcha-reset" });
+      }, 2000);
     }
-
-    setTimeout(() => {
-      setRequestButtonLoading(false);
-      setRequestButtonVariant("secondary");
-      setRequestButtonLabel("发送重置链接");
-      broadcast({ type: "captcha-reset" });
-    }, 2000);
   };
 
   // 重置密码
