@@ -35,16 +35,17 @@ model User {
   status UserStatus @default(ACTIVE)
 
   // 关系
-  accounts      Account[]
-  posts         Post[]
-  comments      Comment[]
-  media         Media[]
-  pages         Page[]
-  notices       Notice[]
-  messages      Message[]      @relation("MessageFrom")
-  messagesTo    Message[]      @relation("MessageTo")
-  auditLogs     AuditLog[]
-  refreshTokens RefreshToken[]
+  accounts       Account[]
+  posts          Post[]
+  comments       Comment[]
+  media          Media[]
+  pages          Page[]
+  notices        Notice[]
+  messages       Message[]       @relation("MessageFrom")
+  messagesTo     Message[]       @relation("MessageTo")
+  auditLogs      AuditLog[]
+  refreshTokens  RefreshToken[]
+  passwordResets PasswordReset[]
 
   // 索引优化
   @@index([role])
@@ -102,6 +103,7 @@ model PasswordReset {
   id        String   @id @default(uuid())
   userUid   Int
   createdAt DateTime @default(now())
+  user User @relation(fields: [userUid], references: [uid], onDelete: Cascade)
 
   @@index([createdAt])
 }
@@ -438,8 +440,8 @@ model PageView {
   timezone   String? @db.VarChar(50)
 
   // 会话和访客跟踪
-  visitorId String  @db.VarChar(100) // 访客ID
-  duration  Int?    @default(0) // 停留时长（秒）
+  visitorId String @db.VarChar(100) // 访客ID
+  duration  Int?   @default(0) // 停留时长（秒）
 
   // 索引优化
   @@index([path, timestamp])
@@ -453,7 +455,7 @@ model PageView {
 // 页面浏览存档表 - 压缩存储历史浏览数据
 model PageViewArchive {
   id   String   @id @default(uuid())
-  date DateTime @db.Date @unique // 存档日期(每天一条记录)
+  date DateTime @unique @db.Date // 存档日期(每天一条记录)
 
   // 汇总统计数据
   totalViews     Int @default(0)

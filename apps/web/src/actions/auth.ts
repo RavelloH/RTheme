@@ -840,36 +840,95 @@ export async function requestPasswordReset(
       select: {
         uid: true,
         email: true,
+        username: true,
+        nickname: true,
       },
     });
+
+    // 防止遍历：即使用户不存在也返回成功消息
     if (!user) {
       return response.ok({
-        message: "已发送重置密码链接，链接15分钟内有效",
-      });
-    } else {
-      // 添加到密码重置表
-      await prisma.passwordReset.create({
-        data: {
-          userUid: user.uid,
-        },
-      });
-      // const passwordResetCode = passwordReset.id;
-      // TODO：发送重置邮件
-      // TODO: 根据站点有无设置email确定是否过期
-      // 清理15分钟之前的请求
-      after(async () => {
-        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-        await prisma.passwordReset.deleteMany({
-          where: {
-            createdAt: { lt: fifteenMinutesAgo },
-          },
-        });
-      });
-      // 返回成功结果
-      return response.ok({
-        message: "已发送重置密码链接，链接15分钟内有效",
+        message: "已发送重置密码链接，链接30分钟内有效",
       });
     }
+
+    // 检查是否在30分钟内已经发送过重置邮件
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const recentReset = await prisma.passwordReset.findFirst({
+      where: {
+        userUid: user.uid,
+        createdAt: { gte: thirtyMinutesAgo },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    // 如果30分钟内已经发送过，不再重复发送
+    if (recentReset) {
+      return response.ok({
+        message: "已发送重置密码链接，链接30分钟内有效",
+      });
+    }
+
+    // 删除该用户的所有旧重置记录
+    await prisma.passwordReset.deleteMany({
+      where: {
+        userUid: user.uid,
+      },
+    });
+
+    // 创建新的密码重置记录
+    const passwordReset = await prisma.passwordReset.create({
+      data: {
+        userUid: user.uid,
+      },
+    });
+
+    // 发送重置密码邮件
+    after(async () => {
+      try {
+        const { sendEmail } = await import("@/lib/server/email");
+        const { renderEmail } = await import("@/emails/utils");
+        const { PasswordResetTemplate } = await import("@/emails/templates");
+        const siteName =
+          (await getConfig<string>("site.name")) || "NeutralPress";
+        const siteUrl = (await getConfig<string>("site.url")) || "";
+
+        const emailComponent = PasswordResetTemplate({
+          username: user.nickname || user.username,
+          resetCode: passwordReset.id,
+          resetUrl: `${siteUrl}/reset-password?code=${passwordReset.id}`,
+          siteName,
+          siteUrl,
+        });
+
+        const { html, text } = await renderEmail(emailComponent);
+
+        await sendEmail({
+          to: user.email,
+          subject: "重置您的密码",
+          html,
+          text,
+        });
+      } catch (error) {
+        console.error("发送密码重置邮件失败:", error);
+      }
+    });
+
+    // 清理30分钟之前的请求
+    after(async () => {
+      await prisma.passwordReset.deleteMany({
+        where: {
+          createdAt: { lt: thirtyMinutesAgo },
+        },
+      });
+    });
+
+    // 返回成功结果
+    return response.ok({
+      message: "已发送重置密码链接，链接30分钟内有效",
+    });
   } catch (error) {
     console.error("Request password reset error:", error);
     return response.serverError();
@@ -921,8 +980,18 @@ export async function resetPassword(
         id: true,
         userUid: true,
         createdAt: true,
+        user: {
+          select: {
+            uid: true,
+            email: true,
+            username: true,
+            nickname: true,
+            status: true,
+          },
+        },
       },
     });
+
     if (!passwordReset) {
       return response.badRequest({
         message: "无效的重置码",
@@ -932,9 +1001,10 @@ export async function resetPassword(
         },
       });
     }
-    // 检查是否过期（15分钟内有效）
-    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-    if (passwordReset.createdAt < fifteenMinutesAgo) {
+
+    // 检查是否过期（30分钟内有效）
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    if (passwordReset.createdAt < thirtyMinutesAgo) {
       return response.badRequest({
         message: "重置码已过期",
         error: {
@@ -943,9 +1013,10 @@ export async function resetPassword(
         },
       });
     }
+
     // 更改密码
     const hashedNewPassword = await hashPassword(new_password);
-    const user = await prisma.user.update({
+    await prisma.user.update({
       where: { uid: passwordReset.userUid },
       data: {
         password: hashedNewPassword,
@@ -953,9 +1024,9 @@ export async function resetPassword(
     });
 
     // 更新用户状态
-    if (user.status === "NEEDS_UPDATE") {
+    if (passwordReset.user.status === "NEEDS_UPDATE") {
       await prisma.user.update({
-        where: { uid: user.uid },
+        where: { uid: passwordReset.userUid },
         data: {
           status: "ACTIVE",
           emailVerified: true,
@@ -963,14 +1034,45 @@ export async function resetPassword(
       });
     }
 
-    // 删除重置请求
-    await prisma.passwordReset.delete({
-      where: { id: passwordReset.id },
+    // 删除该用户的所有密码重置请求
+    await prisma.passwordReset.deleteMany({
+      where: { userUid: passwordReset.userUid },
     });
+
     // 注销所有会话
     await prisma.refreshToken.deleteMany({
       where: { userUid: passwordReset.userUid },
     });
+
+    // 发送密码修改通知邮件
+    after(async () => {
+      try {
+        const { sendEmail } = await import("@/lib/server/email");
+        const { renderEmail } = await import("@/emails/utils");
+        const { PasswordChangedTemplate } = await import("@/emails/templates");
+        const siteName =
+          (await getConfig<string>("site.name")) || "NeutralPress";
+        const siteUrl = (await getConfig<string>("site.url")) || "";
+
+        const emailComponent = PasswordChangedTemplate({
+          username: passwordReset.user.nickname || passwordReset.user.username,
+          siteName,
+          siteUrl,
+        });
+
+        const { html, text } = await renderEmail(emailComponent);
+
+        await sendEmail({
+          to: passwordReset.user.email,
+          subject: "密码已修改",
+          html,
+          text,
+        });
+      } catch (error) {
+        console.error("发送密码修改通知邮件失败:", error);
+      }
+    });
+
     // 返回成功结果
     return response.ok({
       message: "密码重置成功",

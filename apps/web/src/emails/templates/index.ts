@@ -8,3 +8,6 @@ export type { EmailVerificationTemplateProps } from "./EmailVerification";
 
 export { PasswordResetTemplate } from "./PasswordReset";
 export type { PasswordResetTemplateProps } from "./PasswordReset";
+
+export { PasswordChangedTemplate } from "./PasswordChanged";
+export type { PasswordChangedTemplateProps } from "./PasswordChanged";
