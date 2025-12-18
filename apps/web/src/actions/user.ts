@@ -1,5 +1,6 @@
 "use server";
 import { NextResponse } from "next/server";
+import { cookies, headers } from "next/headers";
 import {
   GetUsersTrendsSchema,
   GetUsersTrends,
@@ -15,12 +16,12 @@ import {
 import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
 import limitControl from "@/lib/server/rateLimit";
-import { headers } from "next/headers";
 import { validateData } from "@/lib/server/validator";
 import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
 import { logAuditEvent } from "./audit";
 import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
+import { jwtTokenVerify, type AccessTokenPayload } from "@/lib/server/jwt";
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
@@ -784,5 +785,115 @@ export async function deleteUsers(
   } catch (error) {
     console.error("Delete users error:", error);
     return response.serverError();
+  }
+}
+
+/**
+ * 获取当前用户的个人资料（用于设置页面）
+ */
+export async function getUserProfile(): Promise<
+  ApiResponse<{
+    uid: number;
+    username: string;
+    email: string;
+    hasPassword: boolean;
+    linkedAccounts: Array<{
+      provider: string;
+      email: string;
+    }>;
+  }>
+> {
+  const response = new ResponseBuilder("serveraction");
+
+  try {
+    // 从 cookie 获取当前用户的 access token
+    const cookieStore = await cookies();
+    const token = cookieStore.get("ACCESS_TOKEN")?.value || "";
+    const decoded = jwtTokenVerify<AccessTokenPayload>(token);
+
+    if (!decoded) {
+      return response.unauthorized({
+        message: "请先登录",
+      }) as unknown as ApiResponse<{
+        uid: number;
+        username: string;
+        email: string;
+        hasPassword: boolean;
+        linkedAccounts: Array<{
+          provider: string;
+          email: string;
+        }>;
+      }>;
+    }
+
+    const { uid } = decoded;
+
+    // 查找用户
+    const user = await prisma.user.findUnique({
+      where: { uid },
+      select: {
+        uid: true,
+        username: true,
+        email: true,
+        password: true,
+        accounts: {
+          select: {
+            provider: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return response.unauthorized({
+        message: "用户不存在",
+      }) as unknown as ApiResponse<{
+        uid: number;
+        username: string;
+        email: string;
+        hasPassword: boolean;
+        linkedAccounts: Array<{
+          provider: string;
+          email: string;
+        }>;
+      }>;
+    }
+
+    // 构建返回数据
+    return response.ok({
+      data: {
+        uid: user.uid,
+        username: user.username,
+        email: user.email,
+        hasPassword: !!user.password,
+        linkedAccounts: user.accounts.map((account) => ({
+          provider: account.provider.toLowerCase(),
+          email: user.email,
+        })),
+      },
+    }) as unknown as ApiResponse<{
+      uid: number;
+      username: string;
+      email: string;
+      hasPassword: boolean;
+      linkedAccounts: Array<{
+        provider: string;
+        email: string;
+      }>;
+    }>;
+  } catch (error) {
+    console.error("Get user profile error:", error);
+    return response.serverError({
+      message: "获取用户信息失败，请稍后重试",
+    }) as unknown as ApiResponse<{
+      uid: number;
+      username: string;
+      email: string;
+      hasPassword: boolean;
+      linkedAccounts: Array<{
+        provider: string;
+        email: string;
+      }>;
+    }>;
   }
 }

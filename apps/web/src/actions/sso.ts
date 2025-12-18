@@ -206,14 +206,25 @@ export async function linkSSO({
  */
 export async function unlinkSSO({
   provider,
-  password,
 }: {
   provider: OAuthProvider;
-  password: string;
 }): Promise<ApiResponse<null>> {
   const response = new ResponseBuilder("serveraction");
 
   try {
+    // 检查是否有有效的 REAUTH_TOKEN
+    const { checkReauthToken } = await import("./reauth");
+    const hasReauthToken = await checkReauthToken();
+    if (!hasReauthToken) {
+      return response.forbidden({
+        message: "需要重新验证身份",
+        error: {
+          code: "NEED_REAUTH",
+          message: "需要重新验证身份",
+        },
+      }) as unknown as ApiResponse<null>;
+    }
+
     // 从 cookie 获取当前用户的 access token
     const cookieStore = await cookies();
     const token = cookieStore.get("ACCESS_TOKEN")?.value || "";
@@ -250,28 +261,6 @@ export async function unlinkSSO({
         error: {
           code: "PASSWORD_REQUIRED",
           message: "解绑最后一个登录方式前，请先设置密码",
-        },
-      }) as unknown as ApiResponse<null>;
-    }
-
-    // 验证密码
-    if (!user.password) {
-      return response.badRequest({
-        message: "此账户未设置密码",
-        error: {
-          code: "NO_PASSWORD_SET",
-          message: "此账户未设置密码",
-        },
-      }) as unknown as ApiResponse<null>;
-    }
-
-    const isPasswordValid = await verifyPassword(user.password, password);
-    if (!isPasswordValid.isValid) {
-      return response.badRequest({
-        message: "密码错误",
-        error: {
-          code: "INVALID_PASSWORD",
-          message: "密码错误",
         },
       }) as unknown as ApiResponse<null>;
     }
@@ -359,6 +348,19 @@ export async function setPassword({
   const response = new ResponseBuilder("serveraction");
 
   try {
+    // 检查是否有有效的 REAUTH_TOKEN
+    const { checkReauthToken } = await import("./reauth");
+    const hasReauthToken = await checkReauthToken();
+    if (!hasReauthToken) {
+      return response.forbidden({
+        message: "需要重新验证身份",
+        error: {
+          code: "NEED_REAUTH",
+          message: "需要重新验证身份",
+        },
+      }) as unknown as ApiResponse<null>;
+    }
+
     // 从 cookie 获取当前用户的 access token
     const cookieStore = await cookies();
     const token = cookieStore.get("ACCESS_TOKEN")?.value || "";
@@ -455,6 +457,238 @@ export async function setPassword({
 }
 
 /**
+ * 处理 SSO 绑定回调（专门用于绑定场景）
+ */
+export async function handleSSOBind({
+  provider,
+  code,
+  state,
+  codeVerifier,
+}: {
+  provider: string;
+  code: string;
+  state: string;
+  codeVerifier?: string;
+}): Promise<ApiResponse<null>> {
+  const response = new ResponseBuilder("serveraction");
+
+  try {
+    const cookieStore = await cookies();
+
+    // 注意：不在此处检查 REAUTH_TOKEN
+    // 因为 SSO 绑定流程是：settings 页面 -> reauth 验证 -> SSO 授权 -> 回调
+    // 在 SSO 授权前已经完成了 reauth 验证，回调时不需要再次验证
+    // 而是通过 oauth_bind_uid_${provider} cookie 来验证用户身份
+
+    // 辅助函数：清除 OAuth cookies
+    const clearOAuthCookies = () => {
+      cookieStore.delete(`oauth_bind_state_${provider}`);
+      cookieStore.delete(`oauth_bind_verifier_${provider}`);
+      cookieStore.delete(`oauth_bind_redirect_to`);
+      cookieStore.delete(`oauth_bind_token_${provider}`);
+    };
+
+    // 验证 provider
+    const validProviders: OAuthProvider[] = ["google", "github", "microsoft"];
+    if (!validProviders.includes(provider as OAuthProvider)) {
+      clearOAuthCookies();
+      return response.badRequest({
+        message: "不支持的登录方式",
+        error: { code: "INVALID_PROVIDER", message: "不支持的登录方式" },
+      }) as unknown as ApiResponse<null>;
+    }
+
+    const oauthProvider = provider as OAuthProvider;
+
+    // 验证 state（CSRF 防护）- 使用 JWT
+    const storedStateToken = cookieStore.get(
+      `oauth_bind_state_${provider}`,
+    )?.value;
+    if (!storedStateToken) {
+      clearOAuthCookies();
+      return response.badRequest({
+        message: "安全验证失败，请重试",
+        error: { code: "STATE_MISSING", message: "安全验证失败" },
+      }) as unknown as ApiResponse<null>;
+    }
+
+    // 验证并解析 JWT state token
+    const statePayload = jwtTokenVerify<{
+      state: string;
+      mode: string;
+      provider: string;
+      timestamp: number;
+    }>(storedStateToken);
+
+    if (
+      !statePayload ||
+      statePayload.state !== state ||
+      statePayload.mode !== "bind" ||
+      statePayload.provider !== provider
+    ) {
+      clearOAuthCookies();
+      return response.badRequest({
+        message: "安全验证失败，请重试",
+        error: { code: "STATE_MISMATCH", message: "安全验证失败" },
+      }) as unknown as ApiResponse<null>;
+    }
+
+    // 验证用户是否已登录
+    // 使用 JWT token 验证身份，防止伪造
+    const bindTokenCookie = cookieStore.get(
+      `oauth_bind_token_${provider}`,
+    )?.value;
+    if (!bindTokenCookie) {
+      clearOAuthCookies();
+      return response.unauthorized({
+        message: "请先登录",
+      }) as unknown as ApiResponse<null>;
+    }
+
+    // 验证 JWT token
+    const bindTokenPayload = jwtTokenVerify<{
+      uid: number;
+      purpose: string;
+      provider: string;
+    }>(bindTokenCookie);
+
+    if (
+      !bindTokenPayload ||
+      bindTokenPayload.purpose !== "oauth_bind" ||
+      bindTokenPayload.provider !== provider
+    ) {
+      clearOAuthCookies();
+      return response.unauthorized({
+        message: "登录状态无效",
+      }) as unknown as ApiResponse<null>;
+    }
+
+    const uid = bindTokenPayload.uid;
+
+    // 从数据库查询用户信息
+    const currentUser = await prisma.user.findUnique({
+      where: { uid },
+      select: { uid: true },
+    });
+
+    if (!currentUser) {
+      clearOAuthCookies();
+      return response.unauthorized({
+        message: "用户不存在",
+      }) as unknown as ApiResponse<null>;
+    }
+
+    // 验证授权码并获取用户信息
+    const { validateOAuthCallback } = await import("@/lib/server/oauth");
+    const oauthUser = await validateOAuthCallback(
+      oauthProvider,
+      code,
+      codeVerifier,
+    );
+
+    // 检查当前用户是否已绑定此提供商
+    const existingAccount = await prisma.account.findUnique({
+      where: {
+        userUid_provider: {
+          userUid: currentUser.uid,
+          provider: toAccountProvider(oauthProvider),
+        },
+      },
+    });
+
+    if (existingAccount) {
+      clearOAuthCookies();
+      return response.badRequest({
+        message: `已绑定 ${oauthProvider.toUpperCase()} 账户`,
+        error: {
+          code: "ALREADY_LINKED",
+          message: `已绑定 ${oauthProvider.toUpperCase()} 账户`,
+        },
+      }) as unknown as ApiResponse<null>;
+    }
+
+    // 检查此 SSO 账户是否已被其他用户绑定
+    const matchingAccount = await prisma.account.findUnique({
+      where: {
+        provider_providerAccountId: {
+          provider: toAccountProvider(oauthProvider),
+          providerAccountId: oauthUser.providerAccountId,
+        },
+      },
+    });
+
+    if (matchingAccount) {
+      clearOAuthCookies();
+      return response.badRequest({
+        message: "此 SSO 账户已被其他用户绑定",
+        error: {
+          code: "ACCOUNT_BOUND",
+          message: "此 SSO 账户已被其他用户绑定",
+        },
+      }) as unknown as ApiResponse<null>;
+    }
+
+    // 创建绑定
+    await prisma.account.create({
+      data: {
+        userUid: currentUser.uid,
+        type: "oauth",
+        provider: toAccountProvider(oauthProvider),
+        providerAccountId: oauthUser.providerAccountId,
+      },
+    });
+
+    // 获取客户端信息用于审计日志
+    const clientIP = await getClientIP();
+    const clientUserAgent = await getClientUserAgent();
+
+    // 记录审计日志
+    after(async () => {
+      try {
+        await logAuditEvent({
+          user: {
+            uid: currentUser.uid.toString(),
+            ipAddress: clientIP,
+            userAgent: clientUserAgent,
+          },
+          details: {
+            action: "CREATE",
+            resourceType: "ACCOUNT",
+            resourceId: `${oauthProvider}:${oauthUser.providerAccountId}`,
+            vaule: {
+              old: null,
+              new: {
+                provider: oauthProvider.toUpperCase(),
+                email: oauthUser.email,
+              },
+            },
+            description: `绑定 ${oauthProvider.toUpperCase()} 账户`,
+          },
+        });
+      } catch (error) {
+        console.error("Failed to log audit event:", error);
+      }
+    });
+
+    clearOAuthCookies();
+
+    return response.ok({
+      message: `成功绑定 ${oauthProvider.toUpperCase()} 账户`,
+      data: null,
+    }) as unknown as ApiResponse<null>;
+  } catch (error) {
+    console.error("Handle SSO bind error:", error);
+    return response.serverError({
+      message: error instanceof Error ? error.message : "绑定失败，请稍后重试",
+      error: {
+        code: "SERVER_ERROR",
+        message: "绑定失败，请稍后重试",
+      },
+    }) as unknown as ApiResponse<null>;
+  }
+}
+
+/**
  * 处理 SSO 回调（用于 callback 页面）
  */
 export async function handleSSOCallback({
@@ -491,6 +725,7 @@ export async function handleSSOCallback({
         sameSite: "strict",
         path: "/",
         secure: process.env.NODE_ENV === "production",
+        priority: "high",
       });
       cookieStore.set({
         name: "ACCESS_TOKEN",
@@ -500,6 +735,7 @@ export async function handleSSOCallback({
         sameSite: "strict",
         path: "/",
         secure: process.env.NODE_ENV === "production",
+        priority: "high",
       });
     };
 
@@ -525,9 +761,33 @@ export async function handleSSOCallback({
 
     const oauthProvider = provider as OAuthProvider;
 
-    // 验证 state（CSRF 防护）
-    const storedState = cookieStore.get(`oauth_state_${provider}`)?.value;
-    if (!storedState || storedState !== state) {
+    // 验证 state（CSRF 防护）- 使用 JWT
+    const storedStateToken = cookieStore.get(`oauth_state_${provider}`)?.value;
+    if (!storedStateToken) {
+      clearOAuthCookies();
+      return response.badRequest({
+        message: "安全验证失败，请重试",
+        error: { code: "STATE_MISSING", message: "安全验证失败" },
+      }) as unknown as ApiResponse<{
+        userInfo?: UserInfo;
+        action: "login" | "verify" | "bind";
+      }>;
+    }
+
+    // 验证并解析 JWT state token
+    const statePayload = jwtTokenVerify<{
+      state: string;
+      mode: string;
+      provider: string;
+      timestamp: number;
+    }>(storedStateToken);
+
+    if (
+      !statePayload ||
+      statePayload.state !== state ||
+      statePayload.mode !== "login" ||
+      statePayload.provider !== provider
+    ) {
       clearOAuthCookies();
       return response.badRequest({
         message: "安全验证失败，请重试",
@@ -546,9 +806,9 @@ export async function handleSSOCallback({
       codeVerifier,
     );
 
-    // 检查是否已登录
+    // 检查是否已登录（用于审计日志）
     const accessToken = cookieStore.get("ACCESS_TOKEN")?.value;
-    const currentUser = accessToken
+    const _currentUser = accessToken
       ? jwtTokenVerify<AccessTokenPayload>(accessToken)
       : null;
 
@@ -558,193 +818,6 @@ export async function handleSSOCallback({
     const expiredAtSeconds = 30 * 24 * 60 * 60; // 30天
     const expiredAt = new Date(Date.now() + expiredAtSeconds * 1000);
     const expiredAtUnix = Math.floor(expiredAt.getTime() / 1000);
-
-    if (currentUser) {
-      // 已登录场景
-      const existingAccount = await prisma.account.findUnique({
-        where: {
-          userUid_provider: {
-            userUid: currentUser.uid,
-            provider: toAccountProvider(oauthProvider),
-          },
-        },
-      });
-
-      const matchingAccount = await prisma.account.findUnique({
-        where: {
-          provider_providerAccountId: {
-            provider: toAccountProvider(oauthProvider),
-            providerAccountId: oauthUser.providerAccountId,
-          },
-        },
-      });
-
-      // 如果 SSO 账户属于当前用户，刷新会话
-      if (matchingAccount && matchingAccount.userUid === currentUser.uid) {
-        const user = await prisma.user.findUnique({
-          where: { uid: currentUser.uid },
-          select: {
-            uid: true,
-            username: true,
-            nickname: true,
-            email: true,
-            avatar: true,
-            role: true,
-            status: true,
-            deletedAt: true,
-          },
-        });
-
-        if (!user || user.deletedAt || user.status === "SUSPENDED") {
-          return response.badRequest({
-            message: "该账户已被禁用",
-            error: {
-              code: "ACCOUNT_DISABLED",
-              message: "该账户已被禁用",
-            },
-          }) as unknown as ApiResponse<{
-            userInfo?: UserInfo;
-            action: "login" | "verify" | "bind";
-          }>;
-        }
-
-        const dbRefreshToken = await prisma.refreshToken.create({
-          data: {
-            userUid: user.uid,
-            expiresAt: expiredAt,
-            ipAddress: clientIP,
-            userAgent: clientUserAgent,
-            lastUsedAt: new Date(),
-          },
-        });
-
-        const refreshToken = jwtTokenSign({
-          inner: {
-            uid: user.uid,
-            tokenId: dbRefreshToken.id,
-            exp: expiredAtUnix,
-          },
-          expired: "30d",
-        });
-
-        const newAccessToken = jwtTokenSign({
-          inner: {
-            uid: user.uid,
-            username: user.username,
-            nickname: user.nickname ?? "",
-            role: user.role,
-          },
-          expired: "10m",
-        });
-
-        after(async () => {
-          await prisma.user.update({
-            where: { uid: user.uid },
-            data: { lastUseAt: new Date() },
-          });
-        });
-
-        // 设置认证 cookies
-        setAuthCookies(refreshToken, newAccessToken);
-        // 清除 OAuth cookies
-        clearOAuthCookies();
-
-        return response.ok({
-          message: "登录成功",
-          data: {
-            action: "login" as const,
-            userInfo: {
-              uid: user.uid,
-              username: user.username,
-              nickname: user.nickname,
-              email: user.email,
-              avatar: user.avatar,
-              role: user.role,
-              exp: expiredAt.toISOString(),
-            },
-          },
-        }) as unknown as ApiResponse<{
-          userInfo?: UserInfo;
-          action: "login" | "verify" | "bind";
-        }>;
-      }
-
-      // 如果想绑定但已绑定其他账户
-      if (existingAccount) {
-        clearOAuthCookies();
-        return response.badRequest({
-          message: `已绑定 ${oauthProvider.toUpperCase()} 账户`,
-          error: {
-            code: "ALREADY_LINKED",
-            message: `已绑定 ${oauthProvider.toUpperCase()} 账户`,
-          },
-        }) as unknown as ApiResponse<{
-          userInfo?: UserInfo;
-          action: "login" | "verify" | "bind";
-        }>;
-      }
-
-      // 绑定新账户
-      if (matchingAccount) {
-        clearOAuthCookies();
-        return response.badRequest({
-          message: "此 SSO 账户已被其他用户绑定",
-          error: {
-            code: "ACCOUNT_BOUND",
-            message: "此 SSO 账户已被其他用户绑定",
-          },
-        }) as unknown as ApiResponse<{
-          userInfo?: UserInfo;
-          action: "login" | "verify" | "bind";
-        }>;
-      }
-
-      await prisma.account.create({
-        data: {
-          userUid: currentUser.uid,
-          type: "oauth",
-          provider: toAccountProvider(oauthProvider),
-          providerAccountId: oauthUser.providerAccountId,
-        },
-      });
-
-      after(async () => {
-        try {
-          await logAuditEvent({
-            user: {
-              uid: currentUser.uid.toString(),
-              ipAddress: clientIP,
-              userAgent: clientUserAgent,
-            },
-            details: {
-              action: "CREATE",
-              resourceType: "ACCOUNT",
-              resourceId: `${oauthProvider}:${oauthUser.providerAccountId}`,
-              vaule: {
-                old: null,
-                new: {
-                  provider: oauthProvider.toUpperCase(),
-                  email: oauthUser.email,
-                },
-              },
-              description: `绑定 ${oauthProvider.toUpperCase()} 账户`,
-            },
-          });
-        } catch (error) {
-          console.error("Failed to log audit event:", error);
-        }
-      });
-
-      clearOAuthCookies();
-
-      return response.ok({
-        message: `成功绑定 ${oauthProvider.toUpperCase()} 账户`,
-        data: { action: "bind" as const },
-      }) as unknown as ApiResponse<{
-        userInfo?: UserInfo;
-        action: "login" | "verify" | "bind";
-      }>;
-    }
 
     // 未登录场景：查找已绑定的账户
     const account = await prisma.account.findUnique({

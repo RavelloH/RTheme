@@ -244,6 +244,7 @@ export async function login(
         sameSite: "strict",
         path: "/",
         secure: process.env.NODE_ENV === "production",
+        priority: "high",
       });
       cookieStore.set({
         name: "ACCESS_TOKEN",
@@ -253,6 +254,7 @@ export async function login(
         sameSite: "strict",
         path: "/",
         secure: process.env.NODE_ENV === "production",
+        priority: "high",
       });
     }
 
@@ -596,6 +598,7 @@ export async function refresh(
         sameSite: "strict",
         path: "/",
         secure: process.env.NODE_ENV === "production",
+        priority: "high",
       });
     }
     return response.ok({
@@ -759,7 +762,7 @@ export async function changePassword(
   serverConfig?: AuthActionConfig,
 ): Promise<ApiResponse<ChangePasswordSuccessResponse>>;
 export async function changePassword(
-  { old_password, new_password, access_token }: ChangePassword,
+  { new_password, access_token }: Omit<ChangePassword, "old_password">,
   serverConfig?: AuthActionConfig,
 ): Promise<ActionResult<ChangePasswordSuccessResponse | null>> {
   const response = new ResponseBuilder(
@@ -771,28 +774,30 @@ export async function changePassword(
     return response.tooManyRequests();
   }
 
-  // 验证输入参数
+  // 检查是否有有效的 REAUTH_TOKEN
+  const { checkReauthToken } = await import("./reauth");
+  const hasReauthToken = await checkReauthToken();
+  if (!hasReauthToken) {
+    return response.forbidden({
+      message: "需要重新验证身份",
+      error: {
+        code: "NEED_REAUTH",
+        message: "需要重新验证身份",
+      },
+    });
+  }
+
+  // 验证输入参数 - 只验证 new_password
   const validationError = validateData(
     {
-      old_password,
       new_password,
       access_token,
     },
-    ChangePasswordSchema,
+    ChangePasswordSchema.omit({ old_password: true }),
   );
   if (validationError) return response.badRequest(validationError);
 
   try {
-    // 新旧密码不能相同
-    if (old_password === new_password) {
-      return response.badRequest({
-        message: "新密码不能与旧密码相同",
-        error: {
-          code: "PASSWORDS_IDENTICAL",
-          message: "新密码不能与旧密码相同",
-        },
-      });
-    }
     // 从 cookie 或请求体中获取 Access Token
     const cookieStore = await cookies();
     const token = access_token || cookieStore.get("ACCESS_TOKEN")?.value || "";
@@ -817,30 +822,21 @@ export async function changePassword(
     if (!user) {
       return response.unauthorized();
     }
-    // 检测是否无密码
-    if (!user.password) {
-      return response.badRequest({
-        message: "未设置密码。如需设置密码，请重置密码",
-        error: {
-          code: "NO_PASSWORD_SET",
-          message: "未设置密码。如需设置密码，请重置密码",
-        },
-      });
+
+    // 检查新密码是否与旧密码相同（如果有旧密码）
+    if (user.password) {
+      const isSamePassword = await verifyPassword(user.password, new_password);
+      if (isSamePassword.isValid) {
+        return response.badRequest({
+          message: "新密码不能与当前密码相同",
+          error: {
+            code: "PASSWORDS_IDENTICAL",
+            message: "新密码不能与当前密码相同",
+          },
+        });
+      }
     }
-    // 验证旧密码
-    const isOldPasswordValid = await verifyPassword(
-      user.password,
-      old_password,
-    );
-    if (!isOldPasswordValid.isValid) {
-      return response.badRequest({
-        message: "旧密码错误",
-        error: {
-          code: "INVALID_OLD_PASSWORD",
-          message: "旧密码错误",
-        },
-      });
-    }
+
     // 哈希新密码
     const hashedNewPassword = await hashPassword(new_password);
     // 更新密码
@@ -854,6 +850,11 @@ export async function changePassword(
     await prisma.refreshToken.deleteMany({
       where: { userUid: user.uid },
     });
+
+    // 清除所有认证相关的 cookies，强制用户重新登录
+    cookieStore.delete("ACCESS_TOKEN");
+    cookieStore.delete("REFRESH_TOKEN");
+    cookieStore.delete("REAUTH_TOKEN");
 
     // 获取客户端信息用于审计日志
     const clientIP = await getClientIP();
@@ -980,7 +981,7 @@ export async function requestPasswordReset(
       },
     });
 
-    // 发送重置密码邮件
+    // 统一将邮件发送逻辑放到 after 中，防止时间差泄露用户存在性
     after(async () => {
       try {
         const { sendEmail } = await import("@/lib/server/email");
@@ -1279,39 +1280,37 @@ export async function resendEmailVerification(
       },
     });
 
-    // 发送验证邮件
-    try {
-      const { sendEmail } = await import("@/lib/server/email");
-      const { renderEmail } = await import("@/emails/utils");
-      const { EmailVerificationTemplate } = await import("@/emails/templates");
-      const siteName = (await getConfig<string>("site.name")) || "NeutralPress";
-      const siteUrl = (await getConfig<string>("site.url")) || "";
+    // 统一将邮件发送逻辑放到 after 中，防止时间差泄露用户存在性
+    after(async () => {
+      try {
+        const { sendEmail } = await import("@/lib/server/email");
+        const { renderEmail } = await import("@/emails/utils");
+        const { EmailVerificationTemplate } = await import(
+          "@/emails/templates"
+        );
+        const siteName =
+          (await getConfig<string>("site.name")) || "NeutralPress";
+        const siteUrl = (await getConfig<string>("site.url")) || "";
 
-      const emailComponent = EmailVerificationTemplate({
-        username: user.email,
-        verificationCode: emailVerifyCode.split("-")[0]!, // 只显示6位数字，不显示时间戳
-        siteName,
-        siteUrl,
-      });
+        const emailComponent = EmailVerificationTemplate({
+          username: user.email,
+          verificationCode: emailVerifyCode.split("-")[0]!, // 只显示6位数字，不显示时间戳
+          siteName,
+          siteUrl,
+        });
 
-      const { html, text } = await renderEmail(emailComponent);
+        const { html, text } = await renderEmail(emailComponent);
 
-      await sendEmail({
-        to: user.email,
-        subject: "验证您的邮箱",
-        html,
-        text,
-      });
-    } catch (error) {
-      console.error("发送验证邮件失败:", error);
-      return response.serverError({
-        message: "发送失败，请稍后重试",
-        error: {
-          code: "EMAIL_SENDING_FAILED",
-          message: "发送失败，请稍后重试",
-        },
-      });
-    }
+        await sendEmail({
+          to: user.email,
+          subject: "验证您的邮箱",
+          html,
+          text,
+        });
+      } catch (error) {
+        console.error("发送验证邮件失败:", error);
+      }
+    });
 
     return response.ok({
       message: "验证码已重新发送，请检查邮箱",

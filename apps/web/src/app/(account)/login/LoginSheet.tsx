@@ -41,6 +41,9 @@ export default function LoginSheet({ enabledSSOProviders }: LoginSheetProps) {
   const searchParams = useSearchParams();
   const usernameFromUrl = searchParams.get("username") || "";
   const ssoStatus = searchParams.get("sso");
+  const messageParam = searchParams.get("message");
+  const successParam = searchParams.get("success");
+  const errorParam = searchParams.get("error");
   const { broadcast } = useBroadcastSender<{ type: string }>();
   const toast = useToast();
 
@@ -57,6 +60,37 @@ export default function LoginSheet({ enabledSSOProviders }: LoginSheetProps) {
   const [usernameTip, setUsernameTip] = useState("");
   const [passwordTip, setPasswordTip] = useState("");
   const hasProcessedSSO = useRef(false);
+  const hasProcessedMessage = useRef(false);
+
+  // 处理 URL 参数中的消息（message/success/error）
+  useEffect(() => {
+    if (hasProcessedMessage.current) return;
+
+    if (messageParam || successParam || errorParam) {
+      hasProcessedMessage.current = true;
+
+      // 显示对应的消息
+      if (messageParam) {
+        toast.info(messageParam);
+      } else if (successParam) {
+        toast.success(successParam);
+      } else if (errorParam) {
+        toast.error(errorParam);
+      }
+
+      // 清除 URL 中的消息参数
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete("message");
+      newSearchParams.delete("success");
+      newSearchParams.delete("error");
+
+      // 使用 router.replace 来更新 URL 而不添加历史记录
+      const newUrl = newSearchParams.toString()
+        ? `/login?${newSearchParams.toString()}`
+        : "/login";
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, [messageParam, successParam, errorParam, searchParams, toast]);
 
   // 处理 SSO 登录结果
   useEffect(() => {
