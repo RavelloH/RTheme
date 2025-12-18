@@ -6,6 +6,7 @@ import RegisterSheet from "./RegisterSheet";
 import Marquee from "react-fast-marquee";
 import RegisterIntro from "./RegisterIntro";
 import { getConfig } from "@/lib/server/configCache";
+import type { OAuthProvider } from "@/lib/server/oauth";
 
 export const metadata = await generateMetadata(
   {
@@ -17,11 +18,27 @@ export const metadata = await generateMetadata(
   },
 );
 
+async function getEnabledSSOProviders(): Promise<OAuthProvider[]> {
+  const providers: OAuthProvider[] = ["google", "github", "microsoft"];
+  const enabled: OAuthProvider[] = [];
+
+  for (const provider of providers) {
+    const isEnabled = await getConfig<boolean>(`user.sso.${provider}.enabled`);
+    if (isEnabled) {
+      enabled.push(provider);
+    }
+  }
+
+  return enabled;
+}
+
 export default async function RegisterPage() {
-  const [canRegister, isNeedEmailVerify] = await Promise.all([
-    getConfig<boolean>("user.registration.enabled"),
-    getConfig<boolean>("user.email.verification.required"),
-  ]);
+  const [canRegister, isNeedEmailVerify, enabledSSOProviders] =
+    await Promise.all([
+      getConfig<boolean>("user.registration.enabled"),
+      getConfig<boolean>("user.email.verification.required"),
+      getEnabledSSOProviders(),
+    ]);
 
   return (
     <>
@@ -51,6 +68,7 @@ export default async function RegisterPage() {
               <RegisterSheet
                 canRegister={canRegister}
                 emailVerificationRequired={isNeedEmailVerify}
+                enabledSSOProviders={enabledSSOProviders}
               />
             </GridItem>
 

@@ -1,19 +1,29 @@
 "use client";
 
 import { Input } from "@/ui/Input";
-import { RiLockPasswordLine, RiMailLine, RiUser3Line } from "@remixicon/react";
+import {
+  RiGithubFill,
+  RiGoogleFill,
+  RiLockPasswordLine,
+  RiMailLine,
+  RiMicrosoftFill,
+  RiUser3Line,
+} from "@remixicon/react";
 import { CaptchaButton } from "@/components/CaptchaButton";
 import { useState } from "react";
 import { useBroadcast, useBroadcastSender } from "@/hooks/useBroadcast";
 import { register as registerAction } from "@/actions/auth";
 import Link, { useNavigateWithTransition } from "@/components/Link";
+import { Button } from "@/ui/Button";
 
 export default function RegisterSheet({
   canRegister,
   emailVerificationRequired,
+  enabledSSOProviders,
 }: {
   canRegister: boolean;
   emailVerificationRequired: boolean;
+  enabledSSOProviders: string[];
 }) {
   const navigate = useNavigateWithTransition();
   const { broadcast } = useBroadcastSender<{ type: string }>();
@@ -155,7 +165,7 @@ export default function RegisterSheet({
         setButtonLoadingText("注册成功，请检查邮箱来验证账户");
         setTimeout(() => {
           navigate(
-            `/verify?username=${encodeURIComponent(username)}&email=${encodeURIComponent(email)}`,
+            `/email-verify?username=${encodeURIComponent(username)}&email=${encodeURIComponent(email)}`,
           );
         }, 2000);
       } else {
@@ -249,6 +259,61 @@ export default function RegisterSheet({
           </Link>
         </div>
       </div>
+      {/* SSO 登录选项 */}
+      {enabledSSOProviders.length > 0 && (
+        <div className="pt-6 w-full">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-muted-foreground/30"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-background text-muted-foreground">
+                或使用以下方式注册
+              </span>
+            </div>
+          </div>
+          <div
+            className={`mt-6 grid gap-3 ${
+              enabledSSOProviders.length === 1
+                ? "grid-cols-1"
+                : enabledSSOProviders.length === 2
+                  ? "grid-cols-2"
+                  : "grid-cols-3"
+            }`}
+          >
+            {enabledSSOProviders.includes("google") && (
+              <Button
+                onClick={() => navigate("/sso/google/login")}
+                label=""
+                icon={<RiGoogleFill size={"1.5em"} />}
+                variant="secondary"
+                size="lg"
+                disabled={buttonLoading}
+              ></Button>
+            )}
+            {enabledSSOProviders.includes("github") && (
+              <Button
+                onClick={() => navigate("/sso/github/login")}
+                label=""
+                icon={<RiGithubFill size={"1.5em"} />}
+                variant="secondary"
+                size="lg"
+                disabled={buttonLoading}
+              ></Button>
+            )}
+            {enabledSSOProviders.includes("microsoft") && (
+              <Button
+                onClick={() => navigate("/sso/microsoft/login")}
+                label=""
+                icon={<RiMicrosoftFill size={"1.5em"} />}
+                variant="secondary"
+                size="lg"
+                disabled={buttonLoading}
+              ></Button>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

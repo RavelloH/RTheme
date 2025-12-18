@@ -5,6 +5,9 @@ import MainLayout from "@/components/MainLayout";
 import Marquee from "react-fast-marquee";
 import LoginSheet from "./LoginSheet";
 import { Suspense } from "react";
+import { getConfig } from "@/lib/server/configCache";
+import type { OAuthProvider } from "@/lib/server/oauth";
+import { ToastProvider } from "@/ui/Toast";
 
 export const metadata = await generateMetadata(
   {
@@ -16,9 +19,24 @@ export const metadata = await generateMetadata(
   },
 );
 
-export default function TestPage() {
+async function getEnabledSSOProviders(): Promise<OAuthProvider[]> {
+  const providers: OAuthProvider[] = ["google", "github", "microsoft"];
+  const enabled: OAuthProvider[] = [];
+
+  for (const provider of providers) {
+    const isEnabled = await getConfig<boolean>(`user.sso.${provider}.enabled`);
+    if (isEnabled) {
+      enabled.push(provider);
+    }
+  }
+
+  return enabled;
+}
+
+export default async function LoginPage() {
+  const enabledSSOProviders = await getEnabledSSOProviders();
   return (
-    <>
+    <ToastProvider>
       <MainLayout type="horizontal">
         <HorizontalScroll
           className="h-full"
@@ -47,7 +65,7 @@ export default function TestPage() {
                   <div className="text-muted-foreground">加载中...</div>
                 }
               >
-                <LoginSheet />
+                <LoginSheet enabledSSOProviders={enabledSSOProviders} />
               </Suspense>
             </GridItem>
 
@@ -95,6 +113,6 @@ export default function TestPage() {
           </RowGrid>
         </HorizontalScroll>
       </MainLayout>
-    </>
+    </ToastProvider>
   );
 }

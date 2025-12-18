@@ -8,11 +8,11 @@ import { Suspense } from "react";
 
 export const metadata = await generateMetadata(
   {
-    title: "验证邮箱 / Verify Email",
+    title: "验证邮箱 / Email Verify",
     description: "验证你的邮箱地址以激活账户。",
   },
   {
-    pathname: "/verify",
+    pathname: "/email-verify",
   },
 );
 
@@ -34,7 +34,7 @@ export default function VerifyPage() {
               height={0.1}
               className="bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl"
             >
-              <h1>Verify Email / 验证邮箱</h1>
+              <h1>Email Verify / 验证邮箱</h1>
             </GridItem>
             <GridItem
               areas={[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}
@@ -58,9 +58,9 @@ export default function VerifyPage() {
               className="flex items-center"
             >
               <Marquee className="text-7xl h-full" speed={30} autoFill>
-                <span>Verify</span>
+                <span>Email Verify</span>
                 <span className="px-4">/</span>
-                <span>验证</span>
+                <span>验证邮箱</span>
                 <span className="px-4">/</span>
               </Marquee>
             </GridItem>

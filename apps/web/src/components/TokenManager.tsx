@@ -51,6 +51,17 @@ export default function TokenManager() {
   const tabIdRef = useRef<string>(generateTabId());
 
   useEffect(() => {
+    // 统一的 localStorage 操作辅助函数
+    const removeUserInfo = () => {
+      localStorage.removeItem("user_info");
+      // 触发自定义事件通知同一标签页内的组件
+      window.dispatchEvent(
+        new CustomEvent("localStorageUpdate", {
+          detail: { key: "user_info" },
+        }),
+      );
+    };
+
     // 从 localStorage 获取用户信息，带验证和错误处理
     const getStoredUserInfo = (): UserInfo | null => {
       try {
@@ -67,13 +78,13 @@ export default function TokenManager() {
           !userInfo.lastRefresh
         ) {
           console.error("Invalid user_info format");
-          localStorage.removeItem("user_info");
+          removeUserInfo();
           return null;
         }
 
         return userInfo as UserInfo;
       } catch {
-        localStorage.removeItem("user_info");
+        removeUserInfo();
         return null;
       }
     };
@@ -138,7 +149,7 @@ export default function TokenManager() {
         const exp = new Date(userInfo.exp);
 
         if (exp <= now) {
-          localStorage.removeItem("user_info");
+          removeUserInfo();
           return false;
         }
 
@@ -158,6 +169,13 @@ export default function TokenManager() {
             email: response.data.userInfo.email ?? userInfo.email ?? null,
           };
           localStorage.setItem("user_info", JSON.stringify(updatedUserInfo));
+
+          // 触发自定义事件通知同一标签页内的组件
+          window.dispatchEvent(
+            new CustomEvent("localStorageUpdate", {
+              detail: { key: "user_info" },
+            }),
+          );
 
           stateRef.current.retryCount = 0;
 
@@ -183,7 +201,7 @@ export default function TokenManager() {
           console.log(
             "[TokenManager] UNAUTHORIZED error detected, logging out immediately",
           );
-          localStorage.removeItem("user_info");
+          removeUserInfo();
           try {
             await logout({ refresh_token: undefined });
           } catch (error) {
@@ -272,7 +290,7 @@ export default function TokenManager() {
         const exp = new Date(userInfo.exp);
 
         if (exp <= now) {
-          localStorage.removeItem("user_info");
+          removeUserInfo();
           return;
         }
 

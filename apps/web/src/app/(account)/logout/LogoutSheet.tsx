@@ -9,6 +9,14 @@ async function performLogout() {
   const result = await logout({});
   if (result.success) {
     localStorage.removeItem("user_info");
+
+    // 触发自定义事件通知同一标签页内的组件
+    window.dispatchEvent(
+      new CustomEvent("localStorageUpdate", {
+        detail: { key: "user_info" },
+      }),
+    );
+
     return true;
   } else {
     return false;

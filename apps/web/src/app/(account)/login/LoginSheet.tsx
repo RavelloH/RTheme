@@ -1,19 +1,48 @@
 "use client";
 
 import { Input } from "@/ui/Input";
-import { RiLockPasswordLine, RiUser3Line } from "@remixicon/react";
+import {
+  RiMicrosoftFill,
+  RiGithubFill,
+  RiGoogleFill,
+  RiLockPasswordLine,
+  RiUser3Line,
+} from "@remixicon/react";
 import { CaptchaButton } from "@/components/CaptchaButton";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useBroadcast, useBroadcastSender } from "@/hooks/useBroadcast";
 import { login as loginAction } from "@/actions/auth";
 import { useSearchParams } from "next/navigation";
 import Link, { useNavigateWithTransition } from "@/components/Link";
+import type { OAuthProvider } from "@/lib/server/oauth";
+import { Button } from "@/ui/Button";
+import { useToast } from "@/ui/Toast";
 
-export default function LoginSheet() {
+interface LoginSheetProps {
+  enabledSSOProviders: OAuthProvider[];
+}
+
+interface SSOLoginResult {
+  success: boolean;
+  userInfo: {
+    uid: number;
+    username: string;
+    nickname: string | null;
+    email: string;
+    avatar: string | null;
+    role: string;
+    exp: string;
+  };
+  message: string;
+}
+
+export default function LoginSheet({ enabledSSOProviders }: LoginSheetProps) {
   const navigate = useNavigateWithTransition();
   const searchParams = useSearchParams();
   const usernameFromUrl = searchParams.get("username") || "";
+  const ssoStatus = searchParams.get("sso");
   const { broadcast } = useBroadcastSender<{ type: string }>();
+  const toast = useToast();
 
   const [token, setToken] = useState("");
   const [buttonLabel, setButtonLabel] = useState("登录");
@@ -27,6 +56,99 @@ export default function LoginSheet() {
   const [password, setPassword] = useState("");
   const [usernameTip, setUsernameTip] = useState("");
   const [passwordTip, setPasswordTip] = useState("");
+  const hasProcessedSSO = useRef(false);
+
+  // 处理 SSO 登录结果
+  useEffect(() => {
+    if (!ssoStatus || hasProcessedSSO.current) return;
+
+    hasProcessedSSO.current = true;
+
+    if (ssoStatus === "success") {
+      // 读取 Cookie 中的结果
+      const resultCookie = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("sso_login_result="));
+
+      if (resultCookie) {
+        const resultValue = decodeURIComponent(
+          resultCookie.split("=")[1] || "",
+        );
+        try {
+          const result: SSOLoginResult = JSON.parse(resultValue);
+
+          // 清除 Cookie
+          document.cookie =
+            "sso_login_result=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+
+          // 禁用所有交互，跳过验证码验证
+          setButtonLoading(true);
+          setButtonLoadingText(result.message || "登录成功，正在跳转...");
+          setButtonVariant("outline");
+          setButtonLabel(result.message || "登录成功");
+
+          // 保存用户信息到 localStorage
+          const userInfo = {
+            lastRefresh: new Date(),
+            ...result.userInfo,
+          };
+          localStorage.setItem("user_info", JSON.stringify(userInfo));
+
+          // 触发自定义事件通知同一标签页内的组件
+          window.dispatchEvent(
+            new CustomEvent("localStorageUpdate", {
+              detail: { key: "user_info" },
+            }),
+          );
+
+          // 获取 redirect 参数
+          const redirectParam = searchParams.get("redirect");
+          const targetPath = redirectParam ? redirectParam : "/profile";
+
+          // 3秒后跳转
+          setTimeout(() => {
+            navigate(targetPath);
+          }, 3000);
+        } catch (error) {
+          console.error("Failed to parse SSO result:", error);
+          setButtonLabel("登录失败，请重试");
+          setButtonVariant("outline");
+          setTimeout(() => {
+            setButtonLabel("登录");
+            setButtonVariant("secondary");
+          }, 2000);
+        }
+      } else {
+        setButtonLabel("未找到登录信息");
+        setButtonVariant("outline");
+        setTimeout(() => {
+          setButtonLabel("登录");
+          setButtonVariant("secondary");
+        }, 2000);
+      }
+    } else if (ssoStatus === "error") {
+      // 读取错误信息
+      const errorCookie = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("sso_login_error="));
+
+      let errorMessage = "登录失败，请稍后重试";
+      if (errorCookie) {
+        errorMessage = decodeURIComponent(errorCookie.split("=")[1] || "");
+        // 清除 Cookie
+        document.cookie =
+          "sso_login_error=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      }
+
+      // 使用 Toast 显示错误消息 10 秒
+      toast.error(errorMessage, undefined, 10000);
+
+      // 清除 URL 参数
+      const url = new URL(window.location.href);
+      url.searchParams.delete("sso");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [ssoStatus, navigate, searchParams, toast]);
 
   useBroadcast((message: { type: string; token: string }) => {
     if (message?.type === "captcha-solved") {
@@ -132,6 +254,13 @@ export default function LoginSheet() {
       };
       localStorage.setItem("user_info", JSON.stringify(userInfo));
 
+      // 触发自定义事件通知同一标签页内的组件
+      window.dispatchEvent(
+        new CustomEvent("localStorageUpdate", {
+          detail: { key: "user_info" },
+        }),
+      );
+
       // 获取redirect参数
       const redirectParam = searchParams.get("redirect");
       const targetPath = redirectParam ? redirectParam : "/profile";
@@ -144,7 +273,7 @@ export default function LoginSheet() {
       if (responseData.error?.code === "EMAIL_NOT_VERIFIED") {
         setButtonLoadingText("请先验证邮箱后再登录");
         setTimeout(() => {
-          navigate(`/verify?username=${encodeURIComponent(username)}`);
+          navigate(`/email-verify?username=${encodeURIComponent(username)}`);
         }, 2000);
       } else {
         setButtonLoadingText(responseData.message || "登录失败，请稍后重试");
@@ -227,6 +356,62 @@ export default function LoginSheet() {
           </Link>
         </div>
       </div>
+
+      {/* SSO 登录选项 */}
+      {enabledSSOProviders.length > 0 && (
+        <div className="pt-6 w-full">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-muted-foreground/30"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-background text-muted-foreground">
+                或使用以下方式登录
+              </span>
+            </div>
+          </div>
+          <div
+            className={`mt-6 grid gap-3 ${
+              enabledSSOProviders.length === 1
+                ? "grid-cols-1"
+                : enabledSSOProviders.length === 2
+                  ? "grid-cols-2"
+                  : "grid-cols-3"
+            }`}
+          >
+            {enabledSSOProviders.includes("google") && (
+              <Button
+                onClick={() => navigate("/sso/google/login")}
+                label=""
+                icon={<RiGoogleFill size={"1.5em"} />}
+                variant="secondary"
+                size="lg"
+                disabled={buttonLoading}
+              ></Button>
+            )}
+            {enabledSSOProviders.includes("github") && (
+              <Button
+                onClick={() => navigate("/sso/github/login")}
+                label=""
+                icon={<RiGithubFill size={"1.5em"} />}
+                variant="secondary"
+                size="lg"
+                disabled={buttonLoading}
+              ></Button>
+            )}
+            {enabledSSOProviders.includes("microsoft") && (
+              <Button
+                onClick={() => navigate("/sso/microsoft/login")}
+                label=""
+                icon={<RiMicrosoftFill size={"1.5em"} />}
+                variant="secondary"
+                size="lg"
+                disabled={buttonLoading}
+              ></Button>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

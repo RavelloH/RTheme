@@ -56,23 +56,17 @@ model User {
 
 // 第三方账户模型 (用于SSO登录)
 model Account {
-  id                String  @id @default(uuid())
+  id                String          @id @default(uuid())
   userUid           Int
   type              String // oauth
-  provider          String // google, github
+  provider          AccountProvider
   providerAccountId String // 第三方平台的用户ID
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
 
   user User @relation(fields: [userUid], references: [uid], onDelete: Cascade)
 
   // 复合唯一约束，确保同一个用户不能重复绑定同一个第三方账户
   @@unique([provider, providerAccountId])
+  @@unique([userUid, provider])
   // 索引优化
   @@index([userUid])
   @@index([provider])
@@ -103,7 +97,7 @@ model PasswordReset {
   id        String   @id @default(uuid())
   userUid   Int
   createdAt DateTime @default(now())
-  user User @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+  user      User     @relation(fields: [userUid], references: [uid], onDelete: Cascade)
 
   @@index([createdAt])
 }
@@ -592,4 +586,10 @@ enum StorageProviderType {
   AWS_S3
   GITHUB_PAGES
   VERCEL_BLOB
+}
+
+enum AccountProvider {
+  GOOGLE
+  GITHUB
+  MICROSOFT
 }

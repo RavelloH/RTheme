@@ -95,15 +95,26 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
 
     syncUserInfo();
 
+    // 监听跨标签页的 localStorage 变化
     const handleStorage = (event: StorageEvent) => {
       if (event.key === "user_info") {
         syncUserInfo();
       }
     };
 
+    // 监听同一标签页内的 localStorage 变化（自定义事件）
+    const handleLocalUpdate = (event: Event) => {
+      if (event instanceof CustomEvent && event.detail?.key === "user_info") {
+        syncUserInfo();
+      }
+    };
+
     window.addEventListener("storage", handleStorage);
+    window.addEventListener("localStorageUpdate", handleLocalUpdate);
+
     return () => {
       window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("localStorageUpdate", handleLocalUpdate);
     };
   }, []);
 
