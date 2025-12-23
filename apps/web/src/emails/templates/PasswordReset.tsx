@@ -13,8 +13,6 @@ import {
 export interface PasswordResetTemplateProps {
   /** 用户名或邮箱 */
   username: string;
-  /** 重置码 */
-  resetCode: string;
   /** 重置链接 */
   resetUrl: string;
   /** 站点名称 */
@@ -32,7 +30,6 @@ export interface PasswordResetTemplateProps {
  */
 export function PasswordResetTemplate({
   username,
-  resetCode,
   resetUrl,
   siteName = "NeutralPress",
   siteUrl = "https://example.com",

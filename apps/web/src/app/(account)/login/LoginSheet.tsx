@@ -17,6 +17,7 @@ import Link, { useNavigateWithTransition } from "@/components/Link";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import { Button } from "@/ui/Button";
 import { useToast } from "@/ui/Toast";
+import PasskeyLoginButton from "./PasskeyLoginButton";
 
 interface LoginSheetProps {
   enabledSSOProviders: OAuthProvider[];
@@ -444,6 +445,8 @@ export default function LoginSheet({ enabledSSOProviders }: LoginSheetProps) {
               ></Button>
             )}
           </div>
+          {/* 通行密钥登录（浏览器支持则显示） */}
+          <PasskeyLoginButton disabled={buttonLoading} />
         </div>
       )}
     </>

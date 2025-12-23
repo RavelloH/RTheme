@@ -25,6 +25,8 @@
     "@react-email/tailwind": "^2.0.1",
     "@remixicon/react": "^4.7.0",
     "@repo/shared-types": "workspace:*",
+    "@simplewebauthn/browser": "^13.2.2",
+    "@simplewebauthn/server": "^13.2.2",
     "@tiptap/extension-character-count": "^3.10.2",
     "@tiptap/extension-dropcursor": "^3.10.2",
     "@tiptap/extension-highlight": "^3.10.2",

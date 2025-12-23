@@ -1,0 +1,568 @@
+"use client";
+
+import React, { useEffect, useRef, useState } from "react";
+import { startRegistration } from "@simplewebauthn/browser";
+import {
+  generatePasskeyRegistrationOptions,
+  verifyPasskeyRegistration,
+  listUserPasskeys,
+  renamePasskey,
+  deletePasskey,
+} from "@/actions/passkey";
+import { useToast } from "@/ui/Toast";
+import { Button } from "@/ui/Button";
+import { Input } from "@/ui/Input";
+import { Dialog } from "@/ui/Dialog";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { AutoResizer } from "@/ui/AutoResizer";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import Clickable from "@/ui/Clickable";
+import {
+  RiKey2Line,
+  RiDeleteBinLine,
+  RiPencilLine,
+  RiAddLine,
+  RiComputerLine,
+  RiSmartphoneLine,
+  RiAlertLine,
+} from "@remixicon/react";
+
+export default function PasskeyManager() {
+  const toast = useToast();
+  const [items, setItems] = useState<
+    Array<{
+      credentialId: string;
+      name: string;
+      deviceType: string | null;
+      browser: string | null;
+      createdAt: string;
+      lastUsedAt: string | null;
+    }>
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const [newName, setNewName] = useState("");
+  const [renameTarget, setRenameTarget] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    credentialId: string;
+    name: string;
+  } | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const reauthWindowRef = useRef<Window | null>(null);
+  const pendingActionRef = useRef<null | {
+    type: "create" | "delete" | "rename";
+    payload?: Record<string, unknown>;
+  }>(null);
+  const channelRef = useRef<BroadcastChannel | null>(null);
+  const hasLoadedRef = useRef(false);
+
+  // 相对时间格式化函数
+  function getRelativeTime(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    const weeks = Math.floor(days / 7);
+    const months = Math.floor(days / 30);
+    const years = Math.floor(days / 365);
+
+    if (seconds < 60) {
+      return "刚刚";
+    } else if (minutes < 60) {
+      return `${minutes}分钟前`;
+    } else if (hours < 24) {
+      return `${hours}小时前`;
+    } else if (days < 7) {
+      return `${days}天前`;
+    } else if (weeks < 4) {
+      return `${weeks}周前`;
+    } else if (months < 12) {
+      return `${months}个月前`;
+    } else {
+      return `${years}年前`;
+    }
+  }
+
+  useEffect(() => {
+    const channel = new BroadcastChannel("reauth-channel");
+    channelRef.current = channel;
+    channel.onmessage = (event) => {
+      const { type } = event.data || {};
+      if (type === "reauth-success") {
+        toast.success("身份验证成功");
+        retryPendingAction();
+      } else if (type === "reauth-cancelled") {
+        toast.error("身份验证已取消");
+        pendingActionRef.current = null;
+        setActionLoading(false);
+      }
+    };
+
+    // 防止 React 严格模式下重复加载
+    if (!hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      load();
+    }
+
+    return () => channel.close();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function load() {
+    setLoading(true);
+    const res = await listUserPasskeys();
+    if (res.success) {
+      setItems(res.data!.items);
+    } else {
+      toast.error(res.message || "获取通行密钥失败");
+    }
+    setLoading(false);
+  }
+
+  function openReauthWindow() {
+    const reauthWindow = window.open("/reauth", "reauth");
+    reauthWindowRef.current = reauthWindow;
+  }
+
+  async function retryPendingAction() {
+    const act = pendingActionRef.current;
+    pendingActionRef.current = null;
+    if (!act) return;
+    const p = (act.payload || {}) as { name?: string; credentialId?: string };
+    switch (act.type) {
+      case "create":
+        await createPasskey(p.name);
+        break;
+      case "delete":
+        await handleDelete(p.credentialId as string);
+        break;
+      case "rename":
+        await handleRename(p.credentialId as string, p.name as string);
+        break;
+    }
+  }
+
+  async function createPasskey(name?: string) {
+    setActionLoading(true);
+    try {
+      const optResp = await generatePasskeyRegistrationOptions();
+      if (!optResp.success) {
+        const code = (optResp.error as { code?: string } | undefined)?.code;
+        if (code === "NEED_REAUTH") {
+          pendingActionRef.current = { type: "create", payload: { name } };
+          openReauthWindow();
+          return;
+        }
+        toast.error(optResp.message || "无法创建通行密钥");
+        setActionLoading(false);
+        return;
+      }
+      const assertion = await startRegistration({
+        optionsJSON: optResp.data!.options,
+      });
+      const verifyResp = await verifyPasskeyRegistration({
+        response: assertion,
+        name: name || newName || "新密钥",
+      });
+      if (!verifyResp.success) {
+        toast.error(verifyResp.message || "创建失败");
+        setActionLoading(false);
+        return;
+      }
+      toast.success("已创建通行密钥");
+      setNewName("");
+      setShowCreateDialog(false);
+      await load();
+      setActionLoading(false);
+    } catch (e) {
+      console.error(e);
+      toast.error("创建通行密钥失败");
+      setActionLoading(false);
+    }
+  }
+
+  // 根据设备类型获取图标
+  function getDeviceIcon(deviceType: string | null) {
+    switch (deviceType?.toLowerCase()) {
+      case "singledevice":
+      case "platform":
+        return <RiComputerLine size="1.5em" className="text-foreground" />;
+      case "multidevice":
+        return <RiSmartphoneLine size="1.5em" className="text-foreground" />;
+      default:
+        return <RiKey2Line size="1.5em" className="text-foreground" />;
+    }
+  }
+
+  // 获取设备类型显示文本
+  function getDeviceTypeText(deviceType: string | null) {
+    switch (deviceType?.toLowerCase()) {
+      case "singledevice":
+      case "platform":
+        return "平台验证器";
+      case "multidevice":
+        return "跨设备验证器";
+      default:
+        return "通行密钥";
+    }
+  }
+
+  async function handleRename(credentialId: string, name: string) {
+    setActionLoading(true);
+    const res = await renamePasskey({ credentialId, name });
+    if (!res.success) {
+      const code = (res.error as { code?: string } | undefined)?.code;
+      if (code === "NEED_REAUTH") {
+        pendingActionRef.current = {
+          type: "rename",
+          payload: { credentialId, name },
+        };
+        openReauthWindow();
+        return;
+      }
+      toast.error(res.message || "重命名失败");
+      setActionLoading(false);
+      return;
+    }
+    toast.success("重命名成功");
+    setNewName("");
+    setShowRenameDialog(false);
+    setRenameTarget(null);
+    await load();
+    setActionLoading(false);
+  }
+
+  async function handleDelete(credentialId: string) {
+    setActionLoading(true);
+    const res = await deletePasskey({ credentialId });
+    if (!res.success) {
+      const code = (res.error as { code?: string } | undefined)?.code;
+      if (code === "NEED_REAUTH") {
+        pendingActionRef.current = {
+          type: "delete",
+          payload: { credentialId },
+        };
+        openReauthWindow();
+        return;
+      }
+      toast.error(res.message || "删除失败");
+      setActionLoading(false);
+      return;
+    }
+    toast.success("删除成功");
+    setShowDeleteDialog(false);
+    setDeleteTarget(null);
+    await load();
+    setActionLoading(false);
+  }
+
+  return (
+    <>
+      <div className="space-y-6">
+        {/* 添加通行密钥按钮 */}
+        <div className="flex items-center justify-between pb-4 border-b border-foreground/10">
+          <div>
+            <p className="text-foreground font-medium">管理通行密钥</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              使用存储于设备上的生物学验证方式来实现无密码登录
+            </p>
+          </div>
+          <Button
+            onClick={() => setShowCreateDialog(true)}
+            label="添加密钥"
+            icon={<RiAddLine size="1.5em" />}
+            variant="secondary"
+            size="sm"
+            disabled={loading || actionLoading}
+          />
+        </div>
+
+        {/* 通行密钥列表 */}
+        <AutoResizer duration={0.3}>
+          <div>
+            <AutoTransition type="fade" duration={0.2} initial={false}>
+              {loading ? (
+                <div
+                  key="loading"
+                  className="flex items-center justify-center py-12"
+                >
+                  <LoadingIndicator size="md" />
+                </div>
+              ) : items.length === 0 ? (
+                <div
+                  key="empty"
+                  className="flex flex-col items-center justify-center py-12"
+                >
+                  <p className="text-sm text-muted-foreground">
+                    尚未创建任何通行密钥
+                  </p>
+                </div>
+              ) : (
+                <div key="list" className="space-y-0">
+                  {items.map((item, index) => (
+                    <div
+                      key={item.credentialId}
+                      className={`flex items-center justify-between py-4 gap-4 ${index !== items.length - 1 ? "border-b border-foreground/10" : ""}`}
+                    >
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
+                          {getDeviceIcon(item.deviceType)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground truncate">
+                            {item.name}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-1">
+                            <span className="flex items-center gap-1">
+                              {getDeviceTypeText(item.deviceType)}
+                              {item.browser && (
+                                <>
+                                  <span className="opacity-50">·</span>
+                                  <span>{item.browser}</span>
+                                </>
+                              )}
+                            </span>
+                            <span className="opacity-50">·</span>
+                            <span className="whitespace-nowrap">
+                              创建于{" "}
+                              {new Date(item.createdAt).toLocaleString(
+                                "zh-CN",
+                                {
+                                  year: "numeric",
+                                  month: "2-digit",
+                                  day: "2-digit",
+                                },
+                              )}
+                            </span>
+                            {item.lastUsedAt && (
+                              <>
+                                <span className="opacity-50">·</span>
+                                <span className="whitespace-nowrap">
+                                  上次使用于 {getRelativeTime(item.lastUsedAt)}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-3 flex-shrink-0">
+                        <Clickable
+                          onClick={() => {
+                            setRenameTarget(item.credentialId);
+                            setNewName(item.name);
+                            setShowRenameDialog(true);
+                          }}
+                          disabled={actionLoading}
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <RiPencilLine size="1.25em" />
+                        </Clickable>
+                        <Clickable
+                          onClick={() => {
+                            setDeleteTarget({
+                              credentialId: item.credentialId,
+                              name: item.name,
+                            });
+                            setShowDeleteDialog(true);
+                          }}
+                          disabled={actionLoading}
+                          className="text-error transition-colors"
+                        >
+                          <RiDeleteBinLine size="1.25em" />
+                        </Clickable>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </AutoTransition>
+          </div>
+        </AutoResizer>
+      </div>
+
+      {/* 创建通行密钥对话框 */}
+      <Dialog
+        open={showCreateDialog}
+        onClose={() => {
+          setShowCreateDialog(false);
+          setNewName("");
+        }}
+        title="添加通行密钥"
+        size="sm"
+      >
+        <div className="px-6 py-6 space-y-8">
+          <section className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                创建新的通行密钥
+              </h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                通行密钥使用设备的生物识别技术或设备密码进行身份验证，
+                提供比传统密码更安全、更便捷的登录方式。
+                <br />
+                为保障安全，在执行操作前需要验证你的身份。
+              </p>
+            </div>
+            <div>
+              <Input
+                label="设备名称"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                size="sm"
+                helperText="为这个通行密钥指定一个易于识别的名称"
+              />
+            </div>
+          </section>
+
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end sm:gap-4">
+            <Button
+              label="取消"
+              variant="ghost"
+              onClick={() => {
+                setShowCreateDialog(false);
+                setNewName("");
+              }}
+              size="sm"
+              disabled={actionLoading}
+            />
+            <Button
+              label="创建"
+              variant="secondary"
+              onClick={() => createPasskey()}
+              loading={actionLoading}
+              loadingText="正在创建..."
+              size="sm"
+            />
+          </div>
+        </div>
+      </Dialog>
+
+      {/* 重命名通行密钥对话框 */}
+      <Dialog
+        open={showRenameDialog}
+        onClose={() => {
+          setShowRenameDialog(false);
+          setRenameTarget(null);
+          setNewName("");
+        }}
+        title="重命名通行密钥"
+        size="sm"
+      >
+        <div className="px-6 py-6 space-y-8">
+          <section className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                修改设备名称
+              </h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                为保障安全，在执行操作前需要验证你的身份。
+              </p>
+            </div>
+            <div>
+              <Input
+                label="新名称"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                size="sm"
+                placeholder="输入新的设备名称"
+                helperText="为这个通行密钥指定一个新的名称"
+              />
+            </div>
+          </section>
+
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end sm:gap-4">
+            <Button
+              label="取消"
+              variant="ghost"
+              onClick={() => {
+                setShowRenameDialog(false);
+                setRenameTarget(null);
+                setNewName("");
+              }}
+              size="sm"
+              disabled={actionLoading}
+            />
+            <Button
+              label="确认重命名"
+              variant="secondary"
+              onClick={() =>
+                renameTarget && handleRename(renameTarget, newName)
+              }
+              loading={actionLoading}
+              loadingText="重命名中..."
+              size="sm"
+              disabled={!newName.trim() || actionLoading}
+            />
+          </div>
+        </div>
+      </Dialog>
+
+      {/* 删除通行密钥确认对话框 */}
+      <Dialog
+        open={showDeleteDialog}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setDeleteTarget(null);
+        }}
+        title="删除通行密钥"
+        size="sm"
+      >
+        <div className="px-6 py-6 space-y-8">
+          <section className="space-y-4">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 flex items-center justify-center flex-shrink-0 bg-destructive/10 rounded-sm">
+                <RiAlertLine size="1.5em" className="text-destructive" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-foreground">
+                  确认删除
+                </h3>
+                <p className="text-sm text-muted-foreground mt-2">
+                  你确定要删除通行密钥{" "}
+                  <span className="font-medium text-foreground">
+                    &quot;{deleteTarget?.name}&quot;
+                  </span>{" "}
+                  吗？
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  删除后将无法使用此通行密钥登录。为保障安全，在执行操作前需要验证你的身份。
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end sm:gap-4">
+            <Button
+              label="取消"
+              variant="ghost"
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setDeleteTarget(null);
+              }}
+              size="sm"
+              disabled={actionLoading}
+            />
+            <Button
+              label="确认删除"
+              variant="danger"
+              onClick={() =>
+                deleteTarget && handleDelete(deleteTarget.credentialId)
+              }
+              loading={actionLoading}
+              loadingText="删除中..."
+              size="sm"
+            />
+          </div>
+        </div>
+      </Dialog>
+    </>
+  );
+}

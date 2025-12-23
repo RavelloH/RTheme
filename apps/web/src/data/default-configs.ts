@@ -185,6 +185,67 @@ export const defaultConfigs: DefaultConfig[] = [
     description:
       "是否需要用户注册后验证邮箱。需要设置相关环境变量以配置电子邮件发送服务，详见文档",
   },
+  // Google OAuth
+  {
+    key: "user.sso.google.enabled",
+    value: { default: false },
+    description:
+      "是否启用 Google SSO 登录，详见 https://docs.ravelloh.com/docs/sso",
+  },
+  {
+    key: "user.sso.google",
+    value: {
+      default: {
+        clientId: "",
+        clientSecret: "",
+      },
+    },
+    description: "Google OAuth 配置参数",
+  },
+  // GitHub OAuth
+  {
+    key: "user.sso.github.enabled",
+    value: { default: false },
+    description:
+      "是否启用 GitHub SSO 登录，详见 https://docs.ravelloh.com/docs/sso",
+  },
+  {
+    key: "user.sso.github",
+    value: {
+      default: {
+        clientId: "",
+        clientSecret: "",
+      },
+    },
+    description: "GitHub OAuth 配置参数",
+  },
+  // Microsoft OAuth
+  {
+    key: "user.sso.microsoft.enabled",
+    value: { default: false },
+    description:
+      "是否启用 Microsoft SSO 登录，详见 https://docs.ravelloh.com/docs/sso",
+  },
+  {
+    key: "user.sso.microsoft",
+    value: {
+      default: {
+        clientId: "",
+        clientSecret: "",
+      },
+    },
+    description: "Microsoft OAuth 配置参数",
+  },
+  {
+    key: "user.passkey.enabled",
+    value: { default: true },
+    description: "是否启用通行密钥功能",
+  },
+  {
+    key: "user.passkey.maxPerUser",
+    value: { default: 5 },
+    description: "每个用户允许绑定的最大通行密钥数量",
+  },
   // =====================================
   // 内容相关配置
   // =====================================
@@ -367,59 +428,5 @@ export const defaultConfigs: DefaultConfig[] = [
     value: { default: 365 },
     description:
       "数据保留天数。超过此天数的数据将被删除（不会影响访问量统计）。设置为0以保留所有数据",
-  },
-  // =====================================
-  // SSO 登录配置
-  // =====================================
-  // Google OAuth
-  {
-    key: "user.sso.google.enabled",
-    value: { default: false },
-    description:
-      "是否启用 Google SSO 登录，详见 https://docs.ravelloh.com/docs/sso",
-  },
-  {
-    key: "user.sso.google",
-    value: {
-      default: {
-        clientId: "",
-        clientSecret: "",
-      },
-    },
-    description: "Google OAuth 配置参数",
-  },
-  // GitHub OAuth
-  {
-    key: "user.sso.github.enabled",
-    value: { default: false },
-    description:
-      "是否启用 GitHub SSO 登录，详见 https://docs.ravelloh.com/docs/sso",
-  },
-  {
-    key: "user.sso.github",
-    value: {
-      default: {
-        clientId: "",
-        clientSecret: "",
-      },
-    },
-    description: "GitHub OAuth 配置参数",
-  },
-  // Microsoft OAuth
-  {
-    key: "user.sso.microsoft.enabled",
-    value: { default: false },
-    description:
-      "是否启用 Microsoft SSO 登录，详见 https://docs.ravelloh.com/docs/sso",
-  },
-  {
-    key: "user.sso.microsoft",
-    value: {
-      default: {
-        clientId: "",
-        clientSecret: "",
-      },
-    },
-    description: "Microsoft OAuth 配置参数",
   },
 ];

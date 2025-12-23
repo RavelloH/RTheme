@@ -10,9 +10,6 @@ import {
 import { verifyPassword } from "@/lib/server/password";
 import ResponseBuilder from "@/lib/server/response";
 import type { ApiResponse } from "@repo/shared-types/api/common";
-import { after } from "next/server";
-import { logAuditEvent } from "./audit";
-import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
 import limitControl from "@/lib/server/rateLimit";
 import { verifyToken } from "./captcha";
 
@@ -236,35 +233,6 @@ export async function verifyPasswordForReauth({
       priority: "high",
     });
 
-    // 获取客户端信息用于审计日志
-    const clientIP = await getClientIP();
-    const clientUserAgent = await getClientUserAgent();
-
-    // 记录审计日志
-    after(async () => {
-      try {
-        await logAuditEvent({
-          user: {
-            uid: user.uid.toString(),
-            ipAddress: clientIP,
-            userAgent: clientUserAgent,
-          },
-          details: {
-            action: "UPDATE",
-            resourceType: "USER",
-            resourceId: user.uid.toString(),
-            vaule: {
-              old: null,
-              new: { reauthenticated: true },
-            },
-            description: "通过密码重新认证",
-          },
-        });
-      } catch (error) {
-        console.error("Failed to log audit event:", error);
-      }
-    });
-
     return response.ok({
       message: "验证成功",
       data: null,
@@ -374,33 +342,72 @@ export async function verifySSOForReauth({
       priority: "high",
     });
 
-    // 获取客户端信息用于审计日志
-    const clientIP = await getClientIP();
-    const clientUserAgent = await getClientUserAgent();
+    return response.ok({
+      message: "验证成功",
+      data: null,
+    }) as unknown as ApiResponse<null>;
+  } catch (error) {
+    console.error("Verify SSO for reauth error:", error);
+    return response.serverError({
+      message: "验证失败，请稍后重试",
+      error: {
+        code: "SERVER_ERROR",
+        message: "验证失败，请稍后重试",
+      },
+    }) as unknown as ApiResponse<null>;
+  }
+}
 
-    // 记录审计日志
-    after(async () => {
-      try {
-        await logAuditEvent({
-          user: {
-            uid: user.uid.toString(),
-            ipAddress: clientIP,
-            userAgent: clientUserAgent,
-          },
-          details: {
-            action: "UPDATE",
-            resourceType: "USER",
-            resourceId: user.uid.toString(),
-            vaule: {
-              old: null,
-              new: { reauthenticated: true, provider },
-            },
-            description: `通过 ${provider.toUpperCase()} SSO 重新认证`,
-          },
-        });
-      } catch (error) {
-        console.error("Failed to log audit event:", error);
-      }
+/**
+ * 设置 REAUTH_TOKEN（用于通行密钥验证）
+ * 这个函数在通行密钥验证成功后调用
+ */
+export async function setReauthToken(): Promise<ApiResponse<null>> {
+  const response = new ResponseBuilder("serveraction");
+
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("ACCESS_TOKEN")?.value || "";
+    const decoded = jwtTokenVerify<AccessTokenPayload>(token);
+
+    if (!decoded) {
+      return response.unauthorized({
+        message: "请先登录",
+      }) as unknown as ApiResponse<null>;
+    }
+
+    const { uid } = decoded;
+
+    // 验证用户存在
+    const user = await prisma.user.findUnique({
+      where: { uid },
+      select: { uid: true },
+    });
+
+    if (!user) {
+      return response.unauthorized({
+        message: "用户不存在",
+      }) as unknown as ApiResponse<null>;
+    }
+
+    // 生成 REAUTH_TOKEN
+    const expiredAtUnix = Math.floor(Date.now() / 1000) + REAUTH_TOKEN_EXPIRY;
+    const reauthToken = jwtTokenSign({
+      inner: {
+        uid: user.uid,
+        exp: expiredAtUnix,
+      },
+      expired: `${REAUTH_TOKEN_EXPIRY}s`,
+    });
+
+    // 设置 REAUTH_TOKEN cookie
+    cookieStore.set("REAUTH_TOKEN", reauthToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: REAUTH_TOKEN_EXPIRY,
+      path: "/",
+      priority: "high",
     });
 
     return response.ok({
@@ -408,7 +415,7 @@ export async function verifySSOForReauth({
       data: null,
     }) as unknown as ApiResponse<null>;
   } catch (error) {
-    console.error("Verify SSO for reauth error:", error);
+    console.error("Set reauth token error:", error);
     return response.serverError({
       message: "验证失败，请稍后重试",
       error: {

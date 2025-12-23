@@ -993,7 +993,6 @@ export async function requestPasswordReset(
 
         const emailComponent = PasswordResetTemplate({
           username: user.nickname || user.username,
-          resetCode: passwordReset.id,
           resetUrl: `${siteUrl}/reset-password?code=${passwordReset.id}`,
           siteName,
           siteUrl,

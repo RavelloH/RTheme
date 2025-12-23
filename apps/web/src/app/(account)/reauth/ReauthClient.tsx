@@ -19,12 +19,14 @@ import {
 } from "@remixicon/react";
 import UnauthorizedPage from "../../unauthorized";
 import { CaptchaButton } from "@/components/CaptchaButton";
-import { useBroadcast } from "@/hooks/useBroadcast";
+import { useBroadcast, useBroadcastSender } from "@/hooks/useBroadcast";
+import PasskeyReauthButton from "./PasskeyReauthButton";
 
 export default function ReauthClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
+  const { broadcast } = useBroadcastSender<{ type: string }>();
 
   const [user, setUser] = useState<{
     uid: number;
@@ -37,6 +39,7 @@ export default function ReauthClient() {
   const [password, setPassword] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [ssoRedirecting, setSsoRedirecting] = useState(false);
 
   // 标志：是否正在进行 SSO 验证（使用 ref 以便在事件处理器中访问最新值）
   const isSSORedirectingRef = useRef(false);
@@ -154,10 +157,14 @@ export default function ReauthClient() {
         }, 500);
       } else {
         toast.error(result.message);
+        // 重置验证码
+        broadcast({ type: "captcha-reset" });
+        setVerifying(false);
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "验证失败");
-    } finally {
+      // 重置验证码
+      broadcast({ type: "captcha-reset" });
       setVerifying(false);
     }
   };
@@ -165,6 +172,7 @@ export default function ReauthClient() {
   const handleSSOVerify = (provider: OAuthProvider) => {
     // 设置标志：正在进行 SSO 验证
     isSSORedirectingRef.current = true;
+    setSsoRedirecting(true);
 
     // 跳转到 SSO 验证流程
     router.push(`/sso/${provider}/login?mode=reauth`);
@@ -206,7 +214,7 @@ export default function ReauthClient() {
                   重新验证身份
                 </h1>
                 <p className="text-muted-foreground">
-                  为了安全，请验证你的身份。
+                  为保障安全，请验证你的身份。
                 </p>
               </div>
               <div className="inline-flex w-16 h-16items-center justify-center mb-4">
@@ -226,11 +234,11 @@ export default function ReauthClient() {
                     helperText="输入你的账户密码"
                     icon={<RiShieldKeyholeLine size={"1em"} />}
                     onKeyPress={(e) => {
-                      if (e.key === "Enter" && !verifying) {
+                      if (e.key === "Enter" && !verifying && !ssoRedirecting) {
                         handlePasswordVerify();
                       }
                     }}
-                    disabled={verifying}
+                    disabled={verifying || ssoRedirecting}
                   />
                   <div className="pt-6 w-full">
                     <CaptchaButton
@@ -242,6 +250,7 @@ export default function ReauthClient() {
                       variant="secondary"
                       size="md"
                       fullWidth
+                      disabled={ssoRedirecting}
                     />
                   </div>
                 </div>
@@ -280,10 +289,21 @@ export default function ReauthClient() {
                       variant="secondary"
                       size="md"
                       icon={getProviderIcon(provider)}
-                      disabled={verifying}
+                      disabled={verifying || ssoRedirecting}
+                      loading={ssoRedirecting}
                     />
                   ))}
                 </div>
+              )}
+
+              {/* 通行密钥验证 */}
+              {(user.hasPassword || user.linkedProviders.length > 0) && (
+                <>
+                  <PasskeyReauthButton
+                    disabled={verifying || ssoRedirecting}
+                    size="md"
+                  />
+                </>
               )}
 
               {/* 如果没有任何验证方式 */}
@@ -309,6 +329,7 @@ export default function ReauthClient() {
                   variant="ghost"
                   size="md"
                   fullWidth
+                  disabled={ssoRedirecting}
                 />
               </div>
             </div>

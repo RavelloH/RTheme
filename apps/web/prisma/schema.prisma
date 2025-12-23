@@ -46,6 +46,7 @@ model User {
   auditLogs      AuditLog[]
   refreshTokens  RefreshToken[]
   passwordResets PasswordReset[]
+  passkeys       Passkey[]
 
   // 索引优化
   @@index([role])
@@ -100,6 +101,36 @@ model PasswordReset {
   user      User     @relation(fields: [userUid], references: [uid], onDelete: Cascade)
 
   @@index([createdAt])
+}
+
+// 通行密钥模型 (用于 WebAuthn 身份验证)
+model Passkey {
+  id           String   @id @default(uuid())
+  userUid      Int
+  
+  // WebAuthn 核心字段
+  credentialId String   @unique @db.VarChar(500) // Base64URL 编码的凭证ID
+  publicKey    String   @db.Text                  // Base64 编码的公钥
+  counter      BigInt   @default(0)               // 防重放攻击计数器
+  transports   String[] // 传输方式: ["usb", "nfc", "ble", "internal"]
+  
+  // 用户友好字段
+  name         String   @db.VarChar(100)          // 用户自定义名称
+  
+  // 设备信息
+  deviceType   String?  @db.VarChar(50)           // 设备类型
+  browser      String?  @db.VarChar(100)          // 注册时的浏览器
+  
+  // 时间戳
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime @default(now())
+  
+  // 关系
+  user         User     @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+  
+  @@index([userUid])
+  @@index([credentialId])
+  @@index([lastUsedAt])
 }
 
 model Post {

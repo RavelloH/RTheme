@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { unlinkSSO, setPassword } from "@/actions/sso";
 import { changePassword } from "@/actions/auth";
@@ -21,6 +21,7 @@ import {
   RiShieldKeyholeLine,
 } from "@remixicon/react";
 import UnauthorizedPage from "../../unauthorized";
+import PasskeyManager from "./PasskeyManager";
 
 interface LinkedAccount {
   provider: string;
@@ -701,6 +702,18 @@ export default function SettingsClient({
                       </div>
                     </div>
                   )}
+
+                  {/* 通行密钥管理 */}
+                  <div className="bg-background border border-foreground/10 rounded-sm">
+                    <div className="px-6 py-4 border-b border-foreground/10">
+                      <h3 className="text-lg font-medium text-foreground tracking-wider">
+                        通行密钥管理
+                      </h3>
+                    </div>
+                    <div className="p-6">
+                      <PasskeyManager />
+                    </div>
+                  </div>
                 </div>
               )}
             </AutoTransition>
@@ -725,7 +738,7 @@ export default function SettingsClient({
                   设置新密码
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  为了安全，在修改密码前需要验证你的身份
+                  为保障安全，在修改密码前需要验证你的身份
                 </p>
               </div>
               <div className="space-y-4">
@@ -854,7 +867,7 @@ export default function SettingsClient({
                   确认解绑
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  解绑后将无法使用此方式登录。为了安全，在执行操作前需要验证你的身份。
+                  解绑后将无法使用此方式登录。为保障安全，在执行操作前需要验证你的身份。
                 </p>
               </div>
             </section>

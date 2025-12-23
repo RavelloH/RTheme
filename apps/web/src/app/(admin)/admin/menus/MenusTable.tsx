@@ -25,7 +25,6 @@ import { Select } from "@/ui/Select";
 import { Button } from "@/ui/Button";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { useToast } from "@/ui/Toast";
-import { useNavigateWithTransition } from "@/components/Link";
 
 interface MenuFormState {
   name: string;
@@ -64,7 +63,6 @@ export default function MenusTable() {
   const [batchNewStatus, setBatchNewStatus] = useState("ACTIVE");
   const [batchNewCategory, setBatchNewCategory] = useState("COMMON");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const navigate = useNavigateWithTransition();
 
   // 编辑菜单状态
   const [formData, setFormData] = useState<MenuFormState>({
