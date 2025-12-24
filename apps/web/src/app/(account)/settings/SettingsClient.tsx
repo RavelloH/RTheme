@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { unlinkSSO, setPassword } from "@/actions/sso";
 import { changePassword } from "@/actions/auth";
+import { getSessions, revokeSession } from "@/actions/auth";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import { getUserProfile } from "@/actions/user";
 import { Button } from "@/ui/Button";
@@ -12,6 +13,8 @@ import { Dialog } from "@/ui/Dialog";
 import { useToast } from "@/ui/Toast";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { AutoTransition } from "@/ui/AutoTransition";
+import { AutoResizer } from "@/ui/AutoResizer";
+import Clickable from "@/ui/Clickable";
 import {
   RiGoogleFill,
   RiGithubFill,
@@ -19,6 +22,13 @@ import {
   RiUserLine,
   RiNotification3Line,
   RiShieldKeyholeLine,
+  RiDeviceLine,
+  RiWindowsFill,
+  RiAppleFill,
+  RiAndroidFill,
+  RiTerminalBoxFill,
+  RiComputerLine,
+  RiDeleteBinLine,
 } from "@remixicon/react";
 import UnauthorizedPage from "../../unauthorized";
 import PasskeyManager from "./PasskeyManager";
@@ -36,8 +46,24 @@ interface UserProfile {
   linkedAccounts: LinkedAccount[];
 }
 
+interface Session {
+  id: string;
+  deviceType: string;
+  deviceIcon: string;
+  displayName: string;
+  browserName: string;
+  browserVersion: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+  ipAddress: string;
+  ipLocation: string | null;
+  revokedAt: string | null;
+  isCurrent: boolean;
+}
+
 interface SettingsClientProps {
   enabledSSOProviders: OAuthProvider[];
+  passkeyEnabled: boolean;
 }
 
 type PendingAction =
@@ -56,10 +82,15 @@ type PendingAction =
   | {
       type: "changePassword";
       data: { new_password: string };
+    }
+  | {
+      type: "revokeSession";
+      data: { sessionId: string };
     };
 
 export default function SettingsClient({
   enabledSSOProviders,
+  passkeyEnabled,
 }: SettingsClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -82,6 +113,13 @@ export default function SettingsClient({
   const [showUnlinkDialog, setShowUnlinkDialog] = useState(false);
   const [unlinkLoading, setUnlinkLoading] = useState(false);
 
+  // 会话管理相关状态
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [revokeSessionId, setRevokeSessionId] = useState<string | null>(null);
+  const [showRevokeSessionDialog, setShowRevokeSessionDialog] = useState(false);
+  const [revokeSessionLoading, setRevokeSessionLoading] = useState(false);
+
   // 当前选中的分类
   const [activeSection, setActiveSection] = useState<string>("basic");
 
@@ -93,6 +131,7 @@ export default function SettingsClient({
   const sections = [
     { id: "basic", label: "基本信息", icon: RiUserLine },
     { id: "notifications", label: "通知管理", icon: RiNotification3Line },
+    { id: "sessions", label: "会话管理", icon: RiDeviceLine },
     { id: "security", label: "安全设置", icon: RiShieldKeyholeLine },
   ];
 
@@ -104,6 +143,14 @@ export default function SettingsClient({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 当进入会话管理页面时自动加载会话列表
+  useEffect(() => {
+    if (activeSection === "sessions" && sessions.length === 0) {
+      loadSessions();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSection]);
 
   useEffect(() => {
     // 从 URL 参数读取成功/错误消息
@@ -251,6 +298,9 @@ export default function SettingsClient({
         break;
       case "changePassword":
         await executeChangePassword(action.data);
+        break;
+      case "revokeSession":
+        await executeRevokeSession(action.data);
         break;
     }
   };
@@ -411,6 +461,103 @@ export default function SettingsClient({
     await executeChangePassword({
       new_password: newPassword,
     });
+  };
+
+  // 加载会话列表
+  const loadSessions = async () => {
+    setSessionsLoading(true);
+    try {
+      const result = await getSessions();
+      if (result.success && result.data) {
+        setSessions(result.data.sessions);
+      } else {
+        toast.error(result.message || "加载会话列表失败");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "加载会话列表失败");
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  // 执行撤销会话（不检查 reauth）
+  const executeRevokeSession = async (data: { sessionId: string }) => {
+    setRevokeSessionLoading(true);
+    try {
+      const result = await revokeSession(data);
+
+      if (result.success) {
+        toast.success(result.message);
+        setShowRevokeSessionDialog(false);
+        setRevokeSessionId(null);
+        loadSessions(); // 重新加载会话列表
+        setRevokeSessionLoading(false); // 清除 loading 状态
+      } else if (needsReauth(result.error)) {
+        // 需要 reauth
+        pendingActionRef.current = { type: "revokeSession", data };
+        openReauthWindow();
+      } else {
+        toast.error(result.message);
+        setRevokeSessionLoading(false);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "撤销会话失败");
+      setRevokeSessionLoading(false);
+    }
+  };
+
+  // 处理撤销会话按钮点击
+  const handleRevokeSession = async () => {
+    if (!revokeSessionId) {
+      toast.error("未选择要撤销的会话");
+      return;
+    }
+
+    await executeRevokeSession({
+      sessionId: revokeSessionId,
+    });
+  };
+
+  // 格式化相对时间
+  const formatRelativeTime = (dateString: string | null) => {
+    if (!dateString) return "未知";
+
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffMs = now.getTime() - date.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffSec < 60) return "刚刚";
+    if (diffMin < 60) return `${diffMin} 分钟前`;
+    if (diffHour < 24) return `${diffHour} 小时前`;
+    if (diffDay < 30) return `${diffDay} 天前`;
+
+    // 超过 30 天显示具体日期
+    return date.toLocaleDateString("zh-CN", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  // 获取设备图标
+  const getDeviceIcon = (iconName: string) => {
+    switch (iconName) {
+      case "RiWindowsFill":
+        return <RiWindowsFill size="1.5em" />;
+      case "RiAppleFill":
+        return <RiAppleFill size="1.5em" />;
+      case "RiAndroidFill":
+        return <RiAndroidFill size="1.5em" />;
+      case "RiTerminalBoxFill":
+        return <RiTerminalBoxFill size="1.5em" />;
+      case "RiComputerLine":
+      default:
+        return <RiComputerLine size="1.5em" />;
+    }
   };
 
   if (loading) {
@@ -576,6 +723,167 @@ export default function SettingsClient({
                 </div>
               )}
 
+              {/* 会话管理 */}
+              {activeSection === "sessions" && (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-2xl font-semibold text-foreground mb-2 tracking-wider">
+                      会话管理
+                    </h2>
+                    <p className="text-muted-foreground text-sm">
+                      管理你的登录会话，撤销可疑设备的访问权限
+                    </p>
+                  </div>
+
+                  <div className="bg-background border border-foreground/10 rounded-sm">
+                    <div className="px-6 py-4 border-b border-foreground/10 flex items-center justify-between">
+                      <div>
+                        <p className="text-foreground font-medium">
+                          管理活跃的会话
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          查看所有登录设备并撤销可疑会话
+                        </p>
+                      </div>
+                      <Button
+                        label="刷新"
+                        onClick={loadSessions}
+                        variant="ghost"
+                        size="sm"
+                        loading={sessionsLoading}
+                        disabled={sessionsLoading}
+                      />
+                    </div>
+                    <div className="p-6">
+                      <AutoResizer duration={0.3}>
+                        <div>
+                          <AutoTransition
+                            type="fade"
+                            duration={0.2}
+                            initial={false}
+                          >
+                            {sessionsLoading ? (
+                              <div
+                                key="loading"
+                                className="flex items-center justify-center py-12"
+                              >
+                                <LoadingIndicator size="md" />
+                              </div>
+                            ) : sessions.length === 0 ? (
+                              <div
+                                key="empty"
+                                className="flex flex-col items-center justify-center py-12"
+                              >
+                                <p className="text-sm text-muted-foreground">
+                                  尚未创建任何会话
+                                </p>
+                              </div>
+                            ) : (
+                              <div key="list" className="space-y-0">
+                                {sessions.map((session, index) => (
+                                  <div
+                                    key={session.id}
+                                    className={`
+                                      flex items-center justify-between py-4 gap-4
+                                      ${index !== sessions.length - 1 ? "border-b border-foreground/10" : ""}
+                                      ${session.revokedAt ? "opacity-50" : ""}
+                                    `}
+                                  >
+                                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                                      <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
+                                        {getDeviceIcon(session.deviceIcon)}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <p className="font-medium text-foreground truncate">
+                                            {session.displayName}
+                                          </p>
+                                          {session.isCurrent && (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
+                                              当前会话
+                                            </span>
+                                          )}
+                                          {session.revokedAt && (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
+                                              已撤销
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-1">
+                                          {session.ipLocation && (
+                                            <>
+                                              <span>{session.ipLocation}</span>
+                                              <span className="opacity-50">
+                                                ·
+                                              </span>
+                                            </>
+                                          )}
+                                          <span className="whitespace-nowrap">
+                                            登录于{" "}
+                                            {new Date(
+                                              session.createdAt,
+                                            ).toLocaleString("zh-CN", {
+                                              year: "numeric",
+                                              month: "2-digit",
+                                              day: "2-digit",
+                                            })}
+                                          </span>
+                                          {session.lastUsedAt && (
+                                            <>
+                                              <span className="opacity-50">
+                                                ·
+                                              </span>
+                                              <span className="whitespace-nowrap">
+                                                上次活跃于{" "}
+                                                {formatRelativeTime(
+                                                  session.lastUsedAt,
+                                                )}
+                                              </span>
+                                            </>
+                                          )}
+                                          {session.revokedAt && (
+                                            <>
+                                              <span className="opacity-50">
+                                                ·
+                                              </span>
+                                              <span className="whitespace-nowrap">
+                                                撤销于{" "}
+                                                {formatRelativeTime(
+                                                  session.revokedAt,
+                                                )}
+                                              </span>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    {!session.isCurrent &&
+                                      !session.revokedAt && (
+                                        <div className="flex gap-3 flex-shrink-0">
+                                          <Clickable
+                                            onClick={() => {
+                                              setRevokeSessionId(session.id);
+                                              setShowRevokeSessionDialog(true);
+                                            }}
+                                            disabled={revokeSessionLoading}
+                                            className="text-error transition-colors"
+                                          >
+                                            <RiDeleteBinLine size="1.25em" />
+                                          </Clickable>
+                                        </div>
+                                      )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </AutoTransition>
+                        </div>
+                      </AutoResizer>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* 安全设置 */}
               {activeSection === "security" && (
                 <div className="space-y-6">
@@ -704,16 +1012,18 @@ export default function SettingsClient({
                   )}
 
                   {/* 通行密钥管理 */}
-                  <div className="bg-background border border-foreground/10 rounded-sm">
-                    <div className="px-6 py-4 border-b border-foreground/10">
-                      <h3 className="text-lg font-medium text-foreground tracking-wider">
-                        通行密钥管理
-                      </h3>
+                  {passkeyEnabled && (
+                    <div className="bg-background border border-foreground/10 rounded-sm">
+                      <div className="px-6 py-4 border-b border-foreground/10">
+                        <h3 className="text-lg font-medium text-foreground tracking-wider">
+                          通行密钥管理
+                        </h3>
+                      </div>
+                      <div className="p-6">
+                        <PasskeyManager />
+                      </div>
                     </div>
-                    <div className="p-6">
-                      <PasskeyManager />
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
             </AutoTransition>
@@ -889,6 +1199,51 @@ export default function SettingsClient({
                 onClick={handleUnlinkSSO}
                 loading={unlinkLoading}
                 loadingText="解绑中..."
+                size="sm"
+              />
+            </div>
+          </div>
+        </Dialog>
+
+        {/* 撤销会话对话框 */}
+        <Dialog
+          open={showRevokeSessionDialog}
+          onClose={() => {
+            setShowRevokeSessionDialog(false);
+            setRevokeSessionId(null);
+          }}
+          title="撤销会话"
+          size="sm"
+        >
+          <div className="px-6 py-6 space-y-8">
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">
+                  确认撤销
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  撤销后该设备将无法继续使用此会话访问你的账户。为保障安全，在执行操作前需要验证你的身份。
+                </p>
+              </div>
+            </section>
+
+            <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end sm:gap-4">
+              <Button
+                label="取消"
+                variant="ghost"
+                onClick={() => {
+                  setShowRevokeSessionDialog(false);
+                  setRevokeSessionId(null);
+                }}
+                size="sm"
+                disabled={revokeSessionLoading}
+              />
+              <Button
+                label="确认撤销"
+                variant="danger"
+                onClick={handleRevokeSession}
+                loading={revokeSessionLoading}
+                loadingText="撤销中..."
                 size="sm"
               />
             </div>

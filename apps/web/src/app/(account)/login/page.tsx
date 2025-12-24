@@ -35,6 +35,8 @@ async function getEnabledSSOProviders(): Promise<OAuthProvider[]> {
 
 export default async function LoginPage() {
   const enabledSSOProviders = await getEnabledSSOProviders();
+  const passkeyEnabled = await getConfig<boolean>("user.passkey.enabled");
+
   return (
     <ToastProvider>
       <MainLayout type="horizontal">
@@ -65,7 +67,10 @@ export default async function LoginPage() {
                   <div className="text-muted-foreground">加载中...</div>
                 }
               >
-                <LoginSheet enabledSSOProviders={enabledSSOProviders} />
+                <LoginSheet
+                  enabledSSOProviders={enabledSSOProviders}
+                  passkeyEnabled={passkeyEnabled}
+                />
               </Suspense>
             </GridItem>
 

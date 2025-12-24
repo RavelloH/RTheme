@@ -19,10 +19,14 @@ async function getEnabledSSOProviders(): Promise<OAuthProvider[]> {
 
 export default async function SettingsPage() {
   const enabledSSOProviders = await getEnabledSSOProviders();
+  const passkeyEnabled = await getConfig<boolean>("user.passkey.enabled");
 
   return (
     <ToastProvider>
-      <SettingsClient enabledSSOProviders={enabledSSOProviders} />
+      <SettingsClient
+        enabledSSOProviders={enabledSSOProviders}
+        passkeyEnabled={passkeyEnabled}
+      />
     </ToastProvider>
   );
 }

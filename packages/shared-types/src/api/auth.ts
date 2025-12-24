@@ -372,3 +372,84 @@ export const LogoutSuccessResponseSchema = z.object({
 });
 export type LogoutSuccessResponse = z.infer<typeof LogoutSuccessResponseSchema>;
 registerSchema("LogoutSuccessResponse", LogoutSuccessResponseSchema);
+
+/*
+    <<<<<<<<<< getSessions() schema >>>>>>>>>>
+*/
+// Session 对象
+export const SessionSchema = z.object({
+  id: z.string(),
+  deviceType: z.string(), // 设备类型（Windows、macOS、iOS、Android、Linux 等）
+  deviceIcon: z.string(), // Remix Icon 名称
+  displayName: z.string(), // 显示名称，如 "Windows Edge 141"
+  browserName: z.string(), // 浏览器名称
+  browserVersion: z.string(), // 浏览器版本
+  createdAt: z.string(), // ISO 8601 字符串
+  lastUsedAt: z.string().nullable(), // ISO 8601 字符串
+  ipAddress: z.string(),
+  ipLocation: z.string().nullable(), // 格式化后的位置字符串，如 "中国 北京市"
+  revokedAt: z.string().nullable(), // ISO 8601 字符串
+  isCurrent: z.boolean(), // 是否为当前会话
+});
+export type Session = z.infer<typeof SessionSchema>;
+registerSchema("Session", SessionSchema);
+
+// 获取会话列表成功响应
+export const GetSessionsSuccessResponseSchema = createSuccessResponseSchema(
+  z.object({
+    sessions: z.array(SessionSchema),
+  }),
+);
+export type GetSessionsSuccessResponse = z.infer<
+  typeof GetSessionsSuccessResponseSchema
+>;
+registerSchema("GetSessionsSuccessResponse", GetSessionsSuccessResponseSchema);
+
+/*
+    <<<<<<<<<< revokeSession() schema >>>>>>>>>>
+*/
+export const RevokeSessionSchema = z.object({
+  sessionId: z.string().min(1, "会话 ID 不能为空"),
+});
+export type RevokeSession = z.infer<typeof RevokeSessionSchema>;
+registerSchema("RevokeSession", RevokeSessionSchema);
+
+// 撤销会话成功响应
+export const RevokeSessionSuccessResponseSchema = createSuccessResponseSchema(
+  z.null(),
+);
+export type RevokeSessionSuccessResponse = z.infer<
+  typeof RevokeSessionSuccessResponseSchema
+>;
+registerSchema(
+  "RevokeSessionSuccessResponse",
+  RevokeSessionSuccessResponseSchema,
+);
+
+// 需要重新验证错误响应
+export const NeedReauthErrorResponseSchema = createErrorResponseSchema(
+  z.object({
+    code: z.literal("NEED_REAUTH"),
+    message: z.string(),
+  }),
+);
+export type NeedReauthErrorResponse = z.infer<
+  typeof NeedReauthErrorResponseSchema
+>;
+registerSchema("NeedReauthErrorResponse", NeedReauthErrorResponseSchema);
+
+// 无法撤销当前会话错误响应
+export const CannotRevokeCurrentSessionErrorResponseSchema =
+  createErrorResponseSchema(
+    z.object({
+      code: z.literal("CANNOT_REVOKE_CURRENT_SESSION"),
+      message: z.string(),
+    }),
+  );
+export type CannotRevokeCurrentSessionErrorResponse = z.infer<
+  typeof CannotRevokeCurrentSessionErrorResponseSchema
+>;
+registerSchema(
+  "CannotRevokeCurrentSessionErrorResponse",
+  CannotRevokeCurrentSessionErrorResponseSchema,
+);

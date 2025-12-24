@@ -14,6 +14,7 @@ import type { OAuthProvider } from "@/lib/server/oauth";
 import { after } from "next/server";
 import { logAuditEvent } from "./audit";
 import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
+import { getConfig } from "@/lib/server/configCache";
 
 /**
  * Prisma AccountProvider 枚举类型
@@ -185,6 +186,46 @@ export async function linkSSO({
       }
     });
 
+    // 发送 SSO 绑定通知邮件
+    after(async () => {
+      try {
+        const userWithEmail = await prisma.user.findUnique({
+          where: { uid: user.uid },
+          select: { email: true, username: true, nickname: true },
+        });
+
+        if (!userWithEmail?.email) {
+          return;
+        }
+
+        const { sendEmail } = await import("@/lib/server/email");
+        const { renderEmail } = await import("@/emails/utils");
+        const { SSOLinkedTemplate } = await import("@/emails/templates");
+        const siteName =
+          (await getConfig<string>("site.name")) || "NeutralPress";
+        const siteUrl = (await getConfig<string>("site.url")) || "";
+
+        const emailComponent = SSOLinkedTemplate({
+          username: userWithEmail.nickname || userWithEmail.username,
+          provider: provider.toUpperCase(),
+          linkedAt: new Date().toISOString(),
+          siteName,
+          siteUrl,
+        });
+
+        const { html, text } = await renderEmail(emailComponent);
+
+        await sendEmail({
+          to: userWithEmail.email,
+          subject: `${provider.toUpperCase()} 账户绑定成功`,
+          html,
+          text,
+        });
+      } catch (error) {
+        console.error("发送 SSO 绑定通知邮件失败:", error);
+      }
+    });
+
     return response.ok({
       message: `成功绑定 ${provider.toUpperCase()} 账户`,
       data: null,
@@ -321,6 +362,46 @@ export async function unlinkSSO({
       }
     });
 
+    // 发送 SSO 解绑通知邮件
+    after(async () => {
+      try {
+        const userWithEmail = await prisma.user.findUnique({
+          where: { uid: user.uid },
+          select: { email: true, username: true, nickname: true },
+        });
+
+        if (!userWithEmail?.email) {
+          return;
+        }
+
+        const { sendEmail } = await import("@/lib/server/email");
+        const { renderEmail } = await import("@/emails/utils");
+        const { SSOUnlinkedTemplate } = await import("@/emails/templates");
+        const siteName =
+          (await getConfig<string>("site.name")) || "NeutralPress";
+        const siteUrl = (await getConfig<string>("site.url")) || "";
+
+        const emailComponent = SSOUnlinkedTemplate({
+          username: userWithEmail.nickname || userWithEmail.username,
+          provider: provider.toUpperCase(),
+          unlinkedAt: new Date().toISOString(),
+          siteName,
+          siteUrl,
+        });
+
+        const { html, text } = await renderEmail(emailComponent);
+
+        await sendEmail({
+          to: userWithEmail.email,
+          subject: `${provider.toUpperCase()} 账户解绑成功`,
+          html,
+          text,
+        });
+      } catch (error) {
+        console.error("发送 SSO 解绑通知邮件失败:", error);
+      }
+    });
+
     return response.ok({
       message: `成功解绑 ${provider.toUpperCase()} 账户`,
       data: null,
@@ -437,6 +518,45 @@ export async function setPassword({
         });
       } catch (error) {
         console.error("Failed to log audit event:", error);
+      }
+    });
+
+    // 发送密码设置通知邮件
+    after(async () => {
+      try {
+        const userWithEmail = await prisma.user.findUnique({
+          where: { uid: user.uid },
+          select: { email: true, username: true, nickname: true },
+        });
+
+        if (!userWithEmail?.email) {
+          return;
+        }
+
+        const { sendEmail } = await import("@/lib/server/email");
+        const { renderEmail } = await import("@/emails/utils");
+        const { PasswordSetTemplate } = await import("@/emails/templates");
+        const siteName =
+          (await getConfig<string>("site.name")) || "NeutralPress";
+        const siteUrl = (await getConfig<string>("site.url")) || "";
+
+        const emailComponent = PasswordSetTemplate({
+          username: userWithEmail.nickname || userWithEmail.username,
+          setAt: new Date().toISOString(),
+          siteName,
+          siteUrl,
+        });
+
+        const { html, text } = await renderEmail(emailComponent);
+
+        await sendEmail({
+          to: userWithEmail.email,
+          subject: "账户密码设置成功",
+          html,
+          text,
+        });
+      } catch (error) {
+        console.error("发送密码设置通知邮件失败:", error);
       }
     });
 
@@ -667,6 +787,46 @@ export async function handleSSOBind({
         });
       } catch (error) {
         console.error("Failed to log audit event:", error);
+      }
+    });
+
+    // 发送 SSO 绑定通知邮件
+    after(async () => {
+      try {
+        const userWithEmail = await prisma.user.findUnique({
+          where: { uid: currentUser.uid },
+          select: { email: true, username: true, nickname: true },
+        });
+
+        if (!userWithEmail?.email) {
+          return;
+        }
+
+        const { sendEmail } = await import("@/lib/server/email");
+        const { renderEmail } = await import("@/emails/utils");
+        const { SSOLinkedTemplate } = await import("@/emails/templates");
+        const siteName =
+          (await getConfig<string>("site.name")) || "NeutralPress";
+        const siteUrl = (await getConfig<string>("site.url")) || "";
+
+        const emailComponent = SSOLinkedTemplate({
+          username: userWithEmail.nickname || userWithEmail.username,
+          provider: oauthProvider.toUpperCase(),
+          linkedAt: new Date().toISOString(),
+          siteName,
+          siteUrl,
+        });
+
+        const { html, text } = await renderEmail(emailComponent);
+
+        await sendEmail({
+          to: userWithEmail.email,
+          subject: `${oauthProvider.toUpperCase()} 账户绑定成功`,
+          html,
+          text,
+        });
+      } catch (error) {
+        console.error("发送 SSO 绑定通知邮件失败:", error);
       }
     });
 

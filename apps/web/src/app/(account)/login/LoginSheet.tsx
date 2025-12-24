@@ -21,6 +21,7 @@ import PasskeyLoginButton from "./PasskeyLoginButton";
 
 interface LoginSheetProps {
   enabledSSOProviders: OAuthProvider[];
+  passkeyEnabled: boolean;
 }
 
 interface SSOLoginResult {
@@ -37,7 +38,10 @@ interface SSOLoginResult {
   message: string;
 }
 
-export default function LoginSheet({ enabledSSOProviders }: LoginSheetProps) {
+export default function LoginSheet({
+  enabledSSOProviders,
+  passkeyEnabled,
+}: LoginSheetProps) {
   const navigate = useNavigateWithTransition();
   const searchParams = useSearchParams();
   const usernameFromUrl = searchParams.get("username") || "";
@@ -392,61 +396,81 @@ export default function LoginSheet({ enabledSSOProviders }: LoginSheetProps) {
         </div>
       </div>
 
-      {/* SSO 登录选项 */}
-      {enabledSSOProviders.length > 0 && (
+      {/* SSO 登录选项和通行密钥登录 */}
+      {(enabledSSOProviders.length > 0 || passkeyEnabled) && (
         <div className="pt-6 w-full">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-muted-foreground/30"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-background text-muted-foreground">
-                或使用以下方式登录
-              </span>
-            </div>
-          </div>
-          <div
-            className={`mt-6 grid gap-3 ${
-              enabledSSOProviders.length === 1
-                ? "grid-cols-1"
-                : enabledSSOProviders.length === 2
-                  ? "grid-cols-2"
-                  : "grid-cols-3"
-            }`}
-          >
-            {enabledSSOProviders.includes("google") && (
-              <Button
-                onClick={() => navigate("/sso/google/login")}
-                label=""
-                icon={<RiGoogleFill size={"1.5em"} />}
-                variant="secondary"
-                size="lg"
-                disabled={buttonLoading}
-              ></Button>
-            )}
-            {enabledSSOProviders.includes("github") && (
-              <Button
-                onClick={() => navigate("/sso/github/login")}
-                label=""
-                icon={<RiGithubFill size={"1.5em"} />}
-                variant="secondary"
-                size="lg"
-                disabled={buttonLoading}
-              ></Button>
-            )}
-            {enabledSSOProviders.includes("microsoft") && (
-              <Button
-                onClick={() => navigate("/sso/microsoft/login")}
-                label=""
-                icon={<RiMicrosoftFill size={"1.5em"} />}
-                variant="secondary"
-                size="lg"
-                disabled={buttonLoading}
-              ></Button>
-            )}
-          </div>
+          {enabledSSOProviders.length > 0 && (
+            <>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-muted-foreground/30"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-background text-muted-foreground">
+                    或使用以下方式登录
+                  </span>
+                </div>
+              </div>
+              <div
+                className={`mt-6 grid gap-3 ${
+                  enabledSSOProviders.length === 1
+                    ? "grid-cols-1"
+                    : enabledSSOProviders.length === 2
+                      ? "grid-cols-2"
+                      : "grid-cols-3"
+                }`}
+              >
+                {enabledSSOProviders.includes("google") && (
+                  <Button
+                    onClick={() => navigate("/sso/google/login")}
+                    label=""
+                    icon={<RiGoogleFill size={"1.5em"} />}
+                    variant="secondary"
+                    size="lg"
+                    disabled={buttonLoading}
+                  ></Button>
+                )}
+                {enabledSSOProviders.includes("github") && (
+                  <Button
+                    onClick={() => navigate("/sso/github/login")}
+                    label=""
+                    icon={<RiGithubFill size={"1.5em"} />}
+                    variant="secondary"
+                    size="lg"
+                    disabled={buttonLoading}
+                  ></Button>
+                )}
+                {enabledSSOProviders.includes("microsoft") && (
+                  <Button
+                    onClick={() => navigate("/sso/microsoft/login")}
+                    label=""
+                    icon={<RiMicrosoftFill size={"1.5em"} />}
+                    variant="secondary"
+                    size="lg"
+                    disabled={buttonLoading}
+                  ></Button>
+                )}
+              </div>
+            </>
+          )}
           {/* 通行密钥登录（浏览器支持则显示） */}
-          <PasskeyLoginButton disabled={buttonLoading} />
+          {passkeyEnabled && (
+            <>
+              {enabledSSOProviders.length === 0 && (
+                <div className="relative mb-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-muted-foreground/30"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-background text-muted-foreground">
+                      或使用以下方式登录
+                    </span>
+                  </div>
+                </div>
+              )}
+              <PasskeyLoginButton disabled={buttonLoading} />
+            </>
+          )}
         </div>
       )}
     </>

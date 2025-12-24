@@ -22,7 +22,11 @@ import { CaptchaButton } from "@/components/CaptchaButton";
 import { useBroadcast, useBroadcastSender } from "@/hooks/useBroadcast";
 import PasskeyReauthButton from "./PasskeyReauthButton";
 
-export default function ReauthClient() {
+interface ReauthClientProps {
+  passkeyEnabled: boolean;
+}
+
+export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
@@ -297,14 +301,15 @@ export default function ReauthClient() {
               )}
 
               {/* 通行密钥验证 */}
-              {(user.hasPassword || user.linkedProviders.length > 0) && (
-                <>
-                  <PasskeyReauthButton
-                    disabled={verifying || ssoRedirecting}
-                    size="md"
-                  />
-                </>
-              )}
+              {passkeyEnabled &&
+                (user.hasPassword || user.linkedProviders.length > 0) && (
+                  <>
+                    <PasskeyReauthButton
+                      disabled={verifying || ssoRedirecting}
+                      size="md"
+                    />
+                  </>
+                )}
 
               {/* 如果没有任何验证方式 */}
               {!user.hasPassword && user.linkedProviders.length === 0 && (
