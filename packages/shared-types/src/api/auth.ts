@@ -453,3 +453,121 @@ registerSchema(
   "CannotRevokeCurrentSessionErrorResponse",
   CannotRevokeCurrentSessionErrorResponseSchema,
 );
+
+/*
+    <<<<<<<<<< TOTP Two-Factor Authentication >>>>>>>>>>
+*/
+
+// TOTP 验证码验证（6位数字）
+const totpCodeSchema = z
+  .string()
+  .length(6, "TOTP 验证码必须是6位数字")
+  .regex(/^\d{6}$/, "TOTP 验证码必须是6位数字");
+
+// 备份码验证（XXXX-XXXX 格式）
+const backupCodeSchema = z
+  .string()
+  .regex(/^\d{4}-\d{4}$/, "备份码格式必须是 XXXX-XXXX");
+
+// verifyTotp() - 验证 TOTP 并完成登录
+export const VerifyTotpSchema = z.object({
+  totp_code: totpCodeSchema.optional(),
+  backup_code: backupCodeSchema.optional(),
+  token_transport: z.enum(["cookie", "body"]).default("cookie"),
+});
+export type VerifyTotp = z.infer<typeof VerifyTotpSchema>;
+registerSchema("VerifyTotp", VerifyTotpSchema);
+
+// TOTP 要求响应（登录时需要 TOTP）
+export const TotpRequiredResponseSchema = createSuccessResponseSchema(
+  z.object({
+    requiresTotp: z.literal(true),
+    totp_token: z.string().optional(),
+  }),
+);
+export type TotpRequiredResponse = z.infer<typeof TotpRequiredResponseSchema>;
+registerSchema("TotpRequiredResponse", TotpRequiredResponseSchema);
+
+// confirmTotp() - 确认启用 TOTP
+export const ConfirmTotpSchema = z.object({
+  totp_code: totpCodeSchema,
+});
+export type ConfirmTotp = z.infer<typeof ConfirmTotpSchema>;
+registerSchema("ConfirmTotp", ConfirmTotpSchema);
+
+// TOTP 设置响应（返回 URI 用于生成 QR 码）
+export const TotpSetupResponseSchema = createSuccessResponseSchema(
+  z.object({
+    secret: z.string(),
+    qrCodeUri: z.string(),
+  }),
+);
+export type TotpSetupResponse = z.infer<typeof TotpSetupResponseSchema>;
+registerSchema("TotpSetupResponse", TotpSetupResponseSchema);
+
+// TOTP 备份码响应
+export const TotpBackupCodesResponseSchema = createSuccessResponseSchema(
+  z.object({
+    backupCodes: z.array(z.string()),
+  }),
+);
+export type TotpBackupCodesResponse = z.infer<
+  typeof TotpBackupCodesResponseSchema
+>;
+registerSchema("TotpBackupCodesResponse", TotpBackupCodesResponseSchema);
+
+// TOTP 状态响应
+export const TotpStatusResponseSchema = createSuccessResponseSchema(
+  z.object({
+    enabled: z.boolean(),
+    backupCodesRemaining: z.number(),
+  }),
+);
+export type TotpStatusResponse = z.infer<typeof TotpStatusResponseSchema>;
+registerSchema("TotpStatusResponse", TotpStatusResponseSchema);
+
+// TOTP 验证失败错误
+export const TotpVerificationFailedErrorResponseSchema =
+  createErrorResponseSchema(
+    z.object({
+      code: z.literal("TOTP_VERIFICATION_FAILED"),
+      message: z.string(),
+    }),
+  );
+export type TotpVerificationFailedErrorResponse = z.infer<
+  typeof TotpVerificationFailedErrorResponseSchema
+>;
+registerSchema(
+  "TotpVerificationFailedErrorResponse",
+  TotpVerificationFailedErrorResponseSchema,
+);
+
+// TOTP 未启用错误
+export const TotpNotEnabledErrorResponseSchema = createErrorResponseSchema(
+  z.object({
+    code: z.literal("TOTP_NOT_ENABLED"),
+    message: z.string(),
+  }),
+);
+export type TotpNotEnabledErrorResponse = z.infer<
+  typeof TotpNotEnabledErrorResponseSchema
+>;
+registerSchema(
+  "TotpNotEnabledErrorResponse",
+  TotpNotEnabledErrorResponseSchema,
+);
+
+// TOTP 已启用错误
+export const TotpAlreadyEnabledErrorResponseSchema = createErrorResponseSchema(
+  z.object({
+    code: z.literal("TOTP_ALREADY_ENABLED"),
+    message: z.string(),
+  }),
+);
+export type TotpAlreadyEnabledErrorResponse = z.infer<
+  typeof TotpAlreadyEnabledErrorResponseSchema
+>;
+registerSchema(
+  "TotpAlreadyEnabledErrorResponse",
+  TotpAlreadyEnabledErrorResponseSchema,
+);

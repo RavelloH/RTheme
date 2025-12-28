@@ -12,12 +12,16 @@ import { CaptchaButton } from "@/components/CaptchaButton";
 import { useState, useEffect, useRef } from "react";
 import { useBroadcast, useBroadcastSender } from "@/hooks/useBroadcast";
 import { login as loginAction } from "@/actions/auth";
+import { verifyTotp } from "@/actions/totp";
 import { useSearchParams } from "next/navigation";
 import Link, { useNavigateWithTransition } from "@/components/Link";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import { Button } from "@/ui/Button";
 import { useToast } from "@/ui/Toast";
+import { AutoTransition } from "@/ui/AutoTransition";
 import PasskeyLoginButton from "./PasskeyLoginButton";
+import { OtpInput, BackupCodeInput } from "@/ui/OtpInput";
+import Clickable from "@/ui/Clickable";
 
 interface LoginSheetProps {
   enabledSSOProviders: OAuthProvider[];
@@ -66,6 +70,40 @@ export default function LoginSheet({
   const [passwordTip, setPasswordTip] = useState("");
   const hasProcessedSSO = useRef(false);
   const hasProcessedMessage = useRef(false);
+
+  // TOTP 相关状态
+  const [requiresTotp, setRequiresTotp] = useState(false);
+  const [totpCode, setTotpCode] = useState("");
+  const [backupCode, setBackupCode] = useState("");
+  const [useBackupCode, setUseBackupCode] = useState(false);
+  const [totpError, setTotpError] = useState(false);
+  const [totpVerifying, setTotpVerifying] = useState(false);
+  const [totpMessage, setTotpMessage] = useState("");
+  const [timeRemaining, setTimeRemaining] = useState(300); // 5 minutes in seconds
+  const totpTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // TOTP 倒计时器
+  useEffect(() => {
+    if (requiresTotp && timeRemaining > 0) {
+      totpTimerRef.current = setTimeout(() => {
+        setTimeRemaining((prev) => prev - 1);
+      }, 1000);
+    } else if (timeRemaining === 0) {
+      // 超时，返回到密码输入
+      setRequiresTotp(false);
+      setTotpCode("");
+      setBackupCode("");
+      setUseBackupCode(false);
+      setTimeRemaining(300);
+      toast.error("验证超时，请重新登录");
+    }
+
+    return () => {
+      if (totpTimerRef.current) {
+        clearTimeout(totpTimerRef.current);
+      }
+    };
+  }, [requiresTotp, timeRemaining, toast]);
 
   // 处理 URL 参数中的消息（message/success/error）
   useEffect(() => {
@@ -284,6 +322,16 @@ export default function LoginSheet({
       result instanceof Response ? await result.json() : result;
 
     if (responseData.success) {
+      // 检查是否需要 TOTP 验证
+      if (responseData.data?.requiresTotp) {
+        setRequiresTotp(true);
+        setButtonLoading(false);
+        setButtonVariant("secondary");
+        setButtonLabel("验证");
+        setTimeRemaining(300); // 重置倒计时
+        return;
+      }
+
       setButtonLoadingText("登录成功，正在跳转...");
 
       // 保存用户信息
@@ -326,6 +374,93 @@ export default function LoginSheet({
     }
   };
 
+  // TOTP 验证
+  const verifyTotpCode = async (code?: string) => {
+    // 防止重复提交
+    if (totpVerifying) return;
+
+    // 使用传入的 code 或当前状态值
+    const codeToVerify = code || (useBackupCode ? backupCode : totpCode);
+
+    if (useBackupCode) {
+      if (!codeToVerify || codeToVerify.length !== 9) {
+        return;
+      }
+    } else {
+      if (!codeToVerify || codeToVerify.length !== 6) {
+        return;
+      }
+    }
+
+    setTotpVerifying(true);
+    setTotpMessage("验证中...");
+
+    const result = await verifyTotp({
+      totp_code: useBackupCode ? undefined : codeToVerify,
+      backup_code: useBackupCode ? codeToVerify : undefined,
+      token_transport: "cookie",
+    });
+
+    const responseData =
+      result instanceof Response ? await result.json() : result;
+
+    if (responseData.success) {
+      setTotpMessage("验证成功，正在跳转...");
+
+      // 保存用户信息
+      const userInfo = {
+        lastRefresh: new Date(),
+        ...responseData.data?.userInfo,
+      };
+      localStorage.setItem("user_info", JSON.stringify(userInfo));
+
+      // 触发自定义事件通知同一标签页内的组件
+      window.dispatchEvent(
+        new CustomEvent("localStorageUpdate", {
+          detail: { key: "user_info" },
+        }),
+      );
+
+      // 获取redirect参数
+      const redirectParam = searchParams.get("redirect");
+      const targetPath = redirectParam ? redirectParam : "/profile";
+
+      setTimeout(() => {
+        navigate(targetPath);
+      }, 1500);
+    } else {
+      setTotpError(true);
+
+      // 检查是否超过失败次数限制
+      if (responseData.error?.code === "TOTP_VERIFICATION_FAILED") {
+        setTotpMessage("验证失败次数过多，请重新登录");
+        setTimeout(() => {
+          // 返回到密码输入
+          setRequiresTotp(false);
+          setTotpCode("");
+          setBackupCode("");
+          setUseBackupCode(false);
+          setTotpError(false);
+          setTotpVerifying(false);
+          setTotpMessage("");
+          setTimeRemaining(300);
+          setButtonLoading(false);
+          setButtonVariant("secondary");
+          setButtonLabel("登录");
+        }, 2000);
+      } else {
+        setTotpMessage(responseData.message || "验证失败，请重试");
+        setTimeout(() => {
+          setTotpVerifying(false);
+          setTotpMessage("");
+          setTotpCode("");
+          setBackupCode("");
+          setTotpError(false);
+        }, 2000);
+      }
+    }
+  };
+
   // 处理回车键提交
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !buttonLoading) {
@@ -334,145 +469,219 @@ export default function LoginSheet({
   };
 
   return (
-    <>
-      <Input
-        label="Username / 用户名"
-        tips={usernameTip}
-        disabled={buttonLoading}
-        helperText="3-20位，仅能包含小写字母、数字、下划线，且以小写字母开头"
-        icon={<RiUser3Line size={"1em"} />}
-        value={username}
-        onChange={(e) => {
-          setUsername(e.target.value);
-          validateUsername(e.target.value);
-        }}
-        onKeyPress={handleKeyPress}
-      />
-      <Input
-        label="Password / 密码"
-        tips={passwordTip}
-        disabled={buttonLoading}
-        helperText="6-100位"
-        type="password"
-        icon={<RiLockPasswordLine size={"1em"} />}
-        value={password}
-        onChange={(e) => {
-          setPassword(e.target.value);
-          validatePassword(e.target.value);
-        }}
-        onKeyPress={handleKeyPress}
-      />
-      <hr />
-      <div className="pt-10 w-full">
-        <CaptchaButton
-          label={buttonLabel}
-          variant={buttonVariant}
-          size="lg"
-          fullWidth
-          loadingText={buttonLoadingText}
-          onClick={login}
-          loading={buttonLoading}
-        />
-      </div>
-      <div className="pt-3 w-full flex justify-between">
-        <div className="text-sm text-muted-foreground">
-          还没有账号？
-          <Link
-            href="/register"
-            className="hover:text-primary"
-            presets={["hover-underline", "hover-color"]}
-          >
-            立即注册{">"}
-          </Link>
-        </div>
-        <div className="text-sm text-muted-foreground">
-          <Link
-            href="/reset-password"
-            className="hover:text-primary"
-            presets={["hover-underline", "hover-color"]}
-          >
-            忘记账号/密码?
-          </Link>
-        </div>
-      </div>
-
-      {/* SSO 登录选项和通行密钥登录 */}
-      {(enabledSSOProviders.length > 0 || passkeyEnabled) && (
-        <div className="pt-6 w-full">
-          {enabledSSOProviders.length > 0 && (
-            <>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-muted-foreground/30"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-background text-muted-foreground">
-                    或使用以下方式登录
-                  </span>
-                </div>
-              </div>
-              <div
-                className={`mt-6 grid gap-3 ${
-                  enabledSSOProviders.length === 1
-                    ? "grid-cols-1"
-                    : enabledSSOProviders.length === 2
-                      ? "grid-cols-2"
-                      : "grid-cols-3"
-                }`}
+    <AutoTransition type="scale" duration={0.4} className="w-full">
+      {!requiresTotp ? (
+        // 密码登录界面
+        <div key="login">
+          <Input
+            label="Username / 用户名"
+            tips={usernameTip}
+            disabled={buttonLoading}
+            helperText="3-20位，仅能包含小写字母、数字、下划线，且以小写字母开头"
+            icon={<RiUser3Line size={"1em"} />}
+            value={username}
+            onChange={(e) => {
+              setUsername(e.target.value);
+              validateUsername(e.target.value);
+            }}
+            onKeyPress={handleKeyPress}
+          />
+          <Input
+            label="Password / 密码"
+            tips={passwordTip}
+            disabled={buttonLoading}
+            helperText="6-100位"
+            type="password"
+            icon={<RiLockPasswordLine size={"1em"} />}
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              validatePassword(e.target.value);
+            }}
+            onKeyPress={handleKeyPress}
+          />
+          <hr />
+          <div className="pt-10 w-full">
+            <CaptchaButton
+              label={buttonLabel}
+              variant={buttonVariant}
+              size="lg"
+              fullWidth
+              loadingText={buttonLoadingText}
+              onClick={login}
+              loading={buttonLoading}
+            />
+          </div>
+          <div className="pt-3 w-full flex justify-between">
+            <div className="text-sm text-muted-foreground">
+              还没有账号？
+              <Link
+                href="/register"
+                className="hover:text-primary"
+                presets={["hover-underline", "hover-color"]}
               >
-                {enabledSSOProviders.includes("google") && (
-                  <Button
-                    onClick={() => navigate("/sso/google/login")}
-                    label=""
-                    icon={<RiGoogleFill size={"1.5em"} />}
-                    variant="secondary"
-                    size="lg"
-                    disabled={buttonLoading}
-                  ></Button>
-                )}
-                {enabledSSOProviders.includes("github") && (
-                  <Button
-                    onClick={() => navigate("/sso/github/login")}
-                    label=""
-                    icon={<RiGithubFill size={"1.5em"} />}
-                    variant="secondary"
-                    size="lg"
-                    disabled={buttonLoading}
-                  ></Button>
-                )}
-                {enabledSSOProviders.includes("microsoft") && (
-                  <Button
-                    onClick={() => navigate("/sso/microsoft/login")}
-                    label=""
-                    icon={<RiMicrosoftFill size={"1.5em"} />}
-                    variant="secondary"
-                    size="lg"
-                    disabled={buttonLoading}
-                  ></Button>
-                )}
-              </div>
-            </>
-          )}
-          {/* 通行密钥登录（浏览器支持则显示） */}
-          {passkeyEnabled && (
-            <>
-              {enabledSSOProviders.length === 0 && (
-                <div className="relative mb-4">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-muted-foreground/30"></div>
+                立即注册{">"}
+              </Link>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <Link
+                href="/reset-password"
+                className="hover:text-primary"
+                presets={["hover-underline", "hover-color"]}
+              >
+                忘记账号/密码?
+              </Link>
+            </div>
+          </div>
+
+          {/* SSO 登录选项和通行密钥登录 */}
+          {(enabledSSOProviders.length > 0 || passkeyEnabled) && (
+            <div className="pt-6 w-full">
+              {enabledSSOProviders.length > 0 && (
+                <>
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-muted-foreground/30"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-background text-muted-foreground">
+                        或使用以下方式登录
+                      </span>
+                    </div>
                   </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-background text-muted-foreground">
-                      或使用以下方式登录
-                    </span>
+                  <div
+                    className={`mt-6 grid gap-3 ${
+                      enabledSSOProviders.length === 1
+                        ? "grid-cols-1"
+                        : enabledSSOProviders.length === 2
+                          ? "grid-cols-2"
+                          : "grid-cols-3"
+                    }`}
+                  >
+                    {enabledSSOProviders.includes("google") && (
+                      <Button
+                        onClick={() => navigate("/sso/google/login")}
+                        label=""
+                        icon={<RiGoogleFill size={"1.5em"} />}
+                        variant="secondary"
+                        size="lg"
+                        disabled={buttonLoading}
+                      ></Button>
+                    )}
+                    {enabledSSOProviders.includes("github") && (
+                      <Button
+                        onClick={() => navigate("/sso/github/login")}
+                        label=""
+                        icon={<RiGithubFill size={"1.5em"} />}
+                        variant="secondary"
+                        size="lg"
+                        disabled={buttonLoading}
+                      ></Button>
+                    )}
+                    {enabledSSOProviders.includes("microsoft") && (
+                      <Button
+                        onClick={() => navigate("/sso/microsoft/login")}
+                        label=""
+                        icon={<RiMicrosoftFill size={"1.5em"} />}
+                        variant="secondary"
+                        size="lg"
+                        disabled={buttonLoading}
+                      ></Button>
+                    )}
                   </div>
-                </div>
+                </>
               )}
-              <PasskeyLoginButton disabled={buttonLoading} />
-            </>
+              {/* 通行密钥登录（浏览器支持则显示） */}
+              {passkeyEnabled && (
+                <>
+                  {enabledSSOProviders.length === 0 && (
+                    <div className="relative mb-4">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-muted-foreground/30"></div>
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-background text-muted-foreground">
+                          或使用以下方式登录
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  <PasskeyLoginButton disabled={buttonLoading} />
+                </>
+              )}
+            </div>
           )}
+        </div>
+      ) : (
+        <div key="totp-verification">
+          <div className="mb-6">
+            <div className="text-center mb-6">
+              <h3 className="text-3xl font-semibold text-foreground tracking-wider mb-2">
+                两步验证
+              </h3>
+              <AutoTransition>
+                <p
+                  className={`text-sm ${
+                    totpMessage
+                      ? totpError
+                        ? "text-error"
+                        : "text-muted-foreground"
+                      : "text-muted-foreground"
+                  }`}
+                  key={totpMessage || useBackupCode.toString()}
+                >
+                  {totpMessage ||
+                    (useBackupCode
+                      ? "请输入 8 位数字备份码以继续。"
+                      : "此账号受两步验证保护， 请输入验证器中的 6 位数字验证码以继续。")}
+                </p>
+              </AutoTransition>
+            </div>
+          </div>
+
+          <AutoTransition>
+            {!useBackupCode ? (
+              <div className="mb-6" key="totp-input">
+                <OtpInput
+                  value={totpCode}
+                  onChange={setTotpCode}
+                  disabled={totpVerifying}
+                  onComplete={verifyTotpCode}
+                  error={totpError}
+                  autoFocus
+                />
+              </div>
+            ) : (
+              <div className="mb-6" key="backup-code-input">
+                <BackupCodeInput
+                  value={backupCode}
+                  onChange={setBackupCode}
+                  disabled={totpVerifying}
+                  onComplete={verifyTotpCode}
+                  error={totpError}
+                  autoFocus
+                />
+              </div>
+            )}
+          </AutoTransition>
+
+          <div className="mb-6 flex justify-center">
+            <Clickable
+              onClick={() => {
+                setUseBackupCode(!useBackupCode);
+                setTotpCode("");
+                setBackupCode("");
+                setTotpError(false);
+                setTotpMessage("");
+              }}
+              disabled={totpVerifying}
+              className="text-sm text-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {useBackupCode ? "使用验证器验证码" : "使用备份码"}
+            </Clickable>
+          </div>
         </div>
       )}
-    </>
+    </AutoTransition>
   );
 }

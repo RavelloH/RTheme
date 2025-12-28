@@ -25,6 +25,10 @@ model User {
   password String?
   avatar   String? @db.VarChar(255)
 
+  // TOTP 两步验证
+  totpSecret      String? @db.VarChar(255) // AES-256-GCM 加密的 TOTP secret
+  totpBackupCodes Json? // 存储加密的备份码数组及使用状态
+
   // 统计相关
   createdAt DateTime  @default(now())
   lastUseAt DateTime  @default(now())

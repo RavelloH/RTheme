@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -5,6 +6,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { unlinkSSO, setPassword } from "@/actions/sso";
 import { changePassword } from "@/actions/auth";
 import { getSessions, revokeSession } from "@/actions/auth";
+import {
+  getTotpStatus,
+  enableTotp,
+  confirmTotp,
+  disableTotp,
+  regenerateBackupCodes,
+} from "@/actions/totp";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import { getUserProfile } from "@/actions/user";
 import { Button } from "@/ui/Button";
@@ -14,7 +22,10 @@ import { useToast } from "@/ui/Toast";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { AutoResizer } from "@/ui/AutoResizer";
+import { Checkbox } from "@/ui/Checkbox";
 import Clickable from "@/ui/Clickable";
+import { OtpInput } from "@/ui/OtpInput";
+import QRCode from "qrcode";
 import {
   RiGoogleFill,
   RiGithubFill,
@@ -120,6 +131,19 @@ export default function SettingsClient({
   const [showRevokeSessionDialog, setShowRevokeSessionDialog] = useState(false);
   const [revokeSessionLoading, setRevokeSessionLoading] = useState(false);
 
+  // TOTP 相关状态
+  const [totpEnabled, setTotpEnabled] = useState(false);
+  const [totpBackupCodesRemaining, setTotpBackupCodesRemaining] = useState(0);
+  const [totpLoading, setTotpLoading] = useState(false);
+  const [showTotpSetupDialog, setShowTotpSetupDialog] = useState(false);
+  const [showTotpDisableDialog, setShowTotpDisableDialog] = useState(false);
+  const [showBackupCodesDialog, setShowBackupCodesDialog] = useState(false);
+  const [totpSecret, setTotpSecret] = useState("");
+  const [totpQrCodeUri, setTotpQrCodeUri] = useState("");
+  const [totpSetupCode, setTotpSetupCode] = useState("");
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [backupCodesConfirmed, setBackupCodesConfirmed] = useState(false);
+
   // 当前选中的分类
   const [activeSection, setActiveSection] = useState<string>("basic");
 
@@ -152,12 +176,47 @@ export default function SettingsClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection]);
 
+  // 当进入安全设置页面时加载 TOTP 状态
+  useEffect(() => {
+    if (activeSection === "security") {
+      loadTotpStatus();
+    }
+  }, [activeSection]);
+
+  // 生成 QR 码图片
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
+  useEffect(() => {
+    if (totpQrCodeUri && showTotpSetupDialog) {
+      QRCode.toDataURL(totpQrCodeUri, {
+        width: 256,
+        margin: 2,
+        color: {
+          dark: "#000000",
+          light: "#ffffff",
+        },
+      })
+        .then((url: string) => setQrCodeDataUrl(url))
+        .catch((err: Error) =>
+          console.error("Failed to generate QR code:", err),
+        );
+    }
+  }, [totpQrCodeUri, showTotpSetupDialog]);
+
   useEffect(() => {
     // 从 URL 参数读取成功/错误消息
     const successParam = searchParams.get("success");
     const errorParam = searchParams.get("error");
     const triggerReauth = searchParams.get("trigger_reauth");
     const provider = searchParams.get("provider");
+
+    // 如果是绑定成功返回，恢复保存的 hash
+    if (successParam && !window.location.hash) {
+      const savedHash = localStorage.getItem("sso_bind_return_hash");
+      if (savedHash) {
+        localStorage.removeItem("sso_bind_return_hash");
+        window.location.hash = savedHash;
+      }
+    }
 
     if (successParam) {
       toast.success(successParam);
@@ -252,6 +311,19 @@ export default function SettingsClient({
       toast.error(err instanceof Error ? err.message : "加载失败");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 加载 TOTP 状态
+  const loadTotpStatus = async () => {
+    try {
+      const result = await getTotpStatus();
+      if (result.success && result.data) {
+        setTotpEnabled(result.data.enabled);
+        setTotpBackupCodesRemaining(result.data.backupCodesRemaining);
+      }
+    } catch (err) {
+      console.error("Failed to load TOTP status:", err);
     }
   };
 
@@ -405,11 +477,13 @@ export default function SettingsClient({
   };
 
   const handleLinkSSO = async (provider: OAuthProvider) => {
-    // 直接跳转到 SSO 登录页面，并带上当前 hash
+    // 保存当前 hash 到 localStorage（因为 hash 不会发送到服务器）
+    if (window.location.hash) {
+      localStorage.setItem("sso_bind_return_hash", window.location.hash);
+    }
+    // 直接跳转到 SSO 登录页面
     // 在 SSO login route 中会检查 REAUTH_TOKEN，如果没有会重定向回来触发 reauth
-    router.push(
-      `/sso/${provider}/login?mode=bind&redirect_to=/settings${window.location.hash}`,
-    );
+    router.push(`/sso/${provider}/login?mode=bind&redirect_to=/settings`);
   };
 
   const handleUnlinkSSO = async () => {
@@ -516,6 +590,113 @@ export default function SettingsClient({
     await executeRevokeSession({
       sessionId: revokeSessionId,
     });
+  };
+
+  // 启用 TOTP - 第一步：生成 secret 和 QR code
+  const handleEnableTotp = async () => {
+    setTotpLoading(true);
+    try {
+      const result = await enableTotp();
+
+      if (result.success && result.data) {
+        setTotpSecret(result.data.secret);
+        setTotpQrCodeUri(result.data.qrCodeUri);
+        setShowTotpSetupDialog(true);
+        setTotpLoading(false);
+      } else if (needsReauth(result.error)) {
+        // 需要 reauth
+        pendingActionRef.current = null; // TOTP setup 不支持 pending action
+        openReauthWindow();
+      } else {
+        toast.error(result.message);
+        setTotpLoading(false);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "启用失败");
+      setTotpLoading(false);
+    }
+  };
+
+  // 确认 TOTP 设置 - 第二步：验证 TOTP 码并获取备份码
+  const handleConfirmTotp = async () => {
+    if (!totpSetupCode || totpSetupCode.length !== 6) {
+      toast.error("请输入 6 位验证码");
+      return;
+    }
+
+    setTotpLoading(true);
+    try {
+      const result = await confirmTotp({ totp_code: totpSetupCode });
+
+      if (result.success && result.data) {
+        toast.success("TOTP 启用成功");
+        setBackupCodes(result.data.backupCodes);
+        setShowTotpSetupDialog(false);
+        setShowBackupCodesDialog(true);
+        setTotpSetupCode("");
+        setBackupCodesConfirmed(false);
+        loadTotpStatus();
+        setTotpLoading(false);
+      } else {
+        toast.error(result.message);
+        setTotpLoading(false);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "确认失败");
+      setTotpLoading(false);
+    }
+  };
+
+  // 禁用 TOTP
+  const handleDisableTotp = async () => {
+    setTotpLoading(true);
+    try {
+      const result = await disableTotp();
+
+      if (result.success) {
+        toast.success(result.message);
+        setShowTotpDisableDialog(false);
+        loadTotpStatus();
+        setTotpLoading(false);
+      } else if (needsReauth(result.error)) {
+        // 需要 reauth
+        pendingActionRef.current = null; // TOTP disable 不支持 pending action
+        openReauthWindow();
+      } else {
+        toast.error(result.message);
+        setTotpLoading(false);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "禁用失败");
+      setTotpLoading(false);
+    }
+  };
+
+  // 重新生成备份码
+  const handleRegenerateBackupCodes = async () => {
+    setTotpLoading(true);
+    try {
+      const result = await regenerateBackupCodes();
+
+      if (result.success && result.data) {
+        toast.success(result.message);
+        setBackupCodes(result.data.backupCodes);
+        setShowBackupCodesDialog(true);
+        setBackupCodesConfirmed(false);
+        loadTotpStatus();
+        setTotpLoading(false);
+      } else if (needsReauth(result.error)) {
+        // 需要 reauth
+        pendingActionRef.current = null; // 备份码重新生成不支持 pending action
+        openReauthWindow();
+      } else {
+        toast.error(result.message);
+        setTotpLoading(false);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "重新生成失败");
+      setTotpLoading(false);
+    }
   };
 
   // 格式化相对时间
@@ -942,6 +1123,72 @@ export default function SettingsClient({
                     </div>
                   </div>
 
+                  {/* TOTP 两步验证管理 */}
+                  <div className="bg-background border border-foreground/10 rounded-sm">
+                    <div className="px-6 py-4 border-b border-foreground/10">
+                      <h3 className="text-lg font-medium text-foreground tracking-wider">
+                        两步验证（TOTP）
+                      </h3>
+                    </div>
+                    <div className="p-6">
+                      {totpEnabled ? (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-foreground font-medium">
+                                两步验证已启用
+                              </p>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                登录时需要输入验证码
+                              </p>
+                            </div>
+                            <Button
+                              label="禁用"
+                              onClick={() => setShowTotpDisableDialog(true)}
+                              variant="danger"
+                              size="sm"
+                            />
+                          </div>
+                          <div className="flex items-center justify-between pt-3 border-t border-foreground/10">
+                            <div>
+                              <p className="text-foreground font-medium">
+                                备份码
+                              </p>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                剩余 {totpBackupCodesRemaining} 个备份码
+                              </p>
+                            </div>
+                            <Button
+                              label="重新生成"
+                              onClick={handleRegenerateBackupCodes}
+                              variant="secondary"
+                              size="sm"
+                              loading={totpLoading}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-foreground font-medium">
+                              未启用两步验证
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              为账户添加额外的安全保护
+                            </p>
+                          </div>
+                          <Button
+                            label="启用"
+                            onClick={handleEnableTotp}
+                            variant="secondary"
+                            size="sm"
+                            loading={totpLoading}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   {/* SSO 账户管理 */}
                   {enabledSSOProviders.length > 0 && (
                     <div className="bg-background border border-foreground/10 rounded-sm">
@@ -1247,6 +1494,208 @@ export default function SettingsClient({
                 size="sm"
               />
             </div>
+          </div>
+        </Dialog>
+
+        {/* TOTP 设置对话框 */}
+        <Dialog
+          open={showTotpSetupDialog}
+          onClose={() => {
+            if (!totpLoading) {
+              setShowTotpSetupDialog(false);
+              setTotpSetupCode("");
+              setTotpSecret("");
+              setTotpQrCodeUri("");
+            }
+          }}
+          title="启用两步验证"
+          size="md"
+        >
+          <div className="px-6 py-6 space-y-8">
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">
+                  扫描二维码
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  使用验证器应用（如 Google Authenticator、Microsoft
+                  Authenticator）扫描下方二维码
+                </p>
+              </div>
+
+              {qrCodeDataUrl && (
+                <div className="flex justify-center">
+                  <img
+                    src={qrCodeDataUrl}
+                    alt="TOTP QR Code"
+                    className="w-64 h-64"
+                  />
+                </div>
+              )}
+
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">
+                  或手动输入以下密钥:
+                </p>
+                <div className="p-3 bg-foreground/5 rounded-sm">
+                  <code className="text-sm font-mono text-foreground break-all">
+                    {totpSecret}
+                  </code>
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">
+                  验证设置
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  请输入验证器应用生成的 6 位验证码
+                </p>
+              </div>
+
+              <div className="flex justify-center">
+                <OtpInput
+                  length={6}
+                  value={totpSetupCode}
+                  onChange={setTotpSetupCode}
+                  disabled={totpLoading}
+                  onComplete={() => {}}
+                />
+              </div>
+            </section>
+
+            <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end sm:gap-4">
+              <Button
+                label="取消"
+                variant="ghost"
+                onClick={() => {
+                  setShowTotpSetupDialog(false);
+                  setTotpSetupCode("");
+                  setTotpSecret("");
+                  setTotpQrCodeUri("");
+                }}
+                size="sm"
+                disabled={totpLoading}
+              />
+              <Button
+                label="确认启用"
+                variant="secondary"
+                onClick={handleConfirmTotp}
+                loading={totpLoading}
+                loadingText="验证中..."
+                size="sm"
+              />
+            </div>
+          </div>
+        </Dialog>
+
+        {/* TOTP 禁用对话框 */}
+        <Dialog
+          open={showTotpDisableDialog}
+          onClose={() => {
+            if (!totpLoading) {
+              setShowTotpDisableDialog(false);
+            }
+          }}
+          title="禁用两步验证"
+          size="sm"
+        >
+          <div className="px-6 py-6 space-y-8">
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">
+                  确认禁用
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  禁用后将降低账户安全性。为保障安全，在执行操作前需要验证你的身份。
+                </p>
+              </div>
+            </section>
+
+            <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end sm:gap-4">
+              <Button
+                label="取消"
+                variant="ghost"
+                onClick={() => setShowTotpDisableDialog(false)}
+                size="sm"
+                disabled={totpLoading}
+              />
+              <Button
+                label="确认禁用"
+                variant="danger"
+                onClick={handleDisableTotp}
+                loading={totpLoading}
+                loadingText="禁用中..."
+                size="sm"
+              />
+            </div>
+          </div>
+        </Dialog>
+
+        {/* 备份码展示对话框 */}
+        <Dialog
+          open={showBackupCodesDialog}
+          onClose={() => {
+            if (backupCodesConfirmed) {
+              setShowBackupCodesDialog(false);
+              setBackupCodes([]);
+              setBackupCodesConfirmed(false);
+            }
+          }}
+          title="备份码"
+          size="md"
+        >
+          <div className="px-6 py-6 space-y-6">
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground tracking-wider">
+                  保存备份码
+                </h3>
+                <p className="text-sm text-muted-foreground mt-2">
+                  每个备份码只能使用一次。请将这些备份码保存在安全的地方。
+                  <span className="font-bold text-white">
+                    这些代码只会显示一次。
+                  </span>
+                </p>
+              </div>
+
+              {/* 备份码网格 */}
+              <div className="grid grid-cols-2 gap-3 p-4 bg-foreground/5 rounded-sm border border-foreground/10">
+                {backupCodes.map((code, index) => (
+                  <div
+                    key={index}
+                    className="font-mono text-base text-foreground text-center py-3 px-2 bg-background rounded-sm border border-foreground/10 tracking-wider"
+                  >
+                    {code}
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* 确认区域 */}
+            <section className="space-y-4 pt-2">
+              <Checkbox
+                label="我已安全保存这些备份码"
+                checked={backupCodesConfirmed}
+                onChange={(e) => setBackupCodesConfirmed(e.target.checked)}
+                size="md"
+              />
+
+              <Button
+                label="确认"
+                variant="secondary"
+                onClick={() => {
+                  setShowBackupCodesDialog(false);
+                  setBackupCodes([]);
+                  setBackupCodesConfirmed(false);
+                }}
+                size="md"
+                disabled={!backupCodesConfirmed}
+                fullWidth
+              />
+            </section>
           </div>
         </Dialog>
       </div>

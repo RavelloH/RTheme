@@ -6,6 +6,7 @@ import {
   jwtTokenVerify,
   jwtTokenSign,
   type AccessTokenPayload,
+  type TotpTokenPayload,
 } from "@/lib/server/jwt";
 import { verifyPassword } from "@/lib/server/password";
 import ResponseBuilder from "@/lib/server/response";
@@ -56,6 +57,7 @@ export async function getCurrentUserForReauth(): Promise<
     email: string;
     hasPassword: boolean;
     linkedProviders: string[];
+    hasTotpEnabled: boolean;
   }>
 > {
   const response = new ResponseBuilder("serveraction");
@@ -74,6 +76,7 @@ export async function getCurrentUserForReauth(): Promise<
         email: string;
         hasPassword: boolean;
         linkedProviders: string[];
+        hasTotpEnabled: boolean;
       }>;
     }
 
@@ -86,6 +89,7 @@ export async function getCurrentUserForReauth(): Promise<
         username: true,
         email: true,
         password: true,
+        totpSecret: true,
         accounts: {
           select: {
             provider: true,
@@ -103,6 +107,7 @@ export async function getCurrentUserForReauth(): Promise<
         email: string;
         hasPassword: boolean;
         linkedProviders: string[];
+        hasTotpEnabled: boolean;
       }>;
     }
 
@@ -114,6 +119,7 @@ export async function getCurrentUserForReauth(): Promise<
         email: user.email,
         hasPassword: !!user.password,
         linkedProviders: user.accounts.map((acc) => acc.provider.toLowerCase()),
+        hasTotpEnabled: !!user.totpSecret,
       },
     }) as unknown as ApiResponse<{
       uid: number;
@@ -121,6 +127,7 @@ export async function getCurrentUserForReauth(): Promise<
       email: string;
       hasPassword: boolean;
       linkedProviders: string[];
+      hasTotpEnabled: boolean;
     }>;
   } catch (error) {
     console.error("Get current user for reauth error:", error);
@@ -136,6 +143,7 @@ export async function getCurrentUserForReauth(): Promise<
       email: string;
       hasPassword: boolean;
       linkedProviders: string[];
+      hasTotpEnabled: boolean;
     }>;
   }
 }
@@ -182,6 +190,7 @@ export async function verifyPasswordForReauth({
       select: {
         uid: true,
         password: true,
+        totpSecret: true,
       },
     });
 
@@ -213,6 +222,44 @@ export async function verifyPasswordForReauth({
       }) as unknown as ApiResponse<null>;
     }
 
+    // 检查是否启用了 TOTP
+    if (user.totpSecret) {
+      // 用户启用了 TOTP，签发临时 TOTP Token
+      const totpToken = jwtTokenSign({
+        inner: {
+          uid: user.uid,
+          type: "totp_verification",
+        },
+        expired: "5m",
+      });
+
+      // 设置 TOTP Token Cookie
+      cookieStore.set({
+        name: "TOTP_TOKEN",
+        value: totpToken,
+        httpOnly: true,
+        maxAge: 300, // 5分钟
+        sameSite: "strict",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        priority: "high",
+      });
+
+      // 重置 TOTP 验证失败次数
+      const { resetTotpFailCount } = await import("./totp");
+      await resetTotpFailCount(user.uid);
+
+      // 返回需要 TOTP 验证的响应
+      return response.ok({
+        message: "密码验证成功，请输入两步验证码",
+        data: {
+          requiresTotp: true,
+        },
+      }) as unknown as ApiResponse<null>;
+    }
+
+    // 如果没有启用 TOTP，直接生成 REAUTH_TOKEN
+
     // 生成 REAUTH_TOKEN
     const expiredAtUnix = Math.floor(Date.now() / 1000) + REAUTH_TOKEN_EXPIRY;
     const reauthToken = jwtTokenSign({
@@ -239,6 +286,193 @@ export async function verifyPasswordForReauth({
     }) as unknown as ApiResponse<null>;
   } catch (error) {
     console.error("Verify password for reauth error:", error);
+    return response.serverError({
+      message: "验证失败，请稍后重试",
+      error: {
+        code: "SERVER_ERROR",
+        message: "验证失败，请稍后重试",
+      },
+    }) as unknown as ApiResponse<null>;
+  }
+}
+
+/**
+ * 通过 TOTP 验证身份并设置 REAUTH_TOKEN（用于 Reauth 流程）
+ */
+export async function verifyTotpForReauth({
+  totp_code,
+  backup_code,
+}: {
+  totp_code?: string;
+  backup_code?: string;
+}): Promise<ApiResponse<null>> {
+  const response = new ResponseBuilder("serveraction");
+
+  // 速率控制
+  if (!(await limitControl(await headers(), "verifyTotpForReauth"))) {
+    return response.tooManyRequests() as unknown as ApiResponse<null>;
+  }
+
+  // 必须提供 totp_code 或 backup_code 其中之一
+  if (!totp_code && !backup_code) {
+    return response.badRequest({
+      message: "请提供验证码或备份码",
+    }) as unknown as ApiResponse<null>;
+  }
+
+  try {
+    const cookieStore = await cookies();
+
+    // 从 cookie 中获取 TOTP Token
+    const totpToken = cookieStore.get("TOTP_TOKEN")?.value;
+    if (!totpToken) {
+      return response.unauthorized({
+        message: "验证超时，请重新验证",
+      }) as unknown as ApiResponse<null>;
+    }
+
+    // 验证 TOTP Token
+    const decoded = jwtTokenVerify<TotpTokenPayload>(totpToken);
+
+    if (!decoded || decoded.type !== "totp_verification") {
+      return response.unauthorized({
+        message: "无效的验证令牌",
+      }) as unknown as ApiResponse<null>;
+    }
+
+    const { uid } = decoded;
+
+    // 检查是否超过失败次数限制
+    const { checkTotpFailCount, incrementTotpFailCount, resetTotpFailCount } =
+      await import("./totp");
+    if (await checkTotpFailCount(uid)) {
+      // 清除 TOTP Token
+      cookieStore.delete("TOTP_TOKEN");
+      return response.unauthorized({
+        message: "验证失败次数过多，请重新验证",
+        error: {
+          code: "TOTP_VERIFICATION_FAILED",
+          message: "验证失败次数过多，请重新验证",
+        },
+      }) as unknown as ApiResponse<null>;
+    }
+
+    // 查询用户
+    const user = await prisma.user.findUnique({
+      where: { uid },
+      select: {
+        uid: true,
+        totpSecret: true,
+        totpBackupCodes: true,
+      },
+    });
+
+    if (!user || !user.totpSecret) {
+      return response.badRequest({
+        message: "TOTP 未启用",
+        error: {
+          code: "TOTP_NOT_ENABLED",
+          message: "TOTP 未启用",
+        },
+      }) as unknown as ApiResponse<null>;
+    }
+
+    // 解密 TOTP secret
+    const { decryptTotpSecret, decryptBackupCode } = await import(
+      "@/lib/server/totp-crypto"
+    );
+    const secret = decryptTotpSecret(user.totpSecret);
+    if (!secret) {
+      return response.serverError({
+        message: "TOTP 配置错误，请联系管理员",
+      }) as unknown as ApiResponse<null>;
+    }
+
+    let verified = false;
+
+    // 验证 TOTP 码
+    if (totp_code) {
+      const { verifyTotpCode } = await import("@/lib/server/totp");
+      verified = verifyTotpCode(secret, totp_code);
+    }
+    // 验证备份码
+    else if (backup_code && user.totpBackupCodes) {
+      const { isValidBackupCodeFormat } = await import("@/lib/server/totp");
+
+      if (!isValidBackupCodeFormat(backup_code)) {
+        await incrementTotpFailCount(uid);
+        return response.badRequest({
+          message: "备份码格式错误",
+        }) as unknown as ApiResponse<null>;
+      }
+
+      const backupCodesData = user.totpBackupCodes as {
+        codes: Array<{ code: string; used: boolean; usedAt: string | null }>;
+      };
+
+      // 查找匹配的备份码
+      for (const item of backupCodesData.codes) {
+        if (item.used) continue;
+
+        const decryptedCode = decryptBackupCode(item.code);
+        if (decryptedCode === backup_code) {
+          verified = true;
+
+          // 标记备份码为已使用
+          item.used = true;
+          item.usedAt = new Date().toISOString();
+
+          await prisma.user.update({
+            where: { uid },
+            data: {
+              totpBackupCodes: backupCodesData,
+            },
+          });
+
+          break;
+        }
+      }
+    }
+
+    if (!verified) {
+      await incrementTotpFailCount(uid);
+      return response.badRequest({
+        message: "验证码错误，请重试",
+      }) as unknown as ApiResponse<null>;
+    }
+
+    // 验证成功，重置失败次数
+    await resetTotpFailCount(uid);
+
+    // 清除 TOTP Token
+    cookieStore.delete("TOTP_TOKEN");
+
+    // 生成 REAUTH_TOKEN
+    const expiredAtUnix = Math.floor(Date.now() / 1000) + REAUTH_TOKEN_EXPIRY;
+    const reauthToken = jwtTokenSign({
+      inner: {
+        uid: user.uid,
+        exp: expiredAtUnix,
+      },
+      expired: `${REAUTH_TOKEN_EXPIRY}s`,
+    });
+
+    // 设置 REAUTH_TOKEN cookie
+    cookieStore.set("REAUTH_TOKEN", reauthToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: REAUTH_TOKEN_EXPIRY,
+      path: "/",
+      priority: "high",
+    });
+
+    return response.ok({
+      message: "验证成功",
+      data: null,
+    }) as unknown as ApiResponse<null>;
+  } catch (error) {
+    console.error("Verify TOTP for reauth error:", error);
     return response.serverError({
       message: "验证失败，请稍后重试",
       error: {

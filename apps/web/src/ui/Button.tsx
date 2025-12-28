@@ -116,40 +116,38 @@ export function Button({
       `}
       {...props}
     >
-      <AutoTransition type="fade" duration={0.3}>
-        {isNumericLoading && (
-          <div
-            key="numeric-loading"
-            className="absolute inset-0 rounded-sm overflow-hidden"
-            style={
-              {
-                "--loading-progress": `${loading}%`,
-                "--loading-remaining": `${100 - loading}%`,
-              } as React.CSSProperties
-            }
-          >
-            <div className="relative w-full h-full">
-              <motion.div
-                className="absolute inset-y-0 left-0 bg-current opacity-0"
-                initial={{ width: 0 }}
-                animate={{ width: `${loading}%` }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
-              />
-              <motion.div
-                className="absolute inset-y-0 right-0 bg-current opacity-30"
-                initial={{ left: 0, width: "100%" }}
-                animate={{ left: `${loading}%`, width: `${100 - loading}%` }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
-              />
-            </div>
+      {isNumericLoading && (
+        <motion.div
+          className="absolute inset-0 rounded-sm overflow-hidden"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          style={
+            {
+              "--loading-progress": `${loading}%`,
+              "--loading-remaining": `${100 - loading}%`,
+            } as React.CSSProperties
+          }
+        >
+          <div className="relative w-full h-full">
+            <motion.div
+              className="absolute inset-y-0 left-0 bg-current opacity-0"
+              initial={{ width: 0 }}
+              animate={{ width: `${loading}%` }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+            />
+            <motion.div
+              className="absolute inset-y-0 right-0 bg-current opacity-30"
+              initial={{ left: 0, width: "100%" }}
+              animate={{ left: `${loading}%`, width: `${100 - loading}%` }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+            />
           </div>
-        )}
+        </motion.div>
+      )}
 
-        {shouldShowSpinner && (
-          <div
-            key="spinner-loading"
-            className="absolute inset-0 flex items-center justify-center bg-inherit rounded-md overflow-hidden"
-          >
+      <AutoTransition duration={0.3}>
+        {shouldShowSpinner ? (
+          <div className="flex items-center justify-center">
             <svg
               className="animate-spin h-5 w-5"
               xmlns="http://www.w3.org/2000/svg"
@@ -171,36 +169,34 @@ export function Button({
               ></path>
             </svg>
           </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            {icon && iconPosition === "left" && (
+              <motion.span
+                className="inline-flex"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.1 }}
+              >
+                {icon}
+              </motion.span>
+            )}
+
+            {displayText && <span>{displayText}</span>}
+
+            {icon && iconPosition === "right" && (
+              <motion.span
+                className="inline-flex"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.1 }}
+              >
+                {icon}
+              </motion.span>
+            )}
+          </div>
         )}
       </AutoTransition>
-
-      <div
-        className={`flex items-center gap-2 ${shouldShowSpinner ? "invisible" : ""}`}
-      >
-        {icon && iconPosition === "left" && (
-          <motion.span
-            className="inline-flex"
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-          >
-            {icon}
-          </motion.span>
-        )}
-
-        <AutoTransition duration={0.3}>{displayText}</AutoTransition>
-
-        {icon && iconPosition === "right" && (
-          <motion.span
-            className="inline-flex"
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-          >
-            {icon}
-          </motion.span>
-        )}
-      </div>
     </motion.button>
   );
 }

@@ -23,6 +23,13 @@ export type RefreshTokenPayload = {
   exp: number;
 };
 
+export type TotpTokenPayload = {
+  uid: number;
+  type: "totp_verification";
+  iat: number;
+  exp: number;
+};
+
 // 检查环境变量
 if (!process.env.JWT_PRIVATE_KEY) {
   throw new Error("JWT_PRIVATE_KEY environment variable is not set");

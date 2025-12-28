@@ -122,6 +122,7 @@ export async function login(
         emailVerified: true,
         deletedAt: true,
         status: true,
+        totpSecret: true,
       },
     });
 
@@ -197,6 +198,48 @@ export async function login(
         },
       });
     }
+
+    // 检查是否启用了 TOTP
+    if (user.totpSecret) {
+      // 用户启用了 TOTP，签发临时 TOTP Token
+      const totpToken = jwtTokenSign({
+        inner: {
+          uid: user.uid,
+          type: "totp_verification",
+        },
+        expired: "5m",
+      });
+
+      // 设置 TOTP Token Cookie
+      if (token_transport === "cookie") {
+        const cookieStore = await cookies();
+        cookieStore.set({
+          name: "TOTP_TOKEN",
+          value: totpToken,
+          httpOnly: true,
+          maxAge: 300, // 5分钟
+          sameSite: "strict",
+          path: "/",
+          secure: process.env.NODE_ENV === "production",
+          priority: "high",
+        });
+      }
+
+      // 重置 TOTP 验证失败次数
+      const { resetTotpFailCount } = await import("./totp");
+      await resetTotpFailCount(user.uid);
+
+      // 返回需要 TOTP 验证的响应
+      return response.ok({
+        message: "密码验证成功，请输入两步验证码",
+        data: {
+          requiresTotp: true,
+          ...(token_transport === "body" && { totp_token: totpToken }),
+        },
+      }) as unknown as ActionResult<LoginSuccessResponse | null>;
+    }
+
+    // 如果没有启用 TOTP，继续正常的登录流程
 
     const expiredAtSeconds = 30 * 24 * 60 * 60; // 30天
     const expiredAt = new Date(Date.now() + expiredAtSeconds * 1000);

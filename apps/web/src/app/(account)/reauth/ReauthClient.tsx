@@ -5,12 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   verifyPasswordForReauth,
   getCurrentUserForReauth,
+  verifyTotpForReauth,
 } from "@/actions/reauth";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
 import { useToast } from "@/ui/Toast";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { AutoTransition } from "@/ui/AutoTransition";
 import {
   RiGoogleFill,
   RiGithubFill,
@@ -21,6 +23,8 @@ import UnauthorizedPage from "../../unauthorized";
 import { CaptchaButton } from "@/components/CaptchaButton";
 import { useBroadcast, useBroadcastSender } from "@/hooks/useBroadcast";
 import PasskeyReauthButton from "./PasskeyReauthButton";
+import { OtpInput } from "@/ui/OtpInput";
+import { AutoResizer } from "@/ui/AutoResizer";
 
 interface ReauthClientProps {
   passkeyEnabled: boolean;
@@ -38,12 +42,22 @@ export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
     email: string;
     hasPassword: boolean;
     linkedProviders: string[];
+    hasTotpEnabled: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [password, setPassword] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [ssoRedirecting, setSsoRedirecting] = useState(false);
+
+  // TOTP 相关状态
+  const [requiresTotp, setRequiresTotp] = useState(false);
+  const [totpCode, setTotpCode] = useState("");
+  const [totpError, setTotpError] = useState(false);
+  const [totpVerifying, setTotpVerifying] = useState(false);
+  const [totpMessage, setTotpMessage] = useState("");
+  const [timeRemaining, setTimeRemaining] = useState(300); // 5 minutes in seconds
+  const totpTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 标志：是否正在进行 SSO 验证（使用 ref 以便在事件处理器中访问最新值）
   const isSSORedirectingRef = useRef(false);
@@ -62,6 +76,27 @@ export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
       setCaptchaToken(message.token);
     }
   });
+
+  // TOTP 倒计时器
+  useEffect(() => {
+    if (requiresTotp && timeRemaining > 0) {
+      totpTimerRef.current = setTimeout(() => {
+        setTimeRemaining((prev) => prev - 1);
+      }, 1000);
+    } else if (timeRemaining === 0) {
+      // 超时，返回到密码输入
+      setRequiresTotp(false);
+      setTotpCode("");
+      setTimeRemaining(300);
+      toast.error("验证超时，请重新验证");
+    }
+
+    return () => {
+      if (totpTimerRef.current) {
+        clearTimeout(totpTimerRef.current);
+      }
+    };
+  }, [requiresTotp, timeRemaining, toast]);
 
   useEffect(() => {
     // 检查 SSO 回调的成功/错误参数
@@ -150,6 +185,15 @@ export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
       });
 
       if (result.success) {
+        // 检查是否需要 TOTP 验证
+        const data = result.data as { requiresTotp?: boolean } | null;
+        if (data?.requiresTotp) {
+          setRequiresTotp(true);
+          setVerifying(false);
+          setTimeRemaining(300); // 重置倒计时
+          return;
+        }
+
         toast.success("验证成功");
         // 通知父窗口验证成功
         if (channel) {
@@ -170,6 +214,73 @@ export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
       // 重置验证码
       broadcast({ type: "captcha-reset" });
       setVerifying(false);
+    }
+  };
+
+  // TOTP 验证
+  const handleTotpVerify = async (code?: string) => {
+    // 防止重复提交
+    if (totpVerifying) return;
+
+    // 使用传入的 code 或当前状态值
+    const codeToVerify = code || totpCode;
+
+    if (!codeToVerify || codeToVerify.length !== 6) {
+      return;
+    }
+
+    setTotpVerifying(true);
+    setTotpMessage("验证中...");
+
+    try {
+      const result = await verifyTotpForReauth({
+        totp_code: codeToVerify,
+      });
+
+      if (result.success) {
+        setTotpMessage("验证成功");
+        // 通知父窗口验证成功
+        if (channel) {
+          channel.postMessage({ type: "reauth-success" });
+        }
+        // 延迟关闭窗口，让用户看到成功消息
+        setTimeout(() => {
+          window.close();
+        }, 500);
+      } else {
+        setTotpError(true);
+
+        // 检查是否超过失败次数限制
+        if (result.error?.code === "TOTP_VERIFICATION_FAILED") {
+          setTotpMessage("验证失败次数过多，请重新验证");
+          setTimeout(() => {
+            // 返回到密码输入
+            setRequiresTotp(false);
+            setTotpCode("");
+            setTotpError(false);
+            setTotpVerifying(false);
+            setTotpMessage("");
+            setTimeRemaining(300);
+          }, 2000);
+        } else {
+          setTotpMessage(result.message || "验证失败，请重试");
+          setTimeout(() => {
+            setTotpVerifying(false);
+            setTotpMessage("");
+            setTotpCode("");
+            setTotpError(false);
+          }, 2000);
+        }
+      }
+    } catch (err) {
+      setTotpError(true);
+      setTotpMessage(err instanceof Error ? err.message : "验证失败");
+      setTimeout(() => {
+        setTotpVerifying(false);
+        setTotpMessage("");
+        setTotpCode("");
+        setTotpError(false);
+      }, 2000);
     }
   };
 
@@ -198,7 +309,7 @@ export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
   if (loading) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <LoadingIndicator size="md" />
+        <LoadingIndicator size="lg" />
       </div>
     );
   }
@@ -211,7 +322,7 @@ export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
     <div className="fixed inset-0 bg-background overflow-hidden">
       <div className="h-full flex flex-col md:flex-row">
         <div className="flex-1 flex items-center justify-center p-6 md:p-12">
-          <div className="w-full max-w-md">
+          <AutoResizer className="w-full max-w-md">
             <div className="flex gap-5 items-center justify-between mb-8">
               <div>
                 <h1 className="text-3xl font-bold text-foreground tracking-wider mb-2">
@@ -226,119 +337,156 @@ export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
               </div>
             </div>
             {/* 验证方式 */}
-            <div className="space-y-6">
-              {/* 密码验证 */}
-              {user.hasPassword && (
-                <div className="space-y-4">
-                  <Input
-                    label="Password / 密码"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    helperText="输入你的账户密码"
-                    icon={<RiShieldKeyholeLine size={"1em"} />}
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter" && !verifying && !ssoRedirecting) {
-                        handlePasswordVerify();
-                      }
-                    }}
-                    disabled={verifying || ssoRedirecting}
-                  />
-                  <div className="pt-6 w-full">
-                    <CaptchaButton
-                      label="下一步"
-                      onClick={handlePasswordVerify}
-                      loading={verifying}
-                      loadingText="验证中..."
-                      verificationText="正在执行安全验证"
-                      variant="secondary"
-                      size="md"
-                      fullWidth
-                      disabled={ssoRedirecting}
+
+            <AutoTransition
+              type="scale"
+              duration={0.4}
+              className="space-y-6 pb-2"
+            >
+              {!requiresTotp ? (
+                // 正常验证界面
+                <div key="password" className="space-y-6">
+                  {/* 密码验证 */}
+                  {user.hasPassword && (
+                    <div className="space-y-4">
+                      <Input
+                        label="Password / 密码"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        helperText="输入你的账户密码"
+                        icon={<RiShieldKeyholeLine size={"1em"} />}
+                        onKeyPress={(e) => {
+                          if (
+                            e.key === "Enter" &&
+                            !verifying &&
+                            !ssoRedirecting
+                          ) {
+                            handlePasswordVerify();
+                          }
+                        }}
+                        disabled={verifying || ssoRedirecting}
+                      />
+                      <div className="pt-6 w-full">
+                        <CaptchaButton
+                          label="下一步"
+                          onClick={handlePasswordVerify}
+                          loading={verifying}
+                          loadingText="验证中..."
+                          verificationText="正在执行安全验证"
+                          variant="secondary"
+                          size="lg"
+                          fullWidth
+                          disabled={ssoRedirecting}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 分隔线 */}
+                  {user.hasPassword && user.linkedProviders.length > 0 && (
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-muted-foreground/30"></div>
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-background text-muted-foreground">
+                          或使用以下方式验证
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SSO 验证 */}
+                  {user.linkedProviders.length > 0 && (
+                    <div
+                      className={`grid gap-3 ${
+                        user.linkedProviders.length === 1
+                          ? "grid-cols-1"
+                          : user.linkedProviders.length === 2
+                            ? "grid-cols-2"
+                            : "grid-cols-3"
+                      }`}
+                    >
+                      {user.linkedProviders.map((provider) => (
+                        <Button
+                          key={provider}
+                          label=""
+                          onClick={() =>
+                            handleSSOVerify(provider as OAuthProvider)
+                          }
+                          variant="secondary"
+                          size="lg"
+                          icon={getProviderIcon(provider)}
+                          disabled={verifying || ssoRedirecting}
+                          loading={ssoRedirecting}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* 通行密钥验证 */}
+                  {passkeyEnabled &&
+                    (user.hasPassword || user.linkedProviders.length > 0) && (
+                      <>
+                        <PasskeyReauthButton
+                          disabled={verifying || ssoRedirecting}
+                          size="lg"
+                        />
+                      </>
+                    )}
+
+                  {/* 如果没有任何验证方式 */}
+                  {!user.hasPassword && user.linkedProviders.length === 0 && (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground mb-2">
+                        你的账户未设置任何验证方式
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        请联系管理员
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // TOTP 验证界面
+                <div key="totp">
+                  <div className="mb-6">
+                    <div className="text-center mb-6">
+                      <h3 className="text-xl font-semibold text-foreground tracking-wider mb-2">
+                        两步验证
+                      </h3>
+                      <AutoTransition>
+                        <p
+                          className={`text-sm ${
+                            totpMessage
+                              ? totpError
+                                ? "text-error"
+                                : "text-muted-foreground"
+                              : "text-muted-foreground"
+                          }`}
+                          key={totpMessage || "default"}
+                        >
+                          {totpMessage || "请输入验证器中的 6 位数字验证码"}
+                        </p>
+                      </AutoTransition>
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <OtpInput
+                      value={totpCode}
+                      onChange={setTotpCode}
+                      disabled={totpVerifying}
+                      onComplete={handleTotpVerify}
+                      error={totpError}
+                      autoFocus
                     />
                   </div>
                 </div>
               )}
-
-              {/* 分隔线 */}
-              {user.hasPassword && user.linkedProviders.length > 0 && (
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-muted-foreground/30"></div>
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-background text-muted-foreground">
-                      或使用以下方式验证
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* SSO 验证 */}
-              {user.linkedProviders.length > 0 && (
-                <div
-                  className={`grid gap-3 ${
-                    user.linkedProviders.length === 1
-                      ? "grid-cols-1"
-                      : user.linkedProviders.length === 2
-                        ? "grid-cols-2"
-                        : "grid-cols-3"
-                  }`}
-                >
-                  {user.linkedProviders.map((provider) => (
-                    <Button
-                      key={provider}
-                      label=""
-                      onClick={() => handleSSOVerify(provider as OAuthProvider)}
-                      variant="secondary"
-                      size="md"
-                      icon={getProviderIcon(provider)}
-                      disabled={verifying || ssoRedirecting}
-                      loading={ssoRedirecting}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {/* 通行密钥验证 */}
-              {passkeyEnabled &&
-                (user.hasPassword || user.linkedProviders.length > 0) && (
-                  <>
-                    <PasskeyReauthButton
-                      disabled={verifying || ssoRedirecting}
-                      size="md"
-                    />
-                  </>
-                )}
-
-              {/* 如果没有任何验证方式 */}
-              {!user.hasPassword && user.linkedProviders.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-2">
-                    你的账户未设置任何验证方式
-                  </p>
-                  <p className="text-sm text-muted-foreground">请联系管理员</p>
-                </div>
-              )}
-
-              {/* 取消按钮 */}
-              <div className="pt-3 w-full">
-                <Button
-                  label="取消"
-                  onClick={() => {
-                    if (channel) {
-                      channel.postMessage({ type: "reauth-cancelled" });
-                    }
-                    window.close();
-                  }}
-                  variant="ghost"
-                  size="md"
-                  fullWidth
-                  disabled={ssoRedirecting}
-                />
-              </div>
-            </div>
-          </div>
+            </AutoTransition>
+          </AutoResizer>
         </div>
       </div>
     </div>
