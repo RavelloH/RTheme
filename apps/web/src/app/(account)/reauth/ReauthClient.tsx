@@ -59,9 +59,10 @@ export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
   const [timeRemaining, setTimeRemaining] = useState(300); // 5 minutes in seconds
   const totpTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 标志：是否正在进行 SSO 验证（使用 ref 以便在事件处理器中访问最新值）
+  // 标志：是否正在进行 SSO 验证
   const isSSORedirectingRef = useRef(false);
-
+  // 标志：是否已经发送过消息（成功或取消）
+  const messageSentRef = useRef(false);
   // BroadcastChannel 用于通知父窗口
   const [channel] = useState(() => {
     if (typeof window !== "undefined" && "BroadcastChannel" in window) {
@@ -69,6 +70,17 @@ export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
     }
     return null;
   });
+
+  // 统一的消息发送函数，确保只发送一次
+  const sendReauthMessage = (type: "reauth-success" | "reauth-cancelled") => {
+    if (messageSentRef.current) {
+      return; // 已经发送过消息，不再发送
+    }
+    messageSentRef.current = true;
+    if (channel) {
+      channel.postMessage({ type });
+    }
+  };
 
   // 监听验证码解决事件
   useBroadcast((message: { type: string; token?: string }) => {
@@ -107,9 +119,7 @@ export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
       // SSO 验证成功
       toast.success(successParam);
       // 通知父窗口验证成功
-      if (channel) {
-        channel.postMessage({ type: "reauth-success" });
-      }
+      sendReauthMessage("reauth-success");
       // 延迟关闭窗口，让用户看到成功消息
       setTimeout(() => {
         window.close();
@@ -129,9 +139,9 @@ export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
 
     // 监听窗口关闭事件
     const handleBeforeUnload = () => {
-      // 只有在不是 SSO 跳转时才发送取消消息
-      if (channel && !isSSORedirectingRef.current) {
-        channel.postMessage({ type: "reauth-cancelled" });
+      // 只有在不是 SSO 跳转时才可能发送取消消息
+      if (!isSSORedirectingRef.current) {
+        sendReauthMessage("reauth-cancelled");
       }
     };
 
@@ -196,9 +206,7 @@ export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
 
         toast.success("验证成功");
         // 通知父窗口验证成功
-        if (channel) {
-          channel.postMessage({ type: "reauth-success" });
-        }
+        sendReauthMessage("reauth-success");
         // 延迟关闭窗口，让用户看到成功消息
         setTimeout(() => {
           window.close();
@@ -240,9 +248,7 @@ export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
       if (result.success) {
         setTotpMessage("验证成功");
         // 通知父窗口验证成功
-        if (channel) {
-          channel.postMessage({ type: "reauth-success" });
-        }
+        sendReauthMessage("reauth-success");
         // 延迟关闭窗口，让用户看到成功消息
         setTimeout(() => {
           window.close();
@@ -432,6 +438,7 @@ export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
                         <PasskeyReauthButton
                           disabled={verifying || ssoRedirecting}
                           size="lg"
+                          onSuccess={() => sendReauthMessage("reauth-success")}
                         />
                       </>
                     )}

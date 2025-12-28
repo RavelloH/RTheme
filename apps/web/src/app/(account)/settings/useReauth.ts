@@ -22,6 +22,18 @@ export type PendingAction =
   | {
       type: "revokeSession";
       data: { sessionId: string };
+    }
+  | {
+      type: "enableTotp";
+      data: Record<string, never>;
+    }
+  | {
+      type: "disableTotp";
+      data: Record<string, never>;
+    }
+  | {
+      type: "regenerateBackupCodes";
+      data: Record<string, never>;
     };
 
 interface UseReauthOptions {
@@ -41,6 +53,16 @@ export const useReauth = ({
   const pendingActionRef = useRef<PendingAction | null>(null);
   const channelRef = useRef<BroadcastChannel | null>(null);
 
+  // 使用 ref 保存回调函数，避免 useEffect 重复执行
+  const onReauthSuccessRef = useRef(onReauthSuccess);
+  const onReauthCancelledRef = useRef(onReauthCancelled);
+
+  // 每次回调更新时同步 ref
+  useEffect(() => {
+    onReauthSuccessRef.current = onReauthSuccess;
+    onReauthCancelledRef.current = onReauthCancelled;
+  }, [onReauthSuccess, onReauthCancelled]);
+
   // 初始化 BroadcastChannel
   useEffect(() => {
     if (typeof window !== "undefined" && "BroadcastChannel" in window) {
@@ -56,9 +78,9 @@ export const useReauth = ({
           if (reauthWindowRef.current && !reauthWindowRef.current.closed) {
             reauthWindowRef.current.close();
           }
-          onReauthSuccess();
+          onReauthSuccessRef.current();
         } else if (type === "reauth-cancelled") {
-          onReauthCancelled();
+          onReauthCancelledRef.current();
         }
       };
     }
@@ -69,7 +91,7 @@ export const useReauth = ({
         channelRef.current.close();
       }
     };
-  }, [onReauthSuccess, onReauthCancelled]);
+  }, []); // 移除依赖项，只在组件挂载时创建一次
 
   // 打开 reauth 窗口
   const openReauthWindow = () => {

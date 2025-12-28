@@ -81,6 +81,19 @@ export function Button({
     }
   };
 
+  const getSpinnerSize = () => {
+    switch (size) {
+      case "sm":
+        return "h-4 w-4";
+      case "md":
+        return "h-5 w-5";
+      case "lg":
+        return "h-7 w-7";
+      default:
+        return "h-4 w-4";
+    }
+  };
+
   const isLoading =
     typeof loading === "boolean" ? loading : loading >= 0 && loading <= 100;
   const isNumericLoading =
@@ -149,7 +162,7 @@ export function Button({
         {shouldShowSpinner ? (
           <div className="flex items-center justify-center" key="spinner">
             <svg
-              className="animate-spin h-5 w-5"
+              className={`animate-spin ${getSpinnerSize()}`}
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"

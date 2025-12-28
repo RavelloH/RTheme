@@ -2,6 +2,7 @@ import { getConfig } from "@/lib/server/configCache";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import SettingsClient from "./SettingsClient";
 import { ToastProvider } from "@/ui/Toast";
+import { generateMetadata } from "@/lib/server/seo";
 
 async function getEnabledSSOProviders(): Promise<OAuthProvider[]> {
   const providers: OAuthProvider[] = ["google", "github", "microsoft"];
@@ -16,6 +17,16 @@ async function getEnabledSSOProviders(): Promise<OAuthProvider[]> {
 
   return enabled;
 }
+
+export const metadata = await generateMetadata(
+  {
+    title: "设置 / Settings",
+    description: "管理您的账户设置，包括个人信息、安全选项等。",
+  },
+  {
+    pathname: "/settings",
+  },
+);
 
 export default async function SettingsPage() {
   const enabledSSOProviders = await getEnabledSSOProviders();

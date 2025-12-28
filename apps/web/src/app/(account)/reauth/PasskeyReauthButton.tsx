@@ -14,9 +14,11 @@ import { useToast } from "@/ui/Toast";
 export default function PasskeyReauthButton({
   disabled,
   size = "md",
+  onSuccess,
 }: {
   disabled?: boolean;
   size?: "sm" | "md" | "lg";
+  onSuccess?: () => void;
 }) {
   const [supported, setSupported] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -85,10 +87,8 @@ export default function PasskeyReauthButton({
       toast.success("身份验证成功");
 
       // 通知父窗口验证成功
-      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-        const channel = new BroadcastChannel("reauth-channel");
-        channel.postMessage({ type: "reauth-success" });
-        channel.close();
+      if (onSuccess) {
+        onSuccess();
       }
 
       // 延迟关闭窗口

@@ -30,6 +30,8 @@ interface PasswordDialogsProps {
 export interface PasswordDialogsRef {
   openSetPasswordDialog: () => void;
   openChangePasswordDialog: () => void;
+  executeSetPassword: (data: { newPassword: string }) => Promise<void>;
+  executeChangePassword: (data: { new_password: string }) => Promise<void>;
 }
 
 export const PasswordDialogs = React.forwardRef<
@@ -49,6 +51,8 @@ export const PasswordDialogs = React.forwardRef<
   React.useImperativeHandle(ref, () => ({
     openSetPasswordDialog: () => setShowSetPasswordDialog(true),
     openChangePasswordDialog: () => setShowPasswordDialog(true),
+    executeSetPassword,
+    executeChangePassword,
   }));
 
   // 检查是否需要 reauth

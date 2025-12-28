@@ -1,15 +1,21 @@
 import { ToastProvider } from "@/ui/Toast";
 import ReauthClient from "./ReauthClient";
 import { getConfig } from "@/lib/server/configCache";
+import { generateMetadata } from "@/lib/server/seo";
 
-export const metadata = {
-  title: "重新验证身份",
-  description: "为了您的账户安全,请重新验证您的身份。",
-  robot: {
-    index: false,
-    follow: false,
+export const metadata = await generateMetadata(
+  {
+    title: "重新验证身份",
+    description: "为了您的账户安全,请重新验证您的身份。",
+    robots: {
+      index: false,
+      follow: false,
+    },
   },
-};
+  {
+    pathname: "/reauth",
+  },
+);
 
 export default async function ReauthPage() {
   const passkeyEnabled = await getConfig<boolean>("user.passkey.enabled");

@@ -15,15 +15,20 @@ import {
 } from "@/actions/totp";
 import QRCode from "qrcode";
 
+import type { PendingAction } from "./useReauth";
+
 interface TotpDialogsProps {
   onTotpStatusChange: () => void;
-  onNeedReauth: () => void;
+  onNeedReauth: (action: PendingAction) => void;
 }
 
 export interface TotpDialogsRef {
   openEnableDialog: () => void;
   openDisableDialog: () => void;
   openRegenerateDialog: () => void;
+  executeEnableTotp: () => Promise<void>;
+  executeDisableTotp: () => Promise<void>;
+  executeRegenerateBackupCodes: () => Promise<void>;
 }
 
 /**
@@ -50,6 +55,9 @@ export const TotpDialogs = React.forwardRef<TotpDialogsRef, TotpDialogsProps>(
       openEnableDialog: () => handleEnableTotp(),
       openDisableDialog: () => setShowTotpDisableDialog(true),
       openRegenerateDialog: () => handleRegenerateBackupCodes(),
+      executeEnableTotp: () => handleEnableTotp(),
+      executeDisableTotp: () => handleDisableTotp(),
+      executeRegenerateBackupCodes: () => handleRegenerateBackupCodes(),
     }));
 
     // 生成 QR 码图片
@@ -96,7 +104,8 @@ export const TotpDialogs = React.forwardRef<TotpDialogsRef, TotpDialogsProps>(
           setShowTotpSetupDialog(true);
           setTotpLoading(false);
         } else if (needsReauth(result.error)) {
-          onNeedReauth();
+          setTotpLoading(false);
+          onNeedReauth({ type: "enableTotp", data: {} });
         } else {
           toast.error(result.message);
           setTotpLoading(false);
@@ -149,7 +158,8 @@ export const TotpDialogs = React.forwardRef<TotpDialogsRef, TotpDialogsProps>(
           onTotpStatusChange();
           setTotpLoading(false);
         } else if (needsReauth(result.error)) {
-          onNeedReauth();
+          setTotpLoading(false);
+          onNeedReauth({ type: "disableTotp", data: {} });
         } else {
           toast.error(result.message);
           setTotpLoading(false);
@@ -174,7 +184,8 @@ export const TotpDialogs = React.forwardRef<TotpDialogsRef, TotpDialogsProps>(
           onTotpStatusChange();
           setTotpLoading(false);
         } else if (needsReauth(result.error)) {
-          onNeedReauth();
+          setTotpLoading(false);
+          onNeedReauth({ type: "regenerateBackupCodes", data: {} });
         } else {
           toast.error(result.message);
           setTotpLoading(false);

@@ -20,8 +20,9 @@ import { NotificationSection } from "./NotificationSection";
 import { SessionSection } from "./SessionSection";
 import { SecuritySection } from "./SecuritySection";
 import { PasswordDialogs, type PasswordDialogsRef } from "./PasswordDialogs";
-import { SSODialogs } from "./SSODialogs";
-import { SessionDialogs } from "./SessionDialogs";
+import { SSODialogs, type SSODialogsRef } from "./SSODialogs";
+import { SessionDialogs, type SessionDialogsRef } from "./SessionDialogs";
+import { type TotpDialogsRef } from "./TotpDialogs";
 
 interface LinkedAccount {
   provider: string;
@@ -55,6 +56,9 @@ export default function SettingsClient({
 
   // Refs
   const passwordDialogsRef = useRef<PasswordDialogsRef>(null);
+  const ssoDialogsRef = useRef<SSODialogsRef>(null);
+  const sessionDialogsRef = useRef<SessionDialogsRef>(null);
+  const totpDialogsRef = useRef<TotpDialogsRef>(null);
 
   // 状态管理（简化）
   const [unlinkProvider, setUnlinkProvider] = useState<OAuthProvider | null>(
@@ -178,7 +182,34 @@ export default function SettingsClient({
       case "link":
         redirectToSSOBind(action.data.provider);
         break;
-      // 其他 action 类型由对话框组件处理
+      case "unlink":
+        // 直接执行解绑操作
+        await ssoDialogsRef.current?.executeUnlinkSSO(action.data);
+        break;
+      case "setPassword":
+        // 直接执行设置密码操作
+        await passwordDialogsRef.current?.executeSetPassword(action.data);
+        break;
+      case "changePassword":
+        // 直接执行修改密码操作
+        await passwordDialogsRef.current?.executeChangePassword(action.data);
+        break;
+      case "revokeSession":
+        // 直接执行撤销会话操作
+        await sessionDialogsRef.current?.executeRevokeSession(action.data);
+        break;
+      case "enableTotp":
+        // 直接执行启用 TOTP 操作
+        await totpDialogsRef.current?.executeEnableTotp();
+        break;
+      case "disableTotp":
+        // 直接执行禁用 TOTP 操作
+        await totpDialogsRef.current?.executeDisableTotp();
+        break;
+      case "regenerateBackupCodes":
+        // 直接执行重新生成备份码操作
+        await totpDialogsRef.current?.executeRegenerateBackupCodes();
+        break;
     }
   };
 
@@ -295,7 +326,8 @@ export default function SettingsClient({
                   onPasswordAction={handlePasswordAction}
                   onLinkSSO={handleLinkSSO}
                   onUnlinkSSO={handleUnlinkSSO}
-                  onNeedReauth={() => openReauthWindow()}
+                  onNeedReauth={(action) => handleNeedReauth(action)}
+                  totpDialogsRef={totpDialogsRef}
                 />
               )}
             </AutoTransition>
@@ -310,6 +342,7 @@ export default function SettingsClient({
         />
 
         <SSODialogs
+          ref={ssoDialogsRef}
           provider={unlinkProvider}
           isOpen={showUnlinkDialog}
           onClose={() => {
@@ -321,6 +354,7 @@ export default function SettingsClient({
         />
 
         <SessionDialogs
+          ref={sessionDialogsRef}
           sessionId={revokeSessionId}
           isOpen={showRevokeSessionDialog}
           onClose={() => {

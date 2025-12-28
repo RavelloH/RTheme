@@ -17,18 +17,24 @@ interface SessionDialogsProps {
   }) => void;
 }
 
+export interface SessionDialogsRef {
+  executeRevokeSession: (data: { sessionId: string }) => Promise<void>;
+}
+
 /**
  * 会话撤销对话框组件
  */
-export const SessionDialogs: React.FC<SessionDialogsProps> = ({
-  sessionId,
-  isOpen,
-  onClose,
-  onRevokeSuccess,
-  onNeedReauth,
-}) => {
+export const SessionDialogs = React.forwardRef<
+  SessionDialogsRef,
+  SessionDialogsProps
+>(({ sessionId, isOpen, onClose, onRevokeSuccess, onNeedReauth }, ref) => {
   const toast = useToast();
   const [revokeSessionLoading, setRevokeSessionLoading] = useState(false);
+
+  // 暴露方法给父组件
+  React.useImperativeHandle(ref, () => ({
+    executeRevokeSession,
+  }));
 
   // 检查是否需要 reauth
   const needsReauth = (
@@ -109,4 +115,6 @@ export const SessionDialogs: React.FC<SessionDialogsProps> = ({
       </div>
     </Dialog>
   );
-};
+});
+
+SessionDialogs.displayName = "SessionDialogs";
