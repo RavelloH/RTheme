@@ -7,6 +7,10 @@ import { getProviderName, getProviderIcon } from "./settingsHelpers";
 import PasskeyManager from "./PasskeyManager";
 import { getTotpStatus } from "@/actions/totp";
 import { TotpDialogs, type TotpDialogsRef } from "./TotpDialogs";
+import type { PendingAction } from "./useReauth";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { AutoResizer } from "@/ui/AutoResizer";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 interface LinkedAccount {
   provider: string;
@@ -25,7 +29,8 @@ interface SecuritySectionProps {
   onPasswordAction: (action: "set" | "change") => void;
   onLinkSSO: (provider: OAuthProvider) => void;
   onUnlinkSSO: (provider: OAuthProvider) => void;
-  onNeedReauth: () => void;
+  onNeedReauth: (action: PendingAction) => void;
+  totpDialogsRef?: React.RefObject<TotpDialogsRef | null>;
 }
 
 /**
@@ -39,10 +44,14 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
   onLinkSSO,
   onUnlinkSSO,
   onNeedReauth,
+  totpDialogsRef: externalTotpDialogsRef,
 }) => {
   const [totpEnabled, setTotpEnabled] = useState(false);
   const [totpBackupCodesRemaining, setTotpBackupCodesRemaining] = useState(0);
-  const totpDialogsRef = useRef<TotpDialogsRef>(null);
+  const [totpLoading, setTotpLoading] = useState(true);
+  const internalTotpDialogsRef = useRef<TotpDialogsRef>(null);
+  const totpDialogsRef = externalTotpDialogsRef || internalTotpDialogsRef;
+  const hasLoadedRef = useRef(false);
 
   const linkedProviders = user.linkedAccounts.map((acc) =>
     acc.provider.toLowerCase(),
@@ -50,6 +59,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
 
   // 加载 TOTP 状态
   const loadTotpStatus = async () => {
+    setTotpLoading(true);
     try {
       const result = await getTotpStatus();
       if (result.success && result.data) {
@@ -58,12 +68,17 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
       }
     } catch (err) {
       console.error("Failed to load TOTP status:", err);
+    } finally {
+      setTotpLoading(false);
     }
   };
 
-  // 初始加载 TOTP 状态
+  // 初始加载 TOTP 状态（防止 React 严格模式下重复加载）
   useEffect(() => {
-    loadTotpStatus();
+    if (!hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      loadTotpStatus();
+    }
   }, []);
 
   return (
@@ -127,53 +142,77 @@ export const SecuritySection: React.FC<SecuritySectionProps> = ({
           </h3>
         </div>
         <div className="p-6">
-          {totpEnabled ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-foreground font-medium">两步验证已启用</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    登录时需要输入验证码
-                  </p>
-                </div>
-                <Button
-                  label="禁用"
-                  onClick={() => totpDialogsRef.current?.openDisableDialog()}
-                  variant="danger"
-                  size="sm"
-                />
-              </div>
-              <div className="flex items-center justify-between pt-3 border-t border-foreground/10">
-                <div>
-                  <p className="text-foreground font-medium">备份码</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    剩余 {totpBackupCodesRemaining} 个备份码
-                  </p>
-                </div>
-                <Button
-                  label="重新生成"
-                  onClick={() => totpDialogsRef.current?.openRegenerateDialog()}
-                  variant="secondary"
-                  size="sm"
-                />
-              </div>
+          <AutoResizer duration={0.3}>
+            <div>
+              <AutoTransition type="fade" duration={0.2} initial={false}>
+                {totpLoading ? (
+                  <div
+                    key="loading"
+                    className="flex items-center justify-center py-12"
+                  >
+                    <LoadingIndicator size="md" />
+                  </div>
+                ) : totpEnabled ? (
+                  <div key="enabled" className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-foreground font-medium">
+                          两步验证已启用
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          登录时需要输入验证码
+                        </p>
+                      </div>
+                      <Button
+                        label="禁用"
+                        onClick={() =>
+                          totpDialogsRef.current?.openDisableDialog()
+                        }
+                        variant="danger"
+                        size="sm"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between pt-3 border-t border-foreground/10">
+                      <div>
+                        <p className="text-foreground font-medium">备份码</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          剩余 {totpBackupCodesRemaining} 个备份码
+                        </p>
+                      </div>
+                      <Button
+                        label="重新生成"
+                        onClick={() =>
+                          totpDialogsRef.current?.openRegenerateDialog()
+                        }
+                        variant="secondary"
+                        size="sm"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    key="disabled"
+                    className="flex items-center justify-between"
+                  >
+                    <div>
+                      <p className="text-foreground font-medium">
+                        未启用两步验证
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        为账户添加额外的安全保护
+                      </p>
+                    </div>
+                    <Button
+                      label="启用"
+                      onClick={() => totpDialogsRef.current?.openEnableDialog()}
+                      variant="secondary"
+                      size="sm"
+                    />
+                  </div>
+                )}
+              </AutoTransition>
             </div>
-          ) : (
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-foreground font-medium">未启用两步验证</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  为账户添加额外的安全保护
-                </p>
-              </div>
-              <Button
-                label="启用"
-                onClick={() => totpDialogsRef.current?.openEnableDialog()}
-                variant="secondary"
-                size="sm"
-              />
-            </div>
-          )}
+          </AutoResizer>
         </div>
       </div>
 
