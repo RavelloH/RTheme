@@ -147,7 +147,7 @@ export function Button({
 
       <AutoTransition duration={0.3}>
         {shouldShowSpinner ? (
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center" key="spinner">
             <svg
               className="animate-spin h-5 w-5"
               xmlns="http://www.w3.org/2000/svg"
@@ -170,7 +170,10 @@ export function Button({
             </svg>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
+          <div
+            className="flex items-center gap-2"
+            key={displayText || "display-content"}
+          >
             {icon && iconPosition === "left" && (
               <motion.span
                 className="inline-flex"
