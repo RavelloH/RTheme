@@ -1,6 +1,11 @@
 "use client";
 
-import { getUsersList, updateUsers, deleteUsers } from "@/actions/user";
+import {
+  getUsersList,
+  updateUsers,
+  deleteUsers,
+  disable2FA,
+} from "@/actions/user";
 import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
 import { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
@@ -49,6 +54,10 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
   const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false);
   const [batchStatusDialogOpen, setBatchStatusDialogOpen] = useState(false);
   const [batchRoleDialogOpen, setBatchRoleDialogOpen] = useState(false);
+  const [disable2FADialogOpen, setDisable2FADialogOpen] = useState(false);
+  const [disable2FAUser, setDisable2FAUser] = useState<UserListItem | null>(
+    null,
+  );
   const [batchNewStatus, setBatchNewStatus] = useState("ACTIVE");
   const [batchNewRole, setBatchNewRole] = useState("USER");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -327,6 +336,43 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
       }
     } catch (error) {
       console.error("批量更改角色失败:", error);
+      toast.error("请稍后重试");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 打开关闭2FA对话框
+  const openDisable2FADialog = (user: UserListItem) => {
+    setDisable2FAUser(user);
+    setDisable2FADialogOpen(true);
+  };
+
+  // 关闭关闭2FA对话框
+  const closeDisable2FADialog = () => {
+    setDisable2FADialogOpen(false);
+    setDisable2FAUser(null);
+  };
+
+  // 确认关闭2FA
+  const handleConfirmDisable2FA = async () => {
+    if (!disable2FAUser) return;
+
+    setIsSubmitting(true);
+    try {
+      const result = await disable2FA({
+        uid: disable2FAUser.uid,
+      });
+
+      if (result.success) {
+        toast.success(`已关闭用户 "${disable2FAUser.username}" 的两步验证`);
+        closeDisable2FADialog();
+        setRefreshTrigger((prev) => prev + 1);
+      } else {
+        toast.error(result.message || "未知错误");
+      }
+    } catch (error) {
+      console.error("关闭2FA失败:", error);
       toast.error("请稍后重试");
     } finally {
       setIsSubmitting(false);
@@ -889,6 +935,8 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
         batchActions={batchActions}
         rowActions={rowActions}
         onSelectionChange={handleSelectionChange}
+        // 行点击事件
+        onRowClick={(record) => openEditDialog(record)}
       />
 
       {/* 编辑用户对话框 */}
@@ -1028,22 +1076,40 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
           </div>
 
           {/* 操作按钮 */}
-          <div className="flex justify-end gap-4 pt-4 border-t border-foreground/10">
-            <Button
-              label="取消"
-              variant="ghost"
-              onClick={closeEditDialog}
-              size="sm"
-              disabled={isSubmitting}
-            />
-            <Button
-              label="保存"
-              variant="primary"
-              onClick={handleSaveUser}
-              size="sm"
-              loading={isSubmitting}
-              loadingText="保存中..."
-            />
+          <div className="flex justify-between gap-4 pt-4 border-t border-foreground/10">
+            {/* 左侧：关闭2FA按钮 */}
+            <div>
+              {editingUser?.hasTwoFactor && (
+                <Button
+                  label="关闭两步验证"
+                  variant="danger"
+                  onClick={() => {
+                    closeEditDialog();
+                    openDisable2FADialog(editingUser);
+                  }}
+                  size="sm"
+                  disabled={isSubmitting}
+                />
+              )}
+            </div>
+            {/* 右侧：取消和保存按钮 */}
+            <div className="flex gap-4">
+              <Button
+                label="取消"
+                variant="ghost"
+                onClick={closeEditDialog}
+                size="sm"
+                disabled={isSubmitting}
+              />
+              <Button
+                label="保存"
+                variant="primary"
+                onClick={handleSaveUser}
+                size="sm"
+                loading={isSubmitting}
+                loadingText="保存中..."
+              />
+            </div>
           </div>
         </div>
       </Dialog>
@@ -1164,6 +1230,23 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
         title="确认批量删除"
         description={`确定要删除选中的 ${selectedUsers.length} 个用户吗？`}
         confirmText="删除"
+        cancelText="取消"
+        variant="danger"
+        loading={isSubmitting}
+      />
+
+      {/* 关闭2FA确认对话框 */}
+      <AlertDialog
+        open={disable2FADialogOpen}
+        onClose={closeDisable2FADialog}
+        onConfirm={handleConfirmDisable2FA}
+        title="确认关闭两步验证"
+        description={
+          disable2FAUser
+            ? `确定要关闭用户 "${disable2FAUser.username}" 的两步验证吗？此操作将清除该用户的所有2FA配置，用户需要重新设置。`
+            : ""
+        }
+        confirmText="关闭"
         cancelText="取消"
         variant="danger"
         loading={isSubmitting}

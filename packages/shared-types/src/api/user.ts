@@ -75,6 +75,7 @@ export const UserListItemSchema = z.object({
   status: z.enum(["ACTIVE", "SUSPENDED", "NEEDS_UPDATE"]),
   postsCount: z.number().int().nonnegative(),
   commentsCount: z.number().int().nonnegative(),
+  hasTwoFactor: z.boolean(),
 });
 export type UserListItem = z.infer<typeof UserListItemSchema>;
 
@@ -146,6 +147,29 @@ export type DeleteUsersSuccessResponse = z.infer<
   typeof DeleteUsersSuccessResponseSchema
 >;
 registerSchema("DeleteUsersSuccessResponse", DeleteUsersSuccessResponseSchema);
+
+/*
+    disable2FA() Schema
+*/
+export const Disable2FASchema = z.object({
+  access_token: z.string().optional(),
+  uid: z.number().int().positive(),
+});
+export type Disable2FA = z.infer<typeof Disable2FASchema>;
+registerSchema("Disable2FA", Disable2FASchema);
+
+export const Disable2FAResultSchema = z.object({
+  success: z.boolean(),
+});
+export type Disable2FAResult = z.infer<typeof Disable2FAResultSchema>;
+
+export const Disable2FASuccessResponseSchema = createSuccessResponseSchema(
+  Disable2FAResultSchema,
+);
+export type Disable2FASuccessResponse = z.infer<
+  typeof Disable2FASuccessResponseSchema
+>;
+registerSchema("Disable2FASuccessResponse", Disable2FASuccessResponseSchema);
 
 /*
     updateUserProfile() Schema

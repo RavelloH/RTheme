@@ -14,6 +14,8 @@ import {
   DeleteUsers,
   UpdateUserProfileSchema,
   UpdateUserProfile,
+  Disable2FASchema,
+  Disable2FA,
 } from "@repo/shared-types/api/user";
 import {
   usernameSchema,
@@ -29,6 +31,7 @@ import { authVerify } from "@/lib/server/auth-verify";
 import { logAuditEvent } from "./audit";
 import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
 import { jwtTokenVerify, type AccessTokenPayload } from "@/lib/server/jwt";
+import { Prisma } from ".prisma/client";
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
@@ -318,6 +321,7 @@ export async function getUsersList(
         lastUseAt: true,
         role: true,
         status: true,
+        totpSecret: true,
         _count: {
           select: {
             posts: true,
@@ -344,6 +348,7 @@ export async function getUsersList(
       status: user.status,
       postsCount: user._count.posts,
       commentsCount: user._count.comments,
+      hasTwoFactor: !!user.totpSecret,
     }));
 
     // 计算分页元数据
@@ -1265,6 +1270,126 @@ export async function updateUserProfile(
     console.error("Update user profile error:", error);
     return response.serverError({
       message: "更新失败，请稍后重试",
+    });
+  }
+}
+
+/**
+ * 管理员关闭用户的2FA
+ */
+export async function disable2FA(
+  params: Disable2FA,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<{ success: boolean } | null>>>;
+export async function disable2FA(
+  params: Disable2FA,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<{ success: boolean } | null>>;
+export async function disable2FA(
+  { access_token, uid }: Disable2FA,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<{ success: boolean } | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "disable2FA"))) {
+    return response.tooManyRequests();
+  }
+
+  // 参数验证
+  const validationError = validateData({ access_token, uid }, Disable2FASchema);
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证 - 仅管理员可以操作
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized({
+      message: "需要管理员权限",
+    });
+  }
+
+  try {
+    // 检查是否尝试操作自己的账户
+    if (uid === user.uid) {
+      return response.badRequest({
+        message: "不能关闭自己的2FA，请使用用户设置页面",
+      });
+    }
+
+    // 查询目标用户
+    const targetUser = await prisma.user.findUnique({
+      where: { uid },
+      select: {
+        uid: true,
+        username: true,
+        totpSecret: true,
+        totpBackupCodes: true,
+      },
+    });
+
+    if (!targetUser) {
+      return response.badRequest({
+        message: "用户不存在",
+      });
+    }
+
+    if (!targetUser.totpSecret) {
+      return response.badRequest({
+        message: "该用户未启用2FA",
+      });
+    }
+
+    // 清除2FA相关字段
+    await prisma.user.update({
+      where: { uid },
+      data: {
+        totpSecret: null,
+        totpBackupCodes: null as unknown as Prisma.InputJsonValue,
+      },
+    });
+
+    // 获取客户端信息用于审计日志
+    const clientIP = await getClientIP();
+    const clientUserAgent = await getClientUserAgent();
+
+    // 记录审计日志（after 钩子）
+    const { after } = await import("next/server");
+    after(async () => {
+      try {
+        await logAuditEvent({
+          user: {
+            uid: String(user.uid),
+            ipAddress: clientIP,
+            userAgent: clientUserAgent,
+          },
+          details: {
+            action: "DISABLE_2FA",
+            resourceType: "USER",
+            resourceId: String(uid),
+            vaule: {
+              old: { hasTwoFactor: true },
+              new: { hasTwoFactor: false },
+            },
+            description: `管理员关闭用户 ${targetUser.username} (UID: ${uid}) 的两步验证`,
+          },
+        });
+      } catch (error) {
+        console.error("Failed to log audit event:", error);
+      }
+    });
+
+    return response.ok({
+      data: { success: true },
+    });
+  } catch (error) {
+    console.error("Disable 2FA error:", error);
+    return response.serverError({
+      message: "操作失败，请稍后重试",
     });
   }
 }
