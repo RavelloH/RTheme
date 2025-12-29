@@ -23,6 +23,7 @@ import { PasswordDialogs, type PasswordDialogsRef } from "./PasswordDialogs";
 import { SSODialogs, type SSODialogsRef } from "./SSODialogs";
 import { SessionDialogs, type SessionDialogsRef } from "./SessionDialogs";
 import { type TotpDialogsRef } from "./TotpDialogs";
+import { BasicInfoDialogs, type BasicInfoDialogsRef } from "./BasicInfoDialogs";
 
 interface LinkedAccount {
   provider: string;
@@ -64,6 +65,7 @@ export default function SettingsClient({
   const ssoDialogsRef = useRef<SSODialogsRef>(null);
   const sessionDialogsRef = useRef<SessionDialogsRef>(null);
   const totpDialogsRef = useRef<TotpDialogsRef>(null);
+  const basicInfoDialogsRef = useRef<BasicInfoDialogsRef>(null);
 
   // 状态管理（简化）
   const [unlinkProvider, setUnlinkProvider] = useState<OAuthProvider | null>(
@@ -215,6 +217,10 @@ export default function SettingsClient({
         // 直接执行重新生成备份码操作
         await totpDialogsRef.current?.executeRegenerateBackupCodes();
         break;
+      case "updateProfile":
+        // 直接执行更新个人资料操作
+        await basicInfoDialogsRef.current?.executeUpdate(action.data);
+        break;
     }
   };
 
@@ -318,7 +324,12 @@ export default function SettingsClient({
           {/* 右侧内容区 */}
           <main className="flex-1 min-w-0">
             <AutoTransition type="fade" duration={0.3}>
-              {activeSection === "basic" && <BasicInfoSection user={user} />}
+              {activeSection === "basic" && (
+                <BasicInfoSection
+                  user={user}
+                  basicInfoDialogsRef={basicInfoDialogsRef}
+                />
+              )}
               {activeSection === "notifications" && <NotificationSection />}
               {activeSection === "sessions" && (
                 <SessionSection onRevokeSession={handleRevokeSession} />
@@ -340,6 +351,12 @@ export default function SettingsClient({
         </div>
 
         {/* 对话框组件 */}
+        <BasicInfoDialogs
+          ref={basicInfoDialogsRef}
+          onFieldUpdated={loadUserInfo}
+          onNeedReauth={(action) => handleNeedReauth(action)}
+        />
+
         <PasswordDialogs
           ref={passwordDialogsRef}
           onPasswordSet={loadUserInfo}

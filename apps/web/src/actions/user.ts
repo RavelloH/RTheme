@@ -12,7 +12,14 @@ import {
   UpdateUsers,
   DeleteUsersSchema,
   DeleteUsers,
+  UpdateUserProfileSchema,
+  UpdateUserProfile,
 } from "@repo/shared-types/api/user";
+import {
+  usernameSchema,
+  emailSchema,
+  nicknameSchema,
+} from "@repo/shared-types/api/auth";
 import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
 import limitControl from "@/lib/server/rateLimit";
@@ -917,6 +924,347 @@ export async function getUserProfile(serverConfig?: ActionConfig): Promise<
     console.error("Get user profile error:", error);
     return response.serverError({
       message: "获取用户信息失败，请稍后重试",
+    });
+  }
+}
+
+/**
+ * 更新当前用户的个人资料
+ */
+export async function updateUserProfile(
+  params: UpdateUserProfile,
+  serverConfig: { environment: "serverless" },
+): Promise<
+  NextResponse<ApiResponse<{ updated: boolean; needsLogout?: boolean } | null>>
+>;
+export async function updateUserProfile(
+  params: UpdateUserProfile,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<{ updated: boolean; needsLogout?: boolean } | null>>;
+export async function updateUserProfile(
+  { field, value }: UpdateUserProfile,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<{ updated: boolean; needsLogout?: boolean } | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "updateUserProfile"))) {
+    return response.tooManyRequests();
+  }
+
+  // 参数验证
+  const validationError = validateData(
+    { field, value },
+    UpdateUserProfileSchema,
+  );
+  if (validationError) return response.badRequest(validationError);
+
+  try {
+    // 从 cookie 获取当前用户
+    const cookieStore = await cookies();
+    const token = cookieStore.get("ACCESS_TOKEN")?.value || "";
+    const { jwtTokenVerify } = await import("@/lib/server/jwt");
+    const decoded = jwtTokenVerify<AccessTokenPayload>(token);
+
+    if (!decoded) {
+      return response.unauthorized({
+        message: "请先登录",
+      });
+    }
+
+    const { uid } = decoded;
+
+    // 敏感字段需要 reauth
+    const sensitiveFields = ["username", "email"];
+    if (sensitiveFields.includes(field)) {
+      const { checkReauthToken } = await import("./reauth");
+      const hasReauthToken = await checkReauthToken();
+      if (!hasReauthToken) {
+        return response.forbidden({
+          message: "需要重新验证身份",
+          error: {
+            code: "NEED_REAUTH",
+            message: "需要重新验证身份",
+          },
+        });
+      }
+    }
+
+    // 查询当前用户信息
+    const currentUser = await prisma.user.findUnique({
+      where: { uid },
+      select: {
+        username: true,
+        email: true,
+        nickname: true,
+        website: true,
+        bio: true,
+      },
+    });
+
+    if (!currentUser) {
+      return response.unauthorized({
+        message: "用户不存在",
+      });
+    }
+
+    // 字段级验证
+    let validatedValue: string | null = value.trim() || null;
+    const { websiteSchema } = await import("@repo/shared-types/api/user");
+
+    switch (field) {
+      case "nickname": {
+        if (validatedValue) {
+          const result = nicknameSchema.safeParse(validatedValue);
+          if (!result.success) {
+            return response.badRequest({
+              message: result.error.issues[0]?.message || "昵称格式不正确",
+            });
+          }
+        }
+        break;
+      }
+
+      case "username": {
+        const result = usernameSchema.safeParse(validatedValue);
+        if (!result.success) {
+          return response.badRequest({
+            message: result.error.issues[0]?.message || "用户名格式不正确",
+          });
+        }
+
+        // 唯一性检查
+        const existingUser = await prisma.user.findFirst({
+          where: {
+            username: validatedValue!,
+            uid: { not: uid },
+          },
+        });
+
+        if (existingUser) {
+          return response.conflict({
+            message: "该用户名已被使用",
+          });
+        }
+        break;
+      }
+
+      case "email": {
+        const result = emailSchema.safeParse(validatedValue);
+        if (!result.success) {
+          return response.badRequest({
+            message: result.error.issues[0]?.message || "邮箱格式不正确",
+          });
+        }
+
+        // 唯一性检查
+        const existingUser = await prisma.user.findFirst({
+          where: {
+            email: validatedValue!,
+            uid: { not: uid },
+          },
+        });
+
+        if (existingUser) {
+          return response.conflict({
+            message: "该邮箱已被使用",
+          });
+        }
+        break;
+      }
+
+      case "website": {
+        if (validatedValue) {
+          const result = websiteSchema.safeParse(validatedValue);
+          if (!result.success) {
+            return response.badRequest({
+              message: result.error.issues[0]?.message || "网站链接格式不正确",
+            });
+          }
+          validatedValue = result.data;
+        }
+        break;
+      }
+
+      case "bio": {
+        if (validatedValue && validatedValue.length > 255) {
+          return response.badRequest({
+            message: "个人简介不能超过255个字符",
+          });
+        }
+        break;
+      }
+    }
+
+    // 准备更新数据
+    const updateData: {
+      nickname?: string | null;
+      username?: string;
+      email?: string;
+      website?: string | null;
+      bio?: string | null;
+      emailVerifyCode?: string;
+      emailVerified?: boolean;
+    } = {
+      [field]: validatedValue,
+    };
+
+    // 如果是邮箱修改，需要生成验证码
+    let oldEmail: string | undefined;
+    let newVerifyCode: string | undefined;
+    if (field === "email" && validatedValue) {
+      oldEmail = currentUser.email;
+      const emailUtils = await import("@/lib/server/email");
+      newVerifyCode = emailUtils.default.generate();
+      updateData.emailVerifyCode = newVerifyCode;
+
+      // 检查是否启用邮箱验证
+      const { getConfig } = await import("@/lib/server/configCache");
+      const emailVerificationEnabled = await getConfig<boolean>(
+        "user.email.verification.required",
+        false,
+      );
+      if (emailVerificationEnabled) {
+        updateData.emailVerified = false;
+      }
+    }
+
+    // 执行更新
+    await prisma.user.update({
+      where: { uid },
+      data: updateData,
+    });
+
+    // 获取客户端信息用于审计日志
+    const clientIP = await getClientIP();
+    const clientUserAgent = await getClientUserAgent();
+
+    // 发送邮件通知（after 钩子）
+    const { after } = await import("next/server");
+    after(async () => {
+      try {
+        const { sendEmail } = await import("@/lib/server/email");
+        const { renderEmail } = await import("@/emails/utils");
+        const { getConfig } = await import("@/lib/server/configCache");
+        const siteName =
+          (await getConfig<string>("site.name")) || "NeutralPress";
+        const siteUrl = (await getConfig<string>("site.url")) || "";
+
+        if (field === "username" && validatedValue) {
+          // 发送用户名变更通知
+          const { ProfileChangedTemplate } = await import("@/emails/templates");
+          const emailComponent = ProfileChangedTemplate({
+            username: currentUser.nickname || currentUser.username,
+            changedField: "username",
+            oldValue: currentUser.username,
+            newValue: validatedValue,
+            siteName,
+            siteUrl,
+          });
+
+          const { html, text } = await renderEmail(emailComponent);
+
+          await sendEmail({
+            to: currentUser.email,
+            subject: "账户用户名已变更",
+            html,
+            text,
+          });
+        } else if (
+          field === "email" &&
+          validatedValue &&
+          oldEmail &&
+          newVerifyCode
+        ) {
+          // 向旧邮箱发送变更通知
+          const { ProfileChangedTemplate } = await import("@/emails/templates");
+          const oldEmailComponent = ProfileChangedTemplate({
+            username: currentUser.nickname || currentUser.username,
+            changedField: "email",
+            oldValue: oldEmail,
+            newValue: validatedValue,
+            siteName,
+            siteUrl,
+          });
+
+          const oldEmailRendered = await renderEmail(oldEmailComponent);
+
+          await sendEmail({
+            to: oldEmail,
+            subject: "账户邮箱已变更",
+            html: oldEmailRendered.html,
+            text: oldEmailRendered.text,
+          });
+
+          // 向新邮箱发送验证邮件
+          const { EmailChangedTemplate } = await import("@/emails/templates");
+          const newEmailComponent = EmailChangedTemplate({
+            username: currentUser.nickname || currentUser.username,
+            verificationCode: newVerifyCode.split("-")[0]!,
+            oldEmail,
+            newEmail: validatedValue,
+            siteName,
+            siteUrl,
+          });
+
+          const newEmailRendered = await renderEmail(newEmailComponent);
+
+          await sendEmail({
+            to: validatedValue,
+            subject: "验证您的新邮箱",
+            html: newEmailRendered.html,
+            text: newEmailRendered.text,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to send email notification:", error);
+      }
+    });
+
+    // 记录审计日志（after 钩子）
+    after(async () => {
+      try {
+        await logAuditEvent({
+          user: {
+            uid: String(uid),
+            ipAddress: clientIP,
+            userAgent: clientUserAgent,
+          },
+          details: {
+            action: "UPDATE",
+            resourceType: "USER",
+            resourceId: String(uid),
+            vaule: {
+              old: { [field]: currentUser[field as keyof typeof currentUser] },
+              new: { [field]: validatedValue },
+            },
+            description: `更新个人资料：${field}`,
+          },
+        });
+      } catch (error) {
+        console.error("Failed to log audit event:", error);
+      }
+    });
+
+    // 敏感字段修改后需要退出登录
+    if (sensitiveFields.includes(field)) {
+      cookieStore.delete("ACCESS_TOKEN");
+      cookieStore.delete("REFRESH_TOKEN");
+      cookieStore.delete("REAUTH_TOKEN");
+
+      return response.ok({
+        data: { updated: true, needsLogout: true },
+      });
+    }
+
+    return response.ok({
+      data: { updated: true },
+    });
+  } catch (error) {
+    console.error("Update user profile error:", error);
+    return response.serverError({
+      message: "更新失败，请稍后重试",
     });
   }
 }

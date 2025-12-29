@@ -146,3 +146,59 @@ export type DeleteUsersSuccessResponse = z.infer<
   typeof DeleteUsersSuccessResponseSchema
 >;
 registerSchema("DeleteUsersSuccessResponse", DeleteUsersSuccessResponseSchema);
+
+/*
+    updateUserProfile() Schema
+*/
+// 可编辑的字段枚举
+export const EditableFieldSchema = z.enum([
+  "nickname",
+  "username",
+  "email",
+  "website",
+  "bio",
+]);
+export type EditableField = z.infer<typeof EditableFieldSchema>;
+
+// URL Schema（允许省略协议，自动补全）
+const websiteSchema = z
+  .string()
+  .max(255, "网站链接不能超过255个字符")
+  .optional()
+  .transform((val) => {
+    if (!val || val.trim() === "") return "";
+    const trimmed = val.trim();
+    // 如果已经有协议，直接返回
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    // 否则添加 https:// 前缀
+    return `https://${trimmed}`;
+  })
+  .pipe(z.string().url("请输入有效的网站链接").or(z.literal("")));
+
+export const UpdateUserProfileSchema = z.object({
+  field: EditableFieldSchema,
+  value: z.string(),
+});
+export type UpdateUserProfile = z.infer<typeof UpdateUserProfileSchema>;
+registerSchema("UpdateUserProfile", UpdateUserProfileSchema);
+
+export const UpdateUserProfileResultSchema = z.object({
+  updated: z.boolean(),
+  needsLogout: z.boolean().optional(),
+});
+export type UpdateUserProfileResult = z.infer<
+  typeof UpdateUserProfileResultSchema
+>;
+
+export const UpdateUserProfileSuccessResponseSchema =
+  createSuccessResponseSchema(UpdateUserProfileResultSchema);
+export type UpdateUserProfileSuccessResponse = z.infer<
+  typeof UpdateUserProfileSuccessResponseSchema
+>;
+registerSchema(
+  "UpdateUserProfileSuccessResponse",
+  UpdateUserProfileSuccessResponseSchema,
+);
+
+// 导出 website schema 供其他地方使用
+export { websiteSchema };

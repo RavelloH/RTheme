@@ -181,7 +181,7 @@ export const defaultConfigs: DefaultConfig[] = [
   },
   {
     key: "user.email.verification.required",
-    value: { default: true },
+    value: { default: false },
     description:
       "是否需要用户注册后验证邮箱。需要设置相关环境变量以配置电子邮件发送服务，详见文档",
   },

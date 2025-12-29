@@ -34,6 +34,10 @@ export type PendingAction =
   | {
       type: "regenerateBackupCodes";
       data: Record<string, never>;
+    }
+  | {
+      type: "updateProfile";
+      data: { field: string; value: string };
     };
 
 interface UseReauthOptions {

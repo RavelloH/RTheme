@@ -1,7 +1,9 @@
 "use client";
 
-import { formatRelativeTime } from "@/lib/shared/relativeTime";
 import React from "react";
+import { Button } from "@/ui/Button";
+import { formatRelativeTime } from "@/lib/shared/relativeTime";
+import type { BasicInfoDialogsRef } from "./BasicInfoDialogs";
 
 interface UserProfile {
   uid: number;
@@ -16,6 +18,7 @@ interface UserProfile {
 
 interface BasicInfoSectionProps {
   user: UserProfile;
+  basicInfoDialogsRef?: React.RefObject<BasicInfoDialogsRef | null>;
 }
 
 // 角色名称映射
@@ -41,7 +44,17 @@ const formatDate = (dateString: string): string => {
 /**
  * 基本信息板块组件
  */
-export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({ user }) => {
+export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
+  user,
+  basicInfoDialogsRef,
+}) => {
+  const handleEdit = (
+    field: "nickname" | "username" | "email" | "website" | "bio",
+  ) => {
+    const currentValue = user[field] || "";
+    basicInfoDialogsRef?.current?.openEditDialog(field, currentValue);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -83,7 +96,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({ user }) => {
         </div>
         <div className="p-6">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex-1">
               <p className="text-foreground font-medium">
                 {user.nickname || "未设置"}
               </p>
@@ -91,6 +104,12 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({ user }) => {
                 {user.nickname ? "你的显示名称" : "你还没有设置昵称"}
               </p>
             </div>
+            <Button
+              label="编辑"
+              onClick={() => handleEdit("nickname")}
+              variant="secondary"
+              size="sm"
+            />
           </div>
         </div>
       </div>
@@ -104,12 +123,18 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({ user }) => {
         </div>
         <div className="p-6">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex-1">
               <p className="text-foreground font-medium">{user.username}</p>
               <p className="text-sm text-muted-foreground mt-1">
                 用于登录的唯一用户名
               </p>
             </div>
+            <Button
+              label="编辑"
+              onClick={() => handleEdit("username")}
+              variant="secondary"
+              size="sm"
+            />
           </div>
         </div>
       </div>
@@ -123,12 +148,18 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({ user }) => {
         </div>
         <div className="p-6">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex-1">
               <p className="text-foreground font-medium">{user.email}</p>
               <p className="text-sm text-muted-foreground mt-1">
                 用于接收通知和账户恢复
               </p>
             </div>
+            <Button
+              label="编辑"
+              onClick={() => handleEdit("email")}
+              variant="secondary"
+              size="sm"
+            />
           </div>
         </div>
       </div>
@@ -142,7 +173,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({ user }) => {
         </div>
         <div className="p-6">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex-1">
               {user.website ? (
                 <>
                   <a
@@ -166,6 +197,12 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({ user }) => {
                 </>
               )}
             </div>
+            <Button
+              label="编辑"
+              onClick={() => handleEdit("website")}
+              variant="secondary"
+              size="sm"
+            />
           </div>
         </div>
       </div>
@@ -178,15 +215,23 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({ user }) => {
           </h3>
         </div>
         <div className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-foreground font-medium">
-                {user.bio || "未设置"}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
                 {user.bio ? "你的个人介绍" : "你还没有填写个人简介"}
               </p>
+              <Button
+                label="编辑"
+                onClick={() => handleEdit("bio")}
+                variant="secondary"
+                size="sm"
+              />
             </div>
+            {user.bio && (
+              <p className="text-foreground font-medium whitespace-pre-wrap break-words">
+                {user.bio}
+              </p>
+            )}
           </div>
         </div>
       </div>

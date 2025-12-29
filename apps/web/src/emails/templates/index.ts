@@ -20,3 +20,9 @@ export type { SSOUnlinkedTemplateProps } from "./SSOUnlinked";
 
 export { PasswordSetTemplate } from "./PasswordSet";
 export type { PasswordSetTemplateProps } from "./PasswordSet";
+
+export { ProfileChangedTemplate } from "./ProfileChanged";
+export type { ProfileChangedTemplateProps } from "./ProfileChanged";
+
+export { EmailChangedTemplate } from "./EmailChanged";
+export type { EmailChangedTemplateProps } from "./EmailChanged";
