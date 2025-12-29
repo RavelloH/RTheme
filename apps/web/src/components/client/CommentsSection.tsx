@@ -398,7 +398,7 @@ function SingleComment({
                     : "text-muted-foreground hover:text-error"
                 }`}
               >
-                <AutoTransition>
+                <AutoTransition type="scale" duration={0.2} initial={false}>
                   {comment.isLiked ? (
                     <RiHeartFill size="1.25em" key="liked" />
                   ) : (
@@ -406,7 +406,7 @@ function SingleComment({
                   )}
                 </AutoTransition>
                 <span className="font-mono">
-                  <AutoTransition>
+                  <AutoTransition type="fade" duration={0.2} initial={false}>
                     {comment.likeCount > 0 ? comment.likeCount : "0"}
                   </AutoTransition>
                 </span>
@@ -437,37 +437,23 @@ function SingleComment({
         </div>
       </div>
       {/* 加载指示器 */}
-      <AnimatePresence>
-        {isLoadingDeep && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{
-              height: "auto",
-              opacity: 1,
-              transition: {
-                height: { duration: 0.3, ease: "easeInOut" },
-                opacity: { duration: 0.2, delay: 0.1 },
-              },
-            }}
-            exit={{
-              height: 0,
-              opacity: 0,
-              transition: {
-                height: { duration: 0.3, ease: "easeInOut", delay: 0.1 },
-                opacity: { duration: 0.2 },
-              },
-            }}
-            style={{ overflow: "hidden" }}
-          >
-            <div
-              className="flex items-center gap-2 py-4 text-sm text-muted-foreground w-full h-24 justify-center"
-              style={{ paddingLeft: (comment.depth + 1) * 24 }}
-            >
-              <LoadingIndicator />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <AutoResizer duration={0.3}>
+        <div>
+          <AutoTransition type="fade" duration={0.2} initial={false}>
+            {isLoadingDeep ? (
+              <div
+                key="loading"
+                className="flex items-center gap-2 py-4 text-sm text-muted-foreground w-full h-24 justify-center"
+                style={{ paddingLeft: (comment.depth + 1) * 24 }}
+              >
+                <LoadingIndicator />
+              </div>
+            ) : (
+              <div key="empty" style={{ height: 0 }} />
+            )}
+          </AutoTransition>
+        </div>
+      </AutoResizer>
     </div>
   );
 }
@@ -653,6 +639,7 @@ export default function CommentsSection({
   const loadComments = useCallback(
     async (cursorParam?: string) => {
       setLoading(true);
+      const startTime = Date.now();
       try {
         const result = await getPostComments({
           slug,
@@ -677,6 +664,10 @@ export default function CommentsSection({
         console.error("加载评论失败", error);
         toastError("加载评论失败", "请稍后重试");
       } finally {
+        // 确保加载指示器至少显示 0.5 秒
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, 500 - elapsed);
+        await new Promise((resolve) => setTimeout(resolve, remaining));
         setLoading(false);
       }
     },
@@ -691,6 +682,7 @@ export default function CommentsSection({
       }
 
       setLoadingDeepIds((prev) => new Set(prev).add(commentId));
+      const startTime = Date.now();
       try {
         const result = await getCommentReplies({
           commentId,
@@ -699,7 +691,25 @@ export default function CommentsSection({
         const response = await resolveApiResponse(result);
         if (response?.success && Array.isArray(response.data)) {
           const incoming = response.data as CommentItem[];
+
+          // 确保加载指示器至少显示 0.5 秒
+          const elapsed = Date.now() - startTime;
+          const remaining = Math.max(0, 500 - elapsed);
+          await new Promise((resolve) => setTimeout(resolve, remaining));
+
+          // 先移除加载状态，让加载指示器开始消失动画
+          setLoadingDeepIds((prev) => {
+            const next = new Set(prev);
+            next.delete(commentId);
+            return next;
+          });
+
+          // 延迟一小段时间，让加载指示器的 opacity 消失动画完成
+          await new Promise((resolve) => setTimeout(resolve, 150));
+
+          // 然后添加新评论
           setComments((prev) => mergeBySortKey(prev, incoming));
+
           // 将当前评论和所有加载的子评论都标记为已展开
           setExpandedDeepIds((prev) => {
             const next = new Set(prev);
@@ -710,11 +720,15 @@ export default function CommentsSection({
           });
         } else {
           toastError("加载回复失败", response?.message || "");
+          setLoadingDeepIds((prev) => {
+            const next = new Set(prev);
+            next.delete(commentId);
+            return next;
+          });
         }
       } catch (error) {
         console.error("加载回复失败", error);
         toastError("加载回复失败", "请稍后重试");
-      } finally {
         setLoadingDeepIds((prev) => {
           const next = new Set(prev);
           next.delete(commentId);
@@ -1329,82 +1343,81 @@ export default function CommentsSection({
       </div>
 
       {/* 评论列表 */}
-      <AutoResizer>
-        <AutoTransition>
-          <div key={loading ? "loading" : "loaded"}>
-            {!commentsLoaded && (
-              <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground w-full h-24 justify-center">
-                <LoadingIndicator />
-              </div>
-            )}
-
-            {commentsLoaded && (
-              <>
-                <AnimatePresence initial={false}>
-                  {visibleComments.map((comment) => (
-                    <motion.div
-                      key={comment.id}
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{
-                        height: "auto",
-                        opacity: 1,
-                        transition: {
-                          height: { duration: 0.3, ease: "easeInOut" },
-                          opacity: { duration: 0.2, delay: 0.1 },
+      <div>
+        <AutoTransition type="fade" duration={0.2} initial={false}>
+          {!commentsLoaded ? (
+            <div
+              key="loading"
+              className="flex items-center gap-2 py-4 text-sm text-muted-foreground w-full h-24 justify-center"
+            >
+              <LoadingIndicator />
+            </div>
+          ) : (
+            <div key="loaded">
+              <AnimatePresence initial={false}>
+                {visibleComments.map((comment) => (
+                  <motion.div
+                    key={comment.id}
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{
+                      height: "auto",
+                      opacity: 1,
+                      transition: {
+                        height: { duration: 0.3, ease: "easeInOut" },
+                        opacity: { duration: 0.2, delay: 0.1 },
+                      },
+                    }}
+                    exit={{
+                      height: 0,
+                      opacity: 0,
+                      transition: {
+                        height: {
+                          duration: 0.3,
+                          ease: "easeInOut",
+                          delay: 0.1,
                         },
-                      }}
-                      exit={{
-                        height: 0,
-                        opacity: 0,
-                        transition: {
-                          height: {
-                            duration: 0.3,
-                            ease: "easeInOut",
-                            delay: 0.1,
-                          },
-                          opacity: { duration: 0.2 },
-                        },
-                      }}
-                      style={{ overflow: "hidden" }}
-                      onMouseEnter={() => handleMouseEnter(comment)}
-                      onMouseLeave={handleMouseLeave}
-                    >
-                      <SingleComment
-                        comment={comment}
-                        onReply={handleReply}
-                        onToggleCollapse={handleToggleCollapse}
-                        onExpandDeep={loadDeepReplies}
-                        onHighlight={handleHighlight}
-                        onToggleLike={handleToggleLike}
-                        isCollapsed={collapsedIds.has(comment.id)}
-                        isLoadingDeep={loadingDeepIds.has(comment.id)}
-                        isExpandedDeep={expandedDeepIds.has(comment.id)}
-                        isHighlighted={highlightedId === comment.id}
-                        isInHoverPath={isInHoverPath(comment)}
-                        isCurrentHovered={isCurrentHovered(comment)}
-                        isDirectParent={isDirectParent(comment)}
-                        authorUid={authorUid}
-                        navigate={navigate}
-                      />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-                {loading && (
-                  <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground w-full h-24 justify-center">
-                    <LoadingIndicator />
-                  </div>
-                )}
-                <div ref={sentinelRef} />
-                {!loading && comments.length === 0 && (
-                  <div className="text-muted-foreground text-sm py-8 text-center">
-                    暂无评论
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+                        opacity: { duration: 0.2 },
+                      },
+                    }}
+                    style={{ overflow: "hidden" }}
+                    onMouseEnter={() => handleMouseEnter(comment)}
+                    onMouseLeave={handleMouseLeave}
+                  >
+                    <SingleComment
+                      comment={comment}
+                      onReply={handleReply}
+                      onToggleCollapse={handleToggleCollapse}
+                      onExpandDeep={loadDeepReplies}
+                      onHighlight={handleHighlight}
+                      onToggleLike={handleToggleLike}
+                      isCollapsed={collapsedIds.has(comment.id)}
+                      isLoadingDeep={loadingDeepIds.has(comment.id)}
+                      isExpandedDeep={expandedDeepIds.has(comment.id)}
+                      isHighlighted={highlightedId === comment.id}
+                      isInHoverPath={isInHoverPath(comment)}
+                      isCurrentHovered={isCurrentHovered(comment)}
+                      isDirectParent={isDirectParent(comment)}
+                      authorUid={authorUid}
+                      navigate={navigate}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              {loading && (
+                <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground w-full h-24 justify-center">
+                  <LoadingIndicator />
+                </div>
+              )}
+              <div ref={sentinelRef} />
+              {!loading && comments.length === 0 && (
+                <div className="text-muted-foreground text-sm py-8 text-center">
+                  暂无评论
+                </div>
+              )}
+            </div>
+          )}
         </AutoTransition>
-      </AutoResizer>
+      </div>
     </div>
   );
 }

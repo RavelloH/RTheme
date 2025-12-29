@@ -122,7 +122,7 @@ export const SessionSection: React.FC<SessionSectionProps> = ({
                       <div
                         key={session.id}
                         className={`
-                          flex items-center justify-between py-4 gap-4
+                          flex items-center justify-between py-4 gap-4 pr-5
                           ${index !== sessions.length - 1 ? "border-b border-foreground/10" : ""}
                           ${session.revokedAt ? "opacity-50" : ""}
                         `}
