@@ -287,3 +287,20 @@ export const UnlikeCommentResponseSchema = createSuccessResponseSchema(
 
 export type UnlikeCommentResponse = z.infer<typeof UnlikeCommentResponseSchema>;
 registerSchema("UnlikeCommentResponse", UnlikeCommentResponseSchema);
+
+// 删除自己的评论
+export const DeleteOwnCommentSchema = z.object({
+  commentId: z.string().uuid(),
+});
+
+export type DeleteOwnComment = z.infer<typeof DeleteOwnCommentSchema>;
+registerSchema("DeleteOwnComment", DeleteOwnCommentSchema);
+
+export const DeleteOwnCommentResponseSchema = createSuccessResponseSchema(
+  z.null(),
+);
+
+export type DeleteOwnCommentResponse = z.infer<
+  typeof DeleteOwnCommentResponseSchema
+>;
+registerSchema("DeleteOwnCommentResponse", DeleteOwnCommentResponseSchema);

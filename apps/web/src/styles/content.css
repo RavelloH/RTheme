@@ -7,6 +7,10 @@
   overflow-wrap: break-word;
 }
 
+.mini-md-content {
+  @apply min-h-auto;
+}
+
 /* Text Alignment */
 .tiptap [style*="text-align: left"],
 .md-content [style*="text-align: left"] {
@@ -26,6 +30,10 @@
 .tiptap p,
 .md-content p {
   @apply my-4 leading-relaxed text-xl md:text-base;
+}
+
+.mini-md-content p {
+  @apply my-0 text-base;
 }
 
 .tiptap blockquote p,
@@ -165,6 +173,10 @@
 .md-content img {
   @apply block max-w-full max-h-[80vh] w-full h-auto rounded-lg mx-auto mt-4 mb-1;
   object-fit: contain;
+}
+
+.mini-md-content img {
+  @apply max-h-[10em] ml-0 w-auto;
 }
 
 /* Horizontal Rule */

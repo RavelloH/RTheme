@@ -14,6 +14,7 @@ import {
   getPostComments,
   likeComment,
   unlikeComment,
+  deleteOwnComment,
 } from "@/actions/comment";
 import type { CommentItem } from "@repo/shared-types/api/comment";
 import { Input } from "@/ui/Input";
@@ -25,6 +26,7 @@ import { AutoTransition } from "@/ui/AutoTransition";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { Tooltip } from "@/ui/Tooltip";
+import { AlertDialog } from "@/ui/AlertDialog";
 import ReactMarkdown from "react-markdown";
 import UserAvatar from "@/components/UserAvatar";
 import remarkGfm from "remark-gfm";
@@ -42,6 +44,7 @@ import {
   RiHeartFill,
   RiQuillPenLine,
   RiSpyLine,
+  RiDeleteBinLine,
 } from "@remixicon/react";
 import Clickable from "@/ui/Clickable";
 import { useNavigateWithTransition } from "../Link";
@@ -145,6 +148,7 @@ interface SingleCommentProps {
   onExpandDeep: (commentId: string) => void;
   onHighlight: (commentId: string | null) => void;
   onToggleLike: (commentId: string, currentIsLiked: boolean) => void;
+  onDelete: (comment: CommentItem) => void;
   isCollapsed: boolean;
   isLoadingDeep: boolean;
   isExpandedDeep: boolean;
@@ -163,6 +167,7 @@ function SingleComment({
   onExpandDeep,
   onHighlight,
   onToggleLike,
+  onDelete,
   isCollapsed,
   isLoadingDeep,
   isExpandedDeep,
@@ -379,7 +384,7 @@ function SingleComment({
             </div>
 
             {/* 评论内容 */}
-            <div className="mt-1 prose prose-sm dark:prose-invert max-w-none break-words">
+            <div className="mt-1 prose prose-sm dark:prose-invert max-w-none break-words md-content mini-md-content">
               <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} skipHtml>
                 {comment.content}
               </ReactMarkdown>
@@ -419,6 +424,16 @@ function SingleComment({
                 <RiReplyLine size="1.25em" />
                 <span>回复</span>
               </Clickable>
+              {/* 删除按钮 - 仅自己的评论显示 */}
+              {comment.mine && (
+                <Clickable
+                  onClick={() => onDelete(comment)}
+                  className="flex items-center gap-1 text-muted-foreground hover:text-error transition-colors"
+                >
+                  <RiDeleteBinLine size="1.25em" />
+                  <span>删除</span>
+                </Clickable>
+              )}
               {/* 高亮原回复按钮 */}
               <AutoTransition type="fade" duration={0.15}>
                 {isCurrentHovered && parentId && (
@@ -499,6 +514,16 @@ export default function CommentsSection({
   const [localPendingComments, setLocalPendingComments] = useState<
     LocalPendingComment[]
   >([]);
+
+  // 删除确认对话框状态
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [commentToDelete, setCommentToDelete] = useState<CommentItem | null>(
+    null,
+  );
+  const [deleting, setDeleting] = useState(false);
+
+  // 预览状态
+  const [showPreview, setShowPreview] = useState(false);
 
   // 懒加载
   const [commentsLoaded, setCommentsLoaded] = useState(false);
@@ -924,6 +949,38 @@ export default function CommentsSection({
     }, 100);
   }, []);
 
+  // 打开删除确认对话框
+  const handleDeleteClick = useCallback((comment: CommentItem) => {
+    setCommentToDelete(comment);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  // 确认删除评论
+  const handleConfirmDelete = useCallback(async () => {
+    if (!commentToDelete) return;
+
+    setDeleting(true);
+    try {
+      const result = await deleteOwnComment({ commentId: commentToDelete.id });
+      const response = await resolveApiResponse(result);
+
+      if (response?.success) {
+        // 从列表中移除评论
+        setComments((prev) => prev.filter((c) => c.id !== commentToDelete.id));
+        toastSuccess("评论已删除");
+        setDeleteDialogOpen(false);
+        setCommentToDelete(null);
+      } else {
+        toastError("删除失败", response?.message || "");
+      }
+    } catch (error) {
+      console.error("删除评论失败", error);
+      toastError("删除失败", "请稍后重试");
+    } finally {
+      setDeleting(false);
+    }
+  }, [commentToDelete, toastSuccess, toastError]);
+
   // 提交评论
   const handleSubmit = async () => {
     if (!allowComments) {
@@ -1186,7 +1243,7 @@ export default function CommentsSection({
   return (
     <div
       id="comments"
-      className="max-w-5xl mx-auto pb-10"
+      className="max-w-5xl mx-auto pb-10 pt-8"
       ref={commentsContainerRef}
     >
       <h2
@@ -1267,7 +1324,7 @@ export default function CommentsSection({
         <div ref={inputRef}>
           <Input
             label=""
-            rows={3}
+            rows={4}
             size="sm"
             maxLength={1000}
             placeholder={commentConfig.placeholder}
@@ -1277,6 +1334,31 @@ export default function CommentsSection({
             className="mt-0 pt-0"
           />
         </div>
+
+        {/* 预览区域 */}
+        <AutoResizer duration={0.3}>
+          <div>
+            <AutoTransition type="fade" duration={0.2} initial={false}>
+              {showPreview && content.trim() ? (
+                <div
+                  key="preview"
+                  className="p-4 bg-muted/20 border border-muted rounded-sm"
+                >
+                  <div className="prose prose-sm dark:prose-invert max-w-none break-words md-content mini-md-content">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm, remarkBreaks]}
+                      skipHtml
+                    >
+                      {content}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              ) : (
+                <div key="no-preview" style={{ height: 0 }} />
+              )}
+            </AutoTransition>
+          </div>
+        </AutoResizer>
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-muted-foreground">
@@ -1296,6 +1378,14 @@ export default function CommentsSection({
             <span className="text-xs text-muted-foreground font-mono">
               {content.length} / 1000
             </span>
+            {/* 预览按钮 */}
+            <Button
+              label={showPreview ? "收起" : "预览"}
+              size="sm"
+              variant="secondary"
+              onClick={() => setShowPreview(!showPreview)}
+              disabled={!content.trim()}
+            />
             {isAnonymous && (
               <Tooltip content="登录至现有账号，或使用 Github/Google/Microsoft 账号快捷登录">
                 <Button
@@ -1312,6 +1402,7 @@ export default function CommentsSection({
                 ></Button>
               </Tooltip>
             )}
+
             {captchaLoaded ? (
               <CaptchaButton
                 size="sm"
@@ -1390,6 +1481,7 @@ export default function CommentsSection({
                       onExpandDeep={loadDeepReplies}
                       onHighlight={handleHighlight}
                       onToggleLike={handleToggleLike}
+                      onDelete={handleDeleteClick}
                       isCollapsed={collapsedIds.has(comment.id)}
                       isLoadingDeep={loadingDeepIds.has(comment.id)}
                       isExpandedDeep={expandedDeepIds.has(comment.id)}
@@ -1418,6 +1510,19 @@ export default function CommentsSection({
           )}
         </AutoTransition>
       </div>
+
+      {/* 删除确认对话框 */}
+      <AlertDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="确认删除评论"
+        description="删除后将无法恢复，确定要删除这条评论吗？"
+        confirmText="删除"
+        cancelText="取消"
+        variant="danger"
+        loading={deleting}
+      />
     </div>
   );
 }

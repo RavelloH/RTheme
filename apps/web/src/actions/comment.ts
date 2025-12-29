@@ -33,6 +33,9 @@ import {
   UnlikeComment,
   UnlikeCommentSchema,
   UnlikeCommentResponse,
+  DeleteOwnComment,
+  DeleteOwnCommentSchema,
+  DeleteOwnCommentResponse,
 } from "@repo/shared-types/api/comment";
 import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
@@ -1341,5 +1344,66 @@ export async function unlikeComment(
   } catch (error) {
     console.error("UnlikeComment error:", error);
     return response.serverError({ message: "取消点赞失败，请稍后重试" });
+  }
+}
+
+// 删除自己的评论
+export async function deleteOwnComment(
+  params: DeleteOwnComment,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<DeleteOwnCommentResponse["data"] | null>>>;
+export async function deleteOwnComment(
+  params: DeleteOwnComment,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<DeleteOwnCommentResponse["data"] | null>>;
+export async function deleteOwnComment(
+  params: DeleteOwnComment,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<DeleteOwnCommentResponse["data"] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "deleteOwnComment"))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(params, DeleteOwnCommentSchema);
+  if (validationError) return response.badRequest(validationError);
+
+  // 必须登录
+  const authUser = await authVerify({ allowedRoles: COMMENT_ROLES });
+  if (!authUser) {
+    return response.unauthorized({ message: "请登录后再操作" });
+  }
+
+  const { commentId } = params;
+
+  // 检查评论是否存在且是当前用户的评论
+  const comment = await prisma.comment.findUnique({
+    where: { id: commentId, deletedAt: null },
+    select: { id: true, userUid: true },
+  });
+
+  if (!comment) {
+    return response.notFound({ message: "评论不存在" });
+  }
+
+  // 验证是评论的作者
+  if (comment.userUid !== authUser.uid) {
+    return response.forbidden({ message: "只能删除自己的评论" });
+  }
+
+  try {
+    // 软删除评论
+    await prisma.comment.update({
+      where: { id: commentId },
+      data: { deletedAt: new Date() },
+    });
+
+    return response.ok({ data: null, message: "评论已删除" });
+  } catch (error) {
+    console.error("DeleteOwnComment error:", error);
+    return response.serverError({ message: "删除失败，请稍后重试" });
   }
 }
