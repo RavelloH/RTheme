@@ -23,6 +23,7 @@ import {
 } from "@remixicon/react";
 import generateGradient from "@/lib/shared/gradient";
 import generateComplementary from "@/lib/shared/complementary";
+import { AutoTransition } from "@/ui/AutoTransition";
 
 type StoredUserInfo = {
   uid?: number;
@@ -136,36 +137,40 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
             }}
           >
             <div className="relative flex flex-col justify-center items-center overflow-hidden">
-              {userInfo ? (
-                <UserAvatar
-                  username={userInfo.nickname || userInfo.username || "user"}
-                  avatarUrl={userInfo.avatar}
-                  email={userInfo.email}
-                  shape="square"
-                  size={AVATAR_SIZE}
-                  colors={generateGradient(
-                    mainColor,
-                    generateComplementary(mainColor),
-                    4,
-                  )}
-                  className="h-full w-full transition-transform duration-200 group-hover:scale-105"
-                />
-              ) : (
-                <svg
-                  width="40"
-                  height="40"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="transition-colors duration-200 w-6 h-6 group-hover:text-white group-hover:cursor-pointer"
-                >
-                  <circle cx="12" cy="7" r="4" />
-                  <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
-                </svg>
-              )}
+              <AutoTransition type="scale" duration={1}>
+                {userInfo ? (
+                  <UserAvatar
+                    key="user-avatar"
+                    username={userInfo.nickname || userInfo.username || "user"}
+                    avatarUrl={userInfo.avatar}
+                    email={userInfo.email}
+                    shape="square"
+                    size={AVATAR_SIZE}
+                    colors={generateGradient(
+                      mainColor,
+                      generateComplementary(mainColor),
+                      4,
+                    )}
+                    className="h-full w-full transition-transform duration-200 group-hover:scale-105"
+                  />
+                ) : (
+                  <svg
+                    key="default-avatar"
+                    width="40"
+                    height="40"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="transition-colors duration-200 w-6 h-6 group-hover:text-white group-hover:cursor-pointer"
+                  >
+                    <circle cx="12" cy="7" r="4" />
+                    <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
+                  </svg>
+                )}
+              </AutoTransition>
             </div>
           </button>
         </MenuTrigger>
