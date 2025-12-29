@@ -37,6 +37,8 @@ import {
   RiArrowUpLine,
   RiCloseLine,
   RiHeartLine,
+  RiQuillPenLine,
+  RiSpyLine,
 } from "@remixicon/react";
 import Clickable from "@/ui/Clickable";
 import { useNavigateWithTransition } from "../Link";
@@ -56,6 +58,7 @@ interface CommentConfig {
 interface CommentsSectionProps {
   slug: string;
   allowComments: boolean;
+  authorUid: number;
   commentConfig: CommentConfig;
 }
 
@@ -145,6 +148,8 @@ interface SingleCommentProps {
   isInHoverPath: boolean;
   isCurrentHovered: boolean;
   isDirectParent: boolean;
+  authorUid: number;
+  navigate: (href: string) => void;
 }
 
 function SingleComment({
@@ -160,7 +165,11 @@ function SingleComment({
   isInHoverPath,
   isCurrentHovered,
   isDirectParent,
+  authorUid,
+  navigate,
 }: SingleCommentProps) {
+  const [isNameHovered, setIsNameHovered] = useState(false);
+
   const statusBadge =
     comment.mine && comment.status !== "APPROVED"
       ? `(${comment.status === "PENDING" ? "待审核" : "未通过"})`
@@ -203,7 +212,28 @@ function SingleComment({
       <div className="group relative">
         <div className="flex gap-3">
           {/* 头像 */}
-          <div className="flex-shrink-0">
+          <div
+            onClick={
+              !comment.author.isAnonymous && comment.author.uid
+                ? () => navigate(`/profile/${comment.author.uid}`)
+                : undefined
+            }
+            onMouseEnter={() => {
+              if (!comment.author.isAnonymous && comment.author.uid) {
+                setIsNameHovered(true);
+              }
+            }}
+            onMouseLeave={() => {
+              if (!comment.author.isAnonymous && comment.author.uid) {
+                setIsNameHovered(false);
+              }
+            }}
+            className={`flex-shrink-0 ${
+              !comment.author.isAnonymous && comment.author.uid
+                ? "cursor-pointer"
+                : ""
+            }`}
+          >
             <UserAvatar
               username={comment.author.displayName}
               avatarUrl={comment.author.avatar}
@@ -217,8 +247,49 @@ function SingleComment({
           <div className="flex-1 min-w-0">
             {/* 作者信息行 */}
             <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
-              <span className="font-semibold text-foreground">
-                {comment.author.displayName}
+              <span
+                onClick={
+                  !comment.author.isAnonymous && comment.author.uid
+                    ? () => navigate(`/profile/${comment.author.uid}`)
+                    : undefined
+                }
+                onMouseEnter={() => {
+                  if (!comment.author.isAnonymous && comment.author.uid) {
+                    setIsNameHovered(true);
+                  }
+                }}
+                onMouseLeave={() => {
+                  if (!comment.author.isAnonymous && comment.author.uid) {
+                    setIsNameHovered(false);
+                  }
+                }}
+                className={`font-semibold text-foreground flex items-center gap-1.5 ${
+                  !comment.author.isAnonymous && comment.author.uid
+                    ? "cursor-pointer"
+                    : ""
+                }`}
+              >
+                <span
+                  className={`relative inline ${!comment.author.isAnonymous && comment.author.uid ? `bg-[linear-gradient(currentColor,currentColor)] bg-left-bottom bg-no-repeat transition-[background-size] duration-300 ease-out ${isNameHovered ? "bg-[length:100%_2px]" : "bg-[length:0%_2px]"}` : ""}`}
+                >
+                  {comment.author.displayName}
+                </span>
+                {comment.author.isAnonymous && (
+                  <Tooltip content="匿名用户">
+                    <RiSpyLine
+                      size="1em"
+                      className="text-muted-foreground flex-shrink-0"
+                    />
+                  </Tooltip>
+                )}
+                {comment.author.uid === authorUid && (
+                  <Tooltip content="文章作者">
+                    <RiQuillPenLine
+                      size="1em"
+                      className="text-primary flex-shrink-0"
+                    />
+                  </Tooltip>
+                )}
               </span>
               {comment.replyTo && (
                 <span className="text-xs">
@@ -382,6 +453,7 @@ function SingleComment({
 export default function CommentsSection({
   slug,
   allowComments,
+  authorUid,
   commentConfig,
 }: CommentsSectionProps) {
   // 评论数据
@@ -1097,18 +1169,20 @@ export default function CommentsSection({
               {content.length} / 1000
             </span>
             {isAnonymous && (
-              <Button
-                label="登录"
-                size="sm"
-                variant="secondary"
-                onClick={() =>
-                  navigate(
-                    "/login?redirect=" +
-                      encodeURIComponent(window.location.pathname) +
-                      "#comment",
-                  )
-                }
-              ></Button>
+              <Tooltip content="登录至现有账号，或使用 Github/Google/Microsoft 账号快捷登录">
+                <Button
+                  label="登录"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() =>
+                    navigate(
+                      "/login?redirect=" +
+                        encodeURIComponent(window.location.pathname) +
+                        "#comment",
+                    )
+                  }
+                ></Button>
+              </Tooltip>
             )}
             {captchaLoaded ? (
               <CaptchaButton
@@ -1194,6 +1268,8 @@ export default function CommentsSection({
                         isInHoverPath={isInHoverPath(comment)}
                         isCurrentHovered={isCurrentHovered(comment)}
                         isDirectParent={isDirectParent(comment)}
+                        authorUid={authorUid}
+                        navigate={navigate}
                       />
                     </motion.div>
                   ))}

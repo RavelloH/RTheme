@@ -415,6 +415,7 @@ export default async function PostPage({ params }: PageProps) {
                 <CommentsSection
                   slug={post.slug}
                   allowComments={post.allowComments}
+                  authorUid={post.author.uid}
                   commentConfig={{
                     placeholder,
                     anonymousEnabled,
