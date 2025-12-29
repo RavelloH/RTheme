@@ -33,6 +33,11 @@ interface UserProfile {
   uid: number;
   username: string;
   email: string;
+  nickname: string | null;
+  website: string | null;
+  bio: string | null;
+  role: "USER" | "ADMIN" | "EDITOR" | "AUTHOR";
+  createdAt: string;
   hasPassword: boolean;
   linkedAccounts: LinkedAccount[];
 }
@@ -250,8 +255,8 @@ export default function SettingsClient({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingIndicator size="lg" />
+      <div className="h-full flex items-center justify-center">
+        <LoadingIndicator size="md" />
       </div>
     );
   }
@@ -261,7 +266,7 @@ export default function SettingsClient({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* 头部 */}
         <div className="mb-8">

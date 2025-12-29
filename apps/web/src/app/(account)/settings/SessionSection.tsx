@@ -9,7 +9,8 @@ import Clickable from "@/ui/Clickable";
 import { RiDeleteBinLine } from "@remixicon/react";
 import { getSessions } from "@/actions/auth";
 import { useToast } from "@/ui/Toast";
-import { formatRelativeTime, getDeviceIcon } from "./settingsHelpers";
+import { getDeviceIcon } from "./settingsHelpers";
+import { formatRelativeTime } from "@/lib/shared/relativeTime";
 
 export interface Session {
   id: string;

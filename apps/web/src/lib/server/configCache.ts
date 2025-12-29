@@ -212,16 +212,10 @@ async function getAllConfigsFromDatabase(): Promise<
     const result: Record<string, ConfigItem> = {};
 
     configs.forEach(
-      (config: {
-        key: string;
-        value: unknown;
-        description: string | null;
-        updatedAt: Date;
-      }) => {
+      (config: { key: string; value: unknown; updatedAt: Date }) => {
         result[config.key] = {
           key: config.key,
           value: config.value,
-          description: config.description,
           updatedAt: config.updatedAt,
         };
       },

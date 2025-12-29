@@ -791,19 +791,68 @@ export async function deleteUsers(
 /**
  * 获取当前用户的个人资料（用于设置页面）
  */
-export async function getUserProfile(): Promise<
+export async function getUserProfile(serverConfig: {
+  environment: "serverless";
+}): Promise<
+  NextResponse<
+    ApiResponse<{
+      uid: number;
+      username: string;
+      email: string;
+      nickname: string | null;
+      website: string | null;
+      bio: string | null;
+      role: "USER" | "ADMIN" | "EDITOR" | "AUTHOR";
+      createdAt: string;
+      hasPassword: boolean;
+      linkedAccounts: Array<{
+        provider: string;
+        email: string;
+      }>;
+    } | null>
+  >
+>;
+export async function getUserProfile(serverConfig?: ActionConfig): Promise<
   ApiResponse<{
     uid: number;
     username: string;
     email: string;
+    nickname: string | null;
+    website: string | null;
+    bio: string | null;
+    role: "USER" | "ADMIN" | "EDITOR" | "AUTHOR";
+    createdAt: string;
     hasPassword: boolean;
     linkedAccounts: Array<{
       provider: string;
       email: string;
     }>;
-  }>
+  } | null>
+>;
+export async function getUserProfile(serverConfig?: ActionConfig): Promise<
+  ActionResult<{
+    uid: number;
+    username: string;
+    email: string;
+    nickname: string | null;
+    website: string | null;
+    bio: string | null;
+    role: "USER" | "ADMIN" | "EDITOR" | "AUTHOR";
+    createdAt: string;
+    hasPassword: boolean;
+    linkedAccounts: Array<{
+      provider: string;
+      email: string;
+    }>;
+  } | null>
 > {
-  const response = new ResponseBuilder("serveraction");
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "getUserProfile"))) {
+    return response.tooManyRequests();
+  }
 
   try {
     // 从 cookie 获取当前用户的 access token
@@ -814,16 +863,7 @@ export async function getUserProfile(): Promise<
     if (!decoded) {
       return response.unauthorized({
         message: "请先登录",
-      }) as unknown as ApiResponse<{
-        uid: number;
-        username: string;
-        email: string;
-        hasPassword: boolean;
-        linkedAccounts: Array<{
-          provider: string;
-          email: string;
-        }>;
-      }>;
+      });
     }
 
     const { uid } = decoded;
@@ -835,6 +875,11 @@ export async function getUserProfile(): Promise<
         uid: true,
         username: true,
         email: true,
+        nickname: true,
+        website: true,
+        bio: true,
+        role: true,
+        createdAt: true,
         password: true,
         accounts: {
           select: {
@@ -847,16 +892,7 @@ export async function getUserProfile(): Promise<
     if (!user) {
       return response.unauthorized({
         message: "用户不存在",
-      }) as unknown as ApiResponse<{
-        uid: number;
-        username: string;
-        email: string;
-        hasPassword: boolean;
-        linkedAccounts: Array<{
-          provider: string;
-          email: string;
-        }>;
-      }>;
+      });
     }
 
     // 构建返回数据
@@ -865,35 +901,22 @@ export async function getUserProfile(): Promise<
         uid: user.uid,
         username: user.username,
         email: user.email,
+        nickname: user.nickname,
+        website: user.website,
+        bio: user.bio,
+        role: user.role,
+        createdAt: user.createdAt.toISOString(),
         hasPassword: !!user.password,
         linkedAccounts: user.accounts.map((account) => ({
           provider: account.provider.toLowerCase(),
           email: user.email,
         })),
       },
-    }) as unknown as ApiResponse<{
-      uid: number;
-      username: string;
-      email: string;
-      hasPassword: boolean;
-      linkedAccounts: Array<{
-        provider: string;
-        email: string;
-      }>;
-    }>;
+    });
   } catch (error) {
     console.error("Get user profile error:", error);
     return response.serverError({
       message: "获取用户信息失败，请稍后重试",
-    }) as unknown as ApiResponse<{
-      uid: number;
-      username: string;
-      email: string;
-      hasPassword: boolean;
-      linkedAccounts: Array<{
-        provider: string;
-        email: string;
-      }>;
-    }>;
+    });
   }
 }
