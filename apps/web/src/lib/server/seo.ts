@@ -50,15 +50,55 @@ export const defaultMetadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  // TODO
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon-16x16.png",
-    apple: "/apple-touch-icon.png",
-    other: {
-      rel: "apple-touch-icon-precomposed",
-      url: "/apple-touch-icon-precomposed.png",
-    },
+    icon: [
+      { url: "/icon/16x", sizes: "16x16", type: "image/png" },
+      { url: "/icon/32x", sizes: "32x32", type: "image/png" },
+      { url: "/icon/96x", sizes: "96x96", type: "image/png" },
+    ],
+    shortcut: "/icon/16x",
+    apple: [
+      { url: "/icon/144x", sizes: "144x144", type: "image/png" },
+      { url: "/icon/192x", sizes: "192x192", type: "image/png" },
+    ],
+    other: [
+      {
+        rel: "icon",
+        url: "/icon/48x",
+        sizes: "48x48",
+        type: "image/png",
+      },
+      {
+        rel: "icon",
+        url: "/icon/72x",
+        sizes: "72x72",
+        type: "image/png",
+      },
+      {
+        rel: "icon",
+        url: "/icon/128x",
+        sizes: "128x128",
+        type: "image/png",
+      },
+      {
+        rel: "icon",
+        url: "/icon/256x",
+        sizes: "256x256",
+        type: "image/png",
+      },
+      {
+        rel: "icon",
+        url: "/icon/384x",
+        sizes: "384x384",
+        type: "image/png",
+      },
+      {
+        rel: "icon",
+        url: "/icon/512x",
+        sizes: "512x512",
+        type: "image/png",
+      },
+    ],
   },
   manifest: "/manifest.json",
   openGraph: {

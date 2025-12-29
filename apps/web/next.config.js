@@ -15,6 +15,21 @@ const nextConfig = {
       "node_modules/sharp/vendor/**",
     ],
   },
+  // 配置缓存头
+  async headers() {
+    return [
+      {
+        // 为图标设置强缓存
+        source: "/icon/:size*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
