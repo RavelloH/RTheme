@@ -88,7 +88,6 @@ async function seedDefaultConfigs(prisma: any) {
       configsToAdd.push({
         key: config.key,
         value: config.value,
-        description: config.description,
       });
       addedCount++;
     } else {

@@ -2,6 +2,8 @@ import { ToastProvider } from "@/ui/Toast";
 import ReauthClient from "./ReauthClient";
 import { getConfig } from "@/lib/server/configCache";
 import { generateMetadata } from "@/lib/server/seo";
+import { Suspense } from "react";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 export const metadata = await generateMetadata(
   {
@@ -22,7 +24,9 @@ export default async function ReauthPage() {
 
   return (
     <ToastProvider>
-      <ReauthClient passkeyEnabled={passkeyEnabled} />
+      <Suspense fallback={<LoadingIndicator />}>
+        <ReauthClient passkeyEnabled={passkeyEnabled} />
+      </Suspense>
     </ToastProvider>
   );
 }

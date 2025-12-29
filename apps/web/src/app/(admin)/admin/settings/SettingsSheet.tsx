@@ -13,6 +13,7 @@ import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiSaveLine, RiRefreshLine } from "@remixicon/react";
 import { getSettings, updateSettings } from "@/actions/setting";
 import runWithAuth from "@/lib/client/runWithAuth";
+import { defaultConfigs } from "@/data/default-configs";
 
 interface SettingConfig {
   key: string;
@@ -46,22 +47,40 @@ export default function SettingSheet() {
         { access_token: undefined }, // 使用 cookie 中的 token
       );
 
+      let dbSettings: { key: string; value: unknown; updatedAt: string }[] = [];
+
       // 检查是否为 Response 对象（不应该在客户端出现，但为了类型安全）
       if (result instanceof Response) {
         const json = await result.json();
         if (json.success && json.data) {
-          setSettings(json.data);
+          dbSettings = json.data;
         } else {
           throw new Error(json.message || "获取配置失败");
         }
       } else {
         // 直接是 ApiResponse 对象
         if (result.success && result.data) {
-          setSettings(result.data);
+          dbSettings = result.data;
         } else {
           throw new Error(result.message || "获取配置失败");
         }
       }
+
+      // 创建数据库配置的映射
+      const dbSettingsMap = new Map(dbSettings.map((s) => [s.key, s]));
+
+      // 合并 defaultConfigs 和数据库数据
+      const mergedSettings: SettingConfig[] = defaultConfigs.map((config) => {
+        const dbSetting = dbSettingsMap.get(config.key);
+        return {
+          key: config.key,
+          value: dbSetting ? dbSetting.value : config.value,
+          description: config.description || null,
+          updatedAt: dbSetting ? dbSetting.updatedAt : new Date().toISOString(),
+        };
+      });
+
+      setSettings(mergedSettings);
     } catch (error) {
       console.error("获取配置失败:", error);
       toast.error(
@@ -338,6 +357,38 @@ export default function SettingSheet() {
     if (isDateString(defaultValue)) {
       const date = new Date(defaultValue as string);
       // 转换为本地时间的 datetime-local 格式 (YYYY-MM-DDTHH:mm)
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    // 如果是数组，每行显示一个元素
+    if (Array.isArray(defaultValue)) {
+      return defaultValue.join("\n");
+    }
+
+    // 如果是对象，格式化为 JSON
+    if (typeof defaultValue === "object" && defaultValue !== null) {
+      return JSON.stringify(defaultValue, null, 2);
+    }
+
+    // 其他类型直接转字符串
+    return String(defaultValue);
+  };
+
+  // 获取默认配置值（从 defaultConfigs 中获取）
+  const getDefaultValue = (key: string): string => {
+    const config = defaultConfigs.find((c) => c.key === key);
+    if (!config) return "";
+
+    const defaultValue = extractDefaultValue(config.value);
+
+    // 如果是日期字符串，转换为 datetime-local 格式
+    if (isDateString(defaultValue)) {
+      const date = new Date(defaultValue as string);
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, "0");
       const day = String(date.getDate()).padStart(2, "0");
@@ -707,6 +758,9 @@ export default function SettingSheet() {
                           {setting.description}
                         </div>
                       )}
+                      <div className="text-sm text-muted-foreground mt-1">
+                        默认值：{getDefaultValue(setting.key) || "无"}
+                      </div>
                     </div>
 
                     {inputConfig.useSelect ? (

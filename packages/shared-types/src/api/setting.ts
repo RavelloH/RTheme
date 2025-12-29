@@ -13,7 +13,6 @@ registerSchema("GetSettings", GetSettingsSchema);
 export const SettingItemSchema = z.object({
   key: z.string(),
   value: z.unknown(), // JSON 类型
-  description: z.string().nullable(),
   updatedAt: z.string(),
 });
 export type SettingItem = z.infer<typeof SettingItemSchema>;

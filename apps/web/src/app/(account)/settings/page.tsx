@@ -3,6 +3,8 @@ import type { OAuthProvider } from "@/lib/server/oauth";
 import SettingsClient from "./SettingsClient";
 import { ToastProvider } from "@/ui/Toast";
 import { generateMetadata } from "@/lib/server/seo";
+import { Suspense } from "react";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 async function getEnabledSSOProviders(): Promise<OAuthProvider[]> {
   const providers: OAuthProvider[] = ["google", "github", "microsoft"];
@@ -34,10 +36,12 @@ export default async function SettingsPage() {
 
   return (
     <ToastProvider>
-      <SettingsClient
-        enabledSSOProviders={enabledSSOProviders}
-        passkeyEnabled={passkeyEnabled}
-      />
+      <Suspense fallback={<LoadingIndicator />}>
+        <SettingsClient
+          enabledSSOProviders={enabledSSOProviders}
+          passkeyEnabled={passkeyEnabled}
+        />
+      </Suspense>
     </ToastProvider>
   );
 }

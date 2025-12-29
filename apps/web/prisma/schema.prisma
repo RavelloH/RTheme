@@ -386,11 +386,10 @@ model Menu {
 
 // 网站配置模型
 model Config {
-  key         String   @id
-  value       Json
-  description String?  @db.VarChar(255)
-  updatedAt   DateTime @updatedAt
-  createdAt   DateTime @default(now())
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 
   // 索引优化
   @@index([updatedAt])

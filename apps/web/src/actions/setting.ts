@@ -78,7 +78,6 @@ export async function getSettings(
     const data: SettingItem[] = configs.map((config) => ({
       key: config.key,
       value: config.value,
-      description: config.description,
       updatedAt: config.updatedAt.toISOString(),
     }));
 

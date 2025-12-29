@@ -5505,15 +5505,11 @@ components:
               key:
                 type: string
               value: {}
-              description:
-                nullable: true
-                type: string
               updatedAt:
                 type: string
             required:
               - key
               - value
-              - description
               - updatedAt
             additionalProperties: false
       required:
