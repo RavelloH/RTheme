@@ -32,6 +32,8 @@ type StoredUserInfo = {
   avatar?: string | null;
   email?: string | null;
   role?: string;
+  exp?: string;
+  lastRefresh?: string;
 };
 
 const parseUserInfo = (raw: string | null): StoredUserInfo | null => {
@@ -63,6 +65,14 @@ const parseUserInfo = (raw: string | null): StoredUserInfo | null => {
       typeof data.role === "string" && data.role.trim().length > 0
         ? data.role
         : undefined;
+    const exp =
+      typeof data.exp === "string" && data.exp.trim().length > 0
+        ? data.exp
+        : undefined;
+    const lastRefresh =
+      typeof data.lastRefresh === "string" && data.lastRefresh.trim().length > 0
+        ? data.lastRefresh
+        : undefined;
 
     if (!username && !nickname && !email) {
       return null;
@@ -74,9 +84,80 @@ const parseUserInfo = (raw: string | null): StoredUserInfo | null => {
       avatar,
       email,
       role,
+      exp,
+      lastRefresh,
     };
   } catch (error) {
     console.error("Failed to parse user_info from localStorage:", error);
+    return null;
+  }
+};
+
+// 格式化时间差为人类可读格式
+const formatTimeDiff = (milliseconds: number): string => {
+  if (milliseconds <= 0) return "已过期";
+
+  const seconds = Math.floor(milliseconds / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) {
+    const remainingHours = hours % 24;
+    return remainingHours > 0 ? `${days}天 ${remainingHours}小时` : `${days}天`;
+  }
+  if (hours > 0) {
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes > 0
+      ? `${hours}小时 ${remainingMinutes}分钟`
+      : `${hours}小时`;
+  }
+  if (minutes > 0) {
+    return `${minutes}分钟`;
+  }
+  return `${seconds}秒`;
+};
+
+// 计算 Token 状态信息
+const calculateTokenStatus = (
+  userInfo: StoredUserInfo | null,
+): {
+  expiresIn: string;
+  nextRefreshIn: string;
+} | null => {
+  if (!userInfo?.exp || !userInfo?.lastRefresh) return null;
+
+  try {
+    const now = Date.now();
+
+    // exp 可能是秒级时间戳字符串或 ISO 日期字符串
+    let exp: number;
+    if (/^\d+$/.test(userInfo.exp)) {
+      // 如果是纯数字字符串，视为秒级时间戳
+      exp = Number(userInfo.exp) * 1000;
+    } else {
+      // 否则尝试解析为日期字符串
+      exp = new Date(userInfo.exp).getTime();
+    }
+
+    const lastRefresh = new Date(userInfo.lastRefresh).getTime();
+
+    // 检查解析结果是否有效
+    if (isNaN(exp) || isNaN(lastRefresh)) {
+      return null;
+    }
+
+    const REFRESH_INTERVAL = 9 * 60 * 1000; // 9分钟
+    const nextRefreshTime = lastRefresh + REFRESH_INTERVAL;
+
+    const expiresIn = formatTimeDiff(exp - now);
+    const nextRefreshIn = formatTimeDiff(nextRefreshTime - now);
+
+    return {
+      expiresIn,
+      nextRefreshIn: nextRefreshTime > now ? nextRefreshIn : "即将刷新",
+    };
+  } catch {
     return null;
   }
 };
@@ -85,6 +166,10 @@ const parseUserInfo = (raw: string | null): StoredUserInfo | null => {
 export function LoginButton({ mainColor }: { mainColor: string }) {
   const navigate = useNavigateWithTransition();
   const [userInfo, setUserInfo] = useState<StoredUserInfo | null>(null);
+  const [tokenStatus, setTokenStatus] = useState<{
+    expiresIn: string;
+    nextRefreshIn: string;
+  } | null>(null);
   const { isConsoleOpen } = useConsoleStore();
   const AVATAR_SIZE = 80;
 
@@ -92,9 +177,16 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
     const syncUserInfo = () => {
       const info = parseUserInfo(localStorage.getItem("user_info"));
       setUserInfo(info);
+      setTokenStatus(calculateTokenStatus(info));
     };
 
     syncUserInfo();
+
+    // 每秒更新一次 token 状态显示
+    const statusInterval = setInterval(() => {
+      const info = parseUserInfo(localStorage.getItem("user_info"));
+      setTokenStatus(calculateTokenStatus(info));
+    }, 1000);
 
     // 监听跨标签页的 localStorage 变化
     const handleStorage = (event: StorageEvent) => {
@@ -114,6 +206,7 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
     window.addEventListener("localStorageUpdate", handleLocalUpdate);
 
     return () => {
+      clearInterval(statusInterval);
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("localStorageUpdate", handleLocalUpdate);
     };
@@ -194,6 +287,27 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
                   </div>
                 )}
               </div>
+              {tokenStatus && (
+                <div className="px-3 py-2 my-1 text-xs border-b border-border">
+                  <div className="space-y-1 text-muted-foreground">
+                    <div className="flex justify-start items-center gap-1">
+                      <span>会话有效期:</span>
+                      <span className="font-medium text-foreground/80">
+                        <AutoTransition>{tokenStatus.expiresIn}</AutoTransition>
+                      </span>
+                    </div>
+                    <div className="flex justify-start items-center gap-1">
+                      <span>令牌有效期:</span>
+                      <span className="font-medium text-foreground/80">
+                        <AutoTransition>
+                          {tokenStatus.nextRefreshIn}
+                        </AutoTransition>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <MenuAction
                 onClick={() => navigate("/profile")}
                 icon={<RiUserLine size="1.2em" />}
