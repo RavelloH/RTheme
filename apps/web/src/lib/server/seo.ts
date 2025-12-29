@@ -2,29 +2,10 @@
 import type { Metadata } from "next";
 import { getRawConfig } from "@/lib/server/configCache";
 
-// 默认值常量
-const DEFAULT_URL = "https://example.com";
-const DEFAULT_TITLE = "NeutralPress";
-const DEFAULT_DESCRIPTION = "现代化的内容管理系统";
-const DEFAULT_AUTHOR = "RavelloH";
-const DEFAULT_LOCALE = "zh-CN";
-const DEFAULT_THEME_COLOR = "#2dd4bf";
-
-// 默认SEO配置
-export const defaultMetadata: Metadata = {
-  metadataBase: new URL(DEFAULT_URL),
-  title: {
-    template: "%s | " + DEFAULT_TITLE,
-    default: DEFAULT_TITLE,
-  },
-  description: DEFAULT_DESCRIPTION,
-  applicationName: DEFAULT_TITLE,
+// 基础静态配置（不依赖数据库的固定值）
+const STATIC_METADATA = {
   generator: "NeutralPress",
-  referrer: "strict-origin-when-cross-origin",
-  authors: [{ name: DEFAULT_AUTHOR }],
-  creator: DEFAULT_AUTHOR,
-  publisher: DEFAULT_AUTHOR,
-  category: "Technology",
+  referrer: "strict-origin-when-cross-origin" as const,
   classification: "CMS",
   formatDetection: {
     email: false,
@@ -46,7 +27,7 @@ export const defaultMetadata: Metadata = {
       follow: true,
       noimageindex: false,
       "max-video-preview": -1,
-      "max-image-preview": "large",
+      "max-image-preview": "large" as const,
       "max-snippet": -1,
     },
   },
@@ -62,125 +43,23 @@ export const defaultMetadata: Metadata = {
       { url: "/icon/192x", sizes: "192x192", type: "image/png" },
     ],
     other: [
-      {
-        rel: "icon",
-        url: "/icon/48x",
-        sizes: "48x48",
-        type: "image/png",
-      },
-      {
-        rel: "icon",
-        url: "/icon/72x",
-        sizes: "72x72",
-        type: "image/png",
-      },
-      {
-        rel: "icon",
-        url: "/icon/128x",
-        sizes: "128x128",
-        type: "image/png",
-      },
-      {
-        rel: "icon",
-        url: "/icon/256x",
-        sizes: "256x256",
-        type: "image/png",
-      },
-      {
-        rel: "icon",
-        url: "/icon/384x",
-        sizes: "384x384",
-        type: "image/png",
-      },
-      {
-        rel: "icon",
-        url: "/icon/512x",
-        sizes: "512x512",
-        type: "image/png",
-      },
+      { rel: "icon", url: "/icon/48x", sizes: "48x48", type: "image/png" },
+      { rel: "icon", url: "/icon/72x", sizes: "72x72", type: "image/png" },
+      { rel: "icon", url: "/icon/128x", sizes: "128x128", type: "image/png" },
+      { rel: "icon", url: "/icon/256x", sizes: "256x256", type: "image/png" },
+      { rel: "icon", url: "/icon/384x", sizes: "384x384", type: "image/png" },
+      { rel: "icon", url: "/icon/512x", sizes: "512x512", type: "image/png" },
     ],
   },
-  manifest: "/manifest.json",
-  openGraph: {
-    type: "website",
-    locale: DEFAULT_LOCALE,
-    title: {
-      template: "%s | " + DEFAULT_TITLE,
-      default: DEFAULT_TITLE,
-    },
-    description: DEFAULT_DESCRIPTION,
-    siteName: DEFAULT_TITLE,
-    url: DEFAULT_URL,
-    countryName: "China",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: DEFAULT_TITLE + " - " + DEFAULT_DESCRIPTION,
-        type: "image/png",
-      },
-    ],
-    videos: [],
-    audio: [],
-    determiner: "auto",
-  },
-  twitter: {
-    card: "summary_large_image",
-    site: "@neutralpress",
-    creator: "@neutralpress",
-    title: {
-      template: "%s | " + DEFAULT_TITLE,
-      default: DEFAULT_TITLE,
-    },
-    description: DEFAULT_DESCRIPTION,
-    images: {
-      url: "/twitter-card.png",
-      alt: DEFAULT_TITLE + " Twitter Card",
-      width: 1200,
-      height: 630,
-    },
-  },
+  manifest: "/manifest.webmanifest",
   verification: {
     google: "",
     yandex: "",
     yahoo: "",
-    other: {
-      me: [""],
-    },
+    other: { me: [""] },
   },
-  appleWebApp: {
-    capable: true,
-    title: DEFAULT_TITLE,
-    statusBarStyle: "black-translucent",
-  },
-  appLinks: {
-    web: {
-      url: DEFAULT_URL,
-      should_fallback: true,
-    },
-  },
-  bookmarks: [DEFAULT_URL],
-  keywords: [
-    "CMS",
-    "博客",
-    "内容管理",
-    "Next.js",
-    "React",
-    "TypeScript",
-    "Prisma",
-    "PostgreSQL",
-    "开源",
-    "现代化",
-    "响应式",
-    "SEO优化",
-  ],
   other: {
-    "theme-color": DEFAULT_THEME_COLOR,
-    "msapplication-TileColor": DEFAULT_THEME_COLOR,
     "msapplication-config": "/browserconfig.xml",
-    "apple-mobile-web-app-title": DEFAULT_TITLE,
-    "application-name": DEFAULT_TITLE,
     "mobile-web-app-capable": "yes",
   },
 };
@@ -189,6 +68,8 @@ export const defaultMetadata: Metadata = {
 const seoConfigMap = {
   metadataBase: "site.url",
   title: "site.title",
+  subtitle: "site.subtitle",
+  titleTemplate: "site.title.template",
   description: "seo.description",
   applicationName: "site.title",
   keywords: "seo.keywords",
@@ -205,6 +86,103 @@ const seoConfigMap = {
 interface ConfigValue {
   default?: string | number | boolean | string[] | null;
   [key: string]: unknown;
+}
+
+// 辅助函数：获取字符串配置值
+function getStringValue(
+  configValue: ConfigValue | undefined,
+  fallback: string = "",
+): string {
+  return typeof configValue?.default === "string"
+    ? configValue.default
+    : fallback;
+}
+
+// 辅助函数：获取字符串数组配置值
+function getStringArrayValue(
+  configValue: ConfigValue | undefined,
+  fallback: string[] = [],
+): string[] {
+  const value = configValue?.default;
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") return value.split(",").map((k) => k.trim());
+  return fallback;
+}
+
+/**
+ * 解析标题模板
+ * 模板格式: {pageTitle} | {title}( - {subtitle})
+ * - {pageTitle}: 页面标题（如果有）
+ * - {title}: 站点标题
+ * - {subtitle}: 站点子标题
+ * - (): 括号及其内部内容在 subtitle 为空时会被移除
+ *
+ * @param template 标题模板字符串
+ * @param title 站点标题
+ * @param subtitle 站点子标题（可选）
+ * @param pageTitle 页面标题（可选）
+ * @returns 解析后的标题字符串
+ */
+function parseTitleTemplate(
+  template: string,
+  title: string,
+  subtitle?: string,
+  pageTitle?: string,
+): string {
+  let result = template;
+
+  // 如果没有子标题，移除所有括号及其内容
+  if (!subtitle || subtitle.trim() === "") {
+    result = result.replace(/\([^)]*\)/g, "");
+  }
+
+  // 替换占位符
+  result = result
+    .replace(/\{pageTitle\}/g, pageTitle || "")
+    .replace(/\{title\}/g, title)
+    .replace(/\{subtitle\}/g, subtitle || "")
+    // 移除括号（如果还有的话）
+    .replace(/[()]/g, "")
+    // 清理多余的空格和分隔符
+    .replace(/\s+-\s+$/g, "")
+    .replace(/^\s+-\s+/g, "")
+    .replace(/\|\s+$/g, "")
+    .replace(/^\s+\|/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  return result;
+}
+
+/**
+ * 生成 Next.js Metadata 的标题对象
+ * 如果提供了模板，返回 { template, default } 格式
+ * 否则返回简单的字符串或 undefined
+ */
+function generateTitleMetadata(
+  template: string | undefined,
+  title: string,
+  subtitle?: string,
+): { template: string; default: string } | string | undefined {
+  if (!title) return undefined;
+
+  // 如果有模板，生成标题对象
+  if (template) {
+    // 将 {pageTitle} 替换为 %s 以符合 Next.js 格式
+    const nextjsTemplate = template.replace(/\{pageTitle\}/g, "%s");
+
+    return {
+      template: parseTitleTemplate(nextjsTemplate, title, subtitle, "%s"),
+      default: parseTitleTemplate(template, title, subtitle),
+    };
+  }
+
+  // 没有模板时，如果有子标题则拼接
+  if (subtitle && subtitle.trim() !== "") {
+    return `${title} - ${subtitle}`;
+  }
+
+  return title;
 }
 
 // 扩展的 Metadata 类型，支持分页
@@ -232,137 +210,102 @@ export async function generateMetadata(
     ]),
   ) as Record<string, ConfigValue | undefined>;
 
-  // 动态获取的值 - 适配新的 Object 格式
-  const dynamicUrl = configValues[seoConfigMap.metadataBase]?.default || "";
-  const dynamicTitle = configValues[seoConfigMap.title]?.default || "";
-  const dynamicDescription =
-    configValues[seoConfigMap.description]?.default || "";
-  const dynamicAppName =
-    configValues[seoConfigMap.applicationName]?.default || "";
-  const dynamicKeywords = configValues[seoConfigMap.keywords]?.default || "";
-  const dynamicAuthor = configValues[seoConfigMap.author]?.default || "";
-  const dynamicTwitterSite =
-    configValues[seoConfigMap.twitterSite]?.default || "";
-  const dynamicTwitterCreator =
-    configValues[seoConfigMap.twitterCreator]?.default || "";
-  const dynamicGoogleVerification =
-    configValues[seoConfigMap.googleVerification]?.default || "";
-  const dynamicCategory = configValues[seoConfigMap.category]?.default || "";
-  const dynamicCountry = configValues[seoConfigMap.country]?.default || "";
+  // 动态获取的值
+  const url = getStringValue(configValues[seoConfigMap.metadataBase]);
+  const title = getStringValue(configValues[seoConfigMap.title]);
+  const subtitle = getStringValue(configValues[seoConfigMap.subtitle]);
+  const titleTemplate = getStringValue(
+    configValues[seoConfigMap.titleTemplate],
+  );
+  const description = getStringValue(configValues[seoConfigMap.description]);
+  const appName = getStringValue(configValues[seoConfigMap.applicationName]);
+  const keywords = getStringArrayValue(configValues[seoConfigMap.keywords]);
+  const author = getStringValue(configValues[seoConfigMap.author]);
+  const twitterSite = getStringValue(configValues[seoConfigMap.twitterSite]);
+  const twitterCreator = getStringValue(
+    configValues[seoConfigMap.twitterCreator],
+  );
+  const googleVerification = getStringValue(
+    configValues[seoConfigMap.googleVerification],
+  );
+  const category = getStringValue(configValues[seoConfigMap.category]);
+  const country = getStringValue(configValues[seoConfigMap.country]);
+
+  // 生成标题元数据
+  const titleMetadata = generateTitleMetadata(
+    titleTemplate,
+    title || "NeutralPress",
+    subtitle,
+  );
 
   // 构建最终的metadata
   const dynamicMetadata: Metadata = {
-    metadataBase:
-      typeof dynamicUrl === "string" && dynamicUrl
-        ? new URL(dynamicUrl)
-        : defaultMetadata.metadataBase,
-    title: {
-      template: `%s | ${typeof dynamicTitle === "string" ? dynamicTitle : DEFAULT_TITLE}`,
-      default: typeof dynamicTitle === "string" ? dynamicTitle : DEFAULT_TITLE,
-    },
-    description:
-      typeof dynamicDescription === "string"
-        ? dynamicDescription
-        : defaultMetadata.description,
-    applicationName:
-      typeof dynamicAppName === "string"
-        ? dynamicAppName
-        : defaultMetadata.applicationName,
-    generator: defaultMetadata.generator,
-    referrer: defaultMetadata.referrer,
-    authors: [
-      {
-        name:
-          typeof dynamicAuthor === "string" ? dynamicAuthor : DEFAULT_AUTHOR,
-      },
-    ],
-    creator: typeof dynamicAuthor === "string" ? dynamicAuthor : DEFAULT_AUTHOR,
-    publisher:
-      typeof dynamicAuthor === "string" ? dynamicAuthor : DEFAULT_AUTHOR,
-    category:
-      typeof dynamicCategory === "string"
-        ? dynamicCategory
-        : defaultMetadata.category,
-    classification: defaultMetadata.classification,
-    formatDetection: defaultMetadata.formatDetection,
+    metadataBase: url ? new URL(url) : undefined,
+    title: titleMetadata,
+    description: description || undefined,
+    applicationName: appName || title || undefined,
+    ...STATIC_METADATA,
+    authors: author ? [{ name: author }] : undefined,
+    creator: author || undefined,
+    publisher: author || undefined,
+    category: category || undefined,
     alternates: {
-      ...defaultMetadata.alternates,
+      ...STATIC_METADATA.alternates,
       canonical: options?.pathname || "/",
     },
-    robots: defaultMetadata.robots,
-    icons: defaultMetadata.icons,
-    manifest: defaultMetadata.manifest,
     openGraph: {
-      ...defaultMetadata.openGraph,
-      title: {
-        template: `%s | ${typeof dynamicTitle === "string" ? dynamicTitle : DEFAULT_TITLE}`,
-        default:
-          typeof dynamicTitle === "string" ? dynamicTitle : DEFAULT_TITLE,
-      },
-      description:
-        typeof dynamicDescription === "string"
-          ? dynamicDescription
-          : DEFAULT_DESCRIPTION,
-      siteName:
-        typeof dynamicAppName === "string"
-          ? dynamicAppName
-          : typeof dynamicTitle === "string"
-            ? dynamicTitle
-            : DEFAULT_TITLE,
-      url: typeof dynamicUrl === "string" ? dynamicUrl : DEFAULT_URL,
-      countryName:
-        typeof dynamicCountry === "string"
-          ? dynamicCountry
-          : defaultMetadata.openGraph?.countryName,
+      type: "website",
+      locale: "zh-CN",
+      title: titleMetadata,
+      description: description || undefined,
+      siteName: appName || title || undefined,
+      url: url || undefined,
+      countryName: country || undefined,
+      images: title
+        ? [
+            {
+              url: "/og-image.png",
+              width: 1200,
+              height: 630,
+              alt: `${title}${subtitle ? ` - ${subtitle}` : ""} - ${description || ""}`,
+              type: "image/png",
+            },
+          ]
+        : undefined,
     },
     twitter: {
-      ...defaultMetadata.twitter,
-      site:
-        typeof dynamicTwitterSite === "string"
-          ? dynamicTwitterSite
-          : defaultMetadata.twitter?.site,
-      creator:
-        typeof dynamicTwitterCreator === "string"
-          ? dynamicTwitterCreator
-          : defaultMetadata.twitter?.creator,
-      title: {
-        template: `%s | ${typeof dynamicTitle === "string" ? dynamicTitle : DEFAULT_TITLE}`,
-        default:
-          typeof dynamicTitle === "string" ? dynamicTitle : DEFAULT_TITLE,
-      },
-      description:
-        typeof dynamicDescription === "string"
-          ? dynamicDescription
-          : DEFAULT_DESCRIPTION,
+      card: "summary_large_image",
+      site: twitterSite || undefined,
+      creator: twitterCreator || undefined,
+      title: titleMetadata,
+      description: description || undefined,
+      images: title
+        ? {
+            url: "/twitter-card.png",
+            alt: `${title}${subtitle ? ` - ${subtitle}` : ""} Twitter Card`,
+            width: 1200,
+            height: 630,
+          }
+        : undefined,
     },
     verification: {
-      ...defaultMetadata.verification,
-      google:
-        typeof dynamicGoogleVerification === "string"
-          ? dynamicGoogleVerification
-          : defaultMetadata.verification?.google,
+      ...STATIC_METADATA.verification,
+      google: googleVerification || undefined,
     },
-    keywords:
-      dynamicKeywords && dynamicKeywords !== ""
-        ? Array.isArray(dynamicKeywords)
-          ? dynamicKeywords
-          : (dynamicKeywords as string).split(",").map((k: string) => k.trim())
-        : defaultMetadata.keywords,
+    keywords: keywords.length > 0 ? keywords : undefined,
+    appleWebApp: {
+      capable: true,
+      title: appName || title || undefined,
+      statusBarStyle: "black-translucent",
+    },
     other: {
-      "msapplication-config": "/browserconfig.xml",
-      "apple-mobile-web-app-title":
-        typeof dynamicAppName === "string"
-          ? dynamicAppName
-          : typeof dynamicTitle === "string"
-            ? dynamicTitle
-            : DEFAULT_TITLE,
-      "application-name":
-        typeof dynamicAppName === "string"
-          ? dynamicAppName
-          : typeof dynamicTitle === "string"
-            ? dynamicTitle
-            : DEFAULT_TITLE,
-      "mobile-web-app-capable": "yes",
+      ...STATIC_METADATA.other,
+      ...(appName || title
+        ? {
+            "apple-mobile-web-app-title": appName || title,
+            "application-name": appName || title,
+          }
+        : {}),
     },
   };
 
@@ -371,17 +314,13 @@ export async function generateMetadata(
 
   // 如果提供了分页信息，添加到 other 中以生成正确的 link 标签
   if (overrides.pagination) {
-    // 从 overrides 中移除 pagination，因为它不是标准的 Metadata 字段
     const { pagination, ...overridesWithoutPagination } = overrides;
 
-    // 构建 prev/next 链接并添加到 other 中
     const otherMetadata: Record<string, string | number | (string | number)[]> =
       {
         ...processedOverrides.other,
-        ...defaultMetadata.other,
       };
 
-    // 使用标准的 rel prev/next 格式
     if (pagination.prev) {
       otherMetadata.prev = pagination.prev;
     }
@@ -391,37 +330,29 @@ export async function generateMetadata(
     }
 
     processedOverrides.other = otherMetadata;
-
-    // 更新 processedOverrides，排除 pagination
     Object.assign(processedOverrides, overridesWithoutPagination);
   }
 
   // 如果覆盖参数中包含标题，确保使用模板格式
   if (overrides.title) {
-    const siteTitle =
-      typeof dynamicTitle === "string" ? dynamicTitle : DEFAULT_TITLE;
-
     if (typeof overrides.title === "string") {
-      // 如果是字符串标题，应用模板格式
-      processedOverrides.title = `${overrides.title} | ${siteTitle}`;
+      // 如果是字符串标题，使用模板解析
+      if (titleTemplate) {
+        processedOverrides.title = parseTitleTemplate(
+          titleTemplate,
+          title || "NeutralPress",
+          subtitle,
+          overrides.title,
+        );
+      } else {
+        // 没有模板时使用简单拼接
+        const siteTitle = title || "NeutralPress";
+        const fullTitle = subtitle ? `${siteTitle} - ${subtitle}` : siteTitle;
+        processedOverrides.title = `${overrides.title} | ${fullTitle}`;
+      }
     } else if (overrides.title && typeof overrides.title === "object") {
-      // 如果是对象格式，处理模板和默认值
-      const titleObj = overrides.title as Record<string, unknown>;
-      const newTitle: Record<string, unknown> = {};
-
-      if ("template" in titleObj && titleObj.template) {
-        newTitle.template = titleObj.template;
-      }
-      if ("default" in titleObj && titleObj.default) {
-        newTitle.default = `${titleObj.default} | ${siteTitle}`;
-      }
-      if ("absolute" in titleObj) {
-        newTitle.absolute = titleObj.absolute;
-      }
-
-      if (Object.keys(newTitle).length > 0) {
-        processedOverrides.title = newTitle as Metadata["title"];
-      }
+      // 如果是对象格式，保持原样（允许页面完全控制标题）
+      processedOverrides.title = overrides.title;
     }
   }
 

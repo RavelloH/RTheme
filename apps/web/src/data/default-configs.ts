@@ -404,6 +404,38 @@ export const defaultConfigs: DefaultConfig[] = [
     description: "AI 配置信息。参考文档设置",
   },
   // =====================================
+  // PWA 相关配置
+  // =====================================
+  {
+    key: "pwa.enabled",
+    value: { default: true },
+    description: "是否启用 PWA (Progressive Web App) 功能",
+  },
+  {
+    key: "pwa.short_name",
+    value: { default: "" },
+    description:
+      "[可选] PWA 应用短名称。留空则使用 site.title。建议不超过 12 个字符，用于主屏幕图标下方显示",
+  },
+  {
+    key: "pwa.display",
+    value: { default: "standalone" },
+    description:
+      "PWA 显示模式。可选值：standalone（独立应用）、fullscreen（全屏）、minimal-ui（最小UI）、browser（浏览器）",
+  },
+  {
+    key: "pwa.orientation",
+    value: { default: "any" },
+    description:
+      "PWA 屏幕方向。可选值：any（任意）、portrait（竖屏）、landscape（横屏）",
+  },
+  {
+    key: "pwa.categories",
+    value: { default: ["lifestyle", "productivity"] },
+    description:
+      "[可选] PWA 应用分类。用于应用商店分类，如：lifestyle、productivity、social、news、entertainment 等",
+  },
+  // =====================================
   // 访问统计
   // =====================================
   {
