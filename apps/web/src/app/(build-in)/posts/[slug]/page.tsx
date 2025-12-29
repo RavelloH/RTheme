@@ -356,9 +356,9 @@ export default async function PostPage({ params }: PageProps) {
             </div>
             {/* 上一篇和下一篇文章 */}
             {(adjacentPosts.previous || adjacentPosts.next) && (
-              <div className="max-w-7xl mx-auto mt-12 pt-8 relative">
+              <div className="max-w-7xl mx-auto pt-8 relative">
                 {/* 渐变分隔线 */}
-                <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-l from-transparent via-border to-transparent" />
+                <div className="absolute top-0 left-0 right-0 h-0.5 bg-border" />
                 <h2 className="text-2xl font-bold mb-6">继续阅读</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 h-48">
                   {adjacentPosts.previous && (

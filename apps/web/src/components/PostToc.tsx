@@ -286,25 +286,65 @@ export default function PostToc({
     scrollContainerRef.current = scrollContainer;
 
     const handleScroll = () => {
-      // 计算滚动百分比
+      // 计算滚动百分比 - 只计算文章内容部分
       let progress = 0;
-      if (scrollContainer) {
-        // 如果有滚动容器，使用容器的滚动信息
-        const containerHeight = scrollContainer.clientHeight;
-        const contentHeight = scrollContainer.scrollHeight;
-        const scrollTop = scrollContainer.scrollTop;
-        const scrollableHeight = contentHeight - containerHeight;
-        progress =
-          scrollableHeight > 0 ? (scrollTop / scrollableHeight) * 100 : 0;
-      } else {
-        // 否则使用 window 的滚动信息
-        const windowHeight = window.innerHeight;
-        const documentHeight = document.documentElement.scrollHeight;
-        const scrollTop = window.scrollY || document.documentElement.scrollTop;
-        const scrollableHeight = documentHeight - windowHeight;
-        progress =
-          scrollableHeight > 0 ? (scrollTop / scrollableHeight) * 100 : 0;
+
+      // 查找文章内容容器
+      const contentContainer = document.querySelector(contentSelector);
+
+      if (contentContainer) {
+        const containerRect = contentContainer.getBoundingClientRect();
+        const contentTop =
+          containerRect.top +
+          (scrollContainer?.scrollTop || window.scrollY || 0);
+        const contentBottom = contentTop + containerRect.height;
+
+        if (scrollContainer) {
+          // 如果有滚动容器
+          const scrollTop = scrollContainer.scrollTop;
+          const viewportTop = scrollTop;
+          const viewportBottom = scrollTop + scrollContainer.clientHeight;
+
+          if (viewportTop >= contentBottom) {
+            // 已经滚动超过文章内容
+            progress = 100;
+          } else if (viewportTop < contentTop) {
+            // 还没滚动到文章内容
+            progress = 0;
+          } else {
+            // 在文章内容区域内
+            const scrolledInContent = viewportTop - contentTop;
+            const scrollableHeight = containerRect.height;
+            progress =
+              scrollableHeight > 0
+                ? (scrolledInContent / scrollableHeight) * 100
+                : 0;
+          }
+        } else {
+          // 使用 window 的滚动信息
+          const scrollTop =
+            window.scrollY || document.documentElement.scrollTop;
+          const viewportTop = scrollTop;
+          const viewportBottom = scrollTop + window.innerHeight;
+
+          if (viewportTop >= contentBottom) {
+            // 已经滚动超过文章内容
+            progress = 100;
+          } else if (viewportTop < contentTop) {
+            // 还没滚动到文章内容
+            progress = 0;
+          } else {
+            // 在文章内容区域内
+            const scrolledInContent = viewportTop - contentTop;
+            const scrollableHeight = containerRect.height;
+            progress =
+              scrollableHeight > 0
+                ? (scrolledInContent / scrollableHeight) * 100
+                : 0;
+          }
+        }
       }
+
       setScrollProgress(Math.min(100, Math.max(0, progress)));
 
       // 更新活动标题 - 使用 id 直接匹配，因为标题元素现在有了正确的 id
@@ -525,12 +565,35 @@ export default function PostToc({
     }
 
     const handleScroll = () => {
-      const windowHeight = window.innerHeight;
-      const documentHeight = document.documentElement.scrollHeight;
-      const scrollTop = window.scrollY || document.documentElement.scrollTop;
-      const scrollableHeight = documentHeight - windowHeight;
-      const progress =
-        scrollableHeight > 0 ? (scrollTop / scrollableHeight) * 100 : 0;
+      let progress = 0;
+
+      // 查找文章内容容器
+      const contentContainer = document.querySelector(contentSelector);
+
+      if (contentContainer) {
+        const containerRect = contentContainer.getBoundingClientRect();
+        const contentTop = containerRect.top + (window.scrollY || 0);
+        const contentBottom = contentTop + containerRect.height;
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const viewportTop = scrollTop;
+
+        if (viewportTop >= contentBottom) {
+          // 已经滚动超过文章内容
+          progress = 100;
+        } else if (viewportTop < contentTop) {
+          // 还没滚动到文章内容
+          progress = 0;
+        } else {
+          // 在文章内容区域内
+          const scrolledInContent = viewportTop - contentTop;
+          const scrollableHeight = containerRect.height;
+          progress =
+            scrollableHeight > 0
+              ? (scrolledInContent / scrollableHeight) * 100
+              : 0;
+        }
+      }
+
       setScrollProgress(Math.min(100, Math.max(0, progress)));
     };
 
@@ -540,7 +603,7 @@ export default function PostToc({
     return () => {
       window.removeEventListener("scroll", handleScroll);
     };
-  }, [isMobile]);
+  }, [isMobile, contentSelector]);
 
   // 回到顶部
   const scrollToTop = () => {
