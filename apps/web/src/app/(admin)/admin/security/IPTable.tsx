@@ -5,7 +5,7 @@ import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
 import { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { IPInfo } from "@repo/shared-types/api/security";
-import { useBroadcast, useBroadcastSender } from "@/hooks/useBroadcast";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import {
   RiShieldLine,
   RiShieldCheckLine,

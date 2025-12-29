@@ -9,11 +9,11 @@ import {
   getStorageDetail,
 } from "@/actions/storage";
 import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
-import runWithAuth, { resolveApiResponse } from "@/lib/client/runWithAuth";
+import runWithAuth, { resolveApiResponse } from "@/lib/client/run-with-auth";
 import { TableColumn } from "@/ui/Table";
 import React, { useCallback, useEffect, useState } from "react";
 import type { StorageListItem } from "@repo/shared-types/api/storage";
-import { useBroadcast } from "@/hooks/useBroadcast";
+import { useBroadcast } from "@/hooks/use-broadcast";
 import {
   RiCheckLine,
   RiCloseLine,
@@ -314,26 +314,6 @@ export default function StoragesTable() {
     }
   };
 
-  const handleRowClick = (
-    record: StorageListItem,
-    index: number,
-    event: React.MouseEvent,
-  ) => {
-    // 检查点击目标，避免在点击链接、按钮或操作区时触发
-    const target = event.target as HTMLElement;
-    const isClickable =
-      target.tagName === "A" ||
-      target.tagName === "BUTTON" ||
-      target.closest("a") ||
-      target.closest("button") ||
-      target.closest('[role="button"]') ||
-      target.closest('[data-action-cell="true"]'); // 排除操作列和复选框列
-
-    if (!isClickable) {
-      handleEdit(record);
-    }
-  };
-
   const columns: TableColumn<StorageListItem>[] = [
     {
       title: "名称",
@@ -514,7 +494,7 @@ export default function StoragesTable() {
         onSelectionChange={(selectedKeys) =>
           setSelectedKeys(selectedKeys as string[])
         }
-        onRowClick={handleRowClick}
+        onRowClick={(record) => handleEdit(record)}
         striped
         hoverable
         bordered={false}

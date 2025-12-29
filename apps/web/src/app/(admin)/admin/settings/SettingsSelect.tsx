@@ -2,7 +2,7 @@
 
 import { GridItem } from "@/components/RowGrid";
 import { AutoTransition } from "@/ui/AutoTransition";
-import { useBroadcastSender } from "@/hooks/useBroadcast";
+import { useBroadcastSender } from "@/hooks/use-broadcast";
 import { useState, useEffect } from "react";
 
 const settings = [

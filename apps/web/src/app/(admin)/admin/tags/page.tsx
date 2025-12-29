@@ -6,7 +6,7 @@ import AdminSidebar from "@/components/AdminSidebar";
 import TagsReport from "./TagsReport";
 import TagsDistributionChart from "./TagsDistributionChart";
 import TagsTable from "./TagsTable";
-import { getConfig } from "@/lib/server/configCache";
+import { getConfig } from "@/lib/server/config-cache";
 
 export const metadata = await generateMetadata(
   {

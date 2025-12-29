@@ -4,7 +4,7 @@ import Link from "@/components/Link";
 import { codeToHtml } from "shiki";
 import type { Components } from "react-markdown";
 import type { MDXComponents } from "next-mdx-remote-client/rsc";
-import { processImageUrl, type MediaFileInfo } from "@/lib/shared/imageUtils";
+import { processImageUrl, type MediaFileInfo } from "@/lib/shared/image-utils";
 
 /**
  * 渲染适配器

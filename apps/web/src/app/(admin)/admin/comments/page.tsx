@@ -7,7 +7,7 @@ import CommentsReport from "./CommentsReport";
 import CommentsHistoryChart from "./CommentsHistoryChart";
 import CommentsTable from "./CommentsTable";
 import { ToastProvider } from "@/ui/Toast";
-import { getConfig } from "@/lib/server/configCache";
+import { getConfig } from "@/lib/server/config-cache";
 
 export const metadata = await generateMetadata(
   {

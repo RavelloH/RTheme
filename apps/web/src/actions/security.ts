@@ -23,7 +23,7 @@ import {
 } from "@repo/shared-types/api/security";
 import { ApiResponse } from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
-import limitControl from "@/lib/server/rateLimit";
+import limitControl from "@/lib/server/rate-limit";
 import { validateData } from "@/lib/server/validator";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
 import { authVerify } from "@/lib/server/auth-verify";

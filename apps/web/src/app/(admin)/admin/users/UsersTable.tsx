@@ -10,7 +10,7 @@ import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
 import { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { UserListItem } from "@repo/shared-types/api/user";
-import { useBroadcast } from "@/hooks/useBroadcast";
+import { useBroadcast } from "@/hooks/use-broadcast";
 import {
   RiCheckLine,
   RiCloseLine,

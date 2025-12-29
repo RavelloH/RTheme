@@ -7,11 +7,11 @@ import {
   deletePages,
 } from "@/actions/page";
 import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
-import runWithAuth from "@/lib/client/runWithAuth";
+import runWithAuth from "@/lib/client/run-with-auth";
 import { TableColumn } from "@/ui/Table";
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import type { PageListItem } from "@repo/shared-types/api/page";
-import { useBroadcast } from "@/hooks/useBroadcast";
+import { useBroadcast } from "@/hooks/use-broadcast";
 import {
   RiCheckLine,
   RiCloseLine,
@@ -953,27 +953,6 @@ export default function PagesTable() {
     },
   ];
 
-  // 处理行点击事件
-  const handleRowClick = (
-    record: PageListItem,
-    index: number,
-    event: React.MouseEvent,
-  ) => {
-    // 检查点击目标，避免在点击链接、按钮或操作区时触发
-    const target = event.target as HTMLElement;
-    const isClickable =
-      target.tagName === "A" ||
-      target.tagName === "BUTTON" ||
-      target.closest("a") ||
-      target.closest("button") ||
-      target.closest('[role="button"]') ||
-      target.closest('[data-action-cell="true"]'); // 排除操作列和复选框列
-
-    if (!isClickable) {
-      openEditDialog(record);
-    }
-  };
-
   // 处理排序变化
   const handleSortChange = (key: string, order: "asc" | "desc" | null) => {
     setSortKey(order ? key : null);
@@ -1350,7 +1329,7 @@ export default function PagesTable() {
         batchActions={batchActions}
         rowActions={rowActions}
         onSelectionChange={handleSelectionChange}
-        onRowClick={handleRowClick}
+        onRowClick={(record) => openEditDialog(record)}
       />
 
       {/* 编辑页面对话框 */}

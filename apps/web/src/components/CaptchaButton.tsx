@@ -1,7 +1,7 @@
-import { useCaptcha } from "@/hooks/useCaptcha";
+import { useCaptcha } from "@/hooks/use-captcha";
 import { Button } from "@/ui/Button";
 import { useEffect, useState } from "react";
-import { useBroadcast, useBroadcastSender } from "@/hooks/useBroadcast";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 
 interface CaptchaButtonProps extends React.ComponentProps<typeof Button> {
   /**

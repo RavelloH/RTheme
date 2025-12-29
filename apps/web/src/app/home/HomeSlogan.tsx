@@ -1,6 +1,6 @@
 "use client";
 
-import { useMobile } from "@/hooks/useMobile";
+import { useMobile } from "@/hooks/use-mobile";
 import Image from "next/image";
 import Avatar from "@/../public/avatar.jpg";
 import Marquee from "react-fast-marquee";

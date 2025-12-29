@@ -10,7 +10,7 @@ import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
 import { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { CategoryListItem } from "@repo/shared-types/api/category";
-import { useBroadcast } from "@/hooks/useBroadcast";
+import { useBroadcast } from "@/hooks/use-broadcast";
 import {
   RiEditLine,
   RiDeleteBinLine,
@@ -459,26 +459,6 @@ export default function CategoriesTable({
     return actions;
   };
 
-  // 处理行点击事件
-  const handleRowClick = (
-    record: CategoryListItem,
-    index: number,
-    event: React.MouseEvent,
-  ) => {
-    const target = event.target as HTMLElement;
-    const isClickable =
-      target.tagName === "A" ||
-      target.tagName === "BUTTON" ||
-      target.closest("a") ||
-      target.closest("button") ||
-      target.closest('[role="button"]') ||
-      target.closest('[data-action-cell="true"]');
-
-    if (!isClickable) {
-      openEditDialog(record);
-    }
-  };
-
   // 处理排序变化
   const handleSortChange = (key: string, order: "asc" | "desc" | null) => {
     setSortKey(order ? key : null);
@@ -918,7 +898,7 @@ export default function CategoriesTable({
         batchActions={batchActions}
         rowActions={rowActions}
         onSelectionChange={handleSelectionChange}
-        onRowClick={handleRowClick}
+        onRowClick={(record) => openEditDialog(record)}
       />
 
       {/* 编辑分类对话框 */}

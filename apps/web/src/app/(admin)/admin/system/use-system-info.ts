@@ -3,7 +3,7 @@
 import { getSystemInfo } from "@/actions/system";
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { SystemInfo } from "@repo/shared-types/api/system";
-import { useBroadcastStore } from "@/store/broadcastStore";
+import { useBroadcastStore } from "@/store/broadcast-store";
 
 // 自动刷新间隔（毫秒）
 const AUTO_REFRESH_INTERVAL = 15000;

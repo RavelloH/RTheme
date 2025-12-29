@@ -1,7 +1,7 @@
 "use server";
 
 import { validateData } from "@/lib/server/validator";
-import limitControl from "@/lib/server/rateLimit";
+import limitControl from "@/lib/server/rate-limit";
 import {
   LoginSchema,
   RegisterUserSchema,
@@ -55,8 +55,8 @@ import type {
   RevokeSessionSuccessResponse,
 } from "@repo/shared-types/api/auth";
 import { verifyToken } from "./captcha";
-import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
-import { getConfig } from "@/lib/server/configCache";
+import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
+import { getConfig } from "@/lib/server/config-cache";
 import { logAuditEvent } from "./audit";
 
 type AuthActionEnvironment = "serverless" | "serveraction";

@@ -1,6 +1,6 @@
 "use server";
 
-import limitControl from "@/lib/server/rateLimit";
+import limitControl from "@/lib/server/rate-limit";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
 import ResponseBuilder from "@/lib/server/response";
 import { validateData } from "@/lib/server/validator";

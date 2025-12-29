@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getConfig } from "@/lib/server/configCache";
+import { getConfig } from "@/lib/server/config-cache";
 import FooterMobile from "../client/Footer/FooterMobile";
 
 export default async function FooterMobileWrapper() {

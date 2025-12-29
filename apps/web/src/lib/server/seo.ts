@@ -1,6 +1,6 @@
 // SEO 相关库
 import type { Metadata } from "next";
-import { getRawConfig } from "@/lib/server/configCache";
+import { getRawConfig } from "@/lib/server/config-cache";
 
 // 基础静态配置（不依赖数据库的固定值）
 const STATIC_METADATA = {

@@ -5,13 +5,13 @@ import MainLayout from "@/components/MainLayout";
 import RowGrid, { GridItem } from "@/components/RowGrid";
 import PostCard from "@/components/PostCard";
 import PaginationNav from "@/components/PaginationNav";
-import { createArray } from "@/lib/client/createArray";
+import { createArray } from "@/lib/client/create-array";
 import {
   getBlocksAreas,
   getRawPage,
   getSystemPageConfig,
-} from "@/lib/server/pageCache";
-import { createPageConfigBuilder } from "@/lib/server/pageUtils";
+} from "@/lib/server/page-cache";
+import { createPageConfigBuilder } from "@/lib/server/page-utils";
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import prisma from "@/lib/server/prisma";
 import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
@@ -20,7 +20,10 @@ import { RiSearch2Line } from "@remixicon/react";
 import Custom404 from "@/app/not-found";
 import EmptyPostCard from "@/components/EmptyPostCard";
 import DynamicReplace from "@/components/client/DynamicReplace";
-import { batchQueryMediaFiles, processImageUrl } from "@/lib/shared/imageUtils";
+import {
+  batchQueryMediaFiles,
+  processImageUrl,
+} from "@/lib/shared/image-utils";
 
 // 获取系统页面配置
 const pageConfig = await getRawPage("/posts");

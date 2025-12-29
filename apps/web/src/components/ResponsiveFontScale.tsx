@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useRef, useEffect } from "react";
-import { useMobile } from "@/hooks/useMobile";
+import { useMobile } from "@/hooks/use-mobile";
 interface ResponsiveFontScaleProps {
   children: ReactNode;
   scaleFactor?: number; // 缩放因子，基于视窗高度的比例

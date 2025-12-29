@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext } from "react";
-import type { MenuItem } from "@/lib/server/menuCache";
+import type { MenuItem } from "@/lib/server/menu-cache";
 
 interface MenuContextType {
   menus: MenuItem[];

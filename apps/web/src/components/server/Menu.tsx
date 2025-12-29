@@ -1,9 +1,9 @@
 import "server-only";
 
-import { MenuItem } from "@/lib/server/menuCache";
+import { MenuItem } from "@/lib/server/menu-cache";
 import MenuWrapper from "../client/Menu/MenuWrapper";
 import { MenuFooter, MenuHeader, MenuLayout } from "../client/Menu/MenuMiscs";
-import { getConfig } from "@/lib/server/configCache";
+import { getConfig } from "@/lib/server/config-cache";
 import Marquee from "react-fast-marquee";
 import Link from "../Link";
 import MenuItemWrapper from "../client/Menu/MenuItemLayout";

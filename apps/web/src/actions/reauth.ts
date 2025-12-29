@@ -11,7 +11,7 @@ import {
 import { verifyPassword } from "@/lib/server/password";
 import ResponseBuilder from "@/lib/server/response";
 import type { ApiResponse } from "@repo/shared-types/api/common";
-import limitControl from "@/lib/server/rateLimit";
+import limitControl from "@/lib/server/rate-limit";
 import { verifyToken } from "./captcha";
 
 const REAUTH_TOKEN_EXPIRY = 600; // 10 分钟

@@ -6,7 +6,7 @@ import AdminSidebar from "@/components/AdminSidebar";
 import UsersReport from "./UsersReport";
 import UsersHistoryChart from "./UsersHistoryChart";
 import UsersTable from "./UsersTable";
-import { getConfig } from "@/lib/server/configCache";
+import { getConfig } from "@/lib/server/config-cache";
 
 export const metadata = await generateMetadata(
   {

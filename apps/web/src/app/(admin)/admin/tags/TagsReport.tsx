@@ -9,7 +9,7 @@ import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiRefreshLine, RiAddLine } from "@remixicon/react";
 import { useEffect, useState } from "react";
 import ErrorPage from "@/components/ui/Error";
-import { useBroadcastSender } from "@/hooks/useBroadcast";
+import { useBroadcastSender } from "@/hooks/use-broadcast";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import { Button } from "@/ui/Button";

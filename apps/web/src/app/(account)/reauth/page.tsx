@@ -1,6 +1,6 @@
 import { ToastProvider } from "@/ui/Toast";
 import ReauthClient from "./ReauthClient";
-import { getConfig } from "@/lib/server/configCache";
+import { getConfig } from "@/lib/server/config-cache";
 import { generateMetadata } from "@/lib/server/seo";
 import { Suspense } from "react";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";

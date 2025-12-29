@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import { gsap } from "gsap";
-import { useMobile } from "@/hooks/useMobile";
+import { useMobile } from "@/hooks/use-mobile";
 
 interface MainContentProps {
   children: React.ReactNode;

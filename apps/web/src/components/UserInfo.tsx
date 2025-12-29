@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigateWithTransition } from "@/components/Link";
-import { useConsoleStore } from "@/store/consoleStore";
+import { useConsoleStore } from "@/store/console-store";
 import UserAvatar from "./UserAvatar";
 import {
   Menu,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useBroadcastSender } from "@/hooks/useBroadcast";
+import { useBroadcastSender } from "@/hooks/use-broadcast";
 import { useMenu } from "@/components/MenuProvider";
 import { default as NextLink } from "next/link";
 import { usePathname } from "next/navigation";

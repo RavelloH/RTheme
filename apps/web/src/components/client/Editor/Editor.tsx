@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { createArray } from "@/lib/client/createArray";
+import { createArray } from "@/lib/client/create-array";
 import RowGrid, { GridItem } from "../../RowGrid";
 import {
   RiArrowGoBackLine,
@@ -67,7 +67,7 @@ import {
   loadEditorContent,
   clearEditorContent,
   saveEditorContent,
-} from "@/lib/client/editorPersistence";
+} from "@/lib/client/editor-persistence";
 import type { Editor as TiptapEditorType } from "@tiptap/react";
 import type { editor } from "monaco-editor";
 import {

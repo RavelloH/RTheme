@@ -1,5 +1,5 @@
 "use client";
-import { useMobile } from "@/hooks/useMobile";
+import { useMobile } from "@/hooks/use-mobile";
 
 export default function MainLayout({
   children,

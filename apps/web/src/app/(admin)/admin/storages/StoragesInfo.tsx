@@ -3,8 +3,8 @@
 import { getStorageStats } from "@/actions/stat";
 import { GridItem } from "@/components/RowGrid";
 import ErrorPage from "@/components/ui/Error";
-import { useBroadcastSender } from "@/hooks/useBroadcast";
-import runWithAuth from "@/lib/client/runWithAuth";
+import { useBroadcastSender } from "@/hooks/use-broadcast";
+import runWithAuth from "@/lib/client/run-with-auth";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";

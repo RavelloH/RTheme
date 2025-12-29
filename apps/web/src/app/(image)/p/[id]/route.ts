@@ -6,7 +6,7 @@ import {
   encryptUrl,
 } from "@/lib/server/image-crypto";
 import { getMediaByShortHash } from "@/lib/server/image-resolver";
-import limitControl from "@/lib/server/rateLimit";
+import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
 
 export const runtime = "nodejs";

@@ -15,7 +15,7 @@ import type {
   AdminCommentItem,
   CommentStatus,
 } from "@repo/shared-types/api/comment";
-import runWithAuth, { resolveApiResponse } from "@/lib/client/runWithAuth";
+import runWithAuth, { resolveApiResponse } from "@/lib/client/run-with-auth";
 import { useToast } from "@/ui/Toast";
 import {
   RiCheckLine,
@@ -25,7 +25,7 @@ import {
 } from "@remixicon/react";
 import Link from "@/components/Link";
 import { Dialog } from "@/ui/Dialog";
-import { useBroadcast } from "@/hooks/useBroadcast";
+import { useBroadcast } from "@/hooks/use-broadcast";
 
 const statusLabels: Record<CommentStatus, string> = {
   APPROVED: "已通过",
@@ -397,25 +397,6 @@ export default function CommentsTable() {
     setSelectedComment(null);
   };
 
-  const handleRowClick = (
-    record: AdminCommentRow,
-    _index: number,
-    event: React.MouseEvent,
-  ) => {
-    const target = event.target as HTMLElement;
-    const isAction =
-      target.tagName === "A" ||
-      target.tagName === "BUTTON" ||
-      target.closest("a") ||
-      target.closest("button") ||
-      target.closest('[role="button"]') ||
-      target.closest('[data-action-cell="true"]');
-
-    if (!isAction) {
-      openDetailDialog(record);
-    }
-  };
-
   return (
     <>
       <GridTable
@@ -456,7 +437,7 @@ export default function CommentsTable() {
         batchActions={batchActions}
         rowActions={rowActions}
         onSelectionChange={(keys) => setSelectedKeys(keys)}
-        onRowClick={handleRowClick}
+        onRowClick={(record) => openDetailDialog(record)}
         emptyText="暂无评论记录"
       />
 

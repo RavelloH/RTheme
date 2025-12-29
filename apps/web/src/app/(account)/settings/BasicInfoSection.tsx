@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button } from "@/ui/Button";
-import { formatRelativeTime } from "@/lib/shared/relativeTime";
+import { formatRelativeTime } from "@/lib/shared/relative-time";
 import type { BasicInfoDialogsRef } from "./BasicInfoDialogs";
 
 interface UserProfile {

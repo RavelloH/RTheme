@@ -6,7 +6,7 @@ import AdminSidebar from "@/components/AdminSidebar";
 import AuditHistoryChart from "./AuditHistoryChart";
 import AuditLogTable from "./AuditLogTable";
 import AuditLogInfo from "./AuditLogInfo";
-import { getConfig } from "@/lib/server/configCache";
+import { getConfig } from "@/lib/server/config-cache";
 
 export const metadata = await generateMetadata(
   {

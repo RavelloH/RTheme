@@ -3,8 +3,8 @@
 import Link from "@/components/Link";
 import ParallaxImageCarousel from "@/components/ParallaxImageCarousel";
 import { GridItem } from "@/components/RowGrid";
-import { useMobile } from "@/hooks/useMobile";
-import { createArray } from "@/lib/client/createArray";
+import { useMobile } from "@/hooks/use-mobile";
+import { createArray } from "@/lib/client/create-array";
 
 export default function CategoryContainer({
   category,

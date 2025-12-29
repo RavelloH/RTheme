@@ -1,7 +1,7 @@
 "use client";
 
 import { GridItem } from "@/components/RowGrid";
-import { useBroadcast } from "@/hooks/useBroadcast";
+import { useBroadcast } from "@/hooks/use-broadcast";
 import { useState, useEffect, useCallback } from "react";
 import type { SettingSelectMessage } from "./SettingsSelect";
 import { Input } from "@/ui/Input";
@@ -12,7 +12,7 @@ import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiSaveLine, RiRefreshLine } from "@remixicon/react";
 import { getSettings, updateSettings } from "@/actions/setting";
-import runWithAuth from "@/lib/client/runWithAuth";
+import runWithAuth from "@/lib/client/run-with-auth";
 import { defaultConfigs } from "@/data/default-configs";
 
 interface SettingConfig {

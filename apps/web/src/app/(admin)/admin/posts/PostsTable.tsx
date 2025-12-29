@@ -11,7 +11,7 @@ import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
 import { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { PostListItem } from "@repo/shared-types/api/post";
-import { useBroadcast } from "@/hooks/useBroadcast";
+import { useBroadcast } from "@/hooks/use-broadcast";
 import {
   RiCheckLine,
   RiCloseLine,
@@ -533,27 +533,6 @@ export default function PostsTable() {
     },
   ];
 
-  // 处理行点击事件
-  const handleRowClick = (
-    record: PostListItem,
-    index: number,
-    event: React.MouseEvent,
-  ) => {
-    // 检查点击目标，避免在点击链接、按钮或操作区时触发
-    const target = event.target as HTMLElement;
-    const isClickable =
-      target.tagName === "A" ||
-      target.tagName === "BUTTON" ||
-      target.closest("a") ||
-      target.closest("button") ||
-      target.closest('[role="button"]') ||
-      target.closest('[data-action-cell="true"]'); // 排除操作列和复选框列
-
-    if (!isClickable) {
-      openEditDialog(record);
-    }
-  };
-
   // 处理排序变化
   const handleSortChange = (key: string, order: "asc" | "desc" | null) => {
     setSortKey(order ? key : null);
@@ -1066,7 +1045,7 @@ export default function PostsTable() {
         batchActions={batchActions}
         rowActions={rowActions}
         onSelectionChange={handleSelectionChange}
-        onRowClick={handleRowClick}
+        onRowClick={(record) => openEditDialog(record)}
       />
 
       {/* 编辑文章对话框 */}

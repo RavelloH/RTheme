@@ -11,7 +11,7 @@ import {
   getMarkdownComponents,
   getMDXComponents,
 } from "@/components/server/renderAdapter";
-import { MediaFileInfo } from "@/lib/shared/imageUtils";
+import { MediaFileInfo } from "@/lib/shared/image-utils";
 
 interface MDXRendererProps {
   source: string;

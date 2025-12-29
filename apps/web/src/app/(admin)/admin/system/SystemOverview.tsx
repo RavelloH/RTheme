@@ -6,7 +6,7 @@ import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiRefreshLine } from "@remixicon/react";
 import ErrorPage from "@/components/ui/Error";
-import { useSystemInfo } from "./useSystemInfo";
+import { useSystemInfo } from "./use-system-info";
 import { useState, useEffect } from "react";
 
 // 自动刷新间隔（秒）

@@ -3,7 +3,7 @@ import MainLayout from "@/components/MainLayout";
 import AdminSidebar from "@/components/AdminSidebar";
 import { generateMetadata } from "@/lib/server/seo";
 import AnalyticsStats from "./AnalyticsStats";
-import { getConfig } from "@/lib/server/configCache";
+import { getConfig } from "@/lib/server/config-cache";
 
 export const metadata = await generateMetadata(
   {

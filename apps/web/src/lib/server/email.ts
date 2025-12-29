@@ -4,7 +4,7 @@ import { Resend } from "resend";
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
 import type SMTPTransport from "nodemailer/lib/smtp-transport";
-import { getConfig } from "./configCache";
+import { getConfig } from "./config-cache";
 import { randomInt } from "crypto";
 
 // 验证码相关常量

@@ -13,8 +13,8 @@ import type { ApiResponse } from "@repo/shared-types/api/common";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import { after } from "next/server";
 import { logAuditEvent } from "./audit";
-import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
-import { getConfig } from "@/lib/server/configCache";
+import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
+import { getConfig } from "@/lib/server/config-cache";
 
 /**
  * Prisma AccountProvider 枚举类型

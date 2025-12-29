@@ -14,7 +14,7 @@ import { useEffect, useState } from "react";
 import { getPostsStats } from "@/actions/stat";
 import { GetPostsStatsSuccessResponse } from "@repo/shared-types/api/stats";
 import ErrorPage from "@/components/ui/Error";
-import { useMobile } from "@/hooks/useMobile";
+import { useMobile } from "@/hooks/use-mobile";
 
 type stats = GetPostsStatsSuccessResponse["data"] | null;
 

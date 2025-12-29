@@ -14,7 +14,7 @@ import {
   RiDeviceLine,
 } from "@remixicon/react";
 import UnauthorizedPage from "../../unauthorized";
-import { useReauth, type PendingAction } from "./useReauth";
+import { useReauth, type PendingAction } from "./use-reauth";
 import { BasicInfoSection } from "./BasicInfoSection";
 import { NotificationSection } from "./NotificationSection";
 import { SessionSection } from "./SessionSection";

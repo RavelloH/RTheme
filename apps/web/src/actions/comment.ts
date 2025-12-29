@@ -30,13 +30,13 @@ import {
 } from "@repo/shared-types/api/comment";
 import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
-import limitControl from "@/lib/server/rateLimit";
+import limitControl from "@/lib/server/rate-limit";
 import { validateData } from "@/lib/server/validator";
 import { authVerify } from "@/lib/server/auth-verify";
-import { getClientIP } from "@/lib/server/getClientInfo";
+import { getClientIP } from "@/lib/server/get-client-info";
 import { resolveIpLocation } from "@/lib/server/ip-utils";
 import { verifyToken } from "./captcha";
-import { getConfig } from "@/lib/server/configCache";
+import { getConfig } from "@/lib/server/config-cache";
 import type { UserRole } from "@/lib/server/auth-verify";
 import prisma from "@/lib/server/prisma";
 import crypto from "crypto";

@@ -3,7 +3,7 @@
  * 从数据库配置生成符合 Web App Manifest 规范的 JSON
  */
 
-import { getRawConfig } from "@/lib/server/configCache";
+import { getRawConfig } from "@/lib/server/config-cache";
 
 // Manifest 配置映射表
 const manifestConfigMap = {

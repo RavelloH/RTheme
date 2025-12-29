@@ -1,6 +1,6 @@
 // @/store/useBroadcast.ts
 import { useRef, useEffect } from "react";
-import { useBroadcastStore } from "@/store/broadcastStore";
+import { useBroadcastStore } from "@/store/broadcast-store";
 
 /**
  * React Hook for using broadcast with automatic cleanup

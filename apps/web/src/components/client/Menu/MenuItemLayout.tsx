@@ -1,5 +1,5 @@
 "use client";
-import { useBroadcastSender } from "@/hooks/useBroadcast";
+import { useBroadcastSender } from "@/hooks/use-broadcast";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 

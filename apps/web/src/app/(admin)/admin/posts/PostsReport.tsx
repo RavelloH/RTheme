@@ -8,8 +8,8 @@ import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiRefreshLine, RiStickyNoteAddFill } from "@remixicon/react";
 import { useEffect, useState } from "react";
 import ErrorPage from "@/components/ui/Error";
-import { useBroadcastSender } from "@/hooks/useBroadcast";
-import runWithAuth from "@/lib/client/runWithAuth";
+import { useBroadcastSender } from "@/hooks/use-broadcast";
+import runWithAuth from "@/lib/client/run-with-auth";
 import Link from "@/components/Link";
 
 type StatsData = {

@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { SystemPageConfig } from "./pageCache";
+import type { SystemPageConfig } from "./page-cache";
 
 /**
  * 从配置对象中获取指定 ID 的 block

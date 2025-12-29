@@ -10,7 +10,7 @@ import GridTable, { FilterConfig, ActionButton } from "@/components/GridTable";
 import { TableColumn } from "@/ui/Table";
 import { useEffect, useState, useMemo, useCallback, useRef, memo } from "react";
 import type { MediaListItem, MediaDetail } from "@repo/shared-types/api/media";
-import { useBroadcast } from "@/hooks/useBroadcast";
+import { useBroadcast } from "@/hooks/use-broadcast";
 import { Dialog } from "@/ui/Dialog";
 import { AlertDialog } from "@/ui/AlertDialog";
 import {
@@ -37,7 +37,7 @@ import { useToast } from "@/ui/Toast";
 import Link from "@/components/Link";
 import CMSImage from "@/components/CMSImage";
 import { GridItem } from "@/components/RowGrid";
-import { createArray } from "@/lib/client/createArray";
+import { createArray } from "@/lib/client/create-array";
 import { Checkbox } from "@/ui/Checkbox";
 import { Tooltip } from "@/ui/Tooltip";
 import Clickable from "@/ui/Clickable";
@@ -45,7 +45,7 @@ import { AutoTransition } from "@/ui/AutoTransition";
 import { motion, AnimatePresence } from "framer-motion";
 import { Select } from "@/ui/Select";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { useMobile } from "@/hooks/useMobile";
+import { useMobile } from "@/hooks/use-mobile";
 
 // 提取图片卡片为独立组件并使用 memo
 const MediaGridItem = memo(
@@ -626,25 +626,6 @@ export default function MediaTable() {
     }
   }, [selectedMedia, toast, closeBatchDeleteDialog]);
 
-  // 处理行点击事件
-  const handleRowClick = useCallback(
-    (record: MediaListItem, index: number, event: React.MouseEvent) => {
-      const target = event.target as HTMLElement;
-      const isClickable =
-        target.tagName === "A" ||
-        target.tagName === "BUTTON" ||
-        target.closest("a") ||
-        target.closest("button") ||
-        target.closest('[role="button"]') ||
-        target.closest('[data-action-cell="true"]');
-
-      if (!isClickable) {
-        openDetailDialog(record);
-      }
-    },
-    [openDetailDialog],
-  );
-
   // 监听广播刷新消息
   useBroadcast<{ type: string }>(async (message) => {
     if (message.type === "media-refresh") {
@@ -1138,7 +1119,7 @@ export default function MediaTable() {
             onPageSizeChange={setPageSize}
             onSortChange={handleSortChange}
             onSearchChange={handleSearchChange}
-            onRowClick={handleRowClick}
+            onRowClick={(record) => openDetailDialog(record)}
             searchPlaceholder="搜索显示名称、原始文件名或替代文本..."
             filterConfig={filterConfig}
             onFilterChange={handleFilterChange}

@@ -21,7 +21,7 @@ import {
 } from "@remixicon/react";
 import UnauthorizedPage from "../../unauthorized";
 import { CaptchaButton } from "@/components/CaptchaButton";
-import { useBroadcast, useBroadcastSender } from "@/hooks/useBroadcast";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import PasskeyReauthButton from "./PasskeyReauthButton";
 import { OtpInput } from "@/ui/OtpInput";
 import { AutoResizer } from "@/ui/AutoResizer";

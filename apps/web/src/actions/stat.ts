@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
-import limitControl from "@/lib/server/rateLimit";
+import limitControl from "@/lib/server/rate-limit";
 import { headers } from "next/headers";
 import { validateData } from "@/lib/server/validator";
 import { authVerify } from "@/lib/server/auth-verify";

@@ -8,10 +8,10 @@ import { Select, SelectOption } from "@/ui/Select";
 import { Switch } from "@/ui/Switch";
 import { Button } from "@/ui/Button";
 import { useToast } from "@/ui/Toast";
-import runWithAuth from "@/lib/client/runWithAuth";
+import runWithAuth from "@/lib/client/run-with-auth";
 import { createStorage } from "@/actions/storage";
 import { StorageProviderType } from "@/template/storages";
-import { useBroadcastSender } from "@/hooks/useBroadcast";
+import { useBroadcastSender } from "@/hooks/use-broadcast";
 import { RiServerFill } from "@remixicon/react";
 import {
   StorageConfigFields,

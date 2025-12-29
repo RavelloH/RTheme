@@ -1,6 +1,6 @@
 "use client";
 
-import { useMobile } from "@/hooks/useMobile";
+import { useMobile } from "@/hooks/use-mobile";
 import Marquee from "react-fast-marquee";
 
 export default function HomeTitle({ title }: { title: string }) {

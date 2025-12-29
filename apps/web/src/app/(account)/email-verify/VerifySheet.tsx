@@ -4,7 +4,7 @@ import { Input } from "@/ui/Input";
 import { RiMailLine, RiShieldKeyholeLine } from "@remixicon/react";
 import { CaptchaButton } from "@/components/CaptchaButton";
 import { useState } from "react";
-import { useBroadcast, useBroadcastSender } from "@/hooks/useBroadcast";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import {
   verifyEmail as verifyEmailAction,
   resendEmailVerification as resendEmailAction,

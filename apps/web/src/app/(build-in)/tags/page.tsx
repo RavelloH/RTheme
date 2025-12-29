@@ -6,15 +6,18 @@ import {
   getBlocksAreas,
   getRawPage,
   getSystemPageConfig,
-} from "@/lib/server/pageCache";
-import { createPageConfigBuilder } from "@/lib/server/pageUtils";
+} from "@/lib/server/page-cache";
+import { createPageConfigBuilder } from "@/lib/server/page-utils";
 import prisma from "@/lib/server/prisma";
 import { generateMetadata } from "@/lib/server/seo";
 import Link from "@/components/Link";
 import TagsRandomPage from "./TagsRandomPage";
 import DynamicReplace from "@/components/client/DynamicReplace";
 import TagContainer from "./TagContainer";
-import { batchQueryMediaFiles, processImageUrl } from "@/lib/shared/imageUtils";
+import {
+  batchQueryMediaFiles,
+  processImageUrl,
+} from "@/lib/shared/image-utils";
 
 // 获取系统页面配置
 const page = await getRawPage("/tags");

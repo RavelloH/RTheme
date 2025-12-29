@@ -6,7 +6,7 @@ import AdminSidebar from "@/components/AdminSidebar";
 import CategoriesReport from "./CategoriesReport";
 import CategoriesDistributionChart from "./CategoriesDistributionChart";
 import CategoriesTable from "./CategoriesTable";
-import { getConfig } from "@/lib/server/configCache";
+import { getConfig } from "@/lib/server/config-cache";
 import {
   findCategoryByPath,
   getCategoryNamePath,

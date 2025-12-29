@@ -15,7 +15,7 @@ import {
 } from "@/actions/totp";
 import QRCode from "qrcode";
 
-import type { PendingAction } from "./useReauth";
+import type { PendingAction } from "./use-reauth";
 
 interface TotpDialogsProps {
   onTotpStatusChange: () => void;

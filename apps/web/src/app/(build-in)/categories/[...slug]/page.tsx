@@ -6,13 +6,13 @@ import RowGrid, { GridItem } from "@/components/RowGrid";
 import PostCard from "@/components/PostCard";
 import EmptyPostCard from "@/components/EmptyPostCard";
 import PaginationNav from "@/components/PaginationNav";
-import { createArray } from "@/lib/client/createArray";
+import { createArray } from "@/lib/client/create-array";
 import {
   getBlocksAreas,
   getRawPage,
   getSystemPageConfig,
-} from "@/lib/server/pageCache";
-import { createPageConfigBuilder } from "@/lib/server/pageUtils";
+} from "@/lib/server/page-cache";
+import { createPageConfigBuilder } from "@/lib/server/page-utils";
 import prisma from "@/lib/server/prisma";
 import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
@@ -23,7 +23,10 @@ import { Metadata } from "next";
 import { RiArrowLeftSLine } from "@remixicon/react";
 import { cache } from "react";
 import CategoryContainer from "../CategoryContainer";
-import { batchQueryMediaFiles, processImageUrl } from "@/lib/shared/imageUtils";
+import {
+  batchQueryMediaFiles,
+  processImageUrl,
+} from "@/lib/shared/image-utils";
 
 // 缓存函数：获取所有分类的完整数据
 const getCategoriesWithFullData = cache(async () => {

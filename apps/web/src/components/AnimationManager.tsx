@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { gsap } from "gsap";
-import { useMobile } from "@/hooks/useMobile";
+import { useMobile } from "@/hooks/use-mobile";
 
 interface AnimationManagerProps {
   onTrigger: () => void;

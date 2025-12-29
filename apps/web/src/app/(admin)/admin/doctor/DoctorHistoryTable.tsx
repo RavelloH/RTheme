@@ -5,7 +5,7 @@ import GridTable, { FilterConfig } from "@/components/GridTable";
 import { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { DoctorHistoryItem } from "@repo/shared-types/api/doctor";
-import { useBroadcast } from "@/hooks/useBroadcast";
+import { useBroadcast } from "@/hooks/use-broadcast";
 
 type HealthCheckIssue = {
   code: string;

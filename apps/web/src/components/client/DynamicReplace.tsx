@@ -1,6 +1,6 @@
 "use client";
 
-import { formatRelativeTime } from "@/lib/shared/relativeTime";
+import { formatRelativeTime } from "@/lib/shared/relative-time";
 import { useEffect, useState } from "react";
 
 interface DynamicReplaceProps {

@@ -6,10 +6,10 @@ import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { gsap } from "gsap";
-import { useMenuStore } from "@/store/menuStore";
-import { useConsoleStore } from "@/store/consoleStore";
-import { useBroadcast } from "@/hooks/useBroadcast";
-import { useMobile } from "@/hooks/useMobile";
+import { useMenuStore } from "@/store/menu-store";
+import { useConsoleStore } from "@/store/console-store";
+import { useBroadcast } from "@/hooks/use-broadcast";
+import { useMobile } from "@/hooks/use-mobile";
 
 // Type
 interface TransitionMessage {

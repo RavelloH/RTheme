@@ -6,7 +6,7 @@ import {
   generateState,
   type OAuthProvider,
 } from "@/lib/server/oauth";
-import limitControl from "@/lib/server/rateLimit";
+import limitControl from "@/lib/server/rate-limit";
 import {
   jwtTokenVerify,
   jwtTokenSign,

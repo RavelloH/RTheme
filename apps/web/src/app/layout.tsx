@@ -25,8 +25,8 @@ import TokenManager from "@/components/TokenManager";
 import { AnalyticsTracker } from "@/components/client/AnalyticsTracker";
 
 // lib
-import { getActiveMenus } from "@/lib/server/menuCache";
-import { getConfig } from "@/lib/server/configCache";
+import { getActiveMenus } from "@/lib/server/menu-cache";
+import { getConfig } from "@/lib/server/config-cache";
 
 // Types
 import { ColorConfig } from "@/types/config";

@@ -5,10 +5,10 @@ import { after } from "next/server";
 import prisma from "@/lib/server/prisma";
 import ResponseBuilder from "@/lib/server/response";
 import type { ApiResponse } from "@repo/shared-types/api/common";
-import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
-import limitControl from "@/lib/server/rateLimit";
+import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
+import limitControl from "@/lib/server/rate-limit";
 import { checkReauthToken } from "./reauth";
-import { getConfig } from "@/lib/server/configCache";
+import { getConfig } from "@/lib/server/config-cache";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
 import {
   generateRegistrationOptions,

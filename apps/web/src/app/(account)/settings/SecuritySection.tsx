@@ -7,7 +7,7 @@ import { getProviderName, getProviderIcon } from "./settingsHelpers";
 import PasskeyManager from "./PasskeyManager";
 import { getTotpStatus } from "@/actions/totp";
 import { TotpDialogs, type TotpDialogsRef } from "./TotpDialogs";
-import type { PendingAction } from "./useReauth";
+import type { PendingAction } from "./use-reauth";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";

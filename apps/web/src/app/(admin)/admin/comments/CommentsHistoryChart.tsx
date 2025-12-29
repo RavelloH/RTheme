@@ -14,9 +14,9 @@ import StackedBarChart, {
   type SeriesConfig as StackedSeriesConfig,
 } from "@/components/StackedBarChart";
 import { getCommentHistory } from "@/actions/comment";
-import runWithAuth from "@/lib/client/runWithAuth";
+import runWithAuth from "@/lib/client/run-with-auth";
 import type { CommentHistoryPoint } from "@repo/shared-types/api/comment";
-import { useBroadcast } from "@/hooks/useBroadcast";
+import { useBroadcast } from "@/hooks/use-broadcast";
 import generateGradient from "@/lib/shared/gradient";
 import generateComplementary from "@/lib/shared/complementary";
 

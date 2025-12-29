@@ -5,7 +5,7 @@ import MainLayout from "@/components/MainLayout";
 import RegisterSheet from "./RegisterSheet";
 import Marquee from "react-fast-marquee";
 import RegisterIntro from "./RegisterIntro";
-import { getConfig } from "@/lib/server/configCache";
+import { getConfig } from "@/lib/server/config-cache";
 import type { OAuthProvider } from "@/lib/server/oauth";
 
 export const metadata = await generateMetadata(

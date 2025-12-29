@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies, headers } from "next/headers";
 import { handleSSOCallback, handleSSOBind } from "@/actions/sso";
-import limitControl from "@/lib/server/rateLimit";
+import limitControl from "@/lib/server/rate-limit";
 import { jwtTokenVerify } from "@/lib/server/jwt";
 
 export async function GET(

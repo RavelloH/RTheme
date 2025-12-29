@@ -5,7 +5,7 @@ import GridTable, { FilterConfig } from "@/components/GridTable";
 import { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { AuditLogItem } from "@repo/shared-types/api/audit";
-import { useBroadcast } from "@/hooks/useBroadcast";
+import { useBroadcast } from "@/hooks/use-broadcast";
 import { Dialog } from "@/ui/Dialog";
 import { RiEyeLine } from "@remixicon/react";
 import Clickable from "@/ui/Clickable";

@@ -14,13 +14,16 @@ import {
   getSystemPageConfig,
   getBlocksAreas,
   getRawPage,
-} from "@/lib/server/pageCache";
-import { createPageConfigBuilder } from "@/lib/server/pageUtils";
+} from "@/lib/server/page-cache";
+import { createPageConfigBuilder } from "@/lib/server/page-utils";
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import Custom404 from "./not-found";
-import { getConfig } from "@/lib/server/configCache";
+import { getConfig } from "@/lib/server/config-cache";
 import { RiArrowRightSLine } from "@remixicon/react";
-import { batchQueryMediaFiles, processImageUrl } from "@/lib/shared/imageUtils";
+import {
+  batchQueryMediaFiles,
+  processImageUrl,
+} from "@/lib/shared/image-utils";
 import prisma from "@/lib/server/prisma";
 
 // 获取系统页面配置

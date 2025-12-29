@@ -20,13 +20,13 @@ import {
 } from "@repo/shared-types/api/page";
 import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
-import limitControl from "@/lib/server/rateLimit";
+import limitControl from "@/lib/server/rate-limit";
 import { headers } from "next/headers";
 import { validateData } from "@/lib/server/validator";
 import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
 import { logAuditEvent } from "./audit";
-import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
+import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };

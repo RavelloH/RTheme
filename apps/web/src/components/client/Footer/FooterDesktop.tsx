@@ -4,13 +4,13 @@ import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { gsap } from "gsap";
-import { useMenuStore } from "@/store/menuStore";
-import { useConsoleStore } from "@/store/consoleStore";
-import { useFooterStore } from "@/store/footerStore";
-import { useMobile } from "@/hooks/useMobile";
+import { useMenuStore } from "@/store/menu-store";
+import { useConsoleStore } from "@/store/console-store";
+import { useFooterStore } from "@/store/footer-store";
+import { useMobile } from "@/hooks/use-mobile";
 import { Panel } from "../../Panel";
 import { ConsoleButton } from "../../ConsoleButton";
-import { MenuItem } from "@/lib/server/menuCache";
+import { MenuItem } from "@/lib/server/menu-cache";
 import Link from "../../Link";
 import { LoginButton } from "../../UserInfo";
 

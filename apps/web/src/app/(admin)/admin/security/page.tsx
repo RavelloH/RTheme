@@ -9,7 +9,7 @@ import RequestTrendsChart from "./RequestTrendsChart";
 import IPTable from "./IPTable";
 import EndpointStatsChart from "./EndpointStatsChart";
 import { ToastProvider } from "@/ui/Toast";
-import { getConfig } from "@/lib/server/configCache";
+import { getConfig } from "@/lib/server/config-cache";
 
 export const metadata = await generateMetadata(
   {

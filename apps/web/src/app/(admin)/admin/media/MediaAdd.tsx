@@ -8,7 +8,7 @@ import { Button } from "@/ui/Button";
 import { Select } from "@/ui/Select";
 import { SegmentedControl } from "@/ui/SegmentedControl";
 import { useToast, ToastProvider } from "@/ui/Toast";
-import { useBroadcastSender } from "@/hooks/useBroadcast";
+import { useBroadcastSender } from "@/hooks/use-broadcast";
 import { getStorageList } from "@/actions/storage";
 import {
   RiImageAddFill,

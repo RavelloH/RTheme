@@ -5,8 +5,8 @@ import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiDatabase2Line } from "@remixicon/react";
 import ErrorPage from "@/components/ui/Error";
-import { useSystemInfo } from "./useSystemInfo";
-import { useBroadcast } from "@/hooks/useBroadcast";
+import { useSystemInfo } from "./use-system-info";
+import { useBroadcast } from "@/hooks/use-broadcast";
 import { useState } from "react";
 import AreaChart, {
   type AreaChartDataPoint,

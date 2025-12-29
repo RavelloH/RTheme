@@ -24,12 +24,12 @@ import {
 } from "@repo/shared-types/api/auth";
 import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
-import limitControl from "@/lib/server/rateLimit";
+import limitControl from "@/lib/server/rate-limit";
 import { validateData } from "@/lib/server/validator";
 import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
 import { logAuditEvent } from "./audit";
-import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
+import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { jwtTokenVerify, type AccessTokenPayload } from "@/lib/server/jwt";
 import { Prisma } from ".prisma/client";
 
@@ -1125,7 +1125,7 @@ export async function updateUserProfile(
       updateData.emailVerifyCode = newVerifyCode;
 
       // 检查是否启用邮箱验证
-      const { getConfig } = await import("@/lib/server/configCache");
+      const { getConfig } = await import("@/lib/server/config-cache");
       const emailVerificationEnabled = await getConfig<boolean>(
         "user.email.verification.required",
         false,
@@ -1151,7 +1151,7 @@ export async function updateUserProfile(
       try {
         const { sendEmail } = await import("@/lib/server/email");
         const { renderEmail } = await import("@/emails/utils");
-        const { getConfig } = await import("@/lib/server/configCache");
+        const { getConfig } = await import("@/lib/server/config-cache");
         const siteName =
           (await getConfig<string>("site.name")) || "NeutralPress";
         const siteUrl = (await getConfig<string>("site.url")) || "";

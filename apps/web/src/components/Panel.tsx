@@ -1,6 +1,6 @@
 "use client";
 
-import { useMobile } from "@/hooks/useMobile";
+import { useMobile } from "@/hooks/use-mobile";
 
 export function Panel({ onClose: _onClose }: { onClose: () => void }) {
   const isMobile = useMobile();

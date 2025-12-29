@@ -10,7 +10,7 @@ import {
   OutputFormat,
 } from "pinyin-pro";
 import CompleteDict from "@pinyin-pro/data/complete";
-import { getConfig } from "./configCache";
+import { getConfig } from "./config-cache";
 
 addDict(CompleteDict);
 

@@ -9,8 +9,8 @@ import {
 import RowGrid, { GridItem } from "./RowGrid";
 import Link from "./Link";
 import Clickable from "@/ui/Clickable";
-import { createArray } from "@/lib/client/createArray";
-import { useMobile } from "@/hooks/useMobile";
+import { createArray } from "@/lib/client/create-array";
+import { useMobile } from "@/hooks/use-mobile";
 
 interface PaginationNavProps {
   currentPage: number;

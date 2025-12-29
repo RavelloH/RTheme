@@ -5,7 +5,7 @@ import MainLayout from "@/components/MainLayout";
 import Marquee from "react-fast-marquee";
 import LoginSheet from "./LoginSheet";
 import { Suspense } from "react";
-import { getConfig } from "@/lib/server/configCache";
+import { getConfig } from "@/lib/server/config-cache";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import { ToastProvider } from "@/ui/Toast";
 

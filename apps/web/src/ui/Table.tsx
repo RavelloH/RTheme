@@ -155,6 +155,31 @@ const MemoTableRow = memo(
         }
       : {};
 
+    // 处理行点击事件，排除特定元素
+    const handleRowClick = (e: React.MouseEvent) => {
+      if (!onRowClick) return;
+
+      // 检查点击目标，避免在点击链接、按钮或交互元素时触发
+      const target = e.target as HTMLElement;
+      const isClickable =
+        target.tagName === "A" ||
+        target.tagName === "BUTTON" ||
+        target.tagName === "INPUT" ||
+        target.tagName === "SELECT" ||
+        target.tagName === "TEXTAREA" ||
+        target.closest("a") ||
+        target.closest("button") ||
+        target.closest("input") ||
+        target.closest("select") ||
+        target.closest("textarea") ||
+        target.closest('[role="button"]') ||
+        target.closest('[data-action-cell="true"]'); // 排除操作列和复选框列
+
+      if (!isClickable) {
+        onRowClick(record, index, e);
+      }
+    };
+
     return (
       <RowWrapper
         key={getRowKey(record, index)}
@@ -164,7 +189,7 @@ const MemoTableRow = memo(
         ${onRowClick ? "cursor-pointer" : ""}
         ${rowClassName}
       `}
-        onClick={(e: React.MouseEvent) => onRowClick?.(record, index, e)}
+        onClick={handleRowClick}
         {...(animationProps as Record<string, unknown>)}
       >
         {columns.map((column, columnIndex) => (

@@ -4,7 +4,7 @@
  */
 
 import { Google, GitHub, MicrosoftEntraId, generateCodeVerifier } from "arctic";
-import { getConfig } from "@/lib/server/configCache";
+import { getConfig } from "@/lib/server/config-cache";
 
 export type OAuthProvider = "google" | "github" | "microsoft";
 

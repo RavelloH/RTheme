@@ -10,7 +10,7 @@ import {
 } from "@remixicon/react";
 import { CaptchaButton } from "@/components/CaptchaButton";
 import { useState, useEffect, useRef } from "react";
-import { useBroadcast, useBroadcastSender } from "@/hooks/useBroadcast";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import { login as loginAction } from "@/actions/auth";
 import { verifyTotp } from "@/actions/totp";
 import { useSearchParams } from "next/navigation";

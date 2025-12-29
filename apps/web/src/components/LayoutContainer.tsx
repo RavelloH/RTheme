@@ -1,6 +1,6 @@
 "use client";
 
-import { useMobile } from "@/hooks/useMobile";
+import { useMobile } from "@/hooks/use-mobile";
 
 interface LayoutContainerProps {
   children: React.ReactNode;

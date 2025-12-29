@@ -4,7 +4,7 @@ import { Input } from "@/ui/Input";
 import { RiMailLine, RiLockPasswordLine } from "@remixicon/react";
 import { CaptchaButton } from "@/components/CaptchaButton";
 import { useState } from "react";
-import { useBroadcast, useBroadcastSender } from "@/hooks/useBroadcast";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import {
   requestPasswordReset as requestPasswordResetAction,
   resetPassword as resetPasswordAction,

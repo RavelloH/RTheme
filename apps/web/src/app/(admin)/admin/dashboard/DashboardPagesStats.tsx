@@ -7,9 +7,9 @@ import { AutoTransition } from "@/ui/AutoTransition";
 import { RiRefreshLine } from "@remixicon/react";
 import { useCallback, useEffect, useState } from "react";
 import { getPagesStats } from "@/actions/stat";
-import runWithAuth from "@/lib/client/runWithAuth";
+import runWithAuth from "@/lib/client/run-with-auth";
 import ErrorPage from "@/components/ui/Error";
-import { useBroadcastSender } from "@/hooks/useBroadcast";
+import { useBroadcastSender } from "@/hooks/use-broadcast";
 
 type StatsData = {
   updatedAt: string;

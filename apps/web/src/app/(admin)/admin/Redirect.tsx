@@ -5,7 +5,7 @@ import MainLayout from "@/components/MainLayout";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { useEffect, useState } from "react";
 import { useNavigateWithTransition } from "../../../components/Link";
-import { useMobile } from "../../../hooks/useMobile";
+import { useMobile } from "../../../hooks/use-mobile";
 
 export default function AdminRedirect() {
   const [title, setTitle] = useState("正在启动管理仪表盘...");

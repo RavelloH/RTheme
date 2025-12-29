@@ -29,9 +29,9 @@ import {
   batchQueryMediaFiles,
   processImageUrl,
   extractInternalHashes,
-} from "@/lib/shared/imageUtils";
+} from "@/lib/shared/image-utils";
 import ImageLightbox from "@/components/client/ImageLightbox";
-import { getConfig } from "@/lib/server/configCache";
+import { getConfig } from "@/lib/server/config-cache";
 import React from "react";
 import CommentsSection from "@/components/client/CommentsSection";
 import { ToastProvider } from "@/ui/Toast";

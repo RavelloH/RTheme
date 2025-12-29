@@ -6,7 +6,7 @@ import { getMediaStats } from "@/actions/media";
 import { useEffect, useState } from "react";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import ErrorPage from "@/components/ui/Error";
-import { useBroadcast } from "@/hooks/useBroadcast";
+import { useBroadcast } from "@/hooks/use-broadcast";
 import Clickable from "@/ui/Clickable";
 import { RiRefreshLine } from "@remixicon/react";
 

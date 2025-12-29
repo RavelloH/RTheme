@@ -11,7 +11,7 @@ import AreaChart, {
 } from "@/components/AreaChart";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import ErrorPage from "@/components/ui/Error";
-import { useBroadcast } from "@/hooks/useBroadcast";
+import { useBroadcast } from "@/hooks/use-broadcast";
 
 export default function DoctorHistoryChart() {
   const [data, setData] = useState<DoctorTrendItem[]>([]);

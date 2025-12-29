@@ -8,7 +8,7 @@ import React, {
   useRef,
 } from "react";
 import { GridItem, GridArea } from "@/components/RowGrid";
-import { createArray } from "@/lib/client/createArray";
+import { createArray } from "@/lib/client/create-array";
 import { Table, TableColumn } from "@/ui/Table";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { AutoTransition } from "@/ui/AutoTransition";
@@ -28,7 +28,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import { SelectOption } from "@/ui/Select";
-import { useMobile } from "@/hooks/useMobile";
+import { useMobile } from "@/hooks/use-mobile";
 
 // 操作按钮配置
 export interface ActionButton {

@@ -22,7 +22,7 @@ import { useEffect, useRef } from "react";
 import {
   saveEditorContent,
   type EditorConfig,
-} from "@/lib/client/editorPersistence";
+} from "@/lib/client/editor-persistence";
 import CodeBlockShiki from "tiptap-extension-code-block-shiki";
 
 // 自定义扩展：双击空格退出链接

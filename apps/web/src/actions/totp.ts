@@ -1,7 +1,7 @@
 "use server";
 
 import { validateData } from "@/lib/server/validator";
-import limitControl from "@/lib/server/rateLimit";
+import limitControl from "@/lib/server/rate-limit";
 import {
   VerifyTotpSchema,
   ConfirmTotpSchema,
@@ -26,8 +26,8 @@ import type {
   ApiResponse,
   ApiResponseData,
 } from "@repo/shared-types/api/common";
-import { getClientIP, getClientUserAgent } from "@/lib/server/getClientInfo";
-import { getConfig } from "@/lib/server/configCache";
+import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
+import { getConfig } from "@/lib/server/config-cache";
 import { logAuditEvent } from "./audit";
 import { after, type NextResponse } from "next/server";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";

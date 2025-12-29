@@ -1,6 +1,6 @@
 "use client";
 
-import { useMobile } from "@/hooks/useMobile";
+import { useMobile } from "@/hooks/use-mobile";
 import { motion } from "framer-motion";
 
 export function MenuHeader({ children }: { children: React.ReactNode }) {

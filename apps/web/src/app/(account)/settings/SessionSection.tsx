@@ -10,7 +10,7 @@ import { RiDeleteBinLine } from "@remixicon/react";
 import { getSessions } from "@/actions/auth";
 import { useToast } from "@/ui/Toast";
 import { getDeviceIcon } from "./settingsHelpers";
-import { formatRelativeTime } from "@/lib/shared/relativeTime";
+import { formatRelativeTime } from "@/lib/shared/relative-time";
 
 export interface Session {
   id: string;

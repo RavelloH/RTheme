@@ -26,7 +26,7 @@ import {
   RiSmartphoneLine,
   RiAlertLine,
 } from "@remixicon/react";
-import { formatRelativeTime } from "@/lib/shared/relativeTime";
+import { formatRelativeTime } from "@/lib/shared/relative-time";
 
 export default function PasskeyManager() {
   const toast = useToast();
