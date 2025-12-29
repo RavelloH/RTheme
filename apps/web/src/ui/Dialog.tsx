@@ -26,6 +26,8 @@ export function Dialog({
   showCloseButton = true,
 }: DialogProps) {
   const [mounted, setMounted] = React.useState(false);
+  const [mouseDownTarget, setMouseDownTarget] =
+    React.useState<EventTarget | null>(null);
 
   // 确保组件在客户端挂载
   useEffect(() => {
@@ -90,6 +92,20 @@ export function Dialog({
     return null;
   }
 
+  const handleBackdropMouseDown = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      setMouseDownTarget(e.target);
+    }
+  };
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    // 只有当 mousedown 和 click 都发生在同一个目标（遮罩层）上时才关闭对话框
+    if (e.target === e.currentTarget && e.target === mouseDownTarget) {
+      onClose();
+    }
+    setMouseDownTarget(null);
+  };
+
   const dialogContent = (
     <AnimatePresence>
       {open && (
@@ -100,28 +116,21 @@ export function Dialog({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            onClick={onClose}
+            onMouseDown={handleBackdropMouseDown}
+            onClick={handleBackdropClick}
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
           />
 
           {/* 对话框内容容器 */}
           <div
             className="absolute inset-0 overflow-y-auto"
-            onClick={(e) => {
-              // 点击容器背景（非对话框内容）时关闭对话框
-              if (e.target === e.currentTarget) {
-                onClose();
-              }
-            }}
+            onMouseDown={handleBackdropMouseDown}
+            onClick={handleBackdropClick}
           >
             <div
               className="min-h-full flex items-center justify-center p-4"
-              onClick={(e) => {
-                // 点击 flexbox 容器背景时关闭对话框
-                if (e.target === e.currentTarget) {
-                  onClose();
-                }
-              }}
+              onMouseDown={handleBackdropMouseDown}
+              onClick={handleBackdropClick}
             >
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
