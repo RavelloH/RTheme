@@ -51,6 +51,7 @@ model User {
   refreshTokens  RefreshToken[]
   passwordResets PasswordReset[]
   passkeys       Passkey[]
+  commentLikes   CommentLike[]
 
   // 索引优化
   @@index([role])
@@ -247,6 +248,10 @@ model Comment {
   sortKey    String @default("") @db.VarChar(500) // DFS 排序键，保证树形顺序
   replyCount Int    @default(0) // 直接子评论数量
 
+  // 点赞相关
+  likes     CommentLike[]
+  likeCount Int           @default(0) // 点赞总数（冗余字段，提升查询性能）
+
   // 索引优化
   @@index([postId])
   @@index([userUid])
@@ -259,6 +264,22 @@ model Comment {
   @@index([postId, status, sortKey]) // 复合索引：按 DFS 顺序查询评论树
   @@index([postId, status, depth]) // 复合索引：按层级过滤
   @@index([path]) // 物化路径索引：用于查找子树
+}
+
+// 评论点赞模型
+model CommentLike {
+  id        String   @id @default(uuid())
+  commentId String
+  userId    Int
+  createdAt DateTime @default(now())
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [uid], onDelete: Cascade)
+
+  @@unique([commentId, userId]) // 防止重复点赞
+  @@index([commentId])
+  @@index([userId])
+  @@index([createdAt])
 }
 
 // 媒体文件模型

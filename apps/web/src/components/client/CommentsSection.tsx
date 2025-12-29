@@ -12,6 +12,8 @@ import {
   createComment,
   getCommentReplies,
   getPostComments,
+  likeComment,
+  unlikeComment,
 } from "@/actions/comment";
 import type { CommentItem } from "@repo/shared-types/api/comment";
 import { Input } from "@/ui/Input";
@@ -37,6 +39,7 @@ import {
   RiArrowUpLine,
   RiCloseLine,
   RiHeartLine,
+  RiHeartFill,
   RiQuillPenLine,
   RiSpyLine,
 } from "@remixicon/react";
@@ -141,6 +144,7 @@ interface SingleCommentProps {
   onToggleCollapse: (commentId: string) => void;
   onExpandDeep: (commentId: string) => void;
   onHighlight: (commentId: string | null) => void;
+  onToggleLike: (commentId: string, currentIsLiked: boolean) => void;
   isCollapsed: boolean;
   isLoadingDeep: boolean;
   isExpandedDeep: boolean;
@@ -158,6 +162,7 @@ function SingleComment({
   onToggleCollapse,
   onExpandDeep,
   onHighlight,
+  onToggleLike,
   isCollapsed,
   isLoadingDeep,
   isExpandedDeep,
@@ -383,16 +388,35 @@ function SingleComment({
             {/* 操作栏 - 简化，持续显示 */}
             <div className="mt-2 flex items-center gap-3 text-xs">
               {/* 点赞按钮 */}
-              <Clickable className="flex items-center gap-1 text-muted-foreground hover:text-error transition-colors">
-                <RiHeartLine size={14} />
-                <span>点赞</span>
+              <Clickable
+                onClick={() =>
+                  onToggleLike(comment.id, comment.isLiked ?? false)
+                }
+                className={`flex items-center gap-1 transition-colors duration-300 ${
+                  comment.isLiked
+                    ? "text-error"
+                    : "text-muted-foreground hover:text-error"
+                }`}
+              >
+                <AutoTransition>
+                  {comment.isLiked ? (
+                    <RiHeartFill size="1.25em" key="liked" />
+                  ) : (
+                    <RiHeartLine size="1.25em" key="unliked" />
+                  )}
+                </AutoTransition>
+                <span className="font-mono">
+                  <AutoTransition>
+                    {comment.likeCount > 0 ? comment.likeCount : "0"}
+                  </AutoTransition>
+                </span>
               </Clickable>
               {/* 回复按钮 */}
               <Clickable
                 onClick={() => onReply(comment)}
                 className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
               >
-                <RiReplyLine size={14} />
+                <RiReplyLine size="1.25em" />
                 <span>回复</span>
               </Clickable>
               {/* 高亮原回复按钮 */}
@@ -789,6 +813,94 @@ export default function CommentsSection({
     loadComments();
   }, [commentsLoaded, loadComments]);
 
+  // 点赞/取消点赞
+  const handleToggleLike = useCallback(
+    async (commentId: string, currentIsLiked: boolean) => {
+      // 检查登录状态
+      if (isAnonymous) {
+        toastError("登录后才能点赞评论");
+        return;
+      }
+
+      // 乐观更新：立即更新 UI
+      setComments((prev) =>
+        prev.map((comment) => {
+          if (comment.id === commentId) {
+            return {
+              ...comment,
+              likeCount: currentIsLiked
+                ? comment.likeCount - 1
+                : comment.likeCount + 1,
+              isLiked: !currentIsLiked,
+            };
+          }
+          return comment;
+        }),
+      );
+
+      // 调用 Server Action
+      try {
+        const result = currentIsLiked
+          ? await unlikeComment({ commentId })
+          : await likeComment({ commentId });
+
+        const response = await resolveApiResponse(result);
+
+        if (!response?.success) {
+          // 失败时回滚
+          setComments((prev) =>
+            prev.map((comment) => {
+              if (comment.id === commentId) {
+                return {
+                  ...comment,
+                  likeCount: currentIsLiked
+                    ? comment.likeCount + 1
+                    : comment.likeCount - 1,
+                  isLiked: currentIsLiked,
+                };
+              }
+              return comment;
+            }),
+          );
+          toastError("操作失败", response?.message || "");
+        } else if (response.data) {
+          // 成功后用服务器返回的真实数据更新（确保一致性）
+          const { likeCount, isLiked } = response.data;
+          setComments((prev) =>
+            prev.map((comment) => {
+              if (comment.id === commentId) {
+                return {
+                  ...comment,
+                  likeCount,
+                  isLiked,
+                };
+              }
+              return comment;
+            }),
+          );
+        }
+      } catch {
+        // 网络错误，回滚 UI
+        setComments((prev) =>
+          prev.map((comment) => {
+            if (comment.id === commentId) {
+              return {
+                ...comment,
+                likeCount: currentIsLiked
+                  ? comment.likeCount + 1
+                  : comment.likeCount - 1,
+                isLiked: currentIsLiked,
+              };
+            }
+            return comment;
+          }),
+        );
+        toastError("操作失败", "请稍后重试");
+      }
+    },
+    [isAnonymous, toastError],
+  );
+
   // 设置回复目标
   const handleReply = useCallback((comment: CommentItem) => {
     setReplyTarget(comment);
@@ -949,6 +1061,8 @@ export default function CommentsSection({
       hasMore: false,
       createdAt: local.createdAt,
       location: null,
+      likeCount: 0, // 本地待审核评论，点赞数为 0
+      isLiked: undefined, // 本地评论还未同步，无点赞状态
       author: {
         uid: null,
         username: null,
@@ -1261,6 +1375,7 @@ export default function CommentsSection({
                         onToggleCollapse={handleToggleCollapse}
                         onExpandDeep={loadDeepReplies}
                         onHighlight={handleHighlight}
+                        onToggleLike={handleToggleLike}
                         isCollapsed={collapsedIds.has(comment.id)}
                         isLoadingDeep={loadingDeepIds.has(comment.id)}
                         isExpandedDeep={expandedDeepIds.has(comment.id)}

@@ -27,6 +27,12 @@ import {
   GetCommentHistorySchema,
   GetCommentStats,
   GetCommentStatsSchema,
+  LikeComment,
+  LikeCommentSchema,
+  LikeCommentResponse,
+  UnlikeComment,
+  UnlikeCommentSchema,
+  UnlikeCommentResponse,
 } from "@repo/shared-types/api/comment";
 import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
@@ -106,6 +112,8 @@ const commentSelect = {
   path: true,
   sortKey: true,
   replyCount: true,
+  // 点赞相关
+  likeCount: true,
   user: {
     select: {
       uid: true,
@@ -140,6 +148,7 @@ async function mapCommentToItem(
   currentUid: number | null,
   showLocation: boolean,
   maxDepth?: number, // 用于判断是否有更多深层子评论
+  isLiked?: boolean, // 当前用户是否已点赞
 ): Promise<CommentItem> {
   const displayName =
     comment.user?.nickname ||
@@ -216,6 +225,9 @@ async function mapCommentToItem(
     sortKey: comment.sortKey,
     hasMore,
     descendantCount,
+    // 点赞相关
+    likeCount: comment.likeCount,
+    isLiked: currentUid !== null ? isLiked : undefined,
   };
 }
 
@@ -337,13 +349,35 @@ export async function getPostComments(
     a.sortKey.localeCompare(b.sortKey),
   );
 
-  // 4. 转换为响应格式
-  const data: CommentItem[] = [];
-  for (const c of allComments) {
-    data.push(await mapCommentToItem(c, currentUid, showLocation, maxDepth));
+  // 4. 如果用户已登录，批量查询点赞状态
+  let likedCommentIds: Set<string> = new Set();
+  if (currentUid) {
+    const commentIds = allComments.map((c) => c.id);
+    const likes = await prisma.commentLike.findMany({
+      where: {
+        commentId: { in: commentIds },
+        userId: currentUid,
+      },
+      select: { commentId: true },
+    });
+    likedCommentIds = new Set(likes.map((like) => like.commentId));
   }
 
-  // 5. 计算分页元数据
+  // 5. 转换为响应格式
+  const data: CommentItem[] = [];
+  for (const c of allComments) {
+    data.push(
+      await mapCommentToItem(
+        c,
+        currentUid,
+        showLocation,
+        maxDepth,
+        likedCommentIds.has(c.id),
+      ),
+    );
+  }
+
+  // 6. 计算分页元数据
   const lastRoot = slicedRoots[slicedRoots.length - 1];
   const nextCursor = hasNext ? lastRoot?.sortKey : undefined;
 
@@ -393,6 +427,11 @@ export async function getCommentContext(
   let guard = 0;
   const showLocation = await getConfig<boolean>("comment.locate.enable", false);
 
+  // 收集所有评论ID用于批量查询点赞状态
+  const commentIds: string[] = [];
+  const tempComments: PublicComment[] = [];
+
+  // 第一遍：收集评论链
   while (currentId && guard < 20) {
     const comment: PublicComment | null = await prisma.comment.findUnique({
       where: { id: currentId, deletedAt: null },
@@ -406,9 +445,36 @@ export async function getCommentContext(
       (currentUid !== null && comment.userUid === currentUid);
     if (!visible) break;
 
-    chain.unshift(await mapCommentToItem(comment, currentUid, showLocation));
+    tempComments.unshift(comment);
+    commentIds.unshift(comment.id);
     currentId = comment.parentId;
     guard += 1;
+  }
+
+  // 批量查询点赞状态
+  let likedCommentIds: Set<string> = new Set();
+  if (currentUid && commentIds.length > 0) {
+    const likes = await prisma.commentLike.findMany({
+      where: {
+        commentId: { in: commentIds },
+        userId: currentUid,
+      },
+      select: { commentId: true },
+    });
+    likedCommentIds = new Set(likes.map((like) => like.commentId));
+  }
+
+  // 第二遍：转换为 CommentItem
+  for (const comment of tempComments) {
+    chain.push(
+      await mapCommentToItem(
+        comment,
+        currentUid,
+        showLocation,
+        undefined,
+        likedCommentIds.has(comment.id),
+      ),
+    );
   }
 
   const meta = buildPaginationMeta({
@@ -477,10 +543,30 @@ export async function getCommentReplies(
     select: commentSelect,
   });
 
+  // 批量查询点赞状态
+  let likedCommentIds: Set<string> = new Set();
+  if (currentUid && rawComments.length > 0) {
+    const commentIds = rawComments.map((c) => c.id);
+    const likes = await prisma.commentLike.findMany({
+      where: {
+        commentId: { in: commentIds },
+        userId: currentUid,
+      },
+      select: { commentId: true },
+    });
+    likedCommentIds = new Set(likes.map((like) => like.commentId));
+  }
+
   const data: CommentItem[] = [];
   for (const c of rawComments) {
     data.push(
-      await mapCommentToItem(c, currentUid, showLocation, maxAbsoluteDepth),
+      await mapCommentToItem(
+        c,
+        currentUid,
+        showLocation,
+        maxAbsoluteDepth,
+        likedCommentIds.has(c.id),
+      ),
     );
   }
 
@@ -677,7 +763,15 @@ export async function createComment(
   }
 
   const showLocation = await getConfig<boolean>("comment.locate.enable", false);
-  const mapped = await mapCommentToItem(fullRecord, currentUid, showLocation);
+
+  // 新创建的评论，当前用户肯定没有点赞
+  const mapped = await mapCommentToItem(
+    fullRecord,
+    currentUid,
+    showLocation,
+    undefined,
+    false,
+  );
 
   return response.created({ data: mapped as unknown as CommentItem });
 }
@@ -819,12 +913,28 @@ export async function getCommentsAdmin(
     hasNext: page * pageSize < total,
   });
 
+  // 批量查询点赞状态
+  let likedCommentIds: Set<string> = new Set();
+  if (rows.length > 0) {
+    const commentIds = rows.map((r) => r.id);
+    const likes = await prisma.commentLike.findMany({
+      where: {
+        commentId: { in: commentIds },
+        userId: authUser.uid,
+      },
+      select: { commentId: true },
+    });
+    likedCommentIds = new Set(likes.map((like) => like.commentId));
+  }
+
   const data = await Promise.all(
     rows.map(async (row) => {
       const mapped = await mapCommentToItem(
         row as AdminComment,
         authUser.uid,
         true,
+        undefined,
+        likedCommentIds.has(row.id),
       );
       return {
         ...mapped,
@@ -1051,5 +1161,185 @@ export async function getCommentStats(
   } catch (error) {
     console.error("GetCommentStats error:", error);
     return response.serverError();
+  }
+}
+
+// 点赞评论
+export async function likeComment(
+  params: LikeComment,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<LikeCommentResponse["data"] | null>>>;
+export async function likeComment(
+  params: LikeComment,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<LikeCommentResponse["data"] | null>>;
+export async function likeComment(
+  params: LikeComment,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<LikeCommentResponse["data"] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "likeComment"))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(params, LikeCommentSchema);
+  if (validationError) return response.badRequest(validationError);
+
+  // 必须登录
+  const authUser = await authVerify({ allowedRoles: COMMENT_ROLES });
+  if (!authUser) {
+    return response.unauthorized({ message: "请登录后再点赞" });
+  }
+
+  const { commentId } = params;
+
+  // 检查评论是否存在
+  const comment = await prisma.comment.findUnique({
+    where: { id: commentId, deletedAt: null },
+    select: { id: true },
+  });
+
+  if (!comment) {
+    return response.notFound({ message: "评论不存在" });
+  }
+
+  try {
+    // 使用事务确保原子性
+    const result = await prisma.$transaction(async (tx) => {
+      // 检查是否已点赞
+      const existingLike = await tx.commentLike.findUnique({
+        where: {
+          commentId_userId: {
+            commentId,
+            userId: authUser.uid,
+          },
+        },
+      });
+
+      if (existingLike) {
+        // 已点赞，返回当前状态
+        const comment = await tx.comment.findUnique({
+          where: { id: commentId },
+          select: { likeCount: true },
+        });
+        return {
+          likeCount: comment?.likeCount ?? 0,
+          isLiked: true,
+        };
+      }
+
+      // 创建点赞记录并更新点赞数
+      await tx.commentLike.create({
+        data: {
+          commentId,
+          userId: authUser.uid,
+        },
+      });
+
+      const updatedComment = await tx.comment.update({
+        where: { id: commentId },
+        data: { likeCount: { increment: 1 } },
+        select: { likeCount: true },
+      });
+
+      return {
+        likeCount: updatedComment.likeCount,
+        isLiked: true,
+      };
+    });
+
+    return response.ok({ data: result });
+  } catch (error) {
+    console.error("LikeComment error:", error);
+    return response.serverError({ message: "点赞失败，请稍后重试" });
+  }
+}
+
+// 取消点赞评论
+export async function unlikeComment(
+  params: UnlikeComment,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<UnlikeCommentResponse["data"] | null>>>;
+export async function unlikeComment(
+  params: UnlikeComment,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<UnlikeCommentResponse["data"] | null>>;
+export async function unlikeComment(
+  params: UnlikeComment,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<UnlikeCommentResponse["data"] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "unlikeComment"))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(params, UnlikeCommentSchema);
+  if (validationError) return response.badRequest(validationError);
+
+  // 必须登录
+  const authUser = await authVerify({ allowedRoles: COMMENT_ROLES });
+  if (!authUser) {
+    return response.unauthorized({ message: "请登录后再操作" });
+  }
+
+  const { commentId } = params;
+
+  try {
+    // 使用事务确保原子性
+    const result = await prisma.$transaction(async (tx) => {
+      // 检查是否已点赞
+      const existingLike = await tx.commentLike.findUnique({
+        where: {
+          commentId_userId: {
+            commentId,
+            userId: authUser.uid,
+          },
+        },
+      });
+
+      if (!existingLike) {
+        // 未点赞，返回当前状态
+        const comment = await tx.comment.findUnique({
+          where: { id: commentId },
+          select: { likeCount: true },
+        });
+        return {
+          likeCount: comment?.likeCount ?? 0,
+          isLiked: false,
+        };
+      }
+
+      // 删除点赞记录并更新点赞数
+      await tx.commentLike.delete({
+        where: {
+          commentId_userId: {
+            commentId,
+            userId: authUser.uid,
+          },
+        },
+      });
+
+      const updatedComment = await tx.comment.update({
+        where: { id: commentId },
+        data: { likeCount: { decrement: 1 } },
+        select: { likeCount: true },
+      });
+
+      return {
+        likeCount: updatedComment.likeCount,
+        isLiked: false,
+      };
+    });
+
+    return response.ok({ data: result });
+  } catch (error) {
+    console.error("UnlikeComment error:", error);
+    return response.serverError({ message: "取消点赞失败，请稍后重试" });
   }
 }

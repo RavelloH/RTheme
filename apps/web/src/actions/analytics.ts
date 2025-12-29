@@ -44,7 +44,7 @@ type ActionResult<T extends ApiResponseData> =
   | ApiResponse<T>;
 
 const REDIS_QUEUE_KEY = "np:analytics:event";
-const BATCH_SIZE = 50;
+const BATCH_SIZE = 500; // 同步至数据库的分块大小
 const MAX_RETRIES = 2;
 
 /**

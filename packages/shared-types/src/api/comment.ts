@@ -54,6 +54,9 @@ export const CommentItemSchema = z.object({
   sortKey: z.string().default(""),
   hasMore: z.boolean().default(false), // 是否有未加载的深层子评论
   descendantCount: z.number().int().nonnegative().default(0), // 当前已加载的后代评论数量
+  // 点赞相关
+  likeCount: z.number().int().nonnegative().default(0),
+  isLiked: z.boolean().optional(), // 当前用户是否已点赞（仅登录用户）
 });
 
 export type CommentItem = z.infer<typeof CommentItemSchema>;
@@ -248,3 +251,39 @@ export type CommentHistoryResponse = z.infer<
   typeof CommentHistoryResponseSchema
 >;
 registerSchema("CommentHistoryResponse", CommentHistoryResponseSchema);
+
+// 点赞评论
+export const LikeCommentSchema = z.object({
+  commentId: z.string().uuid(),
+});
+
+export type LikeComment = z.infer<typeof LikeCommentSchema>;
+registerSchema("LikeComment", LikeCommentSchema);
+
+export const LikeCommentResponseSchema = createSuccessResponseSchema(
+  z.object({
+    likeCount: z.number().int().nonnegative(),
+    isLiked: z.boolean(),
+  }),
+);
+
+export type LikeCommentResponse = z.infer<typeof LikeCommentResponseSchema>;
+registerSchema("LikeCommentResponse", LikeCommentResponseSchema);
+
+// 取消点赞
+export const UnlikeCommentSchema = z.object({
+  commentId: z.string().uuid(),
+});
+
+export type UnlikeComment = z.infer<typeof UnlikeCommentSchema>;
+registerSchema("UnlikeComment", UnlikeCommentSchema);
+
+export const UnlikeCommentResponseSchema = createSuccessResponseSchema(
+  z.object({
+    likeCount: z.number().int().nonnegative(),
+    isLiked: z.boolean(),
+  }),
+);
+
+export type UnlikeCommentResponse = z.infer<typeof UnlikeCommentResponseSchema>;
+registerSchema("UnlikeCommentResponse", UnlikeCommentResponseSchema);

@@ -13712,6 +13712,15 @@
                   "type": "integer",
                   "minimum": 0,
                   "maximum": 9007199254740991
+                },
+                "likeCount": {
+                  "default": 0,
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "isLiked": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -13729,7 +13738,8 @@
                 "path",
                 "sortKey",
                 "hasMore",
-                "descendantCount"
+                "descendantCount",
+                "likeCount"
               ],
               "additionalProperties": false
             }
@@ -14007,6 +14017,15 @@
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 9007199254740991
+              },
+              "likeCount": {
+                "default": 0,
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "isLiked": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -14024,7 +14043,8 @@
               "path",
               "sortKey",
               "hasMore",
-              "descendantCount"
+              "descendantCount",
+              "likeCount"
             ],
             "additionalProperties": false
           }
@@ -14210,6 +14230,15 @@
                   "type": "integer",
                   "minimum": 0,
                   "maximum": 9007199254740991
+                },
+                "likeCount": {
+                  "default": 0,
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "isLiked": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -14227,7 +14256,8 @@
                 "path",
                 "sortKey",
                 "hasMore",
-                "descendantCount"
+                "descendantCount",
+                "likeCount"
               ],
               "additionalProperties": false
             }
@@ -14545,6 +14575,15 @@
                   "minimum": 0,
                   "maximum": 9007199254740991
                 },
+                "likeCount": {
+                  "default": 0,
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "isLiked": {
+                  "type": "boolean"
+                },
                 "email": {
                   "nullable": true,
                   "type": "string"
@@ -14574,6 +14613,7 @@
                 "sortKey",
                 "hasMore",
                 "descendantCount",
+                "likeCount",
                 "email",
                 "ipAddress",
                 "userAgent"
@@ -14849,6 +14889,130 @@
               ],
               "additionalProperties": false
             }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "LikeComment": {
+        "type": "object",
+        "properties": {
+          "commentId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": [
+          "commentId"
+        ],
+        "additionalProperties": false
+      },
+      "LikeCommentResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "likeCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "isLiked": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "likeCount",
+              "isLiked"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "UnlikeComment": {
+        "type": "object",
+        "properties": {
+          "commentId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": [
+          "commentId"
+        ],
+        "additionalProperties": false
+      },
+      "UnlikeCommentResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "likeCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "isLiked": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "likeCount",
+              "isLiked"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
