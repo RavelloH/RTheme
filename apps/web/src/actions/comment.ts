@@ -298,7 +298,7 @@ export async function getPostComments(
     ...(cursor ? { sortKey: { gt: cursor } } : {}),
   };
 
-  const [rootComments, showLocation] = await Promise.all([
+  const [rootComments, showLocation, totalComments] = await Promise.all([
     prisma.comment.findMany({
       where: rootWhere,
       orderBy: { sortKey: "asc" },
@@ -306,6 +306,16 @@ export async function getPostComments(
       select: commentSelect,
     }),
     getConfig<boolean>("comment.locate.enable", false),
+    prisma.comment.count({
+      where: {
+        postId: post.id,
+        deletedAt: null,
+        OR: [
+          { status: "APPROVED" },
+          ...(currentUid ? [{ userUid: currentUid }] : []),
+        ],
+      },
+    }),
   ]);
 
   const hasNext = rootComments.length > pageSize;
@@ -317,7 +327,7 @@ export async function getPostComments(
       meta: {
         page: 1,
         pageSize,
-        total: 0,
+        total: totalComments,
         totalPages: 0,
         hasNext: false,
         hasPrev: false,
@@ -452,7 +462,7 @@ export async function getPostComments(
   const meta = {
     page: cursor ? 2 : 1,
     pageSize,
-    total: data.length,
+    total: totalComments,
     totalPages: hasNext ? 2 : 1,
     hasNext,
     hasPrev: !!cursor,

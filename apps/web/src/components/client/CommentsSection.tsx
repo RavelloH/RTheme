@@ -551,6 +551,7 @@ export default function CommentsSection({
   const [loading, setLoading] = useState(false);
   const [hasNext, setHasNext] = useState(false);
   const [cursor, setCursor] = useState<string | undefined>();
+  const [totalComments, setTotalComments] = useState(0); // 真实的评论总数
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [childPaginationMap, setChildPaginationMap] = useState<
     Map<string, ChildPaginationState>
@@ -576,7 +577,7 @@ export default function CommentsSection({
   // 懒加载
   const [commentsLoaded, setCommentsLoaded] = useState(false);
   const commentsContainerRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadTriggerIndexRef = useRef<number>(0);
 
@@ -677,6 +678,7 @@ export default function CommentsSection({
           );
           setHasNext(response.meta?.hasNext ?? false);
           setCursor((response.meta as { nextCursor?: string })?.nextCursor);
+          setTotalComments(response.meta?.total ?? 0); // 设置真实的评论总数
         } else {
           toastError("加载评论失败", response?.message || "");
         }
@@ -910,6 +912,10 @@ export default function CommentsSection({
     setReplyTarget(comment);
     setTimeout(() => {
       inputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      // 等待滚动动画完成后再聚焦
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 1000);
     }, 100);
   }, []);
 
@@ -1220,8 +1226,8 @@ export default function CommentsSection({
       >
         评论
         <AutoTransition>
-          <span key={comments.length} className="text-lg text-muted-foreground">
-            {comments.length > 0 && `(${comments.length})`}
+          <span key={totalComments} className="text-lg text-muted-foreground">
+            {totalComments > 0 && `(${totalComments})`}
           </span>
         </AutoTransition>
       </h2>
@@ -1289,8 +1295,9 @@ export default function CommentsSection({
             )}
           </div>
         )}
-        <div ref={inputRef}>
+        <div>
           <Input
+            ref={inputRef}
             label=""
             rows={4}
             size="sm"
