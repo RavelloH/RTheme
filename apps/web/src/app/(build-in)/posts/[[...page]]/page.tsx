@@ -24,6 +24,7 @@ import {
   batchQueryMediaFiles,
   processImageUrl,
 } from "@/lib/shared/image-utils";
+import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
 
 // 获取系统页面配置
 const pageConfig = await getRawPage("/posts");
@@ -508,6 +509,7 @@ export default async function PostsPage({
           </RowGrid>
         )}
       </HorizontalScroll>
+      <ViewCountBatchLoader />
     </MainLayout>
   );
 }

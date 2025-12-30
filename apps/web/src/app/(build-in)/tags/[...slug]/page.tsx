@@ -25,6 +25,7 @@ import {
   batchQueryMediaFiles,
   processImageUrl,
 } from "@/lib/shared/image-utils";
+import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
 
 // 缓存函数：获取标签的基本信息
 const getTagBasicInfo = cache(async (slug: string) => {
@@ -505,6 +506,7 @@ export default async function TagSlugPage({ params }: TagSlugPageProps) {
           </RowGrid>
         )}
       </HorizontalScroll>
+      <ViewCountBatchLoader />
     </MainLayout>
   );
 }

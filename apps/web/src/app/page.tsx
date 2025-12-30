@@ -25,6 +25,7 @@ import {
   processImageUrl,
 } from "@/lib/shared/image-utils";
 import prisma from "@/lib/server/prisma";
+import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
 
 // 获取系统页面配置
 const page = await getRawPage("/");
@@ -1068,6 +1069,7 @@ export default async function Home() {
               )}
             </RowGrid>
           )}
+          <ViewCountBatchLoader />
         </HorizontalScroll>
       </MainLayout>
     </>

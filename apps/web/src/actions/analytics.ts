@@ -1,5 +1,7 @@
 "use server";
 
+import { readFileSync } from "fs";
+import { join } from "path";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { UAParser } from "ua-parser-js";
@@ -44,8 +46,18 @@ type ActionResult<T extends ApiResponseData> =
   | ApiResponse<T>;
 
 const REDIS_QUEUE_KEY = "np:analytics:event";
+const REDIS_VIEW_COUNT_KEY = "np:view_count:all";
 const BATCH_SIZE = 500; // 同步至数据库的分块大小
 const MAX_RETRIES = 2;
+
+/**
+ * Lua 脚本：原子操作写入队列和更新计数器
+ * 从独立文件加载
+ */
+const TRACK_PAGE_VIEW_SCRIPT = readFileSync(
+  join(process.cwd(), "src/lib/server/lua-scripts/track-page-view.lua"),
+  "utf-8",
+);
 
 /**
  * 处理和规范化 referer
@@ -115,6 +127,49 @@ async function withRetry<T>(
 }
 
 /**
+ * 从 Redis Hash 同步访问量到数据库
+ */
+async function syncViewCountsToDatabase() {
+  try {
+    // 1. 获取 Redis 中的所有访问量
+    const allCounts = await withRetry(() =>
+      redis.hgetall(REDIS_VIEW_COUNT_KEY),
+    );
+
+    if (!allCounts || Object.keys(allCounts).length === 0) {
+      return;
+    }
+
+    // 2. 批量 upsert 到数据库（直接覆盖，以 Redis 为准）
+    const operations = Object.entries(allCounts).map(([path, count]) => {
+      const countNum = parseInt(count, 10);
+      const postMatch = path.match(/^\/posts\/([^/]+)$/);
+      const postSlug = postMatch ? postMatch[1] : null;
+
+      return prisma.viewCountCache.upsert({
+        where: { path },
+        create: {
+          path,
+          cachedCount: countNum,
+          postSlug,
+        },
+        update: {
+          cachedCount: countNum, // 直接覆盖为 Redis 的值
+          ...(postSlug && { postSlug }),
+        },
+      });
+    });
+
+    await Promise.all(operations);
+
+    console.log(`成功同步 ${operations.length} 条访问量到数据库`);
+  } catch (error) {
+    console.error("同步访问量到数据库失败:", error);
+    // 不抛出错误，避免影响主流程
+  }
+}
+
+/**
  * 批量写入 PageView 数据到数据库
  */
 export async function flushEventsToDatabase() {
@@ -149,31 +204,8 @@ export async function flushEventsToDatabase() {
       skipDuplicates: true,
     });
 
-    // 更新 ViewCountCache
-    const pathCounts = new Map<string, number>();
-    for (const view of pageViews) {
-      const count = pathCounts.get(view.path) || 0;
-      pathCounts.set(view.path, count + 1);
-    }
-
-    for (const [path, count] of pathCounts.entries()) {
-      // 检查是否是文章路径 /posts/[slug]
-      const postMatch = path.match(/^\/posts\/([^/]+)$/);
-      const postSlug = postMatch ? postMatch[1] : null;
-
-      await prisma.viewCountCache.upsert({
-        where: { path },
-        create: {
-          path,
-          cachedCount: count,
-          postSlug,
-        },
-        update: {
-          cachedCount: { increment: count },
-          ...(postSlug && { postSlug }),
-        },
-      });
-    }
+    // 从 Redis Hash 同步访问量到 ViewCountCache
+    await syncViewCountsToDatabase();
 
     // 执行归档操作
     await archivePageViews();
@@ -619,14 +651,19 @@ export async function trackPageView(
       visitorId,
     };
 
-    // 写入 Redis 队列
-    await withRetry(() =>
-      redis.rpush(REDIS_QUEUE_KEY, JSON.stringify(pageViewData)),
-    );
+    // 使用 Lua 脚本原子操作：写入队列 + 更新计数器
+    const queueLength = (await withRetry(() =>
+      redis.eval(
+        TRACK_PAGE_VIEW_SCRIPT,
+        2, // KEYS 数量
+        REDIS_QUEUE_KEY, // KEYS[1]
+        REDIS_VIEW_COUNT_KEY, // KEYS[2]
+        JSON.stringify(pageViewData), // ARGV[1]
+        path, // ARGV[2]
+      ),
+    )) as number;
 
     // 检查队列长度，是否需要批量写入数据库
-    const queueLength = await withRetry(() => redis.llen(REDIS_QUEUE_KEY));
-
     if (queueLength >= BATCH_SIZE) {
       // 异步执行批量写入，不阻塞响应
       flushEventsToDatabase().catch((error) => {
@@ -1588,5 +1625,33 @@ export async function getRealTimeStats(
   } catch (error) {
     console.error("获取实时访问统计失败:", error);
     return response.serverError() as unknown as GetRealTimeStatsResponse;
+  }
+}
+
+/**
+ * 批量获取页面访问量（纯 Redis，无需认证）
+ */
+export async function batchGetViewCounts(
+  paths: string[],
+): Promise<Array<{ path: string; count: number }>> {
+  try {
+    // 参数验证：最多 20 个路径
+    if (!Array.isArray(paths) || paths.length === 0 || paths.length > 20) {
+      throw new Error("路径列表必须包含 1-20 个元素");
+    }
+
+    // 从 Redis Hash 批量获取
+    const counts = await redis.hmget(REDIS_VIEW_COUNT_KEY, ...paths);
+
+    // 构建返回结果
+    const result = paths.map((path, index) => ({
+      path,
+      count: parseInt(counts[index] || "0", 10),
+    }));
+
+    return result;
+  } catch (error) {
+    console.error("批量获取访问量失败:", error);
+    throw error;
   }
 }

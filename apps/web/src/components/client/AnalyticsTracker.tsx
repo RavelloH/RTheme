@@ -5,6 +5,98 @@ import { usePathname } from "next/navigation";
 import { trackPageView } from "@/actions/analytics";
 
 const VISITOR_ID_KEY = "visitor_id";
+const CACHE_KEY = "viewcount_cache";
+
+/**
+ * 缓存项接口
+ */
+interface CacheItem {
+  viewcount: number;
+  cachedAt: number;
+}
+
+/**
+ * 缓存数据结构
+ */
+interface CacheData {
+  [slug: string]: CacheItem;
+}
+
+/**
+ * 更新访问量缓存，立即 +1
+ * 只对已存在的缓存进行更新，避免覆盖真实的历史数据
+ */
+function incrementViewCountCache(pathname: string): void {
+  // 只处理文章路径
+  const match = pathname.match(/^\/posts\/([^/]+)$/);
+  if (!match) return;
+
+  const slug = match[1];
+  if (!slug) return;
+
+  try {
+    // 读取现有缓存
+    const cached = localStorage.getItem(CACHE_KEY);
+    const cacheData: CacheData = cached ? JSON.parse(cached) : {};
+
+    // 只更新已存在的缓存项（说明已经从 API 加载过真实数据）
+    if (cacheData[slug]) {
+      // 已存在，访问量 +1
+      cacheData[slug].viewcount += 1;
+      cacheData[slug].cachedAt = Date.now();
+
+      // 写回 localStorage
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+
+      // 立即更新页面显示
+      updateViewCountDisplay(slug, cacheData[slug].viewcount);
+    }
+    // 如果缓存不存在，不做任何操作，等待 ViewCountBatchLoader 从 API 加载真实数据
+  } catch (error) {
+    console.debug("更新访问量缓存失败:", error);
+  }
+}
+
+/**
+ * 立即更新页面上的访问量显示
+ */
+function updateViewCountDisplay(slug: string, count: number): void {
+  try {
+    const elements = document.querySelectorAll<HTMLElement>(
+      `[data-viewcount-slug="${slug}"]`,
+    );
+
+    elements.forEach((element) => {
+      const formattedCount = count.toLocaleString("zh-CN");
+
+      // 查找内部的 span 元素并更新内容
+      const countSpan = element.querySelector("span:last-child");
+      if (countSpan) {
+        countSpan.textContent = formattedCount;
+      }
+
+      // 移除 opacity-0 类，使其可见
+      element.classList.remove("opacity-0");
+
+      // 添加淡入动画
+      element.style.transition = "opacity 0.3s ease-in-out";
+      element.style.opacity = "1";
+    });
+
+    // 同时显示分隔符
+    const separators = document.querySelectorAll<HTMLElement>(
+      "[data-viewcount-separator]",
+    );
+
+    separators.forEach((element) => {
+      element.classList.remove("opacity-0");
+      element.style.transition = "opacity 0.3s ease-in-out";
+      element.style.opacity = "1";
+    });
+  } catch (error) {
+    console.debug("更新访问量显示失败:", error);
+  }
+}
 
 /**
  * 生成访客 ID
@@ -89,7 +181,10 @@ export function AnalyticsTracker() {
     const referer =
       typeof document !== "undefined" ? document.referrer || null : null;
 
-    // 调用 server action 追踪访问
+    // 先立即更新本地缓存（用户立即看到访问量增加）
+    incrementViewCountCache(pathname);
+
+    // 然后调用 server action 追踪访问（后台记录）
     trackPageView({
       path: pathname,
       referer,

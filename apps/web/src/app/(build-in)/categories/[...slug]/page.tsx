@@ -27,6 +27,7 @@ import {
   batchQueryMediaFiles,
   processImageUrl,
 } from "@/lib/shared/image-utils";
+import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
 
 // 缓存函数：获取所有分类的完整数据
 const getCategoriesWithFullData = cache(async () => {
@@ -865,6 +866,7 @@ export default async function CategorySlugPage({
           </RowGrid>
         )}
       </HorizontalScroll>
+      <ViewCountBatchLoader />
     </MainLayout>
   );
 }

@@ -60,6 +60,13 @@ try {
   await generatePageCache();
   rlog.log();
 
+  rlog.log("Starting view count cache generation...");
+  const { default: generateViewCountCache } = await import(
+    "./generate-view-count-cache.js"
+  );
+  await generateViewCountCache();
+  rlog.log();
+
   // 完成 PreBuild
   const endTime = Date.now();
   rlog.success("✓ NeutralPress initialization completed successfully!");

@@ -1,4 +1,5 @@
 import {
+  RiEye2Line,
   RiFolder2Line,
   RiPriceTagLine,
   RiPushpin2Fill,
@@ -123,7 +124,7 @@ export default function PostCard({
                       <Link
                         href={`/categories/${cat.slug}`}
                         className="hover:text-primary transition-colors text-white"
-                        data-fade-word
+                        data-fade
                       >
                         {cat.name}
                       </Link>
@@ -133,29 +134,54 @@ export default function PostCard({
                 </span>
               </span>
             )}
-            {/* 在分类后面显示的标签（hover时出现，移动版不显示） */}
-            {summary && tags?.length !== 0 && (
-              <span
-                className="items-center gap-1 opacity-0 transition-all duration-300 group-hover:opacity-100 ml-3
-                transform translate-y-2 group-hover:translate-y-0
-                [transform-style:preserve-3d] group-hover:[transform:perspective(1000px)_translateY(0)_rotateX(0deg)]
-                [transform:perspective(1000px)_translateY(8px)_rotateX(15deg)]
-                hidden md:inline-flex"
-              >
-                <RiPriceTagLine size={"1em"} />
-                {tags?.map((tag, index) => (
-                  <span key={tag.slug}>
-                    <Link
-                      href={`/tags/${tag.slug}`}
-                      className="hover:text-primary transition-colors text-white"
+            {/* 访问量与标签的hover切换（桌面版） */}
+            <span className="relative ml-3 hidden md:inline-block" data-fade>
+              {summary && tags?.length !== 0 ? (
+                <>
+                  {/* 访问量（默认显示，hover时消失） */}
+                  <span className="inline-flex items-center gap-1 absolute left-0 top-0 transition-all duration-300 group-hover:opacity-0 group-hover:-translate-y-2">
+                    <span
+                      className="flex items-center gap-1 opacity-0 transition-all"
+                      data-viewcount-slug={slug}
                     >
-                      #{tag.name}
-                    </Link>
-                    {index < tags.length - 1 && " "}
+                      <RiEye2Line size={"1em"} />
+                      <span>---</span>
+                    </span>
                   </span>
-                ))}
-              </span>
-            )}
+                  {/* 标签（hover时出现） */}
+                  <span
+                    className="inline-flex items-center gap-1 opacity-0 transition-all duration-300 group-hover:opacity-100
+                    transform translate-y-2 group-hover:translate-y-0
+                    [transform-style:preserve-3d] group-hover:[transform:perspective(1000px)_translateY(0)_rotateX(0deg)]
+                    [transform:perspective(1000px)_translateY(8px)_rotateX(15deg)]"
+                  >
+                    <RiPriceTagLine size={"1em"} />
+                    {tags?.map((tag, index) => (
+                      <span key={tag.slug}>
+                        <Link
+                          href={`/tags/${tag.slug}`}
+                          className="hover:text-primary transition-colors text-white"
+                        >
+                          #{tag.name}
+                        </Link>
+                        {index < tags.length - 1 && " "}
+                      </span>
+                    ))}
+                  </span>
+                </>
+              ) : (
+                /* 没有标签时，常态显示访问量 */
+                <span className="inline-flex items-center gap-1" data-fade>
+                  <span
+                    className="flex items-center gap-1 opacity-0 transition-all"
+                    data-viewcount-slug={slug}
+                  >
+                    <RiEye2Line size={"1em"} />
+                    <span>---</span>
+                  </span>
+                </span>
+              )}
+            </span>
           </div>
           {/* 移动版：标签和摘要同时显示 */}
           <div className="md:hidden">

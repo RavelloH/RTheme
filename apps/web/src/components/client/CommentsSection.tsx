@@ -614,20 +614,6 @@ export default function CommentsSection({
     }
   });
 
-  // 监听滚动进度，在 70% 时加载评论
-  useBroadcast((message: { type: string; progress?: number }) => {
-    if (
-      message?.type === "scroll-progress" &&
-      !commentsLoaded &&
-      typeof message.progress === "number"
-    ) {
-      if (message.progress >= 70) {
-        setCommentsLoaded(true);
-        loadComments();
-      }
-    }
-  });
-
   // 保存匿名用户信息
   const saveAnonymousInfo = useCallback(() => {
     if (isAnonymous) {
@@ -679,6 +665,14 @@ export default function CommentsSection({
           setHasNext(response.meta?.hasNext ?? false);
           setCursor((response.meta as { nextCursor?: string })?.nextCursor);
           setTotalComments(response.meta?.total ?? 0); // 设置真实的评论总数
+
+          // 广播评论数（仅在首次加载时）
+          if (!cursorParam) {
+            broadcast({
+              type: "comment-count",
+              count: response.meta?.total ?? 0,
+            });
+          }
         } else {
           toastError("加载评论失败", response?.message || "");
         }
@@ -693,8 +687,16 @@ export default function CommentsSection({
         setLoading(false);
       }
     },
-    [slug, toastError],
+    [slug, toastError, broadcast],
   );
+
+  // 立即加载评论
+  useEffect(() => {
+    if (!commentsLoaded) {
+      setCommentsLoaded(true);
+      loadComments();
+    }
+  }, [commentsLoaded, loadComments]);
 
   // 加载直接子评论
   const loadDirectChildren = useCallback(

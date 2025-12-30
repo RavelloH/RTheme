@@ -3,7 +3,6 @@ import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
 import {
   RiHashtag,
   RiListView,
-  RiMessageLine,
   RiText,
   RiUserLine,
   RiCalendarLine,
@@ -36,6 +35,8 @@ import React from "react";
 import CommentsSection from "@/components/client/CommentsSection";
 import { ToastProvider } from "@/ui/Toast";
 import AdjacentPostCard from "@/components/AdjacentPostCard";
+import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
+import CommentCount from "@/components/client/CommentCount";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -164,6 +165,9 @@ export default async function PostPage({ params }: PageProps) {
 
   return (
     <MainLayout type="vertical" nopadding>
+      {/* 批量加载访问量 */}
+      <ViewCountBatchLoader />
+
       <ImageLightbox />
       <div className="h-full w-full">
         {/* 文章头部信息 */}
@@ -206,16 +210,19 @@ export default async function PostPage({ params }: PageProps) {
             <RiText size={"1em"} />
             <span>{post.content.length}字</span>
           </span>
-          <span>/</span>
-          <span className="flex items-center gap-1">
-            <RiEye2Line size={"1em"} />
-            <span>{post._count.comments}</span>
-          </span>
-          <span>/</span>
-          <span className="flex items-center gap-1">
-            <RiMessageLine size={"1em"} />
-            <span>{post._count.comments}</span>
-          </span>
+          <>
+            <span className="opacity-0 transition-all" data-viewcount-separator>
+              /
+            </span>
+            <span
+              className="flex items-center gap-1 opacity-0 transition-all"
+              data-viewcount-slug={slug}
+            >
+              <RiEye2Line size={"1em"} />
+              <span>---</span>
+            </span>
+          </>
+          <CommentCount />
         </div>
 
         {/* 文章标题和元信息 - 封面图作为背景，上方留空显示封面 */}
