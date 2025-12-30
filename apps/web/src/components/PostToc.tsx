@@ -14,6 +14,7 @@ import Clickable from "@/ui/Clickable";
 import { Tooltip } from "@/ui/Tooltip";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
+import { useBroadcastSender } from "@/hooks/use-broadcast";
 
 interface TocItem {
   id: string;
@@ -70,6 +71,12 @@ export default function PostToc({
 
   // 视口内容相关状态
   const [viewportItems, setViewportItems] = useState<ViewportContentItem[]>([]);
+
+  // 广播滚动进度
+  const { broadcast } = useBroadcastSender<{
+    type: string;
+    progress: number;
+  }>();
 
   // 将 em 单位转换为像素值
   const emToPx = (em: number): number => {
@@ -303,7 +310,7 @@ export default function PostToc({
           // 如果有滚动容器
           const scrollTop = scrollContainer.scrollTop;
           const viewportTop = scrollTop;
-          const viewportBottom = scrollTop + scrollContainer.clientHeight;
+          const _viewportBottom = scrollTop + scrollContainer.clientHeight;
 
           if (viewportTop >= contentBottom) {
             // 已经滚动超过文章内容
@@ -325,7 +332,7 @@ export default function PostToc({
           const scrollTop =
             window.scrollY || document.documentElement.scrollTop;
           const viewportTop = scrollTop;
-          const viewportBottom = scrollTop + window.innerHeight;
+          const _viewportBottom = scrollTop + window.innerHeight;
 
           if (viewportTop >= contentBottom) {
             // 已经滚动超过文章内容
@@ -346,6 +353,12 @@ export default function PostToc({
       }
 
       setScrollProgress(Math.min(100, Math.max(0, progress)));
+
+      // 广播滚动进度
+      broadcast({
+        type: "scroll-progress",
+        progress: Math.min(100, Math.max(0, progress)),
+      });
 
       // 更新活动标题 - 使用 id 直接匹配，因为标题元素现在有了正确的 id
       const headings = document.querySelectorAll(
@@ -381,7 +394,14 @@ export default function PostToc({
       clearTimeout(initialCheckTimer);
       scrollTarget.removeEventListener("scroll", handleScroll as EventListener);
     };
-  }, [findScrollContainer, isMobile, tocItems, scanViewportContent]); // 添加 tocItems 作为依赖，因为需要访问目录项数据
+  }, [
+    findScrollContainer,
+    isMobile,
+    tocItems,
+    scanViewportContent,
+    broadcast,
+    contentSelector,
+  ]);
 
   // 更新高亮指示器位置
   useEffect(() => {
