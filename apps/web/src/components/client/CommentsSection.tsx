@@ -10,7 +10,7 @@ import React, {
 import { motion, AnimatePresence } from "framer-motion";
 import {
   createComment,
-  getCommentReplies,
+  getDirectChildren,
   getPostComments,
   likeComment,
   unlikeComment,
@@ -88,6 +88,14 @@ interface LocalPendingComment {
   replyToAuthorName?: string;
 }
 
+/** 子评论分页状态 */
+interface ChildPaginationState {
+  cursor?: string;
+  hasNext: boolean;
+  loading: boolean;
+  expanded: boolean;
+}
+
 // ============ 常量 ============
 
 const ANONYMOUS_USER_KEY = "anonymous_comment_user";
@@ -145,13 +153,12 @@ interface SingleCommentProps {
   comment: CommentItem;
   onReply: (comment: CommentItem) => void;
   onToggleCollapse: (commentId: string) => void;
-  onExpandDeep: (commentId: string) => void;
+  onExpandChildren: (commentId: string) => void;
   onHighlight: (commentId: string | null) => void;
   onToggleLike: (commentId: string, currentIsLiked: boolean) => void;
   onDelete: (comment: CommentItem) => void;
+  childPaginationState?: ChildPaginationState;
   isCollapsed: boolean;
-  isLoadingDeep: boolean;
-  isExpandedDeep: boolean;
   isHighlighted: boolean;
   isInHoverPath: boolean;
   isCurrentHovered: boolean;
@@ -164,13 +171,12 @@ function SingleComment({
   comment,
   onReply,
   onToggleCollapse,
-  onExpandDeep,
+  onExpandChildren,
   onHighlight,
   onToggleLike,
   onDelete,
+  childPaginationState,
   isCollapsed,
-  isLoadingDeep,
-  isExpandedDeep,
   isHighlighted,
   isInHoverPath,
   isCurrentHovered,
@@ -187,17 +193,22 @@ function SingleComment({
 
   const indent = comment.depth * 24;
 
-  // 使用服务端返回的后代数量
+  // 使用服务端返回的所有后代评论数量
   const descendantCount = comment.descendantCount ?? 0;
 
-  const hasChildren = descendantCount > 0;
+  // 是否有子评论（使用 replyCount 或 hasMore 标记）
+  const hasChildren =
+    descendantCount > 0 || comment.replyCount > 0 || comment.hasMore;
   const parentId = getParentId(comment);
   const levelColor = levelColors[comment.depth % levelColors.length];
 
-  // 显示的回复数量
-  const displayReplyCount = descendantCount;
-  // 是否需要加载更多（有 hasMore 标记且尚未展开）
-  const needsLoadMore = comment.hasMore && !isExpandedDeep;
+  // 显示的回复数量（使用所有后代评论数）
+  const displayReplyCount = descendantCount || comment.replyCount || 0;
+
+  // 是否需要首次展开（有子评论但尚未展开加载）
+  const needsFirstExpand = hasChildren && !childPaginationState?.expanded;
+  // 是否正在加载
+  const isLoading = childPaginationState?.loading ?? false;
 
   // 高亮父评论
   const highlightParent = () => {
@@ -331,24 +342,31 @@ function SingleComment({
                 </span>
               )}
               {/* 折叠/展开按钮 - 移到信息行 */}
-              {(hasChildren || comment.hasMore) && (
+              {hasChildren && (
                 <>
                   <span className="text-muted-foreground/30">·</span>
-                  {needsLoadMore ? (
-                    // 需要加载更多回复（有 hasMore 但还没加载）
+                  {needsFirstExpand ? (
+                    // 需要首次展开（有子评论但还没加载过）
                     <Clickable
-                      onClick={() => onExpandDeep(comment.id)}
+                      onClick={() => onExpandChildren(comment.id)}
                       hoverScale={1}
+                      disabled={isLoading}
                       className="flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      <motion.div
-                        animate={{ rotate: 0 }}
-                        transition={{ duration: 0.2, ease: "easeInOut" }}
-                      >
-                        <RiArrowRightSLine size={14} />
-                      </motion.div>
+                      {isLoading ? (
+                        <LoadingIndicator size="sm" />
+                      ) : (
+                        <motion.div
+                          animate={{ rotate: 0 }}
+                          transition={{ duration: 0.2, ease: "easeInOut" }}
+                        >
+                          <RiArrowRightSLine size={14} />
+                        </motion.div>
+                      )}
                       <AutoTransition>
-                        展开 {displayReplyCount} 条回复
+                        {isLoading
+                          ? "加载中..."
+                          : `展开 ${displayReplyCount} 条回复`}
                       </AutoTransition>
                     </Clickable>
                   ) : (
@@ -451,23 +469,57 @@ function SingleComment({
           </div>
         </div>
       </div>
-      {/* 加载指示器 */}
+    </div>
+  );
+}
+
+// ============ 子评论加载更多按钮组件 ============
+
+interface LoadMoreChildrenButtonProps {
+  parentId: string;
+  loading: boolean;
+  depth: number;
+  remainingCount: number;
+  onLoadMore: (parentId: string) => void;
+}
+
+function LoadMoreChildrenButton({
+  parentId,
+  loading,
+  depth,
+  remainingCount,
+  onLoadMore,
+}: LoadMoreChildrenButtonProps) {
+  const indent = (depth + 1) * 24;
+
+  return (
+    <div className="py-2" style={{ paddingLeft: indent }}>
       <AutoResizer duration={0.3}>
-        <div>
-          <AutoTransition type="fade" duration={0.2} initial={false}>
-            {isLoadingDeep ? (
-              <div
-                key="loading"
-                className="flex items-center gap-2 py-4 text-sm text-muted-foreground w-full h-24 justify-center"
-                style={{ paddingLeft: (comment.depth + 1) * 24 }}
+        <AutoTransition type="fade" duration={0.2}>
+          {loading ? (
+            <div
+              key="loading"
+              className="flex items-center gap-2 py-4 text-sm text-muted-foreground w-full h-24 justify-center"
+            >
+              <LoadingIndicator />
+            </div>
+          ) : (
+            <Clickable
+              key="button"
+              onClick={() => onLoadMore(parentId)}
+              hoverScale={1}
+              className="flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
+            >
+              <motion.div
+                animate={{ rotate: 0 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
               >
-                <LoadingIndicator />
-              </div>
-            ) : (
-              <div key="empty" style={{ height: 0 }} />
-            )}
-          </AutoTransition>
-        </div>
+                <RiArrowRightSLine size={14} />
+              </motion.div>
+              <span>展开剩余 {remainingCount} 条回复</span>
+            </Clickable>
+          )}
+        </AutoTransition>
       </AutoResizer>
     </div>
   );
@@ -489,12 +541,12 @@ export default function CommentsSection({
 
   // 折叠状态
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
-  // 正在加载深层回复的评论 ID
-  const [loadingDeepIds, setLoadingDeepIds] = useState<Set<string>>(new Set());
-  // 已展开深层回复的评论 ID
-  const [expandedDeepIds, setExpandedDeepIds] = useState<Set<string>>(
-    new Set(),
-  );
+
+  // 子评论分页状态 Map: parentId -> ChildPaginationState
+  // parentId = "root" 表示主级评论
+  const [childPaginationMap, setChildPaginationMap] = useState<
+    Map<string, ChildPaginationState>
+  >(new Map());
 
   // 高亮状态
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
@@ -528,7 +580,7 @@ export default function CommentsSection({
   // 懒加载
   const [commentsLoaded, setCommentsLoaded] = useState(false);
   const commentsContainerRef = useRef<HTMLDivElement | null>(null);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const loadingIndicatorRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLDivElement | null>(null);
 
   const { success: toastSuccess, error: toastError } = useToast();
@@ -660,7 +712,7 @@ export default function CommentsSection({
     }
   });
 
-  // 加载评论
+  // 加载评论（主级评论）
   const loadComments = useCallback(
     async (cursorParam?: string) => {
       setLoading(true);
@@ -669,7 +721,7 @@ export default function CommentsSection({
         const result = await getPostComments({
           slug,
           pageSize: 10,
-          maxDepth: 3,
+          maxDepth: 1, // 只加载主级评论，不预加载子评论
           cursor: cursorParam,
         });
         const response = await resolveApiResponse(result);
@@ -699,69 +751,118 @@ export default function CommentsSection({
     [slug, comments, toastError],
   );
 
-  // 加载深层回复
-  const loadDeepReplies = useCallback(
-    async (commentId: string) => {
-      if (loadingDeepIds.has(commentId) || expandedDeepIds.has(commentId)) {
+  // 加载直接子评论（分页）
+  const loadDirectChildren = useCallback(
+    async (parentId: string, cursorParam?: string) => {
+      const currentState = childPaginationMap.get(parentId);
+
+      // 如果正在加载，跳过
+      if (currentState?.loading) {
         return;
       }
 
-      setLoadingDeepIds((prev) => new Set(prev).add(commentId));
-      const startTime = Date.now();
+      // 更新加载状态
+      setChildPaginationMap((prev) => {
+        const next = new Map(prev);
+        next.set(parentId, {
+          ...currentState,
+          cursor: currentState?.cursor,
+          hasNext: currentState?.hasNext ?? false,
+          loading: true,
+          expanded: true,
+        });
+        return next;
+      });
+
       try {
-        const result = await getCommentReplies({
-          commentId,
-          maxDepth: 3,
+        const result = await getDirectChildren({
+          parentId,
+          postSlug: slug,
+          pageSize: 10,
+          cursor: cursorParam,
         });
         const response = await resolveApiResponse(result);
+
         if (response?.success && Array.isArray(response.data)) {
           const incoming = response.data as CommentItem[];
+          const meta = response.meta as
+            | { nextCursor?: string; hasNext?: boolean }
+            | undefined;
 
-          // 确保加载指示器至少显示 0.5 秒
-          const elapsed = Date.now() - startTime;
-          const remaining = Math.max(0, 500 - elapsed);
-          await new Promise((resolve) => setTimeout(resolve, remaining));
-
-          // 先移除加载状态，让加载指示器开始消失动画
-          setLoadingDeepIds((prev) => {
-            const next = new Set(prev);
-            next.delete(commentId);
-            return next;
-          });
-
-          // 延迟一小段时间，让加载指示器的 opacity 消失动画完成
-          await new Promise((resolve) => setTimeout(resolve, 150));
-
-          // 然后添加新评论
+          // 合并评论
           setComments((prev) => mergeBySortKey(prev, incoming));
 
-          // 将当前评论和所有加载的子评论都标记为已展开
-          setExpandedDeepIds((prev) => {
-            const next = new Set(prev);
-            next.add(commentId);
-            // 将所有加载的评论也标记为已展开（因为它们的子评论也一并加载了）
-            incoming.forEach((c) => next.add(c.id));
+          // 更新分页状态：设置父评论和所有预加载的子评论为已展开
+          setChildPaginationMap((prev) => {
+            const next = new Map(prev);
+
+            // 1. 设置被点击的父评论为已展开
+            next.set(parentId, {
+              cursor: meta?.nextCursor,
+              hasNext: meta?.hasNext ?? false,
+              loading: false,
+              expanded: true,
+            });
+
+            // 2. 初始化所有预加载的子评论的展开状态
+            // 后端预加载了 3 层，需要将它们都标记为已展开
+            incoming.forEach((comment) => {
+              // 如果这个评论有子评论，且还没有展开状态，初始化为已展开
+              if (
+                (comment.replyCount > 0 || comment.hasMore) &&
+                !next.has(comment.id)
+              ) {
+                // 检查是否有已加载的直接子评论
+                const directChildren = incoming.filter(
+                  (c) => c.parentId === comment.id,
+                );
+                const hasLoadedChildren = directChildren.length > 0;
+
+                if (hasLoadedChildren) {
+                  // 如果有预加载的子评论，标记为已展开
+                  const hasMoreChildren =
+                    directChildren.length < (comment.replyCount ?? 0);
+                  const lastChild = directChildren.sort((a, b) =>
+                    b.sortKey.localeCompare(a.sortKey),
+                  )[0];
+
+                  next.set(comment.id, {
+                    expanded: true, // 预加载的评论标记为已展开
+                    loading: false,
+                    hasNext: hasMoreChildren,
+                    cursor: lastChild?.sortKey,
+                  });
+                }
+              }
+            });
+
             return next;
           });
         } else {
           toastError("加载回复失败", response?.message || "");
-          setLoadingDeepIds((prev) => {
-            const next = new Set(prev);
-            next.delete(commentId);
+          setChildPaginationMap((prev) => {
+            const next = new Map(prev);
+            const state = next.get(parentId);
+            if (state) {
+              next.set(parentId, { ...state, loading: false });
+            }
             return next;
           });
         }
       } catch (error) {
         console.error("加载回复失败", error);
         toastError("加载回复失败", "请稍后重试");
-        setLoadingDeepIds((prev) => {
-          const next = new Set(prev);
-          next.delete(commentId);
+        setChildPaginationMap((prev) => {
+          const next = new Map(prev);
+          const state = next.get(parentId);
+          if (state) {
+            next.set(parentId, { ...state, loading: false });
+          }
           return next;
         });
       }
     },
-    [loadingDeepIds, expandedDeepIds, toastError],
+    [slug, childPaginationMap, toastError],
   );
 
   // 评论区进入视口时加载
@@ -784,21 +885,76 @@ export default function CommentsSection({
     return () => observer.disconnect();
   }, [commentsLoaded, loadComments]);
 
-  // 滚动加载更多
+  // 主评论滚动加载更多
   useEffect(() => {
-    if (!sentinelRef.current || !hasNext || loading) return;
+    if (!hasNext || !loadingIndicatorRef.current) return;
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting && hasNext && !loading) {
-          loadComments(cursor);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && hasNext && !loading) {
+            loadComments(cursor);
+          }
+        });
+      },
+      {
+        root: null,
+        rootMargin: "0px 0px 600px 0px", // 提前600px开始加载
+        threshold: 0,
+      },
+    );
+
+    observer.observe(loadingIndicatorRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [cursor, hasNext, loading, loadComments]);
+
+  // 初始化预加载评论的展开状态
+  // 首次加载和自动加载都会预加载 3 层评论，需要将它们标记为已展开
+  useEffect(() => {
+    if (comments.length === 0) return;
+
+    setChildPaginationMap((prev) => {
+      const next = new Map(prev);
+
+      // 找出所有有子评论且子评论已被预加载的评论
+      comments.forEach((parent) => {
+        // 跳过已经有展开状态的评论
+        if (next.has(parent.id)) {
+          return;
+        }
+
+        // 检查这个评论是否有子评论
+        if ((parent.replyCount ?? 0) > 0 || parent.hasMore) {
+          // 检查是否有已加载的直接子评论
+          const directChildren = comments.filter(
+            (c) => c.parentId === parent.id,
+          );
+
+          if (directChildren.length > 0) {
+            // 有预加载的子评论，标记为已展开
+            const hasMoreChildren =
+              directChildren.length < (parent.replyCount ?? 0);
+            // 获取最后一个子评论的 sortKey 作为 cursor
+            const lastChild = directChildren.sort((a, b) =>
+              b.sortKey.localeCompare(a.sortKey),
+            )[0];
+
+            next.set(parent.id, {
+              expanded: true, // 服务端已预加载，标记为已展开
+              loading: false,
+              hasNext: hasMoreChildren,
+              cursor: lastChild?.sortKey,
+            });
+          }
         }
       });
-    });
 
-    observer.observe(sentinelRef.current);
-    return () => observer.disconnect();
-  }, [cursor, hasNext, loading, loadComments]);
+      return next;
+    });
+  }, [comments]);
 
   // 切换折叠状态
   const handleToggleCollapse = useCallback((commentId: string) => {
@@ -848,7 +1004,7 @@ export default function CommentsSection({
     setCursor(undefined);
     setHasNext(false);
     setCollapsedIds(new Set());
-    setExpandedDeepIds(new Set());
+    setChildPaginationMap(new Map());
     loadComments();
   }, [commentsLoaded, loadComments]);
 
@@ -1073,10 +1229,21 @@ export default function CommentsSection({
             pathIds.forEach((id) => next.delete(id));
             return next;
           });
-          // 将父评论标记为已展开深层回复，确保新评论可见
-          setExpandedDeepIds((prev) => {
-            const next = new Set(prev);
-            pathIds.forEach((id) => next.add(id));
+          // 将父评论标记为已展开，确保新评论可见
+          setChildPaginationMap((prev) => {
+            const next = new Map(prev);
+            pathIds.forEach((id) => {
+              const existing = next.get(id);
+              if (existing) {
+                next.set(id, { ...existing, expanded: true });
+              } else {
+                next.set(id, {
+                  hasNext: false,
+                  loading: false,
+                  expanded: true,
+                });
+              }
+            });
             return next;
           });
         }
@@ -1185,10 +1352,33 @@ export default function CommentsSection({
   }, [comments, localPendingComments, removeLocalPendingComment]);
 
   // 过滤掉被折叠隐藏的评论，并合并本地待审核评论
+  // 显示已展开的子评论及其预加载的后代评论
   const visibleComments = useMemo(() => {
-    const serverComments = comments.filter(
-      (c) => !isHiddenByCollapse(c, collapsedIds, commentsMap),
-    );
+    // 先过滤服务器评论
+    const filteredServerComments = comments.filter((c) => {
+      // 1. 检查是否被父评论折叠
+      if (isHiddenByCollapse(c, collapsedIds, commentsMap)) {
+        return false;
+      }
+
+      // 2. 检查评论的所有祖先是否都已展开
+      // 获取评论的所有祖先 ID（从 path 中解析）
+      const ancestorIds = c.path.split("/").slice(0, -1); // 去掉自己
+
+      // 如果有祖先评论
+      if (ancestorIds.length > 0) {
+        // 检查每个祖先是否已展开
+        for (const ancestorId of ancestorIds) {
+          const ancestorState = childPaginationMap.get(ancestorId);
+          // 如果祖先未展开，则不显示这个评论
+          if (!ancestorState?.expanded) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    });
 
     // 过滤掉已经在服务器评论中存在的本地评论（避免重复显示）
     const filteredLocalComments = localCommentsAsItems.filter((local) => {
@@ -1209,8 +1399,31 @@ export default function CommentsSection({
     });
 
     // 合并本地评论（放在最后）
-    return [...serverComments, ...filteredLocalComments];
-  }, [comments, collapsedIds, commentsMap, localCommentsAsItems]);
+    return [...filteredServerComments, ...filteredLocalComments];
+  }, [
+    comments,
+    collapsedIds,
+    commentsMap,
+    localCommentsAsItems,
+    childPaginationMap,
+  ]);
+
+  // 计算每个父评论的最后一个直接子评论 ID
+  // 用于确定 Sentinel 的放置位置
+  const lastDirectChildMap = useMemo(() => {
+    const map = new Map<string, string>(); // parentId -> lastChildId
+
+    // 遍历可见评论，找出每个父评论的最后一个直接子评论
+    visibleComments.forEach((c) => {
+      if (c.parentId) {
+        // 这个评论是某个父评论的子评论
+        // 由于评论按 sortKey 排序，后面的会覆盖前面的，所以最后设置的就是最后一个
+        map.set(c.parentId, c.id);
+      }
+    });
+
+    return map;
+  }, [visibleComments]);
 
   // 判断评论是否在 hover 路径中
   const isInHoverPath = useCallback(
@@ -1434,7 +1647,7 @@ export default function CommentsSection({
       </div>
 
       {/* 评论列表 */}
-      <div>
+      <AutoResizer>
         <AutoTransition type="fade" duration={0.2} initial={false}>
           {!commentsLoaded ? (
             <div
@@ -1446,70 +1659,135 @@ export default function CommentsSection({
           ) : (
             <div key="loaded">
               <AnimatePresence initial={false}>
-                {visibleComments.map((comment) => (
-                  <motion.div
-                    key={comment.id}
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{
-                      height: "auto",
-                      opacity: 1,
-                      transition: {
-                        height: { duration: 0.3, ease: "easeInOut" },
-                        opacity: { duration: 0.2, delay: 0.1 },
-                      },
-                    }}
-                    exit={{
-                      height: 0,
-                      opacity: 0,
-                      transition: {
-                        height: {
-                          duration: 0.3,
-                          ease: "easeInOut",
-                          delay: 0.1,
-                        },
-                        opacity: { duration: 0.2 },
-                      },
-                    }}
-                    style={{ overflow: "hidden" }}
-                    onMouseEnter={() => handleMouseEnter(comment)}
-                    onMouseLeave={handleMouseLeave}
-                  >
-                    <SingleComment
-                      comment={comment}
-                      onReply={handleReply}
-                      onToggleCollapse={handleToggleCollapse}
-                      onExpandDeep={loadDeepReplies}
-                      onHighlight={handleHighlight}
-                      onToggleLike={handleToggleLike}
-                      onDelete={handleDeleteClick}
-                      isCollapsed={collapsedIds.has(comment.id)}
-                      isLoadingDeep={loadingDeepIds.has(comment.id)}
-                      isExpandedDeep={expandedDeepIds.has(comment.id)}
-                      isHighlighted={highlightedId === comment.id}
-                      isInHoverPath={isInHoverPath(comment)}
-                      isCurrentHovered={isCurrentHovered(comment)}
-                      isDirectParent={isDirectParent(comment)}
-                      authorUid={authorUid}
-                      navigate={navigate}
-                    />
-                  </motion.div>
-                ))}
+                {visibleComments.map((comment) => {
+                  const childState = childPaginationMap.get(comment.id);
+
+                  // 检查这个评论是否是某个父评论的最后一个直接子评论
+                  // 如果是，需要在它后面放置父评论的 Sentinel
+                  const parentId = comment.parentId;
+                  const isLastDirectChild =
+                    parentId && lastDirectChildMap.get(parentId) === comment.id;
+
+                  // 获取父评论的分页状态
+                  const parentState = parentId
+                    ? childPaginationMap.get(parentId)
+                    : null;
+                  const parentComment = parentId
+                    ? commentsMap.get(parentId)
+                    : null;
+
+                  // 判断是否需要在这个评论后面显示父评论的 Sentinel（加载更多场景）
+                  const showParentSentinel =
+                    isLastDirectChild &&
+                    parentState?.expanded &&
+                    parentState.hasNext &&
+                    !collapsedIds.has(parentId);
+
+                  return (
+                    <React.Fragment key={comment.id}>
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{
+                          height: "auto",
+                          opacity: 1,
+                          transition: {
+                            height: { duration: 0.3, ease: "easeInOut" },
+                            opacity: { duration: 0.2, delay: 0.1 },
+                          },
+                        }}
+                        exit={{
+                          height: 0,
+                          opacity: 0,
+                          transition: {
+                            height: {
+                              duration: 0.3,
+                              ease: "easeInOut",
+                              delay: 0.1,
+                            },
+                            opacity: { duration: 0.2 },
+                          },
+                        }}
+                        style={{ overflow: "hidden" }}
+                        onMouseEnter={() => handleMouseEnter(comment)}
+                        onMouseLeave={handleMouseLeave}
+                      >
+                        <SingleComment
+                          comment={comment}
+                          onReply={handleReply}
+                          onToggleCollapse={handleToggleCollapse}
+                          onExpandChildren={loadDirectChildren}
+                          onHighlight={handleHighlight}
+                          onToggleLike={handleToggleLike}
+                          onDelete={handleDeleteClick}
+                          childPaginationState={childState}
+                          isCollapsed={collapsedIds.has(comment.id)}
+                          isHighlighted={highlightedId === comment.id}
+                          isInHoverPath={isInHoverPath(comment)}
+                          isCurrentHovered={isCurrentHovered(comment)}
+                          isDirectParent={isDirectParent(comment)}
+                          authorUid={authorUid}
+                          navigate={navigate}
+                        />
+                      </motion.div>
+                      {/* 父评论的子评论加载更多按钮（放在最后一个直接子评论之后） */}
+                      <AutoResizer duration={0.3}>
+                        <AutoTransition type="fade" duration={0.2}>
+                          {showParentSentinel && parentComment && (
+                            <LoadMoreChildrenButton
+                              key={`parent-loadmore-${parentId}`}
+                              parentId={parentId}
+                              loading={parentState?.loading ?? false}
+                              depth={parentComment.depth}
+                              remainingCount={
+                                (parentComment.replyCount || 0) -
+                                visibleComments.filter(
+                                  (c) => c.parentId === parentId,
+                                ).length
+                              }
+                              onLoadMore={(pid) =>
+                                loadDirectChildren(pid, parentState?.cursor)
+                              }
+                            />
+                          )}
+                        </AutoTransition>
+                      </AutoResizer>
+                    </React.Fragment>
+                  );
+                })}
               </AnimatePresence>
-              {loading && (
-                <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground w-full h-24 justify-center">
-                  <LoadingIndicator />
+              {/* 主评论加载指示器 */}
+              {hasNext && (
+                <div ref={loadingIndicatorRef}>
+                  <AutoResizer duration={0.3}>
+                    <AutoTransition type="fade" duration={0.2}>
+                      {loading ? (
+                        <div
+                          key="loading"
+                          className="flex items-center gap-2 py-4 text-sm text-muted-foreground w-full h-24 justify-center"
+                        >
+                          <LoadingIndicator />
+                        </div>
+                      ) : (
+                        <div key="idle" className="h-4" />
+                      )}
+                    </AutoTransition>
+                  </AutoResizer>
                 </div>
               )}
-              <div ref={sentinelRef} />
-              {!loading && comments.length === 0 && (
-                <div className="text-muted-foreground text-sm py-8 text-center">
-                  暂无评论
-                </div>
-              )}
+              <AutoTransition type="fade" duration={0.3}>
+                {!loading && comments.length === 0 && (
+                  <div
+                    key="empty"
+                    className="text-muted-foreground text-sm py-8 text-center"
+                  >
+                    暂无评论
+                  </div>
+                )}
+              </AutoTransition>
             </div>
           )}
         </AutoTransition>
-      </div>
+      </AutoResizer>
 
       {/* 删除确认对话框 */}
       <AlertDialog

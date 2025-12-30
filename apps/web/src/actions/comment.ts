@@ -13,6 +13,9 @@ import {
   GetCommentContextSchema,
   GetCommentReplies,
   GetCommentRepliesSchema,
+  GetDirectChildren,
+  GetDirectChildrenSchema,
+  DirectChildrenResponse,
   UpdateCommentStatus,
   UpdateCommentStatusSchema,
   DeleteComments,
@@ -174,11 +177,14 @@ async function mapCommentToItem(
     ? calculateMD5(comment.authorEmail)
     : null;
 
-  // 判断是否有未加载的深层子评论
+  // 判断是否有未加载的子评论
+  // maxDepth = 0 表示不预加载任何子评论，只要有子评论就标记为 hasMore
+  // maxDepth = 1 表示只加载当前层级，有子评论就标记为 hasMore
+  // maxDepth > 1 时，按原逻辑判断深层子评论
   const hasMore =
     maxDepth !== undefined &&
     comment.replyCount > 0 &&
-    comment.depth >= maxDepth - 1;
+    (maxDepth <= 1 || comment.depth >= maxDepth - 1);
 
   // 从数据库查询此评论的所有后代数量（使用 path 前缀匹配）
   const descendantCount = await prisma.comment.count({
@@ -262,7 +268,7 @@ export async function getPostComments(
   const validationError = validateData(params, GetPostCommentsSchema);
   if (validationError) return response.badRequest(validationError);
 
-  const { slug, pageSize, maxDepth, cursor } = params;
+  const { slug, pageSize, cursor } = params;
 
   const commentEnabled = await getConfig<boolean>("comment.enable", true);
   if (!commentEnabled) {
@@ -280,7 +286,7 @@ export async function getPostComments(
   const authUser = await authVerify({ allowedRoles: COMMENT_ROLES });
   const currentUid = authUser?.uid ?? null;
 
-  // 1. 首先获取顶级评论（分页）
+  // 只获取顶级评论（分页），不再自动加载子评论
   const rootWhere: Prisma.CommentWhereInput = {
     postId: post.id,
     deletedAt: null,
@@ -319,46 +325,85 @@ export async function getPostComments(
     });
   }
 
-  // 2. 获取这些顶级评论下 depth < maxDepth 的所有子评论
+  // 预加载子评论：每个主评论最多5条一级子评论，每个一级子评论最多5条二级子评论
+  const PRELOAD_LIMIT = 5;
   const rootIds = slicedRoots.map((c) => c.id);
-  const pathPatterns = rootIds.map((id) => `${id}%`);
 
-  // 构建 OR 条件查询所有子评论
-  const childrenWhere: Prisma.CommentWhereInput = {
-    postId: post.id,
-    deletedAt: null,
-    depth: { gt: 0, lt: maxDepth }, // depth 1 到 maxDepth-1
-    OR: [
-      { status: "APPROVED" },
-      ...(currentUid ? [{ userUid: currentUid }] : []),
-    ],
-    AND: [
-      {
-        OR: pathPatterns.map((pattern) => ({
-          path: { startsWith: pattern.replace("%", "") },
-        })),
-      },
-    ],
-  };
-
-  const childComments = await prisma.comment.findMany({
-    where: childrenWhere,
+  // 获取一级子评论（parentId 在 rootIds 中）
+  const level1Comments = await prisma.comment.findMany({
+    where: {
+      parentId: { in: rootIds },
+      deletedAt: null,
+      OR: [
+        { status: "APPROVED" },
+        ...(currentUid ? [{ userUid: currentUid }] : []),
+      ],
+    },
     orderBy: { sortKey: "asc" },
     select: commentSelect,
   });
 
-  // 3. 合并并按 sortKey 排序
-  const allComments = [...slicedRoots, ...childComments].sort((a, b) =>
-    a.sortKey.localeCompare(b.sortKey),
-  );
+  // 按父评论分组，每个父评论最多取5条
+  const level1ByParent = new Map<string, PublicComment[]>();
+  for (const c of level1Comments) {
+    if (!c.parentId) continue;
+    const list = level1ByParent.get(c.parentId) || [];
+    if (list.length < PRELOAD_LIMIT) {
+      list.push(c);
+      level1ByParent.set(c.parentId, list);
+    }
+  }
 
-  // 4. 如果用户已登录，批量查询点赞状态
+  // 获取需要预加载二级子评论的一级评论ID
+  const level1Ids: string[] = [];
+  for (const list of level1ByParent.values()) {
+    for (const c of list) {
+      level1Ids.push(c.id);
+    }
+  }
+
+  // 获取二级子评论（parentId 在 level1Ids 中）
+  const level2Comments =
+    level1Ids.length > 0
+      ? await prisma.comment.findMany({
+          where: {
+            parentId: { in: level1Ids },
+            deletedAt: null,
+            OR: [
+              { status: "APPROVED" },
+              ...(currentUid ? [{ userUid: currentUid }] : []),
+            ],
+          },
+          orderBy: { sortKey: "asc" },
+          select: commentSelect,
+        })
+      : [];
+
+  // 按父评论分组，每个父评论最多取5条
+  const level2ByParent = new Map<string, PublicComment[]>();
+  for (const c of level2Comments) {
+    if (!c.parentId) continue;
+    const list = level2ByParent.get(c.parentId) || [];
+    if (list.length < PRELOAD_LIMIT) {
+      list.push(c);
+      level2ByParent.set(c.parentId, list);
+    }
+  }
+
+  // 收集所有评论ID用于批量查询点赞状态
+  const allCommentIds: string[] = [...rootIds, ...level1Ids];
+  for (const list of level2ByParent.values()) {
+    for (const c of list) {
+      allCommentIds.push(c.id);
+    }
+  }
+
+  // 如果用户已登录，批量查询点赞状态
   let likedCommentIds: Set<string> = new Set();
-  if (currentUid) {
-    const commentIds = allComments.map((c) => c.id);
+  if (currentUid && allCommentIds.length > 0) {
     const likes = await prisma.commentLike.findMany({
       where: {
-        commentId: { in: commentIds },
+        commentId: { in: allCommentIds },
         userId: currentUid,
       },
       select: { commentId: true },
@@ -366,21 +411,41 @@ export async function getPostComments(
     likedCommentIds = new Set(likes.map((like) => like.commentId));
   }
 
-  // 5. 转换为响应格式
+  // 转换为响应格式
+  // 构建扁平化的评论列表，按 sortKey 排序
+  const allCommentsToProcess: PublicComment[] = [];
+
+  // 添加主评论及其预加载的子评论
+  for (const root of slicedRoots) {
+    allCommentsToProcess.push(root);
+    const level1List = level1ByParent.get(root.id) || [];
+    for (const l1 of level1List) {
+      allCommentsToProcess.push(l1);
+      const level2List = level2ByParent.get(l1.id) || [];
+      for (const l2 of level2List) {
+        allCommentsToProcess.push(l2);
+      }
+    }
+  }
+
+  // 按 sortKey 排序确保正确的显示顺序
+  allCommentsToProcess.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+
   const data: CommentItem[] = [];
-  for (const c of allComments) {
+  for (const c of allCommentsToProcess) {
+    // maxDepth = 3 表示预加载到第三层（depth 0, 1, 2），更深的标记为 hasMore
     data.push(
       await mapCommentToItem(
         c,
         currentUid,
         showLocation,
-        maxDepth,
+        3, // 预加载三层评论
         likedCommentIds.has(c.id),
       ),
     );
   }
 
-  // 6. 计算分页元数据
+  // 计算分页元数据
   const lastRoot = slicedRoots[slicedRoots.length - 1];
   const nextCursor = hasNext ? lastRoot?.sortKey : undefined;
 
@@ -582,6 +647,242 @@ export async function getCommentReplies(
 
   return response.ok({
     data: data as unknown as CommentListResponse["data"],
+    meta,
+  });
+}
+
+// 获取直接子评论（分页，并预加载下三层）
+export async function getDirectChildren(
+  params: GetDirectChildren,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<DirectChildrenResponse["data"] | null>>>;
+export async function getDirectChildren(
+  params: GetDirectChildren,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<DirectChildrenResponse["data"] | null>>;
+export async function getDirectChildren(
+  params: GetDirectChildren,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<DirectChildrenResponse["data"] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "getDirectChildren"))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(params, GetDirectChildrenSchema);
+  if (validationError) return response.badRequest(validationError);
+
+  const { parentId, postSlug, pageSize, cursor } = params;
+
+  const commentEnabled = await getConfig<boolean>("comment.enable", true);
+  if (!commentEnabled) {
+    return response.forbidden({ message: "评论功能已关闭" });
+  }
+
+  const post = await loadPostId(postSlug);
+  if (!post) {
+    return response.notFound({ message: "文章不存在或未发布" });
+  }
+  if (!post.allowComments) {
+    return response.forbidden({ message: "该文章未开启评论" });
+  }
+
+  const authUser = await authVerify({ allowedRoles: COMMENT_ROLES });
+  const currentUid = authUser?.uid ?? null;
+
+  // 获取父评论信息（如果有）
+  let parentDepth = -1; // -1 表示查询主级评论
+  if (parentId) {
+    const parent = await prisma.comment.findUnique({
+      where: { id: parentId, deletedAt: null },
+      select: { depth: true },
+    });
+    if (!parent) {
+      return response.notFound({ message: "父评论不存在" });
+    }
+    parentDepth = parent.depth;
+  }
+
+  // 构建查询条件：只查询直接子评论（depth = parentDepth + 1）
+  const where: Prisma.CommentWhereInput = {
+    postId: post.id,
+    deletedAt: null,
+    parentId: parentId, // null 表示主级评论
+    depth: parentDepth + 1,
+    OR: [
+      { status: "APPROVED" },
+      ...(currentUid ? [{ userUid: currentUid }] : []),
+    ],
+    ...(cursor ? { sortKey: { gt: cursor } } : {}),
+  };
+
+  const [rawComments, showLocation] = await Promise.all([
+    prisma.comment.findMany({
+      where,
+      orderBy: { sortKey: "asc" },
+      take: pageSize + 1,
+      select: commentSelect,
+    }),
+    getConfig<boolean>("comment.locate.enable", false),
+  ]);
+
+  const hasNext = rawComments.length > pageSize;
+  const slicedComments = rawComments.slice(0, pageSize);
+
+  if (slicedComments.length === 0) {
+    return response.ok({
+      data: [] as unknown as DirectChildrenResponse["data"],
+      meta: {
+        page: 1,
+        pageSize,
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: !!cursor,
+      },
+    });
+  }
+
+  // ========== 预加载下三层子评论（与 getPostComments 相同的逻辑） ==========
+  const PRELOAD_LIMIT = 5;
+  const level0Ids = slicedComments.map((c) => c.id); // 第一层（直接子评论）
+
+  // 获取第二层子评论（parentId 在 level0Ids 中）
+  const level1Comments = await prisma.comment.findMany({
+    where: {
+      parentId: { in: level0Ids },
+      deletedAt: null,
+      OR: [
+        { status: "APPROVED" },
+        ...(currentUid ? [{ userUid: currentUid }] : []),
+      ],
+    },
+    orderBy: { sortKey: "asc" },
+    select: commentSelect,
+  });
+
+  // 按父评论分组，每个父评论最多取 5 条
+  const level1ByParent = new Map<string, PublicComment[]>();
+  for (const c of level1Comments) {
+    if (!c.parentId) continue;
+    const list = level1ByParent.get(c.parentId) || [];
+    if (list.length < PRELOAD_LIMIT) {
+      list.push(c);
+      level1ByParent.set(c.parentId, list);
+    }
+  }
+
+  // 获取需要预加载第三层子评论的第二层评论 ID
+  const level1Ids: string[] = [];
+  for (const list of level1ByParent.values()) {
+    for (const c of list) {
+      level1Ids.push(c.id);
+    }
+  }
+
+  // 获取第三层子评论（parentId 在 level1Ids 中）
+  const level2Comments =
+    level1Ids.length > 0
+      ? await prisma.comment.findMany({
+          where: {
+            parentId: { in: level1Ids },
+            deletedAt: null,
+            OR: [
+              { status: "APPROVED" },
+              ...(currentUid ? [{ userUid: currentUid }] : []),
+            ],
+          },
+          orderBy: { sortKey: "asc" },
+          select: commentSelect,
+        })
+      : [];
+
+  // 按父评论分组，每个父评论最多取 5 条
+  const level2ByParent = new Map<string, PublicComment[]>();
+  for (const c of level2Comments) {
+    if (!c.parentId) continue;
+    const list = level2ByParent.get(c.parentId) || [];
+    if (list.length < PRELOAD_LIMIT) {
+      list.push(c);
+      level2ByParent.set(c.parentId, list);
+    }
+  }
+
+  // 收集所有评论 ID 用于批量查询点赞状态
+  const allCommentIds: string[] = [...level0Ids, ...level1Ids];
+  for (const list of level2ByParent.values()) {
+    for (const c of list) {
+      allCommentIds.push(c.id);
+    }
+  }
+
+  // 如果用户已登录，批量查询点赞状态
+  let likedCommentIds: Set<string> = new Set();
+  if (currentUid && allCommentIds.length > 0) {
+    const likes = await prisma.commentLike.findMany({
+      where: {
+        commentId: { in: allCommentIds },
+        userId: currentUid,
+      },
+      select: { commentId: true },
+    });
+    likedCommentIds = new Set(likes.map((like) => like.commentId));
+  }
+
+  // 构建扁平化的评论列表，按 sortKey 排序
+  const allCommentsToProcess: PublicComment[] = [];
+
+  // 添加第一层评论及其预加载的子评论
+  for (const level0 of slicedComments) {
+    allCommentsToProcess.push(level0);
+    const level1List = level1ByParent.get(level0.id) || [];
+    for (const l1 of level1List) {
+      allCommentsToProcess.push(l1);
+      const level2List = level2ByParent.get(l1.id) || [];
+      for (const l2 of level2List) {
+        allCommentsToProcess.push(l2);
+      }
+    }
+  }
+
+  // 按 sortKey 排序确保正确的显示顺序
+  allCommentsToProcess.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+
+  // 转换为响应格式
+  const data: CommentItem[] = [];
+  // 计算 maxDepth：基于父评论的 depth + 3 层
+  const maxAbsoluteDepth = parentDepth + 4; // parentDepth + 1 (第一层) + 3 (预加载三层)
+  for (const c of allCommentsToProcess) {
+    data.push(
+      await mapCommentToItem(
+        c,
+        currentUid,
+        showLocation,
+        maxAbsoluteDepth, // 预加载三层评论
+        likedCommentIds.has(c.id),
+      ),
+    );
+  }
+
+  // 计算分页元数据
+  const lastComment = slicedComments[slicedComments.length - 1];
+  const nextCursor = hasNext ? lastComment?.sortKey : undefined;
+
+  const meta = {
+    page: cursor ? 2 : 1,
+    pageSize,
+    total: data.length,
+    totalPages: hasNext ? 2 : 1,
+    hasNext,
+    hasPrev: !!cursor,
+    nextCursor,
+  };
+
+  return response.ok({
+    data: data as unknown as DirectChildrenResponse["data"],
     meta,
   });
 }

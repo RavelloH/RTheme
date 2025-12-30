@@ -131,6 +131,26 @@ export const GetCommentRepliesSchema = z.object({
 export type GetCommentReplies = z.infer<typeof GetCommentRepliesSchema>;
 registerSchema("GetCommentReplies", GetCommentRepliesSchema);
 
+// 获取直接子评论（分页）
+export const GetDirectChildrenSchema = z.object({
+  parentId: z.string().uuid().nullable(), // null 表示获取主级评论
+  postSlug: z.string().min(1, "slug 不能为空"), // 用于验证权限和获取 postId
+  pageSize: z.number().int().min(1).max(50).default(10),
+  cursor: z.string().optional(), // 基于 sortKey 的游标
+});
+
+export type GetDirectChildren = z.infer<typeof GetDirectChildrenSchema>;
+registerSchema("GetDirectChildren", GetDirectChildrenSchema);
+
+export const DirectChildrenResponseSchema = createPaginatedResponseSchema(
+  z.array(CommentItemSchema),
+);
+
+export type DirectChildrenResponse = z.infer<
+  typeof DirectChildrenResponseSchema
+>;
+registerSchema("DirectChildrenResponse", DirectChildrenResponseSchema);
+
 export const UpdateCommentStatusSchema = z.object({
   access_token: z.string().optional(),
   ids: z.array(z.string().uuid()).min(1),
