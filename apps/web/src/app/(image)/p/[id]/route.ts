@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import fs from "node:fs/promises";
+import path from "node:path";
 
 import {
   parseImageId,
@@ -8,6 +10,7 @@ import {
 import { getMediaByShortHash } from "@/lib/server/image-resolver";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
+import prisma from "@/lib/server/prisma";
 
 export const runtime = "nodejs";
 const res = new ResponseBuilder("serverless");
@@ -89,9 +92,70 @@ export async function GET(
 
   // 5. 判断请求来源，决定返回方式
   if (isNextImageOptimizer(request)) {
-    // Next.js 图片优化器：直接代理图片内容
+    // Next.js 图片优化器：直接返回图片内容
     try {
-      const response = await fetch(media.storageUrl, {
+      // 查询完整的媒体信息（包含存储提供商）
+      const fullMedia = await prisma.media.findUnique({
+        where: { shortHash },
+        include: { StorageProvider: true },
+      });
+
+      if (!fullMedia) {
+        return res.notFound({
+          message: "图片不存在",
+          error: { code: "IMAGE_NOT_FOUND", message: "未找到对应的图片" },
+        }) as Response;
+      }
+
+      // 如果是本地存储，直接从文件系统读取
+      if (fullMedia.StorageProvider.type === "LOCAL") {
+        const config = fullMedia.StorageProvider.config as {
+          rootDir: string;
+          createDirIfNotExists?: boolean;
+          fileMode?: string | number;
+          dirMode?: string | number;
+        };
+
+        const baseUrl = fullMedia.StorageProvider.baseUrl;
+
+        // 从 storageUrl 中提取相对路径（key）
+        const trimmedBase = baseUrl.replace(/\/+$/, "");
+        let key = fullMedia.storageUrl;
+        if (fullMedia.storageUrl.startsWith(trimmedBase)) {
+          key = fullMedia.storageUrl
+            .substring(trimmedBase.length)
+            .replace(/^\/+/, "");
+        }
+
+        // 构建本地文件路径
+        const absoluteRoot = path.resolve(config.rootDir);
+        const diskPath = path.resolve(absoluteRoot, key);
+
+        // 安全检查：防止路径穿越
+        if (!diskPath.startsWith(absoluteRoot)) {
+          return res.badRequest({
+            message: "非法的文件路径",
+            error: { code: "INVALID_PATH", message: "检测到路径穿越攻击" },
+          }) as Response;
+        }
+
+        // 读取本地文件
+        const fileBuffer = await fs.readFile(diskPath);
+        const contentType = fullMedia.mimeType || "application/octet-stream";
+
+        return new NextResponse(new Uint8Array(fileBuffer), {
+          status: 200,
+          headers: {
+            "Content-Type": contentType,
+            "Content-Length": fileBuffer.byteLength.toString(),
+            "Cache-Control": "public, max-age=31536000, immutable",
+            "X-Content-Type-Options": "nosniff",
+          },
+        });
+      }
+
+      // 非本地存储，使用 fetch 代理
+      const response = await fetch(fullMedia.storageUrl, {
         headers: {
           "User-Agent": request.headers.get("user-agent") || "NeutralPress/1.0",
         },
@@ -124,7 +188,10 @@ export async function GET(
       console.error("图片代理请求失败:", error);
       return res.badGateway({
         message: "图片代理请求失败",
-        error: { code: "PROXY_ERROR", message: "无法连接到存储服务" },
+        error: {
+          code: "PROXY_ERROR",
+          message: "无法连接到存储服务或读取本地文件",
+        },
       }) as Response;
     }
   }
