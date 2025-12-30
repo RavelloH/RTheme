@@ -14,6 +14,7 @@ export interface DialogProps {
   className?: string;
   size?: "sm" | "md" | "lg" | "xl";
   showCloseButton?: boolean;
+  dismissable?: boolean;
 }
 
 export function Dialog({
@@ -24,6 +25,7 @@ export function Dialog({
   className = "",
   size = "md",
   showCloseButton = true,
+  dismissable = true,
 }: DialogProps) {
   const [mounted, setMounted] = React.useState(false);
   const [mouseDownTarget, setMouseDownTarget] =
@@ -38,7 +40,7 @@ export function Dialog({
   // 监听 ESC 键关闭对话框
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && open) {
+      if (event.key === "Escape" && open && dismissable) {
         onClose();
       }
     };
@@ -53,7 +55,7 @@ export function Dialog({
       document.removeEventListener("keydown", handleEscape);
       document.body.style.overflow = "";
     };
-  }, [open, onClose]);
+  }, [open, onClose, dismissable]);
 
   const getSizeStyles = () => {
     switch (size) {
@@ -100,7 +102,11 @@ export function Dialog({
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     // 只有当 mousedown 和 click 都发生在同一个目标（遮罩层）上时才关闭对话框
-    if (e.target === e.currentTarget && e.target === mouseDownTarget) {
+    if (
+      e.target === e.currentTarget &&
+      e.target === mouseDownTarget &&
+      dismissable
+    ) {
       onClose();
     }
     setMouseDownTarget(null);

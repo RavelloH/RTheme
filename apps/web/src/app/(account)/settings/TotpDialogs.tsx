@@ -339,14 +339,14 @@ export const TotpDialogs = React.forwardRef<TotpDialogsRef, TotpDialogsProps>(
         <Dialog
           open={showBackupCodesDialog}
           onClose={() => {
-            if (backupCodesConfirmed) {
-              setShowBackupCodesDialog(false);
-              setBackupCodes([]);
-              setBackupCodesConfirmed(false);
-            }
+            setShowBackupCodesDialog(false);
+            setBackupCodes([]);
+            setBackupCodesConfirmed(false);
           }}
           title="备份码"
           size="md"
+          dismissable={false}
+          showCloseButton={false}
         >
           <div className="px-6 py-6 space-y-6">
             <section className="space-y-4">
