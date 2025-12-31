@@ -27,18 +27,31 @@ type ActionResult<T extends ApiResponseData> =
 
 /**
  * 获取当前用户的通知列表
+ * @param readLimit - 已读通知的数量限制，默认 10 条
  */
-export async function getNotices(serverConfig: {
-  environment: "serverless";
-}): Promise<NextResponse<ApiResponse<GetNoticesSuccessResponse["data"]>>>;
 export async function getNotices(
+  readLimit: number,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<GetNoticesSuccessResponse["data"]>>>;
+export async function getNotices(
+  readLimit?: number,
   serverConfig?: NoticeActionConfig,
 ): Promise<ApiResponse<GetNoticesSuccessResponse["data"]>>;
 export async function getNotices(
+  readLimit?: number | NoticeActionConfig,
   serverConfig?: NoticeActionConfig,
 ): Promise<ActionResult<GetNoticesSuccessResponse["data"] | null>> {
+  // 处理参数重载
+  let actualReadLimit = 10;
+  let actualServerConfig = serverConfig;
+  if (typeof readLimit === "object") {
+    actualServerConfig = readLimit;
+  } else if (typeof readLimit === "number") {
+    actualReadLimit = readLimit;
+  }
+
   const response = new ResponseBuilder(
-    serverConfig?.environment || "serveraction",
+    actualServerConfig?.environment || "serveraction",
   );
 
   // 速率控制
@@ -60,27 +73,45 @@ export async function getNotices(
       });
     }
 
-    const notices = await prisma.notice.findMany({
+    // 获取所有未读通知
+    const unreadNotices = await prisma.notice.findMany({
       where: {
         userUid: user.uid,
+        isRead: false,
       },
       orderBy: {
         createdAt: "desc",
       },
-      take: 100, // 限制最多返回 100 条
     });
 
-    // 分离未读和已读通知
-    const unreadNotices = notices.filter((n) => !n.isRead);
-    const readNotices = notices.filter((n) => n.isRead);
+    // 获取已读通知（分页）
+    const readNotices = await prisma.notice.findMany({
+      where: {
+        userUid: user.uid,
+        isRead: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: actualReadLimit,
+    });
+
+    // 获取总数
+    const totalReadCount = await prisma.notice.count({
+      where: {
+        userUid: user.uid,
+        isRead: true,
+      },
+    });
 
     return response.ok({
       message: "获取通知成功",
       data: {
         unread: unreadNotices,
         read: readNotices,
-        total: notices.length,
+        total: unreadNotices.length + totalReadCount,
         unreadCount: unreadNotices.length,
+        hasMoreRead: readNotices.length < totalReadCount,
       },
     }) as unknown as ActionResult<GetNoticesSuccessResponse["data"] | null>;
   } catch (error) {
@@ -90,6 +121,101 @@ export async function getNotices(
       error: {
         code: "SERVER_ERROR",
         message: error instanceof Error ? error.message : "获取通知失败",
+      },
+    });
+  }
+}
+
+/**
+ * 获取更多已读通知（用于分页加载）
+ * @param skip - 跳过的记录数
+ * @param limit - 获取的记录数，默认 10 条
+ */
+export async function getReadNotices(
+  skip: number,
+  limit: number,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<GetNoticesSuccessResponse["data"]>>>;
+export async function getReadNotices(
+  skip: number,
+  limit?: number,
+  serverConfig?: NoticeActionConfig,
+): Promise<ApiResponse<GetNoticesSuccessResponse["data"]>>;
+export async function getReadNotices(
+  skip: number,
+  limit?: number | NoticeActionConfig,
+  serverConfig?: NoticeActionConfig,
+): Promise<ActionResult<GetNoticesSuccessResponse["data"] | null>> {
+  // 处理参数重载
+  let actualLimit = 10;
+  let actualServerConfig = serverConfig;
+  if (typeof limit === "object") {
+    actualServerConfig = limit;
+  } else if (typeof limit === "number") {
+    actualLimit = limit;
+  }
+
+  const response = new ResponseBuilder(
+    actualServerConfig?.environment || "serveraction",
+  );
+
+  // 速率控制
+  if (!(await limitControl(await headers(), "getReadNotices"))) {
+    return response.tooManyRequests();
+  }
+
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("ACCESS_TOKEN")?.value;
+    const user = await authVerify({
+      allowedRoles: ["USER", "ADMIN", "EDITOR", "AUTHOR"],
+      accessToken: token,
+    });
+
+    if (!user) {
+      return response.unauthorized({
+        message: "未登录",
+      });
+    }
+
+    // 获取已读通知（分页）
+    const readNotices = await prisma.notice.findMany({
+      where: {
+        userUid: user.uid,
+        isRead: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      skip,
+      take: actualLimit,
+    });
+
+    // 获取总数
+    const totalReadCount = await prisma.notice.count({
+      where: {
+        userUid: user.uid,
+        isRead: true,
+      },
+    });
+
+    return response.ok({
+      message: "获取已读通知成功",
+      data: {
+        unread: [],
+        read: readNotices,
+        total: totalReadCount,
+        unreadCount: 0,
+        hasMoreRead: skip + readNotices.length < totalReadCount,
+      },
+    }) as unknown as ActionResult<GetNoticesSuccessResponse["data"] | null>;
+  } catch (error) {
+    console.error("获取已读通知失败:", error);
+    return response.serverError({
+      message: "获取已读通知失败",
+      error: {
+        code: "SERVER_ERROR",
+        message: error instanceof Error ? error.message : "获取已读通知失败",
       },
     });
   }

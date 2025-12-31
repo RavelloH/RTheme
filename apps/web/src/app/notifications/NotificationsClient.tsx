@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useRef, useEffect } from "react";
 import {
   RiNotification3Line,
   RiCheckDoubleLine,
@@ -9,8 +9,14 @@ import {
 } from "@remixicon/react";
 import { Button } from "@/ui/Button";
 import { useToast } from "@/ui/Toast";
-import { markNoticesAsRead, markAllNoticesAsRead } from "@/actions/notice";
+import {
+  markNoticesAsRead,
+  markAllNoticesAsRead,
+  getReadNotices,
+} from "@/actions/notice";
 import { useNavigateWithTransition } from "@/components/Link";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 interface Notice {
   id: string;
@@ -26,6 +32,7 @@ interface NotificationsClientProps {
   readNotices: Notice[];
   isModal?: boolean;
   onRequestClose?: (targetPath?: string) => void; // 请求关闭模态框的回调
+  hasMoreRead?: boolean; // 是否有更多已读通知
 }
 
 export default function NotificationsClient({
@@ -33,12 +40,59 @@ export default function NotificationsClient({
   readNotices: initialRead,
   isModal = false,
   onRequestClose,
+  hasMoreRead: initialHasMoreRead = false,
 }: NotificationsClientProps) {
   const navigate = useNavigateWithTransition();
   const toast = useToast();
   const [isPending, startTransition] = useTransition();
   const [unreadNotices, setUnreadNotices] = useState(initialUnread);
   const [readNotices, setReadNotices] = useState(initialRead);
+  const [hasMoreRead, setHasMoreRead] = useState(initialHasMoreRead);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const loadingRef = useRef(false);
+
+  // 加载更多已读通知
+  const loadMoreReadNotices = async () => {
+    if (loadingRef.current || !hasMoreRead) return;
+
+    loadingRef.current = true;
+    setIsLoadingMore(true);
+
+    try {
+      const result = await getReadNotices(readNotices.length, 10);
+      if (result.success && result.data) {
+        setReadNotices((prev) => [...prev, ...result.data!.read]);
+        setHasMoreRead(result.data.hasMoreRead || false);
+      } else {
+        toast.error(result.message || "加载失败");
+      }
+    } catch (error) {
+      console.error("加载更多通知失败:", error);
+      toast.error("加载失败");
+    } finally {
+      setIsLoadingMore(false);
+      loadingRef.current = false;
+    }
+  };
+
+  // 滚动监听
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // 当滚动到距离底部 100px 时触发加载
+      if (scrollHeight - scrollTop - clientHeight < 100 && hasMoreRead) {
+        loadMoreReadNotices();
+      }
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMoreRead, readNotices.length]);
 
   // 处理点击通知
   const handleNoticeClick = async (notice: Notice) => {
@@ -210,39 +264,69 @@ export default function NotificationsClient({
       </div>
 
       {/* 通知列表 */}
-      <div className={`flex-1 overflow-y-auto ${!isModal ? "pb-8" : ""}`}>
-        {unreadNotices.length === 0 && readNotices.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-20">
-            <RiZzzLine size="3em" className="mb-4" />
-            <p className="text-sm">暂无通知</p>
-          </div>
-        ) : (
-          <>
-            {/* 未读通知 */}
-            {unreadNotices.length > 0 && (
-              <div>
-                <div className="sticky top-0 z-10 px-6 py-2 bg-background/80 backdrop-blur-sm border-b border-foreground/10">
-                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    未读通知 ({unreadNotices.length})
-                  </h3>
-                </div>
-                {unreadNotices.map((notice) => renderNoticeItem(notice, false))}
+      <div
+        ref={scrollContainerRef}
+        className={`flex-1 overflow-y-auto ${!isModal ? "pb-8" : ""}`}
+      >
+        <div>
+          <AutoTransition type="fade" duration={0.2} initial={false}>
+            {unreadNotices.length === 0 && readNotices.length === 0 ? (
+              <div
+                key="empty"
+                className="flex flex-col items-center justify-center h-full text-muted-foreground py-20"
+              >
+                <RiZzzLine size="3em" className="mb-4" />
+                <p className="text-sm">暂无通知</p>
               </div>
-            )}
+            ) : (
+              <div key="list">
+                {/* 未读通知 */}
+                {unreadNotices.length > 0 && (
+                  <div>
+                    <div className="sticky top-0 z-10 px-6 py-2 bg-background/80 backdrop-blur-sm border-b border-foreground/10">
+                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        未读通知 ({unreadNotices.length})
+                      </h3>
+                    </div>
+                    {unreadNotices.map((notice) =>
+                      renderNoticeItem(notice, false),
+                    )}
+                  </div>
+                )}
 
-            {/* 已读通知 */}
-            {readNotices.length > 0 && (
-              <div className={unreadNotices.length > 0 ? "mt-6" : ""}>
-                <div className="sticky top-0 z-10 px-6 py-2 bg-background/80 backdrop-blur-sm border-b border-foreground/10">
-                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    已读通知 ({readNotices.length})
-                  </h3>
-                </div>
-                {readNotices.map((notice) => renderNoticeItem(notice, true))}
+                {/* 已读通知 */}
+                {readNotices.length > 0 && (
+                  <div className={unreadNotices.length > 0 ? "mt-6" : ""}>
+                    <div className="sticky top-0 z-10 px-6 py-2 bg-background/80 backdrop-blur-sm border-b border-foreground/10">
+                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        已读通知 ({readNotices.length})
+                      </h3>
+                    </div>
+                    {readNotices.map((notice) =>
+                      renderNoticeItem(notice, true),
+                    )}
+
+                    {/* 加载更多指示器 */}
+                    {isLoadingMore && (
+                      <div className="flex items-center justify-center py-8">
+                        <LoadingIndicator size="md" />
+                      </div>
+                    )}
+
+                    {/* 没有更多提示 */}
+                    {!hasMoreRead && readNotices.length > 0 && (
+                      <div className="flex items-center justify-center py-8">
+                        <p className="text-sm text-muted-foreground">
+                          没有更多通知了
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
-          </>
-        )}
+          </AutoTransition>
+        </div>
       </div>
     </div>
   );

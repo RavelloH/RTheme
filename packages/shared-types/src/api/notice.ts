@@ -32,6 +32,7 @@ export const GetNoticesSuccessResponseSchema = createSuccessResponseSchema(
     read: z.array(NoticeSchema),
     total: z.number(),
     unreadCount: z.number(),
+    hasMoreRead: z.boolean().optional(), // 是否有更多已读通知
   }),
 );
 export type GetNoticesSuccessResponse = z.infer<

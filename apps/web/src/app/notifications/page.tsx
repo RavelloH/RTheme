@@ -37,7 +37,7 @@ export default async function NotificationsPage() {
     );
   }
 
-  const { unread, read } = result.data;
+  const { unread, read, hasMoreRead } = result.data;
 
   return (
     <div className="h-full bg-background">
@@ -46,6 +46,7 @@ export default async function NotificationsPage() {
           unreadNotices={unread}
           readNotices={read}
           isModal={false}
+          hasMoreRead={hasMoreRead}
         />
       </div>
     </div>
