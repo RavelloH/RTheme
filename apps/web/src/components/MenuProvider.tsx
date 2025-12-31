@@ -169,7 +169,17 @@ export function MenuProvider({
 export function useMenu() {
   const context = useContext(MenuContext);
   if (context === undefined) {
-    throw new Error("useMenu must be used within a MenuProvider");
+    // 返回默认值而不是抛出错误，以支持在 MenuProvider 外部使用
+    return {
+      menus: [],
+      getLeftRightMenus: () => ({
+        leftMenus: [],
+        rightMenus: [],
+        hasHomeOnLeft: false,
+        isMainMenu: false,
+        menuCategory: "UNKNOWN" as const,
+      }),
+    };
   }
   return context;
 }

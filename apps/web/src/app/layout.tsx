@@ -30,6 +30,7 @@ import { getConfig } from "@/lib/server/config-cache";
 
 // Types
 import { ColorConfig } from "@/types/config";
+import { ToastProvider } from "@/ui/Toast";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 const ibmPlexMono = IBM_Plex_Mono({
@@ -41,8 +42,10 @@ const ibmPlexMono = IBM_Plex_Mono({
 
 export default async function RootLayout({
   children,
+  modal,
 }: Readonly<{
   children: React.ReactNode;
+  modal: React.ReactNode;
 }>) {
   const [menus, mainColor, siteName, enableAnalytics] = await Promise.all([
     getActiveMenus(),
@@ -61,31 +64,34 @@ export default async function RootLayout({
         className="h-full bg-background text-foreground"
         suppressHydrationWarning
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          mainColor={mainColor}
-          disableTransitionOnChange
-        >
-          <MenuProvider menus={menus}>
-            <ResponsiveFontScale scaleFactor={0.017} baseSize={12}>
-              <LoadingAnimation siteName={siteName} />
-              <LayoutContainer>
-                <Header menus={menus} />
-                <MainContent>
-                  <PageTransition>{children}</PageTransition>
-                  <FooterMobileWrapper />
-                </MainContent>
-              </LayoutContainer>
-              <FooterDesktopWrapper
-                menus={menus}
-                mainColor={mainColor.primary}
-              />
-            </ResponsiveFontScale>
-          </MenuProvider>
-        </ThemeProvider>
-        {enableAnalytics && <AnalyticsTracker />}
+        <ToastProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            mainColor={mainColor}
+            disableTransitionOnChange
+          >
+            <MenuProvider menus={menus}>
+              <ResponsiveFontScale scaleFactor={0.017} baseSize={12}>
+                <LoadingAnimation siteName={siteName} />
+                <LayoutContainer>
+                  <Header menus={menus} />
+                  <MainContent>
+                    <PageTransition>{children}</PageTransition>
+                    <FooterMobileWrapper />
+                  </MainContent>
+                </LayoutContainer>
+                <FooterDesktopWrapper
+                  menus={menus}
+                  mainColor={mainColor.primary}
+                />
+              </ResponsiveFontScale>
+            </MenuProvider>
+            {modal}
+          </ThemeProvider>
+          {enableAnalytics && <AnalyticsTracker />}
+        </ToastProvider>
       </body>
       <TokenManager />
     </html>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigateWithTransition } from "@/components/Link";
+import { useRouter } from "next/navigation";
 import { useConsoleStore } from "@/store/console-store";
 import UserAvatar from "./UserAvatar";
 import {
@@ -165,6 +166,7 @@ const calculateTokenStatus = (
 // 登录按钮组件，包含菜单状态管理
 export function LoginButton({ mainColor }: { mainColor: string }) {
   const navigate = useNavigateWithTransition();
+  const router = useRouter();
   const [userInfo, setUserInfo] = useState<StoredUserInfo | null>(null);
   const [tokenStatus, setTokenStatus] = useState<{
     expiresIn: string;
@@ -315,7 +317,7 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
                 个人资料
               </MenuAction>
               <MenuAction
-                onClick={() => navigate("/notifications")}
+                onClick={() => router.push("/notifications")}
                 icon={<RiNotification3Line size="1.2em" />}
               >
                 通知

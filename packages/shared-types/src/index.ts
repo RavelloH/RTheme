@@ -20,6 +20,7 @@ export * from "./api/page.js";
 export * from "./api/storage.js";
 export * from "./api/media.js";
 export * from "./api/menu.js";
+export * from "./api/notice.js";
 
 // 类型安全的 API 客户端工具
 export { createApiClient } from "./client.js";
