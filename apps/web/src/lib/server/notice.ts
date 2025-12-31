@@ -17,8 +17,8 @@ export async function sendNotice(
   link?: string,
 ): Promise<void> {
   // 检查全局通知是否启用
-  const noticeConfig = await getConfig<{ enable: boolean }>("notice.enable");
-  if (!noticeConfig?.enable) {
+  const noticeConfig = await getConfig<boolean>("notice.enable");
+  if (!noticeConfig) {
     return;
   }
 

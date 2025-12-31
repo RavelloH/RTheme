@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import {
   CreateComment,
   CreateCommentSchema,
@@ -1086,6 +1087,140 @@ export async function createComment(
     undefined,
     false,
   );
+
+  // 发送通知（异步执行，不阻塞响应）
+  after(async () => {
+    try {
+      const { sendNotice } = await import("@/lib/server/notice");
+      const { sendEmail } = await import("@/lib/server/email");
+      const { renderEmail } = await import("@/emails/utils");
+      const NotificationEmail = (await import("@/emails/templates"))
+        .NotificationEmail;
+
+      const noticeEnabled = await getConfig<boolean>("notice.enable", true);
+      if (!noticeEnabled) return;
+
+      // 获取文章完整信息
+      const postInfo = await prisma.post.findUnique({
+        where: { id: post.id },
+        select: {
+          title: true,
+          slug: true,
+          userUid: true,
+        },
+      });
+      if (!postInfo) return;
+
+      const commentLink = `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/posts/${postInfo.slug}#comment`;
+      const commenterName =
+        dbUser?.nickname || dbUser?.username || authorName || "匿名用户";
+      const truncatedContent =
+        content.length > 50 ? content.slice(0, 50) + "..." : content;
+
+      // 场景1：文章被评论（无 parentId）
+      if (!parentId) {
+        const postsNoticeEnabled = await getConfig<boolean>(
+          "notice.posts.enable",
+          true,
+        );
+        if (!postsNoticeEnabled) return;
+
+        // 如果是自己评论自己的文章，不通知
+        if (currentUid && currentUid === postInfo.userUid) return;
+
+        const noticeContent = `您的文章《${postInfo.title}》被 ${commenterName} 评论了：\n"${truncatedContent}"`;
+
+        // 发送站内通知
+        await sendNotice(postInfo.userUid, noticeContent, commentLink);
+      }
+      // 场景2：评论被回复（有 parentId）
+      else {
+        const commentNoticeEnabled = await getConfig<boolean>(
+          "comment.email.notice.enable",
+          true,
+        );
+        const anonCommentNoticeEnabled = await getConfig<boolean>(
+          "comment.anonymous.email.notice.enable",
+          true,
+        );
+
+        if (!commentNoticeEnabled && !anonCommentNoticeEnabled) return;
+
+        // 获取父评论信息
+        const parentComment = await prisma.comment.findUnique({
+          where: { id: parentId },
+          select: {
+            content: true,
+            userUid: true,
+            authorEmail: true,
+            authorName: true,
+            user: {
+              select: {
+                uid: true,
+                username: true,
+                nickname: true,
+                email: true,
+                emailVerified: true,
+              },
+            },
+          },
+        });
+        if (!parentComment) return;
+
+        // 如果是自己回复自己，不通知
+        if (
+          currentUid &&
+          parentComment.userUid &&
+          currentUid === parentComment.userUid
+        )
+          return;
+
+        const truncatedParentContent =
+          parentComment.content.length > 50
+            ? parentComment.content.slice(0, 50) + "..."
+            : parentComment.content;
+
+        const noticeContent = `您在文章《${postInfo.title}》中的评论：\n"${truncatedParentContent}"\n被 ${commenterName} 回复了：\n"${truncatedContent}"`;
+
+        // 登录用户：发送站内通知
+        if (parentComment.userUid && commentNoticeEnabled) {
+          await sendNotice(parentComment.userUid, noticeContent, commentLink);
+        }
+        // 匿名用户：只发送邮件
+        else if (
+          !parentComment.userUid &&
+          parentComment.authorEmail &&
+          anonCommentNoticeEnabled
+        ) {
+          const siteUrl =
+            (await getConfig<string>("site.url")) || "http://localhost:3000";
+          const siteName =
+            (await getConfig<string>("site.title.default")) || "NeutralPress";
+
+          const emailComponent = NotificationEmail({
+            username: parentComment.authorName || "匿名用户",
+            content: noticeContent,
+            link: commentLink,
+            siteName,
+            siteUrl,
+          });
+
+          const { html, text } = await renderEmail(emailComponent);
+          const emailSubject =
+            noticeContent.split("\n")[0]?.trim() || "您有一条新通知";
+
+          await sendEmail({
+            to: parentComment.authorEmail,
+            subject: emailSubject,
+            html,
+            text,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("发送评论通知失败:", error);
+    }
+  });
 
   return response.created({ data: mapped as unknown as CommentItem });
 }

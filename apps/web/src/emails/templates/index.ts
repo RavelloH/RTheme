@@ -26,3 +26,6 @@ export type { ProfileChangedTemplateProps } from "./ProfileChanged";
 
 export { EmailChangedTemplate } from "./EmailChanged";
 export type { EmailChangedTemplateProps } from "./EmailChanged";
+
+export { default as NotificationEmail } from "./NotificationEmail";
+export type { NotificationEmailProps } from "./NotificationEmail";
