@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import {
   RiNotification3Line,
   RiCheckDoubleLine,
@@ -11,10 +10,12 @@ import {
 import { Button } from "@/ui/Button";
 import { useToast } from "@/ui/Toast";
 import { markNoticesAsRead, markAllNoticesAsRead } from "@/actions/notice";
+import { useNavigateWithTransition } from "@/components/Link";
 
 interface Notice {
   id: string;
-  content: string;
+  title: string; // 通知标题
+  content: string; // 通知正文
   link: string | null;
   isRead: boolean;
   createdAt: Date;
@@ -24,14 +25,16 @@ interface NotificationsClientProps {
   unreadNotices: Notice[];
   readNotices: Notice[];
   isModal?: boolean;
+  onRequestClose?: (targetPath?: string) => void; // 请求关闭模态框的回调
 }
 
 export default function NotificationsClient({
   unreadNotices: initialUnread,
   readNotices: initialRead,
   isModal = false,
+  onRequestClose,
 }: NotificationsClientProps) {
-  const router = useRouter();
+  const navigate = useNavigateWithTransition();
   const toast = useToast();
   const [isPending, startTransition] = useTransition();
   const [unreadNotices, setUnreadNotices] = useState(initialUnread);
@@ -41,10 +44,12 @@ export default function NotificationsClient({
   const handleNoticeClick = async (notice: Notice) => {
     // 如果已读，直接跳转
     if (notice.isRead && notice.link) {
-      if (isModal) {
-        router.back();
+      if (isModal && onRequestClose) {
+        // 模态框模式：调用关闭回调，由外部控制动画和跳转
+        onRequestClose(notice.link);
+      } else {
+        navigate(notice.link);
       }
-      router.push(notice.link);
       return;
     }
 
@@ -59,10 +64,12 @@ export default function NotificationsClient({
 
           // 如果有链接，跳转
           if (notice.link) {
-            if (isModal) {
-              router.back();
+            if (isModal && onRequestClose) {
+              // 模态框模式：调用关闭回调，由外部控制动画和跳转
+              onRequestClose(notice.link);
+            } else {
+              navigate(notice.link);
             }
-            router.push(notice.link);
           }
         } else {
           toast.error(result.message || "标记失败");
@@ -110,44 +117,58 @@ export default function NotificationsClient({
   };
 
   // 渲染通知项
-  const renderNoticeItem = (notice: Notice, isRead: boolean) => (
-    <div
-      key={notice.id}
-      onClick={() => handleNoticeClick(notice)}
-      className={`
-        group relative px-6 py-4 border-b border-foreground/10 
+  const renderNoticeItem = (notice: Notice, isRead: boolean) => {
+    return (
+      <div
+        key={notice.id}
+        onClick={() => handleNoticeClick(notice)}
+        className={`
+        group relative px-6 py-4 border-b border-foreground/10
         transition-all duration-200
         ${notice.link ? "cursor-pointer hover:bg-foreground/5" : ""}
         ${!isRead ? "bg-primary/5" : ""}
       `}
-    >
-      <div className="flex items-start gap-4">
-        {/* 未读标识 */}
-        {!isRead && (
-          <div className="flex-shrink-0 mt-1.5">
-            <div className="w-2 h-2 rounded-full bg-primary" />
-          </div>
-        )}
+      >
+        <div className="flex items-start gap-4">
+          {/* 未读标识 */}
+          {!isRead && (
+            <div className="flex-shrink-0 mt-1.5">
+              <div className="w-2 h-2 rounded-full bg-primary" />
+            </div>
+          )}
 
-        {/* 内容区域 */}
-        <div className="flex-1 min-w-0">
-          <p
-            className={`text-sm leading-relaxed ${
-              isRead ? "text-muted-foreground" : "text-foreground"
-            }`}
-          >
-            {notice.content}
-          </p>
+          {/* 内容区域 */}
+          <div className="flex-1 min-w-0">
+            {/* 标题：加大字号、粗体 */}
+            <p
+              className={`text-base font-semibold leading-relaxed mb-1 ${
+                isRead ? "text-muted-foreground" : "text-foreground"
+              }`}
+            >
+              {notice.title}
+            </p>
 
-          {/* 时间 */}
-          <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
-            <RiTimeLine size={14} />
-            <span>{formatTime(notice.createdAt)}</span>
+            {/* 正文：普通样式 */}
+            {notice.content && (
+              <p
+                className={`text-sm leading-relaxed whitespace-pre-line ${
+                  isRead ? "text-muted-foreground/80" : "text-foreground/80"
+                }`}
+              >
+                {notice.content}
+              </p>
+            )}
+
+            {/* 时间 */}
+            <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+              <RiTimeLine size={14} />
+              <span>{formatTime(notice.createdAt)}</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div
@@ -163,7 +184,7 @@ export default function NotificationsClient({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <RiNotification3Line size="2.25em" className="text-primary" />
+            <RiNotification3Line size="1.5em" className="text-primary" />
             <div>
               <h2 className="text-xl font-medium text-foreground">通知中心</h2>
               <p className="text-sm text-muted-foreground mt-0.5">

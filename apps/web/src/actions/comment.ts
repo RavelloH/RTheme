@@ -1128,10 +1128,16 @@ export async function createComment(
         // 如果是自己评论自己的文章，不通知
         if (currentUid && currentUid === postInfo.userUid) return;
 
-        const noticeContent = `您的文章《${postInfo.title}》被 ${commenterName} 评论了：\n"${truncatedContent}"`;
+        const noticeTitle = `${commenterName} 评论了《${postInfo.title}》`;
+        const noticeContent = `${commenterName} 在《${postInfo.title}》评论："${truncatedContent}"`;
 
         // 发送站内通知
-        await sendNotice(postInfo.userUid, noticeContent, commentLink);
+        await sendNotice(
+          postInfo.userUid,
+          noticeTitle,
+          noticeContent,
+          commentLink,
+        );
       }
       // 场景2：评论被回复（有 parentId）
       else {
@@ -1180,11 +1186,17 @@ export async function createComment(
             ? parentComment.content.slice(0, 50) + "..."
             : parentComment.content;
 
-        const noticeContent = `您在文章《${postInfo.title}》中的评论：\n"${truncatedParentContent}"\n被 ${commenterName} 回复了：\n"${truncatedContent}"`;
+        const noticeTitle = `${commenterName} 回复了您`;
+        const noticeContent = `您在《${postInfo.title}》发布的评论\n"${truncatedParentContent}"\n被 ${commenterName} 回复了：\n"${truncatedContent}"`;
 
         // 登录用户：发送站内通知
         if (parentComment.userUid && commentNoticeEnabled) {
-          await sendNotice(parentComment.userUid, noticeContent, commentLink);
+          await sendNotice(
+            parentComment.userUid,
+            noticeTitle,
+            noticeContent,
+            commentLink,
+          );
         }
         // 匿名用户：只发送邮件
         else if (
@@ -1199,6 +1211,7 @@ export async function createComment(
 
           const emailComponent = NotificationEmail({
             username: parentComment.authorName || "匿名用户",
+            title: noticeTitle,
             content: noticeContent,
             link: commentLink,
             siteName,
@@ -1206,8 +1219,7 @@ export async function createComment(
           });
 
           const { html, text } = await renderEmail(emailComponent);
-          const emailSubject =
-            noticeContent.split("\n")[0]?.trim() || "您有一条新通知";
+          const emailSubject = noticeTitle || "您有一条新通知";
 
           await sendEmail({
             to: parentComment.authorEmail,

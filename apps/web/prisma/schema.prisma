@@ -420,7 +420,8 @@ model Notice {
   id        String   @id @default(uuid())
   userUid   Int
   isRead    Boolean  @default(false)
-  content   String
+  title     String   // 通知标题
+  content   String   // 通知正文
   link      String?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userUid], references: [uid], onDelete: Cascade)

@@ -8,11 +8,13 @@ import NotificationEmail from "@/emails/templates/NotificationEmail";
 /**
  * 发送通知
  * @param userUid 接收用户的 UID
- * @param content 通知内容
+ * @param title 通知标题
+ * @param content 通知内容（正文）
  * @param link 可选的跳转链接
  */
 export async function sendNotice(
   userUid: number,
+  title: string,
   content: string,
   link?: string,
 ): Promise<void> {
@@ -40,6 +42,7 @@ export async function sendNotice(
   const notice = await prisma.notice.create({
     data: {
       userUid,
+      title,
       content,
       link: link || null,
       isRead: false,
@@ -89,20 +92,28 @@ export async function sendNotice(
   });
 
   // 构建重定向链接
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const siteUrl =
+    (await getConfig<string>("site.url")) ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "http://localhost:3000";
+  const siteName =
+    (await getConfig<string>("site.title.default")) || "NeutralPress";
   const redirectUrl = `${siteUrl}/r/${redirectToken}`;
 
   // 渲染邮件模板
   const emailComponent = NotificationEmail({
     username: user.username,
+    title,
     content,
     link: link ? redirectUrl : undefined,
+    siteName,
+    siteUrl,
   });
 
   const { html, text } = await renderEmail(emailComponent);
 
-  // 提取 content 的第一行作为邮件标题
-  const emailSubject = content.split("\n")[0]?.trim() || "您有一条新通知";
+  // 使用 title 作为邮件标题
+  const emailSubject = title || "您有一条新通知";
 
   // 发送邮件通知
   await sendEmail({

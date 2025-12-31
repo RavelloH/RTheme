@@ -13,7 +13,9 @@ import {
 export interface NotificationEmailProps {
   /** 用户名 */
   username: string;
-  /** 通知内容 */
+  /** 通知标题 */
+  title: string;
+  /** 通知内容（正文） */
   content: string;
   /** 可选的跳转链接 */
   link?: string;
@@ -32,6 +34,7 @@ export interface NotificationEmailProps {
  */
 export function NotificationEmail({
   username,
+  title,
   content,
   link,
   siteName = "NeutralPress",
@@ -39,12 +42,11 @@ export function NotificationEmail({
   logoUrl,
   primaryColor = "#2dd4bf",
 }: NotificationEmailProps) {
-  // 拆分 content：第一行作为标题，其余作为正文
-  const lines = content.split("\n");
-  const title = lines[0]?.trim() || "";
-  const body = lines.slice(1).join("\n").trim();
-
+  // 邮件预览使用标题
   const preview = title || `${siteName} - 您有一条新通知`;
+
+  // 将 content 按换行符拆分成段落
+  const contentLines = content.split("\n").filter((line) => line.trim());
 
   return (
     <EmailLayout
@@ -54,15 +56,21 @@ export function NotificationEmail({
       logoUrl={logoUrl}
       primaryColor={primaryColor}
     >
-      <EmailHeading level={1}>新通知</EmailHeading>
-
       <EmailParagraph>您好 {username}，</EmailParagraph>
 
       <EmailParagraph>您在 {siteName} 收到一条新通知：</EmailParagraph>
 
-      <EmailAlert variant="info">{title}</EmailAlert>
-
-      {body && <EmailParagraph>{body}</EmailParagraph>}
+      {/* 显示正文内容，支持多段落 */}
+      {contentLines.length > 0 && (
+        <EmailAlert variant="info">
+          {contentLines.map((line, index) => (
+            <div key={index}>
+              {line}
+              {index < contentLines.length - 1 && <br />}
+            </div>
+          ))}
+        </EmailAlert>
+      )}
 
       {link && (
         <>

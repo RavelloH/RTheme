@@ -12,7 +12,8 @@ import {
 // 通知对象
 export const NoticeSchema = z.object({
   id: z.string(),
-  content: z.string(),
+  title: z.string(), // 通知标题
+  content: z.string(), // 通知正文
   link: z.string().nullable(),
   isRead: z.boolean(),
   createdAt: z.coerce.date(),
