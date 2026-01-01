@@ -99,7 +99,7 @@ export function Menu({
       <nav
         className={`
           flex
-          ${orientation === "horizontal" ? "flex-row items-center gap-1" : "flex-col gap-0.5"}
+          ${orientation === "horizontal" ? "flex-row items-center gap-1" : "flex-col gap-0.5 h-full"}
           ${className}
         `}
       >

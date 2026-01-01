@@ -2,6 +2,7 @@
 
 import { refresh, logout } from "@/actions/auth";
 import { useEffect, useRef } from "react";
+import { useBroadcastSender } from "@/hooks/use-broadcast";
 
 interface UserInfo {
   uid: number;
@@ -24,6 +25,10 @@ interface BroadcastMessage {
   tabId?: string;
 }
 
+interface UserInfoUpdateMessage {
+  type: "user_info_update";
+}
+
 const REFRESH_INTERVAL = 9 * 60 * 1000;
 const REFRESH_DELAY = 1000;
 const BROADCAST_RANDOM_DELAY_MAX = 200;
@@ -37,6 +42,8 @@ const getRandomDelay = () =>
   Math.floor(Math.random() * BROADCAST_RANDOM_DELAY_MAX);
 
 export default function TokenManager() {
+  const { broadcast: broadcastUserInfo } =
+    useBroadcastSender<UserInfoUpdateMessage>();
   const timersRef = useRef({
     main: null as NodeJS.Timeout | null,
     refreshDelay: null as NodeJS.Timeout | null,
@@ -54,12 +61,8 @@ export default function TokenManager() {
     // 统一的 localStorage 操作辅助函数
     const removeUserInfo = () => {
       localStorage.removeItem("user_info");
-      // 触发自定义事件通知同一标签页内的组件
-      window.dispatchEvent(
-        new CustomEvent("localStorageUpdate", {
-          detail: { key: "user_info" },
-        }),
-      );
+      // 使用 broadcast 通知其他组件
+      broadcastUserInfo({ type: "user_info_update" });
     };
 
     // 从 localStorage 获取用户信息，带验证和错误处理
@@ -170,12 +173,8 @@ export default function TokenManager() {
           };
           localStorage.setItem("user_info", JSON.stringify(updatedUserInfo));
 
-          // 触发自定义事件通知同一标签页内的组件
-          window.dispatchEvent(
-            new CustomEvent("localStorageUpdate", {
-              detail: { key: "user_info" },
-            }),
-          );
+          // 使用 broadcast 通知其他组件
+          broadcastUserInfo({ type: "user_info_update" });
 
           stateRef.current.retryCount = 0;
 
@@ -389,6 +388,7 @@ export default function TokenManager() {
         broadcastChannelRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return null;

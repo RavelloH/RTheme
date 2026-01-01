@@ -19,6 +19,7 @@ import {
 import { useNavigateWithTransition } from "@/components/Link";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { useBroadcastSender } from "@/hooks/use-broadcast";
 
 interface Notice {
   id: string;
@@ -27,6 +28,16 @@ interface Notice {
   link: string | null;
   isRead: boolean;
   createdAt: Date;
+}
+
+interface UnreadNoticeUpdateMessage {
+  type: "unread_notice_update";
+  count: number;
+}
+
+interface CachedNoticeCount {
+  count: number;
+  cachedAt: number;
 }
 
 interface NotificationsClientProps {
@@ -48,6 +59,7 @@ export default function NotificationsClient({
 }: NotificationsClientProps) {
   const navigate = useNavigateWithTransition();
   const toast = useToast();
+  const { broadcast } = useBroadcastSender<UnreadNoticeUpdateMessage>();
   const [isPending, startTransition] = useTransition();
   const [unreadNotices, setUnreadNotices] = useState(initialUnread);
   const [readNotices, setReadNotices] = useState(initialRead);
@@ -56,6 +68,16 @@ export default function NotificationsClient({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const modalScrollRef = useRef<HTMLDivElement>(null); // 模态框滚动容器
   const loadingRef = useRef(false);
+
+  // 更新未读数到 localStorage 并广播
+  const updateUnreadCount = (count: number) => {
+    const data: CachedNoticeCount = {
+      count,
+      cachedAt: Date.now(),
+    };
+    localStorage.setItem("unread_notice_count", JSON.stringify(data));
+    broadcast({ type: "unread_notice_update", count });
+  };
 
   // 加载更多已读通知
   const loadMoreReadNotices = async () => {
@@ -134,7 +156,12 @@ export default function NotificationsClient({
         const result = await markNoticesAsRead([notice.id]);
         if (result.success) {
           // 更新本地状态
-          setUnreadNotices((prev) => prev.filter((n) => n.id !== notice.id));
+          setUnreadNotices((prev) => {
+            const newUnread = prev.filter((n) => n.id !== notice.id);
+            // 同步未读数到 localStorage 并广播
+            updateUnreadCount(newUnread.length);
+            return newUnread;
+          });
           setReadNotices((prev) => [notice, ...prev]);
           setTotalReadCount((prev) => prev + 1); // 已读总数 +1
 
@@ -169,6 +196,8 @@ export default function NotificationsClient({
         setReadNotices((prev) => [...unreadNotices, ...prev]);
         setUnreadNotices([]);
         setTotalReadCount((prev) => prev + unreadCount); // 已读总数增加
+        // 同步未读数到 localStorage 并广播
+        updateUnreadCount(0);
         toast.success(result.message || "已全部标记为已读");
       } else {
         toast.error(result.message || "操作失败");

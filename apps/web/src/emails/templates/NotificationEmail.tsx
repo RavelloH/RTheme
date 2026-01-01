@@ -1,7 +1,6 @@
 import * as React from "react";
 import {
   EmailLayout,
-  EmailHeading,
   EmailParagraph,
   EmailButton,
   EmailAlert,

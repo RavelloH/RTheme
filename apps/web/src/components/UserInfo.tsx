@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigateWithTransition } from "@/components/Link";
 import { useRouter } from "next/navigation";
 import { useConsoleStore } from "@/store/console-store";
 import UserAvatar from "./UserAvatar";
+import UnreadNoticeTracker from "./UnreadNoticeTracker";
+import { useBroadcast } from "@/hooks/use-broadcast";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu,
   MenuItem,
@@ -25,6 +28,11 @@ import {
 import generateGradient from "@/lib/shared/gradient";
 import generateComplementary from "@/lib/shared/complementary";
 import { AutoTransition } from "@/ui/AutoTransition";
+
+interface UnreadNoticeUpdateMessage {
+  type: "unread_notice_update";
+  count: number;
+}
 
 type StoredUserInfo = {
   uid?: number;
@@ -172,8 +180,61 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
     expiresIn: string;
     nextRefreshIn: string;
   } | null>(null);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [showNoticeAnimation, setShowNoticeAnimation] = useState(false);
+  const [isLoadingComplete, setIsLoadingComplete] = useState(false);
+  const prevUnreadCountRef = useRef<number>(0);
+  const isInitialLoadRef = useRef(true);
+  const pendingAnimationRef = useRef(false);
   const { isConsoleOpen } = useConsoleStore();
   const AVATAR_SIZE = 80;
+
+  // 监听页面加载完成事件
+  useEffect(() => {
+    const handleLoadingComplete = () => {
+      setIsLoadingComplete(true);
+      // 如果有待播放的动画，现在播放
+      if (pendingAnimationRef.current) {
+        pendingAnimationRef.current = false;
+        setTimeout(() => {
+          isInitialLoadRef.current = false;
+          setShowNoticeAnimation(true);
+          setTimeout(() => setShowNoticeAnimation(false), 2500);
+        }, 1000);
+      }
+    };
+
+    window.addEventListener("loadingComplete", handleLoadingComplete);
+    return () => {
+      window.removeEventListener("loadingComplete", handleLoadingComplete);
+    };
+  }, []);
+
+  // 监听未读数更新广播
+  useBroadcast<UnreadNoticeUpdateMessage>((message) => {
+    if (message.type === "unread_notice_update") {
+      const newCount = message.count;
+      const prevCount = prevUnreadCountRef.current;
+
+      // 判断是否需要播放动画：
+      // 1. 首次加载且有未读通知
+      // 2. 新的未读数 > 之前的未读数（新增了通知）
+      if (newCount > 0 && (isInitialLoadRef.current || newCount > prevCount)) {
+        if (isLoadingComplete) {
+          // 如果加载已完成，立即播放动画
+          isInitialLoadRef.current = false;
+          setShowNoticeAnimation(true);
+          setTimeout(() => setShowNoticeAnimation(false), 2500);
+        } else {
+          // 如果加载未完成，标记为待播放
+          pendingAnimationRef.current = true;
+        }
+      }
+
+      prevUnreadCountRef.current = newCount;
+      setUnreadCount(newCount);
+    }
+  });
 
   useEffect(() => {
     const syncUserInfo = () => {
@@ -181,8 +242,29 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
       setUserInfo(info);
       setTokenStatus(calculateTokenStatus(info));
     };
+    const syncUnreadCount = () => {
+      try {
+        const cached = localStorage.getItem("unread_notice_count");
+        if (cached) {
+          const data = JSON.parse(cached);
+          if (typeof data.count === "number") {
+            const cachedCount = data.count;
+            prevUnreadCountRef.current = cachedCount;
+            setUnreadCount(cachedCount);
+
+            // 如果有未读通知，且是首次加载，标记为待播放
+            if (cachedCount > 0 && isInitialLoadRef.current) {
+              pendingAnimationRef.current = true;
+            }
+          }
+        }
+      } catch {
+        // 忽略解析错误
+      }
+    };
 
     syncUserInfo();
+    syncUnreadCount();
 
     // 每秒更新一次 token 状态显示
     const statusInterval = setInterval(() => {
@@ -194,13 +276,19 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
     const handleStorage = (event: StorageEvent) => {
       if (event.key === "user_info") {
         syncUserInfo();
+      } else if (event.key === "unread_notice_count") {
+        syncUnreadCount();
       }
     };
 
     // 监听同一标签页内的 localStorage 变化（自定义事件）
     const handleLocalUpdate = (event: Event) => {
-      if (event instanceof CustomEvent && event.detail?.key === "user_info") {
-        syncUserInfo();
+      if (event instanceof CustomEvent) {
+        if (event.detail?.key === "user_info") {
+          syncUserInfo();
+        } else if (event.detail?.key === "unread_notice_count") {
+          syncUnreadCount();
+        }
       }
     };
 
@@ -220,147 +308,198 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
   };
 
   return (
-    <Menu orientation="vertical">
-      <MenuItem value="user-menu">
-        <MenuTrigger asChild>
-          <button
-            type="button"
-            className={`flex flex-col justify-center items-center w-full h-full relative group transition-all duration-200 ${getButtonZIndex()}`}
-            aria-label={userInfo ? "用户菜单" : "用户菜单"}
-            style={{
-              zIndex: isConsoleOpen ? 65 : "auto",
-            }}
-          >
-            <AutoTransition
-              type="scale"
-              duration={1}
-              className="relative flex flex-col justify-center items-center overflow-hidden"
-            >
-              {userInfo ? (
-                <UserAvatar
-                  key="user-avatar"
-                  username={userInfo.nickname || userInfo.username || "user"}
-                  avatarUrl={userInfo.avatar}
-                  email={userInfo.email}
-                  shape="square"
-                  size={AVATAR_SIZE}
-                  colors={generateGradient(
-                    mainColor,
-                    generateComplementary(mainColor),
-                    4,
-                  )}
-                  className="h-full w-full transition-transform duration-200 group-hover:scale-105"
-                />
-              ) : (
-                <svg
-                  key="default-avatar"
-                  width="40"
-                  height="40"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="transition-colors duration-200 w-6 h-6 group-hover:text-white group-hover:cursor-pointer"
-                >
-                  <circle cx="12" cy="7" r="4" />
-                  <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
-                </svg>
-              )}
-            </AutoTransition>
-          </button>
-        </MenuTrigger>
-        <MenuContent align="end" minWidth={220}>
-          {userInfo ? (
-            <>
-              <div className="px-3 pb-2 my-1 text-sm border-b border-border">
-                <span className="font-medium text-foreground mr-2">
-                  {userInfo.nickname || userInfo.username}
-                </span>
-                {userInfo.username && userInfo.nickname && (
-                  <span className="text-muted-foreground text-xs mt-0.5">
-                    @{userInfo.username}
-                  </span>
-                )}
-                {userInfo.email && (
-                  <div className="text-muted-foreground text-xs mt-0.5">
-                    {userInfo.email}
-                  </div>
-                )}
-              </div>
-              {tokenStatus && (
-                <div className="px-3 py-2 my-1 text-xs border-b border-border">
-                  <div className="space-y-1 text-muted-foreground">
-                    <div className="flex justify-start items-center gap-1">
-                      <span>会话有效期:</span>
-                      <span className="font-medium text-foreground/80">
-                        <AutoTransition>{tokenStatus.expiresIn}</AutoTransition>
-                      </span>
-                    </div>
-                    <div className="flex justify-start items-center gap-1">
-                      <span>令牌有效期:</span>
-                      <span className="font-medium text-foreground/80">
-                        <AutoTransition>
-                          {tokenStatus.nextRefreshIn}
-                        </AutoTransition>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
+    <>
+      {/* 未读通知轮询组件 - 仅在已登录时启用 */}
+      {userInfo && <UnreadNoticeTracker />}
 
-              <MenuAction
-                onClick={() => navigate("/profile")}
-                icon={<RiUserLine size="1.2em" />}
+      <Menu orientation="vertical">
+        <MenuItem value="user-menu">
+          <MenuTrigger asChild>
+            <button
+              type="button"
+              className={`flex flex-col justify-center items-center w-full h-full relative group transition-all duration-200 ${getButtonZIndex()}`}
+              aria-label={userInfo ? "用户菜单" : "用户菜单"}
+              style={{
+                zIndex: isConsoleOpen ? 65 : "auto",
+              }}
+            >
+              <AutoTransition
+                type="scale"
+                duration={1}
+                className="relative flex flex-col justify-center items-center overflow-visible"
               >
-                个人资料
-              </MenuAction>
-              <MenuAction
-                onClick={() => router.push("/notifications")}
-                icon={<RiNotification3Line size="1.2em" />}
-              >
-                通知
-              </MenuAction>
-              <MenuAction
-                onClick={() => navigate("/messages")}
-                icon={<RiMailLine size="1.2em" />}
-              >
-                私信
-              </MenuAction>
-              <MenuAction
-                onClick={() => navigate("/settings")}
-                icon={<RiSettings3Line size="1.2em" />}
-              >
-                设置
-              </MenuAction>
-              <MenuSeparator />
-              <MenuAction
-                onClick={() => navigate("/logout")}
-                className="text-error"
-                icon={<RiLogoutBoxLine size="1.2em" className="text-error" />}
-              >
-                退出登录
-              </MenuAction>
-            </>
-          ) : (
-            <>
-              <MenuAction
-                onClick={() => navigate("/login")}
-                icon={<RiLoginBoxLine size="1.2em" />}
-              >
-                登录
-              </MenuAction>
-              <MenuAction
-                onClick={() => navigate("/register")}
-                icon={<RiUserAddLine size="1.2em" />}
-              >
-                注册
-              </MenuAction>
-            </>
-          )}
-        </MenuContent>
-      </MenuItem>
-    </Menu>
+                {userInfo ? (
+                  <div className="relative w-full h-full">
+                    {/* 头像层 */}
+                    <div className="overflow-hidden">
+                      <UserAvatar
+                        key="user-avatar"
+                        username={
+                          userInfo.nickname || userInfo.username || "user"
+                        }
+                        avatarUrl={userInfo.avatar}
+                        email={userInfo.email}
+                        shape="square"
+                        size={AVATAR_SIZE}
+                        colors={generateGradient(
+                          mainColor,
+                          generateComplementary(mainColor),
+                          4,
+                        )}
+                        className={
+                          "h-full w-full transition-all duration-200 group-hover:scale-105 group-hover:opacity-90"
+                        }
+                      />
+                    </div>
+
+                    {/* 未读通知叠加层 */}
+                    <AutoTransition>
+                      {unreadCount > 0 && (
+                        <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 pointer-events-none overflow-visible">
+                          {/* 小红点 */}
+                          <div className="relative z-20">
+                            <div className="w-3 h-3 rounded-full bg-primary/70 shadow-lg" />
+                          </div>
+
+                          {/* 波纹动画 - 从右上角中心开始，仅在特定条件下播放一次 */}
+                          <AnimatePresence>
+                            {showNoticeAnimation && (
+                              <motion.div
+                                key="ripple"
+                                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                                initial={{ scale: 0, opacity: 0.8 }}
+                                animate={{ scale: 60, opacity: 0 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 2, ease: "easeOut" }}
+                              >
+                                <div className="w-3 h-3 rounded-full bg-primary" />
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      )}
+                    </AutoTransition>
+                  </div>
+                ) : (
+                  <svg
+                    key="default-avatar"
+                    width="40"
+                    height="40"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="transition-colors duration-200 w-6 h-6 group-hover:text-white group-hover:cursor-pointer"
+                  >
+                    <circle cx="12" cy="7" r="4" />
+                    <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
+                  </svg>
+                )}
+              </AutoTransition>
+            </button>
+          </MenuTrigger>
+          <MenuContent align="end" minWidth={220}>
+            {userInfo ? (
+              <>
+                <div className="px-3 pb-2 my-1 text-sm border-b border-border">
+                  <span className="font-medium text-foreground mr-2">
+                    {userInfo.nickname || userInfo.username}
+                  </span>
+                  {userInfo.username && userInfo.nickname && (
+                    <span className="text-muted-foreground text-xs mt-0.5">
+                      @{userInfo.username}
+                    </span>
+                  )}
+                  {userInfo.email && (
+                    <div className="text-muted-foreground text-xs mt-0.5">
+                      {userInfo.email}
+                    </div>
+                  )}
+                </div>
+                {tokenStatus && (
+                  <div className="px-3 py-2 my-1 text-xs border-b border-border">
+                    <div className="space-y-1 text-muted-foreground">
+                      <div className="flex justify-start items-center gap-1">
+                        <span>会话有效期:</span>
+                        <span className="font-medium text-foreground/80">
+                          <AutoTransition>
+                            {tokenStatus.expiresIn}
+                          </AutoTransition>
+                        </span>
+                      </div>
+                      <div className="flex justify-start items-center gap-1">
+                        <span>令牌有效期:</span>
+                        <span className="font-medium text-foreground/80">
+                          <AutoTransition>
+                            {tokenStatus.nextRefreshIn}
+                          </AutoTransition>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <MenuAction
+                  onClick={() => navigate("/profile")}
+                  icon={<RiUserLine size="1.2em" />}
+                >
+                  个人资料
+                </MenuAction>
+                <MenuAction
+                  onClick={() => router.push("/notifications")}
+                  icon={<RiNotification3Line size="1.2em" />}
+                >
+                  <div className="flex items-center justify-between flex-1">
+                    <span>通知</span>
+                    {unreadCount > 0 && (
+                      <span className="ml-2 px-1.5 py-0.5 text-xs font-mono font-medium bg-primary/10 text-primary rounded-full">
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
+                  </div>
+                </MenuAction>
+                <MenuAction
+                  onClick={() => navigate("/messages")}
+                  icon={<RiMailLine size="1.2em" />}
+                >
+                  私信
+                </MenuAction>
+                <MenuAction
+                  onClick={() => navigate("/settings")}
+                  icon={<RiSettings3Line size="1.2em" />}
+                >
+                  设置
+                </MenuAction>
+                <MenuSeparator />
+                <MenuAction
+                  onClick={() => navigate("/logout")}
+                  className="text-error"
+                  icon={<RiLogoutBoxLine size="1.2em" className="text-error" />}
+                >
+                  退出登录
+                </MenuAction>
+              </>
+            ) : (
+              <>
+                <MenuAction
+                  onClick={() => navigate("/login")}
+                  icon={<RiLoginBoxLine size="1.2em" />}
+                >
+                  登录
+                </MenuAction>
+                <MenuAction
+                  onClick={() => navigate("/register")}
+                  icon={<RiUserAddLine size="1.2em" />}
+                >
+                  注册
+                </MenuAction>
+              </>
+            )}
+          </MenuContent>
+        </MenuItem>
+      </Menu>
+    </>
   );
 }
