@@ -6,6 +6,8 @@ import {
   RiCheckDoubleLine,
   RiTimeLine,
   RiZzzLine,
+  RiMailLine,
+  RiMailOpenLine,
 } from "@remixicon/react";
 import { Button } from "@/ui/Button";
 import { useToast } from "@/ui/Toast";
@@ -30,6 +32,7 @@ interface Notice {
 interface NotificationsClientProps {
   unreadNotices: Notice[];
   readNotices: Notice[];
+  totalReadCount: number; // 已读通知总数
   isModal?: boolean;
   onRequestClose?: (targetPath?: string) => void; // 请求关闭模态框的回调
   hasMoreRead?: boolean; // 是否有更多已读通知
@@ -38,6 +41,7 @@ interface NotificationsClientProps {
 export default function NotificationsClient({
   unreadNotices: initialUnread,
   readNotices: initialRead,
+  totalReadCount: initialTotalReadCount,
   isModal = false,
   onRequestClose,
   hasMoreRead: initialHasMoreRead = false,
@@ -47,9 +51,10 @@ export default function NotificationsClient({
   const [isPending, startTransition] = useTransition();
   const [unreadNotices, setUnreadNotices] = useState(initialUnread);
   const [readNotices, setReadNotices] = useState(initialRead);
+  const [totalReadCount, setTotalReadCount] = useState(initialTotalReadCount);
   const [hasMoreRead, setHasMoreRead] = useState(initialHasMoreRead);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const modalScrollRef = useRef<HTMLDivElement>(null); // 模态框滚动容器
   const loadingRef = useRef(false);
 
   // 加载更多已读通知
@@ -76,23 +81,39 @@ export default function NotificationsClient({
     }
   };
 
-  // 滚动监听
+  // 滚动监听（宽屏模式监听 window，模态框模式监听容器）
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
+    if (isModal) {
+      // 模态框模式：监听容器滚动
+      const container = modalScrollRef.current;
+      if (!container) return;
 
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      // 当滚动到距离底部 100px 时触发加载
-      if (scrollHeight - scrollTop - clientHeight < 100 && hasMoreRead) {
-        loadMoreReadNotices();
-      }
-    };
+      const handleScroll = () => {
+        const { scrollTop, scrollHeight, clientHeight } = container;
+        if (scrollHeight - scrollTop - clientHeight < 200 && hasMoreRead) {
+          loadMoreReadNotices();
+        }
+      };
 
-    container.addEventListener("scroll", handleScroll);
-    return () => container.removeEventListener("scroll", handleScroll);
+      container.addEventListener("scroll", handleScroll);
+      return () => container.removeEventListener("scroll", handleScroll);
+    } else {
+      // 宽屏模式：监听 window 滚动
+      const handleScroll = () => {
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const scrollHeight = document.documentElement.scrollHeight;
+        const clientHeight = window.innerHeight;
+
+        if (scrollHeight - scrollTop - clientHeight < 200 && hasMoreRead) {
+          loadMoreReadNotices();
+        }
+      };
+
+      window.addEventListener("scroll", handleScroll);
+      return () => window.removeEventListener("scroll", handleScroll);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasMoreRead, readNotices.length]);
+  }, [hasMoreRead, readNotices.length, isModal]);
 
   // 处理点击通知
   const handleNoticeClick = async (notice: Notice) => {
@@ -115,6 +136,7 @@ export default function NotificationsClient({
           // 更新本地状态
           setUnreadNotices((prev) => prev.filter((n) => n.id !== notice.id));
           setReadNotices((prev) => [notice, ...prev]);
+          setTotalReadCount((prev) => prev + 1); // 已读总数 +1
 
           // 如果有链接，跳转
           if (notice.link) {
@@ -139,12 +161,14 @@ export default function NotificationsClient({
       return;
     }
 
+    const unreadCount = unreadNotices.length;
     startTransition(async () => {
       const result = await markAllNoticesAsRead();
       if (result.success) {
         // 将所有未读通知移到已读列表
         setReadNotices((prev) => [...unreadNotices, ...prev]);
         setUnreadNotices([]);
+        setTotalReadCount((prev) => prev + unreadCount); // 已读总数增加
         toast.success(result.message || "已全部标记为已读");
       } else {
         toast.error(result.message || "操作失败");
@@ -183,33 +207,36 @@ export default function NotificationsClient({
         ${!isRead ? "bg-primary/5" : ""}
       `}
       >
-        <div className="flex items-start gap-4">
-          {/* 未读标识 */}
-          {!isRead && (
-            <div className="flex-shrink-0 mt-1.5">
-              <div className="w-2 h-2 rounded-full bg-primary" />
-            </div>
-          )}
-
+        <div className="flex gap-4">
           {/* 内容区域 */}
           <div className="flex-1 min-w-0">
-            {/* 标题：加大字号、粗体 */}
-            <p
-              className={`text-base font-semibold leading-relaxed mb-1 ${
-                isRead ? "text-muted-foreground" : "text-foreground"
-              }`}
-            >
-              {notice.title}
-            </p>
+            {/* 标题行：未读小点 + 标题 */}
+            <div className="flex items-center gap-2.5 mb-1">
+              {/* 未读标识 */}
+              {!isRead && (
+                <div className="flex-shrink-0">
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                </div>
+              )}
+
+              {/* 标题：加大字号、粗体 */}
+              <p
+                className={`text-base font-semibold leading-relaxed flex-1 min-w-0 ${
+                  isRead ? "text-muted-foreground" : "text-foreground"
+                }`}
+              >
+                {notice.title}
+              </p>
+            </div>
 
             {/* 正文：普通样式 */}
             {notice.content && (
               <p
-                className={`text-sm leading-relaxed whitespace-pre-line ${
+                className={`text-sm leading-relaxed ${
                   isRead ? "text-muted-foreground/80" : "text-foreground/80"
                 }`}
               >
-                {notice.content}
+                {notice.content.replace(/\n/g, " ")}
               </p>
             )}
 
@@ -225,109 +252,228 @@ export default function NotificationsClient({
   };
 
   return (
-    <div
-      className={`flex flex-col h-full bg-background ${
-        !isModal ? "max-w-4xl mx-auto" : ""
-      }`}
-    >
-      {/* 头部 */}
-      <div
-        className={`flex-shrink-0 px-6 py-4 border-b border-foreground/10 ${
-          !isModal ? "pt-8" : ""
-        }`}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <RiNotification3Line size="1.5em" className="text-primary" />
+    <div className="bg-background">
+      {!isModal ? (
+        // 宽屏模式
+        <div className="max-w-5xl mx-auto px-4 py-8 pb-20">
+          {/* 头部 */}
+          <div className="mb-6 flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-medium text-foreground">通知中心</h2>
-              <p className="text-sm text-muted-foreground mt-0.5">
+              <div className="mb-2">
+                <div className="flex items-center gap-3">
+                  <RiNotification3Line size="1.75em" className="text-primary" />
+                  <h1 className="text-3xl font-bold text-foreground tracking-wider">
+                    通知中心
+                  </h1>
+                </div>
+              </div>
+              <p className="text-muted-foreground">
                 {unreadNotices.length} 条未读 · 共{" "}
-                {unreadNotices.length + readNotices.length} 条
+                {unreadNotices.length + totalReadCount} 条通知
               </p>
+            </div>
+            {unreadNotices.length > 0 && (
+              <Button
+                label="全部已读"
+                variant="ghost"
+                size="sm"
+                onClick={handleMarkAllAsRead}
+                disabled={isPending}
+                loading={isPending}
+                icon={<RiCheckDoubleLine size={18} />}
+                iconPosition="left"
+              />
+            )}
+          </div>
+
+          {/* 通知列表容器 */}
+          <div className="bg-background border border-foreground/10 rounded-sm overflow-hidden">
+            <div>
+              <AutoTransition type="fade" duration={0.2} initial={false}>
+                {unreadNotices.length === 0 && readNotices.length === 0 ? (
+                  <div
+                    key="empty"
+                    className="flex flex-col items-center justify-center text-muted-foreground py-20"
+                  >
+                    <RiZzzLine size="3em" className="mb-4" />
+                    <p className="text-sm">暂无通知</p>
+                  </div>
+                ) : (
+                  <div key="list">
+                    {/* 未读通知 */}
+                    {unreadNotices.length > 0 && (
+                      <div>
+                        <div className="sticky top-0 z-10 px-6 py-3 bg-background/95 backdrop-blur-sm border-b border-foreground/10">
+                          <div className="flex items-center gap-2">
+                            <RiMailLine size="1em" className="text-primary" />
+                            <h3 className="text-sm font-semibold text-foreground">
+                              未读通知
+                            </h3>
+                            <span className="ml-auto px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary rounded-full">
+                              {unreadNotices.length}
+                            </span>
+                          </div>
+                        </div>
+                        {unreadNotices.map((notice) =>
+                          renderNoticeItem(notice, false),
+                        )}
+                      </div>
+                    )}
+
+                    {/* 已读通知 */}
+                    {readNotices.length > 0 && (
+                      <div className={unreadNotices.length > 0 ? "mt-6" : ""}>
+                        <div className="sticky top-0 z-10 px-6 py-3 bg-background/95 backdrop-blur-sm border-b border-foreground/10">
+                          <div className="flex items-center gap-2">
+                            <RiMailOpenLine
+                              size="1em"
+                              className="text-muted-foreground"
+                            />
+                            <h3 className="text-sm font-semibold text-foreground">
+                              已读通知
+                            </h3>
+                            <span className="ml-auto px-2 py-0.5 text-xs font-medium bg-foreground/5 text-muted-foreground rounded-full">
+                              {totalReadCount}
+                            </span>
+                          </div>
+                        </div>
+                        {readNotices.map((notice) =>
+                          renderNoticeItem(notice, true),
+                        )}
+
+                        {/* 加载更多指示器 */}
+                        {isLoadingMore && (
+                          <div className="flex items-center justify-center py-8">
+                            <LoadingIndicator size="md" />
+                          </div>
+                        )}
+
+                        {/* 没有更多提示 */}
+                        {!hasMoreRead && readNotices.length > 0 && (
+                          <div className="flex items-center justify-center py-8">
+                            <p className="text-sm text-muted-foreground">
+                              没有更多通知了
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </AutoTransition>
+            </div>
+          </div>
+        </div>
+      ) : (
+        // 模态框模式
+        <div className="flex flex-col h-full bg-background">
+          {/* 头部 */}
+          <div className="flex-shrink-0 px-6 py-4 border-b border-foreground/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <RiNotification3Line size="1.5em" className="text-primary" />
+                <div>
+                  <p className="text-sm mt-0.5">
+                    {unreadNotices.length} 条未读 · 共{" "}
+                    {unreadNotices.length + totalReadCount} 条通知
+                  </p>
+                </div>
+              </div>
+
+              {unreadNotices.length > 0 && (
+                <Button
+                  label="全部已读"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleMarkAllAsRead}
+                  disabled={isPending}
+                  loading={isPending}
+                  icon={<RiCheckDoubleLine size={18} />}
+                  iconPosition="left"
+                />
+              )}
             </div>
           </div>
 
-          {unreadNotices.length > 0 && (
-            <Button
-              label="全部已读"
-              variant="ghost"
-              size="sm"
-              onClick={handleMarkAllAsRead}
-              disabled={isPending}
-              loading={isPending}
-              icon={<RiCheckDoubleLine size={18} />}
-              iconPosition="left"
-            />
-          )}
-        </div>
-      </div>
-
-      {/* 通知列表 */}
-      <div
-        ref={scrollContainerRef}
-        className={`flex-1 overflow-y-auto ${!isModal ? "pb-8" : ""}`}
-      >
-        <div>
-          <AutoTransition type="fade" duration={0.2} initial={false}>
-            {unreadNotices.length === 0 && readNotices.length === 0 ? (
-              <div
-                key="empty"
-                className="flex flex-col items-center justify-center h-full text-muted-foreground py-20"
-              >
-                <RiZzzLine size="3em" className="mb-4" />
-                <p className="text-sm">暂无通知</p>
-              </div>
-            ) : (
-              <div key="list">
-                {/* 未读通知 */}
-                {unreadNotices.length > 0 && (
-                  <div>
-                    <div className="sticky top-0 z-10 px-6 py-2 bg-background/80 backdrop-blur-sm border-b border-foreground/10">
-                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        未读通知 ({unreadNotices.length})
-                      </h3>
-                    </div>
-                    {unreadNotices.map((notice) =>
-                      renderNoticeItem(notice, false),
-                    )}
+          {/* 通知列表 */}
+          <div ref={modalScrollRef} className="flex-1 overflow-y-auto">
+            <div>
+              <AutoTransition type="fade" duration={0.2} initial={false}>
+                {unreadNotices.length === 0 && readNotices.length === 0 ? (
+                  <div
+                    key="empty"
+                    className="flex flex-col items-center justify-center h-full text-muted-foreground py-20"
+                  >
+                    <RiZzzLine size="3em" className="mb-4" />
+                    <p className="text-sm">暂无通知</p>
                   </div>
-                )}
-
-                {/* 已读通知 */}
-                {readNotices.length > 0 && (
-                  <div className={unreadNotices.length > 0 ? "mt-6" : ""}>
-                    <div className="sticky top-0 z-10 px-6 py-2 bg-background/80 backdrop-blur-sm border-b border-foreground/10">
-                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        已读通知 ({readNotices.length})
-                      </h3>
-                    </div>
-                    {readNotices.map((notice) =>
-                      renderNoticeItem(notice, true),
-                    )}
-
-                    {/* 加载更多指示器 */}
-                    {isLoadingMore && (
-                      <div className="flex items-center justify-center py-8">
-                        <LoadingIndicator size="md" />
+                ) : (
+                  <div key="list">
+                    {/* 未读通知 */}
+                    {unreadNotices.length > 0 && (
+                      <div>
+                        <div className="sticky top-0 z-10 px-6 py-3 bg-background/80 backdrop-blur-sm border-b border-foreground/10">
+                          <div className="flex items-center gap-2">
+                            <RiMailLine size="1em" className="text-primary" />
+                            <h3 className="text-sm font-semibold text-foreground">
+                              未读通知
+                            </h3>
+                            <span className="ml-auto px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary rounded-full">
+                              {unreadNotices.length}
+                            </span>
+                          </div>
+                        </div>
+                        {unreadNotices.map((notice) =>
+                          renderNoticeItem(notice, false),
+                        )}
                       </div>
                     )}
 
-                    {/* 没有更多提示 */}
-                    {!hasMoreRead && readNotices.length > 0 && (
-                      <div className="flex items-center justify-center py-8">
-                        <p className="text-sm text-muted-foreground">
-                          没有更多通知了
-                        </p>
+                    {/* 已读通知 */}
+                    {readNotices.length > 0 && (
+                      <div className={unreadNotices.length > 0 ? "mt-6" : ""}>
+                        <div className="sticky top-0 z-10 px-6 py-3 bg-background/80 backdrop-blur-sm border-b border-foreground/10">
+                          <div className="flex items-center gap-2">
+                            <RiMailOpenLine
+                              size="1em"
+                              className="text-muted-foreground"
+                            />
+                            <h3 className="text-sm font-semibold text-foreground">
+                              已读通知
+                            </h3>
+                            <span className="ml-auto px-2 py-0.5 text-xs font-medium bg-foreground/5 text-muted-foreground rounded-full">
+                              {totalReadCount}
+                            </span>
+                          </div>
+                        </div>
+                        {readNotices.map((notice) =>
+                          renderNoticeItem(notice, true),
+                        )}
+
+                        {/* 加载更多指示器 */}
+                        {isLoadingMore && (
+                          <div className="flex items-center justify-center py-8">
+                            <LoadingIndicator size="md" />
+                          </div>
+                        )}
+
+                        {/* 没有更多提示 */}
+                        {!hasMoreRead && readNotices.length > 0 && (
+                          <div className="flex items-center justify-center py-8">
+                            <p className="text-sm text-muted-foreground">
+                              没有更多通知了
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
                 )}
-              </div>
-            )}
-          </AutoTransition>
+              </AutoTransition>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

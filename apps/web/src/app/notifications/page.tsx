@@ -37,18 +37,16 @@ export default async function NotificationsPage() {
     );
   }
 
-  const { unread, read, hasMoreRead } = result.data;
+  const { unread, read, hasMoreRead, total, unreadCount } = result.data;
+  const totalReadCount = total - unreadCount; // 计算已读通知总数
 
   return (
-    <div className="h-full bg-background">
-      <div className="max-w-4xl mx-auto">
-        <NotificationsClient
-          unreadNotices={unread}
-          readNotices={read}
-          isModal={false}
-          hasMoreRead={hasMoreRead}
-        />
-      </div>
-    </div>
+    <NotificationsClient
+      unreadNotices={unread}
+      readNotices={read}
+      totalReadCount={totalReadCount}
+      isModal={false}
+      hasMoreRead={hasMoreRead}
+    />
   );
 }

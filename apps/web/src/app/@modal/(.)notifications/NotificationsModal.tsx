@@ -23,11 +23,15 @@ interface NotificationsModalProps {
     isRead: boolean;
     createdAt: Date;
   }>;
+  totalReadCount: number; // 已读通知总数
+  hasMoreRead?: boolean; // 是否有更多已读通知
 }
 
 export default function NotificationsModal({
   unreadNotices,
   readNotices,
+  totalReadCount,
+  hasMoreRead = false,
 }: NotificationsModalProps) {
   const router = useRouter();
   const navigate = useNavigateWithTransition();
@@ -65,6 +69,8 @@ export default function NotificationsModal({
         <NotificationsClient
           unreadNotices={unreadNotices}
           readNotices={readNotices}
+          totalReadCount={totalReadCount}
+          hasMoreRead={hasMoreRead}
           isModal={true}
           onRequestClose={handleClose}
         />

@@ -24,7 +24,15 @@ export default async function NotificationsInterceptPage() {
     return null;
   }
 
-  const { unread, read } = result.data;
+  const { unread, read, hasMoreRead, total, unreadCount } = result.data;
+  const totalReadCount = total - unreadCount; // 计算已读通知总数
 
-  return <NotificationsModal unreadNotices={unread} readNotices={read} />;
+  return (
+    <NotificationsModal
+      unreadNotices={unread}
+      readNotices={read}
+      totalReadCount={totalReadCount}
+      hasMoreRead={hasMoreRead}
+    />
+  );
 }
