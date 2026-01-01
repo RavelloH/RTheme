@@ -7,7 +7,6 @@ import MediaStats from "./MediaStats";
 import MediaStatsChart from "./MediaStatsChart";
 import MediaTable from "./MediaTable";
 import MediaAdd from "./MediaAdd";
-import { ToastProvider } from "@/ui/Toast";
 import { Suspense } from "react";
 
 export const metadata = await generateMetadata(
@@ -42,9 +41,8 @@ export default function MediaAdminPage() {
         </RowGrid>
         <RowGrid>
           {/* 管理媒体内容表 */}
-          <ToastProvider>
-            <MediaTable />
-          </ToastProvider>
+
+          <MediaTable />
         </RowGrid>
       </HorizontalScroll>
     </MainLayout>

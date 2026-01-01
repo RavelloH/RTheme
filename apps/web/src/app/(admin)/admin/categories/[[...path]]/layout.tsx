@@ -3,7 +3,6 @@ import UnauthorizedPage from "@/app/unauthorized";
 import { jwtTokenVerify } from "@/lib/server/jwt";
 import ForbiddenPage from "@/app/forbidden";
 import type { AccessTokenPayload } from "@/lib/server/jwt";
-import { ToastProvider } from "@/ui/Toast";
 
 const allowedRoles = ["ADMIN", "EDITOR"];
 
@@ -29,5 +28,5 @@ export default async function CategoriesLayout({
     return <ForbiddenPage role={user.role} allowRoles={allowedRoles} />;
   }
 
-  return <ToastProvider>{children}</ToastProvider>;
+  return <>{children}</>;
 }

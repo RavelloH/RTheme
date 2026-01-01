@@ -8,7 +8,6 @@ import MonthlyTrendsChart from "./MonthlyTrendsChart";
 import RequestTrendsChart from "./RequestTrendsChart";
 import IPTable from "./IPTable";
 import EndpointStatsChart from "./EndpointStatsChart";
-import { ToastProvider } from "@/ui/Toast";
 import { getConfig } from "@/lib/server/config-cache";
 
 export const metadata = await generateMetadata(
@@ -34,20 +33,18 @@ export default async function SecurityPage() {
         enableLineReveal={true}
         snapToElements={false}
       >
-        <ToastProvider>
-          <AdminSidebar />
-          <RowGrid>
-            <SecurityOverview />
-            <MonthlyTrendsChart />
-            <RequestTrendsChart />
-          </RowGrid>
-          <RowGrid>
-            <EndpointStatsChart mainColor={mainColor} />
-          </RowGrid>
-          <RowGrid>
-            <IPTable />
-          </RowGrid>
-        </ToastProvider>
+        <AdminSidebar />
+        <RowGrid>
+          <SecurityOverview />
+          <MonthlyTrendsChart />
+          <RequestTrendsChart />
+        </RowGrid>
+        <RowGrid>
+          <EndpointStatsChart mainColor={mainColor} />
+        </RowGrid>
+        <RowGrid>
+          <IPTable />
+        </RowGrid>
       </HorizontalScroll>
     </MainLayout>
   );

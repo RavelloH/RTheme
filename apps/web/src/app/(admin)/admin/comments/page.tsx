@@ -6,7 +6,6 @@ import AdminSidebar from "@/components/AdminSidebar";
 import CommentsReport from "./CommentsReport";
 import CommentsHistoryChart from "./CommentsHistoryChart";
 import CommentsTable from "./CommentsTable";
-import { ToastProvider } from "@/ui/Toast";
 import { getConfig } from "@/lib/server/config-cache";
 
 export const metadata = await generateMetadata(
@@ -37,9 +36,7 @@ export default async function AdminComments() {
           <CommentsHistoryChart mainColor={mainColor} />
         </RowGrid>
         <RowGrid>
-          <ToastProvider>
-            <CommentsTable />
-          </ToastProvider>
+          <CommentsTable />
         </RowGrid>
       </HorizontalScroll>
     </MainLayout>

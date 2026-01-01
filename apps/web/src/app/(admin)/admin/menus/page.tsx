@@ -6,7 +6,6 @@ import AdminSidebar from "@/components/AdminSidebar";
 import MenusReport from "./MenusReport";
 import MenusTable from "./MenusTable";
 import Link from "@/components/Link";
-import { ToastProvider } from "@/ui/Toast";
 
 export const metadata = await generateMetadata(
   {
@@ -30,9 +29,8 @@ export default async function AdminMenus() {
       >
         <AdminSidebar />
         <RowGrid>
-          <ToastProvider>
-            <MenusReport />
-          </ToastProvider>
+          <MenusReport />
+
           <GridItem areas={[9, 10, 11, 12]} width={3} height={0.5} fixedHeight>
             <div className="w-full h-full p-10 flex flex-col justify-between">
               <div>
@@ -62,9 +60,7 @@ export default async function AdminMenus() {
           </GridItem>
         </RowGrid>
         <RowGrid>
-          <ToastProvider>
-            <MenusTable />
-          </ToastProvider>
+          <MenusTable />
         </RowGrid>
       </HorizontalScroll>
     </MainLayout>

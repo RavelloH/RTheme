@@ -7,7 +7,7 @@ import { Dialog } from "@/ui/Dialog";
 import { Button } from "@/ui/Button";
 import { Select } from "@/ui/Select";
 import { SegmentedControl } from "@/ui/SegmentedControl";
-import { useToast, ToastProvider } from "@/ui/Toast";
+import { useToast } from "@/ui/Toast";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 import { getStorageList } from "@/actions/storage";
 import {
@@ -919,9 +919,5 @@ function MediaAddInner() {
 }
 
 export default function MediaAdd() {
-  return (
-    <ToastProvider>
-      <MediaAddInner />
-    </ToastProvider>
-  );
+  return <MediaAddInner />;
 }

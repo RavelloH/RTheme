@@ -33,7 +33,6 @@ import ImageLightbox from "@/components/client/ImageLightbox";
 import { getConfig } from "@/lib/server/config-cache";
 import React from "react";
 import CommentsSection from "@/components/client/CommentsSection";
-import { ToastProvider } from "@/ui/Toast";
 import AdjacentPostCard from "@/components/AdjacentPostCard";
 import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
 import CommentCount from "@/components/client/CommentCount";
@@ -418,22 +417,20 @@ export default async function PostPage({ params }: PageProps) {
             )}
             {/* 评论区 */}
             {commentEnabled && (
-              <ToastProvider>
-                <CommentsSection
-                  slug={post.slug}
-                  allowComments={post.allowComments}
-                  authorUid={post.author.uid}
-                  commentConfig={{
-                    placeholder,
-                    anonymousEnabled,
-                    anonymousEmailRequired,
-                    anonymousWebsiteEnabled,
-                    reviewAll,
-                    reviewAnonymous,
-                    locateEnabled,
-                  }}
-                />
-              </ToastProvider>
+              <CommentsSection
+                slug={post.slug}
+                allowComments={post.allowComments}
+                authorUid={post.author.uid}
+                commentConfig={{
+                  placeholder,
+                  anonymousEnabled,
+                  anonymousEmailRequired,
+                  anonymousWebsiteEnabled,
+                  reviewAll,
+                  reviewAnonymous,
+                  locateEnabled,
+                }}
+              />
             )}
           </div>
           {/* 侧边栏容器 */}

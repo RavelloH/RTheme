@@ -1,7 +1,6 @@
 import { getConfig } from "@/lib/server/config-cache";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import SettingsClient from "./SettingsClient";
-import { ToastProvider } from "@/ui/Toast";
 import { generateMetadata } from "@/lib/server/seo";
 import { Suspense } from "react";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
@@ -35,13 +34,11 @@ export default async function SettingsPage() {
   const passkeyEnabled = await getConfig<boolean>("user.passkey.enabled");
 
   return (
-    <ToastProvider>
-      <Suspense fallback={<LoadingIndicator />}>
-        <SettingsClient
-          enabledSSOProviders={enabledSSOProviders}
-          passkeyEnabled={passkeyEnabled}
-        />
-      </Suspense>
-    </ToastProvider>
+    <Suspense fallback={<LoadingIndicator />}>
+      <SettingsClient
+        enabledSSOProviders={enabledSSOProviders}
+        passkeyEnabled={passkeyEnabled}
+      />
+    </Suspense>
   );
 }
