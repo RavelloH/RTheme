@@ -5,8 +5,9 @@ import { useNavigateWithTransition } from "@/components/Link";
 import { useRouter } from "next/navigation";
 import { useConsoleStore } from "@/store/console-store";
 import UserAvatar from "./UserAvatar";
-import UnreadNoticeTracker from "./UnreadNoticeTracker";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { useNotification } from "@/components/NotificationProvider";
+import { AutoTransition } from "@/ui/AutoTransition";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu,
@@ -27,7 +28,7 @@ import {
 } from "@remixicon/react";
 import generateGradient from "@/lib/shared/gradient";
 import generateComplementary from "@/lib/shared/complementary";
-import { AutoTransition } from "@/ui/AutoTransition";
+import { Tooltip } from "@/ui/Tooltip";
 
 interface UnreadNoticeUpdateMessage {
   type: "unread_notice_update";
@@ -175,6 +176,7 @@ const calculateTokenStatus = (
 export function LoginButton({ mainColor }: { mainColor: string }) {
   const navigate = useNavigateWithTransition();
   const router = useRouter();
+  const { connectionStatus } = useNotification();
   const [userInfo, setUserInfo] = useState<StoredUserInfo | null>(null);
   const [tokenStatus, setTokenStatus] = useState<{
     expiresIn: string;
@@ -309,9 +311,6 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
 
   return (
     <>
-      {/* 未读通知轮询组件 - 仅在已登录时启用 */}
-      {userInfo && <UnreadNoticeTracker />}
-
       <Menu orientation="vertical">
         <MenuItem value="user-menu">
           <MenuTrigger asChild>
@@ -440,6 +439,76 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
                     </div>
                   </div>
                 )}
+                {/* WebSocket 实时通信状态 */}
+                <AutoTransition type="fade" duration={0.2}>
+                  {connectionStatus === "connected" && (
+                    <div className="px-4 pt-2 pb-3 mb-1 text-xs border-b border-border">
+                      <Tooltip
+                        className="flex items-center gap-2 text-muted-foreground"
+                        content="WebSocket 连接已建立，实时通知、即时通信功能正常"
+                        placement="right"
+                      >
+                        {/* 脉冲圆点 */}
+                        <div className="relative w-3 h-3 flex items-center justify-center">
+                          <span
+                            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-success opacity-75 animate-ping"
+                            style={{ animationDuration: "2s" }}
+                          />
+                          <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-success" />
+                        </div>
+                        <span className="text-success/90">
+                          已与服务器建立实时通信
+                        </span>
+                      </Tooltip>
+                    </div>
+                  )}
+                  {connectionStatus === "connecting" && (
+                    <div className="px-4 pt-2 pb-3 mb-1 text-xs border-b border-border">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        {/* 旋转加载圆点 */}
+                        <div className="relative w-3 h-3 flex items-center justify-center">
+                          <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-muted-foreground animate-pulse" />
+                        </div>
+                        <span>正在连接服务器...</span>
+                      </div>
+                    </div>
+                  )}
+                  {(connectionStatus === "disconnected" ||
+                    connectionStatus === "suspended") && (
+                    <div className="px-4 pt-2 pb-3 mb-1 text-xs border-b border-border">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        {/* 警告圆点 */}
+                        <div className="relative w-3 h-3 flex items-center justify-center">
+                          <span
+                            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-warning opacity-75 animate-ping"
+                            style={{ animationDuration: "1.5s" }}
+                          />
+                          <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-warning" />
+                        </div>
+                        <span className="text-warning/90">正在重新连接...</span>
+                      </div>
+                    </div>
+                  )}
+                  {connectionStatus === "failed" && (
+                    <div className="px-4 pt-2 pb-3 mb-1 text-xs border-b border-border">
+                      <Tooltip
+                        className="flex items-center gap-2 text-muted-foreground"
+                        content={
+                          "无法与服务器建立 WebSocket 连接。通知及站内信可能存在延迟。"
+                        }
+                        placement="right"
+                      >
+                        {/* 错误圆点 */}
+                        <div className="relative w-3 h-3 flex items-center justify-center">
+                          <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-error" />
+                        </div>
+                        <span className="text-error/90">
+                          连接失败，已降级至轮询
+                        </span>
+                      </Tooltip>
+                    </div>
+                  )}
+                </AutoTransition>
 
                 <MenuAction
                   onClick={() => navigate("/profile")}

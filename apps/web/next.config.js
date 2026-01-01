@@ -3,6 +3,7 @@ const nextConfig = {
   images: {
     remotePatterns: [new URL("https://raw.ravelloh.top/**")],
   },
+  serverExternalPackages: ["ably"],
   experimental: {
     optimizePackageImports: ["@remixicon/react"],
   },

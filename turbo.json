@@ -13,7 +13,8 @@
     "ARGON2_HASH_LENGTH",
     "JWT_PRIVATE_KEY",
     "JWT_PUBLIC_KEY",
-    "MASTER_SECRET"
+    "MASTER_SECRET",
+    "ABLY_API_KEY"
   ],
   "tasks": {
     "build": {
@@ -32,7 +33,8 @@
         "ARGON2_HASH_LENGTH",
         "JWT_PRIVATE_KEY",
         "JWT_PUBLIC_KEY",
-        "MASTER_SECRET"
+        "MASTER_SECRET",
+        "ABLY_API_KEY"
       ]
     },
     "lint": {
@@ -47,7 +49,8 @@
         "ARGON2_HASH_LENGTH",
         "JWT_PRIVATE_KEY",
         "JWT_PUBLIC_KEY",
-        "MASTER_SECRET"
+        "MASTER_SECRET",
+        "ABLY_API_KEY"
       ]
     },
     "check-types": {
@@ -62,7 +65,8 @@
         "ARGON2_HASH_LENGTH",
         "JWT_PRIVATE_KEY",
         "JWT_PUBLIC_KEY",
-        "MASTER_SECRET"
+        "MASTER_SECRET",
+        "ABLY_API_KEY"
       ]
     },
     "dev": {
@@ -80,7 +84,8 @@
         "ARGON2_HASH_LENGTH",
         "JWT_PRIVATE_KEY",
         "JWT_PUBLIC_KEY",
-        "MASTER_SECRET"
+        "MASTER_SECRET",
+        "ABLY_API_KEY"
       ]
     },
     "@repo/openapi-generator#dev": {

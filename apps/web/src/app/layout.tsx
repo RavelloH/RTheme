@@ -23,10 +23,12 @@ import ResponsiveFontScale from "@/components/ResponsiveFontScale";
 import PageTransition from "@/components/PageTransition";
 import TokenManager from "@/components/TokenManager";
 import { AnalyticsTracker } from "@/components/client/AnalyticsTracker";
+import NotificationProvider from "@/components/NotificationProvider";
 
 // lib
 import { getActiveMenus } from "@/lib/server/menu-cache";
 import { getConfig } from "@/lib/server/config-cache";
+import { isAblyEnabled } from "@/lib/server/ably-config";
 
 // Types
 import { ColorConfig } from "@/types/config";
@@ -47,12 +49,14 @@ export default async function RootLayout({
   children: React.ReactNode;
   modal: React.ReactNode;
 }>) {
-  const [menus, mainColor, siteName, enableAnalytics] = await Promise.all([
-    getActiveMenus(),
-    getConfig<ColorConfig>("site.color"),
-    getConfig<string>("site.title"),
-    getConfig<boolean>("analytics.enable"),
-  ]);
+  const [menus, mainColor, siteName, enableAnalytics, ablyEnabled] =
+    await Promise.all([
+      getActiveMenus(),
+      getConfig<ColorConfig>("site.color"),
+      getConfig<string>("site.title"),
+      getConfig<boolean>("analytics.enable"),
+      Promise.resolve(isAblyEnabled()),
+    ]);
 
   return (
     <html
@@ -72,23 +76,25 @@ export default async function RootLayout({
             mainColor={mainColor}
             disableTransitionOnChange
           >
-            <MenuProvider menus={menus}>
-              <ResponsiveFontScale scaleFactor={0.017} baseSize={12}>
-                <LoadingAnimation siteName={siteName} />
-                <LayoutContainer>
-                  <Header menus={menus} />
-                  <MainContent>
-                    <PageTransition>{children}</PageTransition>
-                    <FooterMobileWrapper />
-                  </MainContent>
-                </LayoutContainer>
-                <FooterDesktopWrapper
-                  menus={menus}
-                  mainColor={mainColor.primary}
-                />
-              </ResponsiveFontScale>
-            </MenuProvider>
-            {modal}
+            <NotificationProvider isAblyEnabled={ablyEnabled}>
+              <MenuProvider menus={menus}>
+                <ResponsiveFontScale scaleFactor={0.017} baseSize={12}>
+                  <LoadingAnimation siteName={siteName} />
+                  <LayoutContainer>
+                    <Header menus={menus} />
+                    <MainContent>
+                      <PageTransition>{children}</PageTransition>
+                      <FooterMobileWrapper />
+                    </MainContent>
+                  </LayoutContainer>
+                  <FooterDesktopWrapper
+                    menus={menus}
+                    mainColor={mainColor.primary}
+                  />
+                </ResponsiveFontScale>
+              </MenuProvider>
+              {modal}
+            </NotificationProvider>
           </ThemeProvider>
           {enableAnalytics && <AnalyticsTracker />}
         </ToastProvider>

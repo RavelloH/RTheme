@@ -4,6 +4,7 @@ import { jwtTokenSign } from "@/lib/server/jwt";
 import prisma from "@/lib/server/prisma";
 import { renderEmail } from "@/emails/utils";
 import NotificationEmail from "@/emails/templates/NotificationEmail";
+import { publishNoticeToUser } from "@/lib/server/ably";
 
 /**
  * 发送通知
@@ -46,6 +47,25 @@ export async function sendNotice(
       content,
       link: link || null,
       isRead: false,
+    },
+  });
+
+  // 推送实时通知（WebSocket）
+  // 获取未读通知数量
+  const unreadCount = await prisma.notice.count({
+    where: {
+      userUid,
+      isRead: false,
+    },
+  });
+
+  // 通过 Ably 推送未读数量更新
+  await publishNoticeToUser(userUid, {
+    type: "unread_count_update",
+    payload: {
+      noticeId: notice.id,
+      title: notice.title,
+      count: unreadCount,
     },
   });
 

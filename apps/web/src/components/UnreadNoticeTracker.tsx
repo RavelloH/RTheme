@@ -32,6 +32,22 @@ const generateTabId = () =>
 const getRandomDelay = () =>
   Math.floor(Math.random() * BROADCAST_RANDOM_DELAY_MAX);
 
+/**
+ * 检查是否正在加载未读数量
+ */
+const isLoadingUnreadCount = (): boolean => {
+  try {
+    const loading = sessionStorage.getItem("unread_notice_loading");
+    if (!loading) return false;
+
+    const timestamp = parseInt(loading, 10);
+    // 如果加载标志超过 10 秒，认为已过期
+    return Date.now() - timestamp < 10000;
+  } catch {
+    return false;
+  }
+};
+
 export default function UnreadNoticeTracker() {
   const { broadcast } = useBroadcastSender<UnreadNoticeUpdateMessage>();
   const timersRef = useRef({
@@ -217,16 +233,42 @@ export default function UnreadNoticeTracker() {
       clearTimer("main");
 
       try {
-        // 首次检查时，无视缓存立即执行
+        const cached = getCachedCount();
+        const now = Date.now();
+
+        // 首次检查时，检查缓存是否足够新
         if (stateRef.current.isFirstCheck) {
+          // 检查是否有其他组件正在加载
+          if (isLoadingUnreadCount()) {
+            console.log(
+              "[UnreadNoticeTracker] Other component is loading, waiting...",
+            );
+            // 延迟 100ms 后重新检查（保持 isFirstCheck 状态）
+            timersRef.current.main = setTimeout(checkAndSchedule, 100);
+            return;
+          }
+
+          // 清除首次检查标志
           stateRef.current.isFirstCheck = false;
-          console.log("[UnreadNoticeTracker] First check, ignoring cache");
+
+          // 如果缓存存在且很新（< 30秒），说明其他组件刚刚获取过数据
+          if (cached && now - cached.cachedAt < 30000) {
+            console.log(
+              "[UnreadNoticeTracker] Fresh cache found, skipping initial check",
+            );
+            // 直接计划下次检查，避免重复调用
+            const timeUntilNextCheck = CHECK_INTERVAL - (now - cached.cachedAt);
+            scheduleNextCheck(timeUntilNextCheck);
+            return;
+          }
+
+          // 缓存不存在或已过期，立即检查
+          console.log(
+            "[UnreadNoticeTracker] No fresh cache, performing initial check",
+          );
           performCheck(true); // 传入 true 表示立即执行
           return;
         }
-
-        const cached = getCachedCount();
-        const now = Date.now();
 
         if (!cached) {
           // 没有缓存，立即检查
