@@ -189,7 +189,6 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
   const isInitialLoadRef = useRef(true);
   const pendingAnimationRef = useRef(false);
   const { isConsoleOpen } = useConsoleStore();
-  const AVATAR_SIZE = 80;
 
   // 监听页面加载完成事件
   useEffect(() => {
@@ -316,7 +315,7 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
           <MenuTrigger asChild>
             <button
               type="button"
-              className={`flex flex-col justify-center items-center w-full h-full relative group transition-all duration-200 ${getButtonZIndex()}`}
+              className={`flex justify-center items-center relative group transition-all duration-200 w-full h-full ${getButtonZIndex()}`}
               aria-label={userInfo ? "用户菜单" : "用户菜单"}
               style={{
                 zIndex: isConsoleOpen ? 65 : "auto",
@@ -325,31 +324,29 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
               <AutoTransition
                 type="scale"
                 duration={1}
-                className="relative flex flex-col justify-center items-center overflow-visible"
+                className="relative w-full h-full"
               >
                 {userInfo ? (
                   <div className="relative w-full h-full">
                     {/* 头像层 */}
-                    <div className="overflow-hidden">
-                      <UserAvatar
-                        key="user-avatar"
-                        username={
-                          userInfo.nickname || userInfo.username || "user"
-                        }
-                        avatarUrl={userInfo.avatar}
-                        email={userInfo.email}
-                        shape="square"
-                        size={AVATAR_SIZE}
-                        colors={generateGradient(
-                          mainColor,
-                          generateComplementary(mainColor),
-                          4,
-                        )}
-                        className={
-                          "h-full w-full transition-all duration-200 group-hover:scale-105 group-hover:opacity-90"
-                        }
-                      />
-                    </div>
+
+                    <UserAvatar
+                      key="user-avatar"
+                      username={
+                        userInfo.nickname || userInfo.username || "user"
+                      }
+                      avatarUrl={userInfo.avatar}
+                      email={userInfo.email}
+                      shape="square"
+                      colors={generateGradient(
+                        mainColor,
+                        generateComplementary(mainColor),
+                        4,
+                      )}
+                      className={
+                        "!block w-full h-full transition-all duration-200 group-hover:scale-105 group-hover:opacity-90"
+                      }
+                    />
 
                     {/* 未读通知叠加层 */}
                     <AutoTransition>

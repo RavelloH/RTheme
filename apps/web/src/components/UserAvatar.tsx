@@ -117,26 +117,43 @@ export default function UserAvatar({
   );
   const borderRadiusClass = shape === "circle" ? "rounded-full" : "";
 
+  // 检查 className 是否包含响应式尺寸类，如果是则不使用固定尺寸
+  const hasResponsiveSize =
+    className.includes("w-full") || className.includes("h-full");
+  const actualSize = hasResponsiveSize ? undefined : size || 32;
+
   return (
     <div
       className={`inline-block overflow-hidden ${borderRadiusClass} ${className}`}
-      style={{ width: size, height: size }}
+      style={actualSize ? { width: actualSize, height: actualSize } : undefined}
     >
       {loadedUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={loadedUrl}
           alt={`${displayName} avatar`}
-          width={size}
-          height={size}
+          width={actualSize}
+          height={actualSize}
           className={`h-full w-full object-cover ${borderRadiusClass}`}
         />
+      ) : hasResponsiveSize ? (
+        <div className="w-full h-full flex items-center justify-center">
+          <div className="w-full h-full [&>svg]:w-full [&>svg]:h-full">
+            <Avatar
+              name={displayName}
+              colors={colors}
+              variant={variant}
+              size={80}
+              square={shape === "square"}
+            />
+          </div>
+        </div>
       ) : (
         <Avatar
           name={displayName}
           colors={colors}
           variant={variant}
-          size={size}
+          size={actualSize || 80}
           square={shape === "square"}
         />
       )}
