@@ -353,27 +353,37 @@ export default function NotificationsClient({
                   ) : (
                     <div key="list">
                       {/* 未读通知 */}
-                      {unreadNotices.length > 0 && (
-                        <div>
-                          <div className="sticky top-0 z-10 px-6 py-3 bg-background/95 backdrop-blur-sm border-b border-foreground/10">
-                            <div className="flex items-center gap-2">
-                              <RiMailLine size="1em" className="text-primary" />
-                              <h3 className="text-sm font-semibold text-foreground">
-                                未读通知
-                              </h3>
-                              <span className="ml-auto px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary rounded-full">
-                                {unreadNotices.length}
-                              </span>
+                      <AutoResizer>
+                        <AutoTransition type="fade" duration={0.3}>
+                          {unreadNotices.length > 0 && (
+                            <div key="unread-section">
+                              <div className="sticky top-0 z-10 px-6 py-3 bg-background/95 backdrop-blur-sm border-b border-foreground/10">
+                                <div className="flex items-center gap-2">
+                                  <RiMailLine
+                                    size="1em"
+                                    className="text-primary"
+                                  />
+                                  <h3 className="text-sm font-semibold text-foreground">
+                                    未读通知
+                                  </h3>
+                                  <span className="ml-auto px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary rounded-full">
+                                    {unreadNotices.length}
+                                  </span>
+                                </div>
+                              </div>
+                              {unreadNotices.map((notice) =>
+                                renderNoticeItem(notice, false),
+                              )}
                             </div>
-                          </div>
-                          {unreadNotices.map((notice) =>
-                            renderNoticeItem(notice, false),
                           )}
-                        </div>
-                      )}
+                        </AutoTransition>
+                      </AutoResizer>
                       {/* 已读通知 */}
                       {readNotices.length > 0 && (
-                        <div className={unreadNotices.length > 0 ? "mt-6" : ""}>
+                        <div
+                          key="read-section"
+                          className={unreadNotices.length > 0 ? "mt-6" : ""}
+                        >
                           <div className="sticky top-0 z-10 px-6 py-3 bg-background/95 backdrop-blur-sm border-b border-foreground/10">
                             <div className="flex items-center gap-2">
                               <RiMailOpenLine
@@ -462,28 +472,38 @@ export default function NotificationsClient({
                 ) : (
                   <div key="list">
                     {/* 未读通知 */}
-                    {unreadNotices.length > 0 && (
-                      <div>
-                        <div className="sticky top-0 z-10 px-6 py-3 bg-background/80 backdrop-blur-sm border-b border-foreground/10">
-                          <div className="flex items-center gap-2">
-                            <RiMailLine size="1em" className="text-primary" />
-                            <h3 className="text-sm font-semibold text-foreground">
-                              未读通知
-                            </h3>
-                            <span className="ml-auto px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary rounded-full">
-                              {unreadNotices.length}
-                            </span>
+                    <AutoResizer>
+                      <AutoTransition type="fade" duration={0.3}>
+                        {unreadNotices.length > 0 && (
+                          <div key="unread-section">
+                            <div className="sticky top-0 z-10 px-6 py-3 bg-background/80 backdrop-blur-sm border-b border-foreground/10">
+                              <div className="flex items-center gap-2">
+                                <RiMailLine
+                                  size="1em"
+                                  className="text-primary"
+                                />
+                                <h3 className="text-sm font-semibold text-foreground">
+                                  未读通知
+                                </h3>
+                                <span className="ml-auto px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary rounded-full">
+                                  {unreadNotices.length}
+                                </span>
+                              </div>
+                            </div>
+                            {unreadNotices.map((notice) =>
+                              renderNoticeItem(notice, false),
+                            )}
                           </div>
-                        </div>
-                        {unreadNotices.map((notice) =>
-                          renderNoticeItem(notice, false),
                         )}
-                      </div>
-                    )}
+                      </AutoTransition>
+                    </AutoResizer>
 
                     {/* 已读通知 */}
                     {readNotices.length > 0 && (
-                      <div className={unreadNotices.length > 0 ? "mt-6" : ""}>
+                      <div
+                        key="read-section"
+                        className={unreadNotices.length > 0 ? "mt-6" : ""}
+                      >
                         <div className="sticky top-0 z-10 px-6 py-3 bg-background/80 backdrop-blur-sm border-b border-foreground/10">
                           <div className="flex items-center gap-2">
                             <RiMailOpenLine
