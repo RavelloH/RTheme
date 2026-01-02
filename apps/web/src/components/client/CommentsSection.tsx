@@ -8,6 +8,7 @@ import React, {
   useState,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useInView } from "react-intersection-observer";
 import {
   createComment,
   getDirectChildren,
@@ -579,7 +580,13 @@ export default function CommentsSection({
   const commentsContainerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const loadTriggerIndexRef = useRef<number>(0);
+  const loadingMoreRef = useRef(false);
+
+  // 使用 react-intersection-observer 监听触发加载的评论
+  const { ref: loadMoreRef, inView } = useInView({
+    threshold: 0,
+    skip: !hasNext || loading, // 没有更多数据或正在加载时跳过监听
+  });
 
   const { success: toastSuccess, error: toastError } = useToast();
   const { broadcast } = useBroadcastSender<object>();
@@ -697,6 +704,22 @@ export default function CommentsSection({
       loadComments();
     }
   }, [commentsLoaded, loadComments]);
+
+  // 当触发评论进入视口时加载更多
+  useEffect(() => {
+    if (inView && hasNext && !loading && !loadingMoreRef.current) {
+      // 添加小延迟避免初始渲染时立即触发
+      const timer = setTimeout(() => {
+        if (hasNext && !loading && !loadingMoreRef.current) {
+          loadingMoreRef.current = true;
+          loadComments(cursor).finally(() => {
+            loadingMoreRef.current = false;
+          });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [inView, hasNext, loading, cursor, loadComments]);
 
   // 加载直接子评论
   const loadDirectChildren = useCallback(
@@ -858,9 +881,12 @@ export default function CommentsSection({
     if (!commentsLoaded) return;
     setComments([]);
     setCursor(undefined);
-    setHasNext(false);
+    // 不要在这里设置 hasNext，让 loadComments 负责
+    // setHasNext(false);
     setCollapsedIds(new Set());
     setChildPaginationMap(new Map());
+    // 重置加载状态
+    loadingMoreRef.current = false;
     loadComments();
   }, [commentsLoaded, loadComments]);
 
@@ -1194,23 +1220,6 @@ export default function CommentsSection({
     [hoveredPath],
   );
 
-  // 在倒数第 3 条评论处触发加载（提供更流畅的体验）
-  const handleLoadTrigger = useCallback(
-    (index: number, totalCount: number) => {
-      const triggerPoint = totalCount - 3;
-      if (
-        hasNext &&
-        !loading &&
-        index >= triggerPoint &&
-        index > loadTriggerIndexRef.current
-      ) {
-        loadTriggerIndexRef.current = index;
-        loadComments(cursor);
-      }
-    },
-    [hasNext, loading, cursor, loadComments],
-  );
-
   // 如果不允许评论，不渲染
   if (!allowComments) {
     return null;
@@ -1440,9 +1449,17 @@ export default function CommentsSection({
                     parentState.hasNext &&
                     !collapsedIds.has(parentId);
 
+                  // 将 loadMoreRef 附加到倒数第2条评论上
+                  // 这样用户接近底部时就会自动加载下一页
+                  const shouldAttachLoadMoreRef =
+                    hasNext &&
+                    visibleComments.length > 2 &&
+                    index === visibleComments.length - 2;
+
                   return (
                     <React.Fragment key={comment.id}>
                       <motion.div
+                        ref={shouldAttachLoadMoreRef ? loadMoreRef : undefined}
                         initial={{ height: 0, opacity: 0 }}
                         animate={{
                           height: "auto",
@@ -1467,9 +1484,6 @@ export default function CommentsSection({
                         style={{ overflow: "hidden" }}
                         onMouseEnter={() => handleMouseEnter(comment)}
                         onMouseLeave={handleMouseLeave}
-                        onViewportEnter={() =>
-                          handleLoadTrigger(index, visibleComments.length)
-                        }
                       >
                         <SingleComment
                           comment={comment}
@@ -1514,19 +1528,21 @@ export default function CommentsSection({
                   );
                 })}
               </AnimatePresence>
-              {/* 加载指示器 */}
-              {loading && hasNext && (
-                <AutoResizer duration={0.3}>
-                  <AutoTransition type="fade" duration={0.2}>
+
+              {/* 底部加载指示器 - 当还有更多评论时显示 */}
+              <AutoResizer duration={0.3}>
+                <AutoTransition type="fade" duration={0.2}>
+                  {hasNext && (
                     <div
-                      key="loading"
+                      key="bottom-loading"
                       className="flex items-center gap-2 py-4 text-sm text-muted-foreground w-full h-24 justify-center"
                     >
                       <LoadingIndicator />
                     </div>
-                  </AutoTransition>
-                </AutoResizer>
-              )}
+                  )}
+                </AutoTransition>
+              </AutoResizer>
+
               <AutoTransition type="fade" duration={0.3}>
                 {!loading && comments.length === 0 && (
                   <div
