@@ -98,6 +98,7 @@ export type ConnectionStatus =
 interface NotificationContextValue {
   connectionStatus: ConnectionStatus;
   unreadCount: number;
+  isLeader: boolean; // 是否为主标签页（持有锁）
 }
 
 /**
@@ -106,6 +107,7 @@ interface NotificationContextValue {
 const NotificationContext = createContext<NotificationContextValue>({
   connectionStatus: "fallback",
   unreadCount: 0,
+  isLeader: false,
 });
 
 /**
@@ -124,23 +126,19 @@ interface NotificationProviderProps {
   isAblyEnabled: boolean; // 从 layout 传递
 }
 
+const MAX_RETRIES = 5;
+const TOKEN_CACHE_DURATION = 50000; // Token 缓存时间 50 秒（Ably token 通常 60 秒有效）
+const LOCK_NAME = "ably_connection_lock"; // Web Locks API 锁名称
+
 /**
  * 通知 Provider 组件
  *
- * 管理 Ably WebSocket 连接和通知状态。
- * 如果 Ably 未启用或连接失败，会自动回退到轮询机制。
+ * 使用 Web Locks API 管理多标签页的 Ably 连接。
+ * 只有持有锁的标签页（主标签页）会建立 Ably 连接。
  *
  * @param props - 组件属性
  * @param props.children - 子组件
  * @param props.isAblyEnabled - 是否启用 Ably（从服务端传递）
- *
- * @example
- * ```tsx
- * // 在 layout.tsx 中使用
- * <NotificationProvider isAblyEnabled={isAblyEnabled()}>
- *   {children}
- * </NotificationProvider>
- * ```
  */
 export default function NotificationProvider({
   children,
@@ -151,13 +149,21 @@ export default function NotificationProvider({
     useState<ConnectionStatus>("idle");
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  // ============ Ably 连接相关 ============
   const ablyClientRef = useRef<AblyRealtime | null>(null);
   const retryCountRef = useRef(0);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const AblyRef = useRef<typeof import("ably") | null>(null);
   const userUidRef = useRef<number | null>(null); // 存储用户 UID
+  const tokenRequestCacheRef = useRef<{
+    token: string | TokenRequest | TokenDetails;
+    timestamp: number;
+  } | null>(null); // Token 缓存
 
-  const MAX_RETRIES = 5;
+  // ============ Web Locks 相关 ============
+  const lockControllerRef = useRef<AbortController | null>(null);
+  const [isLeader, setIsLeader] = useState(false); // 是否持有锁（主标签页）
 
   // 移除通知
   const removeNotification = useCallback((id: string) => {
@@ -190,7 +196,7 @@ export default function NotificationProvider({
 
   // 回退到轮询模式
   const fallbackToPolling = useCallback(() => {
-    console.log("[Ably] Falling back to polling mode");
+    console.log("[WebSocket] Falling back to polling mode");
     setConnectionStatus("fallback");
     clearRetryTimeout();
 
@@ -200,6 +206,232 @@ export default function NotificationProvider({
       ablyClientRef.current = null;
     }
   }, []);
+
+  // 初始化 Ably 连接
+  const initializeAblyConnection = useCallback(async () => {
+    // 如果已经有连接，不要重复建立
+    if (ablyClientRef.current) {
+      console.log("[WebSocket] Connection already exists, skipping");
+      return;
+    }
+
+    console.log("[WebSocket] Initializing Ably connection as leader...");
+    setConnectionStatus("connecting");
+
+    let isMounted = true;
+
+    try {
+      // 动态导入 Ably
+      const AblyModule = await import("ably");
+
+      if (!isMounted) {
+        console.log("[WebSocket] Component unmounted, skipping connection");
+        return;
+      }
+
+      AblyRef.current = AblyModule;
+      const Ably = AblyModule;
+
+      // 创建 Ably 客户端
+      const client = new Ably.Realtime({
+        authCallback: async (
+          tokenParams: TokenParams,
+          callback: (
+            error: string | ErrorInfo | null,
+            tokenRequestOrDetails: string | TokenRequest | TokenDetails | null,
+          ) => void,
+        ) => {
+          try {
+            // 检查缓存的 token 是否还有效
+            const now = Date.now();
+            if (
+              tokenRequestCacheRef.current &&
+              now - tokenRequestCacheRef.current.timestamp <
+                TOKEN_CACHE_DURATION
+            ) {
+              console.log("[WebSocket] Using cached token");
+              callback(null, tokenRequestCacheRef.current.token);
+              return;
+            }
+
+            console.log("[WebSocket] Requesting new token...");
+            const result = await getAblyTokenRequest();
+
+            if (result.success && result.data?.tokenRequest) {
+              console.log("[WebSocket] Token acquired successfully");
+              // 缓存 token
+              tokenRequestCacheRef.current = {
+                token: result.data.tokenRequest,
+                timestamp: now,
+              };
+              callback(null, result.data.tokenRequest);
+            } else {
+              const errorInfo: ErrorInfo = {
+                name: "AuthenticationError",
+                message:
+                  result.error?.message ||
+                  result.message ||
+                  "Failed to get token",
+                code: 40100,
+                statusCode: 401,
+              };
+              callback(errorInfo, null);
+            }
+          } catch (error) {
+            console.error("[WebSocket] Auth failed:", error);
+            const errorInfo: ErrorInfo = {
+              name: "AuthenticationError",
+              message: error instanceof Error ? error.message : "Unknown error",
+              code: 40100,
+              statusCode: 401,
+            };
+            callback(errorInfo, null);
+            // 认证失败，回退到轮询
+            if (isMounted) {
+              fallbackToPolling();
+            }
+          }
+        },
+      });
+
+      // 监听连接状态
+      client.connection.on("connected", () => {
+        console.log("[WebSocket] Connected");
+        if (isMounted) {
+          setConnectionStatus("connected");
+          retryCountRef.current = 0;
+          clearRetryTimeout();
+        }
+      });
+
+      client.connection.on("connecting", () => {
+        console.log("[WebSocket] Connecting...");
+        if (isMounted) {
+          setConnectionStatus("connecting");
+        }
+      });
+
+      client.connection.on("disconnected", () => {
+        console.log("[WebSocket] Disconnected");
+        if (isMounted) {
+          setConnectionStatus("disconnected");
+
+          // 尝试重连
+          if (retryCountRef.current < MAX_RETRIES) {
+            const delay = getReconnectDelay(retryCountRef.current);
+            console.log(
+              `[WebSocket] Retrying connection in ${Math.round(delay / 1000)}s (attempt ${retryCountRef.current + 1}/${MAX_RETRIES})`,
+            );
+
+            retryTimeoutRef.current = setTimeout(() => {
+              retryCountRef.current++;
+              client.connect();
+            }, delay);
+          } else {
+            console.error("[WebSocket] Max retries reached");
+            fallbackToPolling();
+          }
+        }
+      });
+
+      client.connection.on("suspended", () => {
+        console.warn("[WebSocket] Connection suspended");
+        if (isMounted) {
+          setConnectionStatus("suspended");
+          fallbackToPolling();
+        }
+      });
+
+      client.connection.on("failed", () => {
+        console.error("[WebSocket] Connection failed");
+        if (isMounted) {
+          setConnectionStatus("failed");
+          fallbackToPolling();
+        }
+      });
+
+      ablyClientRef.current = client;
+    } catch (error) {
+      console.error("[WebSocket] Failed to load Ably module:", error);
+      if (isMounted) {
+        fallbackToPolling();
+      }
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [fallbackToPolling]);
+
+  // 清理 Ably 连接
+  const cleanupAblyConnection = useCallback(() => {
+    console.log("[WebSocket] Cleaning up connection");
+    clearRetryTimeout();
+
+    if (ablyClientRef.current) {
+      ablyClientRef.current.close();
+      ablyClientRef.current = null;
+    }
+
+    setConnectionStatus("idle");
+  }, []);
+
+  // ============ Web Locks 主标签页管理 ============
+  useEffect(() => {
+    if (!isAblyEnabled) {
+      console.log("[Locks] Ably not enabled, using polling fallback");
+      setConnectionStatus("fallback");
+      return;
+    }
+
+    console.log("[Locks] Requesting lock for Ably connection...");
+
+    // 创建 AbortController 用于取消锁请求
+    const controller = new AbortController();
+    lockControllerRef.current = controller;
+
+    // 请求锁
+    navigator.locks
+      .request(LOCK_NAME, { signal: controller.signal }, async (lock) => {
+        if (!lock) {
+          console.log("[Locks] Failed to acquire lock");
+          setConnectionStatus("fallback");
+          return;
+        }
+
+        console.log("[Locks] ✅ Acquired lock, becoming leader");
+        setIsLeader(true);
+
+        // 初始化 Ably 连接
+        await initializeAblyConnection();
+
+        // 保持锁直到组件卸载或标签页关闭
+        return new Promise<void>((resolve) => {
+          // 这个 Promise 永不 resolve，直到：
+          // 1. 组件卸载（controller.abort()）
+          // 2. 标签页关闭（自动释放）
+          controller.signal.addEventListener("abort", () => {
+            console.log("[Locks] Releasing lock");
+            setIsLeader(false);
+            cleanupAblyConnection();
+            resolve();
+          });
+        });
+      })
+      .catch((error) => {
+        // AbortError 是正常的（组件卸载时）
+        if (error.name !== "AbortError") {
+          console.error("[Locks] Error acquiring lock:", error);
+          setConnectionStatus("fallback");
+        }
+      });
+
+    return () => {
+      // 组件卸载时释放锁
+      console.log("[Locks] Component unmounting, aborting lock request");
+      controller.abort();
+    };
+  }, [isAblyEnabled, initializeAblyConnection, cleanupAblyConnection]);
 
   // 首次加载时获取未读通知数量和用户 UID
   useEffect(() => {
@@ -278,176 +510,25 @@ export default function NotificationProvider({
     fetchInitialUnreadCount();
   }, [broadcast]);
 
-  // 初始化 Ably 连接
-  useEffect(() => {
-    // 如果未启用 Ably，直接使用轮询回退
-    if (!isAblyEnabled) {
-      console.log("[Ably] Not enabled, using polling fallback");
-      setConnectionStatus("fallback");
-      return;
-    }
-
-    console.log("[Ably] Initializing connection...");
-    setConnectionStatus("connecting");
-
-    let isMounted = true; // 跟踪组件挂载状态
-
-    // 动态导入 Ably（仅在客户端）
-    import("ably")
-      .then((AblyModule) => {
-        // 如果组件已卸载，不创建连接
-        if (!isMounted) {
-          console.log("[Ably] Component unmounted, skipping connection");
-          return;
-        }
-
-        AblyRef.current = AblyModule;
-        const Ably = AblyModule;
-
-        // 创建 Ably 客户端
-        const client = new Ably.Realtime({
-          authCallback: async (
-            tokenParams: TokenParams,
-            callback: (
-              error: string | ErrorInfo | null,
-              tokenRequestOrDetails:
-                | string
-                | TokenRequest
-                | TokenDetails
-                | null,
-            ) => void,
-          ) => {
-            try {
-              console.log("[Ably] Requesting token...");
-              const result = await getAblyTokenRequest();
-
-              if (result.success && result.data?.tokenRequest) {
-                console.log("[Ably] Token acquired successfully");
-                callback(null, result.data.tokenRequest);
-              } else {
-                const errorInfo: ErrorInfo = {
-                  name: "AuthenticationError",
-                  message:
-                    result.error?.message ||
-                    result.message ||
-                    "Failed to get token",
-                  code: 40100,
-                  statusCode: 401,
-                };
-                callback(errorInfo, null);
-              }
-            } catch (error) {
-              console.error("[Ably] Auth failed:", error);
-              const errorInfo: ErrorInfo = {
-                name: "AuthenticationError",
-                message:
-                  error instanceof Error ? error.message : "Unknown error",
-                code: 40100,
-                statusCode: 401,
-              };
-              callback(errorInfo, null);
-              // 认证失败，回退到轮询
-              if (isMounted) {
-                fallbackToPolling();
-              }
-            }
-          },
-        });
-
-        // 监听连接状态
-        client.connection.on("connected", () => {
-          console.log("[Ably] Connected");
-          if (isMounted) {
-            setConnectionStatus("connected");
-            retryCountRef.current = 0; // 重置重试计数
-            clearRetryTimeout();
-          }
-        });
-
-        client.connection.on("connecting", () => {
-          console.log("[Ably] Connecting...");
-          if (isMounted) {
-            setConnectionStatus("connecting");
-          }
-        });
-
-        client.connection.on("disconnected", () => {
-          console.log("[Ably] Disconnected");
-          if (isMounted) {
-            setConnectionStatus("disconnected");
-
-            // 尝试重连
-            if (retryCountRef.current < MAX_RETRIES) {
-              const delay = getReconnectDelay(retryCountRef.current);
-              console.log(
-                `[Ably] Retrying connection in ${Math.round(delay / 1000)}s (attempt ${retryCountRef.current + 1}/${MAX_RETRIES})`,
-              );
-
-              retryTimeoutRef.current = setTimeout(() => {
-                retryCountRef.current++;
-                client.connect();
-              }, delay);
-            } else {
-              console.error("[Ably] Max retries reached");
-              fallbackToPolling();
-            }
-          }
-        });
-
-        client.connection.on("suspended", () => {
-          console.warn("[Ably] Connection suspended");
-          if (isMounted) {
-            setConnectionStatus("suspended");
-            fallbackToPolling();
-          }
-        });
-
-        client.connection.on("failed", () => {
-          console.error("[Ably] Connection failed");
-          if (isMounted) {
-            setConnectionStatus("failed");
-            fallbackToPolling();
-          }
-        });
-
-        ablyClientRef.current = client;
-      })
-      .catch((error) => {
-        console.error("[Ably] Failed to load Ably module:", error);
-        if (isMounted) {
-          fallbackToPolling();
-        }
-      });
-
-    return () => {
-      isMounted = false; // 标记组件已卸载
-      clearRetryTimeout();
-      if (ablyClientRef.current) {
-        console.log("[Ably] Cleaning up connection");
-        ablyClientRef.current.close();
-        ablyClientRef.current = null;
-      }
-    };
-  }, [isAblyEnabled, fallbackToPolling]);
-
-  // 订阅通知频道
+  // 订阅通知频道（仅主标签页）
   useEffect(() => {
     if (
       !ablyClientRef.current ||
       connectionStatus !== "connected" ||
       !isAblyEnabled ||
-      !userUidRef.current // 确保有用户 UID
+      !isLeader ||
+      !userUidRef.current
     ) {
       return;
     }
 
     const channelName = `user:${userUidRef.current}`;
-    console.log(`[Ably] Subscribing to channel: ${channelName}`);
+    console.log(`[WebSocket] Leader subscribing to channel: ${channelName}`);
 
     const channel = ablyClientRef.current.channels.get(channelName);
 
     const messageHandler = (message: Message) => {
-      console.log("[Ably] Received notification:", message.data);
+      console.log("[WebSocket] Leader received notification:", message.data);
 
       try {
         const { type, payload } = message.data;
@@ -456,35 +537,41 @@ export default function NotificationProvider({
         if (type === "new_notice") {
           const { id, title, content, link, createdAt, count } = payload;
 
+          if (!id || !title || !content) {
+            console.warn("[WebSocket] Invalid notification data:", payload);
+            return;
+          }
+
           setNotifications((prev) => {
             // 避免重复
             if (prev.some((n) => n.id === id)) {
               return prev;
             }
 
-            const newNotification = { id, title, content, link, createdAt };
+            const newNotification: NotificationItem = {
+              id,
+              title,
+              content,
+              link: link ?? null,
+              createdAt: createdAt ?? new Date().toISOString(),
+            };
 
             // 如果已经有5个通知，先移除最旧的，再延迟添加新通知
             if (prev.length >= 5) {
-              // 移除最旧的（数组最后一个，因为新的在开头）
               const withoutOldest = prev.slice(0, 4);
 
-              // 延迟添加新通知，等待退出动画完成（约300ms）
               setTimeout(() => {
                 setNotifications((current) => {
-                  // 再次检查是否已存在（避免重复）
                   if (current.some((n) => n.id === id)) {
                     return current;
                   }
-                  // 添加到开头
                   return [newNotification, ...current];
                 });
-              }, 350); // 等待退出动画完成
+              }, 350);
 
               return withoutOldest;
             }
 
-            // 如果少于5个，直接添加
             return [newNotification, ...prev];
           });
 
@@ -500,13 +587,6 @@ export default function NotificationProvider({
 
             // 广播给其他组件
             broadcast({ type: "unread_notice_update", count });
-
-            // 触发自定义事件
-            window.dispatchEvent(
-              new CustomEvent("localStorageUpdate", {
-                detail: { key: "unread_notice_count" },
-              }),
-            );
           }
         }
         // 处理未读数更新（仅更新数字，不显示 Toast）
@@ -524,16 +604,9 @@ export default function NotificationProvider({
 
           // 广播给其他组件
           broadcast({ type: "unread_notice_update", count: payload.count });
-
-          // 触发自定义事件（用于同标签页其他组件监听）
-          window.dispatchEvent(
-            new CustomEvent("localStorageUpdate", {
-              detail: { key: "unread_notice_count" },
-            }),
-          );
         }
       } catch (error) {
-        console.error("[Ably] Failed to process notification:", error);
+        console.error("[WebSocket] Failed to process notification:", error);
       }
     };
 
@@ -542,10 +615,42 @@ export default function NotificationProvider({
     return () => {
       channel.unsubscribe("notification", messageHandler);
     };
-  }, [connectionStatus, isAblyEnabled, broadcast]);
+  }, [connectionStatus, isAblyEnabled, isLeader, broadcast]);
+
+  // 监听 localStorage 变化（同步未读数量）
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      // 监听未读数量缓存的变化
+      if (e.key === "unread_notice_count" && e.newValue) {
+        try {
+          const data = JSON.parse(e.newValue);
+          if (typeof data.count === "number") {
+            console.log(
+              "[Storage] Syncing unread count from storage:",
+              data.count,
+            );
+            setUnreadCount(data.count);
+
+            // 广播给其他组件
+            broadcast({ type: "unread_notice_update", count: data.count });
+          }
+        } catch (error) {
+          console.error("[Storage] Failed to parse storage data:", error);
+        }
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, [broadcast]);
 
   return (
-    <NotificationContext.Provider value={{ connectionStatus, unreadCount }}>
+    <NotificationContext.Provider
+      value={{ connectionStatus, unreadCount, isLeader }}
+    >
       {/* 仅在回退模式时启用轮询组件 */}
       {connectionStatus === "fallback" && <UnreadNoticeTracker />}
       {/* 通知 Toast 显示 */}

@@ -176,7 +176,7 @@ const calculateTokenStatus = (
 export function LoginButton({ mainColor }: { mainColor: string }) {
   const navigate = useNavigateWithTransition();
   const router = useRouter();
-  const { connectionStatus } = useNotification();
+  const { connectionStatus, isLeader } = useNotification();
   const [userInfo, setUserInfo] = useState<StoredUserInfo | null>(null);
   const [tokenStatus, setTokenStatus] = useState<{
     expiresIn: string;
@@ -456,6 +456,23 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
                         </div>
                         <span className="text-success/90">
                           已与服务器建立实时通信
+                        </span>
+                      </Tooltip>
+                    </div>
+                  )}
+                  {connectionStatus === "idle" && isLeader === false && (
+                    <div className="px-4 pt-2 pb-3 mb-1 text-xs border-b border-border">
+                      <Tooltip
+                        className="flex items-center gap-2 text-muted-foreground"
+                        content="其他标签页已建立 WebSocket 连接"
+                        placement="right"
+                      >
+                        {/* 静态绿色圆点 - 无动画 */}
+                        <div className="relative w-3 h-3 flex items-center justify-center">
+                          <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-success" />
+                        </div>
+                        <span className="text-success/90">
+                          已由其他标签页建立实时通信
                         </span>
                       </Tooltip>
                     </div>
