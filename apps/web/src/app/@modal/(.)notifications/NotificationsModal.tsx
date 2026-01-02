@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog } from "@/ui/Dialog";
 import { useNavigateWithTransition } from "@/components/Link";
-import NotificationsClient from "../../notifications/NotificationsClient";
+import NotificationsClient from "@/app/(account)/notifications/NotificationsClient";
 
 interface NotificationsModalProps {
   unreadNotices: Array<{
