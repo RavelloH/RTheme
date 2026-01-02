@@ -329,24 +329,25 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
                 {userInfo ? (
                   <div className="relative w-full h-full">
                     {/* 头像层 */}
-
-                    <UserAvatar
-                      key="user-avatar"
-                      username={
-                        userInfo.nickname || userInfo.username || "user"
-                      }
-                      avatarUrl={userInfo.avatar}
-                      email={userInfo.email}
-                      shape="square"
-                      colors={generateGradient(
-                        mainColor,
-                        generateComplementary(mainColor),
-                        4,
-                      )}
-                      className={
-                        "!block w-full h-full transition-all duration-200 group-hover:scale-105 group-hover:opacity-90"
-                      }
-                    />
+                    <div className="overflow-hidden">
+                      <UserAvatar
+                        key="user-avatar"
+                        username={
+                          userInfo.nickname || userInfo.username || "user"
+                        }
+                        avatarUrl={userInfo.avatar}
+                        email={userInfo.email}
+                        shape="square"
+                        colors={generateGradient(
+                          mainColor,
+                          generateComplementary(mainColor),
+                          4,
+                        )}
+                        className={
+                          "!block w-full h-full transition-all duration-200 group-hover:scale-105 group-hover:opacity-90"
+                        }
+                      />
+                    </div>
 
                     {/* 未读通知叠加层 */}
                     <AutoTransition>

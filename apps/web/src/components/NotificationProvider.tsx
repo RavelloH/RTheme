@@ -13,6 +13,7 @@ import { getAblyTokenRequest } from "@/actions/ably";
 import { getUnreadNoticeCount } from "@/actions/notice";
 import UnreadNoticeTracker from "./UnreadNoticeTracker";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
+import NotificationToast, { type NotificationItem } from "./NotificationToast";
 
 // 动态导入 Ably 类型
 import type {
@@ -149,6 +150,7 @@ export default function NotificationProvider({
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("idle");
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const ablyClientRef = useRef<AblyRealtime | null>(null);
   const retryCountRef = useRef(0);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -156,6 +158,11 @@ export default function NotificationProvider({
   const userUidRef = useRef<number | null>(null); // 存储用户 UID
 
   const MAX_RETRIES = 5;
+
+  // 移除通知
+  const removeNotification = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
 
   // 清理重试定时器
   const clearRetryTimeout = () => {
@@ -445,7 +452,65 @@ export default function NotificationProvider({
       try {
         const { type, payload } = message.data;
 
-        if (
+        // 处理新通知（显示 Toast）
+        if (type === "new_notice") {
+          const { id, title, content, link, createdAt, count } = payload;
+
+          setNotifications((prev) => {
+            // 避免重复
+            if (prev.some((n) => n.id === id)) {
+              return prev;
+            }
+
+            const newNotification = { id, title, content, link, createdAt };
+
+            // 如果已经有5个通知，先移除最旧的，再延迟添加新通知
+            if (prev.length >= 5) {
+              // 移除最旧的（数组最后一个，因为新的在开头）
+              const withoutOldest = prev.slice(0, 4);
+
+              // 延迟添加新通知，等待退出动画完成（约300ms）
+              setTimeout(() => {
+                setNotifications((current) => {
+                  // 再次检查是否已存在（避免重复）
+                  if (current.some((n) => n.id === id)) {
+                    return current;
+                  }
+                  // 添加到开头
+                  return [newNotification, ...current];
+                });
+              }, 350); // 等待退出动画完成
+
+              return withoutOldest;
+            }
+
+            // 如果少于5个，直接添加
+            return [newNotification, ...prev];
+          });
+
+          // 更新未读数
+          if (typeof count === "number") {
+            setUnreadCount(count);
+
+            // 同步到 localStorage
+            localStorage.setItem(
+              "unread_notice_count",
+              JSON.stringify({ count, cachedAt: Date.now() }),
+            );
+
+            // 广播给其他组件
+            broadcast({ type: "unread_notice_update", count });
+
+            // 触发自定义事件
+            window.dispatchEvent(
+              new CustomEvent("localStorageUpdate", {
+                detail: { key: "unread_notice_count" },
+              }),
+            );
+          }
+        }
+        // 处理未读数更新（仅更新数字，不显示 Toast）
+        else if (
           type === "unread_count_update" &&
           typeof payload.count === "number"
         ) {
@@ -483,6 +548,11 @@ export default function NotificationProvider({
     <NotificationContext.Provider value={{ connectionStatus, unreadCount }}>
       {/* 仅在回退模式时启用轮询组件 */}
       {connectionStatus === "fallback" && <UnreadNoticeTracker />}
+      {/* 通知 Toast 显示 */}
+      <NotificationToast
+        notifications={notifications}
+        onRemove={removeNotification}
+      />
       {children}
     </NotificationContext.Provider>
   );

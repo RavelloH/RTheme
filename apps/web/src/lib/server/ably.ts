@@ -35,14 +35,39 @@ export type NotificationType =
   | "comment_reply" // 评论回复
   | "post_status_changed" // 文章状态变更
   | "system_notice" // 系统通知
-  | "unread_count_update"; // 未读数更新
+  | "unread_count_update" // 未读数更新
+  | "new_notice"; // 新通知
+
+/**
+ * 未读数更新 payload
+ */
+export interface UnreadCountUpdatePayload {
+  count: number;
+  noticeId?: string;
+  title?: string;
+}
+
+/**
+ * 新通知 payload（包含完整通知信息）
+ */
+export interface NewNoticePayload {
+  id: string;
+  title: string;
+  content: string;
+  link: string | null;
+  createdAt: string;
+  count: number; // 当前未读总数
+}
 
 /**
  * 通知数据接口
  */
 export interface NotificationData {
   type: NotificationType;
-  payload: Record<string, unknown>;
+  payload:
+    | UnreadCountUpdatePayload
+    | NewNoticePayload
+    | Record<string, unknown>;
 }
 
 /**

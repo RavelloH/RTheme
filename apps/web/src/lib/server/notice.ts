@@ -59,12 +59,15 @@ export async function sendNotice(
     },
   });
 
-  // 通过 Ably 推送未读数量更新
+  // 通过 Ably 推送新通知（包含完整信息）
   await publishNoticeToUser(userUid, {
-    type: "unread_count_update",
+    type: "new_notice",
     payload: {
-      noticeId: notice.id,
+      id: notice.id,
       title: notice.title,
+      content: notice.content,
+      link: notice.link,
+      createdAt: notice.createdAt.toISOString(),
       count: unreadCount,
     },
   });
