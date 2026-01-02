@@ -241,7 +241,7 @@ export default function NotificationToast({
 
   const toastContent = (
     <div
-      className="fixed left-4 z-[100] flex max-h-screen flex-col-reverse gap-2 pointer-events-none transition-all duration-300"
+      className="fixed left-4 z-[10] flex max-h-screen flex-col-reverse gap-2 pointer-events-none transition-all duration-300"
       style={{
         bottom: bottomOffset,
         width: "380px",

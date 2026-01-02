@@ -111,11 +111,26 @@ const NotificationContext = createContext<NotificationContextValue>({
 });
 
 /**
- * 未读通知更新消息类型
+ * 未读通知更新消息类型（组件内广播）
  */
 interface UnreadNoticeUpdateMessage {
   type: "unread_notice_update";
   count: number;
+}
+
+/**
+ * 跨标签页消息类型
+ */
+interface CrossTabMessage {
+  type: "new_notice" | "unread_count_update";
+  payload: {
+    id?: string;
+    title?: string;
+    content?: string;
+    link?: string | null;
+    createdAt?: string;
+    count?: number;
+  };
 }
 
 /**
@@ -164,6 +179,9 @@ export default function NotificationProvider({
   // ============ Web Locks 相关 ============
   const lockControllerRef = useRef<AbortController | null>(null);
   const [isLeader, setIsLeader] = useState(false); // 是否持有锁（主标签页）
+
+  // ============ 跨标签页通信 ============
+  const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
 
   // 移除通知
   const removeNotification = useCallback((id: string) => {
@@ -510,6 +528,95 @@ export default function NotificationProvider({
     fetchInitialUnreadCount();
   }, [broadcast]);
 
+  // ============ 跨标签页通信（BroadcastChannel） ============
+  useEffect(() => {
+    // 创建 BroadcastChannel 实例
+    const channel = new BroadcastChannel("notifications");
+    broadcastChannelRef.current = channel;
+
+    console.log("[BroadcastChannel] Channel created");
+
+    // 监听来自其他标签页的消息
+    channel.onmessage = (event: MessageEvent<CrossTabMessage>) => {
+      const { type, payload } = event.data;
+      console.log("[BroadcastChannel] Received message:", type, payload);
+
+      try {
+        // 处理新通知（显示 Toast）
+        if (type === "new_notice") {
+          const { id, title, content, link, createdAt, count } = payload;
+
+          if (!id || !title || !content) {
+            console.warn(
+              "[BroadcastChannel] Invalid notification data:",
+              payload,
+            );
+            return;
+          }
+
+          setNotifications((prev) => {
+            // 避免重复
+            if (prev.some((n) => n.id === id)) {
+              return prev;
+            }
+
+            const newNotification: NotificationItem = {
+              id,
+              title,
+              content,
+              link: link ?? null,
+              createdAt: createdAt ?? new Date().toISOString(),
+            };
+
+            // 如果已经有5个通知，先移除最旧的，再延迟添加新通知
+            if (prev.length >= 5) {
+              const withoutOldest = prev.slice(0, 4);
+
+              setTimeout(() => {
+                setNotifications((current) => {
+                  if (current.some((n) => n.id === id)) {
+                    return current;
+                  }
+                  return [newNotification, ...current];
+                });
+              }, 350);
+
+              return withoutOldest;
+            }
+
+            return [newNotification, ...prev];
+          });
+
+          // 更新未读数
+          if (typeof count === "number") {
+            setUnreadCount(count);
+
+            // 广播给其他组件（同一标签页内）
+            // 注意：先广播再更新 localStorage，确保 UserInfo 能在 storage 事件前收到消息
+            broadcast({ type: "unread_notice_update", count });
+          }
+        }
+        // 处理未读数更新（仅更新数字，不显示 Toast）
+        else if (
+          type === "unread_count_update" &&
+          typeof payload.count === "number"
+        ) {
+          setUnreadCount(payload.count);
+
+          // 广播给其他组件（同一标签页内）
+          broadcast({ type: "unread_notice_update", count: payload.count });
+        }
+      } catch (error) {
+        console.error("[BroadcastChannel] Failed to process message:", error);
+      }
+    };
+
+    return () => {
+      console.log("[BroadcastChannel] Channel closed");
+      channel.close();
+    };
+  }, [broadcast]);
+
   // 订阅通知频道（仅主标签页）
   useEffect(() => {
     if (
@@ -579,14 +686,24 @@ export default function NotificationProvider({
           if (typeof count === "number") {
             setUnreadCount(count);
 
-            // 同步到 localStorage
+            // 1. 先广播给其他标签页（通过 BroadcastChannel），确保最快送达
+            if (broadcastChannelRef.current) {
+              const message: CrossTabMessage = {
+                type: "new_notice",
+                payload: { id, title, content, link, createdAt, count },
+              };
+              broadcastChannelRef.current.postMessage(message);
+              console.log("[BroadcastChannel] Sent new_notice to other tabs");
+            }
+
+            // 2. 广播给本标签页的其他组件
+            broadcast({ type: "unread_notice_update", count });
+
+            // 3. 最后写入 localStorage（作为持久化和备份机制）
             localStorage.setItem(
               "unread_notice_count",
               JSON.stringify({ count, cachedAt: Date.now() }),
             );
-
-            // 广播给其他组件
-            broadcast({ type: "unread_notice_update", count });
           }
         }
         // 处理未读数更新（仅更新数字，不显示 Toast）
@@ -596,14 +713,26 @@ export default function NotificationProvider({
         ) {
           setUnreadCount(payload.count);
 
-          // 同步到 localStorage
+          // 1. 先广播给其他标签页（通过 BroadcastChannel）
+          if (broadcastChannelRef.current) {
+            const message: CrossTabMessage = {
+              type: "unread_count_update",
+              payload: { count: payload.count },
+            };
+            broadcastChannelRef.current.postMessage(message);
+            console.log(
+              "[BroadcastChannel] Sent unread_count_update to other tabs",
+            );
+          }
+
+          // 2. 广播给本标签页的其他组件
+          broadcast({ type: "unread_notice_update", count: payload.count });
+
+          // 3. 最后写入 localStorage
           localStorage.setItem(
             "unread_notice_count",
             JSON.stringify({ count: payload.count, cachedAt: Date.now() }),
           );
-
-          // 广播给其他组件
-          broadcast({ type: "unread_notice_update", count: payload.count });
         }
       } catch (error) {
         console.error("[WebSocket] Failed to process notification:", error);

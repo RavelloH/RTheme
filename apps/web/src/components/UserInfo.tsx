@@ -184,16 +184,16 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
   } | null>(null);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [showNoticeAnimation, setShowNoticeAnimation] = useState(false);
-  const [isLoadingComplete, setIsLoadingComplete] = useState(false);
   const prevUnreadCountRef = useRef<number>(0);
   const isInitialLoadRef = useRef(true);
   const pendingAnimationRef = useRef(false);
+  const isLoadingCompleteRef = useRef(false); // 使用 ref 避免闭包问题
   const { isConsoleOpen } = useConsoleStore();
 
   // 监听页面加载完成事件
   useEffect(() => {
     const handleLoadingComplete = () => {
-      setIsLoadingComplete(true);
+      isLoadingCompleteRef.current = true;
       // 如果有待播放的动画，现在播放
       if (pendingAnimationRef.current) {
         pendingAnimationRef.current = false;
@@ -206,8 +206,18 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
     };
 
     window.addEventListener("loadingComplete", handleLoadingComplete);
+
+    // 兜底机制：3 秒后如果还没加载完成，强制设置为已完成
+    const fallbackTimeout = setTimeout(() => {
+      if (!isLoadingCompleteRef.current) {
+        console.log("[UserInfo] Fallback: marking loading as complete");
+        handleLoadingComplete();
+      }
+    }, 3000);
+
     return () => {
       window.removeEventListener("loadingComplete", handleLoadingComplete);
+      clearTimeout(fallbackTimeout);
     };
   }, []);
 
@@ -221,13 +231,17 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
       // 1. 首次加载且有未读通知
       // 2. 新的未读数 > 之前的未读数（新增了通知）
       if (newCount > 0 && (isInitialLoadRef.current || newCount > prevCount)) {
-        if (isLoadingComplete) {
-          // 如果加载已完成，立即播放动画
+        // 如果不是首次加载（用户已经在页面上），直接播放动画，无需等待 loadingComplete
+        const shouldPlayImmediately =
+          !isInitialLoadRef.current || isLoadingCompleteRef.current;
+
+        if (shouldPlayImmediately) {
+          // 立即播放动画
           isInitialLoadRef.current = false;
           setShowNoticeAnimation(true);
           setTimeout(() => setShowNoticeAnimation(false), 2500);
         } else {
-          // 如果加载未完成，标记为待播放
+          // 仅在首次加载时标记为待播放
           pendingAnimationRef.current = true;
         }
       }
@@ -277,9 +291,9 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
     const handleStorage = (event: StorageEvent) => {
       if (event.key === "user_info") {
         syncUserInfo();
-      } else if (event.key === "unread_notice_count") {
-        syncUnreadCount();
       }
+      // 注意：unread_notice_count 已由 NotificationProvider 通过 broadcast 同步，
+      // 无需在此处理，避免与 BroadcastChannel 消息产生竞态条件
     };
 
     // 监听同一标签页内的 localStorage 变化（自定义事件）
@@ -287,9 +301,8 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
       if (event instanceof CustomEvent) {
         if (event.detail?.key === "user_info") {
           syncUserInfo();
-        } else if (event.detail?.key === "unread_notice_count") {
-          syncUnreadCount();
         }
+        // 注意：unread_notice_count 已由 NotificationProvider 通过 broadcast 同步
       }
     };
 
