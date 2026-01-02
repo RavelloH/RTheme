@@ -82,6 +82,7 @@
     "react-dom": "^19.1.1",
     "react-email": "^5.0.8",
     "react-fast-marquee": "^1.6.5",
+    "react-intersection-observer": "^10.0.0",
     "react-markdown": "^10.1.0",
     "rehype-katex": "^7.0.1",
     "rehype-raw": "^7.0.0",

@@ -9,6 +9,7 @@ import {
   RiMailLine,
   RiMailOpenLine,
 } from "@remixicon/react";
+import { useInView } from "react-intersection-observer";
 import { Button } from "@/ui/Button";
 import { useToast } from "@/ui/Toast";
 import {
@@ -20,6 +21,7 @@ import { useNavigateWithTransition } from "@/components/Link";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
+import { AutoResizer } from "@/ui/AutoResizer";
 
 interface Notice {
   id: string;
@@ -68,6 +70,19 @@ export default function NotificationsClient({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const modalScrollRef = useRef<HTMLDivElement>(null); // 模态框滚动容器
   const loadingRef = useRef(false);
+  const readCountRef = useRef(initialRead.length); // 使用 ref 跟踪已加载的已读通知数量
+  const hasMoreRef = useRef(initialHasMoreRead); // 使用 ref 跟踪是否有更多数据
+
+  // 使用 react-intersection-observer 监听触发元素（每10条中的第5条）
+  const { ref: loadMoreRef, inView } = useInView({
+    threshold: 0,
+    skip: !hasMoreRead, // 没有更多数据时跳过监听
+  });
+
+  // 同步 hasMoreRead 到 ref
+  useEffect(() => {
+    hasMoreRef.current = hasMoreRead;
+  }, [hasMoreRead]);
 
   // 更新未读数到 localStorage 并广播
   const updateUnreadCount = (count: number) => {
@@ -81,16 +96,22 @@ export default function NotificationsClient({
 
   // 加载更多已读通知
   const loadMoreReadNotices = async () => {
-    if (loadingRef.current || !hasMoreRead) return;
+    if (loadingRef.current || !hasMoreRef.current) return;
 
     loadingRef.current = true;
     setIsLoadingMore(true);
 
     try {
-      const result = await getReadNotices(readNotices.length, 10);
+      const result = await getReadNotices(readCountRef.current, 10);
       if (result.success && result.data) {
-        setReadNotices((prev) => [...prev, ...result.data!.read]);
-        setHasMoreRead(result.data.hasMoreRead || false);
+        setReadNotices((prev) => {
+          const newList = [...prev, ...result.data!.read];
+          readCountRef.current = newList.length;
+          return newList;
+        });
+        const newHasMore = result.data.hasMoreRead || false;
+        setHasMoreRead(newHasMore);
+        hasMoreRef.current = newHasMore;
       } else {
         toast.error(result.message || "加载失败");
       }
@@ -103,39 +124,19 @@ export default function NotificationsClient({
     }
   };
 
-  // 滚动监听（宽屏模式监听 window，模态框模式监听容器）
+  // 当触发元素进入视口时加载更多
   useEffect(() => {
-    if (isModal) {
-      // 模态框模式：监听容器滚动
-      const container = modalScrollRef.current;
-      if (!container) return;
-
-      const handleScroll = () => {
-        const { scrollTop, scrollHeight, clientHeight } = container;
-        if (scrollHeight - scrollTop - clientHeight < 200 && hasMoreRead) {
+    if (inView && hasMoreRef.current && !loadingRef.current && !isLoadingMore) {
+      // 添加小延迟避免初始渲染时立即触发
+      const timer = setTimeout(() => {
+        if (hasMoreRef.current && !loadingRef.current) {
           loadMoreReadNotices();
         }
-      };
-
-      container.addEventListener("scroll", handleScroll);
-      return () => container.removeEventListener("scroll", handleScroll);
-    } else {
-      // 宽屏模式：监听 window 滚动
-      const handleScroll = () => {
-        const scrollTop = window.scrollY || document.documentElement.scrollTop;
-        const scrollHeight = document.documentElement.scrollHeight;
-        const clientHeight = window.innerHeight;
-
-        if (scrollHeight - scrollTop - clientHeight < 200 && hasMoreRead) {
-          loadMoreReadNotices();
-        }
-      };
-
-      window.addEventListener("scroll", handleScroll);
-      return () => window.removeEventListener("scroll", handleScroll);
+      }, 100);
+      return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasMoreRead, readNotices.length, isModal]);
+  }, [inView]); // 只依赖 isModal 和 hasMoreRead
 
   // 处理点击通知
   const handleNoticeClick = async (notice: Notice) => {
@@ -162,7 +163,12 @@ export default function NotificationsClient({
             updateUnreadCount(newUnread.length);
             return newUnread;
           });
-          setReadNotices((prev) => [notice, ...prev]);
+          setReadNotices((prev) => {
+            const newList = [notice, ...prev];
+            // 更新 ref 中的计数
+            readCountRef.current = newList.length;
+            return newList;
+          });
           setTotalReadCount((prev) => prev + 1); // 已读总数 +1
 
           // 如果有链接，跳转
@@ -193,7 +199,12 @@ export default function NotificationsClient({
       const result = await markAllNoticesAsRead();
       if (result.success) {
         // 将所有未读通知移到已读列表
-        setReadNotices((prev) => [...unreadNotices, ...prev]);
+        setReadNotices((prev) => {
+          const newList = [...unreadNotices, ...prev];
+          // 更新 ref 中的计数
+          readCountRef.current = newList.length;
+          return newList;
+        });
         setUnreadNotices([]);
         setTotalReadCount((prev) => prev + unreadCount); // 已读总数增加
         // 同步未读数到 localStorage 并广播
@@ -224,59 +235,70 @@ export default function NotificationsClient({
   };
 
   // 渲染通知项
-  const renderNoticeItem = (notice: Notice, isRead: boolean) => {
+  const renderNoticeItem = (
+    notice: Notice,
+    isRead: boolean,
+    index?: number,
+  ) => {
+    // 计算是否应该附加哨兵ref：已读通知 && 是当前最后一批的第5条
+    const shouldAttachRef =
+      isRead &&
+      hasMoreRead &&
+      index !== undefined &&
+      index === readCountRef.current - 5;
+
     return (
-      <div
-        key={notice.id}
-        onClick={() => handleNoticeClick(notice)}
-        className={`
-        group relative px-6 py-4 border-b border-foreground/10
-        transition-all duration-200
-        ${notice.link ? "cursor-pointer hover:bg-foreground/5" : ""}
-        ${!isRead ? "bg-primary/5" : ""}
-      `}
-      >
-        <div className="flex gap-4">
-          {/* 内容区域 */}
-          <div className="flex-1 min-w-0">
-            {/* 标题行：未读小点 + 标题 */}
-            <div className="flex items-center gap-2.5 mb-1">
-              {/* 未读标识 */}
-              {!isRead && (
-                <div className="flex-shrink-0">
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                </div>
+      <AutoTransition key={notice.id}>
+        <div
+          ref={shouldAttachRef ? loadMoreRef : undefined}
+          onClick={() => handleNoticeClick(notice)}
+          className={`group relative px-6 py-4 border-b border-foreground/10 transition-all duration-200 
+              ${notice.link ? "cursor-pointer hover:bg-foreground/5" : ""} 
+              ${!isRead ? "bg-primary/5" : ""}
+            `}
+        >
+          <div className="flex gap-4">
+            {/* 内容区域 */}
+            <div className="flex-1 min-w-0">
+              {/* 标题行：未读小点 + 标题 */}
+              <div className="flex items-center gap-2.5 mb-1">
+                {/* 未读标识 */}
+                {!isRead && (
+                  <div className="flex-shrink-0">
+                    <div className="w-2 h-2 rounded-full bg-primary" />
+                  </div>
+                )}
+
+                {/* 标题：加大字号、粗体 */}
+                <p
+                  className={`text-base font-semibold leading-relaxed flex-1 min-w-0 ${
+                    isRead ? "text-muted-foreground" : "text-foreground"
+                  }`}
+                >
+                  {notice.title}
+                </p>
+              </div>
+
+              {/* 正文：普通样式 */}
+              {notice.content && (
+                <p
+                  className={`text-sm leading-relaxed ${
+                    isRead ? "text-muted-foreground/80" : "text-foreground/80"
+                  }`}
+                >
+                  {notice.content.replace(/\n/g, " ")}
+                </p>
               )}
 
-              {/* 标题：加大字号、粗体 */}
-              <p
-                className={`text-base font-semibold leading-relaxed flex-1 min-w-0 ${
-                  isRead ? "text-muted-foreground" : "text-foreground"
-                }`}
-              >
-                {notice.title}
-              </p>
-            </div>
-
-            {/* 正文：普通样式 */}
-            {notice.content && (
-              <p
-                className={`text-sm leading-relaxed ${
-                  isRead ? "text-muted-foreground/80" : "text-foreground/80"
-                }`}
-              >
-                {notice.content.replace(/\n/g, " ")}
-              </p>
-            )}
-
-            {/* 时间 */}
-            <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
-              <RiTimeLine size={14} />
-              <span>{formatTime(notice.createdAt)}</span>
+              {/* 时间 */}
+              <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+                <RiTimeLine size={14} />
+                <span>{formatTime(notice.createdAt)}</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </AutoTransition>
     );
   };
 
@@ -318,78 +340,79 @@ export default function NotificationsClient({
           {/* 通知列表容器 */}
           <div className="bg-background border border-foreground/10 rounded-sm overflow-hidden">
             <div>
-              <AutoTransition type="fade" duration={0.2} initial={false}>
-                {unreadNotices.length === 0 && readNotices.length === 0 ? (
-                  <div
-                    key="empty"
-                    className="flex flex-col items-center justify-center text-muted-foreground py-20"
-                  >
-                    <RiZzzLine size="3em" className="mb-4" />
-                    <p className="text-sm">暂无通知</p>
-                  </div>
-                ) : (
-                  <div key="list">
-                    {/* 未读通知 */}
-                    {unreadNotices.length > 0 && (
-                      <div>
-                        <div className="sticky top-0 z-10 px-6 py-3 bg-background/95 backdrop-blur-sm border-b border-foreground/10">
-                          <div className="flex items-center gap-2">
-                            <RiMailLine size="1em" className="text-primary" />
-                            <h3 className="text-sm font-semibold text-foreground">
-                              未读通知
-                            </h3>
-                            <span className="ml-auto px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary rounded-full">
-                              {unreadNotices.length}
-                            </span>
+              <AutoResizer initial={false}>
+                <AutoTransition type="fade" duration={0.5}>
+                  {unreadNotices.length === 0 && readNotices.length === 0 ? (
+                    <div
+                      key="empty"
+                      className="flex flex-col items-center justify-center text-muted-foreground py-20"
+                    >
+                      <RiZzzLine size="3em" className="mb-4" />
+                      <p className="text-sm">暂无通知</p>
+                    </div>
+                  ) : (
+                    <div key="list">
+                      {/* 未读通知 */}
+                      {unreadNotices.length > 0 && (
+                        <div>
+                          <div className="sticky top-0 z-10 px-6 py-3 bg-background/95 backdrop-blur-sm border-b border-foreground/10">
+                            <div className="flex items-center gap-2">
+                              <RiMailLine size="1em" className="text-primary" />
+                              <h3 className="text-sm font-semibold text-foreground">
+                                未读通知
+                              </h3>
+                              <span className="ml-auto px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary rounded-full">
+                                {unreadNotices.length}
+                              </span>
+                            </div>
                           </div>
+                          {unreadNotices.map((notice) =>
+                            renderNoticeItem(notice, false),
+                          )}
                         </div>
-                        {unreadNotices.map((notice) =>
-                          renderNoticeItem(notice, false),
-                        )}
-                      </div>
-                    )}
-
-                    {/* 已读通知 */}
-                    {readNotices.length > 0 && (
-                      <div className={unreadNotices.length > 0 ? "mt-6" : ""}>
-                        <div className="sticky top-0 z-10 px-6 py-3 bg-background/95 backdrop-blur-sm border-b border-foreground/10">
-                          <div className="flex items-center gap-2">
-                            <RiMailOpenLine
-                              size="1em"
-                              className="text-muted-foreground"
-                            />
-                            <h3 className="text-sm font-semibold text-foreground">
-                              已读通知
-                            </h3>
-                            <span className="ml-auto px-2 py-0.5 text-xs font-medium bg-foreground/5 text-muted-foreground rounded-full">
-                              {totalReadCount}
-                            </span>
+                      )}
+                      {/* 已读通知 */}
+                      {readNotices.length > 0 && (
+                        <div className={unreadNotices.length > 0 ? "mt-6" : ""}>
+                          <div className="sticky top-0 z-10 px-6 py-3 bg-background/95 backdrop-blur-sm border-b border-foreground/10">
+                            <div className="flex items-center gap-2">
+                              <RiMailOpenLine
+                                size="1em"
+                                className="text-muted-foreground"
+                              />
+                              <h3 className="text-sm font-semibold text-foreground">
+                                已读通知
+                              </h3>
+                              <span className="ml-auto px-2 py-0.5 text-xs font-medium bg-foreground/5 text-muted-foreground rounded-full">
+                                {totalReadCount}
+                              </span>
+                            </div>
                           </div>
+                          {readNotices.map((notice, index) =>
+                            renderNoticeItem(notice, true, index),
+                          )}
+
+                          {/* 加载指示器 */}
+                          {isLoadingMore && (
+                            <div className="flex items-center justify-center py-8">
+                              <LoadingIndicator size="md" />
+                            </div>
+                          )}
+
+                          {/* 没有更多提示 */}
+                          {!hasMoreRead && readNotices.length > 0 && (
+                            <div className="flex items-center justify-center py-8">
+                              <p className="text-sm text-muted-foreground">
+                                没有更多通知了
+                              </p>
+                            </div>
+                          )}
                         </div>
-                        {readNotices.map((notice) =>
-                          renderNoticeItem(notice, true),
-                        )}
-
-                        {/* 加载更多指示器 */}
-                        {isLoadingMore && (
-                          <div className="flex items-center justify-center py-8">
-                            <LoadingIndicator size="md" />
-                          </div>
-                        )}
-
-                        {/* 没有更多提示 */}
-                        {!hasMoreRead && readNotices.length > 0 && (
-                          <div className="flex items-center justify-center py-8">
-                            <p className="text-sm text-muted-foreground">
-                              没有更多通知了
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </AutoTransition>
+                      )}
+                    </div>
+                  )}
+                </AutoTransition>
+              </AutoResizer>
             </div>
           </div>
         </div>
@@ -426,7 +449,7 @@ export default function NotificationsClient({
 
           {/* 通知列表 */}
           <div ref={modalScrollRef} className="flex-1 overflow-y-auto">
-            <div>
+            <AutoResizer initial={false}>
               <AutoTransition type="fade" duration={0.2} initial={false}>
                 {unreadNotices.length === 0 && readNotices.length === 0 ? (
                   <div
@@ -475,11 +498,11 @@ export default function NotificationsClient({
                             </span>
                           </div>
                         </div>
-                        {readNotices.map((notice) =>
-                          renderNoticeItem(notice, true),
+                        {readNotices.map((notice, index) =>
+                          renderNoticeItem(notice, true, index),
                         )}
 
-                        {/* 加载更多指示器 */}
+                        {/* 加载指示器 */}
                         {isLoadingMore && (
                           <div className="flex items-center justify-center py-8">
                             <LoadingIndicator size="md" />
@@ -499,7 +522,7 @@ export default function NotificationsClient({
                   </div>
                 )}
               </AutoTransition>
-            </div>
+            </AutoResizer>
           </div>
         </div>
       )}

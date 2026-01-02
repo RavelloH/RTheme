@@ -1,18 +1,21 @@
 import "server-only";
-import { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { authVerify } from "@/lib/server/auth-verify";
 import { getNotices } from "@/actions/notice";
 import NotificationsClient from "./NotificationsClient";
+import UnauthorizedPage from "../unauthorized";
+import { generateMetadata } from "@/lib/server/seo";
 
-export const metadata: Metadata = {
-  title: "通知中心",
-  robots: {
-    index: false,
-    follow: false,
+export const metadata = await generateMetadata(
+  {
+    title: "通知中心",
+    robots: {
+      index: false,
+      follow: false,
+    },
   },
-};
+  { pathname: "/notifications" },
+);
 
 export default async function NotificationsPage() {
   // 检查登录状态
@@ -23,7 +26,7 @@ export default async function NotificationsPage() {
     accessToken: token,
   });
   if (!user) {
-    redirect("/login?redirect=/notifications");
+    return <UnauthorizedPage redirect="/notifications" />;
   }
 
   // 获取通知数据
