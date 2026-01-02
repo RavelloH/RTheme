@@ -94,7 +94,7 @@ export async function getAblyTokenRequest(
     const tokenRequest = await client.auth.createTokenRequest({
       clientId: `user:${user.uid}`,
       capability: {
-        [`user:${user.uid}`]: ["subscribe"], // 仅允许订阅自己的 Channel
+        [`user:${user.uid}`]: ["subscribe", "presence"], // 允许订阅自己的 Channel 和使用 Presence
       },
       ttl: 3600000, // 1 小时有效期
     });

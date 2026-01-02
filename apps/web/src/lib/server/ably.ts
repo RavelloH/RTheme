@@ -137,3 +137,57 @@ export const publishNoticeToUsers = async (
 
   return successCount;
 };
+
+/**
+ * 检查用户是否在线（通过 Ably Presence API）
+ *
+ * 使用 Ably 的 Presence 功能实时检测用户是否有活跃的 WebSocket 连接。
+ * 这比基于 RefreshToken 的检测更精准，因为它反映的是真实的连接状态。
+ *
+ * @param userUid - 用户的 UID
+ * @returns Promise<boolean> - 用户是否在线（true = 在线，false = 离线或检测失败）
+ *
+ * @example
+ * ```typescript
+ * const isOnline = await checkUserOnlineStatus(123);
+ * if (isOnline) {
+ *   console.log("用户在线，跳过邮件通知");
+ * } else {
+ *   console.log("用户离线，发送邮件通知");
+ * }
+ * ```
+ */
+export const checkUserOnlineStatus = async (
+  userUid: number,
+): Promise<boolean> => {
+  const client = getAblyServerClient();
+  if (!client) {
+    console.warn(
+      "[Ably] Client not available, cannot check presence, assuming offline",
+    );
+    return false;
+  }
+
+  try {
+    const channel = client.channels.get(`user:${userUid}`);
+    const presenceResult = await channel.presence.get();
+
+    // 检查是否有任何成员在线
+    // presenceResult 是 PaginatedResult<PresenceMessage>，需要访问 items 属性
+    const presenceMembers = presenceResult.items || [];
+    const isOnline = presenceMembers.length > 0;
+
+    console.log(
+      `[Ably] User ${userUid} online status: ${isOnline ? "ONLINE" : "OFFLINE"} (${presenceMembers.length} presence members)`,
+    );
+
+    return isOnline;
+  } catch (error) {
+    console.error(
+      `[Ably] Failed to check presence for user ${userUid}:`,
+      error,
+    );
+    // 检测失败时返回 false，降级到其他检测方式
+    return false;
+  }
+};

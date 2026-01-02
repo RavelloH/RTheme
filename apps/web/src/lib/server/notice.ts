@@ -4,7 +4,8 @@ import { jwtTokenSign } from "@/lib/server/jwt";
 import prisma from "@/lib/server/prisma";
 import { renderEmail } from "@/emails/utils";
 import NotificationEmail from "@/emails/templates/NotificationEmail";
-import { publishNoticeToUser } from "@/lib/server/ably";
+import { publishNoticeToUser, checkUserOnlineStatus } from "@/lib/server/ably";
+import { isAblyEnabled } from "@/lib/server/ably-config";
 
 /**
  * 发送通知
@@ -72,28 +73,52 @@ export async function sendNotice(
     },
   });
 
-  // 检查用户是否在线 (最近10分钟内有活跃的 RefreshToken)
-  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-  const activeToken = await prisma.refreshToken.findFirst({
-    where: {
-      userUid,
-      lastUsedAt: {
-        gte: tenMinutesAgo,
+  // 检查用户是否在线
+  // 策略：如果 Ably 已启用，只信任 Ably Presence；否则降级到 RefreshToken
+  let isUserOnline = false;
+
+  if (isAblyEnabled()) {
+    // Ably 已启用：使用 Presence API（最可信，实时反映 WebSocket 连接状态）
+    isUserOnline = await checkUserOnlineStatus(userUid);
+    console.log(
+      `[Notice] User ${userUid} online status via Ably Presence: ${isUserOnline ? "ONLINE" : "OFFLINE"}`,
+    );
+  } else {
+    // Ably 未启用：降级到 RefreshToken 检测（兼容模式）
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const activeToken = await prisma.refreshToken.findFirst({
+      where: {
+        userUid,
+        lastUsedAt: {
+          gte: tenMinutesAgo,
+        },
+        revokedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
       },
-      revokedAt: null,
-      expiresAt: {
-        gt: new Date(),
+      orderBy: {
+        lastUsedAt: "desc",
       },
-    },
-    orderBy: {
-      lastUsedAt: "desc",
-    },
-  });
+    });
+
+    isUserOnline = Boolean(activeToken);
+    console.log(
+      `[Notice] User ${userUid} online status via RefreshToken (fallback): ${isUserOnline ? "ONLINE" : "OFFLINE"}`,
+    );
+  }
 
   // 如果用户在线，不发送邮件
-  if (activeToken) {
+  if (isUserOnline) {
+    console.log(
+      `[Notice] User ${userUid} is online, skipping email notification`,
+    );
     return;
   }
+
+  console.log(
+    `[Notice] User ${userUid} is offline, proceeding with email notification`,
+  );
 
   // TODO: 未来需要检查用户的 emailNotice 字段，允许用户控制是否接收邮件通知
   // if (!user.emailNotice) {

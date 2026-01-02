@@ -634,6 +634,18 @@ export default function NotificationProvider({
 
     const channel = ablyClientRef.current.channels.get(channelName);
 
+    // 进入 Presence（标记用户为在线状态）
+    channel.presence
+      .enter({ timestamp: Date.now() })
+      .then(() => {
+        console.log(
+          `[WebSocket] Successfully entered Presence for user:${userUidRef.current}`,
+        );
+      })
+      .catch((error) => {
+        console.error("[WebSocket] Failed to enter Presence:", error);
+      });
+
     const messageHandler = (message: Message) => {
       console.log("[WebSocket] Leader received notification:", message.data);
 
@@ -742,6 +754,18 @@ export default function NotificationProvider({
     channel.subscribe("notification", messageHandler);
 
     return () => {
+      // 离开 Presence（标记用户为离线状态）
+      channel.presence
+        .leave()
+        .then(() => {
+          console.log(
+            `[WebSocket] Successfully left Presence for user:${userUidRef.current}`,
+          );
+        })
+        .catch((error) => {
+          console.error("[WebSocket] Failed to leave Presence:", error);
+        });
+
       channel.unsubscribe("notification", messageHandler);
     };
   }, [connectionStatus, isAblyEnabled, isLeader, broadcast]);
