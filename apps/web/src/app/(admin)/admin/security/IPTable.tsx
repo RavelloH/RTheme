@@ -346,7 +346,7 @@ export default function IPTable() {
         if (record.isBanned) {
           return (
             <span className="inline-flex items-center gap-1 text-error">
-              <RiProhibitedLine size={14} />
+              <RiProhibitedLine size="1em" />
               已封禁
             </span>
           );
@@ -354,14 +354,14 @@ export default function IPTable() {
         if (count >= RATE_LIMIT * 0.8) {
           return (
             <span className="inline-flex items-center gap-1 text-warning">
-              <RiShieldLine size={14} />
+              <RiShieldLine size="1em" />
               接近限流
             </span>
           );
         }
         return (
           <span className="inline-flex items-center gap-1 text-success">
-            <RiShieldCheckLine size={14} />
+            <RiShieldCheckLine size="1em" />
             正常
           </span>
         );

@@ -329,7 +329,7 @@ const SingleComment = React.memo(function SingleComment({
                           animate={{ rotate: 0 }}
                           transition={{ duration: 0.2, ease: "easeInOut" }}
                         >
-                          <RiArrowRightSLine size={14} />
+                          <RiArrowRightSLine size="1.2em" />
                         </motion.div>
                       )}
                       <AutoTransition>
@@ -348,7 +348,7 @@ const SingleComment = React.memo(function SingleComment({
                         animate={{ rotate: isCollapsed ? 0 : 90 }}
                         transition={{ duration: 0.2, ease: "easeInOut" }}
                       >
-                        <RiArrowRightSLine size={14} />
+                        <RiArrowRightSLine size="1.2em" />
                       </motion.div>
                       <AutoTransition>
                         {isCollapsed
@@ -423,7 +423,7 @@ const SingleComment = React.memo(function SingleComment({
                     hoverScale={1.1}
                     className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    <RiArrowUpLine size={14} />
+                    <RiArrowUpLine size="1.25em" />
                     <span>高亮原回复</span>
                   </Clickable>
                 )}
@@ -476,7 +476,7 @@ const LoadMoreChildrenButton = React.memo(function LoadMoreChildrenButton({
                 animate={{ rotate: 0 }}
                 transition={{ duration: 0.2, ease: "easeInOut" }}
               >
-                <RiArrowRightSLine size={14} />
+                <RiArrowRightSLine size="1.2em" />
               </motion.div>
               <span>展开剩余 {remainingCount} 条回复</span>
             </Clickable>
@@ -1249,7 +1249,7 @@ export default function CommentsSection({
           <AutoTransition>
             {replyTarget && (
               <div className="bg-muted/30 p-3 border-l-4 border-muted mb-2">
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="text-sm text-muted-foreground flex items-center gap-2 mb-1">
                       <RiReplyLine size={"1em"} />
@@ -1268,7 +1268,7 @@ export default function CommentsSection({
                     onClick={() => setReplyTarget(null)}
                     className="text-muted-foreground hover:text-foreground flex-shrink-0"
                   >
-                    <RiCloseLine size={18} />
+                    <RiCloseLine size="1.25em" />
                   </Clickable>
                 </div>
               </div>
@@ -1349,12 +1349,12 @@ export default function CommentsSection({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Tooltip content="支持 Markdown 语法">
-              <RiMarkdownLine size={20} />
+              <RiMarkdownLine size="1.25em" />
             </Tooltip>
             <Tooltip content="刷新评论">
               <Clickable onClick={handleRefresh} className="ml-auto">
                 <RiRefreshLine
-                  size={20}
+                  size="1.25em"
                   className="text-muted-foreground hover:text-foreground"
                 />
               </Clickable>

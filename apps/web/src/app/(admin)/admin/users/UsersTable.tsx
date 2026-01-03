@@ -680,20 +680,22 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
       render: (value: unknown, record: UserListItem) => {
         const username = record.username;
         return (
-          <UserAvatar
-            username={username}
-            email={record.email}
-            avatarUrl={
-              typeof value === "string" ? value || undefined : undefined
-            }
-            size={32}
-            shape="circle"
-            colors={generateGradient(
-              mainColor,
-              generateComplementary(mainColor),
-              4,
-            )}
-          />
+          <div className="flex items-center justify-center">
+            <UserAvatar
+              username={username}
+              email={record.email}
+              avatarUrl={
+                typeof value === "string" ? value || undefined : undefined
+              }
+              size={32}
+              shape="circle"
+              colors={generateGradient(
+                mainColor,
+                generateComplementary(mainColor),
+                4,
+              )}
+            />
+          </div>
         );
       },
     },

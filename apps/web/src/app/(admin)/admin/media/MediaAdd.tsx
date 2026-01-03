@@ -758,7 +758,7 @@ function MediaAddInner() {
                           ) : (
                             <RiFileDamageFill
                               className="text-muted-foreground"
-                              size={24}
+                              size="1.5em"
                             />
                           )}
                         </div>

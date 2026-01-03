@@ -166,7 +166,7 @@ export function Dialog({
                       onClick={onClose}
                       className="text-foreground hover:text-primary transition-colors"
                     >
-                      <RiCloseLine size={24} />
+                      <RiCloseLine size="1.5em" />
                     </Clickable>
                   )}
                 </div>

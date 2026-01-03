@@ -22,6 +22,7 @@ import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 import { AutoResizer } from "@/ui/AutoResizer";
+import { Tooltip } from "@/ui/Tooltip";
 
 interface Notice {
   id: string;
@@ -292,8 +293,10 @@ export default function NotificationsClient({
 
               {/* 时间 */}
               <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
-                <RiTimeLine size={14} />
-                <span>{formatTime(notice.createdAt)}</span>
+                <RiTimeLine size="1.2em" />
+                <Tooltip content={new Date(notice.createdAt).toLocaleString()}>
+                  {formatTime(notice.createdAt)}
+                </Tooltip>
               </div>
             </div>
           </div>
@@ -331,7 +334,7 @@ export default function NotificationsClient({
                 onClick={handleMarkAllAsRead}
                 disabled={isPending}
                 loading={isPending}
-                icon={<RiCheckDoubleLine size={18} />}
+                icon={<RiCheckDoubleLine size="1.125em" />}
                 iconPosition="left"
               />
             )}
@@ -450,7 +453,7 @@ export default function NotificationsClient({
                   onClick={handleMarkAllAsRead}
                   disabled={isPending}
                   loading={isPending}
-                  icon={<RiCheckDoubleLine size={18} />}
+                  icon={<RiCheckDoubleLine size="1.125em" />}
                   iconPosition="left"
                 />
               )}

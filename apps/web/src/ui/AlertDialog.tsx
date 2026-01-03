@@ -152,7 +152,10 @@ export function AlertDialog({
                     <div
                       className={`flex-shrink-0 w-12 h-12 rounded-full ${variantStyles.iconBg} flex items-center justify-center`}
                     >
-                      <RiAlertLine size={24} className={variantStyles.icon} />
+                      <RiAlertLine
+                        size="1.5em"
+                        className={variantStyles.icon}
+                      />
                     </div>
                     <div className="flex-1 pt-1">
                       <h3 className="text-xl font-medium text-foreground mb-2">
