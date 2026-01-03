@@ -9,7 +9,7 @@ import { Group } from "@visx/group";
 import { motion } from "framer-motion";
 
 export interface AreaChartDataPoint {
-  time: string;
+  time: string; // ISO 8601 格式的时间字符串
   [key: string]: string | number;
 }
 
@@ -20,6 +20,9 @@ export interface SeriesConfig {
   gradientId?: string; // 可选的自定义渐变 ID
 }
 
+export type TimeGranularity = "year" | "month" | "day" | "hour" | "minute";
+export type ShowYearStrategy = "auto" | "always" | "never";
+
 interface AreaChartProps {
   data: AreaChartDataPoint[];
   series: SeriesConfig[]; // 要显示的数据系列配置
@@ -28,6 +31,8 @@ interface AreaChartProps {
   showLegend?: boolean; // 是否在 tooltip 中显示图例
   formatValue?: (value: number, key: string) => string; // 自定义值格式化函数
   formatTime?: (time: string) => string; // 自定义时间格式化函数
+  timeGranularity?: TimeGranularity; // 时间显示精度，默认 "day"
+  showYear?: ShowYearStrategy; // 年份显示策略，默认 "auto"（跨年时显示）
 }
 
 export default function AreaChart({
@@ -38,6 +43,8 @@ export default function AreaChart({
   showLegend = true,
   formatValue = (value: number) => value.toString(),
   formatTime,
+  timeGranularity = "day",
+  showYear: showYearProp = "auto",
 }: AreaChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -100,28 +107,54 @@ export default function AreaChart({
     range: [innerHeight, 0],
   });
 
+  // 检查数据是否跨年
+  const isDataCrossYear = () => {
+    if (data.length === 0) return false;
+    const dates = data.map((d) => getDate(d));
+    const years = new Set(dates.map((d) => d.getFullYear()));
+    return years.size > 1;
+  };
+
+  // 根据策略决定是否显示年份
+  const shouldShowYear =
+    showYearProp === "always"
+      ? true
+      : showYearProp === "never"
+        ? false
+        : isDataCrossYear(); // auto
+
   // 默认时间格式化函数
   const defaultFormatTime = (time: string) => {
-    const date = new Date(time);
+    // 确保 time 是字符串类型
+    const timeStr = typeof time === "string" ? time : String(time);
+
+    const date = new Date(timeStr);
     if (isNaN(date.getTime())) {
-      return time; // 如果无法解析，返回原始字符串
+      return timeStr; // 如果无法解析，返回原始字符串
     }
 
-    // 检查是否包含时间部分（小时不为0或者时间戳精确到小时）
-    const hasTime = time.includes("T") || time.includes(":");
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hour = String(date.getHours()).padStart(2, "0");
+    const minute = String(date.getMinutes()).padStart(2, "0");
 
-    if (hasTime) {
-      return date.toLocaleDateString("zh-CN", {
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } else {
-      return date.toLocaleDateString("zh-CN", {
-        month: "2-digit",
-        day: "2-digit",
-      });
+    // 根据精度级别构建格式
+    const yearPart = shouldShowYear ? `${year}/` : "";
+
+    switch (timeGranularity) {
+      case "year":
+        return `${year}`;
+      case "month":
+        return `${yearPart}${month}`;
+      case "day":
+        return `${yearPart}${month}/${day}`;
+      case "hour":
+        return `${yearPart}${month}/${day} ${hour}:00`;
+      case "minute":
+        return `${yearPart}${month}/${day} ${hour}:${minute}`;
+      default:
+        return `${yearPart}${month}/${day}`;
     }
   };
 

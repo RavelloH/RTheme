@@ -83,11 +83,6 @@ export default function PostsHistoryChart() {
 
   const series: SeriesConfig[] = [
     {
-      key: "personal",
-      label: "我的文章",
-      color: "var(--color-warning)",
-    },
-    {
       key: "new",
       label: "新增文章",
       color: "var(--color-success)",
@@ -122,6 +117,8 @@ export default function PostsHistoryChart() {
                 data={chartData}
                 series={series}
                 className="w-full h-full"
+                timeGranularity="day"
+                showYear="auto"
               />
             </div>
           </>

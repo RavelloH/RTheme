@@ -366,9 +366,15 @@ export async function getAuditTrends(
     const timeGroups = new Map<string, Map<string, number>>();
 
     merged.forEach((record) => {
-      // 将时间戳转换为日期字符串（只保留年月日）
+      // 将时间戳转换为日期（保留完整时间信息）
       const date = new Date(record.timestamp);
-      const timeKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+      // 获取当天的起始时间作为分组键
+      const dayStart = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+      );
+      const timeKey = dayStart.toISOString(); // 使用完整 ISO 格式
       const groupKey = groupBy === "action" ? record.action : record.resource;
 
       if (!timeGroups.has(timeKey)) {

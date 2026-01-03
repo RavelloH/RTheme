@@ -737,7 +737,7 @@ export async function getRequestTrends(
         const hourTimestamp = targetHour * 3600000;
         const date = new Date(hourTimestamp);
         trends.push({
-          time: `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, "0")}:00`,
+          time: date.toISOString(), // 返回完整 ISO 8601 时间戳
           timestamp: hourTimestamp,
           count,
           success,
@@ -763,7 +763,7 @@ export async function getRequestTrends(
 
         const date = new Date(minuteTimestamp);
         trends.push({
-          time: `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`,
+          time: date.toISOString(), // 返回完整 ISO 8601 时间戳
           timestamp: minuteTimestamp,
           count,
         });

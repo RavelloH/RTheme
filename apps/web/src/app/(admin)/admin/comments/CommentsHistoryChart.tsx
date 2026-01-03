@@ -199,6 +199,8 @@ export default function CommentsHistoryChart({
                   data={chartData}
                   series={series}
                   className="w-full h-full"
+                  timeGranularity="day"
+                  showYear="auto"
                 />
               </div>
             </>

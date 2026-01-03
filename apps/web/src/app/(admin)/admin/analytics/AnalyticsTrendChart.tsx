@@ -64,15 +64,6 @@ export default function AnalyticsTrendChart({
     },
   ];
 
-  // 自定义时间格式化，显示时分
-  const formatTime = (time: string) => {
-    const date = new Date(time);
-    return date.toLocaleTimeString("zh-CN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   return (
     <GridItem areas={[9, 10, 11, 12]} width={3} height={0.5}>
       <AutoTransition type="slideUp" className="h-full">
@@ -89,7 +80,8 @@ export default function AnalyticsTrendChart({
                 data={chartData}
                 series={series}
                 className="w-full h-full"
-                formatTime={formatTime}
+                timeGranularity="minute"
+                showYear="never"
               />
             </div>
           </div>

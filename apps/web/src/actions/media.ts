@@ -894,14 +894,18 @@ export async function getMediaTrends(
       total_files: number;
     }>;
 
-    // 转换为响应格式（确保数字类型）
-    const trends: MediaTrendItem[] = dailyTrends.map((trend) => ({
-      time: trend.time,
-      data: {
-        total: Number(trend.total_files),
-        new: Number(trend.new_files),
-      },
-    }));
+    // 转换为响应格式（确保数字类型和完整 ISO 时间字符串）
+    const trends: MediaTrendItem[] = dailyTrends.map((trend) => {
+      const date = new Date(trend.time);
+      // 返回完整 ISO 8601 时间戳（标准化格式）
+      return {
+        time: date.toISOString(),
+        data: {
+          total: Number(trend.total_files),
+          new: Number(trend.new_files),
+        },
+      };
+    });
 
     return response.ok({
       data: trends,

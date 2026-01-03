@@ -94,6 +94,8 @@ export default function MonthlyTrendsChart() {
                 data={chartData}
                 series={series}
                 className="w-full h-full"
+                timeGranularity="hour"
+                showYear="auto"
               />
             </div>
           </>

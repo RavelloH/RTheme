@@ -94,6 +94,8 @@ export default function UsersHistoryChart() {
                 data={chartData}
                 series={series}
                 className="w-full h-full"
+                timeGranularity="day"
+                showYear="auto"
               />
             </div>
           </>

@@ -1464,7 +1464,14 @@ export async function getCommentHistory(
   const slugTitleMap = new Map<string, string | null>();
 
   rows.forEach((row) => {
-    const dateStr = row.createdAt.toISOString().slice(0, 10);
+    // 获取当天的起始时间（0点）作为分组键
+    const date = new Date(row.createdAt);
+    const dayStart = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+    );
+    const dateStr = dayStart.toISOString();
     const item = bucket.get(dateStr) || {
       total: 0,
       approved: 0,
@@ -1487,7 +1494,12 @@ export async function getCommentHistory(
   const data: CommentHistoryPoint[] = [];
   for (let i = params.days - 1; i >= 0; i -= 1) {
     const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-    const dateStr = date.toISOString().slice(0, 10);
+    const dayStart = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+    );
+    const dateStr = dayStart.toISOString();
     const item = bucket.get(dateStr) || {
       total: 0,
       approved: 0,
@@ -1495,7 +1507,7 @@ export async function getCommentHistory(
       posts: new Map<string, number>(),
     };
     data.push({
-      date: dateStr,
+      date: dateStr, // 返回完整 ISO 时间戳
       total: item.total,
       approved: item.approved,
       pending: item.pending,

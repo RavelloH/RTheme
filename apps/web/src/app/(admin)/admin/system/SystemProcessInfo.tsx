@@ -151,13 +151,8 @@ export default function SystemProcessInfo() {
                   series={series}
                   className="w-full h-full"
                   formatValue={(value) => `${value.toFixed(1)} MB`}
-                  formatTime={(time) =>
-                    new Date(time).toLocaleTimeString("zh-CN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit",
-                    })
-                  }
+                  timeGranularity="minute"
+                  showYear="never"
                 />
               ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground text-sm">

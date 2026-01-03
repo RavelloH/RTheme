@@ -93,6 +93,8 @@ export default function RequestTrendsChart() {
                 data={chartData}
                 series={series}
                 className="w-full h-full"
+                timeGranularity="hour"
+                showYear="never"
               />
             </div>
           </>
