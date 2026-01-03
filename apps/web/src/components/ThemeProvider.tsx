@@ -2,11 +2,26 @@
 
 import { ColorConfig } from "@/types/config";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
-import { useEffect } from "react";
+import { createContext, useContext, useEffect } from "react";
 
 type ThemeProviderProps = React.ComponentProps<typeof NextThemesProvider> & {
   mainColor: ColorConfig;
 };
+
+// 创建 Context
+const ColorContext = createContext<ColorConfig | null>(null);
+
+/**
+ * 获取主题颜色配置的 Hook
+ * 必须在 ThemeProvider 内部使用
+ */
+export function useMainColor() {
+  const context = useContext(ColorContext);
+  if (!context) {
+    throw new Error("useMainColor must be used within ThemeProvider");
+  }
+  return context;
+}
 
 export function ThemeProvider({
   children,
@@ -30,5 +45,10 @@ export function ThemeProvider({
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
+
+  return (
+    <ColorContext.Provider value={mainColor}>
+      <NextThemesProvider {...props}>{children}</NextThemesProvider>
+    </ColorContext.Provider>
+  );
 }

@@ -3,6 +3,9 @@
 import Avatar from "boring-avatars";
 import { useEffect, useMemo, useState } from "react";
 import { md5 } from "js-md5";
+import { useMainColor } from "./ThemeProvider";
+import generateGradient from "@/lib/shared/gradient";
+import generateComplementary from "@/lib/shared/complementary";
 
 type AvatarShape = "circle" | "square";
 type BoringAvatarVariant =
@@ -23,7 +26,7 @@ interface UserAvatarProps {
   size?: number;
   shape?: AvatarShape;
   className?: string;
-  colors?: string[];
+  colors?: string[]; // 可选：如果不传则自动从主题生成
   variant?: BoringAvatarVariant;
 }
 
@@ -37,10 +40,27 @@ export default function UserAvatar({
   size = 32,
   shape = "circle",
   className = "",
-  colors,
+  colors, // 用户可以手动指定，如果不指定则自动生成
   variant = "marble",
 }: UserAvatarProps) {
+  const mainColor = useMainColor(); // 从 Context 获取主题颜色
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
+
+  // 动态生成颜色组
+  const generatedColors = useMemo(() => {
+    if (colors) return colors; // 如果手动指定了颜色，使用指定的
+
+    // 否则基于主题颜色自动生成
+    try {
+      const primaryColor = mainColor.primary || "#2dd4bf";
+      const complementaryColor = generateComplementary(primaryColor);
+      return generateGradient(primaryColor, complementaryColor, 4);
+    } catch (error) {
+      console.error("Failed to generate colors:", error);
+      // 降级到默认颜色
+      return ["#92A1C6", "#146A7C", "#F0AB3D", "#C271B4", "#C20D90"];
+    }
+  }, [colors, mainColor.primary]);
 
   useEffect(() => {
     let cancelled = false;
@@ -141,7 +161,7 @@ export default function UserAvatar({
           <div className="w-full h-full [&>svg]:w-full [&>svg]:h-full">
             <Avatar
               name={displayName}
-              colors={colors}
+              colors={generatedColors}
               variant={variant}
               size={80}
               square={shape === "square"}
@@ -151,7 +171,7 @@ export default function UserAvatar({
       ) : (
         <Avatar
           name={displayName}
-          colors={colors}
+          colors={generatedColors}
           variant={variant}
           size={actualSize || 80}
           square={shape === "square"}

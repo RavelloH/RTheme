@@ -87,10 +87,7 @@ export default async function RootLayout({
                       <FooterMobileWrapper />
                     </MainContent>
                   </LayoutContainer>
-                  <FooterDesktopWrapper
-                    menus={menus}
-                    mainColor={mainColor.primary}
-                  />
+                  <FooterDesktopWrapper menus={menus} />
                 </ResponsiveFontScale>
               </MenuProvider>
               {modal}

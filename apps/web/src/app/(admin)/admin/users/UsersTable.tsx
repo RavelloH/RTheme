@@ -19,8 +19,6 @@ import {
   RiUserSettingsLine,
   RiShieldUserLine,
 } from "@remixicon/react";
-import generateGradient from "@/lib/shared/gradient";
-import generateComplementary from "@/lib/shared/complementary";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import { Select, SelectOption } from "@/ui/Select";
@@ -31,7 +29,7 @@ import { useToast } from "@/ui/Toast";
 import Link from "@/components/Link";
 import UserAvatar from "@/components/UserAvatar";
 
-export default function UsersTable({ mainColor }: { mainColor: string }) {
+export default function UsersTable() {
   const toast = useToast();
   const [data, setData] = useState<UserListItem[]>([]);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -689,11 +687,6 @@ export default function UsersTable({ mainColor }: { mainColor: string }) {
               }
               size={32}
               shape="circle"
-              colors={generateGradient(
-                mainColor,
-                generateComplementary(mainColor),
-                4,
-              )}
             />
           </div>
         );

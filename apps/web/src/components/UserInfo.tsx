@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useNavigateWithTransition } from "@/components/Link";
-import { useRouter } from "next/navigation";
 import { useConsoleStore } from "@/store/console-store";
 import UserAvatar from "./UserAvatar";
 import { useBroadcast } from "@/hooks/use-broadcast";
@@ -26,8 +25,6 @@ import {
   RiLoginBoxLine,
   RiUserAddLine,
 } from "@remixicon/react";
-import generateGradient from "@/lib/shared/gradient";
-import generateComplementary from "@/lib/shared/complementary";
 import { Tooltip } from "@/ui/Tooltip";
 
 interface UnreadNoticeUpdateMessage {
@@ -173,9 +170,8 @@ const calculateTokenStatus = (
 };
 
 // 登录按钮组件，包含菜单状态管理
-export function LoginButton({ mainColor }: { mainColor: string }) {
+export function LoginButton() {
   const navigate = useNavigateWithTransition();
-  const router = useRouter();
   const { connectionStatus, isLeader } = useNotification();
   const [userInfo, setUserInfo] = useState<StoredUserInfo | null>(null);
   const [tokenStatus, setTokenStatus] = useState<{
@@ -351,11 +347,6 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
                         avatarUrl={userInfo.avatar}
                         email={userInfo.email}
                         shape="square"
-                        colors={generateGradient(
-                          mainColor,
-                          generateComplementary(mainColor),
-                          4,
-                        )}
                         className={
                           "!block w-full h-full transition-all duration-200 group-hover:scale-105 group-hover:opacity-90"
                         }

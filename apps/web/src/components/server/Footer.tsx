@@ -5,13 +5,7 @@ import { MenuItem } from "@/lib/server/menu-cache";
 import FooterMobile from "../client/Footer/FooterMobile";
 import FooterDesktop from "../client/Footer/FooterDesktop";
 
-export default async function Footer({
-  menus,
-  mainColor,
-}: {
-  menus: MenuItem[];
-  mainColor: string;
-}) {
+export default async function Footer({ menus }: { menus: MenuItem[] }) {
   const [siteBirthday, siteAuthor, siteCopyright] = await Promise.all([
     getConfig<string>("site.birthday"),
     getConfig<string>("author.name"),
@@ -19,7 +13,7 @@ export default async function Footer({
   ]);
   return (
     <>
-      <FooterDesktop menus={menus} mainColor={mainColor} />
+      <FooterDesktop menus={menus} />
       <FooterMobile siteBirthday={siteBirthday} siteAuthor={siteAuthor}>
         {siteCopyright.map((line, idx) => (
           <span key={idx}>
