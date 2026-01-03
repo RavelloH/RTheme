@@ -149,11 +149,56 @@ export async function login(
 
     // 检查是否是需要更新的账户
     if (user.status === "NEEDS_UPDATE") {
+      // 自动发送密码重置邮件
+      after(async () => {
+        try {
+          // 删除该用户的所有旧重置记录
+          await prisma.passwordReset.deleteMany({
+            where: {
+              userUid: user.uid,
+            },
+          });
+
+          // 创建新的密码重置记录
+          const passwordReset = await prisma.passwordReset.create({
+            data: {
+              userUid: user.uid,
+            },
+          });
+
+          // 发送密码重置邮件
+          const { sendEmail } = await import("@/lib/server/email");
+          const { renderEmail } = await import("@/emails/utils");
+          const { PasswordResetTemplate } = await import("@/emails/templates");
+          const siteName =
+            (await getConfig<string>("site.name")) || "NeutralPress";
+          const siteUrl = (await getConfig<string>("site.url")) || "";
+
+          const emailComponent = PasswordResetTemplate({
+            username: user.nickname || user.username,
+            resetUrl: `${siteUrl}/reset-password?code=${passwordReset.id}&reason=NEEDS_UPDATE`,
+            siteName,
+            siteUrl,
+          });
+
+          const { html, text } = await renderEmail(emailComponent);
+
+          await sendEmail({
+            to: user.email,
+            subject: "重置您的密码",
+            html,
+            text,
+          });
+        } catch (error) {
+          console.error("发送密码重置邮件失败:", error);
+        }
+      });
+
       return response.forbidden({
-        message: "站点安全策略已更新，请重置密码后重新登录",
+        message: "站点安全策略已更新，密码重置邮件已发送至您的邮箱",
         error: {
           code: "PASSWORD_RESET_REQUIRED",
-          message: "站点安全策略已更新，请重置密码后重新登录",
+          message: "站点安全策略已更新，密码重置邮件已发送至您的邮箱",
         },
       });
     }

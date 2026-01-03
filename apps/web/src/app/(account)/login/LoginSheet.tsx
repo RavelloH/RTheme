@@ -180,9 +180,7 @@ export default function LoginSheet({
 
           // 获取 redirect 参数
           const redirectParam = searchParams.get("redirect");
-          const targetPath = redirectParam
-            ? redirectParam
-            : "/user/" + userInfo.uid;
+          const targetPath = redirectParam ? redirectParam : "/";
 
           // 3秒后跳转
           setTimeout(() => {
@@ -352,7 +350,7 @@ export default function LoginSheet({
 
       // 获取redirect参数
       const redirectParam = searchParams.get("redirect");
-      const targetPath = redirectParam ? redirectParam : "/user";
+      const targetPath = redirectParam ? redirectParam : "/";
 
       setTimeout(() => {
         navigate(targetPath);
@@ -363,6 +361,11 @@ export default function LoginSheet({
         setButtonLoadingText("请先验证邮箱后再登录");
         setTimeout(() => {
           navigate(`/email-verify?username=${encodeURIComponent(username)}`);
+        }, 2000);
+      } else if (responseData.error?.code === "PASSWORD_RESET_REQUIRED") {
+        setButtonLoadingText(responseData.message || "密码重置邮件已发送");
+        setTimeout(() => {
+          navigate(`/reset-password?reason=NEEDS_UPDATE`);
         }, 2000);
       } else {
         setButtonLoadingText(responseData.message || "登录失败，请稍后重试");
@@ -425,7 +428,7 @@ export default function LoginSheet({
 
       // 获取redirect参数
       const redirectParam = searchParams.get("redirect");
-      const targetPath = redirectParam ? redirectParam : "/user";
+      const targetPath = redirectParam ? redirectParam : "/";
 
       setTimeout(() => {
         navigate(targetPath);

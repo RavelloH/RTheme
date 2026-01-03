@@ -3,7 +3,7 @@
 import { Input } from "@/ui/Input";
 import { RiMailLine, RiLockPasswordLine } from "@remixicon/react";
 import { CaptchaButton } from "@/components/CaptchaButton";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import {
   requestPasswordReset as requestPasswordResetAction,
@@ -11,11 +11,13 @@ import {
 } from "@/actions/auth";
 import { useSearchParams } from "next/navigation";
 import Link, { useNavigateWithTransition } from "@/components/Link";
+import { Dialog } from "@/ui/Dialog";
 
 export default function ResetPasswordSheet() {
   const navigate = useNavigateWithTransition();
   const searchParams = useSearchParams();
   const codeFromUrl = searchParams.get("code") || "";
+  const reasonFromUrl = searchParams.get("reason") || "";
   const { broadcast } = useBroadcastSender<{ type: string }>();
 
   const [token, setToken] = useState("");
@@ -23,6 +25,16 @@ export default function ResetPasswordSheet() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordTip, setPasswordTip] = useState("");
+
+  // 提示对话框状态
+  const [showReasonDialog, setShowReasonDialog] = useState(false);
+
+  // 检测 reason 参数并显示对话框
+  useEffect(() => {
+    if (reasonFromUrl === "NEEDS_UPDATE") {
+      setShowReasonDialog(true);
+    }
+  }, [reasonFromUrl]);
 
   // 请求重置按钮状态
   const [requestButtonLabel, setRequestButtonLabel] = useState("发送重置链接");
@@ -271,6 +283,28 @@ export default function ResetPasswordSheet() {
   // 默认显示请求重置表单
   return (
     <>
+      {/* 安全策略更新提示对话框 - 没有 code 时显示 */}
+      <Dialog
+        open={showReasonDialog}
+        onClose={() => {}}
+        title="安全策略更新通知"
+        dismissable={false}
+        showCloseButton={false}
+        size="md"
+      >
+        <div className="p-6 space-y-4">
+          <div className="text-foreground">
+            <p className="mb-4">尊敬的用户，您好：</p>
+            <p className="mb-4">
+              由于站点安全策略已更新，密码加密方式已改变，您需要重置密码后方可继续使用。
+            </p>
+            <p className="mb-4">
+              密码重置链接已发送至您注册时使用的邮箱，请查收邮件并点击链接完成密码重置。
+            </p>
+          </div>
+        </div>
+      </Dialog>
+
       <Input
         label="Email / 邮箱"
         disabled={requestButtonLoading}

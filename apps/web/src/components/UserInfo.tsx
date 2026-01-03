@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useNavigateWithTransition } from "@/components/Link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useConsoleStore } from "@/store/console-store";
 import UserAvatar from "./UserAvatar";
 import { useBroadcast } from "@/hooks/use-broadcast";
@@ -172,6 +173,8 @@ const calculateTokenStatus = (
 // 登录按钮组件，包含菜单状态管理
 export function LoginButton() {
   const navigate = useNavigateWithTransition();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { connectionStatus, isLeader } = useNotification();
   const [userInfo, setUserInfo] = useState<StoredUserInfo | null>(null);
   const [tokenStatus, setTokenStatus] = useState<{
@@ -185,6 +188,33 @@ export function LoginButton() {
   const pendingAnimationRef = useRef(false);
   const isLoadingCompleteRef = useRef(false); // 使用 ref 避免闭包问题
   const { isConsoleOpen } = useConsoleStore();
+
+  // 构建带 redirect 参数的 URL
+  const buildRedirectUrl = (basePath: string) => {
+    // 获取当前完整路径（包括 search params）
+    const currentPath = pathname;
+    const currentSearch = searchParams.toString();
+    const fullPath = currentSearch
+      ? `${currentPath}?${currentSearch}`
+      : currentPath;
+
+    // 排除登录、注册等账户相关页面
+    const excludedPaths = [
+      "/login",
+      "/register",
+      "/logout",
+      "/reset-password",
+      "/email-verify",
+    ];
+    const shouldAddRedirect = !excludedPaths.some((path) =>
+      currentPath.startsWith(path),
+    );
+
+    if (shouldAddRedirect && currentPath !== "/") {
+      return `${basePath}?redirect=${encodeURIComponent(fullPath)}`;
+    }
+    return basePath;
+  };
 
   // 监听页面加载完成事件
   useEffect(() => {
@@ -576,13 +606,13 @@ export function LoginButton() {
             ) : (
               <>
                 <MenuAction
-                  onClick={() => navigate("/login")}
+                  onClick={() => navigate(buildRedirectUrl("/login"))}
                   icon={<RiLoginBoxLine size="1.2em" />}
                 >
                   登录
                 </MenuAction>
                 <MenuAction
-                  onClick={() => navigate("/register")}
+                  onClick={() => navigate(buildRedirectUrl("/register"))}
                   icon={<RiUserAddLine size="1.2em" />}
                 >
                   注册
