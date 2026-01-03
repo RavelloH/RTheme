@@ -28,21 +28,11 @@ const REQUIRED_ENV_VARS = [
     },
   },
   {
-    name: "BUFFER",
-    description: "Password hashing buffer",
+    name: "MASTER_SECRET",
+    description: "Master secret key for deriving encryption keys",
     validator: (value: string) => {
-      if (value.length < 10) {
-        return "Should be at least 10 characters long for security";
-      }
-      return null;
-    },
-  },
-  {
-    name: "PEPPER",
-    description: "Password hashing pepper",
-    validator: (value: string) => {
-      if (!value) {
-        return "Should not be 'undefined', please set a proper value";
+      if (value.length < 32) {
+        return "Should be at least 32 characters long for security";
       }
       return null;
     },
@@ -165,8 +155,7 @@ export async function checkEnvironmentVariables(): Promise<void> {
     rlog.error("  Example .env file:");
     rlog.error("  DATABASE_URL=postgresql://user:password@host:port/database");
     rlog.error("  REDIS_URL=redis://localhost:6379");
-    rlog.error("  BUFFER=your_secure_buffer_string");
-    rlog.error("  PEPPER=your_secure_pepper_string");
+    rlog.error("  MASTER_SECRET=your_secure_master_secret_at_least_32_chars");
     rlog.error(
       '  JWT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----"',
     );

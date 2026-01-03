@@ -1,6 +1,7 @@
 import "server-only";
 
 import argon2 from "argon2";
+import crypto from "crypto";
 import { cpus } from "os";
 
 // ============================================================================
@@ -52,9 +53,7 @@ interface Argon2Options {
  * 环境配置
  */
 interface PasswordConfig {
-  /** 缓冲字符串 */
-  buffer: string;
-  /** Pepper 字符串 */
+  /** Pepper 字符串（从主密钥派生） */
   pepper: string;
   /** Argon2 配置 */
   argon2: Argon2Options;
@@ -63,6 +62,22 @@ interface PasswordConfig {
 // ============================================================================
 // 配置
 // ============================================================================
+
+/**
+ * 使用 HKDF 从主密钥派生子密钥
+ * @param masterSecret 主密钥
+ * @param info 上下文信息
+ * @param length 输出长度（字节）
+ * @returns 派生的密钥
+ */
+function deriveKey(masterSecret: string, info: string, length: number): Buffer {
+  const ikm = Buffer.from(masterSecret, "utf-8");
+  const salt = Buffer.alloc(32); // 空盐
+  const infoBuffer = Buffer.from(info, "utf-8");
+
+  const derived = crypto.hkdfSync("sha256", ikm, salt, infoBuffer, length);
+  return Buffer.from(derived);
+}
 
 /**
  * 获取动态并行度（基于 CPU 核心数）
@@ -77,34 +92,25 @@ function getDynamicParallelism(): number {
  * 验证和获取环境配置
  */
 function getPasswordConfig(): PasswordConfig {
-  const buffer = process.env.BUFFER;
-  const pepper = process.env.PEPPER;
+  const masterSecret = process.env.MASTER_SECRET;
 
-  if (!buffer || buffer.length < 8) {
+  if (!masterSecret || masterSecret.length < 32) {
     throw new PasswordError(
       PasswordErrorType.CONFIG_ERROR,
-      "BUFFER 环境变量必须设置且长度至少为 8 个字符",
+      "MASTER_SECRET 环境变量必须设置且长度至少为 32 个字符",
     );
   }
 
-  if (!pepper || pepper.length < 8) {
-    throw new PasswordError(
-      PasswordErrorType.CONFIG_ERROR,
-      "PEPPER 环境变量必须设置且长度至少为 8 个字符",
-    );
-  }
+  // 使用 HKDF 从主密钥派生 pepper（32 字节，转为 hex 字符串）
+  const pepper = deriveKey(masterSecret, "password-pepper", 32).toString("hex");
 
   return {
-    buffer,
     pepper,
     argon2: {
-      timeCost: parseInt(process.env.ARGON2_TIME_COST || "3", 10),
-      memoryCost: parseInt(process.env.ARGON2_MEMORY_COST || "262144", 10),
-      parallelism: parseInt(
-        process.env.ARGON2_PARALLELISM || getDynamicParallelism().toString(),
-        10,
-      ),
-      hashLength: parseInt(process.env.ARGON2_HASH_LENGTH || "32", 10),
+      timeCost: 3,
+      memoryCost: 65536, // 64 MB
+      parallelism: parseInt(getDynamicParallelism().toString(), 10),
+      hashLength: 32,
       type: argon2.argon2id,
     },
   };
@@ -130,26 +136,15 @@ function getConfig(): PasswordConfig {
 // ============================================================================
 
 /**
- * 密码预处理函数 - 添加 salt 和 pepper
+ * 密码预处理函数 - 添加 pepper
  * @param password 原始密码
  * @returns 处理后的密码字符串
  */
 function preprocessPassword(password: string): string {
-  const { buffer, pepper } = getConfig();
+  const { pepper } = getConfig();
 
-  let result = "";
-  let bufferIndex = 0;
-
-  // 将缓冲字符与密码字符交替插入
-  for (let i = 0; i < password.length; i++) {
-    const passwordChar = password.charAt(i); // 使用 charAt 确保类型安全
-    const bufferChar = buffer.charAt(bufferIndex); // 使用 charAt 确保类型安全
-    result += passwordChar + bufferChar;
-    bufferIndex = (bufferIndex + 1) % buffer.length;
-  }
-
-  // 添加 pepper
-  return result + pepper;
+  // 直接追加 pepper（从主密钥派生）
+  return password + pepper;
 }
 
 // ============================================================================
