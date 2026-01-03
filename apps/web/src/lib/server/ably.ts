@@ -1,7 +1,7 @@
 import "server-only";
 
 import * as Ably from "ably";
-import { ablyConfig } from "./ably-config";
+import { getAblyApiKey } from "./ably-config";
 
 /**
  * Ably 服务端客户端单例
@@ -15,13 +15,15 @@ let ablyServerClient: Ably.Rest | null = null;
  *
  * @returns Ably Rest 客户端实例，如果未配置则返回 null
  */
-export const getAblyServerClient = (): Ably.Rest | null => {
-  if (!ablyConfig.apiKey) {
+export const getAblyServerClient = async (): Promise<Ably.Rest | null> => {
+  const apiKey = await getAblyApiKey();
+
+  if (!apiKey) {
     return null;
   }
 
   if (!ablyServerClient) {
-    ablyServerClient = new Ably.Rest({ key: ablyConfig.apiKey });
+    ablyServerClient = new Ably.Rest({ key: apiKey });
   }
 
   return ablyServerClient;
@@ -95,7 +97,7 @@ export const publishNoticeToUser = async (
   userUid: number,
   data: NotificationData,
 ): Promise<boolean> => {
-  const client = getAblyServerClient();
+  const client = await getAblyServerClient();
   if (!client) {
     console.warn("[Ably] Client not available, skipping push");
     return false;
@@ -160,7 +162,7 @@ export const publishNoticeToUsers = async (
 export const checkUserOnlineStatus = async (
   userUid: number,
 ): Promise<boolean> => {
-  const client = getAblyServerClient();
+  const client = await getAblyServerClient();
   if (!client) {
     console.warn(
       "[Ably] Client not available, cannot check presence, assuming offline",

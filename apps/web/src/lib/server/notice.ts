@@ -77,7 +77,7 @@ export async function sendNotice(
   // 策略：如果 Ably 已启用，只信任 Ably Presence；否则降级到 RefreshToken
   let isUserOnline = false;
 
-  if (isAblyEnabled()) {
+  if (await isAblyEnabled()) {
     // Ably 已启用：使用 Presence API（最可信，实时反映 WebSocket 连接状态）
     isUserOnline = await checkUserOnlineStatus(userUid);
     console.log(

@@ -65,7 +65,7 @@ export async function getAblyTokenRequest(
   }
 
   // 检查 Ably 是否启用
-  const apiKey = getAblyApiKey();
+  const apiKey = await getAblyApiKey();
   if (!apiKey) {
     return response.serviceUnavailable({
       message: "Ably 服务未配置",

@@ -378,6 +378,12 @@ export const defaultConfigs: DefaultConfig[] = [
     value: { default: true },
     description: "是否在文章被评论时，向作者发送通知",
   },
+  {
+    key: "notice.ably.key",
+    value: { default: "" },
+    description:
+      "[可选] Ably API 密钥。填写后可启用 WebSocket 连接，增强通知、聊天的实时性。详见 https://docs.ravelloh.com/docs/ably",
+  },
   // =====================================
   // AI 集成
   // =====================================

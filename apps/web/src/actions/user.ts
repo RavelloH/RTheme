@@ -1480,7 +1480,7 @@ export async function getUserPublicProfile(
 
     let onlineStatus: UserProfile["onlineStatus"];
 
-    if (isAblyEnabled()) {
+    if (await isAblyEnabled()) {
       // Ably 已启用：使用 Presence API
       const isOnline = await checkUserOnlineStatus(uid);
       if (isOnline) {

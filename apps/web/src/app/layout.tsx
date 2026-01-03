@@ -28,7 +28,6 @@ import NotificationProvider from "@/components/NotificationProvider";
 // lib
 import { getActiveMenus } from "@/lib/server/menu-cache";
 import { getConfig } from "@/lib/server/config-cache";
-import { isAblyEnabled } from "@/lib/server/ably-config";
 
 // Types
 import { ColorConfig } from "@/types/config";
@@ -55,7 +54,7 @@ export default async function RootLayout({
       getConfig<ColorConfig>("site.color"),
       getConfig<string>("site.title"),
       getConfig<boolean>("analytics.enable"),
-      Promise.resolve(isAblyEnabled()),
+      getConfig<string>("notice.ably.key"),
     ]);
 
   return (
@@ -76,7 +75,7 @@ export default async function RootLayout({
             mainColor={mainColor}
             disableTransitionOnChange
           >
-            <NotificationProvider isAblyEnabled={ablyEnabled}>
+            <NotificationProvider isAblyEnabled={ablyEnabled ? true : false}>
               <MenuProvider menus={menus}>
                 <ResponsiveFontScale scaleFactor={0.017} baseSize={12}>
                   <LoadingAnimation siteName={siteName} />
