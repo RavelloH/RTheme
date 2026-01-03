@@ -12,7 +12,7 @@ export const metadata = await generateMetadata({
     "在服务器中未找到此页面。这可能代表此页面已被删除、移动，或从未存在过。",
 });
 
-export default function Custom404() {
+export default function NotFoundPage() {
   return (
     <>
       <MainLayout type="horizontal">

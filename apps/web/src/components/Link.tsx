@@ -213,6 +213,14 @@ function normalizePath(oldPath: string, newPath: string): string {
   return newPath;
 }
 
+// 不使用过渡效果的路径列表
+const NO_TRANSITION_PATHS = ["/user", "/notifications"];
+
+// 检查路径是否应该跳过过渡效果
+function shouldSkipTransition(path: string): boolean {
+  return NO_TRANSITION_PATHS.some((prefix) => path.startsWith(prefix));
+}
+
 // 执行导航过渡和跳转
 function executeNavigationWithTransition(
   newPath: string,
@@ -370,6 +378,12 @@ export function jumpTransition(
   // 同一路径，静默刷新
   if (oldPath === normalizedPath) {
     router.refresh();
+    return;
+  }
+
+  // 检查是否应该跳过过渡效果
+  if (shouldSkipTransition(normalizedPath)) {
+    router.push(normalizedPath);
     return;
   }
 

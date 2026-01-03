@@ -763,7 +763,7 @@ export function MenuCheckboxItem({
       `}
     >
       <span className="w-4 h-4 flex items-center justify-center">
-        {checked && <RiCheckLine size={16} />}
+        {checked && <RiCheckLine size="1em" />}
       </span>
       <span>{children}</span>
     </button>
@@ -958,7 +958,7 @@ export function MenuSubTrigger({
         {icon && <span className="flex-shrink-0 w-4 h-4">{icon}</span>}
         <span>{children}</span>
       </div>
-      <RiArrowRightSLine size={16} className="flex-shrink-0" />
+      <RiArrowRightSLine size="1em" className="flex-shrink-0" />
     </div>
   );
 }

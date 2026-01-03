@@ -16,6 +16,9 @@ import {
   UpdateUserProfile,
   Disable2FASchema,
   Disable2FA,
+  UserProfile,
+  UserActivityItem,
+  UserActivityResponse,
 } from "@repo/shared-types/api/user";
 import {
   usernameSchema,
@@ -1390,6 +1393,463 @@ export async function disable2FA(
     console.error("Disable 2FA error:", error);
     return response.serverError({
       message: "操作失败，请稍后重试",
+    });
+  }
+}
+
+/**
+ * 获取用户公开档案信息（用于用户档案页面）
+ */
+export async function getUserPublicProfile(
+  uid: number,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<UserProfile | null>>>;
+export async function getUserPublicProfile(
+  uid: number,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<UserProfile | null>>;
+export async function getUserPublicProfile(
+  uid: number,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<UserProfile | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "getUserPublicProfile"))) {
+    return response.tooManyRequests();
+  }
+
+  try {
+    // 获取当前登录用户（可能为空）
+    const cookieStore = await cookies();
+    const token = cookieStore.get("ACCESS_TOKEN")?.value;
+    const currentUser = token
+      ? jwtTokenVerify<AccessTokenPayload>(token)
+      : null;
+
+    // 查询目标用户基本信息
+    const targetUser = await prisma.user.findUnique({
+      where: { uid, deletedAt: null },
+      select: {
+        uid: true,
+        username: true,
+        nickname: true,
+        email: true,
+        avatar: true,
+        bio: true,
+        website: true,
+        role: true,
+        status: true,
+        createdAt: true,
+        lastUseAt: true,
+        _count: {
+          select: {
+            posts: {
+              where: {
+                status: "PUBLISHED",
+                deletedAt: null,
+              },
+            },
+            comments: true,
+            commentLikes: true, // 点赞数
+          },
+        },
+      },
+    });
+
+    if (!targetUser) {
+      return response.notFound({
+        message: "用户不存在",
+      });
+    }
+
+    // 计算获赞数（该用户评论收到的点赞总数）
+    const likesReceived = await prisma.commentLike.count({
+      where: {
+        comment: {
+          userUid: uid,
+        },
+      },
+    });
+
+    // 检查在线状态
+    const { checkUserOnlineStatus } = await import("@/lib/server/ably");
+    const { isAblyEnabled } = await import("@/lib/server/ably-config");
+    const { formatRelativeTime } = await import("@/lib/shared/relative-time");
+
+    let onlineStatus: UserProfile["onlineStatus"];
+
+    if (isAblyEnabled()) {
+      // Ably 已启用：使用 Presence API
+      const isOnline = await checkUserOnlineStatus(uid);
+      if (isOnline) {
+        onlineStatus = {
+          status: "online",
+          lastActiveText: "在线",
+        };
+      } else {
+        // 检查最近 10 分钟是否有活跃 RefreshToken
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+        const recentToken = await prisma.refreshToken.findFirst({
+          where: {
+            userUid: uid,
+            lastUsedAt: { gte: tenMinutesAgo },
+            revokedAt: null,
+            expiresAt: { gt: new Date() },
+          },
+        });
+
+        if (recentToken) {
+          onlineStatus = {
+            status: "recently_online",
+            lastActiveText: "刚刚在线",
+          };
+        } else {
+          // 查找最近活跃的 RefreshToken
+          const lastActiveToken = await prisma.refreshToken.findFirst({
+            where: {
+              userUid: uid,
+              revokedAt: null,
+            },
+            orderBy: {
+              lastUsedAt: "desc",
+            },
+          });
+
+          const lastActiveTime =
+            lastActiveToken?.lastUsedAt || targetUser.lastUseAt;
+          onlineStatus = {
+            status: "offline",
+            lastActiveText: formatRelativeTime(lastActiveTime) + "活跃",
+          };
+        }
+      }
+    } else {
+      // Ably 未启用：降级到 RefreshToken 检测
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+      const recentToken = await prisma.refreshToken.findFirst({
+        where: {
+          userUid: uid,
+          lastUsedAt: { gte: tenMinutesAgo },
+          revokedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+      });
+
+      if (recentToken) {
+        onlineStatus = {
+          status: "recently_online",
+          lastActiveText: "刚刚在线",
+        };
+      } else {
+        // 查找最近活跃的 RefreshToken
+        const lastActiveToken = await prisma.refreshToken.findFirst({
+          where: {
+            userUid: uid,
+            revokedAt: null,
+          },
+          orderBy: {
+            lastUsedAt: "desc",
+          },
+        });
+
+        const lastActiveTime =
+          lastActiveToken?.lastUsedAt || targetUser.lastUseAt;
+        onlineStatus = {
+          status: "offline",
+          lastActiveText: formatRelativeTime(lastActiveTime) + "活跃",
+        };
+      }
+    }
+
+    // 权限判断
+    const isOwnProfile = currentUser?.uid === uid;
+    const isAdmin = currentUser?.role === "ADMIN";
+    const canEdit = isOwnProfile; // 只有本人可以编辑自己的资料
+    const canMessage = !!currentUser && !isOwnProfile;
+    const canManage = isAdmin; // 管理员有单独的"管理"按钮
+
+    // 构建返回数据
+    const profileData: UserProfile = {
+      user: {
+        uid: targetUser.uid,
+        username: targetUser.username,
+        nickname: targetUser.nickname,
+        email: canEdit ? targetUser.email : undefined, // 仅自己或管理员可见
+        avatar: targetUser.avatar,
+        bio: targetUser.bio,
+        website: targetUser.website,
+        role: targetUser.role,
+        status: targetUser.status,
+        createdAt: targetUser.createdAt.toISOString(),
+        lastUseAt: targetUser.lastUseAt.toISOString(),
+      },
+      stats: {
+        postsCount: targetUser._count.posts,
+        commentsCount: targetUser._count.comments,
+        likesGiven: targetUser._count.commentLikes,
+        likesReceived,
+      },
+      onlineStatus,
+      permissions: {
+        canEdit,
+        canMessage,
+        canManage,
+      },
+    };
+
+    return response.ok({
+      data: profileData,
+    });
+  } catch (error) {
+    console.error("Get user public profile error:", error);
+    return response.serverError({
+      message: "获取用户档案失败",
+    });
+  }
+}
+
+/**
+ * 获取用户活动时间线
+ */
+export async function getUserActivity(
+  uid: number,
+  offset: number,
+  limit: number,
+  isGuest: boolean,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<UserActivityResponse | null>>>;
+export async function getUserActivity(
+  uid: number,
+  offset?: number,
+  limit?: number,
+  isGuest?: boolean,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<UserActivityResponse | null>>;
+export async function getUserActivity(
+  uid: number,
+  offset: number = 0,
+  limit: number = 20,
+  isGuest: boolean = false,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<UserActivityResponse | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "getUserActivity"))) {
+    return response.tooManyRequests();
+  }
+
+  try {
+    // 访客只显示 10 条
+    const actualLimit = isGuest ? Math.min(limit, 10) : limit;
+    const fetchLimit = actualLimit * 3; // 每种活动各查询 limit*3 条，确保有足够数据
+
+    // 并行查询三种活动
+    const [posts, comments, likes] = await Promise.all([
+      // 查询文章
+      prisma.post.findMany({
+        where: {
+          userUid: uid,
+          status: "PUBLISHED",
+          deletedAt: null,
+        },
+        select: {
+          slug: true,
+          title: true,
+          createdAt: true,
+          tags: {
+            select: {
+              name: true,
+              slug: true,
+            },
+          },
+          categories: {
+            select: {
+              name: true,
+              slug: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: fetchLimit,
+      }),
+
+      // 查询评论
+      prisma.comment.findMany({
+        where: {
+          userUid: uid,
+        },
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          post: {
+            select: {
+              slug: true,
+              title: true,
+            },
+          },
+          parent: {
+            select: {
+              content: true,
+              user: {
+                select: {
+                  username: true,
+                },
+              },
+              authorName: true, // 未登录用户的名字
+            },
+          },
+          _count: {
+            select: {
+              likes: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: fetchLimit,
+      }),
+
+      // 查询点赞
+      prisma.commentLike.findMany({
+        where: {
+          userId: uid,
+        },
+        select: {
+          id: true,
+          createdAt: true,
+          comment: {
+            select: {
+              content: true,
+              user: {
+                select: {
+                  username: true,
+                },
+              },
+              post: {
+                select: {
+                  slug: true,
+                  title: true,
+                },
+              },
+              _count: {
+                select: {
+                  likes: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: fetchLimit,
+      }),
+    ]);
+
+    // 转换为统一的活动格式
+    const activities: UserActivityItem[] = [];
+
+    // 处理文章活动
+    posts.forEach((post) => {
+      activities.push({
+        id: `post-${post.slug}`,
+        type: "post",
+        createdAt: post.createdAt.toISOString(),
+        post: {
+          slug: post.slug,
+          title: post.title,
+          createdAt: post.createdAt.toISOString(),
+          tags: post.tags.map((tag) => ({
+            name: tag.name,
+            slug: tag.slug,
+          })),
+          categories: post.categories.map((category) => ({
+            name: category.name,
+            slug: category.slug,
+          })),
+        },
+      });
+    });
+
+    // 处理评论活动
+    comments.forEach((comment) => {
+      activities.push({
+        id: `comment-${comment.id}`,
+        type: "comment",
+        createdAt: comment.createdAt.toISOString(),
+        comment: {
+          content: comment.content,
+          postSlug: comment.post.slug,
+          postTitle: comment.post.title,
+          likesCount: comment._count.likes,
+          parentComment: comment.parent
+            ? {
+                content: comment.parent.content,
+                authorUsername:
+                  comment.parent.user?.username ||
+                  comment.parent.authorName ||
+                  "未知用户",
+              }
+            : null,
+        },
+      });
+    });
+
+    // 处理点赞活动
+    likes.forEach((like) => {
+      // 如果评论的作者不存在，跳过这条点赞记录
+      if (!like.comment.user) return;
+
+      activities.push({
+        id: `like-${like.id}`,
+        type: "like",
+        createdAt: like.createdAt.toISOString(),
+        like: {
+          commentContent: like.comment.content,
+          commentAuthorUsername: like.comment.user.username,
+          postSlug: like.comment.post.slug,
+          postTitle: like.comment.post.title,
+          commentLikesCount: like.comment._count.likes,
+        },
+      });
+    });
+
+    // 按时间倒序排序
+    activities.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+
+    // 应用分页
+    const paginatedActivities = activities.slice(offset, offset + actualLimit);
+    const total = activities.length;
+    const hasMore = !isGuest && offset + actualLimit < total;
+
+    const activityResponse: UserActivityResponse = {
+      activities: paginatedActivities,
+      pagination: {
+        total,
+        limit: actualLimit,
+        offset,
+        hasMore,
+      },
+    };
+
+    return response.ok({
+      data: activityResponse,
+    });
+  } catch (error) {
+    console.error("Get user activity error:", error);
+    return response.serverError({
+      message: "获取用户活动失败",
     });
   }
 }

@@ -17,7 +17,6 @@ import prisma from "@/lib/server/prisma";
 import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
 import { Input } from "@/ui/Input";
 import { RiSearch2Line } from "@remixicon/react";
-import Custom404 from "@/app/not-found";
 import EmptyPostCard from "@/components/EmptyPostCard";
 import DynamicReplace from "@/components/client/DynamicReplace";
 import {
@@ -25,6 +24,7 @@ import {
   processImageUrl,
 } from "@/lib/shared/image-utils";
 import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
+import { notFound } from "next/navigation";
 
 // 获取系统页面配置
 const pageConfig = await getRawPage("/posts");
@@ -229,7 +229,7 @@ export default async function PostsPage({
   // 计算总页数：基于所有已发布文章数量计算
   const totalPages = Math.ceil(totalPosts / PRE_PAGE_SIZE);
 
-  if (postsWithExpandedCategories.length === 0) return <Custom404 />;
+  if (postsWithExpandedCategories.length === 0) return notFound();
 
   return (
     <MainLayout type="horizontal">

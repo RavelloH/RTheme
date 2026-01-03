@@ -6933,6 +6933,332 @@ components:
         - requestId
         - data
       additionalProperties: false
+    GetUserProfileSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            user:
+              type: object
+              properties:
+                uid:
+                  type: integer
+                  minimum: -9007199254740991
+                  maximum: 9007199254740991
+                username:
+                  type: string
+                nickname:
+                  nullable: true
+                  type: string
+                email:
+                  type: string
+                  format: email
+                  pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+                avatar:
+                  nullable: true
+                  type: string
+                bio:
+                  nullable: true
+                  type: string
+                website:
+                  nullable: true
+                  type: string
+                role:
+                  type: string
+                  enum:
+                    - USER
+                    - ADMIN
+                    - EDITOR
+                    - AUTHOR
+                status:
+                  type: string
+                  enum:
+                    - ACTIVE
+                    - SUSPENDED
+                    - NEEDS_UPDATE
+                createdAt:
+                  type: string
+                  format: date-time
+                  pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+                lastUseAt:
+                  type: string
+                  format: date-time
+                  pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+              required:
+                - uid
+                - username
+                - nickname
+                - avatar
+                - bio
+                - website
+                - role
+                - status
+                - createdAt
+                - lastUseAt
+              additionalProperties: false
+            stats:
+              type: object
+              properties:
+                postsCount:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                commentsCount:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                likesGiven:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                likesReceived:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+              required:
+                - postsCount
+                - commentsCount
+                - likesGiven
+                - likesReceived
+              additionalProperties: false
+            onlineStatus:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - online
+                    - recently_online
+                    - offline
+                lastActiveText:
+                  type: string
+              required:
+                - status
+                - lastActiveText
+              additionalProperties: false
+            permissions:
+              type: object
+              properties:
+                canEdit:
+                  type: boolean
+                canMessage:
+                  type: boolean
+                canManage:
+                  type: boolean
+              required:
+                - canEdit
+                - canMessage
+                - canManage
+              additionalProperties: false
+          required:
+            - user
+            - stats
+            - onlineStatus
+            - permissions
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    GetUserActivitySuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            activities:
+              type: array
+              items:
+                anyOf:
+                  - type: object
+                    properties:
+                      id:
+                        type: string
+                      type:
+                        type: string
+                        enum:
+                          - post
+                      createdAt:
+                        type: string
+                        format: date-time
+                        pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+                      post:
+                        type: object
+                        properties:
+                          slug:
+                            type: string
+                          title:
+                            type: string
+                          excerpt:
+                            type: string
+                          createdAt:
+                            type: string
+                            format: date-time
+                            pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+                        required:
+                          - slug
+                          - title
+                          - excerpt
+                          - createdAt
+                        additionalProperties: false
+                    required:
+                      - id
+                      - type
+                      - createdAt
+                      - post
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      id:
+                        type: string
+                      type:
+                        type: string
+                        enum:
+                          - comment
+                      createdAt:
+                        type: string
+                        format: date-time
+                        pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+                      comment:
+                        type: object
+                        properties:
+                          content:
+                            type: string
+                          postSlug:
+                            type: string
+                          postTitle:
+                            type: string
+                          likesCount:
+                            type: integer
+                            minimum: 0
+                            maximum: 9007199254740991
+                          parentComment:
+                            nullable: true
+                            type: object
+                            properties:
+                              content:
+                                type: string
+                              authorUsername:
+                                type: string
+                            required:
+                              - content
+                              - authorUsername
+                            additionalProperties: false
+                        required:
+                          - content
+                          - postSlug
+                          - postTitle
+                          - likesCount
+                          - parentComment
+                        additionalProperties: false
+                    required:
+                      - id
+                      - type
+                      - createdAt
+                      - comment
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      id:
+                        type: string
+                      type:
+                        type: string
+                        enum:
+                          - like
+                      createdAt:
+                        type: string
+                        format: date-time
+                        pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+                      like:
+                        type: object
+                        properties:
+                          commentContent:
+                            type: string
+                          commentAuthorUsername:
+                            type: string
+                          postSlug:
+                            type: string
+                          postTitle:
+                            type: string
+                          commentLikesCount:
+                            type: integer
+                            minimum: 0
+                            maximum: 9007199254740991
+                        required:
+                          - commentContent
+                          - commentAuthorUsername
+                          - postSlug
+                          - postTitle
+                          - commentLikesCount
+                        additionalProperties: false
+                    required:
+                      - id
+                      - type
+                      - createdAt
+                      - like
+                    additionalProperties: false
+            pagination:
+              type: object
+              properties:
+                total:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                limit:
+                  type: integer
+                  exclusiveMinimum: true
+                  maximum: 9007199254740991
+                offset:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                hasMore:
+                  type: boolean
+              required:
+                - total
+                - limit
+                - offset
+                - hasMore
+              additionalProperties: false
+          required:
+            - activities
+            - pagination
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
     GetPostsTrends:
       type: object
       properties:
@@ -9953,6 +10279,215 @@ components:
       required:
         - commentId
         - maxDepth
+      additionalProperties: false
+    GetDirectChildren:
+      type: object
+      properties:
+        parentId:
+          nullable: true
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        postSlug:
+          type: string
+          minLength: 1
+        pageSize:
+          default: 10
+          type: integer
+          minimum: 1
+          maximum: 50
+        cursor:
+          type: string
+      required:
+        - parentId
+        - postSlug
+        - pageSize
+      additionalProperties: false
+    DirectChildrenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+                pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+              postSlug:
+                type: string
+              parentId:
+                nullable: true
+                type: string
+                format: uuid
+                pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+              content:
+                type: string
+              status:
+                type: string
+                enum:
+                  - PENDING
+                  - APPROVED
+                  - REJECTED
+                  - SPAM
+              createdAt:
+                type: string
+              mine:
+                default: false
+                type: boolean
+              replyCount:
+                default: 0
+                type: integer
+                minimum: 0
+                maximum: 9007199254740991
+              author:
+                type: object
+                properties:
+                  uid:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  username:
+                    nullable: true
+                    type: string
+                  nickname:
+                    nullable: true
+                    type: string
+                  avatar:
+                    nullable: true
+                    type: string
+                  displayName:
+                    type: string
+                  website:
+                    nullable: true
+                    type: string
+                    format: uri
+                  isAnonymous:
+                    type: boolean
+                  emailMd5:
+                    nullable: true
+                    type: string
+                required:
+                  - uid
+                  - username
+                  - nickname
+                  - avatar
+                  - displayName
+                  - isAnonymous
+                  - emailMd5
+                additionalProperties: false
+              location:
+                nullable: true
+                type: string
+              replyTo:
+                nullable: true
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  authorName:
+                    type: string
+                required:
+                  - id
+                  - authorName
+                additionalProperties: false
+              depth:
+                default: 0
+                type: integer
+                minimum: 0
+                maximum: 9007199254740991
+              path:
+                default: ""
+                type: string
+              sortKey:
+                default: ""
+                type: string
+              hasMore:
+                default: false
+                type: boolean
+              descendantCount:
+                default: 0
+                type: integer
+                minimum: 0
+                maximum: 9007199254740991
+              likeCount:
+                default: 0
+                type: integer
+                minimum: 0
+                maximum: 9007199254740991
+              isLiked:
+                type: boolean
+            required:
+              - id
+              - postSlug
+              - parentId
+              - content
+              - status
+              - createdAt
+              - mine
+              - replyCount
+              - author
+              - location
+              - depth
+              - path
+              - sortKey
+              - hasMore
+              - descendantCount
+              - likeCount
+            additionalProperties: false
+        meta:
+          type: object
+          properties:
+            page:
+              type: number
+              minimum: 1
+            pageSize:
+              type: number
+              minimum: 1
+              maximum: 100
+            total:
+              type: number
+              minimum: 0
+            totalPages:
+              type: number
+              minimum: 0
+            hasNext:
+              type: boolean
+            hasPrev:
+              type: boolean
+            nextCursor:
+              type: string
+          required:
+            - page
+            - pageSize
+            - total
+            - totalPages
+            - hasNext
+            - hasPrev
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - meta
       additionalProperties: false
     UpdateCommentStatus:
       type: object
@@ -13207,6 +13742,230 @@ components:
         - timestamp
         - requestId
         - data
+      additionalProperties: false
+    MarkNoticesAsRead:
+      type: object
+      properties:
+        noticeIds:
+          minItems: 1
+          type: array
+          items:
+            type: string
+      required:
+        - noticeIds
+      additionalProperties: false
+    MarkNoticesAsReadSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+          required:
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    MarkAllNoticesAsReadSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+          required:
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    GetUnreadNoticeCountSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            count:
+              type: number
+          required:
+            - count
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    NoticeUnauthorizedErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - UNAUTHORIZED
+            message:
+              type: string
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - error
+      additionalProperties: false
+    InvalidNoticeIdsErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - INVALID_NOTICE_IDS
+            message:
+              type: string
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - error
+      additionalProperties: false
+    NoticeNotFoundErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - NOTICE_NOT_FOUND
+            message:
+              type: string
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - error
       additionalProperties: false
   securitySchemes:
     BearerAuth:

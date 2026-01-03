@@ -539,13 +539,17 @@ export function LoginButton({ mainColor }: { mainColor: string }) {
                 </AutoTransition>
 
                 <MenuAction
-                  onClick={() => navigate("/profile")}
+                  onClick={() => {
+                    if (userInfo?.uid) {
+                      navigate(`/user/${userInfo.uid}`);
+                    }
+                  }}
                   icon={<RiUserLine size="1.2em" />}
                 >
                   个人资料
                 </MenuAction>
                 <MenuAction
-                  onClick={() => router.push("/notifications")}
+                  onClick={() => navigate("/notifications")}
                   icon={<RiNotification3Line size="1.2em" />}
                 >
                   <div className="flex items-center justify-between flex-1">

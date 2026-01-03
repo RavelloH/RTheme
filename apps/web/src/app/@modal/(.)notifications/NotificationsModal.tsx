@@ -65,7 +65,7 @@ export default function NotificationsModal({
       showCloseButton={true}
       dismissable={true}
     >
-      <div className="h-[600px]">
+      <div className="h-[37.5em]">
         <NotificationsClient
           unreadNotices={unreadNotices}
           readNotices={readNotices}

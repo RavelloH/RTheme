@@ -145,10 +145,10 @@ export default function TimeRangeSelector({
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-4 py-2 rounded-lg border border-foreground/10 hover:border-foreground/20 transition-colors bg-background"
       >
-        <RiCalendarLine size={16} className="text-muted-foreground" />
+        <RiCalendarLine size="1em" className="text-muted-foreground" />
         <span className="text-sm font-medium">{getDisplayLabel()}</span>
         <RiArrowDownSLine
-          size={16}
+          size="1em"
           className={`text-muted-foreground transition-transform ${
             isOpen ? "rotate-180" : ""
           }`}

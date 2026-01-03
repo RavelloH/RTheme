@@ -78,7 +78,9 @@ export default function PasskeyLoginButton({
       );
 
       const redirectParam = searchParams.get("redirect");
-      const targetPath = redirectParam ? redirectParam : "/profile";
+      const targetPath = redirectParam
+        ? redirectParam
+        : "/user/" + userInfo.uid;
       toast.success("登录成功，正在跳转...");
       setTimeout(() => {
         navigate(targetPath);

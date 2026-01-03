@@ -17,7 +17,6 @@ import {
 } from "@/lib/server/page-cache";
 import { createPageConfigBuilder } from "@/lib/server/page-utils";
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
-import Custom404 from "./not-found";
 import { getConfig } from "@/lib/server/config-cache";
 import { RiArrowRightSLine } from "@remixicon/react";
 import {
@@ -26,6 +25,7 @@ import {
 } from "@/lib/shared/image-utils";
 import prisma from "@/lib/server/prisma";
 import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
+import { notFound } from "next/navigation";
 
 // 获取系统页面配置
 const page = await getRawPage("/");
@@ -53,7 +53,7 @@ export const metadata = await generateMetadata(
 
 export default async function Home() {
   if (!page || page.status !== "ACTIVE" || page.deletedAt) {
-    return <Custom404 />;
+    return notFound();
   }
 
   // 获取首页展示的文章（最多5篇）

@@ -226,3 +226,146 @@ registerSchema(
 
 // 导出 website schema 供其他地方使用
 export { websiteSchema };
+
+/*
+    getUserProfile() Schema - 用户档案详情
+*/
+export const UserProfileSchema = z.object({
+  // 基本信息
+  user: z.object({
+    uid: z.number().int(),
+    username: z.string(),
+    nickname: z.string().nullable(),
+    email: z.string().email().optional(), // 仅自己或管理员可见
+    avatar: z.string().nullable(),
+    bio: z.string().nullable(),
+    website: z.string().nullable(),
+    role: z.enum(["USER", "ADMIN", "EDITOR", "AUTHOR"]),
+    status: z.enum(["ACTIVE", "SUSPENDED", "NEEDS_UPDATE"]),
+    createdAt: z.string().datetime(),
+    lastUseAt: z.string().datetime(),
+  }),
+  // 统计信息
+  stats: z.object({
+    postsCount: z.number().int().nonnegative(), // 已发布文章数
+    commentsCount: z.number().int().nonnegative(), // 所有评论数
+    likesGiven: z.number().int().nonnegative(), // 点赞数
+    likesReceived: z.number().int().nonnegative(), // 获赞数
+  }),
+  // 在线状态
+  onlineStatus: z.object({
+    status: z.enum(["online", "recently_online", "offline"]), // 在线、刚刚在线、离线
+    lastActiveText: z.string(), // 显示文本，如 "在线"、"刚刚在线"、"3小时前活跃"
+  }),
+  // 权限
+  permissions: z.object({
+    canEdit: z.boolean(), // 能否编辑（自己或管理员）
+    canMessage: z.boolean(), // 能否发私信（已登录且不是自己）
+    canManage: z.boolean(), // 能否管理（管理员）
+  }),
+});
+export type UserProfile = z.infer<typeof UserProfileSchema>;
+
+export const GetUserProfileSuccessResponseSchema =
+  createSuccessResponseSchema(UserProfileSchema);
+export type GetUserProfileSuccessResponse = z.infer<
+  typeof GetUserProfileSuccessResponseSchema
+>;
+registerSchema(
+  "GetUserProfileSuccessResponse",
+  GetUserProfileSuccessResponseSchema,
+);
+
+/*
+    getUserActivity() Schema - 用户活动时间线
+*/
+// 文章活动
+export const PostActivitySchema = z.object({
+  id: z.string(),
+  type: z.literal("post"),
+  createdAt: z.string().datetime(),
+  post: z.object({
+    slug: z.string(),
+    title: z.string(),
+    createdAt: z.string().datetime(),
+    tags: z.array(
+      z.object({
+        name: z.string(),
+        slug: z.string(),
+      }),
+    ),
+    categories: z.array(
+      z.object({
+        name: z.string(),
+        slug: z.string(),
+      }),
+    ),
+  }),
+});
+export type PostActivity = z.infer<typeof PostActivitySchema>;
+
+// 评论活动
+export const CommentActivitySchema = z.object({
+  id: z.string(),
+  type: z.literal("comment"),
+  createdAt: z.string().datetime(),
+  comment: z.object({
+    content: z.string(), // 评论内容
+    postSlug: z.string(), // 所属文章 slug
+    postTitle: z.string(), // 所属文章标题
+    likesCount: z.number().int().nonnegative(), // 点赞数
+    parentComment: z
+      .object({
+        content: z.string(), // 父评论内容
+        authorUsername: z.string(), // 父评论作者用户名
+      })
+      .nullable(), // 如果是回复，包含父评论信息
+  }),
+});
+export type CommentActivity = z.infer<typeof CommentActivitySchema>;
+
+// 点赞活动
+export const LikeActivitySchema = z.object({
+  id: z.string(),
+  type: z.literal("like"),
+  createdAt: z.string().datetime(),
+  like: z.object({
+    commentContent: z.string(), // 被点赞的评论内容
+    commentAuthorUsername: z.string(), // 被点赞评论的作者用户名
+    postSlug: z.string(), // 所属文章 slug
+    postTitle: z.string(), // 所属文章标题
+    commentLikesCount: z.number().int().nonnegative(), // 该评论的总点赞数
+  }),
+});
+export type LikeActivity = z.infer<typeof LikeActivitySchema>;
+
+// 联合活动类型
+export const UserActivityItemSchema = z.discriminatedUnion("type", [
+  PostActivitySchema,
+  CommentActivitySchema,
+  LikeActivitySchema,
+]);
+export type UserActivityItem = z.infer<typeof UserActivityItemSchema>;
+
+// 活动响应
+export const UserActivityResponseSchema = z.object({
+  activities: z.array(UserActivityItemSchema),
+  pagination: z.object({
+    total: z.number().int().nonnegative(), // 总数
+    limit: z.number().int().positive(), // 每页数量
+    offset: z.number().int().nonnegative(), // 偏移量
+    hasMore: z.boolean(), // 是否有更多
+  }),
+});
+export type UserActivityResponse = z.infer<typeof UserActivityResponseSchema>;
+
+export const GetUserActivitySuccessResponseSchema = createSuccessResponseSchema(
+  UserActivityResponseSchema,
+);
+export type GetUserActivitySuccessResponse = z.infer<
+  typeof GetUserActivitySuccessResponseSchema
+>;
+registerSchema(
+  "GetUserActivitySuccessResponse",
+  GetUserActivitySuccessResponseSchema,
+);

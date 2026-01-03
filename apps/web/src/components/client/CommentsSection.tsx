@@ -197,7 +197,7 @@ const SingleComment = React.memo(function SingleComment({
 
   const handleAvatarClick = useCallback(() => {
     if (!comment.author.isAnonymous && comment.author.uid) {
-      navigate(`/profile/${comment.author.uid}`);
+      navigate(`/user/${comment.author.uid}`);
     }
   }, [comment.author.isAnonymous, comment.author.uid, navigate]);
 

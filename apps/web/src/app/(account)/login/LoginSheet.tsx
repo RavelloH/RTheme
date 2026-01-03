@@ -180,7 +180,9 @@ export default function LoginSheet({
 
           // 获取 redirect 参数
           const redirectParam = searchParams.get("redirect");
-          const targetPath = redirectParam ? redirectParam : "/profile";
+          const targetPath = redirectParam
+            ? redirectParam
+            : "/user/" + userInfo.uid;
 
           // 3秒后跳转
           setTimeout(() => {
@@ -350,7 +352,7 @@ export default function LoginSheet({
 
       // 获取redirect参数
       const redirectParam = searchParams.get("redirect");
-      const targetPath = redirectParam ? redirectParam : "/profile";
+      const targetPath = redirectParam ? redirectParam : "/user";
 
       setTimeout(() => {
         navigate(targetPath);
@@ -423,7 +425,7 @@ export default function LoginSheet({
 
       // 获取redirect参数
       const redirectParam = searchParams.get("redirect");
-      const targetPath = redirectParam ? redirectParam : "/profile";
+      const targetPath = redirectParam ? redirectParam : "/user";
 
       setTimeout(() => {
         navigate(targetPath);

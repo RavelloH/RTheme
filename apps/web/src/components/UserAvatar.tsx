@@ -57,8 +57,8 @@ export default function UserAvatar({
       // 优先使用服务器端计算的 MD5
       if (emailMd5) {
         candidates.push(
-          `https://cravatar.cn/avatar/${emailMd5}?d=404`,
-          `https://gravatar.cn/avatar/${emailMd5}?d=404`,
+          `https://cravatar.cn/avatar/${emailMd5}?d=404&s=160`,
+          `https://gravatar.cn/avatar/${emailMd5}?d=404&s=160`,
         );
       }
 
@@ -69,8 +69,8 @@ export default function UserAvatar({
           const hash = md5Hex(normalizedEmail);
           if (cancelled) return;
           candidates.push(
-            `https://cravatar.cn/avatar/${hash}?d=404`,
-            `https://gravatar.cn/avatar/${hash}?d=404`,
+            `https://cravatar.cn/avatar/${hash}?d=404&s=160`,
+            `https://gravatar.cn/avatar/${hash}?d=404&s=160`,
           );
         } catch (error) {
           if (process.env.NODE_ENV !== "production") {

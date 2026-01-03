@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { authVerify } from "@/lib/server/auth-verify";
 import { getNotices } from "@/actions/notice";
 import NotificationsClient from "./NotificationsClient";
-import UnauthorizedPage from "../unauthorized";
+import UnauthorizedPage from "@/app/unauthorized";
 import { generateMetadata } from "@/lib/server/seo";
 
 export const metadata = await generateMetadata(
