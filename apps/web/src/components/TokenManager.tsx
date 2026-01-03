@@ -92,6 +92,13 @@ export default function TokenManager() {
       }
     };
 
+    // 检查用户是否已登录，未登录则跳过所有初始化
+    const userInfo = getStoredUserInfo();
+    if (!userInfo) {
+      console.log("[TokenManager] User not logged in, skipping initialization");
+      return;
+    }
+
     console.log("[TokenManager] Initialized in tab:", tabIdRef.current);
 
     // 统一的定时器清理函数

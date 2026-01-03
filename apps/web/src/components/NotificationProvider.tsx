@@ -179,6 +179,7 @@ export default function NotificationProvider({
   // ============ Web Locks 相关 ============
   const lockControllerRef = useRef<AbortController | null>(null);
   const [isLeader, setIsLeader] = useState(false); // 是否持有锁（主标签页）
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false); // 用户是否已登录
 
   // ============ 跨标签页通信 ============
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
@@ -230,6 +231,13 @@ export default function NotificationProvider({
     // 如果已经有连接，不要重复建立
     if (ablyClientRef.current) {
       console.log("[WebSocket] Connection already exists, skipping");
+      return;
+    }
+
+    // 检查用户是否已登录（双重保险）
+    if (!userUidRef.current) {
+      console.log("[WebSocket] User not logged in, skipping connection");
+      fallbackToPolling();
       return;
     }
 
@@ -402,6 +410,13 @@ export default function NotificationProvider({
       return;
     }
 
+    // 检查用户是否已登录
+    if (!isUserLoggedIn) {
+      console.log("[Locks] User not logged in, skipping Ably connection");
+      setConnectionStatus("idle");
+      return;
+    }
+
     console.log("[Locks] Requesting lock for Ably connection...");
 
     // 创建 AbortController 用于取消锁请求
@@ -449,7 +464,12 @@ export default function NotificationProvider({
       console.log("[Locks] Component unmounting, aborting lock request");
       controller.abort();
     };
-  }, [isAblyEnabled, initializeAblyConnection, cleanupAblyConnection]);
+  }, [
+    isAblyEnabled,
+    isUserLoggedIn,
+    initializeAblyConnection,
+    cleanupAblyConnection,
+  ]);
 
   // 首次加载时获取未读通知数量和用户 UID
   useEffect(() => {
@@ -468,7 +488,17 @@ export default function NotificationProvider({
         const userInfo = getUserInfoFromStorage();
         if (userInfo) {
           userUidRef.current = userInfo.uid;
+          setIsUserLoggedIn(true);
           console.log("[Notification] User UID:", userInfo.uid);
+        } else {
+          // 用户未登录，清空状态并退出
+          userUidRef.current = null;
+          setIsUserLoggedIn(false);
+          setUnreadCount(0);
+          // 清空缓存的未读数量
+          localStorage.removeItem("unread_notice_count");
+          console.log("[Notification] User not logged in, skipping");
+          return;
         }
 
         // 立即设置缓存时间戳，防止其他组件重复调用
@@ -530,6 +560,12 @@ export default function NotificationProvider({
 
   // ============ 跨标签页通信（BroadcastChannel） ============
   useEffect(() => {
+    // 只在用户登录时创建 BroadcastChannel
+    if (!isUserLoggedIn) {
+      console.log("[BroadcastChannel] User not logged in, skipping");
+      return;
+    }
+
     // 创建 BroadcastChannel 实例
     const channel = new BroadcastChannel("notifications");
     broadcastChannelRef.current = channel;
@@ -615,7 +651,7 @@ export default function NotificationProvider({
       console.log("[BroadcastChannel] Channel closed");
       channel.close();
     };
-  }, [broadcast]);
+  }, [broadcast, isUserLoggedIn]);
 
   // 订阅通知频道（仅主标签页）
   useEffect(() => {
@@ -804,8 +840,10 @@ export default function NotificationProvider({
     <NotificationContext.Provider
       value={{ connectionStatus, unreadCount, isLeader }}
     >
-      {/* 仅在回退模式时启用轮询组件 */}
-      {connectionStatus === "fallback" && <UnreadNoticeTracker />}
+      {/* 仅在回退模式且用户已登录时启用轮询组件 */}
+      {connectionStatus === "fallback" && isUserLoggedIn && (
+        <UnreadNoticeTracker />
+      )}
       {/* 通知 Toast 显示 */}
       <NotificationToast
         notifications={notifications}

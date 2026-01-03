@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { gsap } from "gsap";
@@ -423,7 +423,9 @@ export default function FooterDesktop({ menus }: FooterProps) {
         }}
       >
         <div className="h-full border-r border-border flex items-center justify-center w-[5em]">
-          <LoginButton />
+          <Suspense fallback={<div className="w-8 h-8" />}>
+            <LoginButton />
+          </Suspense>
         </div>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-muted-foreground relative">
