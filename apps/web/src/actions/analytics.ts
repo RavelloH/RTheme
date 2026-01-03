@@ -1107,7 +1107,16 @@ export async function getAnalyticsStats(
       for (let i = 0; i < calculatedDays; i++) {
         const date = new Date(startDate);
         date.setDate(date.getDate() + i);
-        const dateKey = date.toISOString().split("T")[0]!;
+        const dayStart = new Date(
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate(),
+          0,
+          0,
+          0,
+          0,
+        );
+        const dateKey = dayStart.toISOString();
         dailyTrendMap.set(dateKey, { views: 0, visitors: new Set() });
       }
     }
@@ -1119,8 +1128,17 @@ export async function getAnalyticsStats(
         // 小时精度：取到小时级别
         timeKey = view.timestamp.toISOString().substring(0, 13) + ":00:00.000Z";
       } else {
-        // 天精度
-        timeKey = view.timestamp.toISOString().split("T")[0]!;
+        // 天精度：取到当天零点
+        const dayStart = new Date(
+          view.timestamp.getFullYear(),
+          view.timestamp.getMonth(),
+          view.timestamp.getDate(),
+          0,
+          0,
+          0,
+          0,
+        );
+        timeKey = dayStart.toISOString();
       }
       const trend = dailyTrendMap.get(timeKey);
       if (trend) {
@@ -1132,7 +1150,16 @@ export async function getAnalyticsStats(
     // 聚合归档数据（仅在天模式下使用）
     if (!isHourlyMode) {
       for (const archive of archivedData) {
-        const dateKey = archive.date.toISOString().split("T")[0]!;
+        const dayStart = new Date(
+          archive.date.getFullYear(),
+          archive.date.getMonth(),
+          archive.date.getDate(),
+          0,
+          0,
+          0,
+          0,
+        );
+        const dateKey = dayStart.toISOString();
         const trend = dailyTrendMap.get(dateKey);
         if (trend) {
           trend.views += archive.totalViews;
@@ -1196,7 +1223,16 @@ export async function getAnalyticsStats(
       for (let i = 0; i < calculatedDays; i++) {
         const date = new Date(startDate);
         date.setDate(date.getDate() + i);
-        const dateKey = date.toISOString().split("T")[0]!;
+        const dayStart = new Date(
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate(),
+          0,
+          0,
+          0,
+          0,
+        );
+        const dateKey = dayStart.toISOString();
         dailyPathTrendMap.set(dateKey, {});
       }
     }
@@ -1204,9 +1240,22 @@ export async function getAnalyticsStats(
     // 聚合 PageView 数据
     for (const view of pageViews) {
       if (top10PathsSet.has(view.path)) {
-        const timeKey = isHourlyMode
-          ? view.timestamp.toISOString().substring(0, 13) + ":00:00.000Z"
-          : view.timestamp.toISOString().split("T")[0]!;
+        let timeKey: string;
+        if (isHourlyMode) {
+          timeKey =
+            view.timestamp.toISOString().substring(0, 13) + ":00:00.000Z";
+        } else {
+          const dayStart = new Date(
+            view.timestamp.getFullYear(),
+            view.timestamp.getMonth(),
+            view.timestamp.getDate(),
+            0,
+            0,
+            0,
+            0,
+          );
+          timeKey = dayStart.toISOString();
+        }
         const pathViews = dailyPathTrendMap.get(timeKey);
         if (pathViews) {
           pathViews[view.path] = (pathViews[view.path] || 0) + 1;

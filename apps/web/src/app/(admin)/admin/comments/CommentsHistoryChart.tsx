@@ -171,6 +171,8 @@ export default function CommentsHistoryChart({
                   data={stackedData}
                   series={stackedSeries}
                   className="w-full h-full"
+                  timeGranularity="day"
+                  showYear="auto"
                 />
               </div>
             </>

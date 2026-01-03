@@ -7,6 +7,7 @@ import { curveMonotoneX } from "@visx/curve";
 import { LinearGradient } from "@visx/gradient";
 import { Group } from "@visx/group";
 import { motion } from "framer-motion";
+import { AutoResizer } from "@/ui/AutoResizer";
 
 export interface AreaChartDataPoint {
   time: string; // ISO 8601 格式的时间字符串
@@ -346,20 +347,22 @@ export default function AreaChart({
             {timeFormatter(hoveredPoint.data.time)}
           </div>
           {showLegend && (
-            <div className="space-y-1 text-xs">
-              {series.map((s) => (
-                <div key={s.key} className="flex items-center gap-2">
-                  <span
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: s.color }}
-                  />
-                  <span style={{ color: s.color }}>
-                    {s.label}:{" "}
-                    {formatValue(getValue(hoveredPoint.data, s.key), s.key)}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <AutoResizer duration={0.2}>
+              <div className="space-y-1 text-xs">
+                {series.map((s) => (
+                  <div key={s.key} className="flex items-center gap-2">
+                    <span
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: s.color }}
+                    />
+                    <span style={{ color: s.color }}>
+                      {s.label}:{" "}
+                      {formatValue(getValue(hoveredPoint.data, s.key), s.key)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </AutoResizer>
           )}
         </div>
       )}

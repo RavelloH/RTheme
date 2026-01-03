@@ -4,9 +4,11 @@ import { useEffect, useState, useRef } from "react";
 import { scaleLinear, scaleBand } from "@visx/scale";
 import { BarStack } from "@visx/shape";
 import { Group } from "@visx/group";
+import { AutoResizer } from "@/ui/AutoResizer";
+import { motion, AnimatePresence } from "framer-motion";
 
 export interface StackedBarChartDataPoint {
-  time: string;
+  time: string; // ISO 8601 格式的时间字符串
   [key: string]: string | number;
 }
 
@@ -16,6 +18,9 @@ export interface SeriesConfig {
   color: string; // 可以是 CSS 变量或颜色值，如 "oklch(var(--p))" 或 "#3b82f6"
 }
 
+export type TimeGranularity = "year" | "month" | "day" | "hour" | "minute";
+export type ShowYearStrategy = "auto" | "always" | "never";
+
 interface StackedBarChartProps {
   data: StackedBarChartDataPoint[];
   series: SeriesConfig[]; // 要显示的数据系列配置
@@ -24,6 +29,8 @@ interface StackedBarChartProps {
   showLegend?: boolean; // 是否在 tooltip 中显示图例
   formatValue?: (value: number, key: string) => string; // 自定义值格式化函数
   formatTime?: (time: string) => string; // 自定义时间格式化函数
+  timeGranularity?: TimeGranularity; // 时间显示精度，默认 "day"
+  showYear?: ShowYearStrategy; // 年份显示策略，默认 "auto"（跨年时显示）
 }
 
 export default function StackedBarChart({
@@ -34,6 +41,8 @@ export default function StackedBarChart({
   showLegend = true,
   formatValue = (value: number) => value.toString(),
   formatTime,
+  timeGranularity = "day",
+  showYear: showYearProp = "auto",
 }: StackedBarChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -44,28 +53,57 @@ export default function StackedBarChart({
     data: StackedBarChartDataPoint;
   } | null>(null);
 
+  // 数据访问器
+  const getDate = (d: StackedBarChartDataPoint) => new Date(d.time);
+
+  // 检查数据是否跨年
+  const isDataCrossYear = () => {
+    if (data.length === 0) return false;
+    const dates = data.map((d) => getDate(d));
+    const years = new Set(dates.map((d) => d.getFullYear()));
+    return years.size > 1;
+  };
+
+  // 根据策略决定是否显示年份
+  const shouldShowYear =
+    showYearProp === "always"
+      ? true
+      : showYearProp === "never"
+        ? false
+        : isDataCrossYear(); // auto
+
   // 默认时间格式化函数
   const defaultFormatTime = (time: string) => {
-    const date = new Date(time);
+    // 确保 time 是字符串类型
+    const timeStr = typeof time === "string" ? time : String(time);
+
+    const date = new Date(timeStr);
     if (isNaN(date.getTime())) {
-      return time; // 如果无法解析，返回原始字符串
+      return timeStr; // 如果无法解析，返回原始字符串
     }
 
-    // 检查是否包含时间部分（小时不为0或者时间戳精确到小时）
-    const hasTime = time.includes("T") || time.includes(":");
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hour = String(date.getHours()).padStart(2, "0");
+    const minute = String(date.getMinutes()).padStart(2, "0");
 
-    if (hasTime) {
-      return date.toLocaleDateString("zh-CN", {
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } else {
-      return date.toLocaleDateString("zh-CN", {
-        month: "2-digit",
-        day: "2-digit",
-      });
+    // 根据精度级别构建格式
+    const yearPart = shouldShowYear ? `${year}/` : "";
+
+    switch (timeGranularity) {
+      case "year":
+        return `${year}`;
+      case "month":
+        return `${yearPart}${month}`;
+      case "day":
+        return `${yearPart}${month}/${day}`;
+      case "hour":
+        return `${yearPart}${month}/${day} ${hour}:00`;
+      case "minute":
+        return `${yearPart}${month}/${day} ${hour}:${minute}`;
+      default:
+        return `${yearPart}${month}/${day}`;
     }
   };
 
@@ -150,25 +188,25 @@ export default function StackedBarChart({
       return;
     }
 
-    // 找到对应的柱子
+    // 找到最接近的柱子（而不是严格要求鼠标在柱子上）
     const bandwidth = xScale.bandwidth();
-    const hoveredTime = data.find((d) => {
-      const barX = xScale(d.time) ?? 0;
-      return x >= barX && x <= barX + bandwidth;
+    const closestData = data.reduce((prev, curr) => {
+      const prevBarX = xScale(prev.time) ?? 0;
+      const currBarX = xScale(curr.time) ?? 0;
+      const prevCenter = prevBarX + bandwidth / 2;
+      const currCenter = currBarX + bandwidth / 2;
+      const prevDiff = Math.abs(x - prevCenter);
+      const currDiff = Math.abs(x - currCenter);
+      return currDiff < prevDiff ? curr : prev;
     });
 
-    if (hoveredTime) {
-      setHoveredPoint({
-        x: clientX - rect.left,
-        y: y,
-        screenY: clientY, // 保存屏幕 Y 坐标用于判断方向
-        data: hoveredTime,
-      });
-      onHover?.(hoveredTime);
-    } else {
-      setHoveredPoint(null);
-      onHover?.(null);
-    }
+    setHoveredPoint({
+      x: clientX - rect.left,
+      y: y,
+      screenY: clientY, // 保存屏幕 Y 坐标用于判断方向
+      data: closestData,
+    });
+    onHover?.(closestData);
   };
 
   // 处理鼠标移动
@@ -224,6 +262,30 @@ export default function StackedBarChart({
         className="w-full h-full"
       >
         <Group left={margin.left} top={margin.top}>
+          {/* hover 背景高亮 */}
+          <AnimatePresence>
+            {hoveredPoint && (
+              <motion.rect
+                key="hover-background"
+                y={0}
+                width={xScale.bandwidth() + 8}
+                height={innerHeight}
+                fill="currentColor"
+                className="pointer-events-none"
+                initial={{
+                  opacity: 0,
+                  x: (xScale(hoveredPoint.data.time) ?? 0) - 4,
+                }}
+                animate={{
+                  opacity: 0.08,
+                  x: (xScale(hoveredPoint.data.time) ?? 0) - 4,
+                }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
+              />
+            )}
+          </AnimatePresence>
+
           <BarStack<StackedBarChartDataPoint, string>
             data={data}
             keys={keys}
@@ -272,24 +334,26 @@ export default function StackedBarChart({
             {timeFormatter(hoveredPoint.data.time)}
           </div>
           {showLegend && (
-            <div className="space-y-1 text-xs">
-              {series.map((s) => {
-                const value = getValue(hoveredPoint.data, s.key);
-                // 只显示有值的系列
-                if (value === 0) return null;
-                return (
-                  <div key={s.key} className="flex items-center gap-2">
-                    <span
-                      className="w-3 h-3 rounded-sm"
-                      style={{ backgroundColor: s.color }}
-                    />
-                    <span style={{ color: s.color }}>
-                      {s.label}: {formatValue(value, s.key)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+            <AutoResizer duration={0.2}>
+              <div className="space-y-1 text-xs">
+                {series.map((s) => {
+                  const value = getValue(hoveredPoint.data, s.key);
+                  // 只显示有值的系列
+                  if (value === 0) return null;
+                  return (
+                    <div key={s.key} className="flex items-center gap-2">
+                      <span
+                        className="w-3 h-3 rounded-sm"
+                        style={{ backgroundColor: s.color }}
+                      />
+                      <span style={{ color: s.color }}>
+                        {s.label}: {formatValue(value, s.key)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </AutoResizer>
           )}
         </div>
       )}

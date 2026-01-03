@@ -170,6 +170,8 @@ export default function AuditHistoryChart({
                   data={chartData}
                   series={series}
                   className="w-full h-full"
+                  timeGranularity="day"
+                  showYear="auto"
                 />
               </div>
             </>
