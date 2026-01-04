@@ -13,12 +13,10 @@ import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import generateGradient from "@/lib/shared/gradient";
 import generateComplementary from "@/lib/shared/complementary";
+import { useMainColor } from "@/components/ThemeProvider";
 
-export default function TagsDistributionChart({
-  mainColor,
-}: {
-  mainColor: string;
-}) {
+export default function TagsDistributionChart() {
+  const mainColor = useMainColor().primary;
   const [data, setData] = useState<TagDistributionItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);

@@ -18,12 +18,10 @@ import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import generateGradient from "@/lib/shared/gradient";
 import generateComplementary from "@/lib/shared/complementary";
+import { useMainColor } from "@/components/ThemeProvider";
 
-export default function AuditHistoryChart({
-  mainColor,
-}: {
-  mainColor: string;
-}) {
+export default function AuditHistoryChart() {
+  const mainColor = useMainColor().primary;
   const [data, setData] = useState<AuditTrendItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);

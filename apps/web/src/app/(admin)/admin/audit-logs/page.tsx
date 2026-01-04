@@ -6,7 +6,6 @@ import AdminSidebar from "@/components/AdminSidebar";
 import AuditHistoryChart from "./AuditHistoryChart";
 import AuditLogTable from "./AuditLogTable";
 import AuditLogInfo from "./AuditLogInfo";
-import { getConfig } from "@/lib/server/config-cache";
 
 export const metadata = await generateMetadata(
   {
@@ -19,8 +18,6 @@ export const metadata = await generateMetadata(
 );
 
 export default async function AuditLogsPage() {
-  const mainColor = (await getConfig<{ primary: string }>("site.color"))
-    .primary;
   return (
     <MainLayout type="horizontal">
       <HorizontalScroll
@@ -33,7 +30,7 @@ export default async function AuditLogsPage() {
         <AdminSidebar />
         <RowGrid>
           <AuditLogInfo />
-          <AuditHistoryChart mainColor={mainColor} />
+          <AuditHistoryChart />
         </RowGrid>
         <RowGrid>
           <AuditLogTable />

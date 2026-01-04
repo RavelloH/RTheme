@@ -10,12 +10,10 @@ import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import generateGradient from "@/lib/shared/gradient";
 import generateComplementary from "@/lib/shared/complementary";
+import { useMainColor } from "@/components/ThemeProvider";
 
-export default function EndpointStatsChart({
-  mainColor,
-}: {
-  mainColor: string;
-}) {
+export default function EndpointStatsChart() {
+  const mainColor = useMainColor().primary;
   const [endpoints, setEndpoints] = useState<EndpointStat[]>([]);
   const [totalRequests, setTotalRequests] = useState(0);
   const [isLoading, setIsLoading] = useState(true);

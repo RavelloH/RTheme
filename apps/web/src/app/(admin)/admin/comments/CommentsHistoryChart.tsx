@@ -19,12 +19,10 @@ import type { CommentHistoryPoint } from "@repo/shared-types/api/comment";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import generateGradient from "@/lib/shared/gradient";
 import generateComplementary from "@/lib/shared/complementary";
+import { useMainColor } from "@/components/ThemeProvider";
 
-export default function CommentsHistoryChart({
-  mainColor,
-}: {
-  mainColor?: string;
-}) {
+export default function CommentsHistoryChart() {
+  const mainColor = useMainColor().primary;
   const [data, setData] = useState<CommentHistoryPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -85,7 +83,6 @@ export default function CommentsHistoryChart({
   ];
 
   const { stackedData, stackedSeries } = (() => {
-    const resolvedMainColor = mainColor ?? "#4f46e5";
     type PostEntry =
       CommentHistoryPoint["posts"] extends Array<infer T>
         ? T
@@ -122,8 +119,8 @@ export default function CommentsHistoryChart({
       .filter((entry) => Object.keys(entry).length > 1); // 仅保留有数据的日期
 
     let colors = generateGradient(
-      resolvedMainColor,
-      generateComplementary(resolvedMainColor),
+      mainColor,
+      generateComplementary(mainColor),
       10,
     );
     colors = colors.flatMap((_, i, arr) =>

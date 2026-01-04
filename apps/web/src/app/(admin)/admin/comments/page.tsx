@@ -6,7 +6,6 @@ import AdminSidebar from "@/components/AdminSidebar";
 import CommentsReport from "./CommentsReport";
 import CommentsHistoryChart from "./CommentsHistoryChart";
 import CommentsTable from "./CommentsTable";
-import { getConfig } from "@/lib/server/config-cache";
 
 export const metadata = await generateMetadata(
   {
@@ -19,8 +18,6 @@ export const metadata = await generateMetadata(
 );
 
 export default async function AdminComments() {
-  const mainColor = (await getConfig<{ primary: string }>("site.color"))
-    .primary;
   return (
     <MainLayout type="horizontal">
       <HorizontalScroll
@@ -33,7 +30,7 @@ export default async function AdminComments() {
         <AdminSidebar />
         <RowGrid>
           <CommentsReport />
-          <CommentsHistoryChart mainColor={mainColor} />
+          <CommentsHistoryChart />
         </RowGrid>
         <RowGrid>
           <CommentsTable />

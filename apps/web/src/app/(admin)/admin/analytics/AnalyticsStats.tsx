@@ -13,14 +13,12 @@ import { getAnalyticsStats } from "@/actions/analytics";
 import type { AnalyticsStatsData } from "@repo/shared-types";
 import generateGradient from "@/lib/shared/gradient";
 import generateComplementary from "@/lib/shared/complementary";
+import { useMainColor } from "@/components/ThemeProvider";
 
-interface AnalyticsStatsProps {
-  mainColor: string;
-}
-
-export default function AnalyticsStats({ mainColor }: AnalyticsStatsProps) {
+export default function AnalyticsStats() {
   const [data, setData] = useState<AnalyticsStatsData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const themeColor = useMainColor(); // 从 ThemeProvider 获取主题颜色
 
   // 从 localStorage 读取上次选择的时间段
   const [timeRange, setTimeRange] = useState<TimeRangeValue>(() => {
@@ -87,12 +85,13 @@ export default function AnalyticsStats({ mainColor }: AnalyticsStatsProps) {
 
   // 为不同维度生成不同的颜色
   const generateColorForDimension = (index: number): string => {
+    const primaryColor = themeColor.primary;
     const baseGradient = generateGradient(
-      mainColor,
-      generateComplementary(mainColor),
+      primaryColor,
+      generateComplementary(primaryColor),
       9,
     );
-    return baseGradient[index % baseGradient.length] || mainColor;
+    return baseGradient[index % baseGradient.length] || primaryColor;
   };
 
   return (
@@ -105,14 +104,17 @@ export default function AnalyticsStats({ mainColor }: AnalyticsStatsProps) {
         />
         <PathTrendChart
           dailyTrend={data?.dailyTrend || null}
-          mainColor={mainColor}
+          mainColor={themeColor.primary}
           isLoading={isLoading}
           timeRange={timeRange}
         />
-        <AnalyticsTrendChart mainColor={mainColor} />
+        <AnalyticsTrendChart mainColor={themeColor.primary} />
       </RowGrid>
       <RowGrid>
-        <PathStatsChart paths={data?.topPaths || null} mainColor={mainColor} />
+        <PathStatsChart
+          paths={data?.topPaths || null}
+          mainColor={themeColor.primary}
+        />
       </RowGrid>
       <RowGrid>
         <DimensionStats

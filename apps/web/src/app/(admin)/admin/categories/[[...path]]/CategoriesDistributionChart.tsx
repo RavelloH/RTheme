@@ -13,16 +13,14 @@ import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import generateGradient from "@/lib/shared/gradient";
 import generateComplementary from "@/lib/shared/complementary";
+import { useMainColor } from "@/components/ThemeProvider";
 
 type Props = {
-  mainColor: string;
   parentId: number | null;
 };
 
-export default function CategoriesDistributionChart({
-  mainColor,
-  parentId,
-}: Props) {
+export default function CategoriesDistributionChart({ parentId }: Props) {
+  const mainColor = useMainColor().primary;
   const [data, setData] = useState<CategoryDistributionItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);

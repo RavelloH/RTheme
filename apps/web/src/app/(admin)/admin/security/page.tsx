@@ -8,7 +8,6 @@ import MonthlyTrendsChart from "./MonthlyTrendsChart";
 import RequestTrendsChart from "./RequestTrendsChart";
 import IPTable from "./IPTable";
 import EndpointStatsChart from "./EndpointStatsChart";
-import { getConfig } from "@/lib/server/config-cache";
 
 export const metadata = await generateMetadata(
   {
@@ -21,9 +20,6 @@ export const metadata = await generateMetadata(
 );
 
 export default async function SecurityPage() {
-  const mainColor = (await getConfig<{ primary: string }>("site.color"))
-    .primary;
-
   return (
     <MainLayout type="horizontal">
       <HorizontalScroll
@@ -40,7 +36,7 @@ export default async function SecurityPage() {
           <RequestTrendsChart />
         </RowGrid>
         <RowGrid>
-          <EndpointStatsChart mainColor={mainColor} />
+          <EndpointStatsChart />
         </RowGrid>
         <RowGrid>
           <IPTable />

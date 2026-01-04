@@ -6,7 +6,6 @@ import AdminSidebar from "@/components/AdminSidebar";
 import CategoriesReport from "./CategoriesReport";
 import CategoriesDistributionChart from "./CategoriesDistributionChart";
 import CategoriesTable from "./CategoriesTable";
-import { getConfig } from "@/lib/server/config-cache";
 import {
   findCategoryByPath,
   getCategoryNamePath,
@@ -69,9 +68,6 @@ export default async function AdminCategories({ params }: Props) {
     }
   }
 
-  const mainColor = (await getConfig<{ primary: string }>("site.color"))
-    .primary;
-
   return (
     <MainLayout type="horizontal">
       <HorizontalScroll
@@ -88,10 +84,7 @@ export default async function AdminCategories({ params }: Props) {
             categoryPath={categoryPath}
             currentCategory={currentCategory}
           />
-          <CategoriesDistributionChart
-            mainColor={mainColor}
-            parentId={parentId}
-          />
+          <CategoriesDistributionChart parentId={parentId} />
         </RowGrid>
         <RowGrid>
           <CategoriesTable
