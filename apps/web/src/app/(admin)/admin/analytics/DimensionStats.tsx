@@ -1,46 +1,51 @@
 "use client";
 
+import { useMemo } from "react";
 import { GridItem } from "@/components/RowGrid";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import type { StatItem } from "@repo/shared-types";
-import DonutChart, { type DonutChartDataPoint } from "@/components/DonutChart";
+import DimensionStatsChart from "@/components/DimensionStatsChart";
 import generateGradient from "@/lib/shared/gradient";
 import generateComplementary from "@/lib/shared/complementary";
+import { useMainColor } from "@/components/ThemeProvider";
 
 interface DimensionStatsProps {
   title: string;
   items: StatItem[] | null;
-  mainColor: string;
+  mainColor?: string; // 改为可选
   position: "up" | "middle" | "down";
 }
 
 export default function DimensionStats({
   title,
   items,
-  mainColor,
+  mainColor: mainColorProp,
   position,
 }: DimensionStatsProps) {
-  // 取前10项显示
-  const displayItems = items ? items.slice(0, 10) : null;
+  const themeColor = useMainColor(); // 从 ThemeProvider 获取主题颜色
 
-  // 转换为 DonutChart 数据格式
-  const chartData: DonutChartDataPoint[] | null = displayItems
-    ? displayItems.map((item) => ({
-        name: item.name,
-        value: item.count,
-        percentage: item.percentage,
-      }))
-    : null;
+  // 显示所有数据（移除 10 项限制）
+  const displayItems = items;
 
-  // 生成颜色 - 确保至少有 2 步
-  const colors = displayItems
-    ? generateGradient(
-        mainColor,
-        generateComplementary(mainColor),
+  // 生成颜色 - 如果未传入 mainColor，使用主题颜色
+  const colors = useMemo(() => {
+    if (!displayItems) return [];
+
+    try {
+      const primaryColor = mainColorProp || themeColor.primary || "#2dd4bf";
+      const complementaryColor = generateComplementary(primaryColor);
+      return generateGradient(
+        primaryColor,
+        complementaryColor,
         Math.max(displayItems.length, 2),
-      )
-    : [];
+      );
+    } catch (error) {
+      console.error("Failed to generate colors:", error);
+      // 降级到默认颜色
+      return ["#92A1C6", "#146A7C", "#F0AB3D", "#C271B4", "#C20D90"];
+    }
+  }, [displayItems, mainColorProp, themeColor.primary]);
 
   return (
     <GridItem
@@ -55,57 +60,13 @@ export default function DimensionStats({
       height={0.5}
     >
       <AutoTransition type="slideUp" className="h-full">
-        {displayItems && chartData ? (
+        {displayItems ? (
           <div key="content" className="flex flex-col h-full p-10">
-            {displayItems.length === 0 ? (
-              <div className="flex flex-col h-full">
-                <div className="text-2xl mb-4">{title}</div>
-                <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                  <span>暂无数据</span>
-                </div>
-              </div>
-            ) : (
-              <div className="flex-1 flex gap-6 min-h-0">
-                {/* 列表 */}
-                <div className="flex-1 overflow-y-auto pr-2">
-                  <div className="text-2xl mb-4">{title}</div>
-                  <div className="space-y-1">
-                    {displayItems.map((item, index) => (
-                      <div
-                        key={item.name}
-                        className="flex items-center justify-between rounded transition-colors"
-                      >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div
-                            className="w-3 h-3 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: colors[index] }}
-                          />
-                          <div className="text-sm truncate" title={item.name}>
-                            {item.name}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4 flex-shrink-0">
-                          <div className="text-sm font-medium">
-                            {item.count.toLocaleString()}
-                          </div>
-                          <div className="text-sm text-muted-foreground w-16 text-right">
-                            {item.percentage.toFixed(1)}%
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {/* 环形图 */}
-                <div className="flex-shrink-0 w-48 h-48 flex items-center justify-center">
-                  <DonutChart
-                    data={chartData}
-                    colors={colors}
-                    showLabels={false}
-                  />
-                </div>
-              </div>
-            )}
+            <DimensionStatsChart
+              title={title}
+              items={displayItems}
+              colors={colors}
+            />
           </div>
         ) : (
           <LoadingIndicator key="loading" size="md" />

@@ -172,27 +172,6 @@ export default function DonutChart({
               });
             }}
           </Pie>
-
-          {/* 中心文本 */}
-          <text
-            textAnchor="middle"
-            fill="currentColor"
-            className="text-base"
-            fontWeight="bold"
-          >
-            {hoveredSlice ? "数量" : "总计"}
-          </text>
-          <text
-            textAnchor="middle"
-            fill="currentColor"
-            className="text-xl"
-            fontWeight="bold"
-            dy="1em"
-          >
-            {hoveredSlice
-              ? formatValue(hoveredSlice.data.value)
-              : formatValue(total)}
-          </text>
         </Group>
       </svg>
 

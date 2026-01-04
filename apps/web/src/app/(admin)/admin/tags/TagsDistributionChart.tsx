@@ -3,9 +3,11 @@
 import { GridItem } from "@/components/RowGrid";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { getTagsDistribution } from "@/actions/tag";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import type { TagDistributionItem } from "@repo/shared-types/api/tag";
-import DonutChart, { type DonutChartDataPoint } from "@/components/DonutChart";
+import DimensionStatsChart, {
+  type DimensionStatsItem,
+} from "@/components/DimensionStatsChart";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
@@ -52,17 +54,32 @@ export default function TagsDistributionChart({
     fetchData();
   }, [refreshTrigger, fetchData]);
 
-  // 转换数据格式为 DonutChart 需要的格式
-  const chartData: DonutChartDataPoint[] = data.map((item) => ({
-    name: item.name,
-    value: item.postCount,
-    percentage: item.percentage,
-  }));
+  // 转换数据格式为 DimensionStatsChart 需要的格式
+  const chartItems: DimensionStatsItem[] = useMemo(
+    () =>
+      data.map((item) => ({
+        name: item.name,
+        count: item.postCount,
+        percentage: item.percentage,
+      })),
+    [data],
+  );
+
+  // 生成颜色
+  const colors = useMemo(
+    () =>
+      generateGradient(
+        mainColor,
+        generateComplementary(mainColor),
+        Math.max(data.length, 2),
+      ),
+    [mainColor, data.length],
+  );
 
   return (
     <GridItem
-      areas={[7, 8, 9, 10, 11, 12]}
-      width={2}
+      areas={[9, 10, 11, 12]}
+      width={3}
       height={0.8}
       className="py-10"
       fixedHeight
@@ -75,22 +92,13 @@ export default function TagsDistributionChart({
             <ErrorPage reason={error} reset={() => fetchData()} />
           </div>
         ) : (
-          <>
-            <div className="text-2xl mb-2 px-10">标签使用分布</div>
-            <div className="w-full h-full" key="content">
-              <DonutChart
-                data={chartData}
-                className="w-full h-full"
-                showLabels={false}
-                formatValue={(value) => `${value} 个`}
-                colors={generateGradient(
-                  mainColor,
-                  generateComplementary(mainColor),
-                  10,
-                )}
-              />
-            </div>
-          </>
+          <div key="content" className="flex flex-col h-full px-10">
+            <DimensionStatsChart
+              title="标签使用分布"
+              items={chartItems}
+              colors={colors}
+            />
+          </div>
         )}
       </AutoTransition>
     </GridItem>
