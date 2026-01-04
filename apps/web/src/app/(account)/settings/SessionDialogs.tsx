@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Dialog } from "@/ui/Dialog";
-import { Button } from "@/ui/Button";
+import { AlertDialog } from "@/ui/AlertDialog";
 import { useToast } from "@/ui/Toast";
 import { revokeSession } from "@/actions/auth";
 
@@ -84,36 +83,17 @@ export const SessionDialogs = React.forwardRef<
   };
 
   return (
-    <Dialog open={isOpen} onClose={onClose} title="撤销会话" size="sm">
-      <div className="px-6 py-6 space-y-8">
-        <section className="space-y-4">
-          <div>
-            <h3 className="text-lg font-semibold text-foreground">确认撤销</h3>
-            <p className="text-sm text-muted-foreground">
-              撤销后该设备将无法继续使用此会话访问你的账户。为保障安全，在执行操作前需要验证你的身份。
-            </p>
-          </div>
-        </section>
-
-        <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end sm:gap-4">
-          <Button
-            label="取消"
-            variant="ghost"
-            onClick={onClose}
-            size="sm"
-            disabled={revokeSessionLoading}
-          />
-          <Button
-            label="确认撤销"
-            variant="danger"
-            onClick={handleRevokeSession}
-            loading={revokeSessionLoading}
-            loadingText="撤销中..."
-            size="sm"
-          />
-        </div>
-      </div>
-    </Dialog>
+    <AlertDialog
+      open={isOpen}
+      onClose={onClose}
+      onConfirm={handleRevokeSession}
+      title="撤销会话"
+      description="撤销后该设备将无法继续使用此会话访问你的账户。为保障安全，在执行操作前需要验证你的身份。"
+      confirmText="确认撤销"
+      cancelText="取消"
+      variant="danger"
+      loading={revokeSessionLoading}
+    />
   );
 });
 

@@ -13,6 +13,7 @@ import { useToast } from "@/ui/Toast";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
 import { Dialog } from "@/ui/Dialog";
+import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
@@ -24,7 +25,6 @@ import {
   RiAddLine,
   RiComputerLine,
   RiSmartphoneLine,
-  RiAlertLine,
 } from "@remixicon/react";
 import { formatRelativeTime } from "@/lib/shared/relative-time";
 
@@ -477,63 +477,22 @@ export default function PasskeyManager() {
       </Dialog>
 
       {/* 删除通行密钥确认对话框 */}
-      <Dialog
+      <AlertDialog
         open={showDeleteDialog}
         onClose={() => {
           setShowDeleteDialog(false);
           setDeleteTarget(null);
         }}
-        title="删除通行密钥"
-        size="sm"
-      >
-        <div className="px-6 py-6 space-y-8">
-          <section className="space-y-4">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 flex items-center justify-center flex-shrink-0 bg-destructive/10 rounded-sm">
-                <RiAlertLine size="1.5em" className="text-destructive" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-foreground">
-                  确认删除
-                </h3>
-                <p className="text-sm text-muted-foreground mt-2">
-                  你确定要删除通行密钥{" "}
-                  <span className="font-medium text-foreground">
-                    &quot;{deleteTarget?.name}&quot;
-                  </span>{" "}
-                  吗？
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  删除后将无法使用此通行密钥登录。为保障安全，在执行操作前需要验证你的身份。
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end sm:gap-4">
-            <Button
-              label="取消"
-              variant="ghost"
-              onClick={() => {
-                setShowDeleteDialog(false);
-                setDeleteTarget(null);
-              }}
-              size="sm"
-              disabled={actionLoading}
-            />
-            <Button
-              label="确认删除"
-              variant="danger"
-              onClick={() =>
-                deleteTarget && handleDelete(deleteTarget.credentialId)
-              }
-              loading={actionLoading}
-              loadingText="删除中..."
-              size="sm"
-            />
-          </div>
-        </div>
-      </Dialog>
+        onConfirm={() =>
+          deleteTarget && handleDelete(deleteTarget.credentialId)
+        }
+        title="确认删除"
+        description={`你确定要删除通行密钥 "${deleteTarget?.name}" 吗？删除后将无法使用此通行密钥登录。为保障安全，在执行操作前需要验证你的身份。`}
+        confirmText="确认删除"
+        cancelText="取消"
+        variant="danger"
+        loading={actionLoading}
+      />
     </>
   );
 }

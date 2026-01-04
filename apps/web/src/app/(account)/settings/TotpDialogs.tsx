@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Dialog } from "@/ui/Dialog";
+import { AlertDialog } from "@/ui/AlertDialog";
 import { Button } from "@/ui/Button";
 import { Checkbox } from "@/ui/Checkbox";
 import { OtpInput } from "@/ui/OtpInput";
@@ -293,47 +294,21 @@ export const TotpDialogs = React.forwardRef<TotpDialogsRef, TotpDialogsProps>(
         </Dialog>
 
         {/* TOTP 禁用对话框 */}
-        <Dialog
+        <AlertDialog
           open={showTotpDisableDialog}
           onClose={() => {
             if (!totpLoading) {
               setShowTotpDisableDialog(false);
             }
           }}
-          title="禁用两步验证"
-          size="sm"
-        >
-          <div className="px-6 py-6 space-y-8">
-            <section className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">
-                  确认禁用
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  禁用后将降低账户安全性。为保障安全，在执行操作前需要验证你的身份。
-                </p>
-              </div>
-            </section>
-
-            <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end sm:gap-4">
-              <Button
-                label="取消"
-                variant="ghost"
-                onClick={() => setShowTotpDisableDialog(false)}
-                size="sm"
-                disabled={totpLoading}
-              />
-              <Button
-                label="确认禁用"
-                variant="danger"
-                onClick={handleDisableTotp}
-                loading={totpLoading}
-                loadingText="禁用中..."
-                size="sm"
-              />
-            </div>
-          </div>
-        </Dialog>
+          onConfirm={handleDisableTotp}
+          title="确认禁用"
+          description="禁用后将降低账户安全性。为保障安全，在执行操作前需要验证你的身份。"
+          confirmText="确认禁用"
+          cancelText="取消"
+          variant="danger"
+          loading={totpLoading}
+        />
 
         {/* 备份码展示对话框 */}
         <Dialog
