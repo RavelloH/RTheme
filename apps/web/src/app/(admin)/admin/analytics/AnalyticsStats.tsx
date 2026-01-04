@@ -5,7 +5,7 @@ import RowGrid from "@/components/RowGrid";
 import AnalyticsOverview from "./AnalyticsOverview";
 import AnalyticsTrendChart from "./AnalyticsTrendChart";
 import PathStatsChart from "./PathStatsChart";
-import PathTrendChart from "./PathTrendChart";
+import PathTrendChart from "./VisitTrendChart";
 import DimensionStats from "./DimensionStats";
 import PageViewTable from "./PageViewTable";
 import { TimeRangeValue } from "./TimeRangeSelector";
@@ -107,6 +107,7 @@ export default function AnalyticsStats({ mainColor }: AnalyticsStatsProps) {
           dailyTrend={data?.dailyTrend || null}
           mainColor={mainColor}
           isLoading={isLoading}
+          timeRange={timeRange}
         />
         <AnalyticsTrendChart mainColor={mainColor} />
       </RowGrid>

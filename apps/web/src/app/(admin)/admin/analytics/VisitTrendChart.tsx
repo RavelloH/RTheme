@@ -4,10 +4,10 @@ import { GridItem } from "@/components/RowGrid";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import type { DailyTrend } from "@repo/shared-types";
-import StackedBarChart, {
-  type StackedBarChartDataPoint,
+import BarChart, {
+  type BarChartDataPoint,
   type SeriesConfig,
-} from "@/components/StackedBarChart";
+} from "@/components/BarChart";
 import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -15,12 +15,26 @@ interface PathTrendChartProps {
   dailyTrend: DailyTrend[] | null;
   mainColor: string;
   isLoading?: boolean;
+  timeRange?: {
+    type: "preset" | "hours" | "custom";
+    days?: number;
+    hours?: number;
+  };
 }
 
 export default function PathTrendChart({
   dailyTrend,
   isLoading = false,
+  timeRange,
 }: PathTrendChartProps) {
+  // 根据时间范围确定时间粒度
+  const timeGranularity = useMemo(() => {
+    if (timeRange?.type === "hours") {
+      return "hour" as const;
+    }
+    return "day" as const;
+  }, [timeRange]);
+
   // 转换数据格式为柱状图需要的格式
   const { chartData, series } = useMemo(() => {
     if (!dailyTrend) {
@@ -28,7 +42,7 @@ export default function PathTrendChart({
     }
 
     // 转换数据格式
-    const chartData: StackedBarChartDataPoint[] = dailyTrend.map((item) => ({
+    const chartData: BarChartDataPoint[] = dailyTrend.map((item) => ({
       time: item.date,
       views: item.views,
       visitors: item.uniqueVisitors,
@@ -74,12 +88,14 @@ export default function PathTrendChart({
                 <div className="text-2xl">访问统计</div>
               </div>
               <div className="w-full h-full">
-                <StackedBarChart
+                <BarChart
                   data={chartData}
                   series={series}
                   className="w-full h-full"
-                  timeGranularity="day"
+                  timeGranularity={timeGranularity}
                   showYear="auto"
+                  fillMissingData={true}
+                  overlappingBars={true}
                 />
               </div>
             </motion.div>
