@@ -500,25 +500,6 @@ export async function verifySSOForReauth({
 
   try {
     const cookieStore = await cookies();
-    const token = cookieStore.get("ACCESS_TOKEN")?.value || "";
-    const decoded = jwtTokenVerify<AccessTokenPayload>(token);
-
-    if (!decoded) {
-      return response.unauthorized({
-        message: "请先登录",
-      }) as unknown as ApiResponse<null>;
-    }
-
-    // 验证 uid 是否匹配当前登录用户
-    if (decoded.uid !== uid) {
-      return response.forbidden({
-        message: "身份验证失败",
-        error: {
-          code: "UID_MISMATCH",
-          message: "身份验证失败",
-        },
-      }) as unknown as ApiResponse<null>;
-    }
 
     const user = await prisma.user.findUnique({
       where: { uid },
