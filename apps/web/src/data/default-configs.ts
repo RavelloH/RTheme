@@ -384,6 +384,28 @@ export const defaultConfigs: DefaultConfig[] = [
     description:
       "[可选] Ably API 密钥。填写后可启用 WebSocket 连接，增强通知、聊天的实时性。详见 https://docs.ravelloh.com/docs/ably",
   },
+  {
+    key: "notice.webPush.enable",
+    value: { default: true },
+    description:
+      "是否启用 WebPush 通知功能，可实现实时推送服务。需要用户允许浏览器接收通知权限",
+  },
+  {
+    key: "notice.webPush.maxPerUser",
+    value: { default: 5 },
+    description: "每个用户允许订阅的最大 Web Push 设备数量",
+  },
+  {
+    key: "notice.webPush.vapidKeys",
+    value: {
+      default: {
+        publicKey: "[AUTO_GENERATED]",
+        privateKey: "[AUTO_GENERATED]",
+      },
+    },
+    description:
+      "WebPush VAPID 密钥对。需要同时配置 publicKey 与 privateKey。默认会初始化生成一套，一般无需修改",
+  },
   // =====================================
   // AI 集成
   // =====================================

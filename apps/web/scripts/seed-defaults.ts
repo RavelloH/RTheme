@@ -51,6 +51,9 @@ async function seedDefaults() {
     // 种子化默认配置
     await seedDefaultConfigs(prisma);
 
+    // 生成 VAPID 密钥（如果需要）
+    await generateVapidKeysIfNeeded(prisma);
+
     // 种子化默认页面和菜单
     await seedDefaultPagesAndMenus(prisma);
 
@@ -59,6 +62,72 @@ async function seedDefaults() {
   } catch (error) {
     rlog.error("Database default value seeding failed:", error);
     throw error;
+  }
+}
+
+// 生成 VAPID 密钥（如果需要）
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function generateVapidKeysIfNeeded(prisma: any) {
+  rlog.log("  Checking VAPID keys for Web Push...");
+
+  try {
+    // 检查配置是否存在
+    const vapidConfig = await prisma.config.findUnique({
+      where: { key: "notice.webPush.vapidKeys" },
+    });
+
+    if (!vapidConfig) {
+      rlog.warning("  VAPID config not found, skipping");
+      return;
+    }
+
+    // 检查是否需要生成密钥
+    const configValue = vapidConfig.value as {
+      default?: { publicKey?: string; privateKey?: string };
+    };
+
+    if (
+      !configValue?.default ||
+      configValue.default.publicKey === "[AUTO_GENERATED]" ||
+      !configValue.default.publicKey ||
+      !configValue.default.privateKey
+    ) {
+      rlog.log("  Generating new VAPID keys...");
+
+      try {
+        // 动态导入 web-push（可能尚未安装）
+        const webpush = await import("web-push");
+        const vapidKeys = webpush.default.generateVAPIDKeys();
+
+        // 更新配置
+        await prisma.config.update({
+          where: { key: "notice.webPush.vapidKeys" },
+          data: {
+            value: {
+              default: {
+                publicKey: vapidKeys.publicKey,
+                privateKey: vapidKeys.privateKey,
+              },
+            },
+          },
+        });
+
+        rlog.success(
+          `  Generated VAPID keys for Web Push (Public Key: ${vapidKeys.publicKey.substring(0, 20)}...)`,
+        );
+      } catch {
+        rlog.warning(
+          "  web-push package not installed, skipping VAPID key generation",
+        );
+        rlog.warning(
+          "  Please run 'pnpm add web-push' and re-run the build script",
+        );
+      }
+    } else {
+      rlog.info("  VAPID keys already configured, skipping");
+    }
+  } catch (error) {
+    rlog.error("  Failed to generate VAPID keys:", error);
   }
 }
 

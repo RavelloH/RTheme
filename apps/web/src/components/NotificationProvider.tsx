@@ -184,6 +184,10 @@ export default function NotificationProvider({
   // ============ 跨标签页通信 ============
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
 
+  // ============ Service Worker 注册 ============
+  const [_swRegistration, setSwRegistration] =
+    useState<ServiceWorkerRegistration | null>(null);
+
   // 移除通知
   const removeNotification = useCallback((id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
@@ -590,40 +594,85 @@ export default function NotificationProvider({
             return;
           }
 
-          setNotifications((prev) => {
-            // 避免重复
-            if (prev.some((n) => n.id === id)) {
-              return prev;
+          // ✅ 检测标签页是否在前台
+          const isTabVisible = !document.hidden;
+          console.log(
+            `[BroadcastChannel] Tab visibility: ${isTabVisible ? "VISIBLE (foreground)" : "HIDDEN (background)"}`,
+          );
+
+          if (isTabVisible) {
+            // 标签页在前台 → 显示页面内通知（NotificationToast）
+            console.log(
+              "[BroadcastChannel] Tab is in foreground, showing in-page notification",
+            );
+
+            setNotifications((prev) => {
+              // 避免重复
+              if (prev.some((n) => n.id === id)) {
+                return prev;
+              }
+
+              const newNotification: NotificationItem = {
+                id,
+                title,
+                content,
+                link: link ?? null,
+                createdAt: createdAt ?? new Date().toISOString(),
+              };
+
+              // 如果已经有5个通知，先移除最旧的，再延迟添加新通知
+              if (prev.length >= 5) {
+                const withoutOldest = prev.slice(0, 4);
+
+                setTimeout(() => {
+                  setNotifications((current) => {
+                    if (current.some((n) => n.id === id)) {
+                      return current;
+                    }
+                    return [newNotification, ...current];
+                  });
+                }, 350);
+
+                return withoutOldest;
+              }
+
+              return [newNotification, ...prev];
+            });
+          } else {
+            // 标签页在后台 → 联系 Service Worker 发送系统通知
+            console.log(
+              "[BroadcastChannel] Tab is in background, requesting system notification from SW",
+            );
+
+            if (navigator.serviceWorker.controller) {
+              // 构建通知数据
+              const siteUrl = window.location.origin || "http://localhost:3000";
+
+              navigator.serviceWorker.controller.postMessage({
+                type: "SHOW_NOTIFICATION",
+                payload: {
+                  title,
+                  body: content,
+                  icon: `${siteUrl}/icon/192x`,
+                  badge: `${siteUrl}/icon/72x`,
+                  data: {
+                    url: link || siteUrl,
+                    noticeId: id,
+                  },
+                },
+              });
+
+              console.log(
+                "[BroadcastChannel] System notification request sent to SW",
+              );
+            } else {
+              console.warn(
+                "[BroadcastChannel] Service Worker not available, cannot show system notification",
+              );
             }
+          }
 
-            const newNotification: NotificationItem = {
-              id,
-              title,
-              content,
-              link: link ?? null,
-              createdAt: createdAt ?? new Date().toISOString(),
-            };
-
-            // 如果已经有5个通知，先移除最旧的，再延迟添加新通知
-            if (prev.length >= 5) {
-              const withoutOldest = prev.slice(0, 4);
-
-              setTimeout(() => {
-                setNotifications((current) => {
-                  if (current.some((n) => n.id === id)) {
-                    return current;
-                  }
-                  return [newNotification, ...current];
-                });
-              }, 350);
-
-              return withoutOldest;
-            }
-
-            return [newNotification, ...prev];
-          });
-
-          // 更新未读数
+          // 更新未读数（无论前后台都需要）
           if (typeof count === "number") {
             setUnreadCount(count);
 
@@ -697,40 +746,83 @@ export default function NotificationProvider({
             return;
           }
 
-          setNotifications((prev) => {
-            // 避免重复
-            if (prev.some((n) => n.id === id)) {
-              return prev;
+          // ✅ 检测标签页是否在前台
+          const isTabVisible = !document.hidden;
+          console.log(
+            `[WebSocket] Tab visibility: ${isTabVisible ? "VISIBLE (foreground)" : "HIDDEN (background)"}`,
+          );
+
+          if (isTabVisible) {
+            // 标签页在前台 → 显示页面内通知（NotificationToast）
+            console.log(
+              "[WebSocket] Tab is in foreground, showing in-page notification",
+            );
+
+            setNotifications((prev) => {
+              // 避免重复
+              if (prev.some((n) => n.id === id)) {
+                return prev;
+              }
+
+              const newNotification: NotificationItem = {
+                id,
+                title,
+                content,
+                link: link ?? null,
+                createdAt: createdAt ?? new Date().toISOString(),
+              };
+
+              // 如果已经有5个通知，先移除最旧的，再延迟添加新通知
+              if (prev.length >= 5) {
+                const withoutOldest = prev.slice(0, 4);
+
+                setTimeout(() => {
+                  setNotifications((current) => {
+                    if (current.some((n) => n.id === id)) {
+                      return current;
+                    }
+                    return [newNotification, ...current];
+                  });
+                }, 350);
+
+                return withoutOldest;
+              }
+
+              return [newNotification, ...prev];
+            });
+          } else {
+            // 标签页在后台 → 联系 Service Worker 发送系统通知
+            console.log(
+              "[WebSocket] Tab is in background, requesting system notification from SW",
+            );
+
+            if (navigator.serviceWorker.controller) {
+              // 构建通知数据
+              const siteUrl = window.location.origin || "http://localhost:3000";
+
+              navigator.serviceWorker.controller.postMessage({
+                type: "SHOW_NOTIFICATION",
+                payload: {
+                  title,
+                  body: content,
+                  icon: `${siteUrl}/icon/192x`,
+                  badge: `${siteUrl}/icon/72x`,
+                  data: {
+                    url: link || siteUrl,
+                    noticeId: id,
+                  },
+                },
+              });
+
+              console.log("[WebSocket] System notification request sent to SW");
+            } else {
+              console.warn(
+                "[WebSocket] Service Worker not available, cannot show system notification",
+              );
             }
+          }
 
-            const newNotification: NotificationItem = {
-              id,
-              title,
-              content,
-              link: link ?? null,
-              createdAt: createdAt ?? new Date().toISOString(),
-            };
-
-            // 如果已经有5个通知，先移除最旧的，再延迟添加新通知
-            if (prev.length >= 5) {
-              const withoutOldest = prev.slice(0, 4);
-
-              setTimeout(() => {
-                setNotifications((current) => {
-                  if (current.some((n) => n.id === id)) {
-                    return current;
-                  }
-                  return [newNotification, ...current];
-                });
-              }, 350);
-
-              return withoutOldest;
-            }
-
-            return [newNotification, ...prev];
-          });
-
-          // 更新未读数
+          // 更新未读数（无论前后台都需要）
           if (typeof count === "number") {
             setUnreadCount(count);
 
@@ -833,6 +925,109 @@ export default function NotificationProvider({
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
+    };
+  }, [broadcast]);
+
+  // ============ Service Worker 注册和消息监听 ============
+  useEffect(() => {
+    // 检查浏览器是否支持 Service Worker 和 Push API
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      console.log("[SW] Service Worker or Push API not supported");
+      return;
+    }
+
+    // 注册 Service Worker
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((registration) => {
+        console.log("[SW] Registration successful");
+        setSwRegistration(registration);
+      })
+      .catch((error) => {
+        console.error("[SW] Registration failed:", error);
+      });
+
+    // 监听来自 Service Worker 的消息
+    const handleSWMessage = (event: MessageEvent) => {
+      const { type, payload } = event.data || {};
+
+      if (type === "PUSH_RECEIVED_WHILE_FOCUSED") {
+        console.log(
+          "[SW] Received PUSH_RECEIVED_WHILE_FOCUSED message:",
+          payload,
+        );
+
+        const { title, body, data: notificationData } = payload;
+
+        if (!title || !body) {
+          console.warn("[SW] Invalid notification data:", payload);
+          return;
+        }
+
+        const noticeId = notificationData?.noticeId;
+        const link = notificationData?.url;
+
+        // 显示页面内通知（使用 NotificationToast 组件）
+        setNotifications((prev) => {
+          // 避免重复
+          if (noticeId && prev.some((n) => n.id === noticeId)) {
+            return prev;
+          }
+
+          const newNotification: NotificationItem = {
+            id: noticeId || `web-push-${Date.now()}`,
+            title,
+            content: body,
+            link: link || null,
+            createdAt: new Date().toISOString(),
+          };
+
+          // 如果已经有5个通知，先移除最旧的，再延迟添加新通知
+          if (prev.length >= 5) {
+            const withoutOldest = prev.slice(0, 4);
+
+            setTimeout(() => {
+              setNotifications((current) => {
+                if (noticeId && current.some((n) => n.id === noticeId)) {
+                  return current;
+                }
+                return [newNotification, ...current];
+              });
+            }, 350);
+
+            return withoutOldest;
+          }
+
+          return [newNotification, ...prev];
+        });
+
+        // 触发未读数量刷新（轮询一次）
+        getUnreadNoticeCount()
+          .then((result) => {
+            if (result.success && result.data) {
+              const count = result.data.count;
+              setUnreadCount(count);
+
+              // 更新缓存
+              localStorage.setItem(
+                "unread_notice_count",
+                JSON.stringify({ count, cachedAt: Date.now() }),
+              );
+
+              // 广播给其他组件
+              broadcast({ type: "unread_notice_update", count });
+            }
+          })
+          .catch((error) => {
+            console.error("[SW] Failed to refresh unread count:", error);
+          });
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", handleSWMessage);
+
+    return () => {
+      navigator.serviceWorker.removeEventListener("message", handleSWMessage);
     };
   }, [broadcast]);
 

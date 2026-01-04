@@ -6,6 +6,18 @@ import { renderEmail } from "@/emails/utils";
 import NotificationEmail from "@/emails/templates/NotificationEmail";
 import { publishNoticeToUser, checkUserOnlineStatus } from "@/lib/server/ably";
 import { isAblyEnabled } from "@/lib/server/ably-config";
+import { sendWebPushToUser } from "@/lib/server/web-push";
+
+/**
+ * 通知选项
+ */
+export interface SendNoticeOptions {
+  /**
+   * 是否为测试通知
+   * 如果为 true，无论用户是否在线，都会发送 Web Push
+   */
+  isTest?: boolean;
+}
 
 /**
  * 发送通知
@@ -13,12 +25,14 @@ import { isAblyEnabled } from "@/lib/server/ably-config";
  * @param title 通知标题
  * @param content 通知内容（正文）
  * @param link 可选的跳转链接
+ * @param options 通知选项
  */
 export async function sendNotice(
   userUid: number,
   title: string,
   content: string,
   link?: string,
+  options?: SendNoticeOptions,
 ): Promise<void> {
   // 检查全局通知是否启用
   const noticeConfig = await getConfig<boolean>("notice.enable");
@@ -76,8 +90,9 @@ export async function sendNotice(
   // 检查用户是否在线
   // 策略：如果 Ably 已启用，只信任 Ably Presence；否则降级到 RefreshToken
   let isUserOnline = false;
+  const ablyEnabled = await isAblyEnabled();
 
-  if (await isAblyEnabled()) {
+  if (ablyEnabled) {
     // Ably 已启用：使用 Presence API（最可信，实时反映 WebSocket 连接状态）
     isUserOnline = await checkUserOnlineStatus(userUid);
     console.log(
@@ -106,6 +121,50 @@ export async function sendNotice(
     console.log(
       `[Notice] User ${userUid} online status via RefreshToken (fallback): ${isUserOnline ? "ONLINE" : "OFFLINE"}`,
     );
+  }
+
+  // Web Push 推送逻辑
+  const webPushEnabled = await getConfig<boolean>("notice.webPush.enable");
+
+  if (webPushEnabled) {
+    // 决定是否发送 Web Push
+    // 如果是测试通知，无论用户是否在线都发送 Web Push
+    const shouldSendWebPush = options?.isTest || !isUserOnline || !ablyEnabled;
+
+    if (shouldSendWebPush) {
+      const siteUrl =
+        (await getConfig<string>("site.url")) ||
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        "http://localhost:3000";
+
+      const reason = options?.isTest
+        ? "test notification"
+        : `online: ${isUserOnline}, ably: ${ablyEnabled}`;
+
+      console.log(`[Notice] Sending Web Push to user ${userUid} (${reason})`);
+
+      // 异步发送 Web Push，不阻塞主流程
+      sendWebPushToUser(userUid, {
+        title: notice.title,
+        body: notice.content,
+        icon: `${siteUrl}/icon/192x`,
+        badge: `${siteUrl}/icon/72x`,
+        data: {
+          url: notice.link || siteUrl,
+          noticeId: notice.id,
+          isTest: options?.isTest || false, // 标记是否为测试通知
+        },
+      }).catch((error) => {
+        console.error(
+          `[Notice] Failed to send Web Push to user ${userUid}:`,
+          error,
+        );
+      });
+    } else {
+      console.log(
+        `[Notice] Skipping Web Push for user ${userUid} (will be handled by client)`,
+      );
+    }
   }
 
   // 如果用户在线，不发送邮件

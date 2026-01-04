@@ -100,6 +100,7 @@
     "turndown": "^7.2.2",
     "turndown-plugin-gfm": "^1.0.2",
     "ua-parser-js": "^2.0.6",
+    "web-push": "^3.6.7",
     "zod": "^4.1.5",
     "zustand": "^5.0.8"
   },
@@ -116,6 +117,7 @@
     "@types/react": "19.1.12",
     "@types/react-dom": "19.1.9",
     "@types/ua-parser-js": "^0.7.39",
+    "@types/web-push": "^3.6.4",
     "chokidar-cli": "^3.0.0",
     "concurrently": "^9.2.1",
     "cross-env": "^7.0.3",

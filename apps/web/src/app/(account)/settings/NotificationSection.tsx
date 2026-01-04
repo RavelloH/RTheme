@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import WebPushManager from "./WebPushManager";
 
 /**
  * 通知管理板块组件
@@ -16,9 +17,8 @@ export const NotificationSection: React.FC = () => {
       </div>
 
       <div className="bg-background border border-foreground/10 rounded-sm p-6">
-        <div className="flex items-center justify-center py-12">
-          <p className="text-muted-foreground">通知设置功能开发中...</p>
-        </div>
+        {/* Web Push 通知设置 */}
+        <WebPushManager />
       </div>
     </div>
   );

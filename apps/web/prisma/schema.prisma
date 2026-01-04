@@ -17,6 +17,9 @@ model User {
   emailVerifyCode String? @db.VarChar(30)
   emailNotice     Boolean @default(false)
 
+  // Web Push 通知
+  webPushEnabled Boolean @default(false)
+
   // 用户信息
   username String  @unique
   nickname String? @db.VarChar(50)
@@ -39,19 +42,20 @@ model User {
   status UserStatus @default(ACTIVE)
 
   // 关系
-  accounts       Account[]
-  posts          Post[]
-  comments       Comment[]
-  media          Media[]
-  pages          Page[]
-  notices        Notice[]
-  messages       Message[]       @relation("MessageFrom")
-  messagesTo     Message[]       @relation("MessageTo")
-  auditLogs      AuditLog[]
-  refreshTokens  RefreshToken[]
-  passwordResets PasswordReset[]
-  passkeys       Passkey[]
-  commentLikes   CommentLike[]
+  accounts          Account[]
+  posts             Post[]
+  comments          Comment[]
+  media             Media[]
+  pages             Page[]
+  notices           Notice[]
+  messages          Message[]          @relation("MessageFrom")
+  messagesTo        Message[]          @relation("MessageTo")
+  auditLogs         AuditLog[]
+  refreshTokens     RefreshToken[]
+  passwordResets    PasswordReset[]
+  passkeys          Passkey[]
+  commentLikes      CommentLike[]
+  pushSubscriptions PushSubscription[]
 
   // 索引优化
   @@index([role])
@@ -575,6 +579,34 @@ model HealthCheck {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
   issues    Json?
+}
+
+// Web Push 订阅模型
+model PushSubscription {
+  id       String @id @default(uuid())
+  userUid  Int
+
+  // Web Push 订阅信息
+  endpoint String @db.VarChar(500)
+  p256dh   String @db.VarChar(100) // keys.p256dh
+  auth     String @db.VarChar(50) // keys.auth
+
+  // 设备信息
+  userAgent  String?  @db.VarChar(1000)
+  browser    String?  @db.VarChar(100)
+  os         String?  @db.VarChar(100)
+  deviceName String   @db.VarChar(100) // 用户自定义名称
+
+  // 状态管理
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+
+  user User @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+
+  @@unique([endpoint])
+  @@index([userUid, isActive])
+  @@index([lastUsedAt])
 }
 
 enum Role {
