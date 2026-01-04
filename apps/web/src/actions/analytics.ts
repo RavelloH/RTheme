@@ -360,19 +360,17 @@ async function archivePageViews() {
       });
 
       // 聚合各维度统计
-      // referer: 只记录有值的外部来源
-      if (view.referer) {
-        incrementMapCount(stats.refererStats, view.referer);
-      }
-      incrementMapCount(stats.countryStats, view.country || "unknown");
-      incrementMapCount(stats.regionStats, view.region || "unknown");
-      incrementMapCount(stats.cityStats, view.city || "unknown");
-      incrementMapCount(stats.deviceStats, view.deviceType || "unknown");
-      incrementMapCount(stats.browserStats, view.browser || "unknown");
-      incrementMapCount(stats.osStats, view.os || "unknown");
-      incrementMapCount(stats.screenStats, view.screenSize || "unknown");
-      incrementMapCount(stats.languageStats, view.language || "unknown");
-      incrementMapCount(stats.timezoneStats, view.timezone || "unknown");
+      // referer: 记录外部来源，空值记录为"直接访问"
+      incrementMapCount(stats.refererStats, view.referer || "直接访问");
+      incrementMapCount(stats.countryStats, view.country || "未知");
+      incrementMapCount(stats.regionStats, view.region || "未知");
+      incrementMapCount(stats.cityStats, view.city || "未知");
+      incrementMapCount(stats.deviceStats, view.deviceType || "未知");
+      incrementMapCount(stats.browserStats, view.browser || "未知");
+      incrementMapCount(stats.osStats, view.os || "未知");
+      incrementMapCount(stats.screenStats, view.screenSize || "未知");
+      incrementMapCount(stats.languageStats, view.language || "未知");
+      incrementMapCount(stats.timezoneStats, view.timezone || "未知");
     }
 
     // 计算会话统计并批量插入或更新归档数据
@@ -692,13 +690,24 @@ function aggregateStats(
   for (const record of records) {
     let value = (record[field] as string | null) || "未知";
 
-    // 特殊处理 referer 字段：跳过空值和"未知"
-    if (field === "referer" && (!record[field] || value === "未知")) {
-      continue;
+    // 统一处理所有表示"未知"的情况
+    if (
+      !value ||
+      value === "unknown" ||
+      value === "Unknown" ||
+      value === "UNKNOWN" ||
+      value.trim() === ""
+    ) {
+      value = "未知";
+    }
+
+    // 特殊处理 referer 字段：将空值显示为"直接访问"
+    if (field === "referer" && value === "未知") {
+      value = "直接访问";
     }
 
     // 对 referer 字段进行域名提取（处理历史数据中可能包含路径的情况）
-    if (field === "referer" && value !== "未知") {
+    if (field === "referer" && value !== "未知" && value !== "直接访问") {
       try {
         const url = new URL(value);
         value = `${url.protocol}//${url.hostname}`;
@@ -738,7 +747,18 @@ function mergeArchivedStats(
 
   // 合并归档统计
   for (const [name, count] of Object.entries(archivedJsonStats)) {
-    mergedMap.set(name, (mergedMap.get(name) || 0) + count);
+    // 统一处理所有表示"未知"的情况
+    let normalizedName = name;
+    if (
+      !name ||
+      name === "unknown" ||
+      name === "Unknown" ||
+      name === "UNKNOWN" ||
+      name.trim() === ""
+    ) {
+      normalizedName = "未知";
+    }
+    mergedMap.set(normalizedName, (mergedMap.get(normalizedName) || 0) + count);
   }
 
   // 重新计算百分比
@@ -1345,19 +1365,30 @@ export async function getAnalyticsStats(
         }
         if (archive.refererStats) {
           for (const [key, value] of Object.entries(archive.refererStats)) {
-            // 过滤掉空值和"未知"
-            if (key && key !== "未知" && key !== "null" && key !== "direct") {
+            let normalizedKey = key;
+
+            // 将空值、"未知"、"null"、"direct" 统一为"直接访问"
+            if (
+              !key ||
+              key === "未知" ||
+              key === "unknown" ||
+              key === "null" ||
+              key === "direct" ||
+              key.trim() === ""
+            ) {
+              normalizedKey = "直接访问";
+            } else {
               // 对归档数据中的 referer 也进行域名提取
-              let normalizedKey = key;
               try {
                 const url = new URL(key);
                 normalizedKey = `${url.protocol}//${url.hostname}`;
               } catch {
                 // 如果解析失败，保持原值
               }
-              mergedRefererStats[normalizedKey] =
-                (mergedRefererStats[normalizedKey] || 0) + value;
             }
+
+            mergedRefererStats[normalizedKey] =
+              (mergedRefererStats[normalizedKey] || 0) + value;
           }
         }
         if (archive.screenStats) {
