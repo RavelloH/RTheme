@@ -634,6 +634,7 @@ export async function trackPageView(
     // 构建 PageView 数据
     const pageViewData = {
       path,
+      timestamp: new Date(), // 记录实际访问时间
       ipAddress,
       userAgent: userAgent !== "unknown" ? userAgent : null,
       referer: normalizedReferer,
@@ -1106,15 +1107,17 @@ export async function getAnalyticsStats(
       // 天模式：按天初始化
       for (let i = 0; i < calculatedDays; i++) {
         const date = new Date(startDate);
-        date.setDate(date.getDate() + i);
+        date.setUTCDate(date.getUTCDate() + i);
         const dayStart = new Date(
-          date.getFullYear(),
-          date.getMonth(),
-          date.getDate(),
-          0,
-          0,
-          0,
-          0,
+          Date.UTC(
+            date.getUTCFullYear(),
+            date.getUTCMonth(),
+            date.getUTCDate(),
+            0,
+            0,
+            0,
+            0,
+          ),
         );
         const dateKey = dayStart.toISOString();
         dailyTrendMap.set(dateKey, { views: 0, visitors: new Set() });
@@ -1128,15 +1131,17 @@ export async function getAnalyticsStats(
         // 小时精度：取到小时级别
         timeKey = view.timestamp.toISOString().substring(0, 13) + ":00:00.000Z";
       } else {
-        // 天精度：取到当天零点
+        // 天精度：取到当天零点（UTC）
         const dayStart = new Date(
-          view.timestamp.getFullYear(),
-          view.timestamp.getMonth(),
-          view.timestamp.getDate(),
-          0,
-          0,
-          0,
-          0,
+          Date.UTC(
+            view.timestamp.getUTCFullYear(),
+            view.timestamp.getUTCMonth(),
+            view.timestamp.getUTCDate(),
+            0,
+            0,
+            0,
+            0,
+          ),
         );
         timeKey = dayStart.toISOString();
       }
@@ -1151,13 +1156,15 @@ export async function getAnalyticsStats(
     if (!isHourlyMode) {
       for (const archive of archivedData) {
         const dayStart = new Date(
-          archive.date.getFullYear(),
-          archive.date.getMonth(),
-          archive.date.getDate(),
-          0,
-          0,
-          0,
-          0,
+          Date.UTC(
+            archive.date.getUTCFullYear(),
+            archive.date.getUTCMonth(),
+            archive.date.getUTCDate(),
+            0,
+            0,
+            0,
+            0,
+          ),
         );
         const dateKey = dayStart.toISOString();
         const trend = dailyTrendMap.get(dateKey);
@@ -1222,15 +1229,17 @@ export async function getAnalyticsStats(
       // 天模式：按天初始化
       for (let i = 0; i < calculatedDays; i++) {
         const date = new Date(startDate);
-        date.setDate(date.getDate() + i);
+        date.setUTCDate(date.getUTCDate() + i);
         const dayStart = new Date(
-          date.getFullYear(),
-          date.getMonth(),
-          date.getDate(),
-          0,
-          0,
-          0,
-          0,
+          Date.UTC(
+            date.getUTCFullYear(),
+            date.getUTCMonth(),
+            date.getUTCDate(),
+            0,
+            0,
+            0,
+            0,
+          ),
         );
         const dateKey = dayStart.toISOString();
         dailyPathTrendMap.set(dateKey, {});
@@ -1246,13 +1255,15 @@ export async function getAnalyticsStats(
             view.timestamp.toISOString().substring(0, 13) + ":00:00.000Z";
         } else {
           const dayStart = new Date(
-            view.timestamp.getFullYear(),
-            view.timestamp.getMonth(),
-            view.timestamp.getDate(),
-            0,
-            0,
-            0,
-            0,
+            Date.UTC(
+              view.timestamp.getUTCFullYear(),
+              view.timestamp.getUTCMonth(),
+              view.timestamp.getUTCDate(),
+              0,
+              0,
+              0,
+              0,
+            ),
           );
           timeKey = dayStart.toISOString();
         }
@@ -1584,6 +1595,9 @@ export async function getRealTimeStats(
     ) as unknown as GetRealTimeStatsResponse;
 
   try {
+    // 先同步 Redis 数据到数据库
+    await flushEventsToDatabase();
+
     const { minutes = 30 } = params;
 
     // 计算时间范围
