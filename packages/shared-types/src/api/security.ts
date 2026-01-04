@@ -93,7 +93,9 @@ export const IPInfoSchema = z.object({
   isBanned: z.boolean(),
   banExpiry: z.number().optional(), // 封禁到期时间戳（如果被封禁）
   banReason: z.string().optional(), // 封禁原因
-  location: z.string().optional(), // IP 归属地
+  country: z.string().nullable().optional(), // 国家
+  province: z.string().nullable().optional(), // 省份/州
+  city: z.string().nullable().optional(), // 城市
 });
 export type IPInfo = z.infer<typeof IPInfoSchema>;
 registerSchema("IPInfo", IPInfoSchema);

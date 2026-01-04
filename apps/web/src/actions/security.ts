@@ -28,79 +28,8 @@ import { validateData } from "@/lib/server/validator";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
 import { authVerify } from "@/lib/server/auth-verify";
 import { getCache, setCache, generateCacheKey } from "@/lib/server/cache";
-
-const RATE_LIMIT = 60; // 与 rateLimit.ts 保持一致
-
-// IP 归属地解析相关
-let ipSearcher: {
-  btreeSearchSync?: (ip: string) => { region?: string };
-  binarySearchSync?: (ip: string) => { region?: string };
-} | null = null;
-
-function isIPv4(ip: string): boolean {
-  const parts = ip.split(".");
-  if (parts.length !== 4) return false;
-  return parts.every((part) => {
-    const num = Number(part);
-    return Number.isInteger(num) && num >= 0 && num <= 255;
-  });
-}
-
-function isPrivateIP(ip: string): boolean {
-  if (ip === "::1" || ip === "::ffff:127.0.0.1") return true;
-  if (ip.startsWith("127.")) return true;
-  if (ip.startsWith("10.")) return true;
-  if (ip.startsWith("192.168.")) return true;
-  if (ip.startsWith("172.")) {
-    const second = parseInt(ip.split(".")[1] ?? "0", 10);
-    if (second >= 16 && second <= 31) return true;
-  }
-  if (ip.startsWith("169.254.")) return true;
-  return false;
-}
-
-function getIpSearcher() {
-  if (ipSearcher) return ipSearcher;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const IP2Region = require("node-ip2region");
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const path = require("path");
-    const dbPath = path.join(
-      process.cwd(),
-      "node_modules/node-ip2region/data/ip2region.db",
-    );
-    ipSearcher = IP2Region.create(dbPath);
-    return ipSearcher;
-  } catch {
-    return null;
-  }
-}
-
-function resolveIpLocation(ip: string | null): string | null {
-  if (!ip || ip === "unknown") return null;
-  if (isPrivateIP(ip)) return null;
-  if (!isIPv4(ip)) return null;
-
-  try {
-    const searcher = getIpSearcher();
-    if (!searcher) return null;
-
-    const regionResult =
-      (searcher.btreeSearchSync?.(ip) as { region?: string } | undefined) ||
-      (searcher.binarySearchSync?.(ip) as { region?: string } | undefined);
-
-    const regionText = regionResult?.region;
-    if (!regionText) return null;
-    const parts = regionText.split("|");
-    const locationParts = parts
-      .slice(0, 4)
-      .filter((part) => part && part !== "0");
-    return locationParts.length ? locationParts.join(" ") : null;
-  } catch {
-    return null;
-  }
-}
+import { resolveIpLocation } from "@/lib/server/ip-utils";
+import { RATE_LIMITS } from "@/lib/server/rate-limit";
 
 /**
  * 获取安全概览数据
@@ -184,7 +113,8 @@ export async function getSecurityOverview(
       const count = await redis.zcount(key, oneMinuteAgo, currentTime);
       if (count > 0) {
         activeIPs++;
-        if (count >= RATE_LIMIT * 0.8) {
+        // 达到访客限制即算作受限（至少访客会被限流）
+        if (count >= RATE_LIMITS.GUEST) {
           rateLimitedIPs++;
         }
       }
@@ -366,7 +296,7 @@ export async function getIPList(
           ? parseInt(lastRequestScores[1] as string, 10)
           : 0;
       const banInfo = bannedIPMap.get(ip);
-      const location = resolveIpLocation(ip);
+      const locationInfo = resolveIpLocation(ip);
 
       allIPs.push({
         ip,
@@ -377,14 +307,16 @@ export async function getIPList(
         isBanned: !!banInfo,
         banExpiry: banInfo?.expiry,
         banReason: banInfo?.reason,
-        location: location || undefined,
+        country: locationInfo?.country ?? undefined,
+        province: locationInfo?.region ?? undefined,
+        city: locationInfo?.city ?? undefined,
       });
     }
 
     // 添加只有封禁记录的IP
     for (const [ip, banInfo] of bannedIPMap) {
       if (!allIPs.find((item) => item.ip === ip)) {
-        const location = resolveIpLocation(ip);
+        const locationInfo = resolveIpLocation(ip);
         allIPs.push({
           ip,
           requestCount: 0,
@@ -394,7 +326,9 @@ export async function getIPList(
           isBanned: true,
           banExpiry: banInfo.expiry,
           banReason: banInfo.reason,
-          location: location || undefined,
+          country: locationInfo?.country ?? undefined,
+          province: locationInfo?.region ?? undefined,
+          city: locationInfo?.city ?? undefined,
         });
       }
     }
@@ -404,8 +338,9 @@ export async function getIPList(
     if (filter === "banned") {
       filteredIPs = allIPs.filter((item) => item.isBanned);
     } else if (filter === "rate-limited") {
+      // 达到访客限制即算作受限
       filteredIPs = allIPs.filter(
-        (item) => item.requestCount >= RATE_LIMIT * 0.8,
+        (item) => item.requestCount >= RATE_LIMITS.GUEST,
       );
     } else if (filter === "active") {
       filteredIPs = allIPs.filter((item) => item.requestCount > 0);

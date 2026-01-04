@@ -19,7 +19,13 @@ import { Button } from "@/ui/Button";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { useToast } from "@/ui/Toast";
 
-const RATE_LIMIT = 60;
+// 速率限制配置（与 rate-limit.ts 保持一致）
+const RATE_LIMITS = {
+  GUEST: 20, // 访客（未登录）
+  USER: 60, // 普通用户
+  EDITOR: 120, // 编辑/作者
+  ADMIN: 600, // 管理员
+} as const;
 
 export default function IPTable() {
   const toast = useToast();
@@ -292,32 +298,39 @@ export default function IPTable() {
       render: (_, record) => <span className="font-mono">{record.ip}</span>,
     },
     {
-      key: "location",
-      title: "归属地",
+      key: "country",
+      title: "国家",
       render: (_, record) => (
-        <span className="text-muted-foreground text-xs truncate max-w-[120px]">
-          {record.location || "-"}
+        <span className="text-muted-foreground text-xs truncate max-w-[100px]">
+          {record.country || "-"}
+        </span>
+      ),
+    },
+    {
+      key: "province",
+      title: "省份",
+      render: (_, record) => (
+        <span className="text-muted-foreground text-xs truncate max-w-[100px]">
+          {record.province || "-"}
+        </span>
+      ),
+    },
+    {
+      key: "city",
+      title: "城市",
+      render: (_, record) => (
+        <span className="text-muted-foreground text-xs truncate max-w-[100px]">
+          {record.city || "-"}
         </span>
       ),
     },
     {
       key: "realtimeCount",
-      title: "实时请求",
+      title: "1m请求",
       sortable: true,
       render: (_, record) => {
         const count = record.realtimeCount ?? record.requestCount;
-        const percentage = (count / RATE_LIMIT) * 100;
-        const colorClass =
-          percentage >= 100
-            ? "text-error"
-            : percentage >= 80
-              ? "text-warning"
-              : "";
-        return (
-          <span className={colorClass}>
-            {count} / {RATE_LIMIT}
-          </span>
-        );
+        return <span>{count}</span>;
       },
     },
     {
@@ -343,6 +356,8 @@ export default function IPTable() {
       title: "状态",
       render: (_, record) => {
         const count = record.realtimeCount ?? record.requestCount;
+
+        // 已封禁
         if (record.isBanned) {
           return (
             <span className="inline-flex items-center gap-1 text-error">
@@ -351,14 +366,48 @@ export default function IPTable() {
             </span>
           );
         }
-        if (count >= RATE_LIMIT * 0.8) {
+
+        // 全账号受限（>=600，所有权限都会被限流）
+        if (count >= RATE_LIMITS.ADMIN) {
           return (
-            <span className="inline-flex items-center gap-1 text-warning">
+            <span className="inline-flex items-center gap-1 text-error">
               <RiShieldLine size="1em" />
-              接近限流
+              全账号受限
             </span>
           );
         }
+
+        // 高权限用户受限（>=120，编辑及以下会被限流）
+        if (count >= RATE_LIMITS.EDITOR) {
+          return (
+            <span className="inline-flex items-center gap-1 text-error">
+              <RiShieldLine size="1em" />
+              高权限用户受限
+            </span>
+          );
+        }
+
+        // 用户受限（>=60，普通用户及以下会被限流）
+        if (count >= RATE_LIMITS.USER) {
+          return (
+            <span className="inline-flex items-center gap-1 text-warning">
+              <RiShieldLine size="1em" />
+              用户受限
+            </span>
+          );
+        }
+
+        // 访客受限（>=20，只有访客会被限流）
+        if (count >= RATE_LIMITS.GUEST) {
+          return (
+            <span className="inline-flex items-center gap-1 text-warning">
+              <RiShieldLine size="1em" />
+              访客受限
+            </span>
+          );
+        }
+
+        // 正常
         return (
           <span className="inline-flex items-center gap-1 text-success">
             <RiShieldCheckLine size="1em" />
