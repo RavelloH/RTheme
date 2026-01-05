@@ -10,6 +10,8 @@ import fs from "fs";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let prisma: any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let pool: any;
 
 // 加载 .env 文件
 config({
@@ -54,13 +56,17 @@ async function initializePrismaClient() {
     );
     const clientUrl = pathToFileURL(clientPath).href;
     const { PrismaClient } = await import(clientUrl);
+    const { Pool } = await import("pg");
+    const { PrismaPg } = await import("@prisma/adapter-pg");
+
+    // 使用与生产环境相同的 adapter 模式
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+    });
+    const adapter = new PrismaPg(pool);
 
     prisma = new PrismaClient({
-      datasources: {
-        db: {
-          url: process.env.DATABASE_URL,
-        },
-      },
+      adapter,
       log: [],
     });
 
@@ -284,6 +290,16 @@ async function cleanup() {
     } catch (error) {
       rlog.warning(
         `  Error closing database connection: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+  if (pool) {
+    try {
+      await pool.end();
+      rlog.info("  Connection pool closed");
+    } catch (error) {
+      rlog.warning(
+        `  Error closing connection pool: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }

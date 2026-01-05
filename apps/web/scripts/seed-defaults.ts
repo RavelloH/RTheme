@@ -7,6 +7,9 @@ import RLog from "rlog-js";
 
 const rlog = new RLog();
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let pool: any;
+
 // 从数据文件导入默认配置
 import { defaultConfigs } from "../src/data/default-configs.js";
 import { defaultPages } from "../src/data/default-pages.js";
@@ -29,13 +32,18 @@ async function seedDefaults() {
       );
       const clientUrl = pathToFileURL(clientPath).href;
       const { PrismaClient } = await import(clientUrl);
+      const { Pool } = await import("pg");
+      const { PrismaPg } = await import("@prisma/adapter-pg");
+
+      // 使用与生产环境相同的 adapter 模式
+      pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+      });
+      const adapter = new PrismaPg(pool);
 
       prisma = new PrismaClient({
-        datasources: {
-          db: {
-            url: process.env.DATABASE_URL,
-          },
-        },
+        adapter,
+        log: [],
       });
 
       // 测试连接
@@ -59,6 +67,18 @@ async function seedDefaults() {
 
     rlog.success("  Database default values check completed");
     await prisma.$disconnect();
+
+    // 关闭连接池
+    if (pool) {
+      try {
+        await pool.end();
+        rlog.info("  Connection pool closed");
+      } catch (error) {
+        rlog.warning(
+          `  Error closing connection pool: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
   } catch (error) {
     rlog.error("Database default value seeding failed:", error);
     throw error;

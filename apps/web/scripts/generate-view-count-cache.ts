@@ -12,6 +12,9 @@ import { Redis } from "ioredis";
 const rlog = new RLog();
 const REDIS_VIEW_COUNT_KEY = "np:view_count:all";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let pool: any;
+
 export default async function generateViewCountCache() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let prisma: any;
@@ -30,13 +33,18 @@ export default async function generateViewCountCache() {
       );
       const clientUrl = pathToFileURL(clientPath).href;
       const { PrismaClient } = await import(clientUrl);
+      const { Pool } = await import("pg");
+      const { PrismaPg } = await import("@prisma/adapter-pg");
+
+      // 使用与生产环境相同的 adapter 模式
+      pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+      });
+      const adapter = new PrismaPg(pool);
 
       prisma = new PrismaClient({
-        datasources: {
-          db: {
-            url: process.env.DATABASE_URL,
-          },
-        },
+        adapter,
+        log: [],
       });
 
       await prisma.$connect();
@@ -115,6 +123,16 @@ export default async function generateViewCountCache() {
     }
     if (redis) {
       await redis.quit();
+    }
+    if (pool) {
+      try {
+        await pool.end();
+        rlog.info("  Connection pool closed");
+      } catch (error) {
+        rlog.warning(
+          `  Error closing connection pool: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
     }
   }
 }

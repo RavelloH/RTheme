@@ -1,6 +1,6 @@
 /**
  * 配置缓存生成脚本
- * 在生产构建前运行，将数据库中的配置缓存到文件系统中
+ * 在生产构建前运行,将数据库中的配置缓存到文件系统中
  */
 
 import fs from "fs";
@@ -9,6 +9,9 @@ import { pathToFileURL } from "url";
 import RLog from "rlog-js";
 
 const rlog = new RLog();
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let pool: any;
 
 // 配置对象类型定义
 interface ConfigItem {
@@ -47,13 +50,18 @@ async function generateConfigCache() {
       );
       const clientUrl = pathToFileURL(clientPath).href;
       const { PrismaClient } = await import(clientUrl);
+      const { Pool } = await import("pg");
+      const { PrismaPg } = await import("@prisma/adapter-pg");
+
+      // 使用与生产环境相同的 adapter 模式
+      pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+      });
+      const adapter = new PrismaPg(pool);
 
       prisma = new PrismaClient({
-        datasources: {
-          db: {
-            url: process.env.DATABASE_URL,
-          },
-        },
+        adapter,
+        log: [],
       });
 
       // 测试连接
@@ -102,6 +110,18 @@ async function generateConfigCache() {
     rlog.success(`  Cached ${Object.keys(result).length} configuration items`);
 
     await prisma.$disconnect();
+
+    // 关闭连接池
+    if (pool) {
+      try {
+        await pool.end();
+        rlog.info("  Connection pool closed");
+      } catch (error) {
+        rlog.warning(
+          `  Error closing connection pool: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
   } catch (error) {
     console.error("Configuration cache generation failed:", error);
     throw error;
