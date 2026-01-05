@@ -9,6 +9,8 @@ import EmptyPostCard from "@/components/EmptyPostCard";
 import MainLayout from "@/components/MainLayout";
 import HomeTitle from "./home/HomeTitle";
 import HomeSlogan from "./home/HomeSlogan";
+import HomeImageGallery from "./home/HomeImageGallery";
+import GlobalMouseTracker from "./home/GlobalMouseTracker";
 import LinkButton from "@/components/LinkButton";
 import {
   getSystemPageConfig,
@@ -94,6 +96,29 @@ export default async function Home() {
     take: 5, // 最多取5篇文章
   });
 
+  // 获取用于图片画廊的文章封面（最多9篇）
+  const galleryPosts = await prisma.post.findMany({
+    where: {
+      status: "PUBLISHED",
+      deletedAt: null,
+      featuredImage: {
+        not: null,
+      },
+    },
+    select: {
+      featuredImage: true,
+    },
+    orderBy: [
+      {
+        isPinned: "desc",
+      },
+      {
+        publishedAt: "desc",
+      },
+    ],
+    take: 9,
+  });
+
   // 获取文章总数用于展示
   const totalPosts = await prisma.post.count({
     where: {
@@ -107,8 +132,13 @@ export default async function Home() {
     .map((post) => post.featuredImage)
     .filter((image): image is string => image !== null);
 
+  const galleryImageUrls = galleryPosts
+    .map((post) => post.featuredImage)
+    .filter((image): image is string => image !== null);
+
   const homePageMediaFileMap = await batchQueryMediaFiles([
     ...homePostImageUrls,
+    ...galleryImageUrls,
   ]);
 
   // 收集所有分类ID，批量获取路径
@@ -282,8 +312,16 @@ export default async function Home() {
     ),
   ];
 
+  // 处理画廊图片URL
+  const galleryImages = galleryImageUrls
+    .map((url) => processImageUrl(url, homePageMediaFileMap))
+    .filter((urls) => urls.length > 0)
+    .map((urls) => urls[0]?.url) // 提取 url 字段
+    .filter((url): url is string => url !== undefined); // 过滤掉 undefined
+
   return (
     <>
+      <GlobalMouseTracker />
       <MainLayout type="horizontal">
         <HorizontalScroll
           className="h-full"
@@ -298,9 +336,9 @@ export default async function Home() {
               areas={[1, 2, 3, 4, 5, 6]}
               width={4.5}
               height={0.5}
-              className="flex items-center justify-center text-5xl"
+              className="flex items-center justify-center"
             >
-              轮播图
+              <HomeImageGallery images={galleryImages} />
             </GridItem>
             <GridItem
               areas={[7, 8, 9]}
