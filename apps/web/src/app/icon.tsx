@@ -84,18 +84,26 @@ export function generateImageMetadata(): IconMetadata[] {
   ];
 }
 
-export default async function Icon({ id }: { id: string }) {
+export default async function Icon({
+  id,
+}: {
+  id: string;
+  params?: { __metadata_id__: string };
+}) {
   // 读取本地的 icon.png 文件
   const iconPath = join(process.cwd(), "public", "icon.png");
   const iconBuffer = await readFile(iconPath);
   const iconBase64 = `data:image/png;base64,${iconBuffer.toString("base64")}`;
 
-  const size = parseInt(id.replace("x", ""), 10);
+  // 从 metadata 中查找匹配的尺寸
+  const metadata = generateImageMetadata();
+  const metadataItem = metadata.find((item) => item.id === id);
+  const size = metadataItem?.size.width || 192; // 默认 192
 
   return new ImageResponse(
     (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={iconBase64} width="100%" height="100%" alt="Icon" />
+      <img src={iconBase64} width={size} height={size} alt="Icon" />
     ),
     {
       width: size,
