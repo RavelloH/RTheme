@@ -5,7 +5,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -48,8 +47,8 @@ model User {
   media             Media[]
   pages             Page[]
   notices           Notice[]
-  messages          Message[]          @relation("MessageFrom")
-  messagesTo        Message[]          @relation("MessageTo")
+  sentMessages      Message[]                 @relation("SentMessages")
+  conversations     ConversationParticipant[]
   auditLogs         AuditLog[]
   refreshTokens     RefreshToken[]
   passwordResets    PasswordReset[]
@@ -114,29 +113,29 @@ model PasswordReset {
 
 // 通行密钥模型 (用于 WebAuthn 身份验证)
 model Passkey {
-  id           String   @id @default(uuid())
-  userUid      Int
-  
+  id      String @id @default(uuid())
+  userUid Int
+
   // WebAuthn 核心字段
   credentialId String   @unique @db.VarChar(500) // Base64URL 编码的凭证ID
-  publicKey    String   @db.Text                  // Base64 编码的公钥
-  counter      BigInt   @default(0)               // 防重放攻击计数器
+  publicKey    String   @db.Text // Base64 编码的公钥
+  counter      BigInt   @default(0) // 防重放攻击计数器
   transports   String[] // 传输方式: ["usb", "nfc", "ble", "internal"]
-  
+
   // 用户友好字段
-  name         String   @db.VarChar(100)          // 用户自定义名称
-  
+  name String @db.VarChar(100) // 用户自定义名称
+
   // 设备信息
-  deviceType   String?  @db.VarChar(50)           // 设备类型
-  browser      String?  @db.VarChar(100)          // 注册时的浏览器
-  
+  deviceType String? @db.VarChar(50) // 设备类型
+  browser    String? @db.VarChar(100) // 注册时的浏览器
+
   // 时间戳
-  createdAt    DateTime @default(now())
-  lastUsedAt   DateTime @default(now())
-  
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+
   // 关系
-  user         User     @relation(fields: [userUid], references: [uid], onDelete: Cascade)
-  
+  user User @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+
   @@index([userUid])
   @@index([credentialId])
   @@index([lastUsedAt])
@@ -424,8 +423,8 @@ model Notice {
   id        String   @id @default(uuid())
   userUid   Int
   isRead    Boolean  @default(false)
-  title     String   // 通知标题
-  content   String   // 通知正文
+  title     String // 通知标题
+  content   String // 通知正文
   link      String?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userUid], references: [uid], onDelete: Cascade)
@@ -433,20 +432,91 @@ model Notice {
   @@index([userUid, isRead])
 }
 
-model Message {
-  id          String   @id @default(uuid())
-  content     String   @db.VarChar(10000)
-  createdAt   DateTime @default(now())
-  fromUserUid Int
-  toUserUid   Int
-  from        User     @relation("MessageFrom", fields: [fromUserUid], references: [uid], onDelete: Cascade)
-  to          User     @relation("MessageTo", fields: [toUserUid], references: [uid], onDelete: Cascade)
+// 1. 会话表：聊天室的容器
+model Conversation {
+  id String @id @default(uuid()) // UUID，同时用作 Ably 的普通频道名
 
-  // 索引优化
-  @@index([fromUserUid])
-  @@index([toUserUid])
-  @@index([createdAt])
-  @@index([fromUserUid, toUserUid]) // 复合索引：会话查询
+  // 排序字段：每次有新消息时，更新此时间。
+  // 用于前端列表页：ORDER BY updatedAt DESC
+  updatedAt DateTime @default(now()) @updatedAt
+  createdAt DateTime @default(now())
+
+  lastMessageId String? // 最后一条消息 ID，方便快速显示预览
+
+  // 关系
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+// 2. 参与者表：这是最关键的“状态机”表
+// 每一个用户在每一个会话里，都有一行记录
+model ConversationParticipant {
+  conversationId String
+  userUid        Int
+  updatedAt      DateTime @default(now()) @updatedAt
+
+  // --- [UI 状态字段] ---
+
+  // 软删除/隐藏：用户点击“删除会话”时，设为 false。
+  // 当有新消息进来时，自动改回 true，会话重新出现在列表顶端。
+  isVisible Boolean @default(true)
+
+  // --- [未读计数核心] ---
+
+  // 冗余计数器：该用户在此会话中有多少未读消息？
+  // 优势：获取全局红点数时，只需 SUM(unreadCount)，速度极快，无需 COUNT(Message)
+  unreadCount Int @default(0)
+
+  // 游标：用户读到的最后一条消息 ID
+  // 用途：进入聊天室时，在此 ID 之后画一条 "以下是新消息" 的分割线、提示发送方接收方是否已读
+  lastReadMessageId String?
+
+  // --- [通知控制字段 (你的防骚扰逻辑)] ---
+
+  // 标记：是否已经为此批次的未读消息发送过邮件？
+  // true = 已发送通知，后续新消息不再发邮件，直到用户阅读
+  // false = 尚未发送通知，下一条新消息触发邮件逻辑
+  hasEmailedUnread Boolean @default(false)
+
+  // 关系
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+
+  // 联合主键：确保一个用户在一个会话里只有一条状态记录
+  @@id([conversationId, userUid])
+  // 索引：用于快速查询“我的会话列表”和“我的总未读数”
+  @@index([userUid, updatedAt(sort: Desc)])
+}
+
+// 3. 消息表：只存普通消息
+model Message {
+  id String @id @default(uuid())
+
+  // 消息内容
+  content String @db.Text
+
+  // 引用回复
+  replyToMessageId String?
+  replyTo          Message?  @relation("MessageReplies", fields: [replyToMessageId], references: [id], onDelete: SetNull)
+  replies          Message[] @relation("MessageReplies")
+
+  // 消息类型
+  type MessageType @default(TEXT)
+
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  // 外键
+  conversationId String
+  senderUid      Int
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("SentMessages", fields: [senderUid], references: [uid], onDelete: Cascade)
+
+  // 索引：用于进入聊天室时分页拉取历史记录
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@index([senderUid])
+  @@index([replyToMessageId])
 }
 
 // 访问量缓存表 - 用于高性能访问统计查询
@@ -583,8 +653,8 @@ model HealthCheck {
 
 // Web Push 订阅模型
 model PushSubscription {
-  id       String @id @default(uuid())
-  userUid  Int
+  id      String @id @default(uuid())
+  userUid Int
 
   // Web Push 订阅信息
   endpoint String @db.VarChar(500)
@@ -592,10 +662,10 @@ model PushSubscription {
   auth     String @db.VarChar(50) // keys.auth
 
   // 设备信息
-  userAgent  String?  @db.VarChar(1000)
-  browser    String?  @db.VarChar(100)
-  os         String?  @db.VarChar(100)
-  deviceName String   @db.VarChar(100) // 用户自定义名称
+  userAgent  String? @db.VarChar(1000)
+  browser    String? @db.VarChar(100)
+  os         String? @db.VarChar(100)
+  deviceName String  @db.VarChar(100) // 用户自定义名称
 
   // 状态管理
   isActive   Boolean  @default(true)
@@ -680,4 +750,9 @@ enum AccountProvider {
   GOOGLE
   GITHUB
   MICROSOFT
+}
+
+enum MessageType {
+  TEXT
+  SYSTEM
 }
