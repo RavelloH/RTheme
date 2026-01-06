@@ -15,6 +15,7 @@ import MessageInput from "./MessageInput";
 import NewMessageFloatingNotice from "./NewMessageFloatingNotice";
 import { Button } from "@/ui/Button";
 import { AlertDialog } from "@/ui/AlertDialog";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { useToast } from "@/ui/Toast";
 import { RiMoreLine, RiDeleteBinLine } from "@remixicon/react";
 import {
@@ -57,12 +58,13 @@ export default function ChatWindow({
   const [showNewMessageNotice, setShowNewMessageNotice] = useState(false);
   const [newMessageCount, setNewMessageCount] = useState(0);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [otherUserLastReadMessageId, setOtherUserLastReadMessageId] = useState<
     string | null
   >(null);
   const messageListRef = useRef<MessageListRef>(null);
   const toast = useToast();
-  const lastMessageCountRef = useRef(0);
+  const lastMessageIdRef = useRef<string | null>(null); // 记录最后一条消息的 ID
 
   const {
     messages,
@@ -76,22 +78,42 @@ export default function ChatWindow({
     addMessages,
   } = useOptimisticMessages();
 
+  // 当会话切换时，立即清空消息（避免显示上一个会话的内容）
+  useEffect(() => {
+    resetMessages([]);
+    setOtherUserLastReadMessageId(null);
+    setIsLoadingMessages(true); // 开始加载
+    setShowNewMessageNotice(false); // 隐藏新消息提示
+    setNewMessageCount(0); // 重置计数
+    lastMessageIdRef.current = null; // 重置最后一条消息 ID
+  }, [conversationId, resetMessages]);
+
   // 加载初始消息
   useEffect(() => {
     const loadInitialMessages = async () => {
       if (!conversationId) {
-        resetMessages([]);
-        setOtherUserLastReadMessageId(null);
+        setIsLoadingMessages(false);
         return;
       }
 
       try {
+        setIsLoadingMessages(true);
         const { getConversationMessages } = await import("@/actions/message");
         const result = await getConversationMessages(conversationId, 0, 25);
 
         if (result.success && result.data) {
-          // 重置消息列表
+          // 完全使用服务器数据，不保留本地乐观消息
           resetMessages(result.data.messages);
+
+          // 初始化最后一条消息 ID
+          if (result.data.messages.length > 0) {
+            const lastMsg =
+              result.data.messages[result.data.messages.length - 1];
+            if (lastMsg) {
+              lastMessageIdRef.current = lastMsg.id;
+            }
+          }
+
           // 立即应用已读状态
           if (result.data.otherUserLastReadMessageId) {
             updateReadStatus(result.data.otherUserLastReadMessageId);
@@ -102,6 +124,8 @@ export default function ChatWindow({
         }
       } catch (error) {
         console.error("加载消息失败:", error);
+      } finally {
+        setIsLoadingMessages(false);
       }
     };
 
@@ -263,24 +287,53 @@ export default function ChatWindow({
     if (atBottom) {
       setShowNewMessageNotice(false);
       setNewMessageCount(0);
-      lastMessageCountRef.current = messages.length;
+      // 更新最后一条消息 ID
+      if (messages.length > 0) {
+        const lastMsg = messages[messages.length - 1];
+        if (lastMsg) {
+          lastMessageIdRef.current = lastMsg.id;
+        }
+      }
     }
   };
 
   // 监听新消息，如果不在底部显示提示并计数
   useEffect(() => {
-    if (!isAtBottom && messages.length > 0) {
-      const newMessagesCount = messages.length - lastMessageCountRef.current;
+    if (messages.length === 0) {
+      return;
+    }
 
-      if (newMessagesCount > 0) {
-        const lastMessage = messages[messages.length - 1];
-        // 如果最后一条是对方发的消息，显示新消息提示
-        if (lastMessage && lastMessage.senderUid !== currentUserId) {
-          setShowNewMessageNotice(true);
-          setNewMessageCount((prev) => prev + newMessagesCount);
+    const lastMessage = messages[messages.length - 1];
+    if (!lastMessage) {
+      return;
+    }
+
+    // 检查是否有新消息（通过最后一条消息的 ID 判断）
+    const isNewMessage = lastMessageIdRef.current !== lastMessage.id;
+
+    if (isNewMessage && !isAtBottom) {
+      // 只有当最后一条消息是对方发的，才显示提示
+      if (lastMessage.senderUid !== currentUserId) {
+        // 计算新消息数量：找到上次记录的消息 ID 之后的所有消息
+        let newCount = 0;
+        for (let i = messages.length - 1; i >= 0; i--) {
+          const msg = messages[i];
+          if (msg && msg.id === lastMessageIdRef.current) {
+            break;
+          }
+          if (msg && msg.senderUid !== currentUserId) {
+            newCount++;
+          }
         }
-        lastMessageCountRef.current = messages.length;
+
+        if (newCount > 0) {
+          setShowNewMessageNotice(true);
+          setNewMessageCount(newCount);
+        }
       }
+
+      // 更新最后一条消息 ID
+      lastMessageIdRef.current = lastMessage.id;
     }
   }, [messages, isAtBottom, currentUserId]);
 
@@ -356,16 +409,22 @@ export default function ChatWindow({
       </div>
 
       {/* 消息列表 */}
-      <div className="flex-1 relative overflow-hidden">
-        <MessageList
-          ref={messageListRef}
-          messages={messages}
-          currentUserId={currentUserId}
-          conversationId={conversationId || ""}
-          onScrollChange={handleScrollChange}
-          onRetryMessage={handleRetryMessage}
-          onLoadMoreMessages={handleLoadMoreMessages}
-        />
+      <AutoTransition className="flex-1 relative overflow-hidden">
+        {isLoadingMessages ? (
+          <div className="flex items-center justify-center h-full">
+            <LoadingIndicator size="md" />
+          </div>
+        ) : (
+          <MessageList
+            ref={messageListRef}
+            messages={messages}
+            currentUserId={currentUserId}
+            conversationId={conversationId || ""}
+            onScrollChange={handleScrollChange}
+            onRetryMessage={handleRetryMessage}
+            onLoadMoreMessages={handleLoadMoreMessages}
+          />
+        )}
 
         {/* 新消息提示 */}
         <AutoTransition type="slideUp">
@@ -376,7 +435,7 @@ export default function ChatWindow({
             />
           )}
         </AutoTransition>
-      </div>
+      </AutoTransition>
 
       {/* 输入框 */}
       <div className="flex-shrink-0 border-t border-foreground/10 bg-background">

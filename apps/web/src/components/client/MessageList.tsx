@@ -4,6 +4,7 @@ import {
   useState,
   useRef,
   useEffect,
+  useLayoutEffect,
   useCallback,
   forwardRef,
   useImperativeHandle,
@@ -44,6 +45,12 @@ const MessageList = forwardRef<MessageListRef, MessageListProps>(
     const loadingRef = useRef(false);
     const lastScrollHeightRef = useRef(0);
     const prevMessagesLengthRef = useRef(0);
+
+    // 当会话切换时，重置状态
+    useEffect(() => {
+      prevMessagesLengthRef.current = 0;
+      setHasMore(true);
+    }, [conversationId]);
 
     // 暴露给父组件的方法
     useImperativeHandle(ref, () => ({
@@ -132,12 +139,11 @@ const MessageList = forwardRef<MessageListRef, MessageListProps>(
       }
     }, [messages.length, checkIfAtBottom, scrollToBottom]);
 
-    // 初次加载完成后滚动到底部
-    useEffect(() => {
+    // 初次加载完成后立即滚动到底部（使用 useLayoutEffect 避免闪烁）
+    useLayoutEffect(() => {
       if (messages.length > 0 && prevMessagesLengthRef.current === 0) {
-        setTimeout(() => {
-          scrollToBottom();
-        }, 100);
+        // 立即滚动到底部，不使用动画
+        scrollToBottom();
       }
       prevMessagesLengthRef.current = messages.length;
     }, [messages.length, scrollToBottom]);
@@ -178,7 +184,7 @@ const MessageList = forwardRef<MessageListRef, MessageListProps>(
         </AutoTransition>
 
         {/* 空状态 */}
-        {messages.length === 0 && !isLoadingMore && (
+        {messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
             <p className="text-sm text-muted-foreground">
               还没有消息，开始聊天吧

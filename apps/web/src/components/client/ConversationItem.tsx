@@ -134,10 +134,16 @@ export default function ConversationItem({
               </p>
 
               {/* 未读数徽章 */}
-              {unreadCount > 0 && (
-                <div className="flex-shrink-0 ml-2">
+              {unreadCount > 0 ? (
+                <div className="flex-shrink-0">
                   <span className="ml-2 px-1.5 py-0.5 text-xs font-mono font-medium bg-primary/10 text-primary rounded-full">
                     {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex-shrink-0">
+                  <span className="ml-2 px-1.5 py-0.5 text-xs font-mono font-medium bg-primary/10 text-primary rounded-full opacity-0">
+                    0
                   </span>
                 </div>
               )}
