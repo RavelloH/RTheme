@@ -448,12 +448,15 @@ model Conversation {
   messages     Message[]
 }
 
-// 2. 参与者表：这是最关键的“状态机”表
+// 2. 参与者表：这是最关键的"状态机"表
 // 每一个用户在每一个会话里，都有一行记录
 model ConversationParticipant {
   conversationId String
   userUid        Int
   updatedAt      DateTime @default(now()) @updatedAt
+
+  // 最后一条消息的时间（专门用于排序，只在有新消息时更新，不在标记已读时更新）
+  lastMessageAt DateTime @default(now())
 
   // --- [UI 状态字段] ---
 
@@ -484,8 +487,9 @@ model ConversationParticipant {
 
   // 联合主键：确保一个用户在一个会话里只有一条状态记录
   @@id([conversationId, userUid])
-  // 索引：用于快速查询“我的会话列表”和“我的总未读数”
+  // 索引：用于快速查询"我的会话列表"和"我的总未读数"
   @@index([userUid, updatedAt(sort: Desc)])
+  @@index([userUid, lastMessageAt(sort: Desc)])
 }
 
 // 3. 消息表：只存普通消息

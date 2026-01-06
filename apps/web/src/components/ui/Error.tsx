@@ -21,7 +21,7 @@ export default function ErrorPage({
       onMouseLeave={() => setHover(false)}
     >
       <AutoTransition type="scale">
-        {hover ? (
+        {hover && reset ? (
           <Clickable key="refresh" onClick={reset}>
             <RiRefreshLine size={"3em"} />
           </Clickable>

@@ -117,7 +117,7 @@ export default function UserProfileClient({
                 <UserAvatar
                   username={user.username}
                   avatarUrl={user.avatar}
-                  email={user.email}
+                  emailMd5={user.emailMd5}
                   size={80}
                   shape="circle"
                   className="w-[80px] h-[80px]"
@@ -300,7 +300,7 @@ export default function UserProfileClient({
             <UserAvatar
               username={user.username}
               avatarUrl={user.avatar}
-              email={user.email}
+              email={user.emailMd5}
               size={200}
               shape="square"
               className="w-full h-full"

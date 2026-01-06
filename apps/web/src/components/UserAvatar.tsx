@@ -142,10 +142,13 @@ export default function UserAvatar({
     className.includes("w-full") || className.includes("h-full");
   const actualSize = hasResponsiveSize ? undefined : size || 32;
 
+  // 将像素值转换为 em 单位（基于 16px）
+  const sizeInEm = actualSize ? `${actualSize / 16}em` : undefined;
+
   return (
     <div
       className={`inline-block overflow-hidden ${borderRadiusClass} ${className}`}
-      style={actualSize ? { width: actualSize, height: actualSize } : undefined}
+      style={sizeInEm ? { width: sizeInEm, height: sizeInEm } : undefined}
     >
       {loadedUrl ? (
         // eslint-disable-next-line @next/next/no-img-element

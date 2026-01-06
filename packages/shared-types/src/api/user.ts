@@ -236,7 +236,7 @@ export const UserProfileSchema = z.object({
     uid: z.number().int(),
     username: z.string(),
     nickname: z.string().nullable(),
-    email: z.string().email().optional(), // 仅自己或管理员可见
+    emailMd5: z.string(),
     avatar: z.string().nullable(),
     bio: z.string().nullable(),
     website: z.string().nullable(),

@@ -6963,10 +6963,8 @@ components:
                 nickname:
                   nullable: true
                   type: string
-                email:
+                emailMd5:
                   type: string
-                  format: email
-                  pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
                 avatar:
                   nullable: true
                   type: string
@@ -7001,6 +6999,7 @@ components:
                 - uid
                 - username
                 - nickname
+                - emailMd5
                 - avatar
                 - bio
                 - website
@@ -7117,17 +7116,42 @@ components:
                             type: string
                           title:
                             type: string
-                          excerpt:
-                            type: string
                           createdAt:
                             type: string
                             format: date-time
                             pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+                          tags:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                slug:
+                                  type: string
+                              required:
+                                - name
+                                - slug
+                              additionalProperties: false
+                          categories:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                slug:
+                                  type: string
+                              required:
+                                - name
+                                - slug
+                              additionalProperties: false
                         required:
                           - slug
                           - title
-                          - excerpt
                           - createdAt
+                          - tags
+                          - categories
                         additionalProperties: false
                     required:
                       - id
@@ -11228,7 +11252,14 @@ components:
           type: number
         banReason:
           type: string
-        location:
+        country:
+          nullable: true
+          type: string
+        province:
+          nullable: true
+          type: string
+        city:
+          nullable: true
           type: string
       required:
         - ip
@@ -11275,7 +11306,14 @@ components:
                     type: number
                   banReason:
                     type: string
-                  location:
+                  country:
+                    nullable: true
+                    type: string
+                  province:
+                    nullable: true
+                    type: string
+                  city:
+                    nullable: true
                     type: string
                 required:
                   - ip
@@ -13953,6 +13991,518 @@ components:
               type: string
               enum:
                 - NOTICE_NOT_FOUND
+            message:
+              type: string
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - error
+      additionalProperties: false
+    ConversationUser:
+      type: object
+      properties:
+        uid:
+          type: number
+        username:
+          type: string
+        nickname:
+          nullable: true
+          type: string
+        avatar:
+          nullable: true
+          type: string
+        role:
+          type: string
+          enum:
+            - USER
+            - ADMIN
+            - EDITOR
+            - AUTHOR
+        emailMd5:
+          nullable: true
+          type: string
+        isOnline:
+          type: boolean
+      required:
+        - uid
+        - username
+        - nickname
+        - avatar
+        - role
+        - emailMd5
+      additionalProperties: false
+    GetConversationMessagesRequest:
+      type: object
+      properties:
+        conversationId:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        skip:
+          default: 0
+          type: number
+          minimum: 0
+        take:
+          default: 25
+          type: number
+          minimum: 1
+          maximum: 50
+      required:
+        - conversationId
+        - skip
+        - take
+      additionalProperties: false
+    SendMessageRequest:
+      type: object
+      properties:
+        targetUid:
+          type: integer
+          exclusiveMinimum: true
+          maximum: 9007199254740991
+        content:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        tempId:
+          type: string
+      required:
+        - targetUid
+        - content
+      additionalProperties: false
+    MarkConversationAsReadRequest:
+      type: object
+      properties:
+        conversationId:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+      required:
+        - conversationId
+      additionalProperties: false
+    MarkConversationAsReadSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+          required:
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    DeleteConversationRequest:
+      type: object
+      properties:
+        conversationId:
+          type: string
+          format: uuid
+          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+      required:
+        - conversationId
+      additionalProperties: false
+    DeleteConversationSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+          required:
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    SearchUsersRequest:
+      type: object
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 100
+      required:
+        - query
+      additionalProperties: false
+    SearchUsersSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            users:
+              type: array
+              items:
+                type: object
+                properties:
+                  uid:
+                    type: number
+                  username:
+                    type: string
+                  nickname:
+                    nullable: true
+                    type: string
+                  avatar:
+                    nullable: true
+                    type: string
+                  role:
+                    type: string
+                    enum:
+                      - USER
+                      - ADMIN
+                      - EDITOR
+                      - AUTHOR
+                  emailMd5:
+                    nullable: true
+                    type: string
+                  isOnline:
+                    type: boolean
+                required:
+                  - uid
+                  - username
+                  - nickname
+                  - avatar
+                  - role
+                  - emailMd5
+                additionalProperties: false
+          required:
+            - users
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    CheckMessagePermissionRequest:
+      type: object
+      properties:
+        targetUid:
+          type: integer
+          exclusiveMinimum: true
+          maximum: 9007199254740991
+      required:
+        - targetUid
+      additionalProperties: false
+    CheckMessagePermissionSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            allowed:
+              type: boolean
+            reason:
+              type: string
+          required:
+            - allowed
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    MessageUnauthorizedErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - UNAUTHORIZED
+            message:
+              type: string
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - error
+      additionalProperties: false
+    ConversationNotFoundErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - CONVERSATION_NOT_FOUND
+            message:
+              type: string
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - error
+      additionalProperties: false
+    UserNotFoundErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - USER_NOT_FOUND
+            message:
+              type: string
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - error
+      additionalProperties: false
+    MessagePermissionDeniedErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - PERMISSION_DENIED
+            message:
+              type: string
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - error
+      additionalProperties: false
+    MessageSystemDisabledErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - MESSAGE_SYSTEM_DISABLED
+            message:
+              type: string
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+        - error
+      additionalProperties: false
+    InvalidMessageRequestErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
+        requestId:
+          type: string
+        data:
+          type: string
+          nullable: true
+          enum:
+            - null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - INVALID_REQUEST
             message:
               type: string
           required:

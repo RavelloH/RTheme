@@ -432,6 +432,24 @@ export const defaultConfigs: DefaultConfig[] = [
     description: "AI 配置信息。参考文档设置",
   },
   // =====================================
+  // 聊天系统
+  // =====================================
+  {
+    key: "message.enable",
+    value: { default: true },
+    description: "是否启用站内信系统",
+  },
+  {
+    key: "message.userToUser.enable",
+    value: { default: true },
+    description: "是否允许USER与USER之间相互发送站内信",
+  },
+  {
+    key: "message.userToAdmin.enable",
+    value: { default: true },
+    description: "是否允许USER向ADMIN/EDITOR/AUTHOR发送站内信",
+  },
+  // =====================================
   // PWA 相关配置
   // =====================================
   {

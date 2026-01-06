@@ -30,7 +30,7 @@ export function AutoResizer({
   ease = "easeInOut",
   initial = false,
 }: AutoResizerProps) {
-  const [height, setHeight] = useState<number | "auto">(initial ? "auto" : 0);
+  const [height, setHeight] = useState<number | "auto">("auto");
   const contentRef = useRef<HTMLDivElement>(null);
   const isFirstRender = useRef(true);
 
@@ -41,13 +41,15 @@ export function AutoResizer({
       for (const entry of entries) {
         const newHeight = entry.contentRect.height;
 
-        // 首次渲染时，根据 initial 决定是否直接设置高度
-        if (isFirstRender.current && !initial) {
-          setHeight(newHeight);
-          isFirstRender.current = false;
-        } else {
-          setHeight(newHeight);
+        // 首次渲染时，如果 initial=false 则标记为已完成首次渲染
+        if (isFirstRender.current) {
+          if (!initial) {
+            // 不播放动画，直接设置高度
+            isFirstRender.current = false;
+          }
         }
+
+        setHeight(newHeight);
       }
     });
 
@@ -62,10 +64,12 @@ export function AutoResizer({
     <motion.div
       className={className}
       style={{ overflow: "hidden" }}
-      initial={initial ? false : { height: 0 }}
-      animate={{ height }}
+      initial={initial ? false : { height: "auto" }}
+      animate={
+        isFirstRender.current && !initial ? { height: "auto" } : { height }
+      }
       transition={{
-        duration,
+        duration: isFirstRender.current && !initial ? 0 : duration,
         ease: ease as Easing | Easing[],
       }}
     >

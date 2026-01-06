@@ -35,12 +35,20 @@ import { logAuditEvent } from "./audit";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { jwtTokenVerify, type AccessTokenPayload } from "@/lib/server/jwt";
 import { Prisma } from ".prisma/client";
+import crypto from "crypto";
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
 type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
+
+function calculateMD5(text: string): string {
+  return crypto
+    .createHash("md5")
+    .update(text.toLowerCase().trim())
+    .digest("hex");
+}
 
 /*
   getUsersTrends - 获取用户趋势数据
@@ -1576,7 +1584,7 @@ export async function getUserPublicProfile(
         uid: targetUser.uid,
         username: targetUser.username,
         nickname: targetUser.nickname,
-        email: canEdit ? targetUser.email : undefined, // 仅自己或管理员可见
+        emailMd5: calculateMD5(targetUser.email),
         avatar: targetUser.avatar,
         bio: targetUser.bio,
         website: targetUser.website,

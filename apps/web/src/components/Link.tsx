@@ -214,7 +214,7 @@ function normalizePath(oldPath: string, newPath: string): string {
 }
 
 // 不使用过渡效果的路径列表
-const NO_TRANSITION_PATHS = ["/user", "/notifications"];
+const NO_TRANSITION_PATHS = ["/user", "/notifications", "/messages"];
 
 // 检查路径是否应该跳过过渡效果
 function shouldSkipTransition(path: string): boolean {
