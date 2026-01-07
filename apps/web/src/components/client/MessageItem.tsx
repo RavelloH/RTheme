@@ -1,7 +1,6 @@
 "use client";
 
 import type { Message } from "@repo/shared-types/api/message";
-import { Button } from "@/ui/Button";
 import {
   RiLoader4Line,
   RiCheckLine,

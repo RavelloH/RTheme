@@ -31,6 +31,7 @@ interface ChatWindowProps {
   conversation?: Conversation; // 可选，临时会话时为空
   temporaryTargetUser?: ConversationUser | null; // 临时目标用户
   currentUserId: number;
+  conversationKey: string; // 用于区分不同会话的唯一标识符
   onDeleteConversation: (conversationId: string) => void;
   onConversationCreated?: (conversationId: string) => void; // 会话创建回调
   onMessageSent?: (conversationId: string, message: Message) => void; // 消息发送成功回调
@@ -42,6 +43,7 @@ export default function ChatWindow({
   conversation,
   temporaryTargetUser,
   currentUserId,
+  conversationKey,
   onDeleteConversation,
   onConversationCreated,
   onMessageSent,
@@ -86,7 +88,7 @@ export default function ChatWindow({
     setShowNewMessageNotice(false); // 隐藏新消息提示
     setNewMessageCount(0); // 重置计数
     lastMessageIdRef.current = null; // 重置最后一条消息 ID
-  }, [conversationId, resetMessages]);
+  }, [conversationKey, resetMessages]);
 
   // 加载初始消息
   useEffect(() => {

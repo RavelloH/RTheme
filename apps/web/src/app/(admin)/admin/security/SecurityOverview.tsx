@@ -114,13 +114,13 @@ export default function SecurityOverview() {
           最近 24 小时处理 {formatNumber(last24hTotal)} 个请求，
           {formatNumber(last24hError)} 个超过速率限制，错误率{" "}
           {calcErrorRate(last24hSuccess, last24hError)}
-          ，平均每小时 {formatNumber(avgPerHour)} 个请求。
+          ，平均每小时 {formatNumber(avgPerHour)} 个。
         </p>
         <p>
           最近 30 天处理 {formatNumber(last30dTotal)} 个请求，
           {formatNumber(last30dError)} 个超过速率限制，错误率{" "}
           {calcErrorRate(last30dSuccess, last30dError)}
-          ，平均每天 {formatNumber(avgPerDay)} 个请求。
+          ，平均每天 {formatNumber(avgPerDay)} 个。
         </p>
       </div>
     );

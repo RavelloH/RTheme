@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState, useCallback, useEffect } from "react";
 import type {
   Conversation,
   ConversationUser,
@@ -29,66 +28,21 @@ export default function MessagesClient({
   currentUserId,
   isModal = false,
 }: MessagesClientProps) {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const conversationIdParam = searchParams.get("id");
-  const targetUidParam = searchParams.get("uid");
-
   const [conversations, setConversations] =
     useState<Conversation[]>(initialConversations);
   const [total, setTotal] = useState(initialTotal);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | null
-  >(conversationIdParam);
+  >(null);
   const [temporaryTargetUser, setTemporaryTargetUser] =
     useState<ConversationUser | null>(null);
+  const [temporaryLastMessage, setTemporaryLastMessage] = useState<{
+    content: string;
+    createdAt: Date;
+    senderUid: number;
+  } | null>(null);
   const [_isLoadingTargetUser, setIsLoadingTargetUser] = useState(false);
-
-  // 同步 URL 参数和选中的会话
-  useEffect(() => {
-    setSelectedConversationId(conversationIdParam);
-  }, [conversationIdParam]);
-
-  // 处理 uid 参数：加载目标用户信息
-  useEffect(() => {
-    if (targetUidParam) {
-      const targetUid = parseInt(targetUidParam, 10);
-      if (isNaN(targetUid)) return;
-
-      // 先检查是否已有会话
-      const existingConversation = conversations.find(
-        (conv) => conv.otherUser.uid === targetUid,
-      );
-
-      if (existingConversation) {
-        // 如果已有会话，直接跳转到该会话
-        router.replace(`/messages?id=${existingConversation.conversationId}`);
-        return;
-      }
-
-      // 加载目标用户信息
-      setIsLoadingTargetUser(true);
-      import("@/actions/message")
-        .then(async ({ searchUsers }) => {
-          const result = await searchUsers(targetUidParam);
-          if (result.success && result.data && result.data.users.length > 0) {
-            setTemporaryTargetUser(result.data.users[0] || null);
-          } else {
-            setTemporaryTargetUser(null);
-          }
-        })
-        .catch((error) => {
-          console.error("加载用户信息失败:", error);
-          setTemporaryTargetUser(null);
-        })
-        .finally(() => {
-          setIsLoadingTargetUser(false);
-        });
-    } else {
-      setTemporaryTargetUser(null);
-    }
-  }, [targetUidParam, conversations, router]);
 
   // 处理会话更新（轮询回调）
   const handleConversationsUpdate = useCallback(
@@ -147,8 +101,28 @@ export default function MessagesClient({
           );
         }
       }
+
+      // 如果有临时用户，检查是否有对应的正式会话出现
+      if (temporaryTargetUser) {
+        const matchingConversation = updatedConversations.find(
+          (conv) => conv.otherUser.uid === temporaryTargetUser.uid,
+        );
+        if (matchingConversation) {
+          // 找到对应的正式会话，切换过去
+          setTemporaryTargetUser(null);
+          setTemporaryLastMessage(null);
+          // 只有当前选中的是临时会话时才切换到正式会话
+          if (
+            selectedConversationId?.startsWith(
+              `temp-${temporaryTargetUser.uid}`,
+            )
+          ) {
+            setSelectedConversationId(matchingConversation.conversationId);
+          }
+        }
+      }
     },
-    [selectedConversationId],
+    [selectedConversationId, temporaryTargetUser],
   );
 
   // 处理当前会话消息更新（轮询回调）
@@ -167,12 +141,6 @@ export default function MessagesClient({
     [],
   );
 
-  // 当会话切换时，清空轮询消息缓存
-  useEffect(() => {
-    setCurrentConversationMessages([]);
-    setPolledOtherUserLastReadMessageId(null);
-  }, [selectedConversationId]);
-
   // 启用轮询
   useMessagePolling({
     enabled: true,
@@ -181,45 +149,43 @@ export default function MessagesClient({
     currentConversationId: selectedConversationId,
   });
 
+  // 当 selectedConversationId 变化时，清空轮询消息缓存
+  useEffect(() => {
+    setCurrentConversationMessages([]);
+    setPolledOtherUserLastReadMessageId(null);
+  }, [selectedConversationId]);
+
   // 处理会话选择
-  const handleSelectConversation = useCallback(
-    (conversationId: string) => {
-      // 立即更新本地会话列表，清除未读数
-      setConversations((prev) =>
-        prev.map((conv) =>
-          conv.conversationId === conversationId
-            ? { ...conv, unreadCount: 0 }
-            : conv,
-        ),
-      );
+  const handleSelectConversation = useCallback((conversationId: string) => {
+    // 如果是临时会话，只设置选中状态，不做其他处理
+    if (conversationId.startsWith("temp-")) {
+      setSelectedConversationId(conversationId);
+      return;
+    }
 
-      const newUrl = `/messages?id=${conversationId}`;
+    // 立即更新本地会话列表，清除未读数
+    setConversations((prev) =>
+      prev.map((conv) =>
+        conv.conversationId === conversationId
+          ? { ...conv, unreadCount: 0 }
+          : conv,
+      ),
+    );
 
-      if (isModal) {
-        // 模态框模式：使用 replaceState 纯客户端更新 URL，不触发路由导航
-        window.history.replaceState(null, "", newUrl);
-        // 手动更新内部状态
-        setSelectedConversationId(conversationId);
-      } else {
-        // 全屏模式：使用 replace 避免历史记录堆积
-        router.replace(newUrl);
-      }
-    },
-    [router, isModal],
-  );
+    // 选择会话，不清空临时用户（允许临时会话继续存在于列表中）
+    setSelectedConversationId(conversationId);
+  }, []);
 
   // 处理新会话
   const handleNewConversation = useCallback(
     async (uid: number) => {
-      const newUrl = `/messages?uid=${uid}`;
-
       // 先检查是否已有会话
       const existingConversation = conversations.find(
         (conv) => conv.otherUser.uid === uid,
       );
 
       if (existingConversation) {
-        // 如果已有会话，直接跳转
+        // 如果已有会话，直接选择
         handleSelectConversation(existingConversation.conversationId);
         return;
       }
@@ -233,15 +199,10 @@ export default function MessagesClient({
         if (result.success && result.data && result.data.users.length > 0) {
           const user = result.data.users[0];
           if (user) {
+            // 设置临时用户并选中临时会话
             setTemporaryTargetUser(user);
-
-            // 更新 URL
-            if (isModal) {
-              window.history.replaceState(null, "", newUrl);
-              setSelectedConversationId(null); // 清空选中的会话
-            } else {
-              router.replace(newUrl);
-            }
+            setTemporaryLastMessage(null);
+            setSelectedConversationId(`temp-${user.uid}`);
           }
         }
       } catch (error) {
@@ -250,7 +211,7 @@ export default function MessagesClient({
         setIsLoadingTargetUser(false);
       }
     },
-    [conversations, isModal, router, handleSelectConversation],
+    [conversations, handleSelectConversation],
   );
 
   // 处理会话删除
@@ -263,15 +224,26 @@ export default function MessagesClient({
 
       // 如果删除的是当前选中的会话，清空选择
       if (selectedConversationId === conversationId) {
-        router.push("/messages");
+        setSelectedConversationId(null);
       }
     },
-    [selectedConversationId, router],
+    [selectedConversationId],
   );
 
   // 处理消息发送成功（立即更新会话列表）
   const handleMessageSent = useCallback(
     (conversationId: string, message: Message) => {
+      // 如果有临时用户，说明是临时会话发送的第一条消息
+      // 此时 conversationId 是新创建的正式会话 ID，但我们需要更新临时会话的显示
+      if (temporaryTargetUser) {
+        setTemporaryLastMessage({
+          content: message.content,
+          createdAt: message.createdAt,
+          senderUid: message.senderUid,
+        });
+        return;
+      }
+
       setConversations((prev) => {
         // 找到对应的会话
         const targetConv = prev.find(
@@ -298,55 +270,78 @@ export default function MessagesClient({
         return [updatedConv, ...otherConvs];
       });
     },
-    [],
+    [temporaryTargetUser],
   );
 
   // 处理加载更多会话
-  const handleLoadMore = useCallback(async (skip: number) => {
-    const { getConversations } = await import("@/actions/message");
-    const result = await getConversations(undefined, skip, 20);
+  const handleLoadMore = useCallback(
+    async (skip: number) => {
+      // 如果有临时会话,需要减去1(临时会话不应计入 skip)
+      const actualSkip = temporaryTargetUser ? skip - 1 : skip;
+      if (actualSkip < 0) return; // 防止负数
 
-    if (result.success && result.data) {
-      setConversations((prev) => [...prev, ...result.data!.conversations]);
-      setHasMore(result.data.hasMore);
-    }
-  }, []);
+      const { getConversations } = await import("@/actions/message");
+      const result = await getConversations(undefined, actualSkip, 20);
+
+      if (result.success && result.data) {
+        setConversations((prev) => [...prev, ...result.data!.conversations]);
+        setHasMore(result.data.hasMore);
+      }
+    },
+    [temporaryTargetUser],
+  );
 
   // 处理新会话创建成功
-  const handleConversationCreated = useCallback(
-    (conversationId: string) => {
-      // 会话创建后，立即清除未读标记并更新 URL
-      setConversations((prev) =>
-        prev.map((conv) =>
-          conv.conversationId === conversationId
-            ? { ...conv, unreadCount: 0 }
-            : conv,
-        ),
-      );
+  const handleConversationCreated = useCallback((conversationId: string) => {
+    // 会话创建后，清除未读标记
+    setConversations((prev) =>
+      prev.map((conv) =>
+        conv.conversationId === conversationId
+          ? { ...conv, unreadCount: 0 }
+          : conv,
+      ),
+    );
 
-      const newUrl = `/messages?id=${conversationId}`;
-
-      if (isModal) {
-        // 模态框模式：使用 replaceState 纯客户端更新 URL
-        window.history.replaceState(null, "", newUrl);
-        setSelectedConversationId(conversationId);
-      } else {
-        // 全屏模式：使用 replace
-        router.replace(newUrl);
-      }
-
-      setTemporaryTargetUser(null);
-    },
-    [router, isModal],
-  );
+    // 不立即设置 selectedConversationId 或清空 temporaryTargetUser
+    // 保持临时会话状态，让轮询自然检测到新会话后自动切换
+    // 这样可以避免中间状态的加载指示器闪现
+  }, []);
 
   // 获取当前选中的会话信息
   const selectedConversation = conversations.find(
     (conv) => conv.conversationId === selectedConversationId,
   );
 
+  // 构建完整的会话列表(包含临时会话)
+  const allConversations = temporaryTargetUser
+    ? [
+        // 临时会话(虚拟对象,仅在内存中)
+        {
+          conversationId: `temp-${temporaryTargetUser.uid}`,
+          otherUser: temporaryTargetUser,
+          lastMessage: temporaryLastMessage,
+          unreadCount: 0,
+          updatedAt: new Date(),
+          lastMessageAt: new Date(),
+          otherUserLastReadMessageId: null,
+        },
+        ...conversations,
+      ]
+    : conversations;
+
   // 判断是否显示聊天窗口
-  const shouldShowChatWindow = selectedConversation || temporaryTargetUser;
+  // 如果 selectedConversationId 存在（无论是临时会话还是正式会话），就显示聊天窗口
+  const shouldShowChatWindow = !!selectedConversationId;
+
+  // 确定要显示的会话：优先使用 selectedConversation，如果是临时会话则使用 null
+  const conversationToShow = selectedConversationId?.startsWith("temp-")
+    ? undefined
+    : selectedConversation;
+
+  // 确定要显示的临时用户：只有当选中的是临时会话时才传递
+  const temporaryUserToShow = selectedConversationId?.startsWith("temp-")
+    ? temporaryTargetUser
+    : null;
 
   return (
     <div className="flex h-full bg-background">
@@ -357,7 +352,7 @@ export default function MessagesClient({
         }`}
       >
         <ConversationList
-          conversations={conversations}
+          conversations={allConversations}
           selectedConversationId={selectedConversationId}
           currentUserId={currentUserId}
           hasMore={hasMore}
@@ -374,11 +369,9 @@ export default function MessagesClient({
       <AutoTransition className="flex-1 flex flex-col">
         {shouldShowChatWindow ? (
           <ChatWindow
-            key={
-              selectedConversation?.otherUser.uid || temporaryTargetUser?.uid
-            }
-            conversation={selectedConversation}
-            temporaryTargetUser={temporaryTargetUser}
+            conversationKey={selectedConversationId || "unknown"}
+            conversation={conversationToShow}
+            temporaryTargetUser={temporaryUserToShow}
             currentUserId={currentUserId}
             onDeleteConversation={handleDeleteConversation}
             onConversationCreated={handleConversationCreated}
