@@ -14,6 +14,7 @@ import Clickable from "@/ui/Clickable";
 interface MessageItemProps {
   message: Message;
   isOwn: boolean;
+  showTail?: boolean;
   onRetry: (tempId: string, content: string) => void;
 }
 
@@ -28,6 +29,7 @@ const formatTime = (date: Date) => {
 export default function MessageItem({
   message,
   isOwn,
+  showTail = true,
   onRetry,
 }: MessageItemProps) {
   const { content, createdAt, status } = message;
@@ -79,15 +81,39 @@ export default function MessageItem({
       <div
         className={`max-w-[70%] flex flex-col gap-1 ${isOwn ? "items-end" : "items-start"}`}
       >
-        {/* 消息气泡 */}
-        <div
-          className={`px-4 py-2 rounded-sm break-words ${
-            isOwn
-              ? "bg-primary text-primary-foreground"
-              : "bg-foreground/10 text-foreground"
-          } ${status === "failed" ? "opacity-60" : ""}`}
-        >
-          <p className="text-sm whitespace-pre-wrap">{content}</p>
+        {/* 消息气泡容器 */}
+        <div className="relative">
+          {/* 消息气泡 */}
+          <div
+            className={`relative px-4 py-2 break-words rounded-sm ${
+              isOwn
+                ? `bg-primary text-primary-foreground ${showTail && "rounded-br-none"}`
+                : `bg-foreground/10 text-foreground ${showTail && "rounded-bl-none"}`
+            } ${status === "failed" ? "opacity-60" : ""}`}
+          >
+            <p className="text-sm whitespace-pre-wrap">{content}</p>
+          </div>
+
+          {/* Telegram 风格的尾巴 */}
+          {showTail && (
+            <div
+              className={`absolute bottom-0 ${
+                isOwn ? "-right-[0.5em]" : "-left-[0.5em]"
+              }`}
+            >
+              <svg
+                width="8"
+                height="12"
+                viewBox="0 0 8 12"
+                className={isOwn ? "" : "scale-x-[-1]"}
+              >
+                <path
+                  d="M 0 0 L 8 12 L 0 12 Z"
+                  className={isOwn ? "fill-primary" : "fill-foreground/10"}
+                />
+              </svg>
+            </div>
+          )}
         </div>
 
         {/* 底部信息：时间 + 状态 + 重试按钮 */}

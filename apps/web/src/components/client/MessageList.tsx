@@ -11,6 +11,7 @@ import {
 } from "react";
 import type { Message } from "@repo/shared-types/api/message";
 import MessageItem from "./MessageItem";
+import DateDivider from "./DateDivider";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { AutoTransition } from "@/ui/AutoTransition";
 
@@ -148,6 +149,36 @@ const MessageList = forwardRef<MessageListRef, MessageListProps>(
       prevMessagesLengthRef.current = messages.length;
     }, [messages.length, scrollToBottom]);
 
+    // 检查两个日期是否在同一天
+    const isSameDay = (date1: Date, date2: Date) => {
+      const d1 = new Date(date1);
+      const d2 = new Date(date2);
+      return (
+        d1.getFullYear() === d2.getFullYear() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate()
+      );
+    };
+
+    // 检查是否应该显示尾巴（同一发送者的连续消息，只有最后一条显示）
+    const shouldShowTail = (index: number) => {
+      const currentMessage = messages[index];
+      const nextMessage = messages[index + 1];
+
+      // 最后一条消息总是显示尾巴
+      if (!nextMessage || !currentMessage) return true;
+
+      // 如果下一条消息的发送者不同，显示尾巴
+      if (currentMessage.senderUid !== nextMessage.senderUid) return true;
+
+      // 如果下一条消息是不同日期，显示尾巴
+      if (!isSameDay(currentMessage.createdAt, nextMessage.createdAt))
+        return true;
+
+      // 同一发送者的连续消息不显示尾巴
+      return false;
+    };
+
     return (
       <div
         ref={scrollContainerRef}
@@ -172,14 +203,29 @@ const MessageList = forwardRef<MessageListRef, MessageListProps>(
         {/* 消息列表 */}
         <AutoTransition type="fade" duration={0.2}>
           <div key="messages" className="flex flex-col gap-3">
-            {messages.map((message) => (
-              <MessageItem
-                key={message.tempId || message.id}
-                message={message}
-                isOwn={message.senderUid === currentUserId}
-                onRetry={onRetryMessage}
-              />
-            ))}
+            {messages.map((message, index) => {
+              // 判断是否需要显示日期分隔符
+              const prevMessage = messages[index - 1];
+              const showDateDivider =
+                index === 0 ||
+                !prevMessage ||
+                !isSameDay(message.createdAt, prevMessage.createdAt);
+
+              return (
+                <div key={message.tempId || message.id}>
+                  {/* 日期分隔符 */}
+                  {showDateDivider && <DateDivider date={message.createdAt} />}
+
+                  {/* 消息项 */}
+                  <MessageItem
+                    message={message}
+                    isOwn={message.senderUid === currentUserId}
+                    showTail={shouldShowTail(index)}
+                    onRetry={onRetryMessage}
+                  />
+                </div>
+              );
+            })}
           </div>
         </AutoTransition>
 
