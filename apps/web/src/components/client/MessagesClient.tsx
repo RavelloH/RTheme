@@ -149,6 +149,12 @@ export default function MessagesClient({
     currentConversationId: selectedConversationId,
   });
 
+  // 当选中的会话变化时，清空当前会话消息
+  useEffect(() => {
+    setCurrentConversationMessages([]);
+    setPolledOtherUserLastReadMessageId(null);
+  }, [selectedConversationId]);
+
   // 当 selectedConversationId 变化时，清空轮询消息缓存
   useEffect(() => {
     setCurrentConversationMessages([]);

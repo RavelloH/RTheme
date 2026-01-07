@@ -154,23 +154,47 @@ export function useOptimisticMessages(initialMessages: Message[] = []) {
 
   /**
    * 追加新消息到末尾（用于接收新消息）
+   * @param newMessages 新消息列表
+   * @param lastReadMessageId 对方最后已读消息ID（可选）
    */
-  const appendMessages = useCallback((newMessages: Message[]) => {
-    setMessages((prev) => {
-      const existingIds = new Set(prev.map((msg) => msg.id));
-      const uniqueNewMessages = newMessages.filter(
-        (msg) => !existingIds.has(msg.id),
-      );
+  const appendMessages = useCallback(
+    (newMessages: Message[], lastReadMessageId?: string | null) => {
+      setMessages((prev) => {
+        const existingIds = new Set(prev.map((msg) => msg.id));
+        const uniqueNewMessages = newMessages.filter(
+          (msg) => !existingIds.has(msg.id),
+        );
 
-      return [
-        ...prev,
-        ...uniqueNewMessages.map((msg) => ({
-          ...msg,
-          status: "sent" as const,
-        })),
-      ];
-    });
-  }, []);
+        // 如果提供了 lastReadMessageId，计算已读时间戳
+        let lastReadTime: number | null = null;
+        if (lastReadMessageId) {
+          const lastReadMsg = [...prev, ...uniqueNewMessages].find(
+            (msg) => msg.id === lastReadMessageId,
+          );
+          if (lastReadMsg) {
+            lastReadTime = new Date(lastReadMsg.createdAt).getTime();
+          }
+        }
+
+        return [
+          ...prev,
+          ...uniqueNewMessages.map((msg) => {
+            const msgTime = new Date(msg.createdAt).getTime();
+            // 如果有已读时间戳且消息时间 <= 已读时间，标记为 read
+            const status =
+              lastReadTime !== null && msgTime <= lastReadTime
+                ? ("read" as const)
+                : ("sent" as const);
+            return {
+              ...msg,
+              status,
+            };
+          }),
+        ];
+      });
+    },
+    [],
+  );
 
   return {
     messages,

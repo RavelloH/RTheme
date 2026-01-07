@@ -612,7 +612,7 @@ export function MenuContent({
             visibility: hasCalculated ? "visible" : "hidden",
           }}
           className={`
-            z-50
+            z-[60]
             rounded-sm
             bg-background
             border
@@ -1042,7 +1042,7 @@ export function MenuSubContent({
             minWidth: `${minWidth}px`,
           }}
           className={`
-            z-50
+            z-[60]
             bg-background
             border
             border-foreground/10

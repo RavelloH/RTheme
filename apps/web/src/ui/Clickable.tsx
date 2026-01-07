@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ReactNode, MouseEvent } from "react";
+import { ReactNode, MouseEvent, forwardRef } from "react";
 
 interface ClickableProps {
   children: ReactNode;
@@ -46,35 +46,45 @@ interface ClickableProps {
  * </Clickable>
  * ```
  */
-export default function Clickable({
-  children,
-  onClick,
-  className = "",
-  disabled = false,
-  enableHoverScale = true,
-  hoverScale = 1.2,
-  tapScale = 0.95,
-  duration = 0.2,
-}: ClickableProps) {
-  const handleClick = (event: MouseEvent<HTMLDivElement>) => {
-    if (disabled) return;
-    onClick?.(event);
-  };
+const Clickable = forwardRef<HTMLDivElement, ClickableProps>(
+  (
+    {
+      children,
+      onClick,
+      className = "",
+      disabled = false,
+      enableHoverScale = true,
+      hoverScale = 1.2,
+      tapScale = 0.95,
+      duration = 0.2,
+    },
+    ref,
+  ) => {
+    const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+      if (disabled) return;
+      onClick?.(event);
+    };
 
-  return (
-    <motion.div
-      className={`${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"} ${className}`}
-      onClick={handleClick}
-      whileHover={
-        !disabled && enableHoverScale ? { scale: hoverScale } : undefined
-      }
-      whileTap={!disabled ? { scale: tapScale } : undefined}
-      transition={{
-        duration,
-        ease: "easeOut",
-      }}
-    >
-      {children}
-    </motion.div>
-  );
-}
+    return (
+      <motion.div
+        ref={ref}
+        className={`${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"} ${className}`}
+        onClick={handleClick}
+        whileHover={
+          !disabled && enableHoverScale ? { scale: hoverScale } : undefined
+        }
+        whileTap={!disabled ? { scale: tapScale } : undefined}
+        transition={{
+          duration,
+          ease: "easeOut",
+        }}
+      >
+        {children}
+      </motion.div>
+    );
+  },
+);
+
+Clickable.displayName = "Clickable";
+
+export default Clickable;

@@ -13,7 +13,6 @@ import MessageList from "./MessageList";
 import type { MessageListRef } from "./MessageList";
 import MessageInput from "./MessageInput";
 import NewMessageFloatingNotice from "./NewMessageFloatingNotice";
-import { Button } from "@/ui/Button";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { useToast } from "@/ui/Toast";
@@ -26,6 +25,7 @@ import {
   MenuAction,
 } from "@/ui/Menu";
 import { AutoTransition } from "@/ui/AutoTransition";
+import Clickable from "@/ui/Clickable";
 
 interface ChatWindowProps {
   conversation?: Conversation; // 可选，临时会话时为空
@@ -61,9 +61,6 @@ export default function ChatWindow({
   const [newMessageCount, setNewMessageCount] = useState(0);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
-  const [otherUserLastReadMessageId, setOtherUserLastReadMessageId] = useState<
-    string | null
-  >(null);
   const messageListRef = useRef<MessageListRef>(null);
   const toast = useToast();
   const lastMessageIdRef = useRef<string | null>(null); // 记录最后一条消息的 ID
@@ -83,7 +80,6 @@ export default function ChatWindow({
   // 当会话切换时，立即清空消息（避免显示上一个会话的内容）
   useEffect(() => {
     resetMessages([]);
-    setOtherUserLastReadMessageId(null);
     setIsLoadingMessages(true); // 开始加载
     setShowNewMessageNotice(false); // 隐藏新消息提示
     setNewMessageCount(0); // 重置计数
@@ -119,9 +115,6 @@ export default function ChatWindow({
           // 立即应用已读状态
           if (result.data.otherUserLastReadMessageId) {
             updateReadStatus(result.data.otherUserLastReadMessageId);
-            setOtherUserLastReadMessageId(
-              result.data.otherUserLastReadMessageId,
-            );
           }
         }
       } catch (error) {
@@ -134,26 +127,26 @@ export default function ChatWindow({
     loadInitialMessages();
   }, [conversationId, resetMessages, updateReadStatus]);
 
-  // 处理轮询获取的新消息
+  // 处理轮询获取的新消息和已读状态
   useEffect(() => {
+    // 轮询返回的是完整的消息列表（最新25条），需要过滤出真正的新消息
     if (polledMessages.length > 0) {
+      // appendMessages 内部会自动去重，只添加真正的新消息
+      // 但不传入 lastReadMessageId，避免覆盖已有消息的状态
       appendMessages(polledMessages);
     }
-  }, [polledMessages, appendMessages]);
 
-  // 处理轮询获取的已读状态更新
-  useEffect(() => {
+    // 单独更新已读状态，不影响消息的添加
     if (polledOtherUserLastReadMessageId) {
-      setOtherUserLastReadMessageId(polledOtherUserLastReadMessageId);
+      updateReadStatus(polledOtherUserLastReadMessageId);
     }
-  }, [polledOtherUserLastReadMessageId]);
-
-  // 更新已读状态（显示双对勾）
-  useEffect(() => {
-    if (otherUserLastReadMessageId) {
-      updateReadStatus(otherUserLastReadMessageId);
-    }
-  }, [otherUserLastReadMessageId, updateReadStatus]);
+  }, [
+    polledMessages,
+    polledOtherUserLastReadMessageId,
+    appendMessages,
+    updateReadStatus,
+    conversationId,
+  ]);
 
   // 处理加载更多历史消息
   const handleLoadMoreMessages = async (skip: number): Promise<boolean> => {
@@ -164,11 +157,15 @@ export default function ChatWindow({
       const result = await getConversationMessages(conversationId, skip, 25);
 
       if (result.success && result.data) {
+        // 先添加消息
         addMessages(result.data.messages);
-        // 更新已读状态
+
+        // 立即更新已读状态
         if (result.data.otherUserLastReadMessageId) {
-          setOtherUserLastReadMessageId(result.data.otherUserLastReadMessageId);
+          // 强制立即应用已读状态到新加载的消息
+          updateReadStatus(result.data.otherUserLastReadMessageId);
         }
+
         return result.data.hasMore;
       }
       return false;
@@ -363,37 +360,34 @@ export default function ChatWindow({
       <div className="flex-shrink-0 px-6 py-4 border-b border-foreground/10 bg-background">
         <div className="flex items-center justify-between">
           {/* 用户信息 */}
-          <div className="flex items-center gap-3">
-            <UserAvatar
-              username={otherUser.nickname || otherUser.username}
-              avatarUrl={otherUser.avatar}
-              emailMd5={otherUser.emailMd5}
-              shape="circle"
-              className="!block w-10 h-10"
-            />
-            <div>
-              <h2 className="font-semibold text-foreground">
-                {otherUser.nickname || otherUser.username}
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                @{otherUser.username}
-              </p>
+          <AutoTransition type="slide">
+            <div className="flex items-center gap-3" key={otherUser.uid}>
+              <UserAvatar
+                username={otherUser.nickname || otherUser.username}
+                avatarUrl={otherUser.avatar}
+                emailMd5={otherUser.emailMd5}
+                shape="circle"
+                className="!block w-10 h-10"
+              />
+              <div>
+                <h2 className="font-semibold text-foreground">
+                  {otherUser.nickname || otherUser.username}
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  @{otherUser.username}
+                </p>
+              </div>
             </div>
-          </div>
+          </AutoTransition>
 
           {/* 更多菜单（仅在非临时会话时显示） */}
           {!isTemporaryConversation && (
             <Menu orientation="vertical">
               <MenuItem value="more">
                 <MenuTrigger asChild>
-                  <Button
-                    label=""
-                    variant="ghost"
-                    size="sm"
-                    icon={<RiMoreLine size="1.2em" />}
-                    iconPosition="left"
-                    aria-label="更多操作"
-                  />
+                  <Clickable>
+                    <RiMoreLine size="1.5em" />
+                  </Clickable>
                 </MenuTrigger>
                 <MenuContent align="end" minWidth={160}>
                   <MenuAction
@@ -418,6 +412,7 @@ export default function ChatWindow({
           </div>
         ) : (
           <MessageList
+            key={conversationKey}
             ref={messageListRef}
             messages={messages}
             currentUserId={currentUserId}

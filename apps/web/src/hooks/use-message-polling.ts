@@ -54,12 +54,10 @@ export function useMessagePolling({
   );
 
   // 使用 SWR 轮询当前会话消息（仅在有当前会话时）
+  // 注意：不依赖 conversationsData，只要有 currentConversationId 就持续轮询
+  // 这样即使会话列表的增量查询没有返回当前会话，消息轮询仍然能获取到已读状态更新
   const { data: messagesData } = useSWR(
-    enabled &&
-      currentConversationId &&
-      conversationsData?.conversations.some(
-        (conv) => conv.conversationId === currentConversationId,
-      )
+    enabled && currentConversationId
       ? ["conversation-messages", currentConversationId]
       : null,
     async ([_, convId]) => {
@@ -75,6 +73,19 @@ export function useMessagePolling({
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
       shouldRetryOnError: false,
+      // 强制比较完整数据，确保 otherUserLastReadMessageId 变化时能触发更新
+      compare: (a, b) => {
+        if (a === b) return true;
+        if (!a || !b) return false;
+        // 比较消息数组长度和 otherUserLastReadMessageId
+        return (
+          a.messages.length === b.messages.length &&
+          a.otherUserLastReadMessageId === b.otherUserLastReadMessageId &&
+          (a.messages.length === 0 ||
+            a.messages[a.messages.length - 1]?.id ===
+              b.messages[b.messages.length - 1]?.id)
+        );
+      },
     },
   );
 
@@ -98,7 +109,7 @@ export function useMessagePolling({
         messagesData.otherUserLastReadMessageId,
       );
     }
-  }, [messagesData, onCurrentConversationUpdate]);
+  }, [messagesData, onCurrentConversationUpdate, currentConversationId]);
 
   return {
     // 手动触发轮询（通过 SWR 的 mutate）
