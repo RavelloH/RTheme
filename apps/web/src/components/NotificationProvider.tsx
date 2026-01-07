@@ -13,7 +13,9 @@ import { getAblyTokenRequest } from "@/actions/ably";
 import { getUnreadNoticeCount } from "@/actions/notice";
 import UnreadNoticeTracker from "./UnreadNoticeTracker";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
-import NotificationToast, { type NotificationItem } from "./NotificationToast";
+import { type NotificationItem } from "./NotificationToast";
+import { type MessageNotificationItem } from "./MessageNotificationToast";
+import UnifiedNotificationContainer from "./UnifiedNotificationContainer";
 
 // 动态导入 Ably 类型
 import type {
@@ -98,6 +100,7 @@ export type ConnectionStatus =
 interface NotificationContextValue {
   connectionStatus: ConnectionStatus;
   unreadCount: number;
+  unreadMessageCount: number; // 私信未读数
   isLeader: boolean; // 是否为主标签页（持有锁）
 }
 
@@ -107,6 +110,7 @@ interface NotificationContextValue {
 const NotificationContext = createContext<NotificationContextValue>({
   connectionStatus: "fallback",
   unreadCount: 0,
+  unreadMessageCount: 0,
   isLeader: false,
 });
 
@@ -118,11 +122,24 @@ interface UnreadNoticeUpdateMessage {
   count: number;
 }
 
+interface UnreadMessageCountUpdateMessage {
+  type: "unread_message_count_update";
+  count: number;
+}
+
+type BroadcastMessage =
+  | UnreadNoticeUpdateMessage
+  | UnreadMessageCountUpdateMessage;
+
 /**
  * 跨标签页消息类型
  */
 interface CrossTabMessage {
-  type: "new_notice" | "unread_count_update";
+  type:
+    | "new_notice"
+    | "unread_count_update"
+    | "new_private_message"
+    | "unread_message_count_update";
   payload: {
     id?: string;
     title?: string;
@@ -130,6 +147,20 @@ interface CrossTabMessage {
     link?: string | null;
     createdAt?: string;
     count?: number;
+    messageCount?: number; // 私信未读数
+    conversationId?: string;
+    message?: {
+      id: string;
+      content: string;
+      type: "TEXT" | "SYSTEM";
+      senderUid: number;
+      createdAt: string;
+    };
+    sender?: {
+      uid: number;
+      username: string;
+      nickname: string | null;
+    };
   };
 }
 
@@ -159,11 +190,15 @@ export default function NotificationProvider({
   children,
   isAblyEnabled,
 }: NotificationProviderProps) {
-  const { broadcast } = useBroadcastSender<UnreadNoticeUpdateMessage>();
+  const { broadcast } = useBroadcastSender<BroadcastMessage>();
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("idle");
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0); // 私信未读数
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [messageNotifications, setMessageNotifications] = useState<
+    MessageNotificationItem[]
+  >([]);
 
   // ============ Ably 连接相关 ============
   const ablyClientRef = useRef<AblyRealtime | null>(null);
@@ -191,6 +226,11 @@ export default function NotificationProvider({
   // 移除通知
   const removeNotification = useCallback((id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
+  // 移除消息通知
+  const removeMessageNotification = useCallback((id: string) => {
+    setMessageNotifications((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
   // 清理重试定时器
@@ -508,6 +548,7 @@ export default function NotificationProvider({
         // 立即设置缓存时间戳，防止其他组件重复调用
         const existingCache = localStorage.getItem("unread_notice_count");
         let cachedCount = 0;
+        let cachedMessageCount = 0;
 
         if (existingCache) {
           try {
@@ -520,6 +561,14 @@ export default function NotificationProvider({
                 data.count,
               );
             }
+            if (typeof data.messageCount === "number") {
+              cachedMessageCount = data.messageCount;
+              setUnreadMessageCount(data.messageCount);
+              console.log(
+                "[Notification] Loaded cached message count:",
+                data.messageCount,
+              );
+            }
           } catch {
             // 忽略解析错误
           }
@@ -528,23 +577,33 @@ export default function NotificationProvider({
         // 更新缓存时间戳，标记正在获取数据
         localStorage.setItem(
           "unread_notice_count",
-          JSON.stringify({ count: cachedCount, cachedAt: Date.now() }),
+          JSON.stringify({
+            count: cachedCount,
+            messageCount: cachedMessageCount,
+            cachedAt: Date.now(),
+          }),
         );
 
         // 调用 API 获取最新数据
         const result = await getUnreadNoticeCount();
         if (result.success && result.data) {
           const count = result.data.count;
+          const messageCount = result.data.messageCount;
           setUnreadCount(count);
+          setUnreadMessageCount(messageCount);
 
           // 更新缓存
           localStorage.setItem(
             "unread_notice_count",
-            JSON.stringify({ count, cachedAt: Date.now() }),
+            JSON.stringify({ count, messageCount, cachedAt: Date.now() }),
           );
 
           // 广播给其他组件
           broadcast({ type: "unread_notice_update", count });
+          broadcast({
+            type: "unread_message_count_update",
+            count: messageCount,
+          });
 
           console.log("[Notification] Initial unread count:", count);
         }
@@ -690,6 +749,97 @@ export default function NotificationProvider({
 
           // 广播给其他组件（同一标签页内）
           broadcast({ type: "unread_notice_update", count: payload.count });
+        }
+        // 处理新私信消息
+        else if (type === "new_private_message") {
+          const { message, sender, conversationId, messageCount } = payload;
+
+          if (!message || !sender || !conversationId) {
+            console.warn(
+              "[BroadcastChannel] Invalid private message data:",
+              payload,
+            );
+            return;
+          }
+
+          // 更新私信未读数
+          if (typeof messageCount === "number") {
+            setUnreadMessageCount(messageCount);
+            // 广播给其他组件
+            broadcast({
+              type: "unread_message_count_update",
+              count: messageCount,
+            });
+          }
+
+          // 检查用户是否在 /messages 路由下
+          const isOnMessagesPage = window.location.pathname === "/messages";
+
+          if (isOnMessagesPage) {
+            // TODO: 处理在消息页面收到新消息的情况
+            console.log(
+              "[BroadcastChannel] User is on /messages page, TODO: update messages UI",
+            );
+          } else {
+            // 用户不在消息页面，显示消息通知
+            const isTabVisible = !document.hidden;
+
+            if (isTabVisible) {
+              const newMessageNotification: MessageNotificationItem = {
+                id: `message-${message.id}-${Date.now()}`,
+                conversationId,
+                sender: {
+                  uid: sender.uid,
+                  username: sender.username,
+                  nickname: sender.nickname,
+                },
+                messageContent: message.content,
+                createdAt: message.createdAt,
+              };
+
+              setMessageNotifications((prev) => {
+                if (prev.some((n) => n.id === newMessageNotification.id)) {
+                  return prev;
+                }
+                return [newMessageNotification, ...prev];
+              });
+            } else {
+              // 标签页在后台，通过 Service Worker 发送系统通知
+              if (navigator.serviceWorker.controller) {
+                const siteUrl =
+                  window.location.origin || "http://localhost:3000";
+                const senderName = sender.nickname || sender.username;
+                const messagePreview =
+                  message.content.substring(0, 20) +
+                  (message.content.length > 20 ? "..." : "");
+
+                navigator.serviceWorker.controller.postMessage({
+                  type: "SHOW_NOTIFICATION",
+                  payload: {
+                    title: `${senderName} 私信了您`,
+                    body: messagePreview,
+                    icon: `${siteUrl}/icon/192x`,
+                    badge: `${siteUrl}/icon/72x`,
+                    data: {
+                      url: `/messages?conversation=${conversationId}`,
+                    },
+                  },
+                });
+              }
+            }
+          }
+        }
+        // 处理私信未读数更新（仅更新数字，不显示 Toast）
+        else if (
+          type === "unread_message_count_update" &&
+          typeof payload.messageCount === "number"
+        ) {
+          setUnreadMessageCount(payload.messageCount);
+          // 广播给其他组件
+          broadcast({
+            type: "unread_message_count_update",
+            count: payload.messageCount,
+          });
         }
       } catch (error) {
         console.error("[BroadcastChannel] Failed to process message:", error);
@@ -874,6 +1024,83 @@ export default function NotificationProvider({
             JSON.stringify({ count: payload.count, cachedAt: Date.now() }),
           );
         }
+        // 处理新私信消息
+        else if (type === "new_private_message") {
+          console.log("[WebSocket] Received new private message:", payload);
+
+          const { message, sender, conversationId, messageCount } = payload as {
+            conversationId: string;
+            message: {
+              id: string;
+              content: string;
+              type: "TEXT" | "SYSTEM";
+              senderUid: number;
+              createdAt: string;
+            };
+            sender: {
+              uid: number;
+              username: string;
+              nickname: string | null;
+            };
+            messageCount: number;
+          };
+
+          // 更新私信未读数
+          if (typeof messageCount === "number") {
+            setUnreadMessageCount(messageCount);
+          }
+
+          // 检查用户是否在 /messages 路由下
+          const isOnMessagesPage = window.location.pathname === "/messages";
+
+          if (isOnMessagesPage) {
+            // TODO: 处理在消息页面收到新消息的情况
+            // 这里需要刷新消息列表或者通过其他机制更新 UI
+            console.log(
+              "[WebSocket] User is on /messages page, TODO: update messages UI",
+            );
+          } else {
+            // 用户不在消息页面，显示消息通知
+            const newMessageNotification: MessageNotificationItem = {
+              id: `message-${message.id}-${Date.now()}`,
+              conversationId,
+              sender: {
+                uid: sender.uid,
+                username: sender.username,
+                nickname: sender.nickname,
+              },
+              messageContent: message.content,
+              createdAt: message.createdAt,
+            };
+
+            setMessageNotifications((prev) => {
+              // 检查是否已存在相同的通知（防止重复）
+              if (prev.some((n) => n.id === newMessageNotification.id)) {
+                return prev;
+              }
+              return [newMessageNotification, ...prev];
+            });
+          }
+
+          // 广播给其他标签页
+          if (broadcastChannelRef.current) {
+            broadcastChannelRef.current.postMessage({
+              type: "new_private_message",
+              payload,
+            });
+            console.log(
+              "[BroadcastChannel] Sent new_private_message to other tabs",
+            );
+          }
+
+          // 广播私信未读数给本标签页的其他组件
+          if (typeof messageCount === "number") {
+            broadcast({
+              type: "unread_message_count_update",
+              count: messageCount,
+            });
+          }
+        }
       } catch (error) {
         console.error("[WebSocket] Failed to process notification:", error);
       }
@@ -914,6 +1141,19 @@ export default function NotificationProvider({
 
             // 广播给其他组件
             broadcast({ type: "unread_notice_update", count: data.count });
+          }
+          if (typeof data.messageCount === "number") {
+            console.log(
+              "[Storage] Syncing message count from storage:",
+              data.messageCount,
+            );
+            setUnreadMessageCount(data.messageCount);
+
+            // 广播给其他组件
+            broadcast({
+              type: "unread_message_count_update",
+              count: data.messageCount,
+            });
           }
         } catch (error) {
           console.error("[Storage] Failed to parse storage data:", error);
@@ -1033,16 +1273,18 @@ export default function NotificationProvider({
 
   return (
     <NotificationContext.Provider
-      value={{ connectionStatus, unreadCount, isLeader }}
+      value={{ connectionStatus, unreadCount, unreadMessageCount, isLeader }}
     >
       {/* 仅在回退模式且用户已登录时启用轮询组件 */}
       {connectionStatus === "fallback" && isUserLoggedIn && (
         <UnreadNoticeTracker />
       )}
-      {/* 通知 Toast 显示 */}
-      <NotificationToast
+      {/* 统一的通知容器（消息通知在上，普通通知在下） */}
+      <UnifiedNotificationContainer
         notifications={notifications}
-        onRemove={removeNotification}
+        messageNotifications={messageNotifications}
+        onRemoveNotification={removeNotification}
+        onRemoveMessageNotification={removeMessageNotification}
       />
       {children}
     </NotificationContext.Provider>

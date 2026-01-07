@@ -494,10 +494,23 @@ export async function getUnreadNoticeCount(
       },
     });
 
+    // 查询私信未读数：汇总所有私聊对话的 unreadCount
+    const messageUnreadResult = await prisma.conversationParticipant.aggregate({
+      where: {
+        userUid: user.uid,
+      },
+      _sum: {
+        unreadCount: true,
+      },
+    });
+
+    const messageCount = messageUnreadResult._sum?.unreadCount || 0;
+
     return response.ok({
       message: "获取未读通知数量成功",
       data: {
         count,
+        messageCount,
       },
     }) as unknown as ActionResult<
       GetUnreadNoticeCountSuccessResponse["data"] | null

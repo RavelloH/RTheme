@@ -8,7 +8,9 @@ import { revalidatePath } from "next/cache";
 import ResponseBuilder from "@/lib/server/response";
 import limitControl from "@/lib/server/rate-limit";
 import { getConfig } from "@/lib/server/config-cache";
-import { checkUserOnlineStatus } from "@/lib/server/ably";
+import { checkUserOnlineStatus, publishNoticeToUser } from "@/lib/server/ably";
+import { isAblyEnabled } from "@/lib/server/ably-config";
+import { sendNotice } from "@/lib/server/notice";
 import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
 import {
   GetConversationsSuccessResponse,
@@ -662,7 +664,7 @@ export async function sendMessage(
       data: {
         unreadCount: { increment: 1 },
         isVisible: true, // 恢复显示（如果对方已删除）
-        hasEmailedUnread: false, // 重置邮件通知标志
+        lastNotifiedAt: null, // 重置邮件通知时间
         lastMessageAt: message.createdAt, // 更新最后消息时间
       },
     });
@@ -678,6 +680,111 @@ export async function sendMessage(
         lastMessageAt: message.createdAt, // 更新最后消息时间
       },
     });
+
+    // ============ 通知系统集成 ============
+    // 获取对方的 ConversationParticipant 信息
+    const targetParticipant = await prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userUid: {
+          conversationId: conversation.id,
+          userUid: targetUid,
+        },
+      },
+      select: {
+        lastNotifiedAt: true,
+      },
+    });
+
+    // 检查是否需要发送通知
+    const shouldNotify =
+      !targetParticipant?.lastNotifiedAt ||
+      new Date().getTime() - targetParticipant.lastNotifiedAt.getTime() >
+        10 * 60 * 1000;
+
+    if (shouldNotify) {
+      // 更新 lastNotifiedAt
+      await prisma.conversationParticipant.updateMany({
+        where: {
+          conversationId: conversation.id,
+          userUid: targetUid,
+        },
+        data: {
+          lastNotifiedAt: new Date(),
+        },
+      });
+
+      // 获取发送者信息
+      const sender = await prisma.user.findUnique({
+        where: { uid: user.uid },
+        select: {
+          username: true,
+          nickname: true,
+        },
+      });
+
+      const senderName = sender?.nickname || sender?.username || "用户";
+      const messagePreview =
+        content.substring(0, 20) + (content.length > 20 ? "..." : "");
+
+      // 检查 Ably 是否启用
+      const ablyEnabled = await isAblyEnabled();
+
+      if (!ablyEnabled) {
+        // Ably 未启用，直接发送通知
+        await sendNotice(
+          targetUid,
+          `${senderName} 私信了您`,
+          messagePreview,
+          `/messages?conversation=${conversation.id}`,
+        );
+      } else {
+        // Ably 已启用，检查用户是否在线
+        const isOnline = await checkUserOnlineStatus(targetUid);
+
+        if (!isOnline) {
+          // 用户不在线，发送通知
+          await sendNotice(
+            targetUid,
+            `${senderName} 私信了您`,
+            messagePreview,
+            `/messages?conversation=${conversation.id}`,
+          );
+        } else {
+          // 用户在线，通过 WebSocket 发送消息详情
+          // 计算接收者的私信未读总数
+          const messageUnreadResult =
+            await prisma.conversationParticipant.aggregate({
+              where: {
+                userUid: targetUid,
+              },
+              _sum: {
+                unreadCount: true,
+              },
+            });
+          const messageCount = messageUnreadResult._sum?.unreadCount || 0;
+
+          await publishNoticeToUser(targetUid, {
+            type: "new_private_message",
+            payload: {
+              conversationId: conversation.id,
+              message: {
+                id: message.id,
+                content: message.content,
+                type: message.type,
+                senderUid: message.senderUid,
+                createdAt: message.createdAt.toISOString(),
+              },
+              sender: {
+                uid: user.uid,
+                username: sender?.username || "",
+                nickname: sender?.nickname || null,
+              },
+              messageCount,
+            },
+          });
+        }
+      }
+    }
 
     // Revalidate
     revalidatePath("/messages");

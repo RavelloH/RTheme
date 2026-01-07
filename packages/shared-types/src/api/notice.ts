@@ -94,6 +94,7 @@ export const GetUnreadNoticeCountSuccessResponseSchema =
   createSuccessResponseSchema(
     z.object({
       count: z.number(),
+      messageCount: z.number(), // 私信未读数
     }),
   );
 export type GetUnreadNoticeCountSuccessResponse = z.infer<

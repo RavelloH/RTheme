@@ -33,6 +33,15 @@ interface UnreadNoticeUpdateMessage {
   count: number;
 }
 
+interface UnreadMessageCountUpdateMessage {
+  type: "unread_message_count_update";
+  count: number;
+}
+
+type BroadcastMessage =
+  | UnreadNoticeUpdateMessage
+  | UnreadMessageCountUpdateMessage;
+
 type StoredUserInfo = {
   uid?: number;
   username?: string;
@@ -182,10 +191,14 @@ export function LoginButton() {
     nextRefreshIn: string;
   } | null>(null);
   const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [unreadMessageCount, setUnreadMessageCount] = useState<number>(0);
   const [showNoticeAnimation, setShowNoticeAnimation] = useState(false);
   const prevUnreadCountRef = useRef<number>(0);
+  const prevUnreadMessageCountRef = useRef<number>(0);
   const isInitialLoadRef = useRef(true);
+  const isMessageInitialLoadRef = useRef(true);
   const pendingAnimationRef = useRef(false);
+  const pendingMessageAnimationRef = useRef(false);
   const isLoadingCompleteRef = useRef(false); // 使用 ref 避免闭包问题
   const { isConsoleOpen } = useConsoleStore();
 
@@ -229,6 +242,14 @@ export function LoginButton() {
           setTimeout(() => setShowNoticeAnimation(false), 2500);
         }, 1000);
       }
+      if (pendingMessageAnimationRef.current) {
+        pendingMessageAnimationRef.current = false;
+        setTimeout(() => {
+          isMessageInitialLoadRef.current = false;
+          setShowNoticeAnimation(true);
+          setTimeout(() => setShowNoticeAnimation(false), 2500);
+        }, 1000);
+      }
     };
 
     window.addEventListener("loadingComplete", handleLoadingComplete);
@@ -248,7 +269,7 @@ export function LoginButton() {
   }, []);
 
   // 监听未读数更新广播
-  useBroadcast<UnreadNoticeUpdateMessage>((message) => {
+  useBroadcast<BroadcastMessage>((message) => {
     if (message.type === "unread_notice_update") {
       const newCount = message.count;
       const prevCount = prevUnreadCountRef.current;
@@ -274,6 +295,31 @@ export function LoginButton() {
 
       prevUnreadCountRef.current = newCount;
       setUnreadCount(newCount);
+    } else if (message.type === "unread_message_count_update") {
+      const newCount = message.count;
+      const prevCount = prevUnreadMessageCountRef.current;
+
+      // 判断是否需要播放动画：私信未读数增加时也播放 ripple
+      if (
+        newCount > 0 &&
+        (isMessageInitialLoadRef.current || newCount > prevCount)
+      ) {
+        const shouldPlayImmediately =
+          !isMessageInitialLoadRef.current || isLoadingCompleteRef.current;
+
+        if (shouldPlayImmediately) {
+          // 立即播放动画
+          isMessageInitialLoadRef.current = false;
+          setShowNoticeAnimation(true);
+          setTimeout(() => setShowNoticeAnimation(false), 2500);
+        } else {
+          // 仅在首次加载时标记为待播放
+          pendingMessageAnimationRef.current = true;
+        }
+      }
+
+      prevUnreadMessageCountRef.current = newCount;
+      setUnreadMessageCount(message.count);
     }
   });
 
@@ -304,8 +350,30 @@ export function LoginButton() {
       }
     };
 
+    const syncUnreadMessageCount = () => {
+      try {
+        const cached = localStorage.getItem("unread_message_count");
+        if (cached) {
+          const data = JSON.parse(cached);
+          if (typeof data.count === "number") {
+            const cachedCount = data.count;
+            prevUnreadMessageCountRef.current = cachedCount;
+            setUnreadMessageCount(cachedCount);
+
+            // 如果有未读私信，且是首次加载，标记为待播放
+            if (cachedCount > 0 && isMessageInitialLoadRef.current) {
+              pendingMessageAnimationRef.current = true;
+            }
+          }
+        }
+      } catch {
+        // 忽略解析错误
+      }
+    };
+
     syncUserInfo();
     syncUnreadCount();
+    syncUnreadMessageCount();
 
     // 每秒更新一次 token 状态显示
     const statusInterval = setInterval(() => {
@@ -586,7 +654,14 @@ export function LoginButton() {
                   onClick={() => navigate("/messages")}
                   icon={<RiMailLine size="1.2em" />}
                 >
-                  私信
+                  <div className="flex items-center justify-between flex-1">
+                    <span>私信</span>
+                    {unreadMessageCount > 0 && (
+                      <span className="ml-2 px-1.5 py-0.5 text-xs font-mono font-medium bg-primary/10 text-primary rounded-full">
+                        {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
+                      </span>
+                    )}
+                  </div>
                 </MenuAction>
                 <MenuAction
                   onClick={() => navigate("/settings")}

@@ -28,14 +28,17 @@ interface NotificationToastProps {
 }
 
 /**
- * 单个通知卡片组件
+ * 单个通知卡片组件（导出供统一容器使用）
  */
-interface NotificationCardProps {
+export interface NotificationCardProps {
   notification: NotificationItem;
   onRemove: (id: string) => void;
 }
 
-function NotificationCard({ notification, onRemove }: NotificationCardProps) {
+export function NotificationCard({
+  notification,
+  onRemove,
+}: NotificationCardProps) {
   const [progress, setProgress] = useState(100);
   const [isPaused, setIsPaused] = useState(false);
   const [isCardHovered, setIsCardHovered] = useState(false);

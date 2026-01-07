@@ -38,7 +38,8 @@ export type NotificationType =
   | "post_status_changed" // 文章状态变更
   | "system_notice" // 系统通知
   | "unread_count_update" // 未读数更新
-  | "new_notice"; // 新通知
+  | "new_notice" // 新通知
+  | "new_private_message"; // 新私信
 
 /**
  * 未读数更新 payload
@@ -62,6 +63,26 @@ export interface NewNoticePayload {
 }
 
 /**
+ * 新私信 payload（包含完整消息信息）
+ */
+export interface NewPrivateMessagePayload {
+  conversationId: string;
+  message: {
+    id: string;
+    content: string;
+    type: "TEXT" | "SYSTEM";
+    senderUid: number;
+    createdAt: string;
+  };
+  sender: {
+    uid: number;
+    username: string;
+    nickname: string | null;
+  };
+  messageCount: number; // 接收者的私信未读总数
+}
+
+/**
  * 通知数据接口
  */
 export interface NotificationData {
@@ -69,6 +90,7 @@ export interface NotificationData {
   payload:
     | UnreadCountUpdatePayload
     | NewNoticePayload
+    | NewPrivateMessagePayload
     | Record<string, unknown>;
 }
 

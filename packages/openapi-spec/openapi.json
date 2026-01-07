@@ -19595,10 +19595,14 @@
             "properties": {
               "count": {
                 "type": "number"
+              },
+              "messageCount": {
+                "type": "number"
               }
             },
             "required": [
-              "count"
+              "count",
+              "messageCount"
             ],
             "additionalProperties": false
           }

@@ -476,10 +476,10 @@ model ConversationParticipant {
 
   // --- [通知控制字段 (你的防骚扰逻辑)] ---
 
-  // 标记：是否已经为此批次的未读消息发送过邮件？
-  // true = 已发送通知，后续新消息不再发邮件，直到用户阅读
-  // false = 尚未发送通知，下一条新消息触发邮件逻辑
-  hasEmailedUnread Boolean @default(false)
+  // 记录：最后一次发送邮件通知的时间
+  // null = 尚未发送通知，或用户已读后重置
+  // DateTime = 已发送通知的时间戳，用于控制通知频率
+  lastNotifiedAt DateTime?
 
   // 关系
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)

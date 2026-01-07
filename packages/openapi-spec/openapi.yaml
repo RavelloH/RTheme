@@ -13872,8 +13872,11 @@ components:
           properties:
             count:
               type: number
+            messageCount:
+              type: number
           required:
             - count
+            - messageCount
           additionalProperties: false
       required:
         - success
