@@ -24,6 +24,7 @@ export type TrackPageViewResponse = ApiResponse<null>;
  * 获取页面浏览记录请求参数
  */
 export const GetPageViewsSchema = z.object({
+  access_token: z.string().optional(),
   page: z.number().int().min(1).default(1),
   pageSize: z.number().int().min(1).max(100).default(25),
   sortBy: z

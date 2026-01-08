@@ -12,6 +12,7 @@ import { resolveIpLocation } from "@/lib/server/ip-utils";
 import limitControl from "@/lib/server/rate-limit";
 import { validateData } from "@/lib/server/validator";
 import ResponseBuilder from "@/lib/server/response";
+import { authVerify } from "@/lib/server/auth-verify";
 import type {
   TrackPageView,
   TrackPageViewResponse,
@@ -792,6 +793,16 @@ export async function getAnalyticsStats(
       validationError,
     ) as unknown as GetAnalyticsStatsResponse;
 
+  // 身份验证 - 仅管理员可访问
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: params.access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized() as unknown as GetAnalyticsStatsResponse;
+  }
+
   try {
     // 先同步 Redis 数据到数据库
     await flushEventsToDatabase();
@@ -1469,6 +1480,16 @@ export async function getPageViews(
       validationError,
     ) as unknown as GetPageViewsResponse;
 
+  // 身份验证 - 仅管理员可访问
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: params.access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized() as unknown as GetPageViewsResponse;
+  }
+
   try {
     const {
       page = 1,
@@ -1624,6 +1645,16 @@ export async function getRealTimeStats(
     return response.badRequest(
       validationError,
     ) as unknown as GetRealTimeStatsResponse;
+
+  // 身份验证 - 仅管理员可访问
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: params.access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized() as unknown as GetRealTimeStatsResponse;
+  }
 
   try {
     // 先同步 Redis 数据到数据库
