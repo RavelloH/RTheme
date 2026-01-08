@@ -4,9 +4,11 @@ import useSWR from "swr";
 import { getConversations, getConversationMessages } from "@/actions/message";
 import type { Conversation, Message } from "@repo/shared-types/api/message";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
+import type { ConnectionStatus } from "@/components/NotificationProvider";
 
 interface UseMessagePollingOptions {
   enabled: boolean;
+  connectionStatus?: ConnectionStatus; // WebSocket 连接状态
   onConversationsUpdate?: (conversations: Conversation[]) => void;
   onCurrentConversationUpdate?: (
     messages: Message[],
@@ -19,9 +21,12 @@ interface UseMessagePollingOptions {
  * 消息轮询 Hook (基于 SWR)
  * 每 3 秒轮询一次会话列表，检测更新
  * 如果当前有打开的会话，同时获取该会话的新消息
+ *
+ * 注意：如果 WebSocket 已连接（connectionStatus 非 fallback），则禁用轮询
  */
 export function useMessagePolling({
   enabled,
+  connectionStatus = "fallback",
   onConversationsUpdate,
   onCurrentConversationUpdate,
   currentConversationId,
@@ -36,11 +41,16 @@ export function useMessagePolling({
     lastPolledAtRef.current = undefined;
   }, [pathname, searchParams]);
 
+  // 只在 fallback 模式下启用轮询，WebSocket 连接成功时使用 WebSocket 消息通知
+  const shouldPoll = enabled && connectionStatus === "fallback";
+
   // 使用 SWR 轮询会话列表
+  // 注意：key 保持稳定（不包含 lastPolledAtRef），fetcher 通过闭包访问最新的 ref 值
   const { data: conversationsData } = useSWR(
-    enabled ? ["conversations", lastPolledAtRef.current] : null,
-    async ([_, lastPolledAt]) => {
-      const result = await getConversations(lastPolledAt, 0, 20);
+    shouldPoll ? "conversations" : null,
+    async () => {
+      // 直接访问 ref 的当前值（增量获取）
+      const result = await getConversations(lastPolledAtRef.current, 0, 20);
       if (result.success && result.data) {
         return result.data;
       }
@@ -55,11 +65,11 @@ export function useMessagePolling({
     },
   );
 
-  // 使用 SWR 轮询当前会话消息（仅在有当前会话时）
+  // 使用 SWR 轮询当前会话消息（仅在有当前会话且处于 fallback 模式时）
   // 注意：不依赖 conversationsData，只要有 currentConversationId 就持续轮询
   // 这样即使会话列表的增量查询没有返回当前会话，消息轮询仍然能获取到已读状态更新
   const { data: messagesData } = useSWR(
-    enabled && currentConversationId
+    shouldPoll && currentConversationId
       ? ["conversation-messages", currentConversationId]
       : null,
     async ([_, convId]) => {

@@ -9,6 +9,8 @@ import type {
 } from "@repo/shared-types/api/message";
 import { useMessagePolling } from "@/hooks/use-message-polling";
 import { useNotification } from "@/components/NotificationProvider";
+import { useBroadcast } from "@/hooks/use-broadcast";
+import { useBroadcastSender } from "@/hooks/use-broadcast";
 import ConversationList from "./ConversationList";
 import ChatWindow from "./ChatWindow";
 import { RiQuestionAnswerLine } from "@remixicon/react";
@@ -46,9 +48,125 @@ export default function MessagesClient({
   } | null>(null);
   const [_isLoadingTargetUser, setIsLoadingTargetUser] = useState(false);
   const searchParams = useSearchParams();
-  const { removeMessageNotificationsByConversation } = useNotification();
+  const { removeMessageNotificationsByConversation, connectionStatus } =
+    useNotification();
+  const { broadcast } = useBroadcastSender();
 
-  // 处理会话更新（轮询回调）
+  // 监听已读状态更新（来自 WebSocket）
+  const [wsOtherUserLastReadMessageId, setWsOtherUserLastReadMessageId] =
+    useState<string | null>(null);
+
+  useBroadcast<{
+    type: "read_receipt_update";
+    conversationId: string;
+    otherUserLastReadMessageId: string;
+  }>((message) => {
+    if (
+      message.type === "read_receipt_update" &&
+      message.conversationId === selectedConversationId
+    ) {
+      console.log(
+        "[MessagesClient] Received read receipt update:",
+        message.otherUserLastReadMessageId,
+      );
+      setWsOtherUserLastReadMessageId(message.otherUserLastReadMessageId);
+    }
+  });
+
+  // 监听来自 WebSocket 的新私信消息广播
+  useBroadcast<{
+    type: "new_private_message";
+    conversationId: string;
+    message: {
+      id: string;
+      content: string;
+      type: "TEXT" | "SYSTEM";
+      senderUid: number;
+      createdAt: string;
+    };
+    sender: {
+      uid: number;
+      username: string;
+      nickname: string | null;
+    };
+    messageCount: number;
+  }>((message) => {
+    if (message.type === "new_private_message") {
+      const { conversationId, message: newMsg, sender, messageCount } = message;
+
+      console.log(
+        "[MessagesClient] Received new private message from WebSocket:",
+        conversationId,
+      );
+
+      // 更新私信未读数
+      if (typeof messageCount === "number") {
+        // 这个会通过 NotificationProvider 的 localStorage 同步机制更新
+      }
+
+      // 更新会话列表
+      setConversations((prev) => {
+        const existingIndex = prev.findIndex(
+          (conv) => conv.conversationId === conversationId,
+        );
+
+        const lastMessage = {
+          content: newMsg.content,
+          createdAt: new Date(newMsg.createdAt),
+          senderUid: newMsg.senderUid,
+        };
+
+        if (existingIndex >= 0) {
+          // 更新现有会话
+          const updated = [...prev];
+          const conversation = updated[existingIndex];
+
+          if (!conversation) return prev;
+
+          // 如果当前会话是打开的，不增加未读数
+          const isCurrentConversation =
+            selectedConversationId === conversationId;
+
+          updated[existingIndex] = {
+            ...conversation,
+            lastMessage,
+            lastMessageAt: new Date(newMsg.createdAt),
+            unreadCount: isCurrentConversation
+              ? 0
+              : (conversation.unreadCount || 0) + 1,
+          };
+
+          // 将更新的会话移到最前面
+          const [movedConv] = updated.splice(existingIndex, 1);
+          if (!movedConv) return prev;
+          return [movedConv, ...updated];
+        } else {
+          // 新会话，添加到列表顶部
+          const newConversation: Conversation = {
+            conversationId,
+            otherUser: {
+              ...sender,
+              avatar: null,
+              role: "USER" as const,
+              emailMd5: null,
+            },
+            lastMessage,
+            lastMessageAt: new Date(newMsg.createdAt),
+            updatedAt: new Date(newMsg.createdAt),
+            unreadCount: selectedConversationId === conversationId ? 0 : 1,
+            otherUserLastReadMessageId: null,
+          };
+
+          return [newConversation, ...prev];
+        }
+      });
+
+      // 注意：不再在这里直接更新 currentConversationMessages
+      // 而是通过 NotificationProvider 的广播直接发送给 ChatWindow
+    }
+  });
+
+  // 处理会话更新（轮询或 WebSocket 回调）
   const handleConversationsUpdate = useCallback(
     (updatedConversations: Conversation[]) => {
       setConversations((prev) => {
@@ -145,25 +263,64 @@ export default function MessagesClient({
     [],
   );
 
-  // 启用轮询
+  // 启用消息更新：WebSocket 连接时使用 WebSocket，否则使用轮询
   useMessagePolling({
     enabled: true,
+    connectionStatus, // 传入 WebSocket 连接状态
     onConversationsUpdate: handleConversationsUpdate,
     onCurrentConversationUpdate: handleCurrentConversationUpdate,
     currentConversationId: selectedConversationId,
   });
 
-  // 当选中的会话变化时，清空当前会话消息
-  useEffect(() => {
-    setCurrentConversationMessages([]);
-    setPolledOtherUserLastReadMessageId(null);
-  }, [selectedConversationId]);
+  // 处理发送已读回执
+  const handleSendReadReceipt = useCallback(
+    (lastReadMessageId: string) => {
+      // 如果 WebSocket 已连接，通过 WebSocket 发送已读标记
+      if (connectionStatus === "connected" && selectedConversationId) {
+        console.log(
+          "[MessagesClient] Sending read receipt via WebSocket:",
+          lastReadMessageId,
+        );
+        broadcast({
+          type: "send_read_receipt",
+          conversationId: selectedConversationId,
+          lastReadMessageId,
+        });
+      }
+      // 否则依赖 ChatWindow 内部的 markAsRead action
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [connectionStatus, selectedConversationId], // 移除 broadcast，它是稳定的
+  );
 
-  // 当 selectedConversationId 变化时，清空轮询消息缓存
+  // 当选中的会话变化时，订阅/取消订阅 chat 频道并清空消息缓存
   useEffect(() => {
     setCurrentConversationMessages([]);
     setPolledOtherUserLastReadMessageId(null);
-  }, [selectedConversationId]);
+    setWsOtherUserLastReadMessageId(null);
+
+    // 如果有选中的会话且 WebSocket 已连接，订阅 chat 频道
+    if (selectedConversationId && connectionStatus === "connected") {
+      console.log(
+        `[MessagesClient] Subscribing to chat channel: ${selectedConversationId}`,
+      );
+      broadcast({
+        type: "subscribe_chat_channel",
+        conversationId: selectedConversationId,
+      });
+
+      return () => {
+        console.log(
+          `[MessagesClient] Unsubscribing from chat channel: ${selectedConversationId}`,
+        );
+        broadcast({
+          type: "unsubscribe_chat_channel",
+          conversationId: selectedConversationId,
+        });
+      };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedConversationId, connectionStatus]); // 移除 broadcast，它是稳定的
 
   // 处理会话选择
   const handleSelectConversation = useCallback(
@@ -383,6 +540,10 @@ export default function MessagesClient({
     ? temporaryTargetUser
     : null;
 
+  // 合并已读状态：优先使用 WebSocket 的，fallback 到轮询的
+  const effectiveOtherUserLastReadMessageId =
+    wsOtherUserLastReadMessageId || polledOtherUserLastReadMessageId;
+
   return (
     <div className="flex h-full bg-background">
       {/* 左侧：会话列表 */}
@@ -417,7 +578,11 @@ export default function MessagesClient({
             onConversationCreated={handleConversationCreated}
             onMessageSent={handleMessageSent}
             polledMessages={currentConversationMessages}
-            polledOtherUserLastReadMessageId={polledOtherUserLastReadMessageId}
+            polledOtherUserLastReadMessageId={
+              effectiveOtherUserLastReadMessageId
+            }
+            onSendReadReceipt={handleSendReadReceipt}
+            connectionStatus={connectionStatus}
           />
         ) : (
           <div

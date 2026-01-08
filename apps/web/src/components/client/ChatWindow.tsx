@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type {
   Conversation,
   ConversationUser,
   Message,
 } from "@repo/shared-types/api/message";
 import { useOptimisticMessages } from "@/hooks/use-optimistic-messages";
-import { sendMessage } from "@/actions/message";
+import { sendMessage, markConversationAsRead } from "@/actions/message";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import type { ConnectionStatus } from "@/components/NotificationProvider";
 import UserAvatar from "@/components/UserAvatar";
 import MessageList from "./MessageList";
 import type { MessageListRef } from "./MessageList";
@@ -26,6 +28,7 @@ import {
 } from "@/ui/Menu";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
+import Link from "../Link";
 
 interface ChatWindowProps {
   conversation?: Conversation; // 可选，临时会话时为空
@@ -37,6 +40,8 @@ interface ChatWindowProps {
   onMessageSent?: (conversationId: string, message: Message) => void; // 消息发送成功回调
   polledMessages?: Message[]; // 轮询获取的消息
   polledOtherUserLastReadMessageId?: string | null; // 轮询获取的对方已读消息ID
+  onSendReadReceipt?: (lastReadMessageId: string) => void; // 发送已读标记回调
+  connectionStatus?: ConnectionStatus; // WebSocket 连接状态
 }
 
 export default function ChatWindow({
@@ -49,6 +54,8 @@ export default function ChatWindow({
   onMessageSent,
   polledMessages = [],
   polledOtherUserLastReadMessageId = null,
+  onSendReadReceipt,
+  connectionStatus = "fallback",
 }: ChatWindowProps) {
   // 使用现有会话或临时用户信息
   const otherUser = conversation?.otherUser || temporaryTargetUser;
@@ -61,9 +68,15 @@ export default function ChatWindow({
   const [newMessageCount, setNewMessageCount] = useState(0);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+  const [isOtherUserInChatChannel, setIsOtherUserInChatChannel] =
+    useState(false);
   const messageListRef = useRef<MessageListRef>(null);
   const toast = useToast();
   const lastMessageIdRef = useRef<string | null>(null); // 记录最后一条消息的 ID
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingBroadcastIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const { broadcast } = useBroadcastSender();
 
   const {
     messages,
@@ -77,6 +90,93 @@ export default function ChatWindow({
     addMessages,
   } = useOptimisticMessages();
 
+  // 监听来自 WebSocket 的新消息（直接添加到当前会话）
+  useBroadcast<{
+    type: "append_message_to_conversation";
+    conversationId: string;
+    message: {
+      id: string;
+      content: string;
+      type: "TEXT" | "SYSTEM";
+      senderUid: number;
+      createdAt: string;
+    };
+  }>((msg) => {
+    if (
+      msg.type === "append_message_to_conversation" &&
+      msg.conversationId === conversationId
+    ) {
+      console.log(
+        "[ChatWindow] Received new message from WebSocket:",
+        msg.message.id,
+      );
+      // 直接添加消息，不需要通过 polledMessages
+      appendMessages([
+        {
+          ...msg.message,
+          createdAt: new Date(msg.message.createdAt),
+        },
+      ]);
+
+      // 如果消息不是当前用户发送的，立即标记为已读
+      // 这样可以防止未读数增加（因为用户正在查看该会话）
+      if (msg.message.senderUid !== currentUserId && conversationId) {
+        console.log(
+          "[ChatWindow] Auto-marking conversation as read (user is viewing)",
+        );
+        markConversationAsRead(conversationId).then((result) => {
+          if (result.success && result.data) {
+            // 广播未读数更新
+            broadcast({
+              type: "unread_message_count_update",
+              count: result.data.unreadMessageCount,
+            });
+          }
+        });
+      }
+    }
+  });
+
+  // 监听对方正在输入的状态
+  useBroadcast<{
+    type: "user_typing";
+    conversationId: string;
+    userUid: number;
+  }>((msg) => {
+    if (
+      msg.type === "user_typing" &&
+      msg.conversationId === conversationId &&
+      msg.userUid === otherUser?.uid
+    ) {
+      setIsOtherUserTyping(true);
+
+      // 清除之前的定时器
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      // 5秒后自动隐藏
+      typingTimeoutRef.current = setTimeout(() => {
+        setIsOtherUserTyping(false);
+      }, 5000);
+    }
+  });
+
+  // 监听对方在 chat 频道的在线状态
+  useBroadcast<{
+    type: "chat_presence_update";
+    conversationId: string;
+    isOnline: boolean;
+  }>((msg) => {
+    if (
+      msg.type === "chat_presence_update" &&
+      msg.conversationId === conversationId
+    ) {
+      console.log("[ChatWindow] Received chat presence update:", msg.isOnline);
+      setIsOtherUserInChatChannel(msg.isOnline);
+    }
+  });
+
   // 当会话切换时，立即清空消息（避免显示上一个会话的内容）
   useEffect(() => {
     resetMessages([]);
@@ -84,6 +184,20 @@ export default function ChatWindow({
     setShowNewMessageNotice(false); // 隐藏新消息提示
     setNewMessageCount(0); // 重置计数
     lastMessageIdRef.current = null; // 重置最后一条消息 ID
+    setIsOtherUserTyping(false); // 重置对方输入状态
+    setIsOtherUserInChatChannel(false); // 重置对方在线状态
+
+    // 清理输入信号发送定时器
+    if (typingBroadcastIntervalRef.current) {
+      clearInterval(typingBroadcastIntervalRef.current);
+      typingBroadcastIntervalRef.current = null;
+    }
+
+    // 清理输入状态超时定时器
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
   }, [conversationKey, resetMessages]);
 
   // 加载初始消息
@@ -291,6 +405,12 @@ export default function ChatWindow({
         const lastMsg = messages[messages.length - 1];
         if (lastMsg) {
           lastMessageIdRef.current = lastMsg.id;
+
+          // 发送已读标记（只有当最后一条消息不是自己发的时候）
+          if (lastMsg.senderUid !== currentUserId && onSendReadReceipt) {
+            console.log("[ChatWindow] Sending read receipt for:", lastMsg.id);
+            onSendReadReceipt(lastMsg.id);
+          }
         }
       }
     }
@@ -345,6 +465,38 @@ export default function ChatWindow({
     setNewMessageCount(0);
   };
 
+  // 处理用户输入（用于发送正在输入信号）
+  const handleUserTyping = useCallback(() => {
+    if (!conversationId || connectionStatus !== "connected") return;
+
+    // 如果还没有启动间隔发送，启动它
+    if (!typingBroadcastIntervalRef.current) {
+      // 立即发送第一次
+      broadcast({
+        type: "send_typing_signal",
+        conversationId,
+        userUid: currentUserId,
+      });
+
+      // 然后每3秒发送一次
+      typingBroadcastIntervalRef.current = setInterval(() => {
+        broadcast({
+          type: "send_typing_signal",
+          conversationId,
+          userUid: currentUserId,
+        });
+      }, 3000);
+    }
+  }, [conversationId, connectionStatus, currentUserId, broadcast]);
+
+  // 处理用户停止输入
+  const handleUserStopTyping = useCallback(() => {
+    if (typingBroadcastIntervalRef.current) {
+      clearInterval(typingBroadcastIntervalRef.current);
+      typingBroadcastIntervalRef.current = null;
+    }
+  }, []);
+
   // 如果没有用户信息，返回空
   if (!otherUser) {
     return (
@@ -362,19 +514,49 @@ export default function ChatWindow({
           {/* 用户信息 */}
           <AutoTransition type="slide">
             <div className="flex items-center gap-3" key={otherUser.uid}>
-              <UserAvatar
-                username={otherUser.nickname || otherUser.username}
-                avatarUrl={otherUser.avatar}
-                emailMd5={otherUser.emailMd5}
-                shape="circle"
-                className="!block w-10 h-10"
-              />
+              <Link href={`/user/${otherUser.uid}`}>
+                <UserAvatar
+                  username={otherUser.nickname || otherUser.username}
+                  avatarUrl={otherUser.avatar}
+                  emailMd5={otherUser.emailMd5}
+                  shape="circle"
+                  className="!block w-10 h-10"
+                />
+              </Link>
               <div>
                 <h2 className="font-semibold text-foreground">
                   {otherUser.nickname || otherUser.username}
                 </h2>
-                <p className="text-xs text-muted-foreground">
-                  @{otherUser.username}
+                <p className="text-xs text-muted-foreground flex items-center gap-2">
+                  <span>@{otherUser.username}</span>
+                  <AutoTransition>
+                    {connectionStatus === "connected" &&
+                      conversationId &&
+                      isOtherUserInChatChannel && (
+                        <AutoTransition>
+                          {/* 正在输入提示 */}
+                          {isOtherUserTyping ? (
+                            <div key="inputing">正在输入...</div>
+                          ) : (
+                            <div
+                              className="flex items-center gap-1"
+                              key="online-status"
+                            >
+                              <div className="relative w-3 h-3 flex items-center justify-center">
+                                <span
+                                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-success opacity-75 animate-ping"
+                                  style={{ animationDuration: "2s" }}
+                                />
+                                <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-success" />
+                              </div>
+                              <span className="text-success/90">
+                                对方在当前会话中
+                              </span>
+                            </div>
+                          )}
+                        </AutoTransition>
+                      )}
+                  </AutoTransition>
                 </p>
               </div>
             </div>
@@ -436,7 +618,11 @@ export default function ChatWindow({
 
       {/* 输入框 */}
       <div className="flex-shrink-0 border-t border-foreground/10 bg-background">
-        <MessageInput onSendMessage={handleSendMessage} />
+        <MessageInput
+          onSendMessage={handleSendMessage}
+          onTyping={handleUserTyping}
+          onStopTyping={handleUserStopTyping}
+        />
       </div>
 
       {/* 删除确认对话框 */}

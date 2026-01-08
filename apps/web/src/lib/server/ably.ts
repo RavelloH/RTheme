@@ -188,9 +188,6 @@ export const checkUserOnlineStatus = async (
 ): Promise<boolean> => {
   const client = await getAblyServerClient();
   if (!client) {
-    console.warn(
-      "[Ably] Client not available, cannot check presence, assuming offline",
-    );
     return false;
   }
 

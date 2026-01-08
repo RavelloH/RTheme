@@ -103,29 +103,33 @@ export default function ConversationList({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <RiMailLine size="1.5em" className="text-primary" />
-            {(() => {
-              const unreadCount = conversations.reduce(
-                (sum, conv) => sum + conv.unreadCount,
-                0,
-              );
-              if (isModal) {
-                return unreadCount > 0
-                  ? `${unreadCount} 个未读消息`
-                  : "无未读消息";
-              } else {
-                return (
-                  <h2 className="text-xl font-bold text-foreground">
-                    私信
-                    {unreadCount > 0 && (
-                      <span className="text-sm font-normal text-muted-foreground ml-2">
-                        - {unreadCount} 个未读消息
-                      </span>
-                    )}
-                  </h2>
+            <AutoTransition>
+              {(() => {
+                const unreadCount = conversations.reduce(
+                  (sum, conv) => sum + conv.unreadCount,
+                  0,
                 );
-              }
-            })()}
+                if (isModal) {
+                  return unreadCount > 0
+                    ? `${unreadCount} 个未读消息`
+                    : "无未读消息";
+                } else {
+                  return (
+                    <h2 className="text-xl font-bold text-foreground">
+                      私信
+                      {unreadCount > 0 && (
+                        <span className="font-medium">
+                          {" "}
+                          - {unreadCount} 个未读消息
+                        </span>
+                      )}
+                    </h2>
+                  );
+                }
+              })()}
+            </AutoTransition>
           </div>
+
           <Clickable
             onClick={() => setShowNewConversationDialog(true)}
             aria-label="发起新会话"

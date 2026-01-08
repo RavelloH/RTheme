@@ -12,7 +12,7 @@ import {
 import { getAblyTokenRequest } from "@/actions/ably";
 import { getUnreadNoticeCount } from "@/actions/notice";
 import UnreadNoticeTracker from "./UnreadNoticeTracker";
-import { useBroadcastSender } from "@/hooks/use-broadcast";
+import { useBroadcastSender, useBroadcast } from "@/hooks/use-broadcast";
 import { type NotificationItem } from "./NotificationToast";
 import { type MessageNotificationItem } from "./MessageNotificationToast";
 import UnifiedNotificationContainer from "./UnifiedNotificationContainer";
@@ -25,6 +25,7 @@ import type {
   TokenDetails,
   ErrorInfo,
   Message,
+  PresenceMessage,
 } from "ably";
 
 type AblyRealtime = Realtime;
@@ -128,9 +129,115 @@ interface UnreadMessageCountUpdateMessage {
   count: number;
 }
 
+/**
+ * 新私信消息广播（推送到消息页面组件）
+ */
+interface NewPrivateMessageBroadcast {
+  type: "new_private_message";
+  conversationId: string;
+  message: {
+    id: string;
+    content: string;
+    type: "TEXT" | "SYSTEM";
+    senderUid: number;
+    createdAt: string;
+  };
+  sender: {
+    uid: number;
+    username: string;
+    nickname: string | null;
+  };
+  messageCount: number;
+}
+
+/**
+ * 新消息添加到当前会话（直接发送给 ChatWindow）
+ */
+interface AppendMessageToConversation {
+  type: "append_message_to_conversation";
+  conversationId: string;
+  message: {
+    id: string;
+    content: string;
+    type: "TEXT" | "SYSTEM";
+    senderUid: number;
+    createdAt: string;
+  };
+}
+
+/**
+ * 订阅 chat 频道请求（从 MessagesClient 发送到 NotificationProvider）
+ */
+interface SubscribeChatChannelMessage {
+  type: "subscribe_chat_channel";
+  conversationId: string;
+}
+
+/**
+ * 取消订阅 chat 频道请求
+ */
+interface UnsubscribeChatChannelMessage {
+  type: "unsubscribe_chat_channel";
+  conversationId: string;
+}
+
+/**
+ * 发送已读标记到 chat 频道
+ */
+interface SendReadReceiptMessage {
+  type: "send_read_receipt";
+  conversationId: string;
+  lastReadMessageId: string;
+}
+
+/**
+ * 已读状态更新广播（从 NotificationProvider 发送到 MessagesClient）
+ */
+interface ReadReceiptUpdateMessage {
+  type: "read_receipt_update";
+  conversationId: string;
+  otherUserLastReadMessageId: string;
+}
+
+/**
+ * 发送正在输入信号
+ */
+interface SendTypingSignalMessage {
+  type: "send_typing_signal";
+  conversationId: string;
+  userUid: number;
+}
+
+/**
+ * 正在输入广播（从 NotificationProvider 发送到 ChatWindow）
+ */
+interface UserTypingMessage {
+  type: "user_typing";
+  conversationId: string;
+  userUid: number;
+}
+
+/**
+ * Chat 频道在线状态更新（从 NotificationProvider 发送到 ChatWindow）
+ */
+interface ChatPresenceUpdateMessage {
+  type: "chat_presence_update";
+  conversationId: string;
+  isOnline: boolean; // 对方是否在频道中
+}
+
 type BroadcastMessage =
   | UnreadNoticeUpdateMessage
-  | UnreadMessageCountUpdateMessage;
+  | UnreadMessageCountUpdateMessage
+  | NewPrivateMessageBroadcast
+  | AppendMessageToConversation
+  | SubscribeChatChannelMessage
+  | UnsubscribeChatChannelMessage
+  | SendReadReceiptMessage
+  | ReadReceiptUpdateMessage
+  | SendTypingSignalMessage
+  | UserTypingMessage
+  | ChatPresenceUpdateMessage;
 
 /**
  * 跨标签页消息类型
@@ -224,6 +331,20 @@ export default function NotificationProvider({
   const [_swRegistration, setSwRegistration] =
     useState<ServiceWorkerRegistration | null>(null);
 
+  // ============ Chat 频道管理 ============
+  const subscribedChatChannelsRef = useRef<
+    Map<
+      string,
+      {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        channel: any; // Ably RealtimeChannel 类型
+        handler: (msg: Message) => void;
+        typingHandler?: (msg: Message) => void;
+        presenceHandler?: (msg: PresenceMessage) => void;
+      }
+    >
+  >(new Map()); // conversationId -> { channel, handler, typingHandler, presenceHandler }
+
   // 移除通知
   const removeNotification = useCallback((id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
@@ -272,26 +393,54 @@ export default function NotificationProvider({
         return;
       }
 
-      // 更新私信未读数
+      // 检查用户是否在 /messages 路由下
+      const isOnMessagesPage =
+        window.location.pathname === "/messages" ||
+        window.location.pathname.startsWith("/messages?");
+
+      // 更新私信未读数（服务器返回的数字）
+      // 注意：如果用户正在查看该会话，ChatWindow 会立即调用 markAsRead 来纠正这个数字
       if (typeof messageCount === "number") {
         setUnreadMessageCount(messageCount);
-        // 广播给其他组件
-        broadcast({
-          type: "unread_message_count_update",
-          count: messageCount,
-        });
-      }
 
-      // 检查用户是否在 /messages 路由下
-      const isOnMessagesPage = window.location.pathname === "/messages";
+        // 只在不在 /messages 页面时才广播（触发 ripple）
+        if (!isOnMessagesPage) {
+          broadcast({
+            type: "unread_message_count_update",
+            count: messageCount,
+          });
+
+          // 更新缓存
+          localStorage.setItem(
+            "unread_message_count",
+            JSON.stringify({ count: messageCount, cachedAt: Date.now() }),
+          );
+        }
+      }
 
       if (isOnMessagesPage) {
-        // TODO: 处理在消息页面收到新消息的情况
+        // 用户在消息页面，广播新消息给页面组件
         console.log(
-          "[Notification] User is on /messages page, TODO: update messages UI",
+          "[Notification] User is on /messages page, broadcasting to MessagesClient",
         );
+        // 广播会话列表更新
+        broadcast({
+          type: "new_private_message",
+          conversationId,
+          message,
+          sender,
+          messageCount,
+        });
+        // 广播消息添加到当前会话（直接发送给 ChatWindow）
+        broadcast({
+          type: "append_message_to_conversation",
+          conversationId,
+          message,
+        });
         return;
       }
+
+      // 用户不在消息页面时，显示消息通知
 
       // 用户不在消息页面，显示消息通知
       const isTabVisible = !document.hidden;
@@ -731,6 +880,198 @@ export default function NotificationProvider({
 
     fetchInitialUnreadCount();
   }, [broadcast]);
+
+  // ============ 处理 chat 频道订阅请求 ============
+  useBroadcast<BroadcastMessage>((message) => {
+    // 只有主标签页（持有 Ably 连接的标签页）处理订阅请求
+    if (!isLeader || !ablyClientRef.current) return;
+
+    if (message.type === "subscribe_chat_channel") {
+      const { conversationId } = message;
+      console.log(`[Chat] Subscribing to chat:${conversationId}`);
+
+      // 检查是否已订阅
+      if (subscribedChatChannelsRef.current.has(conversationId)) {
+        console.log(`[Chat] Already subscribed to chat:${conversationId}`);
+        return;
+      }
+
+      const channel = ablyClientRef.current.channels.get(
+        `chat:${conversationId}`,
+      );
+
+      const readReceiptHandler = (msg: Message) => {
+        try {
+          const { type, lastReadMessageId, userUid } = msg.data;
+
+          if (type === "read_receipt" && lastReadMessageId) {
+            console.log(
+              `[Chat] Received read receipt from user ${userUid}:`,
+              lastReadMessageId,
+            );
+
+            // 广播给 MessagesClient
+            broadcast({
+              type: "read_receipt_update",
+              conversationId,
+              otherUserLastReadMessageId: lastReadMessageId,
+            });
+          }
+        } catch (error) {
+          console.error("[Chat] Failed to process read receipt:", error);
+        }
+      };
+
+      const typingHandler = (msg: Message) => {
+        try {
+          const { type, userUid } = msg.data;
+
+          if (type === "typing" && userUid !== userUidRef.current) {
+            // 广播给 ChatWindow
+            broadcast({
+              type: "user_typing",
+              conversationId,
+              userUid,
+            });
+          }
+        } catch (error) {
+          console.error("[Chat] Failed to process typing signal:", error);
+        }
+      };
+
+      const presenceHandler = (_msg: PresenceMessage) => {
+        try {
+          // 检查 Presence 中是否有其他用户（排除自己）
+          channel.presence.get().then((members: PresenceMessage[]) => {
+            const otherUsersOnline = members.some(
+              (member) => member.clientId !== `user:${userUidRef.current}`,
+            );
+
+            console.log(
+              `[Chat] Presence update for chat:${conversationId}, other users online:`,
+              otherUsersOnline,
+            );
+
+            // 广播给 ChatWindow
+            broadcast({
+              type: "chat_presence_update",
+              conversationId,
+              isOnline: otherUsersOnline,
+            });
+          });
+        } catch (error) {
+          console.error("[Chat] Failed to process presence update:", error);
+        }
+      };
+
+      channel.subscribe("read_receipt", readReceiptHandler);
+      channel.subscribe("typing", typingHandler);
+      channel.presence.subscribe(presenceHandler);
+
+      // 进入 Presence（标记自己在这个 chat 频道）
+      channel.presence
+        .enter()
+        .then(() => {
+          console.log(`[Chat] Entered presence for chat:${conversationId}`);
+
+          // 立即检查一次对方是否在线
+          channel.presence.get().then((members: PresenceMessage[]) => {
+            const otherUsersOnline = members.some(
+              (member) => member.clientId !== `user:${userUidRef.current}`,
+            );
+
+            broadcast({
+              type: "chat_presence_update",
+              conversationId,
+              isOnline: otherUsersOnline,
+            });
+          });
+        })
+        .catch((error: Error) => {
+          console.error("[Chat] Failed to enter presence:", error);
+        });
+
+      subscribedChatChannelsRef.current.set(conversationId, {
+        channel,
+        handler: readReceiptHandler,
+        typingHandler,
+        presenceHandler,
+      });
+
+      console.log(`[Chat] Successfully subscribed to chat:${conversationId}`);
+    } else if (message.type === "unsubscribe_chat_channel") {
+      const { conversationId } = message;
+      console.log(`[Chat] Unsubscribing from chat:${conversationId}`);
+
+      const subscription =
+        subscribedChatChannelsRef.current.get(conversationId);
+      if (subscription) {
+        // 离开 Presence
+        subscription.channel.presence.leave().catch((error: Error) => {
+          console.error("[Chat] Failed to leave presence:", error);
+        });
+
+        // 取消订阅所有事件
+        subscription.channel.unsubscribe("read_receipt", subscription.handler);
+        if (subscription.typingHandler) {
+          subscription.channel.unsubscribe(
+            "typing",
+            subscription.typingHandler,
+          );
+        }
+        if (subscription.presenceHandler) {
+          subscription.channel.presence.unsubscribe(
+            subscription.presenceHandler,
+          );
+        }
+
+        subscribedChatChannelsRef.current.delete(conversationId);
+        console.log(
+          `[Chat] Successfully unsubscribed from chat:${conversationId}`,
+        );
+      }
+    } else if (message.type === "send_read_receipt") {
+      const { conversationId, lastReadMessageId } = message;
+      console.log(
+        `[Chat] Sending read receipt for conversation ${conversationId}:`,
+        lastReadMessageId,
+      );
+
+      const subscription =
+        subscribedChatChannelsRef.current.get(conversationId);
+      if (subscription && userUidRef.current) {
+        subscription.channel
+          .publish("read_receipt", {
+            type: "read_receipt",
+            lastReadMessageId,
+            userUid: userUidRef.current,
+          })
+          .then(() => {
+            console.log(
+              `[Chat] Read receipt sent successfully for ${conversationId}`,
+            );
+          })
+          .catch((error: Error) => {
+            console.error("[Chat] Failed to send read receipt:", error);
+          });
+      }
+    } else if (message.type === "send_typing_signal") {
+      const { conversationId, userUid } = message;
+
+      const subscription =
+        subscribedChatChannelsRef.current.get(conversationId);
+      if (subscription) {
+        subscription.channel
+          .publish("typing", {
+            type: "typing",
+            userUid,
+          })
+          .catch((error: Error) => {
+            console.error("[Chat] Failed to send typing signal:", error);
+          });
+      }
+    }
+  });
 
   // ============ 跨标签页通信（BroadcastChannel） ============
   useEffect(() => {
@@ -1243,26 +1584,37 @@ export default function NotificationProvider({
           return [newNotification, ...prev];
         });
 
-        // 触发未读数量刷新（轮询一次）
-        getUnreadNoticeCount()
-          .then((result) => {
-            if (result.success && result.data) {
-              const count = result.data.count;
-              setUnreadCount(count);
+        // 只在非私信通知时触发未读数量刷新
+        // 私信通知的未读数由消息系统管理，不需要重新获取通知数
+        const notificationType = notificationData?.type;
+        if (notificationType !== "message") {
+          getUnreadNoticeCount()
+            .then((result) => {
+              if (result.success && result.data) {
+                const count = result.data.count;
+                setUnreadCount(count);
 
-              // 更新缓存
-              localStorage.setItem(
-                "unread_notice_count",
-                JSON.stringify({ count, cachedAt: Date.now() }),
+                // 更新缓存
+                localStorage.setItem(
+                  "unread_notice_count",
+                  JSON.stringify({ count, cachedAt: Date.now() }),
+                );
+
+                // 广播给其他组件
+                broadcast({ type: "unread_notice_update", count });
+              }
+            })
+            .catch((error) => {
+              console.error(
+                "[Notification] Failed to refresh unread notice count:",
+                error,
               );
-
-              // 广播给其他组件
-              broadcast({ type: "unread_notice_update", count });
-            }
-          })
-          .catch((error) => {
-            console.error("[SW] Failed to refresh unread count:", error);
-          });
+            });
+        } else {
+          console.log(
+            "[Notification] Skipping unread notice count refresh for message notification",
+          );
+        }
       }
     };
 

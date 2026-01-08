@@ -844,8 +844,11 @@ export async function sendMessage(
       }
     }
 
-    // Revalidate
-    revalidatePath("/messages");
+    // 不需要 revalidatePath，因为：
+    // 1. WebSocket 模式：客户端通过实时通知已经更新了界面
+    // 2. 轮询模式：轮询会自动获取更新
+    // 3. revalidatePath 会导致页面重新渲染，触发不必要的 getConversations 调用
+    // revalidatePath("/messages");
 
     return response.ok({
       message: "发送成功",

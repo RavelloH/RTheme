@@ -7,12 +7,19 @@ import { AutoResizer } from "@/ui/AutoResizer";
 
 interface MessageInputProps {
   onSendMessage: (content: string) => void;
+  onTyping?: () => void;
+  onStopTyping?: () => void;
 }
 
-export default function MessageInput({ onSendMessage }: MessageInputProps) {
+export default function MessageInput({
+  onSendMessage,
+  onTyping,
+  onStopTyping,
+}: MessageInputProps) {
   const [content, setContent] = useState("");
   const [isSending, setIsSending] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const typingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 自动调整 textarea 高度
   useEffect(() => {
@@ -27,6 +34,13 @@ export default function MessageInput({ onSendMessage }: MessageInputProps) {
     const trimmedContent = content.trim();
     if (!trimmedContent || isSending) return;
 
+    // 停止输入信号
+    if (typingTimerRef.current) {
+      clearTimeout(typingTimerRef.current);
+      typingTimerRef.current = null;
+    }
+    onStopTyping?.();
+
     setIsSending(true);
     try {
       await onSendMessage(trimmedContent);
@@ -39,6 +53,40 @@ export default function MessageInput({ onSendMessage }: MessageInputProps) {
       setIsSending(false);
     }
   };
+
+  // 处理输入变化
+  const handleContentChange = (value: string) => {
+    setContent(value);
+
+    // 触发正在输入信号
+    if (value.trim()) {
+      onTyping?.();
+
+      // 设置定时器，5秒后没有输入则停止发送信号
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current);
+      }
+      typingTimerRef.current = setTimeout(() => {
+        onStopTyping?.();
+      }, 5000);
+    } else {
+      // 如果输入为空，立即停止信号
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current);
+        typingTimerRef.current = null;
+      }
+      onStopTyping?.();
+    }
+  };
+
+  // 清理定时器
+  useEffect(() => {
+    return () => {
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current);
+      }
+    };
+  }, []);
 
   // 处理键盘事件
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -58,7 +106,7 @@ export default function MessageInput({ onSendMessage }: MessageInputProps) {
           <textarea
             ref={textareaRef}
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={(e) => handleContentChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={"输入消息..."}
             className="w-full max-h-[200px] px-4 pt-4 text-sm

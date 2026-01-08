@@ -95,6 +95,7 @@ export async function getAblyTokenRequest(
       clientId: `user:${user.uid}`,
       capability: {
         [`user:${user.uid}`]: ["subscribe", "presence"], // 允许订阅自己的 Channel 和使用 Presence
+        "chat:*": ["subscribe", "publish", "presence"], // 允许订阅和发布任何聊天频道（用于私信已读同步）
       },
       ttl: 3600000, // 1 小时有效期
     });

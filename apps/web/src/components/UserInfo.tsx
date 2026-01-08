@@ -451,9 +451,9 @@ export function LoginButton() {
                       />
                     </div>
 
-                    {/* 未读通知叠加层 */}
+                    {/* 未读通知/私信叠加层 */}
                     <AutoTransition>
-                      {unreadCount > 0 && (
+                      {(unreadCount > 0 || unreadMessageCount > 0) && (
                         <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 pointer-events-none overflow-visible">
                           {/* 小红点 */}
                           <div className="relative z-20">
