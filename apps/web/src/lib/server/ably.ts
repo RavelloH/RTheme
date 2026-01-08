@@ -169,6 +169,7 @@ export const publishNoticeToUsers = async (
  * 这比基于 RefreshToken 的检测更精准，因为它反映的是真实的连接状态。
  *
  * @param userUid - 用户的 UID
+ * @param timeout - 超时时间（毫秒），默认 3000ms
  * @returns Promise<boolean> - 用户是否在线（true = 在线，false = 离线或检测失败）
  *
  * @example
@@ -183,6 +184,7 @@ export const publishNoticeToUsers = async (
  */
 export const checkUserOnlineStatus = async (
   userUid: number,
+  timeout: number = 3000,
 ): Promise<boolean> => {
   const client = await getAblyServerClient();
   if (!client) {
@@ -194,7 +196,17 @@ export const checkUserOnlineStatus = async (
 
   try {
     const channel = client.channels.get(`user:${userUid}`);
-    const presenceResult = await channel.presence.get();
+
+    // 使用 Promise.race 添加超时保护
+    const presenceResult = await Promise.race([
+      channel.presence.get(),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Presence check timeout after ${timeout}ms`)),
+          timeout,
+        ),
+      ),
+    ]);
 
     // 检查是否有任何成员在线
     // presenceResult 是 PaginatedResult<PresenceMessage>，需要访问 items 属性
@@ -211,7 +223,7 @@ export const checkUserOnlineStatus = async (
       `[Ably] Failed to check presence for user ${userUid}:`,
       error,
     );
-    // 检测失败时返回 false，降级到其他检测方式
+    // 检测失败时保守处理，假设离线，降级到其他通知方式
     return false;
   }
 };

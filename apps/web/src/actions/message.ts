@@ -757,10 +757,79 @@ export async function sendMessage(
         );
       } else {
         // Ably 已启用，检查用户是否在线
-        const isOnline = await checkUserOnlineStatus(targetUid);
+        try {
+          const isOnline = await checkUserOnlineStatus(targetUid);
 
-        if (!isOnline) {
-          // 用户不在线，发送通知
+          if (!isOnline) {
+            // 用户不在线，发送通知
+            await sendNotice(
+              targetUid,
+              `${senderName} 私信了您`,
+              messagePreview,
+              `/messages?conversation=${conversation.id}`,
+              {
+                type: "message",
+                senderName: senderName,
+              },
+            );
+          } else {
+            // 用户在线，通过 WebSocket 发送消息详情
+            // 计算接收者的私信未读总数（在 increment 之后）
+            const messageUnreadResult =
+              await prisma.conversationParticipant.aggregate({
+                where: {
+                  userUid: targetUid,
+                },
+                _sum: {
+                  unreadCount: true,
+                },
+              });
+            const messageCount = messageUnreadResult._sum?.unreadCount || 0;
+
+            // 尝试通过 WebSocket 推送消息
+            const pushSuccess = await publishNoticeToUser(targetUid, {
+              type: "new_private_message",
+              payload: {
+                conversationId: conversation.id,
+                message: {
+                  id: message.id,
+                  content: message.content,
+                  type: message.type,
+                  senderUid: message.senderUid,
+                  createdAt: message.createdAt.toISOString(),
+                },
+                sender: {
+                  uid: user.uid,
+                  username: sender?.username || "",
+                  nickname: sender?.nickname || null,
+                },
+                messageCount,
+              },
+            });
+
+            // 如果 WebSocket 推送失败，降级到站内通知
+            if (!pushSuccess) {
+              console.warn(
+                `[Message] WebSocket push failed for user ${targetUid}, falling back to notice`,
+              );
+              await sendNotice(
+                targetUid,
+                `${senderName} 私信了您`,
+                messagePreview,
+                `/messages?conversation=${conversation.id}`,
+                {
+                  type: "message",
+                  senderName: senderName,
+                },
+              );
+            }
+          }
+        } catch (error) {
+          // Ably 操作失败，降级到站内通知
+          console.error(
+            `[Message] Failed to send notification via Ably for user ${targetUid}:`,
+            error,
+          );
           await sendNotice(
             targetUid,
             `${senderName} 私信了您`,
@@ -771,39 +840,6 @@ export async function sendMessage(
               senderName: senderName,
             },
           );
-        } else {
-          // 用户在线，通过 WebSocket 发送消息详情
-          // 计算接收者的私信未读总数
-          const messageUnreadResult =
-            await prisma.conversationParticipant.aggregate({
-              where: {
-                userUid: targetUid,
-              },
-              _sum: {
-                unreadCount: true,
-              },
-            });
-          const messageCount = messageUnreadResult._sum?.unreadCount || 0;
-
-          await publishNoticeToUser(targetUid, {
-            type: "new_private_message",
-            payload: {
-              conversationId: conversation.id,
-              message: {
-                id: message.id,
-                content: message.content,
-                type: message.type,
-                senderUid: message.senderUid,
-                createdAt: message.createdAt.toISOString(),
-              },
-              sender: {
-                uid: user.uid,
-                username: sender?.username || "",
-                nickname: sender?.nickname || null,
-              },
-              messageCount,
-            },
-          });
         }
       }
     }

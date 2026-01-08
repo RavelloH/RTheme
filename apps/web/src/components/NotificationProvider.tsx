@@ -244,6 +244,106 @@ export default function NotificationProvider({
     [],
   );
 
+  /**
+   * 处理新私信消息的通用逻辑
+   * 用于 WebSocket 和 BroadcastChannel 共享
+   */
+  const handleNewPrivateMessage = useCallback(
+    (payload: {
+      conversationId: string;
+      message: {
+        id: string;
+        content: string;
+        type: "TEXT" | "SYSTEM";
+        senderUid: number;
+        createdAt: string;
+      };
+      sender: {
+        uid: number;
+        username: string;
+        nickname: string | null;
+      };
+      messageCount: number;
+    }) => {
+      const { message, sender, conversationId, messageCount } = payload;
+
+      if (!message || !sender || !conversationId) {
+        console.warn("[Notification] Invalid private message data:", payload);
+        return;
+      }
+
+      // 更新私信未读数
+      if (typeof messageCount === "number") {
+        setUnreadMessageCount(messageCount);
+        // 广播给其他组件
+        broadcast({
+          type: "unread_message_count_update",
+          count: messageCount,
+        });
+      }
+
+      // 检查用户是否在 /messages 路由下
+      const isOnMessagesPage = window.location.pathname === "/messages";
+
+      if (isOnMessagesPage) {
+        // TODO: 处理在消息页面收到新消息的情况
+        console.log(
+          "[Notification] User is on /messages page, TODO: update messages UI",
+        );
+        return;
+      }
+
+      // 用户不在消息页面，显示消息通知
+      const isTabVisible = !document.hidden;
+
+      if (isTabVisible) {
+        // 标签页在前台 → 显示页面内消息通知
+        const newMessageNotification: MessageNotificationItem = {
+          id: `message-${message.id}-${Date.now()}`,
+          conversationId,
+          sender: {
+            uid: sender.uid,
+            username: sender.username,
+            nickname: sender.nickname,
+          },
+          messageContent: message.content,
+          createdAt: message.createdAt,
+        };
+
+        setMessageNotifications((prev) => {
+          // 避免重复
+          if (prev.some((n) => n.id === newMessageNotification.id)) {
+            return prev;
+          }
+          return [newMessageNotification, ...prev];
+        });
+      } else {
+        // 标签页在后台 → 通过 Service Worker 发送系统通知
+        if (navigator.serviceWorker.controller) {
+          const siteUrl = window.location.origin || "http://localhost:3000";
+          const senderName = sender.nickname || sender.username;
+          const messagePreview =
+            message.content.substring(0, 20) +
+            (message.content.length > 20 ? "..." : "");
+
+          navigator.serviceWorker.controller.postMessage({
+            type: "SHOW_NOTIFICATION",
+            payload: {
+              title: `${senderName} 私信了您`,
+              body: messagePreview,
+              icon: `${siteUrl}/icon/192x`,
+              badge: `${siteUrl}/icon/72x`,
+              data: {
+                url: `/messages?conversation=${conversationId}`,
+              },
+            },
+          });
+        }
+      }
+    },
+    [broadcast],
+  );
+
   // 清理重试定时器
   const clearRetryTimeout = () => {
     if (retryTimeoutRef.current) {
@@ -763,82 +863,9 @@ export default function NotificationProvider({
         }
         // 处理新私信消息
         else if (type === "new_private_message") {
-          const { message, sender, conversationId, messageCount } = payload;
-
-          if (!message || !sender || !conversationId) {
-            console.warn(
-              "[BroadcastChannel] Invalid private message data:",
-              payload,
-            );
-            return;
-          }
-
-          // 更新私信未读数
-          if (typeof messageCount === "number") {
-            setUnreadMessageCount(messageCount);
-            // 广播给其他组件
-            broadcast({
-              type: "unread_message_count_update",
-              count: messageCount,
-            });
-          }
-
-          // 检查用户是否在 /messages 路由下
-          const isOnMessagesPage = window.location.pathname === "/messages";
-
-          if (isOnMessagesPage) {
-            // TODO: 处理在消息页面收到新消息的情况
-            console.log(
-              "[BroadcastChannel] User is on /messages page, TODO: update messages UI",
-            );
-          } else {
-            // 用户不在消息页面，显示消息通知
-            const isTabVisible = !document.hidden;
-
-            if (isTabVisible) {
-              const newMessageNotification: MessageNotificationItem = {
-                id: `message-${message.id}-${Date.now()}`,
-                conversationId,
-                sender: {
-                  uid: sender.uid,
-                  username: sender.username,
-                  nickname: sender.nickname,
-                },
-                messageContent: message.content,
-                createdAt: message.createdAt,
-              };
-
-              setMessageNotifications((prev) => {
-                if (prev.some((n) => n.id === newMessageNotification.id)) {
-                  return prev;
-                }
-                return [newMessageNotification, ...prev];
-              });
-            } else {
-              // 标签页在后台，通过 Service Worker 发送系统通知
-              if (navigator.serviceWorker.controller) {
-                const siteUrl =
-                  window.location.origin || "http://localhost:3000";
-                const senderName = sender.nickname || sender.username;
-                const messagePreview =
-                  message.content.substring(0, 20) +
-                  (message.content.length > 20 ? "..." : "");
-
-                navigator.serviceWorker.controller.postMessage({
-                  type: "SHOW_NOTIFICATION",
-                  payload: {
-                    title: `${senderName} 私信了您`,
-                    body: messagePreview,
-                    icon: `${siteUrl}/icon/192x`,
-                    badge: `${siteUrl}/icon/72x`,
-                    data: {
-                      url: `/messages?conversation=${conversationId}`,
-                    },
-                  },
-                });
-              }
-            }
-          }
+          handleNewPrivateMessage(
+            payload as Parameters<typeof handleNewPrivateMessage>[0],
+          );
         }
         // 处理私信未读数更新（仅更新数字，不显示 Toast）
         else if (
@@ -861,7 +888,7 @@ export default function NotificationProvider({
       console.log("[BroadcastChannel] Channel closed");
       channel.close();
     };
-  }, [broadcast, isUserLoggedIn]);
+  }, [broadcast, isUserLoggedIn, handleNewPrivateMessage]);
 
   // 订阅通知频道（仅主标签页）
   useEffect(() => {
@@ -1039,7 +1066,7 @@ export default function NotificationProvider({
         else if (type === "new_private_message") {
           console.log("[WebSocket] Received new private message:", payload);
 
-          const { message, sender, conversationId, messageCount } = payload as {
+          const typedPayload = payload as {
             conversationId: string;
             message: {
               id: string;
@@ -1056,42 +1083,8 @@ export default function NotificationProvider({
             messageCount: number;
           };
 
-          // 更新私信未读数
-          if (typeof messageCount === "number") {
-            setUnreadMessageCount(messageCount);
-          }
-
-          // 检查用户是否在 /messages 路由下
-          const isOnMessagesPage = window.location.pathname === "/messages";
-
-          if (isOnMessagesPage) {
-            // TODO: 处理在消息页面收到新消息的情况
-            // 这里需要刷新消息列表或者通过其他机制更新 UI
-            console.log(
-              "[WebSocket] User is on /messages page, TODO: update messages UI",
-            );
-          } else {
-            // 用户不在消息页面，显示消息通知
-            const newMessageNotification: MessageNotificationItem = {
-              id: `message-${message.id}-${Date.now()}`,
-              conversationId,
-              sender: {
-                uid: sender.uid,
-                username: sender.username,
-                nickname: sender.nickname,
-              },
-              messageContent: message.content,
-              createdAt: message.createdAt,
-            };
-
-            setMessageNotifications((prev) => {
-              // 检查是否已存在相同的通知（防止重复）
-              if (prev.some((n) => n.id === newMessageNotification.id)) {
-                return prev;
-              }
-              return [newMessageNotification, ...prev];
-            });
-          }
+          // 处理消息（使用共享逻辑）
+          handleNewPrivateMessage(typedPayload);
 
           // 广播给其他标签页
           if (broadcastChannelRef.current) {
@@ -1102,14 +1095,6 @@ export default function NotificationProvider({
             console.log(
               "[BroadcastChannel] Sent new_private_message to other tabs",
             );
-          }
-
-          // 广播私信未读数给本标签页的其他组件
-          if (typeof messageCount === "number") {
-            broadcast({
-              type: "unread_message_count_update",
-              count: messageCount,
-            });
           }
         }
       } catch (error) {
@@ -1134,7 +1119,13 @@ export default function NotificationProvider({
 
       channel.unsubscribe("notification", messageHandler);
     };
-  }, [connectionStatus, isAblyEnabled, isLeader, broadcast]);
+  }, [
+    connectionStatus,
+    isAblyEnabled,
+    isLeader,
+    broadcast,
+    handleNewPrivateMessage,
+  ]);
 
   // 监听 localStorage 变化（同步未读数量）
   useEffect(() => {
