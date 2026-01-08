@@ -57,7 +57,7 @@ import type {
 import { verifyToken } from "./captcha";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { getConfig } from "@/lib/server/config-cache";
-import { logAuditEvent } from "./audit";
+import { logAuditEvent } from "@/lib/server/audit";
 
 type AuthActionEnvironment = "serverless" | "serveraction";
 type AuthActionConfig = { environment?: AuthActionEnvironment };

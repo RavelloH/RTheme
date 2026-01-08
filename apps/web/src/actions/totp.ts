@@ -28,7 +28,7 @@ import type {
 } from "@repo/shared-types/api/common";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { getConfig } from "@/lib/server/config-cache";
-import { logAuditEvent } from "./audit";
+import { logAuditEvent } from "@/lib/server/audit";
 import { after, type NextResponse } from "next/server";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
 import {

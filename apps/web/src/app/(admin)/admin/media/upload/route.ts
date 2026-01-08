@@ -10,7 +10,7 @@ import { uploadObject } from "@/lib/server/oss";
 import { generateSignedImageId } from "@/lib/server/image-crypto";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
-import { logAuditEvent } from "@/actions/audit";
+import { logAuditEvent } from "@/lib/server/audit";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 
 const response = new ResponseBuilder("serverless");

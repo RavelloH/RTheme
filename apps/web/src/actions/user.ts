@@ -31,7 +31,7 @@ import limitControl from "@/lib/server/rate-limit";
 import { validateData } from "@/lib/server/validator";
 import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
-import { logAuditEvent } from "./audit";
+import { logAuditEvent } from "@/lib/server/audit";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { jwtTokenVerify, type AccessTokenPayload } from "@/lib/server/jwt";
 import { Prisma } from ".prisma/client";

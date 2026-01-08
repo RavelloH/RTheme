@@ -14,7 +14,7 @@ import { headers } from "next/headers";
 import { validateData } from "@/lib/server/validator";
 import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
-import { logAuditEvent } from "./audit";
+import { logAuditEvent } from "@/lib/server/audit";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { Prisma } from ".prisma/client";
 

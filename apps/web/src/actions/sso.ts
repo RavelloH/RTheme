@@ -12,7 +12,7 @@ import ResponseBuilder from "@/lib/server/response";
 import type { ApiResponse } from "@repo/shared-types/api/common";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import { after } from "next/server";
-import { logAuditEvent } from "./audit";
+import { logAuditEvent } from "@/lib/server/audit";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { getConfig } from "@/lib/server/config-cache";
 

@@ -23,42 +23,6 @@ type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
 
-export async function logAuditEvent({
-  user,
-  details,
-}: {
-  user: {
-    uid: string;
-    ipAddress: string;
-    userAgent: string;
-  };
-  details?: {
-    action: string;
-    resourceType: string;
-    resourceId?: string;
-    value: {
-      old: string | number | boolean | object | null;
-      new: string | number | boolean | object | null;
-    };
-    description?: string;
-    metadata?: Record<string, string | number | boolean>;
-  };
-}) {
-  return await prisma.auditLog.create({
-    data: {
-      action: details?.action || "UNKNOWN",
-      resource: details?.resourceType || "UNKNOWN",
-      resourceId: details?.resourceId || "",
-      userUid: Number(user.uid),
-      description: details?.description || "",
-      oldData: details?.value.old ? JSON.stringify(details.value.old) : {},
-      newData: details?.value.new ? JSON.stringify(details.value.new) : {},
-      ipAddress: user.ipAddress,
-      userAgent: user.userAgent,
-    },
-  });
-}
-
 export async function getAuditLogs(
   params: GetAuditLogs,
   serverConfig: { environment: "serverless" },
