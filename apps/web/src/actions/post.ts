@@ -1001,7 +1001,7 @@ export async function createPost(
         action: "CREATE",
         resourceType: "POST",
         resourceId: String(post.id),
-        vaule: {
+        value: {
           old: null,
           new: {
             id: post.id,
@@ -1428,7 +1428,7 @@ export async function updatePost(
         action: "UPDATE",
         resourceType: "POST",
         resourceId: String(updatedPost.id),
-        vaule: {
+        value: {
           old: auditOldValue,
           new: auditNewValue,
         },
@@ -1724,7 +1724,7 @@ export async function updatePosts(
         action: "UPDATE",
         resourceType: "POST",
         resourceId: ids.join(","),
-        vaule: {
+        value: {
           old: auditOldValue,
           new: auditNewValue,
         },
@@ -1850,7 +1850,7 @@ export async function deletePosts(
         action: "DELETE",
         resourceType: "POST",
         resourceId: ids.join(","),
-        vaule: {
+        value: {
           old: {
             posts: postsToDelete.map((p) => ({
               id: p.id,
@@ -2288,7 +2288,7 @@ export async function resetPostToVersion(
         action: "RESET",
         resourceType: "POST_VERSION",
         resourceId: String(post.id),
-        vaule: {
+        value: {
           old: {
             versionCount: currentVersionCount,
             latestVersion: versionLog[versionLog.length - 1]?.version || "",
@@ -2423,7 +2423,7 @@ export async function squashPostToVersion(
         action: "SQUASH",
         resourceType: "POST_VERSION",
         resourceId: String(post.id),
-        vaule: {
+        value: {
           old: {
             versionCount: versionLog.length,
             oldestVersion: versionLog[0]?.version || "",

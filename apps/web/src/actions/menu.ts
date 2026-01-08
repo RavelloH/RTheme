@@ -420,7 +420,7 @@ export async function createMenu(
         action: "CREATE",
         resourceType: "Menu",
         resourceId: menu.id,
-        vaule: {
+        value: {
           old: null,
           new: menu,
         },
@@ -539,7 +539,7 @@ export async function updateMenu(
         action: "UPDATE",
         resourceType: "Menu",
         resourceId: menu.id,
-        vaule: {
+        value: {
           old: existingMenu,
           new: menu,
         },
@@ -637,7 +637,7 @@ export async function updateMenus(
         action: "UPDATE",
         resourceType: "Menu",
         resourceId: params.ids.join(","),
-        vaule: {
+        value: {
           old: null,
           new: { ids: params.ids, updateData },
         },
@@ -718,7 +718,7 @@ export async function deleteMenus(
         action: "DELETE",
         resourceType: "Menu",
         resourceId: params.ids.join(","),
-        vaule: {
+        value: {
           old: menusToDelete,
           new: null,
         },

@@ -611,7 +611,7 @@ export async function confirmTotp(
             action: "CREATE",
             resourceType: "TOTP",
             resourceId: uid.toString(),
-            vaule: {
+            value: {
               old: null,
               new: { totpEnabled: true },
             },
@@ -742,7 +742,7 @@ export async function disableTotp(
             action: "DELETE",
             resourceType: "TOTP",
             resourceId: uid.toString(),
-            vaule: {
+            value: {
               old: { totpEnabled: true },
               new: { totpEnabled: false },
             },
@@ -883,7 +883,7 @@ export async function regenerateBackupCodes(
             action: "UPDATE",
             resourceType: "TOTP",
             resourceId: uid.toString(),
-            vaule: {
+            value: {
               old: null,
               new: { backupCodesRegenerated: true },
             },

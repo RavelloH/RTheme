@@ -36,7 +36,7 @@ export async function logAuditEvent({
     action: string;
     resourceType: string;
     resourceId?: string;
-    vaule: {
+    value: {
       old: string | number | boolean | object | null;
       new: string | number | boolean | object | null;
     };
@@ -51,8 +51,8 @@ export async function logAuditEvent({
       resourceId: details?.resourceId || "",
       userUid: Number(user.uid),
       description: details?.description || "",
-      oldData: details?.vaule.old ? JSON.stringify(details.vaule.old) : {},
-      newData: details?.vaule.new ? JSON.stringify(details.vaule.new) : {},
+      oldData: details?.value.old ? JSON.stringify(details.value.old) : {},
+      newData: details?.value.new ? JSON.stringify(details.value.new) : {},
       ipAddress: user.ipAddress,
       userAgent: user.userAgent,
     },

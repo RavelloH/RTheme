@@ -171,7 +171,7 @@ export async function linkSSO({
             action: "CREATE",
             resourceType: "ACCOUNT",
             resourceId: `${provider}:${providerAccountId}`,
-            vaule: {
+            value: {
               old: null,
               new: {
                 provider: provider.toUpperCase(),
@@ -348,7 +348,7 @@ export async function unlinkSSO({
             action: "DELETE",
             resourceType: "ACCOUNT",
             resourceId: account.id,
-            vaule: {
+            value: {
               old: {
                 provider: provider.toUpperCase(),
               },
@@ -509,7 +509,7 @@ export async function setPassword({
             action: "UPDATE",
             resourceType: "USER",
             resourceId: user.uid.toString(),
-            vaule: {
+            value: {
               old: { hasPassword: false },
               new: { hasPassword: true },
             },
@@ -775,7 +775,7 @@ export async function handleSSOBind({
             action: "CREATE",
             resourceType: "ACCOUNT",
             resourceId: `${oauthProvider}:${oauthUser.providerAccountId}`,
-            vaule: {
+            value: {
               old: null,
               new: {
                 provider: oauthProvider.toUpperCase(),
@@ -1151,7 +1151,7 @@ export async function handleSSOCallback({
             action: "CREATE",
             resourceType: "USER",
             resourceId: newUser.uid.toString(),
-            vaule: {
+            value: {
               old: null,
               new: {
                 username: newUser.username,

@@ -286,7 +286,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         action: "UPLOAD_MEDIA",
         resourceType: "Media",
         resourceId: String(media.id),
-        vaule: {
+        value: {
           old: null,
           new: {
             fileName: media.fileName,

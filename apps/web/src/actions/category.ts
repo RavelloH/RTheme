@@ -830,7 +830,7 @@ export async function createCategory(
         action: "CREATE_CATEGORY",
         resourceType: "CATEGORY",
         resourceId: category.id.toString(),
-        vaule: {
+        value: {
           old: null,
           new: {
             name: category.name,
@@ -1104,7 +1104,7 @@ export async function updateCategory(
         action: "UPDATE_CATEGORY",
         resourceType: "CATEGORY",
         resourceId: updatedCategory.id.toString(),
-        vaule: {
+        value: {
           old: {
             slug: category.slug,
             name: category.name,
@@ -1248,7 +1248,7 @@ export async function deleteCategories(
         action: "DELETE_CATEGORIES",
         resourceType: "CATEGORY",
         resourceId: ids.join(","),
-        vaule: {
+        value: {
           old: { categoryIds: ids, cascadeDeleted },
           new: null,
         },
@@ -1430,7 +1430,7 @@ export async function moveCategories(
         action: "MOVE_CATEGORIES",
         resourceType: "CATEGORY",
         resourceId: ids.join(","),
-        vaule: {
+        value: {
           old: null,
           new: {
             categoryIds: ids,

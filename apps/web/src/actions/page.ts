@@ -444,7 +444,7 @@ export async function createPage(
         action: "CREATE",
         resourceType: "PAGE",
         resourceId: newPage.id,
-        vaule: {
+        value: {
           old: null,
           new: {
             id: newPage.id,
@@ -583,7 +583,7 @@ export async function updatePage(
         action: "UPDATE",
         resourceType: "PAGE",
         resourceId: originalPage.id,
-        vaule: {
+        value: {
           old: {
             slug: originalPage.slug,
             title: originalPage.title,
@@ -704,7 +704,7 @@ export async function updatePages(
         action: "UPDATE",
         resourceType: "PAGE",
         resourceId: targetIds.join(","),
-        vaule: {
+        value: {
           old: {},
           new: updateData,
         },
@@ -807,7 +807,7 @@ export async function deletePages(
         action: "DELETE",
         resourceType: "PAGE",
         resourceId: ids.join(","),
-        vaule: {
+        value: {
           old: {
             deletedIds: ids,
             deletedCount: result.count,

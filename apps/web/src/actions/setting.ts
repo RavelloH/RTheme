@@ -193,7 +193,7 @@ export async function updateSettings(
           action: "BULK_UPDATE",
           resourceType: "CONFIG",
           resourceId: keys.join(","),
-          vaule: {
+          value: {
             old: oldData,
             new: newData,
           },

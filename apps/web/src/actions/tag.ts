@@ -523,7 +523,7 @@ export async function createTag(
         action: "CREATE_TAG",
         resourceType: "Tag",
         resourceId: newTag.slug,
-        vaule: {
+        value: {
           old: null,
           new: {
             slug: newTag.slug,
@@ -701,7 +701,7 @@ export async function updateTag(
         action: "UPDATE_TAG",
         resourceType: "Tag",
         resourceId: slug,
-        vaule: {
+        value: {
           old: {
             slug: existingTag.slug,
             name: existingTag.name,
@@ -801,7 +801,7 @@ export async function deleteTags(
         action: "DELETE_TAGS",
         resourceType: "Tag",
         resourceId: slugs.join(", "),
-        vaule: {
+        value: {
           old: { slugs, count: result.count },
           new: null,
         },

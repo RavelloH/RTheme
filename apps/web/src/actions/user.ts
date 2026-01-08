@@ -553,7 +553,7 @@ export async function updateUsers(
             action: "UPDATE",
             resourceType: "USER",
             resourceId: String(targetUid),
-            vaule: {
+            value: {
               old: oldData,
               new: updateData,
             },
@@ -662,7 +662,7 @@ export async function updateUsers(
             action: "BULK_UPDATE",
             resourceType: "USER",
             resourceId: uids.join(","),
-            vaule: {
+            value: {
               old: oldData,
               new: updateData,
             },
@@ -793,7 +793,7 @@ export async function deleteUsers(
           action: "BULK_DELETE",
           resourceType: "USER",
           resourceId: uids.join(","),
-          vaule: {
+          value: {
             old: oldData,
             new: { deletedAt: NOW.toISOString() },
           },
@@ -1251,7 +1251,7 @@ export async function updateUserProfile(
             action: "UPDATE",
             resourceType: "USER",
             resourceId: String(uid),
-            vaule: {
+            value: {
               old: { [field]: currentUser[field as keyof typeof currentUser] },
               new: { [field]: validatedValue },
             },
@@ -1382,7 +1382,7 @@ export async function disable2FA(
             action: "DISABLE_2FA",
             resourceType: "USER",
             resourceId: String(uid),
-            vaule: {
+            value: {
               old: { hasTwoFactor: true },
               new: { hasTwoFactor: false },
             },

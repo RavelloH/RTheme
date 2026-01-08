@@ -525,7 +525,7 @@ export async function updateMedia(
         action: "UPDATE_MEDIA",
         resourceType: "Media",
         resourceId: String(id),
-        vaule: {
+        value: {
           old: {
             originalName: existingMedia.originalName,
             altText: existingMedia.altText,
@@ -653,7 +653,7 @@ export async function deleteMedia(
         action: "DELETE_MEDIA",
         resourceType: "Media",
         resourceId: deletableIds.join(", "),
-        vaule: {
+        value: {
           old: {
             ids: deletableIds,
             files: mediaToDelete
@@ -1139,7 +1139,7 @@ export async function uploadMedia(
             action: "UPLOAD_MEDIA",
             resourceType: "Media",
             resourceId: String(media.id),
-            vaule: {
+            value: {
               old: null,
               new: {
                 fileName: media.fileName,

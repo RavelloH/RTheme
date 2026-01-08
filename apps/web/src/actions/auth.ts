@@ -505,7 +505,7 @@ export async function register(
             action: "CREATE",
             resourceType: "USER",
             resourceId: user.uid.toString(),
-            vaule: {
+            value: {
               old: null,
               new: {
                 username: user.username,
@@ -816,7 +816,7 @@ export async function verifyEmail(
               action: "UPDATE",
               resourceType: "USER",
               resourceId: user.uid.toString(),
-              vaule: {
+              value: {
                 old: { emailVerified: false },
                 new: { emailVerified: true },
               },
@@ -966,7 +966,7 @@ export async function changePassword(
             action: "UPDATE",
             resourceType: "USER",
             resourceId: user.uid.toString(),
-            vaule: {
+            value: {
               old: { passwordChanged: false },
               new: { passwordChanged: true },
             },
@@ -1287,7 +1287,7 @@ export async function resetPassword(
             action: "UPDATE",
             resourceType: "USER",
             resourceId: passwordReset.userUid.toString(),
-            vaule: {
+            value: {
               old: { passwordReset: false },
               new: { passwordReset: true },
             },
@@ -1824,7 +1824,7 @@ export async function revokeSession(
             action: "UPDATE",
             resourceType: "REFRESH_TOKEN",
             resourceId: sessionId,
-            vaule: {
+            value: {
               old: { revokedAt: null },
               new: { revokedAt: new Date() },
             },
