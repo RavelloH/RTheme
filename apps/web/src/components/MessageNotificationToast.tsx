@@ -8,6 +8,7 @@ import { useFooterStore } from "@/store/footer-store";
 import { useNavigateWithTransition } from "./Link";
 import Clickable from "@/ui/Clickable";
 import UserAvatar from "./UserAvatar";
+import { AutoResizer } from "@/ui/AutoResizer";
 
 /**
  * 消息通知项数据接口
@@ -165,10 +166,12 @@ export function MessageNotificationCard({
 
             {/* 消息内容 */}
             <div className="text-sm whitespace-pre-wrap relative z-[1]">
-              {/* 发送者名称（Telegram 风格：只有第一个消息显示） */}
-              {showSenderName && (
-                <div className="text-xs text-primary mb-1">{senderName}</div>
-              )}
+              {/* 发送者名称 */}
+              <AutoResizer>
+                {showSenderName && (
+                  <div className="text-xs text-primary mb-1">{senderName}</div>
+                )}
+              </AutoResizer>
               {notification.messageContent}
             </div>
           </div>

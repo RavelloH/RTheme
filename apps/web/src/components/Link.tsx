@@ -17,7 +17,15 @@ type RouterInstance = ReturnType<typeof useRouter>;
 
 interface CustomLinkProps extends React.ComponentProps<typeof NextLink> {
   children: React.ReactNode;
-  presets?: string[];
+  presets?: Array<
+    | "hover-underline"
+    | "arrow"
+    | "arrow-out"
+    | "hash"
+    | "dynamic-icon"
+    | "hover-color"
+    | ""
+  >;
 }
 
 // 处理特殊链接类型
@@ -71,7 +79,7 @@ const presetStyles = {
     className: "group relative inline-block",
   },
   "hover-color": {
-    className: "transition-colors duration-300",
+    className: "transition-colors duration-300 ease-in-out hover:text-primary",
   },
   arrow: {
     className: "inline-flex items-center gap-1",

@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import type {
   Conversation,
   ConversationUser,
   Message,
 } from "@repo/shared-types/api/message";
 import { useMessagePolling } from "@/hooks/use-message-polling";
+import { useNotification } from "@/components/NotificationProvider";
 import ConversationList from "./ConversationList";
 import ChatWindow from "./ChatWindow";
 import { RiQuestionAnswerLine } from "@remixicon/react";
@@ -43,6 +45,8 @@ export default function MessagesClient({
     senderUid: number;
   } | null>(null);
   const [_isLoadingTargetUser, setIsLoadingTargetUser] = useState(false);
+  const searchParams = useSearchParams();
+  const { removeMessageNotificationsByConversation } = useNotification();
 
   // 处理会话更新（轮询回调）
   const handleConversationsUpdate = useCallback(
@@ -162,25 +166,50 @@ export default function MessagesClient({
   }, [selectedConversationId]);
 
   // 处理会话选择
-  const handleSelectConversation = useCallback((conversationId: string) => {
-    // 如果是临时会话，只设置选中状态，不做其他处理
-    if (conversationId.startsWith("temp-")) {
+  const handleSelectConversation = useCallback(
+    (conversationId: string) => {
+      // 如果是临时会话，只设置选中状态，不做其他处理
+      if (conversationId.startsWith("temp-")) {
+        setSelectedConversationId(conversationId);
+        return;
+      }
+
+      // 移除该会话的所有消息通知
+      removeMessageNotificationsByConversation?.(conversationId);
+
+      // 立即更新本地会话列表，清除未读数
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.conversationId === conversationId
+            ? { ...conv, unreadCount: 0 }
+            : conv,
+        ),
+      );
+
+      // 选择会话，不清空临时用户（允许临时会话继续存在于列表中）
       setSelectedConversationId(conversationId);
-      return;
+    },
+    [removeMessageNotificationsByConversation],
+  );
+
+  // 处理 URL 中的 conversation 参数，自动打开指定会话
+  useEffect(() => {
+    const conversationId = searchParams.get("conversation");
+    if (conversationId && conversations.length > 0) {
+      // 检查该会话是否存在
+      const conversation = conversations.find(
+        (conv) => conv.conversationId === conversationId,
+      );
+      if (conversation && selectedConversationId !== conversationId) {
+        handleSelectConversation(conversationId);
+      }
     }
-
-    // 立即更新本地会话列表，清除未读数
-    setConversations((prev) =>
-      prev.map((conv) =>
-        conv.conversationId === conversationId
-          ? { ...conv, unreadCount: 0 }
-          : conv,
-      ),
-    );
-
-    // 选择会话，不清空临时用户（允许临时会话继续存在于列表中）
-    setSelectedConversationId(conversationId);
-  }, []);
+  }, [
+    searchParams,
+    conversations,
+    selectedConversationId,
+    handleSelectConversation,
+  ]);
 
   // 处理新会话
   const handleNewConversation = useCallback(

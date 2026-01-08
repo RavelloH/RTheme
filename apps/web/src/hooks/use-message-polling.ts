@@ -3,6 +3,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import { getConversations, getConversationMessages } from "@/actions/message";
 import type { Conversation, Message } from "@repo/shared-types/api/message";
+import { useBroadcastSender } from "@/hooks/use-broadcast";
 
 interface UseMessagePollingOptions {
   enabled: boolean;
@@ -28,6 +29,7 @@ export function useMessagePolling({
   const lastPolledAtRef = useRef<Date | undefined>(undefined);
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { broadcast } = useBroadcastSender();
 
   // 当路由或搜索参数变化时，重置轮询时间戳（强制全量获取）
   useEffect(() => {
@@ -108,8 +110,27 @@ export function useMessagePolling({
         messagesData.messages,
         messagesData.otherUserLastReadMessageId,
       );
+
+      // 如果响应中包含私信未读数，更新 localStorage 并广播
+      if (typeof messagesData.unreadMessageCount === "number") {
+        const count = messagesData.unreadMessageCount;
+
+        // 更新 localStorage
+        localStorage.setItem(
+          "unread_message_count",
+          JSON.stringify({ count, cachedAt: Date.now() }),
+        );
+
+        // 广播给其他组件
+        broadcast({ type: "unread_message_count_update", count });
+      }
     }
-  }, [messagesData, onCurrentConversationUpdate, currentConversationId]);
+  }, [
+    messagesData,
+    onCurrentConversationUpdate,
+    currentConversationId,
+    broadcast,
+  ]);
 
   return {
     // 手动触发轮询（通过 SWR 的 mutate）

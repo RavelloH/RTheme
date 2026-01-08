@@ -14109,6 +14109,8 @@ components:
           properties:
             message:
               type: string
+            unreadMessageCount:
+              type: number
           required:
             - message
           additionalProperties: false

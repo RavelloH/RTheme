@@ -19920,6 +19920,9 @@
             "properties": {
               "message": {
                 "type": "string"
+              },
+              "unreadMessageCount": {
+                "type": "number"
               }
             },
             "required": [

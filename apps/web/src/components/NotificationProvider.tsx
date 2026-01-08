@@ -102,6 +102,7 @@ interface NotificationContextValue {
   unreadCount: number;
   unreadMessageCount: number; // 私信未读数
   isLeader: boolean; // 是否为主标签页（持有锁）
+  removeMessageNotificationsByConversation?: (conversationId: string) => void; // 移除特定会话的所有消息通知
 }
 
 /**
@@ -232,6 +233,16 @@ export default function NotificationProvider({
   const removeMessageNotification = useCallback((id: string) => {
     setMessageNotifications((prev) => prev.filter((n) => n.id !== id));
   }, []);
+
+  // 移除特定会话的所有消息通知
+  const removeMessageNotificationsByConversation = useCallback(
+    (conversationId: string) => {
+      setMessageNotifications((prev) =>
+        prev.filter((n) => n.conversationId !== conversationId),
+      );
+    },
+    [],
+  );
 
   // 清理重试定时器
   const clearRetryTimeout = () => {
@@ -1273,7 +1284,13 @@ export default function NotificationProvider({
 
   return (
     <NotificationContext.Provider
-      value={{ connectionStatus, unreadCount, unreadMessageCount, isLeader }}
+      value={{
+        connectionStatus,
+        unreadCount,
+        unreadMessageCount,
+        isLeader,
+        removeMessageNotificationsByConversation,
+      }}
     >
       {/* 仅在回退模式且用户已登录时启用轮询组件 */}
       {connectionStatus === "fallback" && isUserLoggedIn && (

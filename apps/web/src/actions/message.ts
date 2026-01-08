@@ -412,6 +412,7 @@ export async function getConversationMessages(
     // 自动标记为已读（服务器端自动标记逻辑）
     // 只要最新消息被发送给客户端（skip === 0），就将其标记为已读
     // 注意：加载历史消息（skip > 0）时不标记已读，避免将已读指针倒退
+    let totalUnreadMessageCount: number | undefined;
     if (actualSkip === 0 && messages.length > 0) {
       const latestMessage = messages[0]!; // messages 是降序，第一条是最新的（已检查 length > 0）
 
@@ -440,6 +441,18 @@ export async function getConversationMessages(
           updatedAt: new Date(),
         },
       });
+
+      // 计算用户的总私信未读数（标记已读后）
+      const messageUnreadResult =
+        await prisma.conversationParticipant.aggregate({
+          where: {
+            userUid: user.uid,
+          },
+          _sum: {
+            unreadCount: true,
+          },
+        });
+      totalUnreadMessageCount = messageUnreadResult._sum?.unreadCount || 0;
     }
 
     // 获取对方的 lastReadMessageId（在更新当前用户的已读状态之后获取）
@@ -459,6 +472,7 @@ export async function getConversationMessages(
         messages: messages.reverse(), // 反转为正序（旧 → 新）
         hasMore: actualSkip + actualTake < totalMessages,
         otherUserLastReadMessageId: otherParticipant?.lastReadMessageId || null,
+        unreadMessageCount: totalUnreadMessageCount,
       },
     }) as unknown as ActionResult<
       GetConversationMessagesSuccessResponse["data"] | null
@@ -916,10 +930,22 @@ export async function markConversationAsRead(
       },
     });
 
+    // 计算用户的总私信未读数
+    const messageUnreadResult = await prisma.conversationParticipant.aggregate({
+      where: {
+        userUid: user.uid,
+      },
+      _sum: {
+        unreadCount: true,
+      },
+    });
+    const totalUnreadMessageCount = messageUnreadResult._sum?.unreadCount || 0;
+
     return response.ok({
       message: "标记已读成功",
       data: {
         message: "标记已读成功",
+        unreadMessageCount: totalUnreadMessageCount,
       },
     }) as unknown as ActionResult<
       MarkConversationAsReadSuccessResponse["data"] | null

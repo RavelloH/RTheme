@@ -29,7 +29,7 @@ export default function ConversationList({
   selectedConversationId,
   currentUserId,
   hasMore,
-  total,
+  total: _total,
   onSelectConversation,
   onDeleteConversation,
   onLoadMore,
@@ -103,15 +103,28 @@ export default function ConversationList({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <RiMailLine size="1.5em" className="text-primary" />
-            {isModal ? (
-              total > 0 ? (
-                `${total} 个活跃会话`
-              ) : (
-                "尚无活跃会话"
-              )
-            ) : (
-              <h2 className="text-xl font-bold text-foreground">私信</h2>
-            )}
+            {(() => {
+              const unreadCount = conversations.reduce(
+                (sum, conv) => sum + conv.unreadCount,
+                0,
+              );
+              if (isModal) {
+                return unreadCount > 0
+                  ? `${unreadCount} 个未读消息`
+                  : "无未读消息";
+              } else {
+                return (
+                  <h2 className="text-xl font-bold text-foreground">
+                    私信
+                    {unreadCount > 0 && (
+                      <span className="text-sm font-normal text-muted-foreground ml-2">
+                        - {unreadCount} 个未读消息
+                      </span>
+                    )}
+                  </h2>
+                );
+              }
+            })()}
           </div>
           <Clickable
             onClick={() => setShowNewConversationDialog(true)}

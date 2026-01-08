@@ -123,6 +123,7 @@ export const GetConversationMessagesSuccessResponseSchema =
       messages: z.array(MessageSchema),
       hasMore: z.boolean(),
       otherUserLastReadMessageId: z.string().nullable(), // 对方已读的最后一条消息 ID
+      unreadMessageCount: z.number().optional(), // 用户的总私信未读数（仅在标记已读后返回）
     }),
   );
 export type GetConversationMessagesSuccessResponse = z.infer<
@@ -179,6 +180,7 @@ export const MarkConversationAsReadSuccessResponseSchema =
   createSuccessResponseSchema(
     z.object({
       message: z.string(),
+      unreadMessageCount: z.number().optional(),
     }),
   );
 export type MarkConversationAsReadSuccessResponse = z.infer<
