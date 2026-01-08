@@ -54,7 +54,7 @@ import type {
   RevokeSession,
   RevokeSessionSuccessResponse,
 } from "@repo/shared-types/api/auth";
-import { verifyToken } from "./captcha";
+import { verifyToken } from "@/lib/server/captcha";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { getConfig } from "@/lib/server/config-cache";
 import { logAuditEvent } from "@/lib/server/audit";

@@ -48,7 +48,7 @@ import { validateData } from "@/lib/server/validator";
 import { authVerify } from "@/lib/server/auth-verify";
 import { getClientIP } from "@/lib/server/get-client-info";
 import { resolveIpLocation } from "@/lib/server/ip-utils";
-import { verifyToken } from "./captcha";
+import { verifyToken } from "@/lib/server/captcha";
 import { getConfig } from "@/lib/server/config-cache";
 import type { UserRole } from "@/lib/server/auth-verify";
 import prisma from "@/lib/server/prisma";
