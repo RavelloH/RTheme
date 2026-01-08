@@ -202,6 +202,11 @@ export default function MessagesClient({
       );
       if (conversation && selectedConversationId !== conversationId) {
         handleSelectConversation(conversationId);
+
+        // 清除 URL 中的 conversation 参数，避免重复触发
+        const url = new URL(window.location.href);
+        url.searchParams.delete("conversation");
+        window.history.replaceState({}, "", url.toString());
       }
     }
   }, [

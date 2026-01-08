@@ -750,6 +750,10 @@ export async function sendMessage(
           `${senderName} 私信了您`,
           messagePreview,
           `/messages?conversation=${conversation.id}`,
+          {
+            type: "message",
+            senderName: senderName,
+          },
         );
       } else {
         // Ably 已启用，检查用户是否在线
@@ -762,6 +766,10 @@ export async function sendMessage(
             `${senderName} 私信了您`,
             messagePreview,
             `/messages?conversation=${conversation.id}`,
+            {
+              type: "message",
+              senderName: senderName,
+            },
           );
         } else {
           // 用户在线，通过 WebSocket 发送消息详情

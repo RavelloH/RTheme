@@ -3,7 +3,9 @@ import { sendEmail } from "@/lib/server/email";
 import { jwtTokenSign } from "@/lib/server/jwt";
 import prisma from "@/lib/server/prisma";
 import { renderEmail } from "@/emails/utils";
-import NotificationEmail from "@/emails/templates/NotificationEmail";
+import NotificationEmail, {
+  type NotificationType,
+} from "@/emails/templates/NotificationEmail";
 import { publishNoticeToUser, checkUserOnlineStatus } from "@/lib/server/ably";
 import { isAblyEnabled } from "@/lib/server/ably-config";
 import { sendWebPushToUser } from "@/lib/server/web-push";
@@ -17,6 +19,14 @@ export interface SendNoticeOptions {
    * 如果为 true，无论用户是否在线，都会发送 Web Push
    */
   isTest?: boolean;
+  /**
+   * 通知类型
+   */
+  type?: NotificationType;
+  /**
+   * 发送者名称（仅当 type="message" 时使用）
+   */
+  senderName?: string;
 }
 
 /**
@@ -215,6 +225,8 @@ export async function sendNotice(
     link: link ? redirectUrl : undefined,
     siteName,
     siteUrl,
+    type: options?.type || "general",
+    senderName: options?.senderName,
   });
 
   const { html, text } = await renderEmail(emailComponent);
