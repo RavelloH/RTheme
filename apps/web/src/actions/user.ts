@@ -1691,6 +1691,7 @@ export async function getUserActivity(
       prisma.comment.findMany({
         where: {
           userUid: uid,
+          status: "APPROVED",
         },
         select: {
           id: true,
