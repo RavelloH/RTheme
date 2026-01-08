@@ -3,7 +3,9 @@
 import React from "react";
 import { Button } from "@/ui/Button";
 import { formatRelativeTime } from "@/lib/shared/relative-time";
+import UserAvatar from "@/components/UserAvatar";
 import type { BasicInfoDialogsRef } from "./BasicInfoDialogs";
+import Link from "@/components/Link";
 
 interface UserProfile {
   uid: number;
@@ -134,6 +136,41 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               onClick={() => handleEdit("username")}
               variant="secondary"
               size="sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 头像 */}
+      <div className="bg-background border border-foreground/10 rounded-sm">
+        <div className="px-6 py-4 border-b border-foreground/10">
+          <h3 className="text-lg font-medium text-foreground tracking-wider">
+            头像
+          </h3>
+        </div>
+        <div className="p-6">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <p className="text-sm text-muted-foreground mt-1">
+                我们默认使用使用 Gravatar 来显示你的头像，你可以在{" "}
+                <Link
+                  presets={["hover-color", "arrow-out"]}
+                  href="https://gravatar.com/"
+                >
+                  https://gravatar.com/
+                </Link>{" "}
+                更改你的头像。
+                <br />
+                如果账户邮箱是 QQ 邮箱，则会优先使用 QQ 头像。
+                未找到头像的情况下，会基于用户名生成头像。
+              </p>
+            </div>
+            <UserAvatar
+              username={user.username}
+              email={user.email}
+              size={80}
+              shape="circle"
+              className="flex-shrink-0"
             />
           </div>
         </div>
