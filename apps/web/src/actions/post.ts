@@ -46,6 +46,11 @@ import { logAuditEvent } from "@/lib/server/audit";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { TextVersion } from "text-version";
 import { slugify } from "@/lib/server/slugify";
+import {
+  getFeaturedImageUrl,
+  findMediaIdByUrl,
+} from "@/lib/server/media-reference";
+import { MEDIA_SLOTS } from "@/types/media";
 
 /*
   辅助函数：从内容中提取内部图片链接并返回对应的 Media ID
@@ -592,7 +597,6 @@ export async function getPostsList(
         publishedAt: true,
         createdAt: true,
         updatedAt: true,
-        featuredImage: true,
         metaDescription: true,
         metaKeywords: true,
         robotsIndex: true,
@@ -620,6 +624,15 @@ export async function getPostsList(
             cachedCount: true,
           },
         },
+        mediaRefs: {
+          include: {
+            media: {
+              select: {
+                shortHash: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -635,7 +648,7 @@ export async function getPostsList(
       publishedAt: post.publishedAt?.toISOString() || null,
       createdAt: post.createdAt.toISOString(),
       updatedAt: post.updatedAt.toISOString(),
-      featuredImage: post.featuredImage,
+      featuredImage: getFeaturedImageUrl(post.mediaRefs),
       metaDescription: post.metaDescription,
       metaKeywords: post.metaKeywords,
       robotsIndex: post.robotsIndex,
@@ -747,7 +760,6 @@ export async function getPostDetail(
         publishedAt: true,
         createdAt: true,
         updatedAt: true,
-        featuredImage: true,
         metaDescription: true,
         metaKeywords: true,
         robotsIndex: true,
@@ -768,6 +780,15 @@ export async function getPostDetail(
         tags: {
           select: {
             name: true,
+          },
+        },
+        mediaRefs: {
+          include: {
+            media: {
+              select: {
+                shortHash: true,
+              },
+            },
           },
         },
       },
@@ -799,7 +820,7 @@ export async function getPostDetail(
       publishedAt: post.publishedAt?.toISOString() || null,
       createdAt: post.createdAt.toISOString(),
       updatedAt: post.updatedAt.toISOString(),
-      featuredImage: post.featuredImage,
+      featuredImage: getFeaturedImageUrl(post.mediaRefs),
       metaDescription: post.metaDescription,
       metaKeywords: post.metaKeywords,
       robotsIndex: post.robotsIndex,
@@ -949,6 +970,31 @@ export async function createPost(
     // 提取内容中的内部图片链接
     const mediaIds = await extractInternalMediaFromContent(content);
 
+    // 准备 mediaRefs 创建数据
+    const mediaRefsData: Array<{ mediaId: number; slot: string }> = [];
+
+    // 如果有特色图片，添加到 mediaRefs
+    if (featuredImage) {
+      // featuredImage 是 URL 字符串，需要查找对应的 media ID
+      const mediaId = await findMediaIdByUrl(prisma, featuredImage);
+      if (mediaId) {
+        mediaRefsData.push({
+          mediaId,
+          slot: MEDIA_SLOTS.POST_FEATURED_IMAGE,
+        });
+      } else {
+        return response.badRequest({ message: "特色图片不存在" });
+      }
+    }
+
+    // 添加内容图片到 mediaRefs
+    for (const mediaId of mediaIds) {
+      mediaRefsData.push({
+        mediaId,
+        slot: MEDIA_SLOTS.POST_CONTENT_IMAGE,
+      });
+    }
+
     // 创建文章
     const post = await prisma.post.create({
       data: {
@@ -956,7 +1002,6 @@ export async function createPost(
         slug: finalSlug,
         content: versionedContent,
         excerpt: excerpt || null,
-        featuredImage: featuredImage || null,
         status,
         isPinned,
         allowComments,
@@ -981,10 +1026,10 @@ export async function createPost(
                 ),
               }
             : undefined,
-        media:
-          mediaIds.length > 0
+        mediaRefs:
+          mediaRefsData.length > 0
             ? {
-                connect: mediaIds.map((id) => ({ id })),
+                create: mediaRefsData,
               }
             : undefined,
       },
@@ -1130,7 +1175,6 @@ export async function updatePost(
         slug: true,
         content: true,
         excerpt: true,
-        featuredImage: true,
         status: true,
         isPinned: true,
         allowComments: true,
@@ -1142,6 +1186,15 @@ export async function updatePost(
         userUid: true, // 需要获取作者 uid 以进行权限检查
         categories: { select: { name: true } },
         tags: { select: { name: true } },
+        mediaRefs: {
+          include: {
+            media: {
+              select: {
+                shortHash: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -1189,9 +1242,71 @@ export async function updatePost(
     }
 
     // 提取内容中的内部图片链接（如果更新了内容）
-    let mediaIds: number[] | undefined;
+    let contentMediaIds: number[] | undefined;
     if (content !== undefined) {
-      mediaIds = await extractInternalMediaFromContent(content);
+      contentMediaIds = await extractInternalMediaFromContent(content);
+    }
+
+    // 准备 mediaRefs 更新数据
+    let mediaRefsUpdateData:
+      | {
+          deleteMany?: { slot: string };
+          create?: Array<{ mediaId: number; slot: string }>;
+        }
+      | undefined;
+
+    // 检查是否需要更新 mediaRefs
+    const needUpdateMediaRefs =
+      featuredImage !== undefined || contentMediaIds !== undefined;
+
+    if (needUpdateMediaRefs) {
+      mediaRefsUpdateData = {};
+      const mediaRefsToCreate: Array<{ mediaId: number; slot: string }> = [];
+
+      // 处理特色图片更新
+      if (featuredImage !== undefined) {
+        // 先删除旧的特色图片引用
+        mediaRefsUpdateData.deleteMany = {
+          slot: MEDIA_SLOTS.POST_FEATURED_IMAGE,
+        };
+
+        // 如果提供了新的特色图片，添加新引用
+        if (featuredImage) {
+          const mediaId = await findMediaIdByUrl(prisma, featuredImage);
+          if (mediaId) {
+            mediaRefsToCreate.push({
+              mediaId,
+              slot: MEDIA_SLOTS.POST_FEATURED_IMAGE,
+            });
+          } else {
+            return response.badRequest({ message: "特色图片不存在" });
+          }
+        }
+      }
+
+      // 处理内容图片更新（如果更新了内容）
+      if (contentMediaIds !== undefined) {
+        // 删除旧的内容图片引用
+        if (!mediaRefsUpdateData.deleteMany) {
+          mediaRefsUpdateData.deleteMany = {
+            slot: MEDIA_SLOTS.POST_CONTENT_IMAGE,
+          };
+        }
+        // 如果已经有 deleteMany，需要改用 deleteMany 数组
+        // 但 Prisma 不支持多个 deleteMany，所以需要在事务中分别删除
+
+        // 添加新的内容图片引用
+        for (const mediaId of contentMediaIds) {
+          mediaRefsToCreate.push({
+            mediaId,
+            slot: MEDIA_SLOTS.POST_CONTENT_IMAGE,
+          });
+        }
+      }
+
+      if (mediaRefsToCreate.length > 0) {
+        mediaRefsUpdateData.create = mediaRefsToCreate;
+      }
     }
 
     // 构建更新数据
@@ -1200,7 +1315,6 @@ export async function updatePost(
       slug?: string;
       content?: string;
       excerpt?: string | null;
-      featuredImage?: string | null;
       status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
       isPinned?: boolean;
       allowComments?: boolean;
@@ -1215,8 +1329,6 @@ export async function updatePost(
     if (newSlug !== undefined) updateData.slug = newSlug;
     if (content !== undefined) updateData.content = versionedContent;
     if (excerpt !== undefined) updateData.excerpt = excerpt || null;
-    if (featuredImage !== undefined)
-      updateData.featuredImage = featuredImage || null;
     if (status !== undefined) updateData.status = status;
     if (isPinned !== undefined) updateData.isPinned = isPinned;
     if (allowComments !== undefined) updateData.allowComments = allowComments;
@@ -1258,7 +1370,12 @@ export async function updatePost(
     if (robotsIndex !== undefined) updateData.robotsIndex = robotsIndex;
 
     // 处理分类更新
-    let categoryUpdateData;
+    let categoryUpdateData:
+      | {
+          set: [];
+          connect: Array<{ id: number }>;
+        }
+      | undefined;
     if (categories !== undefined) {
       if (categories.length > 0) {
         // 提供了具体的分类列表
@@ -1283,36 +1400,63 @@ export async function updatePost(
     }
     // 如果 categories === undefined，则保持原有分类不变
 
-    // 更新文章
-    const updatedPost = await prisma.post.update({
-      where: { id: existingPost.id },
-      data: {
-        ...updateData,
-        // 处理分类
-        ...(categoryUpdateData && { categories: categoryUpdateData }),
-        // 处理标签
-        ...(tags !== undefined && {
-          tags: {
-            set: [], // 先清空所有关联
-            connectOrCreate: await Promise.all(
-              tags.map(async (name) => {
-                const slug = await slugify(name);
-                return {
-                  where: { name },
-                  create: { name, slug },
-                };
-              }),
-            ),
-          },
-        }),
-        // 处理媒体关联（如果更新了内容）
-        ...(mediaIds !== undefined && {
-          media: {
-            set: [], // 先清空所有关联
-            connect: mediaIds.map((id) => ({ id })),
-          },
-        }),
-      },
+    // 更新文章 - 使用事务处理 mediaRefs
+    const updatedPost = await prisma.$transaction(async (tx) => {
+      // 1. 如果需要更新 mediaRefs，先删除相关引用
+      if (needUpdateMediaRefs) {
+        // 删除特色图片引用
+        if (featuredImage !== undefined) {
+          await tx.mediaReference.deleteMany({
+            where: {
+              postId: existingPost.id,
+              slot: MEDIA_SLOTS.POST_FEATURED_IMAGE,
+            },
+          });
+        }
+
+        // 删除内容图片引用
+        if (contentMediaIds !== undefined) {
+          await tx.mediaReference.deleteMany({
+            where: {
+              postId: existingPost.id,
+              slot: MEDIA_SLOTS.POST_CONTENT_IMAGE,
+            },
+          });
+        }
+      }
+
+      // 2. 更新文章主体数据
+      const updated = await tx.post.update({
+        where: { id: existingPost.id },
+        data: {
+          ...updateData,
+          // 处理分类
+          ...(categoryUpdateData && { categories: categoryUpdateData }),
+          // 处理标签
+          ...(tags !== undefined && {
+            tags: {
+              set: [], // 先清空所有关联
+              connectOrCreate: await Promise.all(
+                tags.map(async (name) => {
+                  const slug = await slugify(name);
+                  return {
+                    where: { name },
+                    create: { name, slug },
+                  };
+                }),
+              ),
+            },
+          }),
+          // 处理 mediaRefs 创建
+          ...(mediaRefsUpdateData?.create && {
+            mediaRefs: {
+              create: mediaRefsUpdateData.create,
+            },
+          }),
+        },
+      });
+
+      return updated;
     });
 
     // 记录审计日志
@@ -1338,12 +1482,12 @@ export async function updatePost(
       auditOldValue.excerpt = existingPost.excerpt;
       auditNewValue.excerpt = excerpt;
     }
-    if (
-      featuredImage !== undefined &&
-      featuredImage !== existingPost.featuredImage
-    ) {
-      auditOldValue.featuredImage = existingPost.featuredImage;
-      auditNewValue.featuredImage = featuredImage;
+    if (featuredImage !== undefined) {
+      const oldFeaturedImage = getFeaturedImageUrl(existingPost.mediaRefs);
+      if (featuredImage !== oldFeaturedImage) {
+        auditOldValue.featuredImage = oldFeaturedImage;
+        auditNewValue.featuredImage = featuredImage;
+      }
     }
     if (status !== undefined && status !== existingPost.status) {
       auditOldValue.status = existingPost.status;
@@ -1553,7 +1697,6 @@ export async function updatePosts(
       title?: string;
       slug?: string;
       excerpt?: string;
-      featuredImage?: string;
       metaDescription?: string;
       metaKeywords?: string;
       robotsIndex?: boolean;
@@ -1567,7 +1710,6 @@ export async function updatePosts(
     if (title !== undefined) updateData.title = title;
     if (slug !== undefined) updateData.slug = slug;
     if (excerpt !== undefined) updateData.excerpt = excerpt;
-    if (featuredImage !== undefined) updateData.featuredImage = featuredImage;
     if (metaDescription !== undefined)
       updateData.metaDescription = metaDescription;
     if (metaKeywords !== undefined) updateData.metaKeywords = metaKeywords;
@@ -1591,7 +1733,6 @@ export async function updatePosts(
         title: true,
         slug: true,
         excerpt: true,
-        featuredImage: true,
         status: true,
         isPinned: true,
         allowComments: true,
@@ -1600,6 +1741,15 @@ export async function updatePosts(
         metaKeywords: true,
         robotsIndex: true,
         postMode: true,
+        mediaRefs: {
+          include: {
+            media: {
+              select: {
+                shortHash: true,
+              },
+            },
+          },
+        },
       },
     });
 

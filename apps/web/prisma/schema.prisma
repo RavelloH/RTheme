@@ -12,8 +12,10 @@ model User {
 
   // 邮件业务
   email           String  @unique
+  // 邮件验证状态
   emailVerified   Boolean @default(false)
   emailVerifyCode String? @db.VarChar(30)
+  // 邮件通知 @deprecated
   emailNotice     Boolean @default(false)
 
   // Web Push 通知
@@ -24,8 +26,9 @@ model User {
   nickname String? @db.VarChar(50)
   website  String? @db.VarChar(255)
   bio      String? @db.VarChar(255)
-  password String?
   avatar   String? @db.VarChar(255)
+
+  password String?
 
   // TOTP 两步验证
   totpSecret      String? @db.VarChar(255) // AES-256-GCM 加密的 TOTP secret
@@ -120,7 +123,7 @@ model Passkey {
   credentialId String   @unique @db.VarChar(500) // Base64URL 编码的凭证ID
   publicKey    String   @db.Text // Base64 编码的公钥
   counter      BigInt   @default(0) // 防重放攻击计数器
-  transports   String[] // 传输方式: ["usb", "nfc", "ble", "internal"]
+  transports   String[] // 传输方式
 
   // 用户友好字段
   name String @db.VarChar(100) // 用户自定义名称
@@ -147,7 +150,6 @@ model Post {
   slug          String     @unique
   content       String
   excerpt       String?    @db.VarChar(500)
-  featuredImage String?    @db.VarChar(255)
   status        PostStatus @default(DRAFT)
   isPinned      Boolean    @default(false)
   allowComments Boolean    @default(true)
@@ -169,11 +171,10 @@ model Post {
   tags       Tag[]
   categories Category[]
   comments   Comment[]
-  media      Media[]
 
   // 访问统计关系
   viewCount ViewCountCache?
-  // @@index([userUid, status]) // 复合索引：按作者和状态查询
+  mediaRefs MediaReference[]
 
   // 索引优化
   @@index([status])
@@ -185,23 +186,23 @@ model Post {
 }
 
 model Tag {
-  slug          String   @id
-  name          String   @unique
-  description   String?  @db.VarChar(255)
-  featuredImage String?  @db.VarChar(255)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  posts         Post[]
+  slug        String           @id
+  name        String           @unique
+  description String?          @db.VarChar(255)
+  mediaRefs   MediaReference[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  posts       Post[]
 }
 
 model Category {
-  id            Int      @id @default(autoincrement())
-  slug          String
-  name          String
-  description   String?  @db.VarChar(255)
-  featuredImage String?  @db.VarChar(255)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          Int              @id @default(autoincrement())
+  slug        String
+  name        String
+  description String?          @db.VarChar(255)
+  mediaRefs   MediaReference[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   // 层级关系
   parentId Int?
@@ -295,8 +296,6 @@ model Media {
   shortHash    String    @db.VarChar(12)
   hash         String    @db.VarChar(64)
   mediaType    MediaType @default(IMAGE)
-  // 从属
-  posts        Post[]
 
   // 图片相关
   width       Int?
@@ -317,12 +316,52 @@ model Media {
   user            User            @relation(fields: [userUid], references: [uid], onDelete: Cascade)
   StorageProvider StorageProvider @relation(fields: [storageProviderId], references: [id], onDelete: Restrict)
 
+  // 引用关系
+  references MediaReference[]
+
   @@unique([shortHash])
   // 索引优化
   @@index([inGallery])
   @@index([userUid])
   @@index([createdAt])
   @@index([fileName])
+}
+
+// 媒体引用关系表 - 统一管理所有图片引用
+model MediaReference {
+  id      String @id @default(uuid())
+  mediaId Int // 引用的媒体 ID
+  media   Media  @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+
+  // 引用字段名
+  slot String @db.VarChar(50)
+
+  // 关系
+  // 文章相关
+  postId Int?
+  post   Post? @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  // 页面相关
+  pageId String?
+  page   Page?   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  // 标签相关
+  tagSlug String?
+  tag     Tag?    @relation(fields: [tagSlug], references: [slug], onDelete: Cascade, onUpdate: Cascade)
+
+  // 分类相关
+  categoryId Int?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  // 时间戳
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([mediaId])
+  @@index([postId, slot])
+  @@index([pageId, slot])
+  @@index([tagSlug, slot])
+  @@index([categoryId, slot])
 }
 
 model StorageProvider {
@@ -377,7 +416,8 @@ model Page {
   author  User? @relation(fields: [userUid], references: [uid], onDelete: SetNull)
 
   // 导航关系
-  menus Menu[]
+  menus     Menu[]
+  mediaRefs MediaReference[]
 
   // 索引优化
   @@index([status])
@@ -432,7 +472,6 @@ model Notice {
   @@index([userUid, isRead])
 }
 
-// 1. 会话表：聊天室的容器
 model Conversation {
   id String @id @default(uuid()) // UUID，同时用作 Ably 的普通频道名
 
@@ -448,37 +487,23 @@ model Conversation {
   messages     Message[]
 }
 
-// 2. 参与者表：这是最关键的"状态机"表
-// 每一个用户在每一个会话里，都有一行记录
 model ConversationParticipant {
   conversationId String
   userUid        Int
   updatedAt      DateTime @default(now()) @updatedAt
 
-  // 最后一条消息的时间（专门用于排序，只在有新消息时更新，不在标记已读时更新）
+  // 最后一条消息
   lastMessageAt DateTime @default(now())
 
-  // --- [UI 状态字段] ---
-
-  // 软删除/隐藏：用户点击“删除会话”时，设为 false。
-  // 当有新消息进来时，自动改回 true，会话重新出现在列表顶端。
   isVisible Boolean @default(true)
 
-  // --- [未读计数核心] ---
-
-  // 冗余计数器：该用户在此会话中有多少未读消息？
-  // 优势：获取全局红点数时，只需 SUM(unreadCount)，速度极快，无需 COUNT(Message)
+  // 单会话未读数
   unreadCount Int @default(0)
 
-  // 游标：用户读到的最后一条消息 ID
-  // 用途：进入聊天室时，在此 ID 之后画一条 "以下是新消息" 的分割线、提示发送方接收方是否已读
+  // 已读判断
   lastReadMessageId String?
 
-  // --- [通知控制字段 (你的防骚扰逻辑)] ---
-
-  // 记录：最后一次发送邮件通知的时间
-  // null = 尚未发送通知，或用户已读后重置
-  // DateTime = 已发送通知的时间戳，用于控制通知频率
+  // 通知发送防抖
   lastNotifiedAt DateTime?
 
   // 关系
@@ -492,7 +517,6 @@ model ConversationParticipant {
   @@index([userUid, lastMessageAt(sort: Desc)])
 }
 
-// 3. 消息表：只存普通消息
 model Message {
   id String @id @default(uuid())
 
@@ -748,6 +772,7 @@ enum StorageProviderType {
   AWS_S3
   GITHUB_PAGES
   VERCEL_BLOB
+  EXTERNAL_URL
 }
 
 enum AccountProvider {

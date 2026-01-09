@@ -35,6 +35,12 @@ import {
   generateUniqueSlug,
   isValidSlug,
 } from "@/lib/server/slugify";
+import {
+  getFeaturedImageUrl,
+  mediaRefsInclude,
+  updateFeaturedImageRef,
+  findMediaIdByUrl,
+} from "@/lib/server/media-reference";
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
@@ -191,13 +197,8 @@ export async function getTagsList(
       where,
       skip,
       take: pageSize,
-      select: {
-        slug: true,
-        name: true,
-        description: true,
-        featuredImage: true,
-        createdAt: true,
-        updatedAt: true,
+      include: {
+        ...mediaRefsInclude,
         posts: {
           where: {
             deletedAt: null,
@@ -214,7 +215,7 @@ export async function getTagsList(
       slug: tag.slug,
       name: tag.name,
       description: tag.description,
-      featuredImage: tag.featuredImage,
+      featuredImage: getFeaturedImageUrl(tag.mediaRefs),
       postCount: tag.posts.length,
       createdAt: tag.createdAt.toISOString(),
       updatedAt: tag.updatedAt.toISOString(),
@@ -333,6 +334,7 @@ export async function getTagDetail(
     const tag = await prisma.tag.findUnique({
       where: { slug },
       include: {
+        ...mediaRefsInclude,
         posts: {
           where: {
             deletedAt: null,
@@ -355,7 +357,7 @@ export async function getTagDetail(
       slug: tag.slug,
       name: tag.name,
       description: tag.description,
-      featuredImage: tag.featuredImage,
+      featuredImage: getFeaturedImageUrl(tag.mediaRefs),
       postCount: tag.posts.length,
       createdAt: tag.createdAt.toISOString(),
       updatedAt: tag.updatedAt.toISOString(),
@@ -502,14 +504,39 @@ export async function createTag(
       return response.badRequest({ message: `标签名 "${name}" 已存在` });
     }
 
+    // 如果提供了 featuredImage，验证媒体是否存在
+    let mediaId: number | undefined;
+    if (featuredImage) {
+      // 使用 findMediaIdByUrl 支持多种 URL 格式
+      const foundMediaId = await findMediaIdByUrl(prisma, featuredImage);
+
+      if (!foundMediaId) {
+        return response.badRequest({
+          message: "特色图片不存在",
+        });
+      }
+
+      mediaId = foundMediaId;
+    }
+
     // 创建标签
     const newTag = await prisma.tag.create({
       data: {
         slug: finalSlug,
         name,
         description: description || null,
-        featuredImage: featuredImage || null,
+        ...(mediaId
+          ? {
+              mediaRefs: {
+                create: {
+                  mediaId: mediaId,
+                  slot: "featuredImage",
+                },
+              },
+            }
+          : {}),
       },
+      include: mediaRefsInclude,
     });
 
     // 记录审计日志
@@ -529,6 +556,7 @@ export async function createTag(
             slug: newTag.slug,
             name: newTag.name,
             description: newTag.description,
+            featuredImage: getFeaturedImageUrl(newTag.mediaRefs),
           },
         },
         description: "创建标签",
@@ -540,7 +568,7 @@ export async function createTag(
         slug: newTag.slug,
         name: newTag.name,
         description: newTag.description,
-        featuredImage: newTag.featuredImage,
+        featuredImage: getFeaturedImageUrl(newTag.mediaRefs),
         createdAt: newTag.createdAt.toISOString(),
         updatedAt: newTag.updatedAt.toISOString(),
       },
@@ -634,6 +662,7 @@ export async function updateTag(
     // 检查标签是否存在
     const existingTag = await prisma.tag.findUnique({
       where: { slug },
+      include: mediaRefsInclude,
     });
 
     if (!existingTag) {
@@ -679,6 +708,25 @@ export async function updateTag(
       }
     }
 
+    // 如果提供了 featuredImage，验证媒体是否存在
+    let mediaId: number | null | undefined;
+    if (featuredImage !== undefined) {
+      if (featuredImage === null) {
+        mediaId = null;
+      } else {
+        // 使用 findMediaIdByUrl 支持多种 URL 格式
+        const foundMediaId = await findMediaIdByUrl(prisma, featuredImage);
+
+        if (!foundMediaId) {
+          return response.badRequest({
+            message: "特色图片不存在",
+          });
+        }
+
+        mediaId = foundMediaId;
+      }
+    }
+
     // 更新标签
     const updatedTag = await prisma.tag.update({
       where: { slug },
@@ -686,8 +734,13 @@ export async function updateTag(
         ...(finalNewSlug ? { slug: finalNewSlug } : {}),
         ...(newName && newName !== existingTag.name ? { name: newName } : {}),
         ...(description !== undefined ? { description } : {}),
-        ...(featuredImage !== undefined ? { featuredImage } : {}),
+        ...(mediaId !== undefined
+          ? {
+              mediaRefs: updateFeaturedImageRef(mediaId, "tag"),
+            }
+          : {}),
       },
+      include: mediaRefsInclude,
     });
 
     // 记录审计日志
@@ -706,13 +759,13 @@ export async function updateTag(
             slug: existingTag.slug,
             name: existingTag.name,
             description: existingTag.description,
-            featuredImage: existingTag.featuredImage,
+            featuredImage: getFeaturedImageUrl(existingTag.mediaRefs),
           },
           new: {
             slug: updatedTag.slug,
             name: updatedTag.name,
             description: updatedTag.description,
-            featuredImage: updatedTag.featuredImage,
+            featuredImage: getFeaturedImageUrl(updatedTag.mediaRefs),
           },
         },
         description: "更新标签",
@@ -724,7 +777,7 @@ export async function updateTag(
         slug: updatedTag.slug,
         name: updatedTag.name,
         description: updatedTag.description,
-        featuredImage: updatedTag.featuredImage,
+        featuredImage: getFeaturedImageUrl(updatedTag.mediaRefs),
         updatedAt: updatedTag.updatedAt.toISOString(),
       },
       message: "标签更新成功",

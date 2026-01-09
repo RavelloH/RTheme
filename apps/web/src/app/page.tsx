@@ -28,6 +28,10 @@ import {
 import prisma from "@/lib/server/prisma";
 import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
 import { notFound } from "next/navigation";
+import {
+  getFeaturedImageUrl,
+  mediaRefsInclude,
+} from "@/lib/server/media-reference";
 
 // 获取系统页面配置
 const page = await getRawPage("/");
@@ -68,7 +72,6 @@ export default async function Home() {
       title: true,
       slug: true,
       excerpt: true,
-      featuredImage: true,
       isPinned: true,
       publishedAt: true,
       categories: {
@@ -84,6 +87,7 @@ export default async function Home() {
           slug: true,
         },
       },
+      ...mediaRefsInclude,
     },
     orderBy: [
       {
@@ -101,12 +105,9 @@ export default async function Home() {
     where: {
       status: "PUBLISHED",
       deletedAt: null,
-      featuredImage: {
-        not: null,
-      },
     },
     select: {
-      featuredImage: true,
+      ...mediaRefsInclude,
     },
     orderBy: [
       {
@@ -129,11 +130,11 @@ export default async function Home() {
 
   // 收集所有文章的featuredImage进行批量查询
   const homePostImageUrls = homePosts
-    .map((post) => post.featuredImage)
+    .map((post) => getFeaturedImageUrl(post.mediaRefs))
     .filter((image): image is string => image !== null);
 
   const galleryImageUrls = galleryPosts
-    .map((post) => post.featuredImage)
+    .map((post) => getFeaturedImageUrl(post.mediaRefs))
     .filter((image): image is string => image !== null);
 
   const homePageMediaFileMap = await batchQueryMediaFiles([
@@ -144,7 +145,7 @@ export default async function Home() {
   // 收集所有分类ID，批量获取路径
   const allCategoryIds = new Set<number>();
   homePosts.forEach((post) => {
-    post.categories.forEach((category) => {
+    post.categories.forEach((category: { id: number }) => {
       allCategoryIds.add(category.id);
     });
   });
@@ -707,9 +708,9 @@ export default async function Home() {
                   category={displayPosts[0].categories}
                   tags={displayPosts[0].tags}
                   cover={
-                    displayPosts[0].featuredImage
+                    getFeaturedImageUrl(displayPosts[0].mediaRefs)
                       ? processImageUrl(
-                          displayPosts[0].featuredImage,
+                          getFeaturedImageUrl(displayPosts[0].mediaRefs)!,
                           homePageMediaFileMap,
                         )
                       : []
@@ -742,9 +743,9 @@ export default async function Home() {
                   category={displayPosts[1].categories}
                   tags={displayPosts[1].tags}
                   cover={
-                    displayPosts[1].featuredImage
+                    getFeaturedImageUrl(displayPosts[1].mediaRefs)
                       ? processImageUrl(
-                          displayPosts[1].featuredImage,
+                          getFeaturedImageUrl(displayPosts[1].mediaRefs)!,
                           homePageMediaFileMap,
                         )
                       : []
@@ -777,9 +778,9 @@ export default async function Home() {
                   category={displayPosts[2].categories}
                   tags={displayPosts[2].tags}
                   cover={
-                    displayPosts[2].featuredImage
+                    getFeaturedImageUrl(displayPosts[2].mediaRefs)
                       ? processImageUrl(
-                          displayPosts[2].featuredImage,
+                          getFeaturedImageUrl(displayPosts[2].mediaRefs)!,
                           homePageMediaFileMap,
                         )
                       : []
@@ -812,9 +813,9 @@ export default async function Home() {
                   category={displayPosts[3].categories}
                   tags={displayPosts[3].tags}
                   cover={
-                    displayPosts[3].featuredImage
+                    getFeaturedImageUrl(displayPosts[3].mediaRefs)
                       ? processImageUrl(
-                          displayPosts[3].featuredImage,
+                          getFeaturedImageUrl(displayPosts[3].mediaRefs)!,
                           homePageMediaFileMap,
                         )
                       : []
@@ -847,9 +848,9 @@ export default async function Home() {
                   category={displayPosts[4].categories}
                   tags={displayPosts[4].tags}
                   cover={
-                    displayPosts[4].featuredImage
+                    getFeaturedImageUrl(displayPosts[4].mediaRefs)
                       ? processImageUrl(
-                          displayPosts[4].featuredImage,
+                          getFeaturedImageUrl(displayPosts[4].mediaRefs)!,
                           homePageMediaFileMap,
                         )
                       : []

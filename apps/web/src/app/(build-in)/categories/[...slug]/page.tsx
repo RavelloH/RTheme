@@ -24,9 +24,9 @@ import { RiArrowLeftSLine } from "@remixicon/react";
 import { cache } from "react";
 import CategoryContainer from "../CategoryContainer";
 import {
-  batchQueryMediaFiles,
-  processImageUrl,
-} from "@/lib/shared/image-utils";
+  getFeaturedImageUrl,
+  getFeaturedImageData,
+} from "@/lib/server/media-reference";
 import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
 
 // 缓存函数：获取所有分类的完整数据
@@ -37,10 +37,21 @@ const getCategoriesWithFullData = cache(async () => {
       slug: true,
       name: true,
       description: true,
-      featuredImage: true,
       parentId: true,
       createdAt: true,
       updatedAt: true,
+      mediaRefs: {
+        include: {
+          media: {
+            select: {
+              shortHash: true,
+              width: true,
+              height: true,
+              blur: true,
+            },
+          },
+        },
+      },
       parent: {
         select: {
           slug: true,
@@ -61,9 +72,20 @@ const getCategoriesWithFullData = cache(async () => {
           slug: true,
           name: true,
           description: true,
-          featuredImage: true,
           createdAt: true,
           updatedAt: true,
+          mediaRefs: {
+            include: {
+              media: {
+                select: {
+                  shortHash: true,
+                  width: true,
+                  height: true,
+                  blur: true,
+                },
+              },
+            },
+          },
           posts: {
             where: {
               deletedAt: null,
@@ -156,9 +178,20 @@ const getCategoryPostsData = cache(
           title: true,
           slug: true,
           excerpt: true,
-          featuredImage: true,
           isPinned: true,
           publishedAt: true,
+          mediaRefs: {
+            include: {
+              media: {
+                select: {
+                  shortHash: true,
+                  width: true,
+                  height: true,
+                  blur: true,
+                },
+              },
+            },
+          },
           categories: {
             select: {
               id: true,
@@ -227,9 +260,12 @@ interface PostWithCategories {
   title: string;
   slug: string;
   excerpt: string | null;
-  featuredImage: string | null;
   isPinned: boolean;
   publishedAt: Date | null;
+  mediaRefs: Array<{
+    slot: string;
+    media: { shortHash: string };
+  }>;
   categories: PostCategory[];
   tags: { name: string; slug: string }[];
 }
@@ -358,14 +394,6 @@ export default async function CategorySlugPage({
   // 获取所有分类数据（使用缓存函数）
   const allCategories = await getCategoriesWithFullData();
 
-  // 收集所有分类的featuredImage进行批量查询
-  const allCategoryImageUrls = allCategories
-    .map((category) => category.featuredImage)
-    .filter((image): image is string => image !== null);
-
-  // 批量查询媒体文件
-  const mediaFileMap = await batchQueryMediaFiles(allCategoryImageUrls);
-
   // 查找当前分类：根据路径层级查找
   // 首先尝试查找最深层级的分类（最后一个slug）
   const targetSlug = categorySlugs[categorySlugs.length - 1]!;
@@ -464,7 +492,7 @@ export default async function CategorySlugPage({
     slug: currentCategory.slug,
     name: currentCategory.name,
     description: currentCategory.description,
-    featuredImage: currentCategory.featuredImage,
+    featuredImageUrl: getFeaturedImageUrl(currentCategory.mediaRefs) ?? null,
     totalPostCount: calculateTotalPosts(currentCategory.id),
     totalChildCount: calculateTotalChildren(currentCategory.id),
     path: (categoryPathsMap.get(currentCategory.id) || []).map(
@@ -485,7 +513,9 @@ export default async function CategorySlugPage({
       slug: child.slug,
       name: child.name,
       description: child.description,
-      featuredImage: child.featuredImage,
+      featuredImage: getFeaturedImageData(child.mediaRefs)
+        ? [getFeaturedImageData(child.mediaRefs)!]
+        : null,
       totalPostCount,
       totalChildCount,
       path: path.map((item) => item.slug),
@@ -516,16 +546,6 @@ export default async function CategorySlugPage({
   const { posts, totalPosts, postCategoryPathsMap } =
     await getCategoryPostsData(targetCategoryIds, currentPage, PRE_PAGE_SIZE);
 
-  // 收集所有文章的featuredImage进行批量查询
-  const allPostImageUrls = posts
-    .map((post) => post.featuredImage)
-    .filter((image): image is string => image !== null);
-
-  // 批量查询文章图片的媒体文件（复用之前的mediaFileMap变量名以避免冲突，这里使用postMediaFileMap）
-  const postMediaFileMap = await batchQueryMediaFiles(allPostImageUrls);
-
-  // postCategoryPathsMap 已经在 getCategoryPostsData 中获取了
-
   // 为文章构建完整的分类路径数组
   const postsWithExpandedCategories = posts.map((post: PostWithCategories) => {
     const expandedCategories: { name: string; slug: string }[] = [];
@@ -544,9 +564,13 @@ export default async function CategorySlugPage({
       });
     });
 
+    // 获取图片优化数据
+    const featuredImageData = getFeaturedImageData(post.mediaRefs);
+
     return {
       ...post,
       categories: expandedCategories,
+      coverData: featuredImageData ? [featuredImageData] : undefined,
     };
   });
 
@@ -719,9 +743,7 @@ export default async function CategorySlugPage({
                 key={category.id}
                 category={{
                   ...category,
-                  featuredImage: category.featuredImage
-                    ? processImageUrl(category.featuredImage, mediaFileMap)
-                    : [],
+                  featuredImage: category.featuredImage,
                 }}
               />
             ))}
@@ -765,14 +787,7 @@ export default async function CategorySlugPage({
                             }
                             category={post.categories}
                             tags={post.tags}
-                            cover={
-                              post.featuredImage
-                                ? processImageUrl(
-                                    post.featuredImage,
-                                    postMediaFileMap,
-                                  )
-                                : []
-                            }
+                            cover={post.coverData}
                             summary={post.excerpt || ""}
                           />
                         ) : (

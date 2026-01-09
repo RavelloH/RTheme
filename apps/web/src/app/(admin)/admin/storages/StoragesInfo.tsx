@@ -21,7 +21,7 @@ type StatsData = {
     default: number;
   };
   byType: Array<{
-    type: "LOCAL" | "AWS_S3" | "GITHUB_PAGES" | "VERCEL_BLOB";
+    type: "LOCAL" | "AWS_S3" | "GITHUB_PAGES" | "VERCEL_BLOB" | "EXTERNAL_URL";
     count: number;
     active: number;
     mediaCount: number;
@@ -48,6 +48,7 @@ const getTypeLabel = (type: string): string => {
     AWS_S3: "AWS S3",
     GITHUB_PAGES: "GitHub Pages",
     VERCEL_BLOB: "Vercel Blob",
+    EXTERNAL_URL: "外部URL",
   };
   return labels[type] || type;
 };

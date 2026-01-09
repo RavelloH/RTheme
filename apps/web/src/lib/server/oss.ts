@@ -69,6 +69,8 @@ type GithubConfig = {
   commitMessageTemplate?: string;
 };
 
+type ExternalUrlConfig = object;
+
 type UploadOptions =
   | (BaseProvider & { type: "LOCAL"; config: LocalConfig; file: UploadFile })
   | (BaseProvider & { type: "AWS_S3"; config: S3Config; file: UploadFile })
@@ -80,6 +82,11 @@ type UploadOptions =
   | (BaseProvider & {
       type: "GITHUB_PAGES";
       config: GithubConfig;
+      file: UploadFile;
+    })
+  | (BaseProvider & {
+      type: "EXTERNAL_URL";
+      config: ExternalUrlConfig;
       file: UploadFile;
     });
 
@@ -94,6 +101,11 @@ type DeleteOptions =
   | (BaseProvider & {
       type: "GITHUB_PAGES";
       config: GithubConfig;
+      key: string;
+    })
+  | (BaseProvider & {
+      type: "EXTERNAL_URL";
+      config: ExternalUrlConfig;
       key: string;
     });
 
@@ -130,6 +142,8 @@ export async function uploadObject(
       return uploadToVercelBlob({ ...options, key: relativeKey });
     case "GITHUB_PAGES":
       return uploadToGithub({ ...options, key: relativeKey });
+    case "EXTERNAL_URL":
+      return uploadToExternalUrl({ ...options, key: relativeKey });
   }
 }
 
@@ -143,6 +157,8 @@ export async function deleteObject(options: DeleteOptions): Promise<void> {
       return deleteFromVercelBlob(options);
     case "GITHUB_PAGES":
       return deleteFromGithub(options);
+    case "EXTERNAL_URL":
+      return deleteFromExternalUrl(options);
   }
 }
 
@@ -531,4 +547,24 @@ async function deleteFromGithub(
       email: committerEmail,
     },
   });
+}
+
+// ---------------------------------------------------------------------------
+// External URL
+// ---------------------------------------------------------------------------
+
+async function uploadToExternalUrl(
+  options: UploadOptions & { type: "EXTERNAL_URL"; key: string },
+): Promise<UploadResult> {
+  const { baseUrl, key } = options;
+  // 外部URL存储只返回基础URL和相对路径，实际上传由外部系统处理
+  const url = toPublicUrl(baseUrl, key);
+  return { key, url };
+}
+
+async function deleteFromExternalUrl(
+  _options: DeleteOptions & { type: "EXTERNAL_URL" },
+): Promise<void> {
+  // 外部URL存储的删除操作由外部系统处理
+  // 这里无需执行任何操作
 }

@@ -36,6 +36,7 @@ import CommentsSection from "@/components/client/CommentsSection";
 import AdjacentPostCard from "@/components/AdjacentPostCard";
 import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
 import CommentCount from "@/components/client/CommentCount";
+import { getFeaturedImageUrl } from "@/lib/server/media-reference";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -71,7 +72,9 @@ export default async function PostPage({ params }: PageProps) {
     categoryPath,
     categorySlugPath,
     postMediaFileMap,
-    adjacentPosts;
+    adjacentPosts,
+    previousFeaturedImage,
+    nextFeaturedImage;
   const [
     commentEnabled,
     placeholder,
@@ -125,11 +128,18 @@ export default async function PostPage({ params }: PageProps) {
     }
 
     // 添加相邻文章的封面图片
-    if (adjacentPosts.previous?.featuredImage) {
-      allImageUrls.add(adjacentPosts.previous.featuredImage);
+    const previousFeaturedImage = getFeaturedImageUrl(
+      adjacentPosts.previous?.mediaRefs,
+    );
+    const nextFeaturedImage = getFeaturedImageUrl(
+      adjacentPosts.next?.mediaRefs,
+    );
+
+    if (previousFeaturedImage) {
+      allImageUrls.add(previousFeaturedImage);
     }
-    if (adjacentPosts.next?.featuredImage) {
-      allImageUrls.add(adjacentPosts.next.featuredImage);
+    if (nextFeaturedImage) {
+      allImageUrls.add(nextFeaturedImage);
     }
 
     // 查询文章内容中的所有图片
@@ -379,9 +389,9 @@ export default async function PostPage({ params }: PageProps) {
                         category={adjacentPosts.previous.categories}
                         tags={adjacentPosts.previous.tags}
                         cover={
-                          adjacentPosts.previous.featuredImage
+                          previousFeaturedImage
                             ? processImageUrl(
-                                adjacentPosts.previous.featuredImage,
+                                previousFeaturedImage,
                                 postMediaFileMap,
                               )
                             : undefined
@@ -401,9 +411,9 @@ export default async function PostPage({ params }: PageProps) {
                         category={adjacentPosts.next.categories}
                         tags={adjacentPosts.next.tags}
                         cover={
-                          adjacentPosts.next.featuredImage
+                          nextFeaturedImage
                             ? processImageUrl(
-                                adjacentPosts.next.featuredImage,
+                                nextFeaturedImage,
                                 postMediaFileMap,
                               )
                             : undefined

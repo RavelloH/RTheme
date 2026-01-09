@@ -2,7 +2,8 @@ export type StorageProviderType =
   | "LOCAL"
   | "AWS_S3"
   | "GITHUB_PAGES"
-  | "VERCEL_BLOB";
+  | "VERCEL_BLOB"
+  | "EXTERNAL_URL";
 
 export interface ConfigItem {
   value: string;
@@ -177,5 +178,14 @@ export const STORAGE_PROVIDER_CONFIG_TEMPLATES: Record<
       description:
         "可选：提交信息模板，支持使用 {{filename}}、{{datetime}} 等占位符（具体实现由后端决定）。",
     },
+  },
+
+  /**
+   * 5. 外部 URL 存储
+   * 此存储类型用于直接使用外部 URL 作为文件存储方式，无需实际上传文件。
+   * 数据库中的 baseUrl：配置为文件访问的基础 URL。
+   */
+  EXTERNAL_URL: {
+    // EXTERNAL_URL 存储类型无需配置项，所有文件直接使用 baseUrl + pathTemplate
   },
 };

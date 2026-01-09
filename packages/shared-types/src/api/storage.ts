@@ -14,6 +14,7 @@ export const StorageProviderTypeSchema = z.enum([
   "AWS_S3",
   "GITHUB_PAGES",
   "VERCEL_BLOB",
+  "EXTERNAL_URL",
 ]);
 
 export type StorageProviderType = z.infer<typeof StorageProviderTypeSchema>;
@@ -31,7 +32,7 @@ export const GetStorageListSchema = z.object({
     .default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
   search: z.string().optional(),
-  type: z.enum(["LOCAL", "AWS_S3", "GITHUB_PAGES", "VERCEL_BLOB"]).optional(),
+  type: StorageProviderTypeSchema.optional(),
   isActive: z.boolean().optional(),
   isDefault: z.boolean().optional(),
 });
@@ -41,7 +42,7 @@ export type GetStorageList = z.infer<typeof GetStorageListSchema>;
 export const StorageListItemSchema = z.object({
   id: z.string(),
   name: z.string(),
-  type: z.enum(["LOCAL", "AWS_S3", "GITHUB_PAGES", "VERCEL_BLOB"]),
+  type: StorageProviderTypeSchema,
   displayName: z.string(),
   baseUrl: z.string(),
   isActive: z.boolean(),
@@ -69,7 +70,7 @@ export type GetStorageDetail = z.infer<typeof GetStorageDetailSchema>;
 export const StorageDetailSchema = z.object({
   id: z.string(),
   name: z.string(),
-  type: z.enum(["LOCAL", "AWS_S3", "GITHUB_PAGES", "VERCEL_BLOB"]),
+  type: StorageProviderTypeSchema,
   displayName: z.string(),
   baseUrl: z.string(),
   isActive: z.boolean(),
@@ -91,9 +92,7 @@ export type StorageDetail = z.infer<typeof StorageDetailSchema>;
 export const CreateStorageSchema = z.object({
   access_token: z.string().optional(),
   name: z.string().min(1).max(50),
-  type: z
-    .enum(["LOCAL", "AWS_S3", "GITHUB_PAGES", "VERCEL_BLOB"])
-    .default("LOCAL"),
+  type: StorageProviderTypeSchema.default("LOCAL"),
   displayName: z.string().min(1).max(100),
   baseUrl: z.string().min(1).max(255),
   isActive: z.boolean().default(true),
@@ -108,7 +107,7 @@ export type CreateStorage = z.infer<typeof CreateStorageSchema>;
 export const CreateStorageResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
-  type: z.enum(["LOCAL", "AWS_S3", "GITHUB_PAGES", "VERCEL_BLOB"]),
+  type: StorageProviderTypeSchema,
   displayName: z.string(),
   baseUrl: z.string(),
   isActive: z.boolean(),
@@ -143,7 +142,7 @@ export type UpdateStorage = z.infer<typeof UpdateStorageSchema>;
 export const UpdateStorageResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
-  type: z.enum(["LOCAL", "AWS_S3", "GITHUB_PAGES", "VERCEL_BLOB"]),
+  type: StorageProviderTypeSchema,
   displayName: z.string(),
   baseUrl: z.string(),
   isActive: z.boolean(),
@@ -240,7 +239,7 @@ export const GetStorageStatsSuccessResponseSchema = createSuccessResponseSchema(
     }),
     byType: z.array(
       z.object({
-        type: z.enum(["LOCAL", "AWS_S3", "GITHUB_PAGES", "VERCEL_BLOB"]),
+        type: StorageProviderTypeSchema,
         count: z.number(),
         active: z.number(),
         mediaCount: z.number(),

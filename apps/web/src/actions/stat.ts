@@ -1111,7 +1111,12 @@ export async function getStorageStats(
 
     // 构建 byType 数据
     const byType: Array<{
-      type: "LOCAL" | "AWS_S3" | "GITHUB_PAGES" | "VERCEL_BLOB";
+      type:
+        | "LOCAL"
+        | "AWS_S3"
+        | "GITHUB_PAGES"
+        | "VERCEL_BLOB"
+        | "EXTERNAL_URL";
       count: number;
       active: number;
       mediaCount: number;
@@ -1145,7 +1150,12 @@ export async function getStorageStats(
       };
 
       byType.push({
-        type: stat.type as "LOCAL" | "AWS_S3" | "GITHUB_PAGES" | "VERCEL_BLOB",
+        type: stat.type as
+          | "LOCAL"
+          | "AWS_S3"
+          | "GITHUB_PAGES"
+          | "VERCEL_BLOB"
+          | "EXTERNAL_URL",
         count: totalCount,
         active: activeCount,
         mediaCount: mediaInfo.mediaCount,

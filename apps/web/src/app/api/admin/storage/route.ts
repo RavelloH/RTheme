@@ -53,7 +53,7 @@ const response = new ResponseBuilder("serverless");
  *         name: type
  *         schema:
  *           type: string
- *           enum: [LOCAL, AWS_S3, GITHUB_PAGES, VERCEL_BLOB]
+ *           enum: [LOCAL, AWS_S3, GITHUB_PAGES, VERCEL_BLOB, EXTERNAL_URL]
  *         description: 存储类型筛选
  *       - in: query
  *         name: isActive

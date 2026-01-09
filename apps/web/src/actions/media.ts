@@ -229,7 +229,7 @@ export async function getMediaList(
         },
         _count: {
           select: {
-            posts: true,
+            references: true,
           },
         },
       },
@@ -252,7 +252,7 @@ export async function getMediaList(
       blur: item.blur,
       inGallery: item.inGallery,
       createdAt: item.createdAt.toISOString(),
-      postsCount: item._count.posts,
+      postsCount: item._count.references, // 使用 references 计数
       user: item.user,
     }));
 
@@ -337,14 +337,41 @@ export async function getMediaDetail(
             displayName: true,
           },
         },
-        posts: {
+        references: {
           select: {
-            id: true,
-            title: true,
-            slug: true,
-          },
-          where: {
-            deletedAt: null, // 只获取未删除的文章
+            postId: true,
+            post: {
+              select: {
+                id: true,
+                title: true,
+                slug: true,
+                deletedAt: true,
+              },
+            },
+            pageId: true,
+            page: {
+              select: {
+                id: true,
+                title: true,
+                slug: true,
+                deletedAt: true,
+              },
+            },
+            tagSlug: true,
+            tag: {
+              select: {
+                slug: true,
+                name: true,
+              },
+            },
+            categoryId: true,
+            category: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
           },
         },
       },
@@ -358,6 +385,15 @@ export async function getMediaDetail(
     if (user.role === "AUTHOR" && media.userUid !== user.uid) {
       return response.forbidden({ message: "无权限访问此文件" });
     }
+
+    // 过滤出未删除的文章引用
+    const postsReferences = media.references
+      .filter((ref) => ref.post && !ref.post.deletedAt)
+      .map((ref) => ({
+        id: ref.post!.id,
+        title: ref.post!.title,
+        slug: ref.post!.slug,
+      }));
 
     const mediaDetail: MediaDetail = {
       id: media.id,
@@ -394,11 +430,7 @@ export async function getMediaDetail(
             displayName: media.StorageProvider.displayName,
           }
         : null,
-      posts: media.posts.map((post) => ({
-        id: post.id,
-        title: post.title,
-        slug: post.slug,
-      })),
+      posts: postsReferences,
     };
 
     return response.ok({
@@ -1091,8 +1123,18 @@ export async function uploadMedia(
 
         // 上传到 OSS
         const fileName = `${processed.shortHash}.${processed.extension}`;
+        // 确保存储类型不是 EXTERNAL_URL（不支持上传）
+        if (storageProvider.type === "EXTERNAL_URL") {
+          console.warn(
+            `跳过文件 ${file.originalName}: EXTERNAL_URL 类型不支持上传`,
+          );
+          continue;
+        }
         const uploadResult = await uploadObject({
-          type: storageProvider.type,
+          type: storageProvider.type as Exclude<
+            typeof storageProvider.type,
+            "EXTERNAL_URL"
+          >,
           baseUrl: storageProvider.baseUrl,
           pathTemplate: storageProvider.pathTemplate,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any

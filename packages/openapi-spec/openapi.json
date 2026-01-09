@@ -2361,7 +2361,8 @@
                 "LOCAL",
                 "AWS_S3",
                 "GITHUB_PAGES",
-                "VERCEL_BLOB"
+                "VERCEL_BLOB",
+                "EXTERNAL_URL"
               ]
             },
             "description": "存储类型筛选"
@@ -17429,7 +17430,8 @@
               "LOCAL",
               "AWS_S3",
               "GITHUB_PAGES",
-              "VERCEL_BLOB"
+              "VERCEL_BLOB",
+              "EXTERNAL_URL"
             ]
           },
           "isActive": {
@@ -17482,7 +17484,8 @@
               "LOCAL",
               "AWS_S3",
               "GITHUB_PAGES",
-              "VERCEL_BLOB"
+              "VERCEL_BLOB",
+              "EXTERNAL_URL"
             ]
           },
           "displayName": {
@@ -17660,7 +17663,8 @@
               "LOCAL",
               "AWS_S3",
               "GITHUB_PAGES",
-              "VERCEL_BLOB"
+              "VERCEL_BLOB",
+              "EXTERNAL_URL"
             ]
           },
           "displayName": {
@@ -17722,7 +17726,8 @@
               "LOCAL",
               "AWS_S3",
               "GITHUB_PAGES",
-              "VERCEL_BLOB"
+              "VERCEL_BLOB",
+              "EXTERNAL_URL"
             ]
           },
           "displayName": {
@@ -17786,7 +17791,8 @@
               "LOCAL",
               "AWS_S3",
               "GITHUB_PAGES",
-              "VERCEL_BLOB"
+              "VERCEL_BLOB",
+              "EXTERNAL_URL"
             ]
           },
           "displayName": {
@@ -17844,7 +17850,8 @@
               "LOCAL",
               "AWS_S3",
               "GITHUB_PAGES",
-              "VERCEL_BLOB"
+              "VERCEL_BLOB",
+              "EXTERNAL_URL"
             ]
           },
           "displayName": {
@@ -18008,7 +18015,8 @@
                         "LOCAL",
                         "AWS_S3",
                         "GITHUB_PAGES",
-                        "VERCEL_BLOB"
+                        "VERCEL_BLOB",
+                        "EXTERNAL_URL"
                       ]
                     },
                     "count": {

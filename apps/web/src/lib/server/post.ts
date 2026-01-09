@@ -4,6 +4,7 @@ import { TextVersion } from "text-version";
 import remarkGfm from "remark-gfm";
 import rehypeSlug from "rehype-slug";
 import { serialize } from "next-mdx-remote-client/serialize";
+import { getFeaturedImageUrl } from "@/lib/server/media-reference";
 
 export interface PostData {
   id: number;
@@ -69,7 +70,6 @@ export async function getPublishedPost(slug: string): Promise<PostData> {
       publishedAt: true,
       createdAt: true,
       updatedAt: true,
-      featuredImage: true,
       metaDescription: true,
       metaKeywords: true,
       robotsIndex: true,
@@ -108,6 +108,18 @@ export async function getPublishedPost(slug: string): Promise<PostData> {
           cachedCount: true,
         },
       },
+      mediaRefs: {
+        include: {
+          media: {
+            select: {
+              shortHash: true,
+              width: true,
+              height: true,
+              blur: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -115,10 +127,14 @@ export async function getPublishedPost(slug: string): Promise<PostData> {
     notFound();
   }
 
+  // 提取特色图片URL
+  const featuredImage = getFeaturedImageUrl(post.mediaRefs);
+
   return {
     ...post,
     viewCount: post.viewCount?.cachedCount || 0,
-  };
+    featuredImage,
+  } as PostData;
 }
 
 /**
@@ -191,9 +207,12 @@ export interface AdjacentPostData {
     name: string;
     slug: string;
   }>;
-  featuredImage: string | null;
   excerpt: string | null;
   isPinned: boolean;
+  mediaRefs: Array<{
+    slot: string;
+    media: { shortHash: string };
+  }>;
 }
 
 export interface AdjacentPosts {
@@ -235,7 +254,6 @@ export async function getAdjacentPosts(
       title: true,
       slug: true,
       publishedAt: true,
-      featuredImage: true,
       excerpt: true,
       isPinned: true,
       categories: {
@@ -248,6 +266,18 @@ export async function getAdjacentPosts(
         select: {
           name: true,
           slug: true,
+        },
+      },
+      mediaRefs: {
+        include: {
+          media: {
+            select: {
+              shortHash: true,
+              width: true,
+              height: true,
+              blur: true,
+            },
+          },
         },
       },
     },
@@ -264,7 +294,6 @@ export async function getAdjacentPosts(
       title: true,
       slug: true,
       publishedAt: true,
-      featuredImage: true,
       excerpt: true,
       isPinned: true,
       categories: {
@@ -277,6 +306,18 @@ export async function getAdjacentPosts(
         select: {
           name: true,
           slug: true,
+        },
+      },
+      mediaRefs: {
+        include: {
+          media: {
+            select: {
+              shortHash: true,
+              width: true,
+              height: true,
+              blur: true,
+            },
+          },
         },
       },
     },

@@ -49,6 +49,11 @@ import {
   findCategoryByPath,
   batchGetCategoryPaths,
 } from "@/lib/server/category-utils";
+import {
+  getFeaturedImageUrl,
+  findMediaIdByUrl,
+} from "@/lib/server/media-reference";
+import { MEDIA_SLOTS } from "@/types/media";
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
@@ -235,7 +240,6 @@ export async function getCategoriesList(
         slug: true,
         name: true,
         description: true,
-        featuredImage: true,
         parentId: true,
         createdAt: true,
         updatedAt: true,
@@ -256,6 +260,15 @@ export async function getCategoriesList(
         children: {
           select: {
             id: true,
+          },
+        },
+        mediaRefs: {
+          include: {
+            media: {
+              select: {
+                shortHash: true,
+              },
+            },
           },
         },
       },
@@ -280,7 +293,6 @@ export async function getCategoriesList(
         slug: true,
         name: true,
         description: true,
-        featuredImage: true,
         parentId: true,
         createdAt: true,
         updatedAt: true,
@@ -295,6 +307,15 @@ export async function getCategoriesList(
         children: {
           select: {
             id: true,
+          },
+        },
+        mediaRefs: {
+          include: {
+            media: {
+              select: {
+                shortHash: true,
+              },
+            },
           },
         },
       },
@@ -357,7 +378,7 @@ export async function getCategoriesList(
         slug: category.slug,
         name: category.name,
         description: category.description,
-        featuredImage: category.featuredImage,
+        featuredImage: getFeaturedImageUrl(category.mediaRefs),
         parentId: category.parentId,
         parentSlug: category.parent?.slug || null,
         parentName: category.parent?.name || null,
@@ -459,10 +480,13 @@ export async function getCategoryDetail(
       slug: string;
       name: string;
       description: string | null;
-      featuredImage: string | null;
       parentId: number | null;
       createdAt: Date;
       updatedAt: Date;
+      mediaRefs?: Array<{
+        slot: string;
+        media: { shortHash: string };
+      }>;
       parent?: { slug: string; name: string } | null;
       children?: Array<{
         id: number;
@@ -490,10 +514,18 @@ export async function getCategoryDetail(
             slug: true,
             name: true,
             description: true,
-            featuredImage: true,
             parentId: true,
             createdAt: true,
             updatedAt: true,
+            mediaRefs: {
+              include: {
+                media: {
+                  select: {
+                    shortHash: true,
+                  },
+                },
+              },
+            },
             parent: {
               select: {
                 slug: true,
@@ -539,10 +571,18 @@ export async function getCategoryDetail(
           slug: true,
           name: true,
           description: true,
-          featuredImage: true,
           parentId: true,
           createdAt: true,
           updatedAt: true,
+          mediaRefs: {
+            include: {
+              media: {
+                select: {
+                  shortHash: true,
+                },
+              },
+            },
+          },
           parent: {
             select: {
               slug: true,
@@ -607,7 +647,7 @@ export async function getCategoryDetail(
       slug: category.slug,
       name: category.name,
       description: category.description,
-      featuredImage: category.featuredImage,
+      featuredImage: getFeaturedImageUrl(category.mediaRefs),
       parentId: category.parentId,
       parentSlug: category.parent?.slug || null,
       parentName: category.parent?.name || null,
@@ -809,13 +849,63 @@ export async function createCategory(
     }
 
     // 创建分类
+    const categoryData: {
+      slug: string;
+      name: string;
+      description: string | null;
+      parentId: number | null;
+    } = {
+      slug: finalSlug,
+      name,
+      description: description ?? null,
+      parentId: resolvedParentId ?? null,
+    };
+
+    // 如果提供了 featuredImage URL，查找对应的 mediaId
+    let featuredImageMediaId: number | null = null;
+    if (featuredImage !== undefined && featuredImage !== null) {
+      featuredImageMediaId = await findMediaIdByUrl(prisma, featuredImage);
+    }
+
     const category = await prisma.category.create({
-      data: {
-        slug: finalSlug,
-        name,
-        description: description ?? null,
-        featuredImage: featuredImage ?? null,
-        parentId: resolvedParentId ?? null,
+      data: categoryData,
+      include: {
+        mediaRefs: {
+          include: {
+            media: {
+              select: {
+                shortHash: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // 如果有 featuredImage，创建关联
+    if (featuredImageMediaId !== null) {
+      await prisma.mediaReference.create({
+        data: {
+          mediaId: featuredImageMediaId,
+          categoryId: category.id,
+          slot: MEDIA_SLOTS.CATEGORY_FEATURED_IMAGE,
+        },
+      });
+    }
+
+    // 重新获取分类以包含 mediaRefs
+    const categoryWithMedia = await prisma.category.findUnique({
+      where: { id: category.id },
+      include: {
+        mediaRefs: {
+          include: {
+            media: {
+              select: {
+                shortHash: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -848,7 +938,7 @@ export async function createCategory(
         slug: category.slug,
         name: category.name,
         description: category.description,
-        featuredImage: category.featuredImage,
+        featuredImage: getFeaturedImageUrl(categoryWithMedia?.mediaRefs),
         parentId: category.parentId,
         createdAt: category.createdAt.toISOString(),
         updatedAt: category.updatedAt.toISOString(),
@@ -1009,7 +1099,6 @@ export async function updateCategory(
       slug?: string;
       name?: string;
       description?: string | null;
-      featuredImage?: string | null;
       parentId?: number | null;
     } = {};
 
@@ -1071,11 +1160,6 @@ export async function updateCategory(
       updateData.description = description;
     }
 
-    // 处理特色图片更新
-    if (featuredImage !== undefined) {
-      updateData.featuredImage = featuredImage;
-    }
-
     // 处理父分类更新
     if (resolvedParentId !== undefined) {
       // 检查是否为"未分类"分类，禁止设置父分类
@@ -1091,6 +1175,47 @@ export async function updateCategory(
     const updatedCategory = await prisma.category.update({
       where: { id: category.id },
       data: updateData,
+    });
+
+    // 处理特色图片更新
+    if (featuredImage !== undefined) {
+      // 删除旧的特色图片引用
+      await prisma.mediaReference.deleteMany({
+        where: {
+          categoryId: category.id,
+          slot: MEDIA_SLOTS.CATEGORY_FEATURED_IMAGE,
+        },
+      });
+
+      // 如果提供了新的 featuredImage URL，创建新引用
+      if (featuredImage !== null) {
+        const mediaId = await findMediaIdByUrl(prisma, featuredImage);
+        if (mediaId) {
+          await prisma.mediaReference.create({
+            data: {
+              mediaId,
+              categoryId: category.id,
+              slot: MEDIA_SLOTS.CATEGORY_FEATURED_IMAGE,
+            },
+          });
+        }
+      }
+    }
+
+    // 重新获取分类以包含 mediaRefs
+    const updatedCategoryWithMedia = await prisma.category.findUnique({
+      where: { id: category.id },
+      include: {
+        mediaRefs: {
+          include: {
+            media: {
+              select: {
+                shortHash: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     // 审计日志
@@ -1131,7 +1256,7 @@ export async function updateCategory(
         slug: updatedCategory.slug,
         name: updatedCategory.name,
         description: updatedCategory.description,
-        featuredImage: updatedCategory.featuredImage,
+        featuredImage: getFeaturedImageUrl(updatedCategoryWithMedia?.mediaRefs),
         parentId: updatedCategory.parentId,
         updatedAt: updatedCategory.updatedAt.toISOString(),
       },

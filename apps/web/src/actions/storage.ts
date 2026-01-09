@@ -182,6 +182,19 @@ async function verifyStorageConnectivity(params: {
           });
         }
         break;
+      case "EXTERNAL_URL":
+        // 外部URL存储不需要额外的验证，只需验证URL可访问
+        await uploadObject({
+          type: "EXTERNAL_URL",
+          baseUrl: params.baseUrl,
+          config: {},
+          file: {
+            buffer: Buffer.from("test"),
+            filename: "test.txt",
+            contentType: "text/plain",
+          },
+        });
+        break;
       default:
         throw new Error(
           `Unsupported storage type: ${params.type satisfies never}`,

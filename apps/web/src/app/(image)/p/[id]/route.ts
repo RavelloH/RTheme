@@ -72,13 +72,15 @@ export async function GET(
     }) as Response;
   }
 
-  // 3. 速率限制检查
-  const isAllowed = await limitControl(request.headers);
-  if (!isAllowed) {
-    return res.tooManyRequests({
-      message: "请求过于频繁",
-      error: { code: "RATE_LIMITED", message: "请求过于频繁，请稍后再试" },
-    }) as Response;
+  // 3. 对非Nextjs请求进行速率限制检查
+  if (!isNextImageOptimizer(request)) {
+    const isAllowed = await limitControl(request.headers);
+    if (!isAllowed) {
+      return res.tooManyRequests({
+        message: "请求过于频繁",
+        error: { code: "RATE_LIMITED", message: "请求过于频繁，请稍后再试" },
+      }) as Response;
+    }
   }
 
   // 4. 查询媒体信息

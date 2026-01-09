@@ -1499,6 +1499,7 @@ paths:
               - AWS_S3
               - GITHUB_PAGES
               - VERCEL_BLOB
+              - EXTERNAL_URL
           description: 存储类型筛选
         - in: query
           name: isActive
@@ -12276,6 +12277,7 @@ components:
             - AWS_S3
             - GITHUB_PAGES
             - VERCEL_BLOB
+            - EXTERNAL_URL
         isActive:
           type: boolean
         isDefault:
@@ -12315,6 +12317,7 @@ components:
             - AWS_S3
             - GITHUB_PAGES
             - VERCEL_BLOB
+            - EXTERNAL_URL
         displayName:
           type: string
           minLength: 1
@@ -12447,6 +12450,7 @@ components:
             - AWS_S3
             - GITHUB_PAGES
             - VERCEL_BLOB
+            - EXTERNAL_URL
         displayName:
           type: string
         baseUrl:
@@ -12493,6 +12497,7 @@ components:
             - AWS_S3
             - GITHUB_PAGES
             - VERCEL_BLOB
+            - EXTERNAL_URL
         displayName:
           type: string
         baseUrl:
@@ -12541,6 +12546,7 @@ components:
             - AWS_S3
             - GITHUB_PAGES
             - VERCEL_BLOB
+            - EXTERNAL_URL
         displayName:
           type: string
         baseUrl:
@@ -12584,6 +12590,7 @@ components:
             - AWS_S3
             - GITHUB_PAGES
             - VERCEL_BLOB
+            - EXTERNAL_URL
         displayName:
           type: string
         baseUrl:
@@ -12704,6 +12711,7 @@ components:
                       - AWS_S3
                       - GITHUB_PAGES
                       - VERCEL_BLOB
+                      - EXTERNAL_URL
                   count:
                     type: number
                   active:

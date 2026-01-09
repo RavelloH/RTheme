@@ -14,10 +14,7 @@ import Link from "@/components/Link";
 import TagsRandomPage from "./TagsRandomPage";
 import DynamicReplace from "@/components/client/DynamicReplace";
 import TagContainer from "./TagContainer";
-import {
-  batchQueryMediaFiles,
-  processImageUrl,
-} from "@/lib/shared/image-utils";
+import { getFeaturedImageData } from "@/lib/server/media-reference";
 
 // 获取系统页面配置
 const page = await getRawPage("/tags");
@@ -29,9 +26,20 @@ const allTags = await prisma.tag.findMany({
     slug: true,
     name: true,
     description: true,
-    featuredImage: true,
     createdAt: true,
     updatedAt: true,
+    mediaRefs: {
+      include: {
+        media: {
+          select: {
+            shortHash: true,
+            width: true,
+            height: true,
+            blur: true,
+          },
+        },
+      },
+    },
     posts: {
       where: {
         deletedAt: null,
@@ -43,22 +51,14 @@ const allTags = await prisma.tag.findMany({
   },
 });
 
-// 收集所有内部链接的哈希
-const allImageUrls = allTags
-  .map((tag) => tag.featuredImage)
-  .filter((image): image is string => image !== null); // 过滤空值并进行类型守卫;
-
-// 批量查询媒体文件
-const mediaFileMap = await batchQueryMediaFiles(allImageUrls);
-
 // 处理标签统计数据
 const processedTags = allTags.map((tag) => ({
   slug: tag.slug,
   name: tag.name,
   description: tag.description,
-  featuredImage: tag.featuredImage
-    ? processImageUrl(tag.featuredImage, mediaFileMap)
-    : [],
+  featuredImage: getFeaturedImageData(tag.mediaRefs)
+    ? [getFeaturedImageData(tag.mediaRefs)!]
+    : null,
   postCount: tag.posts.length,
   createdAt: tag.createdAt.toISOString(),
   updatedAt: tag.updatedAt.toISOString(),

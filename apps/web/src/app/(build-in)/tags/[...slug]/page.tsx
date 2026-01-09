@@ -21,10 +21,7 @@ import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { RiArrowLeftSLine } from "@remixicon/react";
 import { cache } from "react";
-import {
-  batchQueryMediaFiles,
-  processImageUrl,
-} from "@/lib/shared/image-utils";
+import { getFeaturedImageData } from "@/lib/server/media-reference";
 import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
 
 // 缓存函数：获取标签的基本信息
@@ -35,9 +32,17 @@ const getTagBasicInfo = cache(async (slug: string) => {
       slug: true,
       name: true,
       description: true,
-      featuredImage: true,
       createdAt: true,
       updatedAt: true,
+      mediaRefs: {
+        include: {
+          media: {
+            select: {
+              shortHash: true,
+            },
+          },
+        },
+      },
     },
   });
 });
@@ -61,9 +66,20 @@ const getTagPostsData = cache(
           title: true,
           slug: true,
           excerpt: true,
-          featuredImage: true,
           isPinned: true,
           publishedAt: true,
+          mediaRefs: {
+            include: {
+              media: {
+                select: {
+                  shortHash: true,
+                  width: true,
+                  height: true,
+                  blur: true,
+                },
+              },
+            },
+          },
           categories: {
             select: {
               id: true,
@@ -218,13 +234,14 @@ export default async function TagSlugPage({ params }: TagSlugPageProps) {
     PRE_PAGE_SIZE,
   );
 
-  // 收集所有文章的featuredImage进行批量查询
-  const allPostImageUrls = posts
-    .map((post) => post.featuredImage)
-    .filter((image): image is string => image !== null);
-
-  // 批量查询媒体文件
-  const postMediaFileMap = await batchQueryMediaFiles(allPostImageUrls);
+  // 为文章添加图片优化数据
+  const postsWithCoverData = posts.map((post) => {
+    const featuredImageData = getFeaturedImageData(post.mediaRefs);
+    return {
+      ...post,
+      coverData: featuredImageData ? [featuredImageData] : undefined,
+    };
+  });
 
   // 计算总页数
   const totalPages = Math.ceil(totalPosts / PRE_PAGE_SIZE);
@@ -371,13 +388,13 @@ export default async function TagSlugPage({ params }: TagSlugPageProps) {
         {/* 文章网格 */}
         {posts.length > 0 && (
           <RowGrid>
-            {Array(Math.ceil(posts.length / 4))
+            {Array(Math.ceil(postsWithCoverData.length / 4))
               .fill(0)
               .map((_, rowIndex) => (
                 <React.Fragment key={rowIndex}>
                   {Array.from({ length: 4 }, (_, index) => {
                     const postIndex = rowIndex * 4 + index;
-                    const post = posts[postIndex];
+                    const post = postsWithCoverData[postIndex];
 
                     return (
                       <GridItem
@@ -405,14 +422,7 @@ export default async function TagSlugPage({ params }: TagSlugPageProps) {
                             }
                             category={post.categories}
                             tags={post.tags}
-                            cover={
-                              post.featuredImage
-                                ? processImageUrl(
-                                    post.featuredImage,
-                                    postMediaFileMap,
-                                  )
-                                : []
-                            }
+                            cover={post.coverData}
                             summary={post.excerpt || ""}
                           />
                         ) : (
