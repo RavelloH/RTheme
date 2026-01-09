@@ -14,6 +14,7 @@ import { authVerify } from "@/lib/server/auth-verify";
 import os from "os";
 import { exec } from "child_process";
 import { promisify } from "util";
+import { performance } from "perf_hooks";
 
 const execAsync = promisify(exec);
 
@@ -99,6 +100,27 @@ async function measureEventLoopLag(): Promise<number> {
       resolve(Math.round(lagMs * 100) / 100);
     });
   });
+}
+
+// 获取事件循环利用率（Node.js 14.10+）
+function getEventLoopUtilization(): {
+  idle: number;
+  active: number;
+  utilization: number;
+} | null {
+  try {
+    if (typeof performance.eventLoopUtilization === "function") {
+      const elu = performance.eventLoopUtilization();
+      return {
+        idle: Math.round(elu.idle * 100) / 100,
+        active: Math.round(elu.active * 100) / 100,
+        utilization: Math.round(elu.utilization * 10000) / 10000, // 保留4位小数
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 // 获取资源使用情况
@@ -302,11 +324,12 @@ export async function getSystemInfo(
     // 获取资源使用情况
     const resourceUsage = getResourceUsage();
 
-    // 获取活跃句柄和请求数
-    // @ts-expect-error - _getActiveHandles 和 _getActiveRequests 是内部 API
+    // 获取事件循环利用率
+    const eventLoopUtilization = getEventLoopUtilization();
+
+    // 获取活跃句柄数
+    // @ts-expect-error - _getActiveHandles 是内部 API
     const activeHandles = process._getActiveHandles?.()?.length ?? 0;
-    // @ts-expect-error - 内部 API
-    const activeRequests = process._getActiveRequests?.()?.length ?? 0;
 
     const systemInfo = {
       os: {
@@ -347,8 +370,8 @@ export async function getSystemInfo(
         },
         resourceUsage: resourceUsage || undefined,
         eventLoopLag,
+        eventLoopUtilization: eventLoopUtilization || undefined,
         activeHandles,
-        activeRequests,
       },
       disk: diskInfo || undefined,
       network: getNetworkInfo(),

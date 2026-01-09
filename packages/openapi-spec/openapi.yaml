@@ -6368,9 +6368,21 @@ components:
                   additionalProperties: false
                 eventLoopLag:
                   type: number
+                eventLoopUtilization:
+                  type: object
+                  properties:
+                    idle:
+                      type: number
+                    active:
+                      type: number
+                    utilization:
+                      type: number
+                  required:
+                    - idle
+                    - active
+                    - utilization
+                  additionalProperties: false
                 activeHandles:
-                  type: number
-                activeRequests:
                   type: number
               required:
                 - nodeVersion

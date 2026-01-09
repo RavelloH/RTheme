@@ -126,7 +126,7 @@ export default function SystemProcessInfo() {
               </div>
             </div>
 
-            {/* 活跃资源 */}
+            {/* 活跃资源与事件循环 */}
             <div className="flex mb-4 text-sm">
               <div className="flex-1 text-center py-1">
                 <span className="text-muted-foreground">活跃句柄: </span>
@@ -136,9 +136,11 @@ export default function SystemProcessInfo() {
               </div>
               <div className="w-px bg-muted" />
               <div className="flex-1 text-center py-1">
-                <span className="text-muted-foreground">活跃请求: </span>
+                <span className="text-muted-foreground">事件循环利用率: </span>
                 <span className="font-mono">
-                  {systemInfo.process.activeRequests ?? 0}
+                  {systemInfo.process.eventLoopUtilization
+                    ? `${(systemInfo.process.eventLoopUtilization.utilization * 100).toFixed(2)}%`
+                    : "-"}
                 </span>
               </div>
             </div>

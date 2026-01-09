@@ -77,9 +77,16 @@ export const SystemInfoSchema = z.object({
       .optional(),
     // 事件循环延迟
     eventLoopLag: z.number().optional(), // 事件循环延迟（毫秒）
-    // 活跃句柄和请求
-    activeHandles: z.number().optional(), // 活跃句柄数
-    activeRequests: z.number().optional(), // 活跃请求数
+    // 事件循环利用率
+    eventLoopUtilization: z
+      .object({
+        idle: z.number(), // 空闲时间（毫秒）
+        active: z.number(), // 活跃时间（毫秒）
+        utilization: z.number(), // 利用率（0-1之间，越接近1表示越繁忙）
+      })
+      .optional(),
+    // 活跃句柄数
+    activeHandles: z.number().optional(), // 活跃句柄数（保持事件循环运行的资源）
   }),
   // 磁盘信息（可选，部分平台可能不支持）
   disk: z
