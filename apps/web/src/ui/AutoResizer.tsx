@@ -31,8 +31,8 @@ export function AutoResizer({
   initial = false,
 }: AutoResizerProps) {
   const [height, setHeight] = useState<number | "auto">("auto");
+  const [updateCount, setUpdateCount] = useState(0);
   const contentRef = useRef<HTMLDivElement>(null);
-  const isFirstRender = useRef(true);
 
   useEffect(() => {
     if (!contentRef.current) return;
@@ -40,16 +40,8 @@ export function AutoResizer({
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const newHeight = entry.contentRect.height;
-
-        // 首次渲染时，如果 initial=false 则标记为已完成首次渲染
-        if (isFirstRender.current) {
-          if (!initial) {
-            // 不播放动画，直接设置高度
-            isFirstRender.current = false;
-          }
-        }
-
         setHeight(newHeight);
+        setUpdateCount((prev) => prev + 1);
       }
     });
 
@@ -58,18 +50,19 @@ export function AutoResizer({
     return () => {
       resizeObserver.disconnect();
     };
-  }, [initial]);
+  }, []);
+
+  // 如果 initial=true，总是播放动画
+  // 如果 initial=false，只有在第二次及以后的更新才播放动画
+  const shouldAnimate = initial || updateCount > 1;
 
   return (
     <motion.div
       className={className}
       style={{ overflow: "hidden" }}
-      initial={initial ? false : { height: "auto" }}
-      animate={
-        isFirstRender.current && !initial ? { height: "auto" } : { height }
-      }
+      animate={{ height }}
       transition={{
-        duration: isFirstRender.current && !initial ? 0 : duration,
+        duration: shouldAnimate ? duration : 0,
         ease: ease as Easing | Easing[],
       }}
     >
