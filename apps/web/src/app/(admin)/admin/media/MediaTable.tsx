@@ -126,6 +126,7 @@ const MediaGridItem = memo(
               fill
               blur={item.blur}
               className="object-cover"
+              sizes="(max-width: 768px) 8rem, 10rem"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground">
@@ -871,8 +872,8 @@ export default function MediaTable() {
                 <CMSImage
                   src={`/p/${record.imageId}`}
                   alt={record.originalName}
-                  width={record.width}
-                  height={record.height}
+                  width={96}
+                  height={96}
                   blur={record.blur}
                   className="w-full h-full object-cover"
                 />
