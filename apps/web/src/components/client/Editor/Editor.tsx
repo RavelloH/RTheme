@@ -461,9 +461,36 @@ export default function Editor({
     [extractTitleFromEditor],
   );
 
-  const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen);
+  const toggleFullscreen = async () => {
+    const editorElement = document.getElementById("editor-container");
+    if (!editorElement) return;
+
+    try {
+      if (!document.fullscreenElement) {
+        // 进入全屏
+        await editorElement.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        // 退出全屏
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch (error) {
+      console.error("全屏切换失败:", error);
+    }
   };
+
+  // 监听浏览器全屏状态变化(用户按 ESC 键退出全屏时)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
 
   // 工具栏按钮操作 - 通过适配器管理器执行
   const handleUndo = () => {
@@ -1166,7 +1193,11 @@ export default function Editor({
   ];
 
   return (
-    <RowGrid className="w-full max-h-[100vh]" full>
+    <RowGrid
+      className={`w-full ${isFullscreen ? "fixed inset-0 z-[9999] bg-background" : "max-h-[100vh]"}`}
+      id="editor-container"
+      full
+    >
       <GridItem
         areas={[1]}
         width={3.2}
@@ -1393,7 +1424,7 @@ export default function Editor({
 
       <GridItem
         areas={createArray(2, 11)}
-        className="overflow-hidden bg-background relative"
+        className={`overflow-hidden bg-background relative ${isFullscreen ? "h-screen" : ""}`}
         height={1.5}
       >
         {editorType === "visual" ? (
@@ -1539,7 +1570,7 @@ export default function Editor({
         areas={[12]}
         width={3.2}
         height={0.15}
-        className="flex px-10 items-center justify-between border-t border-foreground/10"
+        className={`flex px-10 items-center justify-between border-t border-foreground/10 ${isFullscreen ? "hidden" : ""}`}
       >
         {/* 左侧：编辑器类型选择 + 字数统计 */}
         <div className="flex items-center gap-4">

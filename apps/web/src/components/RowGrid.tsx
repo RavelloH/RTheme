@@ -117,6 +117,7 @@ interface RowGridProps {
   children: ReactNode;
   className?: string;
   full?: boolean;
+  id?: string;
 }
 
 export function GridItem({
@@ -231,6 +232,7 @@ export default function RowGrid({
   children,
   className = "",
   full = false,
+  id,
 }: RowGridProps) {
   const isMobile = useMobile();
 
@@ -245,6 +247,7 @@ export default function RowGrid({
   return (
     <div
       key={`row-grid-${isMobile ? "mobile" : "desktop"}`}
+      id={id}
       className={combinedClassName}
     >
       {children}
