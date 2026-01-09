@@ -12465,6 +12465,8 @@ components:
           type: string
         mediaCount:
           type: number
+        totalSize:
+          type: number
         createdAt:
           type: string
         updatedAt:
@@ -12480,6 +12482,7 @@ components:
         - maxFileSize
         - pathTemplate
         - mediaCount
+        - totalSize
         - createdAt
         - updatedAt
       additionalProperties: false
@@ -12513,6 +12516,8 @@ components:
         config: {}
         mediaCount:
           type: number
+        totalSize:
+          type: number
         createdAt:
           type: string
         updatedAt:
@@ -12529,6 +12534,7 @@ components:
         - pathTemplate
         - config
         - mediaCount
+        - totalSize
         - createdAt
         - updatedAt
       additionalProperties: false

@@ -314,6 +314,25 @@ export async function getStorageList(
       }),
     ]);
 
+    // 计算每个存储提供商的文件总大小
+    const providerIds = storageProviders.map((p) => p.id);
+    const sizeSums = await prisma.media.groupBy({
+      by: ["storageProviderId"],
+      where: {
+        storageProviderId: {
+          in: providerIds,
+        },
+      },
+      _sum: {
+        size: true,
+      },
+    });
+
+    // 创建一个 Map 以便快速查找
+    const sizeMap = new Map(
+      sizeSums.map((item) => [item.storageProviderId, item._sum.size || 0]),
+    );
+
     const items = storageProviders.map((provider) => ({
       id: provider.id,
       name: provider.name,
@@ -325,6 +344,7 @@ export async function getStorageList(
       maxFileSize: provider.maxFileSize,
       pathTemplate: provider.pathTemplate,
       mediaCount: provider._count.media,
+      totalSize: sizeMap.get(provider.id) || 0,
       createdAt: provider.createdAt.toISOString(),
       updatedAt: provider.updatedAt.toISOString(),
     }));
@@ -406,6 +426,16 @@ export async function getStorageDetail(
       return response.notFound();
     }
 
+    // 计算文件总大小
+    const sizeSum = await prisma.media.aggregate({
+      where: {
+        storageProviderId: id,
+      },
+      _sum: {
+        size: true,
+      },
+    });
+
     const data = {
       id: storageProvider.id,
       name: storageProvider.name,
@@ -418,6 +448,7 @@ export async function getStorageDetail(
       pathTemplate: storageProvider.pathTemplate,
       config: storageProvider.config,
       mediaCount: storageProvider._count.media,
+      totalSize: sizeSum._sum.size || 0,
       createdAt: storageProvider.createdAt.toISOString(),
       updatedAt: storageProvider.updatedAt.toISOString(),
     };

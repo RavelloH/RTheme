@@ -50,6 +50,7 @@ export const StorageListItemSchema = z.object({
   maxFileSize: z.number(),
   pathTemplate: z.string(),
   mediaCount: z.number(),
+  totalSize: z.number(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -79,6 +80,7 @@ export const StorageDetailSchema = z.object({
   pathTemplate: z.string(),
   config: z.any(),
   mediaCount: z.number(),
+  totalSize: z.number(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

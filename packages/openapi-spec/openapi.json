@@ -17688,6 +17688,9 @@
           "mediaCount": {
             "type": "number"
           },
+          "totalSize": {
+            "type": "number"
+          },
           "createdAt": {
             "type": "string"
           },
@@ -17706,6 +17709,7 @@
           "maxFileSize",
           "pathTemplate",
           "mediaCount",
+          "totalSize",
           "createdAt",
           "updatedAt"
         ],
@@ -17752,6 +17756,9 @@
           "mediaCount": {
             "type": "number"
           },
+          "totalSize": {
+            "type": "number"
+          },
           "createdAt": {
             "type": "string"
           },
@@ -17771,6 +17778,7 @@
           "pathTemplate",
           "config",
           "mediaCount",
+          "totalSize",
           "createdAt",
           "updatedAt"
         ],
