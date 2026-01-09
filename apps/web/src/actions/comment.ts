@@ -1289,8 +1289,24 @@ export async function deleteComments(
 
   const { ids } = params;
 
+  // 构建权限过滤条件
+  const whereCondition: Prisma.CommentWhereInput = {
+    id: { in: ids },
+    deletedAt: null,
+  };
+
+  // AUTHOR 角色只能删除自己的评论或自己文章下的评论
+  if (authUser.role === "AUTHOR") {
+    whereCondition.OR = [
+      // 自己发表的评论
+      { userUid: authUser.uid },
+      // 自己文章下的评论
+      { post: { userUid: authUser.uid } },
+    ];
+  }
+
   await prisma.comment.updateMany({
-    where: { id: { in: ids }, deletedAt: null },
+    where: whereCondition,
     data: { deletedAt: new Date() },
   });
 

@@ -10,6 +10,7 @@ import limitControl from "@/lib/server/rate-limit";
 import { checkReauthToken } from "./reauth";
 import { getConfig } from "@/lib/server/config-cache";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
+import { authVerify } from "@/lib/server/auth-verify";
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -65,15 +66,6 @@ async function assertPasskeyEnabledAndLimit(uid?: number) {
   }
 }
 
-// 获取当前已登录用户 UID（用于注册/管理）
-async function getCurrentUid(): Promise<number | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("ACCESS_TOKEN")?.value || "";
-  const { jwtTokenVerify } = await import("@/lib/server/jwt");
-  const decoded = jwtTokenVerify<{ uid: number }>(token);
-  return decoded?.uid ?? null;
-}
-
 // ===== 注册（需要登录 + reauth） =====
 export async function generatePasskeyRegistrationOptions(): Promise<
   ApiResponse<{ options: PublicKeyCredentialCreationOptionsJSON }>
@@ -86,8 +78,11 @@ export async function generatePasskeyRegistrationOptions(): Promise<
     }>;
 
   try {
-    const uid = await getCurrentUid();
-    if (!uid) {
+    // 使用统一的 authVerify 进行身份验证
+    const authUser = await authVerify({
+      allowedRoles: ["USER", "ADMIN", "EDITOR", "AUTHOR"],
+    });
+    if (!authUser) {
       return response.unauthorized({
         message: "请先登录",
       }) as unknown as ApiResponse<{
@@ -105,10 +100,10 @@ export async function generatePasskeyRegistrationOptions(): Promise<
       }>;
     }
 
-    await assertPasskeyEnabledAndLimit(uid);
+    await assertPasskeyEnabledAndLimit(authUser.uid);
 
     const user = await prisma.user.findUnique({
-      where: { uid },
+      where: { uid: authUser.uid },
       select: { uid: true, username: true, email: true },
     });
     if (!user)
@@ -139,7 +134,7 @@ export async function generatePasskeyRegistrationOptions(): Promise<
     // 存储挑战
     await ensureRedisConnection();
     await redis.set(
-      REG_CHALLENGE_KEY(uid),
+      REG_CHALLENGE_KEY(authUser.uid),
       options.challenge,
       "EX",
       CHALLENGE_TTL,
@@ -176,8 +171,11 @@ export async function verifyPasskeyRegistration(payload: {
     return response.tooManyRequests() as unknown as ApiResponse<null>;
 
   try {
-    const uid = await getCurrentUid();
-    if (!uid)
+    // 使用统一的 authVerify 进行身份验证
+    const authUser = await authVerify({
+      allowedRoles: ["USER", "ADMIN", "EDITOR", "AUTHOR"],
+    });
+    if (!authUser)
       return response.unauthorized({
         message: "请先登录",
       }) as unknown as ApiResponse<null>;
@@ -190,10 +188,10 @@ export async function verifyPasskeyRegistration(payload: {
       }) as unknown as ApiResponse<null>;
     }
 
-    await assertPasskeyEnabledAndLimit(uid);
+    await assertPasskeyEnabledAndLimit(authUser.uid);
 
     await ensureRedisConnection();
-    const expectedChallenge = await redis.get(REG_CHALLENGE_KEY(uid));
+    const expectedChallenge = await redis.get(REG_CHALLENGE_KEY(authUser.uid));
     if (!expectedChallenge) {
       return response.badRequest({
         message: "挑战已过期，请重试",
@@ -271,7 +269,7 @@ export async function verifyPasskeyRegistration(payload: {
     // 存储 Passkey
     await prisma.passkey.create({
       data: {
-        userUid: uid,
+        userUid: authUser.uid,
         credentialId: credentialId,
         publicKey: publicKey,
         counter: BigInt(counter || 0),
@@ -286,7 +284,7 @@ export async function verifyPasskeyRegistration(payload: {
     after(async () => {
       try {
         await prisma.user.update({
-          where: { uid },
+          where: { uid: authUser.uid },
           data: { updatedAt: new Date() },
         });
         // 省略审计细节以避免类型错误；已有审计系统可按需接入
@@ -296,7 +294,7 @@ export async function verifyPasskeyRegistration(payload: {
     });
 
     // 清除挑战
-    await redis.del(REG_CHALLENGE_KEY(uid));
+    await redis.del(REG_CHALLENGE_KEY(authUser.uid));
 
     return response.ok({
       message: "通行密钥已绑定",
@@ -634,8 +632,11 @@ export async function listUserPasskeys(): Promise<
 > {
   const response = new ResponseBuilder("serveraction");
   try {
-    const uid = await getCurrentUid();
-    if (!uid)
+    // 使用统一的 authVerify 进行身份验证
+    const authUser = await authVerify({
+      allowedRoles: ["USER", "ADMIN", "EDITOR", "AUTHOR"],
+    });
+    if (!authUser)
       return response.unauthorized({
         message: "请先登录",
       }) as unknown as ApiResponse<{
@@ -650,7 +651,7 @@ export async function listUserPasskeys(): Promise<
       }>;
     await assertPasskeyEnabledAndLimit();
     const items = await prisma.passkey.findMany({
-      where: { userUid: uid },
+      where: { userUid: authUser.uid },
       orderBy: { createdAt: "desc" },
       select: {
         credentialId: true,
@@ -710,8 +711,11 @@ export async function renamePasskey({
 }): Promise<ApiResponse<null>> {
   const response = new ResponseBuilder("serveraction");
   try {
-    const uid = await getCurrentUid();
-    if (!uid)
+    // 使用统一的 authVerify 进行身份验证
+    const authUser = await authVerify({
+      allowedRoles: ["USER", "ADMIN", "EDITOR", "AUTHOR"],
+    });
+    if (!authUser)
       return response.unauthorized({
         message: "请先登录",
       }) as unknown as ApiResponse<null>;
@@ -725,7 +729,7 @@ export async function renamePasskey({
     }
 
     const pk = await prisma.passkey.findUnique({ where: { credentialId } });
-    if (!pk || pk.userUid !== uid)
+    if (!pk || pk.userUid !== authUser.uid)
       return response.badRequest({
         message: "未找到通行密钥",
       }) as unknown as ApiResponse<null>;
@@ -751,8 +755,11 @@ export async function deletePasskey({
 }): Promise<ApiResponse<null>> {
   const response = new ResponseBuilder("serveraction");
   try {
-    const uid = await getCurrentUid();
-    if (!uid)
+    // 使用统一的 authVerify 进行身份验证
+    const authUser = await authVerify({
+      allowedRoles: ["USER", "ADMIN", "EDITOR", "AUTHOR"],
+    });
+    if (!authUser)
       return response.unauthorized({
         message: "请先登录",
       }) as unknown as ApiResponse<null>;
@@ -766,7 +773,7 @@ export async function deletePasskey({
     }
 
     const pk = await prisma.passkey.findUnique({ where: { credentialId } });
-    if (!pk || pk.userUid !== uid)
+    if (!pk || pk.userUid !== authUser.uid)
       return response.badRequest({
         message: "未找到通行密钥",
       }) as unknown as ApiResponse<null>;

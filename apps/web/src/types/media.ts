@@ -16,9 +16,6 @@ export const MEDIA_SLOTS = {
   // 页面相关
   PAGE_FEATURED_IMAGE: "featuredImage", // 页面特色图片
   PAGE_CONTENT_IMAGE: "contentImage", // 页面内容图片
-
-  // 用户相关
-  USER_AVATAR: "avatar", // 用户头像
 } as const;
 
 export type MediaSlot = (typeof MEDIA_SLOTS)[keyof typeof MEDIA_SLOTS];
