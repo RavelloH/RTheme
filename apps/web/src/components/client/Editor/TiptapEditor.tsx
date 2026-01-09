@@ -258,6 +258,42 @@ const PasteImageUpload = Extension.create({
   },
 });
 
+// 自定义扩展：确保文档末尾始终有一个空段落
+const TrailingParagraph = Extension.create({
+  name: "trailingParagraph",
+
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey("trailingParagraph"),
+        appendTransaction: (transactions, oldState, newState) => {
+          // 只在文档内容发生变化时检查
+          const docChanged = transactions.some((tr) => tr.docChanged);
+          if (!docChanged) return null;
+
+          const { doc, schema, tr } = newState;
+          const lastNode = doc.lastChild;
+
+          // 如果最后一个节点不是段落，或者是非空段落，添加一个空段落
+          if (
+            !lastNode ||
+            lastNode.type !== schema.nodes.paragraph ||
+            lastNode.content.size > 0
+          ) {
+            if (schema.nodes.paragraph) {
+              const paragraph = schema.nodes.paragraph.create();
+              tr.insert(doc.content.size, paragraph);
+              return tr;
+            }
+          }
+
+          return null;
+        },
+      }),
+    ];
+  },
+});
+
 // 自定义扩展：双击空格退出链接
 const ExitLinkOnDoubleSpace = Extension.create({
   name: "exitLinkOnDoubleSpace",
@@ -418,6 +454,7 @@ export function TiptapEditor({
       }),
       CharacterCount,
       Markdown,
+      TrailingParagraph, // 确保末尾始终有空段落
       ExitLinkOnDoubleSpace,
       PasteImageUpload,
     ],
