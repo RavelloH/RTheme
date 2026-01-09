@@ -1364,7 +1364,7 @@ export default function MediaPreviewDialog({
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">
-                    访问链接
+                    代理访问链接
                   </label>
                   <div className="flex items-center gap-2 mt-1">
                     <p className="text-sm font-mono text-muted-foreground break-all flex-1">
@@ -1382,7 +1382,7 @@ export default function MediaPreviewDialog({
                 {isMediaDetail(media) && media.storageUrl && (
                   <div className="md:col-span-2">
                     <label className="text-sm text-muted-foreground">
-                      OSS 地址
+                      存储源地址
                     </label>
                     <div className="flex items-center gap-2 mt-1">
                       <p className="text-sm font-mono text-muted-foreground break-all flex-1">

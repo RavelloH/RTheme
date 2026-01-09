@@ -2,6 +2,17 @@
 const nextConfig = {
   images: {
     remotePatterns: [new URL("https://raw.ravelloh.top/**")],
+    localPatterns: [
+      {
+        pathname: "/p/**",
+        search: "",
+      },
+    ],
+    deviceSizes: [640, 1920, 3840],
+    imageSizes: [32, 48, 64, 96, 128, 256, 384],
+    qualities: [85],
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 2678400,
   },
   serverExternalPackages: ["ably"],
   experimental: {

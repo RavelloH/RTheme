@@ -180,8 +180,33 @@ export default function MediaSelector({
     ((page: number, append: boolean) => Promise<void>) | undefined
   >(undefined);
 
-  // URL 标签页状态
+  // URL 标签页状态(外部图片导入)
   const [urlInput, setUrlInput] = useState("");
+  const [importMode, setImportMode] = useState<"record" | "transfer">("record");
+  const [importProcessMode, setImportProcessMode] =
+    useState<ProcessMode>("lossy");
+  const [importItems, setImportItems] = useState<
+    Array<{
+      id: string;
+      url: string;
+      fileName: string;
+      fileSize?: number;
+      status: "pending" | "uploading" | "success" | "error";
+      result?: {
+        imageId: string;
+        url: string;
+        originalSize: number;
+        processedSize: number;
+        isDuplicate: boolean;
+        width: number | null;
+        height: number | null;
+      };
+      error?: string;
+      imageLoadError?: boolean;
+      customFileName?: string;
+    }>
+  >([]);
+  const [importing, setImporting] = useState(false);
 
   // 从 localStorage 获取用户角色
   useEffect(() => {
@@ -196,9 +221,9 @@ export default function MediaSelector({
     }
   }, []);
 
-  // 使用 Server Action 加载存储提供商列表（仅 ADMIN/EDITOR）
+  // 加载存储提供商列表（仅在转存模式且为 ADMIN/EDITOR 时）
   useEffect(() => {
-    if (userRole && userRole !== "AUTHOR") {
+    if (importMode === "transfer" && userRole && userRole !== "AUTHOR") {
       setLoadingProviders(true);
 
       getStorageList({
@@ -211,15 +236,19 @@ export default function MediaSelector({
       })
         .then((response) => {
           if (response.success && response.data) {
-            setStorageProviders(response.data);
+            // 过滤掉虚拟存储提供商（external-url）
+            const filteredProviders = response.data.filter(
+              (provider: StorageProvider) => provider.name !== "external-url",
+            );
+            setStorageProviders(filteredProviders);
             // 自动选择默认存储提供商
-            const defaultStorage = response.data.find(
+            const defaultStorage = filteredProviders.find(
               (s: StorageProvider) => s.isDefault,
             );
             if (defaultStorage) {
               setSelectedStorageId(defaultStorage.id);
-            } else if (response.data.length > 0 && response.data[0]) {
-              setSelectedStorageId(response.data[0].id);
+            } else if (filteredProviders.length > 0 && filteredProviders[0]) {
+              setSelectedStorageId(filteredProviders[0].id);
             }
           }
         })
@@ -228,7 +257,7 @@ export default function MediaSelector({
         )
         .finally(() => setLoadingProviders(false));
     }
-  }, [userRole]);
+  }, [importMode, userRole]);
 
   // 格式化字节大小
   const formatBytes = (bytes: number): string => {
@@ -285,6 +314,401 @@ export default function MediaSelector({
     }
   };
 
+  // ========== 外部图片导入相关函数 ==========
+
+  // 从 URL 提取文件名
+  const extractFileName = (url: string): string => {
+    try {
+      const urlObj = new URL(url);
+      const pathname = urlObj.pathname;
+      const fileName = pathname.split("/").pop() || "未命名文件";
+      return decodeURIComponent(fileName);
+    } catch {
+      return "未命名文件";
+    }
+  };
+
+  // 预加载图片以获取文件大小
+  const preloadImage = async (url: string): Promise<number | undefined> => {
+    try {
+      const response = await fetch(url, { method: "HEAD" });
+      const contentLength = response.headers.get("content-length");
+      return contentLength ? parseInt(contentLength, 10) : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+
+  // 解析 URL 输入并追加到列表(带去重)
+  const parseImportUrls = async () => {
+    const lines = urlInput.trim().split("\n");
+    const newItems: typeof importItems = [];
+
+    // 获取现有 URL 列表用于去重
+    const existingUrls = new Set(importItems.map((item) => item.url));
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      // 简单的 URL 验证
+      try {
+        new URL(trimmed);
+        // 去重:跳过已存在的 URL
+        if (!existingUrls.has(trimmed)) {
+          const fileName = extractFileName(trimmed);
+          newItems.push({
+            id: `${trimmed}-${Date.now()}-${Math.random()}`,
+            url: trimmed,
+            fileName,
+            status: "pending",
+          });
+          existingUrls.add(trimmed); // 添加到集合中,避免本次批次内重复
+        }
+      } catch {
+        // 忽略无效的 URL
+        console.warn(`Invalid URL: ${trimmed}`);
+      }
+    }
+
+    if (newItems.length === 0) {
+      toast.error("请输入有效的图片 URL");
+      return;
+    }
+
+    // 追加到现有列表,而不是替换
+    setImportItems((prev) => [...prev, ...newItems]);
+    setUrlInput(""); // 清空输入框
+
+    // 异步加载文件大小
+    newItems.forEach(async (item) => {
+      const fileSize = await preloadImage(item.url);
+      if (fileSize) {
+        setImportItems((prev) =>
+          prev.map((i) => (i.id === item.id ? { ...i, fileSize } : i)),
+        );
+      }
+    });
+  };
+
+  // 处理输入框的键盘事件(Enter 键追加)
+  const handleImportInputKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (urlInput.trim()) {
+        parseImportUrls();
+      }
+    }
+  };
+
+  // 处理粘贴事件(自动追加)
+  const handleImportInputPaste = (
+    e: React.ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData.getData("text");
+
+    if (!pastedText.trim()) return;
+
+    const lines = pastedText.trim().split("\n");
+    const newItems: typeof importItems = [];
+
+    // 获取现有 URL 列表用于去重
+    const existingUrls = new Set(importItems.map((item) => item.url));
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      try {
+        new URL(trimmed);
+        // 去重:跳过已存在的 URL
+        if (!existingUrls.has(trimmed)) {
+          const fileName = extractFileName(trimmed);
+          newItems.push({
+            id: `${trimmed}-${Date.now()}-${Math.random()}`,
+            url: trimmed,
+            fileName,
+            status: "pending",
+          });
+          existingUrls.add(trimmed); // 添加到集合中,避免本次批次内重复
+        }
+      } catch {
+        console.warn(`Invalid URL: ${trimmed}`);
+      }
+    }
+
+    if (newItems.length > 0) {
+      setImportItems((prev) => [...prev, ...newItems]);
+
+      // 异步加载文件大小
+      newItems.forEach(async (item) => {
+        const fileSize = await preloadImage(item.url);
+        if (fileSize) {
+          setImportItems((prev) =>
+            prev.map((i) => (i.id === item.id ? { ...i, fileSize } : i)),
+          );
+        }
+      });
+    }
+  };
+
+  // 移除导入项
+  const removeImportItem = (id: string) => {
+    setImportItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  // 更新导入项文件名
+  const updateImportItemFileName = (id: string, newFileName: string) => {
+    setImportItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, customFileName: newFileName } : item,
+      ),
+    );
+  };
+
+  // 获取导入项显示文件名
+  const getImportDisplayFileName = (
+    item: (typeof importItems)[number],
+  ): string => {
+    return item.customFileName || item.fileName;
+  };
+
+  // 处理导入项文件名编辑
+  const handleImportFileNameBlur = (
+    id: string,
+    e: React.FocusEvent<HTMLDivElement>,
+  ) => {
+    const newFileName = e.currentTarget.textContent?.trim() || "";
+    if (newFileName) {
+      updateImportItemFileName(id, newFileName);
+    } else {
+      // 如果为空,恢复原始文件名
+      e.currentTarget.textContent =
+        importItems.find((item) => item.id === id)?.fileName || "";
+    }
+  };
+
+  // 处理导入项图片加载错误
+  const handleImportImageError = (id: string) => {
+    setImportItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, imageLoadError: true } : item,
+      ),
+    );
+  };
+
+  // 导入单个图片
+  const importSingleItem = async (importItem: (typeof importItems)[number]) => {
+    // 标记为导入中
+    setImportItems((prev) =>
+      prev.map((item) =>
+        item.id === importItem.id
+          ? {
+              ...item,
+              status: "uploading" as const,
+              error: undefined,
+            }
+          : item,
+      ),
+    );
+
+    try {
+      const formData = new FormData();
+      formData.append("externalUrl", importItem.url);
+      // 如果用户自定义了文件名,传递给后端
+      if (importItem.customFileName) {
+        formData.append("displayName", importItem.customFileName);
+      }
+
+      // 根据导入模式决定参数
+      if (importMode === "record") {
+        // 记录模式:不压缩,不上传到 OSS
+        formData.append("mode", "original");
+      } else {
+        // 转存模式:按选择的模式压缩并上传
+        formData.append("mode", importProcessMode);
+        // 如果选择了存储提供商,添加到 FormData
+        if (selectedStorageId) {
+          formData.append("storageProviderId", selectedStorageId);
+        }
+      }
+
+      // 使用 fetch 发送请求
+      const response = await fetch("/admin/media/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include", // 携带 cookie
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        // 更新项目状态为成功
+        setImportItems((prev) =>
+          prev.map((item) =>
+            item.id === importItem.id
+              ? {
+                  ...item,
+                  status: "success" as const,
+                  result: result.data,
+                }
+              : item,
+          ),
+        );
+        return { success: true, data: result.data };
+      } else {
+        // 更新项目状态为失败
+        const errorMessage = result.message || "导入失败";
+        setImportItems((prev) =>
+          prev.map((item) =>
+            item.id === importItem.id
+              ? {
+                  ...item,
+                  status: "error" as const,
+                  error: errorMessage,
+                }
+              : item,
+          ),
+        );
+        return { success: false };
+      }
+    } catch (error) {
+      console.error(`导入图片失败: ${importItem.url}`, error);
+      setImportItems((prev) =>
+        prev.map((item) =>
+          item.id === importItem.id
+            ? {
+                ...item,
+                status: "error" as const,
+                error: "导入失败,请稍后重试",
+              }
+            : item,
+        ),
+      );
+      return { success: false };
+    }
+  };
+
+  // 执行导入并选择
+  const handleImportAndSelect = async () => {
+    if (importItems.length === 0) {
+      toast.error("请先添加要导入的图片 URL");
+      return;
+    }
+
+    // 只导入待导入的项目(不包括失败的项目)
+    const itemsToImport = importItems.filter(
+      (item) => item.status === "pending",
+    );
+
+    if (itemsToImport.length === 0) {
+      toast.error("没有需要导入的项目");
+      return;
+    }
+
+    setImporting(true);
+
+    try {
+      // 并发导入,最多同时3个
+      const CONCURRENT_LIMIT = 3;
+      let successCount = 0;
+      let failCount = 0;
+      const successfulImageIds: string[] = [];
+
+      // 创建项目队列(使用索引而非修改数组)
+      let currentIndex = 0;
+      const totalItems = itemsToImport.length;
+
+      // 导入单个项目并递归处理队列
+      const importNext = async (): Promise<void> => {
+        // 从队列中取出下一个项目
+        const index = currentIndex++;
+        if (index >= totalItems) {
+          return; // 队列已空
+        }
+
+        const item = itemsToImport[index];
+        if (!item) return;
+
+        // 导入当前项目
+        const result = await importSingleItem(item);
+
+        // 统计结果
+        if (result.success && result.data) {
+          successCount++;
+          successfulImageIds.push(result.data.imageId);
+        } else {
+          failCount++;
+        }
+
+        // 立即开始导入下一个项目(递归)
+        await importNext();
+      };
+
+      // 启动初始的并发导入任务(最多 CONCURRENT_LIMIT 个)
+      const initialTasks = [];
+      for (let i = 0; i < Math.min(CONCURRENT_LIMIT, totalItems); i++) {
+        initialTasks.push(importNext());
+      }
+
+      // 等待所有并发链完成
+      await Promise.all(initialTasks);
+
+      // 显示导入结果并自动选择
+      if (successCount > 0 && failCount === 0) {
+        // 全部成功
+        if (multiple) {
+          const urls = successfulImageIds.map((id) => `/p/${id}`);
+          onChange(urls);
+        } else {
+          onChange(`/p/${successfulImageIds[0]}`);
+        }
+        closeDialog();
+        toast.success(`成功导入 ${successCount} 张图片`);
+      } else if (successCount > 0 && failCount > 0) {
+        // 部分成功
+        if (multiple) {
+          const urls = successfulImageIds.map((id) => `/p/${id}`);
+          onChange(urls);
+        } else if (successfulImageIds[0]) {
+          onChange(`/p/${successfulImageIds[0]}`);
+        }
+        closeDialog();
+        toast.success(`成功 ${successCount} 张,失败 ${failCount} 张`);
+      } else {
+        toast.error("导入失败,所有图片都导入失败");
+      }
+    } catch (error) {
+      console.error("导入图片失败:", error);
+      toast.error("导入失败,请稍后重试");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  // 重试导入单个项目
+  const retryImportItem = async (id: string) => {
+    const itemToRetry = importItems.find((item) => item.id === id);
+    if (!itemToRetry) return;
+
+    const result = await importSingleItem(itemToRetry);
+    if (result.success && result.data) {
+      // 单选模式下重试成功后自动选择
+      if (!multiple) {
+        onChange(`/p/${result.data.imageId}`);
+        closeDialog();
+      }
+      toast.success("导入成功");
+    } else {
+      toast.error("导入失败,请检查错误信息后重试");
+    }
+  };
+
+  // ========== End of 外部图片导入相关函数 ==========
+
   // 打开对话框
   const openDialog = useCallback(() => {
     setDialogOpen(true);
@@ -303,13 +727,17 @@ export default function MediaSelector({
 
   // 关闭对话框
   const closeDialog = useCallback(() => {
-    if (uploading) return;
+    if (uploading || importing) return;
     setDialogOpen(false);
     setUploadFiles([]);
     setUrlInput("");
     setSelectedImageIds(new Set());
     setMode("lossy"); // 重置为默认压缩模式
-  }, [uploading, setDialogOpen]);
+    // 清除导入状态
+    setImportItems([]);
+    setImportMode("record");
+    setImportProcessMode("lossy");
+  }, [uploading, importing, setDialogOpen]);
 
   // 受控模式下，当对话框打开时初始化状态
   useEffect(() => {
@@ -787,35 +1215,6 @@ export default function MediaSelector({
     }
   }, [uploadFiles, uploadSingleFile, onChange, closeDialog, toast, multiple]);
 
-  // URL 输入确认
-  const handleConfirmUrl = useCallback(() => {
-    if (!urlInput.trim()) {
-      toast.error("请输入图片 URL");
-      return;
-    }
-
-    if (multiple) {
-      // 多选模式：按行分割 URL
-      const urls = urlInput
-        .split("\n")
-        .map((url) => url.trim())
-        .filter((url) => url.length > 0);
-
-      if (urls.length > 0) {
-        onChange(urls);
-        closeDialog();
-        toast.success(`已添加 ${urls.length} 个图片链接`);
-      } else {
-        toast.error("请输入有效的图片 URL");
-      }
-    } else {
-      // 单选模式
-      onChange(urlInput.trim());
-      closeDialog();
-      toast.success("图片 URL 已设置");
-    }
-  }, [urlInput, onChange, closeDialog, toast, multiple]);
-
   // 清除图片
   const handleClear = useCallback(() => {
     onChange("");
@@ -953,7 +1352,7 @@ export default function MediaSelector({
 
           {/* 使用 AutoResizer 包裹内容区域，实现平滑高度过渡 */}
           <AutoResizer duration={0.3}>
-            <AutoTransition key={activeTab} type="fade" duration={0.2}>
+            <AutoTransition type="fade" duration={0.3}>
               {/* 选择标签页 */}
               {activeTab === "select" && (
                 <div className="space-y-4">
@@ -1115,6 +1514,32 @@ export default function MediaSelector({
               {/* 上传标签页 */}
               {activeTab === "upload" && (
                 <div className="space-y-4">
+                  {/* 处理模式选择 */}
+                  <div className="space-y-4">
+                    <SegmentedControl
+                      value={mode}
+                      onChange={setMode}
+                      disabled={uploading}
+                      options={[
+                        {
+                          value: "lossy",
+                          label: "有损优化",
+                          description: "压缩为 AVIF 格式，节省占用",
+                        },
+                        {
+                          value: "lossless",
+                          label: "无损转换",
+                          description: "无损转换为 WebP ，并保留元数据",
+                        },
+                        {
+                          value: "original",
+                          label: "保留原片",
+                          description: "以原始格式上传，不做处理",
+                        },
+                      ]}
+                      columns={3}
+                    />
+                  </div>
                   {/* 存储提供商选择（仅 ADMIN/EDITOR 可见） */}
                   {userRole && userRole !== "AUTHOR" && (
                     <div className="space-y-2 flex flex-col gap-y-2">
@@ -1143,36 +1568,6 @@ export default function MediaSelector({
                       )}
                     </div>
                   )}
-
-                  {/* 处理模式选择 */}
-                  <div className="space-y-4">
-                    <label className="text-sm font-medium text-muted-foreground">
-                      处理模式
-                    </label>
-                    <SegmentedControl
-                      value={mode}
-                      onChange={setMode}
-                      disabled={uploading}
-                      options={[
-                        {
-                          value: "lossy",
-                          label: "有损优化",
-                          description: "压缩为 AVIF 格式，节省占用",
-                        },
-                        {
-                          value: "lossless",
-                          label: "无损转换",
-                          description: "无损转换为 WebP ，并保留元数据",
-                        },
-                        {
-                          value: "original",
-                          label: "保留原片",
-                          description: "以原始格式上传，不做处理",
-                        },
-                      ]}
-                      columns={3}
-                    />
-                  </div>
 
                   {/* 文件选择区域 */}
                   <div
@@ -1416,24 +1811,288 @@ export default function MediaSelector({
                 </div>
               )}
 
-              {/* URL 标签页 */}
+              {/* URL 标签页 - 外部图片导入 */}
               {activeTab === "url" && (
-                <div className="space-y-4 pb-6">
-                  <Input
-                    label={multiple ? "图片 URL（每行一个）" : "图片 URL"}
-                    value={urlInput}
-                    onChange={(e) => setUrlInput(e.target.value)}
-                    size="sm"
-                    rows={multiple ? 5 : undefined}
-                    helperText={
-                      multiple
-                        ? "每行输入一个图片链接，支持批量添加"
-                        : "支持任何可访问的图片链接"
-                    }
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    注意：外部图片链接不会进行自动优化，可能影响加载速度和显示效果。
-                  </p>
+                <div className="space-y-4">
+                  {/* 导入模式选择 */}
+                  <div className="space-y-4">
+                    <SegmentedControl
+                      value={importMode}
+                      onChange={setImportMode}
+                      disabled={importing}
+                      options={[
+                        {
+                          value: "record",
+                          label: "外链优化",
+                          description: "仅优化图片，不上传到存储",
+                        },
+                        {
+                          value: "transfer",
+                          label: "转存托管",
+                          description: "下载并上传到存储，可选择压缩",
+                        },
+                      ]}
+                      columns={2}
+                    />
+                  </div>
+
+                  <AutoResizer>
+                    <AutoTransition>
+                      {/* 转存模式的额外选项 */}
+                      {importMode === "transfer" ? (
+                        <div key="transfer-options">
+                          {/* 处理模式选择 */}
+                          <div className="space-y-4">
+                            <p className="text-sm text-muted-foreground">
+                              将图片直接下载并上传到存储服务，完全由站点托管。
+                            </p>
+                            <SegmentedControl
+                              value={importProcessMode}
+                              onChange={setImportProcessMode}
+                              disabled={importing}
+                              options={[
+                                {
+                                  value: "lossy",
+                                  label: "有损优化",
+                                  description: "压缩为 AVIF 格式，节省占用",
+                                },
+                                {
+                                  value: "lossless",
+                                  label: "无损转换",
+                                  description: "无损转换为 WebP ，并保留元数据",
+                                },
+                                {
+                                  value: "original",
+                                  label: "保留原片",
+                                  description: "以原始格式上传，不做处理",
+                                },
+                              ]}
+                              columns={3}
+                            />
+                          </div>
+                          {/* 存储提供商选择（仅 ADMIN/EDITOR 可见） */}
+                          {userRole && userRole !== "AUTHOR" && (
+                            <div className="space-y-2 flex flex-col gap-y-2 pt-4 pb-8">
+                              <label className="text-sm font-medium text-muted-foreground">
+                                上传位置
+                              </label>
+
+                              {loadingProviders ? (
+                                <div className="text-sm text-muted-foreground">
+                                  加载中...
+                                </div>
+                              ) : (
+                                <Select
+                                  value={selectedStorageId}
+                                  onChange={(value) =>
+                                    setSelectedStorageId(String(value))
+                                  }
+                                  options={storageProviders.map((provider) => ({
+                                    value: provider.id,
+                                    label: `${provider.displayName}${provider.isDefault ? " (默认)" : ""}`,
+                                  }))}
+                                  size="sm"
+                                  disabled={importing}
+                                  placeholder="选择存储提供商"
+                                />
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p
+                          className="text-sm text-muted-foreground"
+                          key="record-mode-info"
+                        >
+                          将图片的元信息，例如文件大小、图片尺寸、模糊占位符等解析后保存到数据库，并为其启用站点的图片优化。
+                          其性能与常规上传的图片相同，并可在全站所有功能中使用。图片仍然托管在原始的外部
+                          URL 上，不会上传到存储服务。
+                        </p>
+                      )}
+                    </AutoTransition>
+                  </AutoResizer>
+
+                  {/* URL 输入区域 */}
+                  <div className="space-y-2">
+                    <Input
+                      label="图片 URL"
+                      value={urlInput}
+                      onChange={(e) => setUrlInput(e.target.value)}
+                      onKeyDown={handleImportInputKeyDown}
+                      onPaste={handleImportInputPaste}
+                      helperText={
+                        "粘贴图片 URL，每行一个。Enter 或粘贴后自动添加"
+                      }
+                      rows={2}
+                      size="sm"
+                      disabled={importing}
+                    />
+                  </div>
+
+                  {/* 导入列表 */}
+                  <AutoResizer>
+                    {importItems.length > 0 && (
+                      <div className="space-y-0">
+                        <div className="text-sm font-medium text-muted-foreground pb-3 border-b border-border">
+                          导入列表 ({importItems.length})
+                        </div>
+                        <div className="divide-y divide-border">
+                          {importItems.map((item) => (
+                            <div
+                              key={item.id}
+                              className="flex items-center gap-3 py-3 px-5"
+                            >
+                              {/* 预览图 */}
+                              <div className="flex-shrink-0">
+                                <div className="w-14 h-14 rounded-md overflow-hidden bg-muted flex items-center justify-center">
+                                  {!item.imageLoadError ? (
+                                    <Image
+                                      unoptimized
+                                      src={item.url}
+                                      alt={getImportDisplayFileName(item)}
+                                      className="w-full h-full object-cover"
+                                      width={56}
+                                      height={56}
+                                      onError={() =>
+                                        handleImportImageError(item.id)
+                                      }
+                                    />
+                                  ) : (
+                                    <RiFileDamageFill
+                                      className="text-muted-foreground"
+                                      size="1.5em"
+                                    />
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* 项目信息 */}
+                              <div className="flex-1 min-w-0">
+                                {/* 文件名（可编辑） */}
+                                <div
+                                  contentEditable={
+                                    item.status === "pending" && !importing
+                                  }
+                                  suppressContentEditableWarning
+                                  onBlur={(e) =>
+                                    handleImportFileNameBlur(item.id, e)
+                                  }
+                                  onKeyDown={handleFileNameKeyDown}
+                                  className={`text-sm font-medium truncate mb-1 outline-none ${
+                                    item.status === "pending" && !importing
+                                      ? "cursor-text focus:underline"
+                                      : ""
+                                  }`}
+                                >
+                                  {getImportDisplayFileName(item)}
+                                </div>
+
+                                {/* URL 和文件大小 */}
+                                {!item.error && (
+                                  <div className="text-xs text-muted-foreground truncate">
+                                    {item.url}
+                                    {item.fileSize && (
+                                      <span className="ml-2">
+                                        · {formatBytes(item.fileSize)}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* 错误信息 */}
+                                {item.error && (
+                                  <div className="text-xs text-error">
+                                    {item.error}
+                                  </div>
+                                )}
+
+                                {/* 成功信息 */}
+                                {item.result && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {formatBytes(item.result.originalSize)}
+                                    {item.result.width &&
+                                      item.result.height && (
+                                        <span className="ml-2">
+                                          · {item.result.width} ×{" "}
+                                          {item.result.height}
+                                        </span>
+                                      )}
+                                    {item.result.isDuplicate && (
+                                      <span className="text-orange-500 ml-2">
+                                        · 重复项目
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* 状态指示器 */}
+                              <div className="flex-shrink-0 w-20">
+                                <AutoTransition type="scale">
+                                  {item.status === "pending" && (
+                                    <div className="h-6 w-6" />
+                                  )}
+                                  {item.status === "uploading" && (
+                                    <div className="flex flex-col items-center gap-1">
+                                      <RiLoader4Line
+                                        className="animate-spin text-primary"
+                                        size="1.5em"
+                                      />
+                                    </div>
+                                  )}
+                                  {item.status === "success" && (
+                                    <div className="flex flex-col items-center gap-1">
+                                      <RiCheckFill
+                                        className="text-success"
+                                        size="1.75em"
+                                      />
+                                    </div>
+                                  )}
+                                  {item.status === "error" && (
+                                    <div className="flex flex-col items-center gap-1">
+                                      <RiCloseFill
+                                        className="text-error"
+                                        size="1.75em"
+                                      />
+                                    </div>
+                                  )}
+                                </AutoTransition>
+                              </div>
+
+                              {/* 删除/重试按钮 */}
+                              {item.status === "error" ? (
+                                <button
+                                  type="button"
+                                  onClick={() => retryImportItem(item.id)}
+                                  className="flex-shrink-0 p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-muted-foreground disabled:hover:bg-transparent"
+                                  aria-label={`重试 ${getImportDisplayFileName(item)}`}
+                                  title="重试导入"
+                                  disabled={importing}
+                                >
+                                  <RiRestartLine size="1.5em" />
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => removeImportItem(item.id)}
+                                  className="flex-shrink-0 p-2 text-muted-foreground hover:text-error hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-muted-foreground disabled:hover:bg-transparent"
+                                  aria-label={`删除 ${getImportDisplayFileName(item)}`}
+                                  title="删除此项目"
+                                  disabled={
+                                    importing ||
+                                    item.status === "success" ||
+                                    item.status === "uploading"
+                                  }
+                                >
+                                  <RiCloseFill size="1.5em" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </AutoResizer>
 
                   {/* 操作按钮 */}
                   <div className="flex justify-end gap-4 pt-4 border-t border-foreground/10">
@@ -1442,13 +2101,16 @@ export default function MediaSelector({
                       variant="ghost"
                       onClick={closeDialog}
                       size="sm"
+                      disabled={importing}
                     />
                     <Button
-                      label="确认"
+                      label="导入并选择"
                       variant="primary"
-                      onClick={handleConfirmUrl}
+                      onClick={handleImportAndSelect}
                       size="sm"
-                      disabled={!urlInput.trim()}
+                      loading={importing}
+                      loadingText="导入中..."
+                      disabled={importItems.length === 0}
                     />
                   </div>
                 </div>

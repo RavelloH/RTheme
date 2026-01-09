@@ -42,6 +42,14 @@ import {
 } from "./StorageConfigFields";
 import { StorageProviderType } from "@/template/storages";
 
+// 虚拟存储提供商的名称（与后端保持一致）
+const VIRTUAL_STORAGE_NAME = "external-url";
+
+// 检查是否为虚拟存储
+function isVirtualStorage(storage: StorageListItem): boolean {
+  return storage.name === VIRTUAL_STORAGE_NAME;
+}
+
 interface StorageFormState {
   name: string;
   displayName: string;
@@ -132,7 +140,18 @@ export default function StoragesTable() {
       if (response && response.success) {
         // API 返回遵循 shared-types 中的 Paginated Response：
         // response.data 是条目数组，分页信息在 response.meta 中
-        setData(response.data as StorageListItem[]);
+        let items = response.data as StorageListItem[];
+
+        // 将虚拟存储排到最后
+        items = items.sort((a, b) => {
+          const aIsVirtual = isVirtualStorage(a);
+          const bIsVirtual = isVirtualStorage(b);
+          if (aIsVirtual && !bIsVirtual) return 1;
+          if (!aIsVirtual && bIsVirtual) return -1;
+          return 0;
+        });
+
+        setData(items);
         setTotalPages((response.meta?.totalPages as number) || 1);
         setTotalRecords((response.meta?.total as number) || 0);
       } else if (response && !response.success) {
@@ -151,6 +170,12 @@ export default function StoragesTable() {
   }, [fetchData]);
 
   const handleEdit = async (record: StorageListItem) => {
+    // 禁止编辑虚拟存储
+    if (isVirtualStorage(record)) {
+      toastError("系统保护", "虚拟存储提供商不允许编辑");
+      return;
+    }
+
     setEditingStorage(record);
     // 立即设置基本表单数据（从列表项中获得）
     setFormData({
@@ -434,34 +459,41 @@ export default function StoragesTable() {
     },
   ];
 
-  const rowActions = (record: StorageListItem): ActionButton[] => [
-    {
-      label: "编辑",
-      onClick: () => handleEdit(record),
-      icon: <RiEditLine size="1em" />,
-    },
-    {
-      label: record.isActive ? "停用" : "激活",
-      onClick: () => handleToggleStatus(record),
-      icon: record.isActive ? (
-        <RiEyeOffLine size="1em" />
-      ) : (
-        <RiEyeLine size="1em" />
-      ),
-    },
-    {
-      label: "设为默认",
-      onClick: () => handleSetDefault(record),
-      icon: <RiStarLine size="1em" />,
-      disabled: record.isDefault,
-    },
-    {
-      label: "删除",
-      onClick: () => handleDelete([record]),
-      icon: <RiDeleteBinLine size="1em" />,
-      variant: "danger",
-    },
-  ];
+  const rowActions = (record: StorageListItem): ActionButton[] => {
+    const isVirtual = isVirtualStorage(record);
+
+    return [
+      {
+        label: "编辑",
+        onClick: () => handleEdit(record),
+        icon: <RiEditLine size="1em" />,
+        disabled: isVirtual, // 禁用虚拟存储的编辑
+      },
+      {
+        label: record.isActive ? "停用" : "激活",
+        onClick: () => handleToggleStatus(record),
+        icon: record.isActive ? (
+          <RiEyeOffLine size="1em" />
+        ) : (
+          <RiEyeLine size="1em" />
+        ),
+        disabled: isVirtual, // 禁用虚拟存储的状态切换
+      },
+      {
+        label: "设为默认",
+        onClick: () => handleSetDefault(record),
+        icon: <RiStarLine size="1em" />,
+        disabled: record.isDefault || isVirtual, // 禁用虚拟存储设为默认
+      },
+      {
+        label: "删除",
+        onClick: () => handleDelete([record]),
+        icon: <RiDeleteBinLine size="1em" />,
+        variant: "danger",
+        disabled: isVirtual, // 禁用虚拟存储的删除
+      },
+    ];
+  };
 
   return (
     <>
@@ -494,7 +526,12 @@ export default function StoragesTable() {
         onSelectionChange={(selectedKeys) =>
           setSelectedKeys(selectedKeys as string[])
         }
-        onRowClick={(record) => handleEdit(record)}
+        onRowClick={(record) => {
+          // 禁止点击虚拟存储行
+          if (!isVirtualStorage(record)) {
+            handleEdit(record);
+          }
+        }}
         striped
         hoverable
         bordered={false}

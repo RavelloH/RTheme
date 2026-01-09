@@ -12,6 +12,7 @@ import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import { logAuditEvent } from "@/lib/server/audit";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
+import { getOrCreateVirtualStorage } from "@/lib/server/virtual-storage";
 
 const response = new ResponseBuilder("serverless");
 
@@ -88,6 +89,11 @@ export async function POST(request: NextRequest): Promise<Response> {
       | null;
     const file = formData.get("file") as File | null;
 
+    // 检查是否为外部图片导入
+    const externalUrl = formData.get("externalUrl") as string | null;
+    const altText = formData.get("altText") as string | null;
+    const displayName = formData.get("displayName") as string | null;
+
     // 验证模式
     if (!["lossy", "lossless", "original"].includes(mode)) {
       return response.badRequest({
@@ -98,6 +104,183 @@ export async function POST(request: NextRequest): Promise<Response> {
         },
       }) as Response;
     }
+
+    // ========================================================================
+    // 外部图片导入分支
+    // ========================================================================
+    if (externalUrl) {
+      try {
+        // 获取或创建虚拟存储提供商
+        const virtualStorage = await getOrCreateVirtualStorage();
+
+        // Fetch 外部图片
+        const imageResponse = await fetch(externalUrl, {
+          method: "GET",
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (compatible; NeutralPress/1.0; +https://ravelloh.com)",
+          },
+        });
+
+        if (!imageResponse.ok) {
+          return response.badRequest({
+            message: `无法获取外部图片: HTTP ${imageResponse.status}`,
+            error: {
+              code: "FETCH_FAILED",
+              message: `HTTP 状态码: ${imageResponse.status}`,
+            },
+          }) as Response;
+        }
+
+        // 检查 Content-Type
+        const contentType =
+          imageResponse.headers.get("content-type") || "image/jpeg";
+        if (!contentType.startsWith("image/")) {
+          return response.badRequest({
+            message: `URL 返回的不是图片类型: ${contentType}`,
+            error: {
+              code: "NOT_IMAGE",
+              message: "只能导入图片文件",
+            },
+          }) as Response;
+        }
+
+        // 读取图片数据
+        const arrayBuffer = await imageResponse.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        // 提取文件名
+        const urlObj = new URL(externalUrl);
+        const pathParts = urlObj.pathname.split("/");
+        const urlFilename =
+          displayName ||
+          pathParts[pathParts.length - 1] ||
+          `external-${Date.now()}.jpg`;
+
+        // 处理图片元数据（不压缩,使用 original 模式提取元数据）
+        const processed = await processImage(
+          buffer,
+          urlFilename,
+          contentType,
+          "original",
+        );
+
+        // 检查去重
+        const existingMedia = await prisma.media.findFirst({
+          where: { hash: processed.hash },
+          select: {
+            id: true,
+            originalName: true,
+            shortHash: true,
+            storageUrl: true,
+            width: true,
+            height: true,
+            size: true,
+          },
+        });
+
+        if (existingMedia) {
+          // 文件已存在，直接返回现有记录
+          const imageId = generateSignedImageId(existingMedia.shortHash);
+          return response.ok({
+            data: {
+              id: existingMedia.id,
+              originalName: existingMedia.originalName,
+              shortHash: existingMedia.shortHash,
+              imageId,
+              url: `/p/${imageId}`,
+              originalSize: buffer.length,
+              processedSize: existingMedia.size,
+              isDuplicate: true,
+              width: existingMedia.width,
+              height: existingMedia.height,
+            },
+            message: "文件已存在（已去重）",
+          }) as Response;
+        }
+
+        // 保存到数据库（不上传到 OSS，直接存储外部 URL）
+        const media = await prisma.media.create({
+          data: {
+            fileName: urlFilename,
+            originalName: urlFilename,
+            mimeType: contentType,
+            size: buffer.length,
+            shortHash: processed.shortHash,
+            hash: processed.hash,
+            mediaType: "IMAGE",
+            width: processed.width,
+            height: processed.height,
+            altText: altText || undefined,
+            blur: processed.blur,
+            thumbnails: {},
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            exif: processed.exif as any,
+            inGallery: false,
+            isOptimized: false,
+            storageUrl: externalUrl, // 直接存储外部 URL
+            storageProviderId: virtualStorage.id, // 使用虚拟存储提供商
+            userUid: user.uid,
+          },
+        });
+
+        // 记录审计日志
+        await logAuditEvent({
+          user: {
+            uid: String(user.uid),
+            ipAddress: (await getClientIP()) || "Unknown",
+            userAgent: (await getClientUserAgent()) || "Unknown",
+          },
+          details: {
+            action: "IMPORT_EXTERNAL_MEDIA",
+            resourceType: "Media",
+            resourceId: String(media.id),
+            value: {
+              old: null,
+              new: {
+                fileName: media.fileName,
+                originalName: media.originalName,
+                externalUrl,
+                size: buffer.length,
+              },
+            },
+            description: `导入外部图片: ${externalUrl}`,
+          },
+        });
+
+        const imageId = generateSignedImageId(processed.shortHash);
+        return response.ok({
+          data: {
+            id: media.id,
+            originalName: media.originalName,
+            shortHash: media.shortHash,
+            imageId,
+            url: `/p/${imageId}`,
+            originalSize: buffer.length,
+            processedSize: buffer.length,
+            isDuplicate: false,
+            width: media.width,
+            height: media.height,
+          },
+          message: "导入成功",
+        }) as Response;
+      } catch (error) {
+        console.error("Import external image error:", error);
+        const errorMessage =
+          error instanceof Error ? error.message : "导入外部图片失败";
+        return response.badRequest({
+          message: errorMessage,
+          error: {
+            code: "IMPORT_FAILED",
+            message: errorMessage,
+          },
+        }) as Response;
+      }
+    }
+
+    // ========================================================================
+    // 文件上传分支（原有逻辑）
+    // ========================================================================
 
     // 验证文件
     if (!file) {
@@ -321,10 +504,3 @@ export async function POST(request: NextRequest): Promise<Response> {
     return response.serverError() as Response;
   }
 }
-
-// 配置 body 大小限制
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};

@@ -122,7 +122,7 @@ export default function MediaStats() {
   };
 
   return (
-    <GridItem areas={[1, 2, 3, 4, 5, 6]} width={2} height={0.5}>
+    <GridItem areas={[1, 2, 3, 4]} width={3} height={0.5}>
       <AutoTransition type="scale" className="h-full">
         {result ? (
           <div

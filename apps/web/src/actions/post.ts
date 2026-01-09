@@ -51,37 +51,80 @@ import {
   findMediaIdByUrl,
 } from "@/lib/server/media-reference";
 import { MEDIA_SLOTS } from "@/types/media";
+import { generateSignature } from "@/lib/server/image-crypto";
 
 /*
-  辅助函数：从内容中提取内部图片链接并返回对应的 Media ID
-  图片链接格式：/p/{8位shortHash}{4位签名}
-  例如：/p/5DIMkhLbkAfO，其中 5DIMkhLb 是 shortHash，kAfO 是签名
-*/
-async function extractInternalMediaFromContent(
-  content: string,
-): Promise<number[]> {
-  // 1. 提取所有 /p/ 开头的图片链接（匹配 /p/ 后跟12位字符）
-  const imageRegex = /\/p\/([a-zA-Z0-9_-]{12})/g;
-  const matches = [...content.matchAll(imageRegex)];
+  辅助函数：处理内容中的图片并提取引用关系
 
-  if (matches.length === 0) {
-    return [];
+  功能：
+  1. 检测内容中的所有存储源 URL（通过数据库匹配）
+  2. 自动替换为 /p/{shortHash}{signature} 格式
+  3. 提取所有图片的 Media ID（包括原有 /p/ 链接和存储源 URL）
+
+  @param content - 文章内容
+  @param prismaClient - Prisma 客户端实例
+  @returns { processedContent, mediaIds } - 处理后的内容和媒体 ID 列表
+*/
+async function processContentImagesAndExtractReferences(
+  content: string,
+  prismaClient: typeof prisma,
+): Promise<{ processedContent: string; mediaIds: number[] }> {
+  let processedContent = content;
+  const mediaIds = new Set<number>();
+
+  // 1. 提取所有已存在的 /p/ 链接（匹配 /p/ 后跟12位字符）
+  const shortLinkRegex = /\/p\/([a-zA-Z0-9_-]{12})/g;
+  const shortLinkMatches = [...content.matchAll(shortLinkRegex)];
+
+  // 2. 提取所有可能的图片 URL（http/https 开头，常见图片扩展名）
+  const urlRegex =
+    /https?:\/\/[^\s<>"{}|\\^`[\]]+?\.(jpg|jpeg|png|gif|webp|avif|svg|bmp|tiff|ico)/gi;
+  const urlMatches = [...content.matchAll(urlRegex)];
+
+  // 3. 批量查询数据库中的媒体
+  const urlsToCheck = urlMatches.map((m) => m[0]);
+  const shortHashesToCheck = shortLinkMatches.map((m) => m[1]!.substring(0, 8));
+
+  const [mediaByUrl, mediaByShortHash] = await Promise.all([
+    // 查找通过 storageUrl 匹配的媒体
+    urlsToCheck.length > 0
+      ? prismaClient.media.findMany({
+          where: { storageUrl: { in: urlsToCheck } },
+          select: { id: true, storageUrl: true, shortHash: true },
+        })
+      : Promise.resolve([]),
+    // 查找通过 shortHash 匹配的媒体
+    shortHashesToCheck.length > 0
+      ? prismaClient.media.findMany({
+          where: { shortHash: { in: shortHashesToCheck } },
+          select: { id: true, shortHash: true },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  // 4. 替换存储源 URL 为 /p/ 格式
+  for (const media of mediaByUrl) {
+    if (media.storageUrl && media.shortHash) {
+      const signature = generateSignature(media.shortHash);
+      const shortLink = `/p/${media.shortHash}${signature}`;
+      // 全局替换所有匹配的 URL
+      processedContent = processedContent.replaceAll(
+        media.storageUrl,
+        shortLink,
+      );
+      mediaIds.add(media.id);
+    }
   }
 
-  // 2. 提取所有 shortHash（前8位）并去重
-  const shortHashes = [...new Set(matches.map((m) => m[1]!.substring(0, 8)))];
+  // 5. 收集所有 /p/ 格式的图片 ID
+  for (const media of mediaByShortHash) {
+    mediaIds.add(media.id);
+  }
 
-  // 3. 一次性查询所有匹配的 media（单次数据库查询，使用索引）
-  const mediaList = await prisma.media.findMany({
-    where: {
-      shortHash: { in: shortHashes },
-    },
-    select: {
-      id: true,
-    },
-  });
-
-  return mediaList.map((m) => m.id);
+  return {
+    processedContent,
+    mediaIds: Array.from(mediaIds),
+  };
 }
 
 /*
@@ -930,13 +973,17 @@ export async function createPost(
       return response.badRequest({ message: "该 slug 已被使用" });
     }
 
-    // 使用 text-version 创建内容版本
+    // 处理内容中的图片链接：自动替换存储源 URL 为 /p/ 格式并提取引用
+    const { processedContent, mediaIds } =
+      await processContentImagesAndExtractReferences(content, prisma);
+
+    // 使用 text-version 创建内容版本（使用处理后的内容）
     const tv = new TextVersion();
     const now = new Date().toISOString();
     // 如果没有提供 commitMessage，使用默认值
     const finalCommitMessage = commitMessage || "初始版本";
     const versionName = `${user.uid}:${now}:${finalCommitMessage}`;
-    const versionedContent = tv.commit("", content, versionName);
+    const versionedContent = tv.commit("", processedContent, versionName);
 
     // 处理发布时间：如果状态是 PUBLISHED 且没有提供 publishedAt，则使用当前时间
     let publishedAtDate: Date | null = null;
@@ -966,9 +1013,6 @@ export async function createPost(
         connect: [{ id: uncategorizedId }],
       };
     }
-
-    // 提取内容中的内部图片链接
-    const mediaIds = await extractInternalMediaFromContent(content);
 
     // 准备 mediaRefs 创建数据
     const mediaRefsData: Array<{ mediaId: number; slot: string }> = [];
@@ -1222,15 +1266,26 @@ export async function updatePost(
     let versionedContent = existingPost.content;
     let newVersionName: string | undefined;
     let oldVersionName: string | undefined;
+    let processedContent: string | undefined;
+    let contentMediaIds: number[] | undefined;
 
     if (content !== undefined) {
+      // 先处理图片链接：自动替换存储源 URL 为 /p/ 格式并提取引用
+      const result = await processContentImagesAndExtractReferences(
+        content,
+        prisma,
+      );
+      processedContent = result.processedContent;
+      contentMediaIds = result.mediaIds;
+
+      // 然后使用处理后的内容创建版本
       const tv = new TextVersion();
       const now = new Date().toISOString();
       const finalCommitMessage = commitMessage || "更新内容";
       newVersionName = `${user.uid}:${now}:${finalCommitMessage}`;
       versionedContent = tv.commit(
         existingPost.content,
-        content,
+        processedContent,
         newVersionName,
       );
 
@@ -1239,12 +1294,6 @@ export async function updatePost(
       if (versionLog.length > 0) {
         oldVersionName = versionLog[versionLog.length - 1]?.version;
       }
-    }
-
-    // 提取内容中的内部图片链接（如果更新了内容）
-    let contentMediaIds: number[] | undefined;
-    if (content !== undefined) {
-      contentMediaIds = await extractInternalMediaFromContent(content);
     }
 
     // 准备 mediaRefs 更新数据

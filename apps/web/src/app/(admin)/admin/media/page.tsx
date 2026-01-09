@@ -7,6 +7,7 @@ import MediaStats from "./MediaStats";
 import MediaStatsChart from "./MediaStatsChart";
 import MediaTable from "./MediaTable";
 import MediaAdd from "./MediaAdd";
+import MediaImport from "./MediaImport";
 import { Suspense } from "react";
 
 export const metadata = await generateMetadata(
@@ -34,6 +35,7 @@ export default function MediaAdminPage() {
           {/* 媒体内容统计 */}
           <MediaStats />
           <Suspense fallback={null}>
+            <MediaImport />
             <MediaAdd />
           </Suspense>
           {/* 媒体内容趋势统计图表 */}

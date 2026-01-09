@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { RiArrowDownSLine } from "@remixicon/react";
 
@@ -34,13 +35,38 @@ export function Select({
   const [dropdownDirection, setDropdownDirection] = useState<"down" | "up">(
     "down",
   );
+  const [dropdownPosition, setDropdownPosition] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  }>({ top: 0, left: 0, width: 0 });
+  const [isMounted, setIsMounted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
 
+  // 确保组件已挂载（用于 Portal）
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // 更新下拉框位置
+  const updateDropdownPosition = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      });
+    }
+  };
+
   // 判断下拉框展开方向
   useEffect(() => {
     if (isOpen && containerRef.current) {
+      updateDropdownPosition();
+
       if (direcation) {
         setDropdownDirection(direcation);
         return;
@@ -51,6 +77,19 @@ export function Select({
       setDropdownDirection(isInUpperHalf ? "down" : "up");
     }
   }, [isOpen, direcation]);
+
+  // 监听滚动和窗口大小变化，更新下拉框位置
+  useEffect(() => {
+    if (isOpen) {
+      const handleUpdate = () => updateDropdownPosition();
+      window.addEventListener("scroll", handleUpdate, true);
+      window.addEventListener("resize", handleUpdate);
+      return () => {
+        window.removeEventListener("scroll", handleUpdate, true);
+        window.removeEventListener("resize", handleUpdate);
+      };
+    }
+  }, [isOpen]);
 
   // 点击外部关闭下拉框
   useEffect(() => {
@@ -86,6 +125,77 @@ export function Select({
   const handleSelect = (optionValue: string | number) => {
     onChange(optionValue);
     setIsOpen(false);
+  };
+
+  // 渲染下拉菜单
+  const renderDropdown = () => {
+    if (!isMounted) return null;
+
+    const dropdownStyle: React.CSSProperties = {
+      position: "fixed",
+      top:
+        dropdownDirection === "down" ? `${dropdownPosition.top + 4}px` : "auto",
+      bottom:
+        dropdownDirection === "up"
+          ? `${window.innerHeight - dropdownPosition.top + window.scrollY + 4}px`
+          : "auto",
+      left: `${dropdownPosition.left}px`,
+      width: `${dropdownPosition.width}px`,
+      zIndex: 9999,
+    };
+
+    return createPortal(
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: dropdownDirection === "down" ? -10 : 10,
+            }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{
+              opacity: 0,
+              y: dropdownDirection === "down" ? -10 : 10,
+            }}
+            transition={{ duration: 0.2 }}
+            style={dropdownStyle}
+            className="bg-background/90 border-border border-1 backdrop-blur-sm shadow-lg rounded overflow-hidden"
+          >
+            <div className="max-h-[240px] overflow-y-auto overflow-x-hidden">
+              {options.length === 0 && (
+                <div className="px-4 py-2 text-muted-foreground text-sm">
+                  暂无选项
+                </div>
+              )}
+              {options.map((option) => {
+                const isSelected = option.value === value;
+                return (
+                  <motion.button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleSelect(option.value)}
+                    className={`
+                    ${getSizeStyles()}
+                    w-full
+                    text-left
+                    transition-colors
+                    hover:bg-primary
+                    hover:text-primary-foreground
+                    ${isSelected ? "bg-primary/20 text-primary" : "text-foreground"}
+                  `}
+                    whileHover={{ scaleX: 1.02 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    {option.label}
+                  </motion.button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>,
+      document.body,
+    );
   };
 
   return (
@@ -146,59 +256,8 @@ export function Select({
         />
       </div>
 
-      {/* 下拉选项列表 */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{
-              opacity: 0,
-              y: dropdownDirection === "down" ? -10 : 10,
-            }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{
-              opacity: 0,
-              y: dropdownDirection === "down" ? -10 : 10,
-            }}
-            transition={{ duration: 0.2 }}
-            className={`absolute z-[60] w-full bg-background/90 border-border border-1 backdrop-blur-sm shadow-lg rounded overflow-hidden ${
-              dropdownDirection === "down"
-                ? "mt-1 top-full"
-                : "mb-1 bottom-full"
-            }`}
-          >
-            <div className="max-h-[240px] overflow-y-auto overflow-x-hidden">
-              {options.length === 0 && (
-                <div className="px-4 py-2 text-muted-foreground text-sm">
-                  暂无选项
-                </div>
-              )}
-              {options.map((option) => {
-                const isSelected = option.value === value;
-                return (
-                  <motion.button
-                    key={option.value}
-                    type="button"
-                    onClick={() => handleSelect(option.value)}
-                    className={`
-                      ${getSizeStyles()}
-                      w-full
-                      text-left
-                      transition-colors
-                      hover:bg-primary
-                      hover:text-primary-foreground
-                      ${isSelected ? "bg-primary/20 text-primary" : "text-foreground"}
-                    `}
-                    whileHover={{ scaleX: 1.02 }}
-                    transition={{ duration: 0.15 }}
-                  >
-                    {option.label}
-                  </motion.button>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* 下拉选项列表（通过 Portal 渲染到 body） */}
+      {renderDropdown()}
     </div>
   );
 }

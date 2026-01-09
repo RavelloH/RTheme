@@ -629,36 +629,8 @@ function MediaAddInner() {
         size="lg"
       >
         <div className="px-6 py-6 space-y-6">
-          {/* 存储提供商选择（仅 ADMIN/EDITOR 可见） */}
-          {userRole && userRole !== "AUTHOR" && (
-            <div className="space-y-2 flex flex-col gap-y-2">
-              <label className="text-sm font-medium text-muted-foreground">
-                上传位置
-              </label>
-
-              {loadingProviders ? (
-                <div className="text-sm text-muted-foreground">加载中...</div>
-              ) : (
-                <Select
-                  value={selectedStorageId}
-                  onChange={(value) => setSelectedStorageId(String(value))}
-                  options={storageProviders.map((provider) => ({
-                    value: provider.id,
-                    label: `${provider.displayName}${provider.isDefault ? " (默认)" : ""}`,
-                  }))}
-                  size="sm"
-                  disabled={uploading}
-                  placeholder="选择存储提供商"
-                />
-              )}
-            </div>
-          )}
-
           {/* 处理模式选择 */}
           <div className="space-y-4">
-            <label className="text-sm font-medium text-muted-foreground">
-              处理模式
-            </label>
             <SegmentedControl
               value={mode}
               onChange={setMode}
@@ -683,6 +655,31 @@ function MediaAddInner() {
               columns={3}
             />
           </div>
+
+          {/* 存储提供商选择（仅 ADMIN/EDITOR 可见） */}
+          {userRole && userRole !== "AUTHOR" && (
+            <div className="space-y-2 flex flex-col gap-y-2">
+              <label className="text-sm font-medium text-muted-foreground">
+                上传位置
+              </label>
+
+              {loadingProviders ? (
+                <div className="text-sm text-muted-foreground">加载中...</div>
+              ) : (
+                <Select
+                  value={selectedStorageId}
+                  onChange={(value) => setSelectedStorageId(String(value))}
+                  options={storageProviders.map((provider) => ({
+                    value: provider.id,
+                    label: `${provider.displayName}${provider.isDefault ? " (默认)" : ""}`,
+                  }))}
+                  size="sm"
+                  disabled={uploading}
+                  placeholder="选择存储提供商"
+                />
+              )}
+            </div>
+          )}
 
           {/* 文件选择区域 */}
           <div

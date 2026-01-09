@@ -33,6 +33,7 @@ import {
 import prisma from "@/lib/server/prisma";
 import { deleteObject, uploadObject } from "@/lib/server/oss";
 import type { StorageProviderType } from "@/template/storages";
+import { isVirtualStorage } from "@/lib/server/virtual-storage";
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
@@ -637,6 +638,14 @@ export async function updateStorage(
       return response.notFound();
     }
 
+    // 保护虚拟存储提供商
+    if (isVirtualStorage(existingStorage)) {
+      return response.forbidden({
+        message: "虚拟存储提供商不允许修改",
+        error: { code: "FORBIDDEN", message: "系统保护的存储提供商" },
+      });
+    }
+
     // Connectivity check: skip when disabling, otherwise block bad configs
     const effectiveBaseUrl = baseUrl ?? existingStorage.baseUrl;
     const effectivePathTemplate =
@@ -761,6 +770,27 @@ export async function deleteStorage(
   }
 
   try {
+    // 检查是否包含虚拟存储提供商
+    const storageProviders = await prisma.storageProvider.findMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    const virtualStorages = storageProviders.filter((s) => isVirtualStorage(s));
+    if (virtualStorages.length > 0) {
+      return response.forbidden({
+        message: "虚拟存储提供商不允许删除",
+        error: { code: "FORBIDDEN", message: "系统保护的存储提供商" },
+      });
+    }
+
     // 检查是否有媒体文件关联
     const mediaCount = await prisma.media.count({
       where: {
@@ -844,15 +874,36 @@ export async function toggleStorageStatus(
   }
 
   try {
-    const storageProvider = await prisma.storageProvider.update({
+    const storageProvider = await prisma.storageProvider.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        isActive: true,
+      },
+    });
+
+    if (!storageProvider) {
+      return response.notFound();
+    }
+
+    // 保护虚拟存储提供商
+    if (isVirtualStorage(storageProvider)) {
+      return response.forbidden({
+        message: "虚拟存储提供商不允许停用",
+        error: { code: "FORBIDDEN", message: "系统保护的存储提供商" },
+      });
+    }
+
+    const updatedStorage = await prisma.storageProvider.update({
       where: { id },
       data: { isActive },
     });
 
     const data = {
-      id: storageProvider.id,
-      isActive: storageProvider.isActive,
-      updatedAt: storageProvider.updatedAt.toISOString(),
+      id: updatedStorage.id,
+      isActive: updatedStorage.isActive,
+      updatedAt: updatedStorage.updatedAt.toISOString(),
     };
 
     return response.ok({ data });
@@ -907,6 +958,27 @@ export async function setDefaultStorage(
   }
 
   try {
+    // 检查目标存储提供商是否存在
+    const targetStorage = await prisma.storageProvider.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    if (!targetStorage) {
+      return response.notFound();
+    }
+
+    // 保护虚拟存储提供商
+    if (isVirtualStorage(targetStorage)) {
+      return response.forbidden({
+        message: "虚拟存储提供商不允许设为默认",
+        error: { code: "FORBIDDEN", message: "系统保护的存储提供商" },
+      });
+    }
+
     await prisma.$transaction(async (tx) => {
       // 先将所有存储设为非默认
       await tx.storageProvider.updateMany({
