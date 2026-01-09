@@ -4,9 +4,8 @@ import React, { useEffect, useState } from "react";
 import { startAuthentication } from "@simplewebauthn/browser";
 import {
   generatePasskeyAuthenticationOptions,
-  verifyPasskeyAuthentication,
+  verifyPasskeyForReauth,
 } from "@/actions/passkey";
-import { setReauthToken } from "@/actions/reauth";
 import { Button } from "@/ui/Button";
 import { RiKey2Line } from "@remixicon/react";
 import { useToast } from "@/ui/Toast";
@@ -65,21 +64,13 @@ export default function PasskeyReauthButton({
       // 启动 WebAuthn 验证流程
       const assertion = await startAuthentication({ optionsJSON: options });
 
-      // 验证响应
-      const verifyResp = await verifyPasskeyAuthentication({
+      // 验证响应并直接设置 REAUTH_TOKEN（安全修复）
+      const verifyResp = await verifyPasskeyForReauth({
         nonce,
         response: assertion,
       });
       if (!verifyResp.success) {
         toast.error(verifyResp.message || "验证失败");
-        setLoading(false);
-        return;
-      }
-
-      // 通行密钥验证成功，设置 REAUTH_TOKEN
-      const setTokenResp = await setReauthToken();
-      if (!setTokenResp.success) {
-        toast.error("重新验证失败，请稍后重试");
         setLoading(false);
         return;
       }

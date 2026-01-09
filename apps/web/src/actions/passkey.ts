@@ -617,6 +617,134 @@ export async function verifyPasskeyAuthentication(payload: {
   }
 }
 
+// ===== 二次验证（Reauth）专用 =====
+/**
+ * 通过 Passkey 进行二次验证并设置 REAUTH_TOKEN
+ * 此函数用于重新验证身份，而非登录
+ */
+export async function verifyPasskeyForReauth(payload: {
+  nonce: string;
+  response: unknown;
+}): Promise<ApiResponse<null>> {
+  const response = new ResponseBuilder("serveraction");
+
+  if (!(await limitControl(await headers(), "passkeyReauthVerify")))
+    return response.tooManyRequests() as unknown as ApiResponse<null>;
+
+  try {
+    // 首先验证用户已登录
+    const authUser = await authVerify({
+      allowedRoles: ["USER", "ADMIN", "EDITOR", "AUTHOR"],
+    });
+    if (!authUser) {
+      return response.unauthorized({
+        message: "请先登录",
+      }) as unknown as ApiResponse<null>;
+    }
+
+    await ensureRedisConnection();
+    const expectedChallenge = await redis.get(
+      AUTH_CHALLENGE_KEY(payload.nonce),
+    );
+    if (!expectedChallenge) {
+      return response.badRequest({
+        message: "挑战已过期，请重试",
+      }) as unknown as ApiResponse<null>;
+    }
+
+    const { rpID, origin } = await getRPConfig();
+
+    const authResponse =
+      payload.response as unknown as import("@simplewebauthn/server").AuthenticationResponseJSON;
+    const incomingCredentialId = authResponse.id;
+
+    // 查找 passkey 并验证是否属于当前用户
+    const passkey = await prisma.passkey.findUnique({
+      where: { credentialId: incomingCredentialId },
+    });
+
+    if (!passkey) {
+      return response.badRequest({
+        message: "未找到对应通行密钥",
+      }) as unknown as ApiResponse<null>;
+    }
+
+    // 验证 Passkey 是否属于当前登录用户
+    if (passkey.userUid !== authUser.uid) {
+      return response.forbidden({
+        message: "此通行密钥不属于当前用户",
+      }) as unknown as ApiResponse<null>;
+    }
+
+    const verification: VerifiedAuthenticationResponse =
+      await verifyAuthenticationResponse({
+        response: authResponse,
+        expectedChallenge,
+        expectedRPID: rpID,
+        expectedOrigin: origin,
+        requireUserVerification: true,
+        credential: {
+          id: passkey.credentialId,
+          publicKey: Buffer.from(passkey.publicKey, "base64"),
+          counter: Number(passkey.counter),
+        },
+      });
+
+    if (!verification.verified || !verification.authenticationInfo) {
+      return response.badRequest({
+        message: "身份验证失败",
+      }) as unknown as ApiResponse<null>;
+    }
+
+    const { credentialID, newCounter } = verification.authenticationInfo;
+
+    // 更新计数器与最后使用时间
+    await prisma.passkey.update({
+      where: { credentialId: credentialID },
+      data: {
+        counter: BigInt(newCounter || Number(passkey.counter)),
+        lastUsedAt: new Date(),
+      },
+    });
+
+    // 清除挑战
+    await redis.del(AUTH_CHALLENGE_KEY(payload.nonce));
+
+    // 生成 REAUTH_TOKEN（10分钟有效期）
+    const REAUTH_TOKEN_EXPIRY = 600;
+    const expiredAtUnix = Math.floor(Date.now() / 1000) + REAUTH_TOKEN_EXPIRY;
+    const reauthToken = jwtTokenSign({
+      inner: {
+        uid: authUser.uid,
+        exp: expiredAtUnix,
+      },
+      expired: `${REAUTH_TOKEN_EXPIRY}s`,
+    });
+
+    // 设置 REAUTH_TOKEN cookie
+    const cookieStore = await cookies();
+    cookieStore.set("REAUTH_TOKEN", reauthToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: REAUTH_TOKEN_EXPIRY,
+      path: "/",
+      priority: "high",
+    });
+
+    return response.ok({
+      message: "验证成功",
+      data: null,
+    }) as unknown as ApiResponse<null>;
+  } catch (error) {
+    console.error("verifyPasskeyForReauth error:", error);
+    return response.serverError({
+      message: "验证失败，请稍后重试",
+      error: { code: "SERVER_ERROR", message: "验证失败，请稍后重试" },
+    }) as unknown as ApiResponse<null>;
+  }
+}
+
 // ===== 管理（需要登录 + reauth） =====
 export async function listUserPasskeys(): Promise<
   ApiResponse<{
