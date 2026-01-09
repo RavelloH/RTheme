@@ -24,6 +24,239 @@ import {
   type EditorConfig,
 } from "@/lib/client/editor-persistence";
 import CodeBlockShiki from "tiptap-extension-code-block-shiki";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
+import type { EditorView } from "@tiptap/pm/view";
+
+// Toast 实例（需要从外部传入）
+let toastInstance: {
+  info: (title: string, message?: string, duration?: number) => string;
+  success: (title: string, message?: string, duration?: number) => string;
+  error: (title: string, message?: string, duration?: number) => string;
+  dismiss: (id: string) => void;
+} | null = null;
+
+// 存储当前上传的 Toast ID（用于主动关闭）
+let currentUploadToastId: string | null = null;
+
+// 设置 Toast 实例
+export function setEditorToast(toast: typeof toastInstance): void {
+  toastInstance = toast;
+}
+
+// 上传图片到服务器的辅助函数
+async function uploadImageToServer(
+  file: File,
+  view: EditorView,
+  localImageUrl: string,
+): Promise<void> {
+  // 显示上传中的 Toast（不自动关闭）
+  currentUploadToastId =
+    toastInstance?.info(
+      "正在上传图片",
+      `文件: ${file.name}`,
+      0, // 不自动关闭
+    ) || null;
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("mode", "lossy"); // 默认使用有损压缩
+
+    const response = await fetch("/admin/media/upload", {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+    });
+
+    const result = await response.json();
+
+    if (result.success && result.data) {
+      // 上传成功，替换本地图片为真实图片
+      const imageUrl = `/p/${result.data.imageId}`;
+
+      // 获取最新的编辑器状态
+      const state = view.state;
+      const { schema, doc } = state;
+
+      // 遍历文档，查找包含 blob URL 的图片节点
+      let foundPos: number | null = null;
+      let foundNodeSize: number | null = null;
+
+      doc.descendants((node, pos) => {
+        if (
+          node.type === schema.nodes.image &&
+          node.attrs.src === localImageUrl
+        ) {
+          foundPos = pos;
+          foundNodeSize = node.nodeSize;
+          return false; // 停止遍历
+        }
+      });
+
+      if (foundPos !== null && foundNodeSize !== null) {
+        // 创建新的图片节点（移除暗化样式，使用真实 URL）
+        if (schema.nodes.image) {
+          const newImageNode = schema.nodes.image.create({
+            src: imageUrl,
+            alt: result.data.originalName || file.name,
+            // 不设置 class 属性，移除暗化效果
+          });
+
+          // 创建新的事务，替换整个节点
+          const tr = state.tr.replaceRangeWith(
+            foundPos,
+            foundPos + foundNodeSize,
+            newImageNode,
+          );
+
+          view.dispatch(tr);
+        }
+      }
+
+      // 关闭上传中的 Toast
+      if (currentUploadToastId) {
+        toastInstance?.dismiss(currentUploadToastId);
+      }
+
+      // 显示成功 Toast
+      toastInstance?.success("图片上传成功", undefined, 2000);
+      currentUploadToastId = null;
+
+      // 释放本地 URL
+      URL.revokeObjectURL(localImageUrl);
+    } else {
+      // 上传失败，删除图片
+      console.error("图片上传失败:", result.message);
+
+      // 获取最新状态并查找图片节点
+      const state = view.state;
+      const { schema, doc } = state;
+
+      let foundPos: number | null = null;
+      let foundNodeSize: number | null = null;
+
+      doc.descendants((node, pos) => {
+        if (
+          node.type === schema.nodes.image &&
+          node.attrs.src === localImageUrl
+        ) {
+          foundPos = pos;
+          foundNodeSize = node.nodeSize;
+          return false;
+        }
+      });
+
+      if (foundPos !== null && foundNodeSize !== null) {
+        const tr = state.tr.delete(foundPos, foundPos + foundNodeSize);
+        view.dispatch(tr);
+      }
+
+      // 关闭上传中的 Toast
+      if (currentUploadToastId) {
+        toastInstance?.dismiss(currentUploadToastId);
+      }
+
+      // 显示错误 Toast
+      toastInstance?.error("图片上传失败", result.message || "未知错误", 3000);
+      currentUploadToastId = null;
+
+      // 释放本地 URL
+      URL.revokeObjectURL(localImageUrl);
+    }
+  } catch (error) {
+    console.error("图片上传失败:", error);
+
+    // 上传出错，删除图片
+    const state = view.state;
+    const { schema, doc } = state;
+
+    let foundPos: number | null = null;
+    let foundNodeSize: number | null = null;
+
+    doc.descendants((node, pos) => {
+      if (
+        node.type === schema.nodes.image &&
+        node.attrs.src === localImageUrl
+      ) {
+        foundPos = pos;
+        foundNodeSize = node.nodeSize;
+        return false;
+      }
+    });
+
+    if (foundPos !== null && foundNodeSize !== null) {
+      const tr = state.tr.delete(foundPos, foundPos + foundNodeSize);
+      view.dispatch(tr);
+    }
+
+    // 关闭上传中的 Toast
+    if (currentUploadToastId) {
+      toastInstance?.dismiss(currentUploadToastId);
+    }
+
+    // 显示错误 Toast
+    toastInstance?.error("图片上传失败", "请稍后重试", 3000);
+    currentUploadToastId = null;
+
+    // 释放本地 URL
+    URL.revokeObjectURL(localImageUrl);
+  }
+}
+
+// 自定义扩展：粘贴图片自动上传
+const PasteImageUpload = Extension.create({
+  name: "pasteImageUpload",
+
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey("pasteImageUpload"),
+        props: {
+          handlePaste: (view, event) => {
+            const items = event.clipboardData?.items;
+            if (!items) return false;
+
+            // 检查剪贴板中是否有图片
+            for (let i = 0; i < items.length; i++) {
+              const item = items[i];
+              if (item && item.type.startsWith("image/")) {
+                const file = item.getAsFile();
+                if (!file) continue;
+
+                // 阻止默认粘贴行为
+                event.preventDefault();
+
+                // 创建本地 blob URL
+                const localImageUrl = URL.createObjectURL(file);
+
+                // 立即插入本地图片（带暗化样式）
+                const { schema } = view.state;
+                const node = schema.nodes.image?.create({
+                  src: localImageUrl,
+                  alt: file.name,
+                  // 添加暗化样式类
+                  class: "opacity-50 pointer-events-none",
+                });
+
+                if (node) {
+                  const transaction = view.state.tr.replaceSelectionWith(node);
+                  view.dispatch(transaction);
+
+                  // 上传图片，传入本地 URL（不再需要位置参数）
+                  uploadImageToServer(file, view, localImageUrl);
+                }
+
+                return true;
+              }
+            }
+
+            return false;
+          },
+        },
+      }),
+    ];
+  },
+});
 
 // 自定义扩展：双击空格退出链接
 const ExitLinkOnDoubleSpace = Extension.create({
@@ -186,6 +419,7 @@ export function TiptapEditor({
       CharacterCount,
       Markdown,
       ExitLinkOnDoubleSpace,
+      PasteImageUpload,
     ],
     content,
     editorProps: {

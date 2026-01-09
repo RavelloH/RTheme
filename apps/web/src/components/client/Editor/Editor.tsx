@@ -50,7 +50,7 @@ import { Checkbox } from "@/ui/Checkbox";
 import { TagInput, SelectedTag } from "@/components/client/Tag/TagInput";
 import { CategoryInput } from "@/components/client/Category/CategoryInput";
 import MediaSelector from "@/components/client/MediaSelector";
-import { TiptapEditor } from "./TiptapEditor";
+import { TiptapEditor, setEditorToast } from "./TiptapEditor";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { createPost, updatePost } from "@/actions/post";
 import { useNavigateWithTransition } from "@/components/Link";
@@ -116,6 +116,11 @@ export default function Editor({
   const navigate = useNavigateWithTransition();
   const hasLoadedFromStorage = useRef(false); // 标记是否已从storage加载
   const isInitialMount = useRef(true); // 标记是否是首次挂载
+
+  // 注入 toast 实例到 TiptapEditor
+  useEffect(() => {
+    setEditorToast(toast);
+  }, [toast]);
   const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false);
   const [isLinkToolbarVisible, setIsLinkToolbarVisible] = useState(false);
   const [currentLinkUrl, setCurrentLinkUrl] = useState("");

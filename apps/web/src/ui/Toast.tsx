@@ -40,31 +40,32 @@ interface ToastContextType {
     message?: string,
     duration?: number,
     action?: ToastAction,
-  ) => void;
+  ) => string; // 返回 toast ID
   success: (
     title: string,
     message?: string,
     duration?: number,
     action?: ToastAction,
-  ) => void;
+  ) => string; // 返回 toast ID
   error: (
     title: string,
     message?: string,
     duration?: number,
     action?: ToastAction,
-  ) => void;
+  ) => string; // 返回 toast ID
   warning: (
     title: string,
     message?: string,
     duration?: number,
     action?: ToastAction,
-  ) => void;
+  ) => string; // 返回 toast ID
   info: (
     title: string,
     message?: string,
     duration?: number,
     action?: ToastAction,
-  ) => void;
+  ) => string; // 返回 toast ID
+  dismiss: (id: string) => void; // 新增：手动关闭 toast
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -96,7 +97,7 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
       message?: string,
       duration: number = 3000,
       action?: ToastAction,
-    ) => {
+    ): string => {
       const id = `toast-${Date.now()}-${Math.random()}`;
       const newToast: ToastMessage = {
         id,
@@ -122,6 +123,8 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
           removeToast(id);
         }, duration);
       }
+
+      return id; // 返回 toast ID
     },
     [maxToasts, removeToast],
   );
@@ -132,8 +135,8 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
       message?: string,
       duration?: number,
       action?: ToastAction,
-    ) => {
-      showToast("success", title, message, duration, action);
+    ): string => {
+      return showToast("success", title, message, duration, action);
     },
     [showToast],
   );
@@ -144,8 +147,8 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
       message?: string,
       duration?: number,
       action?: ToastAction,
-    ) => {
-      showToast("error", title, message, duration, action);
+    ): string => {
+      return showToast("error", title, message, duration, action);
     },
     [showToast],
   );
@@ -156,8 +159,8 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
       message?: string,
       duration?: number,
       action?: ToastAction,
-    ) => {
-      showToast("warning", title, message, duration, action);
+    ): string => {
+      return showToast("warning", title, message, duration, action);
     },
     [showToast],
   );
@@ -168,14 +171,24 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
       message?: string,
       duration?: number,
       action?: ToastAction,
-    ) => {
-      showToast("info", title, message, duration, action);
+    ): string => {
+      return showToast("info", title, message, duration, action);
     },
     [showToast],
   );
 
+  // 手动关闭 toast
+  const dismiss = useCallback(
+    (id: string) => {
+      removeToast(id);
+    },
+    [removeToast],
+  );
+
   return (
-    <ToastContext.Provider value={{ showToast, success, error, warning, info }}>
+    <ToastContext.Provider
+      value={{ showToast, success, error, warning, info, dismiss }}
+    >
       {children}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </ToastContext.Provider>
