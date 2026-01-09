@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { Editor } from "@tiptap/react";
@@ -9,7 +10,6 @@ import { useState } from "react";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import { Button } from "@/ui/Button";
-import CMSImage from "@/components/CMSImage";
 
 interface ImageToolbarProps {
   editor: Editor;
@@ -105,17 +105,16 @@ export function ImageToolbar({
         size="md"
       >
         <div className="px-6 py-6 space-y-6">
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div className="bg-muted/20 p-4 rounded-lg">
-              <CMSImage
+              <img
                 src={imageSrc}
                 alt={imageAlt}
-                className="max-h-40 mx-auto object-contain"
+                className="w-full max-h-[20em] rounded-md object-cover"
               />
-              <p className="text-xs text-foreground/60 mt-2 break-all">
-                {imageSrc}
-              </p>
+              <p className="text-xs text-foreground/60 break-all">{imageSrc}</p>
             </div>
+
             <Input
               label="Alt 文本"
               value={altText}
