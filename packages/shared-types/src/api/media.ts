@@ -22,7 +22,7 @@ export const GetMediaListSchema = z.object({
   page: z.number().int().min(1).default(1),
   pageSize: z.number().int().min(1).max(100).default(25),
   sortBy: z
-    .enum(["id", "createdAt", "size", "originalName"])
+    .enum(["id", "createdAt", "size", "originalName", "referencesCount"])
     .default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
   search: z.string().optional(),
@@ -34,6 +34,7 @@ export const GetMediaListSchema = z.object({
   isOptimized: z.boolean().optional(),
   createdAtStart: z.string().optional(),
   createdAtEnd: z.string().optional(),
+  hasReferences: z.boolean().optional(), // 新增：筛选是否有引用
 });
 
 export type GetMediaList = z.infer<typeof GetMediaListSchema>;
@@ -111,13 +112,40 @@ export const MediaDetailSchema = z.object({
       displayName: z.string(),
     })
     .nullable(),
-  posts: z.array(
-    z.object({
-      id: z.number(),
-      title: z.string(),
-      slug: z.string(),
-    }),
-  ),
+  // 引用信息 - 包含所有类型的引用
+  references: z.object({
+    posts: z.array(
+      z.object({
+        id: z.number(),
+        title: z.string(),
+        slug: z.string(),
+        slot: z.string(), // 引用位置：featuredImage/contentImage
+      }),
+    ),
+    pages: z.array(
+      z.object({
+        id: z.string(),
+        title: z.string(),
+        slug: z.string(),
+        slot: z.string(), // 引用位置：featuredImage/contentImage
+      }),
+    ),
+    tags: z.array(
+      z.object({
+        slug: z.string(),
+        name: z.string(),
+        slot: z.string(), // 引用位置：featuredImage
+      }),
+    ),
+    categories: z.array(
+      z.object({
+        id: z.number(),
+        name: z.string(),
+        slug: z.string(),
+        slot: z.string(), // 引用位置：featuredImage
+      }),
+    ),
+  }),
 });
 
 export type MediaDetail = z.infer<typeof MediaDetailSchema>;

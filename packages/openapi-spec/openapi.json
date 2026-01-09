@@ -18107,7 +18107,8 @@
               "id",
               "createdAt",
               "size",
-              "originalName"
+              "originalName",
+              "referencesCount"
             ]
           },
           "sortOrder": {
@@ -18156,6 +18157,9 @@
           },
           "createdAtEnd": {
             "type": "string"
+          },
+          "hasReferences": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -18499,28 +18503,121 @@
             ],
             "additionalProperties": false
           },
-          "posts": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "number"
-                },
-                "title": {
-                  "type": "string"
-                },
-                "slug": {
-                  "type": "string"
+          "references": {
+            "type": "object",
+            "properties": {
+              "posts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "number"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": "string"
+                    },
+                    "slot": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "slug",
+                    "slot"
+                  ],
+                  "additionalProperties": false
                 }
               },
-              "required": [
-                "id",
-                "title",
-                "slug"
-              ],
-              "additionalProperties": false
-            }
+              "pages": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": "string"
+                    },
+                    "slot": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "slug",
+                    "slot"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "slug": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "slot": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "slug",
+                    "name",
+                    "slot"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "categories": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "number"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": "string"
+                    },
+                    "slot": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "slug",
+                    "slot"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "posts",
+              "pages",
+              "tags",
+              "categories"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -18546,7 +18643,7 @@
           "storageProviderId",
           "user",
           "storageProvider",
-          "posts"
+          "references"
         ],
         "additionalProperties": false
       },

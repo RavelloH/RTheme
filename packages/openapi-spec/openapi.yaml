@@ -12778,6 +12778,7 @@ components:
             - createdAt
             - size
             - originalName
+            - referencesCount
         sortOrder:
           default: desc
           type: string
@@ -12813,6 +12814,8 @@ components:
           type: string
         createdAtEnd:
           type: string
+        hasReferences:
+          type: boolean
       required:
         - page
         - pageSize
@@ -13063,22 +13066,88 @@ components:
             - name
             - displayName
           additionalProperties: false
-        posts:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: number
-              title:
-                type: string
-              slug:
-                type: string
-            required:
-              - id
-              - title
-              - slug
-            additionalProperties: false
+        references:
+          type: object
+          properties:
+            posts:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: number
+                  title:
+                    type: string
+                  slug:
+                    type: string
+                  slot:
+                    type: string
+                required:
+                  - id
+                  - title
+                  - slug
+                  - slot
+                additionalProperties: false
+            pages:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  title:
+                    type: string
+                  slug:
+                    type: string
+                  slot:
+                    type: string
+                required:
+                  - id
+                  - title
+                  - slug
+                  - slot
+                additionalProperties: false
+            tags:
+              type: array
+              items:
+                type: object
+                properties:
+                  slug:
+                    type: string
+                  name:
+                    type: string
+                  slot:
+                    type: string
+                required:
+                  - slug
+                  - name
+                  - slot
+                additionalProperties: false
+            categories:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: number
+                  name:
+                    type: string
+                  slug:
+                    type: string
+                  slot:
+                    type: string
+                required:
+                  - id
+                  - name
+                  - slug
+                  - slot
+                additionalProperties: false
+          required:
+            - posts
+            - pages
+            - tags
+            - categories
+          additionalProperties: false
       required:
         - id
         - fileName
@@ -13102,7 +13171,7 @@ components:
         - storageProviderId
         - user
         - storageProvider
-        - posts
+        - references
       additionalProperties: false
     MediaStats:
       type: object

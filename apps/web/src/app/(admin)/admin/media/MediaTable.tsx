@@ -455,6 +455,15 @@ export default function MediaTable() {
         ],
       },
       {
+        key: "hasReferences",
+        label: "引用状态",
+        type: "checkboxGroup",
+        options: [
+          { value: "true", label: "已被引用" },
+          { value: "false", label: "未被引用" },
+        ],
+      },
+      {
         key: "createdAt",
         label: "上传时间",
         type: "dateRange",
@@ -641,7 +650,12 @@ export default function MediaTable() {
         const params: {
           page: number;
           pageSize: number;
-          sortBy?: "id" | "createdAt" | "size" | "originalName";
+          sortBy?:
+            | "id"
+            | "createdAt"
+            | "size"
+            | "originalName"
+            | "referencesCount";
           sortOrder?: "asc" | "desc";
           search?: string;
           mediaType?: "IMAGE" | "VIDEO" | "AUDIO" | "FILE";
@@ -650,6 +664,7 @@ export default function MediaTable() {
           sizeMax?: number;
           inGallery?: boolean;
           isOptimized?: boolean;
+          hasReferences?: boolean;
           createdAtStart?: string;
           createdAtEnd?: string;
         } = {
@@ -659,11 +674,15 @@ export default function MediaTable() {
 
         // 只在有有效的排序参数时才添加
         if (sortKey && sortOrder) {
-          params.sortBy = sortKey as
+          // 将 postsCount 映射为 referencesCount
+          const mappedSortKey =
+            sortKey === "postsCount" ? "referencesCount" : sortKey;
+          params.sortBy = mappedSortKey as
             | "id"
             | "createdAt"
             | "size"
-            | "originalName";
+            | "originalName"
+            | "referencesCount";
           params.sortOrder = sortOrder;
         }
 
@@ -750,6 +769,19 @@ export default function MediaTable() {
           }
         }
 
+        // 引用状态筛选
+        if (filterValues.hasReferences) {
+          if (typeof filterValues.hasReferences === "string") {
+            params.hasReferences = filterValues.hasReferences === "true";
+          } else if (
+            Array.isArray(filterValues.hasReferences) &&
+            filterValues.hasReferences.length > 0
+          ) {
+            // 如果是数组，根据第一个值设置布尔值
+            params.hasReferences = filterValues.hasReferences[0] === "true";
+          }
+        }
+
         const result = await getMediaList({
           page: params.page,
           pageSize: params.pageSize,
@@ -762,6 +794,7 @@ export default function MediaTable() {
           sizeMax: params.sizeMax,
           inGallery: params.inGallery,
           isOptimized: params.isOptimized,
+          hasReferences: params.hasReferences,
           createdAtStart: params.createdAtStart,
           createdAtEnd: params.createdAtEnd,
         });
@@ -983,9 +1016,10 @@ export default function MediaTable() {
       },
       {
         key: "postsCount",
-        title: "关联文章",
+        title: "引用次数",
         dataIndex: "postsCount",
         align: "left",
+        sortable: true,
         render: (value: unknown) => {
           const count = Number(value) || 0;
           return (

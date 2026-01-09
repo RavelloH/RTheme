@@ -69,6 +69,7 @@ export async function getMediaList(
     isOptimized,
     createdAtStart,
     createdAtEnd,
+    hasReferences,
   }: GetMediaList,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<MediaListItem[] | null>> {
@@ -96,6 +97,7 @@ export async function getMediaList(
       isOptimized,
       createdAtStart,
       createdAtEnd,
+      hasReferences,
     },
     GetMediaListSchema,
   );
@@ -197,6 +199,25 @@ export async function getMediaList(
       conditions.push(createdAtCondition);
     }
 
+    // 引用筛选
+    if (hasReferences !== undefined) {
+      if (hasReferences) {
+        // 只显示有引用的
+        conditions.push({
+          references: {
+            some: {},
+          },
+        });
+      } else {
+        // 只显示无引用的
+        conditions.push({
+          references: {
+            none: {},
+          },
+        });
+      }
+    }
+
     if (conditions.length > 0) {
       where.AND = conditions;
     }
@@ -233,7 +254,10 @@ export async function getMediaList(
           },
         },
       },
-      orderBy: [{ [sortBy]: sortOrder }, { id: "desc" }],
+      orderBy:
+        sortBy === "referencesCount"
+          ? [{ references: { _count: sortOrder } }, { id: "desc" }]
+          : [{ [sortBy]: sortOrder }, { id: "desc" }],
     });
 
     // 转换为响应格式
@@ -339,6 +363,7 @@ export async function getMediaDetail(
         },
         references: {
           select: {
+            slot: true,
             postId: true,
             post: {
               select: {
@@ -386,13 +411,40 @@ export async function getMediaDetail(
       return response.forbidden({ message: "无权限访问此文件" });
     }
 
-    // 过滤出未删除的文章引用
+    // 按类型分类引用信息
     const postsReferences = media.references
       .filter((ref) => ref.post && !ref.post.deletedAt)
       .map((ref) => ({
         id: ref.post!.id,
         title: ref.post!.title,
         slug: ref.post!.slug,
+        slot: ref.slot,
+      }));
+
+    const pagesReferences = media.references
+      .filter((ref) => ref.page && !ref.page.deletedAt)
+      .map((ref) => ({
+        id: ref.page!.id,
+        title: ref.page!.title,
+        slug: ref.page!.slug,
+        slot: ref.slot,
+      }));
+
+    const tagsReferences = media.references
+      .filter((ref) => ref.tag)
+      .map((ref) => ({
+        slug: ref.tag!.slug,
+        name: ref.tag!.name,
+        slot: ref.slot,
+      }));
+
+    const categoriesReferences = media.references
+      .filter((ref) => ref.category)
+      .map((ref) => ({
+        id: ref.category!.id,
+        name: ref.category!.name,
+        slug: ref.category!.slug,
+        slot: ref.slot,
       }));
 
     const mediaDetail: MediaDetail = {
@@ -430,7 +482,12 @@ export async function getMediaDetail(
             displayName: media.StorageProvider.displayName,
           }
         : null,
-      posts: postsReferences,
+      references: {
+        posts: postsReferences,
+        pages: pagesReferences,
+        tags: tagsReferences,
+        categories: categoriesReferences,
+      },
     };
 
     return response.ok({

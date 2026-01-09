@@ -721,31 +721,183 @@ export default function MediaPreviewDialog({
             </div>
           </div>
 
-          {/* 文章使用信息 */}
-          {isMediaDetail(media) && media.posts && media.posts.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-                使用此媒体的文章 ({media.posts.length})
-              </h3>
-              <div>
-                {media.posts.map((post) => (
-                  <div
-                    key={post.id}
-                    className="flex items-center gap-2 p-1 rounded hover:bg-muted/30 transition-colors"
-                  >
-                    <span className="text-sm text-muted-foreground">•</span>
-                    <Link
-                      href={`/admin/posts/edit/${post.slug}`}
-                      className="text-sm hover:text-primary transition-colors flex-1"
-                      presets={["hover-underline"]}
-                    >
-                      {post.title}
-                    </Link>
-                  </div>
-                ))}
+          <AutoResizer>
+            {/* 引用信息 */}
+            {isMediaDetail(media) && media.references && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                  引用信息
+                </h3>
+                <div className="space-y-6">
+                  {/* 文章引用 */}
+                  {media.references.posts &&
+                    media.references.posts.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground mb-2">
+                          文章 ({media.references.posts.length})
+                        </h4>
+                        <div className="space-y-1">
+                          {media.references.posts.map((post) => (
+                            <div
+                              key={post.id}
+                              className="flex items-start gap-2 p-2"
+                            >
+                              <span className="text-sm text-muted-foreground mt-0.5">
+                                •
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <Link
+                                  href={`/admin/posts?id=${post.id}`}
+                                  className="text-sm hover:text-primary transition-colors block truncate"
+                                  presets={["hover-color"]}
+                                  title={post.title}
+                                >
+                                  {post.title}
+                                </Link>
+                                <span className="text-xs text-muted-foreground">
+                                  {post.slot === "featuredImage"
+                                    ? "特色图片"
+                                    : post.slot === "contentImage"
+                                      ? "内容图片"
+                                      : post.slot}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                  {/* 页面引用 */}
+                  {media.references.pages &&
+                    media.references.pages.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground mb-2">
+                          页面 ({media.references.pages.length})
+                        </h4>
+                        <div className="space-y-1">
+                          {media.references.pages.map((page) => (
+                            <div
+                              key={page.id}
+                              className="flex items-start gap-2 p-2"
+                            >
+                              <span className="text-sm text-muted-foreground mt-0.5">
+                                •
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <Link
+                                  href={`/admin/pages?id=${page.id}`}
+                                  className="text-sm hover:text-primary transition-colors block truncate"
+                                  presets={["hover-color"]}
+                                  title={page.title}
+                                >
+                                  {page.title}
+                                </Link>
+                                <span className="text-xs text-muted-foreground">
+                                  {page.slot === "featuredImage"
+                                    ? "特色图片"
+                                    : page.slot === "contentImage"
+                                      ? "内容图片"
+                                      : page.slot}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                  {/* 标签引用 */}
+                  {media.references.tags &&
+                    media.references.tags.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground mb-2">
+                          标签 ({media.references.tags.length})
+                        </h4>
+                        <div className="space-y-1">
+                          {media.references.tags.map((tag) => (
+                            <div
+                              key={tag.slug}
+                              className="flex items-start gap-2 p-2"
+                            >
+                              <span className="text-sm text-muted-foreground mt-0.5">
+                                •
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <Link
+                                  href={`/admin/tags`}
+                                  className="text-sm hover:text-primary transition-colors block truncate"
+                                  presets={["hover-color"]}
+                                  title={tag.name}
+                                >
+                                  {tag.name}
+                                </Link>
+                                <span className="text-xs text-muted-foreground">
+                                  {tag.slot === "featuredImage"
+                                    ? "特色图片"
+                                    : tag.slot}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                  {/* 分类引用 */}
+                  {media.references.categories &&
+                    media.references.categories.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground mb-2">
+                          分类 ({media.references.categories.length})
+                        </h4>
+                        <div className="space-y-1">
+                          {media.references.categories.map((category) => (
+                            <div
+                              key={category.id}
+                              className="flex items-start gap-2 p-2"
+                            >
+                              <span className="text-sm text-muted-foreground mt-0.5">
+                                •
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <Link
+                                  href={`/admin/categories`}
+                                  className="text-sm hover:text-primary transition-colors block truncate"
+                                  presets={["hover-color"]}
+                                  title={category.name}
+                                >
+                                  {category.name}
+                                </Link>
+                                <span className="text-xs text-muted-foreground">
+                                  {category.slot === "featuredImage"
+                                    ? "特色图片"
+                                    : category.slot}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                  {/* 无引用提示 */}
+                  {(!media.references.posts ||
+                    media.references.posts.length === 0) &&
+                    (!media.references.pages ||
+                      media.references.pages.length === 0) &&
+                    (!media.references.tags ||
+                      media.references.tags.length === 0) &&
+                    (!media.references.categories ||
+                      media.references.categories.length === 0) && (
+                      <div className="text-sm text-muted-foreground">
+                        此媒体文件暂未被任何内容引用
+                      </div>
+                    )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </AutoResizer>
 
           {/* 上传者信息 */}
           <AutoResizer>
