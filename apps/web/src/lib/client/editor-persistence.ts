@@ -22,7 +22,7 @@ const STORAGE_KEY = "editor";
 export function saveEditorContent(
   content: string,
   config: EditorConfig = {},
-  isMarkdown: boolean = true,
+  _isMarkdown: boolean = true,
   key: string = "new",
 ): void {
   // 检查是否在浏览器环境

@@ -131,19 +131,6 @@ export function Select({
   const renderDropdown = () => {
     if (!isMounted) return null;
 
-    const dropdownStyle: React.CSSProperties = {
-      position: "fixed",
-      top:
-        dropdownDirection === "down" ? `${dropdownPosition.top + 4}px` : "auto",
-      bottom:
-        dropdownDirection === "up"
-          ? `${window.innerHeight - dropdownPosition.top + window.scrollY + 4}px`
-          : "auto",
-      left: `${dropdownPosition.left}px`,
-      width: `${dropdownPosition.width}px`,
-      zIndex: 9999,
-    };
-
     return createPortal(
       <AnimatePresence>
         {isOpen && (
@@ -158,7 +145,20 @@ export function Select({
               y: dropdownDirection === "down" ? -10 : 10,
             }}
             transition={{ duration: 0.2 }}
-            style={dropdownStyle}
+            style={{
+              position: "fixed",
+              top:
+                dropdownDirection === "down"
+                  ? `${dropdownPosition.top + 4}px`
+                  : "auto",
+              bottom:
+                dropdownDirection === "up"
+                  ? `${window.innerHeight - dropdownPosition.top + window.scrollY + 4}px`
+                  : "auto",
+              left: `${dropdownPosition.left}px`,
+              width: `${dropdownPosition.width}px`,
+              zIndex: 9999,
+            }}
             className="bg-background/90 border-border border-1 backdrop-blur-sm shadow-lg rounded overflow-hidden"
           >
             <div className="max-h-[240px] overflow-y-auto overflow-x-hidden">

@@ -7,6 +7,7 @@ export interface ToggleProps
   extends Omit<
     React.ButtonHTMLAttributes<HTMLButtonElement>,
     | "id"
+    | "style"
     | "onDrag"
     | "onDragStart"
     | "onDragEnd"

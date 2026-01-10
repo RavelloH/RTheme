@@ -8,6 +8,7 @@ export interface ButtonProps
   extends Omit<
     React.ButtonHTMLAttributes<HTMLButtonElement>,
     | "id"
+    | "style"
     | "onDrag"
     | "onDragStart"
     | "onDragEnd"
@@ -102,6 +103,14 @@ export function Button({
   const shouldShowSpinner = isLoading && !loadingText;
   const isDisabled = disabled || isLoading;
 
+  // CSS 自定义属性用于加载进度
+  const loadingStyles = isNumericLoading
+    ? ({
+        "--loading-progress": `${loading}%`,
+        "--loading-remaining": `${100 - loading}%`,
+      } as React.CSSProperties)
+    : undefined;
+
   return (
     <motion.button
       id={buttonId}
@@ -134,12 +143,7 @@ export function Button({
           className="absolute inset-0 rounded-sm overflow-hidden"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          style={
-            {
-              "--loading-progress": `${loading}%`,
-              "--loading-remaining": `${100 - loading}%`,
-            } as React.CSSProperties
-          }
+          style={loadingStyles}
         >
           <div className="relative w-full h-full">
             <motion.div

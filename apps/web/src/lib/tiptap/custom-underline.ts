@@ -7,6 +7,25 @@
 import { Mark, mergeAttributes } from "@tiptap/react";
 import type { JSONContent } from "@tiptap/react";
 
+// Tiptap Markdown 类型定义
+interface MarkdownToken {
+  type?: string;
+  raw?: string;
+  text?: string;
+  tokens?: MarkdownToken[];
+}
+
+interface MarkdownParseHelpers {
+  applyMark: (name: string, content: JSONContent[]) => JSONContent;
+  parseInline: (tokens: MarkdownToken[]) => JSONContent[];
+}
+
+type MarkdownParseResult = JSONContent;
+
+interface MarkdownLexerConfiguration {
+  inlineTokens: (content: string) => MarkdownToken[];
+}
+
 export const CustomUnderline = Mark.create({
   name: "underline",
 
@@ -42,7 +61,10 @@ export const CustomUnderline = Mark.create({
   },
 
   // Markdown 解析：支持 ++ 和 <u> 两种语法
-  parseMarkdown(token: any, helpers: any) {
+  parseMarkdown(
+    token: MarkdownToken,
+    helpers: MarkdownParseHelpers,
+  ): MarkdownParseResult {
     return helpers.applyMark(
       this.name || "underline",
       helpers.parseInline(token.tokens || []),
@@ -71,19 +93,24 @@ export const CustomUnderline = Mark.create({
       if (htmlIndex === -1) return plusIndex;
       return Math.min(plusIndex, htmlIndex);
     },
-    tokenize(src: string, _tokens: unknown, lexer: any) {
+    tokenize(
+      src: string,
+      _tokens: MarkdownToken[],
+      lexer: MarkdownLexerConfiguration,
+    ): MarkdownToken | undefined {
       // 尝试匹配 <u> 标签
       const htmlRule = /^<u>([^<]+)<\/u>/;
       let match = htmlRule.exec(src);
 
       if (match) {
         const innerContent = match[1] || "";
-        return {
+        const token: MarkdownToken = {
           type: "underline",
           raw: match[0],
           text: innerContent,
           tokens: lexer.inlineTokens(innerContent),
         };
+        return token;
       }
 
       // 尝试匹配 ++ 语法
@@ -95,12 +122,13 @@ export const CustomUnderline = Mark.create({
       }
 
       const innerContent = match[2]?.trim() || "";
-      return {
+      const token: MarkdownToken = {
         type: "underline",
         raw: match[0],
         text: innerContent,
         tokens: lexer.inlineTokens(innerContent),
       };
+      return token;
     },
   },
 
