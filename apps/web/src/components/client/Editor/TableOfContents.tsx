@@ -1,7 +1,7 @@
 "use client";
 
 import { Editor } from "@tiptap/react";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { RiListCheck, RiArrowUpLine, RiArrowDownLine } from "@remixicon/react";
 import Clickable from "@/ui/Clickable";
 
@@ -16,20 +16,41 @@ interface TableOfContentsProps {
 }
 
 /**
- * 编辑器目录组件 - 简化版
+ * 编辑器目录组件 - 增强版
  *
  * 功能：
  * - 自动提取标题并生成目录
  * - 滚动高亮当前标题
  * - 点击跳转
- * - 快捷按钮（顶部/底部）
+ * - 滚动进度显示
+ * - 渐变遮罩
+ * - 智能指示器定位
  */
 export function TableOfContents({ editor }: TableOfContentsProps) {
   const [headings, setHeadings] = useState<Heading[]>([]);
   const [activeId, setActiveId] = useState<string>("");
-  const [isReady, setIsReady] = useState(false); // 添加就绪状态
+  const [isReady, setIsReady] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [showTopGradient, setShowTopGradient] = useState(false);
+  const [showBottomGradient, setShowBottomGradient] = useState(false);
+
+  const containerRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
+
+  const isScrollingRef = useRef(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isUserClickRef = useRef(false);
+  const clickedTargetIdRef = useRef<string | null>(null);
+
+  // 将 em 单位转换为像素值
+  const emToPx = useCallback((em: number): number => {
+    if (typeof window === "undefined") return em * 16;
+    const fontSize = parseFloat(
+      getComputedStyle(document.documentElement).fontSize,
+    );
+    return em * fontSize;
+  }, []);
 
   // 提取标题（ID 已由 CustomHeading 自动生成）
   useEffect(() => {
@@ -45,7 +66,7 @@ export function TableOfContents({ editor }: TableOfContentsProps) {
 
       headingElements.forEach((element) => {
         const text = element.textContent || "";
-        const id = element.id; // 直接读取 CustomHeading 生成的 ID
+        const id = element.id;
         const level = parseInt(element.tagName.substring(1));
 
         if (id && text) {
@@ -72,29 +93,37 @@ export function TableOfContents({ editor }: TableOfContentsProps) {
     };
   }, [editor, isReady]);
 
-  // 监听滚动，高亮当前标题
+  // 监听滚动，高亮当前标题 + 计算进度
   useEffect(() => {
     if (!editor || headings.length === 0) return;
 
     const handleScroll = () => {
-      // 获取正确的滚动容器 - 不是 editor.view.dom，而是它的父容器
       const scrollContainer = document.getElementById(
         "tiptap-scroll-container",
       );
       if (!scrollContainer) return;
 
       const scrollTop = scrollContainer.scrollTop || 0;
+      const scrollHeight = scrollContainer.scrollHeight;
+      const clientHeight = scrollContainer.clientHeight;
+
+      // 计算滚动进度
+      const maxScroll = scrollHeight - clientHeight;
+      const progress = maxScroll > 0 ? (scrollTop / maxScroll) * 100 : 0;
+      setScrollProgress(Math.min(100, Math.max(0, progress)));
+
+      // 更新活动标题
+      const activeThreshold = emToPx(6);
       let currentActiveId = "";
 
-      // 找到当前滚动位置最接近的标题
       headings.forEach((heading) => {
         const element = document.getElementById(heading.id);
         if (element) {
           const rect = element.getBoundingClientRect();
           const containerRect = scrollContainer.getBoundingClientRect();
-          const relativeTop = rect.top - containerRect.top + scrollTop;
+          const relativeTop = rect.top - containerRect.top;
 
-          if (relativeTop <= scrollTop + 100) {
+          if (relativeTop <= activeThreshold) {
             currentActiveId = heading.id;
           }
         }
@@ -103,48 +132,189 @@ export function TableOfContents({ editor }: TableOfContentsProps) {
       setActiveId(currentActiveId);
     };
 
-    // 在正确的容器上监听滚动事件
     const scrollContainer = document.getElementById("tiptap-scroll-container");
     if (!scrollContainer) return;
 
     scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll(); // 初始化
+    handleScroll();
 
     return () => {
       scrollContainer.removeEventListener("scroll", handleScroll);
     };
-  }, [editor, headings]);
+  }, [editor, headings, emToPx]);
 
   // 更新高亮指示器位置
   useEffect(() => {
-    if (!activeId || !navRef.current || !highlightRef.current) {
+    if (
+      !activeId ||
+      !navRef.current ||
+      !highlightRef.current ||
+      !containerRef.current
+    ) {
       if (highlightRef.current) {
         highlightRef.current.style.opacity = "0";
       }
       return;
     }
 
-    const activeLink = navRef.current.querySelector(
+    // 清理之前的定时器
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = null;
+    }
+
+    const activeElement = navRef.current.querySelector(
       `a[href="#${activeId}"]`,
     ) as HTMLElement;
 
-    if (activeLink && highlightRef.current) {
-      // 获取父容器（带 p-4 的 div）
-      const parentContainer = highlightRef.current.parentElement;
-      if (!parentContainer) return;
+    if (activeElement && containerRef.current && highlightRef.current) {
+      const isScrollable =
+        navRef.current.scrollHeight > navRef.current.clientHeight;
 
-      const parentRect = parentContainer.getBoundingClientRect();
-      const linkRect = activeLink.getBoundingClientRect();
+      // 更新高亮指示器的函数
+      const updateHighlight = () => {
+        if (
+          navRef.current &&
+          containerRef.current &&
+          highlightRef.current &&
+          activeElement
+        ) {
+          const containerRect = containerRef.current.getBoundingClientRect();
+          const activeRect = activeElement.getBoundingClientRect();
+          const navRect = navRef.current.getBoundingClientRect();
 
-      // 计算相对于父容器的位置
-      const top = linkRect.top - parentRect.top;
-      const height = linkRect.height;
+          // 计算相对于容器的位置
+          const top = activeRect.top - containerRect.top;
+          const height = activeRect.height;
 
-      highlightRef.current.style.top = `${top}px`;
-      highlightRef.current.style.height = `${height}px`;
-      highlightRef.current.style.opacity = "1";
+          // 检查是否在可视区域内
+          const isInView =
+            activeRect.top >= navRect.top &&
+            activeRect.bottom <= navRect.bottom;
+
+          highlightRef.current.style.top = `${top}px`;
+          highlightRef.current.style.height = `${height}px`;
+          highlightRef.current.style.opacity = isInView ? "1" : "0";
+        }
+        isScrollingRef.current = false;
+      };
+
+      // 如果是用户点击触发的
+      if (isUserClickRef.current) {
+        // 检查滚动是否已经到达目标位置
+        if (clickedTargetIdRef.current === activeId) {
+          // 滚动已完成，立即更新指示器
+          setTimeout(updateHighlight, 100);
+          return;
+        } else {
+          // 还在滚动中，不更新指示器
+          return;
+        }
+      }
+
+      if (isScrollable) {
+        // 计算目标滚动位置
+        const targetOffset = emToPx(5);
+        const elementOffsetTop = activeElement.offsetTop;
+        const rawDesiredScrollTop = elementOffsetTop - targetOffset;
+
+        // 限制在合法滚动范围内
+        const maxScrollTop =
+          navRef.current.scrollHeight - navRef.current.clientHeight;
+        const desiredScrollTop = Math.max(
+          0,
+          Math.min(rawDesiredScrollTop, maxScrollTop),
+        );
+        const currentScrollTop = navRef.current.scrollTop;
+
+        // 判断是否需要滚动
+        const needsScroll = Math.abs(desiredScrollTop - currentScrollTop) > 1;
+
+        if (needsScroll) {
+          // 如果正在滚动中，延迟执行
+          if (isScrollingRef.current) {
+            scrollTimeoutRef.current = setTimeout(() => {
+              if (navRef.current) {
+                navRef.current.scrollTo({
+                  top: desiredScrollTop,
+                  behavior: "smooth",
+                });
+                isScrollingRef.current = true;
+                scrollTimeoutRef.current = setTimeout(updateHighlight, 200);
+              }
+            }, 100);
+            return;
+          }
+
+          // 触发滚动
+          isScrollingRef.current = true;
+          navRef.current.scrollTo({
+            top: desiredScrollTop,
+            behavior: "smooth",
+          });
+
+          // 等待滚动完成后更新指示器
+          scrollTimeoutRef.current = setTimeout(updateHighlight, 400);
+        } else {
+          // 不需要滚动，立即更新
+          updateHighlight();
+        }
+      } else {
+        // 不可滚动，立即更新
+        updateHighlight();
+      }
+    } else {
+      if (highlightRef.current) {
+        highlightRef.current.style.opacity = "0";
+      }
     }
-  }, [activeId, headings]);
+  }, [activeId, headings, emToPx]);
+
+  // 监听目录滚动，更新渐变遮罩
+  useEffect(() => {
+    if (!navRef.current) {
+      setShowTopGradient(false);
+      setShowBottomGradient(false);
+      return;
+    }
+
+    let rafId: number | null = null;
+
+    const updateGradients = () => {
+      if (!navRef.current) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = navRef.current;
+      const isScrollable = scrollHeight > clientHeight;
+
+      if (!isScrollable) {
+        setShowTopGradient(false);
+        setShowBottomGradient(false);
+        return;
+      }
+
+      setShowTopGradient(scrollTop > 10);
+      setShowBottomGradient(scrollTop < scrollHeight - clientHeight - 10);
+    };
+
+    const handleScroll = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+      rafId = requestAnimationFrame(updateGradients);
+    };
+
+    updateGradients();
+
+    const nav = navRef.current;
+    nav.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      nav.removeEventListener("scroll", handleScroll);
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+    };
+  }, [headings]);
 
   // 滚动到顶部
   const scrollToTop = () => {
@@ -169,13 +339,22 @@ export function TableOfContents({ editor }: TableOfContentsProps) {
     const scrollContainer = document.getElementById("tiptap-scroll-container");
     if (!element || !scrollContainer) return;
 
+    isUserClickRef.current = true;
+    clickedTargetIdRef.current = id;
+
     const containerRect = scrollContainer.getBoundingClientRect();
     const elementRect = element.getBoundingClientRect();
 
     const scrollTop =
-      elementRect.top - containerRect.top + scrollContainer.scrollTop - 100; // 留 100px 顶部空间
+      elementRect.top - containerRect.top + scrollContainer.scrollTop - 100;
 
     scrollContainer.scrollTo({ top: scrollTop, behavior: "smooth" });
+
+    // 延迟重置标记
+    setTimeout(() => {
+      isUserClickRef.current = false;
+      clickedTargetIdRef.current = null;
+    }, 1000);
   };
 
   if (headings.length === 0) {
@@ -192,6 +371,7 @@ export function TableOfContents({ editor }: TableOfContentsProps) {
 
   return (
     <div
+      ref={containerRef}
       className={`overflow-hidden relative transition-all duration-300 ${
         isReady ? "w-64 opacity-100" : "w-0 opacity-0"
       }`}
@@ -230,36 +410,66 @@ export function TableOfContents({ editor }: TableOfContentsProps) {
           </div>
         </div>
 
-        {/* 目录列表 */}
-        <nav
-          ref={navRef}
-          className="space-y-1 relative max-h-[50vh] overflow-y-auto overflow-x-hidden scrollbar-hide"
-        >
-          {headings.map((heading) => {
-            const isActive = activeId === heading.id;
-            const marginLeft = (heading.level - 1) * 12;
+        {/* 目录列表容器 */}
+        <div className="relative">
+          {/* 顶部渐变遮罩 */}
+          <div
+            className={`absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-background via-background/80 to-transparent pointer-events-none z-20 transition-opacity duration-300 ${
+              showTopGradient ? "opacity-100" : "opacity-0"
+            }`}
+          />
 
-            return (
-              <a
-                key={heading.id}
-                href={`#${heading.id}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleHeadingClick(heading.id);
-                }}
-                className={`block w-full text-left px-2 py-1 rounded text-sm transition-colors truncate cursor-pointer ${
-                  isActive
-                    ? "text-foreground font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                style={{ marginLeft: `${marginLeft}px` }}
-                title={heading.text}
-              >
-                {heading.text}
-              </a>
-            );
-          })}
-        </nav>
+          {/* 底部渐变遮罩 */}
+          <div
+            className={`absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none z-20 transition-opacity duration-300 ${
+              showBottomGradient ? "opacity-100" : "opacity-0"
+            }`}
+          />
+
+          {/* 目录列表 */}
+          <nav
+            ref={navRef}
+            className="space-y-1 relative max-h-[40vh] overflow-y-auto overflow-x-hidden scrollbar-hide"
+          >
+            {headings.map((heading) => {
+              const isActive = activeId === heading.id;
+              const marginLeft = (heading.level - 1) * 12;
+
+              return (
+                <a
+                  key={heading.id}
+                  href={`#${heading.id}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleHeadingClick(heading.id);
+                  }}
+                  className={`block w-full text-left px-2 py-1 rounded text-sm transition-colors truncate cursor-pointer ${
+                    isActive
+                      ? "text-foreground font-bold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  style={{ marginLeft: `${marginLeft}px` }}
+                  title={heading.text}
+                >
+                  {heading.text}
+                </a>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* 滚动进度 */}
+        <div className="mt-6 pt-4 space-y-3 relative">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-border">
+            <div
+              className="h-full bg-primary transition-all duration-300 ease-out"
+              style={{ width: `${scrollProgress}%` }}
+            />
+          </div>
+          <div className="text-xs text-muted-foreground font-medium font-mono">
+            {scrollProgress.toFixed(0)} %
+          </div>
+        </div>
       </div>
     </div>
   );

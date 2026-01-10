@@ -68,6 +68,7 @@ export default function PostToc({
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isUserClickRef = useRef(false);
+  const clickedTargetIdRef = useRef<string | null>(null); // 记录点击的目标ID
 
   // 视口内容相关状态
   const [viewportItems, setViewportItems] = useState<ViewportContentItem[]>([]);
@@ -458,9 +459,17 @@ export default function PostToc({
         isScrollingRef.current = false;
       };
 
-      // 如果是用户点击触发的，在1000ms内不更新指示器
+      // 如果是用户点击触发的
       if (isUserClickRef.current) {
-        return;
+        // 检查滚动是否已经到达目标位置
+        if (clickedTargetIdRef.current === activeId) {
+          // 滚动已完成，立即更新指示器
+          setTimeout(updateHighlight, 100); // 稍微延迟确保DOM完全更新
+          return;
+        } else {
+          // 还在滚动中，不更新指示器
+          return;
+        }
       }
 
       if (isScrollable) {
@@ -695,10 +704,12 @@ export default function PostToc({
                     href={`#${item.id}`}
                     onClick={() => {
                       isUserClickRef.current = true;
+                      clickedTargetIdRef.current = item.id; // 记录点击的目标
                       setIsCollapsed(false);
                       // 延迟重置标记，确保页面滚动完成
                       setTimeout(() => {
                         isUserClickRef.current = false;
+                        clickedTargetIdRef.current = null;
                       }, 1000);
                     }}
                     className={`block w-full text-left px-2 py-1 rounded text-sm transition-colors ${
@@ -857,9 +868,11 @@ export default function PostToc({
                       href={`#${item.id}`}
                       onClick={() => {
                         isUserClickRef.current = true;
+                        clickedTargetIdRef.current = item.id; // 记录点击的目标
                         // 延迟重置标记，确保页面滚动完成
                         setTimeout(() => {
                           isUserClickRef.current = false;
+                          clickedTargetIdRef.current = null;
                         }, 1000);
                       }}
                       className={`block w-full text-left px-2 py-1 rounded text-sm transition-colors truncate ${
