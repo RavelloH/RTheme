@@ -28,7 +28,6 @@ import { validateData } from "@/lib/server/validator";
 import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
 import { logAuditEvent } from "@/lib/server/audit";
-import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import {
   slugify,
   sanitizeUserSlug,
@@ -543,8 +542,6 @@ export async function createTag(
     await logAuditEvent({
       user: {
         uid: String(user.uid),
-        ipAddress: (await getClientIP()) || "Unknown",
-        userAgent: (await getClientUserAgent()) || "Unknown",
       },
       details: {
         action: "CREATE_TAG",
@@ -744,33 +741,46 @@ export async function updateTag(
     });
 
     // 记录审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(user.uid),
-        ipAddress: (await getClientIP()) || "Unknown",
-        userAgent: (await getClientUserAgent()) || "Unknown",
-      },
-      details: {
-        action: "UPDATE_TAG",
-        resourceType: "Tag",
-        resourceId: slug,
-        value: {
-          old: {
-            slug: existingTag.slug,
-            name: existingTag.name,
-            description: existingTag.description,
-            featuredImage: getFeaturedImageUrl(existingTag.mediaRefs),
-          },
-          new: {
-            slug: updatedTag.slug,
-            name: updatedTag.name,
-            description: updatedTag.description,
-            featuredImage: getFeaturedImageUrl(updatedTag.mediaRefs),
-          },
+    const auditOldValue: Record<string, string | null> = {};
+    const auditNewValue: Record<string, string | null> = {};
+
+    if (slug !== updatedTag.slug) {
+      auditOldValue.slug = existingTag.slug;
+      auditNewValue.slug = updatedTag.slug;
+    }
+    if (existingTag.name !== updatedTag.name) {
+      auditOldValue.name = existingTag.name;
+      auditNewValue.name = updatedTag.name;
+    }
+    if (existingTag.description !== updatedTag.description) {
+      auditOldValue.description = existingTag.description;
+      auditNewValue.description = updatedTag.description;
+    }
+
+    const oldFeaturedImage = getFeaturedImageUrl(existingTag.mediaRefs);
+    const newFeaturedImage = getFeaturedImageUrl(updatedTag.mediaRefs);
+    if (oldFeaturedImage !== newFeaturedImage) {
+      auditOldValue.featuredImage = oldFeaturedImage;
+      auditNewValue.featuredImage = newFeaturedImage;
+    }
+
+    if (Object.keys(auditNewValue).length > 0) {
+      await logAuditEvent({
+        user: {
+          uid: String(user.uid),
         },
-        description: "更新标签",
-      },
-    });
+        details: {
+          action: "UPDATE_TAG",
+          resourceType: "Tag",
+          resourceId: slug,
+          value: {
+            old: auditOldValue,
+            new: auditNewValue,
+          },
+          description: "更新标签",
+        },
+      });
+    }
 
     return response.ok({
       data: {
@@ -847,8 +857,6 @@ export async function deleteTags(
     await logAuditEvent({
       user: {
         uid: String(user.uid),
-        ipAddress: (await getClientIP()) || "Unknown",
-        userAgent: (await getClientUserAgent()) || "Unknown",
       },
       details: {
         action: "DELETE_TAGS",

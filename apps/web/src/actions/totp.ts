@@ -26,7 +26,6 @@ import type {
   ApiResponse,
   ApiResponseData,
 } from "@repo/shared-types/api/common";
-import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { getConfig } from "@/lib/server/config-cache";
 import { logAuditEvent } from "@/lib/server/audit";
 import { after, type NextResponse } from "next/server";
@@ -44,6 +43,7 @@ import {
   encryptBackupCode,
   decryptBackupCode,
 } from "@/lib/server/totp-crypto";
+import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 
 type AuthActionEnvironment = "serverless" | "serveraction";
 type AuthActionConfig = { environment?: AuthActionEnvironment };
@@ -595,17 +595,12 @@ export async function confirmTotp(
     await redis.del(`totp:setup:${uid}`);
 
     // 获取客户端信息用于审计日志
-    const clientIP = await getClientIP();
-    const clientUserAgent = await getClientUserAgent();
-
     // 记录审计日志
     after(async () => {
       try {
         await logAuditEvent({
           user: {
             uid: uid.toString(),
-            ipAddress: clientIP,
-            userAgent: clientUserAgent,
           },
           details: {
             action: "CREATE",
@@ -726,17 +721,12 @@ export async function disableTotp(
     });
 
     // 获取客户端信息用于审计日志
-    const clientIP = await getClientIP();
-    const clientUserAgent = await getClientUserAgent();
-
     // 记录审计日志
     after(async () => {
       try {
         await logAuditEvent({
           user: {
             uid: uid.toString(),
-            ipAddress: clientIP,
-            userAgent: clientUserAgent,
           },
           details: {
             action: "DELETE",
@@ -867,24 +857,19 @@ export async function regenerateBackupCodes(
     });
 
     // 获取客户端信息用于审计日志
-    const clientIP = await getClientIP();
-    const clientUserAgent = await getClientUserAgent();
-
     // 记录审计日志
     after(async () => {
       try {
         await logAuditEvent({
           user: {
             uid: uid.toString(),
-            ipAddress: clientIP,
-            userAgent: clientUserAgent,
           },
           details: {
             action: "UPDATE",
             resourceType: "TOTP",
             resourceId: uid.toString(),
             value: {
-              old: null,
+              old: {},
               new: { backupCodesRegenerated: true },
             },
             description: `用户重新生成 TOTP 备份码 - uid: ${uid}`,

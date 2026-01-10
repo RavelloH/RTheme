@@ -15,7 +15,6 @@ import { validateData } from "@/lib/server/validator";
 import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
 import { logAuditEvent } from "@/lib/server/audit";
-import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { Prisma } from ".prisma/client";
 
 type ActionEnvironment = "serverless" | "serveraction";
@@ -186,8 +185,6 @@ export async function updateSettings(
       await logAuditEvent({
         user: {
           uid: String(user.uid),
-          ipAddress: await getClientIP(),
-          userAgent: await getClientUserAgent(),
         },
         details: {
           action: "BULK_UPDATE",

@@ -598,12 +598,12 @@ export async function trackPageView(
   const validationError = validateData(params, TrackPageViewSchema);
   if (validationError) return response.badRequest(validationError);
 
+  // 获取服务端信息
+  const ipAddress = await getClientIP();
+  const userAgent = await getClientUserAgent();
+
   try {
     const { path, referer, visitorId, screenSize, language, timezone } = params;
-
-    // 获取服务端信息
-    const ipAddress = await getClientIP();
-    const userAgent = await getClientUserAgent();
 
     // 解析地理位置
     const location = resolveIpLocation(ipAddress);

@@ -32,7 +32,6 @@ import { validateData } from "@/lib/server/validator";
 import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
 import { logAuditEvent } from "@/lib/server/audit";
-import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { jwtTokenVerify, type AccessTokenPayload } from "@/lib/server/jwt";
 import { Prisma } from ".prisma/client";
 import crypto from "crypto";
@@ -546,8 +545,6 @@ export async function updateUsers(
         await logAuditEvent({
           user: {
             uid: String(user.uid),
-            ipAddress: await getClientIP(),
-            userAgent: await getClientUserAgent(),
           },
           details: {
             action: "UPDATE",
@@ -655,8 +652,6 @@ export async function updateUsers(
         await logAuditEvent({
           user: {
             uid: String(user.uid),
-            ipAddress: await getClientIP(),
-            userAgent: await getClientUserAgent(),
           },
           details: {
             action: "BULK_UPDATE",
@@ -786,8 +781,6 @@ export async function deleteUsers(
       await logAuditEvent({
         user: {
           uid: String(user.uid),
-          ipAddress: await getClientIP(),
-          userAgent: await getClientUserAgent(),
         },
         details: {
           action: "BULK_DELETE",
@@ -1153,9 +1146,6 @@ export async function updateUserProfile(
     });
 
     // 获取客户端信息用于审计日志
-    const clientIP = await getClientIP();
-    const clientUserAgent = await getClientUserAgent();
-
     // 发送邮件通知（after 钩子）
     const { after } = await import("next/server");
     after(async () => {
@@ -1244,8 +1234,6 @@ export async function updateUserProfile(
         await logAuditEvent({
           user: {
             uid: String(uid),
-            ipAddress: clientIP,
-            userAgent: clientUserAgent,
           },
           details: {
             action: "UPDATE",
@@ -1365,9 +1353,6 @@ export async function disable2FA(
     });
 
     // 获取客户端信息用于审计日志
-    const clientIP = await getClientIP();
-    const clientUserAgent = await getClientUserAgent();
-
     // 记录审计日志（after 钩子）
     const { after } = await import("next/server");
     after(async () => {
@@ -1375,8 +1360,6 @@ export async function disable2FA(
         await logAuditEvent({
           user: {
             uid: String(user.uid),
-            ipAddress: clientIP,
-            userAgent: clientUserAgent,
           },
           details: {
             action: "DISABLE_2FA",

@@ -55,9 +55,9 @@ import type {
   RevokeSessionSuccessResponse,
 } from "@repo/shared-types/api/auth";
 import { verifyToken } from "@/lib/server/captcha";
-import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { getConfig } from "@/lib/server/config-cache";
 import { logAuditEvent } from "@/lib/server/audit";
+import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 
 type AuthActionEnvironment = "serverless" | "serveraction";
 type AuthActionConfig = { environment?: AuthActionEnvironment };
@@ -290,7 +290,6 @@ export async function login(
     const expiredAt = new Date(Date.now() + expiredAtSeconds * 1000);
     const expiredAtUnix = Math.floor(expiredAt.getTime() / 1000); // 转换为Unix时间戳
 
-    // 获取客户端信息
     const clientIP = await getClientIP();
     const clientUserAgent = await getClientUserAgent();
 
@@ -478,9 +477,6 @@ export async function register(
     const emailVerifyCode = emailUtils.generate();
 
     // 获取客户端信息用于审计日志
-    const clientIP = await getClientIP();
-    const clientUserAgent = await getClientUserAgent();
-
     // 创建用户
     const user = await prisma.user.create({
       data: {
@@ -498,8 +494,6 @@ export async function register(
         await logAuditEvent({
           user: {
             uid: user.uid.toString(),
-            ipAddress: clientIP,
-            userAgent: clientUserAgent,
           },
           details: {
             action: "CREATE",
@@ -800,17 +794,12 @@ export async function verifyEmail(
       });
 
       // 获取客户端信息用于审计日志
-      const clientIP = await getClientIP();
-      const clientUserAgent = await getClientUserAgent();
-
       // 记录审计日志
       after(async () => {
         try {
           await logAuditEvent({
             user: {
               uid: user.uid.toString(),
-              ipAddress: clientIP,
-              userAgent: clientUserAgent,
             },
             details: {
               action: "UPDATE",
@@ -950,17 +939,12 @@ export async function changePassword(
     cookieStore.delete("REAUTH_TOKEN");
 
     // 获取客户端信息用于审计日志
-    const clientIP = await getClientIP();
-    const clientUserAgent = await getClientUserAgent();
-
     // 记录审计日志
     after(async () => {
       try {
         await logAuditEvent({
           user: {
             uid: user.uid.toString(),
-            ipAddress: clientIP,
-            userAgent: clientUserAgent,
           },
           details: {
             action: "UPDATE",
@@ -1271,17 +1255,12 @@ export async function resetPassword(
     });
 
     // 获取客户端信息用于审计日志
-    const clientIP = await getClientIP();
-    const clientUserAgent = await getClientUserAgent();
-
     // 记录审计日志
     after(async () => {
       try {
         await logAuditEvent({
           user: {
             uid: passwordReset.userUid.toString(),
-            ipAddress: clientIP,
-            userAgent: clientUserAgent,
           },
           details: {
             action: "UPDATE",
@@ -1808,17 +1787,12 @@ export async function revokeSession(
     });
 
     // 获取客户端信息用于审计日志
-    const clientIP = await getClientIP();
-    const clientUserAgent = await getClientUserAgent();
-
     // 记录审计日志
     after(async () => {
       try {
         await logAuditEvent({
           user: {
             uid: uid.toString(),
-            ipAddress: clientIP,
-            userAgent: clientUserAgent,
           },
           details: {
             action: "UPDATE",

@@ -33,7 +33,6 @@ import { validateData } from "@/lib/server/validator";
 import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
 import { logAuditEvent } from "@/lib/server/audit";
-import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { slugify, sanitizeUserSlug, isValidSlug } from "@/lib/server/slugify";
 import {
   getCategoryPath,
@@ -913,8 +912,6 @@ export async function createCategory(
     await logAuditEvent({
       user: {
         uid: String(user.uid),
-        ipAddress: (await getClientIP()) || "Unknown",
-        userAgent: (await getClientUserAgent()) || "Unknown",
       },
       details: {
         action: "CREATE_CATEGORY",
@@ -1218,35 +1215,34 @@ export async function updateCategory(
       },
     });
 
-    // 审计日志
+    // 审计日志 - 使用自动对象比对功能
+    const oldCategoryData = {
+      slug: category.slug,
+      name: category.name,
+      description: category.description,
+      parentId: category.parentId,
+    };
+
+    const newCategoryData = {
+      slug: updatedCategory.slug,
+      name: updatedCategory.name,
+      description: updatedCategory.description,
+      parentId: updatedCategory.parentId,
+    };
+
     await logAuditEvent({
       user: {
         uid: String(user.uid),
-        ipAddress: (await getClientIP()) || "Unknown",
-        userAgent: (await getClientUserAgent()) || "Unknown",
       },
       details: {
         action: "UPDATE_CATEGORY",
         resourceType: "CATEGORY",
         resourceId: updatedCategory.id.toString(),
         value: {
-          old: {
-            slug: category.slug,
-            name: category.name,
-            parentId: category.parentId,
-          },
-          new: {
-            slug: updatedCategory.slug,
-            name: updatedCategory.name,
-            parentId: updatedCategory.parentId,
-          },
+          old: oldCategoryData,
+          new: newCategoryData,
         },
         description: "更新分类",
-        metadata: Object.fromEntries(
-          Object.entries(updateData).filter(
-            ([, v]) => v !== null && v !== undefined,
-          ),
-        ) as Record<string, string | number | boolean>,
       },
     });
 
@@ -1366,8 +1362,6 @@ export async function deleteCategories(
     await logAuditEvent({
       user: {
         uid: String(user.uid),
-        ipAddress: (await getClientIP()) || "Unknown",
-        userAgent: (await getClientUserAgent()) || "Unknown",
       },
       details: {
         action: "DELETE_CATEGORIES",
@@ -1532,6 +1526,16 @@ export async function moveCategories(
       }
     }
 
+    // 获取移动前的 parentId 信息用于审计日志
+    const oldCategories = await prisma.category.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, parentId: true },
+    });
+    const oldParentIds = oldCategories.map((c) => ({
+      id: c.id,
+      parentId: c.parentId,
+    }));
+
     // 批量更新
     const updateResult = await prisma.category.updateMany({
       where: {
@@ -1548,19 +1552,14 @@ export async function moveCategories(
     await logAuditEvent({
       user: {
         uid: String(user.uid),
-        ipAddress: (await getClientIP()) || "Unknown",
-        userAgent: (await getClientUserAgent()) || "Unknown",
       },
       details: {
         action: "MOVE_CATEGORIES",
         resourceType: "CATEGORY",
         resourceId: ids.join(","),
         value: {
-          old: null,
-          new: {
-            categoryIds: ids,
-            targetParentId: resolvedTargetParentId,
-          },
+          old: { categories: oldParentIds },
+          new: { targetParentId: resolvedTargetParentId },
         },
         description: "批量移动分类",
       },

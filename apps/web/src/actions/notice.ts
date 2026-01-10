@@ -1,6 +1,6 @@
 "use server";
 
-import { NextResponse, after } from "next/server";
+import { NextResponse } from "next/server";
 import { cookies, headers } from "next/headers";
 import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
@@ -8,7 +8,6 @@ import { revalidatePath } from "next/cache";
 import ResponseBuilder from "@/lib/server/response";
 import limitControl from "@/lib/server/rate-limit";
 import { validateData } from "@/lib/server/validator";
-import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { AccessTokenPayload, jwtTokenVerify } from "@/lib/server/jwt";
 import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
 import {
@@ -293,35 +292,6 @@ export async function markNoticesAsRead(
       });
     }
 
-    // 获取客户端信息用于审计日志
-    const clientIP = await getClientIP();
-    const clientUserAgent = await getClientUserAgent();
-
-    // 记录审计日志
-    if (result.count > 0) {
-      after(async () => {
-        try {
-          await prisma.auditLog.create({
-            data: {
-              action: "UPDATE",
-              resource: "Notice",
-              resourceId: noticeIds.join(","),
-              userUid: uid,
-              ipAddress: clientIP,
-              userAgent: clientUserAgent,
-              description: `标记 ${result.count} 条通知为已读`,
-              metadata: {
-                noticeIds,
-                count: result.count,
-              },
-            },
-          });
-        } catch (error) {
-          console.error("Failed to create audit log:", error);
-        }
-      });
-    }
-
     revalidatePath("/notifications");
 
     return response.ok({
@@ -397,34 +367,6 @@ export async function markAllNoticesAsRead(
         payload: {
           count: 0,
         },
-      });
-    }
-
-    // 获取客户端信息用于审计日志
-    const clientIP = await getClientIP();
-    const clientUserAgent = await getClientUserAgent();
-
-    // 记录审计日志
-    if (result.count > 0) {
-      after(async () => {
-        try {
-          await prisma.auditLog.create({
-            data: {
-              action: "UPDATE",
-              resource: "Notice",
-              resourceId: "all",
-              userUid: uid,
-              ipAddress: clientIP,
-              userAgent: clientUserAgent,
-              description: `标记所有通知为已读 (${result.count} 条)`,
-              metadata: {
-                count: result.count,
-              },
-            },
-          });
-        } catch (error) {
-          console.error("Failed to create audit log:", error);
-        }
       });
     }
 

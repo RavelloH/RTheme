@@ -5,12 +5,13 @@ import { after } from "next/server";
 import prisma from "@/lib/server/prisma";
 import ResponseBuilder from "@/lib/server/response";
 import type { ApiResponse } from "@repo/shared-types/api/common";
-import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import limitControl from "@/lib/server/rate-limit";
 import { checkReauthToken } from "./reauth";
 import { getConfig } from "@/lib/server/config-cache";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
 import { authVerify } from "@/lib/server/auth-verify";
+import { logAuditEvent } from "@/lib/server/audit";
+import { getClientUserAgent } from "@/lib/server/get-client-info";
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -226,7 +227,6 @@ export async function verifyPasskeyRegistration(payload: {
 
     // 获取客户端信息
     const clientUserAgent = await getClientUserAgent();
-
     // 解析 User-Agent 获取操作系统和浏览器信息
     let deviceInfo: string | undefined;
     if (clientUserAgent) {
@@ -287,7 +287,26 @@ export async function verifyPasskeyRegistration(payload: {
           where: { uid: authUser.uid },
           data: { updatedAt: new Date() },
         });
-        // 省略审计细节以避免类型错误；已有审计系统可按需接入
+
+        await logAuditEvent({
+          user: {
+            uid: String(authUser.uid),
+          },
+          details: {
+            action: "CREATE",
+            resourceType: "PASSKEY",
+            resourceId: credentialId,
+            value: {
+              old: null,
+              new: {
+                name: payload.name || "未命名密钥",
+                deviceType: credentialDeviceType,
+                browser: deviceInfo,
+              },
+            },
+            description: `添加通行密钥: ${payload.name || "未命名密钥"}`,
+          },
+        });
       } catch (e) {
         console.error("Audit log error:", e);
       }
@@ -516,15 +535,10 @@ export async function verifyPasskeyAuthentication(payload: {
     const expiredAt = new Date(Date.now() + expiredAtSeconds * 1000);
     const expiredAtUnix = Math.floor(expiredAt.getTime() / 1000);
 
-    const clientIP = await getClientIP();
-    const clientUserAgent = await getClientUserAgent();
-
     const dbRefreshToken = await prisma.refreshToken.create({
       data: {
         userUid: user.uid,
         expiresAt: expiredAt,
-        ipAddress: clientIP,
-        userAgent: clientUserAgent,
         lastUsedAt: new Date(),
       },
     });
@@ -863,6 +877,24 @@ export async function renamePasskey({
       }) as unknown as ApiResponse<null>;
 
     await prisma.passkey.update({ where: { credentialId }, data: { name } });
+
+    // 记录审计日志
+    await logAuditEvent({
+      user: {
+        uid: String(authUser.uid),
+      },
+      details: {
+        action: "UPDATE",
+        resourceType: "PASSKEY",
+        resourceId: credentialId,
+        value: {
+          old: { name: pk.name },
+          new: { name },
+        },
+        description: `重命名通行密钥: ${pk.name} -> ${name}`,
+      },
+    });
+
     return response.ok({
       message: "重命名成功",
       data: null,
@@ -907,6 +939,24 @@ export async function deletePasskey({
       }) as unknown as ApiResponse<null>;
 
     await prisma.passkey.delete({ where: { credentialId } });
+
+    // 记录审计日志
+    await logAuditEvent({
+      user: {
+        uid: String(authUser.uid),
+      },
+      details: {
+        action: "DELETE",
+        resourceType: "PASSKEY",
+        resourceId: credentialId,
+        value: {
+          old: { name: pk.name, credentialId },
+          new: null,
+        },
+        description: `删除通行密钥: ${pk.name}`,
+      },
+    });
+
     return response.ok({
       message: "删除成功",
       data: null,

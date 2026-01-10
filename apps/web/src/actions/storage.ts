@@ -7,6 +7,7 @@ import limitControl from "@/lib/server/rate-limit";
 import { headers } from "next/headers";
 import { validateData } from "@/lib/server/validator";
 import { authVerify } from "@/lib/server/auth-verify";
+import { logAuditEvent } from "@/lib/server/audit";
 import {
   GetStorageList,
   GetStorageListSchema,
@@ -558,6 +559,29 @@ export async function createStorage(
       },
     });
 
+    // 记录审计日志
+    await logAuditEvent({
+      user: {
+        uid: String(user.uid),
+      },
+      details: {
+        action: "CREATE",
+        resourceType: "STORAGE_PROVIDER",
+        resourceId: storageProvider.id,
+        value: {
+          old: null,
+          new: {
+            name: storageProvider.name,
+            type: storageProvider.type,
+            displayName: storageProvider.displayName,
+            isActive: storageProvider.isActive,
+            isDefault: storageProvider.isDefault,
+          },
+        },
+        description: `创建存储提供商: ${storageProvider.name}`,
+      },
+    });
+
     const data = {
       id: storageProvider.id,
       name: storageProvider.name,
@@ -716,6 +740,37 @@ export async function updateStorage(
       data: updateData,
     });
 
+    // 记录审计日志
+    const auditOldValue: Record<string, unknown> = {};
+    const auditNewValue: Record<string, unknown> = {};
+
+    Object.entries(updateData).forEach(([key, value]) => {
+      // Config comparison might need JSON stringify if it's an object
+      const oldValue = existingStorage[key as keyof typeof existingStorage];
+      if (JSON.stringify(value) !== JSON.stringify(oldValue)) {
+        auditOldValue[key] = oldValue;
+        auditNewValue[key] = value;
+      }
+    });
+
+    if (Object.keys(auditNewValue).length > 0) {
+      await logAuditEvent({
+        user: {
+          uid: String(user.uid),
+        },
+        details: {
+          action: "UPDATE",
+          resourceType: "STORAGE_PROVIDER",
+          resourceId: storageProvider.id,
+          value: {
+            old: auditOldValue,
+            new: auditNewValue,
+          },
+          description: `更新存储提供商: ${storageProvider.name}`,
+        },
+      });
+    }
+
     const data = {
       id: storageProvider.id,
       name: storageProvider.name,
@@ -845,6 +900,25 @@ export async function deleteStorage(
       },
     });
 
+    // 记录审计日志
+    if (result.count > 0) {
+      await logAuditEvent({
+        user: {
+          uid: String(user.uid),
+        },
+        details: {
+          action: "DELETE",
+          resourceType: "STORAGE_PROVIDER",
+          resourceId: ids.join(","),
+          value: {
+            old: { ids },
+            new: null,
+          },
+          description: `批量删除存储提供商: ${result.count} 个`,
+        },
+      });
+    }
+
     const data = {
       deleted: result.count,
       ids,
@@ -929,6 +1003,23 @@ export async function toggleStorageStatus(
     const updatedStorage = await prisma.storageProvider.update({
       where: { id },
       data: { isActive },
+    });
+
+    // 记录审计日志
+    await logAuditEvent({
+      user: {
+        uid: String(user.uid),
+      },
+      details: {
+        action: "UPDATE",
+        resourceType: "STORAGE_PROVIDER",
+        resourceId: updatedStorage.id,
+        value: {
+          old: { isActive: storageProvider.isActive },
+          new: { isActive: updatedStorage.isActive },
+        },
+        description: `${isActive ? "启用" : "停用"}存储提供商: ${updatedStorage.name}`,
+      },
     });
 
     const data = {
@@ -1022,6 +1113,23 @@ export async function setDefaultStorage(
         where: { id },
         data: { isDefault: true },
       });
+    });
+
+    // 记录审计日志
+    await logAuditEvent({
+      user: {
+        uid: String(user.uid),
+      },
+      details: {
+        action: "UPDATE",
+        resourceType: "STORAGE_PROVIDER",
+        resourceId: id,
+        value: {
+          old: { isDefault: false },
+          new: { isDefault: true },
+        },
+        description: `设置默认存储提供商: ${targetStorage.name}`,
+      },
     });
 
     const data = {

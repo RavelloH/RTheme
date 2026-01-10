@@ -206,6 +206,10 @@ export async function getAuditLogs(
       oldData: record.oldData,
       newData: record.newData,
       description: record.description,
+      metadata: record.metadata as Record<
+        string,
+        string | number | boolean
+      > | null,
       user: record.user,
     }));
 

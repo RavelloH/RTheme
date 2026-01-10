@@ -43,7 +43,6 @@ import { validateData } from "@/lib/server/validator";
 import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
 import { logAuditEvent } from "@/lib/server/audit";
-import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { TextVersion } from "text-version";
 import { slugify } from "@/lib/server/slugify";
 import {
@@ -1083,8 +1082,6 @@ export async function createPost(
     await logAuditEvent({
       user: {
         uid: String(user.uid),
-        ipAddress: await getClientIP(),
-        userAgent: await getClientUserAgent(),
       },
       details: {
         action: "CREATE",
@@ -1614,8 +1611,6 @@ export async function updatePost(
     await logAuditEvent({
       user: {
         uid: String(user.uid),
-        ipAddress: await getClientIP(),
-        userAgent: await getClientUserAgent(),
       },
       details: {
         action: "UPDATE",
@@ -1916,8 +1911,6 @@ export async function updatePosts(
     await logAuditEvent({
       user: {
         uid: String(user.uid),
-        ipAddress: await getClientIP(),
-        userAgent: await getClientUserAgent(),
       },
       details: {
         action: "UPDATE",
@@ -2042,8 +2035,6 @@ export async function deletePosts(
     await logAuditEvent({
       user: {
         uid: String(user.uid),
-        ipAddress: await getClientIP(),
-        userAgent: await getClientUserAgent(),
       },
       details: {
         action: "DELETE",
@@ -2480,8 +2471,6 @@ export async function resetPostToVersion(
     await logAuditEvent({
       user: {
         uid: String(user.uid),
-        ipAddress: await getClientIP(),
-        userAgent: await getClientUserAgent(),
       },
       details: {
         action: "RESET",
@@ -2615,8 +2604,6 @@ export async function squashPostToVersion(
     await logAuditEvent({
       user: {
         uid: String(user.uid),
-        ipAddress: await getClientIP(),
-        userAgent: await getClientUserAgent(),
       },
       details: {
         action: "SQUASH",

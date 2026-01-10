@@ -9,6 +9,78 @@ import { useBroadcast } from "@/hooks/use-broadcast";
 import { Dialog } from "@/ui/Dialog";
 import { RiEyeLine } from "@remixicon/react";
 import Clickable from "@/ui/Clickable";
+import { codeToHtml } from "shiki";
+
+/**
+ * 检查值是否为空（null、空对象、空字符串）
+ */
+function isEmpty(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (typeof value === "string" && value.trim() === "") return true;
+  if (typeof value === "object" && !Array.isArray(value)) {
+    return Object.keys(value).length === 0;
+  }
+  return false;
+}
+
+/**
+ * JSON 代码高亮组件
+ */
+function JSONHighlight({ json }: { json: unknown }) {
+  const [html, setHtml] = useState("");
+
+  useEffect(() => {
+    const highlightCode = async () => {
+      try {
+        const jsonString = JSON.stringify(json, null, 2);
+        const highlighted = await codeToHtml(jsonString, {
+          lang: "json",
+          themes: {
+            light: "dark-plus",
+            dark: "dark-plus",
+          },
+        });
+        setHtml(highlighted);
+      } catch (err) {
+        console.error("Shiki 高亮错误:", err);
+        const jsonString = JSON.stringify(json, null, 2);
+        setHtml(`${jsonString.replace(/</g, "&lt;").replace(/>/g, "&gt;")}`);
+      }
+    };
+    highlightCode();
+  }, [json]);
+
+  return (
+    <div className="text-xs overflow-auto max-h-64 rounded-lg ">
+      <pre className="shiki bg-[#1E1E1E] p-4 rounded-lg overflow-x-auto">
+        <code dangerouslySetInnerHTML={{ __html: html }}></code>
+      </pre>
+    </div>
+  );
+}
+
+/**
+ * 解析 IP 地理位置
+ */
+function getIPLocation(ip: string | null): string | null {
+  if (!ip) return null;
+
+  // 检查是否为本地地址
+  if (
+    ip === "127.0.0.1" ||
+    ip === "::1" ||
+    ip.startsWith("192.168.") ||
+    ip.startsWith("10.") ||
+    ip.startsWith("172.")
+  ) {
+    return "本地网络";
+  }
+
+  // 注意：这里需要使用动态导入，因为 ip-utils 是服务端模块
+  // 在客户端我们先简单显示 IP 地址
+  // 后续可以通过 API 调用服务端函数来获取地理位置
+  return null;
+}
 
 export default function AuditLogTable() {
   const [data, setData] = useState<AuditLogItem[]>([]);
@@ -453,7 +525,17 @@ export default function AuditLogTable() {
                   <label className="text-sm text-muted-foreground">
                     IP地址
                   </label>
-                  <p className="text-sm font-mono">{selectedLog.ipAddress}</p>
+                  <p className="text-sm font-mono">
+                    {selectedLog.ipAddress}
+                    {(() => {
+                      const location = getIPLocation(selectedLog.ipAddress);
+                      return location ? (
+                        <span className="text-muted-foreground ml-2">
+                          ({location})
+                        </span>
+                      ) : null;
+                    })()}
+                  </p>
                 </div>
                 <div className="md:col-span-2">
                   <label className="text-sm text-muted-foreground">
@@ -476,45 +558,74 @@ export default function AuditLogTable() {
               </div>
             )}
 
+            {/* Metadata 元数据 */}
+            {selectedLog.metadata && !isEmpty(selectedLog.metadata) && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                  元数据 (Metadata)
+                </h3>
+                <JSONHighlight json={selectedLog.metadata} />
+              </div>
+            )}
+
             {/* 数据变更 */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
                 数据变更
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-muted-foreground mb-2 block">
-                    变更前 (Old Data)
-                  </label>
-                  <pre className="text-xs font-mono bg-muted/50 p-3 rounded overflow-auto max-h-64">
-                    {selectedLog.oldData
-                      ? JSON.stringify(
-                          typeof selectedLog.oldData === "string"
-                            ? JSON.parse(selectedLog.oldData)
-                            : selectedLog.oldData,
-                          null,
-                          2,
-                        )
-                      : "无数据"}
-                  </pre>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground mb-2 block">
-                    变更后 (New Data)
-                  </label>
-                  <pre className="text-xs font-mono bg-muted/50 p-3 rounded overflow-auto max-h-64">
-                    {selectedLog.newData
-                      ? JSON.stringify(
-                          typeof selectedLog.newData === "string"
-                            ? JSON.parse(selectedLog.newData)
-                            : selectedLog.newData,
-                          null,
-                          2,
-                        )
-                      : "无数据"}
-                  </pre>
-                </div>
-              </div>
+              {(() => {
+                // 解析 oldData 和 newData
+                let oldData: unknown = selectedLog.oldData;
+                let newData: unknown = selectedLog.newData;
+
+                // 如果是字符串，尝试解析为 JSON
+                if (typeof oldData === "string") {
+                  try {
+                    oldData = JSON.parse(oldData);
+                  } catch {
+                    // 解析失败，保持原字符串
+                  }
+                }
+                if (typeof newData === "string") {
+                  try {
+                    newData = JSON.parse(newData);
+                  } catch {
+                    // 解析失败，保持原字符串
+                  }
+                }
+
+                const oldIsEmpty = isEmpty(oldData);
+                const newIsEmpty = isEmpty(newData);
+
+                // 如果两者都为空，显示提示信息
+                if (oldIsEmpty && newIsEmpty) {
+                  return (
+                    <p className="text-sm text-muted-foreground">无数据变更</p>
+                  );
+                }
+
+                // 如果其中一个为空，让另一个占据全部宽度
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                    {!oldIsEmpty && (
+                      <div className={newIsEmpty ? "md:col-span-2" : ""}>
+                        <label className="text-sm text-muted-foreground mb-2 block h-6">
+                          变更前 (Old Data)
+                        </label>
+                        <JSONHighlight json={oldData} />
+                      </div>
+                    )}
+                    {!newIsEmpty && (
+                      <div className={oldIsEmpty ? "md:col-span-2" : ""}>
+                        <label className="text-sm text-muted-foreground mb-2 block h-6">
+                          变更后 (New Data)
+                        </label>
+                        <JSONHighlight json={newData} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}

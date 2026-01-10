@@ -26,7 +26,6 @@ import { validateData } from "@/lib/server/validator";
 import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
 import { logAuditEvent } from "@/lib/server/audit";
-import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import {
   processImage,
   type ProcessMode,
@@ -604,31 +603,42 @@ export async function updateMedia(
     });
 
     // 记录审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(user.uid),
-        ipAddress: (await getClientIP()) || "Unknown",
-        userAgent: (await getClientUserAgent()) || "Unknown",
-      },
-      details: {
-        action: "UPDATE_MEDIA",
-        resourceType: "Media",
-        resourceId: String(id),
-        value: {
-          old: {
-            originalName: existingMedia.originalName,
-            altText: existingMedia.altText,
-            inGallery: existingMedia.inGallery,
-          },
-          new: {
-            originalName: updatedMedia.originalName,
-            altText: updatedMedia.altText,
-            inGallery: updatedMedia.inGallery,
-          },
+    const auditOldValue: Record<string, string | boolean | null> = {};
+    const auditNewValue: Record<string, string | boolean | null> = {};
+
+    if (
+      originalName !== undefined &&
+      originalName !== existingMedia.originalName
+    ) {
+      auditOldValue.originalName = existingMedia.originalName;
+      auditNewValue.originalName = originalName;
+    }
+    if (altText !== undefined && altText !== existingMedia.altText) {
+      auditOldValue.altText = existingMedia.altText;
+      auditNewValue.altText = altText;
+    }
+    if (inGallery !== undefined && inGallery !== existingMedia.inGallery) {
+      auditOldValue.inGallery = existingMedia.inGallery;
+      auditNewValue.inGallery = inGallery;
+    }
+
+    if (Object.keys(auditNewValue).length > 0) {
+      await logAuditEvent({
+        user: {
+          uid: String(user.uid),
         },
-        description: "更新媒体文件信息",
-      },
-    });
+        details: {
+          action: "UPDATE_MEDIA",
+          resourceType: "Media",
+          resourceId: String(id),
+          value: {
+            old: auditOldValue,
+            new: auditNewValue,
+          },
+          description: "更新媒体文件信息",
+        },
+      });
+    }
 
     return response.ok({
       data: {
@@ -735,8 +745,6 @@ export async function deleteMedia(
     await logAuditEvent({
       user: {
         uid: String(user.uid),
-        ipAddress: (await getClientIP()) || "Unknown",
-        userAgent: (await getClientUserAgent()) || "Unknown",
       },
       details: {
         action: "DELETE_MEDIA",
@@ -1231,8 +1239,6 @@ export async function uploadMedia(
         await logAuditEvent({
           user: {
             uid: String(user.uid),
-            ipAddress: (await getClientIP()) || "Unknown",
-            userAgent: (await getClientUserAgent()) || "Unknown",
           },
           details: {
             action: "UPLOAD_MEDIA",

@@ -40,6 +40,9 @@ export const AuditLogItemSchema = z.object({
   oldData: z.any().nullable(),
   newData: z.any().nullable(),
   description: z.string().nullable(),
+  metadata: z
+    .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+    .nullable(),
   // 关联的用户信息
   user: z
     .object({

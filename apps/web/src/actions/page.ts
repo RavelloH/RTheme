@@ -26,7 +26,6 @@ import { validateData } from "@/lib/server/validator";
 import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
 import { logAuditEvent } from "@/lib/server/audit";
-import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
@@ -437,8 +436,6 @@ export async function createPage(
     await logAuditEvent({
       user: {
         uid: String(authResult.uid),
-        ipAddress: await getClientIP(),
-        userAgent: await getClientUserAgent(),
       },
       details: {
         action: "CREATE",
@@ -573,37 +570,64 @@ export async function updatePage(
     };
 
     // 记录审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(authResult.uid),
-        ipAddress: await getClientIP(),
-        userAgent: await getClientUserAgent(),
-      },
-      details: {
-        action: "UPDATE",
-        resourceType: "PAGE",
-        resourceId: originalPage.id,
-        value: {
-          old: {
-            slug: originalPage.slug,
-            title: originalPage.title,
-            // 其他旧值
-          },
-          new: {
-            slug: updatedPage.slug,
-            title: updatedPage.title,
-            // 其他新值
-          },
-        },
-        description: `更新页面: ${updatedPage.title}`,
-        metadata: {
-          pageId: originalPage.id,
-          originalSlug: slug,
-          newSlug: updatedPage.slug,
-          fieldsModifiedCount: Object.keys(updateData).length,
-        },
-      },
+    const auditOldValue: Record<string, unknown> = {};
+    const auditNewValue: Record<string, unknown> = {};
+
+    // 比较并记录变更
+    if (updateData.title && updateData.title !== originalPage.title) {
+      auditOldValue.title = originalPage.title;
+      auditNewValue.title = updateData.title;
+    }
+    if (updateData.slug && updateData.slug !== originalPage.slug) {
+      auditOldValue.slug = originalPage.slug;
+      auditNewValue.slug = updateData.slug;
+    }
+    if (updateData.content && updateData.content !== originalPage.content) {
+      // 内容变更通常较大，可能不记录完整内容，或仅记录 hash/摘要
+      // 这里简化为只记录有变更
+      auditOldValue.content = "(content)";
+      auditNewValue.content = "(updated)";
+    }
+    if (updateData.status && updateData.status !== originalPage.status) {
+      auditOldValue.status = originalPage.status;
+      auditNewValue.status = updateData.status;
+    }
+    // ... 其他字段的比较逻辑
+    const simpleFields = [
+      "contentType",
+      "metaDescription",
+      "metaKeywords",
+      "robotsIndex",
+      "isSystemPage",
+      "config",
+    ] as const;
+
+    simpleFields.forEach((field) => {
+      const val = updateData[field as keyof typeof updateData];
+      const oldVal = originalPage[field as keyof typeof originalPage];
+      if (val !== undefined && JSON.stringify(val) !== JSON.stringify(oldVal)) {
+        auditOldValue[field] = oldVal;
+        auditNewValue[field] = val;
+      }
     });
+
+    if (Object.keys(auditNewValue).length > 0) {
+      await logAuditEvent({
+        user: {
+          uid: String(authResult.uid),
+        },
+        details: {
+          action: "UPDATE",
+          resourceType: "PAGE",
+          resourceId: originalPage.id,
+          value: {
+            old: auditOldValue,
+            new: auditNewValue,
+          },
+          description: `更新页面: ${updatedPage.title}`,
+        },
+      });
+    }
 
     return response.ok({ data: result });
   } catch (error) {
@@ -697,23 +721,16 @@ export async function updatePages(
     await logAuditEvent({
       user: {
         uid: String(authResult.uid),
-        ipAddress: await getClientIP(),
-        userAgent: await getClientUserAgent(),
       },
       details: {
         action: "UPDATE",
         resourceType: "PAGE",
         resourceId: targetIds.join(","),
         value: {
-          old: {},
+          old: { ids: targetIds },
           new: updateData,
         },
         description: `批量更新页面: ${result.count} 个`,
-        metadata: {
-          count: result.count,
-          targetIdsCount: targetIds.length,
-          fieldsModifiedCount: Object.keys(updateData).length,
-        },
       },
     });
 
@@ -800,8 +817,6 @@ export async function deletePages(
     await logAuditEvent({
       user: {
         uid: String(authResult.uid),
-        ipAddress: await getClientIP(),
-        userAgent: await getClientUserAgent(),
       },
       details: {
         action: "DELETE",

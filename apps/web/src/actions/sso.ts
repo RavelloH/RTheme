@@ -13,8 +13,8 @@ import type { ApiResponse } from "@repo/shared-types/api/common";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import { after } from "next/server";
 import { logAuditEvent } from "@/lib/server/audit";
-import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { getConfig } from "@/lib/server/config-cache";
+import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 
 /**
  * Prisma AccountProvider 枚举类型
@@ -155,17 +155,12 @@ export async function linkSSO({
     });
 
     // 获取客户端信息用于审计日志
-    const clientIP = await getClientIP();
-    const clientUserAgent = await getClientUserAgent();
-
     // 记录审计日志
     after(async () => {
       try {
         await logAuditEvent({
           user: {
             uid: user.uid.toString(),
-            ipAddress: clientIP,
-            userAgent: clientUserAgent,
           },
           details: {
             action: "CREATE",
@@ -332,17 +327,12 @@ export async function unlinkSSO({
     });
 
     // 获取客户端信息用于审计日志
-    const clientIP = await getClientIP();
-    const clientUserAgent = await getClientUserAgent();
-
     // 记录审计日志
     after(async () => {
       try {
         await logAuditEvent({
           user: {
             uid: user.uid.toString(),
-            ipAddress: clientIP,
-            userAgent: clientUserAgent,
           },
           details: {
             action: "DELETE",
@@ -493,17 +483,12 @@ export async function setPassword({
     });
 
     // 获取客户端信息用于审计日志
-    const clientIP = await getClientIP();
-    const clientUserAgent = await getClientUserAgent();
-
     // 记录审计日志
     after(async () => {
       try {
         await logAuditEvent({
           user: {
             uid: user.uid.toString(),
-            ipAddress: clientIP,
-            userAgent: clientUserAgent,
           },
           details: {
             action: "UPDATE",
@@ -759,17 +744,12 @@ export async function handleSSOBind({
     });
 
     // 获取客户端信息用于审计日志
-    const clientIP = await getClientIP();
-    const clientUserAgent = await getClientUserAgent();
-
     // 记录审计日志
     after(async () => {
       try {
         await logAuditEvent({
           user: {
             uid: currentUser.uid.toString(),
-            ipAddress: clientIP,
-            userAgent: clientUserAgent,
           },
           details: {
             action: "CREATE",
@@ -1144,8 +1124,6 @@ export async function handleSSOCallback({
         await logAuditEvent({
           user: {
             uid: newUser.uid.toString(),
-            ipAddress: clientIP,
-            userAgent: clientUserAgent,
           },
           details: {
             action: "CREATE",

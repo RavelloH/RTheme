@@ -31,7 +31,6 @@ import { validateData } from "@/lib/server/validator";
 import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
 import { logAuditEvent } from "@/lib/server/audit";
-import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
@@ -413,8 +412,6 @@ export async function createMenu(
     await logAuditEvent({
       user: {
         uid: String(authResult.uid),
-        ipAddress: await getClientIP(),
-        userAgent: await getClientUserAgent(),
       },
       details: {
         action: "CREATE",
@@ -529,23 +526,34 @@ export async function updateMenu(
     });
 
     // 记录审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(authResult.uid),
-        ipAddress: await getClientIP(),
-        userAgent: await getClientUserAgent(),
-      },
-      details: {
-        action: "UPDATE",
-        resourceType: "Menu",
-        resourceId: menu.id,
-        value: {
-          old: existingMenu,
-          new: menu,
-        },
-        description: `更新菜单: ${menu.name}`,
-      },
+    const auditOldValue: Record<string, unknown> = {};
+    const auditNewValue: Record<string, unknown> = {};
+
+    Object.entries(updateData).forEach(([key, value]) => {
+      const oldValue = existingMenu[key as keyof typeof existingMenu];
+      if (value !== oldValue) {
+        auditOldValue[key] = oldValue;
+        auditNewValue[key] = value;
+      }
     });
+
+    if (Object.keys(auditNewValue).length > 0) {
+      await logAuditEvent({
+        user: {
+          uid: String(authResult.uid),
+        },
+        details: {
+          action: "UPDATE",
+          resourceType: "Menu",
+          resourceId: menu.id,
+          value: {
+            old: auditOldValue,
+            new: auditNewValue,
+          },
+          description: `更新菜单: ${menu.name}`,
+        },
+      });
+    }
 
     const data: UpdateMenuResult = {
       id: menu.id,
@@ -630,8 +638,6 @@ export async function updateMenus(
     await logAuditEvent({
       user: {
         uid: String(authResult.uid),
-        ipAddress: await getClientIP(),
-        userAgent: await getClientUserAgent(),
       },
       details: {
         action: "UPDATE",
@@ -711,8 +717,6 @@ export async function deleteMenus(
     await logAuditEvent({
       user: {
         uid: String(authResult.uid),
-        ipAddress: await getClientIP(),
-        userAgent: await getClientUserAgent(),
       },
       details: {
         action: "DELETE",

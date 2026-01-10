@@ -46,6 +46,7 @@ import ResponseBuilder from "@/lib/server/response";
 import limitControl from "@/lib/server/rate-limit";
 import { validateData } from "@/lib/server/validator";
 import { authVerify } from "@/lib/server/auth-verify";
+import { logAuditEvent } from "@/lib/server/audit";
 import { getClientIP } from "@/lib/server/get-client-info";
 import { resolveIpLocation } from "@/lib/server/ip-utils";
 import { verifyToken } from "@/lib/server/captcha";
@@ -977,10 +978,11 @@ export async function createComment(
     }
   }
 
+  // 获取客户端 IP 地址
+  const ipAddress = await getClientIP();
+
   const status: CommentStatus =
     reviewAll || (!currentUid && reviewAnon) ? "PENDING" : "APPROVED";
-
-  const ipAddress = await getClientIP();
 
   const dbUser = currentUid
     ? await prisma.user.findUnique({
@@ -1259,9 +1261,32 @@ export async function updateCommentStatus(
 
   const { ids, status } = params;
 
+  const oldComments = await prisma.comment.findMany({
+    where: { id: { in: ids }, deletedAt: null },
+    select: { status: true },
+  });
+  const oldStatuses = [...new Set(oldComments.map((c) => c.status))];
+
   await prisma.comment.updateMany({
     where: { id: { in: ids }, deletedAt: null },
     data: { status },
+  });
+
+  // 记录审计日志
+  await logAuditEvent({
+    user: {
+      uid: String(authUser.uid),
+    },
+    details: {
+      action: "UPDATE",
+      resourceType: "COMMENT",
+      resourceId: ids.join(","),
+      value: {
+        old: { status: oldStatuses },
+        new: { status },
+      },
+      description: `批量更新评论状态: ${oldStatuses.join("/")} -> ${status} (${ids.length} 条)`,
+    },
   });
 
   return response.ok({ message: "更新成功" });
@@ -1305,10 +1330,35 @@ export async function deleteComments(
     ];
   }
 
-  await prisma.comment.updateMany({
+  const commentsToDelete = await prisma.comment.findMany({
     where: whereCondition,
-    data: { deletedAt: new Date() },
+    select: { id: true },
   });
+  const deletedIds = commentsToDelete.map((c) => c.id);
+
+  if (deletedIds.length > 0) {
+    await prisma.comment.updateMany({
+      where: { id: { in: deletedIds } },
+      data: { deletedAt: new Date() },
+    });
+
+    // 记录审计日志
+    await logAuditEvent({
+      user: {
+        uid: String(authUser.uid),
+      },
+      details: {
+        action: "DELETE",
+        resourceType: "COMMENT",
+        resourceId: deletedIds.join(","),
+        value: {
+          old: { ids: deletedIds },
+          new: { deletedAt: new Date() },
+        },
+        description: `批量删除评论: ${deletedIds.length} 条`,
+      },
+    });
+  }
 
   return response.ok({ message: "删除成功" });
 }
