@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useId } from "react";
-import { motion } from "framer-motion";
+import { motion, type MotionStyle } from "framer-motion";
 import { AutoTransition } from "./AutoTransition";
 
 export interface ButtonProps
@@ -104,11 +104,11 @@ export function Button({
   const isDisabled = disabled || isLoading;
 
   // CSS 自定义属性用于加载进度
-  const loadingStyles = isNumericLoading
+  const loadingStyles: MotionStyle | undefined = isNumericLoading
     ? ({
         "--loading-progress": `${loading}%`,
         "--loading-remaining": `${100 - loading}%`,
-      } as React.CSSProperties)
+      } as MotionStyle)
     : undefined;
 
   return (

@@ -2,10 +2,10 @@
 
 import { useRef, useEffect } from "react";
 import { MonacoEditor } from "./MonacoEditor";
-import { MDXPreview } from "./MDXPreview";
+import { LivePreview } from "./LivePreview";
 import type { editor } from "monaco-editor";
 
-export interface MarkdownEditorProps {
+export interface LiveEditorProps {
   content: string;
   onChange: (content: string) => void;
   mode: "markdown" | "mdx";
@@ -13,13 +13,13 @@ export interface MarkdownEditorProps {
   onEditorReady?: (editor: editor.IStandaloneCodeEditor) => void;
 }
 
-export function MarkdownEditor({
+export function LiveEditor({
   content,
   onChange,
   mode,
   className = "",
   onEditorReady,
-}: MarkdownEditorProps) {
+}: LiveEditorProps) {
   const monacoContainerRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -82,7 +82,7 @@ export function MarkdownEditor({
 
       {/* 右侧: MDX 预览 */}
       <div ref={previewContainerRef} className="w-1/2 h-full">
-        <MDXPreview content={content} mode={mode} />
+        <LivePreview content={content} mode={mode} />
       </div>
     </div>
   );

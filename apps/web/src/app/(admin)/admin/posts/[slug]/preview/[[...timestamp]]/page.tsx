@@ -13,7 +13,7 @@ import RowGrid, { GridItem } from "@/components/RowGrid";
 import AdminSidebar from "@/components/AdminSidebar";
 import { RiArrowLeftSLine } from "@remixicon/react";
 import Clickable from "@/ui/Clickable";
-import { MDXPreview } from "@/components/client/Editor/MDXPreview";
+import { LivePreview } from "@/components/client/Editor/LivePreview";
 
 export default function PostPreviewPage() {
   const params = useParams();
@@ -205,7 +205,7 @@ export default function PostPreviewPage() {
                 <p className="text-muted-foreground">加载中...</p>
               </div>
             ) : version ? (
-              <MDXPreview
+              <LivePreview
                 content={version.content}
                 mode={postMode === "MDX" ? "mdx" : "markdown"}
                 className="px-6 py-8"

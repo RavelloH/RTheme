@@ -51,7 +51,7 @@ import { TagInput, SelectedTag } from "@/components/client/Tag/TagInput";
 import { CategoryInput } from "@/components/client/Category/CategoryInput";
 import MediaSelector from "@/components/client/MediaSelector";
 import { TiptapEditor, setEditorToast } from "./TiptapEditor";
-import { MarkdownEditor } from "./MarkdownEditor";
+import { LiveEditor } from "./LiveEditor";
 import { createPost, updatePost } from "@/actions/post";
 import { useNavigateWithTransition } from "@/components/Link";
 import { TableToolbar } from "./TableToolbar";
@@ -1484,7 +1484,7 @@ export default function Editor({
             {editor && <ListToolbar editor={editor} />}
           </>
         ) : (
-          <MarkdownEditor
+          <LiveEditor
             content={markdownContent}
             onChange={(content) => {
               setMarkdownContent(content);

@@ -11,7 +11,7 @@ import {
   RiInformationLine,
 } from "@remixicon/react";
 import CMSImage from "@/components/CMSImage";
-import MDXRenderer from "@/components/MDXRenderer";
+import UniversalRenderer from "@/components/server/UniversalRenderer";
 import PostToc from "@/components/PostToc";
 import {
   getPublishedPost,
@@ -327,7 +327,7 @@ export default async function PostPage({ params }: PageProps) {
         {/* 文章内容 */}
         <div className="px-6 md:px-10 max-w-7xl mx-auto pt-10 flex gap-6 relative h-full">
           <div className="flex-[8] h-full min-w-0">
-            <MDXRenderer
+            <UniversalRenderer
               source={renderedContent.content}
               mode={renderedContent.mode}
               mediaFileMap={postMediaFileMap}

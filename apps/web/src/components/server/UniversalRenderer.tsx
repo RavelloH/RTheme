@@ -1,16 +1,9 @@
 import React from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
-import remarkBreaks from "remark-breaks";
-import rehypeKatex from "rehype-katex";
-import rehypeSlug from "rehype-slug";
-import rehypeRaw from "rehype-raw";
-import { getMarkdownComponents } from "@/components/server/renderAdapter";
 import { MediaFileInfo } from "@/lib/shared/image-utils";
 import MDXClientRenderer from "@/components/client/MDXClientRenderer";
+import MarkdownServerRenderer from "@/components/server/MarkdownServerRenderer";
 
-interface MDXRendererProps {
+interface UniversalRendererProps {
   source: string;
   mode: "markdown" | "mdx";
   mediaFileMap?: Map<string, MediaFileInfo>;
@@ -51,17 +44,14 @@ function removeFirstH1(content: string): string {
 }
 
 /**
- * MDX/Markdown 统一渲染器（服务端组件）
- *
- * - Markdown 模式：在服务端使用 react-markdown 渲染
- * - MDX 模式：委托给客户端组件 MDXClientRenderer 处理交互
+ * MDX/Markdown 统一渲染器
  */
-export default function MDXRenderer({
+export default async function UniversalRenderer({
   source,
   mode,
   mediaFileMap,
   skipFirstH1 = false,
-}: MDXRendererProps) {
+}: UniversalRendererProps) {
   // 如果需要跳过第一个 h1，在渲染前处理内容
   const processedSource = skipFirstH1 ? removeFirstH1(source) : source;
 
@@ -70,16 +60,11 @@ export default function MDXRenderer({
     return <MDXClientRenderer source={processedSource} />;
   }
 
-  // Markdown 模式：使用 react-markdown 渲染（服务端）
+  // Markdown 模式：使用服务端渲染器（SSR + Shiki 代码高亮）
   return (
-    <div className="w-full max-w-4xl mx-auto md-content">
-      <Markdown
-        remarkPlugins={[remarkGfm, remarkMath, remarkBreaks]}
-        rehypePlugins={[rehypeKatex, rehypeSlug, rehypeRaw]}
-        components={getMarkdownComponents(mediaFileMap)}
-      >
-        {processedSource}
-      </Markdown>
-    </div>
+    <MarkdownServerRenderer
+      source={processedSource}
+      mediaFileMap={mediaFileMap}
+    />
   );
 }
