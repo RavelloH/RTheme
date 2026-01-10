@@ -10,8 +10,6 @@ import "./globals.css";
 
 // Server Componments
 import Header from "@/components/server/Header";
-import FooterDesktopWrapper from "@/components/server/FooterDesktopWrapper";
-import FooterMobileWrapper from "@/components/server/FooterMobileWrapper";
 
 // Client Components
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -32,6 +30,7 @@ import { getConfig } from "@/lib/server/config-cache";
 // Types
 import { ColorConfig } from "@/types/config";
 import { ToastProvider } from "@/ui/Toast";
+import Footer from "@/components/server/Footer";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 const ibmPlexMono = IBM_Plex_Mono({
@@ -83,10 +82,9 @@ export default async function RootLayout({
                     <Header menus={menus} />
                     <MainContent>
                       <PageTransition>{children}</PageTransition>
-                      <FooterMobileWrapper />
                     </MainContent>
                   </LayoutContainer>
-                  <FooterDesktopWrapper menus={menus} />
+                  <Footer menus={menus} />
                 </ResponsiveFontScale>
               </MenuProvider>
               {modal}
