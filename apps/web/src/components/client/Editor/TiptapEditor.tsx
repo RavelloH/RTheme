@@ -10,12 +10,8 @@ import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
-import Highlight from "@tiptap/extension-highlight";
-import Superscript from "@tiptap/extension-superscript";
-import Subscript from "@tiptap/extension-subscript";
 import Placeholder from "@tiptap/extension-placeholder";
 import InvisibleCharacters from "@tiptap/extension-invisible-characters";
-import TextAlign from "@tiptap/extension-text-align";
 import CharacterCount from "@tiptap/extension-character-count";
 import { Markdown } from "@tiptap/markdown";
 import { useEffect, useRef } from "react";
@@ -26,6 +22,15 @@ import {
 import CodeBlockShiki from "tiptap-extension-code-block-shiki";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
+import {
+  HighlightWithMarkdown,
+  SuperscriptWithMarkdown,
+  SubscriptWithMarkdown,
+  TextAlignWithMarkdown,
+  UnderlineWithMarkdown,
+} from "@/lib/tiptap/markdown-extensions";
+import { CustomParagraph } from "@/lib/tiptap/custom-paragraph";
+import { CustomHeading } from "@/lib/tiptap/custom-heading";
 
 // Toast 实例（需要从外部传入）
 let toastInstance: {
@@ -378,15 +383,22 @@ export function TiptapEditor({
   // 用于跟踪是否是首次渲染，避免初始化时触发保存
   const isFirstRender = useRef(true);
 
+  // 规范化初始内容：将 3 个或更多连续换行符替换为 2 个
+  const normalizedInitialContent = content.replace(/\n{3,}/g, "\n\n");
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
-        heading: {
-          levels: [1, 2, 3, 4, 5, 6],
-        },
+        heading: false, // 禁用 StarterKit 自带的 heading，使用我们的自定义版本
+        paragraph: false, // 禁用 StarterKit 自带的 paragraph，使用我们的自定义版本
         link: false,
+        underline: false, // 禁用 StarterKit 自带的 underline，使用我们的自定义版本
       }),
+      CustomHeading.configure({
+        levels: [1, 2, 3, 4, 5, 6],
+      }),
+      CustomParagraph,
       CodeBlockShiki.configure({
         defaultTheme: "light-plus",
         themes: {
@@ -436,19 +448,20 @@ export function TiptapEditor({
           class: "flex items-start gap-2",
         },
       }),
-      Highlight.configure({
+      UnderlineWithMarkdown,
+      HighlightWithMarkdown.configure({
         multicolor: false,
         HTMLAttributes: {
           class: "bg-yellow-200 dark:bg-yellow-800 px-1 rounded",
         },
       }),
-      Superscript,
-      Subscript,
+      SuperscriptWithMarkdown,
+      SubscriptWithMarkdown,
       Placeholder.configure({
         placeholder,
       }),
       InvisibleCharacters,
-      TextAlign.configure({
+      TextAlignWithMarkdown.configure({
         types: ["heading", "paragraph"],
         alignments: ["left", "center", "right"],
       }),
@@ -458,25 +471,28 @@ export function TiptapEditor({
       ExitLinkOnDoubleSpace,
       PasteImageUpload,
     ],
-    content,
+    content: normalizedInitialContent,
     editorProps: {
       attributes: {
-        class:
-          "prose prose-base sm:prose-lg lg:prose-xl max-w-none focus:outline-none min-h-full text-foreground",
+        class: "tiptap min-h-full text-foreground",
       },
     },
     onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
+      // 直接使用 Tiptap Markdown 扩展导出 Markdown
+      let markdown = editor.getMarkdown();
 
-      console.log(html);
+      // 规范化 Markdown：将 3 个或更多连续换行符替换为 2 个
+      markdown = markdown.replace(/\n{3,}/g, "\n\n");
+
+      console.log(markdown);
 
       // 调用外部onChange回调
-      onChange?.(html);
+      onChange?.(markdown);
 
       // 如果启用了持久化,保存到localStorage
       // 跳过首次渲染时的保存，避免覆盖刚加载的草稿
       if (enablePersistence && !isFirstRender.current) {
-        saveEditorContent(html, editorConfig, false, storageKey);
+        saveEditorContent(markdown, editorConfig, true, storageKey); // isMarkdown = true
       }
 
       // 标记首次渲染已完成
@@ -496,10 +512,13 @@ export function TiptapEditor({
   useEffect(() => {
     if (!editor || !content) return;
 
+    // 规范化输入的 Markdown：将 3 个或更多连续换行符替换为 2 个
+    const normalizedContent = content.replace(/\n{3,}/g, "\n\n");
+
     // 检查当前内容是否与传入的 content 不同
     // 使用 markdown.parse 将 Markdown 转换为 JSON
     // @ts-expect-error - markdown.parse方法可能没有类型定义
-    const json = editor.markdown.parse(content);
+    const json = editor.markdown.parse(normalizedContent);
     const currentJson = editor.getJSON();
 
     // 简单比较：如果内容不同，则更新

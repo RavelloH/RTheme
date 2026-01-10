@@ -138,11 +138,8 @@ export class TiptapAdapter implements IEditorAdapter {
    */
   getContent(): string {
     try {
-      // 使用 Tiptap 的 markdown 扩展导出
-      return (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (this.editor as any).markdown?.serialize?.(this.editor.getJSON()) || ""
-      );
+      // 使用 Tiptap Markdown 扩展的 getMarkdown() 方法
+      return this.editor.getMarkdown() || "";
     } catch (error) {
       console.error("Failed to get Tiptap content:", error);
       return "";

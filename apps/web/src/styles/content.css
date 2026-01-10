@@ -7,6 +7,18 @@
   overflow-wrap: break-word;
 }
 
+/* 移除 ProseMirror 聚焦时的默认边框 */
+.ProseMirror-focused {
+  outline: none !important;
+  border: none !important;
+}
+
+.tiptap:focus,
+.tiptap:focus-visible {
+  outline: none !important;
+  border: none !important;
+}
+
 .mini-md-content {
   @apply min-h-auto;
 }

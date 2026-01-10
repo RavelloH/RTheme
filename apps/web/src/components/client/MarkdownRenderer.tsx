@@ -58,6 +58,7 @@ const CodeBlockComponent = (props: React.HTMLAttributes<HTMLElement>) => {
 
 /**
  * 客户端 Markdown 组件配置
+ * 样式完全由 content.css 统一管理
  */
 const markdownComponents = {
   // 代码处理
@@ -70,7 +71,7 @@ const markdownComponents = {
       return <CodeBlockComponent {...props} />;
     }
 
-    // 行内代码
+    // 行内代码 - 样式由 content.css 管理
     return <code {...props}>{children}</code>;
   },
 
@@ -117,109 +118,14 @@ const markdownComponents = {
     );
   },
 
-  // 表格
+  // 表格容器 - 添加横向滚动
   table: ({ children, ...rest }: React.HTMLAttributes<HTMLTableElement>) => (
     <div className="overflow-x-auto my-6">
-      <table className="min-w-full border-collapse" {...rest}>
-        {children}
-      </table>
+      <table {...rest}>{children}</table>
     </div>
   ),
-  thead: ({
-    children,
-    ...rest
-  }: React.HTMLAttributes<HTMLTableSectionElement>) => (
-    <thead className="bg-foreground/5" {...rest}>
-      {children}
-    </thead>
-  ),
-  tbody: ({
-    children,
-    ...rest
-  }: React.HTMLAttributes<HTMLTableSectionElement>) => (
-    <tbody {...rest}>{children}</tbody>
-  ),
-  tr: ({ children, ...rest }: React.HTMLAttributes<HTMLTableRowElement>) => (
-    <tr className="border-b border-foreground/10" {...rest}>
-      {children}
-    </tr>
-  ),
-  th: ({ children, ...rest }: React.HTMLAttributes<HTMLTableCellElement>) => (
-    <th
-      className="px-4 py-2 text-left font-semibold border border-foreground/20"
-      {...rest}
-    >
-      {children}
-    </th>
-  ),
-  td: ({ children, ...rest }: React.HTMLAttributes<HTMLTableCellElement>) => (
-    <td className="px-4 py-2 border border-foreground/20" {...rest}>
-      {children}
-    </td>
-  ),
 
-  // 其他元素
-  p: ({ children, ...rest }: React.HTMLAttributes<HTMLParagraphElement>) => (
-    <p className="my-4 leading-relaxed" {...rest}>
-      {children}
-    </p>
-  ),
-  ul: ({ children, ...rest }: React.HTMLAttributes<HTMLUListElement>) => (
-    <ul className="list-disc list-inside my-4 space-y-1" {...rest}>
-      {children}
-    </ul>
-  ),
-  ol: ({ children, ...rest }: React.HTMLAttributes<HTMLOListElement>) => (
-    <ol className="list-decimal list-inside my-4 space-y-1" {...rest}>
-      {children}
-    </ol>
-  ),
-  li: ({ children, ...rest }: React.HTMLAttributes<HTMLLIElement>) => (
-    <li className="my-1" {...rest}>
-      {children}
-    </li>
-  ),
-  blockquote: ({
-    children,
-    ...rest
-  }: React.HTMLAttributes<HTMLQuoteElement>) => (
-    <blockquote
-      className="border-l-4 border-foreground/20 pl-4 my-4 italic"
-      {...rest}
-    >
-      {children}
-    </blockquote>
-  ),
-  hr: ({ ...rest }: React.HTMLAttributes<HTMLHRElement>) => (
-    <hr className="border-foreground/20 my-8" {...rest} />
-  ),
-
-  // Markdown 扩展元素（删除线、下划线、高亮、上下标）
-  del: ({ children, ...rest }: React.HTMLAttributes<HTMLElement>) => (
-    <del className="line-through text-muted-foreground" {...rest}>
-      {children}
-    </del>
-  ),
-  u: ({ children, ...rest }: React.HTMLAttributes<HTMLElement>) => (
-    <u className="underline" {...rest}>
-      {children}
-    </u>
-  ),
-  mark: ({ children, ...rest }: React.HTMLAttributes<HTMLElement>) => (
-    <mark className="bg-yellow-200 dark:bg-yellow-800 px-1 rounded" {...rest}>
-      {children}
-    </mark>
-  ),
-  sup: ({ children, ...rest }: React.HTMLAttributes<HTMLElement>) => (
-    <sup className="text-xs align-super" {...rest}>
-      {children}
-    </sup>
-  ),
-  sub: ({ children, ...rest }: React.HTMLAttributes<HTMLElement>) => (
-    <sub className="text-xs align-sub" {...rest}>
-      {children}
-    </sub>
-  ),
+  // 其他元素使用默认渲染，样式由 content.css 管理
 };
 
 export default function MarkdownRenderer({
