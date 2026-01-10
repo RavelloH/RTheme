@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useCallback } from "react";
+import { useBroadcast } from "@/hooks/use-broadcast";
+import type { MDXContentMessage } from "@/types/broadcast-messages";
 
 /**
  * 图片灯箱组件
@@ -141,7 +143,8 @@ export default function ImageLightbox() {
     document.addEventListener("keydown", handleKeyDown);
   }, []);
 
-  useEffect(() => {
+  // 绑定图片点击事件
+  const attachLightboxToImages = useCallback(() => {
     // 查找所有可放大的图片
     const images =
       document.querySelectorAll<HTMLImageElement>("img[data-lightbox]");
@@ -175,14 +178,31 @@ export default function ImageLightbox() {
 
     // 清理所有事件监听器
     return () => {
+      cleanups.forEach((cleanup) => cleanup());
       images.forEach((img) => {
         img.style.cursor = "";
         img.style.transition = "";
-        img.style.opacity = "";
       });
-      cleanups.forEach((cleanup) => cleanup());
     };
   }, [handleImageClick]);
+
+  // 初始绑定
+  useEffect(() => {
+    return attachLightboxToImages();
+  }, [attachLightboxToImages]);
+
+  // 监听 MDX 渲染完成广播，重新绑定图片
+  useBroadcast<MDXContentMessage>((message) => {
+    if (
+      message.type === "mdx-content-rendered" ||
+      message.type === "mdx-content-recheck"
+    ) {
+      // 稍微延迟一下确保 DOM 完全更新
+      setTimeout(() => {
+        attachLightboxToImages();
+      }, 150);
+    }
+  });
 
   return null;
 }

@@ -14,7 +14,11 @@ import Clickable from "@/ui/Clickable";
 import { Tooltip } from "@/ui/Tooltip";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
-import { useBroadcastSender } from "@/hooks/use-broadcast";
+import { useBroadcastSender, useBroadcast } from "@/hooks/use-broadcast";
+import type {
+  ScrollProgressMessage,
+  MDXContentMessage,
+} from "@/types/broadcast-messages";
 
 interface TocItem {
   id: string;
@@ -74,10 +78,7 @@ export default function PostToc({
   const [viewportItems, setViewportItems] = useState<ViewportContentItem[]>([]);
 
   // 广播滚动进度
-  const { broadcast } = useBroadcastSender<{
-    type: string;
-    progress: number;
-  }>();
+  const { broadcast } = useBroadcastSender<ScrollProgressMessage>();
 
   // 将 em 单位转换为像素值
   const emToPx = (em: number): number => {
@@ -221,7 +222,7 @@ export default function PostToc({
   }, [contentSelector, isElementInViewport]);
 
   // 从 DOM 中提取目录
-  useEffect(() => {
+  const extractTocItems = useCallback(() => {
     const items: TocItem[] = [];
 
     // 查找内容容器
@@ -253,7 +254,25 @@ export default function PostToc({
     });
 
     setTocItems(items);
-  }, [contentSelector]); // 只依赖选择器，不依赖 content
+  }, [contentSelector]);
+
+  // 初始提取目录
+  useEffect(() => {
+    extractTocItems();
+  }, [extractTocItems]);
+
+  // 监听 MDX 渲染完成广播，重新提取目录
+  useBroadcast<MDXContentMessage>((message) => {
+    if (
+      message.type === "mdx-content-rendered" ||
+      message.type === "mdx-content-recheck"
+    ) {
+      // 稍微延迟一下确保 DOM 完全更新
+      setTimeout(() => {
+        extractTocItems();
+      }, 150);
+    }
+  });
 
   // 处理页面加载时的hash
   useEffect(() => {

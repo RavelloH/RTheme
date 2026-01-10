@@ -1,9 +1,6 @@
 import prisma from "@/lib/server/prisma";
 import { notFound } from "next/navigation";
 import { TextVersion } from "text-version";
-import remarkGfm from "remark-gfm";
-import rehypeSlug from "rehype-slug";
-import { serialize } from "next-mdx-remote-client/serialize";
 import { getFeaturedImageUrl } from "@/lib/server/media-reference";
 
 export interface PostData {
@@ -138,43 +135,6 @@ export async function getPublishedPost(slug: string): Promise<PostData> {
 }
 
 /**
- * 序列化 MDX 内容
- */
-export async function serializeMDX(
-  content: string,
-): Promise<{ content: string }> {
-  try {
-    const result = await serialize({
-      source: content,
-      options: {
-        mdxOptions: {
-          format: "mdx",
-          development: false,
-          remarkPlugins: [remarkGfm],
-          rehypePlugins: [
-            rehypeSlug, // 为标题添加 id
-            // 注意：代码高亮在 MDXRenderer 组件中使用 shiki 处理
-          ],
-        },
-        parseFrontmatter: true,
-      },
-    });
-
-    // 处理不同的结果类型
-    if ("compiledSource" in result) {
-      return { content: (result as { compiledSource: string }).compiledSource };
-    } else if ("content" in result) {
-      return { content: (result as { content: string }).content };
-    } else {
-      throw new Error("无法获取序列化后的内容");
-    }
-  } catch (error) {
-    console.error("MDX serialization error:", error);
-    throw new Error("MDX 内容序列化失败");
-  }
-}
-
-/**
  * 渲染文章内容
  */
 export async function renderPostContent(
@@ -188,8 +148,9 @@ export async function renderPostContent(
     // Markdown 模式：直接返回原始内容，由 react-markdown 在组件中渲染
     return { content: latestContent, mode: "markdown" };
   } else if (post.postMode === "MDX") {
-    const mdxSource = await serializeMDX(latestContent);
-    return { content: mdxSource.content, mode: "mdx" };
+    // MDX 模式：直接返回原始内容，由 MDXRemote 在组件中编译和渲染
+    // MDXRemote (RSC) 会自己处理编译，不需要提前 serialize
+    return { content: latestContent, mode: "mdx" };
   } else {
     throw new Error(`Unsupported post mode: ${post.postMode}`);
   }

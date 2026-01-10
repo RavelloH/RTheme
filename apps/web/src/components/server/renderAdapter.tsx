@@ -378,5 +378,7 @@ export function getMarkdownComponents(
 export function getMDXComponents(
   mediaFileMap?: Map<string, MediaFileInfo>,
 ): MDXComponents {
-  return createBaseComponents(mediaFileMap) as MDXComponents;
+  return {
+    ...createBaseComponents(mediaFileMap),
+  } as MDXComponents;
 }

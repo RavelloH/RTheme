@@ -225,7 +225,7 @@ function RenderError({
             <RiRefreshLine size={"3em"} />
           </Clickable>
         ) : (
-          <div className="inline-block" key="icon">
+          <div key="icon">
             <RiAlertLine size={"3em"} />
           </div>
         )}

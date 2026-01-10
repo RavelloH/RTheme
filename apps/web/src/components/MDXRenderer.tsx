@@ -1,4 +1,3 @@
-import { MDXRemote } from "next-mdx-remote-client/rsc";
 import React from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -7,11 +6,9 @@ import remarkBreaks from "remark-breaks";
 import rehypeKatex from "rehype-katex";
 import rehypeSlug from "rehype-slug";
 import rehypeRaw from "rehype-raw";
-import {
-  getMarkdownComponents,
-  getMDXComponents,
-} from "@/components/server/renderAdapter";
+import { getMarkdownComponents } from "@/components/server/renderAdapter";
 import { MediaFileInfo } from "@/lib/shared/image-utils";
+import MDXClientRenderer from "@/components/client/MDXClientRenderer";
 
 interface MDXRendererProps {
   source: string;
@@ -53,6 +50,12 @@ function removeFirstH1(content: string): string {
   return content;
 }
 
+/**
+ * MDX/Markdown 统一渲染器（服务端组件）
+ *
+ * - Markdown 模式：在服务端使用 react-markdown 渲染
+ * - MDX 模式：委托给客户端组件 MDXClientRenderer 处理交互
+ */
 export default function MDXRenderer({
   source,
   mode,
@@ -63,18 +66,11 @@ export default function MDXRenderer({
   const processedSource = skipFirstH1 ? removeFirstH1(source) : source;
 
   if (mode === "mdx") {
-    // MDX 模式：使用 next-mdx-remote 渲染
-    return (
-      <div className="w-full max-w-4xl mx-auto">
-        <MDXRemote
-          source={processedSource}
-          components={getMDXComponents(mediaFileMap)}
-        />
-      </div>
-    );
+    // MDX 模式：使用客户端渲染器（支持交互式组件）
+    return <MDXClientRenderer source={processedSource} />;
   }
 
-  // Markdown 模式：使用 react-markdown 渲染
+  // Markdown 模式：使用 react-markdown 渲染（服务端）
   return (
     <div className="w-full max-w-4xl mx-auto md-content">
       <Markdown
