@@ -31,6 +31,7 @@ import {
 } from "@/lib/tiptap/markdown-extensions";
 import { CustomParagraph } from "@/lib/tiptap/custom-paragraph";
 import { CustomHeading } from "@/lib/tiptap/custom-heading";
+import { TableOfContents } from "./TableOfContents";
 
 // Toast 实例（需要从外部传入）
 let toastInstance: {
@@ -367,6 +368,7 @@ export interface TiptapEditorProps {
   enablePersistence?: boolean; // 是否启用持久化
   editorConfig?: EditorConfig; // 编辑器配置
   storageKey?: string; // localStorage 键名
+  showTableOfContents?: boolean; // 是否显示目录
 }
 
 export function TiptapEditor({
@@ -379,6 +381,7 @@ export function TiptapEditor({
   enablePersistence = false,
   editorConfig = {},
   storageKey = "new",
+  showTableOfContents = false,
 }: TiptapEditorProps) {
   // 用于跟踪是否是首次渲染，避免初始化时触发保存
   const isFirstRender = useRef(true);
@@ -575,9 +578,23 @@ export function TiptapEditor({
 
   return (
     <div className={`tiptap-editor w-full h-full ${className}`}>
-      <div className="h-full overflow-auto flex justify-center">
-        <div className="w-full max-w-4xl px-6 py-8">
-          <EditorContent editor={editor} className="h-full" />
+      <div className="h-full overflow-auto" id="tiptap-scroll-container">
+        <div
+          className={`flex gap-6 ${showTableOfContents ? "max-w-7xl" : "max-w-4xl"} mx-auto px-6 py-8 transition-all duration-300`}
+        >
+          {/* 主编辑区 - 自适应剩余空间 */}
+          <div className="flex-1 min-w-0 transition-all duration-300">
+            <EditorContent editor={editor} className="h-full" />
+          </div>
+
+          {/* 目录区域 - 固定宽度 w-64 */}
+          <div
+            className={`hidden xl:block sticky top-8 self-start max-h-[calc(100vh-8rem)] transition-all duration-300 overflow-hidden shrink-0 ${
+              showTableOfContents ? "w-64 opacity-100" : "w-0 opacity-0"
+            }`}
+          >
+            <TableOfContents editor={editor} />
+          </div>
         </div>
       </div>
     </div>

@@ -56,7 +56,6 @@ import { createPost, updatePost } from "@/actions/post";
 import { useNavigateWithTransition } from "@/components/Link";
 import { TableToolbar } from "./TableToolbar";
 import { TableSizePicker } from "./TableSizePicker";
-import { TableOfContents } from "./TableOfContents";
 import { ListToolbar } from "./ListToolbar";
 import { LinkPopover } from "./LinkPopover";
 import { LinkToolbar } from "./LinkToolbar";
@@ -1435,6 +1434,7 @@ export default function Editor({
               onEditorReady={handleEditorReady}
               className="h-full"
               showInvisibleChars={showInvisibleChars}
+              showTableOfContents={showTableOfContents}
               enablePersistence={true}
               editorConfig={{
                 ...detailsForm,
@@ -1482,15 +1482,6 @@ export default function Editor({
 
             {/* 列表工具栏 */}
             {editor && <ListToolbar editor={editor} />}
-
-            {/* 目录 - 浮动在右侧 */}
-            {showTableOfContents && (
-              <div className="absolute top-0 right-8 h-full w-64 pt-8 hidden xl:block">
-                <div className="sticky top-8 max-h-[calc(100vh-8rem)] overflow-y-auto">
-                  <TableOfContents editor={editor} />
-                </div>
-              </div>
-            )}
           </>
         ) : (
           <MarkdownEditor
