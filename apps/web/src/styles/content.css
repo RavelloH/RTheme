@@ -44,7 +44,7 @@
   @apply my-4 leading-relaxed text-xl md:text-base;
 }
 
-.mini-md-content p {
+.mini-md-content {
   @apply my-0 text-base;
 }
 
@@ -59,7 +59,7 @@
   content: attr(data-placeholder);
 }
 
-/* Task List */
+/* Task List - Tiptap */
 .tiptap ul[data-type="taskList"],
 .md-content ul[data-type="taskList"] {
   @apply list-none pl-0;
@@ -67,17 +67,64 @@
 
 .tiptap ul[data-type="taskList"] li,
 .md-content ul[data-type="taskList"] li {
-  @apply flex items-start gap-2;
+  @apply flex items-center gap-2;
 }
 
 .tiptap ul[data-type="taskList"] li > label,
 .md-content ul[data-type="taskList"] li > label {
-  @apply flex-none mt-1;
+  @apply flex items-center gap-2 cursor-pointer;
 }
 
 .tiptap ul[data-type="taskList"] li > div,
 .md-content ul[data-type="taskList"] li > div {
   @apply flex-1;
+}
+
+.tiptap ul[data-type="taskList"] li > div > p,
+.md-content ul[data-type="taskList"] li > div > p {
+  @apply my-0 text-base;
+}
+
+/* Task List - react-markdown (remark-gfm) */
+.md-content .contains-task-list {
+  @apply list-none pl-0;
+}
+
+.md-content .task-list-item {
+  @apply flex items-center gap-2;
+}
+
+/* Task List Checkbox - 匹配项目 Checkbox 组件样式 */
+.tiptap ul[data-type="taskList"] input[type="checkbox"],
+.md-content ul[data-type="taskList"] input[type="checkbox"],
+.md-content .task-list-item input[type="checkbox"] {
+  @apply appearance-none w-4 h-4 bg-background border-2 border-foreground rounded-none
+         cursor-pointer flex-none transition-colors duration-200
+         hover:border-primary/50
+         checked:border-primary
+         relative m-0;
+}
+
+/* Task List Checkbox - 对勾标记 */
+.tiptap ul[data-type="taskList"] input[type="checkbox"]::after,
+.md-content ul[data-type="taskList"] input[type="checkbox"]::after,
+.md-content .task-list-item input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 50%;
+  top: 50%;
+  width: 0.25rem;
+  height: 0.5rem;
+  border: solid var(--color-primary);
+  border-width: 0 2.5px 2.5px 0;
+  transform: translate(-50%, -60%) rotate(45deg);
+}
+
+.tiptap ul[data-type="taskList"] input[type="checkbox"]:checked::after,
+.md-content ul[data-type="taskList"] input[type="checkbox"]:checked::after,
+.md-content .task-list-item input[type="checkbox"]:checked::after {
+  display: block;
 }
 
 /* Blockquote */

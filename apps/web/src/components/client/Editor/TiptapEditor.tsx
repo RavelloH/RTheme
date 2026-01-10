@@ -393,10 +393,10 @@ export function TiptapEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
-        heading: false, // 禁用 StarterKit 自带的 heading，使用我们的自定义版本
-        paragraph: false, // 禁用 StarterKit 自带的 paragraph，使用我们的自定义版本
+        heading: false,
+        paragraph: false,
         link: false,
-        underline: false, // 禁用 StarterKit 自带的 underline，使用我们的自定义版本
+        underline: false,
       }),
       CustomHeading.configure({
         levels: [1, 2, 3, 4, 5, 6],
@@ -442,7 +442,7 @@ export function TiptapEditor({
       }),
       TaskList.configure({
         HTMLAttributes: {
-          class: "list-none pl-0",
+          class: "list-none pl-0 my-0 py-0",
         },
       }),
       TaskItem.configure({
