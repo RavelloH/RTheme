@@ -39,6 +39,13 @@ let toastInstance: {
   success: (title: string, message?: string, duration?: number) => string;
   error: (title: string, message?: string, duration?: number) => string;
   dismiss: (id: string) => void;
+  update: (
+    id: string,
+    title: string,
+    message?: string,
+    type?: "success" | "error" | "warning" | "info",
+    progress?: number,
+  ) => void;
 } | null = null;
 
 // 存储当前上传的 Toast ID（用于主动关闭）
@@ -56,80 +63,183 @@ async function uploadImageToServer(
   localImageUrl: string,
 ): Promise<void> {
   // 显示上传中的 Toast（不自动关闭）
+  // 格式：上方显示状态，下方显示文件名
   currentUploadToastId =
-    toastInstance?.info(
-      "正在上传图片",
-      `文件: ${file.name}`,
-      0, // 不自动关闭
-    ) || null;
+    toastInstance?.info("正在上传图片", file.name, 0) || null;
+
+  // 用于节流进度更新，避免频繁更新 Toast
+  let lastProgressUpdate = 0;
+  const PROGRESS_UPDATE_INTERVAL = 100; // 100ms 更新一次
 
   try {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("mode", "lossy"); // 默认使用有损压缩
 
-    const response = await fetch("/admin/media/upload", {
-      method: "POST",
-      body: formData,
-      credentials: "include",
-    });
+    // 使用 XMLHttpRequest 以支持进度追踪
+    const xhr = new XMLHttpRequest();
 
-    const result = await response.json();
+    // 创建 Promise 包装 XHR
+    const uploadPromise = new Promise<{
+      success: boolean;
+      data?: { imageId: string; originalName: string };
+      message?: string;
+    }>((resolve, reject) => {
+      // 上传进度
+      xhr.upload.addEventListener("progress", (e) => {
+        if (e.lengthComputable && currentUploadToastId) {
+          const now = Date.now();
+          // 节流：每 100ms 更新一次，避免过于频繁
+          if (now - lastProgressUpdate < PROGRESS_UPDATE_INTERVAL) {
+            return;
+          }
+          lastProgressUpdate = now;
 
-    if (result.success && result.data) {
-      // 上传成功，替换本地图片为真实图片
-      const imageUrl = `/p/${result.data.imageId}`;
-
-      // 获取最新的编辑器状态
-      const state = view.state;
-      const { schema, doc } = state;
-
-      // 遍历文档，查找包含 blob URL 的图片节点
-      let foundPos: number | null = null;
-      let foundNodeSize: number | null = null;
-
-      doc.descendants((node, pos) => {
-        if (
-          node.type === schema.nodes.image &&
-          node.attrs.src === localImageUrl
-        ) {
-          foundPos = pos;
-          foundNodeSize = node.nodeSize;
-          return false; // 停止遍历
+          const progress = Math.round((e.loaded / e.total) * 100);
+          // 使用 update 方法更新 Toast 内容，传递进度参数
+          if (toastInstance && currentUploadToastId) {
+            toastInstance.update(
+              currentUploadToastId,
+              "正在上传图片",
+              file.name,
+              undefined, // 不改变类型
+              progress, // 传递进度
+            );
+          }
         }
       });
 
-      if (foundPos !== null && foundNodeSize !== null) {
-        // 创建新的图片节点（移除暗化样式，使用真实 URL）
-        if (schema.nodes.image) {
-          const newImageNode = schema.nodes.image.create({
-            src: imageUrl,
-            alt: result.data.originalName || file.name,
-            // 不设置 class 属性，移除暗化效果
-          });
+      // 请求完成
+      xhr.addEventListener("load", () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const result = JSON.parse(xhr.responseText);
+            resolve(result);
+          } catch {
+            reject(new Error("解析响应失败"));
+          }
+        } else {
+          try {
+            const result = JSON.parse(xhr.responseText);
+            resolve(result);
+          } catch {
+            reject(new Error(`上传失败: ${xhr.statusText}`));
+          }
+        }
+      });
 
-          // 创建新的事务，替换整个节点
-          const tr = state.tr.replaceRangeWith(
-            foundPos,
-            foundPos + foundNodeSize,
-            newImageNode,
+      // 请求错误
+      xhr.addEventListener("error", () => {
+        reject(new Error("网络错误"));
+      });
+
+      // 发送请求
+      xhr.open("POST", "/admin/media/upload");
+      xhr.setRequestHeader("Accept", "application/json");
+      xhr.withCredentials = true;
+      xhr.send(formData);
+    });
+
+    const result = await uploadPromise;
+
+    if (result.success && result.data) {
+      // 上传成功，先预加载图片再替换
+      const imageUrl = `/p/${result.data.imageId}`;
+
+      // 创建一个新的 Image 对象来预加载图片
+      const preloadImg = new window.Image();
+
+      preloadImg.onload = () => {
+        // 图片加载完成，现在替换本地图片为真实图片
+        // 获取最新的编辑器状态
+        const state = view.state;
+        const { schema, doc } = state;
+
+        // 遍历文档，查找包含 blob URL 的图片节点
+        let foundPos: number | null = null;
+        let foundNodeSize: number | null = null;
+
+        doc.descendants((node, pos) => {
+          if (
+            node.type === schema.nodes.image &&
+            node.attrs.src === localImageUrl
+          ) {
+            foundPos = pos;
+            foundNodeSize = node.nodeSize;
+            return false; // 停止遍历
+          }
+        });
+
+        if (foundPos !== null && foundNodeSize !== null) {
+          // 创建新的图片节点（使用真实 URL）
+          if (schema.nodes.image) {
+            const newImageNode = schema.nodes.image.create({
+              src: imageUrl,
+              alt: result.data?.originalName || file.name,
+            });
+
+            // 创建新的事务，替换整个节点
+            const tr = state.tr.replaceRangeWith(
+              foundPos,
+              foundPos + foundNodeSize,
+              newImageNode,
+            );
+
+            view.dispatch(tr);
+          }
+        }
+
+        // 更新 Toast 为成功状态（移除进度）
+        if (currentUploadToastId && toastInstance) {
+          toastInstance.update(
+            currentUploadToastId,
+            "图片上传成功",
+            file.name,
+            "success",
+            undefined, // 移除进度条
           );
 
-          view.dispatch(tr);
+          // 2秒后自动关闭
+          setTimeout(() => {
+            if (currentUploadToastId) {
+              toastInstance?.dismiss(currentUploadToastId);
+              currentUploadToastId = null;
+            }
+          }, 2000);
         }
-      }
 
-      // 关闭上传中的 Toast
-      if (currentUploadToastId) {
-        toastInstance?.dismiss(currentUploadToastId);
-      }
+        // 释放本地 URL
+        URL.revokeObjectURL(localImageUrl);
+      };
 
-      // 显示成功 Toast
-      toastInstance?.success("图片上传成功", undefined, 2000);
-      currentUploadToastId = null;
+      preloadImg.onerror = () => {
+        // 图片预加载失败
+        console.error("图片预加载失败:", imageUrl);
 
-      // 释放本地 URL
-      URL.revokeObjectURL(localImageUrl);
+        // 更新 Toast 为错误状态（移除进度）
+        if (currentUploadToastId && toastInstance) {
+          toastInstance.update(
+            currentUploadToastId,
+            "图片加载失败",
+            file.name,
+            "error",
+            undefined, // 移除进度条
+          );
+
+          // 5秒后自动关闭
+          setTimeout(() => {
+            if (currentUploadToastId) {
+              toastInstance?.dismiss(currentUploadToastId);
+              currentUploadToastId = null;
+            }
+          }, 5000);
+        }
+
+        // 不删除图片节点，保留 blob URL 以便用户可以看到
+      };
+
+      // 开始预加载图片
+      preloadImg.src = imageUrl;
     } else {
       // 上传失败，删除图片
       console.error("图片上传失败:", result.message);
@@ -157,14 +267,24 @@ async function uploadImageToServer(
         view.dispatch(tr);
       }
 
-      // 关闭上传中的 Toast
-      if (currentUploadToastId) {
-        toastInstance?.dismiss(currentUploadToastId);
-      }
+      // 更新 Toast 为错误状态（移除进度）
+      if (currentUploadToastId && toastInstance) {
+        toastInstance.update(
+          currentUploadToastId,
+          "图片上传失败",
+          file.name,
+          "error",
+          undefined, // 移除进度条
+        );
 
-      // 显示错误 Toast
-      toastInstance?.error("图片上传失败", result.message || "未知错误", 3000);
-      currentUploadToastId = null;
+        // 3秒后自动关闭
+        setTimeout(() => {
+          if (currentUploadToastId) {
+            toastInstance?.dismiss(currentUploadToastId);
+            currentUploadToastId = null;
+          }
+        }, 3000);
+      }
 
       // 释放本地 URL
       URL.revokeObjectURL(localImageUrl);
@@ -195,21 +315,31 @@ async function uploadImageToServer(
       view.dispatch(tr);
     }
 
-    // 关闭上传中的 Toast
-    if (currentUploadToastId) {
-      toastInstance?.dismiss(currentUploadToastId);
-    }
+    // 更新 Toast 为错误状态（移除进度）
+    if (currentUploadToastId && toastInstance) {
+      toastInstance.update(
+        currentUploadToastId,
+        "图片上传失败",
+        file.name,
+        "error",
+        undefined, // 移除进度条
+      );
 
-    // 显示错误 Toast
-    toastInstance?.error("图片上传失败", "请稍后重试", 3000);
-    currentUploadToastId = null;
+      // 3秒后自动关闭
+      setTimeout(() => {
+        if (currentUploadToastId) {
+          toastInstance?.dismiss(currentUploadToastId);
+          currentUploadToastId = null;
+        }
+      }, 3000);
+    }
 
     // 释放本地 URL
     URL.revokeObjectURL(localImageUrl);
   }
 }
 
-// 自定义扩展：粘贴图片自动上传
+// 自定义扩展：粘贴和拖拽图片自动上传
 const PasteImageUpload = Extension.create({
   name: "pasteImageUpload",
 
@@ -235,13 +365,11 @@ const PasteImageUpload = Extension.create({
                 // 创建本地 blob URL
                 const localImageUrl = URL.createObjectURL(file);
 
-                // 立即插入本地图片（带暗化样式）
+                // 立即插入本地图片
                 const { schema } = view.state;
                 const node = schema.nodes.image?.create({
                   src: localImageUrl,
                   alt: file.name,
-                  // 添加暗化样式类
-                  class: "opacity-50 pointer-events-none",
                 });
 
                 if (node) {
@@ -257,6 +385,57 @@ const PasteImageUpload = Extension.create({
             }
 
             return false;
+          },
+          handleDrop: (view, event) => {
+            const hasFiles =
+              event.dataTransfer &&
+              event.dataTransfer.files &&
+              event.dataTransfer.files.length > 0;
+
+            if (!hasFiles) return false;
+
+            const files = Array.from(event.dataTransfer.files);
+            const imageFiles = files.filter((file) =>
+              file.type.startsWith("image/"),
+            );
+
+            // 如果没有图片文件，不处理
+            if (imageFiles.length === 0) return false;
+
+            // 阻止默认拖拽行为
+            event.preventDefault();
+
+            // 获取拖拽位置
+            const coordinates = view.posAtCoords({
+              left: event.clientX,
+              top: event.clientY,
+            });
+
+            if (!coordinates) return false;
+
+            // 处理所有图片文件
+            imageFiles.forEach((file) => {
+              // 创建本地 blob URL
+              const localImageUrl = URL.createObjectURL(file);
+
+              // 立即在拖拽位置插入本地图片
+              const { schema } = view.state;
+              const node = schema.nodes.image?.create({
+                src: localImageUrl,
+                alt: file.name,
+              });
+
+              if (node) {
+                // 在拖拽位置插入图片
+                const transaction = view.state.tr.insert(coordinates.pos, node);
+                view.dispatch(transaction);
+
+                // 上传图片，传入本地 URL
+                uploadImageToServer(file, view, localImageUrl);
+              }
+            });
+
+            return true;
           },
         },
       }),

@@ -16,6 +16,7 @@ import {
   RiInformationLine,
 } from "@remixicon/react";
 import { Button } from "./Button";
+import { AutoTransition } from "./AutoTransition";
 
 export type ToastType = "success" | "error" | "warning" | "info";
 
@@ -31,6 +32,7 @@ export interface ToastMessage {
   message?: string;
   duration?: number;
   action?: ToastAction;
+  progress?: number; // 进度百分比 0-100
 }
 
 interface ToastContextType {
@@ -65,7 +67,14 @@ interface ToastContextType {
     duration?: number,
     action?: ToastAction,
   ) => string; // 返回 toast ID
-  dismiss: (id: string) => void; // 新增：手动关闭 toast
+  dismiss: (id: string) => void; // 手动关闭 toast
+  update: (
+    id: string,
+    title: string,
+    message?: string,
+    type?: ToastType,
+    progress?: number,
+  ) => void; // 更新 toast 内容
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -185,9 +194,36 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
     [removeToast],
   );
 
+  // 更新 toast 内容
+  const update = useCallback(
+    (
+      id: string,
+      title: string,
+      message?: string,
+      type?: ToastType,
+      progress?: number,
+    ) => {
+      setToasts((prev) =>
+        prev.map((toast) =>
+          toast.id === id
+            ? {
+                ...toast,
+                title,
+                message,
+                ...(type && { type }),
+                // 始终更新 progress，即使是 undefined（用于清除进度）
+                progress,
+              }
+            : toast,
+        ),
+      );
+    },
+    [],
+  );
+
   return (
     <ToastContext.Provider
-      value={{ showToast, success, error, warning, info, dismiss }}
+      value={{ showToast, success, error, warning, info, dismiss, update }}
     >
       {children}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
@@ -231,31 +267,91 @@ interface ToastProps {
   canClose?: boolean;
 }
 
+// 圆形进度条组件
+function CircularProgress({ progress }: { progress: number }) {
+  const radius = 10;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (progress / 100) * circumference;
+
+  return (
+    <svg width="24" height="24" className="transform -rotate-90">
+      {/* 背景圆 */}
+      <circle
+        cx="12"
+        cy="12"
+        r={radius}
+        stroke="currentColor"
+        strokeWidth="2"
+        fill="none"
+        className="text-border"
+      />
+      {/* 进度圆 */}
+      <circle
+        cx="12"
+        cy="12"
+        r={radius}
+        stroke="currentColor"
+        strokeWidth="2"
+        fill="none"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        className="text-primary transition-all duration-300"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function Toast({ toast, onRemove, canClose }: ToastProps) {
   const getIcon = () => {
+    // 如果有进度，显示进度条
+    if (toast.progress !== undefined) {
+      return (
+        <div
+          className="flex h-6 w-6 items-center justify-center"
+          key="progress"
+        >
+          <CircularProgress progress={toast.progress} />
+        </div>
+      );
+    }
+
+    // 否则显示状态图标
     switch (toast.type) {
       case "success":
         return (
-          <div className="flex h-5 w-5 items-center justify-center rounded-full text-success">
-            <RiCheckLine size="2em" />
+          <div
+            className="flex h-6 w-6 items-center justify-center rounded-full text-success"
+            key="success"
+          >
+            <RiCheckLine size="1.5em" />
           </div>
         );
       case "error":
         return (
-          <div className="flex h-5 w-5 items-center justify-center rounded-full text-error">
-            <RiCloseLine size="2em" />
+          <div
+            className="flex h-6 w-6 items-center justify-center rounded-full text-error"
+            key="error"
+          >
+            <RiCloseLine size="1.5em" />
           </div>
         );
       case "warning":
         return (
-          <div className="flex h-5 w-5 items-center justify-center rounded-full text-warning">
-            <RiErrorWarningLine size="2em" />
+          <div
+            className="flex h-6 w-6 items-center justify-center rounded-full text-warning"
+            key="warning"
+          >
+            <RiErrorWarningLine size="1.5em" />
           </div>
         );
       case "info":
         return (
-          <div className="flex h-5 w-5 items-center justify-center rounded-full text-foreground">
-            <RiInformationLine size="2em" />
+          <div
+            className="flex h-6 w-6 items-center justify-center rounded-full text-foreground"
+            key="info"
+          >
+            <RiInformationLine size="1.5em" />
           </div>
         );
     }
@@ -301,15 +397,15 @@ function Toast({ toast, onRemove, canClose }: ToastProps) {
       }}
     >
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="flex-shrink-0">{getIcon()}</div>
+        <AutoTransition className="flex-shrink-0">{getIcon()}</AutoTransition>
         <div className="flex-1 min-w-0 space-y-1">
-          <div className="text-sm font-medium text-foreground leading-tight">
+          <AutoTransition className="text-sm font-medium text-foreground leading-tight">
             {toast.title}
-          </div>
+          </AutoTransition>
           {toast.message && (
-            <div className="text-sm text-muted-foreground leading-snug">
+            <AutoTransition className="text-sm text-muted-foreground leading-snug">
               {toast.message}
-            </div>
+            </AutoTransition>
           )}
         </div>
       </div>
