@@ -57,6 +57,7 @@ const MediaGridItem = memo(
     formatFileSize,
     getFileTypeIcon,
     actions,
+    index,
   }: {
     item: MediaListItem;
     isSelected: boolean;
@@ -70,7 +71,11 @@ const MediaGridItem = memo(
       onClick: () => void;
       variant?: "primary" | "danger" | "ghost" | "outline";
     }>;
+    index: number;
   }) => {
+    // 前 24 张图片使用 eager 加载，其余懒加载
+    const loadingStrategy = index < 24 ? "eager" : "lazy";
+
     const renderTooltipContent = () => {
       return (
         <div className="space-y-1 min-w-[200px]">
@@ -109,6 +114,7 @@ const MediaGridItem = memo(
                 : "border-2 border-transparent hover:border-foreground/30"
             }
           `}
+          style={{ transform: "translateZ(0)" }}
           onClick={(e) => {
             const target = e.target as HTMLElement;
             const isCheckboxClick = target.closest('[data-checkbox="true"]');
@@ -127,6 +133,8 @@ const MediaGridItem = memo(
               blur={item.blur}
               className="object-cover"
               sizes="(max-width: 768px) 8rem, 10rem"
+              loading={loadingStrategy}
+              priority={index < 12}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground">
@@ -1320,7 +1328,7 @@ export default function MediaTable() {
                 </AnimatePresence>
 
                 {/* 网格内容 */}
-                <div className="flex-1 overflow-auto px-10 py-6">
+                <div className="flex-1 overflow-auto px-10 py-6 scroll-smooth">
                   {loading ? (
                     <div className="h-full">
                       <LoadingIndicator />
@@ -1336,9 +1344,10 @@ export default function MediaTable() {
                         gridTemplateColumns: isMobile
                           ? "repeat(auto-fill, minmax(8em, 1fr))"
                           : "repeat(auto-fill, minmax(10em, 1fr))",
+                        contentVisibility: "auto",
                       }}
                     >
-                      {data.map((item) => (
+                      {data.map((item, index) => (
                         <MediaGridItem
                           key={item.id}
                           item={item}
@@ -1348,6 +1357,7 @@ export default function MediaTable() {
                           formatFileSize={formatFileSize}
                           getFileTypeIcon={getFileTypeIcon}
                           actions={rowActions(item)}
+                          index={index}
                         />
                       ))}
                     </div>

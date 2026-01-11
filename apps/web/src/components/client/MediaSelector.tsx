@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useInView } from "react-intersection-observer";
 import { Dialog } from "@/ui/Dialog";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
@@ -159,7 +160,12 @@ export default function MediaSelector({
   const [selectedImageIds, setSelectedImageIds] = useState<Set<number>>(
     new Set(),
   );
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Intersection Observer 哨兵 - 用于懒加载
+  const { ref: loadMoreRef, inView } = useInView({
+    threshold: 0,
+    skip: !hasMore,
+  });
 
   // 上传标签页状态
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
@@ -814,34 +820,23 @@ export default function MediaSelector({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, dialogOpen]); // 只依赖 activeTab 和 dialogOpen
 
-  // 滚动加载更多 - 当 Dialog 打开且在选择标签页时绑定
+  // Intersection Observer 触发加载更多
   useEffect(() => {
-    if (activeTab !== "select" || !dialogOpen) return;
-
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      // 使用 ref 中的最新值
-      if (loadingRef.current || !hasMoreRef.current) return;
-
-      const scrollTop = container.scrollTop;
-      const scrollHeight = container.scrollHeight;
-      const clientHeight = container.clientHeight;
-      const distanceToBottom = scrollHeight - scrollTop - clientHeight;
-
-      // 距离底部小于 100px 时加载更多
-      if (distanceToBottom < 100) {
-        const nextPage = pageRef.current + 1;
-        loadMediaListRef.current?.(nextPage, true);
-      }
-    };
-
-    container.addEventListener("scroll", handleScroll);
-    return () => {
-      container.removeEventListener("scroll", handleScroll);
-    };
-  }, [activeTab, dialogOpen, mediaList.length]); // 添加 mediaList.length 确保容器渲染后重新绑定
+    if (
+      inView &&
+      hasMoreRef.current &&
+      !loadingRef.current &&
+      activeTab === "select"
+    ) {
+      const timer = setTimeout(() => {
+        if (hasMoreRef.current && !loadingRef.current) {
+          const nextPage = pageRef.current + 1;
+          loadMediaListRef.current?.(nextPage, true);
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [inView, activeTab]);
 
   // 选择图片（切换选中状态）
   const handleSelectImage = useCallback(
@@ -1355,76 +1350,78 @@ export default function MediaSelector({
             <AutoTransition type="fade" duration={0.3}>
               {/* 选择标签页 */}
               {activeTab === "select" && (
-                <div className="space-y-4">
+                <div className="space-y-4" key="select-tab">
                   {mediaList.length === 0 && !loading ? (
                     <div className="h-64 flex items-center justify-center text-muted-foreground">
                       暂无图片
                     </div>
                   ) : (
-                    <div
-                      ref={scrollContainerRef}
-                      className="max-h-96 overflow-y-auto space-y-4"
-                    >
-                      <div
-                        className="grid gap-4"
-                        style={{
-                          gridTemplateColumns:
-                            "repeat(auto-fill, minmax(8em, 1fr))",
-                        }}
-                      >
-                        {mediaList.map((item) => {
-                          const isSelected = selectedImageIds.has(item.id);
+                    <div className="max-h-96 overflow-y-auto scroll-smooth">
+                      <>
+                        <div
+                          className="grid gap-4"
+                          style={{
+                            gridTemplateColumns:
+                              "repeat(auto-fill, minmax(8em, 1fr))",
+                            contentVisibility: "auto",
+                          }}
+                        >
+                          {mediaList.map((item, index) => {
+                            const isSelected = selectedImageIds.has(item.id);
+                            // 前 12 张图片使用 eager 加载，其余懒加载
+                            const loadingStrategy =
+                              index < 12 ? "eager" : "lazy";
 
-                          const renderTooltipContent = () => {
-                            return (
-                              <div className="space-y-1 min-w-[200px]">
-                                <div className="font-medium truncate">
-                                  {item.originalName}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {item.width && item.height && (
-                                    <div>
-                                      尺寸: {item.width} × {item.height}
-                                    </div>
-                                  )}
-                                  <div>大小: {formatBytes(item.size)}</div>
-                                  <div>
-                                    上传:{" "}
-                                    {new Date(item.createdAt).toLocaleString(
-                                      "zh-CN",
-                                      {
-                                        year: "numeric",
-                                        month: "2-digit",
-                                        day: "2-digit",
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      },
+                            const renderTooltipContent = () => {
+                              return (
+                                <div className="space-y-1 min-w-[200px]">
+                                  <div className="font-medium truncate">
+                                    {item.originalName}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {item.width && item.height && (
+                                      <div>
+                                        尺寸: {item.width} × {item.height}
+                                      </div>
                                     )}
+                                    <div>大小: {formatBytes(item.size)}</div>
+                                    <div>
+                                      上传:{" "}
+                                      {new Date(item.createdAt).toLocaleString(
+                                        "zh-CN",
+                                        {
+                                          year: "numeric",
+                                          month: "2-digit",
+                                          day: "2-digit",
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        },
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            );
-                          };
+                              );
+                            };
 
-                          return (
-                            <Tooltip
-                              key={item.id}
-                              content={renderTooltipContent()}
-                              placement="top"
-                              delay={300}
-                              className="block"
-                            >
-                              <div
-                                onClick={(e) => {
-                                  const target = e.target as HTMLElement;
-                                  const isCheckboxClick = target.closest(
-                                    '[data-checkbox="true"]',
-                                  );
-                                  if (!isCheckboxClick) {
-                                    handleSelectImage(item);
-                                  }
-                                }}
-                                className={`
+                            return (
+                              <Tooltip
+                                key={item.id}
+                                content={renderTooltipContent()}
+                                placement="top"
+                                delay={300}
+                                className="block"
+                              >
+                                <div
+                                  onClick={(e) => {
+                                    const target = e.target as HTMLElement;
+                                    const isCheckboxClick = target.closest(
+                                      '[data-checkbox="true"]',
+                                    );
+                                    if (!isCheckboxClick) {
+                                      handleSelectImage(item);
+                                    }
+                                  }}
+                                  className={`
                                   relative aspect-square cursor-pointer overflow-hidden bg-muted/30
                                   group transition-all duration-150
                                   ${
@@ -1433,62 +1430,71 @@ export default function MediaSelector({
                                       : "border-2 border-transparent hover:border-foreground/30"
                                   }
                                 `}
-                              >
-                                {item.width && item.height ? (
-                                  <CMSImage
-                                    src={`/p/${item.imageId}`}
-                                    alt={item.altText || item.originalName}
-                                    fill
-                                    blur={item.blur}
-                                    className="object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                                    <RiImageLine size="2em" />
-                                  </div>
-                                )}
-                                {/* 复选框 */}
-                                <div
-                                  className={`
+                                  style={{ transform: "translateZ(0)" }}
+                                >
+                                  {item.width && item.height ? (
+                                    <CMSImage
+                                      src={`/p/${item.imageId}`}
+                                      alt={item.altText || item.originalName}
+                                      fill
+                                      blur={item.blur}
+                                      className="object-cover"
+                                      loading={loadingStrategy}
+                                      sizes="8em"
+                                      priority={index < 6}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                                      <RiImageLine size="2em" />
+                                    </div>
+                                  )}
+                                  {/* 复选框 */}
+                                  <div
+                                    className={`
                                     absolute top-2 right-2 z-10
                                     transition-opacity duration-150
                                     ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}
                                   `}
-                                  data-checkbox="true"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                  }}
-                                >
-                                  <div className="rounded p-1">
-                                    <Checkbox
-                                      checked={isSelected}
-                                      onChange={(e) => {
-                                        e.stopPropagation();
-                                        handleSelectImage(item);
-                                      }}
-                                      size="lg"
-                                    />
+                                    data-checkbox="true"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                    }}
+                                  >
+                                    <div className="rounded p-1">
+                                      <Checkbox
+                                        checked={isSelected}
+                                        onChange={(e) => {
+                                          e.stopPropagation();
+                                          handleSelectImage(item);
+                                        }}
+                                        size="lg"
+                                      />
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            </Tooltip>
-                          );
-                        })}
-                      </div>
-
-                      {/* 加载中指示器 */}
-                      {loading && (
-                        <div className="flex justify-center py-4 my-4">
-                          <LoadingIndicator />
+                              </Tooltip>
+                            );
+                          })}
                         </div>
-                      )}
 
-                      {/* 没有更多数据提示 */}
-                      {!hasMore && mediaList.length > 0 && (
-                        <div className="text-center text-sm text-muted-foreground py-4">
-                          没有更多图片了
-                        </div>
-                      )}
+                        {/* 底部状态显示 */}
+                        {hasMore ? (
+                          // 有更多数据时，常驻显示加载指示器和哨兵
+                          <div
+                            ref={loadMoreRef}
+                            className="flex justify-center py-4 my-4"
+                          >
+                            <LoadingIndicator />
+                          </div>
+                        ) : (
+                          // 没有更多数据时，显示提示信息
+                          mediaList.length > 0 && (
+                            <div className="text-center text-sm text-muted-foreground py-4">
+                              没有更多图片了
+                            </div>
+                          )
+                        )}
+                      </>
                     </div>
                   )}
 
