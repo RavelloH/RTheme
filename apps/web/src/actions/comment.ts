@@ -56,6 +56,11 @@ import prisma from "@/lib/server/prisma";
 import crypto from "crypto";
 import type { Prisma } from ".prisma/client";
 import { getCache, setCache, generateCacheKey } from "@/lib/server/cache";
+import {
+  checkSpam as akismetCheckSpam,
+  isAkismetEnabled,
+  type CommentData,
+} from "@/lib/server/akismet";
 
 const COMMENT_ROLES: UserRole[] = ["USER", "ADMIN", "EDITOR", "AUTHOR"];
 
@@ -981,8 +986,24 @@ export async function createComment(
   // 获取客户端 IP 地址
   const ipAddress = await getClientIP();
 
-  const status: CommentStatus =
+  // 检查是否启用 Akismet
+  const akismetEnabled = await isAkismetEnabled();
+
+  // AUTHOR、EDITOR、ADMIN 角色豁免 Akismet 检查
+  const isPrivilegedUser =
+    authUser &&
+    (authUser.role === "AUTHOR" ||
+      authUser.role === "EDITOR" ||
+      authUser.role === "ADMIN");
+
+  // 计算"正常情况下"应该的状态（用于返回给用户，实现影子封禁）
+  const normalStatus: CommentStatus =
     reviewAll || (!currentUid && reviewAnon) ? "PENDING" : "APPROVED";
+
+  // 如果启用了 Akismet 且用户不是特权用户，实际存储时统一使用 PENDING，等待异步检查
+  // 特权用户（AUTHOR/EDITOR/ADMIN）豁免检查，直接使用正常状态
+  const status: CommentStatus =
+    akismetEnabled && !isPrivilegedUser ? "PENDING" : normalStatus;
 
   const dbUser = currentUid
     ? await prisma.user.findUnique({
@@ -1089,6 +1110,82 @@ export async function createComment(
     undefined,
     false,
   );
+
+  // Shadown ban
+  const mappedWithFakeStatus = {
+    ...mapped,
+    status: akismetEnabled && !isPrivilegedUser ? normalStatus : mapped.status,
+  };
+
+  // 获取 headers 用于 Akismet 检查
+  const headersList = await headers();
+  const userAgent = headersList.get("user-agent") || undefined;
+  const referrer = headersList.get("referer") || undefined;
+
+  // Akismet
+  after(async () => {
+    try {
+      // 只有启用了 Akismet 才进行检查
+      if (!akismetEnabled) return;
+
+      // 特权用户（AUTHOR/EDITOR/ADMIN）豁免检查
+      if (isPrivilegedUser) {
+        console.log(
+          `评论 ${record.id} 来自特权用户（${authUser?.role}），豁免 Akismet 检查`,
+        );
+        return;
+      }
+
+      // 获取站点 URL 用于生成 permalink
+      const siteUrl =
+        (await getConfig<{ default?: string }>("site.url"))?.default ||
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        "http://localhost:3000";
+
+      // 构建评论数据
+      const commentData: CommentData = {
+        userIp: ipAddress || "",
+        userAgent,
+        referrer,
+        permalink: `${siteUrl}/posts/${slug}#comment-${record.id}`,
+        commentType: "comment",
+        commentAuthor: dbUser?.nickname || dbUser?.username || authorName,
+        commentAuthorEmail: dbUser?.email || authorEmail || undefined,
+        commentAuthorUrl:
+          dbUser?.website ||
+          (allowAnonWebsite ? authorWebsite || undefined : undefined),
+        commentContent: content,
+        commentDateGmt: new Date(),
+        userRole: currentUid ? (dbUser ? "user" : undefined) : undefined,
+        isTest: process.env.NODE_ENV === "development",
+      };
+
+      // 调用 Akismet 检查
+      const isSpam = await akismetCheckSpam(commentData);
+
+      // 根据检查结果更新评论状态
+      if (isSpam) {
+        // 如果是垃圾评论，标记为 SPAM（影子封禁，用户看不到，但发布者以为成功了）
+        await prisma.comment.update({
+          where: { id: record.id },
+          data: { status: "SPAM" },
+        });
+        console.log(`评论 ${record.id} 被 Akismet 标记为垃圾评论`);
+      } else {
+        // 如果通过 Akismet 检查，使用正常状态（normalStatus）
+        await prisma.comment.update({
+          where: { id: record.id },
+          data: { status: normalStatus },
+        });
+        console.log(
+          `评论 ${record.id} 通过 Akismet 检查，状态更新为 ${normalStatus}`,
+        );
+      }
+    } catch (error) {
+      console.error("Akismet 异步检查失败:", error);
+      // 发生错误时，为了安全起见，保持 PENDING 状态，由管理员人工审核
+    }
+  });
 
   // 发送通知（异步执行，不阻塞响应）
   after(async () => {
@@ -1236,7 +1333,9 @@ export async function createComment(
     }
   });
 
-  return response.created({ data: mapped as unknown as CommentItem });
+  return response.created({
+    data: mappedWithFakeStatus as unknown as CommentItem,
+  });
 }
 
 export async function updateCommentStatus(
@@ -1261,9 +1360,23 @@ export async function updateCommentStatus(
 
   const { ids, status } = params;
 
+  // 获取评论的旧状态和完整信息（用于 Akismet 报告）
   const oldComments = await prisma.comment.findMany({
     where: { id: { in: ids }, deletedAt: null },
-    select: { status: true },
+    select: {
+      id: true,
+      status: true,
+      content: true,
+      ipAddress: true,
+      authorName: true,
+      authorEmail: true,
+      authorWebsite: true,
+      createdAt: true,
+      post: { select: { slug: true, publishedAt: true } },
+      user: {
+        select: { nickname: true, username: true, email: true, website: true },
+      },
+    },
   });
   const oldStatuses = [...new Set(oldComments.map((c) => c.status))];
 
@@ -1287,6 +1400,67 @@ export async function updateCommentStatus(
       },
       description: `批量更新评论状态: ${oldStatuses.join("/")} -> ${status} (${ids.length} 条)`,
     },
+  });
+
+  // Akismet 报告（异步执行，不阻塞响应）
+  after(async () => {
+    try {
+      // 只有启用了 Akismet 报告功能才执行
+      const reportEnabled = await getConfig<boolean>(
+        "comment.akismet.report.enable",
+        false,
+      );
+      if (!reportEnabled) return;
+
+      const akismetEnabled = await isAkismetEnabled();
+      if (!akismetEnabled) return;
+
+      const { submitSpam, submitHam } = await import("@/lib/server/akismet");
+
+      // 获取站点 URL
+      const siteUrl =
+        (await getConfig<{ default?: string }>("site.url"))?.default ||
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        "http://localhost:3000";
+
+      for (const comment of oldComments) {
+        // 只处理状态发生变化的评论
+        if (comment.status === status) continue;
+
+        // 构建评论数据
+        const commentData: CommentData = {
+          userIp: comment.ipAddress || "",
+          permalink: `${siteUrl}/posts/${comment.post.slug}#comment-${comment.id}`,
+          commentType: "comment",
+          commentAuthor:
+            comment.user?.nickname ||
+            comment.user?.username ||
+            comment.authorName ||
+            undefined,
+          commentAuthorEmail:
+            comment.user?.email || comment.authorEmail || undefined,
+          commentAuthorUrl:
+            comment.user?.website || comment.authorWebsite || undefined,
+          commentContent: comment.content,
+          commentDateGmt: comment.createdAt,
+          commentPostModifiedGmt: comment.post.publishedAt || undefined,
+          isTest: process.env.NODE_ENV === "development",
+        };
+
+        // 如果从非 SPAM 状态改为 SPAM 状态，向 Akismet 提交垃圾评论
+        if (comment.status !== "SPAM" && status === "SPAM") {
+          await submitSpam(commentData);
+          console.log(`已向 Akismet 报告垃圾评论: ${comment.id}`);
+        }
+        // 如果从 SPAM 状态改为非 SPAM 状态，向 Akismet 提交正常评论
+        else if (comment.status === "SPAM" && status !== "SPAM") {
+          await submitHam(commentData);
+          console.log(`已向 Akismet 报告正常评论: ${comment.id}`);
+        }
+      }
+    } catch (error) {
+      console.error("向 Akismet 报告评论状态失败:", error);
+    }
   });
 
   return response.ok({ message: "更新成功" });

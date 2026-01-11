@@ -14,7 +14,7 @@ const nextConfig = {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 2678400,
   },
-  serverExternalPackages: ["ably"],
+  serverExternalPackages: ["ably", "akismet-api"],
   experimental: {
     optimizePackageImports: ["@remixicon/react"],
   },

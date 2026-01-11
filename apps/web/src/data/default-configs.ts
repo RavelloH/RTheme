@@ -282,9 +282,20 @@ export const defaultConfigs: DefaultConfig[] = [
     description: "[可选] 评论输入框默认占位信息",
   },
   {
-    key: "comment.antiSpam.enable",
+    key: "comment.akismet.enable",
+    value: { default: false },
+    description:
+      "是否启用Akismet反垃圾功能，若开启需同时填写comment.akismet.apiKey。开启后可自动检测垃圾评论。不会对 AUTHOR/EDITOR/ADMIN 进行检查。详见 https://docs.ravelloh.com/docs/comment#akismet",
+  },
+  {
+    key: "comment.akismet.apiKey",
+    value: { default: "" },
+    description: "[可选] Akismet API Key。启用 Akismet 反垃圾功能所需",
+  },
+  {
+    key: "comment.akismet.report.enable",
     value: { default: true },
-    description: "是否启用评论反垃圾功能。效果有限。",
+    description: "是否在管理员将评论标记为垃圾评论时，上报至 Akismet",
   },
   {
     key: "comment.anonymous.enable",
