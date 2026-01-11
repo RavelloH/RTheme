@@ -72,6 +72,168 @@ function calculateMD5(text: string): string {
     .digest("hex");
 }
 
+/**
+ * 发送评论通知的辅助函数
+ * 只有当评论状态为 APPROVED 时才调用此函数
+ */
+async function sendCommentNotification(params: {
+  commentId: string;
+  postId: number;
+  postSlug: string;
+  parentId: string | null;
+  currentUid: number | null;
+  commenterName: string;
+  commenterEmail: string | null;
+  content: string;
+}): Promise<void> {
+  try {
+    const { sendNotice } = await import("@/lib/server/notice");
+    const { sendEmail } = await import("@/lib/server/email");
+    const { renderEmail } = await import("@/emails/utils");
+    const NotificationEmail = (await import("@/emails/templates"))
+      .NotificationEmail;
+
+    const noticeEnabled = await getConfig<boolean>("notice.enable", true);
+    if (!noticeEnabled) return;
+
+    // 获取文章完整信息
+    const postInfo = await prisma.post.findUnique({
+      where: { id: params.postId },
+      select: {
+        title: true,
+        slug: true,
+        userUid: true,
+      },
+    });
+    if (!postInfo) return;
+
+    const siteUrl =
+      (await getConfig<{ default?: string }>("site.url"))?.default ||
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      "http://localhost:3000";
+
+    const commentLink = `${siteUrl}/posts/${params.postSlug}#comment-${params.commentId}`;
+    const truncatedContent =
+      params.content.length > 50
+        ? params.content.slice(0, 50) + "..."
+        : params.content;
+
+    // 场景1：文章被评论（无 parentId）
+    if (!params.parentId) {
+      const postsNoticeEnabled = await getConfig<boolean>(
+        "notice.posts.enable",
+        true,
+      );
+      if (!postsNoticeEnabled) return;
+
+      // 如果是自己评论自己的文章，不通知
+      if (params.currentUid && params.currentUid === postInfo.userUid) return;
+
+      const noticeTitle = `${params.commenterName} 评论了《${postInfo.title}》`;
+      const noticeContent = `${params.commenterName} 在《${postInfo.title}》评论："${truncatedContent}"`;
+
+      // 发送站内通知
+      await sendNotice(
+        postInfo.userUid,
+        noticeTitle,
+        noticeContent,
+        commentLink,
+      );
+    }
+    // 场景2：评论被回复（有 parentId）
+    else {
+      const commentNoticeEnabled = await getConfig<boolean>(
+        "comment.email.notice.enable",
+        true,
+      );
+      const anonCommentNoticeEnabled = await getConfig<boolean>(
+        "comment.anonymous.email.notice.enable",
+        true,
+      );
+
+      if (!commentNoticeEnabled && !anonCommentNoticeEnabled) return;
+
+      // 获取父评论信息
+      const parentComment = await prisma.comment.findUnique({
+        where: { id: params.parentId },
+        select: {
+          content: true,
+          userUid: true,
+          authorEmail: true,
+          authorName: true,
+          user: {
+            select: {
+              uid: true,
+              username: true,
+              nickname: true,
+              email: true,
+              emailVerified: true,
+            },
+          },
+        },
+      });
+      if (!parentComment) return;
+
+      // 如果是自己回复自己，不通知
+      if (
+        params.currentUid &&
+        parentComment.userUid &&
+        params.currentUid === parentComment.userUid
+      )
+        return;
+
+      const truncatedParentContent =
+        parentComment.content.length > 50
+          ? parentComment.content.slice(0, 50) + "..."
+          : parentComment.content;
+
+      const noticeTitle = `${params.commenterName} 回复了您`;
+      const noticeContent = `您在《${postInfo.title}》发布的评论\n"${truncatedParentContent}"\n被 ${params.commenterName} 回复了：\n"${truncatedContent}"`;
+
+      // 登录用户：发送站内通知
+      if (parentComment.userUid && commentNoticeEnabled) {
+        await sendNotice(
+          parentComment.userUid,
+          noticeTitle,
+          noticeContent,
+          commentLink,
+        );
+      }
+      // 匿名用户：只发送邮件
+      else if (
+        !parentComment.userUid &&
+        parentComment.authorEmail &&
+        anonCommentNoticeEnabled
+      ) {
+        const siteName =
+          (await getConfig<{ default?: string }>("site.title"))?.default ||
+          "NeutralPress";
+
+        const emailComponent = NotificationEmail({
+          username: parentComment.authorName || "匿名用户",
+          title: noticeTitle,
+          content: noticeContent,
+          link: commentLink,
+          siteName,
+          siteUrl,
+        });
+
+        const { html, text } = await renderEmail(emailComponent);
+        const emailSubject = noticeTitle || "您有一条新通知";
+
+        await sendEmail({
+          to: parentComment.authorEmail,
+          subject: emailSubject,
+          html,
+          text,
+        });
+      }
+    }
+  } catch (error) {
+    console.error("发送评论通知失败:", error);
+  }
+}
+
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
 type ActionResult<T extends ApiResponseData> =
@@ -1180,6 +1342,21 @@ export async function createComment(
         console.log(
           `评论 ${record.id} 通过 Akismet 检查，状态更新为 ${normalStatus}`,
         );
+
+        // 只有状态变为 APPROVED 时才发送通知
+        if (normalStatus === "APPROVED") {
+          await sendCommentNotification({
+            commentId: record.id,
+            postId: post.id,
+            postSlug: slug,
+            parentId: parentId || null,
+            currentUid,
+            commenterName:
+              dbUser?.nickname || dbUser?.username || authorName || "匿名用户",
+            commenterEmail: dbUser?.email || authorEmail || null,
+            content,
+          });
+        }
       }
     } catch (error) {
       console.error("Akismet 异步检查失败:", error);
@@ -1187,151 +1364,23 @@ export async function createComment(
     }
   });
 
-  // 发送通知（异步执行，不阻塞响应）
-  after(async () => {
-    try {
-      const { sendNotice } = await import("@/lib/server/notice");
-      const { sendEmail } = await import("@/lib/server/email");
-      const { renderEmail } = await import("@/emails/utils");
-      const NotificationEmail = (await import("@/emails/templates"))
-        .NotificationEmail;
-
-      const noticeEnabled = await getConfig<boolean>("notice.enable", true);
-      if (!noticeEnabled) return;
-
-      // 获取文章完整信息
-      const postInfo = await prisma.post.findUnique({
-        where: { id: post.id },
-        select: {
-          title: true,
-          slug: true,
-          userUid: true,
-        },
+  // 对于未启用 Akismet 或特权用户的情况，立即发送通知（如果状态为 APPROVED）
+  // 启用 Akismet 的普通用户，通知会在异步检查通过后发送
+  if ((!akismetEnabled || isPrivilegedUser) && status === "APPROVED") {
+    after(async () => {
+      await sendCommentNotification({
+        commentId: record.id,
+        postId: post.id,
+        postSlug: slug,
+        parentId: parentId || null,
+        currentUid,
+        commenterName:
+          dbUser?.nickname || dbUser?.username || authorName || "匿名用户",
+        commenterEmail: dbUser?.email || authorEmail || null,
+        content,
       });
-      if (!postInfo) return;
-
-      const commentLink = `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/posts/${postInfo.slug}#comment`;
-      const commenterName =
-        dbUser?.nickname || dbUser?.username || authorName || "匿名用户";
-      const truncatedContent =
-        content.length > 50 ? content.slice(0, 50) + "..." : content;
-
-      // 场景1：文章被评论（无 parentId）
-      if (!parentId) {
-        const postsNoticeEnabled = await getConfig<boolean>(
-          "notice.posts.enable",
-          true,
-        );
-        if (!postsNoticeEnabled) return;
-
-        // 如果是自己评论自己的文章，不通知
-        if (currentUid && currentUid === postInfo.userUid) return;
-
-        const noticeTitle = `${commenterName} 评论了《${postInfo.title}》`;
-        const noticeContent = `${commenterName} 在《${postInfo.title}》评论："${truncatedContent}"`;
-
-        // 发送站内通知
-        await sendNotice(
-          postInfo.userUid,
-          noticeTitle,
-          noticeContent,
-          commentLink,
-        );
-      }
-      // 场景2：评论被回复（有 parentId）
-      else {
-        const commentNoticeEnabled = await getConfig<boolean>(
-          "comment.email.notice.enable",
-          true,
-        );
-        const anonCommentNoticeEnabled = await getConfig<boolean>(
-          "comment.anonymous.email.notice.enable",
-          true,
-        );
-
-        if (!commentNoticeEnabled && !anonCommentNoticeEnabled) return;
-
-        // 获取父评论信息
-        const parentComment = await prisma.comment.findUnique({
-          where: { id: parentId },
-          select: {
-            content: true,
-            userUid: true,
-            authorEmail: true,
-            authorName: true,
-            user: {
-              select: {
-                uid: true,
-                username: true,
-                nickname: true,
-                email: true,
-                emailVerified: true,
-              },
-            },
-          },
-        });
-        if (!parentComment) return;
-
-        // 如果是自己回复自己，不通知
-        if (
-          currentUid &&
-          parentComment.userUid &&
-          currentUid === parentComment.userUid
-        )
-          return;
-
-        const truncatedParentContent =
-          parentComment.content.length > 50
-            ? parentComment.content.slice(0, 50) + "..."
-            : parentComment.content;
-
-        const noticeTitle = `${commenterName} 回复了您`;
-        const noticeContent = `您在《${postInfo.title}》发布的评论\n"${truncatedParentContent}"\n被 ${commenterName} 回复了：\n"${truncatedContent}"`;
-
-        // 登录用户：发送站内通知
-        if (parentComment.userUid && commentNoticeEnabled) {
-          await sendNotice(
-            parentComment.userUid,
-            noticeTitle,
-            noticeContent,
-            commentLink,
-          );
-        }
-        // 匿名用户：只发送邮件
-        else if (
-          !parentComment.userUid &&
-          parentComment.authorEmail &&
-          anonCommentNoticeEnabled
-        ) {
-          const siteUrl =
-            (await getConfig<string>("site.url")) || "http://localhost:3000";
-          const siteName =
-            (await getConfig<string>("site.title.default")) || "NeutralPress";
-
-          const emailComponent = NotificationEmail({
-            username: parentComment.authorName || "匿名用户",
-            title: noticeTitle,
-            content: noticeContent,
-            link: commentLink,
-            siteName,
-            siteUrl,
-          });
-
-          const { html, text } = await renderEmail(emailComponent);
-          const emailSubject = noticeTitle || "您有一条新通知";
-
-          await sendEmail({
-            to: parentComment.authorEmail,
-            subject: emailSubject,
-            html,
-            text,
-          });
-        }
-      }
-    } catch (error) {
-      console.error("发送评论通知失败:", error);
-    }
-  });
+    });
+  }
 
   return response.created({
     data: mappedWithFakeStatus as unknown as CommentItem,
@@ -1360,7 +1409,7 @@ export async function updateCommentStatus(
 
   const { ids, status } = params;
 
-  // 获取评论的旧状态和完整信息（用于 Akismet 报告）
+  // 获取评论的旧状态和完整信息（用于 Akismet 报告和通知补发）
   const oldComments = await prisma.comment.findMany({
     where: { id: { in: ids }, deletedAt: null },
     select: {
@@ -1372,9 +1421,23 @@ export async function updateCommentStatus(
       authorEmail: true,
       authorWebsite: true,
       createdAt: true,
-      post: { select: { slug: true, publishedAt: true } },
+      parentId: true,
+      userUid: true,
+      post: {
+        select: {
+          id: true,
+          slug: true,
+          publishedAt: true,
+        },
+      },
       user: {
-        select: { nickname: true, username: true, email: true, website: true },
+        select: {
+          uid: true,
+          nickname: true,
+          username: true,
+          email: true,
+          website: true,
+        },
       },
     },
   });
@@ -1460,6 +1523,39 @@ export async function updateCommentStatus(
       }
     } catch (error) {
       console.error("向 Akismet 报告评论状态失败:", error);
+    }
+  });
+
+  // 补发通知：当管理员将评论从其他状态改为 APPROVED 时，发送通知
+  after(async () => {
+    try {
+      // 只处理状态变为 APPROVED 的评论
+      if (status !== "APPROVED") return;
+
+      for (const comment of oldComments) {
+        // 只处理状态发生变化的评论（从非 APPROVED 变为 APPROVED）
+        if (comment.status === "APPROVED") continue;
+
+        // 发送通知
+        await sendCommentNotification({
+          commentId: comment.id,
+          postId: comment.post.id,
+          postSlug: comment.post.slug,
+          parentId: comment.parentId,
+          currentUid: comment.userUid,
+          commenterName:
+            comment.user?.nickname ||
+            comment.user?.username ||
+            comment.authorName ||
+            "匿名用户",
+          commenterEmail: comment.user?.email || comment.authorEmail || null,
+          content: comment.content,
+        });
+
+        console.log(`已补发评论 ${comment.id} 的通知`);
+      }
+    } catch (error) {
+      console.error("补发评论通知失败:", error);
     }
   });
 
