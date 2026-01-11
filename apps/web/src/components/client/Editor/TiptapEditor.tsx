@@ -14,6 +14,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import InvisibleCharacters from "@tiptap/extension-invisible-characters";
 import CharacterCount from "@tiptap/extension-character-count";
 import { Markdown } from "@tiptap/markdown";
+import { InlineMath, BlockMath } from "@tiptap/extension-mathematics";
 import { useEffect, useRef } from "react";
 import {
   saveEditorContent,
@@ -548,6 +549,11 @@ export interface TiptapEditorProps {
   editorConfig?: EditorConfig; // 编辑器配置
   storageKey?: string; // localStorage 键名
   showTableOfContents?: boolean; // 是否显示目录
+  onMathClick?: (
+    latex: string,
+    type: "inline" | "block",
+    position: number,
+  ) => void; // 数学公式点击回调
 }
 
 export function TiptapEditor({
@@ -561,6 +567,7 @@ export function TiptapEditor({
   editorConfig = {},
   storageKey = "new",
   showTableOfContents = false,
+  onMathClick,
 }: TiptapEditorProps) {
   // 用于跟踪是否是首次渲染，避免初始化时触发保存
   const isFirstRender = useRef(true);
@@ -648,6 +655,31 @@ export function TiptapEditor({
         alignments: ["left", "center", "right"],
       }),
       CharacterCount,
+      // 分别配置 InlineMath 和 BlockMath
+      InlineMath.configure({
+        katexOptions: {
+          throwOnError: false,
+          strict: false,
+          displayMode: false, // 行内公式使用 inline mode
+        },
+        onClick: (node, pos) => {
+          if (onMathClick) {
+            onMathClick(node.attrs.latex, "inline", pos);
+          }
+        },
+      }),
+      BlockMath.configure({
+        katexOptions: {
+          throwOnError: false,
+          strict: false,
+          displayMode: true, // 块级公式使用 display mode
+        },
+        onClick: (node, pos) => {
+          if (onMathClick) {
+            onMathClick(node.attrs.latex, "block", pos);
+          }
+        },
+      }),
       Markdown,
       TrailingParagraph, // 确保末尾始终有空段落
       ExitLinkOnDoubleSpace,

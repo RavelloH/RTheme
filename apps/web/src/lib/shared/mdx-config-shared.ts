@@ -40,14 +40,16 @@ export const markdownRemarkPlugins = [remarkGfm, remarkMath, remarkBreaks];
 export const markdownRehypePlugins = [rehypeKatex, rehypeSlug, rehypeRaw];
 
 /**
- * MDX 渲染的 remark 插件列表（不包含 remarkMath，由 MDX 自行处理）
+ * MDX 渲染的 remark 插件列表
+ * 包含 remarkMath 以支持数学公式
  */
-export const mdxRemarkPlugins = [remarkGfm];
+export const mdxRemarkPlugins = [remarkGfm, remarkMath];
 
 /**
  * MDX 渲染的 rehype 插件列表
+ * 包含 rehypeKatex 以渲染 LaTeX 数学公式
  */
-export const mdxRehypePlugins = [rehypeSlug];
+export const mdxRehypePlugins = [rehypeKatex, rehypeSlug];
 
 // ============ 工具函数 ============
 

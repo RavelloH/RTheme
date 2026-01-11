@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "../styles/content.css";
+@import "katex/dist/katex.min.css";
 
 @theme {
   --color-background: #ffffff;

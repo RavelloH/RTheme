@@ -37,6 +37,7 @@ import {
   RiAlignLeft,
   RiAlignCenter,
   RiAlignRight,
+  RiFunctions,
 } from "@remixicon/react";
 import { Toggle } from "@/ui/Toggle";
 import { Dropdown, DropdownOption } from "@/ui/Dropdown";
@@ -61,6 +62,7 @@ import { LinkPopover } from "./LinkPopover";
 import { LinkToolbar } from "./LinkToolbar";
 import { ImageToolbar } from "./ImageToolbar";
 import { CodeBlockToolbar } from "./CodeBlockToolbar";
+import { MathDialog } from "./MathDialog";
 import { useToast } from "@/ui/Toast";
 import {
   loadEditorContent,
@@ -130,6 +132,19 @@ export default function Editor({
     useState(false);
   const [currentCodeBlockLanguage, setCurrentCodeBlockLanguage] = useState("");
   const [isImageSelectorOpen, setIsImageSelectorOpen] = useState(false);
+
+  // 数学公式对话框状态
+  const [isMathDialogOpen, setIsMathDialogOpen] = useState(false);
+  const [mathDialogMode, setMathDialogMode] = useState<"insert" | "edit">(
+    "insert",
+  );
+  const [mathDialogLatex, setMathDialogLatex] = useState("");
+  const [mathDialogType, setMathDialogType] = useState<"inline" | "block">(
+    "inline",
+  );
+  const [mathDialogPosition, setMathDialogPosition] = useState<
+    number | undefined
+  >(undefined);
 
   // 适配器管理器
   const adapterManagerRef = useRef<AdapterManager | null>(null);
@@ -654,6 +669,28 @@ export default function Editor({
     adapterManagerRef.current?.executeCommand("subscript");
   };
 
+  // 打开数学公式对话框（插入新公式）
+  const handleMath = () => {
+    setMathDialogMode("insert");
+    setMathDialogLatex("");
+    setMathDialogType("inline");
+    setMathDialogPosition(undefined);
+    setIsMathDialogOpen(true);
+  };
+
+  // 数学公式节点点击处理（编辑现有公式）
+  const handleMathClick = (
+    latex: string,
+    type: "inline" | "block",
+    position: number,
+  ) => {
+    setMathDialogMode("edit");
+    setMathDialogLatex(latex);
+    setMathDialogType(type);
+    setMathDialogPosition(position);
+    setIsMathDialogOpen(true);
+  };
+
   const toggleInvisibleChars = () => {
     setShowInvisibleChars(!showInvisibleChars);
   };
@@ -1171,6 +1208,11 @@ export default function Editor({
       name: "插入图片",
     },
     {
+      icon: <RiFunctions size="1.2em" />,
+      action: handleMath,
+      name: "插入数学公式",
+    },
+    {
       icon: <RiSeparator size="1.2em" />,
       action: handleHorizontalRule,
       name: "分隔线",
@@ -1443,6 +1485,7 @@ export default function Editor({
                 showTableOfContents,
               }}
               storageKey={storageKey}
+              onMathClick={handleMathClick}
             />
 
             {/* 表格工具栏 */}
@@ -1592,6 +1635,17 @@ export default function Editor({
           multiple
           hideTrigger
           defaultTab="upload"
+        />
+
+        {/* 数学公式编辑对话框 */}
+        <MathDialog
+          isOpen={isMathDialogOpen}
+          onClose={() => setIsMathDialogOpen(false)}
+          editor={editor}
+          initialLatex={mathDialogLatex}
+          initialType={mathDialogType}
+          position={mathDialogPosition}
+          mode={mathDialogMode}
         />
 
         {/* 右侧：操作按钮 */}

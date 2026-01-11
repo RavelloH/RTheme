@@ -137,7 +137,7 @@
 /* 行内代码样式 - 不在 pre 内的 code */
 .tiptap :not(pre) > code,
 .md-content :not(pre) > code {
-  @apply bg-foreground/10 text-foreground px-1.5 py-0.5 rounded-xs text-lg md:text-sm font-mono hover:bg-foreground/20 transition-all;
+  @apply bg-foreground/10 text-foreground px-1 py-0.5 mx-1 rounded-xs text-lg md:text-sm font-mono hover:bg-foreground/20 transition-all;
 }
 
 /* 代码块基础样式 */
@@ -386,4 +386,96 @@ html.dark .md-content .shiki span {
 .dark .md-content .shiki span {
   color: var(--shiki-dark) !important;
   background-color: var(--shiki-dark-bg) !important;
+}
+
+/* ========== Mathematics/LaTeX Styles ========== */
+
+/* 数学公式渲染节点 - 基础样式 */
+.tiptap-mathematics-render,
+.md-content .katex-display,
+.md-content .katex {
+  @apply my-4 px-2 max-w-full;
+
+  transition: all 0.2s ease;
+}
+
+.katex-display .katex {
+  @apply w-full;
+}
+
+/* 可编辑的数学公式节点 - 悬停效果 */
+.tiptap-mathematics-render--editable:hover {
+  @apply bg-primary/10;
+  border-radius: 4px;
+  cursor: pointer;
+  outline-offset: 2px;
+}
+
+/* 块级数学公式 - 居中显示 */
+.tiptap-mathematics-render[data-type="block-math"],
+.md-content .katex-display {
+  @apply flex justify-center w-full;
+  padding: 1rem 0;
+  margin: 1.5rem 0;
+}
+
+/* 块级数学公式 - 内部  */
+.tiptap-mathematics-render[data-type="block-math"] .block-math-inner,
+.md-content .katex-display .block-math-inner {
+  @apply w-full;
+}
+
+/* 行内数学公式 */
+.tiptap-mathematics-render[data-type="inline-math"],
+.md-content .katex {
+  @apply inline-block align-middle;
+  margin: 0 0.2em;
+}
+
+/* KaTeX 自身样式调整 */
+.tiptap .katex,
+.md-content .katex {
+  font-size: 1.1em;
+}
+
+/* 块级公式的 KaTeX 容器 */
+.tiptap .katex-display,
+.md-content .katex-display {
+  @apply w-full px-2;
+  margin: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.tiptap-mathematics-render--editable:hover::after {
+  @apply block;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 暗色模式下的样式调整 */
+.dark .tiptap-mathematics-render--editable:hover {
+  @apply bg-primary/20;
+}
+
+/* KaTeX 字体加载优化 */
+.katex {
+  font-family: "KaTeX_Main", "Times New Roman", serif;
+}
+
+/* 移除块级公式的滚动条样式（美化） */
+.katex-display::-webkit-scrollbar {
+  height: 6px;
+}
+
+.katex-display::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+.katex-display::-webkit-scrollbar-thumb {
+  @apply bg-foreground/20 rounded;
+}
+
+.katex-display::-webkit-scrollbar-thumb:hover {
+  @apply bg-foreground/30;
 }
