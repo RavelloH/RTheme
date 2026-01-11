@@ -335,6 +335,23 @@ export const defaultConfigs: DefaultConfig[] = [
     description: "评论是否需要管理员审核后才能展示。控制匿名评论",
   },
   {
+    key: "comment.review.notifyAdmin.enable",
+    value: { default: true },
+    description:
+      "若开启评论审核，是否在有新评论待审核时通知管理员及编辑(ADMIN/EDITOR)",
+  },
+  {
+    key: "comment.review.notifyAdmin.uid",
+    value: { default: ["1"] },
+    description:
+      "审核通知应该发送给哪个用户。填写用户UID，每行一个。不填写则发送给所有ADMIN/Editor",
+  },
+  {
+    key: "comment.review.notifyAdmin.threshold",
+    value: { default: 1 },
+    description: "当待审核评论数量达到该阈值时，才发送通知",
+  },
+  {
     key: "comment.locate.enable",
     value: { default: false },
     description:

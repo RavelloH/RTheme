@@ -234,6 +234,80 @@ async function sendCommentNotification(params: {
   }
 }
 
+/**
+ * 通知管理员有新评论待审核
+ */
+async function notifyAdminPendingComments(): Promise<void> {
+  try {
+    const notifyEnabled = await getConfig<boolean>(
+      "comment.review.notifyAdmin.enable",
+      true,
+    );
+    if (!notifyEnabled) return;
+
+    const threshold = await getConfig<number>(
+      "comment.review.notifyAdmin.threshold",
+      1,
+    );
+
+    // 统计待审核评论数量
+    const pendingCount = await prisma.comment.count({
+      where: {
+        status: "PENDING",
+        deletedAt: null,
+      },
+    });
+
+    // 如果未达到阈值，不发送通知
+    if (pendingCount < threshold) return;
+
+    const { sendNotice } = await import("@/lib/server/notice");
+
+    // 获取应该接收通知的用户 UID 列表
+    const notifyUids = await getConfig<string[]>(
+      "comment.review.notifyAdmin.uid",
+      [],
+    );
+
+    const siteUrl =
+      (await getConfig<{ default?: string }>("site.url"))?.default ||
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      "http://localhost:3000";
+
+    const adminLink = `${siteUrl}/admin/comments?status=PENDING`;
+    const noticeTitle = `有 ${pendingCount} 条评论待审核`;
+    const noticeContent = `当前有 ${pendingCount} 条评论正在等待审核，请及时处理。`;
+
+    // 如果指定了特定用户，只通知这些用户
+    if (notifyUids && notifyUids.length > 0) {
+      for (const uidStr of notifyUids) {
+        const uid = parseInt(uidStr, 10);
+        if (!isNaN(uid)) {
+          await sendNotice(uid, noticeTitle, noticeContent, adminLink);
+        }
+      }
+    }
+    // 否则通知所有管理员和编辑
+    else {
+      const admins = await prisma.user.findMany({
+        where: {
+          role: { in: ["ADMIN", "EDITOR"] },
+          deletedAt: null,
+        },
+        select: { uid: true },
+      });
+
+      for (const admin of admins) {
+        await sendNotice(admin.uid, noticeTitle, noticeContent, adminLink);
+      }
+    }
+
+    console.log(`已通知管理员：${pendingCount} 条评论待审核`);
+  } catch (error) {
+    console.error("通知管理员失败:", error);
+  }
+}
+
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
 type ActionResult<T extends ApiResponseData> =
@@ -1356,6 +1430,9 @@ export async function createComment(
             commenterEmail: dbUser?.email || authorEmail || null,
             content,
           });
+        } else if (normalStatus === "PENDING") {
+          // 如果状态为 PENDING（需要人工审核），通知管理员
+          await notifyAdminPendingComments();
         }
       }
     } catch (error) {
@@ -1379,6 +1456,13 @@ export async function createComment(
         commenterEmail: dbUser?.email || authorEmail || null,
         content,
       });
+    });
+  }
+
+  // 如果评论状态为 PENDING（未启用 Akismet 但开启了人工审核），通知管理员
+  if ((!akismetEnabled || isPrivilegedUser) && status === "PENDING") {
+    after(async () => {
+      await notifyAdminPendingComments();
     });
   }
 
