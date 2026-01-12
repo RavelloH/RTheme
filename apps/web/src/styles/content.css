@@ -316,7 +316,7 @@
 /* Highlight */
 .tiptap mark,
 .md-content mark {
-  @apply bg-primary/90 font-bold text-primary-foreground rounded-xs mx-1;
+  @apply bg-primary font-semibold text-primary-foreground rounded-[2px] mx-1 px-1;
 }
 
 /* Strikethrough */
@@ -478,4 +478,27 @@ html.dark .md-content .shiki span {
 
 .katex-display::-webkit-scrollbar-thumb:hover {
   @apply bg-foreground/30;
+}
+
+/* ========== Table Cell Selection Styles ========== */
+
+/* ProseMirror 选中的节点样式 */
+.tiptap .ProseMirror-selectednode {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* 表格单元格选择样式 */
+.tiptap .selectedCell {
+  @apply bg-primary/20 relative text-foreground;
+}
+
+.tiptap .selectedCell::after {
+  opacity: 0.3;
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-primary);
+  pointer-events: none;
+  z-index: 1;
 }

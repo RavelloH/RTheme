@@ -71,13 +71,21 @@
 
 ::-webkit-scrollbar-track,
 .scrollbar-default::-webkit-scrollbar-track {
-  background: var(--color-background);
+  background: color-mix(
+    in srgb,
+    var(--color-muted-foreground),
+    transparent 60%
+  );
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb,
 .scrollbar-default::-webkit-scrollbar-thumb {
-  background: var(--color-muted-foreground);
+  background: color-mix(
+    in srgb,
+    var(--color-muted-foreground),
+    transparent 60%
+  );
   border-radius: 4px;
   opacity: 0.6;
   transition: opacity 0.2s ease;
@@ -97,17 +105,31 @@
 /* Firefox 滚动条样式 */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-muted-foreground) var(--color-background);
+  scrollbar-color: color-mix(
+      in srgb,
+      var(--color-muted-foreground),
+      transparent 60%
+    )
+    var(--color-background);
 }
 
 .scrollbar-default {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-muted-foreground) var(--color-background);
+  scrollbar-color: color-mix(
+      in srgb,
+      var(--color-muted-foreground),
+      transparent 60%
+    )
+    var(--color-background);
 }
 
 /* 暗色模式下的滚动条优化 */
 .dark ::-webkit-scrollbar-thumb {
-  background: var(--color-muted-foreground);
+  background: color-mix(
+    in srgb,
+    var(--color-muted-foreground),
+    transparent 60%
+  );
   opacity: 0.5;
 }
 
@@ -117,7 +139,12 @@
 }
 
 .dark {
-  scrollbar-color: var(--color-muted-foreground) var(--color-background);
+  scrollbar-color: color-mix(
+      in srgb,
+      var(--color-muted-foreground),
+      transparent 60%
+    )
+    var(--color-background);
 }
 
 .loading-dots span {
@@ -134,4 +161,20 @@
   100% {
     opacity: 1;
   }
+}
+
+::selection {
+  @apply bg-primary/30;
+}
+
+:focus-visible:not(input, textarea, select, button, .tiptap) {
+  @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+}
+
+::marker {
+  @apply text-secondary-foreground/80;
+}
+
+::target-text {
+  @apply bg-primary/50 text-foreground;
 }

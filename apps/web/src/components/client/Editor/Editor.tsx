@@ -71,6 +71,7 @@ import {
 } from "@/lib/client/editor-persistence";
 import type { Editor as TiptapEditorType } from "@tiptap/react";
 import { TextSelection } from "@tiptap/pm/state";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type { editor } from "monaco-editor";
 import {
   createAdapterManager,
@@ -702,10 +703,20 @@ export default function Editor({
 
     const { state, view } = editor;
     const { selection } = state;
-    const { $anchor } = selection;
 
     // 保存当前光标位置
     const currentPos = selection.from;
+
+    // 检查是否是单元格选择（CellSelection）
+    const isCellSelection = selection.constructor.name === "CellSelection";
+
+    // 多单元格选择时不执行对齐操作
+    if (isCellSelection) {
+      return;
+    }
+
+    // 单个单元格：更新整列
+    const { $anchor } = selection;
 
     // 获取当前单元格的深度和列索引
     let cellDepth = 0;
@@ -735,10 +746,10 @@ export default function Editor({
     const { tr } = state;
     let updated = false;
 
-    table.forEach((rowNode, rowOffset) => {
+    table.forEach((rowNode: ProseMirrorNode, rowOffset: number) => {
       if (rowNode.type.name === "tableRow") {
         let currentCol = 0;
-        rowNode.forEach((cellNode, cellOffset) => {
+        rowNode.forEach((cellNode: ProseMirrorNode, cellOffset: number) => {
           if (currentCol === colIndex) {
             const cellPos =
               $anchor.start(tableDepth) + rowOffset + cellOffset + 1;
@@ -764,10 +775,9 @@ export default function Editor({
       // 恢复光标位置
       try {
         const $pos = tr.doc.resolve(currentPos);
-        const selection = TextSelection.near($pos);
-        tr.setSelection(selection);
+        const newSelection = TextSelection.near($pos);
+        tr.setSelection(newSelection);
       } catch (e) {
-        // 如果位置无效，不设置选区
         console.warn("Failed to restore cursor position:", e);
       }
       view.dispatch(tr);

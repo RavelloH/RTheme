@@ -4861,6 +4861,14 @@ components:
               description:
                 nullable: true
                 type: string
+              metadata:
+                nullable: true
+                type: object
+                additionalProperties:
+                  anyOf:
+                    - type: string
+                    - type: number
+                    - type: boolean
               user:
                 nullable: true
                 type: object
@@ -4889,6 +4897,7 @@ components:
               - oldData
               - newData
               - description
+              - metadata
               - user
             additionalProperties: false
       required:
