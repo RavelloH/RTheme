@@ -70,6 +70,7 @@ import {
   saveEditorContent,
 } from "@/lib/client/editor-persistence";
 import type { Editor as TiptapEditorType } from "@tiptap/react";
+import { TextSelection } from "@tiptap/pm/state";
 import type { editor } from "monaco-editor";
 import {
   createAdapterManager,
@@ -695,16 +696,109 @@ export default function Editor({
     setShowInvisibleChars(!showInvisibleChars);
   };
 
+  // 设置当前列的对齐方式（在表格内时）
+  const setColumnAlignment = (align: "left" | "center" | "right") => {
+    if (!editor) return;
+
+    const { state, view } = editor;
+    const { selection } = state;
+    const { $anchor } = selection;
+
+    // 保存当前光标位置
+    const currentPos = selection.from;
+
+    // 获取当前单元格的深度和列索引
+    let cellDepth = 0;
+    for (let d = $anchor.depth; d > 0; d--) {
+      if (
+        $anchor.node(d).type.name === "tableCell" ||
+        $anchor.node(d).type.name === "tableHeader"
+      ) {
+        cellDepth = d;
+        break;
+      }
+    }
+
+    if (!cellDepth) return;
+
+    // 获取表格节点和当前行
+    const tableDepth = cellDepth - 2;
+    const table = $anchor.node(tableDepth);
+
+    // 计算当前列的索引
+    let colIndex = 0;
+    for (let i = 0; i < $anchor.index(cellDepth - 1); i++) {
+      colIndex++;
+    }
+
+    // 创建事务来更新所有行中该列的单元格
+    const { tr } = state;
+    let updated = false;
+
+    table.forEach((rowNode, rowOffset) => {
+      if (rowNode.type.name === "tableRow") {
+        let currentCol = 0;
+        rowNode.forEach((cellNode, cellOffset) => {
+          if (currentCol === colIndex) {
+            const cellPos =
+              $anchor.start(tableDepth) + rowOffset + cellOffset + 1;
+            const cellType = cellNode.type;
+
+            // 创建新的单元格节点，更新 textAlign 属性
+            const newAttrs = { ...cellNode.attrs, textAlign: align };
+            const newCell = cellType.create(
+              newAttrs,
+              cellNode.content,
+              cellNode.marks,
+            );
+
+            tr.replaceWith(cellPos, cellPos + cellNode.nodeSize, newCell);
+            updated = true;
+          }
+          currentCol++;
+        });
+      }
+    });
+
+    if (updated) {
+      // 恢复光标位置
+      try {
+        const $pos = tr.doc.resolve(currentPos);
+        const selection = TextSelection.near($pos);
+        tr.setSelection(selection);
+      } catch (e) {
+        // 如果位置无效，不设置选区
+        console.warn("Failed to restore cursor position:", e);
+      }
+      view.dispatch(tr);
+    }
+  };
+
   const handleAlignLeft = () => {
-    adapterManagerRef.current?.executeCommand("alignLeft");
+    // 如果在表格内，设置列对齐
+    if (editorState.isTable) {
+      setColumnAlignment("left");
+    } else {
+      adapterManagerRef.current?.executeCommand("alignLeft");
+    }
   };
 
   const handleAlignCenter = () => {
-    adapterManagerRef.current?.executeCommand("alignCenter");
+    // 如果在表格内，设置列对齐
+    if (editorState.isTable) {
+      setColumnAlignment("center");
+    } else {
+      adapterManagerRef.current?.executeCommand("alignCenter");
+    }
   };
 
   const handleAlignRight = () => {
-    adapterManagerRef.current?.executeCommand("alignRight");
+    // 如果在表格内，设置列对齐
+    if (editorState.isTable) {
+      setColumnAlignment("right");
+    } else {
+      adapterManagerRef.current?.executeCommand("alignRight");
+    }
   };
 
   // 打开设置详细信息对话框

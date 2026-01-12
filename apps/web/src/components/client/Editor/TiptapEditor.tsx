@@ -4,10 +4,6 @@ import { useEditor, EditorContent, Editor, Extension } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
-import { Table } from "@tiptap/extension-table";
-import TableRow from "@tiptap/extension-table-row";
-import TableCell from "@tiptap/extension-table-cell";
-import TableHeader from "@tiptap/extension-table-header";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -33,6 +29,115 @@ import {
 import { CustomParagraph } from "@/lib/tiptap/custom-paragraph";
 import { CustomHeading } from "@/lib/tiptap/custom-heading";
 import { TableOfContents } from "./TableOfContents";
+import {
+  TableWithMarkdown,
+  TableCellWithMarkdown,
+  TableHeaderWithMarkdown,
+  TableRowWithMarkdown,
+} from "@/lib/tiptap/table-with-markdown";
+import type { JSONContent } from "@tiptap/core";
+
+// 解析 Markdown 表格中的对齐标记
+function parseTableAlignment(markdown: string): Map<number, string[]> {
+  const tableAlignments = new Map<number, string[]>();
+  const lines = markdown.split("\n");
+  let tableIndex = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line) continue;
+
+    const trimmedLine = line.trim();
+
+    // 检测表格分隔行（包含对齐标记）
+    if (trimmedLine.startsWith("|") && trimmedLine.includes("-")) {
+      const cells = trimmedLine
+        .split("|")
+        .slice(1, -1)
+        .map((cell) => cell.trim());
+
+      // 检查是否为分隔行
+      const isSeparator = cells.every((cell) =>
+        /^:?-+:?$/.test(cell.replace(/\s/g, "")),
+      );
+
+      if (isSeparator) {
+        const alignments = cells.map((cell) => {
+          const trimmed = cell.trim();
+          if (trimmed.startsWith(":") && trimmed.endsWith(":")) {
+            return "center";
+          } else if (trimmed.endsWith(":")) {
+            return "right";
+          } else {
+            return null; // left 或无对齐
+          }
+        });
+
+        tableAlignments.set(tableIndex, alignments as string[]);
+        tableIndex++;
+      }
+    }
+  }
+
+  return tableAlignments;
+}
+
+// 后处理 JSON 内容，添加表格对齐信息
+function postProcessTableAlignment(
+  json: JSONContent,
+  markdown: string,
+): JSONContent {
+  const tableAlignments = parseTableAlignment(markdown);
+  let tableIndex = 0;
+
+  function processNode(node: JSONContent): JSONContent {
+    if (node.type === "table") {
+      const alignments = tableAlignments.get(tableIndex);
+      tableIndex++;
+
+      if (alignments && node.content) {
+        // 为每一行的单元格添加对齐信息
+        const processedContent = node.content.map((row) => {
+          if (row.type === "tableRow" && row.content) {
+            const processedCells = row.content.map((cell, cellIndex) => {
+              const align = alignments[cellIndex];
+              return {
+                ...cell,
+                attrs: {
+                  ...cell.attrs,
+                  textAlign: align || null,
+                },
+              };
+            });
+
+            return {
+              ...row,
+              content: processedCells,
+            };
+          }
+          return row;
+        });
+
+        return {
+          ...node,
+          content: processedContent,
+        };
+      }
+    }
+
+    // 递归处理子节点
+    if (node.content) {
+      return {
+        ...node,
+        content: node.content.map(processNode),
+      };
+    }
+
+    return node;
+  }
+
+  return processNode(json);
+}
 
 // Toast 实例（需要从外部传入）
 let toastInstance: {
@@ -608,19 +713,19 @@ export function TiptapEditor({
           class: "max-w-full h-auto rounded-lg",
         },
       }),
-      Table.configure({
+      TableWithMarkdown.configure({
         resizable: false,
         HTMLAttributes: {
           class: "border-collapse table-auto w-full",
         },
       }),
-      TableRow,
-      TableCell.configure({
+      TableRowWithMarkdown,
+      TableCellWithMarkdown.configure({
         HTMLAttributes: {
           class: "border border-foreground/20 px-3 py-2",
         },
       }),
-      TableHeader.configure({
+      TableHeaderWithMarkdown.configure({
         HTMLAttributes: {
           class:
             "border border-foreground/20 px-3 py-2 font-bold bg-foreground/5",
@@ -698,7 +803,7 @@ export function TiptapEditor({
       // 规范化 Markdown：将 3 个或更多连续换行符替换为 2 个
       markdown = markdown.replace(/\n{3,}/g, "\n\n");
 
-      console.log(markdown);
+      console.log("Tiptap导出的markdown", markdown);
 
       // 调用外部onChange回调
       onChange?.(markdown);
@@ -732,7 +837,11 @@ export function TiptapEditor({
     // 检查当前内容是否与传入的 content 不同
     // 使用 markdown.parse 将 Markdown 转换为 JSON
     // @ts-expect-error - markdown.parse方法可能没有类型定义
-    const json = editor.markdown.parse(normalizedContent);
+    let json = editor.markdown.parse(normalizedContent);
+
+    // 后处理：为表格单元格添加对齐信息
+    json = postProcessTableAlignment(json, normalizedContent);
+
     const currentJson = editor.getJSON();
 
     // 简单比较：如果内容不同，则更新
