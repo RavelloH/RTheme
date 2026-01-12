@@ -31,7 +31,9 @@ interface CustomLinkProps extends React.ComponentProps<typeof NextLink> {
 // 处理特殊链接类型
 function handleSpecialLinks(newPath: string): boolean {
   if (newPath.startsWith("#")) {
-    const anchor = document.querySelector(newPath);
+    const anchorId = newPath.slice(1);
+    const anchor = document.getElementById(anchorId);
+
     if (anchor) {
       // 更新URL地址栏（添加hash）
       window.history.pushState(null, "", newPath);
