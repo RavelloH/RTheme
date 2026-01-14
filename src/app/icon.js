@@ -73,10 +73,8 @@ export function generateImageMetadata() {
 
 export default async function Icon({ id }) {
     return new ImageResponse(
-        (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={config.siteURL + config.iconImage} width='100%' height='100%' alt='Icon' />
-        ),
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={config.siteURL + config.iconImage} width='100%' height='100%' alt='Icon' />,
         {
             width: id.replace('x', ''),
             height: id.replace('x', ''),
