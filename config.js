@@ -4,7 +4,7 @@ const config = {
     author: 'RavelloH', // 作者名
     description: "RavelloH's Blog", // 站点描述
     sign: 'Debug the life.', // 站点签名
-    siteURL: 'https://ravelloh.top/', // 站点地址,带有尾缀斜杠
+    siteURL: 'https://ravelloh.com/', // 站点地址,带有尾缀斜杠
     pwaStartURL: '/?mode=pwa', // PWA启动地址
     lang: 'zh-CN', // 站点语言
     iconImage: 'icon.png', // 站点图标
