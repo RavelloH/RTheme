@@ -1493,9 +1493,20 @@ export async function updateCommentStatus(
 
   const { ids, status } = params;
 
+  // 构建权限过滤条件
+  const whereCondition: Prisma.CommentWhereInput = {
+    id: { in: ids },
+    deletedAt: null,
+  };
+
+  // AUTHOR 角色只能管理自己文章下的评论
+  if (authUser.role === "AUTHOR") {
+    whereCondition.post = { userUid: authUser.uid };
+  }
+
   // 获取评论的旧状态和完整信息（用于 Akismet 报告和通知补发）
   const oldComments = await prisma.comment.findMany({
-    where: { id: { in: ids }, deletedAt: null },
+    where: whereCondition,
     select: {
       id: true,
       status: true,
@@ -1512,6 +1523,7 @@ export async function updateCommentStatus(
           id: true,
           slug: true,
           publishedAt: true,
+          userUid: true, // 确保获取文章作者ID
         },
       },
       user: {
@@ -1527,8 +1539,14 @@ export async function updateCommentStatus(
   });
   const oldStatuses = [...new Set(oldComments.map((c) => c.status))];
 
+  // 只有找到的评论才更新（避免 AUTHOR 尝试更新不属于自己的评论）
+  const foundIds = oldComments.map((c) => c.id);
+  if (foundIds.length === 0) {
+    return response.ok({ message: "没有可更新的评论" });
+  }
+
   await prisma.comment.updateMany({
-    where: { id: { in: ids }, deletedAt: null },
+    where: { id: { in: foundIds }, deletedAt: null }, // 使用 foundIds 确保安全性
     data: { status },
   });
 
@@ -1757,9 +1775,19 @@ export async function getCommentsAdmin(
     parentOnly,
   } = params;
 
+  // 构建 post 查询条件
+  const postWhere: Prisma.PostWhereInput = {};
+  if (slug) {
+    postWhere.slug = slug;
+  }
+  // AUTHOR 角色只能查看自己文章下的评论
+  if (authUser.role === "AUTHOR") {
+    postWhere.userUid = authUser.uid;
+  }
+
   const where: Prisma.CommentWhereInput = {
     deletedAt: null,
-    ...(slug ? { post: { slug } } : {}),
+    ...(Object.keys(postWhere).length > 0 ? { post: postWhere } : {}),
     ...(uid ? { userUid: uid } : {}),
     ...(parentOnly ? { parentId: null } : {}),
     ...(status?.length ? { status: { in: status } } : {}),
@@ -1863,8 +1891,18 @@ export async function getCommentHistory(
   const now = new Date();
   const since = new Date(now.getTime() - params.days * 24 * 60 * 60 * 1000);
 
+  const where: Prisma.CommentWhereInput = {
+    createdAt: { gte: since },
+    deletedAt: null,
+  };
+
+  // AUTHOR 角色只能查看自己文章下的评论统计
+  if (authUser.role === "AUTHOR") {
+    where.post = { userUid: authUser.uid };
+  }
+
   const rows = await prisma.comment.findMany({
-    where: { createdAt: { gte: since }, deletedAt: null },
+    where,
     select: {
       createdAt: true,
       status: true,
@@ -1975,7 +2013,11 @@ export async function getCommentStats(
   if (!authUser) return response.unauthorized();
 
   try {
-    const CACHE_KEY = generateCacheKey("stats", "comments");
+    const CACHE_KEY = generateCacheKey(
+      "stats",
+      "comments",
+      authUser.role === "AUTHOR" ? `author-${authUser.uid}` : "global",
+    );
     const CACHE_TTL = 60 * 60; // 1小时
 
     // 如果不是强制刷新，尝试从缓存获取
@@ -1996,6 +2038,12 @@ export async function getCommentStats(
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
+    const baseWhere: Prisma.CommentWhereInput = { deletedAt: null };
+    // AUTHOR 角色只能查看自己文章下的评论统计
+    if (authUser.role === "AUTHOR") {
+      baseWhere.post = { userUid: authUser.uid };
+    }
+
     const [
       total,
       approved,
@@ -2007,24 +2055,32 @@ export async function getCommentStats(
       newLast7Days,
       newLast30Days,
     ] = await Promise.all([
-      prisma.comment.count({ where: { deletedAt: null } }),
-      prisma.comment.count({ where: { status: "APPROVED", deletedAt: null } }),
-      prisma.comment.count({ where: { status: "PENDING", deletedAt: null } }),
-      prisma.comment.count({ where: { status: "REJECTED", deletedAt: null } }),
-      prisma.comment.count({ where: { status: "SPAM", deletedAt: null } }),
+      prisma.comment.count({ where: baseWhere }),
+      prisma.comment.count({
+        where: { ...baseWhere, status: "APPROVED" },
+      }),
+      prisma.comment.count({
+        where: { ...baseWhere, status: "PENDING" },
+      }),
+      prisma.comment.count({
+        where: { ...baseWhere, status: "REJECTED" },
+      }),
+      prisma.comment.count({
+        where: { ...baseWhere, status: "SPAM" },
+      }),
       prisma.comment.findFirst({
-        where: { deletedAt: null },
+        where: baseWhere,
         orderBy: { createdAt: "desc" },
         select: { createdAt: true },
       }),
       prisma.comment.count({
-        where: { createdAt: { gte: oneDayAgo }, deletedAt: null },
+        where: { ...baseWhere, createdAt: { gte: oneDayAgo } },
       }),
       prisma.comment.count({
-        where: { createdAt: { gte: sevenDaysAgo }, deletedAt: null },
+        where: { ...baseWhere, createdAt: { gte: sevenDaysAgo } },
       }),
       prisma.comment.count({
-        where: { createdAt: { gte: thirtyDaysAgo }, deletedAt: null },
+        where: { ...baseWhere, createdAt: { gte: thirtyDaysAgo } },
       }),
     ]);
 

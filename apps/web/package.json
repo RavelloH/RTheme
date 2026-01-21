@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack --port 3000",
-    "build": "pnpm prebuild && next build",
+    "build": "pnpm prebuild && next build --webpack",
     "start": "next start",
     "lint": "eslint --max-warnings 0 .",
     "check-types": "tsc --noEmit",
