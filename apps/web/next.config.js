@@ -15,6 +15,7 @@ const nextConfig = {
     minimumCacheTTL: 2678400,
   },
   serverExternalPackages: ["ably", "akismet-api"],
+  cacheComponents: true,
   experimental: {
     optimizePackageImports: ["@remixicon/react"],
   },

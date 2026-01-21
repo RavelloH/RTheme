@@ -197,7 +197,7 @@ function createResponseBody<T extends ApiResponseData>(
       .split(" ")[1] || "unknown";
 
   console.log(
-    `[${timestamp}] | ${requestId} | ${success ? ":S" : ":E"} | [Res/${status || "Action"}] | ${stack} | ${message} ${
+    ` <= [${timestamp}] | ${requestId} | ${success ? ":S" : ":E"} | [Res/${status || "Action"}] | ${stack} | ${message} ${
       error ? ` | ${JSON.stringify(error)}` : ""
     }`,
   );

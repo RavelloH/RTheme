@@ -96,7 +96,7 @@ async function ensureScriptLoaded(): Promise<string> {
     await ensureRedisConnection();
     const sha = (await redis.script("LOAD", RATE_LIMIT_SCRIPT)) as string;
     scriptSha = sha;
-    console.log(`[Rate Limit] Lua script loaded: ${sha}`);
+    console.log(` [Rate Limit] Lua script loaded: ${sha}`);
     return sha;
   } catch (error) {
     console.error("Failed to load Lua script:", error);
@@ -156,7 +156,7 @@ async function limitControl(
     } catch (error: unknown) {
       // 如果脚本不存在（NOSCRIPT 错误），重新加载并重试
       if (error instanceof Error && error.message?.includes("NOSCRIPT")) {
-        console.warn("[Rate Limit] Script not found, reloading...");
+        console.warn(" [Rate Limit] Script not found, reloading...");
         scriptSha = null; // 清除缓存
         const newSha = await ensureScriptLoaded();
         result = (await redis.evalsha(

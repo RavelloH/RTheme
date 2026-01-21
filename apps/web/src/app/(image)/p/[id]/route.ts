@@ -12,7 +12,6 @@ import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
 import prisma from "@/lib/server/prisma";
 
-export const runtime = "nodejs";
 const res = new ResponseBuilder("serverless");
 
 /**

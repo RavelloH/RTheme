@@ -260,6 +260,33 @@ export const defaultConfigs: DefaultConfig[] = [
     description:
       "是否对自动转换的拼音slug进行分词处理。例如：zheshi-yipian-wenzhang 而不是 zhe-shi-yi-pian-wen-zhang",
   },
+  {
+    key: "content.rss.enabled",
+    value: { default: true },
+    description: "是否启用RSS订阅功能",
+  },
+  {
+    key: "content.rss.postCount",
+    value: { default: 10 },
+    description: "RSS订阅中包含的最新文章数量",
+  },
+  {
+    key: "content.rss.showFullContent",
+    value: { default: true },
+    description: "RSS订阅中是否显示文章全文，若关闭则仅显示摘要",
+  },
+  {
+    key: "content.rss.autoGenerateExcerpt",
+    value: { default: true },
+    description:
+      "如果文章未手动设置摘要，是否自动截取文章内容作为摘要。如果 content.rss.showFullContent 为 true 则此配置无效",
+  },
+  {
+    key: "content.rss.maxExcerptLength",
+    value: { default: 200 },
+    description:
+      "RSS订阅中自动文章摘要的最大长度，单位为字符。如果 content.rss.showFullContent 为 true 则此配置无效。需与 content.rss.autoGenerateExcerpt 配合使用",
+  },
   // =====================================
   // 媒体相关配置
   // =====================================

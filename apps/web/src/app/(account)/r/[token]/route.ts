@@ -4,7 +4,6 @@ import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
 import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = "nodejs";
 const res = new ResponseBuilder("serverless");
 
 /**
