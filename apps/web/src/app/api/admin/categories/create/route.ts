@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { connection } from "next/server";
 import { createCategory } from "@/actions/category";
 
 /**
@@ -51,6 +52,7 @@ import { createCategory } from "@/actions/category";
  *         description: 服务器错误
  */
 export async function POST(request: NextRequest) {
+  await connection();
   const body = await request.json();
   const access_token = request.headers
     .get("authorization")

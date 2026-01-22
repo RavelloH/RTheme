@@ -2,6 +2,7 @@ import { getCategoriesStats } from "@/actions/stat";
 import ResponseBuilder from "@/lib/server/response";
 import { validateGetRequest } from "@/lib/server/request-converter";
 import { GetCategoriesStatsSchema } from "@repo/shared-types/api/stats";
+import { connection } from "next/server";
 
 const response = new ResponseBuilder("serverless");
 
@@ -48,8 +49,9 @@ const response = new ResponseBuilder("serverless");
  *               $ref: '#/components/schemas/ServerErrorResponse'
  */
 export async function GET(request: Request): Promise<Response> {
+  await connection();
   try {
-    const validationResult = validateGetRequest(
+    const validationResult = await validateGetRequest(
       request,
       GetCategoriesStatsSchema,
     );

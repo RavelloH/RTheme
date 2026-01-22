@@ -1,5 +1,6 @@
 import { getDoctorTrends } from "@/actions/doctor";
 import ResponseBuilder from "@/lib/server/response";
+import { connection } from "next/server";
 import { validateGetRequest } from "@/lib/server/request-converter";
 import { GetDoctorTrendsSchema } from "@repo/shared-types/api/doctor";
 
@@ -65,9 +66,13 @@ const response = new ResponseBuilder("serverless");
  *               $ref: '#/components/schemas/ServerErrorResponse'
  */
 export async function GET(request: Request): Promise<Response> {
+  await connection();
   try {
     // 使用 validateGetRequest 自动从查询参数和 Authorization header 中提取并验证数据
-    const validationResult = validateGetRequest(request, GetDoctorTrendsSchema);
+    const validationResult = await validateGetRequest(
+      request,
+      GetDoctorTrendsSchema,
+    );
     if (validationResult instanceof Response) return validationResult;
 
     const { access_token, days, count } = validationResult.data;

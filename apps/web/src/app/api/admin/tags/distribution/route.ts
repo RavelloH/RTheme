@@ -2,6 +2,7 @@ import { getTagsDistribution } from "@/actions/tag";
 import ResponseBuilder from "@/lib/server/response";
 import { validateGetRequest } from "@/lib/server/request-converter";
 import { GetTagsDistributionSchema } from "@repo/shared-types/api/tag";
+import { connection } from "next/server";
 
 const response = new ResponseBuilder("serverless");
 
@@ -36,8 +37,9 @@ const response = new ResponseBuilder("serverless");
  *               $ref: '#/components/schemas/UnauthorizedErrorResponse'
  */
 export async function GET(request: Request): Promise<Response> {
+  await connection();
   try {
-    const validationResult = validateGetRequest(
+    const validationResult = await validateGetRequest(
       request,
       GetTagsDistributionSchema,
     );

@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { authVerify } from "@/lib/server/auth-verify";
 import { getConversations } from "@/actions/message";
 import MessagesModal from "./MessagesModal";
+import { randomUUID } from "crypto";
 
 export default async function MessagesInterceptPage() {
   // 检查登录状态
@@ -29,6 +30,7 @@ export default async function MessagesInterceptPage() {
 
   return (
     <MessagesModal
+      key={randomUUID()}
       initialConversations={conversations}
       initialTotal={total}
       initialHasMore={hasMore}

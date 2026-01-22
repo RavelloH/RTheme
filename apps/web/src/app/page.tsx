@@ -32,6 +32,7 @@ import {
   getFeaturedImageUrl,
   mediaRefsInclude,
 } from "@/lib/server/media-reference";
+import { cacheLife, cacheTag } from "next/cache";
 
 // 获取系统页面配置
 const page = await getRawPage("/");
@@ -58,6 +59,10 @@ export const metadata = await generateMetadata(
 );
 
 export default async function Home() {
+  "use cache";
+  cacheTag("pages", "posts", "categories", "tags", "projects");
+  cacheLife("max");
+
   if (!page || page.status !== "ACTIVE" || page.deletedAt) {
     return notFound();
   }

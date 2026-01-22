@@ -5,6 +5,7 @@ import { getUserPublicProfile } from "@/actions/user";
 import { jwtTokenVerify, type AccessTokenPayload } from "@/lib/server/jwt";
 import UserProfileModal from "./UserProfileModal";
 import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
+import { randomUUID } from "crypto";
 
 interface UserProfileModalPageProps {
   params: Promise<{ uid: string }>;
@@ -37,6 +38,7 @@ export default async function UserProfileModalPage({
   return (
     <>
       <UserProfileModal
+        key={randomUUID()}
         profile={profileResult.data}
         initialActivities={[]}
         hasMore={true}

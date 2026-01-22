@@ -1,7 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
-import { NextResponse } from "next/server";
+import { connection, NextResponse } from "next/server";
 import { validateRequestData } from "./validator";
 
 /**
@@ -20,7 +20,10 @@ import { validateRequestData } from "./validator";
  * const body = convertGetToPost(request)
  * // 返回: { force: true, access_token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..." }
  */
-export function convertGetToPost(request: Request): Record<string, unknown> {
+export async function convertGetToPost(
+  request: Request,
+): Promise<Record<string, unknown>> {
+  await connection();
   // 解析URL查询参数
   const url = new URL(request.url);
   const params: Record<string, unknown> = {};
@@ -67,16 +70,16 @@ export function convertGetToPost(request: Request): Record<string, unknown> {
  * @example
  * // GET /?force=true
  * // Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
- * const result = validateGetRequest(request, GetUsersStatsSchema)
+ * const result = await validateGetRequest(request, GetUsersStatsSchema)
  * if (result instanceof Response) return result
  * const { access_token, force } = result.data
  */
-export function validateGetRequest<T>(
+export async function validateGetRequest<T>(
   request: Request,
   schema: z.ZodSchema<T>,
-): { success: true; data: T } | NextResponse {
+): Promise<{ success: true; data: T } | NextResponse> {
   // 将GET请求转换为对象
-  const data = convertGetToPost(request);
+  const data = await convertGetToPost(request);
 
   // 使用现有的验证函数验证数据
   return validateRequestData(data, schema);

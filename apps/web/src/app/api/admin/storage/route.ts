@@ -8,6 +8,7 @@ import {
   GetStorageListSchema,
   CreateStorageSchema,
 } from "@repo/shared-types/api/storage";
+import { connection } from "next/server";
 
 const response = new ResponseBuilder("serverless");
 
@@ -147,8 +148,12 @@ const response = new ResponseBuilder("serverless");
  */
 
 export async function GET(request: Request): Promise<Response> {
+  await connection();
   try {
-    const validationResult = validateGetRequest(request, GetStorageListSchema);
+    const validationResult = await validateGetRequest(
+      request,
+      GetStorageListSchema,
+    );
     if (validationResult instanceof Response) return validationResult;
 
     const {

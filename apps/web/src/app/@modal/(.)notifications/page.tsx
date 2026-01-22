@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { authVerify } from "@/lib/server/auth-verify";
 import { getNotices } from "@/actions/notice";
 import NotificationsModal from "./NotificationsModal";
+import { randomUUID } from "crypto";
 
 export default async function NotificationsInterceptPage() {
   // 检查登录状态
@@ -29,6 +30,7 @@ export default async function NotificationsInterceptPage() {
 
   return (
     <NotificationsModal
+      key={randomUUID()}
       unreadNotices={unread}
       readNotices={read}
       totalReadCount={totalReadCount}

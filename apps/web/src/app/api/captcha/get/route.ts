@@ -1,6 +1,6 @@
 import { createChallenge } from "@/actions/captcha";
 import ResponseBuilder from "@/lib/server/response";
-
+import { connection } from "next/server";
 const response = new ResponseBuilder("serverless");
 
 /**
@@ -32,6 +32,7 @@ const response = new ResponseBuilder("serverless");
  *               $ref: '#/components/schemas/ServerErrorResponse'
  */
 export async function GET(): Promise<Response> {
+  await connection();
   try {
     const response = await createChallenge({
       environment: "serverless",

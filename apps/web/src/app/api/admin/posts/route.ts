@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { connection, NextRequest } from "next/server";
 import { getPostsList, createPost } from "@/actions/post";
 
 /**
@@ -74,6 +74,7 @@ import { getPostsList, createPost } from "@/actions/post";
  *               $ref: '#/components/schemas/CreatePostSuccessResponse'
  */
 export async function GET(request: NextRequest) {
+  await connection();
   const url = new URL(request.url);
   const page = url.searchParams.get("page");
   const pageSize = url.searchParams.get("pageSize");

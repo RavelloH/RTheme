@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { updateCategory } from "@/actions/category";
+import { connection } from "next/server";
 
 /**
  * @openapi
@@ -58,6 +59,7 @@ import { updateCategory } from "@/actions/category";
  *         description: 服务器错误
  */
 export async function PUT(request: NextRequest) {
+  await connection();
   const body = await request.json();
   const access_token = request.headers
     .get("authorization")

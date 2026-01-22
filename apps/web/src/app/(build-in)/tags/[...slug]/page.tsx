@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import LinkButton from "@/components/LinkButton";
 import MainLayout from "@/components/MainLayout";
@@ -23,6 +23,7 @@ import { RiArrowLeftSLine } from "@remixicon/react";
 import { cache } from "react";
 import { getFeaturedImageData } from "@/lib/server/media-reference";
 import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
+import { cacheLife, cacheTag } from "next/cache";
 
 // 缓存函数：获取标签的基本信息
 const getTagBasicInfo = cache(async (slug: string) => {
@@ -191,6 +192,9 @@ export async function generateStaticParams() {
 }
 
 export default async function TagSlugPage({ params }: TagSlugPageProps) {
+  "use cache";
+  cacheTag("pages", "posts", "tags");
+  cacheLife("max");
   const { slug } = await params;
 
   // 处理空路径情况
@@ -247,7 +251,7 @@ export default async function TagSlugPage({ params }: TagSlugPageProps) {
   const totalPages = Math.ceil(totalPosts / PRE_PAGE_SIZE);
 
   const pageInfo = `标签：${tagInfo.name}`;
-  const lastUpdatedDate = new Date();
+  const lastUpdatedDate = tagInfo.updatedAt;
 
   return (
     <MainLayout type="horizontal">
@@ -300,34 +304,36 @@ export default async function TagSlugPage({ params }: TagSlugPageProps) {
                       .replaceAll("{tagName}", tagInfo.name)}
                   </h1>
                 </div>
-                <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
-                  {config.getBlockContent(1).map((line, index) => {
-                    // 检查是否包含需要动态处理的占位符
-                    if (line.includes("{lastUpdatedDays}")) {
-                      return (
-                        <DynamicReplace
-                          key={index}
-                          text={line}
-                          params={[
-                            ["{tag}", tagInfo.name],
-                            ["{tagName}", tagInfo.name],
-                            ["{posts}", String(totalPosts)],
-                            ["__date", lastUpdatedDate.toISOString()],
-                          ]}
-                        />
-                      );
-                    } else {
-                      return (
-                        <div key={index}>
-                          {line
-                            .replaceAll("{tag}", tagInfo.name)
-                            .replaceAll("{tagName}", tagInfo.name)
-                            .replaceAll("{posts}", String(totalPosts)) || " "}
-                        </div>
-                      );
-                    }
-                  })}
-                </div>
+                <Suspense>
+                  <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
+                    {config.getBlockContent(1).map((line, index) => {
+                      // 检查是否包含需要动态处理的占位符
+                      if (line.includes("{lastUpdatedDays}")) {
+                        return (
+                          <DynamicReplace
+                            key={index}
+                            text={line}
+                            params={[
+                              ["{tag}", tagInfo.name],
+                              ["{tagName}", tagInfo.name],
+                              ["{posts}", String(totalPosts)],
+                              ["__date", lastUpdatedDate.toISOString()],
+                            ]}
+                          />
+                        );
+                      } else {
+                        return (
+                          <div key={index}>
+                            {line
+                              .replaceAll("{tag}", tagInfo.name)
+                              .replaceAll("{tagName}", tagInfo.name)
+                              .replaceAll("{posts}", String(totalPosts)) || " "}
+                          </div>
+                        );
+                      }
+                    })}
+                  </div>
+                </Suspense>
               </div>
               <div>
                 <div className="mt-10">

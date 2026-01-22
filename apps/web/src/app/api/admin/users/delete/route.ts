@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { deleteUsers } from "@/actions/user";
+import { connection } from "next/server";
 
 /**
  * @openapi
@@ -48,6 +49,7 @@ import { deleteUsers } from "@/actions/user";
  *         description: 服务器错误
  */
 export async function POST(request: NextRequest) {
+  await connection();
   const body = await request.json();
   const access_token = request.headers
     .get("authorization")

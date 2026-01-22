@@ -14,6 +14,7 @@ import {
   UpdateStorageSchema,
   DeleteStorageSchema,
 } from "@repo/shared-types/api/storage";
+import { connection } from "next/server";
 
 const response = new ResponseBuilder("serverless");
 
@@ -185,10 +186,11 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
+  await connection();
   try {
     const { id } = await params;
 
-    const validationResult = validateGetRequest(
+    const validationResult = await validateGetRequest(
       request,
       GetStorageDetailSchema,
     );

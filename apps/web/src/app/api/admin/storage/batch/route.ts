@@ -2,6 +2,7 @@ import { deleteStorage } from "@/actions/storage";
 import ResponseBuilder from "@/lib/server/response";
 import { validateDeleteRequest } from "@/lib/server/request-converter";
 import { DeleteStorageSchema } from "@repo/shared-types/api/storage";
+import { connection } from "next/server";
 
 const response = new ResponseBuilder("serverless");
 
@@ -70,6 +71,7 @@ const response = new ResponseBuilder("serverless");
  */
 
 export async function DELETE(request: Request): Promise<Response> {
+  await connection();
   try {
     const validationResult = validateDeleteRequest(
       request,

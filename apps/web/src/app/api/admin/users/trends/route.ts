@@ -2,6 +2,7 @@ import { getUsersTrends } from "@/actions/user";
 import ResponseBuilder from "@/lib/server/response";
 import { validateGetRequest } from "@/lib/server/request-converter";
 import { GetUsersTrendsSchema } from "@repo/shared-types/api/user";
+import { connection } from "next/server";
 
 const response = new ResponseBuilder("serverless");
 
@@ -65,9 +66,13 @@ const response = new ResponseBuilder("serverless");
  *               $ref: '#/components/schemas/ServerErrorResponse'
  */
 export async function GET(request: Request): Promise<Response> {
+  await connection();
   try {
     // 使用 validateGetRequest 自动从查询参数和 Authorization header 中提取并验证数据
-    const validationResult = validateGetRequest(request, GetUsersTrendsSchema);
+    const validationResult = await validateGetRequest(
+      request,
+      GetUsersTrendsSchema,
+    );
     if (validationResult instanceof Response) return validationResult;
 
     const { access_token, days, count } = validationResult.data;

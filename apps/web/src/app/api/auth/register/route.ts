@@ -2,7 +2,7 @@ import ResponseBuilder from "@/lib/server/response";
 import { validateRequestJSON } from "@/lib/server/validator";
 import { RegisterUserSchema } from "@repo/shared-types/api/auth";
 import { register } from "@/actions/auth";
-
+import { connection } from "next/server";
 const response = new ResponseBuilder("serverless");
 
 /**
@@ -51,6 +51,7 @@ const response = new ResponseBuilder("serverless");
  *               $ref: '#/components/schemas/ServerErrorResponse'
  */
 export async function POST(request: Request): Promise<Response> {
+  await connection();
   try {
     // 验证请求数据
     const validationResult = await validateRequestJSON(

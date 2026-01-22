@@ -9,7 +9,7 @@ import {
   RiUser3Line,
 } from "@remixicon/react";
 import { CaptchaButton } from "@/components/CaptchaButton";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import { login as loginAction } from "@/actions/auth";
 import { verifyTotp } from "@/actions/totp";
@@ -611,7 +611,9 @@ export default function LoginSheet({
                       </div>
                     </div>
                   )}
-                  <PasskeyLoginButton disabled={buttonLoading} />
+                  <Suspense>
+                    <PasskeyLoginButton disabled={buttonLoading} />
+                  </Suspense>
                 </>
               )}
             </div>

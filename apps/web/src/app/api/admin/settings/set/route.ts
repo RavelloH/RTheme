@@ -2,6 +2,7 @@ import { updateSettings } from "@/actions/setting";
 import ResponseBuilder from "@/lib/server/response";
 import { validateJSON } from "@/lib/server/validator";
 import { UpdateSettingsSchema } from "@repo/shared-types/api/setting";
+import { connection } from "next/server";
 
 const response = new ResponseBuilder("serverless");
 
@@ -84,6 +85,7 @@ const response = new ResponseBuilder("serverless");
  *               $ref: '#/components/schemas/ServerErrorResponse'
  */
 export async function POST(request: Request): Promise<Response> {
+  await connection();
   try {
     // 使用 validateJSON 自动解析 JSON 并验证数据
     const validationResult = await validateJSON(request, UpdateSettingsSchema);

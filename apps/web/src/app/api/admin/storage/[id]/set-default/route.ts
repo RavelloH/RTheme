@@ -2,6 +2,7 @@ import { setDefaultStorage } from "@/actions/storage";
 import ResponseBuilder from "@/lib/server/response";
 import { validatePatchRequest } from "@/lib/server/request-converter";
 import { SetDefaultStorageSchema } from "@repo/shared-types/api/storage";
+import { connection } from "next/server";
 
 const response = new ResponseBuilder("serverless");
 
@@ -75,6 +76,7 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
+  await connection();
   try {
     const { id } = await params;
 

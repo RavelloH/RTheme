@@ -15,6 +15,8 @@ import TagsRandomPage from "./TagsRandomPage";
 import DynamicReplace from "@/components/client/DynamicReplace";
 import TagContainer from "./TagContainer";
 import { getFeaturedImageData } from "@/lib/server/media-reference";
+import { cacheLife, cacheTag } from "next/cache";
+import { Suspense } from "react";
 
 // 获取系统页面配置
 const page = await getRawPage("/tags");
@@ -90,6 +92,9 @@ export const metadata = await generateMetadata(
 );
 
 export default async function TagsIndex() {
+  "use cache";
+  cacheTag("pages", "posts", "tags");
+  cacheLife("max");
   return (
     <MainLayout type="horizontal">
       <HorizontalScroll
@@ -137,29 +142,32 @@ export default async function TagsIndex() {
                 <div className="text-7xl" data-fade-char>
                   <h1>{config.getBlockTitle(1)}</h1>
                 </div>
-                <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
-                  {config.getBlockContent(1).map((line, index) => {
-                    // 检查是否包含需要动态处理的占位符
-                    if (line.includes("{lastUpdatedDays}")) {
-                      return (
-                        <DynamicReplace
-                          key={index}
-                          text={line}
-                          params={[
-                            ["{tags}", String(totalTags)],
-                            ["__date", lastUpdatedDate.toISOString()],
-                          ]}
-                        />
-                      );
-                    } else {
-                      return (
-                        <div key={index}>
-                          {line.replaceAll("{tags}", String(totalTags)) || " "}
-                        </div>
-                      );
-                    }
-                  })}
-                </div>
+                <Suspense>
+                  <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
+                    {config.getBlockContent(1).map((line, index) => {
+                      // 检查是否包含需要动态处理的占位符
+                      if (line.includes("{lastUpdatedDays}")) {
+                        return (
+                          <DynamicReplace
+                            key={index}
+                            text={line}
+                            params={[
+                              ["{tags}", String(totalTags)],
+                              ["__date", lastUpdatedDate.toISOString()],
+                            ]}
+                          />
+                        );
+                      } else {
+                        return (
+                          <div key={index}>
+                            {line.replaceAll("{tags}", String(totalTags)) ||
+                              " "}
+                          </div>
+                        );
+                      }
+                    })}
+                  </div>
+                </Suspense>
               </div>
               <div>
                 <div className="mt-10">
@@ -184,12 +192,14 @@ export default async function TagsIndex() {
                 height={0.1}
                 className="flex items-center uppercase text-2xl"
               >
-                <TagsRandomPage
-                  options={tags.map((tag) => {
-                    return `/tags/${tag.slug}`;
-                  })}
-                  text={config.getBlockFooterDesc(1)}
-                />
+                <Suspense>
+                  <TagsRandomPage
+                    options={tags.map((tag) => {
+                      return `/tags/${tag.slug}`;
+                    })}
+                    text={config.getBlockFooterDesc(1)}
+                  />
+                </Suspense>
               </GridItem>
             )}
           </RowGrid>

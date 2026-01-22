@@ -2,6 +2,7 @@ import "server-only";
 
 import fs from "fs";
 import path from "path";
+import { unstable_cache } from "next/cache";
 
 // 配置对象类型定义
 export interface ConfigItem {
@@ -96,7 +97,27 @@ export async function getConfig<T = unknown>(
   defaultValue?: T,
   field?: string,
 ): Promise<T> {
-  const value = await getConfigValue(key, defaultValue, field);
+  // 定义一个被缓存包裹的内部函数
+  const getCachedData = unstable_cache(
+    async (k: string, def?: T, f?: string) => {
+      return await getConfigValue(k, def, f);
+    },
+    // 1. Key Parts: 用于生成缓存 Key 的标识符
+    // 我们加入 key 和 field 确保唯一性
+    [`config-${key}-${field ?? "default"}`],
+    {
+      // 2. Tags: 对应原本的 cacheTag("config", ...)
+      // 允许你后续通过 revalidateTag('config') 全局清除缓存
+      tags: ["config", `config/${key}`],
+
+      // 3. Revalidate: 对应原本的 cacheLife("max")
+      // false 表示无限期缓存（静态），直到手动刷新
+      revalidate: false,
+    },
+  );
+
+  // 执行缓存函数
+  const value = await getCachedData(key, defaultValue, field);
   return value as T;
 }
 

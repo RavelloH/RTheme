@@ -5,6 +5,7 @@ import MainLayout from "@/components/MainLayout";
 import ClientDiagnostics from "../components/ClientDiagnostics";
 import LinkButton from "@/components/LinkButton";
 import { RiArrowGoBackLine, RiFeedbackLine } from "@remixicon/react";
+import { Suspense } from "react";
 
 export const metadata = await generateMetadata({
   title: "404 Not Found",
@@ -95,7 +96,9 @@ export default function NotFoundPage() {
               width={2}
               height={1.5}
             >
-              <ClientDiagnostics errorType="HTTP/404" />
+              <Suspense>
+                <ClientDiagnostics errorType="HTTP/404" />
+              </Suspense>
             </GridItem>
           </RowGrid>
         </HorizontalScroll>

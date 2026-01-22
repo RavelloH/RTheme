@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import LinkButton from "@/components/LinkButton";
 import MainLayout from "@/components/MainLayout";
@@ -28,9 +28,11 @@ import {
   getFeaturedImageData,
 } from "@/lib/server/media-reference";
 import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
+import { cacheLife, cacheTag } from "next/cache";
 
 // 缓存函数：获取所有分类的完整数据
 const getCategoriesWithFullData = cache(async () => {
+  "use cache";
   return await prisma.category.findMany({
     select: {
       id: true,
@@ -107,6 +109,7 @@ const getCategoriesWithFullData = cache(async () => {
 
 // 缓存函数：获取分类的基本信息（用于元数据生成）
 const getCategoriesBasicInfo = cache(async () => {
+  "use cache";
   return await prisma.category.findMany({
     select: {
       id: true,
@@ -119,6 +122,7 @@ const getCategoriesBasicInfo = cache(async () => {
 
 // 缓存函数：批量获取分类及其子分类的文章数
 const getCategoriesPostCount = cache(async (categoryIds: number[]) => {
+  "use cache";
   // 获取指定分类及其子分类的所有文章
   const posts = await prisma.post.findMany({
     where: {
@@ -160,6 +164,7 @@ const getCategoryPostsData = cache(
     currentPage: number,
     pageSize: number,
   ) => {
+    "use cache";
     const [posts, totalPosts] = await Promise.all([
       // 分页查询文章
       prisma.post.findMany({
@@ -359,6 +364,9 @@ export async function generateStaticParams() {
 export default async function CategorySlugPage({
   params,
 }: CategorySlugPageProps) {
+  "use cache";
+  cacheTag("pages", "posts", "categories");
+  cacheLife("max");
   const { slug } = await params;
 
   // 处理空路径情况，重定向到分类首页
@@ -630,40 +638,42 @@ export default async function CategorySlugPage({
                       .replaceAll("{categoryName}", currentCategoryData.name)}
                   </h1>
                 </div>
-                <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
-                  {config.getBlockContent(1).map((line, index) => {
-                    // 检查是否包含需要动态处理的占位符
-                    if (line.includes("{lastUpdatedDays}")) {
-                      return (
-                        <DynamicReplace
-                          key={index}
-                          text={line}
-                          params={[
-                            ["{categoryName}", currentCategoryData.name],
-                            ["{categories}", String(totalChildCategories)],
-                            ["{posts}", String(totalPosts)],
-                            ["__date", lastUpdatedDate.toISOString()],
-                          ]}
-                        />
-                      );
-                    } else {
-                      return (
-                        <div key={index}>
-                          {line
-                            .replaceAll(
-                              "{categoryName}",
-                              currentCategoryData.name,
-                            )
-                            .replaceAll(
-                              "{categories}",
-                              String(totalChildCategories),
-                            )
-                            .replaceAll("{posts}", String(totalPosts)) || " "}
-                        </div>
-                      );
-                    }
-                  })}
-                </div>
+                <Suspense>
+                  <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
+                    {config.getBlockContent(1).map((line, index) => {
+                      // 检查是否包含需要动态处理的占位符
+                      if (line.includes("{lastUpdatedDays}")) {
+                        return (
+                          <DynamicReplace
+                            key={index}
+                            text={line}
+                            params={[
+                              ["{categoryName}", currentCategoryData.name],
+                              ["{categories}", String(totalChildCategories)],
+                              ["{posts}", String(totalPosts)],
+                              ["__date", lastUpdatedDate.toISOString()],
+                            ]}
+                          />
+                        );
+                      } else {
+                        return (
+                          <div key={index}>
+                            {line
+                              .replaceAll(
+                                "{categoryName}",
+                                currentCategoryData.name,
+                              )
+                              .replaceAll(
+                                "{categories}",
+                                String(totalChildCategories),
+                              )
+                              .replaceAll("{posts}", String(totalPosts)) || " "}
+                          </div>
+                        );
+                      }
+                    })}
+                  </div>
+                </Suspense>
               </div>
               <div>
                 <div className="mt-10">

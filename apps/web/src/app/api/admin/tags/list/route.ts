@@ -2,6 +2,7 @@ import { getTagsList } from "@/actions/tag";
 import ResponseBuilder from "@/lib/server/response";
 import { validateGetRequest } from "@/lib/server/request-converter";
 import { GetTagsListSchema } from "@repo/shared-types/api/tag";
+import { connection } from "next/server";
 
 const response = new ResponseBuilder("serverless");
 
@@ -63,8 +64,12 @@ const response = new ResponseBuilder("serverless");
  *               $ref: '#/components/schemas/UnauthorizedErrorResponse'
  */
 export async function GET(request: Request): Promise<Response> {
+  await connection();
   try {
-    const validationResult = validateGetRequest(request, GetTagsListSchema);
+    const validationResult = await validateGetRequest(
+      request,
+      GetTagsListSchema,
+    );
     if (validationResult instanceof Response) return validationResult;
 
     return (await getTagsList(validationResult.data, {

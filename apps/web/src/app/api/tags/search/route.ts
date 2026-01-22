@@ -1,5 +1,6 @@
 import { searchTags } from "@/actions/tag";
 import { SearchTagsSchema } from "@repo/shared-types/api/tag";
+import { connection } from "next/server";
 
 /**
  * @openapi
@@ -56,6 +57,7 @@ import { SearchTagsSchema } from "@repo/shared-types/api/tag";
  *         description: 请求过于频繁
  */
 export async function GET(request: Request) {
+  await connection();
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("query") || "";
   const limit = parseInt(searchParams.get("limit") || "10", 10);

@@ -16,6 +16,8 @@ import CategoriesRandomPage from "./CategoriesRandomPage";
 import DynamicReplace from "@/components/client/DynamicReplace";
 import CategoryContainer from "./CategoryContainer";
 import { getFeaturedImageData } from "@/lib/server/media-reference";
+import { cacheLife, cacheTag } from "next/cache";
+import { Suspense } from "react";
 
 // 获取系统页面配置
 const page = await getRawPage("/categories");
@@ -172,6 +174,9 @@ export const metadata = await generateMetadata(
 );
 
 export default async function CategoryIndex() {
+  "use cache";
+  cacheTag("pages", "posts", "categories");
+  cacheLife("max");
   return (
     <MainLayout type="horizontal">
       <HorizontalScroll
@@ -219,35 +224,40 @@ export default async function CategoryIndex() {
                 <div className="text-7xl" data-fade-char>
                   <h1>{config.getBlockTitle(1)}</h1>
                 </div>
-                <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
-                  {config.getBlockContent(1).map((line, index) => {
-                    // 检查是否包含需要动态处理的占位符
-                    if (line.includes("{lastUpdatedDays}")) {
-                      return (
-                        <DynamicReplace
-                          key={index}
-                          text={line}
-                          params={[
-                            ["{categories}", String(totalCategories)],
-                            ["{root}", String(rootCategories)],
-                            ["{child}", String(childCategories)],
-                            ["__date", lastUpdatedDate.toISOString()],
-                          ]}
-                        />
-                      );
-                    } else {
-                      return (
-                        <div key={index}>
-                          {line
-                            .replaceAll("{categories}", String(totalCategories))
-                            .replaceAll("{root}", String(rootCategories))
-                            .replaceAll("{child}", String(childCategories)) ||
-                            " "}
-                        </div>
-                      );
-                    }
-                  })}
-                </div>
+                <Suspense>
+                  <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
+                    {config.getBlockContent(1).map((line, index) => {
+                      // 检查是否包含需要动态处理的占位符
+                      if (line.includes("{lastUpdatedDays}")) {
+                        return (
+                          <DynamicReplace
+                            key={index}
+                            text={line}
+                            params={[
+                              ["{categories}", String(totalCategories)],
+                              ["{root}", String(rootCategories)],
+                              ["{child}", String(childCategories)],
+                              ["__date", lastUpdatedDate.toISOString()],
+                            ]}
+                          />
+                        );
+                      } else {
+                        return (
+                          <div key={index}>
+                            {line
+                              .replaceAll(
+                                "{categories}",
+                                String(totalCategories),
+                              )
+                              .replaceAll("{root}", String(rootCategories))
+                              .replaceAll("{child}", String(childCategories)) ||
+                              " "}
+                          </div>
+                        );
+                      }
+                    })}
+                  </div>
+                </Suspense>
               </div>
               <div>
                 <div className="mt-10">
@@ -272,12 +282,14 @@ export default async function CategoryIndex() {
                 height={0.1}
                 className="flex items-center uppercase text-2xl"
               >
-                <CategoriesRandomPage
-                  options={categories.map((category) => {
-                    return `/categories/${category.slug}`;
-                  })}
-                  text={config.getBlockFooterDesc(1)}
-                />
+                <Suspense>
+                  <CategoriesRandomPage
+                    options={categories.map((category) => {
+                      return `/categories/${category.slug}`;
+                    })}
+                    text={config.getBlockFooterDesc(1)}
+                  />
+                </Suspense>
               </GridItem>
             )}
           </RowGrid>

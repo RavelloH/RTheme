@@ -438,9 +438,6 @@ export async function batchGetCategoryPaths(
   if (categoryIds.length === 0) {
     return new Map();
   }
-
-  // 方案：一次性获取所有分类（假设分类总数不会太多）
-  // 对于内容管理系统来说，分类数量通常是有限的，这个方案是可行的
   const allCategories = await prisma.category.findMany({
     select: {
       id: true,

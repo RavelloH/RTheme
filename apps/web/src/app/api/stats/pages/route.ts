@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { getPagesStats } from "@/actions/stat";
+import { connection } from "next/server";
 
 /**
  * @openapi
@@ -27,6 +28,7 @@ import { getPagesStats } from "@/actions/stat";
  *               $ref: '#/components/schemas/GetPagesStatsSuccessResponse'
  */
 export async function GET(request: NextRequest) {
+  await connection();
   const url = new URL(request.url);
   const force = url.searchParams.get("force") === "true";
   const access_token = request.headers

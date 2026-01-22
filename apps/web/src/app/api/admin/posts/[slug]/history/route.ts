@@ -2,6 +2,7 @@ import { getPostHistory } from "@/actions/post";
 import ResponseBuilder from "@/lib/server/response";
 import { validateGetRequest } from "@/lib/server/request-converter";
 import { GetPostHistorySchema } from "@repo/shared-types/api/post";
+import { connection } from "next/server";
 
 const response = new ResponseBuilder("serverless");
 
@@ -100,11 +101,15 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ slug: string }> },
 ): Promise<Response> {
+  await connection();
   try {
     const { slug } = await params;
 
     // 使用 validateGetRequest 自动从查询参数和 Authorization header 中提取并验证数据
-    const validationResult = validateGetRequest(request, GetPostHistorySchema);
+    const validationResult = await validateGetRequest(
+      request,
+      GetPostHistorySchema,
+    );
     if (validationResult instanceof Response) return validationResult;
 
     const { access_token, page, pageSize, sortBy, sortOrder } =

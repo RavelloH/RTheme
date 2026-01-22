@@ -2,6 +2,7 @@ import { getPostsTrends } from "@/actions/post";
 import ResponseBuilder from "@/lib/server/response";
 import { validateGetRequest } from "@/lib/server/request-converter";
 import { GetPostsTrendsSchema } from "@repo/shared-types/api/post";
+import { connection } from "next/server";
 
 const response = new ResponseBuilder("serverless");
 
@@ -35,8 +36,12 @@ const response = new ResponseBuilder("serverless");
  *               $ref: '#/components/schemas/GetPostsTrendsSuccessResponse'
  */
 export async function GET(request: Request): Promise<Response> {
+  await connection();
   try {
-    const validationResult = validateGetRequest(request, GetPostsTrendsSchema);
+    const validationResult = await validateGetRequest(
+      request,
+      GetPostsTrendsSchema,
+    );
     if (validationResult instanceof Response) return validationResult;
 
     const { access_token, days, count } = validationResult.data;

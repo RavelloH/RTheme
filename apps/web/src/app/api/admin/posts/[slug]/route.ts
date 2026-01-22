@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { getPostDetail, updatePost } from "@/actions/post";
+import { connection } from "next/server";
 
 /**
  * @openapi
@@ -134,6 +135,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ) {
+  await connection();
   const { slug } = await params;
   const access_token = request.headers
     .get("authorization")

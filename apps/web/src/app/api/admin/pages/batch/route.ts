@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { updatePages, deletePages } from "@/actions/page";
+import { connection } from "next/server";
 
 /**
  * @openapi
@@ -47,6 +48,7 @@ import { updatePages, deletePages } from "@/actions/page";
  */
 
 export async function PATCH(request: NextRequest) {
+  await connection();
   const access_token = request.headers
     .get("authorization")
     ?.replace("Bearer ", "");

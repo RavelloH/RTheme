@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import LinkButton from "@/components/LinkButton";
 import MainLayout from "@/components/MainLayout";
@@ -22,6 +22,7 @@ import DynamicReplace from "@/components/client/DynamicReplace";
 import { getFeaturedImageData } from "@/lib/server/media-reference";
 import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
 import { notFound } from "next/navigation";
+import { cacheLife, cacheTag } from "next/cache";
 
 // 获取系统页面配置
 const pageConfig = await getRawPage("/posts");
@@ -132,6 +133,9 @@ export default async function PostsPage({
 }: {
   params: Promise<{ page?: string[] }>;
 }) {
+  "use cache";
+  cacheTag("pages", "posts");
+  cacheLife("max");
   const resolvedParams = await params;
   const page = resolvedParams.page?.[1] || "1";
 
@@ -286,54 +290,56 @@ export default async function PostsPage({
                   label="搜索全站文章..."
                   icon={<RiSearch2Line size={"1em"} />}
                 />
-                <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
-                  {config.getBlockContent(1).map((line, index) => {
-                    // 检查是否包含需要动态处理的占位符
-                    if (line.includes("{lastPublishDays}")) {
-                      return (
-                        <DynamicReplace
-                          key={index}
-                          text={line}
-                          params={[
-                            [
-                              "{firstPublishAt}",
-                              oldestDate
-                                ? new Date(oldestDate).toLocaleDateString(
-                                    "zh-CN",
-                                    {
-                                      year: "numeric",
-                                      month: "2-digit",
-                                      day: "2-digit",
-                                    },
-                                  )
-                                : "",
-                            ],
-                            ["{posts}", String(totalPosts)],
-                            ["__date", newestDate?.toISOString() || ""],
-                          ]}
-                        />
-                      );
-                    } else {
-                      return (
-                        <div key={index}>
-                          {line
-                            .replaceAll(
-                              "{firstPublishAt}",
-                              new Date(oldestDate || "").toLocaleDateString(
-                                "zh-CN",
-                                {
-                                  year: "numeric",
-                                  month: "2-digit",
-                                  day: "2-digit",
-                                },
-                              ),
-                            )
-                            .replaceAll("{posts}", String(totalPosts)) || " "}
-                        </div>
-                      );
-                    }
-                  })}
-                </div>
+                <Suspense>
+                  <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
+                    {config.getBlockContent(1).map((line, index) => {
+                      // 检查是否包含需要动态处理的占位符
+                      if (line.includes("{lastPublishDays}")) {
+                        return (
+                          <DynamicReplace
+                            key={index}
+                            text={line}
+                            params={[
+                              [
+                                "{firstPublishAt}",
+                                oldestDate
+                                  ? new Date(oldestDate).toLocaleDateString(
+                                      "zh-CN",
+                                      {
+                                        year: "numeric",
+                                        month: "2-digit",
+                                        day: "2-digit",
+                                      },
+                                    )
+                                  : "",
+                              ],
+                              ["{posts}", String(totalPosts)],
+                              ["__date", newestDate?.toISOString() || ""],
+                            ]}
+                          />
+                        );
+                      } else {
+                        return (
+                          <div key={index}>
+                            {line
+                              .replaceAll(
+                                "{firstPublishAt}",
+                                new Date(oldestDate || "").toLocaleDateString(
+                                  "zh-CN",
+                                  {
+                                    year: "numeric",
+                                    month: "2-digit",
+                                    day: "2-digit",
+                                  },
+                                ),
+                              )
+                              .replaceAll("{posts}", String(totalPosts)) || " "}
+                          </div>
+                        );
+                      }
+                    })}
+                  </div>
+                </Suspense>
               </div>
               <div>
                 <div className="mt-10">

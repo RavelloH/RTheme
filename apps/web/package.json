@@ -20,7 +20,7 @@
     "@octokit/rest": "^22.0.1",
     "@pinyin-pro/data": "^1.2.0",
     "@prisma/adapter-pg": "^7.2.0",
-    "@prisma/client": "^7.2.0",
+    "@prisma/client": "^6.19.2",
     "@prisma/client-runtime-utils": "^7.2.0",
     "@react-email/components": "^1.0.1",
     "@react-email/render": "^2.0.0",
@@ -135,7 +135,7 @@
     "cross-env": "^7.0.3",
     "eslint": "^9.35.0",
     "eslint-config-next": "^16.1.1",
-    "prisma": "^7.2.0",
+    "prisma": "^6.19.2",
     "tailwindcss": "^4.1.13",
     "tsx": "^4.20.5",
     "typescript": "5.9.2"

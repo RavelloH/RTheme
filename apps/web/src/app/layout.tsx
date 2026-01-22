@@ -31,6 +31,7 @@ import { getConfig } from "@/lib/server/config-cache";
 import { ColorConfig } from "@/types/config";
 import { ToastProvider } from "@/ui/Toast";
 import Footer from "@/components/server/Footer";
+import { Suspense } from "react";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 const ibmPlexMono = IBM_Plex_Mono({
@@ -79,21 +80,33 @@ export default async function RootLayout({
                 <ResponsiveFontScale scaleFactor={0.017} baseSize={12}>
                   <LoadingAnimation siteName={siteName} />
                   <LayoutContainer>
-                    <Header menus={menus} />
+                    <Suspense>
+                      <Header menus={menus} />
+                    </Suspense>
                     <MainContent>
-                      <PageTransition>{children}</PageTransition>
+                      <Suspense>
+                        <PageTransition>{children}</PageTransition>
+                      </Suspense>
                     </MainContent>
                   </LayoutContainer>
-                  <Footer menus={menus} />
+                  <Suspense>
+                    <Footer menus={menus} />
+                  </Suspense>
                 </ResponsiveFontScale>
               </MenuProvider>
               {modal}
             </NotificationProvider>
           </ThemeProvider>
-          {enableAnalytics && <AnalyticsTracker />}
+          {enableAnalytics && (
+            <Suspense>
+              <AnalyticsTracker />
+            </Suspense>
+          )}
+          <Suspense>
+            <TokenManager />
+          </Suspense>
         </ToastProvider>
       </body>
-      <TokenManager />
     </html>
   );
 }

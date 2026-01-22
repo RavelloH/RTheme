@@ -1,5 +1,6 @@
 import { getCategoriesList } from "@/actions/category";
 import ResponseBuilder from "@/lib/server/response";
+import { connection } from "next/server";
 import { validateGetRequest } from "@/lib/server/request-converter";
 import { GetCategoriesListSchema } from "@repo/shared-types/api/category";
 
@@ -74,8 +75,9 @@ const response = new ResponseBuilder("serverless");
  *               $ref: '#/components/schemas/UnauthorizedErrorResponse'
  */
 export async function GET(request: Request): Promise<Response> {
+  await connection();
   try {
-    const validationResult = validateGetRequest(
+    const validationResult = await validateGetRequest(
       request,
       GetCategoriesListSchema,
     );

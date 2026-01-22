@@ -2,6 +2,7 @@ import { getTagsStats } from "@/actions/stat";
 import ResponseBuilder from "@/lib/server/response";
 import { validateGetRequest } from "@/lib/server/request-converter";
 import { GetTagsStatsSchema } from "@repo/shared-types/api/stats";
+import { connection } from "next/server";
 
 const response = new ResponseBuilder("serverless");
 
@@ -48,8 +49,12 @@ const response = new ResponseBuilder("serverless");
  *               $ref: '#/components/schemas/ServerErrorResponse'
  */
 export async function GET(request: Request): Promise<Response> {
+  await connection();
   try {
-    const validationResult = validateGetRequest(request, GetTagsStatsSchema);
+    const validationResult = await validateGetRequest(
+      request,
+      GetTagsStatsSchema,
+    );
     if (validationResult instanceof Response) return validationResult;
 
     const { access_token, force } = validationResult.data;
