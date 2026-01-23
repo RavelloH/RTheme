@@ -277,18 +277,21 @@ export async function markNoticesAsRead(
 
     // 推送未读数量更新
     if (result.count > 0) {
-      const unreadCount = await prisma.notice.count({
-        where: {
-          userUid: uid,
-          isRead: false,
-        },
-      });
+      const { after } = await import("next/server");
+      after(async () => {
+        const unreadCount = await prisma.notice.count({
+          where: {
+            userUid: uid,
+            isRead: false,
+          },
+        });
 
-      await publishNoticeToUser(uid, {
-        type: "unread_count_update",
-        payload: {
-          count: unreadCount,
-        },
+        await publishNoticeToUser(uid, {
+          type: "unread_count_update",
+          payload: {
+            count: unreadCount,
+          },
+        });
       });
     }
 
@@ -362,11 +365,14 @@ export async function markAllNoticesAsRead(
 
     // 推送未读数量更新（标记全部已读后，未读数量为 0）
     if (result.count > 0) {
-      await publishNoticeToUser(uid, {
-        type: "unread_count_update",
-        payload: {
-          count: 0,
-        },
+      const { after } = await import("next/server");
+      after(async () => {
+        await publishNoticeToUser(uid, {
+          type: "unread_count_update",
+          payload: {
+            count: 0,
+          },
+        });
       });
     }
 

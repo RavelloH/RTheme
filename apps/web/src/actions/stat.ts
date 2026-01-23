@@ -204,8 +204,11 @@ export async function getUsersStats(
 
     // 保存到缓存（缓存1小时）
     const cacheData = { ...data, cache: true };
-    await setCache(CACHE_KEY, cacheData, {
-      ttl: CACHE_TTL,
+    const { after } = await import("next/server");
+    after(async () => {
+      await setCache(CACHE_KEY, cacheData, {
+        ttl: CACHE_TTL,
+      });
     });
 
     return response.ok({
@@ -327,8 +330,11 @@ export async function getAuditStats(
 
     // 保存到缓存（缓存1小时）
     const cacheData = { ...data, cache: true };
-    await setCache(CACHE_KEY, cacheData, {
-      ttl: CACHE_TTL,
+    const { after } = await import("next/server");
+    after(async () => {
+      await setCache(CACHE_KEY, cacheData, {
+        ttl: CACHE_TTL,
+      });
     });
 
     return response.ok({
@@ -519,8 +525,11 @@ export async function getPostsStats(
 
     // 保存到缓存（缓存1小时）
     const cacheData = { ...data, cache: true };
-    await setCache(CACHE_KEY, cacheData, {
-      ttl: CACHE_TTL,
+    const { after } = await import("next/server");
+    after(async () => {
+      await setCache(CACHE_KEY, cacheData, {
+        ttl: CACHE_TTL,
+      });
     });
 
     return response.ok({
@@ -646,8 +655,11 @@ export async function getTagsStats(
 
     // 保存到缓存（缓存1小时）
     const cacheData = { ...data, cache: true };
-    await setCache(CACHE_KEY, cacheData, {
-      ttl: CACHE_TTL,
+    const { after } = await import("next/server");
+    after(async () => {
+      await setCache(CACHE_KEY, cacheData, {
+        ttl: CACHE_TTL,
+      });
     });
 
     return response.ok({
@@ -849,8 +861,11 @@ export async function getCategoriesStats(
 
     // 保存到缓存（缓存1小时）
     const cacheData = { ...data, cache: true };
-    await setCache(CACHE_KEY, cacheData, {
-      ttl: CACHE_TTL,
+    const { after } = await import("next/server");
+    after(async () => {
+      await setCache(CACHE_KEY, cacheData, {
+        ttl: CACHE_TTL,
+      });
     });
 
     return response.ok({
@@ -985,8 +1000,11 @@ export async function getPagesStats(
 
     // 保存到缓存（缓存1小时）
     const cacheData = { ...statsData, cache: true };
-    await setCache(CACHE_KEY, cacheData, {
-      ttl: CACHE_TTL,
+    const { after } = await import("next/server");
+    after(async () => {
+      await setCache(CACHE_KEY, cacheData, {
+        ttl: CACHE_TTL,
+      });
     });
 
     return response.ok({
@@ -1194,8 +1212,11 @@ export async function getStorageStats(
 
     // 保存到缓存（缓存1小时）
     const cacheData = { ...data, cache: true };
-    await setCache(CACHE_KEY, cacheData, {
-      ttl: CACHE_TTL,
+    const { after } = await import("next/server");
+    after(async () => {
+      await setCache(CACHE_KEY, cacheData, {
+        ttl: CACHE_TTL,
+      });
     });
 
     return response.ok({
@@ -1524,8 +1545,11 @@ export async function getVisitStats(
 
     // 保存到缓存（缓存1小时）
     const cacheData = { ...data, cache: true };
-    await setCache(CACHE_KEY, cacheData, {
-      ttl: CACHE_TTL,
+    const { after } = await import("next/server");
+    after(async () => {
+      await setCache(CACHE_KEY, cacheData, {
+        ttl: CACHE_TTL,
+      });
     });
 
     return response.ok({

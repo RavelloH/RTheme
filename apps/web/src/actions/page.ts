@@ -434,31 +434,34 @@ export async function createPage(
     };
 
     // 记录审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(authResult.uid),
-      },
-      details: {
-        action: "CREATE",
-        resourceType: "PAGE",
-        resourceId: newPage.id,
-        value: {
-          old: null,
-          new: {
-            id: newPage.id,
-            title,
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(authResult.uid),
+        },
+        details: {
+          action: "CREATE",
+          resourceType: "PAGE",
+          resourceId: newPage.id,
+          value: {
+            old: null,
+            new: {
+              id: newPage.id,
+              title,
+              slug,
+              status,
+              isSystemPage,
+            },
+          },
+          description: `创建页面: ${title}`,
+          metadata: {
+            pageId: newPage.id,
             slug,
-            status,
             isSystemPage,
           },
         },
-        description: `创建页面: ${title}`,
-        metadata: {
-          pageId: newPage.id,
-          slug,
-          isSystemPage,
-        },
-      },
+      });
     });
 
     // 刷新缓存标签
@@ -617,20 +620,23 @@ export async function updatePage(
     });
 
     if (Object.keys(auditNewValue).length > 0) {
-      await logAuditEvent({
-        user: {
-          uid: String(authResult.uid),
-        },
-        details: {
-          action: "UPDATE",
-          resourceType: "PAGE",
-          resourceId: originalPage.id,
-          value: {
-            old: auditOldValue,
-            new: auditNewValue,
+      const { after } = await import("next/server");
+      after(async () => {
+        await logAuditEvent({
+          user: {
+            uid: String(authResult.uid),
           },
-          description: `更新页面: ${updatedPage.title}`,
-        },
+          details: {
+            action: "UPDATE",
+            resourceType: "PAGE",
+            resourceId: originalPage.id,
+            value: {
+              old: auditOldValue,
+              new: auditNewValue,
+            },
+            description: `更新页面: ${updatedPage.title}`,
+          },
+        });
       });
     }
 
@@ -727,20 +733,23 @@ export async function updatePages(
     });
 
     // 记录审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(authResult.uid),
-      },
-      details: {
-        action: "UPDATE",
-        resourceType: "PAGE",
-        resourceId: targetIds.join(","),
-        value: {
-          old: { ids: targetIds },
-          new: updateData,
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(authResult.uid),
         },
-        description: `批量更新页面: ${result.count} 个`,
-      },
+        details: {
+          action: "UPDATE",
+          resourceType: "PAGE",
+          resourceId: targetIds.join(","),
+          value: {
+            old: { ids: targetIds },
+            new: updateData,
+          },
+          description: `批量更新页面: ${result.count} 个`,
+        },
+      });
     });
 
     // 刷新缓存标签
@@ -829,27 +838,30 @@ export async function deletePages(
     });
 
     // 记录审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(authResult.uid),
-      },
-      details: {
-        action: "DELETE",
-        resourceType: "PAGE",
-        resourceId: ids.join(","),
-        value: {
-          old: {
-            deletedIds: ids,
-            deletedCount: result.count,
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(authResult.uid),
+        },
+        details: {
+          action: "DELETE",
+          resourceType: "PAGE",
+          resourceId: ids.join(","),
+          value: {
+            old: {
+              deletedIds: ids,
+              deletedCount: result.count,
+            },
+            new: null,
           },
-          new: null,
+          description: `批量删除页面: ${result.count} 个`,
+          metadata: {
+            count: result.count,
+            idsCount: ids.length,
+          },
         },
-        description: `批量删除页面: ${result.count} 个`,
-        metadata: {
-          count: result.count,
-          idsCount: ids.length,
-        },
-      },
+      });
     });
 
     // 刷新缓存标签

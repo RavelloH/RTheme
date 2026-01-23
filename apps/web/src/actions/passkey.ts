@@ -581,12 +581,11 @@ export async function verifyPasskeyAuthentication(payload: {
           where: { uid: user.uid },
           data: { lastUseAt: new Date() },
         });
+        await redis.del(AUTH_CHALLENGE_KEY(payload.nonce));
       } catch (e) {
         console.error("Post-login update failed:", e);
       }
     });
-
-    await redis.del(AUTH_CHALLENGE_KEY(payload.nonce));
 
     return response.ok({
       message: "登录成功",
@@ -722,7 +721,10 @@ export async function verifyPasskeyForReauth(payload: {
     });
 
     // 清除挑战
-    await redis.del(AUTH_CHALLENGE_KEY(payload.nonce));
+    const { after } = await import("next/server");
+    after(async () => {
+      await redis.del(AUTH_CHALLENGE_KEY(payload.nonce));
+    });
 
     // 生成 REAUTH_TOKEN（10分钟有效期）
     const REAUTH_TOKEN_EXPIRY = 600;
@@ -879,20 +881,23 @@ export async function renamePasskey({
     await prisma.passkey.update({ where: { credentialId }, data: { name } });
 
     // 记录审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(authUser.uid),
-      },
-      details: {
-        action: "UPDATE",
-        resourceType: "PASSKEY",
-        resourceId: credentialId,
-        value: {
-          old: { name: pk.name },
-          new: { name },
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(authUser.uid),
         },
-        description: `重命名通行密钥: ${pk.name} -> ${name}`,
-      },
+        details: {
+          action: "UPDATE",
+          resourceType: "PASSKEY",
+          resourceId: credentialId,
+          value: {
+            old: { name: pk.name },
+            new: { name },
+          },
+          description: `重命名通行密钥: ${pk.name} -> ${name}`,
+        },
+      });
     });
 
     return response.ok({
@@ -941,20 +946,23 @@ export async function deletePasskey({
     await prisma.passkey.delete({ where: { credentialId } });
 
     // 记录审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(authUser.uid),
-      },
-      details: {
-        action: "DELETE",
-        resourceType: "PASSKEY",
-        resourceId: credentialId,
-        value: {
-          old: { name: pk.name, credentialId },
-          new: null,
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(authUser.uid),
         },
-        description: `删除通行密钥: ${pk.name}`,
-      },
+        details: {
+          action: "DELETE",
+          resourceType: "PASSKEY",
+          resourceId: credentialId,
+          value: {
+            old: { name: pk.name, credentialId },
+            new: null,
+          },
+          description: `删除通行密钥: ${pk.name}`,
+        },
+      });
     });
 
     return response.ok({

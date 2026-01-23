@@ -665,9 +665,12 @@ export async function trackPageView(
 
     // 检查队列长度，是否需要批量写入数据库
     if (queueLength >= BATCH_SIZE) {
+      const { after } = await import("next/server");
       // 异步执行批量写入，不阻塞响应
-      flushEventsToDatabase().catch((error) => {
-        console.error("后台批量写入失败:", error);
+      after(() => {
+        flushEventsToDatabase().catch((error) => {
+          console.error("后台批量写入失败:", error);
+        });
       });
     }
 

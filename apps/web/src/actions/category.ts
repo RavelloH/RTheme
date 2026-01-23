@@ -910,24 +910,27 @@ export async function createCategory(
     });
 
     // 审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(user.uid),
-      },
-      details: {
-        action: "CREATE_CATEGORY",
-        resourceType: "CATEGORY",
-        resourceId: category.id.toString(),
-        value: {
-          old: null,
-          new: {
-            name: category.name,
-            slug: category.slug,
-            parentId: category.parentId,
-          },
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(user.uid),
         },
-        description: "创建分类",
-      },
+        details: {
+          action: "CREATE_CATEGORY",
+          resourceType: "CATEGORY",
+          resourceId: category.id.toString(),
+          value: {
+            old: null,
+            new: {
+              name: category.name,
+              slug: category.slug,
+              parentId: category.parentId,
+            },
+          },
+          description: "创建分类",
+        },
+      });
     });
 
     // 刷新缓存标签
@@ -1235,20 +1238,23 @@ export async function updateCategory(
       parentId: updatedCategory.parentId,
     };
 
-    await logAuditEvent({
-      user: {
-        uid: String(user.uid),
-      },
-      details: {
-        action: "UPDATE_CATEGORY",
-        resourceType: "CATEGORY",
-        resourceId: updatedCategory.id.toString(),
-        value: {
-          old: oldCategoryData,
-          new: newCategoryData,
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(user.uid),
         },
-        description: "更新分类",
-      },
+        details: {
+          action: "UPDATE_CATEGORY",
+          resourceType: "CATEGORY",
+          resourceId: updatedCategory.id.toString(),
+          value: {
+            old: oldCategoryData,
+            new: newCategoryData,
+          },
+          description: "更新分类",
+        },
+      });
     });
 
     // 刷新缓存标签
@@ -1369,20 +1375,23 @@ export async function deleteCategories(
     });
 
     // 审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(user.uid),
-      },
-      details: {
-        action: "DELETE_CATEGORIES",
-        resourceType: "CATEGORY",
-        resourceId: ids.join(","),
-        value: {
-          old: { categoryIds: ids, cascadeDeleted },
-          new: null,
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(user.uid),
         },
-        description: "批量删除分类",
-      },
+        details: {
+          action: "DELETE_CATEGORIES",
+          resourceType: "CATEGORY",
+          resourceId: ids.join(","),
+          value: {
+            old: { categoryIds: ids, cascadeDeleted },
+            new: null,
+          },
+          description: "批量删除分类",
+        },
+      });
     });
 
     // 刷新缓存标签
@@ -1563,20 +1572,23 @@ export async function moveCategories(
     });
 
     // 审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(user.uid),
-      },
-      details: {
-        action: "MOVE_CATEGORIES",
-        resourceType: "CATEGORY",
-        resourceId: ids.join(","),
-        value: {
-          old: { categories: oldParentIds },
-          new: { targetParentId: resolvedTargetParentId },
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(user.uid),
         },
-        description: "批量移动分类",
-      },
+        details: {
+          action: "MOVE_CATEGORIES",
+          resourceType: "CATEGORY",
+          resourceId: ids.join(","),
+          value: {
+            old: { categories: oldParentIds },
+            new: { targetParentId: resolvedTargetParentId },
+          },
+          description: "批量移动分类",
+        },
+      });
     });
 
     // 刷新缓存标签

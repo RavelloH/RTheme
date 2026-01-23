@@ -592,7 +592,9 @@ export async function confirmTotp(
     });
 
     // 清除 Redis 中的临时数据
-    await redis.del(`totp:setup:${uid}`);
+    after(async () => {
+      await redis.del(`totp:setup:${uid}`);
+    });
 
     // 获取客户端信息用于审计日志
     // 记录审计日志

@@ -183,20 +183,23 @@ export async function updateSettings(
         })),
       };
 
-      await logAuditEvent({
-        user: {
-          uid: String(user.uid),
-        },
-        details: {
-          action: "BULK_UPDATE",
-          resourceType: "CONFIG",
-          resourceId: keys.join(","),
-          value: {
-            old: oldData,
-            new: newData,
+      const { after } = await import("next/server");
+      after(async () => {
+        await logAuditEvent({
+          user: {
+            uid: String(user.uid),
           },
-          description: `批量更新 ${updated} 个配置项：${keys.join(", ")}`,
-        },
+          details: {
+            action: "BULK_UPDATE",
+            resourceType: "CONFIG",
+            resourceId: keys.join(","),
+            value: {
+              old: oldData,
+              new: newData,
+            },
+            description: `批量更新 ${updated} 个配置项：${keys.join(", ")}`,
+          },
+        });
       });
     }
 

@@ -543,20 +543,23 @@ export async function updateUsers(
 
       // 记录审计日志
       if (result.count > 0) {
-        await logAuditEvent({
-          user: {
-            uid: String(user.uid),
-          },
-          details: {
-            action: "UPDATE",
-            resourceType: "USER",
-            resourceId: String(targetUid),
-            value: {
-              old: oldData,
-              new: updateData,
+        const { after } = await import("next/server");
+        after(async () => {
+          await logAuditEvent({
+            user: {
+              uid: String(user.uid),
             },
-            description: `更新用户信息：${oldUser.username} (UID: ${targetUid})`,
-          },
+            details: {
+              action: "UPDATE",
+              resourceType: "USER",
+              resourceId: String(targetUid),
+              value: {
+                old: oldData,
+                new: updateData,
+              },
+              description: `更新用户信息：${oldUser.username} (UID: ${targetUid})`,
+            },
+          });
         });
       }
 
@@ -653,20 +656,23 @@ export async function updateUsers(
 
       // 记录审计日志
       if (result.count > 0) {
-        await logAuditEvent({
-          user: {
-            uid: String(user.uid),
-          },
-          details: {
-            action: "BULK_UPDATE",
-            resourceType: "USER",
-            resourceId: uids.join(","),
-            value: {
-              old: oldData,
-              new: updateData,
+        const { after } = await import("next/server");
+        after(async () => {
+          await logAuditEvent({
+            user: {
+              uid: String(user.uid),
             },
-            description: `批量更新 ${result.count} 个用户的${role ? "角色" : ""}${role && status ? "和" : ""}${status ? "状态" : ""}`,
-          },
+            details: {
+              action: "BULK_UPDATE",
+              resourceType: "USER",
+              resourceId: uids.join(","),
+              value: {
+                old: oldData,
+                new: updateData,
+              },
+              description: `批量更新 ${result.count} 个用户的${role ? "角色" : ""}${role && status ? "和" : ""}${status ? "状态" : ""}`,
+            },
+          });
         });
       }
 
@@ -787,20 +793,23 @@ export async function deleteUsers(
 
     // 记录审计日志
     if (result.count > 0) {
-      await logAuditEvent({
-        user: {
-          uid: String(user.uid),
-        },
-        details: {
-          action: "BULK_DELETE",
-          resourceType: "USER",
-          resourceId: uids.join(","),
-          value: {
-            old: oldData,
-            new: { deletedAt: NOW.toISOString() },
+      const { after } = await import("next/server");
+      after(async () => {
+        await logAuditEvent({
+          user: {
+            uid: String(user.uid),
           },
-          description: `批量删除 ${result.count} 个用户：${usersToDelete.map((u) => u.username).join(", ")}`,
-        },
+          details: {
+            action: "BULK_DELETE",
+            resourceType: "USER",
+            resourceId: uids.join(","),
+            value: {
+              old: oldData,
+              new: { deletedAt: NOW.toISOString() },
+            },
+            description: `批量删除 ${result.count} 个用户：${usersToDelete.map((u) => u.username).join(", ")}`,
+          },
+        });
       });
     }
 

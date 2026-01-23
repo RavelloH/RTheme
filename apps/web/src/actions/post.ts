@@ -1080,41 +1080,44 @@ export async function createPost(
     });
 
     // 记录审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(user.uid),
-      },
-      details: {
-        action: "CREATE",
-        resourceType: "POST",
-        resourceId: String(post.id),
-        value: {
-          old: null,
-          new: {
-            id: post.id,
-            title,
-            slug: finalSlug,
-            excerpt,
-            featuredImage,
-            status,
-            isPinned,
-            allowComments,
-            publishedAt: publishedAtDate?.toISOString() || null,
-            metaDescription,
-            metaKeywords,
-            robotsIndex,
-            postMode,
-            categories,
-            tags,
-            versionName,
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(user.uid),
+        },
+        details: {
+          action: "CREATE",
+          resourceType: "POST",
+          resourceId: String(post.id),
+          value: {
+            old: null,
+            new: {
+              id: post.id,
+              title,
+              slug: finalSlug,
+              excerpt,
+              featuredImage,
+              status,
+              isPinned,
+              allowComments,
+              publishedAt: publishedAtDate?.toISOString() || null,
+              metaDescription,
+              metaKeywords,
+              robotsIndex,
+              postMode,
+              categories,
+              tags,
+              versionName,
+            },
+          },
+          description: `创建文章: ${title}`,
+          metadata: {
+            postId: post.id,
+            slug: post.slug,
           },
         },
-        description: `创建文章: ${title}`,
-        metadata: {
-          postId: post.id,
-          slug: post.slug,
-        },
-      },
+      });
     });
 
     // 刷新缓存标签
@@ -1614,25 +1617,28 @@ export async function updatePost(
       auditNewValue.versionName = newVersionName;
     }
 
-    await logAuditEvent({
-      user: {
-        uid: String(user.uid),
-      },
-      details: {
-        action: "UPDATE",
-        resourceType: "POST",
-        resourceId: String(updatedPost.id),
-        value: {
-          old: auditOldValue,
-          new: auditNewValue,
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(user.uid),
         },
-        description: `更新文章: ${updatedPost.title}`,
-        metadata: {
-          postId: updatedPost.id,
-          slug: updatedPost.slug,
-          fieldsModifiedCount: Object.keys(auditNewValue).length,
+        details: {
+          action: "UPDATE",
+          resourceType: "POST",
+          resourceId: String(updatedPost.id),
+          value: {
+            old: auditOldValue,
+            new: auditNewValue,
+          },
+          description: `更新文章: ${updatedPost.title}`,
+          metadata: {
+            postId: updatedPost.id,
+            slug: updatedPost.slug,
+            fieldsModifiedCount: Object.keys(auditNewValue).length,
+          },
         },
-      },
+      });
     });
 
     // 刷新缓存标签
@@ -1923,25 +1929,28 @@ export async function updatePosts(
       }
     }
 
-    await logAuditEvent({
-      user: {
-        uid: String(user.uid),
-      },
-      details: {
-        action: "UPDATE",
-        resourceType: "POST",
-        resourceId: ids.join(","),
-        value: {
-          old: auditOldValue,
-          new: auditNewValue,
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(user.uid),
         },
-        description: `批量更新文章: ${ids.length} 篇`,
-        metadata: {
-          count: result.count,
-          idsCount: ids.length,
-          fieldsModifiedCount: Object.keys(auditNewValue).length,
+        details: {
+          action: "UPDATE",
+          resourceType: "POST",
+          resourceId: ids.join(","),
+          value: {
+            old: auditOldValue,
+            new: auditNewValue,
+          },
+          description: `批量更新文章: ${ids.length} 篇`,
+          metadata: {
+            count: result.count,
+            idsCount: ids.length,
+            fieldsModifiedCount: Object.keys(auditNewValue).length,
+          },
         },
-      },
+      });
     });
 
     // 刷新缓存标签
@@ -2054,31 +2063,30 @@ export async function deletePosts(
     });
 
     // 记录审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(user.uid),
-      },
-      details: {
-        action: "DELETE",
-        resourceType: "POST",
-        resourceId: ids.join(","),
-        value: {
-          old: {
-            posts: postsToDelete.map((p) => ({
-              id: p.id,
-              title: p.title,
-              slug: p.slug,
-            })),
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(user.uid),
+        },
+        details: {
+          action: "DELETE",
+          resourceType: "POST",
+          resourceId: ids.join(","),
+          value: {
+            old: {
+              ids,
+              deletedCount: result.count,
+            },
+            new: null,
           },
-          new: null,
+          description: `批量删除文章: ${result.count} 篇`,
+          metadata: {
+            count: result.count,
+            idsCount: ids.length,
+          },
         },
-        description: `批量删除文章: ${ids.length} 篇`,
-        metadata: {
-          count: result.count,
-          idsCount: ids.length,
-          deletedPostsCount: postsToDelete.length,
-        },
-      },
+      });
     });
 
     // 刷新缓存标签

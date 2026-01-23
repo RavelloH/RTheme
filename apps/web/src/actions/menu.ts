@@ -410,20 +410,23 @@ export async function createMenu(
     });
 
     // 记录审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(authResult.uid),
-      },
-      details: {
-        action: "CREATE",
-        resourceType: "Menu",
-        resourceId: menu.id,
-        value: {
-          old: null,
-          new: menu,
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(authResult.uid),
         },
-        description: `创建菜单: ${menu.name}`,
-      },
+        details: {
+          action: "CREATE",
+          resourceType: "Menu",
+          resourceId: menu.id,
+          value: {
+            old: null,
+            new: menu,
+          },
+          description: `创建菜单: ${menu.name}`,
+        },
+      });
     });
 
     const data: CreateMenuResult = {
@@ -542,20 +545,23 @@ export async function updateMenu(
     });
 
     if (Object.keys(auditNewValue).length > 0) {
-      await logAuditEvent({
-        user: {
-          uid: String(authResult.uid),
-        },
-        details: {
-          action: "UPDATE",
-          resourceType: "Menu",
-          resourceId: menu.id,
-          value: {
-            old: auditOldValue,
-            new: auditNewValue,
+      const { after } = await import("next/server");
+      after(async () => {
+        await logAuditEvent({
+          user: {
+            uid: String(authResult.uid),
           },
-          description: `更新菜单: ${menu.name}`,
-        },
+          details: {
+            action: "UPDATE",
+            resourceType: "Menu",
+            resourceId: menu.id,
+            value: {
+              old: auditOldValue,
+              new: auditNewValue,
+            },
+            description: `更新菜单: ${menu.name}`,
+          },
+        });
       });
     }
 
@@ -642,20 +648,23 @@ export async function updateMenus(
     });
 
     // 记录审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(authResult.uid),
-      },
-      details: {
-        action: "UPDATE",
-        resourceType: "Menu",
-        resourceId: params.ids.join(","),
-        value: {
-          old: null,
-          new: { ids: params.ids, updateData },
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(authResult.uid),
         },
-        description: `批量更新 ${result.count} 个菜单`,
-      },
+        details: {
+          action: "UPDATE",
+          resourceType: "Menu",
+          resourceId: params.ids.join(","),
+          value: {
+            old: null,
+            new: { ids: params.ids, updateData },
+          },
+          description: `批量更新 ${result.count} 个菜单`,
+        },
+      });
     });
 
     const data: UpdateMenusResult = {
@@ -724,20 +733,23 @@ export async function deleteMenus(
     });
 
     // 记录审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(authResult.uid),
-      },
-      details: {
-        action: "DELETE",
-        resourceType: "Menu",
-        resourceId: params.ids.join(","),
-        value: {
-          old: menusToDelete,
-          new: null,
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(authResult.uid),
         },
-        description: `批量删除 ${result.count} 个菜单`,
-      },
+        details: {
+          action: "DELETE",
+          resourceType: "Menu",
+          resourceId: params.ids.join(","),
+          value: {
+            old: menusToDelete,
+            new: null,
+          },
+          description: `批量删除 ${result.count} 个菜单`,
+        },
+      });
     });
 
     const data: DeleteMenusResult = {

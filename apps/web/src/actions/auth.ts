@@ -526,32 +526,36 @@ export async function register(
     }
 
     // 发送验证邮件
+    after(async () => {
+      try {
+        const { sendEmail } = await import("@/lib/server/email");
+        const { renderEmail } = await import("@/emails/utils");
+        const { EmailVerificationTemplate } = await import(
+          "@/emails/templates"
+        );
+        const siteName =
+          (await getConfig<string>("site.name")) || "NeutralPress";
+        const siteUrl = (await getConfig<string>("site.url")) || "";
 
-    try {
-      const { sendEmail } = await import("@/lib/server/email");
-      const { renderEmail } = await import("@/emails/utils");
-      const { EmailVerificationTemplate } = await import("@/emails/templates");
-      const siteName = (await getConfig<string>("site.name")) || "NeutralPress";
-      const siteUrl = (await getConfig<string>("site.url")) || "";
+        const emailComponent = EmailVerificationTemplate({
+          username: user.nickname || user.username,
+          verificationCode: emailVerifyCode.split("-")[0]!, // 只显示6位数字，不显示时间戳
+          siteName,
+          siteUrl,
+        });
 
-      const emailComponent = EmailVerificationTemplate({
-        username: user.nickname || user.username,
-        verificationCode: emailVerifyCode.split("-")[0]!, // 只显示6位数字，不显示时间戳
-        siteName,
-        siteUrl,
-      });
+        const { html, text } = await renderEmail(emailComponent);
 
-      const { html, text } = await renderEmail(emailComponent);
-
-      await sendEmail({
-        to: user.email,
-        subject: "验证您的邮箱",
-        html,
-        text,
-      });
-    } catch (error) {
-      console.error("发送验证邮件失败:", error);
-    }
+        await sendEmail({
+          to: user.email,
+          subject: "验证您的邮箱",
+          html,
+          text,
+        });
+      } catch (error) {
+        console.error("发送验证邮件失败:", error);
+      }
+    });
 
     return response.ok({
       message: "注册成功，请检查邮箱以验证账户",

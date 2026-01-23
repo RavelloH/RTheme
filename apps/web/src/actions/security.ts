@@ -197,7 +197,10 @@ export async function getSecurityOverview(
     };
 
     // 写入缓存
-    await setCache(CACHE_KEY, resultData, { ttl: CACHE_TTL });
+    const { after } = await import("next/server");
+    after(async () => {
+      await setCache(CACHE_KEY, resultData, { ttl: CACHE_TTL });
+    });
 
     return response.ok({
       data: resultData,

@@ -540,25 +540,28 @@ export async function createTag(
     });
 
     // 记录审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(user.uid),
-      },
-      details: {
-        action: "CREATE_TAG",
-        resourceType: "Tag",
-        resourceId: newTag.slug,
-        value: {
-          old: null,
-          new: {
-            slug: newTag.slug,
-            name: newTag.name,
-            description: newTag.description,
-            featuredImage: getFeaturedImageUrl(newTag.mediaRefs),
-          },
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(user.uid),
         },
-        description: "创建标签",
-      },
+        details: {
+          action: "CREATE_TAG",
+          resourceType: "Tag",
+          resourceId: newTag.slug,
+          value: {
+            old: null,
+            new: {
+              slug: newTag.slug,
+              name: newTag.name,
+              description: newTag.description,
+              featuredImage: getFeaturedImageUrl(newTag.mediaRefs),
+            },
+          },
+          description: "创建标签",
+        },
+      });
     });
 
     // 刷新缓存标签
@@ -769,20 +772,23 @@ export async function updateTag(
     }
 
     if (Object.keys(auditNewValue).length > 0) {
-      await logAuditEvent({
-        user: {
-          uid: String(user.uid),
-        },
-        details: {
-          action: "UPDATE_TAG",
-          resourceType: "Tag",
-          resourceId: slug,
-          value: {
-            old: auditOldValue,
-            new: auditNewValue,
+      const { after } = await import("next/server");
+      after(async () => {
+        await logAuditEvent({
+          user: {
+            uid: String(user.uid),
           },
-          description: "更新标签",
-        },
+          details: {
+            action: "UPDATE_TAG",
+            resourceType: "Tag",
+            resourceId: slug,
+            value: {
+              old: auditOldValue,
+              new: auditNewValue,
+            },
+            description: "更新标签",
+          },
+        });
       });
     }
 
@@ -863,20 +869,23 @@ export async function deleteTags(
     });
 
     // 记录审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(user.uid),
-      },
-      details: {
-        action: "DELETE_TAGS",
-        resourceType: "Tag",
-        resourceId: slugs.join(", "),
-        value: {
-          old: { slugs, count: result.count },
-          new: null,
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(user.uid),
         },
-        description: "删除标签",
-      },
+        details: {
+          action: "DELETE_TAGS",
+          resourceType: "Tag",
+          resourceId: slugs.join(", "),
+          value: {
+            old: { slugs, count: result.count },
+            new: null,
+          },
+          description: "删除标签",
+        },
+      });
     });
 
     // 刷新缓存标签

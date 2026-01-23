@@ -623,20 +623,23 @@ export async function updateMedia(
     }
 
     if (Object.keys(auditNewValue).length > 0) {
-      await logAuditEvent({
-        user: {
-          uid: String(user.uid),
-        },
-        details: {
-          action: "UPDATE_MEDIA",
-          resourceType: "Media",
-          resourceId: String(id),
-          value: {
-            old: auditOldValue,
-            new: auditNewValue,
+      const { after } = await import("next/server");
+      after(async () => {
+        await logAuditEvent({
+          user: {
+            uid: String(user.uid),
           },
-          description: "更新媒体文件信息",
-        },
+          details: {
+            action: "UPDATE_MEDIA",
+            resourceType: "Media",
+            resourceId: String(id),
+            value: {
+              old: auditOldValue,
+              new: auditNewValue,
+            },
+            description: "更新媒体文件信息",
+          },
+        });
       });
     }
 
@@ -742,25 +745,28 @@ export async function deleteMedia(
     });
 
     // 记录审计日志
-    await logAuditEvent({
-      user: {
-        uid: String(user.uid),
-      },
-      details: {
-        action: "DELETE_MEDIA",
-        resourceType: "Media",
-        resourceId: deletableIds.join(", "),
-        value: {
-          old: {
-            ids: deletableIds,
-            files: mediaToDelete
-              .filter((m) => deletableIds.includes(m.id))
-              .map((m) => m.originalName),
-          },
-          new: null,
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(user.uid),
         },
-        description: "删除媒体文件",
-      },
+        details: {
+          action: "DELETE_MEDIA",
+          resourceType: "Media",
+          resourceId: deletableIds.join(", "),
+          value: {
+            old: {
+              ids: deletableIds,
+              files: mediaToDelete
+                .filter((m) => deletableIds.includes(m.id))
+                .map((m) => m.originalName),
+            },
+            new: null,
+          },
+          description: "删除媒体文件",
+        },
+      });
     });
 
     return response.ok({
@@ -899,8 +905,11 @@ export async function getMediaStats(
 
     // 保存到缓存（缓存1小时）
     const cacheData = { ...mediaStats, cache: true };
-    await setCache(CACHE_KEY, cacheData, {
-      ttl: CACHE_TTL,
+    const { after } = await import("next/server");
+    after(async () => {
+      await setCache(CACHE_KEY, cacheData, {
+        ttl: CACHE_TTL,
+      });
     });
 
     return response.ok({
@@ -1236,26 +1245,29 @@ export async function uploadMedia(
         });
 
         // 记录审计日志
-        await logAuditEvent({
-          user: {
-            uid: String(user.uid),
-          },
-          details: {
-            action: "UPLOAD_MEDIA",
-            resourceType: "Media",
-            resourceId: String(media.id),
-            value: {
-              old: null,
-              new: {
-                fileName: media.fileName,
-                originalName: media.originalName,
-                mode,
-                originalSize: file.originalSize,
-                processedSize: processed.size,
-              },
+        const { after } = await import("next/server");
+        after(async () => {
+          await logAuditEvent({
+            user: {
+              uid: String(user.uid),
             },
-            description: `上传图片: ${file.originalName} (模式: ${mode})`,
-          },
+            details: {
+              action: "UPLOAD_MEDIA",
+              resourceType: "Media",
+              resourceId: String(media.id),
+              value: {
+                old: null,
+                new: {
+                  fileName: media.fileName,
+                  originalName: media.originalName,
+                  mode,
+                  originalSize: file.originalSize,
+                  processedSize: processed.size,
+                },
+              },
+              description: `上传图片: ${file.originalName} (模式: ${mode})`,
+            },
+          });
         });
 
         const imageId = generateSignedImageId(processed.shortHash);

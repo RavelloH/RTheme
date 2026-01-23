@@ -696,140 +696,59 @@ export async function sendMessage(
     });
 
     // ============ 通知系统集成 ============
-    // 获取对方的 ConversationParticipant 信息
-    const targetParticipant = await prisma.conversationParticipant.findUnique({
-      where: {
-        conversationId_userUid: {
-          conversationId: conversation.id,
-          userUid: targetUid,
-        },
-      },
-      select: {
-        lastNotifiedAt: true,
-      },
-    });
-
-    // 检查是否需要发送通知
-    const shouldNotify =
-      !targetParticipant?.lastNotifiedAt ||
-      new Date().getTime() - targetParticipant.lastNotifiedAt.getTime() >
-        10 * 60 * 1000;
-
-    if (shouldNotify) {
-      // 更新 lastNotifiedAt
-      await prisma.conversationParticipant.updateMany({
-        where: {
-          conversationId: conversation.id,
-          userUid: targetUid,
-        },
-        data: {
-          lastNotifiedAt: new Date(),
-        },
-      });
-
-      // 获取发送者信息
-      const sender = await prisma.user.findUnique({
-        where: { uid: user.uid },
-        select: {
-          username: true,
-          nickname: true,
-        },
-      });
-
-      const senderName = sender?.nickname || sender?.username || "用户";
-      const messagePreview =
-        content.substring(0, 20) + (content.length > 20 ? "..." : "");
-
-      // 检查 Ably 是否启用
-      const ablyEnabled = await isAblyEnabled();
-
-      if (!ablyEnabled) {
-        // Ably 未启用，直接发送通知
-        await sendNotice(
-          targetUid,
-          `${senderName} 私信了您`,
-          messagePreview,
-          `/messages?conversation=${conversation.id}`,
-          {
-            type: "message",
-            senderName: senderName,
+    const { after } = await import("next/server");
+    after(async () => {
+      // 获取对方的 ConversationParticipant 信息
+      const targetParticipant = await prisma.conversationParticipant.findUnique(
+        {
+          where: {
+            conversationId_userUid: {
+              conversationId: conversation.id,
+              userUid: targetUid,
+            },
           },
-        );
-      } else {
-        // Ably 已启用，检查用户是否在线
-        try {
-          const isOnline = await checkUserOnlineStatus(targetUid);
+          select: {
+            lastNotifiedAt: true,
+          },
+        },
+      );
 
-          if (!isOnline) {
-            // 用户不在线，发送通知
-            await sendNotice(
-              targetUid,
-              `${senderName} 私信了您`,
-              messagePreview,
-              `/messages?conversation=${conversation.id}`,
-              {
-                type: "message",
-                senderName: senderName,
-              },
-            );
-          } else {
-            // 用户在线，通过 WebSocket 发送消息详情
-            // 计算接收者的私信未读总数（在 increment 之后）
-            const messageUnreadResult =
-              await prisma.conversationParticipant.aggregate({
-                where: {
-                  userUid: targetUid,
-                },
-                _sum: {
-                  unreadCount: true,
-                },
-              });
-            const messageCount = messageUnreadResult._sum?.unreadCount || 0;
+      // 检查是否需要发送通知
+      const shouldNotify =
+        !targetParticipant?.lastNotifiedAt ||
+        new Date().getTime() - targetParticipant.lastNotifiedAt.getTime() >
+          10 * 60 * 1000;
 
-            // 尝试通过 WebSocket 推送消息
-            const pushSuccess = await publishNoticeToUser(targetUid, {
-              type: "new_private_message",
-              payload: {
-                conversationId: conversation.id,
-                message: {
-                  id: message.id,
-                  content: message.content,
-                  type: message.type,
-                  senderUid: message.senderUid,
-                  createdAt: message.createdAt.toISOString(),
-                },
-                sender: {
-                  uid: user.uid,
-                  username: sender?.username || "",
-                  nickname: sender?.nickname || null,
-                },
-                messageCount,
-              },
-            });
+      if (shouldNotify) {
+        // 更新 lastNotifiedAt
+        await prisma.conversationParticipant.updateMany({
+          where: {
+            conversationId: conversation.id,
+            userUid: targetUid,
+          },
+          data: {
+            lastNotifiedAt: new Date(),
+          },
+        });
 
-            // 如果 WebSocket 推送失败，降级到站内通知
-            if (!pushSuccess) {
-              console.warn(
-                `[Message] WebSocket push failed for user ${targetUid}, falling back to notice`,
-              );
-              await sendNotice(
-                targetUid,
-                `${senderName} 私信了您`,
-                messagePreview,
-                `/messages?conversation=${conversation.id}`,
-                {
-                  type: "message",
-                  senderName: senderName,
-                },
-              );
-            }
-          }
-        } catch (error) {
-          // Ably 操作失败，降级到站内通知
-          console.error(
-            `[Message] Failed to send notification via Ably for user ${targetUid}:`,
-            error,
-          );
+        // 获取发送者信息
+        const sender = await prisma.user.findUnique({
+          where: { uid: user.uid },
+          select: {
+            username: true,
+            nickname: true,
+          },
+        });
+
+        const senderName = sender?.nickname || sender?.username || "用户";
+        const messagePreview =
+          content.substring(0, 20) + (content.length > 20 ? "..." : "");
+
+        // 检查 Ably 是否启用
+        const ablyEnabled = await isAblyEnabled();
+
+        if (!ablyEnabled) {
+          // Ably 未启用，直接发送通知
           await sendNotice(
             targetUid,
             `${senderName} 私信了您`,
@@ -840,9 +759,95 @@ export async function sendMessage(
               senderName: senderName,
             },
           );
+        } else {
+          // Ably 已启用，检查用户是否在线
+          try {
+            const isOnline = await checkUserOnlineStatus(targetUid);
+
+            if (!isOnline) {
+              // 用户不在线，发送通知
+              await sendNotice(
+                targetUid,
+                `${senderName} 私信了您`,
+                messagePreview,
+                `/messages?conversation=${conversation.id}`,
+                {
+                  type: "message",
+                  senderName: senderName,
+                },
+              );
+            } else {
+              // 用户在线，通过 WebSocket 发送消息详情
+              // 计算接收者的私信未读总数（在 increment 之后）
+              const messageUnreadResult =
+                await prisma.conversationParticipant.aggregate({
+                  where: {
+                    userUid: targetUid,
+                  },
+                  _sum: {
+                    unreadCount: true,
+                  },
+                });
+              const messageCount = messageUnreadResult._sum?.unreadCount || 0;
+
+              // 尝试通过 WebSocket 推送消息
+              const pushSuccess = await publishNoticeToUser(targetUid, {
+                type: "new_private_message",
+                payload: {
+                  conversationId: conversation.id,
+                  message: {
+                    id: message.id,
+                    content: message.content,
+                    type: message.type,
+                    senderUid: message.senderUid,
+                    createdAt: message.createdAt.toISOString(),
+                  },
+                  sender: {
+                    uid: user.uid,
+                    username: sender?.username || "",
+                    nickname: sender?.nickname || null,
+                  },
+                  messageCount,
+                },
+              });
+
+              // 如果 WebSocket 推送失败，降级到站内通知
+              if (!pushSuccess) {
+                console.warn(
+                  `[Message] WebSocket push failed for user ${targetUid}, falling back to notice`,
+                );
+                await sendNotice(
+                  targetUid,
+                  `${senderName} 私信了您`,
+                  messagePreview,
+                  `/messages?conversation=${conversation.id}`,
+                  {
+                    type: "message",
+                    senderName: senderName,
+                  },
+                );
+              }
+            }
+          } catch (error) {
+            // Ably 操作失败，降级到站内通知
+            console.error(
+              `[Message] Failed to send notification via Ably for user ${targetUid}:`,
+              error,
+            );
+            await sendNotice(
+              targetUid,
+              `${senderName} 私信了您`,
+              messagePreview,
+              `/messages?conversation=${conversation.id}`,
+              {
+                type: "message",
+                senderName: senderName,
+              },
+            );
+          }
         }
       }
-    }
+    });
 
     // 不需要 revalidatePath，因为：
     // 1. WebSocket 模式：客户端通过实时通知已经更新了界面
