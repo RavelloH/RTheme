@@ -37,9 +37,27 @@ import AdjacentPostCard from "@/components/AdjacentPostCard";
 import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
 import CommentCount from "@/components/client/CommentCount";
 import { getFeaturedImageUrl } from "@/lib/server/media-reference";
+import prisma from "@/lib/server/prisma";
+import { cacheLife, cacheTag } from "next/cache";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+}
+
+// 生成静态参数
+export async function generateStaticParams() {
+  const posts = await prisma.post.findMany({
+    where: {
+      status: "PUBLISHED",
+    },
+    select: {
+      slug: true,
+    },
+  });
+
+  return posts.map((post) => ({
+    slug: post.slug,
+  }));
 }
 
 export async function generateMetadata({ params }: PageProps) {
@@ -65,6 +83,7 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 export default async function PostPage({ params }: PageProps) {
+  "use cache";
   const { slug } = await params;
 
   let post,
@@ -171,6 +190,14 @@ export default async function PostPage({ params }: PageProps) {
     const pathUpToIndex = slugArray.slice(0, index + 1).join("/");
     return `/categories/${pathUpToIndex}`;
   };
+
+  cacheTag(
+    `posts/${(await params).slug}`,
+    `posts/${adjacentPosts.previous?.slug || "none"}`,
+    `posts/${adjacentPosts.next?.slug || "none"}`,
+    `users/${post.author.uid}`,
+  );
+  cacheLife("max");
 
   return (
     <MainLayout type="vertical" nopadding>

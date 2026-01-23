@@ -134,7 +134,7 @@ export default async function PostsPage({
   params: Promise<{ page?: string[] }>;
 }) {
   "use cache";
-  cacheTag("pages", "posts");
+  cacheTag("pages/posts-page", "posts");
   cacheLife("max");
   const resolvedParams = await params;
   const page = resolvedParams.page?.[1] || "1";

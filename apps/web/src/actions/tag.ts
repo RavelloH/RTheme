@@ -1,5 +1,6 @@
 "use server";
 import { NextResponse } from "next/server";
+import { updateTag as updateTags } from "next/cache";
 import {
   GetTagsListSchema,
   GetTagsList,
@@ -560,6 +561,9 @@ export async function createTag(
       },
     });
 
+    // 刷新缓存标签
+    updateTags("tags");
+
     return response.ok({
       data: {
         slug: newTag.slug,
@@ -782,6 +786,11 @@ export async function updateTag(
       });
     }
 
+    // 刷新缓存标签
+    updateTags("tags");
+    updateTags(`tags/${updatedTag.slug}`);
+    updateTags("posts");
+
     return response.ok({
       data: {
         slug: updatedTag.slug,
@@ -868,6 +877,14 @@ export async function deleteTags(
         },
         description: "删除标签",
       },
+    });
+
+    // 刷新缓存标签
+    updateTags("tags");
+    updateTags("posts");
+    // 刷新每个被删除的标签
+    slugs.forEach((slug) => {
+      updateTags(`tags/${slug}`);
     });
 
     return response.ok({

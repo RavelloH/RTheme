@@ -1,5 +1,6 @@
 "use server";
 import { NextResponse } from "next/server";
+import { updateTag } from "next/cache";
 import {
   GetMenusListSchema,
   GetMenusList,
@@ -429,6 +430,9 @@ export async function createMenu(
       id: menu.id,
     };
 
+    // 刷新缓存标签
+    updateTag("menus");
+
     return response.created({
       data,
       message: "创建菜单成功",
@@ -559,6 +563,9 @@ export async function updateMenu(
       id: menu.id,
     };
 
+    // 刷新缓存标签
+    updateTag("menus");
+
     return response.ok({
       data,
       message: "更新菜单成功",
@@ -655,6 +662,9 @@ export async function updateMenus(
       updated: result.count,
     };
 
+    // 刷新缓存标签
+    updateTag("menus");
+
     return response.ok({
       data,
       message: `成功更新 ${result.count} 个菜单`,
@@ -733,6 +743,9 @@ export async function deleteMenus(
     const data: DeleteMenusResult = {
       deleted: result.count,
     };
+
+    // 刷新缓存标签
+    updateTag("menus");
 
     return response.ok({
       data,

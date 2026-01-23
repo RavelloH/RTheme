@@ -93,7 +93,7 @@ export const metadata = await generateMetadata(
 
 export default async function TagsIndex() {
   "use cache";
-  cacheTag("pages", "posts", "tags");
+  cacheTag("pages/tags-page", "posts", "tags");
   cacheLife("max");
   return (
     <MainLayout type="horizontal">

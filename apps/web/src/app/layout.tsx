@@ -32,6 +32,7 @@ import { ColorConfig } from "@/types/config";
 import { ToastProvider } from "@/ui/Toast";
 import Footer from "@/components/server/Footer";
 import { Suspense } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 const ibmPlexMono = IBM_Plex_Mono({
@@ -48,6 +49,9 @@ export default async function RootLayout({
   children: React.ReactNode;
   modal: React.ReactNode;
 }>) {
+  "use cache";
+  cacheTag("config", "menus");
+  cacheLife("max");
   const [menus, mainColor, siteName, enableAnalytics, ablyEnabled] =
     await Promise.all([
       getActiveMenus(),

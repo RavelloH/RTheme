@@ -2,6 +2,7 @@ import "server-only";
 
 import fs from "fs";
 import path from "path";
+import { unstable_cache } from "next/cache";
 
 // 自定义 JSON 类型定义（避免与 Prisma 的 JsonValue 冲突）
 type CustomJsonValue =
@@ -97,27 +98,52 @@ const CACHE_FILE_PATH = path.join(process.cwd(), ".cache", ".page-cache.json");
 
 /**
  * 获取原始页面项
- * 在开发环境中直接从数据库读取
- * 在生产环境中从缓存文件读取
+ * 在 build 阶段从缓存文件读取
+ * 在开发环境和生产环境中使用 unstable_cache
  */
-// TODO: 改为从redis中读取
 export async function getRawPage(slug: string): Promise<PageItem | null> {
-  if (process.env.NODE_ENV === "production") {
+  // build 阶段使用文件缓存
+  if (process.env.IS_BUILDING === "true") {
     return getPageFromCache(slug);
-  } else {
-    return getPageFromDatabase(slug);
   }
+
+  // dev 和生产环境使用 unstable_cache
+  const getCachedData = unstable_cache(
+    async (s: string) => {
+      return await getPageFromDatabase(s);
+    },
+    [`page-${slug}`],
+    {
+      tags: ["pages", `pages/${slug}`],
+      revalidate: false,
+    },
+  );
+
+  return await getCachedData(slug);
 }
 
 /**
  * 通过 ID 获取原始页面项
  */
 export async function getRawPageById(id: string): Promise<PageItem | null> {
-  if (process.env.NODE_ENV === "production") {
+  // build 阶段使用文件缓存
+  if (process.env.IS_BUILDING === "true") {
     return getPageByIdFromCache(id);
-  } else {
-    return getPageByIdFromDatabase(id);
   }
+
+  // dev 和生产环境使用 unstable_cache
+  const getCachedData = unstable_cache(
+    async (pageId: string) => {
+      return await getPageByIdFromDatabase(pageId);
+    },
+    [`page-id-${id}`],
+    {
+      tags: ["pages", `pages/${id}`],
+      revalidate: false,
+    },
+  );
+
+  return await getCachedData(id);
 }
 
 /**
@@ -360,12 +386,26 @@ function getPageByIdFromCache(id: string): PageItem | null {
  * 只返回 ACTIVE 状态且未删除的页面
  */
 export async function getAllActivePages(): Promise<Record<string, PageItem>> {
-  const allPages =
-    process.env.NODE_ENV === "production"
-      ? getAllPagesFromCache()
-      : await getAllPagesFromDatabase();
+  // build 阶段使用文件缓存
+  if (process.env.IS_BUILDING === "true") {
+    const allPages = getAllPagesFromCache();
+    return filterActivePages(allPages);
+  }
 
-  return filterActivePages(allPages);
+  // dev 和生产环境使用 unstable_cache
+  const getCachedData = unstable_cache(
+    async () => {
+      const allPages = await getAllPagesFromDatabase();
+      return filterActivePages(allPages);
+    },
+    ["all-active-pages"],
+    {
+      tags: ["pages"],
+      revalidate: false,
+    },
+  );
+
+  return await getCachedData();
 }
 
 /**
@@ -497,49 +537,102 @@ function getAllPagesFromCache(): Record<string, PageItem> {
 export async function getPagesByStatus(
   status: "ACTIVE" | "SUSPENDED",
 ): Promise<Record<string, PageItem>> {
-  const allPages =
-    process.env.NODE_ENV === "production"
-      ? getAllPagesFromCache()
-      : await getAllPagesFromDatabase();
+  // build 阶段使用文件缓存
+  if (process.env.IS_BUILDING === "true") {
+    const allPages = getAllPagesFromCache();
+    const filteredPages: Record<string, PageItem> = {};
 
-  const filteredPages: Record<string, PageItem> = {};
+    Object.entries(allPages).forEach(([slug, page]) => {
+      // 跳过已删除的页面
+      if (page.deletedAt) {
+        return;
+      }
 
-  Object.entries(allPages).forEach(([slug, page]) => {
-    // 跳过已删除的页面
-    if (page.deletedAt) {
-      return;
-    }
+      // 只返回指定状态的页面
+      if (page.status === status) {
+        filteredPages[slug] = page;
+      }
+    });
 
-    // 只返回指定状态的页面
-    if (page.status === status) {
-      filteredPages[slug] = page;
-    }
-  });
+    return filteredPages;
+  }
 
-  return filteredPages;
+  // dev 和生产环境使用 unstable_cache
+  const getCachedData = unstable_cache(
+    async (s: "ACTIVE" | "SUSPENDED") => {
+      const allPages = await getAllPagesFromDatabase();
+      const filteredPages: Record<string, PageItem> = {};
+
+      Object.entries(allPages).forEach(([slug, page]) => {
+        // 跳过已删除的页面
+        if (page.deletedAt) {
+          return;
+        }
+
+        // 只返回指定状态的页面
+        if (page.status === s) {
+          filteredPages[slug] = page;
+        }
+      });
+
+      return filteredPages;
+    },
+    [`pages-by-status-${status}`],
+    {
+      tags: ["pages"],
+      revalidate: false,
+    },
+  );
+
+  return await getCachedData(status);
 }
 
 /**
  * 获取系统页面
  */
 export async function getSystemPages(): Promise<Record<string, PageItem>> {
-  const allPages =
-    process.env.NODE_ENV === "production"
-      ? getAllPagesFromCache()
-      : await getAllPagesFromDatabase();
+  // build 阶段使用文件缓存
+  if (process.env.IS_BUILDING === "true") {
+    const allPages = getAllPagesFromCache();
+    const systemPages: Record<string, PageItem> = {};
 
-  const systemPages: Record<string, PageItem> = {};
+    Object.entries(allPages).forEach(([slug, page]) => {
+      // 跳过已删除、非活跃状态、非系统页面的页面
+      if (page.deletedAt || page.status !== "ACTIVE" || !page.isSystemPage) {
+        return;
+      }
 
-  Object.entries(allPages).forEach(([slug, page]) => {
-    // 跳过已删除、非活跃状态、非系统页面的页面
-    if (page.deletedAt || page.status !== "ACTIVE" || !page.isSystemPage) {
-      return;
-    }
+      systemPages[slug] = page;
+    });
 
-    systemPages[slug] = page;
-  });
+    return systemPages;
+  }
 
-  return systemPages;
+  // dev 和生产环境使用 unstable_cache
+  const getCachedData = unstable_cache(
+    async () => {
+      const allPages = await getAllPagesFromDatabase();
+      const systemPages: Record<string, PageItem> = {};
+
+      Object.entries(allPages).forEach(([slug, page]) => {
+        // 跳过已删除、非活跃状态、非系统页面的页面
+        if (page.deletedAt || page.status !== "ACTIVE" || !page.isSystemPage) {
+          return;
+        }
+
+        systemPages[slug] = page;
+      });
+
+      return systemPages;
+    },
+    ["system-pages"],
+    {
+      tags: ["pages"],
+      revalidate: false,
+    },
+  );
+
+  return await getCachedData();
 }
 
 /**
@@ -548,26 +641,54 @@ export async function getSystemPages(): Promise<Record<string, PageItem>> {
 export async function getPagesByUser(
   userUid: number,
 ): Promise<Record<string, PageItem>> {
-  const allPages =
-    process.env.NODE_ENV === "production"
-      ? getAllPagesFromCache()
-      : await getAllPagesFromDatabase();
+  // build 阶段使用文件缓存
+  if (process.env.IS_BUILDING === "true") {
+    const allPages = getAllPagesFromCache();
+    const userPages: Record<string, PageItem> = {};
 
-  const userPages: Record<string, PageItem> = {};
+    Object.entries(allPages).forEach(([slug, page]) => {
+      // 跳过已删除的页面和系统页面
+      if (page.deletedAt || page.isSystemPage) {
+        return;
+      }
 
-  Object.entries(allPages).forEach(([slug, page]) => {
-    // 跳过已删除的页面和系统页面
-    if (page.deletedAt || page.isSystemPage) {
-      return;
-    }
+      // 只返回指定用户的页面
+      if (page.userUid === userUid) {
+        userPages[slug] = page;
+      }
+    });
 
-    // 只返回指定用户的页面
-    if (page.userUid === userUid) {
-      userPages[slug] = page;
-    }
-  });
+    return userPages;
+  }
 
-  return userPages;
+  // dev 和生产环境使用 unstable_cache
+  const getCachedData = unstable_cache(
+    async (uid: number) => {
+      const allPages = await getAllPagesFromDatabase();
+      const userPages: Record<string, PageItem> = {};
+
+      Object.entries(allPages).forEach(([slug, page]) => {
+        // 跳过已删除的页面和系统页面
+        if (page.deletedAt || page.isSystemPage) {
+          return;
+        }
+
+        // 只返回指定用户的页面
+        if (page.userUid === uid) {
+          userPages[slug] = page;
+        }
+      });
+
+      return userPages;
+    },
+    [`pages-by-user-${userUid}`],
+    {
+      tags: ["pages"],
+      revalidate: false,
+    },
+  );
+
+  return await getCachedData(userUid);
 }
 
 /**

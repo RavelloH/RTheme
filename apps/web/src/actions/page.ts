@@ -1,5 +1,6 @@
 "use server";
 import { NextResponse } from "next/server";
+import { updateTag } from "next/cache";
 import {
   GetPagesListSchema,
   GetPagesList,
@@ -460,6 +461,10 @@ export async function createPage(
       },
     });
 
+    // 刷新缓存标签
+    updateTag("pages");
+    updateTag(`pages/${newPage.id}`);
+
     return response.created({ data: result });
   } catch (error) {
     console.error("创建页面失败:", error);
@@ -629,6 +634,10 @@ export async function updatePage(
       });
     }
 
+    // 刷新缓存标签
+    updateTag("pages");
+    updateTag(`pages/${originalPage.id}`);
+
     return response.ok({ data: result });
   } catch (error) {
     console.error("更新页面失败:", error);
@@ -734,6 +743,12 @@ export async function updatePages(
       },
     });
 
+    // 刷新缓存标签
+    updateTag("pages");
+    targetIds.forEach((id) => {
+      updateTag(`pages/${id}`);
+    });
+
     return response.ok({
       data: {
         updated: result.count,
@@ -835,6 +850,12 @@ export async function deletePages(
           idsCount: ids.length,
         },
       },
+    });
+
+    // 刷新缓存标签
+    updateTag("pages");
+    ids.forEach((id) => {
+      updateTag(`pages/${id}`);
     });
 
     return response.ok({

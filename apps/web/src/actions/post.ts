@@ -1,5 +1,6 @@
 "use server";
 import { NextResponse } from "next/server";
+import { updateTag } from "next/cache";
 import {
   GetPostsTrendsSchema,
   GetPostsTrends,
@@ -1116,6 +1117,11 @@ export async function createPost(
       },
     });
 
+    // 刷新缓存标签
+    updateTag("posts");
+    updateTag("categories");
+    updateTag("tags");
+
     return response.ok({
       data: {
         id: post.id,
@@ -1629,6 +1635,15 @@ export async function updatePost(
       },
     });
 
+    // 刷新缓存标签
+    updateTag("posts");
+    updateTag(`posts/${slug}`);
+    if (newSlug && newSlug !== slug) {
+      updateTag(`posts/${newSlug}`);
+    }
+    updateTag("categories");
+    updateTag("tags");
+
     return response.ok({
       data: {
         id: updatedPost.id,
@@ -1929,6 +1944,13 @@ export async function updatePosts(
       },
     });
 
+    // 刷新缓存标签
+    updateTag("posts");
+    // 刷新每个更新的文章
+    postsBeforeUpdate.forEach((post) => {
+      updateTag(`posts/${post.slug}`);
+    });
+
     return response.ok({
       data: { updated: result.count },
     });
@@ -2057,6 +2079,15 @@ export async function deletePosts(
           deletedPostsCount: postsToDelete.length,
         },
       },
+    });
+
+    // 刷新缓存标签
+    updateTag("posts");
+    updateTag("categories");
+    updateTag("tags");
+    // 刷新每个删除的文章
+    postsToDelete.forEach((post) => {
+      updateTag(`posts/${post.slug}`);
     });
 
     return response.ok({
@@ -2496,6 +2527,10 @@ export async function resetPostToVersion(
       },
     });
 
+    // 刷新缓存标签
+    updateTag("posts");
+    updateTag(`posts/${slug}`);
+
     return response.ok({
       data: {
         slug,
@@ -2628,6 +2663,10 @@ export async function squashPostToVersion(
         },
       },
     });
+
+    // 刷新缓存标签
+    updateTag("posts");
+    updateTag(`posts/${slug}`);
 
     return response.ok({
       data: {

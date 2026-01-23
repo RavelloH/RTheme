@@ -193,7 +193,7 @@ export async function generateStaticParams() {
 
 export default async function TagSlugPage({ params }: TagSlugPageProps) {
   "use cache";
-  cacheTag("pages", "posts", "tags");
+  cacheTag("pages/child-tags-page", "posts", `tags/${(await params).slug}`);
   cacheLife("max");
   const { slug } = await params;
 

@@ -60,7 +60,14 @@ export const metadata = await generateMetadata(
 
 export default async function Home() {
   "use cache";
-  cacheTag("pages", "posts", "categories", "tags", "projects");
+  cacheTag(
+    "pages/home-page",
+    "posts",
+    "categories",
+    "tags",
+    "projects",
+    "config",
+  );
   cacheLife("max");
 
   if (!page || page.status !== "ACTIVE" || page.deletedAt) {

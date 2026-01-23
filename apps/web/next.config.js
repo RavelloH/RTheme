@@ -1,48 +1,61 @@
+import { PHASE_PRODUCTION_BUILD } from "next/constants.js";
+
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  images: {
-    remotePatterns: [new URL("https://raw.ravelloh.top/**")],
-    localPatterns: [
-      {
-        pathname: "/p/**",
-        search: "",
-      },
-    ],
-    deviceSizes: [640, 1920, 3840],
-    imageSizes: [32, 48, 64, 96, 128, 256, 384],
-    qualities: [85],
-    formats: ["image/avif", "image/webp"],
-    minimumCacheTTL: 2678400,
-  },
-  serverExternalPackages: ["ably", "akismet-api"],
-  cacheComponents: true,
-  experimental: {
-    optimizePackageImports: ["@remixicon/react"],
-  },
-  allowedDevOrigins: ["198.18.0.1"],
-  // 排除 sharp 的 Linux 二进制文件，避免 Windows 上的权限错误
-  outputFileTracingExcludes: {
-    "*": [
-      "node_modules/@img/sharp-libvips-linux*",
-      "node_modules/@img/sharp-linux*",
-      "node_modules/sharp/vendor/**",
-    ],
-  },
-  // 配置缓存头
-  async headers() {
-    return [
-      {
-        // 为图标设置强缓存
-        source: "/icon/:size*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
-          },
-        ],
-      },
-    ];
-  },
+const nextConfig = (phase) => {
+  return {
+    env: {
+      IS_BUILDING: phase === PHASE_PRODUCTION_BUILD ? "true" : "false",
+    },
+    images: {
+      remotePatterns: [
+        {
+          protocol: "https",
+          hostname: "raw.ravelloh.top",
+          pathname: "/**",
+        },
+      ],
+      localPatterns: [
+        {
+          pathname: "/p/**",
+          search: "",
+        },
+      ],
+      deviceSizes: [640, 1920, 3840],
+      imageSizes: [32, 48, 64, 96, 128, 256, 384],
+      qualities: [85],
+      formats: ["image/avif", "image/webp"],
+      minimumCacheTTL: 2678400,
+    },
+    serverExternalPackages: ["ably", "akismet-api"],
+    cacheComponents: true,
+    experimental: {
+      optimizePackageImports: ["@remixicon/react"],
+    },
+    allowedDevOrigins: ["198.18.0.1"],
+    // 排除 sharp 的 Linux 二进制文件，避免 Windows 上的权限错误
+    outputFileTracingExcludes: {
+      "*": [
+        "node_modules/@img/sharp-libvips-linux*",
+        "node_modules/@img/sharp-linux*",
+        "node_modules/sharp/vendor/**",
+      ],
+    },
+    // 配置缓存头
+    async headers() {
+      return [
+        {
+          // 为图标设置强缓存
+          source: "/icon/:size*",
+          headers: [
+            {
+              key: "Cache-Control",
+              value: "public, max-age=31536000, immutable",
+            },
+          ],
+        },
+      ];
+    },
+  };
 };
 
 export default nextConfig;

@@ -365,7 +365,11 @@ export default async function CategorySlugPage({
   params,
 }: CategorySlugPageProps) {
   "use cache";
-  cacheTag("pages", "posts", "categories");
+  cacheTag(
+    "pages/child-categories-page",
+    "posts",
+    `categories/${(await params).slug}`,
+  );
   cacheLife("max");
   const { slug } = await params;
 

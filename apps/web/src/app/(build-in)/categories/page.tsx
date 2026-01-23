@@ -175,7 +175,7 @@ export const metadata = await generateMetadata(
 
 export default async function CategoryIndex() {
   "use cache";
-  cacheTag("pages", "posts", "categories");
+  cacheTag("pages/categories-page", "posts", "categories");
   cacheLife("max");
   return (
     <MainLayout type="horizontal">

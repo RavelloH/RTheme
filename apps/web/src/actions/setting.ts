@@ -1,5 +1,6 @@
 "use server";
 import { NextResponse } from "next/server";
+import { updateTag } from "next/cache";
 import {
   GetSettingsSchema,
   GetSettings,
@@ -198,6 +199,9 @@ export async function updateSettings(
         },
       });
     }
+
+    // 刷新缓存标签
+    updateTag("config");
 
     return response.ok({
       data: { updated },

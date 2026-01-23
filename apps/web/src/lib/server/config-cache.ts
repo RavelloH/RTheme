@@ -27,21 +27,33 @@ const CACHE_FILE_PATH = path.join(
 
 /**
  * 获取原始配置项
- * 在开发环境中直接从数据库读取
- * 在生产环境中从缓存文件读取
+ * 在 build 阶段从缓存文件读取
+ * 在开发环境和生产环境中使用 unstable_cache
  */
-// TODO: 改为从redis中读取
 export async function getRawConfig(key: string): Promise<ConfigItem | null> {
   // 检查是否为敏感配置
   if (key.startsWith("secret.")) {
     throw Error("无法获取敏感配置项");
   }
 
-  if (process.env.NODE_ENV === "production") {
+  // build 阶段使用文件缓存
+  if (process.env.IS_BUILDING === "true") {
     return getConfigFromCache(key);
-  } else {
-    return getConfigFromDatabase(key);
   }
+
+  // dev 和生产环境使用 unstable_cache
+  const getCachedData = unstable_cache(
+    async (k: string) => {
+      return await getConfigFromDatabase(k);
+    },
+    [`raw-config-${key}`],
+    {
+      tags: ["config", `config/${key}`],
+      revalidate: false,
+    },
+  );
+
+  return await getCachedData(key);
 }
 
 /**
@@ -102,16 +114,10 @@ export async function getConfig<T = unknown>(
     async (k: string, def?: T, f?: string) => {
       return await getConfigValue(k, def, f);
     },
-    // 1. Key Parts: 用于生成缓存 Key 的标识符
-    // 我们加入 key 和 field 确保唯一性
     [`config-${key}-${field ?? "default"}`],
     {
-      // 2. Tags: 对应原本的 cacheTag("config", ...)
-      // 允许你后续通过 revalidateTag('config') 全局清除缓存
       tags: ["config", `config/${key}`],
 
-      // 3. Revalidate: 对应原本的 cacheLife("max")
-      // false 表示无限期缓存（静态），直到手动刷新
       revalidate: false,
     },
   );
@@ -182,12 +188,26 @@ function getConfigFromCache(key: string): ConfigItem | null {
  * 过滤掉 secret 开头的敏感配置项和 description 字段
  */
 export async function getAllConfigs(): Promise<Record<string, ConfigItem>> {
-  const allConfigs =
-    process.env.NODE_ENV === "production"
-      ? getAllConfigsFromCache()
-      : await getAllConfigsFromDatabase();
+  // build 阶段使用文件缓存
+  if (process.env.IS_BUILDING === "true") {
+    const allConfigs = getAllConfigsFromCache();
+    return filterSensitiveConfigs(allConfigs);
+  }
 
-  return filterSensitiveConfigs(allConfigs);
+  // dev 和生产环境使用 unstable_cache
+  const getCachedData = unstable_cache(
+    async () => {
+      const allConfigs = await getAllConfigsFromDatabase();
+      return filterSensitiveConfigs(allConfigs);
+    },
+    ["all-configs"],
+    {
+      tags: ["config"],
+      revalidate: false,
+    },
+  );
+
+  return await getCachedData();
 }
 
 /**

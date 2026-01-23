@@ -1,5 +1,6 @@
 "use server";
 import { NextResponse } from "next/server";
+import { updateTag } from "next/cache";
 import { cookies, headers } from "next/headers";
 import {
   GetUsersTrendsSchema,
@@ -559,6 +560,9 @@ export async function updateUsers(
         });
       }
 
+      // 刷新缓存标签
+      updateTag(`users/${targetUid}`);
+
       return response.ok({
         data: { updated: result.count },
       });
@@ -665,6 +669,11 @@ export async function updateUsers(
           },
         });
       }
+
+      // 刷新缓存标签
+      uids.forEach((uid) => {
+        updateTag(`users/${uid}`);
+      });
 
       return response.ok({
         data: { updated: result.count },
@@ -794,6 +803,11 @@ export async function deleteUsers(
         },
       });
     }
+
+    // 刷新缓存标签
+    usersToDelete.forEach((user) => {
+      updateTag(`users/${user.uid}`);
+    });
 
     return response.ok({
       data: { deleted: result.count },
@@ -1250,6 +1264,9 @@ export async function updateUserProfile(
         console.error("Failed to log audit event:", error);
       }
     });
+
+    // 刷新缓存标签
+    updateTag(`users/${uid}`);
 
     // 敏感字段修改后需要退出登录
     if (sensitiveFields.includes(field)) {

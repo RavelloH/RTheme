@@ -7,7 +7,8 @@
     "REDIS_URL",
     "JWT_PRIVATE_KEY",
     "JWT_PUBLIC_KEY",
-    "MASTER_SECRET"
+    "MASTER_SECRET",
+    "IS_BUILDING"
   ],
   "tasks": {
     "build": {
@@ -16,30 +17,22 @@
       "outputs": [".next/**", "!.next/cache/**", "dist/**", "build/**"],
       "env": [
         "NODE_ENV",
+        "NEXT_PHASE",
         "DATABASE_URL",
         "REDIS_URL",
         "JWT_PRIVATE_KEY",
         "JWT_PUBLIC_KEY",
-        "MASTER_SECRET"
+        "MASTER_SECRET",
+        "IS_BUILDING"
       ]
     },
     "lint": {
       "dependsOn": ["^lint"],
-      "env": [
-        "NODE_ENV",
-        "JWT_PRIVATE_KEY",
-        "JWT_PUBLIC_KEY",
-        "MASTER_SECRET"
-      ]
+      "env": ["NODE_ENV", "JWT_PRIVATE_KEY", "JWT_PUBLIC_KEY", "MASTER_SECRET"]
     },
     "check-types": {
       "dependsOn": ["^check-types"],
-      "env": [
-        "NODE_ENV",
-        "JWT_PRIVATE_KEY",
-        "JWT_PUBLIC_KEY",
-        "MASTER_SECRET"
-      ]
+      "env": ["NODE_ENV", "JWT_PRIVATE_KEY", "JWT_PUBLIC_KEY", "MASTER_SECRET"]
     },
     "dev": {
       "cache": false,
@@ -50,7 +43,8 @@
         "REDIS_URL",
         "JWT_PRIVATE_KEY",
         "JWT_PUBLIC_KEY",
-        "MASTER_SECRET"
+        "MASTER_SECRET",
+        "IS_BUILDING"
       ]
     },
     "@repo/openapi-generator#dev": {

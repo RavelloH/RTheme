@@ -1,8 +1,7 @@
-"use cache";
-
 import "server-only";
 import fs from "fs";
 import path from "path";
+import { unstable_cache } from "next/cache";
 
 // 菜单项类型定义
 export interface MenuItem {
@@ -41,15 +40,28 @@ const CACHE_FILE_PATH = path.join(process.cwd(), ".cache", ".menu-cache.json");
 
 /**
  * 获取菜单项列表
- * 在开发环境中直接从数据库读取
- * 在生产环境中从缓存文件读取
+ * 在 build 阶段从缓存文件读取
+ * 在开发环境和生产环境中使用 unstable_cache
  */
 export async function getMenus(): Promise<MenuItem[]> {
-  if (process.env.NODE_ENV === "production") {
+  // build 阶段使用文件缓存
+  if (process.env.IS_BUILDING === "true") {
     return getMenusFromCache();
-  } else {
-    return getMenusFromDatabase();
   }
+
+  // dev 和生产环境使用 unstable_cache
+  const getCachedData = unstable_cache(
+    async () => {
+      return await getMenusFromDatabase();
+    },
+    ["menus"],
+    {
+      tags: ["menus"],
+      revalidate: false,
+    },
+  );
+
+  return await getCachedData();
 }
 
 /**

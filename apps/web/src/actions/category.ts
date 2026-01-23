@@ -1,5 +1,6 @@
 "use server";
 import { NextResponse } from "next/server";
+import { updateTag } from "next/cache";
 import {
   GetCategoriesListSchema,
   GetCategoriesList,
@@ -929,6 +930,10 @@ export async function createCategory(
       },
     });
 
+    // 刷新缓存标签
+    updateTag("categories");
+    updateTag("posts");
+
     return response.ok({
       data: {
         id: category.id,
@@ -1246,6 +1251,11 @@ export async function updateCategory(
       },
     });
 
+    // 刷新缓存标签
+    updateTag("categories");
+    updateTag(`categories/${updatedCategory.slug}`);
+    updateTag("posts");
+
     return response.ok({
       data: {
         id: updatedCategory.id,
@@ -1374,6 +1384,10 @@ export async function deleteCategories(
         description: "批量删除分类",
       },
     });
+
+    // 刷新缓存标签
+    updateTag("categories");
+    updateTag("posts");
 
     return response.ok({
       data: {
@@ -1564,6 +1578,10 @@ export async function moveCategories(
         description: "批量移动分类",
       },
     });
+
+    // 刷新缓存标签
+    updateTag("categories");
+    updateTag("posts");
 
     return response.ok({
       data: {
