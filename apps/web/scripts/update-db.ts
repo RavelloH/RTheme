@@ -71,7 +71,7 @@ async function initializePrismaClient() {
     });
 
     await prisma.$connect();
-    rlog.success("  Prisma client initialized and connected");
+    rlog.success("✓ Prisma client initialized and connected");
   } catch (error) {
     throw new Error(`Failed to initialize Prisma client: ${error}`);
   }
@@ -162,7 +162,7 @@ async function isProjectDatabase(): Promise<boolean> {
     }
 
     rlog.success(
-      `  Database contains ${existingMigrations.length} migrations from this project`,
+      `✓ Database contains ${existingMigrations.length} migrations from this project`,
     );
     return true;
   } catch (error) {
@@ -197,8 +197,6 @@ async function runMigrateDeploy(): Promise<void> {
       encoding: "utf-8",
     });
 
-    rlog.success("  Prisma migrate deploy completed successfully");
-
     // 如果输出包含有用信息，显示它
     if (output && output.trim()) {
       const lines = output.trim().split("\n");
@@ -212,6 +210,8 @@ async function runMigrateDeploy(): Promise<void> {
         }
       });
     }
+
+    rlog.success("✓ Prisma migrate deploy completed successfully");
   } catch (error) {
     if (error instanceof Error && "stdout" in error) {
       const execError = error as Error & {
@@ -257,7 +257,7 @@ async function updateDatabaseInternal(): Promise<void> {
   if (isEmpty) {
     rlog.info("  Database is empty, initializing with migrations...");
     await runMigrateDeploy();
-    rlog.success("  Database initialized successfully");
+    rlog.success("✓ Database initialized successfully");
     return;
   }
 

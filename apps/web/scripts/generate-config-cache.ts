@@ -76,7 +76,7 @@ async function generateConfigCache() {
         "utf-8",
       );
       rlog.log(`  Configuration cache generated: ${CACHE_FILE_PATH}`);
-      rlog.success(`  Cached 0 configuration items (Prisma not ready)`);
+      rlog.success(`✓ Cached 0 configuration items (Prisma not ready)`);
       return;
     }
 
@@ -107,7 +107,7 @@ async function generateConfigCache() {
     fs.writeFileSync(CACHE_FILE_PATH, JSON.stringify(result, null, 2), "utf-8");
 
     rlog.log(`  Configuration cache generated: ${CACHE_FILE_PATH}`);
-    rlog.success(`  Cached ${Object.keys(result).length} configuration items`);
+    rlog.success(`✓ Cached ${Object.keys(result).length} configuration items`);
 
     await prisma.$disconnect();
 

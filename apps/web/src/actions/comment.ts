@@ -109,7 +109,6 @@ async function sendCommentNotification(params: {
 
     const siteUrl =
       (await getConfig<{ default?: string }>("site.url"))?.default ||
-      process.env.NEXT_PUBLIC_SITE_URL ||
       "http://localhost:3000";
 
     const commentLink = `${siteUrl}/posts/${params.postSlug}#comment-${params.commentId}`;
@@ -271,7 +270,6 @@ async function notifyAdminPendingComments(): Promise<void> {
 
     const siteUrl =
       (await getConfig<{ default?: string }>("site.url"))?.default ||
-      process.env.NEXT_PUBLIC_SITE_URL ||
       "http://localhost:3000";
 
     const adminLink = `${siteUrl}/admin/comments?status=PENDING`;
@@ -1375,7 +1373,6 @@ export async function createComment(
       // 获取站点 URL 用于生成 permalink
       const siteUrl =
         (await getConfig<{ default?: string }>("site.url"))?.default ||
-        process.env.NEXT_PUBLIC_SITE_URL ||
         "http://localhost:3000";
 
       // 构建评论数据
@@ -1585,7 +1582,6 @@ export async function updateCommentStatus(
       // 获取站点 URL
       const siteUrl =
         (await getConfig<{ default?: string }>("site.url"))?.default ||
-        process.env.NEXT_PUBLIC_SITE_URL ||
         "http://localhost:3000";
 
       for (const comment of oldComments) {

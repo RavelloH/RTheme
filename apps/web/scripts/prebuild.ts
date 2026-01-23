@@ -1,6 +1,8 @@
-// script/init.ts
+// script/prebuild.ts
 // run before building the project
 
+import fs from "fs";
+import path from "path";
 import Rlog from "rlog-js";
 import { config } from "dotenv";
 // 加载 .env 文件
@@ -10,7 +12,6 @@ config({
 const rlog = new Rlog();
 
 rlog.config.setConfigGlobal({
-  logFilePath: "./logs/init.log",
   silent: true,
 });
 
@@ -18,6 +19,8 @@ rlog.config.setConfig({
   customColorRules: [{ reg: "NeutralPress", color: "green" }],
   silent: false,
 });
+
+rlog.file.init();
 
 const startTime = Date.now();
 rlog.log();
@@ -27,6 +30,16 @@ rlog.log();
 rlog.log("Starting environment variables check...");
 const { checkEnvironmentVariables } = await import("./check-env.js");
 await checkEnvironmentVariables();
+rlog.log();
+
+rlog.log("Starting JWT key pair validation...");
+const { checkJWTKeyPair } = await import("./check-jwt-token.js");
+await checkJWTKeyPair();
+rlog.log();
+
+rlog.log("Starting Redis connection check...");
+const { checkRedisConnection } = await import("./check-redis.js");
+await checkRedisConnection();
 rlog.log();
 
 rlog.log("Starting database check...");
@@ -69,6 +82,20 @@ try {
 
   // 完成 PreBuild
   const endTime = Date.now();
+
+  // 写入构建元数据供 postbuild 使用
+  const cacheDir = path.join(process.cwd(), ".cache");
+  if (!fs.existsSync(cacheDir)) {
+    fs.mkdirSync(cacheDir, { recursive: true });
+  }
+  fs.writeFileSync(
+    path.join(cacheDir, "build-meta.json"),
+    JSON.stringify({
+      prebuildStartTime: startTime,
+      prebuildEndTime: endTime,
+    }),
+  );
+
   rlog.success("✓ NeutralPress initialization completed successfully!");
   rlog.log("Time spend: " + ((endTime - startTime) / 1000).toFixed(2) + "s");
 } catch (error) {

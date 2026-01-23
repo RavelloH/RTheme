@@ -144,7 +144,7 @@ async function generatePageCache() {
     fs.writeFileSync(CACHE_FILE_PATH, JSON.stringify(result, null, 2), "utf-8");
 
     rlog.log(`  Page cache generated: ${CACHE_FILE_PATH}`);
-    rlog.success(`  Cached ${Object.keys(result).length} pages`);
+    rlog.success(`✓ Cached ${Object.keys(result).length} pages`);
 
     await prisma.$disconnect();
 

@@ -5,12 +5,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack --port 3000",
-    "build": "pnpm prebuild && next build --webpack",
+    "build": "tsx scripts/prebuild.ts && next build --webpack && tsx scripts/postbuild.ts",
+    "build:pre": "tsx scripts/prebuild.ts",
+    "build:post": "tsx scripts/postbuild.ts",
     "start": "next start",
     "lint": "eslint --max-warnings 0 .",
     "check-types": "tsc --noEmit",
     "gen-prisma": "prisma generate",
-    "prebuild": "cross-env NODE_ENV=production tsx scripts/prebuild.ts"
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,css,md}\""
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.936.0",
@@ -103,7 +105,7 @@
     "resend": "^6.6.0",
     "rlog-js": "^1.6.1",
     "server-only": "^0.0.1",
-    "sharp": "^0.34.3",
+    "sharp": "^0.34.5",
     "shiki": "^3.15.0",
     "swr": "^2.3.8",
     "text-version": "^1.0.3",

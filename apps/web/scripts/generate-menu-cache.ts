@@ -174,7 +174,7 @@ async function generateMenuCache() {
     fs.writeFileSync(CACHE_FILE_PATH, JSON.stringify(result, null, 2), "utf-8");
 
     rlog.log(`  Menu cache generated: ${CACHE_FILE_PATH}`);
-    rlog.success(`  Cached ${result.length} menu items`);
+    rlog.success(`✓ Cached ${result.length} menu items`);
 
     await prisma.$disconnect();
 

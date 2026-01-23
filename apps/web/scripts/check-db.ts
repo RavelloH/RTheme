@@ -31,7 +31,7 @@ export async function checkDatabaseHealth(): Promise<void> {
     await checkMigrationStatus();
     await performHealthChecks();
 
-    rlog.success("  Database health check completed successfully!");
+    rlog.success("✓ Database health check completed");
   } catch (error) {
     rlog.error(
       `  Database health check failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -78,7 +78,7 @@ async function checkEnvironment() {
     throw new Error("Invalid DATABASE_URL format");
   }
 
-  rlog.success("  Environment variables validated");
+  rlog.success("✓ Environment variables validated");
 }
 
 // 初始化 Prisma 客户端
@@ -91,8 +91,6 @@ async function initializePrismaClient() {
     encoding: "utf-8",
   });
 
-  rlog.success("  Prisma migrate deploy completed successfully");
-
   // 如果输出包含有用信息，显示它
   if (output && output.trim()) {
     const lines = output.trim().split("\n");
@@ -100,6 +98,9 @@ async function initializePrismaClient() {
       rlog.info(`  | ${line.trim()}`);
     });
   }
+
+  rlog.info("  Prisma migrate deploy completed successfully");
+
   try {
     const clientPath = path.join(
       process.cwd(),
@@ -123,7 +124,7 @@ async function initializePrismaClient() {
       log: [],
     });
 
-    rlog.success("  Prisma client initialized");
+    rlog.success("✓ Prisma client initialized");
   } catch (error) {
     rlog.error(error);
     rlog.exit(`Failed to initialize Prisma client`);
@@ -136,11 +137,11 @@ async function testConnection() {
 
   try {
     await prisma.$connect();
-    rlog.success("  Database connection established");
+    rlog.info("  Database connection established");
 
     // 测试基本查询
     await prisma.$queryRaw`SELECT 1 as test`;
-    rlog.success("  Basic query execution successful");
+    rlog.success("✓ Basic query execution successful");
   } catch (error) {
     throw new Error(`Database connection failed: ${error}`);
   }
@@ -197,7 +198,7 @@ async function checkDatabaseSchema() {
       }
     }
 
-    rlog.success("  Database schema check completed");
+    rlog.success("✓ Database schema check completed");
   } catch (error) {
     rlog.error(
       `  Schema check encountered issues: ${error instanceof Error ? error.message : String(error)}`,
@@ -263,7 +264,7 @@ async function checkMigrationStatus() {
       rlog.warning("  No migrations found in _prisma_migrations table");
     }
 
-    rlog.success("  Migration status check completed");
+    rlog.success("✓ Migration status check completed");
   } catch (error) {
     rlog.error(
       `  Migration status check failed: ${error instanceof Error ? error.message : String(error)}`,

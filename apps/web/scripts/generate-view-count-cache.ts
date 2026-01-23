@@ -106,7 +106,7 @@ export default async function generateViewCountCache() {
 
     // 6. 验证数据
     const redisCount = await redis.hlen(REDIS_VIEW_COUNT_KEY);
-    rlog.success(`  View count cache generated: ${redisCount} records`);
+    rlog.success(`✓ View count cache generated: ${redisCount} records`);
 
     if (redisCount !== allCounts.length) {
       throw new Error(

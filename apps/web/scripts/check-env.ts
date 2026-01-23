@@ -3,6 +3,7 @@
 
 import { config } from "dotenv";
 import { pathToFileURL } from "url";
+import { randomBytes } from "crypto";
 import Rlog from "rlog-js";
 
 // 加载 .env 文件
@@ -11,6 +12,21 @@ config({
 });
 
 const rlog = new Rlog();
+
+// 计算香农熵
+function calculateShannonEntropy(str: string): number {
+  const len = str.length;
+  const frequencies = new Map<string, number>();
+  for (const char of str) {
+    frequencies.set(char, (frequencies.get(char) || 0) + 1);
+  }
+  let entropy = 0;
+  for (const count of frequencies.values()) {
+    const p = count / len;
+    entropy -= p * Math.log2(p);
+  }
+  return entropy;
+}
 
 // 必需的环境变量配置
 const REQUIRED_ENV_VARS = [
@@ -28,11 +44,26 @@ const REQUIRED_ENV_VARS = [
     },
   },
   {
+    name: "REDIS_URL",
+    description: "Redis connection string (required)",
+    validator: (value: string) => {
+      if (!value.startsWith("redis://") && !value.startsWith("rediss://")) {
+        return "Should be a valid Redis connection string (redis:// or rediss://)";
+      }
+      return null;
+    },
+  },
+  {
     name: "MASTER_SECRET",
     description: "Master secret key for deriving encryption keys",
     validator: (value: string) => {
       if (value.length < 32) {
         return "Should be at least 32 characters long for security";
+      }
+      const entropy = calculateShannonEntropy(value);
+      // 防止过于简单的密钥
+      if (entropy < 3.5) {
+        return `Entropy is too low (${entropy.toFixed(2)}). Please use a more random secret (aim for > 3.5).`;
       }
       return null;
     },
@@ -59,16 +90,6 @@ const REQUIRED_ENV_VARS = [
         !value.includes("END PUBLIC KEY")
       ) {
         return "Should be a valid PEM format public key";
-      }
-      return null;
-    },
-  },
-  {
-    name: "REDIS_URL",
-    description: "Redis connection string (required)",
-    validator: (value: string) => {
-      if (!value.startsWith("redis://") && !value.startsWith("rediss://")) {
-        return "Should be a valid Redis connection string (redis:// or rediss://)";
       }
       return null;
     },
@@ -101,54 +122,83 @@ const OPTIONAL_ENV_VARS = [
 
 // 导出的环境检查函数
 export async function checkEnvironmentVariables(): Promise<void> {
-  rlog.info("> Starting environment variables check...");
-
   let hasErrors = false;
   let hasWarnings = false;
 
   // 检查必需的环境变量
-  rlog.info("  Checking required environment variables:");
+  rlog.info("> Checking required environment variables:");
+  // 先获取最长的环境变量字符
+  let maxLength = 0;
+  for (const envVar of REQUIRED_ENV_VARS)
+    if (envVar.name.length > maxLength) {
+      maxLength = envVar.name.length;
+    }
+  // 输出检查
   for (const envVar of REQUIRED_ENV_VARS) {
     const value = process.env[envVar.name];
 
     if (!value) {
-      rlog.error(`  ✗ ${envVar.name} is missing`);
+      rlog.error(
+        `  ✗ ${envVar.name}${" ".repeat(maxLength - envVar.name.length)} is missing`,
+      );
+      if (envVar.name === "MASTER_SECRET") {
+        const generated = randomBytes(32).toString("hex");
+        rlog.info(`    Auto-generated strong secret: ${generated}`);
+        rlog.info(`    Please add this MASTER_SECRET to your .env file.`);
+      }
       rlog.error(`    Description: ${envVar.description}`);
       hasErrors = true;
     } else {
       const validationError = envVar.validator(value);
       if (validationError) {
-        rlog.error(`  ✗ ${envVar.name} is invalid: ${validationError}`);
+        rlog.error(
+          `  ✗ ${envVar.name}${" ".repeat(maxLength - envVar.name.length)} is invalid: ${validationError}`,
+        );
+        if (envVar.name === "MASTER_SECRET") {
+          const generated = randomBytes(32).toString("hex");
+          rlog.info(`    Recommended strong secret: ${generated}`);
+        }
         hasErrors = true;
       } else {
-        rlog.success(`  ✓ ${envVar.name} is set and valid`);
+        rlog.success(
+          `  ✓ ${envVar.name}${" ".repeat(maxLength - envVar.name.length)} is set and valid`,
+        );
       }
     }
   }
 
   // 检查可选的环境变量
-  rlog.info("  Checking optional environment variables:");
+  rlog.info("> Checking optional environment variables:");
+  maxLength = 0;
+  for (const envVar of OPTIONAL_ENV_VARS)
+    if (envVar.name.length > maxLength) {
+      maxLength = envVar.name.length;
+    }
   for (const envVar of OPTIONAL_ENV_VARS) {
     const value = process.env[envVar.name];
 
     if (!value) {
-      rlog.info(`  ○ ${envVar.name} is not set (optional)`);
+      rlog.info(
+        `  ○ ${envVar.name}${" ".repeat(maxLength - envVar.name.length)} is not set (optional)`,
+      );
     } else {
       const validationError = envVar.validator(value);
       if (validationError) {
         rlog.warning(
-          `  ! ${envVar.name} is set but invalid: ${validationError}`,
+          `  ! ${envVar.name}${" ".repeat(maxLength - envVar.name.length)} is set but invalid: ${validationError}`,
         );
         hasWarnings = true;
       } else {
-        rlog.success(`  ✓ ${envVar.name} is set and valid`);
+        rlog.success(
+          `  ✓ ${envVar.name}${" ".repeat(maxLength - envVar.name.length)} is set and valid`,
+        );
       }
     }
   }
 
   // 总结检查结果
   if (hasErrors) {
-    rlog.error("  Environment variables check failed!");
+    rlog.error("✗ Environment variables check failed!");
     rlog.error(
       "  Please check your .env file and set the missing or invalid variables.",
     );
@@ -174,7 +224,7 @@ export async function checkEnvironmentVariables(): Promise<void> {
       "  Optional variables have issues but the system can still function",
     );
   } else {
-    rlog.success("  Environment variables check completed successfully!");
+    rlog.success("✓ Environment variables check completed");
   }
 }
 

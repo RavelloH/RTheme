@@ -26,18 +26,31 @@ const nextConfig = (phase) => {
       formats: ["image/avif", "image/webp"],
       minimumCacheTTL: 2678400,
     },
+    output: "standalone",
     serverExternalPackages: ["ably", "akismet-api"],
     cacheComponents: true,
     experimental: {
       optimizePackageImports: ["@remixicon/react"],
     },
     allowedDevOrigins: ["198.18.0.1"],
-    // 排除 sharp 的 Linux 二进制文件，避免 Windows 上的权限错误
     outputFileTracingExcludes: {
       "*": [
         "node_modules/@img/sharp-libvips-linux*",
         "node_modules/@img/sharp-linux*",
         "node_modules/sharp/vendor/**",
+        "**/@esbuild/linux-x64/**",
+        "**/@esbuild/linux-arm64/**",
+        "node_modules/typescript/**/*",
+        "node_modules/prettier/**/*",
+        "node_modules/eslint/**/*",
+        "node_modules/@types/**/*",
+        "node_modules/webpack/**/*",
+        "node_modules/terser/**/*",
+        "node_modules/esbuild/**/*",
+        "node_modules/@esbuild/**/*",
+        "node_modules/postcss/**/*",
+        "**/*.map",
+        "**/*.d.ts",
       ],
     },
     // 配置缓存头

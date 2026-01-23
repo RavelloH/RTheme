@@ -17,8 +17,6 @@ import { defaultMenus } from "../src/data/default-menus.js";
 
 async function seedDefaults() {
   try {
-    rlog.log("> Checking and adding database default values...");
-
     // 动态导入 Prisma 客户端以避免初始化问题
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let prisma: any;
@@ -65,7 +63,7 @@ async function seedDefaults() {
     // 种子化默认页面和菜单
     await seedDefaultPagesAndMenus(prisma);
 
-    rlog.success("  Database default values check completed");
+    rlog.success("✓ Database default values check completed");
     await prisma.$disconnect();
 
     // 关闭连接池
@@ -88,7 +86,7 @@ async function seedDefaults() {
 // 生成 VAPID 密钥（如果需要）
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function generateVapidKeysIfNeeded(prisma: any) {
-  rlog.log("  Checking VAPID keys for Web Push...");
+  rlog.log("> Checking VAPID keys for Web Push...");
 
   try {
     // 检查配置是否存在
@@ -133,7 +131,7 @@ async function generateVapidKeysIfNeeded(prisma: any) {
         });
 
         rlog.success(
-          `  Generated VAPID keys for Web Push (Public Key: ${vapidKeys.publicKey.substring(0, 20)}...)`,
+          `✓ Generated VAPID keys for Web Push (Public Key: ${vapidKeys.publicKey.substring(0, 20)}...)`,
         );
       } catch {
         rlog.warning(
@@ -154,7 +152,7 @@ async function generateVapidKeysIfNeeded(prisma: any) {
 // 种子化默认配置
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function seedDefaultConfigs(prisma: any) {
-  rlog.log("  Checking default configurations...");
+  rlog.log("> Checking default configurations...");
 
   let addedCount = 0;
   let skippedCount = 0;
@@ -217,14 +215,14 @@ async function seedDefaultConfigs(prisma: any) {
   }
 
   rlog.success(
-    `  Configuration check completed: added ${addedCount} items, skipped ${skippedCount} items`,
+    `✓ Configuration check completed: added ${addedCount} items, skipped ${skippedCount} items`,
   );
 }
 
 // 种子化默认页面和菜单
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function seedDefaultPagesAndMenus(prisma: any) {
-  rlog.log("  Checking default pages and menus...");
+  rlog.log("> Checking default pages and menus...");
 
   let pagesAddedCount = 0;
   let pagesSkippedCount = 0;
@@ -360,7 +358,7 @@ async function seedDefaultPagesAndMenus(prisma: any) {
   }
 
   rlog.success(
-    `  Pages and menus check completed: added ${pagesAddedCount} pages, ${menusAddedCount} menus, skipped ${pagesSkippedCount} pages, ${menusSkippedCount} menus`,
+    `✓ Pages and menus check completed: added ${pagesAddedCount} pages, ${menusAddedCount} menus, skipped ${pagesSkippedCount} pages, ${menusSkippedCount} menus`,
   );
 }
 
@@ -371,7 +369,7 @@ export { seedDefaults };
 async function main() {
   try {
     await seedDefaults();
-    rlog.success("  Database default value seeding completed");
+    rlog.success("✓ Database default value seeding completed");
   } catch (error) {
     rlog.error("  Database default value seeding failed:", error);
     process.exit(1);
