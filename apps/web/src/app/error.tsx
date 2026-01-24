@@ -10,6 +10,7 @@ import {
   RiFeedbackLine,
   RiResetRightFill,
 } from "@remixicon/react";
+import { AutoTransition } from "@/ui/AutoTransition";
 
 export default function Error({
   error,
@@ -97,7 +98,7 @@ export default function Error({
             >
               <LinkButton
                 mode="link"
-                href="/message?uid=1"
+                href="/messages?uid=1"
                 text="反馈给管理员"
                 icon={<RiFeedbackLine />}
               />
@@ -108,11 +109,13 @@ export default function Error({
               width={2}
               height={1.5}
             >
-              <ClientDiagnostics
-                errorType={error.name + "-" + error.digest}
-                errorStack={error.stack}
-                errorMessage={error.message}
-              />
+              <AutoTransition duration={0.5} type="fade">
+                <ClientDiagnostics
+                  errorType={error.name + "-" + error.digest}
+                  errorStack={error.stack}
+                  errorMessage={error.message}
+                />
+              </AutoTransition>
             </GridItem>
           </RowGrid>
         </HorizontalScroll>

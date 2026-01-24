@@ -595,14 +595,17 @@ export default function ClientDiagnostics({
 
   if (logs.length === 0) {
     return (
-      <div className="text-xs opacity-10 font-mono">
+      <div className="text-xs opacity-10 font-mono" key="loading">
         <div>[INIT] Collecting diagnostics...</div>
       </div>
     );
   }
 
   return (
-    <div className="text-xs space-y-0 opacity-20 font-mono break-all">
+    <div
+      className="text-xs space-y-0 opacity-20 font-mono break-all"
+      key="logs"
+    >
       {logs.map((log, index) => (
         <div key={index}>{log}</div>
       ))}

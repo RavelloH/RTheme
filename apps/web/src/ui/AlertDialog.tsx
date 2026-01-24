@@ -181,6 +181,7 @@ export function AlertDialog({
                     <Button
                       label={confirmText}
                       variant={getButtonVariant()}
+                      className={variant === "warning" ? "bg-warning" : ""}
                       onClick={onConfirm}
                       size="sm"
                       loading={loading}

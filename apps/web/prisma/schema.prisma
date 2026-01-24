@@ -146,19 +146,22 @@ model Passkey {
 }
 
 model Post {
-  id            Int        @id @default(autoincrement())
-  title         String
-  slug          String     @unique
-  content       String
-  excerpt       String?    @db.VarChar(500)
-  status        PostStatus @default(DRAFT)
-  isPinned      Boolean    @default(false)
-  allowComments Boolean    @default(true)
-  publishedAt   DateTime? // 发布时间，用于精确控制发布时间
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  deletedAt     DateTime?
-  postMode      PostMode   @default(MARKDOWN)
+  id                  Int                      @id @default(autoincrement())
+  title               String
+  titleSearchVector   Unsupported("tsvector")?
+  slug                String                   @unique
+  content             String
+  contentSearchVector Unsupported("tsvector")?
+  excerpt             String?                  @db.VarChar(500)
+  status              PostStatus               @default(DRAFT)
+  isPinned            Boolean                  @default(false)
+  allowComments       Boolean                  @default(true)
+  publishedAt         DateTime? // 发布时间，用于精确控制发布时间
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  tokenizedAt         DateTime?
+  deletedAt           DateTime?
+  postMode            PostMode                 @default(MARKDOWN)
 
   userUid Int
 
@@ -184,6 +187,8 @@ model Post {
   @@index([createdAt])
   @@index([updatedAt])
   @@index([status, createdAt]) // 复合索引：按状态和时间查询
+  @@index([titleSearchVector], type: Gin)
+  @@index([contentSearchVector], type: Gin)
 }
 
 model Tag {
@@ -672,6 +677,34 @@ model AuditLog {
   @@index([resourceId])
   @@index([action, resource]) // 复合索引：按操作类型和资源类型查询
   @@index([userUid, timestamp]) // 复合索引：按用户和时间查询
+}
+
+model SearchLog {
+  id Int @id @default(autoincrement())
+
+  query  String   @db.VarChar(255) // 原始内容
+  tokens String[] // 分词后的内容数组
+
+  resultCount Int // 搜到了多少个结果
+
+  ip        String?
+  sessionId String?
+  visitorId String?
+
+  durationMs Int? // 性能指标（毫秒）
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([query])
+}
+
+model CustomDictionary {
+  id Int @id @default(autoincrement())
+
+  word String @unique
+
+  createdAt DateTime @default(now())
 }
 
 model HealthCheck {

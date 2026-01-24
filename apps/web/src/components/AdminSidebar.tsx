@@ -16,6 +16,8 @@ import {
   RiMessageFill,
   RiPriceTag3Fill,
   RiSave3Fill,
+  RiSearchEyeFill,
+  RiSearchFill,
   RiSettings4Fill,
   RiShieldFill,
   RiStethoscopeFill,
@@ -129,6 +131,18 @@ const AdminSidebarList = [
     name: "审计日志",
     icon: <RiFileShieldFill size={"1.5em"} />,
     href: "/admin/audit-logs",
+    role: roles.admin,
+  },
+  {
+    name: "搜索洞察",
+    icon: <RiSearchEyeFill size={"1.5em"} />,
+    href: "/admin/search-insights",
+    role: roles.admin,
+  },
+  {
+    name: "搜索索引",
+    icon: <RiSearchFill size={"1.5em"} />,
+    href: "/admin/search",
     role: roles.admin,
   },
   {

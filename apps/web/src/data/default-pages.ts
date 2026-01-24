@@ -168,7 +168,7 @@ export const defaultPages: DefaultPage[] = [
             },
             footer: {
               value: {
-                link: "/message?uid=1",
+                link: "/messages?uid=1",
                 description: "Start chatting with me",
               },
               description: "底部显示文本，可提供链接用于跳转",

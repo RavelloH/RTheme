@@ -85,7 +85,7 @@ export default function NotFoundPage() {
             >
               <LinkButton
                 mode="link"
-                href="/message?uid=1"
+                href="/messages?uid=1"
                 text="反馈给管理员"
                 icon={<RiFeedbackLine />}
               />
