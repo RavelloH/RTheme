@@ -446,48 +446,117 @@ async function archivePageViews() {
         };
       }
 
-      await prisma.pageViewArchive.upsert({
-        where: {
-          date: stats.date,
-        },
-        create: {
-          date: stats.date,
-          totalViews: stats.totalViews,
-          uniqueVisitors: stats.uniqueVisitors.size,
-          totalSessions,
-          bounces,
-          totalDuration: Math.round(totalDuration / 1000), // 转换为秒
-          pathStats: pathStatsJson,
-          refererStats: Object.fromEntries(stats.refererStats),
-          countryStats: Object.fromEntries(stats.countryStats),
-          regionStats: Object.fromEntries(stats.regionStats),
-          cityStats: Object.fromEntries(stats.cityStats),
-          deviceStats: Object.fromEntries(stats.deviceStats),
-          browserStats: Object.fromEntries(stats.browserStats),
-          osStats: Object.fromEntries(stats.osStats),
-          screenStats: Object.fromEntries(stats.screenStats),
-          languageStats: Object.fromEntries(stats.languageStats),
-          timezoneStats: Object.fromEntries(stats.timezoneStats),
-        },
-        update: {
-          totalViews: stats.totalViews,
-          uniqueVisitors: stats.uniqueVisitors.size,
-          totalSessions,
-          bounces,
-          totalDuration: Math.round(totalDuration / 1000), // 转换为秒
-          pathStats: pathStatsJson,
-          refererStats: Object.fromEntries(stats.refererStats),
-          countryStats: Object.fromEntries(stats.countryStats),
-          regionStats: Object.fromEntries(stats.regionStats),
-          cityStats: Object.fromEntries(stats.cityStats),
-          deviceStats: Object.fromEntries(stats.deviceStats),
-          browserStats: Object.fromEntries(stats.browserStats),
-          osStats: Object.fromEntries(stats.osStats),
-          screenStats: Object.fromEntries(stats.screenStats),
-          languageStats: Object.fromEntries(stats.languageStats),
-          timezoneStats: Object.fromEntries(stats.timezoneStats),
-        },
+      // 检查是否存在现有归档
+      const existingArchive = await prisma.pageViewArchive.findUnique({
+        where: { date: stats.date },
       });
+
+      if (existingArchive) {
+        // 合并统计数据 (增量更新)
+        const mergedPathStats = {
+          ...((existingArchive.pathStats as Record<
+            string,
+            { views: number; visitors: number }
+          >) || {}),
+        };
+        for (const [path, data] of Object.entries(pathStatsJson)) {
+          if (mergedPathStats[path]) {
+            mergedPathStats[path]!.views += data.views;
+            mergedPathStats[path]!.visitors += data.visitors; // 累加访客数 (注意：这可能导致 UV 虚高，但这是低精度数据的代价)
+          } else {
+            mergedPathStats[path] = data;
+          }
+        }
+
+        // 辅助函数：合并常规 Map 统计
+        const mergeMapStats = (
+          existing: Record<string, number> | null,
+          current: Map<string, number>,
+        ): Record<string, number> => {
+          const merged = { ...(existing || {}) };
+          for (const [key, value] of current.entries()) {
+            merged[key] = (merged[key] || 0) + value;
+          }
+          return merged;
+        };
+
+        await prisma.pageViewArchive.update({
+          where: { date: stats.date },
+          data: {
+            totalViews: { increment: stats.totalViews },
+            uniqueVisitors: { increment: stats.uniqueVisitors.size }, // 同样，UV 只能累加
+            totalSessions: { increment: totalSessions },
+            bounces: { increment: bounces },
+            totalDuration: {
+              increment: Math.round(totalDuration / 1000),
+            },
+            pathStats: mergedPathStats,
+            refererStats: mergeMapStats(
+              existingArchive.refererStats as Record<string, number>,
+              stats.refererStats,
+            ),
+            countryStats: mergeMapStats(
+              existingArchive.countryStats as Record<string, number>,
+              stats.countryStats,
+            ),
+            regionStats: mergeMapStats(
+              existingArchive.regionStats as Record<string, number>,
+              stats.regionStats,
+            ),
+            cityStats: mergeMapStats(
+              existingArchive.cityStats as Record<string, number>,
+              stats.cityStats,
+            ),
+            deviceStats: mergeMapStats(
+              existingArchive.deviceStats as Record<string, number>,
+              stats.deviceStats,
+            ),
+            browserStats: mergeMapStats(
+              existingArchive.browserStats as Record<string, number>,
+              stats.browserStats,
+            ),
+            osStats: mergeMapStats(
+              existingArchive.osStats as Record<string, number>,
+              stats.osStats,
+            ),
+            screenStats: mergeMapStats(
+              existingArchive.screenStats as Record<string, number>,
+              stats.screenStats,
+            ),
+            languageStats: mergeMapStats(
+              existingArchive.languageStats as Record<string, number>,
+              stats.languageStats,
+            ),
+            timezoneStats: mergeMapStats(
+              existingArchive.timezoneStats as Record<string, number>,
+              stats.timezoneStats,
+            ),
+          },
+        });
+      } else {
+        // 创建新归档
+        await prisma.pageViewArchive.create({
+          data: {
+            date: stats.date,
+            totalViews: stats.totalViews,
+            uniqueVisitors: stats.uniqueVisitors.size,
+            totalSessions,
+            bounces,
+            totalDuration: Math.round(totalDuration / 1000), // 转换为秒
+            pathStats: pathStatsJson,
+            refererStats: Object.fromEntries(stats.refererStats),
+            countryStats: Object.fromEntries(stats.countryStats),
+            regionStats: Object.fromEntries(stats.regionStats),
+            cityStats: Object.fromEntries(stats.cityStats),
+            deviceStats: Object.fromEntries(stats.deviceStats),
+            browserStats: Object.fromEntries(stats.browserStats),
+            osStats: Object.fromEntries(stats.osStats),
+            screenStats: Object.fromEntries(stats.screenStats),
+            languageStats: Object.fromEntries(stats.languageStats),
+            timezoneStats: Object.fromEntries(stats.timezoneStats),
+          },
+        });
+      }
     }
 
     // 删除已归档的 PageView 记录
