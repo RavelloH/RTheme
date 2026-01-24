@@ -1,10 +1,4 @@
-import {
-  RiFolder2Line,
-  RiPriceTagLine,
-  RiTimeLine,
-  RiArrowLeftLine,
-  RiArrowRightLine,
-} from "@remixicon/react";
+import { RiArrowLeftLine, RiArrowRightLine, RiHashtag } from "@remixicon/react";
 import Link from "./Link";
 import CMSImage from "./CMSImage";
 
@@ -34,15 +28,17 @@ export default function AdjacentPostCard({
   cover,
   direction,
 }: AdjacentPostCardProps) {
-  // 格式化日期显示
+  // 格式化日期显示 - 使用点号分隔，符合瑞士风格
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString("zh-CN", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      });
+      return date
+        .toLocaleDateString("zh-CN", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        })
+        .replace(/\//g, ".");
     } catch {
       return dateString;
     }
@@ -55,105 +51,91 @@ export default function AdjacentPostCard({
       ? { url: cover }
       : null;
 
+  const isNext = direction === "next";
+
   return (
-    <Link href={"/posts/" + slug} className="h-full w-full">
-      <div className="h-full w-full relative group overflow-hidden">
-        {/* 背景图片 */}
-        {coverImage && (
-          <>
-            <div className="absolute inset-0">
-              <CMSImage
-                src={coverImage.url}
-                alt={title}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 50vw"
-                optimized={!!(coverImage.width && coverImage.height)}
-                width={coverImage.width}
-                height={coverImage.height}
-                blur={coverImage.blur}
-                priority={false}
-              />
-            </div>
-
-            {/* 遮罩层 */}
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/40 z-10 transition-opacity duration-300 group-hover:opacity-90" />
-          </>
-        )}
-
-        {/* 内容区域 */}
-        <div
-          className={`relative z-20 px-8 py-6 h-full flex flex-col justify-end ${
-            direction === "next" ? "items-end" : "items-start"
-          }`}
-        >
-          {/* 方向指示 */}
-          <div className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
-            {direction === "previous" ? (
-              <>
-                <RiArrowLeftLine size={"1em"} />
-                <span>上一篇</span>
-              </>
-            ) : (
-              <>
-                <span>下一篇</span>
-                <RiArrowRightLine size={"1em"} />
-              </>
-            )}
+    <Link
+      href={"/posts/" + slug}
+      className={`group block h-full w-full bg-background overflow-hidden relative transition-colors duration-300`}
+    >
+      {/* 背景图片层 - 作为纹理处理 */}
+      {coverImage && (
+        <>
+          <div className="absolute inset-0 z-0 opacity-[0.03] grayscale transition-all duration-500 ease-out group-hover:opacity-10 group-hover:scale-105 group-hover:grayscale-0 pointer-events-none">
+            <CMSImage
+              src={coverImage.url}
+              alt={title}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 50vw"
+              optimized={!!(coverImage.width && coverImage.height)}
+              width={coverImage.width}
+              height={coverImage.height}
+              blur={coverImage.blur}
+              priority={false}
+            />
           </div>
+          {/* 边缘渐变遮罩 - 仅桌面端显示，用于制造中间的柔和过渡 */}
+          <div
+            className={`hidden md:block absolute inset-y-0 w-1/3 z-0 pointer-events-none ${
+              isNext ? "left-0 bg-gradient-to-r" : "right-0 bg-gradient-to-l"
+            } from-background to-transparent`}
+          />
+        </>
+      )}
 
-          {/* 标题 */}
-          <h3
-            className={`text-xl md:text-2xl font-bold mb-3 text-foreground group-hover:text-primary transition-colors line-clamp-2 ${
-              direction === "next" ? "text-right" : "text-left"
-            }`}
-          >
+      {/* 内容结构 - Swiss Layout */}
+      <div
+        className={`relative z-10 h-full flex flex-col p-5 md:p-8 ${
+          isNext ? "items-end text-right" : "items-start text-left"
+        }`}
+      >
+        {/* 顶部：方向指示 */}
+        <div
+          className={`w-full flex items-center mb-auto ${isNext ? "justify-end" : "justify-start"}`}
+        >
+          <div className="flex items-center gap-2 font-mono text-xs tracking-widest text-muted-foreground uppercase group-hover:text-primary transition-colors">
+            {!isNext && <RiArrowLeftLine size={"1.1em"} />}
+            <span>{isNext ? "Next" : "Previous"}</span>
+            {isNext && <RiArrowRightLine size={"1.1em"} />}
+          </div>
+        </div>
+
+        {/* 中部：标题 (增加垂直间距替代分隔线) */}
+        <div className="py-4">
+          <h3 className="text-lg md:text-xl font-bold leading-tight tracking-tight text-foreground group-hover:text-primary transition-colors line-clamp-2">
             {title}
           </h3>
+        </div>
 
-          {/* 元信息 */}
-          <div className="text-sm flex flex-wrap gap-2 text-muted-foreground">
-            {date && (
-              <span className="flex items-center gap-1">
-                <RiTimeLine size={"1em"} />
-                <span>{formatDate(date)}</span>
-              </span>
-            )}
-            {category && category.length > 0 && (
-              <>
-                {date && <span>·</span>}
-                <span className="flex items-center gap-1">
-                  <RiFolder2Line size={"1em"} />
-                  <span>
-                    {category.map((cat, index) => (
-                      <span key={cat.slug}>
-                        {cat.name}
-                        {index < category.length - 1 && " / "}
-                      </span>
-                    ))}
-                  </span>
-                </span>
-              </>
-            )}
-          </div>
-
-          {/* 标签 */}
+        {/* 底部：标签与元信息 (互换位置，移除分隔线) */}
+        <div
+          className={`w-full flex flex-col gap-2 mt-auto font-mono text-xs text-muted-foreground ${
+            isNext ? "items-end" : "items-start"
+          }`}
+        >
+          {/* 标签 (现在在上方) */}
           {tags && tags.length > 0 && (
-            <div
-              className={`flex flex-wrap gap-1 mt-2 text-sm text-muted-foreground items-center ${
-                direction === "next" ? "justify-end" : "justify-start"
-              }`}
-            >
-              <RiPriceTagLine size={"1em"} />
-              {tags.slice(0, 3).map((tag, index) => (
-                <span key={tag.slug}>
-                  #{tag.name}
-                  {index < Math.min(tags.length, 3) - 1 && " "}
+            <div className="flex flex-wrap gap-1.5">
+              {tags.slice(0, 2).map((tag) => (
+                <span
+                  key={tag.slug}
+                  className="inline-flex items-center px-1 py-0.5 rounded-xs gap-0.5"
+                >
+                  <RiHashtag size="1em" />
+                  {tag.name}
                 </span>
               ))}
-              {tags.length > 3 && <span>...</span>}
             </div>
           )}
+
+          {/* 日期与分类 (现在在最下方) */}
+          <div className="flex flex-wrap gap-x-3 gap-y-1 opacity-60 group-hover:opacity-100 transition-opacity uppercase">
+            {date && <span>{formatDate(date)}</span>}
+            {category && category.length > 0 && (
+              <span>{category.map((cat) => cat.name).join(" / ")}</span>
+            )}
+          </div>
         </div>
       </div>
     </Link>

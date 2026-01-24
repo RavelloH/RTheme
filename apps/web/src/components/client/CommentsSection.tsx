@@ -1232,7 +1232,7 @@ export default function CommentsSection({
       ref={commentsContainerRef}
     >
       <h2
-        className="text-2xl font-semibold mb-4 flex items-center gap-2"
+        className="text-2xl font-semibold flex items-center gap-2"
         id="comment"
       >
         评论
@@ -1276,6 +1276,20 @@ export default function CommentsSection({
           </AutoTransition>
         </AutoResizer>
 
+        <div>
+          <Input
+            ref={inputRef}
+            label=""
+            rows={4}
+            size="sm"
+            maxLength={1000}
+            placeholder={commentConfig.placeholder}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            onFocus={() => !captchaLoaded && setCaptchaLoaded(true)}
+            className="mt-0 pt-0"
+          />
+        </div>
         {isAnonymous && commentConfig.anonymousEnabled && (
           <div
             className={`grid grid-cols-1 gap-3 ${commentConfig.anonymousWebsiteEnabled ? "md:grid-cols-3" : "md:grid-cols-2"}`}
@@ -1306,20 +1320,6 @@ export default function CommentsSection({
             )}
           </div>
         )}
-        <div>
-          <Input
-            ref={inputRef}
-            label=""
-            rows={4}
-            size="sm"
-            maxLength={1000}
-            placeholder={commentConfig.placeholder}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onFocus={() => !captchaLoaded && setCaptchaLoaded(true)}
-            className="mt-0 pt-0"
-          />
-        </div>
 
         {/* 预览区域 */}
         <AutoResizer duration={0.3}>

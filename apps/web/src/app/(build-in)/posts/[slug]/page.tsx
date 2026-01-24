@@ -147,12 +147,10 @@ export default async function PostPage({ params }: PageProps) {
     }
 
     // 添加相邻文章的封面图片
-    const previousFeaturedImage = getFeaturedImageUrl(
+    previousFeaturedImage = getFeaturedImageUrl(
       adjacentPosts.previous?.mediaRefs,
     );
-    const nextFeaturedImage = getFeaturedImageUrl(
-      adjacentPosts.next?.mediaRefs,
-    );
+    nextFeaturedImage = getFeaturedImageUrl(adjacentPosts.next?.mediaRefs);
 
     if (previousFeaturedImage) {
       allImageUrls.add(previousFeaturedImage);
@@ -399,60 +397,64 @@ export default async function PostPage({ params }: PageProps) {
             </div>
             {/* 上一篇和下一篇文章 */}
             {(adjacentPosts.previous || adjacentPosts.next) && (
-              <div className="max-w-7xl mx-auto pt-8 relative">
-                {/* 渐变分隔线 */}
-                <div className="absolute top-0 left-0 right-0 h-0.5 bg-border" />
+              <div className="max-w-7xl mx-auto pt-16">
                 <h2 className="text-2xl font-bold mb-6">继续阅读</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 h-48">
-                  {adjacentPosts.previous && (
-                    <div className="flex items-center justify-start h-full w-full">
-                      <AdjacentPostCard
-                        title={adjacentPosts.previous.title}
-                        slug={adjacentPosts.previous.slug}
-                        date={
-                          adjacentPosts.previous.publishedAt?.toISOString() ||
-                          ""
-                        }
-                        category={adjacentPosts.previous.categories}
-                        tags={adjacentPosts.previous.tags}
-                        cover={
-                          previousFeaturedImage
-                            ? processImageUrl(
-                                previousFeaturedImage,
-                                postMediaFileMap,
-                              )
-                            : undefined
-                        }
-                        direction="previous"
-                      />
-                    </div>
-                  )}
-                  {adjacentPosts.next && (
-                    <div className="flex items-center justify-end h-full w-full">
-                      <AdjacentPostCard
-                        title={adjacentPosts.next.title}
-                        slug={adjacentPosts.next.slug}
-                        date={
-                          adjacentPosts.next.publishedAt?.toISOString() || ""
-                        }
-                        category={adjacentPosts.next.categories}
-                        tags={adjacentPosts.next.tags}
-                        cover={
-                          nextFeaturedImage
-                            ? processImageUrl(
-                                nextFeaturedImage,
-                                postMediaFileMap,
-                              )
-                            : undefined
-                        }
-                        direction="next"
-                      />
-                    </div>
-                  )}
+                <div className="relative border-y border-border">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+                    {adjacentPosts.previous ? (
+                      <div className="border-b md:border-b-0 border-border/50 md:border-r md:border-border/0 relative">
+                        <AdjacentPostCard
+                          title={adjacentPosts.previous.title}
+                          slug={adjacentPosts.previous.slug}
+                          date={
+                            adjacentPosts.previous.publishedAt?.toISOString() ||
+                            ""
+                          }
+                          category={adjacentPosts.previous.categories}
+                          tags={adjacentPosts.previous.tags}
+                          cover={
+                            previousFeaturedImage
+                              ? processImageUrl(
+                                  previousFeaturedImage,
+                                  postMediaFileMap,
+                                )
+                              : undefined
+                          }
+                          direction="previous"
+                        />
+                      </div>
+                    ) : (
+                      // 占位符，保持布局平衡（如果只要一个显示50%的话，否则可以移除）
+                      <div className="hidden md:block" />
+                    )}
+
+                    {adjacentPosts.next && (
+                      <div className="relative">
+                        <AdjacentPostCard
+                          title={adjacentPosts.next.title}
+                          slug={adjacentPosts.next.slug}
+                          date={
+                            adjacentPosts.next.publishedAt?.toISOString() || ""
+                          }
+                          category={adjacentPosts.next.categories}
+                          tags={adjacentPosts.next.tags}
+                          cover={
+                            nextFeaturedImage
+                              ? processImageUrl(
+                                  nextFeaturedImage,
+                                  postMediaFileMap,
+                                )
+                              : undefined
+                          }
+                          direction="next"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
-            {/* 评论区 */}
+            {/* 评论区 */}{" "}
             {commentEnabled && (
               <CommentsSection
                 slug={post.slug}
