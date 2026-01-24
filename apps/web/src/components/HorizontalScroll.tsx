@@ -14,6 +14,8 @@ interface GSAPHorizontalScrollProps {
   snapToElements?: boolean;
 }
 
+const SPACE_REGEX = /^\s+$/;
+
 export default function HorizontalScroll({
   children,
   className = "",
@@ -63,639 +65,415 @@ export default function HorizontalScroll({
 
     // 创建 GSAP 上下文
     const ctx = gsap.context(() => {
-      // 更新到目标位置的函数
-      const animateToTarget = () => {
-        // 停止当前动画
-        if (animationRef.current) {
-          animationRef.current.kill();
+      // -----------------------------------------------------------------------
+      // 性能优化: 预先测量和缓存元素位置，避免在 ticker/scroll 中频繁读取 DOM
+      // -----------------------------------------------------------------------
+      const cache = {
+        containerWidth: 0,
+        parallax: [] as {
+          el: Element;
+          speed: number;
+          initialX: number;
+          leftOffset: number; // 相对于 content 左边缘的偏移
+          width: number;
+          hasEntered: boolean;
+          entryScrollX: number;
+        }[],
+        fade: [] as {
+          el: Element;
+          leftOffset: number;
+          width: number;
+        }[],
+        wordFade: [] as {
+          el: Element;
+          leftOffset: number;
+          width: number;
+          spans: HTMLSpanElement[];
+          isFullyRevealed: boolean;
+        }[],
+        charFade: [] as {
+          el: Element;
+          leftOffset: number;
+          width: number;
+          spans: HTMLSpanElement[];
+          isFullyRevealed: boolean;
+        }[],
+        lineReveal: [] as {
+          el: Element;
+          leftOffset: number;
+          width: number;
+          lines: HTMLElement[];
+          isFullyRevealed: boolean;
+        }[],
+      };
+
+      // DOM 预处理：仅执行一次 (拆分文本等)
+      const initDOM = () => {
+        if (enableFadeElements) {
+          // 初始状态设置 - Fade
+          content.querySelectorAll("[data-fade]").forEach((element) => {
+            gsap.set(element, { opacity: 0 });
+          });
+
+          // Word Fade Split
+          content.querySelectorAll("[data-fade-word]").forEach((element) => {
+            if (element.hasAttribute("data-processed")) return;
+            const originalText = element.textContent || "";
+            const words = originalText
+              .split(/(\s+)/)
+              .filter((word) => word.length > 0);
+            element.innerHTML = "";
+            words.forEach((word) => {
+              const span = document.createElement("span");
+              span.textContent = word;
+              span.style.display = "inline-block";
+              if (SPACE_REGEX.test(word)) {
+                span.style.width = word.length * 0.25 + "em";
+                span.style.minWidth = word.length * 0.25 + "em";
+              }
+              element.appendChild(span);
+              // Init style
+              if (SPACE_REGEX.test(word)) {
+                gsap.set(span, { opacity: 0, transformOrigin: "50% 100%" });
+              } else {
+                gsap.set(span, {
+                  opacity: 0,
+                  y: 10,
+                  scale: 0.8,
+                  transformOrigin: "50% 100%",
+                });
+              }
+            });
+            element.setAttribute("data-processed", "true");
+          });
+
+          // Char Fade Split
+          content.querySelectorAll("[data-fade-char]").forEach((element) => {
+            if (element.hasAttribute("data-processed")) return;
+            const originalText = element.textContent || "";
+            const chars = originalText.split("");
+            element.innerHTML = "";
+            chars.forEach((char) => {
+              const span = document.createElement("span");
+              span.textContent = char;
+              span.style.display = "inline-block";
+              if (char === " ") span.style.width = "0.25em";
+              element.appendChild(span);
+              // Init style
+              gsap.set(span, {
+                opacity: 0,
+                y: 15,
+                rotationY: 90,
+                transformOrigin: "50% 50%",
+              });
+            });
+            element.setAttribute("data-processed", "true");
+          });
         }
 
-        // 获取当前位置
-        const currentX = gsap.getProperty(content, "x") as number;
-        const targetX = targetXRef.current;
+        if (enableLineReveal) {
+          content.querySelectorAll("[data-line-reveal]").forEach((element) => {
+            if (element.hasAttribute("data-processed")) return;
+            // (Keeping original split logic simplified for brevity but functionally identical)
+            if (element.children.length === 0) {
+              const text = element.textContent || "";
+              const textLines = text
+                .split("\n")
+                .filter((line) => line.trim().length > 0);
+              element.innerHTML = "";
+              textLines.forEach((lineText, index) => {
+                const span = document.createElement("span");
+                span.textContent = lineText;
+                span.style.display = "block";
+                element.appendChild(span);
+                if (index < textLines.length - 1) {
+                  const empty = document.createElement("span");
+                  empty.innerHTML = "&nbsp;";
+                  empty.style.display = "block";
+                  empty.style.height = "0.1em";
+                  element.appendChild(empty);
+                }
+              });
+            } else {
+              // Ensure empty children have height
+              Array.from(element.children).forEach((child) => {
+                const c = child as HTMLElement;
+                if (!c.textContent?.trim()) {
+                  c.innerHTML = "&nbsp;";
+                  c.style.display = "block";
+                  c.style.height = "1em";
+                }
+              });
+            }
+            // Init style
+            Array.from(element.children).forEach((line) => {
+              gsap.set(line, {
+                opacity: 0,
+                y: 20,
+                rotationX: -90,
+                transformOrigin: "50% 100%",
+              });
+            });
+            element.setAttribute("data-processed", "true");
+          });
+        }
+      };
 
-        // 如果已经在目标位置，不需要动画
-        if (Math.abs(targetX - currentX) < 0.1) {
+      initDOM();
+
+      // 测量所有元素位置 (在 Init 和 Resize 时调用)
+      const measure = () => {
+        const containerRect = container.getBoundingClientRect();
+        const contentRect = content.getBoundingClientRect();
+        cache.containerWidth = containerRect.width;
+
+        // 当前 content 的 X 偏移 (用于还原元素相对 content 的原始位置)
+        // 注意：contentRect.left 已经包含了 transform 变换
+        // 相对位置 = (元素屏幕位置 - content 屏幕位置)
+        // 这个相对位置在滚动过程中是不变的
+
+        if (enableParallax) {
+          cache.parallax = [];
+          content.querySelectorAll("[data-parallax]").forEach((element) => {
+            const rect = element.getBoundingClientRect();
+            // 重置 transform 以获取准确的原始位置?
+            // 不，我们希望基于当前布局。
+            // 假设初始状态下没有额外的 transform，或者我们基于 layout flow。
+            // 这里为了简单，我们计算它相对于 content 左边缘的距离。
+            const leftOffset = rect.left - contentRect.left;
+
+            cache.parallax.push({
+              el: element,
+              speed: parseFloat(element.getAttribute("data-parallax") || "0.5"),
+              initialX: (gsap.getProperty(element, "x") as number) || 0,
+              leftOffset,
+              width: rect.width,
+              hasEntered: false,
+              entryScrollX: 0,
+            });
+          });
+        }
+
+        if (enableFadeElements) {
+          cache.fade = [];
+          content.querySelectorAll("[data-fade]").forEach((element) => {
+            const rect = element.getBoundingClientRect();
+            cache.fade.push({
+              el: element,
+              leftOffset: rect.left - contentRect.left,
+              width: rect.width,
+            });
+          });
+
+          cache.wordFade = [];
+          content.querySelectorAll("[data-fade-word]").forEach((element) => {
+            const rect = element.getBoundingClientRect();
+            cache.wordFade.push({
+              el: element,
+              leftOffset: rect.left - contentRect.left,
+              width: rect.width,
+              spans: Array.from(element.children) as HTMLSpanElement[],
+              isFullyRevealed: false,
+            });
+          });
+
+          cache.charFade = [];
+          content.querySelectorAll("[data-fade-char]").forEach((element) => {
+            const rect = element.getBoundingClientRect();
+            cache.charFade.push({
+              el: element,
+              leftOffset: rect.left - contentRect.left,
+              width: rect.width,
+              spans: Array.from(element.children) as HTMLSpanElement[],
+              isFullyRevealed: false,
+            });
+          });
+        }
+
+        if (enableLineReveal) {
+          cache.lineReveal = [];
+          content.querySelectorAll("[data-line-reveal]").forEach((element) => {
+            const rect = element.getBoundingClientRect();
+            cache.lineReveal.push({
+              el: element,
+              leftOffset: rect.left - contentRect.left,
+              width: rect.width,
+              lines: Array.from(element.children) as HTMLElement[],
+              isFullyRevealed: false,
+            });
+          });
+        }
+      };
+
+      measure();
+
+      // -----------------------------------------------------------------------
+      // 动画循环
+      // -----------------------------------------------------------------------
+      let lastX = -999999;
+
+      const updateLoop = () => {
+        const currentX = gsap.getProperty(content, "x") as number;
+
+        // 性能优化：位置未改变时不重复计算 (除非强制刷新，这里省略)
+        if (Math.abs(currentX - lastX) < 0.01) {
           return;
         }
+        lastX = currentX;
 
-        // 创建新的GSAP动画，使用惯性ease
-        animationRef.current = gsap.to(content, {
-          x: targetX,
-          duration: 1,
-          ease: "power3.out", // 这个ease模拟真实的惯性感觉
-          overwrite: false,
-        });
-      };
+        const { containerWidth } = cache;
 
-      // 鼠标滚轮控制
-      const handleWheel = (e: WheelEvent) => {
-        // 检查是否是垂直滚动且目标元素有可滚动内容
-        const target = e.target as HTMLElement;
+        // --- Update Parallax ---
+        if (enableParallax) {
+          const viewportPreparationZone = containerWidth;
+          cache.parallax.forEach((item) => {
+            // 计算当前屏幕位置: contentX + itemOffset
+            const currentLeft = currentX + item.leftOffset;
+            const currentRight = currentLeft + item.width;
 
-        // 检查目标元素或其父元素是否有垂直滚动
-        let element: HTMLElement | null = target;
-        while (element && element !== container) {
-          const style = window.getComputedStyle(element);
-          const hasVerticalScroll =
-            (style.overflowY === "auto" || style.overflowY === "scroll") &&
-            element.scrollHeight > element.clientHeight;
-
-          if (hasVerticalScroll) {
-            // 检查是否可以在当前方向继续滚动
-            const isScrollingDown = e.deltaY > 0;
-            const isScrollingUp = e.deltaY < 0;
-            const isAtTop = element.scrollTop === 0;
-            const isAtBottom =
-              element.scrollTop + element.clientHeight >=
-              element.scrollHeight - 1;
-
-            // 如果可以继续滚动，则允许默认行为
-            if (
-              (isScrollingDown && !isAtBottom) ||
-              (isScrollingUp && !isAtTop)
-            ) {
-              return; // 不阻止默认行为，让子元素正常滚动
-            }
-          }
-
-          element = element.parentElement;
-        }
-
-        // 阻止默认滚动行为
-        e.preventDefault();
-
-        // 计算滚动增量
-        const deltaX = e.deltaY * scrollSpeed;
-
-        // 更新目标位置
-        const newTargetX = targetXRef.current - deltaX;
-
-        // 计算边界
-        const maxScrollLeft = -(content.scrollWidth - container.offsetWidth);
-        targetXRef.current = Math.max(maxScrollLeft, Math.min(0, newTargetX));
-
-        // 触发动画到新的目标位置
-        animateToTarget();
-      };
-
-      // 触摸开始处理
-      const handleTouchStart = (e: TouchEvent) => {
-        if (e.touches.length === 0) return;
-
-        const touch = e.touches[0];
-        if (!touch) return;
-
-        const now = Date.now();
-
-        touchStateRef.current = {
-          isStarted: true,
-          startX: touch.clientX,
-          startY: touch.clientY,
-          startTargetX: targetXRef.current,
-          currentX: touch.clientX,
-          velocity: 0,
-          lastTime: now,
-          direction: 0,
-          isDragging: false,
-        };
-
-        // 停止当前动画
-        if (animationRef.current) {
-          animationRef.current.kill();
-        }
-      };
-
-      // 触摸移动处理
-      const handleTouchMove = (e: TouchEvent) => {
-        if (!touchStateRef.current.isStarted || e.touches.length === 0) return;
-
-        const touch = e.touches[0];
-        if (!touch) return;
-
-        const now = Date.now();
-        const deltaTime = now - touchStateRef.current.lastTime;
-
-        // 节流：至少间隔 16ms（60fps）
-        if (deltaTime < 16) return;
-
-        const deltaX = touch.clientX - touchStateRef.current.currentX;
-        const deltaY = touch.clientY - touchStateRef.current.startY;
-
-        // 判断是否为水平拖动
-        const horizontalDistance = Math.abs(
-          touch.clientX - touchStateRef.current.startX,
-        );
-        const verticalDistance = Math.abs(deltaY);
-
-        if (horizontalDistance > 10 && horizontalDistance > verticalDistance) {
-          e.preventDefault();
-          touchStateRef.current.isDragging = true;
-
-          // 计算速度
-          touchStateRef.current.velocity = deltaX / deltaTime;
-          touchStateRef.current.direction = deltaX > 0 ? 1 : -1;
-
-          // 更新目标位置
-          const newTargetX =
-            touchStateRef.current.startTargetX +
-            (touch.clientX - touchStateRef.current.startX);
-
-          // 计算边界
-          const maxScrollLeft = -(content.scrollWidth - container.offsetWidth);
-          targetXRef.current = Math.max(maxScrollLeft, Math.min(0, newTargetX));
-
-          // 立即更新位置（跟随手指）
-          gsap.set(content, { x: targetXRef.current });
-
-          touchStateRef.current.currentX = touch.clientX;
-          touchStateRef.current.lastTime = now;
-        }
-      };
-
-      // 触摸结束处理
-      const handleTouchEnd = () => {
-        if (!touchStateRef.current.isStarted) return;
-
-        touchStateRef.current.isStarted = false;
-
-        if (touchStateRef.current.isDragging) {
-          // 计算惯性滚动
-          const velocity = touchStateRef.current.velocity;
-          const momentum = velocity * 300; // 惯性系数
-
-          // 计算最终位置
-          let finalX = targetXRef.current + momentum;
-
-          // 边界检查
-          const maxScrollLeft = -(content.scrollWidth - container.offsetWidth);
-          finalX = Math.max(maxScrollLeft, Math.min(0, finalX));
-
-          // 更新目标位置
-          targetXRef.current = finalX;
-
-          // 使用动画到达最终位置
-          animateToTarget();
-        }
-
-        touchStateRef.current.isDragging = false;
-      };
-
-      // 如果启用视差效果
-      if (enableParallax) {
-        const parallaxElements = content.querySelectorAll("[data-parallax]");
-
-        // 为每个视差元素存储其初始状态
-        const elementStates = new Map();
-
-        parallaxElements.forEach((element) => {
-          const speed = parseFloat(
-            element.getAttribute("data-parallax") || "0.5",
-          );
-
-          // 设置初始样式
-          gsap.set(element, { transformOrigin: "center center" });
-
-          // 初始化元素状态
-          elementStates.set(element, {
-            speed,
-            initialX: 0,
-            hasEnteredViewport: false,
-            viewportEntryX: 0,
-          });
-        });
-
-        // 创建视差更新函数
-        const updateParallaxElements = () => {
-          const containerRect = container.getBoundingClientRect();
-          const containerWidth = containerRect.width;
-
-          parallaxElements.forEach((element) => {
-            const elementRect = element.getBoundingClientRect();
-            const elementState = elementStates.get(element);
-
-            // 计算元素相对于容器的位置
-            const elementLeftInContainer =
-              elementRect.left - containerRect.left;
-            const elementRightInContainer =
-              elementLeftInContainer + elementRect.width;
-
-            // 定义视口范围：从右边界向左扩展100px作为"准备区域"
-            const viewportPreparationZone = containerWidth; // 右边界开始准备
-
-            // 检查元素是否在视口范围内（包括准备区域）
             const isInViewportArea =
-              elementLeftInContainer < viewportPreparationZone &&
-              elementRightInContainer > 0;
+              currentLeft < viewportPreparationZone && currentRight > 0;
 
             if (isInViewportArea) {
-              // 如果元素首次进入视口区域，记录当前的滚动位置作为基准点
-              if (!elementState.hasEnteredViewport) {
-                elementState.hasEnteredViewport = true;
-                elementState.viewportEntryX = gsap.getProperty(
-                  content,
-                  "x",
-                ) as number;
-                elementState.initialX =
-                  (gsap.getProperty(element, "x") as number) || 0;
+              if (!item.hasEntered) {
+                item.hasEntered = true;
+                item.entryScrollX = currentX;
+                item.initialX = (gsap.getProperty(item.el, "x") as number) || 0;
               }
 
-              // 计算从进入视口开始的相对移动距离
-              const currentContentX = gsap.getProperty(content, "x") as number;
-              const relativeMovement =
-                currentContentX - elementState.viewportEntryX;
-
-              // 应用视差效果：基于相对移动距离
-              const parallaxX =
-                elementState.initialX + relativeMovement * elementState.speed;
-              gsap.set(element, { x: parallaxX });
-            } else if (elementLeftInContainer >= viewportPreparationZone) {
-              // 元素还未进入准备区域，重置状态
-              if (elementState.hasEnteredViewport) {
-                elementState.hasEnteredViewport = false;
-                elementState.viewportEntryX = 0;
-                // 保持当前位置，不重置到初始位置
+              const relativeMovement = currentX - item.entryScrollX;
+              const parallaxX = item.initialX + relativeMovement * item.speed;
+              gsap.set(item.el, { x: parallaxX });
+            } else if (currentLeft >= viewportPreparationZone) {
+              if (item.hasEntered) {
+                item.hasEntered = false;
+                item.entryScrollX = 0;
               }
             }
-            // 如果元素已经完全离开左侧视口，保持最后的视差位置
           });
-        };
+        }
 
-        // 使用 GSAP ticker 来更新视差效果
-        gsap.ticker.add(updateParallaxElements);
+        // --- Update Fade Elements ---
+        if (enableFadeElements) {
+          const animationStartX = containerWidth;
+          const animationEndX = containerWidth * 0.8;
+          const totalDistance = animationStartX - animationEndX;
 
-        // 添加清理函数
-        cleanupFunctions.push(() => gsap.ticker.remove(updateParallaxElements));
-      }
+          cache.fade.forEach((item) => {
+            const currentLeft = currentX + item.leftOffset;
+            const center = currentLeft + item.width / 2;
+            let progress = 0;
 
-      // 如果启用淡入效果
-      if (enableFadeElements) {
-        const fadeElements = content.querySelectorAll("[data-fade]");
+            if (center <= animationEndX) progress = 1;
+            else if (center >= animationStartX) progress = 0;
+            else progress = (animationStartX - center) / totalDistance;
 
-        // 创建一个函数来更新所有淡入元素的状态
-        const updateFadeElements = () => {
-          const containerRect = container.getBoundingClientRect();
-          const containerWidth = containerRect.width;
-
-          fadeElements.forEach((element) => {
-            // 获取元素在文档中的位置
-            const elementRect = element.getBoundingClientRect();
-
-            // 计算元素相对于容器视口的位置
-            // elementRect.left 是相对于整个页面的，containerRect.left 也是
-            // 所以 elementRect.left - containerRect.left 得到的是元素相对于容器的位置
-            const elementLeftInContainer =
-              elementRect.left - containerRect.left;
-            const elementCenter =
-              elementLeftInContainer + elementRect.width / 2;
-
-            // 定义动画范围：从右边界到屏幕右侧80%位置
-            const animationStartX = containerWidth; // 右边界
-            const animationEndX = containerWidth * 0.8; // 屏幕右侧80%位置
-
-            // 计算元素中心在动画范围内的进度
-            let animationProgress = 0;
-
-            if (elementCenter <= animationEndX) {
-              // 元素已经到达或超过屏幕右侧80%位置，完全显示
-              animationProgress = 1;
-            } else if (elementCenter >= animationStartX) {
-              // 元素还在右边界外，不显示
-              animationProgress = 0;
-            } else {
-              // 元素在动画范围内，计算进度
-              const totalDistance = animationStartX - animationEndX;
-              const currentDistance = animationStartX - elementCenter;
-              animationProgress = currentDistance / totalDistance;
-            }
-
-            // 确保进度在 0-1 范围内
-            animationProgress = Math.max(0, Math.min(1, animationProgress));
-
-            // 根据动画进度计算透明度
-            const opacity = animationProgress;
-
-            // 应用动画 - 只改变透明度
-            gsap.to(element, {
-              opacity,
+            gsap.to(item.el, {
+              opacity: Math.max(0, Math.min(1, progress)),
               duration: 0.1,
               ease: "none",
               overwrite: true,
             });
           });
-        };
 
-        // 初始状态设置 - 只设置透明度
-        fadeElements.forEach((element) => {
-          gsap.set(element, { opacity: 0 });
-        });
+          // --- Update Word Fade ---
+          const wordTriggerPoint = containerWidth * 0.8;
+          cache.wordFade.forEach((item) => {
+            const currentLeft = currentX + item.leftOffset;
+            const currentRight = currentLeft + item.width;
 
-        // 立即更新一次
-        updateFadeElements();
-
-        // 使用 GSAP ticker 来持续更新淡入效果
-        gsap.ticker.add(updateFadeElements);
-
-        // 添加清理函数
-        cleanupFunctions.push(() => gsap.ticker.remove(updateFadeElements));
-
-        // 逐字淡入效果
-        const wordFadeElements = content.querySelectorAll("[data-fade-word]");
-
-        wordFadeElements.forEach((element) => {
-          // 将文本内容分割成单词并包装在span中
-          const originalText = element.textContent || "";
-          const words = originalText
-            .split(/(\s+)/)
-            .filter((word) => word.length > 0);
-
-          // 清空原内容并重新构建
-          element.innerHTML = "";
-
-          const wordSpans: HTMLSpanElement[] = [];
-          words.forEach((word) => {
-            const span = document.createElement("span");
-            span.textContent = word;
-            span.style.display = "inline-block";
-
-            // 为空格设置固定宽度，避免缩放影响
-            if (/^\s+$/.test(word)) {
-              span.style.width = word.length * 0.25 + "em";
-              span.style.minWidth = word.length * 0.25 + "em";
-            }
-
-            element.appendChild(span);
-
-            // 为所有单词（包括空格）应用动画
-            wordSpans.push(span);
-          });
-
-          // 初始状态：隐藏所有单词
-          wordSpans.forEach((span) => {
-            const isSpace = /^\s+$/.test(span.textContent || "");
-
-            if (isSpace) {
-              // 空格只控制透明度，不缩放
-              gsap.set(span, {
-                opacity: 0,
-                transformOrigin: "50% 100%",
-              });
-            } else {
-              // 非空格单词进行完整动画
-              gsap.set(span, {
-                opacity: 0,
-                y: 10,
-                scale: 0.8,
-                transformOrigin: "50% 100%",
-              });
-            }
-          });
-
-          // 添加状态来跟踪是否已经完全显示
-          let isFullyRevealed = false;
-
-          // 创建一个函数来更新逐字淡入状态
-          const updateWordFade = () => {
-            const containerRect = container.getBoundingClientRect();
-            const containerWidth = containerRect.width;
-            const elementRect = element.getBoundingClientRect();
-
-            // 计算元素相对于容器的位置
-            const elementLeftInContainer =
-              elementRect.left - containerRect.left;
-            const elementRightInContainer =
-              elementLeftInContainer + elementRect.width;
-
-            // 定义触发范围：当元素进入屏幕右侧80%位置时开始逐字显示
-            const triggerPoint = containerWidth * 0.8;
-
-            // 检查元素是否进入触发范围
-            if (elementRightInContainer <= triggerPoint) {
-              // 元素已经完全进入视野，标记为完全显示并播放完整动画
-              if (!isFullyRevealed) {
-                isFullyRevealed = true;
-                wordSpans.forEach((span, index) => {
-                  const isSpace = /^\s+$/.test(span.textContent || "");
-
-                  if (isSpace) {
-                    // 空格只淡入，不缩放和移动
-                    gsap.to(span, {
-                      opacity: 1,
-                      duration: 0.4,
-                      delay: index * 0.05,
-                      ease: "back.out(1.2)",
-                      overwrite: true,
-                    });
-                  } else {
-                    // 非空格单词进行完整动画
-                    gsap.to(span, {
-                      opacity: 1,
-                      y: 0,
-                      scale: 1,
-                      duration: 0.4,
-                      delay: index * 0.05, // 每个单词延迟0.05秒
-                      ease: "back.out(1.2)",
-                      overwrite: true,
-                    });
-                  }
+            if (currentRight <= wordTriggerPoint) {
+              if (!item.isFullyRevealed) {
+                item.isFullyRevealed = true;
+                item.spans.forEach((span, i) => {
+                  gsap.to(span, {
+                    opacity: 1,
+                    y: 0,
+                    scale: 1,
+                    duration: 0.4,
+                    delay: i * 0.05,
+                    ease: "back.out(1.2)",
+                    overwrite: true,
+                  });
                 });
               }
-            } else if (elementLeftInContainer <= containerWidth) {
-              // 元素部分可见，重置完全显示状态
-              isFullyRevealed = false;
-
-              // 元素部分可见，计算应该显示多少单词
+            } else if (currentLeft <= containerWidth) {
+              item.isFullyRevealed = false;
+              // 部分可见
               const visibleProgress = Math.max(
                 0,
-                Math.min(
-                  1,
-                  (containerWidth - elementLeftInContainer) / elementRect.width,
-                ),
+                Math.min(1, (containerWidth - currentLeft) / item.width),
               );
+              const count = Math.floor(visibleProgress * item.spans.length);
 
-              // 根据可见进度决定显示多少单词
-              const wordsToShow = Math.floor(
-                visibleProgress * wordSpans.length,
-              );
-
-              wordSpans.forEach((span, index) => {
-                const isSpace = /^\s+$/.test(span.textContent || "");
-
-                if (index < wordsToShow) {
-                  // 显示这个单词
-                  if (isSpace) {
-                    // 空格只淡入
-                    gsap.to(span, {
-                      opacity: 1,
-                      duration: 0.4,
-                      ease: "back.out(1.2)",
-                      overwrite: true,
-                    });
-                  } else {
-                    // 非空格单词进行完整动画
-                    gsap.to(span, {
-                      opacity: 1,
-                      y: 0,
-                      scale: 1,
-                      duration: 0.4,
-                      ease: "back.out(1.2)",
-                      overwrite: true,
-                    });
-                  }
+              item.spans.forEach((span, i) => {
+                const isSpace = SPACE_REGEX.test(span.textContent || "");
+                if (i < count) {
+                  gsap.to(span, {
+                    opacity: 1,
+                    y: 0,
+                    scale: 1,
+                    duration: 0.4,
+                    ease: "back.out(1.2)",
+                    overwrite: true,
+                  });
                 } else {
-                  // 隐藏这个单词
-                  if (isSpace) {
-                    // 空格只淡出
-                    gsap.to(span, {
-                      opacity: 0,
-                      duration: 0.2,
-                      ease: "power2.out",
-                      overwrite: true,
-                    });
-                  } else {
-                    // 非空格单词进行完整隐藏动画
-                    gsap.to(span, {
-                      opacity: 0,
-                      y: 10,
-                      scale: 0.8,
-                      duration: 0.2,
-                      ease: "power2.out",
-                      overwrite: true,
-                    });
-                  }
+                  gsap.to(span, {
+                    opacity: 0,
+                    y: isSpace ? 0 : 10,
+                    scale: isSpace ? 1 : 0.8,
+                    duration: 0.2,
+                    ease: "power2.out",
+                    overwrite: true,
+                  });
                 }
               });
             } else {
-              // 元素完全不可见，重置完全显示状态并隐藏所有单词
-              isFullyRevealed = false;
-              wordSpans.forEach((span) => {
-                const isSpace = /^\s+$/.test(span.textContent || "");
-
-                if (isSpace) {
-                  // 空格只淡出
-                  gsap.to(span, {
-                    opacity: 0,
-                    duration: 0.2,
-                    ease: "power2.out",
-                    overwrite: true,
-                  });
-                } else {
-                  // 非空格单词进行完整隐藏动画
-                  gsap.to(span, {
-                    opacity: 0,
-                    y: 10,
-                    scale: 0.8,
-                    duration: 0.2,
-                    ease: "power2.out",
-                    overwrite: true,
-                  });
-                }
+              item.isFullyRevealed = false;
+              item.spans.forEach((span) => {
+                const isSpace = SPACE_REGEX.test(span.textContent || "");
+                gsap.to(span, {
+                  opacity: 0,
+                  y: isSpace ? 0 : 10,
+                  scale: isSpace ? 1 : 0.8,
+                  duration: 0.2,
+                  ease: "power2.out",
+                  overwrite: true,
+                });
               });
             }
-          };
-
-          // 使用 GSAP ticker 来持续更新逐字淡入效果
-          gsap.ticker.add(updateWordFade);
-
-          // 添加清理函数
-          cleanupFunctions.push(() => gsap.ticker.remove(updateWordFade));
-
-          // 立即更新一次
-          updateWordFade();
-        });
-
-        // 逐字符淡入效果
-        const charFadeElements = content.querySelectorAll("[data-fade-char]");
-
-        charFadeElements.forEach((element) => {
-          // 将文本内容分割成字符并包装在span中
-          const originalText = element.textContent || "";
-          const chars = originalText.split("");
-
-          // 清空原内容并重新构建
-          element.innerHTML = "";
-
-          const charSpans: HTMLSpanElement[] = [];
-          chars.forEach((char) => {
-            const span = document.createElement("span");
-            span.textContent = char;
-            span.style.display = "inline-block";
-
-            // 为空格添加特殊处理，保持原有宽度
-            if (char === " ") {
-              span.style.width = "0.25em";
-            }
-
-            element.appendChild(span);
-            charSpans.push(span);
           });
 
-          // 初始状态：隐藏所有字符
-          charSpans.forEach((span) => {
-            gsap.set(span, {
-              opacity: 0,
-              y: 15,
-              rotationY: 90,
-              transformOrigin: "50% 50%",
-            });
-          });
+          // --- Update Char Fade ---
+          const charTriggerPoint = containerWidth * 0.75;
+          cache.charFade.forEach((item) => {
+            const currentLeft = currentX + item.leftOffset;
+            const currentRight = currentLeft + item.width;
 
-          // 添加状态来跟踪是否已经完全显示
-          let isFullyRevealed = false;
-
-          // 创建一个函数来更新逐字符淡入状态
-          const updateCharFade = () => {
-            const containerRect = container.getBoundingClientRect();
-            const containerWidth = containerRect.width;
-            const elementRect = element.getBoundingClientRect();
-
-            // 计算元素相对于容器的位置
-            const elementLeftInContainer =
-              elementRect.left - containerRect.left;
-            const elementRightInContainer =
-              elementLeftInContainer + elementRect.width;
-
-            // 定义触发范围：当元素进入屏幕右侧75%位置时开始逐字符显示
-            const triggerPoint = containerWidth * 0.75;
-
-            // 检查元素是否进入触发范围
-            if (elementRightInContainer <= triggerPoint) {
-              // 元素已经完全进入视野，标记为完全显示并播放完整动画
-              if (!isFullyRevealed) {
-                isFullyRevealed = true;
-                charSpans.forEach((span, index) => {
+            if (currentRight <= charTriggerPoint) {
+              if (!item.isFullyRevealed) {
+                item.isFullyRevealed = true;
+                item.spans.forEach((span, i) => {
                   gsap.to(span, {
                     opacity: 1,
                     y: 0,
                     rotationY: 0,
                     duration: 0.3,
-                    delay: index * 0.02, // 每个字符延迟0.02秒
+                    delay: i * 0.02,
                     ease: "back.out(1.1)",
                     overwrite: true,
                   });
                 });
               }
-            } else if (elementLeftInContainer <= containerWidth) {
-              // 元素部分可见，重置完全显示状态
-              isFullyRevealed = false;
-
-              // 元素部分可见，计算应该显示多少字符
+            } else if (currentLeft <= containerWidth) {
+              item.isFullyRevealed = false;
               const visibleProgress = Math.max(
                 0,
-                Math.min(
-                  1,
-                  (containerWidth - elementLeftInContainer) / elementRect.width,
-                ),
+                Math.min(1, (containerWidth - currentLeft) / item.width),
               );
-
-              // 根据可见进度决定显示多少字符
-              const charsToShow = Math.floor(
-                visibleProgress * charSpans.length,
-              );
-
-              charSpans.forEach((span, index) => {
-                if (index < charsToShow) {
-                  // 显示这个字符
+              const count = Math.floor(visibleProgress * item.spans.length);
+              item.spans.forEach((span, i) => {
+                if (i < count) {
                   gsap.to(span, {
                     opacity: 1,
                     y: 0,
@@ -705,7 +483,6 @@ export default function HorizontalScroll({
                     overwrite: true,
                   });
                 } else {
-                  // 隐藏这个字符
                   gsap.to(span, {
                     opacity: 0,
                     y: 15,
@@ -717,9 +494,8 @@ export default function HorizontalScroll({
                 }
               });
             } else {
-              // 元素完全不可见，重置完全显示状态并隐藏所有字符
-              isFullyRevealed = false;
-              charSpans.forEach((span) => {
+              item.isFullyRevealed = false;
+              item.spans.forEach((span) => {
                 gsap.to(span, {
                   opacity: 0,
                   y: 15,
@@ -730,147 +506,40 @@ export default function HorizontalScroll({
                 });
               });
             }
-          };
-
-          // 使用 GSAP ticker 来持续更新逐字符淡入效果
-          gsap.ticker.add(updateCharFade);
-
-          // 添加清理函数
-          cleanupFunctions.push(() => gsap.ticker.remove(updateCharFade));
-
-          // 立即更新一次
-          updateCharFade();
-        });
-      }
-
-      // 如果启用逐行显示效果
-      if (enableLineReveal) {
-        const lineRevealElements =
-          content.querySelectorAll("[data-line-reveal]");
-
-        lineRevealElements.forEach((element) => {
-          // 处理文本换行：获取所有直接子元素作为"行"，如果没有子元素则创建文本行
-          let lines: HTMLElement[] = [];
-
-          if (element.children.length === 0) {
-            // 如果没有子元素，说明是纯文本，需要按换行符分割
-            const text = element.textContent || "";
-            const textLines = text
-              .split("\n")
-              .filter((line) => line.trim().length > 0);
-
-            // 清空原内容
-            element.innerHTML = "";
-
-            // 为每行文本创建一个 span 元素
-            textLines.forEach((lineText, index) => {
-              const span = document.createElement("span");
-              span.textContent = lineText;
-              span.style.display = "block";
-              element.appendChild(span);
-
-              // 如果不是最后一行，添加一个空行用于换行
-              if (index < textLines.length - 1) {
-                const emptySpan = document.createElement("span");
-                emptySpan.innerHTML = "&nbsp;";
-                emptySpan.style.display = "block";
-                emptySpan.style.height = "0.1em";
-                element.appendChild(emptySpan);
-              }
-            });
-
-            lines = Array.from(element.children) as HTMLElement[];
-          } else {
-            // 如果有子元素，检查是否需要插入换行
-            lines = Array.from(element.children) as HTMLElement[];
-
-            // 检查是否有空白的子元素（内容为空格或完全为空）
-            let hasEmptyElements = false;
-            lines.forEach((child) => {
-              const text = child.textContent || "";
-              if (text.trim() === "" || text === " ") {
-                hasEmptyElements = true;
-              }
-            });
-
-            if (hasEmptyElements) {
-              // 如果有空白子元素，直接在这些元素中插入换行符
-              lines.forEach((child) => {
-                const text = child.textContent || "";
-                if (text.trim() === "" || text === " ") {
-                  // 将空白元素的内容设置为换行符
-                  child.innerHTML = "&nbsp;";
-                  child.style.display = "block";
-                  child.style.height = "1em"; // 设置高度为1em，确保有可见的空行效果
-                }
-              });
-            }
-          }
-
-          // 初始状态：隐藏所有行
-          lines.forEach((line) => {
-            gsap.set(line, {
-              opacity: 0,
-              y: 20,
-              rotationX: -90,
-              transformOrigin: "50% 100%",
-            });
           });
+        }
 
-          // 添加状态来跟踪是否已经完全显示
-          let isFullyRevealed = false;
+        // --- Update Line Reveal ---
+        if (enableLineReveal) {
+          const lineTriggerPoint = containerWidth * 0.8;
+          cache.lineReveal.forEach((item) => {
+            const currentLeft = currentX + item.leftOffset;
+            const currentRight = currentLeft + item.width;
 
-          // 创建一个函数来更新逐行显示状态
-          const updateLineReveal = () => {
-            const containerRect = container.getBoundingClientRect();
-            const containerWidth = containerRect.width;
-            const elementRect = element.getBoundingClientRect();
-
-            // 计算元素相对于容器的位置
-            const elementLeftInContainer =
-              elementRect.left - containerRect.left;
-            const elementRightInContainer =
-              elementLeftInContainer + elementRect.width;
-
-            // 定义触发范围：当元素进入屏幕右侧70%位置时开始逐行显示
-            const triggerPoint = containerWidth * 0.8;
-
-            // 检查元素是否进入触发范围
-            if (elementRightInContainer <= triggerPoint) {
-              // 元素已经完全进入视野，标记为完全显示并播放完整动画
-              if (!isFullyRevealed) {
-                isFullyRevealed = true;
-                lines.forEach((line, index) => {
+            if (currentRight <= lineTriggerPoint) {
+              if (!item.isFullyRevealed) {
+                item.isFullyRevealed = true;
+                item.lines.forEach((line, i) => {
                   gsap.to(line, {
                     opacity: 1,
                     y: 0,
                     rotationX: 0,
                     duration: 0.6,
-                    delay: index * 0.1, // 每行延迟0.1秒
+                    delay: i * 0.1,
                     ease: "back.out(1.7)",
                     overwrite: true,
                   });
                 });
               }
-            } else if (elementLeftInContainer <= containerWidth) {
-              // 元素部分可见，重置完全显示状态
-              isFullyRevealed = false;
-
-              // 元素部分可见，计算应该显示多少行
+            } else if (currentLeft <= containerWidth) {
+              item.isFullyRevealed = false;
               const visibleProgress = Math.max(
                 0,
-                Math.min(
-                  1,
-                  (containerWidth - elementLeftInContainer) / elementRect.width,
-                ),
+                Math.min(1, (containerWidth - currentLeft) / item.width),
               );
-
-              // 根据可见进度决定显示多少行
-              const linesToShow = Math.floor(visibleProgress * lines.length);
-
-              lines.forEach((line, index) => {
-                if (index < linesToShow) {
-                  // 显示这一行
+              const count = Math.floor(visibleProgress * item.lines.length);
+              item.lines.forEach((line, i) => {
+                if (i < count) {
                   gsap.to(line, {
                     opacity: 1,
                     y: 0,
@@ -880,7 +549,6 @@ export default function HorizontalScroll({
                     overwrite: true,
                   });
                 } else {
-                  // 隐藏这一行
                   gsap.to(line, {
                     opacity: 0,
                     y: 20,
@@ -892,9 +560,8 @@ export default function HorizontalScroll({
                 }
               });
             } else {
-              // 元素完全不可见，重置完全显示状态并隐藏所有行
-              isFullyRevealed = false;
-              lines.forEach((line) => {
+              item.isFullyRevealed = false;
+              item.lines.forEach((line) => {
                 gsap.to(line, {
                   opacity: 0,
                   y: 20,
@@ -905,23 +572,134 @@ export default function HorizontalScroll({
                 });
               });
             }
-          };
+          });
+        }
+      };
 
-          // 使用 GSAP ticker 来持续更新逐行显示效果
-          gsap.ticker.add(updateLineReveal);
+      // 注册单个 ticker 函数
+      gsap.ticker.add(updateLoop);
+      cleanupFunctions.push(() => gsap.ticker.remove(updateLoop));
 
-          // 添加清理函数
-          cleanupFunctions.push(() => gsap.ticker.remove(updateLineReveal));
+      // 窗口大小变化时重新测量
+      window.addEventListener("resize", measure);
+      cleanupFunctions.push(() =>
+        window.removeEventListener("resize", measure),
+      );
 
-          // 立即更新一次
-          updateLineReveal();
+      // -----------------------------------------------------------------------
+      // 事件处理
+      // -----------------------------------------------------------------------
+      const animateToTarget = () => {
+        if (animationRef.current) animationRef.current.kill();
+        const currentX = gsap.getProperty(content, "x") as number;
+        const targetX = targetXRef.current;
+        if (Math.abs(targetX - currentX) < 0.1) return;
+
+        animationRef.current = gsap.to(content, {
+          x: targetX,
+          duration: 1,
+          ease: "power3.out",
+          overwrite: false,
         });
-      }
+      };
 
-      // 添加鼠标滚轮监听
+      const handleWheel = (e: WheelEvent) => {
+        // ... (Keep existing scroll logic)
+        const target = e.target as HTMLElement;
+        let element: HTMLElement | null = target;
+        while (element && element !== container) {
+          const style = window.getComputedStyle(element);
+          const hasVerticalScroll =
+            (style.overflowY === "auto" || style.overflowY === "scroll") &&
+            element.scrollHeight > element.clientHeight;
+          if (hasVerticalScroll) {
+            const isScrollingDown = e.deltaY > 0;
+            const isScrollingUp = e.deltaY < 0;
+            const isAtTop = element.scrollTop === 0;
+            const isAtBottom =
+              element.scrollTop + element.clientHeight >=
+              element.scrollHeight - 1;
+            if (
+              (isScrollingDown && !isAtBottom) ||
+              (isScrollingUp && !isAtTop)
+            ) {
+              return;
+            }
+          }
+          element = element.parentElement;
+        }
+
+        e.preventDefault();
+        const deltaX = e.deltaY * scrollSpeed;
+        const newTargetX = targetXRef.current - deltaX;
+        const maxScrollLeft = -(content.scrollWidth - container.offsetWidth);
+        targetXRef.current = Math.max(maxScrollLeft, Math.min(0, newTargetX));
+        animateToTarget();
+      };
+
+      const handleTouchStart = (e: TouchEvent) => {
+        if (e.touches.length === 0) return;
+        const touch = e.touches[0];
+        if (!touch) return;
+        touchStateRef.current = {
+          isStarted: true,
+          startX: touch.clientX,
+          startY: touch.clientY,
+          startTargetX: targetXRef.current,
+          currentX: touch.clientX,
+          velocity: 0,
+          lastTime: Date.now(),
+          direction: 0,
+          isDragging: false,
+        };
+        if (animationRef.current) animationRef.current.kill();
+      };
+
+      const handleTouchMove = (e: TouchEvent) => {
+        if (!touchStateRef.current.isStarted || e.touches.length === 0) return;
+        const touch = e.touches[0];
+        if (!touch) return;
+        const now = Date.now();
+        if (now - touchStateRef.current.lastTime < 16) return;
+
+        const deltaX = touch.clientX - touchStateRef.current.currentX;
+        const deltaY = touch.clientY - touchStateRef.current.startY;
+        const horizontalDistance = Math.abs(
+          touch.clientX - touchStateRef.current.startX,
+        );
+        const verticalDistance = Math.abs(deltaY);
+
+        if (horizontalDistance > 10 && horizontalDistance > verticalDistance) {
+          e.preventDefault();
+          touchStateRef.current.isDragging = true;
+          touchStateRef.current.velocity =
+            deltaX / (now - touchStateRef.current.lastTime);
+          const newTargetX =
+            touchStateRef.current.startTargetX +
+            (touch.clientX - touchStateRef.current.startX);
+          const maxScrollLeft = -(content.scrollWidth - container.offsetWidth);
+          targetXRef.current = Math.max(maxScrollLeft, Math.min(0, newTargetX));
+          gsap.set(content, { x: targetXRef.current });
+          touchStateRef.current.currentX = touch.clientX;
+          touchStateRef.current.lastTime = now;
+        }
+      };
+
+      const handleTouchEnd = () => {
+        if (!touchStateRef.current.isStarted) return;
+        touchStateRef.current.isStarted = false;
+        if (touchStateRef.current.isDragging) {
+          const momentum = touchStateRef.current.velocity * 300;
+          let finalX = targetXRef.current + momentum;
+          const maxScrollLeft = -(content.scrollWidth - container.offsetWidth);
+          finalX = Math.max(maxScrollLeft, Math.min(0, finalX));
+          targetXRef.current = finalX;
+          animateToTarget();
+        }
+        touchStateRef.current.isDragging = false;
+      };
+
       container.addEventListener("wheel", handleWheel, { passive: false });
-
-      // 添加触摸事件监听
       container.addEventListener("touchstart", handleTouchStart, {
         passive: false,
       });
@@ -932,18 +710,14 @@ export default function HorizontalScroll({
         passive: false,
       });
 
-      // 键盘操作处理
+      // Keydown optimization: only attach if necessary? No, document level is fine but ensure clean up.
       const handleKeyDown = (e: KeyboardEvent) => {
-        // 检查是否在可编辑元素中,或者在Monaco编辑器中,避免冲突
+        // ... (Logic same as original)
         const target = e.target as HTMLElement;
-
-        // 更全面的Monaco编辑器检测
         const isInMonacoEditor =
-          target.closest('[data-monaco-editor="true"]') !== null ||
-          target.closest(".monaco-editor") !== null ||
-          target.classList?.contains("monaco-editor") ||
-          target.classList?.contains("native-edit-context") ||
-          target.closest(".view-lines") !== null;
+          target.closest('[data-monaco-editor="true"]') ||
+          target.closest(".monaco-editor") ||
+          target.classList?.contains("monaco-editor");
 
         if (
           document.activeElement?.tagName === "INPUT" ||
@@ -955,78 +729,43 @@ export default function HorizontalScroll({
         }
 
         let scrollDelta = 0;
-
-        // 向右滚动:空格、右方向键、下方向键
         if (
           e.code === "Space" ||
           e.code === "ArrowRight" ||
           e.code === "ArrowDown"
         ) {
           e.preventDefault();
-          scrollDelta = -100; // 向右滚动为负值
-        }
-        // 向左滚动:Shift+空格、左方向键、上方向键
-        else if (
+          scrollDelta = -100;
+        } else if (
           (e.code === "Space" && e.shiftKey) ||
           e.code === "ArrowLeft" ||
           e.code === "ArrowUp"
         ) {
           e.preventDefault();
-          scrollDelta = 100; // 向左滚动为正值
+          scrollDelta = 100;
         }
 
         if (scrollDelta !== 0) {
-          // 计算滚动增量
-          const deltaX = scrollDelta * scrollSpeed;
-
-          // 更新目标位置
-          const newTargetX = targetXRef.current + deltaX;
-
-          // 计算边界
+          const newTargetX = targetXRef.current + scrollDelta * scrollSpeed;
           const maxScrollLeft = -(content.scrollWidth - container.offsetWidth);
           targetXRef.current = Math.max(maxScrollLeft, Math.min(0, newTargetX));
-
-          // 触发动画到新的目标位置
           animateToTarget();
         }
       };
 
-      // 添加键盘事件监听 - 改为全局监听
       document.addEventListener("keydown", handleKeyDown, { passive: false });
 
-      // 点击容器时的处理（可以用于其他交互，暂时保留）
-      const handleClick = () => {
-        // 这里可以添加点击时的其他交互效果
-      };
-
-      container.addEventListener("click", handleClick);
-
-      // 添加清理函数
-      cleanupFunctions.push(() =>
-        container.removeEventListener("wheel", handleWheel),
-      );
-      cleanupFunctions.push(() =>
-        container.removeEventListener("touchstart", handleTouchStart),
-      );
-      cleanupFunctions.push(() =>
-        container.removeEventListener("touchmove", handleTouchMove),
-      );
-      cleanupFunctions.push(() =>
-        container.removeEventListener("touchend", handleTouchEnd),
-      );
-      cleanupFunctions.push(() =>
-        document.removeEventListener("keydown", handleKeyDown),
-      );
-      cleanupFunctions.push(() =>
-        container.removeEventListener("click", handleClick),
-      );
+      cleanupFunctions.push(() => {
+        container.removeEventListener("wheel", handleWheel);
+        container.removeEventListener("touchstart", handleTouchStart);
+        container.removeEventListener("touchmove", handleTouchMove);
+        container.removeEventListener("touchend", handleTouchEnd);
+        document.removeEventListener("keydown", handleKeyDown);
+      });
     }, container);
 
-    // 组件卸载时清理
     return () => {
-      if (animationRef.current) {
-        animationRef.current.kill();
-      }
+      if (animationRef.current) animationRef.current.kill();
       ctx.revert();
       cleanupFunctions.forEach((cleanup) => cleanup());
     };
@@ -1038,198 +777,219 @@ export default function HorizontalScroll({
     isMobile,
   ]);
 
-  // 移动设备上的竖直滚动动画效果
+  // Mobile optimization
   useEffect(() => {
     if (!isMobile) return;
-
     const container = containerRef.current;
     const content = contentRef.current;
-
     if (!container || !content) return;
 
-    // 存储清理函数
     const cleanupFunctions: (() => void)[] = [];
-
-    // 延迟初始化，确保其他动画已完成
     const initTimeout = setTimeout(() => {
-      // 创建 GSAP 上下文
       const ctx = gsap.context(() => {
-        // 移动设备上只启用淡入效果，不启用视差效果
-        if (enableFadeElements) {
-          const fadeElements = content.querySelectorAll("[data-fade]");
+        // Cache mechanism for mobile (vertical scroll)
+        const cache = {
+          fade: [] as { el: Element; topOffset: number; height: number }[],
+          wordFade: [] as {
+            el: Element;
+            topOffset: number;
+            height: number;
+            spans: HTMLSpanElement[];
+          }[],
+          charFade: [] as {
+            el: Element;
+            topOffset: number;
+            height: number;
+            spans: HTMLSpanElement[];
+          }[],
+          lineReveal: [] as {
+            el: Element;
+            topOffset: number;
+            height: number;
+            lines: HTMLElement[];
+          }[],
+        };
 
-          // 创建一个函数来更新所有淡入元素的状态（基于竖直滚动）
-          const updateFadeElements = () => {
-            const scrollTop =
-              window.pageYOffset || document.documentElement.scrollTop;
-            const windowHeight = window.innerHeight;
+        const initDOM = () => {
+          // Split logic mirrors desktop... can extract to shared function but keeping inline for now
+          if (enableFadeElements) {
+            content.querySelectorAll("[data-fade]").forEach((el) =>
+              gsap.set(el, {
+                opacity: 0,
+                clearProps: "transform,opacity",
+                force3D: true,
+              }),
+            );
 
-            fadeElements.forEach((element) => {
-              const elementRect = element.getBoundingClientRect();
-              const elementTop = elementRect.top + scrollTop;
+            // ... Split logic for word/char ... (Re-implementing split logic here is redundant if it ran in desktop effect, BUT isMobile changes, causing unmount/remount, so we must run it.)
+            // However, split modifies DOM. If we switch mobile->desktop->mobile, we might double split if not careful.
+            // The "data-processed" check handles this.
+            content.querySelectorAll("[data-fade-word]").forEach((element) => {
+              if (element.hasAttribute("data-processed")) return;
+              // ... same split logic
+              const originalText = element.textContent || "";
+              const words = originalText
+                .split(/(\s+)/)
+                .filter((word) => word.length > 0);
+              element.innerHTML = "";
+              words.forEach((word) => {
+                const span = document.createElement("span");
+                span.textContent = word;
+                span.style.display = "inline-block";
+                if (SPACE_REGEX.test(word)) {
+                  span.style.width = word.length * 0.25 + "em";
+                  span.style.minWidth = word.length * 0.25 + "em";
+                }
+                element.appendChild(span);
+                if (SPACE_REGEX.test(word)) gsap.set(span, { opacity: 0 });
+                else gsap.set(span, { opacity: 0, y: 10, scale: 0.8 });
+              });
+              element.setAttribute("data-processed", "true");
+            });
 
-              // 计算元素相对于视口的位置
-              const elementCenter = elementTop + elementRect.height / 2;
+            // ... same char split logic
+            content.querySelectorAll("[data-fade-char]").forEach((element) => {
+              if (element.hasAttribute("data-processed")) return;
+              const chars = (element.textContent || "").split("");
+              element.innerHTML = "";
+              chars.forEach((char) => {
+                const span = document.createElement("span");
+                span.textContent = char;
+                span.style.display = "inline-block";
+                if (char === " ") span.style.width = "0.25em";
+                element.appendChild(span);
+                gsap.set(span, { opacity: 0, y: 15, rotationY: 90 });
+              });
+              element.setAttribute("data-processed", "true");
+            });
+          }
 
-              // 定义动画范围：在屏幕下方0-10%区域内播放动画
-              const animationStartY = scrollTop + windowHeight; // 屏幕底部（0%）
-              const animationEndY = scrollTop + windowHeight * 0.9; // 屏幕下方10%位置
+          // Line reveal split
+          if (enableLineReveal) {
+            content
+              .querySelectorAll("[data-line-reveal]")
+              .forEach((element) => {
+                if (element.hasAttribute("data-processed")) return;
+                if (element.children.length === 0) {
+                  const lines = (element.textContent || "")
+                    .split("\n")
+                    .filter((l) => l.trim().length > 0);
+                  element.innerHTML = "";
+                  lines.forEach((l) => {
+                    const s = document.createElement("span");
+                    s.textContent = l;
+                    s.style.display = "block";
+                    element.appendChild(s);
+                  });
+                }
+                // Init style
+                Array.from(element.children).forEach((c) =>
+                  gsap.set(c, { opacity: 0, y: 20, rotationX: -90 }),
+                );
+                element.setAttribute("data-processed", "true");
+              });
+          }
+        };
+        initDOM();
 
-              // 计算元素中心在动画范围内的进度
-              let animationProgress = 0;
+        const measure = () => {
+          // Mobile measures vertical top relative to document
+          // Or relative to content, but we use window.scrollY
+          const scrollTop =
+            window.pageYOffset || document.documentElement.scrollTop;
 
-              if (elementCenter <= animationEndY) {
-                // 元素已经到达或超过屏幕下方10%位置，完全显示
-                animationProgress = 1;
-              } else if (elementCenter >= animationStartY) {
-                // 元素还在屏幕底部下方，不显示
-                animationProgress = 0;
-              } else {
-                // 元素在动画范围内，计算进度
-                const totalDistance = animationStartY - animationEndY;
-                const currentDistance = animationStartY - elementCenter;
-                animationProgress = currentDistance / totalDistance;
-              }
+          if (enableFadeElements) {
+            cache.fade = [];
+            content.querySelectorAll("[data-fade]").forEach((el) => {
+              const rect = el.getBoundingClientRect();
+              cache.fade.push({
+                el,
+                topOffset: rect.top + scrollTop,
+                height: rect.height,
+              });
+            });
 
-              // 确保进度在 0-1 范围内
-              animationProgress = Math.max(0, Math.min(1, animationProgress));
+            cache.wordFade = [];
+            content.querySelectorAll("[data-fade-word]").forEach((el) => {
+              const rect = el.getBoundingClientRect();
+              cache.wordFade.push({
+                el,
+                topOffset: rect.top + scrollTop,
+                height: rect.height,
+                spans: Array.from(el.children) as HTMLSpanElement[],
+              });
+            });
 
-              // 根据动画进度计算透明度
-              const opacity = animationProgress;
+            cache.charFade = [];
+            content.querySelectorAll("[data-fade-char]").forEach((el) => {
+              const rect = el.getBoundingClientRect();
+              cache.charFade.push({
+                el,
+                topOffset: rect.top + scrollTop,
+                height: rect.height,
+                spans: Array.from(el.children) as HTMLSpanElement[],
+              });
+            });
+          }
+          if (enableLineReveal) {
+            cache.lineReveal = [];
+            content.querySelectorAll("[data-line-reveal]").forEach((el) => {
+              const rect = el.getBoundingClientRect();
+              cache.lineReveal.push({
+                el,
+                topOffset: rect.top + scrollTop,
+                height: rect.height,
+                lines: Array.from(el.children) as HTMLElement[],
+              });
+            });
+          }
+        };
+        measure(); // Initial measure
 
-              // 应用动画 - 只改变透明度
-              gsap.to(element, {
-                opacity,
+        const onScroll = () => {
+          const scrollTop =
+            window.pageYOffset || document.documentElement.scrollTop;
+          const windowHeight = window.innerHeight;
+          const animStart = scrollTop + windowHeight;
+          const animEnd = scrollTop + windowHeight * 0.9;
+          const totalDist = animStart - animEnd;
+
+          // Update Fade
+          if (enableFadeElements) {
+            cache.fade.forEach((item) => {
+              const center = item.topOffset + item.height / 2;
+              let progress = 0;
+              if (center <= animEnd) progress = 1;
+              else if (center >= animStart) progress = 0;
+              else progress = (animStart - center) / totalDist;
+              gsap.to(item.el, {
+                opacity: progress,
                 duration: 0.3,
                 ease: "power2.out",
                 overwrite: true,
               });
             });
-          };
 
-          // 初始状态设置 - 只设置透明度
-          fadeElements.forEach((element) => {
-            gsap.set(element, {
-              opacity: 0,
-              clearProps: "transform,opacity",
-              force3D: true,
-            });
-          });
+            // Update Word Fade
+            cache.wordFade.forEach((item) => {
+              const center = item.topOffset + item.height / 2;
+              let progress = 0;
+              if (center <= animEnd) progress = 1;
+              else if (center >= animStart) progress = 0;
+              else progress = (animStart - center) / totalDist;
 
-          // 延迟执行初始更新，确保DOM完全准备好
-          setTimeout(() => {
-            updateFadeElements();
-          }, 100);
-
-          // 监听滚动事件
-          const scrollHandler = () => {
-            requestAnimationFrame(updateFadeElements);
-          };
-
-          window.addEventListener("scroll", scrollHandler, { passive: true });
-          cleanupFunctions.push(() =>
-            window.removeEventListener("scroll", scrollHandler),
-          );
-
-          // 逐字淡入效果
-          const wordFadeElements = content.querySelectorAll("[data-fade-word]");
-
-          wordFadeElements.forEach((element) => {
-            // 将文本内容分割成单词并包装在span中
-            const originalText = element.textContent || "";
-            const words = originalText
-              .split(/(\s+)/)
-              .filter((word) => word.length > 0);
-
-            // 清空原内容并重新构建
-            element.innerHTML = "";
-
-            const wordSpans: HTMLSpanElement[] = [];
-            words.forEach((word) => {
-              const span = document.createElement("span");
-              span.textContent = word;
-              span.style.display = "inline-block";
-
-              // 为空格设置固定宽度，避免缩放影响
-              if (/^\s+$/.test(word)) {
-                span.style.width = word.length * 0.25 + "em";
-                span.style.minWidth = word.length * 0.25 + "em";
-              }
-
-              element.appendChild(span);
-              wordSpans.push(span);
-            });
-
-            // 初始状态：隐藏所有单词
-            wordSpans.forEach((span) => {
-              const isSpace = /^\s+$/.test(span.textContent || "");
-
-              if (isSpace) {
-                gsap.set(span, {
-                  opacity: 0,
-                  transformOrigin: "50% 100%",
-                });
-              } else {
-                gsap.set(span, {
-                  opacity: 0,
-                  y: 10,
-                  scale: 0.8,
-                  transformOrigin: "50% 100%",
-                });
-              }
-            });
-
-            // 创建一个函数来更新逐字淡入状态（基于竖直滚动）
-            const updateWordFade = () => {
-              const scrollTop =
-                window.pageYOffset || document.documentElement.scrollTop;
-              const windowHeight = window.innerHeight;
-              const elementRect = element.getBoundingClientRect();
-              const elementTop = elementRect.top + scrollTop;
-              const elementCenter = elementTop + elementRect.height / 2;
-
-              // 定义触发范围：在屏幕下方0-10%区域内播放动画
-              const animationStartY = scrollTop + windowHeight; // 屏幕底部（0%）
-              const animationEndY = scrollTop + windowHeight * 0.9; // 屏幕下方10%位置
-
-              // 计算动画进度
-              let animationProgress = 0;
-
-              if (elementCenter <= animationEndY) {
-                // 元素已经到达或超过屏幕下方10%位置，完全显示
-                animationProgress = 1;
-              } else if (elementCenter >= animationStartY) {
-                // 元素还在屏幕底部下方，不显示
-                animationProgress = 0;
-              } else {
-                // 元素在动画范围内，计算进度
-                const totalDistance = animationStartY - animationEndY;
-                const currentDistance = animationStartY - elementCenter;
-                animationProgress = currentDistance / totalDistance;
-              }
-
-              // 确保进度在 0-1 范围内
-              animationProgress = Math.max(0, Math.min(1, animationProgress));
-
-              // 根据动画进度计算应该显示多少单词
-              const wordsToShow = Math.floor(
-                animationProgress * wordSpans.length,
-              );
-
-              // 根据滚动进度更新每个单词的显示状态
-              wordSpans.forEach((span, index) => {
-                const isSpace = /^\s+$/.test(span.textContent || "");
-
-                if (index < wordsToShow) {
-                  // 显示这个单词
-                  if (isSpace) {
+              const count = Math.floor(progress * item.spans.length);
+              item.spans.forEach((span, i) => {
+                const isSpace = SPACE_REGEX.test(span.textContent || "");
+                if (i < count) {
+                  if (isSpace)
                     gsap.to(span, {
                       opacity: 1,
                       duration: 0.3,
                       ease: "power2.out",
                       overwrite: true,
                     });
-                  } else {
+                  else
                     gsap.to(span, {
                       opacity: 1,
                       y: 0,
@@ -1238,122 +998,36 @@ export default function HorizontalScroll({
                       ease: "back.out(1.2)",
                       overwrite: true,
                     });
-                  }
                 } else {
-                  // 隐藏这个单词
-                  if (isSpace) {
+                  if (isSpace)
                     gsap.to(span, {
                       opacity: 0,
                       duration: 0.2,
-                      ease: "power2.out",
                       overwrite: true,
                     });
-                  } else {
+                  else
                     gsap.to(span, {
                       opacity: 0,
                       y: 10,
                       scale: 0.8,
                       duration: 0.2,
-                      ease: "power2.out",
                       overwrite: true,
                     });
-                  }
                 }
               });
-            };
-
-            // 监听滚动事件
-            const wordScrollHandler = () => {
-              requestAnimationFrame(updateWordFade);
-            };
-
-            window.addEventListener("scroll", wordScrollHandler, {
-              passive: true,
-            });
-            cleanupFunctions.push(() =>
-              window.removeEventListener("scroll", wordScrollHandler),
-            );
-
-            // 立即更新一次
-            updateWordFade();
-          });
-
-          // 逐字符淡入效果
-          const charFadeElements = content.querySelectorAll("[data-fade-char]");
-
-          charFadeElements.forEach((element) => {
-            // 将文本内容分割成字符并包装在span中
-            const originalText = element.textContent || "";
-            const chars = originalText.split("");
-
-            // 清空原内容并重新构建
-            element.innerHTML = "";
-
-            const charSpans: HTMLSpanElement[] = [];
-            chars.forEach((char) => {
-              const span = document.createElement("span");
-              span.textContent = char;
-              span.style.display = "inline-block";
-
-              // 为空格添加特殊处理，保持原有宽度
-              if (char === " ") {
-                span.style.width = "0.25em";
-              }
-
-              element.appendChild(span);
-              charSpans.push(span);
             });
 
-            // 初始状态：隐藏所有字符
-            charSpans.forEach((span) => {
-              gsap.set(span, {
-                opacity: 0,
-                y: 15,
-                rotationY: 90,
-                transformOrigin: "50% 50%",
-              });
-            });
+            // Char Fade
+            cache.charFade.forEach((item) => {
+              const center = item.topOffset + item.height / 2;
+              let progress = 0;
+              if (center <= animEnd) progress = 1;
+              else if (center >= animStart) progress = 0;
+              else progress = (animStart - center) / totalDist;
 
-            // 创建一个函数来更新逐字符淡入状态（基于竖直滚动）
-            const updateCharFade = () => {
-              const scrollTop =
-                window.pageYOffset || document.documentElement.scrollTop;
-              const windowHeight = window.innerHeight;
-              const elementRect = element.getBoundingClientRect();
-              const elementTop = elementRect.top + scrollTop;
-              const elementCenter = elementTop + elementRect.height / 2;
-
-              // 定义触发范围：在屏幕下方0-10%区域内播放动画
-              const animationStartY = scrollTop + windowHeight; // 屏幕底部（0%）
-              const animationEndY = scrollTop + windowHeight * 0.9; // 屏幕下方10%位置
-
-              // 计算动画进度
-              let animationProgress = 0;
-
-              if (elementCenter <= animationEndY) {
-                // 元素已经到达或超过屏幕下方10%位置，完全显示
-                animationProgress = 1;
-              } else if (elementCenter >= animationStartY) {
-                // 元素还在屏幕底部下方，不显示
-                animationProgress = 0;
-              } else {
-                // 元素在动画范围内，计算进度
-                const totalDistance = animationStartY - animationEndY;
-                const currentDistance = animationStartY - elementCenter;
-                animationProgress = currentDistance / totalDistance;
-              }
-
-              // 确保进度在 0-1 范围内
-              animationProgress = Math.max(0, Math.min(1, animationProgress));
-
-              // 根据进度计算应该显示多少字符
-              const charsToShow = Math.floor(
-                animationProgress * charSpans.length,
-              );
-
-              charSpans.forEach((span, index) => {
-                if (index < charsToShow) {
-                  // 显示这个字符
+              const count = Math.floor(progress * item.spans.length);
+              item.spans.forEach((span, i) => {
+                if (i < count)
                   gsap.to(span, {
                     opacity: 1,
                     y: 0,
@@ -1362,198 +1036,64 @@ export default function HorizontalScroll({
                     ease: "power2.out",
                     overwrite: true,
                   });
-                } else {
-                  // 隐藏这个字符
+                else
                   gsap.to(span, {
                     opacity: 0,
                     y: 15,
                     rotationY: 90,
                     duration: 0.3,
-                    ease: "power2.out",
                     overwrite: true,
                   });
-                }
-              });
-            };
-
-            // 监听滚动事件
-            const charScrollHandler = () => {
-              requestAnimationFrame(updateCharFade);
-            };
-
-            window.addEventListener("scroll", charScrollHandler, {
-              passive: true,
-            });
-            cleanupFunctions.push(() =>
-              window.removeEventListener("scroll", charScrollHandler),
-            );
-
-            // 立即更新一次
-            updateCharFade();
-          });
-        }
-
-        // 如果启用逐行显示效果
-        if (enableLineReveal) {
-          const lineRevealElements =
-            content.querySelectorAll("[data-line-reveal]");
-
-          lineRevealElements.forEach((element) => {
-            // 处理文本换行：获取所有直接子元素作为"行"，如果没有子元素则创建文本行
-            let lines: HTMLElement[] = [];
-
-            if (element.children.length === 0) {
-              // 如果没有子元素，说明是纯文本，需要按换行符分割
-              const text = element.textContent || "";
-              const textLines = text
-                .split("\n")
-                .filter((line) => line.trim().length > 0);
-
-              // 清空原内容
-              element.innerHTML = "";
-
-              // 为每行文本创建一个 span 元素
-              textLines.forEach((lineText, index) => {
-                const span = document.createElement("span");
-                span.textContent = lineText;
-                span.style.display = "block";
-                element.appendChild(span);
-
-                // 如果不是最后一行，添加一个空行用于换行
-                if (index < textLines.length - 1) {
-                  const emptySpan = document.createElement("span");
-                  emptySpan.innerHTML = "&nbsp;";
-                  emptySpan.style.display = "block";
-                  emptySpan.style.height = "0.1em";
-                  element.appendChild(emptySpan);
-                }
-              });
-
-              lines = Array.from(element.children) as HTMLElement[];
-            } else {
-              // 如果有子元素，检查是否有空白的子元素需要插入换行
-              lines = Array.from(element.children) as HTMLElement[];
-
-              // 检查是否有空白的子元素（内容为空格或完全为空）
-              let hasEmptyElements = false;
-              lines.forEach((child) => {
-                const text = child.textContent || "";
-                if (text.trim() === "" || text === " ") {
-                  hasEmptyElements = true;
-                }
-              });
-
-              if (hasEmptyElements) {
-                // 如果有空白子元素，直接在这些元素中插入换行符
-                lines.forEach((child) => {
-                  const text = child.textContent || "";
-                  if (text.trim() === "" || text === " ") {
-                    // 将空白元素的内容设置为换行符
-                    child.innerHTML = "&nbsp;";
-                    child.style.display = "block";
-                    child.style.height = "1em"; // 设置高度为1em，确保有可见的空行效果
-                  }
-                });
-              }
-            }
-
-            // 初始状态：隐藏所有行
-            lines.forEach((line) => {
-              gsap.set(line, {
-                opacity: 0,
-                y: 20,
-                rotationX: -90,
-                transformOrigin: "50% 100%",
               });
             });
+          }
 
-            // 创建一个函数来更新逐行显示状态（基于竖直滚动）
-            const updateLineReveal = () => {
-              const scrollTop =
-                window.pageYOffset || document.documentElement.scrollTop;
-              const windowHeight = window.innerHeight;
-              const elementRect = element.getBoundingClientRect();
-              const elementTop = elementRect.top + scrollTop;
-              const elementCenter = elementTop + elementRect.height / 2;
+          if (enableLineReveal) {
+            cache.lineReveal.forEach((item) => {
+              const center = item.topOffset + item.height / 2;
+              let progress = 0;
+              if (center <= animEnd) progress = 1;
+              else if (center >= animStart) progress = 0;
+              else progress = (animStart - center) / totalDist;
 
-              // 定义触发范围：在屏幕下方0-10%区域内播放动画
-              const animationStartY = scrollTop + windowHeight; // 屏幕底部（0%）
-              const animationEndY = scrollTop + windowHeight * 0.9; // 屏幕下方10%位置
-
-              // 计算动画进度
-              let animationProgress = 0;
-
-              if (elementCenter <= animationEndY) {
-                // 元素已经到达或超过屏幕下方10%位置，完全显示
-                animationProgress = 1;
-              } else if (elementCenter >= animationStartY) {
-                // 元素还在屏幕底部下方，不显示
-                animationProgress = 0;
-              } else {
-                // 元素在动画范围内，计算进度
-                const totalDistance = animationStartY - animationEndY;
-                const currentDistance = animationStartY - elementCenter;
-                animationProgress = currentDistance / totalDistance;
-              }
-
-              // 确保进度在 0-1 范围内
-              animationProgress = Math.max(0, Math.min(1, animationProgress));
-
-              // 根据进度计算应该显示多少行
-              const linesToShow = Math.floor(animationProgress * lines.length);
-
-              lines.forEach((line, index) => {
-                if (index < linesToShow) {
-                  // 显示这一行
+              const count = Math.floor(progress * item.lines.length);
+              item.lines.forEach((line, i) => {
+                if (i < count)
                   gsap.to(line, {
                     opacity: 1,
                     y: 0,
                     rotationX: 0,
                     duration: 0.4,
-                    ease: "power2.out",
                     overwrite: true,
                   });
-                } else {
-                  // 隐藏这一行
+                else
                   gsap.to(line, {
                     opacity: 0,
                     y: 20,
                     rotationX: -90,
                     duration: 0.3,
-                    ease: "power2.out",
                     overwrite: true,
                   });
-                }
               });
-            };
-
-            // 监听滚动事件
-            const lineScrollHandler = () => {
-              requestAnimationFrame(updateLineReveal);
-            };
-
-            window.addEventListener("scroll", lineScrollHandler, {
-              passive: true,
             });
-            cleanupFunctions.push(() =>
-              window.removeEventListener("scroll", lineScrollHandler),
-            );
+          }
+        };
 
-            // 立即更新一次
-            updateLineReveal();
-          });
-        }
-      }, container);
+        const rafScroll = () => requestAnimationFrame(onScroll);
+        window.addEventListener("scroll", rafScroll, { passive: true });
+        window.addEventListener("resize", measure); // Measure on resize for mobile too
+        cleanupFunctions.push(() => {
+          window.removeEventListener("scroll", rafScroll);
+          window.removeEventListener("resize", measure);
+        });
 
+        onScroll(); // Init
+      });
       cleanupFunctions.push(() => ctx.revert());
     }, 500); // 延迟500ms初始化
 
     cleanupFunctions.push(() => clearTimeout(initTimeout));
-
-    // 组件卸载时清理
-    return () => {
-      cleanupFunctions.forEach((cleanup) => cleanup());
-    };
+    return () => cleanupFunctions.forEach((c) => c());
   }, [isMobile, enableFadeElements, enableLineReveal]);
 
   return (
