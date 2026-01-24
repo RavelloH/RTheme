@@ -178,3 +178,7 @@
 ::target-text {
   @apply bg-primary/50 text-foreground;
 }
+
+html {
+  overflow-y: hidden;
+}
