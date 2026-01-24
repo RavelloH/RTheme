@@ -721,53 +721,70 @@ export default function NotificationProvider({
       return;
     }
 
-    console.log("[Locks] Requesting lock for Ably connection...");
+    // Check if Web Locks API is available
+    if (typeof navigator !== "undefined" && "locks" in navigator) {
+      console.log("[Locks] Requesting lock for Ably connection...");
 
-    // 创建 AbortController 用于取消锁请求
-    const controller = new AbortController();
-    lockControllerRef.current = controller;
+      // 创建 AbortController 用于取消锁请求
+      const controller = new AbortController();
+      lockControllerRef.current = controller;
 
-    // 请求锁
-    navigator.locks
-      .request(LOCK_NAME, { signal: controller.signal }, async (lock) => {
-        if (!lock) {
-          console.log("[Locks] Failed to acquire lock");
-          setConnectionStatus("fallback");
-          return;
-        }
+      // 请求锁
+      navigator.locks
+        .request(LOCK_NAME, { signal: controller.signal }, async (lock) => {
+          if (!lock) {
+            console.log("[Locks] Failed to acquire lock");
+            setConnectionStatus("fallback");
+            return;
+          }
 
-        console.log("[Locks] ✅ Acquired lock, becoming leader");
-        setIsLeader(true);
+          console.log("[Locks] Acquired lock, becoming leader");
+          setIsLeader(true);
 
-        // 初始化 Ably 连接
-        await initializeAblyConnection();
+          // 初始化 Ably 连接
+          await initializeAblyConnection();
 
-        // 保持锁直到组件卸载或标签页关闭
-        return new Promise<void>((resolve) => {
-          // 这个 Promise 永不 resolve，直到：
-          // 1. 组件卸载（controller.abort()）
-          // 2. 标签页关闭（自动释放）
-          controller.signal.addEventListener("abort", () => {
-            console.log("[Locks] Releasing lock");
-            setIsLeader(false);
-            cleanupAblyConnection();
-            resolve();
+          // 保持锁直到组件卸载或标签页关闭
+          return new Promise<void>((resolve) => {
+            // 这个 Promise 永不 resolve，直到：
+            // 1. 组件卸载（controller.abort()）
+            // 2. 标签页关闭（自动释放）
+            controller.signal.addEventListener("abort", () => {
+              console.log("[Locks] Releasing lock");
+              setIsLeader(false);
+              cleanupAblyConnection();
+              resolve();
+            });
           });
+        })
+        .catch((error) => {
+          // AbortError 是正常的（组件卸载时）
+          if (error.name !== "AbortError") {
+            console.error("[Locks] Error acquiring lock:", error);
+            setConnectionStatus("fallback");
+          }
         });
-      })
-      .catch((error) => {
-        // AbortError 是正常的（组件卸载时）
-        if (error.name !== "AbortError") {
-          console.error("[Locks] Error acquiring lock:", error);
-          setConnectionStatus("fallback");
-        }
-      });
 
-    return () => {
-      // 组件卸载时释放锁
-      console.log("[Locks] Component unmounting, aborting lock request");
-      controller.abort();
-    };
+      return () => {
+        // 组件卸载时释放锁
+        console.log("[Locks] Component unmounting, aborting lock request");
+        controller.abort();
+      };
+    } else {
+      // Web Locks API不可用时（如不支持的浏览器或非安全上下文），回退到每个标签页独立连接
+      console.warn(
+        "[Locks] Web Locks API not available, falling back to independent connection per tab",
+      );
+
+      // 既然无法协调，就让当前标签页作为 Leader 独立运行
+      setIsLeader(true);
+      initializeAblyConnection();
+
+      return () => {
+        setIsLeader(false);
+        cleanupAblyConnection();
+      };
+    }
   }, [
     isAblyEnabled,
     isUserLoggedIn,
