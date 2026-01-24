@@ -162,7 +162,7 @@ export function ImageComponent({
   const imgHeight = height ? Number(height) : 400;
 
   return (
-    <div>
+    <span className="block">
       <CMSImage
         src={imgSrc}
         alt={imgAlt}
@@ -171,10 +171,12 @@ export function ImageComponent({
         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         data-lightbox="true"
       />
-      <div className="text-center text-muted-foreground text-sm mb-2">
-        {imgAlt}
-      </div>
-    </div>
+      {imgAlt && (
+        <span className="block text-center text-muted-foreground text-sm mb-2">
+          {imgAlt}
+        </span>
+      )}
+    </span>
   );
 }
 

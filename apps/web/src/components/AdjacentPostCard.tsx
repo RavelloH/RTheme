@@ -94,7 +94,7 @@ export default function AdjacentPostCard({
         <div
           className={`w-full flex items-center mb-auto ${isNext ? "justify-end" : "justify-start"}`}
         >
-          <div className="flex items-center gap-2 font-mono text-xs tracking-widest text-muted-foreground uppercase group-hover:text-primary transition-colors">
+          <div className="flex items-center gap-2 font-mono text-xs tracking-widest text-muted-foreground uppercase group-hover:text-foreground transition-colors">
             {!isNext && <RiArrowLeftLine size={"1.1em"} />}
             <span>{isNext ? "Next" : "Previous"}</span>
             {isNext && <RiArrowRightLine size={"1.1em"} />}
@@ -130,7 +130,7 @@ export default function AdjacentPostCard({
           )}
 
           {/* 日期与分类 (现在在最下方) */}
-          <div className="flex flex-wrap gap-x-3 gap-y-1 opacity-60 group-hover:opacity-100 transition-opacity uppercase">
+          <div className="flex flex-wrap gap-x-3 gap-y-1 uppercase">
             {date && <span>{formatDate(date)}</span>}
             {category && category.length > 0 && (
               <span>{category.map((cat) => cat.name).join(" / ")}</span>

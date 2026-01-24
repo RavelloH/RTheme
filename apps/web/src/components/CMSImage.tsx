@@ -64,8 +64,8 @@ export default function CMSImage({
   // 如果加载失败，显示错误占位图标
   if (hasError) {
     return (
-      <div
-        className={`flex items-center justify-center bg-muted/30 text-muted-foreground ${className || ""}`}
+      <span
+        className={`${fill ? "flex" : "inline-flex"} items-center justify-center bg-muted/30 text-muted-foreground ${className || ""}`}
         style={
           fill
             ? { position: "absolute", inset: 0 }
@@ -73,7 +73,7 @@ export default function CMSImage({
         }
       >
         <RiFileDamageFill size="2em" />
-      </div>
+      </span>
     );
   }
 

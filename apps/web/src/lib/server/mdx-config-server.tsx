@@ -92,7 +92,7 @@ export function ImageComponentServer({
   imgHeight = imgHeight || 400;
 
   return (
-    <div className="relative my-4">
+    <span className="block relative my-4">
       <CMSImage
         src={imgSrc}
         alt={imgAlt}
@@ -104,11 +104,11 @@ export function ImageComponentServer({
         data-lightbox="true"
       />
       {imgAlt && (
-        <div className="text-center text-muted-foreground text-sm mt-2">
+        <span className="block text-center text-muted-foreground text-sm mt-2">
           {imgAlt}
-        </div>
+        </span>
       )}
-    </div>
+    </span>
   );
 }
 
