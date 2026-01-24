@@ -700,19 +700,48 @@ function cleanEnglishToken(token: string): string {
 /**
  * 拆分驼峰命名 (Always Split 策略)
  * 规则：不再合并2段，只要有驼峰或数字边界就拆分
+ * 特殊处理：识别 UUID/哈希值等均匀字母数字混合模式，保持完整
  * * @example
  * splitCamelCase('useEffect') => ['use', 'effect']
  * splitCamelCase('IOError') => ['io', 'error']
  * splitCamelCase('http2Client') => ['http', '2', 'client']
+ * splitCamelCase('a1b2c3d4') => ['a1b2c3d4'] // UUID 模式，保持完整
+ * splitCamelCase('ff00ab') => ['ff00ab'] // 十六进制，保持完整
  */
 function splitCamelCase(token: string): string[] {
-  // 1. 过滤非字母数字字符 (可选，视你的整体清洗流程而定)
+  // 1. 过滤非字母数字字符
   if (!/^[a-zA-Z0-9]+$/.test(token)) return [token.toLowerCase()];
 
   // 2. 如果全小写或全大写（且不含数字边界），则不处理，直接返回小写
   // 例如: "make", "URL" -> "make", "url"
   if (/^[a-z]+$/.test(token) || /^[A-Z]+$/.test(token)) {
     return [token.toLowerCase()];
+  }
+
+  // 3. 检测均匀字母数字混合模式（UUID/哈希值/十六进制等）
+  // 特征：字母和数字交替出现，且长度 >= 4，没有明显的驼峰模式
+  // 例如：a1b2, c3d4, ff00ab, 9a8b7c
+  const hasLetters = /[a-zA-Z]/.test(token);
+  const hasDigits = /[0-9]/.test(token);
+  const hasUpperCase = /[A-Z]/.test(token);
+
+  // 如果同时包含字母和数字
+  if (hasLetters && hasDigits) {
+    // 如果只有小写字母+数字（如 a1b2c3, ff00ab），且长度 >= 4，保持完整
+    // 这种模式通常是 UUID、哈希值、十六进制等标识符
+    if (!hasUpperCase && token.length >= 4) {
+      // 检查是否为均匀混合（不是明显的前缀+版本号模式）
+      // 例如：a1b2c3（UUID）vs http2（前缀+版本）
+      const letterCount = (token.match(/[a-z]/g) || []).length;
+      const digitCount = (token.match(/[0-9]/g) || []).length;
+
+      // 如果字母和数字的比例接近（都至少占 30%），视为均匀混合
+      const minCount = Math.min(letterCount, digitCount);
+      const totalCount = token.length;
+      if (minCount / totalCount >= 0.3) {
+        return [token.toLowerCase()];
+      }
+    }
   }
 
   return (
