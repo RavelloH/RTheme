@@ -439,62 +439,71 @@ export function useNavigateWithTransition() {
   };
 }
 
-export default function Link({ children, presets, ...props }: CustomLinkProps) {
-  const navigate = useNavigateWithTransition();
+export default React.forwardRef<HTMLAnchorElement, CustomLinkProps>(
+  function Link({ children, presets, ...props }, ref) {
+    const navigate = useNavigateWithTransition();
 
-  const handleNavigation = (e: { preventDefault: () => void }) => {
-    const targetPath = props.href.toString();
-    navigate(targetPath);
-    e.preventDefault();
-  };
+    const handleNavigation = (e: React.MouseEvent<HTMLAnchorElement>) => {
+      const targetPath = props.href.toString();
+      navigate(targetPath);
+      e.preventDefault();
+      if (props.onClick) {
+        props.onClick(e);
+      }
+    };
 
-  // 检查是否需要动态图标
-  const needsDynamicIcon = presets?.includes("dynamic-icon");
+    // 检查是否需要动态图标
+    const needsDynamicIcon = presets?.includes("dynamic-icon");
 
-  // 合并 className
-  const combinedClassName = [
-    props.className,
-    presets?.includes("hover-underline") ? "group" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+    // 合并 className
+    const combinedClassName = [
+      props.className,
+      presets?.includes("hover-underline") ? "group" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
 
-  // 如果需要动态图标，使用客户端组件
-  if (needsDynamicIcon) {
+    // 如果需要动态图标，使用客户端组件
+    if (needsDynamicIcon) {
+      return (
+        <DynamicIconLink
+          {...props}
+          presets={presets}
+          className={combinedClassName}
+          onClick={handleNavigation}
+          linkRef={ref}
+        >
+          {children}
+        </DynamicIconLink>
+      );
+    }
+
+    // 应用预设样式（不带动态图标）
+    const styledChildren = applyPresets(presets, children);
+
     return (
-      <DynamicIconLink
+      <NextLink
         {...props}
-        presets={presets}
         className={combinedClassName}
-        onNavigate={handleNavigation}
+        onClick={handleNavigation}
+        ref={ref}
       >
-        {children}
-      </DynamicIconLink>
+        {styledChildren}
+      </NextLink>
     );
-  }
-
-  // 应用预设样式（不带动态图标）
-  const styledChildren = applyPresets(presets, children);
-
-  return (
-    <NextLink
-      {...props}
-      className={combinedClassName}
-      onNavigate={handleNavigation}
-    >
-      {styledChildren}
-    </NextLink>
-  );
-}
+  },
+);
 
 // 动态图标链接客户端组件
 function DynamicIconLink({
   children,
   presets,
-  onNavigate,
+  onClick,
+  linkRef,
   ...props
 }: CustomLinkProps & {
-  onNavigate?: (e: { preventDefault: () => void }) => void;
+  onClick?: React.MouseEventHandler<HTMLAnchorElement>;
+  linkRef?: React.Ref<HTMLAnchorElement>;
 }) {
   const [DynamicIcon, setDynamicIcon] = useState<
     typeof import("./client/DynamicIcon").DynamicIcon | null
@@ -535,7 +544,7 @@ function DynamicIconLink({
   );
 
   return (
-    <NextLink {...props} onNavigate={onNavigate}>
+    <NextLink {...props} onClick={onClick} ref={linkRef}>
       {styledChildren}
     </NextLink>
   );
