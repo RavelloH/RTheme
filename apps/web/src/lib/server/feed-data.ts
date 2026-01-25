@@ -7,7 +7,6 @@ import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import rehypeStringify from "rehype-stringify";
-import { TextVersion } from "text-version";
 import {
   markdownRemarkPlugins,
   markdownRehypePlugins,
@@ -266,9 +265,8 @@ export async function getFeedData(): Promise<FeedData> {
     posts.map(async (post) => {
       const featuredImage = getFeaturedImageUrl(post.mediaRefs);
 
-      // 获取最新版本的内容
-      const tv = new TextVersion();
-      const latestContent = tv.latest(post.content);
+      // text-version v2: content 字段已经是最新内容
+      const latestContent = post.content;
 
       let content = latestContent;
       const excerpt = post.excerpt;

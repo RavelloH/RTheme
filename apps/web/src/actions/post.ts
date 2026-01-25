@@ -846,9 +846,8 @@ export async function getPostDetail(
       return response.forbidden({ message: "无权访问此文章" });
     }
 
-    // 使用 text-version 获取最新版本的内容
-    const tv = new TextVersion();
-    const latestContent = tv.latest(post.content);
+    // text-version v2: content 字段已经是最新内容
+    const latestContent = post.content;
 
     // 转换数据格式
     const data: PostDetail = {
@@ -977,13 +976,16 @@ export async function createPost(
     const { processedContent, mediaIds } =
       await processContentImagesAndExtractReferences(content, prisma);
 
-    // 使用 text-version 创建内容版本（使用处理后的内容）
+    // 使用 text-version v2 创建内容版本（使用处理后的内容）
     const tv = new TextVersion();
     const now = new Date().toISOString();
     // 如果没有提供 commitMessage，使用默认值
     const finalCommitMessage = commitMessage || "初始版本";
     const versionName = `${user.uid}:${now}:${finalCommitMessage}`;
-    const versionedContent = tv.commit("", processedContent, versionName);
+    tv.commit(processedContent, versionName);
+
+    // 导出为分离式存储
+    const { metadata, snapshot } = tv.export("separate");
 
     // 处理发布时间：如果状态是 PUBLISHED 且没有提供 publishedAt，则使用当前时间
     let publishedAtDate: Date | null = null;
@@ -1044,7 +1046,8 @@ export async function createPost(
       data: {
         title,
         slug: finalSlug,
-        content: versionedContent,
+        content: snapshot, // 最新内容
+        versionMetadata: metadata, // 版本历史元数据
         excerpt: excerpt || null,
         status,
         isPinned,
@@ -1224,6 +1227,7 @@ export async function updatePost(
         title: true,
         slug: true,
         content: true,
+        versionMetadata: true,
         excerpt: true,
         status: true,
         isPinned: true,
@@ -1268,8 +1272,9 @@ export async function updatePost(
       }
     }
 
-    // 使用 text-version 处理内容版本
-    let versionedContent = existingPost.content;
+    // 使用 text-version v2 处理内容版本
+    let newMetadata = existingPost.versionMetadata;
+    let newSnapshot = existingPost.content;
     let newVersionName: string | undefined;
     let oldVersionName: string | undefined;
     let processedContent: string | undefined;
@@ -1285,20 +1290,25 @@ export async function updatePost(
       contentMediaIds = result.mediaIds;
 
       // 然后使用处理后的内容创建版本
-      const tv = new TextVersion();
+      const tv = new TextVersion(
+        existingPost.versionMetadata,
+        existingPost.content,
+      );
       const now = new Date().toISOString();
       const finalCommitMessage = commitMessage || "更新内容";
       newVersionName = `${user.uid}:${now}:${finalCommitMessage}`;
-      versionedContent = tv.commit(
-        existingPost.content,
-        processedContent,
-        newVersionName,
-      );
+      tv.commit(processedContent, newVersionName);
+
+      // 导出为分离式存储
+      const exported = tv.export("separate");
+      newMetadata = exported.metadata;
+      newSnapshot = exported.snapshot;
 
       // 获取旧版本名称
-      const versionLog = tv.log(existingPost.content);
-      if (versionLog.length > 0) {
-        oldVersionName = versionLog[versionLog.length - 1]?.version;
+      const versionLog = tv.log();
+      if (versionLog.length > 1) {
+        // 获取倒数第二个版本（因为刚刚添加了新版本）
+        oldVersionName = versionLog[versionLog.length - 2]?.version;
       }
     }
 
@@ -1382,7 +1392,10 @@ export async function updatePost(
 
     if (title !== undefined) updateData.title = title;
     if (newSlug !== undefined) updateData.slug = newSlug;
-    if (content !== undefined) updateData.content = versionedContent;
+    if (content !== undefined) {
+      updateData.content = newSnapshot;
+      (updateData as Record<string, unknown>).versionMetadata = newMetadata;
+    }
     if (excerpt !== undefined) updateData.excerpt = excerpt || null;
     if (status !== undefined) updateData.status = status;
     if (isPinned !== undefined) updateData.isPinned = isPinned;
@@ -2171,6 +2184,7 @@ export async function getPostHistory(
       select: {
         id: true,
         content: true,
+        versionMetadata: true,
         userUid: true,
       },
     });
@@ -2184,9 +2198,9 @@ export async function getPostHistory(
       return response.forbidden({ message: "无权访问此文章的历史记录" });
     }
 
-    // 使用 text-version 获取版本历史
-    const tv = new TextVersion();
-    const versionLog = tv.log(post.content);
+    // 使用 text-version v2 获取版本历史（使用分离式存储）
+    const tv = new TextVersion(post.versionMetadata, post.content);
+    const versionLog = tv.log();
 
     // 解析版本名称并关联用户信息
     const historyItems: PostHistoryItem[] = [];
@@ -2333,6 +2347,7 @@ export async function getPostVersion(
       select: {
         id: true,
         content: true,
+        versionMetadata: true,
         userUid: true,
       },
     });
@@ -2346,9 +2361,9 @@ export async function getPostVersion(
       return response.forbidden({ message: "无权访问此文章的历史记录" });
     }
 
-    // 使用 text-version 获取版本历史
-    const tv = new TextVersion();
-    const versionLog = tv.log(post.content);
+    // 使用 text-version v2 获取版本历史（使用分离式存储）
+    const tv = new TextVersion(post.versionMetadata, post.content);
+    const versionLog = tv.log();
 
     // 如果没有提供 timestamp，获取最新版本（列表中的最后一个）
     let targetVersion: { version: string; isSnapshot: boolean } | undefined;
@@ -2368,7 +2383,7 @@ export async function getPostVersion(
     }
 
     // 获取该版本的内容
-    const versionContent = tv.show(post.content, targetVersion.version);
+    const versionContent = tv.show(targetVersion.version);
 
     if (versionContent === null) {
       return response.notFound({ message: "无法读取版本内容" });
@@ -2467,6 +2482,7 @@ export async function resetPostToVersion(
       select: {
         id: true,
         content: true,
+        versionMetadata: true,
       },
     });
 
@@ -2474,9 +2490,9 @@ export async function resetPostToVersion(
       return response.notFound({ message: "文章不存在" });
     }
 
-    // 使用 text-version 获取版本历史
-    const tv = new TextVersion();
-    const versionLog = tv.log(post.content);
+    // 使用 text-version v2 获取版本历史（使用分离式存储）
+    const tv = new TextVersion(post.versionMetadata, post.content);
+    const versionLog = tv.log();
 
     // 查找匹配的版本
     const targetVersion = findVersionByTimestamp(versionLog, timestamp);
@@ -2498,12 +2514,18 @@ export async function resetPostToVersion(
       .map((v) => v.version);
 
     // 执行 reset
-    const newContent = tv.reset(post.content, targetVersion.version);
+    tv.reset(targetVersion.version);
+
+    // 导出为分离式存储
+    const exported = tv.export("separate");
 
     // 更新文章内容
     await prisma.post.update({
       where: { id: post.id },
-      data: { content: newContent },
+      data: {
+        content: exported.snapshot,
+        versionMetadata: exported.metadata,
+      },
     });
 
     // 记录审计日志
@@ -2605,6 +2627,7 @@ export async function squashPostToVersion(
       select: {
         id: true,
         content: true,
+        versionMetadata: true,
       },
     });
 
@@ -2612,9 +2635,9 @@ export async function squashPostToVersion(
       return response.notFound({ message: "文章不存在" });
     }
 
-    // 使用 text-version 获取版本历史
-    const tv = new TextVersion();
-    const versionLog = tv.log(post.content);
+    // 使用 text-version v2 获取版本历史（使用分离式存储）
+    const tv = new TextVersion(post.versionMetadata, post.content);
+    const versionLog = tv.log();
 
     // 查找匹配的版本
     const targetVersion = findVersionByTimestamp(versionLog, timestamp);
@@ -2635,12 +2658,18 @@ export async function squashPostToVersion(
       .map((v) => v.version);
 
     // 执行 squash
-    const newContent = tv.squash(post.content, targetVersion.version);
+    tv.squash(targetVersion.version);
+
+    // 导出为分离式存储
+    const exported = tv.export("separate");
 
     // 更新文章内容
     await prisma.post.update({
       where: { id: post.id },
-      data: { content: newContent },
+      data: {
+        content: exported.snapshot,
+        versionMetadata: exported.metadata,
+      },
     });
 
     // 记录审计日志

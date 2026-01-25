@@ -9,6 +9,7 @@ import limitControl from "@/lib/server/rate-limit";
 import { validateData } from "@/lib/server/validator";
 import { logAuditEvent } from "@/lib/server/audit";
 import { analyzeText } from "@/lib/server/tokenizer";
+import { generateSignature } from "@/lib/server/image-crypto";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
@@ -16,7 +17,6 @@ import remarkMath from "remark-math";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import rehypeStringify from "rehype-stringify";
-import { TextVersion } from "text-version";
 import type {
   ApiResponse,
   ApiResponseData,
@@ -118,14 +118,11 @@ async function markdownToPlainText(markdown: string): Promise<string> {
 
 /**
  * 辅助函数：解析文章内容并提取纯文本
+ * text-version v2: content 字段已经是最新内容
  */
 async function extractTextFromContent(content: string): Promise<string> {
-  // 第一步：使用 text-version 获取最新版本的内容
-  const tv = new TextVersion();
-  const latestContent = tv.latest(content);
-
   // 第二步：将 Markdown/MDX 转换为纯文本
-  return await markdownToPlainText(latestContent);
+  return await markdownToPlainText(content);
 }
 
 /*
@@ -1101,20 +1098,73 @@ export async function searchPosts(
       });
     }
 
-    // 6. 执行搜索查询
+    // 6. 执行搜索查询（限制最多20条）
     const skip = (page - 1) * pageSize;
+    const effectivePageSize = Math.min(pageSize, 20); // 限制最多20条
     const searchQuery = `
       SELECT
         p.id,
         p.slug,
         p.title,
-        p.excerpt,
         p.status,
         p."publishedAt",
         p."createdAt",
         p."updatedAt",
         p."userUid",
-        (${rankExpression}) as rank
+        p."isPinned",
+        (${rankExpression}) as rank,
+        ts_headline('simple', p.title, to_tsquery('simple', $1), 
+          'StartSel=<mark>, StopSel=</mark>, MaxWords=20, MinWords=5, MaxFragments=1, HighlightAll=FALSE') as "titleHighlight",
+        (
+          WITH token_data AS (
+            -- 解析 tsvector 格式: 'word':1,2,3
+            SELECT 
+              regexp_matches[1] as token,
+              string_to_array(regexp_matches[2], ',')::int[] as positions
+            FROM regexp_matches(
+              p."contentSearchVector"::text,
+              '''([^'']+)'':([0-9,]+)',
+              'g'
+            ) AS regexp_matches
+          ),
+          matching_tokens AS (
+            -- 找出匹配的词元及其位置
+            SELECT DISTINCT token, unnest(positions) as pos
+            FROM token_data
+            WHERE to_tsvector('simple', token) @@ to_tsquery('simple', $1)
+            ORDER BY pos
+            LIMIT 5
+          ),
+          all_tokens_with_pos AS (
+            -- 展开所有词元的位置
+            SELECT token, unnest(positions) as pos
+            FROM token_data
+          ),
+          context_positions AS (
+            -- 获取所有匹配位置的上下文范围
+            SELECT DISTINCT generate_series(
+              mt.pos - 3,
+              mt.pos + 3
+            ) as ctx_pos, mt.pos as match_pos, mt.token as match_token
+            FROM matching_tokens mt
+          ),
+          context_tokens AS (
+            -- 获取上下文范围内的所有词元，并标记匹配的
+            SELECT DISTINCT atp.token, atp.pos,
+              CASE 
+                WHEN atp.pos = cp.match_pos AND atp.token = cp.match_token 
+                THEN true 
+                ELSE false 
+              END as is_match
+            FROM context_positions cp
+            JOIN all_tokens_with_pos atp ON atp.pos = cp.ctx_pos
+          )
+          SELECT string_agg(
+            CASE WHEN is_match THEN '<mark>' || token || '</mark>' ELSE token END,
+            ' ' ORDER BY pos
+          )
+          FROM context_tokens
+        ) as "excerptHighlight"
       FROM "Post" p
       WHERE ${fullWhereClause}
       ORDER BY rank DESC, p."updatedAt" DESC
@@ -1123,25 +1173,89 @@ export async function searchPosts(
     `;
 
     const searchParams = status
-      ? [searchQueryStr, status, pageSize, skip]
-      : [searchQueryStr, pageSize, skip];
+      ? [searchQueryStr, status, effectivePageSize, skip]
+      : [searchQueryStr, effectivePageSize, skip];
 
-    const posts = await prisma.$queryRawUnsafe<
+    const rawPosts = await prisma.$queryRawUnsafe<
       Array<{
         id: number;
         slug: string;
         title: string;
-        excerpt: string | null;
         status: string;
         publishedAt: Date | null;
         createdAt: Date;
         updatedAt: Date;
         userUid: number;
+        isPinned: boolean;
         rank: number;
+        titleHighlight: string;
+        excerptHighlight: string | null;
       }>
     >(searchQuery, ...searchParams);
 
-    // 7. 获取作者信息
+    // 7. 使用 Prisma 关系查询获取完整的文章信息（包括分类、标签、封面）
+    const postIds = rawPosts.map((p) => p.id);
+
+    const posts = await prisma.post.findMany({
+      where: {
+        id: { in: postIds },
+      },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        excerpt: true,
+        status: true,
+        publishedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        isPinned: true,
+        userUid: true,
+        categories: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+        tags: {
+          select: {
+            name: true,
+            slug: true,
+          },
+        },
+        mediaRefs: {
+          where: {
+            slot: "featuredImage",
+          },
+          include: {
+            media: {
+              select: {
+                shortHash: true,
+                width: true,
+                height: true,
+                blur: true,
+              },
+            },
+          },
+          take: 1,
+        },
+      },
+    });
+
+    // 构建 postId 到 rank 和 highlight 的映射
+    const postMetaMap = new Map(
+      rawPosts.map((p) => [
+        p.id,
+        {
+          rank: p.rank,
+          titleHighlight: p.titleHighlight,
+          excerptHighlight: p.excerptHighlight,
+        },
+      ]),
+    );
+
+    // 8. 获取作者信息
     const userUids = posts.map((p) => p.userUid);
     const users = await prisma.user.findMany({
       where: {
@@ -1156,13 +1270,29 @@ export async function searchPosts(
 
     const userMap = new Map(users.map((u) => [u.uid, u]));
 
-    // 8. 组装结果
+    // 9. 组装结果
     const result: SearchPostsResultItem[] = posts.map((post) => {
       const author = userMap.get(post.userUid) || {
         uid: post.userUid,
         username: "unknown",
         nickname: null,
       };
+
+      const postMeta = postMetaMap.get(post.id) || {
+        rank: 0,
+        titleHighlight: post.title,
+        excerptHighlight: null,
+      };
+
+      const mediaRef = post.mediaRefs[0];
+      const coverData = mediaRef
+        ? {
+            url: `/p/${mediaRef.media.shortHash}${generateSignature(mediaRef.media.shortHash)}`,
+            width: mediaRef.media.width,
+            height: mediaRef.media.height,
+            blur: mediaRef.media.blur,
+          }
+        : undefined;
 
       return {
         id: post.id,
@@ -1174,11 +1304,17 @@ export async function searchPosts(
         createdAt: post.createdAt.toISOString(),
         updatedAt: post.updatedAt.toISOString(),
         author,
-        rank: post.rank,
+        rank: postMeta.rank,
+        isPinned: post.isPinned,
+        categories: post.categories,
+        tags: post.tags,
+        coverData,
+        titleHighlight: postMeta.titleHighlight,
+        excerptHighlight: postMeta.excerptHighlight,
       };
     });
 
-    // 9. 记录搜索日志
+    // 10. 记录搜索日志
     const { after } = await import("next/server");
     after(async () => {
       await prisma.searchLog.create({
@@ -1190,7 +1326,7 @@ export async function searchPosts(
       });
     });
 
-    // 10. 返回结果
+    // 11. 返回结果
     const meta = {
       page,
       pageSize,

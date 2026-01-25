@@ -1,42 +1,52 @@
 import prisma from "@/lib/server/prisma";
 import { notFound } from "next/navigation";
-import { TextVersion } from "text-version";
 import { getFeaturedImageUrl } from "@/lib/server/media-reference";
 
 export interface PostData {
-  id: number;
+  id?: number;
   title: string;
   slug: string;
-  content: string;
+  content?: string;
   excerpt: string | null;
-  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   isPinned: boolean;
-  allowComments: boolean;
+  allowComments?: boolean;
   publishedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-  featuredImage: string | null;
-  metaDescription: string | null;
-  metaKeywords: string | null;
-  robotsIndex: boolean;
-  postMode: "MARKDOWN" | "MDX";
-  author: {
+  createdAt?: Date;
+  updatedAt?: Date;
+  featuredImage?: string | null;
+  metaDescription?: string | null;
+  metaKeywords?: string | null;
+  robotsIndex?: boolean;
+  postMode?: "MARKDOWN" | "MDX";
+  // 为搜索结果添加的额外属性
+  summary?: string; // PostCard 需要的摘要属性
+  cover?:
+    | Array<{
+        url: string;
+        width?: number;
+        height?: number;
+        blur?: string;
+      }>
+    | string; // PostCard 需要的封面属性
+  author?: {
     uid: number;
     username: string;
     nickname: string | null;
   };
-  categories: Array<{
-    id: number;
+  categories?: Array<{
+    id?: number;
     name: string;
+    slug?: string;
   }>;
-  tags: Array<{
+  tags?: Array<{
     name: string;
     slug: string;
   }>;
-  _count: {
+  _count?: {
     comments: number;
   };
-  viewCount: number;
+  viewCount?: number;
 }
 
 export interface RenderedContent {
@@ -140,9 +150,8 @@ export async function getPublishedPost(slug: string): Promise<PostData> {
 export async function renderPostContent(
   post: PostData,
 ): Promise<RenderedContent> {
-  // text-version 获取最新版本的内容
-  const tv = new TextVersion();
-  const latestContent = tv.latest(post.content);
+  // text-version v2: 直接使用 content 字段（已经是最新内容）
+  const latestContent = post.content || "";
 
   if (post.postMode === "MARKDOWN") {
     // Markdown 模式：直接返回原始内容，由 react-markdown 在组件中渲染

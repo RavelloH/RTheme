@@ -108,7 +108,7 @@
     "sharp": "^0.34.5",
     "shiki": "^3.15.0",
     "swr": "^2.3.8",
-    "text-version": "^1.0.3",
+    "text-version": "^2.0.0",
     "tiptap-extension-code-block-shiki": "^1.0.0",
     "ua-parser-js": "^2.0.6",
     "unified": "^11.0.5",

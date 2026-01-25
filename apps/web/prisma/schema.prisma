@@ -150,7 +150,8 @@ model Post {
   title               String
   titleSearchVector   Unsupported("tsvector")?
   slug                String                   @unique
-  content             String
+  content             String // 存储最新内容
+  versionMetadata     String? // 存储版本历史元数据
   contentSearchVector Unsupported("tsvector")?
   excerpt             String?                  @db.VarChar(500)
   status              PostStatus               @default(DRAFT)
