@@ -14,9 +14,6 @@ import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import remarkRehype from "remark-rehype";
-import rehypeRaw from "rehype-raw";
-import rehypeStringify from "rehype-stringify";
 import type {
   ApiResponse,
   ApiResponseData,
@@ -43,6 +40,7 @@ import type {
   GetSearchIndexStats,
   SearchIndexStatsResult,
   SearchPostsResultItem,
+  PostStatus,
 } from "@repo/shared-types/api/search";
 import {
   TestTokenizeSchema,
@@ -61,59 +59,105 @@ type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
 
-/**
- * 格式化时间，自动选择合适的单位
- * @param microseconds 微秒
- * @returns 格式化后的时间字符串
- */
-function formatDuration(microseconds: number): string {
-  if (microseconds < 1000) {
-    // 小于 1ms，显示微秒
-    return `${microseconds}μs`;
-  } else if (microseconds < 1000000) {
-    // 小于 1s，显示毫秒
-    const ms = (microseconds / 1000).toFixed(2);
-    return `${ms}ms`;
-  } else {
-    // 大于等于 1s，显示秒
-    const s = (microseconds / 1000000).toFixed(2);
-    return `${s}s`;
-  }
-}
+// formatDuration 函数已弃用，保留用于未来可能的性能监控功能
 
 /**
  * 辅助函数：将 Markdown 转换为纯文本
+ * 通过遍历 mdast (Markdown AST) 提取文本内容，比 HTML 正则剥离更可靠
  */
 async function markdownToPlainText(markdown: string): Promise<string> {
-  try {
-    const processor = unified()
-      .use(remarkParse)
-      .use(remarkGfm)
-      .use(remarkMath)
-      .use(remarkRehype, { allowDangerousHtml: true })
-      .use(rehypeRaw)
-      .use(rehypeStringify);
+  // 1. 使用 unified 解析 Markdown
+  const processor = unified().use(remarkParse).use(remarkGfm).use(remarkMath);
 
-    const vfile = await processor.process(markdown);
-    const html = String(vfile);
+  const ast = processor.parse(markdown);
 
-    // 去除 HTML 标签，保留纯文本
-    const plainText = html
-      .replace(/<[^>]*>/g, " ") // 移除所有 HTML 标签
-      .replace(/&nbsp;/g, " ") // 替换 &nbsp;
-      .replace(/&lt;/g, "<") // 解码 HTML 实体
+  // 2. 递归提取所有文本节点
+  function extractText(node: unknown): string {
+    if (!node || typeof node !== "object") return "";
+
+    const nodeObj = node as Record<string, unknown>;
+    const type = nodeObj.type as string | undefined;
+
+    // 1. 直接文本节点
+    if (type === "text" || type === "inlineCode") {
+      // 即使是文本节点，也可能包含未被解析的 HTML 标签（如内联样式），尝试清理
+      // 使用更严格的正则：必须以字母或 / 开头，防止误伤 a < b
+      const value = nodeObj.value as string | undefined;
+      return (value || "").replace(/<[a-zA-Z/][^>]*>/g, " ");
+    }
+
+    // 代码块：保留内容，但进行基础清理
+    if (type === "code") {
+      const value = nodeObj.value as string | undefined;
+      return (value || "") + " ";
+    }
+
+    // 2. 图片节点 - 提取 alt 文本并添加标识
+    if (type === "image" || type === "imageReference") {
+      const alt = (nodeObj.alt as string | undefined | null) || "图片";
+      return `[${alt}] `;
+    }
+
+    // 3. HTML 节点 - 剥离标签保留内容
+    if (type === "html") {
+      const value = nodeObj.value as string | undefined;
+      return (value || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
+    }
+
+    // 4. 分割线 - 替换为空格
+    if (type === "thematicBreak") {
+      return " ";
+    }
+
+    // 5. 有子节点的容器节点
+    const children = nodeObj.children;
+    if (children && Array.isArray(children)) {
+      const childrenText = children.map(extractText).join("");
+
+      // 为块级元素添加空格防止粘连
+      const blockTypes = [
+        "paragraph",
+        "heading",
+        "listItem",
+        "tableCell",
+        "tableRow",
+        "blockquote",
+        "code",
+      ];
+      if (type && blockTypes.includes(type)) {
+        return childrenText + " ";
+      }
+      return childrenText;
+    }
+
+    return "";
+  }
+
+  const plainText = extractText(ast);
+
+  // 3. 最终清理：解码实体、移除多余装饰符、合并空格
+  return (
+    plainText
+      .replace(/&nbsp;/g, " ")
+      .replace(/&lt;/g, "<")
       .replace(/&gt;/g, ">")
       .replace(/&amp;/g, "&")
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")
-      .replace(/\s+/g, " ") // 合并多个空格
-      .trim();
-
-    return plainText;
-  } catch (error) {
-    console.error("Markdown 转换失败:", error);
-    return markdown; // 失败时返回原始内容
-  }
+      // 移除常见的 Markdown 标记符号 (**, __, ~~, `)
+      // 匹配成对的或孤立的标记符
+      .replace(/(\*\*|__|~~|`)/g, " ")
+      // 移除连续的符号行 (---, ***, ===)
+      .replace(/[-=*_]{3,}/g, " ")
+      // 移除自定义装饰符
+      .replace(/\+\+([^+]+)\+\+/g, "$1")
+      .replace(/==([^=]+)==/g, "$1")
+      // 再次清理可能残留的 HTML 标签 (针对未被解析为 html 节点的漏网之鱼)
+      .replace(/<[a-zA-Z/][^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .replace(/\n+/g, " ")
+      .trim()
+  );
 }
 
 /**
@@ -125,9 +169,338 @@ async function extractTextFromContent(content: string): Promise<string> {
   return await markdownToPlainText(content);
 }
 
-/*
-  testTokenize - 测试分词功能
-*/
+/**
+ * 智能摘要生成函数
+ * 采用聚类拼接策略：
+ * 1. 找出所有关键词位置
+ * 2. 将邻近的关键词（距离 < 阈值）归为一个片段
+ * 3. 拼接这些片段，中间用省略号连接
+ * 4. 确保总长度不超过 maxLength
+ */
+function generateSmartExcerpt(
+  text: string,
+  tokens: string[],
+  maxLength: number = 80,
+): string {
+  if (!text || tokens.length === 0) return text.slice(0, maxLength);
+
+  // 1. 找出所有 unique token
+  const uniqueTokens = Array.from(
+    new Set(tokens.filter((t) => t && t.trim().length > 0)),
+  );
+
+  if (uniqueTokens.length === 0) return text.slice(0, maxLength);
+
+  const lowerText = text.toLowerCase();
+
+  // 2. 找出所有 token 在文本中的位置
+  const matches: Array<{ start: number; end: number; token: string }> = [];
+
+  for (const token of uniqueTokens) {
+    let pos = lowerText.indexOf(token.toLowerCase());
+    while (pos !== -1) {
+      matches.push({ start: pos, end: pos + token.length, token });
+      pos = lowerText.indexOf(token.toLowerCase(), pos + 1);
+    }
+  }
+
+  if (matches.length === 0) return text.slice(0, maxLength);
+
+  // 按位置排序
+  matches.sort((a, b) => a.start - b.start);
+
+  // 3. 初始聚类参数 (非常保守，宁愿碎一点)
+  const basePadding = 2; // 初始只留极少上下文
+  const mergeDistance = 10; // 两个片段间隔小于此值才合并
+
+  // 4. 生成初始微片段
+  // 每个片段结构: { start, end, score, tokens, originalStart, originalEnd }
+  // 增加 originalStart/End 以支持 maxContext 限制
+  const fragments: Array<{
+    start: number;
+    end: number;
+    score: number;
+    tokens: Set<string>;
+    originalStart: number;
+    originalEnd: number;
+  }> = [];
+
+  for (const m of matches) {
+    const start = Math.max(0, m.start - basePadding);
+    const end = Math.min(text.length, m.end + basePadding);
+
+    if (fragments.length > 0) {
+      const last = fragments[fragments.length - 1];
+      // 检查是否重叠或极近
+      if (last && start <= last.end + mergeDistance) {
+        last.end = Math.max(last.end, end);
+        // 更新 originalEnd 为最新的 match end (近似处理，取并集的最远端)
+        if (last.originalEnd !== undefined) {
+          last.originalEnd = Math.max(last.originalEnd, m.end);
+        }
+        last.score += m.token.length;
+        last.tokens.add(m.token);
+        continue;
+      }
+    }
+
+    fragments.push({
+      start,
+      end,
+      score: m.token.length,
+      tokens: new Set([m.token]),
+      originalStart: m.start,
+      originalEnd: m.end,
+    });
+  }
+
+  // 5. 筛选片段以适应 maxLength 和可见性要求
+  // 省略号长度估计为 3 ("...")
+  const ellipsisLen = 3;
+  const visibleThreshold = 40; // 前40个字符为可见区域
+
+  // 5.1 首先检查：如果存在多个片段，且后面的片段会在可见区域外被截断
+  // 则删除前面的某些片段，让后面的关键词前移到可见区域内
+
+  while (fragments.length > 1) {
+    // 计算当前所有片段的总长度
+    const currentTotalLen =
+      fragments.reduce((sum, f) => sum + (f.end - f.start), 0) +
+      (fragments.length - 1) * ellipsisLen;
+
+    // 如果总长度已经在 maxLength 内，检查可见性
+    if (currentTotalLen <= maxLength) {
+      // 计算第二个关键词的位置（如果有的话）
+      if (fragments.length >= 2) {
+        const firstFrag = fragments[0];
+        const secondFrag = fragments[1];
+
+        if (firstFrag && secondFrag) {
+          // 第二个关键词在完整摘要中的位置 = 第一个片段长度 + 省略号
+          const secondKeywordPos =
+            firstFrag.end - firstFrag.start + ellipsisLen;
+
+          // 如果第二个关键词在可见区域外（超过40字符），删除第一个片段
+          if (secondKeywordPos > visibleThreshold) {
+            fragments.shift(); // 删除第一个片段
+            continue; // 重新检查
+          }
+        }
+      }
+      break; // 长度和可见性都满足
+    }
+
+    // 如果总长度超出 maxLength，需要删除片段
+    // 统计全局 token 覆盖情况
+    const allTokens = new Set<string>();
+    fragments.forEach((f) => f.tokens.forEach((t) => allTokens.add(t)));
+
+    let worstIndex = -1;
+    let minUniqueContribution = Infinity;
+
+    for (let i = fragments.length - 1; i >= 0; i--) {
+      // 从后往前找，倾向于删除后面的
+      const frag = fragments[i];
+      if (!frag) continue;
+
+      // 计算如果删除这个片段，会丢失多少种 token
+      // 即：这个片段有的 token，其他片段都没有
+      let contribution = 0;
+      frag.tokens.forEach((t) => {
+        let existsInOthers = false;
+        for (let j = 0; j < fragments.length; j++) {
+          const otherFrag = fragments[j];
+          if (i !== j && otherFrag && otherFrag.tokens.has(t)) {
+            existsInOthers = true;
+            break;
+          }
+        }
+        if (!existsInOthers) contribution++;
+      });
+
+      if (contribution < minUniqueContribution) {
+        minUniqueContribution = contribution;
+        worstIndex = i;
+      }
+    }
+
+    if (worstIndex !== -1) {
+      // 删除该片段
+      const removed = fragments.splice(worstIndex, 1)[0];
+      if (removed) {
+        // 继续循环，重新计算
+      }
+    } else {
+      break; // 应该不会发生
+    }
+  }
+
+  // 重新计算总长度
+  let currentTotalLen =
+    fragments.reduce((sum, f) => sum + (f.end - f.start), 0) +
+    (fragments.length - 1) * ellipsisLen;
+
+  // 6. 动态扩展 (核心优化)
+  // 如果还有空间，轮流向外扩展上下文，但增加最大上下文限制，避免过度填充
+  const maxContext = 15; // 每个方向最大扩展字符数
+
+  // 辅助函数：获取第 i 个片段允许的左边界
+  const getMinStart = (i: number) => {
+    const frag = fragments[i];
+    if (!frag) return 0;
+    // 绝对左边界：基于原始匹配位置向左 maxContext
+    const limit = Math.max(0, frag.originalStart - maxContext);
+    // 相对左边界（不能越过上一个片段）
+    const neighbor = i === 0 ? 0 : (fragments[i - 1]?.end ?? 0);
+    return Math.max(limit, neighbor);
+  };
+
+  // 辅助函数：获取第 i 个片段允许的右边界
+  const getMaxEnd = (i: number) => {
+    const frag = fragments[i];
+    if (!frag) return text.length;
+    // 绝对右边界
+    const limit = Math.min(text.length, frag.originalEnd + maxContext);
+    // 相对右边界
+    const neighbor =
+      i === fragments.length - 1
+        ? text.length
+        : (fragments[i + 1]?.start ?? text.length);
+    return Math.min(limit, neighbor);
+  };
+
+  let changed = true;
+  while (currentTotalLen < maxLength && changed) {
+    changed = false;
+
+    for (let i = 0; i < fragments.length; i++) {
+      if (currentTotalLen >= maxLength) break;
+
+      const frag = fragments[i];
+      if (!frag) continue;
+
+      const minStart = getMinStart(i);
+      const maxEnd = getMaxEnd(i);
+
+      // 尝试向左扩展
+      if (frag.start > minStart) {
+        const step = Math.min(2, maxLength - currentTotalLen);
+        const actualMove = Math.min(frag.start - minStart, step);
+        if (actualMove > 0) {
+          frag.start -= actualMove;
+          currentTotalLen += actualMove;
+          changed = true;
+        }
+      }
+
+      if (currentTotalLen >= maxLength) break;
+
+      // 尝试向右扩展
+      if (frag.end < maxEnd) {
+        const step = Math.min(2, maxLength - currentTotalLen);
+        const actualMove = Math.min(maxEnd - frag.end, step);
+        if (actualMove > 0) {
+          frag.end += actualMove;
+          currentTotalLen += actualMove;
+          changed = true;
+        }
+      }
+    }
+  }
+
+  // 6.5 如果仍然不足 maxLength，从最后一个片段向后扩充到文本末尾
+  if (currentTotalLen < maxLength && fragments.length > 0) {
+    const lastFrag = fragments[fragments.length - 1];
+    if (lastFrag && lastFrag.end < text.length) {
+      const remaining = maxLength - currentTotalLen;
+      const extension = Math.min(remaining, text.length - lastFrag.end);
+      lastFrag.end += extension;
+      currentTotalLen += extension;
+    }
+  }
+
+  // 7. 拼接输出
+
+  let resultHtml = "";
+
+  for (let i = 0; i < fragments.length; i++) {
+    const frag = fragments[i];
+    if (!frag) continue;
+
+    let content = text.slice(frag.start, frag.end);
+
+    // HTML 转义
+    content = content
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
+    // 高亮
+    const sortedTokens = [...uniqueTokens].sort((a, b) => b.length - a.length);
+    const pattern = sortedTokens
+      .map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+      .join("|");
+
+    if (pattern) {
+      const regex = new RegExp(`(${pattern})`, "gi");
+      content = content.replace(regex, "<mark>$1</mark>");
+    }
+
+    // 前导省略号
+    if (i === 0 && frag.start > 0) {
+      resultHtml += "...";
+    } else if (i > 0) {
+      resultHtml += "..."; // 片段间
+    }
+
+    resultHtml += content;
+
+    // 尾部省略号
+    if (i === fragments.length - 1 && frag.end < text.length) {
+      resultHtml += "...";
+    }
+  }
+
+  return resultHtml;
+}
+
+/**
+ * 标题高亮函数
+ * 直接在标题中查找所有关键词并高亮
+ */
+function highlightTitle(title: string, tokens: string[]): string {
+  if (!title || tokens.length === 0) return title;
+
+  // 找出所有 unique token
+  const uniqueTokens = Array.from(
+    new Set(tokens.filter((t) => t && t.trim().length > 0)),
+  );
+
+  if (uniqueTokens.length === 0) return title;
+
+  // HTML 转义
+  let escaped = title
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+  // 按长度降序排序，避免短 token 破坏长 token 的匹配
+  const sortedTokens = [...uniqueTokens].sort((a, b) => b.length - a.length);
+
+  // 为每个 token 创建正则，并高亮
+  for (const token of sortedTokens) {
+    const pattern = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(`(${pattern})`, "gi");
+    escaped = escaped.replace(regex, "<mark>$1</mark>");
+  }
+
+  return escaped;
+}
+
 export async function testTokenize(
   params: Omit<TestTokenize, "access_token">,
   serverConfig: { environment: "serverless" },
@@ -183,29 +556,6 @@ export async function testTokenize(
     const endTime = performance.now();
     const duration = Math.round((endTime - startTime) * 1000); // 转换为微秒
 
-    // 记录审计日志
-    const { after } = await import("next/server");
-    after(async () => {
-      await logAuditEvent({
-        user: {
-          uid: String(user.uid),
-        },
-        details: {
-          action: "TEST_TOKENIZE",
-          resourceType: "SEARCH",
-          value: {
-            old: null,
-            new: {
-              text: text.substring(0, 100),
-              tokenCount: tokens.length,
-              duration,
-            },
-          },
-          description: `测试分词：${text.substring(0, 50)}...，共 ${tokens.length} 个词，耗时 ${formatDuration(duration)}`,
-        },
-      });
-    });
-
     return response.ok({
       data: {
         text,
@@ -251,6 +601,11 @@ export async function addCustomWord(
   );
 
   if (validationError) return response.badRequest(validationError);
+
+  // 检查词汇是否包含空格
+  if (word.includes(" ")) {
+    return response.badRequest({ message: "自定义词汇中不能含有空格" });
+  }
 
   // 从 cookies 获取 access token
   const { cookies } = await import("next/headers");
@@ -633,6 +988,7 @@ export async function indexPosts(
           SET
             "titleSearchVector" = to_tsvector('simple', ${titleTokensStr}),
             "contentSearchVector" = to_tsvector('simple', ${contentTokensStr}),
+            "plain" = ${plainText},
             "tokenizedAt" = NOW()
           WHERE "id" = ${post.id}
         `;
@@ -765,6 +1121,7 @@ export async function deleteIndex(
           SET
             "titleSearchVector" = NULL,
             "contentSearchVector" = NULL,
+            "plain" = NULL,
             "tokenizedAt" = NULL
           WHERE "id" = ${post.id}
         `;
@@ -1045,40 +1402,83 @@ export async function searchPosts(
       });
     }
 
-    // 2. 将分词结果用空格连接，准备用于 to_tsquery
-    const searchQueryStr = tokens.join(" | "); // 使用 OR 连接，匹配任意一个词即可
+    // 2. 准备查询字符串
+    // OR 查询：用于 WHERE 过滤（保证召回率）和基础相关性
+    const orQueryStr = tokens.join(" | ");
+    // AND 查询：用于排序加分，奖励包含所有词的文章
+    const andQueryStr = tokens.join(" & ");
+    // PHRASE 查询：用于排序加分，奖励包含连续短语的文章
+    const phraseQueryStr = tokens.join(" <-> ");
 
     // 3. 根据 searchIn 参数决定搜索字段和排名计算
+    // 我们将使用三个参数 $1(OR), $2(AND), $3(PHRASE)
+    // 基础权重配置
+    const weights = {
+      title: {
+        or: 10.0,
+        and: 20.0,
+        phrase: 40.0,
+      },
+      content: {
+        or: 1.0,
+        and: 2.0,
+        phrase: 5.0,
+      },
+    };
+
     let whereClause = "";
     let rankExpression = "";
 
     if (searchIn === "title") {
       whereClause = `"titleSearchVector" @@ to_tsquery('simple', $1)`;
-      rankExpression = `ts_rank("titleSearchVector", to_tsquery('simple', $1))`;
+      rankExpression = `
+        (
+          ts_rank_cd("titleSearchVector", to_tsquery('simple', $1)) * ${weights.title.or} +
+          ts_rank_cd("titleSearchVector", to_tsquery('simple', $2)) * ${weights.title.and} +
+          ts_rank_cd("titleSearchVector", to_tsquery('simple', $3)) * ${weights.title.phrase}
+        )
+      `;
     } else if (searchIn === "content") {
       whereClause = `"contentSearchVector" @@ to_tsquery('simple', $1)`;
-      rankExpression = `ts_rank("contentSearchVector", to_tsquery('simple', $1))`;
+      rankExpression = `
+        (
+          ts_rank_cd("contentSearchVector", to_tsquery('simple', $1), 32) * ${weights.content.or} +
+          ts_rank_cd("contentSearchVector", to_tsquery('simple', $2), 32) * ${weights.content.and} +
+          ts_rank_cd("contentSearchVector", to_tsquery('simple', $3), 32) * ${weights.content.phrase}
+        )
+      `;
     } else {
-      // both: 标题或内容匹配即可
+      // both
       whereClause = `("titleSearchVector" @@ to_tsquery('simple', $1) OR "contentSearchVector" @@ to_tsquery('simple', $1))`;
       rankExpression = `
-        ts_rank("titleSearchVector", to_tsquery('simple', $1)) * 2.0 +
-        ts_rank("contentSearchVector", to_tsquery('simple', $1))
+        (
+          -- 标题得分 (高权重，无归一化)
+          ts_rank_cd("titleSearchVector", to_tsquery('simple', $1)) * ${weights.title.or} +
+          ts_rank_cd("titleSearchVector", to_tsquery('simple', $2)) * ${weights.title.and} +
+          ts_rank_cd("titleSearchVector", to_tsquery('simple', $3)) * ${weights.title.phrase} +
+          -- 内容得分 (低权重，有归一化)
+          ts_rank_cd("contentSearchVector", to_tsquery('simple', $1), 32) * ${weights.content.or} +
+          ts_rank_cd("contentSearchVector", to_tsquery('simple', $2), 32) * ${weights.content.and} +
+          ts_rank_cd("contentSearchVector", to_tsquery('simple', $3), 32) * ${weights.content.phrase}
+        )
       `;
     }
 
     // 4. 构建完整的 WHERE 条件
-    const statusFilter = status ? ` AND "status" = $2` : "";
+    // 参数索引偏移：搜索相关参数占用了 $1, $2, $3
+    // 如果有 status，它是 $4
+    const statusFilter = status ? ` AND "status" = $4` : "";
     const fullWhereClause = `${whereClause}${statusFilter} AND "deletedAt" IS NULL`;
 
     // 5. 计算总数
+    // count 查询只需要 $1 (OR query) 和 status (如果有)
     const countQuery = `
       SELECT COUNT(*)::bigint as count
       FROM "Post"
-      WHERE ${fullWhereClause}
+      WHERE ${whereClause}${status ? ` AND "status" = $2` : ""} AND "deletedAt" IS NULL
     `;
 
-    const countParams = status ? [searchQueryStr, status] : [searchQueryStr];
+    const countParams = status ? [orQueryStr, status] : [orQueryStr];
 
     const countResult = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
       countQuery,
@@ -1101,6 +1501,18 @@ export async function searchPosts(
     // 6. 执行搜索查询（限制最多20条）
     const skip = (page - 1) * pageSize;
     const effectivePageSize = Math.min(pageSize, 20); // 限制最多20条
+
+    // 参数索引:
+    // $1: orQuery
+    // $2: andQuery
+    // $3: phraseQuery
+    // $4: status (optional)
+    // Next: limit, offset
+
+    // 根据是否有 status 决定 limit/offset 的索引
+    const limitIdx = status ? 5 : 4;
+    const offsetIdx = status ? 6 : 5;
+
     const searchQuery = `
       SELECT
         p.id,
@@ -1113,68 +1525,21 @@ export async function searchPosts(
         p."userUid",
         p."isPinned",
         (${rankExpression}) as rank,
-        ts_headline('simple', p.title, to_tsquery('simple', $1), 
-          'StartSel=<mark>, StopSel=</mark>, MaxWords=20, MinWords=5, MaxFragments=1, HighlightAll=FALSE') as "titleHighlight",
-        (
-          WITH token_data AS (
-            -- 解析 tsvector 格式: 'word':1,2,3
-            SELECT 
-              regexp_matches[1] as token,
-              string_to_array(regexp_matches[2], ',')::int[] as positions
-            FROM regexp_matches(
-              p."contentSearchVector"::text,
-              '''([^'']+)'':([0-9,]+)',
-              'g'
-            ) AS regexp_matches
-          ),
-          matching_tokens AS (
-            -- 找出匹配的词元及其位置
-            SELECT DISTINCT token, unnest(positions) as pos
-            FROM token_data
-            WHERE to_tsvector('simple', token) @@ to_tsquery('simple', $1)
-            ORDER BY pos
-            LIMIT 5
-          ),
-          all_tokens_with_pos AS (
-            -- 展开所有词元的位置
-            SELECT token, unnest(positions) as pos
-            FROM token_data
-          ),
-          context_positions AS (
-            -- 获取所有匹配位置的上下文范围
-            SELECT DISTINCT generate_series(
-              mt.pos - 3,
-              mt.pos + 3
-            ) as ctx_pos, mt.pos as match_pos, mt.token as match_token
-            FROM matching_tokens mt
-          ),
-          context_tokens AS (
-            -- 获取上下文范围内的所有词元，并标记匹配的
-            SELECT DISTINCT atp.token, atp.pos,
-              CASE 
-                WHEN atp.pos = cp.match_pos AND atp.token = cp.match_token 
-                THEN true 
-                ELSE false 
-              END as is_match
-            FROM context_positions cp
-            JOIN all_tokens_with_pos atp ON atp.pos = cp.ctx_pos
-          )
-          SELECT string_agg(
-            CASE WHEN is_match THEN '<mark>' || token || '</mark>' ELSE token END,
-            ' ' ORDER BY pos
-          )
-          FROM context_tokens
-        ) as "excerptHighlight"
+        p.plain
       FROM "Post" p
       WHERE ${fullWhereClause}
       ORDER BY rank DESC, p."updatedAt" DESC
-      LIMIT $${status ? 3 : 2}
-      OFFSET $${status ? 4 : 3}
+      LIMIT $${limitIdx}
+      OFFSET $${offsetIdx}
     `;
 
-    const searchParams = status
-      ? [searchQueryStr, status, effectivePageSize, skip]
-      : [searchQueryStr, effectivePageSize, skip];
+    const searchParams: (string | number)[] = [
+      orQueryStr,
+      andQueryStr,
+      phraseQueryStr,
+    ];
+    if (status) searchParams.push(status);
+    searchParams.push(effectivePageSize, skip);
 
     const rawPosts = await prisma.$queryRawUnsafe<
       Array<{
@@ -1188,8 +1553,7 @@ export async function searchPosts(
         userUid: number;
         isPinned: boolean;
         rank: number;
-        titleHighlight: string;
-        excerptHighlight: string | null;
+        plain: string | null;
       }>
     >(searchQuery, ...searchParams);
 
@@ -1249,8 +1613,10 @@ export async function searchPosts(
         p.id,
         {
           rank: p.rank,
-          titleHighlight: p.titleHighlight,
-          excerptHighlight: p.excerptHighlight,
+          titleHighlight: highlightTitle(p.title, tokens),
+          excerptHighlight: p.plain
+            ? generateSmartExcerpt(p.plain, tokens)
+            : null,
         },
       ]),
     );
@@ -1271,48 +1637,56 @@ export async function searchPosts(
     const userMap = new Map(users.map((u) => [u.uid, u]));
 
     // 9. 组装结果
-    const result: SearchPostsResultItem[] = posts.map((post) => {
-      const author = userMap.get(post.userUid) || {
-        uid: post.userUid,
-        username: "unknown",
-        nickname: null,
-      };
+    // 关键修正：必须遍历 rawPosts (有序) 而不是 posts (无序)，以保持搜索排名
+    const postsMap = new Map(posts.map((p) => [p.id, p]));
 
-      const postMeta = postMetaMap.get(post.id) || {
-        rank: 0,
-        titleHighlight: post.title,
-        excerptHighlight: null,
-      };
+    const result = rawPosts
+      .map((rawPost) => {
+        const post = postsMap.get(rawPost.id);
+        if (!post) return null;
 
-      const mediaRef = post.mediaRefs[0];
-      const coverData = mediaRef
-        ? {
-            url: `/p/${mediaRef.media.shortHash}${generateSignature(mediaRef.media.shortHash)}`,
-            width: mediaRef.media.width,
-            height: mediaRef.media.height,
-            blur: mediaRef.media.blur,
-          }
-        : undefined;
+        const author = userMap.get(post.userUid) || {
+          uid: post.userUid,
+          username: "unknown",
+          nickname: null,
+        };
 
-      return {
-        id: post.id,
-        slug: post.slug,
-        title: post.title,
-        excerpt: post.excerpt,
-        status: post.status,
-        publishedAt: post.publishedAt?.toISOString() || null,
-        createdAt: post.createdAt.toISOString(),
-        updatedAt: post.updatedAt.toISOString(),
-        author,
-        rank: postMeta.rank,
-        isPinned: post.isPinned,
-        categories: post.categories,
-        tags: post.tags,
-        coverData,
-        titleHighlight: postMeta.titleHighlight,
-        excerptHighlight: postMeta.excerptHighlight,
-      };
-    });
+        const postMeta = postMetaMap.get(post.id) || {
+          rank: 0,
+          titleHighlight: post.title,
+          excerptHighlight: null,
+        };
+
+        const mediaRef = post.mediaRefs[0];
+        const coverData = mediaRef
+          ? {
+              url: `/p/${mediaRef.media.shortHash}${generateSignature(mediaRef.media.shortHash)}`,
+              width: mediaRef.media.width,
+              height: mediaRef.media.height,
+              blur: mediaRef.media.blur,
+            }
+          : undefined;
+
+        return {
+          id: post.id,
+          slug: post.slug,
+          title: post.title,
+          excerpt: post.excerpt,
+          status: post.status as PostStatus,
+          publishedAt: post.publishedAt?.toISOString() || null,
+          createdAt: post.createdAt.toISOString(),
+          updatedAt: post.updatedAt.toISOString(),
+          author,
+          rank: postMeta.rank,
+          isPinned: post.isPinned,
+          categories: post.categories,
+          tags: post.tags,
+          coverData,
+          titleHighlight: postMeta.titleHighlight,
+          excerptHighlight: postMeta.excerptHighlight,
+        } as SearchPostsResultItem;
+      })
+      .filter((item): item is SearchPostsResultItem => item !== null);
 
     // 10. 记录搜索日志
     const { after } = await import("next/server");
@@ -1462,13 +1836,19 @@ export async function getPostTokenDetails(
             item !== null,
         );
 
-      // 按第一个位置排序，用于按位置展示
-      const sortedTokens = [...tokensWithPos].sort(
-        (a, b) => Math.min(...a.positions) - Math.min(...b.positions),
-      );
+      // 展开所有位置，形成 (token, position) 对，以便完整展示所有分词
+      const allOccurrences: { token: string; position: number }[] = [];
+      tokensWithPos.forEach(({ token, positions }) => {
+        positions.forEach((pos) => {
+          allOccurrences.push({ token, position: pos });
+        });
+      });
+
+      // 按位置排序
+      allOccurrences.sort((a, b) => a.position - b.position);
 
       // 返回按位置排序的词元列表
-      const orderedTokens = sortedTokens.map((item) => item.token);
+      const orderedTokens = allOccurrences.map((item) => item.token);
 
       // 统计词频（去除单字符）
       const wordFrequency = new Map<string, number>();
@@ -1681,11 +2061,11 @@ export async function getSearchIndexStats(
         }
       }
 
-      // 获取 Top 100 高频词
+      // 获取 Top 500 高频词
       topWords = Array.from(wordFrequency.entries())
         .map(([word, count]) => ({ word, count }))
         .sort((a, b) => b.count - a.count)
-        .slice(0, 100);
+        .slice(0, 500);
     }
 
     // 4. 统计近期索引活动

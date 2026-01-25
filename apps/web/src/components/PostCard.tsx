@@ -9,7 +9,7 @@ import Link from "./Link";
 import CMSImage from "./CMSImage";
 
 interface PostCardProps {
-  title: string;
+  title: string | React.ReactNode;
   slug?: string;
   date?: string;
   category?: { name: string; slug: string }[];
@@ -22,9 +22,10 @@ interface PostCardProps {
         blur?: string;
       }>
     | string;
-  summary?: string;
+  summary?: string | React.ReactNode;
   isPinned?: boolean;
   className?: string;
+  showAll?: boolean; // 新增：是否显示所有信息（浏览量+标签并排，摘要始终显示）
 }
 
 export default function PostCard({
@@ -37,6 +38,7 @@ export default function PostCard({
   summary,
   isPinned = false,
   className = "",
+  showAll = false,
 }: PostCardProps) {
   // 格式化日期显示
   const formatDate = (dateString: string) => {
@@ -88,7 +90,7 @@ export default function PostCard({
           <div className="absolute inset-0 pointer-events-none">
             <CMSImage
               src={coverImage.url}
-              alt={title}
+              alt={typeof title === "string" ? title : "Post cover"}
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -138,9 +140,41 @@ export default function PostCard({
               </span>
             </span>
           )}
-          {/* 访问量与标签的hover切换（桌面版） */}
+          {/* 访问量与标签区域 */}
           <span className="relative ml-3 hidden md:inline-block" data-fade>
-            {summary && tags?.length !== 0 ? (
+            {showAll ? (
+              /* showAll 模式：浏览量和标签并排显示 */
+              <>
+                <span className="inline-flex items-center gap-3">
+                  {tags && tags.length > 0 && (
+                    <>
+                      <span className="inline-flex items-center gap-1">
+                        <RiPriceTagLine size={"1em"} />
+                        {tags.map((tag, index) => (
+                          <span key={tag.slug}>
+                            <Link
+                              href={`/tags/${tag.slug}`}
+                              className="hover:text-primary transition-colors text-white pointer-events-auto relative z-30"
+                            >
+                              #{tag.name}
+                            </Link>
+                            {index < tags.length - 1 && " "}
+                          </span>
+                        ))}
+                      </span>
+                    </>
+                  )}
+                  <span
+                    className="flex items-center gap-1 opacity-0 transition-all"
+                    data-viewcount-slug={slug}
+                  >
+                    <RiEye2Line size={"1em"} />
+                    <span>---</span>
+                  </span>
+                </span>
+              </>
+            ) : summary && tags?.length !== 0 ? (
+              /* 原有的 hover 切换效果 */
               <>
                 {/* 访问量（默认显示，hover时消失） */}
                 <span className="inline-flex items-center gap-1 absolute left-0 top-0 transition-all duration-300 group-hover:opacity-0 group-hover:-translate-y-2">
@@ -217,9 +251,15 @@ export default function PostCard({
 
         {/* 桌面版：hover切换效果 */}
         <div className="hidden md:block relative h-8">
-          {summary && tags?.length !== 0 && (
+          {summary && tags?.length !== 0 ? (
             <>
-              <div className="text-xl text-white/90 absolute inset-0 transition-all duration-300 group-hover:opacity-0 group-hover:-translate-y-2">
+              <div
+                className={`text-xl text-white/90 absolute inset-0 transition-all duration-300 ${
+                  showAll
+                    ? "opacity-0"
+                    : "group-hover:opacity-0 group-hover:-translate-y-2"
+                }`}
+              >
                 <span className="flex items-center gap-1">
                   <RiPriceTagLine size={"1em"} data-fade />
                   {tags?.map((tag, index) => (
@@ -236,13 +276,17 @@ export default function PostCard({
                   ))}
                 </span>
               </div>
-              <div className="text-lg text-white/90 absolute inset-0 transition-all duration-300 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0">
+              <div
+                className={`text-xl text-white/90 absolute inset-0 transition-all duration-300 ${
+                  showAll
+                    ? "opacity-100"
+                    : "opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0"
+                }`}
+              >
                 <div className="line-clamp-1">{summary}</div>
               </div>
             </>
-          )}
-          {/* 如果没有summary，正常显示标签 */}
-          {!summary && tags?.length !== 0 && (
+          ) : !summary && tags?.length !== 0 ? (
             <div className="text-xl text-white/90">
               <span className="flex items-center gap-1">
                 <RiPriceTagLine size={"1em"} data-fade />
@@ -260,13 +304,11 @@ export default function PostCard({
                 ))}
               </span>
             </div>
-          )}
-          {/* 只有summary没有标签的情况 */}
-          {summary && !tags?.length && (
-            <div className="text-lg text-white/90">
+          ) : summary && !tags?.length ? (
+            <div className="text-xl text-white/90">
               <div className="line-clamp-1">{summary}</div>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

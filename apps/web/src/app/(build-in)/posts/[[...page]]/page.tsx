@@ -3,9 +3,6 @@ import HorizontalScroll from "@/components/HorizontalScroll";
 import LinkButton from "@/components/LinkButton";
 import MainLayout from "@/components/MainLayout";
 import RowGrid, { GridItem } from "@/components/RowGrid";
-import PostCard from "@/components/PostCard";
-import PaginationNav from "@/components/PaginationNav";
-import { createArray } from "@/lib/client/create-array";
 import {
   getBlocksAreas,
   getRawPage,
@@ -15,9 +12,8 @@ import { createPageConfigBuilder } from "@/lib/server/page-utils";
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import prisma from "@/lib/server/prisma";
 import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
-import { Input } from "@/ui/Input";
-import { RiSearch2Line } from "@remixicon/react";
-import EmptyPostCard from "@/components/EmptyPostCard";
+import SearchInput from "@/components/client/SearchInput";
+import SearchContent from "@/components/client/SearchContent";
 import DynamicReplace from "@/components/client/DynamicReplace";
 import { getFeaturedImageData } from "@/lib/server/media-reference";
 import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
@@ -286,10 +282,7 @@ export default async function PostsPage({
                 <div className="text-7xl" data-fade-char>
                   <h1>{config.getBlockTitle(1)}</h1>
                 </div>
-                <Input
-                  label="搜索全站文章..."
-                  icon={<RiSearch2Line size={"1em"} />}
-                />
+                <SearchInput />
                 <Suspense>
                   <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
                     {config.getBlockContent(1).map((line, index) => {
@@ -384,58 +377,10 @@ export default async function PostsPage({
           </RowGrid>
         )}
 
-        <RowGrid>
-          {Array(Math.ceil(postsWithExpandedCategories.length / 4))
-            .fill(0)
-            .map((_, rowIndex) => (
-              <React.Fragment key={rowIndex}>
-                {Array.from({ length: 4 }, (_, index) => {
-                  const postIndex = rowIndex * 4 + index;
-                  const post = postsWithExpandedCategories[postIndex];
-
-                  return (
-                    <GridItem
-                      key={post ? post.slug : `empty-${postIndex}`}
-                      areas={createArray(index * 3 + 1, (index + 1) * 3)}
-                      width={4}
-                      height={0.4}
-                      className=""
-                    >
-                      {post ? (
-                        <PostCard
-                          title={post.title}
-                          slug={post.slug}
-                          isPinned={post.isPinned}
-                          date={
-                            post.publishedAt
-                              ? new Date(post.publishedAt)
-                                  .toLocaleDateString("zh-CN", {
-                                    year: "numeric",
-                                    month: "2-digit",
-                                    day: "2-digit",
-                                  })
-                                  .replace(/\//g, "/")
-                              : ""
-                          }
-                          category={post.categories}
-                          tags={post.tags}
-                          cover={post.coverData}
-                          summary={post.excerpt || ""}
-                        />
-                      ) : (
-                        <EmptyPostCard
-                          direction={index % 2 === 0 ? "left" : "right"}
-                        />
-                      )}
-                    </GridItem>
-                  );
-                })}
-              </React.Fragment>
-            ))}
-        </RowGrid>
-
-        {/* 分页导航 */}
-        <PaginationNav
+        {/* 主要内容显示区 - 使用 SearchContent */}
+        <SearchContent
+          initialPosts={postsWithExpandedCategories}
+          searchQuery=""
           currentPage={Number(page)}
           totalPages={totalPages}
           basePath="/posts"

@@ -49,6 +49,21 @@ export interface PostData {
   viewCount?: number;
 }
 
+export type FullPostData = Omit<PostData, "categories" | "tags" | "author"> & {
+  id: number;
+  content: string;
+  allowComments: boolean;
+  author: NonNullable<PostData["author"]>;
+  categories: Array<{
+    id: number;
+    name: string;
+    slug?: string;
+  }>;
+  tags: NonNullable<PostData["tags"]>;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export interface RenderedContent {
   content: string;
   mode: "markdown" | "mdx";
@@ -58,7 +73,7 @@ export interface RenderedContent {
  * 获取公开的文章数据
  * 只返回已发布且未被删除的文章
  */
-export async function getPublishedPost(slug: string): Promise<PostData> {
+export async function getPublishedPost(slug: string): Promise<FullPostData> {
   const post = await prisma.post.findUnique({
     where: {
       slug,
@@ -141,7 +156,7 @@ export async function getPublishedPost(slug: string): Promise<PostData> {
     ...post,
     viewCount: post.viewCount?.cachedCount || 0,
     featuredImage,
-  } as PostData;
+  } as FullPostData;
 }
 
 /**

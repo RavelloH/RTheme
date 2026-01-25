@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+// 重新定义 PostStatus 类型，与 Prisma schema 保持一致
+export type PostStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+
 // ==================== 测试分词 ====================
 
 export const TestTokenizeSchema = z.object({
@@ -162,7 +165,7 @@ export interface SearchPostsResultItem {
   slug: string;
   title: string;
   excerpt: string | null;
-  status: string;
+  status: PostStatus;
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -172,6 +175,24 @@ export interface SearchPostsResultItem {
     nickname: string | null;
   };
   rank: number; // 搜索相关性排名
+  isPinned: boolean;
+  categories: Array<{
+    id: number;
+    name: string;
+    slug: string;
+  }>;
+  tags: Array<{
+    name: string;
+    slug: string;
+  }>;
+  coverData?: {
+    url: string;
+    width: number | null;
+    height: number | null;
+    blur: string | null;
+  };
+  titleHighlight: string; // 标题中的匹配高亮
+  excerptHighlight: string | null; // 摘要中的匹配高亮（从 contentSearchVector 提取的关键词）
 }
 
 export interface SearchPostsResult {

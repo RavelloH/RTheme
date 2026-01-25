@@ -1,0 +1,57 @@
+"use client";
+
+import React, { useState } from "react";
+import RowGrid, { GridItem } from "@/components/RowGrid";
+import SearchContent, {
+  type PostData,
+} from "@/components/client/SearchContent";
+import PaginationNav from "@/components/PaginationNav";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { createArray } from "@/lib/client/create-array";
+
+interface PostsPageContentProps {
+  initialPosts: PostData[];
+  currentPage: number;
+  totalPages: number;
+  basePath: string;
+  block2?: React.ReactNode;
+}
+
+export default function PostsPageContent({
+  initialPosts,
+  currentPage,
+  totalPages,
+  basePath,
+  block2,
+}: PostsPageContentProps) {
+  const [isSearching, setIsSearching] = useState(false);
+
+  return (
+    <>
+      <SearchContent
+        initialPosts={initialPosts}
+        searchQuery=""
+        onSearchStateChange={setIsSearching}
+      />
+      <AutoTransition type="fade">
+        {!isSearching && (
+          <RowGrid key="pagination" className="mt-auto">
+            <GridItem
+              areas={createArray(1, 12)}
+              width={1}
+              height={0.2}
+              className="flex justify-center items-center"
+            >
+              <PaginationNav
+                currentPage={currentPage}
+                totalPages={totalPages}
+                basePath={basePath}
+              />
+            </GridItem>
+          </RowGrid>
+        )}
+      </AutoTransition>
+      {block2}
+    </>
+  );
+}

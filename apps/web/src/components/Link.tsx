@@ -544,7 +544,11 @@ function DynamicIconLink({
   );
 
   return (
-    <NextLink {...props} onClick={onClick} ref={linkRef}>
+    <NextLink
+      {...props}
+      onClick={onClick}
+      ref={linkRef as React.RefObject<HTMLAnchorElement>}
+    >
       {styledChildren}
     </NextLink>
   );

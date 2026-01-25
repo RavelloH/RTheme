@@ -24,6 +24,13 @@
   --color-error-foreground: #ffffff;
   --color-warning: #ca8a04;
   --color-warning-foreground: #ffffff;
+
+  /* 图表颜色 */
+  --chart-1: #2dd4bf;
+  --chart-2: #3b82f6;
+  --chart-3: #8b5cf6;
+  --chart-4: #ec4899;
+  --chart-5: #f59e0b;
 }
 
 .dark {
@@ -181,4 +188,10 @@
 
 html {
   overflow-y: hidden;
+}
+
+/* 搜索结果高亮样式 */
+mark {
+  color: var(--color-primary);
+  background: none;
 }
