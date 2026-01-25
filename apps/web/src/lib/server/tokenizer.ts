@@ -1,23 +1,164 @@
 /**
- * 文本分词库
- * 用于中英文混合文本的分词处理，支持自定义词典和停止词过滤
+ * 文本分词库 - 基于 Moo 词法分析器与 @node-rs/jieba 中文分词
  *
- * 采用"从粗到细"的分词策略：
- * 1. 预处理：清理不可见字符、HTML/Markdown 语法
- * 2. 粗分：按语言类型（中文/英文/符号）切分成片段
- * 3. 细分：对英文进行驼峰拆分、符号处理；对中文使用 pinyin-pro 分词
- * 4. 后处理：过滤停止词和无效 token
+ * 三层分词策略：
+ * 1. 词法分析层：使用 Moo 按优先级识别代码结构、网络标识、特殊格式
+ * 2. 语义裂变层：对英文复合词使用 kebabCase 进行智能拆分，同时保留原词
+ * 3. 中文分词层：使用 @node-rs/jieba 搜索引擎模式进行中文分词
  */
 import "server-only";
-import { segment, OutputFormat, addDict, pinyin } from "pinyin-pro";
-import CompleteDict from "@pinyin-pro/data/complete";
+import moo from "moo";
+import { kebabCase } from "lodash-es";
+import { Jieba } from "@node-rs/jieba";
+import { dict } from "@node-rs/jieba/dict";
 import prisma from "@/lib/server/prisma";
 import { unstable_cache } from "next/cache";
+import { createHash } from "crypto";
 
-// ========== 初始化 ==========
-addDict(CompleteDict);
+// ========== Token 类型定义 ==========
+
+/**
+ * Token 类型枚举（类型安全）
+ */
+const TOKEN_TYPES = {
+  FRAMEWORK_DIRECTIVE: "framework_directive",
+  DECORATOR: "decorator",
+  NPM_PACKAGE: "npm_package",
+  NPM_PACKAGE_WITH_VERSION: "npm_package_with_version",
+  PACKAGE_WITH_VERSION: "package_with_version",
+  GENERIC_TYPE: "generic_type",
+  EMAIL: "email",
+  IP: "ip",
+  IPV6: "ipv6",
+  UUID: "uuid",
+  URL: "url",
+  VERSION: "version",
+  VERSION_WITH_TAG: "version_with_tag",
+  DATE: "date",
+  TIME: "time",
+  NUMBER_UNIT: "number_unit",
+  DOTFILE: "dotfile",
+  PATH: "path",
+  OPERATOR: "operator",
+  PARENTHESES: "parentheses",
+  CLI_FLAG: "cli_flag",
+  TAILWIND_ARBITRARY: "tailwind_arbitrary",
+  TAILWIND_STATE: "tailwind_state",
+  COMPOUND_WORD: "compound_word",
+  TEXT: "text",
+  WHITESPACE: "whitespace",
+} as const;
+
+type TokenType = (typeof TOKEN_TYPES)[keyof typeof TOKEN_TYPES];
+
+// ========== TokenizerManager 单例 ==========
+
+/**
+ * 分词器管理器单例类
+ * 封装全局状态，提供线程安全的 jieba 实例管理
+ */
+class TokenizerManager {
+  private static instance: TokenizerManager | null = null;
+  private jieba: Jieba | null = null;
+  private jiebaDict: Uint8Array;
+  private loadedDictHash: string = "";
+  private isInitialized: boolean = false;
+
+  private constructor() {
+    this.jiebaDict = dict;
+  }
+
+  /**
+   * 获取单例实例
+   */
+  static getInstance(): TokenizerManager {
+    if (!TokenizerManager.instance) {
+      TokenizerManager.instance = new TokenizerManager();
+    }
+    return TokenizerManager.instance;
+  }
+
+  /**
+   * 计算词典哈希值
+   */
+  private hashDict(dict: string[]): string {
+    return createHash("md5").update(dict.join("\n")).digest("hex");
+  }
+
+  /**
+   * 加载自定义词典
+   */
+  private async loadCustomDictionary(
+    customWords: string[],
+    currentHash: string,
+  ): Promise<void> {
+    try {
+      // 将自定义词汇格式化为 "词 词频" 格式
+      const customDictLines = customWords.map((word) => `${word} 100`);
+
+      // 合并基础词典和自定义词典
+      const baseDict = new TextDecoder().decode(dict);
+      const mergedDictText =
+        customDictLines.length > 0
+          ? `${baseDict}\n${customDictLines.join("\n")}`
+          : baseDict;
+
+      // 创建新的 Uint8Array 并重新初始化 jieba
+      this.jiebaDict = new TextEncoder().encode(mergedDictText);
+      this.jieba = Jieba.withDict(this.jiebaDict);
+      this.loadedDictHash = currentHash;
+      this.isInitialized = true;
+    } catch (error) {
+      console.error("[自定义词典] 加载失败:", error);
+      // 降级：使用基础词典
+      if (!this.jieba) {
+        this.jieba = Jieba.withDict(dict);
+        this.isInitialized = true;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * 获取 jieba 实例（延迟初始化 + 词典变更检测）
+   */
+  async getJieba(): Promise<Jieba> {
+    // 获取最新的自定义词典
+    const customWords = await getCustomDictionary();
+    const currentHash = this.hashDict(customWords);
+
+    // 检查词典是否变更（首次调用或词典更新）
+    if (!this.isInitialized || currentHash !== this.loadedDictHash) {
+      await this.loadCustomDictionary(customWords, currentHash);
+    }
+
+    // jieba 此时必然不为 null
+    return this.jieba!;
+  }
+
+  /**
+   * 手动重置词典（用于测试或强制刷新）
+   */
+  async resetDictionary(): Promise<void> {
+    this.loadedDictHash = "";
+    this.isInitialized = false;
+    await this.getJieba(); // 重新加载
+  }
+
+  /**
+   * 获取当前词典哈希值
+   */
+  getCurrentDictHash(): string {
+    return this.loadedDictHash;
+  }
+}
 
 // ========== 常量定义 ==========
+
+/** 最大 token 长度 */
+// UUID: 36 字符 (550e8400-e29b-41d4-a716-446655440000)
+// IPv6: 最长 45 字符 (2001:0db8:85a3:0000:0000:8a2e:0370:7334)
+const MAX_TOKEN_LENGTH = 64;
 
 /** 停止词集合 */
 const STOP_WORDS = new Set([
@@ -63,6 +204,12 @@ const STOP_WORDS = new Set([
   "却",
   "请",
   "它",
+  "为",
+  "所",
+  "与",
+  "或",
+  "及",
+  "如",
   // 英文虚词
   "a",
   "an",
@@ -132,32 +279,716 @@ const STOP_WORDS = new Set([
   "just",
   "should",
   "now",
-  // 域名后缀
-  "http",
-  "https",
-  "www",
-  "com",
-  "cn",
-  "net",
-  "org",
+  "do",
+  "does",
+  "did",
+  "if",
+  "else",
+  "by",
+  "on",
+  "at",
+  "in",
+  "from",
+  "with",
+  "for",
+  "into",
+  "as",
+  "or",
+  "and",
 ]);
 
-/** 需要保护的操作符（按长度从长到短排序） */
-const PROTECTED_OPERATORS = [
-  // 三字符
+// ========== Moo 词法分析器配置 ==========
+
+const lexer = moo.compile({
+  // ============================================
+  // 1. 强格式与网络标识 (绝对明确，优先级最高)
+  // ============================================
+
+  // IPv6 (极其复杂且特征明显，最先匹配)
+  ipv6: {
+    match:
+      /(?:(?:[a-fA-F0-9]{1,4}:){7}[a-fA-F0-9]{1,4})|(?:[a-fA-F0-9]{1,4}(?::[a-fA-F0-9]{1,4})*::[a-fA-F0-9]{1,4}(?::[a-fA-F0-9]{1,4})*)|(?:::[a-fA-F0-9]{1,4}(?::[a-fA-F0-9]{1,4})*)|(?:[a-fA-F0-9]{1,4}(?::[a-fA-F0-9]{1,4})*::)|(?:::)/,
+    value: (s) => s,
+  },
+
+  // 邮箱 & URL (包含大量标点，先处理以免被拆散)
+  email: {
+    match: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/,
+    value: (s) => s,
+  },
+  url: {
+    match: /https?:\/\/[a-zA-Z0-9-._~:/?#[\]@!$&'()*+,;=%]+/,
+    value: (s) => s,
+  },
+
+  // 日期 (YYYY-MM-DD 或 YYYY/MM/DD，支持单数字月日)
+  date: {
+    match: /\d{4}[-/]\d{1,2}[-/]\d{1,2}/,
+    value: (s) => s,
+  },
+
+  // 时间 (HH:MM:SS 或 HH:MM)
+  time: {
+    match: /\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?/,
+    value: (s) => s,
+  },
+
+  // UUID (格式：8-4-4-4-12 的十六进制)
+  // 示例：550e8400-e29b-41d4-a716-446655440000
+  uuid: {
+    match:
+      /[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}/,
+    value: (s) => s,
+  },
+
+  // ============================================
+  // 2. 包管理与版本号 (容易与数字或路径混淆，需靠前)
+  // ============================================
+
+  // NPM 包名+版本 (必须在单纯包名之前！)
+  // 修正：移动到 npm_package 之前
+  npm_package_with_version: {
+    match:
+      /(?:@[a-z0-9-~][a-z0-9-._~]*\/[a-z0-9-._~]+|[a-z0-9-~][a-z0-9-._~]*)@(?:[v~^]?\d+\.\d+\.\d+(?:[x*]|\.[x*])?|[a-zA-Z0-9.-]+)/,
+    value: (s) => s,
+  },
+
+  // NPM 包名 (带作用域或不带)
+  // 放在 framework_directive 之前，因为都以 @ 开头
+  npm_package: {
+    match: /@[a-z0-9-~][a-z0-9-._~]*\/[a-z0-9-._~]+/,
+    value: (s) => s,
+  },
+
+  // Python/Ruby/PHP 包名+版本 (requests==2.31.0)
+  package_with_version: {
+    match: /[a-zA-Z][a-zA-Z0-9_-]*(?:==|>=|<=|~=|!=|~>|[~^])(?:\d+(?:\.\d+)*)/,
+    value: (s) => s,
+  },
+
+  // 带标签的版本号 (v1.0.0-beta)
+  version_with_tag: {
+    match: /[v~^]?\d+\.\d+\.\d+-[a-zA-Z0-9.-]+/,
+    value: (s) => s,
+  },
+
+  // IPv4 (必须在 version 和 number 之前)
+  ip: {
+    match: /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/,
+    value: (s) => s,
+  },
+
+  // 普通版本号 (v1.0.2)
+  // 必须在 number_unit 之前，否则 1.0.2 会被识别为 数字1.0 + .2
+  version: {
+    match: /[v~^]?\d+\.\d+\.\d+(?:[x*]|\.[x*])?/,
+    value: (s) => s,
+  },
+
+  // ============================================
+  // 3. 框架与代码结构 (包含 @ : [ ] 等符号)
+  // ============================================
+
+  // Python/Java 注解 (@Override)
+  decorator: {
+    match: /@[\w]+(?:\.[\w]+)+/,
+    value: (s) => s,
+  },
+
+  // Tailwind CSS 状态前缀 (hover:bg-red)
+  // 放在 framework_directive 之前，防止被 :prop 误伤
+  tailwind_state: {
+    match: /[a-zA-Z][a-zA-Z0-9-]*:[a-zA-Z0-9\-[\]#]+/,
+    value: (s) => s,
+  },
+
+  // Vue/Angular 指令 (@click, :prop)
+  framework_directive: {
+    match: /[@*v][\w-]+(?:\.[\w-]+)*|:[a-z]+(?=[\s,./)]|$)/,
+    value: (s) => s,
+  },
+
+  // Tailwind Arbitrary Values (w-[10px])
+  tailwind_arbitrary: {
+    match: /[a-zA-Z][a-zA-Z0-9-]*-\[[^\]]+\]/,
+    value: (s) => s,
+  },
+
+  // 泛型 (List<String>)
+  generic_type: {
+    match: /\b[A-Z]\w*<[\w\s,<>]+>/,
+    value: (s) => s,
+  },
+
+  // CLI 参数 (--save)
+  // 必须在 operator 之前 (- 会被 operator 匹配)
+  cli_flag: {
+    match: /-{1,2}[a-zA-Z][a-zA-Z0-9-]*/,
+    value: (s) => s,
+  },
+
+  // ============================================
+  // 4. 文件与路径
+  // ============================================
+
+  // 点文件 (.env)
+  // 必须在 compound_word 之前，否则会被识别为 compound_word
+  dotfile: {
+    match: /\.[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]+)*/,
+    value: (s) => s,
+  },
+
+  // 路径 (/usr/bin)
+  // 包含斜杠，必须在 compound_word 之前
+  path: {
+    match: /(?:\/|[a-zA-Z]:\\)[a-zA-Z0-9._\-/\\]+/,
+    value: (s) => s,
+  },
+
+  // ============================================
+  // 5. 基础值类型
+  // ============================================
+
+  // 数字/百分比 (必须放在 IP 和 Version 之后)
+  number_unit: {
+    match: /[$¥]?\d+(?:\.\d+)?%?/,
+    value: (s) => s,
+  },
+
+  // ============================================
+  // 6. 符号与操作符
+  // ============================================
+
+  // 强操作符
+  operator: {
+    match:
+      /===|!==|\.\.\.|::|=>|->|&&|\|\||\+\+|--|<<|>>|\*\*|\+=|-=|!|\?|\||&|\^|~|%|\+|-|\*|\//,
+    value: (s) => s,
+  },
+
+  // 括号
+  parentheses: {
+    match: /\(|\)|\(\)/,
+    value: (s) => s,
+  },
+
+  // ============================================
+  // 7. 通用标识符 (优先级最低的具体规则)
+  // ============================================
+
+  // 复合词汇 (Node.js, TCP/IP, user_id)
+  // 这是“兜底”的标识符规则，放在最后，防止吃掉前面的特定格式
+  compound_word: {
+    match: /[a-zA-Z0-9_]+(?:[.\-/][a-zA-Z0-9_]+)+[+#]*|[a-zA-Z0-9_]+[+#]*/,
+    value: (s) => s,
+  },
+
+  // ============================================
+  // 8. 兜底 (文本与空白)
+  // ============================================
+
+  // 忽略空白
+  whitespace: {
+    match: /[ \t\r\n]+/,
+    lineBreaks: true,
+  },
+
+  // 任何未匹配的字符序列
+  text: {
+    match: /[^ \t\r\n]+/,
+    lineBreaks: true,
+  },
+});
+
+// ========== 自定义词典管理 ==========
+
+/**
+ * 获取自定义词典（带缓存）
+ */
+const getCustomDictionary = unstable_cache(
+  async (): Promise<string[]> => {
+    try {
+      const customWords = await prisma.customDictionary.findMany({
+        select: { word: true },
+      });
+
+      const words: string[] = [];
+      for (const { word } of customWords) {
+        if (word?.trim()) {
+          words.push(word.replaceAll(" ", ""));
+        }
+      }
+      return words;
+    } catch (error) {
+      console.error("[自定义词典] 查询失败:", error);
+      return [];
+    }
+  },
+  ["custom-dictionary"],
+  { tags: ["custom-dictionary"], revalidate: false },
+);
+
+// ========== 语义裂变处理 ==========
+
+/**
+ * 语义裂变处理器
+ * 将复合词拆解为多个搜索令牌（统一转小写）
+ *
+ * 例如：
+ * "Next.js" -> ["next.js", "next", "js"]
+ * "user_id" -> ["user_id", "user", "id"]
+ * "TCP/IP" -> ["tcp/ip", "tcp", "ip"]
+ */
+function expandSemantics(token: string, type: TokenType): string[] {
+  const results = new Set<string>();
+  const raw = token.trim();
+  const lower = raw.toLowerCase();
+
+  // 不要删除这行日志，用于调试不同类型 token 的裂变效果
+  console.log("Expanding token:", raw, "of type:", type);
+
+  // 1. 保留小写版本
+  results.add(lower);
+
+  // 2. 根据类型进行裂变
+  switch (type) {
+    case TOKEN_TYPES.DOTFILE: {
+      // .env.local -> .env.local, env.local, env, local
+      // 添加原词
+      results.add(lower);
+
+      // 移除开头的点
+      const withoutDot = lower.slice(1);
+      if (withoutDot) {
+        results.add(withoutDot);
+
+        // 如果有点，继续拆分
+        // env.local -> env, local
+        withoutDot.split(".").forEach((part) => {
+          if (part.length > 1) {
+            results.add(part);
+          }
+        });
+      }
+      break;
+    }
+
+    case TOKEN_TYPES.VERSION_WITH_TAG: {
+      // v2.0.1-beta -> v2.0.1-beta, v2.0.1, 2.0.1, beta
+      // 添加原词
+      results.add(lower);
+
+      // 提取标签部分 (匹配 v2.0.1-beta 或 2.0.1-beta 格式)
+      const tagMatch = lower.match(
+        /^(?:[v~^])?(?:\d+\.){2}\d+-([a-zA-Z0-9.-]+)$/,
+      );
+      if (tagMatch && tagMatch[1]) {
+        // 添加标签
+        results.add(tagMatch[1]);
+
+        // 移除标签，保留带前缀的版本号
+        const versionWithPrefix = lower.substring(0, lower.indexOf("-"));
+        results.add(versionWithPrefix);
+
+        // 移除前缀和标签，只保留纯版本号
+        const versionOnly = versionWithPrefix.replace(/^[v~^]/, "");
+        if (versionOnly !== versionWithPrefix) {
+          results.add(versionOnly);
+        }
+      }
+      break;
+    }
+
+    case TOKEN_TYPES.TAILWIND_ARBITRARY: {
+      // w-[100px] -> w-[100px], w, 100px
+      // min-h-[500px] -> min-h-[500px], min, h, 500px
+      // "min-h-[500px] -> min-h-[500px], min, h, 500px (去掉引号)
+      // min-h-["500px"] -> min-h-["500px"], min, h, 500px (去掉内部引号)
+      // 去掉前后引号等边界字符
+      const cleaned = lower.replace(/^['"`]|['"`]$/g, "");
+      // 添加清理后的原词（只添加 cleaned，不添加 lower，避免重复）
+      results.add(cleaned);
+
+      // 提取方括号内的值
+      const bracketMatch = cleaned.match(/\[([^\]]+)\]$/);
+      if (bracketMatch && bracketMatch[1]) {
+        // 提取前缀部分（方括号之前的纯字母部分，去掉尾部的连字符）
+        const beforeBracket = cleaned.substring(0, cleaned.indexOf("["));
+        const prefix = beforeBracket.replace(/-+$/, ""); // 去掉尾部的连字符
+
+        if (prefix) {
+          // 添加完整前缀
+          results.add(prefix);
+
+          // 使用 kebabCase 进一步拆分前缀（min-h -> min, h）
+          const prefixParts = kebabCase(prefix).split("-");
+          prefixParts.forEach((part) => {
+            if (part.length > 1 || part === "w" || part === "h") {
+              results.add(part);
+            }
+          });
+        }
+
+        // 去掉方括号内值的引号后添加（最后添加，保持搜索权重）
+        const bracketValue = bracketMatch[1].replace(/^['"`]|['"`]$/g, "");
+        results.add(bracketValue);
+      }
+      break;
+    }
+
+    case TOKEN_TYPES.TAILWIND_STATE: {
+      // hover:bg-red-500 -> hover:bg-red-500, hover, bg-red-500, bg, red, 500
+      // dark:bg-black -> dark:bg-black, dark, bg-black, bg, black
+      // 添加原词
+      results.add(lower);
+
+      // 按冒号拆分
+      const colonIndex = lower.indexOf(":");
+      if (colonIndex > 0) {
+        // 提取状态前缀（hover, dark, focus等）
+        const state = lower.substring(0, colonIndex);
+        results.add(state);
+
+        // 提取类名部分（bg-red-500）
+        const className = lower.substring(colonIndex + 1);
+        results.add(className);
+
+        // 进一步拆分类名（使用 kebabCase）
+        const classParts = kebabCase(className).split("-");
+        classParts.forEach((part) => {
+          if (part.length > 1 || part === "w" || part === "h") {
+            results.add(part);
+          }
+        });
+      }
+      break;
+    }
+
+    case TOKEN_TYPES.NPM_PACKAGE: {
+      // @radix-ui/react-dialog -> @radix-ui/react-dialog, @radix-ui, radix-ui, radix, ui, react-dialog, react, dialog
+      // @types/node -> @types/node, @types, types, node
+      results.add(lower); // 添加完整包名
+
+      // 按 / 拆分
+      const slashIndex = lower.indexOf("/");
+      if (slashIndex > 0) {
+        // 添加 @scope 部分
+        const scope = lower.substring(0, slashIndex);
+        results.add(scope); // @radix-ui
+
+        // 进一步拆分 scope（去掉 @）
+        const scopeWithoutAt = scope.replace(/^@/, "");
+        results.add(scopeWithoutAt); // radix-ui
+
+        // 使用 kebabCase 拆分 scope 部分
+        const scopeParts = kebabCase(scopeWithoutAt).split("-");
+        scopeParts.forEach((part) => {
+          if (part.length > 1) {
+            results.add(part);
+          }
+        });
+
+        // 添加包名部分，并进一步拆分
+        const packageName = lower.substring(slashIndex + 1);
+        results.add(packageName); // react-dialog
+
+        // 使用 kebabCase 进一步拆分包名
+        const packageParts = kebabCase(packageName).split("-");
+        packageParts.forEach((part) => {
+          if (part.length > 1) {
+            results.add(part);
+          }
+        });
+      } else {
+        // 没有 / 的情况，使用 kebabCase 拆分
+        const standardized = kebabCase(raw);
+        standardized.split("-").forEach((part) => {
+          if (part.length > 1 || part === "c" || part === "r") {
+            results.add(part);
+          }
+        });
+      }
+      break;
+    }
+
+    case TOKEN_TYPES.NPM_PACKAGE_WITH_VERSION: {
+      // @nestjs/core@^10.3.0 -> @nestjs/core, ^10.3.0, 10.3.0
+      // react@18.0.0 -> react, 18.0.0
+      results.add(lower); // 添加完整字符串
+
+      // 按 @ 拆分包名和版本
+      const atIndex = lower.indexOf("@", 1); // 从索引 1 开始，跳过开头的 @
+      if (atIndex > 0) {
+        const packageName = lower.substring(0, atIndex);
+        const version = lower.substring(atIndex + 1);
+
+        results.add(packageName); // @nestjs/core
+        results.add(version); // ^10.3.0
+
+        // 如果版本号有前缀，去掉前缀后再添加
+        const versionWithoutPrefix = version.replace(/^[v~^]/, "");
+        if (versionWithoutPrefix !== version) {
+          results.add(versionWithoutPrefix); // 10.3.0
+        }
+
+        // 进一步拆分包名（复用 npm_package 的逻辑）
+        const slashIndex = packageName.indexOf("/");
+        if (slashIndex > 0) {
+          const scope = packageName.substring(0, slashIndex);
+          results.add(scope); // @nestjs
+
+          const scopeWithoutAt = scope.replace(/^@/, "");
+          results.add(scopeWithoutAt); // nestjs
+
+          const actualPackageName = packageName.substring(slashIndex + 1);
+          results.add(actualPackageName); // core
+        } else {
+          results.add(packageName.replace(/^@/, "")); // react (没有 @scope 的情况)
+        }
+      }
+      break;
+    }
+
+    case TOKEN_TYPES.PACKAGE_WITH_VERSION: {
+      // requests==2.31.0 -> requests==2.31.0, requests, ==, 2.31.0
+      // django>=4.2 -> django>=4.2, django, >=, 4.2
+      // gem~>2.0 -> gem~>2.0, gem, ~>, 2.0
+      // react^18.0.0 -> react^18.0.0, react, ^, 18.0.0
+      results.add(lower); // 添加完整字符串
+
+      // 匹配版本约束符号和版本号
+      const versionMatch = lower.match(/(==|>=|<=|~=|!=|~>|[~^])(.+)/);
+      if (versionMatch && versionMatch[1] && versionMatch[2]) {
+        const operator = versionMatch[1];
+        const version = versionMatch[2];
+        const packageName = lower.substring(0, lower.indexOf(operator));
+
+        results.add(packageName); // requests/gem/react
+        results.add(operator); // ==/~>/^
+
+        // 对版本号继续分词（可能包含多个点）
+        // 2.31.0 会被拆分为 2.31.0（完整版本号）
+        results.add(version); // 2.31.0
+      }
+      break;
+    }
+
+    case TOKEN_TYPES.CLI_FLAG: {
+      // --save-dev -> --save-dev, save-dev, save, dev
+      // --force -> --force, force
+      // -v -> -v, v
+      results.add(lower); // 添加完整标志
+
+      // 去掉前缀（- 或 --）
+      const withoutPrefix = lower.replace(/^-+/, "");
+      results.add(withoutPrefix);
+
+      // 使用 kebabCase 进一步拆分
+      const parts = kebabCase(withoutPrefix).split("-");
+      parts.forEach((part) => {
+        if (part.length > 1 || part === "v" || part === "f") {
+          results.add(part);
+        }
+      });
+      break;
+    }
+
+    case TOKEN_TYPES.PATH:
+    case TOKEN_TYPES.COMPOUND_WORD:
+    case TOKEN_TYPES.FRAMEWORK_DIRECTIVE: {
+      // 使用 kebabCase 智能拆解
+      // kebabCase('Next.js') -> 'next-js'
+      // kebabCase('user_id') -> 'user-id'
+      // kebabCase('TCP/IP') -> 'tcp-ip'
+      const standardized = kebabCase(raw);
+
+      // 将标准化后的词拆分成原子
+      standardized.split("-").forEach((part) => {
+        // 过滤掉单个字母（除非是常见的单字母如 c、r）
+        if (part.length > 1 || part === "c" || part === "r") {
+          results.add(part);
+        }
+      });
+      break;
+    }
+
+    case TOKEN_TYPES.GENERIC_TYPE: {
+      // List<String> -> list, string
+      const parts = kebabCase(raw).split("-");
+      parts.forEach((part) => {
+        if (part.length > 1) {
+          results.add(part);
+        }
+      });
+      break;
+    }
+
+    case TOKEN_TYPES.VERSION: {
+      // v1.2.3 -> v1.2.3, 1.2.3
+      // ^1.0.0 -> ^1.0.0, 1.0.0
+      // ~2.4.x -> ~2.4.x, 2.4.x
+      // 去掉前缀符号
+      const withoutPrefix = lower.replace(/^[v~^]/, "");
+      if (withoutPrefix !== lower) {
+        results.add(withoutPrefix);
+      }
+      break;
+    }
+
+    case TOKEN_TYPES.DECORATOR: {
+      // @app.route -> app.route, app, route
+      const decoratorName = lower.replace(/^@/, "");
+      results.add(decoratorName);
+      decoratorName.split(".").forEach((part) => {
+        if (part.length > 1) {
+          results.add(part);
+        }
+      });
+      break;
+    }
+
+    case TOKEN_TYPES.URL: {
+      // https://github.com/org/repo/issues -> github.com, github, org, repo, issues
+      // 提取域名
+      try {
+        // 去掉协议
+        const urlWithoutProtocol = lower.replace(/^[a-z]+:\/\//, "");
+
+        // 提取域名（到第一个 / 或 : 或 ? 或 # 为止）
+        const domainEndIndex = urlWithoutProtocol.search(/[/:?#]/);
+        let domain = "";
+        let path = "";
+
+        if (domainEndIndex > 0) {
+          domain = urlWithoutProtocol.substring(0, domainEndIndex);
+          path = urlWithoutProtocol.substring(domainEndIndex);
+        } else {
+          domain = urlWithoutProtocol;
+        }
+
+        if (domain) {
+          results.add(domain); // github.com
+
+          // 去掉 www. 前缀
+          const domainWithoutWww = domain.replace(/^www\./, "");
+          if (domainWithoutWww !== domain) {
+            results.add(domainWithoutWww);
+          }
+
+          // 提取纯域名（去掉 .com 等后缀）
+          const domainParts = domain.split(".");
+          domainParts.forEach((part) => {
+            if (part.length > 2 || part === "github" || part === "gitlab") {
+              results.add(part);
+            }
+          });
+        }
+
+        // 拆分路径
+        if (path) {
+          // 去掉开头的 / 和末尾的 /
+          const cleanPath = path.replace(/^\/+|\/+$/g, "");
+          // 按 / 拆分
+          const pathParts = cleanPath.split("/");
+          pathParts.forEach((part) => {
+            if (part && part.length > 0) {
+              results.add(part);
+            }
+          });
+        }
+      } catch (error) {
+        // 如果解析失败，至少保留原始 URL
+        console.error("[URL 解析失败]", error);
+      }
+      break;
+    }
+
+    case TOKEN_TYPES.IPV6:
+      // IPv6 地址通常不需要拆分，保留完整形式
+      break;
+
+    case TOKEN_TYPES.PARENTHESES:
+      // 圆括号：(), (, ) - 直接保留，不需要拆分
+      break;
+
+    case TOKEN_TYPES.UUID:
+      // UUID：550e8400-e29b-41d4-a716-446655440000
+      // UUID 是一个完整的标识符，不应该拆分
+      break;
+
+    case TOKEN_TYPES.IP:
+    case TOKEN_TYPES.EMAIL:
+    case TOKEN_TYPES.DATE:
+    case TOKEN_TYPES.TIME:
+      // 这些通常不需要拆分，用户搜索时通常搜全称
+      break;
+  }
+
+  return Array.from(results);
+}
+
+// ========== 验证与过滤 ==========
+
+/**
+ * Token 验证规则
+ */
+const VALIDATORS = {
+  /** 检查是否为空 */
+  notEmpty: (token: string): boolean => token.trim().length > 0,
+
+  /** 检查最大长度 */
+  maxLength: (token: string): boolean => token.length <= MAX_TOKEN_LENGTH,
+
+  /** 检查是否包含有效字符（字母、数字或中文） */
+  hasValidContent: (token: string): boolean =>
+    /[a-zA-Z0-9\u4e00-\u9fa5]/.test(token),
+
+  /** 检查是否为停止词 */
+  notStopWord: (token: string): boolean => !STOP_WORDS.has(token.toLowerCase()),
+} as const;
+
+/**
+ * 判断 token 是否有效
+ */
+function isValidToken(token: string): boolean {
+  return (
+    VALIDATORS.notEmpty(token) &&
+    VALIDATORS.maxLength(token) &&
+    VALIDATORS.hasValidContent(token)
+  );
+}
+
+/**
+ * 版本操作符和编程符号集合（保留这些纯符号 token）
+ * Python pip: ==, >=, <=, ~=, !=, <, >
+ * npm/Node.js: ^, ~, >=, <=, >, <, =, *, x
+ * Ruby bundler: ~>, >=, <=, >, <, =
+ * PHP composer: ^, ~, >=, <=, >, <, =, *
+ * Rust Cargo: ^, ~, >=, <=, >, <, =, *
+ * 编程符号: (), (), (), ., []
+ */
+const PROGRAMMING_SYMBOLS = new Set([
+  // 版本操作符
+  "==",
+  ">=",
+  "<=",
+  "~=",
+  "!=",
+  "~>",
+  "<",
+  ">",
+  "~",
+  "^",
+  "=",
+  "*",
+  "x",
+  // 编程操作符 (Moo)
   "===",
   "!==",
   "...",
-  "---",
-  // 双字符
-  "==",
-  "!=",
-  "<=",
-  ">=",
+  "::",
   "=>",
-  ":=",
   "->",
-  "?>",
   "&&",
   "||",
   "++",
@@ -165,664 +996,59 @@ const PROTECTED_OPERATORS = [
   "<<",
   ">>",
   "**",
-  "~/",
-];
-
-/** 操作符正则（用于验证 token 是否为操作符） */
-const OPERATOR_REGEX =
-  /^(===?|!==?|<=?|>=?|=>|:=|->|\?>|<|>|&&|\|\||[+]{2}|-{2}|<<|>>|\*\*|[+\-*/%&|^]=|\\[dws]|\.{3}|-{3}|~\/|\$)$/;
-
-/** 片段类型 */
-type SegmentType = "chinese" | "english" | "operator" | "mixed";
-
-/** 片段接口 */
-interface TextSegment {
-  type: SegmentType;
-  content: string;
-}
-
-// ========== 自定义词典管理 ==========
-
-/** 用于追踪当前已加载的词典内容的哈希值 */
-let loadedDictHash = "";
-
-/** 计算词典的简单哈希值（用于检测变更） */
-function hashDict(dict: Record<string, [string, number]>): string {
-  return Object.keys(dict).sort().join(",");
-}
-
-/** 从数据库获取自定义词典数据（带缓存） */
-const getCustomDictionary = unstable_cache(
-  async (): Promise<Record<string, [string, number]>> => {
-    try {
-      const customWords = await prisma.customDictionary.findMany({
-        select: { word: true },
-      });
-
-      const dict: Record<string, [string, number]> = {};
-      for (const { word } of customWords) {
-        if (!word?.trim()) continue;
-        dict[word] = [pinyin(word, { toneType: "symbol" }), 1];
-      }
-      return dict;
-    } catch (error) {
-      console.error("加载自定义词典失败:", error);
-      return {};
-    }
-  },
-  ["custom-dictionary"],
-  { tags: ["custom-dictionary"], revalidate: false },
-);
-
-/** 加载并注入自定义词典到 pinyin-pro */
-async function loadCustomDictionary(): Promise<void> {
-  const dict = await getCustomDictionary();
-  const currentHash = hashDict(dict);
-
-  if (currentHash === loadedDictHash) return;
-
-  if (Object.keys(dict).length > 0) {
-    addDict(dict, "custom");
-  }
-  loadedDictHash = currentHash;
-}
-
-// ========== 阶段1：预处理 ==========
-
-/** 保护操作符，返回处理后的文本和映射表 */
-function protectOperators(text: string): {
-  text: string;
-  map: Map<string, string>;
-} {
-  const map = new Map<string, string>();
-  let result = text;
-
-  PROTECTED_OPERATORS.forEach((op, i) => {
-    const placeholder = `__OP${i}__`;
-    if (result.includes(op)) {
-      result = result.replaceAll(op, placeholder);
-      map.set(placeholder, op);
-    }
-  });
-
-  return { text: result, map };
-}
-
-/** 恢复被保护的操作符 */
-function restoreOperators(text: string, map: Map<string, string>): string {
-  let result = text;
-  for (const [placeholder, op] of map) {
-    result = result.replaceAll(placeholder, op);
-  }
-  return result;
-}
-
-/** 处理 HTML 标签：提取 Vue 指令，识别泛型语法 */
-function processHtmlTags(text: string): string {
-  return text.replace(
-    /<([^>]*)>/g,
-    (match, content: string, offset: number) => {
-      const trimmed = content.trim();
-
-      // 闭合标签或注释
-      if (/^[/!]/.test(trimmed)) return " ";
-
-      // 检查是否为泛型语法
-      const beforeChar = offset > 0 ? text[offset - 1] : "";
-      const isAfterWord = beforeChar ? /[a-zA-Z0-9_]/.test(beforeChar) : false;
-
-      // 泛型情况
-      if (isAfterWord) {
-        if (/^[a-zA-Z0-9_]+$/.test(trimmed)) return match; // Box<T>
-        if (/^[A-Z](?:\s|,|>)/.test(trimmed)) return match; // <T extends>
-        if (/^[A-Z][a-zA-Z0-9]*(?:\s*[,<>]|$)/.test(trimmed)) return match; // <String, List>
-      }
-
-      // HTML/JSX 标签
-      const startsWithLowercase = /^[a-z]/.test(trimmed);
-      const isComponent = /^[A-Z][a-z]/.test(trimmed) && /\s/.test(trimmed);
-
-      if (startsWithLowercase || isComponent) {
-        // 提取 Vue 指令
-        const vueAttrs = [
-          ...content.matchAll(/[@:v-][a-zA-Z-]+(?:\.[a-zA-Z]+)*/g),
-        ].map((m) => m[0]);
-        return vueAttrs.length > 0 ? ` ${vueAttrs.join(" ")} ` : " ";
-      }
-
-      // 组件标签（无属性）
-      if (/^[A-Z][a-zA-Z0-9]+\s*\/?$/.test(trimmed)) {
-        return ` ${trimmed.replace(/\s*\/?$/, "")} `;
-      }
-
-      return match;
-    },
-  );
-}
-
-/** 清理不可见字符和 Markdown 语法 */
-function cleanMarkdownAndControl(text: string): string {
-  return (
-    text
-      .replace(/[\r\n]+/g, " ")
-      // eslint-disable-next-line no-control-regex
-      .replace(/[\x00-\x1F\x7F]/g, "")
-      .replace(/```(\w+)?/g, " $1 ")
-      .replace(/\*{2,}/g, " ")
-      // 移除 Markdown 强调下划线（不匹配 __init__ 等 Python 魔法方法）
-      .replace(
-        /(?<![a-zA-Z0-9])_{2}(?![a-zA-Z0-9_])|(?<![a-zA-Z0-9_])_{2}(?![a-zA-Z0-9])/g,
-        " ",
-      )
-      .replace(/^#{1,6}\s+/gm, "")
-      .replace(/>\s*/g, " ")
-      .replace(/^\s*[-*+]\s+/gm, " ")
-  );
-}
-
-/** 处理标点符号 */
-function processPunctuation(text: string): string {
-  let result = text;
-
-  // 保护需要特殊处理的 token
-  const protectedTokens = new Map<string, string>();
-  let tokenIndex = 0;
-
-  // 保护 Rust 生命周期（'static 和单字母如 'a, 'b 等）
-  // 只匹配常见的 Rust 生命周期模式
-  result = result.replace(/(?<=^|\s)'(static|[a-z])(?=\s|$|>|,)/g, (match) => {
-    const placeholder = `XPKGX${tokenIndex}XPKGX`;
-    protectedTokens.set(placeholder, match);
-    tokenIndex++;
-    return placeholder;
-  });
-
-  // 保护日期格式（YYYY-MM-DD）
-  result = result.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, (match) => {
-    const placeholder = `XPKGX${tokenIndex}XPKGX`;
-    protectedTokens.set(placeholder, match);
-    tokenIndex++;
-    return placeholder;
-  });
-
-  // 保护版本号（^1.2.3, ~2.0.0）
-  result = result.replace(/[~^]\d+\.\d+\.\d+/g, (match) => {
-    const placeholder = `XPKGX${tokenIndex}XPKGX`;
-    protectedTokens.set(placeholder, match);
-    tokenIndex++;
-    return placeholder;
-  });
-
-  // 保护百分比（50%）
-  result = result.replace(/\d+%/g, (match) => {
-    const placeholder = `XPKGX${tokenIndex}XPKGX`;
-    protectedTokens.set(placeholder, match);
-    tokenIndex++;
-    return placeholder;
-  });
-
-  // npm 包名格式（@scope/package-name）
-  // @scope 完整保留，package 部分按连字符规则处理
-  result = result.replace(
-    /@([a-zA-Z0-9_-]+)\/([a-zA-Z0-9._-]+)/g,
-    (_match, scope, pkg: string) => {
-      // @scope 保护（包括其中的连字符）
-      const scopePlaceholder = `XPKGX${tokenIndex}XPKGX`;
-      protectedTokens.set(scopePlaceholder, `@${scope}`);
-      tokenIndex++;
-
-      // package 部分：检查连字符数量决定是否拆分
-      const hyphenCount = (pkg.match(/-/g) || []).length;
-      if (hyphenCount > 1) {
-        // 3个及以上部分：拆分
-        return `${scopePlaceholder} ${pkg.replace(/-/g, " ")}`;
-      } else {
-        // 2个或更少部分：保护整个包名
-        const pkgPlaceholder = `XPKGX${tokenIndex}XPKGX`;
-        protectedTokens.set(pkgPlaceholder, pkg);
-        tokenIndex++;
-        return `${scopePlaceholder} ${pkgPlaceholder}`;
-      }
-    },
-  );
-
-  // 保护 Python 装饰器模式（@app.route, @pytest.mark 等）
-  result = result.replace(
-    /@([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_.]*)/g,
-    (match) => {
-      const placeholder = `XPKGX${tokenIndex}XPKGX`;
-      protectedTokens.set(placeholder, match);
-      tokenIndex++;
-      return placeholder;
-    },
-  );
-
-  // 保护单独的 @ 前缀词（如 @click, @scope, @app.route 没有后面包名的情况）
-  result = result.replace(/@([a-zA-Z0-9_.-]+)(?![/\w])/g, (_match, name) => {
-    const placeholder = `XPKGX${tokenIndex}XPKGX`;
-    protectedTokens.set(placeholder, `@${name}`);
-    tokenIndex++;
-    return placeholder;
-  });
-
-  // 处理开头的斜杠（路径开头）
-  result = result.replace(/^\//g, " ");
-
-  // 移除末尾的斜杠
-  result = result.replace(/\/$/g, " ");
-
-  // 处理 REST 参数格式（只处理路径中的参数，如 /api/:id → /api/ id）
-  // 保留 Vue 属性绑定如 :prop（不在路径中）
-  result = result.replace(/\/(:)([a-zA-Z_][a-zA-Z0-9_]*)/g, "/ $2");
-
-  // 处理斜杠：区分路径和技术词
-  // 技术词保留：TCP/IP, I/O, CI/CD, application/json 等
-  // 路径拆分：Windows/System32, usr/local 等
-  const slashMatches =
-    result.match(/[a-zA-Z0-9._-]+(?:\/[a-zA-Z0-9._-]+)+/g) || [];
-  for (const word of slashMatches) {
-    const parts = word.split("/");
-    const slashCount = parts.length - 1;
-
-    // 判断是否为技术缩写词（全大写或常见 MIME 类型）
-    const isAcronym = parts.every((p) => /^[A-Z]+$/.test(p)); // TCP/IP, I/O
-    // MIME 类型必须是 类型/子类型 格式，且类型是标准的 MIME 主类型
-    const mimeTypes = [
-      "text",
-      "image",
-      "audio",
-      "video",
-      "application",
-      "multipart",
-      "message",
-      "font",
-      "model",
-      "chemical",
-    ];
-    const isMimeType = parts.length === 2 && mimeTypes.includes(parts[0]!); // application/json
-    const isProtocolPair = /^[A-Z]{2,}\/[A-Z]{2,}$/.test(word); // CI/CD
-
-    if (isAcronym || isMimeType || isProtocolPair) {
-      // 技术词保留
-      continue;
-    }
-
-    if (slashCount >= 1) {
-      // 路径拆分（Windows/System32 → Windows System32）
-      result = result.replace(word, parts.join(" "));
-    }
-  }
-
-  // 处理连字符：2个部分保留，3个及以上拆分
-  const hyphenMatches = result.match(/[a-zA-Z0-9]+-[a-zA-Z0-9-]*/g) || [];
-  for (const word of hyphenMatches) {
-    const hyphenCount = (word.match(/-/g) || []).length;
-
-    // 3个及以上部分：拆分（test-spilt-test → test spilt test）
-    if (hyphenCount > 1) {
-      result = result.replace(word, word.replace(/-/g, " "));
-    }
-    // 2个部分：保留（test-spilt → test-spilt）
-  }
-
-  // 处理下划线：2个部分保留，3个及以上拆分
-  // 注意：__init__ 等 Python 魔术方法保留（以双下划线开头和结尾）
-  const underscoreMatches =
-    result.match(/[a-zA-Z0-9]+(?:_[a-zA-Z0-9]+)+/g) || [];
-  for (const word of underscoreMatches) {
-    // 跳过 Python 魔术方法（被双下划线包围的词已经不会被匹配到这里）
-    const underscoreCount = (word.match(/_/g) || []).length;
-
-    // 3个及以上部分：拆分（test_spilt_test → test spilt test）
-    if (underscoreCount > 1) {
-      result = result.replace(word, word.replace(/_/g, " "));
-    }
-    // 2个部分：保留（test_spilt → test_spilt）
-  }
-
-  // 处理句末点号
-  result = result.replace(/\.(?![a-zA-Z0-9])/g, " ");
-
-  // 移除其他标点，保留有意义的符号
-  // 保留的符号：+ - . @ # _ % $ ¥ : = > < & | ^ / \ ! *
-  // 注意：单引号只在 Rust 生命周期中有意义，由正则单独处理
-  result = result
-    .replace(/[^\w\s+\-.@#_%$¥:=><&|^/\\!*\u4e00-\u9fa5]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  // 恢复被保护的 token
-  for (const [placeholder, token] of protectedTokens) {
-    result = result.replace(placeholder, token);
-  }
-
-  return result;
-}
-
-/** 预处理入口：清理文本 */
-function preprocess(text: string): {
-  cleanText: string;
-  operatorMap: Map<string, string>;
-} {
-  let cleanText = text;
-
-  // 移除 Unicode 转义序列 \uXXXX
-  cleanText = cleanText.replace(/\\u([0-9a-fA-F]{4})/g, " u$1 ");
-
-  // 移除转义字符（\n, \t, \r 等，但保留 \d, \w, \s）
-  cleanText = cleanText.replace(/\\[ntr]/g, " ");
-
-  // 处理 Windows 路径反斜杠（转为正斜杠）
-  cleanText = cleanText.replace(/\\/g, "/");
-
-  // 处理泛型语法：Vec<T> → Vec T, HashMap<K,V> → HashMap K V
-  cleanText = cleanText.replace(
-    /([a-zA-Z_][a-zA-Z0-9_]*)<([^<>]+)>/g,
-    (_match, name, params: string) => {
-      // 提取泛型参数，移除逗号和空格
-      const cleanParams = params.replace(/[,\s]+/g, " ").trim();
-      return `${name} ${cleanParams}`;
-    },
-  );
-
-  // 处理 PHP/XML 标签
-  cleanText = cleanText.replace(/<\?php\b/gi, " php ");
-  cleanText = cleanText.replace(/<\?xml\b/gi, " xml ");
-  cleanText = cleanText.replace(/\?>/g, " ");
-
-  // 处理 SQL 函数中的星号
-  cleanText = cleanText.replace(/\((\*)\)/g, " $1 ");
-
-  // 处理正则表达式模式（只处理包含正则特征的内容）
-  // /^[a-z]+$/ → ^[a-z]+$
-  // 不处理普通路径如 /usr/local/
-  cleanText = cleanText.replace(
-    /\/(\^[^\\/]+\$|\[[^\]]+\](?:\+|\*|\?)?)\//g,
-    " $1 ",
-  );
-
-  // 处理 try...catch 等省略号连接
-  cleanText = cleanText.replace(/\.{3}(?=[a-zA-Z])/g, " ");
-
-  // 处理非捕获组 (?:pattern) → pattern
-  cleanText = cleanText.replace(/\(\?:/g, "(");
-  // 处理前瞻断言等复杂模式
-  cleanText = cleanText.replace(/\(\?[=!<][^)]*\)/g, " ");
-
-  // 处理多段点分隔路径（3段及以上拆分，但保留配置文件名和技术名词）
-  // 配置文件名模式：*.config.js, tsconfig.build.json 等
-  // 技术名词：Node.js, Vue.js, www.google.com 等
-  cleanText = cleanText.replace(
-    /([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_.]*)/g,
-    (match, p1, p2, p3: string) => {
-      // 如果是配置文件名（以常见扩展名结尾），保留
-      if (
-        /\.(js|ts|json|yml|yaml|md|sh|py|rs|go|java|css|html|xml)$/i.test(match)
-      ) {
-        return match;
-      }
-      // 如果是域名（以常见 TLD 结尾），保留
-      if (/\.(com|cn|org|net|io|dev|app|co|edu|gov)$/i.test(match)) {
-        return match;
-      }
-      // 如果是方法调用模式（如 db.users.find），拆分
-      if (/^[a-z]/.test(p1) && /^[a-z]/.test(p2) && /^[a-z]/.test(p3)) {
-        // 检查是否像模块路径（全是标识符）
-        if (!/[()]/.test(p3)) {
-          return `${p1} ${p2} ${p3}`;
-        }
-      }
-      return `${p1} ${p2} ${p3}`;
-    },
-  );
-
-  // 保护操作符（在任何清理之前，避免被 Markdown 规则破坏）
-  const { text: protectedText, map: operatorMap } = protectOperators(cleanText);
-  cleanText = protectedText;
-
-  // 处理 HTML 标签
-  cleanText = processHtmlTags(cleanText);
-
-  // 清理控制字符和 Markdown
-  cleanText = cleanMarkdownAndControl(cleanText);
-
-  // 处理标点
-  cleanText = processPunctuation(cleanText);
-
-  // 恢复操作符
-  cleanText = restoreOperators(cleanText, operatorMap);
-
-  return { cleanText, operatorMap };
-}
-
-// ========== 阶段2：粗分 ==========
+  "+=",
+  "-=",
+  // 单字符操作符
+  "!",
+  "?",
+  "|",
+  "&",
+  "%",
+  "+",
+  "-",
+  "/",
+  // 圆括号
+  "(",
+  ")",
+  "()",
+  // 方括号
+  "[",
+  "]",
+  "[]",
+  // 花括号
+  "{",
+  "}",
+  "{}",
+]);
 
 /**
- * 粗分正则：匹配英文、操作符、特殊符号组合
- *
- * 支持：
- * - 盘符：C:, D:
- * - 邮箱：user@example.com
- * - 类邮箱ID：abc@123
- * - 斜杠技术词：TCP/IP, I/O, CI/CD, application/json（单斜杠保留）
- * - 技术词：Node.js, C++, C#, UTF-8
- * - 作用域前缀：@neutral-press, @repo（npm 包的作用域部分）
- * - Vue/Angular 指令：@click, :prop, v-model, *ngIf
- * - 泛型语法：Map<String, List<Integer>>
- * - 操作符：===, !==, &&, ||, <<, >>, :=, ->, ...
- * - 正则转义：\d, \w, \s
- * - 命令参数：-rf, --help
- * - 版本号：^1.2.3, ~2.0.0
- * - 百分比：50%
- * - 日期格式：2023-12-31
- * - Ruby类变量：@@class_var
- * - Rust生命周期：'static
- * - Rust引用类型：&str, &mut
- * - PHP标签：<?php
- * - 货币格式：$50.00
- * - npm包名：@scope/package-name
- * - Python装饰器：@app.route, @pytest.mark.skip
+ * 过滤停止词和无效 token
+ * 注意：不进行去重，保留重复 token 以影响查询权重（tsvector 会自动处理）
  */
-const ENGLISH_TOKEN_REGEX =
-  /@[a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)+|@[a-zA-Z0-9_-]+\/[a-zA-Z0-9._-]+|\$\d+(?:\.\d+)?|[A-Z]:|[a-zA-Z0-9._+-]+@[a-zA-Z0-9.-]+(?:\.[a-zA-Z]{2,})?|[a-zA-Z0-9]+\/[a-zA-Z0-9]+|[A-Z][+]{2}|[A-Z]#|<<|>>|\.{3}|-{3}|:=|->|\?>|~\/|@@?[a-zA-Z_][a-zA-Z0-9_-]*|\*[a-zA-Z]+|[~^][0-9]+\.[0-9.]+|\d+%|\d{4}-\d{2}-\d{2}|'[a-zA-Z]+|<\?[a-zA-Z]+|[@$#:!&]?[a-zA-Z0-9._-]+[+]{2}|-{1,2}[a-zA-Z]+|[@$#:!&]?[a-zA-Z0-9._\-:+]+(?:<[\w\s,<>]+>)?|===?|!==?|<=?|>=?|=>|&&|\|\||[+]{2}|-{2}|\*\*|[+\-*/%&|^]=|\\[dws]|\*|<|>|\.[a-zA-Z0-9]+/g;
-
-/** 将文本粗分为片段 */
-function coarseSegment(text: string): TextSegment[] {
-  const segments: TextSegment[] = [];
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = ENGLISH_TOKEN_REGEX.exec(text)) !== null) {
-    let token = match[0];
-    const isOperator = OPERATOR_REGEX.test(token);
-
-    // 普通 token 必须包含字母或数字
-    if (!isOperator && !/[a-zA-Z0-9]/.test(token)) continue;
-
-    // 清理 token
-    if (!isOperator) {
-      token = cleanEnglishToken(token);
-      if (!token) continue;
-    }
-
-    // 添加之前的中文部分
-    if (match.index > lastIndex) {
-      const chinesePart = text.slice(lastIndex, match.index).trim();
-      if (chinesePart) {
-        segments.push({ type: "chinese", content: chinesePart });
-      }
-    }
-
-    // 添加当前 token（保留原始大小写，细分后再转小写）
-    segments.push({
-      type: isOperator ? "operator" : "english",
-      content: isOperator ? token.toLowerCase() : token,
-    });
-
-    lastIndex = match.index + match[0].length;
-  }
-
-  // 添加剩余的中文部分
-  if (lastIndex < text.length) {
-    const remaining = text.slice(lastIndex).trim();
-    if (remaining) {
-      segments.push({ type: "chinese", content: remaining });
-    }
-  }
-
-  return segments;
-}
-
-/** 清理英文 token */
-function cleanEnglishToken(token: string): string {
-  let result = token.trim();
-
-  // 点开头的文件名保持不变
-  if (result.startsWith(".") && /\.[a-zA-Z]/.test(result)) {
-    return result;
-  }
-
-  // 移除末尾孤立的点号
-  result = result.replace(/\.$/, "");
-
-  // 移除末尾孤立的冒号（除非是盘符或特殊前缀）
-  // 盘符格式：C:, D: 等
-  const isDriveLetter = /^[A-Za-z]:$/.test(result);
-  if (!isDriveLetter && !/^[@$#:!][a-zA-Z]+/.test(result)) {
-    result = result.replace(/:$/, "");
-  }
-
-  return result;
-}
-
-// ========== 阶段3：细分 ==========
-
-/**
- * 拆分驼峰命名 (Always Split 策略)
- * 规则：不再合并2段，只要有驼峰或数字边界就拆分
- * 特殊处理：识别 UUID/哈希值等均匀字母数字混合模式，保持完整
- * * @example
- * splitCamelCase('useEffect') => ['use', 'effect']
- * splitCamelCase('IOError') => ['io', 'error']
- * splitCamelCase('http2Client') => ['http', '2', 'client']
- * splitCamelCase('a1b2c3d4') => ['a1b2c3d4'] // UUID 模式，保持完整
- * splitCamelCase('ff00ab') => ['ff00ab'] // 十六进制，保持完整
- */
-function splitCamelCase(token: string): string[] {
-  // 1. 过滤非字母数字字符
-  if (!/^[a-zA-Z0-9]+$/.test(token)) return [token.toLowerCase()];
-
-  // 2. 如果全小写或全大写（且不含数字边界），则不处理，直接返回小写
-  // 例如: "make", "URL" -> "make", "url"
-  if (/^[a-z]+$/.test(token) || /^[A-Z]+$/.test(token)) {
-    return [token.toLowerCase()];
-  }
-
-  // 3. 检测均匀字母数字混合模式（UUID/哈希值/十六进制等）
-  // 特征：字母和数字交替出现，且长度 >= 4，没有明显的驼峰模式
-  // 例如：a1b2, c3d4, ff00ab, 9a8b7c
-  const hasLetters = /[a-zA-Z]/.test(token);
-  const hasDigits = /[0-9]/.test(token);
-  const hasUpperCase = /[A-Z]/.test(token);
-
-  // 如果同时包含字母和数字
-  if (hasLetters && hasDigits) {
-    // 如果只有小写字母+数字（如 a1b2c3, ff00ab），且长度 >= 4，保持完整
-    // 这种模式通常是 UUID、哈希值、十六进制等标识符
-    if (!hasUpperCase && token.length >= 4) {
-      // 检查是否为均匀混合（不是明显的前缀+版本号模式）
-      // 例如：a1b2c3（UUID）vs http2（前缀+版本）
-      const letterCount = (token.match(/[a-z]/g) || []).length;
-      const digitCount = (token.match(/[0-9]/g) || []).length;
-
-      // 如果字母和数字的比例接近（都至少占 30%），视为均匀混合
-      const minCount = Math.min(letterCount, digitCount);
-      const totalCount = token.length;
-      if (minCount / totalCount >= 0.3) {
-        return [token.toLowerCase()];
-      }
-    }
-  }
-
-  return (
-    token
-      // 处理连续大写后跟小写 (XMLParser -> XML Parser)
-      .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
-      // 处理小写/数字 后跟 大写 (camelCase -> camel Case)
-      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-      // (可选) 处理字母后跟数字 (v2 -> v 2) - 推荐开启，利于搜索版本号
-      .replace(/([a-zA-Z])([0-9])/g, "$1 $2")
-      // (可选) 处理数字后跟字母 (2px -> 2 px)
-      .replace(/([0-9])([a-zA-Z])/g, "$1 $2")
-      .toLowerCase()
-      .split(/\s+/)
-      .filter(Boolean)
-  );
-}
-
-/** 对中文使用 pinyin-pro 分词 */
-function segmentChinese(text: string): string[] {
-  return segment(text, { format: OutputFormat.ZhSegment }).map((t) =>
-    t.toLowerCase(),
-  );
-}
-
-/** 对片段进行细分 */
-function fineSegment(segments: TextSegment[]): string[] {
-  const tokens: string[] = [];
-
-  for (const seg of segments) {
-    switch (seg.type) {
-      case "chinese":
-        tokens.push(...segmentChinese(seg.content));
-        break;
-
-      case "english":
-        tokens.push(...splitCamelCase(seg.content));
-        break;
-
-      case "operator":
-        tokens.push(seg.content);
-        break;
-    }
-  }
-
-  return tokens;
-}
-
-// ========== 阶段4：后处理 ==========
-
-/** 特殊有效 token 正则（单独的符号也是有效的） */
-const SPECIAL_VALID_TOKENS =
-  /^(\$|\.{3}|-{3}|~\/|:=|->|\?>|@@?[a-zA-Z_]\w*|\*[a-zA-Z]+|'[a-zA-Z]+|[~^]\d+\.\d+\.\d+|\d+%|\d{4}-\d{2}-\d{2})$/;
-
-/** 判断 token 是否有效 */
-function isValidToken(token: string): boolean {
-  const t = token.trim();
-  if (!t) return false;
-
-  // 操作符是有效的
-  if (OPERATOR_REGEX.test(t)) return true;
-
-  // 特殊有效 token
-  if (SPECIAL_VALID_TOKENS.test(t)) return true;
-
-  // 必须包含字母、数字或中文
-  return /[a-zA-Z0-9\u4e00-\u9fa5]/.test(t);
-}
-
-/** 最大 token 长度 */
-const MAX_TOKEN_LENGTH = 32;
-
-/** 过滤停止词和无效 token */
 function postprocess(tokens: string[]): string[] {
-  return tokens.filter((token) => {
-    if (!isValidToken(token)) return false;
-    if (STOP_WORDS.has(token.toLowerCase())) return false;
-    // 超过32字符的 token 丢弃
-    if (token.length > MAX_TOKEN_LENGTH) return false;
-    return true;
-  });
+  const result: string[] = [];
+
+  for (const token of tokens) {
+    const lower = token.toLowerCase();
+
+    // 跳过无效 token
+    if (!isValidToken(token)) {
+      // 但如果是编程符号（版本操作符、括号等），保留它（使用小写比较）
+      if (!PROGRAMMING_SYMBOLS.has(lower)) {
+        continue;
+      } else {
+        console.log("[postprocess] 保留编程符号:", token);
+      }
+    }
+
+    // 跳过停止词
+    if (VALIDATORS.notStopWord(lower) || PROGRAMMING_SYMBOLS.has(lower)) {
+      result.push(token);
+    }
+  }
+
+  console.log("[postprocess] 最终结果:", result);
+  return result;
 }
 
 // ========== 主入口 ==========
@@ -835,23 +1061,76 @@ function postprocess(tokens: string[]): string[] {
  *
  * @example
  * const tokens = await analyzeText('这是使用 Next.js 生成的文本');
- * // ['使用', 'next.js', '生成', '文本']
+ * // ['使用', 'next.js', 'next', 'js', '生成', '文本']
  */
 export async function analyzeText(text: string): Promise<string[]> {
   if (!text) return [];
 
-  // 1. 加载自定义词典
-  await loadCustomDictionary();
+  try {
+    // 1. 获取 TokenizerManager 实例
+    const manager = TokenizerManager.getInstance();
 
-  // 2. 预处理：清理 HTML、Markdown、标点等
-  const { cleanText } = preprocess(text);
+    // 2. 获取 jieba 实例（会自动加载自定义词典）
+    const jiebaInstance = await manager.getJieba();
 
-  // 3. 粗分：按语言类型切分
-  const segments = coarseSegment(cleanText);
+    // 3. 使用数组而不是 Set，保留重复 token 以影响查询权重
+    const finalTokens: string[] = [];
 
-  // 4. 细分：驼峰拆分、中文分词
-  const tokens = fineSegment(segments);
+    // 4. 重置 Lexer 状态
+    lexer.reset(text);
 
-  // 5. 后处理：过滤停止词和无效 token
-  return postprocess(tokens);
+    // 5. 消费 Token
+    for (const token of lexer) {
+      if (token.type === TOKEN_TYPES.WHITESPACE) continue;
+
+      console.log("[Lexer] Token:", token.value, "Type:", token.type);
+
+      if (token.type === TOKEN_TYPES.TEXT) {
+        // 使用 jieba 搜索引擎模式进行中文分词
+        // cutForSearch 返回包括完整词和子词的分词结果
+        const zhTokens = jiebaInstance.cutForSearch(token.value, true);
+        zhTokens.forEach((t) => {
+          if (t && t.trim()) {
+            finalTokens.push(t.toLowerCase());
+          }
+        });
+      } else {
+        // 特殊格式 -> 语义裂变
+        const expanded = expandSemantics(token.value, token.type as TokenType);
+        expanded.forEach((t) => {
+          finalTokens.push(t);
+        });
+      }
+    }
+
+    // 6. 后处理：过滤停止词和无效 token
+    const result = postprocess(finalTokens);
+
+    return result;
+  } catch (error) {
+    console.error("[分词器] 处理文本失败:", error);
+    // 降级：返回空数组
+    return [];
+  }
+}
+
+/**
+ * 手动重置分词器词典（用于测试或强制刷新）
+ */
+export async function resetTokenizerDictionary(): Promise<void> {
+  try {
+    const manager = TokenizerManager.getInstance();
+    await manager.resetDictionary();
+  } catch (error) {
+    console.error("[分词器] 重置词典失败:", error);
+    throw error;
+  }
+}
+
+/**
+ * 获取当前词典哈希值
+ */
+export function getCurrentDictHash(): string {
+  const manager = TokenizerManager.getInstance();
+  return manager.getCurrentDictHash();
 }

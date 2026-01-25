@@ -151,8 +151,9 @@ model Post {
   titleSearchVector   Unsupported("tsvector")?
   slug                String                   @unique
   content             String // 存储最新内容
-  versionMetadata     String? // 存储版本历史元数据
+  versionMetadata     String // 存储版本历史元数据
   contentSearchVector Unsupported("tsvector")?
+  plain               String? // 存储纯文本内容，用于搜索高亮截取
   excerpt             String?                  @db.VarChar(500)
   status              PostStatus               @default(DRAFT)
   isPinned            Boolean                  @default(false)

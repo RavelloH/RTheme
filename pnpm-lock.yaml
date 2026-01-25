@@ -85,6 +85,9 @@ importers:
       '@monaco-editor/react':
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.54.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      '@node-rs/jieba':
+        specifier: ^2.0.0
+        version: 2.0.1
       '@octokit/rest':
         specifier: ^22.0.1
         version: 22.0.1
@@ -259,9 +262,15 @@ importers:
       katex:
         specifier: ^0.16.27
         version: 0.16.27
+      lodash-es:
+        specifier: ^4.17.21
+        version: 4.17.23
       monaco-editor:
         specifier: ^0.54.0
         version: 0.54.0
+      moo:
+        specifier: ^0.5.2
+        version: 0.5.2
       next:
         specifier: ^16.1.1
         version: 16.1.1(@babel/core@7.28.4)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(sass@1.92.1)
@@ -353,8 +362,8 @@ importers:
         specifier: ^2.3.8
         version: 2.3.8(react@19.1.1)
       text-version:
-        specifier: ^2.0.0
-        version: 2.0.0(diff-match-patch@1.0.5)
+        specifier: ^2.0.1
+        version: 2.0.1(diff-match-patch@1.0.5)
       tiptap-extension-code-block-shiki:
         specifier: ^1.0.0
         version: 1.0.0(@tiptap/core@3.16.0(@tiptap/pm@3.15.3))(@tiptap/pm@3.15.3)(shiki@3.15.0)
@@ -392,6 +401,12 @@ importers:
       '@types/jsonwebtoken':
         specifier: ^9.0.10
         version: 9.0.10
+      '@types/lodash-es':
+        specifier: ^4.17.12
+        version: 4.17.12
+      '@types/moo':
+        specifier: ^0.5.9
+        version: 0.5.10
       '@types/node':
         specifier: ^24.3.1
         version: 24.3.1
@@ -1927,9 +1942,6 @@ packages:
   '@emnapi/core@1.7.1':
     resolution: {integrity: sha512-o1uhUASyo921r2XtHYOHy7gdkGLge8ghBEQHMWmyJFoXlpU58kIrhhN3w26lpQb6dspetweapMn2CSNwQ8I4wg==}
 
-  '@emnapi/runtime@1.5.0':
-    resolution: {integrity: sha512-97/BJ3iXHww3djw6hYIfErCZFee7qCtrneuLa20UXFCOTCfBM2cvQHjWJ2EG0s0MtdNwInarqCTz35i4wWXHsQ==}
-
   '@emnapi/runtime@1.8.1':
     resolution: {integrity: sha512-mehfKSMWjjNol8659Z8KxEMrdSJDDot5SXMq00dM8BN4o+CLNXQ0xH2V7EchNHV4RmbZLmmPdEaXZc5H2FXmDg==}
 
@@ -2459,6 +2471,93 @@ packages:
   '@noble/hashes@1.8.0':
     resolution: {integrity: sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A==}
     engines: {node: ^14.21.3 || >=16}
+
+  '@node-rs/jieba-android-arm-eabi@2.0.1':
+    resolution: {integrity: sha512-tavsIaxybnlA9tRbJ+oc3NW3zhx0d5rNiCGdpIdGWjflwS7HyeUTVAZmAFDlg58Mc6EjTdVKZH+RolBbAJtgcQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm]
+    os: [android]
+
+  '@node-rs/jieba-android-arm64@2.0.1':
+    resolution: {integrity: sha512-AwdyqKvVNuSDnDq3anUfq+nJ5J/kzXjkfbr/1WY6TfaAlTNuuGVskuQv72/wIx/jn7NoXfm/UPuJrWYG16NC6w==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [android]
+
+  '@node-rs/jieba-darwin-arm64@2.0.1':
+    resolution: {integrity: sha512-10+nwGQ6KzXXJlIL/sELA6Fi6m7eJ7xJksBiKuw1kxKUgaJwtVfAG0iqRF+NRQv0Sdq7r3k5ew9K9y0+IYaEcA==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@node-rs/jieba-darwin-x64@2.0.1':
+    resolution: {integrity: sha512-IJ5RK0X/uPQa1XRmTvwKSieya+w1IJeiKLw0EekoBFJKybXQdvo8/uqM/8z2eVJ8vQxW9X6K2vkVGFvYQa9dYA==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@node-rs/jieba-freebsd-x64@2.0.1':
+    resolution: {integrity: sha512-yg7vyhqzP2weJu5DJ3q9q4pb0b4GWWRwcv54zK7MSSA6KNJ/uQv2a4R9/qmptLU/fZv14gWuJBEMFdL7y1Dv2w==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [freebsd]
+
+  '@node-rs/jieba-linux-arm-gnueabihf@2.0.1':
+    resolution: {integrity: sha512-fxQYunS7w2tv8XV9GigkWJPzHnbcw6tjrUdDu5/qU0FdQVEzGuEYG85DjlNf8lZTDGSUKHBVyAQs7bBIvq8yqg==}
+    engines: {node: '>= 10'}
+    cpu: [arm]
+    os: [linux]
+
+  '@node-rs/jieba-linux-arm64-gnu@2.0.1':
+    resolution: {integrity: sha512-VnLU630hQIyO/fwyxh2vqZi72mO+hXkVUC3jVLPfOAlppinmsGX9N81tpTPUK3840hbV8WLtbYTWN1XodI38eg==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@node-rs/jieba-linux-arm64-musl@2.0.1':
+    resolution: {integrity: sha512-K4EDyNixSLVdTNYnHwD+7I/ytvzpo7tt+vdCLqwQViiek2PMpL/FFRvA39uU2tk99jXIxvkczdxARG20BRZppg==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@node-rs/jieba-linux-x64-gnu@2.0.1':
+    resolution: {integrity: sha512-sq3J6L2ANTE25I9eVFq/nb57OtXcvUIeUD1CTKJxwgTKIVmcB2LyOZpWf20AjHRUfbMER9Klqg5dgyyO+Six+w==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+
+  '@node-rs/jieba-linux-x64-musl@2.0.1':
+    resolution: {integrity: sha512-0zfP9Qy68yEXrhBFknfhF6WUJDPU/8eRuyIrkMGdMjfRpxhpSbr2fMfnsqhOQLvhuK4w3iDFvTy4t5d0s6JKMA==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+
+  '@node-rs/jieba-wasm32-wasi@2.0.1':
+    resolution: {integrity: sha512-7I5rJya5rlQNJIhv8PvPzIVT1/gVc0vFzHmlfRGwCPGDJ3tHVxkSPW34dDx3OgDmbIeadNpmgIyC1RaS9djPJg==}
+    engines: {node: '>=14.0.0'}
+    cpu: [wasm32]
+
+  '@node-rs/jieba-win32-arm64-msvc@2.0.1':
+    resolution: {integrity: sha512-Aj/2EwYSaPgAbKnSl+vKM/2kOaZNMZWnShiZzbSNyzlLy3eIOyOYVLbYRDno4547KngRxer8uzROhIQIwXwkvw==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@node-rs/jieba-win32-ia32-msvc@2.0.1':
+    resolution: {integrity: sha512-tpJt3uuBlGrcOInQLTYvcgamQgfadl5cwExLYU+CX9rXKpXLDO31dIujUDBgNWoiQq3tOiU1/AKbT7ZdNd4lBQ==}
+    engines: {node: '>= 10'}
+    cpu: [ia32]
+    os: [win32]
+
+  '@node-rs/jieba-win32-x64-msvc@2.0.1':
+    resolution: {integrity: sha512-LDOyo2/2CO8UnpSGLJdgqtH8mOnsABPhNxkfIky7UT9cyLEzOaU44nbA5YzPGpBI3qzMbWcwJYQsjBcgK2VqAg==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
+
+  '@node-rs/jieba@2.0.1':
+    resolution: {integrity: sha512-tnfzXOMqzVQF2dSKMhPC9HrHzzWmN6KheL/zYtGenhOpq/bCKHJWVASSggEnHlkmHgXGeIJHR2N/IuPzewz1BQ==}
+    engines: {node: '>= 10'}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -3812,6 +3911,9 @@ packages:
   '@types/linkify-it@5.0.0':
     resolution: {integrity: sha512-sVDA58zAw4eWAffKOaQH5/5j3XeayukzDk+ewSsnv3p4yJEZHCCzMDiZM8e0OUrRvmpGZ85jf4yDHkHsgBNr9Q==}
 
+  '@types/lodash-es@4.17.12':
+    resolution: {integrity: sha512-0NgftHUcV4v34VhXm8QBSftKVXtbkBG3ViCjs6+eJ5a6y6Mi/jiFGPc1sC7QK+9BFhWrURE3EOggmWaSxL9OzQ==}
+
   '@types/lodash@4.17.20':
     resolution: {integrity: sha512-H3MHACvFUEiujabxhaI/ImO6gUrd8oOurg7LQtS7mbwIXA/cUqWrvBsaeJ23aZEPk1TAYkurjfMbSELfoCXlGA==}
 
@@ -3832,6 +3934,9 @@ packages:
 
   '@types/mime@1.3.5':
     resolution: {integrity: sha512-/pyBZWSLD2n0dcHE3hq8s8ZvcETHtEuF+3E7XVt0Ig2nvsVQXdghHVcEkIWjy9A0wKfTn97a/PSDYohKIlnP/w==}
+
+  '@types/moo@0.5.10':
+    resolution: {integrity: sha512-W6KzyZjXUYpwQfLK1O1UDzqcqYlul+lO7Bt71luyIIyNlOZwJaNeWWdqFs1C/f2hohZvUFHMk6oFNe9Rg48DbA==}
 
   '@types/ms@2.1.0':
     resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
@@ -7043,6 +7148,9 @@ packages:
     resolution: {integrity: sha512-gvVijfZvn7R+2qyPX8mAuKcFGDf6Nc61GdvGafQsHL0sBIxfKzA+usWn4GFC/bk+QdwPUD4kWFJLhElipq+0VA==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
+  lodash-es@4.17.23:
+    resolution: {integrity: sha512-kVI48u3PZr38HdYz98UmfPnXl2DXrpdctLrFLCd3kOx1xUkOmpFPx7gCWWM5MPkL/fD8zb+Ph0QzjGFs4+hHWg==}
+
   lodash.castarray@4.4.0:
     resolution: {integrity: sha512-aVx8ztPv7/2ULbArGJ2Y42bG1mEQ5mGjpdvrbJcJFU3TbYybe+QlLS4pst9zV52ymy2in1KpFPiZnAOATxD4+Q==}
 
@@ -7595,6 +7703,9 @@ packages:
 
   monaco-editor@0.54.0:
     resolution: {integrity: sha512-hx45SEUoLatgWxHKCmlLJH81xBo0uXP4sRkESUpmDQevfi+e7K1VuiSprK6UpQ8u4zOcKNiH0pMvHvlMWA/4cw==}
+
+  moo@0.5.2:
+    resolution: {integrity: sha512-iSAJLHYKnX41mKcJKjqvnAN9sf0LMDTXDEvFv+ffuRR9a1MIuXLjMNL6EsnDHSkKLTWNqQQ5uo61P4EbU4NU+Q==}
 
   motion-dom@12.23.12:
     resolution: {integrity: sha512-RcR4fvMCTESQBD/uKQe49D5RUeDOokkGRmz4ceaJKDBgHYtZtntC/s2vLvY38gqGaytinij/yi3hMcWVcEF5Kw==}
@@ -9704,8 +9815,8 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
-  text-version@2.0.0:
-    resolution: {integrity: sha512-IMRzJuDkeOlagEg+prDS+eRfJn4gNFR5HvlK8KobG0NIcSGTsuKa3cU7aL9mtFaAuVPchVBkPYDxsTeYrwkTig==}
+  text-version@2.0.1:
+    resolution: {integrity: sha512-o8hbdMagFQqdjUrD8sylQspt9dNtTCRR46s/F+C3GnT78zZT+/mocx5+UMt9t3NtcR6QNQcDkGkWPoinczhWrw==}
     peerDependencies:
       diff-match-patch: ^1.0.5
 
@@ -13215,11 +13326,6 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
-  '@emnapi/runtime@1.5.0':
-    dependencies:
-      tslib: 2.8.1
-    optional: true
-
   '@emnapi/runtime@1.8.1':
     dependencies:
       tslib: 2.8.1
@@ -13612,7 +13718,7 @@ snapshots:
   '@napi-rs/wasm-runtime@0.2.12':
     dependencies:
       '@emnapi/core': 1.7.1
-      '@emnapi/runtime': 1.5.0
+      '@emnapi/runtime': 1.8.1
       '@tybys/wasm-util': 0.10.1
     optional: true
 
@@ -13651,6 +13757,67 @@ snapshots:
     optional: true
 
   '@noble/hashes@1.8.0': {}
+
+  '@node-rs/jieba-android-arm-eabi@2.0.1':
+    optional: true
+
+  '@node-rs/jieba-android-arm64@2.0.1':
+    optional: true
+
+  '@node-rs/jieba-darwin-arm64@2.0.1':
+    optional: true
+
+  '@node-rs/jieba-darwin-x64@2.0.1':
+    optional: true
+
+  '@node-rs/jieba-freebsd-x64@2.0.1':
+    optional: true
+
+  '@node-rs/jieba-linux-arm-gnueabihf@2.0.1':
+    optional: true
+
+  '@node-rs/jieba-linux-arm64-gnu@2.0.1':
+    optional: true
+
+  '@node-rs/jieba-linux-arm64-musl@2.0.1':
+    optional: true
+
+  '@node-rs/jieba-linux-x64-gnu@2.0.1':
+    optional: true
+
+  '@node-rs/jieba-linux-x64-musl@2.0.1':
+    optional: true
+
+  '@node-rs/jieba-wasm32-wasi@2.0.1':
+    dependencies:
+      '@napi-rs/wasm-runtime': 0.2.12
+    optional: true
+
+  '@node-rs/jieba-win32-arm64-msvc@2.0.1':
+    optional: true
+
+  '@node-rs/jieba-win32-ia32-msvc@2.0.1':
+    optional: true
+
+  '@node-rs/jieba-win32-x64-msvc@2.0.1':
+    optional: true
+
+  '@node-rs/jieba@2.0.1':
+    optionalDependencies:
+      '@node-rs/jieba-android-arm-eabi': 2.0.1
+      '@node-rs/jieba-android-arm64': 2.0.1
+      '@node-rs/jieba-darwin-arm64': 2.0.1
+      '@node-rs/jieba-darwin-x64': 2.0.1
+      '@node-rs/jieba-freebsd-x64': 2.0.1
+      '@node-rs/jieba-linux-arm-gnueabihf': 2.0.1
+      '@node-rs/jieba-linux-arm64-gnu': 2.0.1
+      '@node-rs/jieba-linux-arm64-musl': 2.0.1
+      '@node-rs/jieba-linux-x64-gnu': 2.0.1
+      '@node-rs/jieba-linux-x64-musl': 2.0.1
+      '@node-rs/jieba-wasm32-wasi': 2.0.1
+      '@node-rs/jieba-win32-arm64-msvc': 2.0.1
+      '@node-rs/jieba-win32-ia32-msvc': 2.0.1
+      '@node-rs/jieba-win32-x64-msvc': 2.0.1
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
@@ -15242,6 +15409,10 @@ snapshots:
 
   '@types/linkify-it@5.0.0': {}
 
+  '@types/lodash-es@4.17.12':
+    dependencies:
+      '@types/lodash': 4.17.20
+
   '@types/lodash@4.17.20': {}
 
   '@types/markdown-it@14.1.2':
@@ -15262,6 +15433,8 @@ snapshots:
   '@types/mdx@2.0.13': {}
 
   '@types/mime@1.3.5': {}
+
+  '@types/moo@0.5.10': {}
 
   '@types/ms@2.1.0': {}
 
@@ -19031,6 +19204,8 @@ snapshots:
     dependencies:
       p-locate: 6.0.0
 
+  lodash-es@4.17.23: {}
+
   lodash.castarray@4.4.0: {}
 
   lodash.debounce@4.0.8: {}
@@ -20019,6 +20194,8 @@ snapshots:
     dependencies:
       dompurify: 3.1.7
       marked: 14.0.0
+
+  moo@0.5.2: {}
 
   motion-dom@12.23.12:
     dependencies:
@@ -22545,7 +22722,7 @@ snapshots:
       commander: 2.20.3
       source-map-support: 0.5.21
 
-  text-version@2.0.0(diff-match-patch@1.0.5):
+  text-version@2.0.1(diff-match-patch@1.0.5):
     dependencies:
       '@types/diff-match-patch': 1.0.36
       diff-match-patch: 1.0.5

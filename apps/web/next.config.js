@@ -27,7 +27,7 @@ const nextConfig = (phase) => {
       minimumCacheTTL: 2678400,
     },
     output: "standalone",
-    serverExternalPackages: ["ably", "akismet-api"],
+    serverExternalPackages: ["ably", "akismet-api", "@node-rs/jieba"],
     cacheComponents: true,
     experimental: {
       optimizePackageImports: ["@remixicon/react"],
