@@ -378,16 +378,15 @@ export default function ImageLightbox() {
             />
 
             {/* 2. Controls Layer */}
-            <motion.div
-              key="lightbox-controls"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: isClosing ? 0 : 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-[1001] pointer-events-none flex flex-col justify-between"
-            >
+            <div className="fixed inset-0 z-[1001] pointer-events-none flex flex-col justify-between">
               {/* Top Bar: Alt Text & Close Button */}
-              <div className="w-full bg-gradient-to-b from-black/80 to-transparent p-4 flex justify-between items-start pointer-events-auto">
+              <motion.div
+                initial={{ opacity: 0, y: -50 }}
+                animate={{ opacity: isClosing ? 0 : 1, y: isClosing ? -50 : 0 }}
+                exit={{ opacity: 0, y: -50 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="w-full bg-gradient-to-b from-black/80 to-transparent p-4 flex justify-between items-start pointer-events-auto"
+              >
                 <div className="flex flex-col text-white/90 max-w-[80%]">
                   {currentImage && currentImage.alt && (
                     <span className="font-medium text-lg line-clamp-2">
@@ -407,11 +406,16 @@ export default function ImageLightbox() {
                 >
                   <RiCloseLine size={32} />
                 </button>
-              </div>
+              </motion.div>
 
               {/* Navigation Arrows (Absolute Center) */}
               {images.length > 1 && (
-                <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: isClosing ? 0 : 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
                   <button
                     className="pointer-events-auto absolute left-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white transition-colors bg-black/20 hover:bg-black/50 rounded-full backdrop-blur-md z-10"
                     onClick={prevImage}
@@ -426,38 +430,46 @@ export default function ImageLightbox() {
                   >
                     <RiArrowRightLine size={32} />
                   </button>
-                </>
+                </motion.div>
               )}
 
               {/* Bottom Bar: Thumbnail Strip */}
-              <div className="w-full bg-black/80 backdrop-blur-md h-24 flex items-center gap-2 px-4 overflow-x-hidden scroll-smooth pointer-events-auto z-20">
-                {images.map((img, idx) => (
-                  <button
-                    title="Jump to image"
-                    key={idx}
-                    ref={(el) => {
-                      thumbnailRefs.current[idx] = el;
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      jumpToImage(idx);
-                    }}
-                    className={`relative h-16 flex-shrink-0 transition-all rounded-md overflow-hidden border-2 ${
-                      currentIndex === idx
-                        ? "border-white opacity-100 scale-105"
-                        : "border-transparent opacity-50 hover:opacity-80"
-                    }`}
-                  >
-                    <img
-                      src={img.src}
-                      alt={img.alt}
-                      className="h-full w-auto object-cover"
-                      loading="lazy"
-                    />
-                  </button>
-                ))}
-              </div>
-            </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 100 }}
+                animate={{ opacity: isClosing ? 0 : 1, y: isClosing ? 100 : 0 }}
+                exit={{ opacity: 0, y: 100 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="w-full bg-black/80 backdrop-blur-md h-24 overflow-x-auto pointer-events-auto z-20"
+              >
+                <div className="w-fit h-full flex items-center gap-2 px-4 mx-auto">
+                  {images.map((img, idx) => (
+                    <button
+                      title="Jump to image"
+                      key={idx}
+                      ref={(el) => {
+                        thumbnailRefs.current[idx] = el;
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        jumpToImage(idx);
+                      }}
+                      className={`relative h-16 flex-shrink-0 transition-all rounded-md overflow-hidden border-2 ${
+                        currentIndex === idx
+                          ? "border-white opacity-100 scale-105"
+                          : "border-transparent opacity-50 hover:opacity-80"
+                      }`}
+                    >
+                      <img
+                        src={img.src}
+                        alt={img.alt}
+                        className="h-full w-auto object-cover"
+                        loading="lazy"
+                      />
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            </div>
           </>
         )}
       </AnimatePresence>
