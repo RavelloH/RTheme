@@ -74,20 +74,32 @@ export function MathDialog({
 
     if (mode === "edit" && position !== undefined) {
       // 编辑模式：更新现有公式
-      if (mathType === "inline") {
-        editor
-          .chain()
-          .setNodeSelection(position)
-          .updateInlineMath({ latex })
-          .focus()
-          .run();
+      // 如果类型改变了，需要替换节点
+      if (mathType !== initialType) {
+        editor.chain().setNodeSelection(position).deleteSelection().run();
+
+        if (mathType === "inline") {
+          editor.chain().insertInlineMath({ latex }).focus().run();
+        } else {
+          editor.chain().insertBlockMath({ latex }).focus().run();
+        }
       } else {
-        editor
-          .chain()
-          .setNodeSelection(position)
-          .updateBlockMath({ latex })
-          .focus()
-          .run();
+        // 类型未变，直接更新
+        if (mathType === "inline") {
+          editor
+            .chain()
+            .setNodeSelection(position)
+            .updateInlineMath({ latex })
+            .focus()
+            .run();
+        } else {
+          editor
+            .chain()
+            .setNodeSelection(position)
+            .updateBlockMath({ latex })
+            .focus()
+            .run();
+        }
       }
     } else {
       // 插入模式：插入新公式
@@ -104,7 +116,8 @@ export function MathDialog({
   const handleDelete = () => {
     if (!editor || mode !== "edit" || position === undefined) return;
 
-    if (mathType === "inline") {
+    // 始终使用初始类型进行删除，因为这是编辑器中实际存在的节点类型
+    if (initialType === "inline") {
       editor
         .chain()
         .setNodeSelection(position)
@@ -203,7 +216,7 @@ export function MathDialog({
               onKeyDown={handleKeyDown}
               autoComplete="off"
               autoCorrect="off"
-              helperText="例如: E = mc^2 或 \frac{a}{b}"
+              helperText="例如: E = mc^2 或 \frac{a}{b}，无需包含 $ 符号"
               className="font-mono"
               size="sm"
               rows={mathType === "block" ? 6 : undefined}
