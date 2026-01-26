@@ -19,6 +19,8 @@ import {
   RiCheckLine,
   RiEyeLine,
   RiDeleteBinLine,
+  RiAlertLine,
+  RiErrorWarningLine,
 } from "@remixicon/react";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { Dialog } from "@/ui/Dialog";
@@ -439,19 +441,23 @@ export default function PostIndexTable() {
         const status = String(value);
         let statusText = "";
         let statusColor = "";
+        let statusIcon = null;
 
         switch (status) {
           case "never-indexed":
             statusText = "未索引";
-            statusColor = "text-error";
+            statusColor = "text-muted-foreground";
+            statusIcon = <RiErrorWarningLine size="1em" />;
             break;
           case "outdated":
             statusText = "已过期";
             statusColor = "text-warning";
+            statusIcon = <RiAlertLine size="1em" />;
             break;
           case "up-to-date":
             statusText = "已更新";
             statusColor = "text-success";
+            statusIcon = <RiCheckLine size="1em" />;
             break;
         }
 
@@ -459,7 +465,7 @@ export default function PostIndexTable() {
           <span
             className={`inline-flex items-center gap-1 text-sm font-medium ${statusColor}`}
           >
-            {status === "up-to-date" && <RiCheckLine size="1em" />}
+            {statusIcon}
             {statusText}
           </span>
         );

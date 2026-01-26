@@ -1415,9 +1415,9 @@ export async function searchPosts(
     // 基础权重配置
     const weights = {
       title: {
-        or: 10.0,
-        and: 20.0,
-        phrase: 40.0,
+        or: 2.0,
+        and: 5.0,
+        phrase: 10.0,
       },
       content: {
         or: 1.0,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useEffect, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import DonutChart, { type DonutChartDataPoint } from "./DonutChart";
 
 export interface DimensionStatsItem {
@@ -24,7 +24,7 @@ export default function DimensionStatsChart({
 }: DimensionStatsChartProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showTopGradient, setShowTopGradient] = useState(false);
-  const [showBottomGradient, setShowBottomGradient] = useState(false);
+  const [showBottomGradient, setShowBottomGradient] = useState(true);
 
   // 转换为 DonutChart 数据格式
   const chartData: DonutChartDataPoint[] = useMemo(
@@ -37,51 +37,18 @@ export default function DimensionStatsChart({
     [items],
   );
 
-  // 监听滚动，更新渐变遮罩显示状态
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
+  // 监听滚动事件更新渐变遮罩
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const { scrollTop, scrollHeight, clientHeight } = container;
 
-    let rafId: number | null = null;
+    // 顶部渐变：距离顶部超过 10px 时显示
+    setShowTopGradient(scrollTop > 10);
 
-    const updateGradients = () => {
-      if (!container) return;
-
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      const isScrollable = scrollHeight > clientHeight;
-
-      if (!isScrollable) {
-        setShowTopGradient(false);
-        setShowBottomGradient(false);
-        return;
-      }
-
-      // 显示顶部渐变：不在顶部时显示
-      setShowTopGradient(scrollTop > 10);
-
-      // 显示底部渐变：不在底部时显示
-      setShowBottomGradient(scrollTop < scrollHeight - clientHeight - 10);
-    };
-
-    const handleScroll = () => {
-      // 使用 requestAnimationFrame 优化性能
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-      }
-      rafId = requestAnimationFrame(updateGradients);
-    };
-
-    updateGradients(); // 初始化
-
-    container.addEventListener("scroll", handleScroll, { passive: true });
-
-    return () => {
-      container.removeEventListener("scroll", handleScroll);
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-      }
-    };
-  }, [items]);
+    // 底部渐变：距离底部超过 10px 时显示
+    const isNearBottom = scrollTop >= scrollHeight - clientHeight;
+    setShowBottomGradient(!isNearBottom);
+  };
 
   if (items.length === 0) {
     return (
@@ -115,6 +82,7 @@ export default function DimensionStatsChart({
         {/* 滚动内容 */}
         <div
           ref={scrollContainerRef}
+          onScroll={handleScroll}
           className="overflow-y-auto scrollbar-hide pr-2 h-full"
         >
           <div className="text-2xl mb-4">{title}</div>
