@@ -3,12 +3,14 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RiArrowDownSLine } from "@remixicon/react";
+import { Tooltip, TooltipProps } from "./Tooltip";
 
 export interface DropdownOption {
   value: string;
   label: string;
   icon?: React.ReactNode;
   onClick?: () => void;
+  Tooltip?: Omit<TooltipProps, "key" | "children">;
 }
 
 export interface DropdownProps {
@@ -142,11 +144,13 @@ export function Dropdown({
             `}
           >
             <div className="py-1">
-              {options.map((option, index) => (
-                <button
-                  key={option.value}
-                  onClick={() => handleOptionClick(option)}
-                  className={`
+              {options.map((option, index) =>
+                option.Tooltip ? (
+                  <Tooltip className="w-full" key={index} {...option.Tooltip}>
+                    <button
+                      key={option.value}
+                      onClick={() => handleOptionClick(option)}
+                      className={`
                     w-full
                     flex
                     items-center
@@ -157,13 +161,36 @@ export function Dropdown({
                     transition-colors
                     ${index !== options.length - 1 ? "" : ""}
                   `}
-                >
-                  {option.icon && (
-                    <span className="flex-shrink-0">{option.icon}</span>
-                  )}
-                  <span>{option.label}</span>
-                </button>
-              ))}
+                    >
+                      {option.icon && (
+                        <span className="flex-shrink-0">{option.icon}</span>
+                      )}
+                      <span>{option.label}</span>
+                    </button>
+                  </Tooltip>
+                ) : (
+                  <button
+                    key={option.value}
+                    onClick={() => handleOptionClick(option)}
+                    className={`
+                    w-full
+                    flex
+                    items-center
+                    gap-2
+                    ${sizeStyles.item}
+                    text-left
+                    hover:bg-foreground/10
+                    transition-colors
+                    ${index !== options.length - 1 ? "" : ""}
+                  `}
+                  >
+                    {option.icon && (
+                      <span className="flex-shrink-0">{option.icon}</span>
+                    )}
+                    <span>{option.label}</span>
+                  </button>
+                ),
+              )}
             </div>
           </motion.div>
         )}

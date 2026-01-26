@@ -1130,6 +1130,10 @@ export default function Editor({
           level: 1,
         });
       },
+      Tooltip: {
+        content: "Ctrl+Alt+1",
+        placement: "right",
+      },
     },
     {
       value: "h2",
@@ -1139,6 +1143,10 @@ export default function Editor({
         adapterManagerRef.current?.executeCommandWithParams("heading", {
           level: 2,
         });
+      },
+      Tooltip: {
+        content: "Ctrl+Alt+2",
+        placement: "right",
       },
     },
     {
@@ -1150,6 +1158,10 @@ export default function Editor({
           level: 3,
         });
       },
+      Tooltip: {
+        content: "Ctrl+Alt+3",
+        placement: "right",
+      },
     },
     {
       value: "h4",
@@ -1159,6 +1171,10 @@ export default function Editor({
         adapterManagerRef.current?.executeCommandWithParams("heading", {
           level: 4,
         });
+      },
+      Tooltip: {
+        content: "Ctrl+Alt+4",
+        placement: "right",
       },
     },
     {
@@ -1170,6 +1186,10 @@ export default function Editor({
           level: 5,
         });
       },
+      Tooltip: {
+        content: "Ctrl+Alt+5",
+        placement: "right",
+      },
     },
     {
       value: "h6",
@@ -1180,19 +1200,15 @@ export default function Editor({
           level: 6,
         });
       },
+      Tooltip: {
+        content: "Ctrl+Alt+6",
+        placement: "right",
+      },
     },
   ];
 
   // 列表选项
   const listOptions: DropdownOption[] = [
-    {
-      value: "unordered",
-      label: "无序列表",
-      icon: <RiListUnordered size="1.2em" />,
-      onClick: () => {
-        adapterManagerRef.current?.executeCommand("bulletList");
-      },
-    },
     {
       value: "ordered",
       label: "有序列表",
@@ -1200,13 +1216,34 @@ export default function Editor({
       onClick: () => {
         adapterManagerRef.current?.executeCommand("orderedList");
       },
+      Tooltip: {
+        content: "Ctrl+Shift+7",
+        placement: "right",
+      },
     },
+    {
+      value: "unordered",
+      label: "无序列表",
+      icon: <RiListUnordered size="1.2em" />,
+      onClick: () => {
+        adapterManagerRef.current?.executeCommand("bulletList");
+      },
+      Tooltip: {
+        content: "Ctrl+Shift+8",
+        placement: "right",
+      },
+    },
+
     {
       value: "task",
       label: "待办事项",
       icon: <RiListCheck2 size="1.2em" />,
       onClick: () => {
         adapterManagerRef.current?.executeCommand("taskList");
+      },
+      Tooltip: {
+        content: "Ctrl+Shift+9",
+        placement: "right",
       },
     },
   ];
@@ -1218,18 +1255,30 @@ export default function Editor({
       label: "左对齐",
       icon: <RiAlignLeft size="1.2em" />,
       onClick: handleAlignLeft,
+      Tooltip: {
+        content: "Ctrl+Shift+L",
+        placement: "right",
+      },
     },
     {
       value: "center",
       label: "居中对齐",
       icon: <RiAlignCenter size="1.2em" />,
       onClick: handleAlignCenter,
+      Tooltip: {
+        content: "Ctrl+Shift+E",
+        placement: "right",
+      },
     },
     {
       value: "right",
       label: "右对齐",
       icon: <RiAlignRight size="1.2em" />,
       onClick: handleAlignRight,
+      Tooltip: {
+        content: "Ctrl+Shift+R",
+        placement: "right",
+      },
     },
   ];
 
@@ -1238,12 +1287,12 @@ export default function Editor({
     {
       icon: <RiArrowGoBackLine size="1.2em" />,
       action: handleUndo,
-      name: "撤销",
+      name: "撤销 (Ctrl+Z)",
     },
     {
       icon: <RiArrowGoForwardLine size="1.2em" />,
       action: handleRedo,
-      name: "取消撤销",
+      name: "取消撤销 (Ctrl+Shift+Z)",
     },
   ];
 
@@ -1251,35 +1300,35 @@ export default function Editor({
     {
       icon: <RiBold size="1.2em" />,
       action: handleBold,
-      name: "加粗",
+      name: "加粗 (Ctrl+B)",
       value: "bold",
       isActive: editorState.isBold,
     },
     {
       icon: <RiItalic size="1.2em" />,
       action: handleItalic,
-      name: "斜体",
+      name: "斜体 (Ctrl+I)",
       value: "italic",
       isActive: editorState.isItalic,
     },
     {
       icon: <RiStrikethrough size="1.2em" />,
       action: handleStrike,
-      name: "删除线",
+      name: "删除线 (Ctrl+Shift+S)",
       value: "strikethrough",
       isActive: editorState.isStrike,
     },
     {
       icon: <RiUnderline size="1.2em" />,
       action: handleUnderline,
-      name: "下划线",
+      name: "下划线 (Ctrl+U)",
       value: "underline",
       isActive: editorState.isUnderline,
     },
     {
       icon: <RiMarkPenLine size="1.2em" />,
       action: handleHighlight,
-      name: "高亮",
+      name: "高亮 (Ctrl+Shift+H)",
       value: "highlight",
       isActive: editorState.isHighlight,
     },
@@ -1289,20 +1338,20 @@ export default function Editor({
     {
       icon: <RiDoubleQuotesL size="1.2em" />,
       action: handleBlockquote,
-      name: "引用",
+      name: "引用 (Ctrl+Shift+B)",
       isActive: editorState.isBlockquote,
     },
     {
       icon: <RiCodeLine size="1.2em" />,
       action: handleCode,
-      name: "行内代码",
+      name: "行内代码 (Ctrl+E)",
       value: "code",
       isActive: editorState.isCode,
     },
     {
       icon: <RiCodeSSlashLine size="1.2em" />,
       action: handleCodeBlock,
-      name: "代码块",
+      name: "代码块 (Ctrl+Alt+C)",
       isActive: editorState.isCodeBlock,
     },
   ];
@@ -1326,14 +1375,14 @@ export default function Editor({
     {
       icon: <RiSuperscript size="1.2em" />,
       action: handleSuperscript,
-      name: "上标",
+      name: "上标 (Ctrl+.)",
       value: "superscript",
       isActive: editorState.isSuperscript,
     },
     {
       icon: <RiSubscript size="1.2em" />,
       action: handleSubscript,
-      name: "下标",
+      name: "下标 (Ctrl+,)",
       value: "subscript",
       isActive: editorState.isSubscript,
     },
@@ -1370,16 +1419,14 @@ export default function Editor({
           <div className="w-px h-6 bg-foreground/20" />
 
           {/* 标题下拉菜单 */}
-          <Tooltip content="标题">
-            <Dropdown
-              trigger={
-                <div className="inline-flex items-center justify-center gap-0 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 px-2">
-                  <RiHeading size="1.2em" />
-                </div>
-              }
-              options={headingOptions}
-            />
-          </Tooltip>
+          <Dropdown
+            trigger={
+              <div className="inline-flex items-center justify-center gap-0 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 px-2">
+                <RiHeading size="1.2em" />
+              </div>
+            }
+            options={headingOptions}
+          />
 
           <div className="w-px h-6 bg-foreground/20" />
 
@@ -1403,30 +1450,27 @@ export default function Editor({
           <div className="w-px h-6 bg-foreground/20" />
 
           {/* 对齐下拉菜单 */}
-          <Tooltip content="对齐">
-            <Dropdown
-              trigger={
-                <div className="inline-flex items-center justify-center gap-0 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 px-2">
-                  <RiAlignLeft size="1.2em" />
-                </div>
-              }
-              options={alignOptions}
-            />
-          </Tooltip>
+          <Dropdown
+            trigger={
+              <div className="inline-flex items-center justify-center gap-0 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 px-2">
+                <RiAlignLeft size="1.2em" />
+              </div>
+            }
+            options={alignOptions}
+          />
 
           <div className="w-px h-6 bg-foreground/20" />
 
           {/* 列表下拉菜单 */}
-          <Tooltip content="列表">
-            <Dropdown
-              trigger={
-                <div className="inline-flex items-center justify-center gap-0 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 px-2">
-                  <RiListUnordered size="1.2em" />
-                </div>
-              }
-              options={listOptions}
-            />
-          </Tooltip>
+
+          <Dropdown
+            trigger={
+              <div className="inline-flex items-center justify-center gap-0 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 px-2">
+                <RiListUnordered size="1.2em" />
+              </div>
+            }
+            options={listOptions}
+          />
 
           <div className="w-px h-6 bg-foreground/20" />
 
