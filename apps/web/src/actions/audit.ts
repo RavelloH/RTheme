@@ -16,6 +16,7 @@ import limitControl from "@/lib/server/rate-limit";
 import { headers } from "next/headers";
 import { validateData } from "@/lib/server/validator";
 import { authVerify } from "@/lib/server/auth-verify";
+import { resolveIpLocation } from "@/lib/server/ip-utils";
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
@@ -210,6 +211,7 @@ export async function getAuditLogs(
         string,
         string | number | boolean
       > | null,
+      location: record.ipAddress ? resolveIpLocation(record.ipAddress) : null,
       user: record.user,
     }));
 

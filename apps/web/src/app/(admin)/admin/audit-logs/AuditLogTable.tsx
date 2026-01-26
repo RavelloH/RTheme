@@ -24,6 +24,26 @@ function isEmpty(value: unknown): boolean {
 }
 
 /**
+ * 格式化地理位置信息
+ */
+function formatLocation(
+  location: {
+    country: string | null;
+    region: string | null;
+    city: string | null;
+  } | null,
+): string {
+  if (!location) return "未知";
+
+  const parts: string[] = [];
+  if (location.country) parts.push(location.country);
+  if (location.region) parts.push(location.region);
+  if (location.city) parts.push(location.city);
+
+  return parts.length > 0 ? parts.join(" ") : "未知";
+}
+
+/**
  * JSON 代码高亮组件
  */
 function JSONHighlight({ json }: { json: unknown }) {
@@ -57,29 +77,6 @@ function JSONHighlight({ json }: { json: unknown }) {
       </pre>
     </div>
   );
-}
-
-/**
- * 解析 IP 地理位置
- */
-function getIPLocation(ip: string | null): string | null {
-  if (!ip) return null;
-
-  // 检查是否为本地地址
-  if (
-    ip === "127.0.0.1" ||
-    ip === "::1" ||
-    ip.startsWith("192.168.") ||
-    ip.startsWith("10.") ||
-    ip.startsWith("172.")
-  ) {
-    return "本地网络";
-  }
-
-  // 注意：这里需要使用动态导入，因为 ip-utils 是服务端模块
-  // 在客户端我们先简单显示 IP 地址
-  // 后续可以通过 API 调用服务端函数来获取地理位置
-  return null;
 }
 
 export default function AuditLogTable() {
@@ -383,6 +380,19 @@ export default function AuditLogTable() {
       mono: true,
     },
     {
+      key: "location",
+      title: "归属地",
+      dataIndex: "location",
+      align: "left",
+      render: (value: unknown) => {
+        return (
+          <span className="text-sm text-muted-foreground">
+            {String(formatLocation(value as AuditLogItem["location"]) || "-")}
+          </span>
+        );
+      },
+    },
+    {
       key: "description",
       title: "描述",
       dataIndex: "description",
@@ -527,14 +537,11 @@ export default function AuditLogTable() {
                   </label>
                   <p className="text-sm font-mono">
                     {selectedLog.ipAddress}
-                    {(() => {
-                      const location = getIPLocation(selectedLog.ipAddress);
-                      return location ? (
-                        <span className="text-muted-foreground ml-2">
-                          ({location})
-                        </span>
-                      ) : null;
-                    })()}
+                    {selectedLog.location ? (
+                      <span className="text-muted-foreground ml-2">
+                        ({formatLocation(selectedLog.location)})
+                      </span>
+                    ) : null}
                   </p>
                 </div>
                 <div className="md:col-span-2">

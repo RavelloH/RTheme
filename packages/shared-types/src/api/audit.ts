@@ -43,6 +43,14 @@ export const AuditLogItemSchema = z.object({
   metadata: z
     .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
     .nullable(),
+  // IP 地理位置信息
+  location: z
+    .object({
+      country: z.string().nullable(),
+      region: z.string().nullable(),
+      city: z.string().nullable(),
+    })
+    .nullable(),
   // 关联的用户信息
   user: z
     .object({

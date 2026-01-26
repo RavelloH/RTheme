@@ -264,15 +264,16 @@ export default function PageViewTable() {
       key: "path",
       title: "访问路径",
       dataIndex: "path",
+      width: "45em",
       align: "left",
       sortable: true,
       mono: true,
       render: (value: unknown) => {
         if (typeof value === "string") {
-          if (value.length > 40) {
+          if (value.length > 60) {
             return (
               <span className="text-sm" title={value}>
-                {value.substring(0, 40)}...
+                {value.substring(0, 60)}...
               </span>
             );
           }
@@ -283,7 +284,7 @@ export default function PageViewTable() {
     },
     {
       key: "visitorId",
-      title: "访客ID",
+      title: "访客短 ID",
       dataIndex: "visitorId",
       align: "left",
       sortable: true,
@@ -291,8 +292,8 @@ export default function PageViewTable() {
       render: (value: unknown) => {
         if (typeof value === "string") {
           return (
-            <span className="text-xs text-muted-foreground" title={value}>
-              {value.substring(0, 12)}...
+            <span className="text-muted-foreground" title={value}>
+              {value.split("-")[0]}
             </span>
           );
         }
@@ -303,6 +304,24 @@ export default function PageViewTable() {
       key: "country",
       title: "国家",
       dataIndex: "country",
+      align: "left",
+      sortable: true,
+      render: (value: unknown) => {
+        return (
+          <span className="text-sm">
+            {value ? (
+              String(value)
+            ) : (
+              <span className="text-muted-foreground">-</span>
+            )}
+          </span>
+        );
+      },
+    },
+    {
+      key: "region",
+      title: "地区",
+      dataIndex: "region",
       align: "left",
       sortable: true,
       render: (value: unknown) => {
@@ -493,16 +512,14 @@ export default function PageViewTable() {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-sm text-muted-foreground">国家</label>
-                  <p className="text-sm">{selectedView.country || "-"}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">地区</label>
-                  <p className="text-sm">{selectedView.region || "-"}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">城市</label>
-                  <p className="text-sm">{selectedView.city || "-"}</p>
+                  <label className="text-sm text-muted-foreground">
+                    归属地
+                  </label>
+                  <p className="text-sm flex gap-2">
+                    <span>{selectedView.country}</span>
+                    <span>{selectedView.region}</span>
+                    <span>{selectedView.city}</span>
+                  </p>
                 </div>
               </div>
             </div>
