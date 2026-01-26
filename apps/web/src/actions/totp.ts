@@ -44,6 +44,7 @@ import {
   decryptBackupCode,
 } from "@/lib/server/totp-crypto";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
+import { generateCacheKey } from "@/lib/server/cache";
 
 type AuthActionEnvironment = "serverless" | "serveraction";
 type AuthActionConfig = { environment?: AuthActionEnvironment };
@@ -61,7 +62,7 @@ type ActionResult<T extends ApiResponseData> =
  */
 export async function checkTotpFailCount(uid: number): Promise<boolean> {
   await ensureRedisConnection();
-  const key = `totp:fail:${uid}`;
+  const key = generateCacheKey("auth", "totp", "fail", uid);
   const count = await redis.get(key);
   return count ? parseInt(count, 10) >= 3 : false;
 }
@@ -71,7 +72,7 @@ export async function checkTotpFailCount(uid: number): Promise<boolean> {
  */
 export async function incrementTotpFailCount(uid: number): Promise<void> {
   await ensureRedisConnection();
-  const key = `totp:fail:${uid}`;
+  const key = generateCacheKey("auth", "totp", "fail", uid);
   const count = await redis.incr(key);
 
   // 首次设置过期时间为 5 分钟
@@ -85,7 +86,7 @@ export async function incrementTotpFailCount(uid: number): Promise<void> {
  */
 export async function resetTotpFailCount(uid: number): Promise<void> {
   await ensureRedisConnection();
-  const key = `totp:fail:${uid}`;
+  const key = generateCacheKey("auth", "totp", "fail", uid);
   await redis.del(key);
 }
 
@@ -460,7 +461,7 @@ export async function enableTotp(
     // 临时存储到 Redis（5分钟过期）
     await ensureRedisConnection();
     await redis.setex(
-      `totp:setup:${uid}`,
+      generateCacheKey("auth", "totp", "setup", uid),
       300,
       JSON.stringify({
         secret,
@@ -546,7 +547,9 @@ export async function confirmTotp(
 
     // 从 Redis 获取临时存储的 secret
     await ensureRedisConnection();
-    const setupData = await redis.get(`totp:setup:${uid}`);
+    const setupData = await redis.get(
+      generateCacheKey("auth", "totp", "setup", uid),
+    );
     if (!setupData) {
       return response.badRequest({
         message: "TOTP 设置已过期，请重新开始",
@@ -593,7 +596,7 @@ export async function confirmTotp(
 
     // 清除 Redis 中的临时数据
     after(async () => {
-      await redis.del(`totp:setup:${uid}`);
+      await redis.del(generateCacheKey("auth", "totp", "setup", uid));
     });
 
     // 获取客户端信息用于审计日志

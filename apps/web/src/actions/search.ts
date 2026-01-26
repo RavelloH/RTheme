@@ -63,6 +63,7 @@ import {
   GetSearchLogStatsSchema,
   GetSearchLogsSchema,
 } from "@repo/shared-types/api/search";
+import { generateCacheKey } from "@/lib/server/cache";
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
@@ -1630,7 +1631,7 @@ export async function getSearchIndexStats(
 
   try {
     // 缓存键
-    const cacheKey = "search-index-stats";
+    const cacheKey = generateCacheKey("stat", "search", "index");
 
     // 如果不强制刷新，先尝试从缓存获取
     if (!force) {
@@ -1858,7 +1859,7 @@ export async function getSearchLogStats(
 
   try {
     // 缓存键
-    const cacheKey = `search-log-stats-${days}`;
+    const cacheKey = generateCacheKey("stat", "search", "log", days);
 
     // 如果不强制刷新，先尝试从缓存获取
     if (!force) {

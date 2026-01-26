@@ -59,7 +59,7 @@ export async function getSecurityOverview(
   }
 
   try {
-    const CACHE_KEY = generateCacheKey("stats", "security");
+    const CACHE_KEY = generateCacheKey("stat", "security");
     const CACHE_TTL = 5 * 60; // 5分钟缓存（安全数据需要相对实时）
 
     // 如果不是强制刷新，尝试从缓存获取
@@ -89,8 +89,8 @@ export async function getSecurityOverview(
 
     // 获取全局统计计数器（永久）
     const [totalSuccessStr, totalErrorStr] = await Promise.all([
-      redis.get("np:stat:success"),
-      redis.get("np:stat:error"),
+      redis.get("np:rate:stat:success"),
+      redis.get("np:rate:stat:error"),
     ]);
     const totalSuccess = totalSuccessStr ? parseInt(totalSuccessStr, 10) : 0;
     const totalError = totalErrorStr ? parseInt(totalErrorStr, 10) : 0;
@@ -98,8 +98,8 @@ export async function getSecurityOverview(
 
     // 获取当前小时请求数（成功 + 错误）
     const [currentHourSuccessStr, currentHourErrorStr] = await Promise.all([
-      redis.get(`np:stat:hour:${currentHour}:success`),
-      redis.get(`np:stat:hour:${currentHour}:error`),
+      redis.get(`np:rate:stat:hour:${currentHour}:success`),
+      redis.get(`np:rate:stat:hour:${currentHour}:error`),
     ]);
     const currentHourRequests =
       (currentHourSuccessStr ? parseInt(currentHourSuccessStr, 10) : 0) +
@@ -129,8 +129,8 @@ export async function getSecurityOverview(
     for (let i = 23; i >= 0; i--) {
       const targetHour = currentHour - i;
       const [successStr, errorStr] = await Promise.all([
-        redis.get(`np:stat:hour:${targetHour}:success`),
-        redis.get(`np:stat:hour:${targetHour}:error`),
+        redis.get(`np:rate:stat:hour:${targetHour}:success`),
+        redis.get(`np:rate:stat:hour:${targetHour}:error`),
       ]);
       const success = successStr ? parseInt(successStr, 10) : 0;
       const error = errorStr ? parseInt(errorStr, 10) : 0;
@@ -159,8 +159,8 @@ export async function getSecurityOverview(
     for (let i = 30 * 24 - 1; i >= 0; i--) {
       const targetHour = currentHour - i;
       const [successStr, errorStr] = await Promise.all([
-        redis.get(`np:stat:hour:${targetHour}:success`),
-        redis.get(`np:stat:hour:${targetHour}:error`),
+        redis.get(`np:rate:stat:hour:${targetHour}:success`),
+        redis.get(`np:rate:stat:hour:${targetHour}:error`),
       ]);
       const success = successStr ? parseInt(successStr, 10) : 0;
       const error = errorStr ? parseInt(errorStr, 10) : 0;
@@ -199,7 +199,11 @@ export async function getSecurityOverview(
     // 写入缓存
     const { after } = await import("next/server");
     after(async () => {
-      await setCache(CACHE_KEY, resultData, { ttl: CACHE_TTL });
+      await setCache(
+        CACHE_KEY,
+        { ...resultData, cache: true },
+        { ttl: CACHE_TTL },
+      );
     });
 
     return response.ok({
@@ -574,10 +578,10 @@ export async function getEndpointStats(
     const currentTime = Date.now();
     const startTime = currentTime - hours * 3600000;
 
-    // 从 np:stat:endpoint ZSET 中获取所有在时间范围内的记录
+    // 从 np:rate:endpoint ZSET 中获取所有在时间范围内的记录
     // 值格式: apiName:timestamp, 分数: timestamp
     const allRecords = await redis.zrangebyscore(
-      "np:stat:endpoint",
+      "np:rate:endpoint",
       startTime,
       currentTime,
     );
@@ -665,8 +669,8 @@ export async function getRequestTrends(
       for (let i = hours - 1; i >= 0; i--) {
         const targetHour = currentHour - i;
         const [successStr, errorStr] = await Promise.all([
-          redis.get(`np:stat:hour:${targetHour}:success`),
-          redis.get(`np:stat:hour:${targetHour}:error`),
+          redis.get(`np:rate:stat:hour:${targetHour}:success`),
+          redis.get(`np:rate:stat:hour:${targetHour}:error`),
         ]);
         const success = successStr ? parseInt(successStr, 10) : 0;
         const error = errorStr ? parseInt(errorStr, 10) : 0;

@@ -1,6 +1,7 @@
 import "server-only";
 import Cap from "@cap.js/server";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
+import { generateCacheKey } from "@/lib/server/cache";
 
 export const cap = new Cap({
   storage: {
@@ -13,7 +14,7 @@ export const cap = new Cap({
           const ttl = Math.floor((challengeData.expires - Date.now()) / 1000);
           if (ttl > 0) {
             await redis.setex(
-              `np:captcha:challenge:${token}`,
+              generateCacheKey("captcha", "challenge", token),
               ttl,
               JSON.stringify(challengeData),
             );
@@ -27,7 +28,9 @@ export const cap = new Cap({
         try {
           await ensureRedisConnection();
 
-          const data = await redis.get(`np:captcha:challenge:${token}`);
+          const data = await redis.get(
+            generateCacheKey("captcha", "challenge", token),
+          );
           if (!data) {
             return null;
           }
@@ -35,7 +38,7 @@ export const cap = new Cap({
           const challengeData = JSON.parse(data);
           // 检查是否过期
           if (challengeData.expires <= Date.now()) {
-            await redis.del(`np:captcha:challenge:${token}`);
+            await redis.del(generateCacheKey("captcha", "challenge", token));
             return null;
           }
 
@@ -47,7 +50,7 @@ export const cap = new Cap({
       },
       delete: async (token) => {
         try {
-          await redis.del(`np:captcha:challenge:${token}`);
+          await redis.del(generateCacheKey("captcha", "challenge", token));
         } catch (error) {
           console.error("Redis delete challenge failed:", error);
           throw new Error(`Redis delete challenge failed: ${error}`);
@@ -67,7 +70,7 @@ export const cap = new Cap({
           const ttl = Math.floor((expires - Date.now()) / 1000);
           if (ttl > 0) {
             await redis.setex(
-              `np:captcha:token:${tokenKey}`,
+              generateCacheKey("captcha", "token", tokenKey),
               ttl,
               expires.toString(),
             );
@@ -81,7 +84,9 @@ export const cap = new Cap({
         try {
           await ensureRedisConnection();
 
-          const data = await redis.get(`np:captcha:token:${tokenKey}`);
+          const data = await redis.get(
+            generateCacheKey("captcha", "token", tokenKey),
+          );
           if (!data) {
             return null;
           }
@@ -89,7 +94,7 @@ export const cap = new Cap({
           const expires = parseInt(data, 10);
           // 检查是否过期
           if (expires <= Date.now()) {
-            await redis.del(`np:captcha:token:${tokenKey}`);
+            await redis.del(generateCacheKey("captcha", "token", tokenKey));
             return null;
           }
 
@@ -101,7 +106,7 @@ export const cap = new Cap({
       },
       delete: async (tokenKey) => {
         try {
-          await redis.del(`np:captcha:token:${tokenKey}`);
+          await redis.del(generateCacheKey("captcha", "token", tokenKey));
         } catch (error) {
           console.error("Redis delete token failed:", error);
           throw new Error(`Redis delete token failed: ${error}`);

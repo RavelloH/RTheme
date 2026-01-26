@@ -30,7 +30,6 @@ const calcErrorRate = (
 
 export default function DashboardSecurityStats() {
   const [result, setResult] = useState<SecurityOverviewData | null>(null);
-  const [isCache, setIsCache] = useState(true);
   const [refreshTime, setRefreshTime] = useState<Date | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
@@ -46,7 +45,6 @@ export default function DashboardSecurityStats() {
     }
     if (!res.data) return;
     setResult(res.data);
-    setIsCache(res.data.cache);
     setRefreshTime(new Date(res.data.updatedAt));
   };
 
@@ -134,7 +132,7 @@ export default function DashboardSecurityStats() {
           <div>
             {refreshTime && (
               <div className="inline-flex items-center gap-2">
-                {isCache ? "最近缓存于" : "统计缓存于"}:{" "}
+                {result.cache ? "统计缓存于" : "数据刷新于"}:{" "}
                 {refreshTime.toLocaleString()}
                 <Clickable onClick={() => fetchData(true)}>
                   <RiRefreshLine size={"1em"} />

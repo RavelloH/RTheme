@@ -827,7 +827,7 @@ export async function getMediaStats(
   }
 
   try {
-    const CACHE_KEY = generateCacheKey("stats", "media", String(days));
+    const CACHE_KEY = generateCacheKey("stat", "media", String(days));
     const CACHE_TTL = 60 * 60; // 1小时
 
     // 如果不是强制刷新，尝试从缓存获取

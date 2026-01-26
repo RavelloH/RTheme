@@ -45,14 +45,6 @@ function generateDescription(
     );
   }
 
-  // 4. 热门分词
-  if (stats.topTokens && stats.topTokens.length > 0) {
-    elements.push(
-      <div key="topTokens">
-        最热门的分词是 &ldquo;{stats.topTokens[0]?.token}&rdquo;。
-      </div>,
-    );
-  }
   return elements;
 }
 

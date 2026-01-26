@@ -1,11 +1,11 @@
 -- KEYS:
 -- 1: rateKey (np:rate:ip:<ip>)
--- 2: statSuccess (np:stat:success)
--- 3: statError (np:stat:error)
--- 4: statHourSuccess (np:stat:hour:<hour>:success)
--- 5: statHourError (np:stat:hour:<hour>:error)
+-- 2: statSuccess (np:rate:stat:success)
+-- 3: statError (np:rate:stat:error)
+-- 4: statHourSuccess (np:rate:stat:hour:<hour>:success)
+-- 5: statHourError (np:rate:stat:hour:<hour>:error)
 -- 6: banKey (np:rate:ban:<ip>)
--- 7: endpointKey (np:stat:endpoint)
+-- 7: endpointKey (np:rate:endpoint)
 
 -- ARGV:
 -- 1: now (毫秒时间戳)

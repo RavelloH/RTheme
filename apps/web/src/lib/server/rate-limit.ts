@@ -123,12 +123,12 @@ async function limitControl(
     // 准备 Lua 脚本的 keys 和 args
     const keys = [
       `np:rate:ip:${ip}`, // 1: rateKey
-      "np:stat:success", // 2: statSuccess
-      "np:stat:error", // 3: statError
-      `np:stat:hour:${currentHour}:success`, // 4: statHourSuccess
-      `np:stat:hour:${currentHour}:error`, // 5: statHourError
+      "np:rate:stat:success", // 2: statSuccess
+      "np:rate:stat:error", // 3: statError
+      `np:rate:stat:hour:${currentHour}:success`, // 4: statHourSuccess
+      `np:rate:stat:hour:${currentHour}:error`, // 5: statHourError
       `np:rate:ban:${ip}`, // 6: banKey
-      "np:stat:endpoint", // 7: endpointKey
+      "np:rate:endpoint", // 7: endpointKey
     ];
 
     const args = [

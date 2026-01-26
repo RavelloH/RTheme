@@ -84,7 +84,7 @@ export async function getUsersStats(
   }
 
   try {
-    const CACHE_KEY = generateCacheKey("stats", "users");
+    const CACHE_KEY = generateCacheKey("stat", "users");
     const CACHE_TTL = 60 * 60; // 1小时
 
     // 如果不是强制刷新，尝试从缓存获取
@@ -259,7 +259,7 @@ export async function getAuditStats(
   }
 
   try {
-    const CACHE_KEY = generateCacheKey("stats", "audit");
+    const CACHE_KEY = generateCacheKey("stat", "audit");
     const CACHE_TTL = 60 * 60; // 1小时
 
     // 如果不是强制刷新，尝试从缓存获取
@@ -385,7 +385,7 @@ export async function getPostsStats(
   }
 
   try {
-    const CACHE_KEY = generateCacheKey("stats", "posts");
+    const CACHE_KEY = generateCacheKey("stat", "posts");
     const CACHE_TTL = 60 * 60; // 1小时
 
     // 如果不是强制刷新，尝试从缓存获取
@@ -580,7 +580,7 @@ export async function getTagsStats(
   }
 
   try {
-    const CACHE_KEY = generateCacheKey("stats", "tags");
+    const CACHE_KEY = generateCacheKey("stat", "tags");
     const CACHE_TTL = 60 * 60; // 1小时
 
     // 如果不是强制刷新，尝试从缓存获取
@@ -712,7 +712,7 @@ export async function getCategoriesStats(
   }
 
   try {
-    const CACHE_KEY = generateCacheKey("stats", "categories");
+    const CACHE_KEY = generateCacheKey("stat", "categories");
     const CACHE_TTL = 60 * 60; // 1小时
 
     // 如果不是强制刷新，尝试从缓存获取
@@ -918,7 +918,7 @@ export async function getPagesStats(
   }
 
   try {
-    const CACHE_KEY = generateCacheKey("stats", "pages");
+    const CACHE_KEY = generateCacheKey("stat", "pages");
     const CACHE_TTL = 60 * 60; // 1小时
 
     // 如果不是强制刷新，尝试从缓存获取
@@ -1057,7 +1057,7 @@ export async function getStorageStats(
   }
 
   try {
-    const CACHE_KEY = generateCacheKey("stats", "storage");
+    const CACHE_KEY = generateCacheKey("stat", "storage");
     const CACHE_TTL = 60 * 60; // 1小时
 
     // 如果不是强制刷新，尝试从缓存获取
@@ -1269,7 +1269,7 @@ export async function getVisitStats(
   }
 
   try {
-    const CACHE_KEY = generateCacheKey("stats", "visit");
+    const CACHE_KEY = generateCacheKey("stat", "visit");
     const CACHE_TTL = 60 * 60; // 1小时
 
     // 如果不是强制刷新，尝试从缓存获取

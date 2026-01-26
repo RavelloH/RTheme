@@ -165,30 +165,32 @@ export async function doctor(
     };
 
     const getRedisKeyCount = async (): Promise<{
-      captcha: number;
-      rateLimit: number;
       cache: number;
+      rate: number;
+      analytics: number;
+      viewCount: number;
       total: number;
     }> => {
       try {
         await ensureRedisConnection();
-        const [captchaChallenges, captchaTokens, rateLimitKeys, cacheKeys] =
+        const [cacheKeys, rateKeys, analyticsKeys, viewCountKeys] =
           await Promise.all([
-            redis.keys("np:captcha:challenge:*"),
-            redis.keys("np:captcha:token:*"),
-            redis.keys("np:rate_limit:*"),
             redis.keys("np:cache:*"),
+            redis.keys("np:rate:*"),
+            redis.keys("np:analytics:*"),
+            redis.keys("np:view_count:*"),
           ]);
 
         return {
-          captcha: captchaChallenges.length + captchaTokens.length,
-          rateLimit: rateLimitKeys.length,
           cache: cacheKeys.length,
+          rate: rateKeys.length,
+          analytics: analyticsKeys.length,
+          viewCount: viewCountKeys.length,
           total: await redis.dbsize(),
         };
       } catch (error) {
         console.error("Redis key count check failed:", error);
-        return { captcha: -1, rateLimit: -1, cache: -1, total: -1 };
+        return { cache: -1, rate: -1, analytics: -1, viewCount: -1, total: -1 };
       }
     };
 
