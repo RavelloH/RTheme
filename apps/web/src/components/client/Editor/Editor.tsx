@@ -78,6 +78,8 @@ import {
   type AdapterManager,
   type EditorState as AdapterEditorState,
 } from "./adapters";
+import { AutoResizer } from "@/ui/AutoResizer";
+import { AutoTransition } from "@/ui/AutoTransition";
 
 export default function Editor({
   content,
@@ -1978,283 +1980,287 @@ export default function Editor({
         }
         size="lg"
       >
-        <div className="px-6 py-6 space-y-6">
-          {!showCommitInput ? (
-            <>
-              {/* 确认信息展示 */}
-              <p className="text-sm text-muted-foreground mb-4">
-                请确认以下信息无误后继续。
-                <span className="text-error">标题</span>为必填项。
-              </p>
+        <AutoResizer>
+          <div className="px-6 py-6">
+            <AutoTransition duration={0.2}>
+              {!showCommitInput ? (
+                <div key="confirm-info" className="space-y-6">
+                  {/* 确认信息展示 */}
+                  <p className="text-sm text-muted-foreground mb-4">
+                    请确认以下信息无误后继续。
+                    <span className="text-error">标题</span>为必填项。
+                  </p>
 
-              {/* 编辑器类型提示 */}
-              <div className="mb-4">
-                <p className="text-sm text-muted-foreground">
-                  根据当前所选编辑器，内容将以{" "}
-                  <span className="font-medium text-primary">
-                    {editorType === "visual"
-                      ? "Markdown"
-                      : editorType === "markdown"
-                        ? "Markdown"
-                        : "MDX"}
-                  </span>{" "}
-                  模式保存。
-                </p>
-              </div>
-
-              {/* 基本信息 - 只读展示 */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-                  基本信息
-                </h3>
-                <div className="grid grid-cols-1 gap-4 bg-muted/20 p-4 rounded-lg">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      标题 <span className="text-error">*</span>
-                    </label>
-                    <p
-                      className={`text-sm ${detailsForm.title ? "text-foreground/80" : "text-muted-foreground italic"}`}
-                    >
-                      {detailsForm.title ||
-                        `（未设置，请点击"${isEditMode ? "更改" : "设置"}详细信息"填写）`}
+                  {/* 编辑器类型提示 */}
+                  <div className="mb-4">
+                    <p className="text-sm text-muted-foreground">
+                      根据当前所选编辑器，内容将以{" "}
+                      <span className="font-medium text-primary">
+                        {editorType === "visual"
+                          ? "Markdown"
+                          : editorType === "markdown"
+                            ? "Markdown"
+                            : "MDX"}
+                      </span>{" "}
+                      模式保存。
                     </p>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Slug
-                    </label>
-                    <p
-                      className={`text-sm font-mono ${detailsForm.slug ? "text-foreground/80" : "text-muted-foreground italic"}`}
-                    >
-                      {detailsForm.slug || "（未设置，将从标题自动生成）"}
-                    </p>
+
+                  {/* 基本信息 - 只读展示 */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                      基本信息
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4 bg-muted/20 p-4 rounded-lg">
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">
+                          标题 <span className="text-error">*</span>
+                        </label>
+                        <p
+                          className={`text-sm ${detailsForm.title ? "text-foreground" : "text-muted-foreground"}`}
+                        >
+                          {detailsForm.title ||
+                            `（未设置，请点击"${isEditMode ? "更改" : "设置"}详细信息"填写）`}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">
+                          Slug
+                        </label>
+                        <p className="text-sm font-mono text-foreground/80">
+                          {detailsForm.slug || "（未设置，将从标题自动生成）"}
+                        </p>
+                      </div>
+                      {isEditMode && (
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-1">
+                            文章状态
+                          </label>
+                          <p className="text-sm text-foreground/80">
+                            {detailsForm.status === "DRAFT"
+                              ? "草稿"
+                              : detailsForm.status === "PUBLISHED"
+                                ? "已发布"
+                                : "已归档"}
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">
+                          摘要
+                        </label>
+                        <p className="text-sm text-foreground/80">
+                          {detailsForm.excerpt || "（未设置）"}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">
+                          分类
+                        </label>
+                        <p className="text-sm text-foreground/80">
+                          {detailsForm.category ||
+                            "（未设置，将分配到「未分类」）"}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">
+                          标签
+                        </label>
+                        <p className="text-sm text-foreground/80">
+                          {detailsForm.tags.length > 0
+                            ? detailsForm.tags.map((tag) => tag.name).join("、")
+                            : "（未设置）"}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  {isEditMode && (
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">
-                        文章状态
-                      </label>
-                      <p className="text-sm text-foreground/80">
-                        {detailsForm.status === "DRAFT"
-                          ? "草稿"
-                          : detailsForm.status === "PUBLISHED"
+
+                  {/* 发布设置 - 只读展示 */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                      发布设置
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4 bg-muted/20 p-4 rounded-lg">
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">
+                          状态
+                        </label>
+                        <p className="text-sm text-foreground/80">
+                          {confirmAction === "publish"
                             ? "已发布"
-                            : "已归档"}
-                      </p>
+                            : detailsForm.status === "PUBLISHED"
+                              ? "已发布"
+                              : detailsForm.status === "DRAFT"
+                                ? "草稿"
+                                : "已归档"}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">
+                          置顶
+                        </label>
+                        <p className="text-sm text-foreground/80">
+                          {detailsForm.isPinned ? "是" : "否"}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">
+                          允许评论
+                        </label>
+                        <p className="text-sm text-foreground/80">
+                          {detailsForm.allowComments ? "是" : "否"}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">
+                          搜索引擎索引
+                        </label>
+                        <p className="text-sm text-foreground/80">
+                          {detailsForm.robotsIndex ? "允许" : "禁止"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SEO 设置 - 只读展示 */}
+                  {(detailsForm.metaDescription ||
+                    detailsForm.metaKeywords) && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                        SEO 设置
+                      </h3>
+                      <div className="grid grid-cols-1 gap-4 bg-muted/20 p-4 rounded-lg">
+                        {detailsForm.metaDescription && (
+                          <div>
+                            <label className="block text-sm font-medium text-foreground mb-1">
+                              SEO 描述
+                            </label>
+                            <p className="text-sm text-foreground/80">
+                              {detailsForm.metaDescription}
+                            </p>
+                          </div>
+                        )}
+                        {detailsForm.metaKeywords && (
+                          <div>
+                            <label className="block text-sm font-medium text-foreground mb-1">
+                              SEO 关键词
+                            </label>
+                            <p className="text-sm text-foreground/80">
+                              {detailsForm.metaKeywords}
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      摘要
-                    </label>
-                    <p className="text-sm text-foreground/80">
-                      {detailsForm.excerpt || "（未设置）"}
-                    </p>
+
+                  {/* 特色图片 - 只读展示 */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                      特色图片
+                    </h3>
+                    <div className="bg-muted/20 p-4 rounded-lg">
+                      {detailsForm.featuredImage ? (
+                        <div className="space-y-2 ">
+                          <img
+                            src={detailsForm.featuredImage}
+                            alt="特色图片预览"
+                            className="w-full max-h-[20em] rounded-md object-cover"
+                          />
+                          <p className="text-xs text-foreground/60 break-all">
+                            {detailsForm.featuredImage}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">
+                          （未设置）
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      分类
-                    </label>
-                    <p className="text-sm text-foreground/80">
-                      {detailsForm.category || "（未设置，将分配到「未分类」）"}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      标签
-                    </label>
-                    <p className="text-sm text-foreground/80">
-                      {detailsForm.tags.length > 0
-                        ? detailsForm.tags.map((tag) => tag.name).join("、")
-                        : "（未设置）"}
-                    </p>
+
+                  {/* 操作按钮 */}
+                  <div className="flex justify-between gap-4 pt-4 border-t border-foreground/10">
+                    <Button
+                      label="取消"
+                      variant="ghost"
+                      onClick={closeConfirmDialog}
+                      size="sm"
+                      disabled={isSubmitting}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        label={isEditMode ? "更改详细信息" : "设置详细信息"}
+                        variant="ghost"
+                        onClick={openDetailsFromConfirm}
+                        size="sm"
+                        disabled={isSubmitting}
+                      />
+                      <Button
+                        label="下一步"
+                        variant="primary"
+                        onClick={handleNextStep}
+                        size="sm"
+                        disabled={isSubmitting || !detailsForm.title.trim()}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div key="commit-input" className="space-y-6">
+                  {/* 提交信息输入 */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                      提交信息
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      添加提交信息（可选）
+                    </p>
+                    <Input
+                      label="提交信息（可选）"
+                      value={commitMessage}
+                      onChange={(e) => setCommitMessage(e.target.value)}
+                      rows={3}
+                      size="sm"
+                      helperText="提交信息将帮助您追踪文章的修改历史"
+                    />
+                  </div>
 
-              {/* 发布设置 - 只读展示 */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-                  发布设置
-                </h3>
-                <div className="grid grid-cols-2 gap-4 bg-muted/20 p-4 rounded-lg">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      状态
-                    </label>
-                    <p className="text-sm text-foreground/80">
-                      {confirmAction === "publish"
-                        ? "已发布"
-                        : detailsForm.status === "PUBLISHED"
-                          ? "已发布"
-                          : detailsForm.status === "DRAFT"
-                            ? "草稿"
-                            : "已归档"}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      置顶
-                    </label>
-                    <p className="text-sm text-foreground/80">
-                      {detailsForm.isPinned ? "是" : "否"}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      允许评论
-                    </label>
-                    <p className="text-sm text-foreground/80">
-                      {detailsForm.allowComments ? "是" : "否"}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      搜索引擎索引
-                    </label>
-                    <p className="text-sm text-foreground/80">
-                      {detailsForm.robotsIndex ? "允许" : "禁止"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* SEO 设置 - 只读展示 */}
-              {(detailsForm.metaDescription || detailsForm.metaKeywords) && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-                    SEO 设置
-                  </h3>
-                  <div className="grid grid-cols-1 gap-4 bg-muted/20 p-4 rounded-lg">
-                    {detailsForm.metaDescription && (
-                      <div>
-                        <label className="block text-sm font-medium text-foreground mb-1">
-                          SEO 描述
-                        </label>
-                        <p className="text-sm text-foreground/80">
-                          {detailsForm.metaDescription}
-                        </p>
-                      </div>
-                    )}
-                    {detailsForm.metaKeywords && (
-                      <div>
-                        <label className="block text-sm font-medium text-foreground mb-1">
-                          SEO 关键词
-                        </label>
-                        <p className="text-sm text-foreground/80">
-                          {detailsForm.metaKeywords}
-                        </p>
-                      </div>
-                    )}
+                  {/* 操作按钮 */}
+                  <div className="flex justify-between gap-4 pt-4 border-t border-foreground/10">
+                    <Button
+                      label="上一步"
+                      variant="ghost"
+                      onClick={handleBackToConfirm}
+                      size="sm"
+                      disabled={isSubmitting}
+                    />
+                    <Button
+                      label={
+                        isEditMode
+                          ? "保存"
+                          : confirmAction === "publish"
+                            ? "发布"
+                            : "保存为草稿"
+                      }
+                      variant="primary"
+                      onClick={handleFinalSubmit}
+                      size="sm"
+                      loading={isSubmitting}
+                      loadingText={
+                        isEditMode
+                          ? "保存中..."
+                          : confirmAction === "publish"
+                            ? "发布中..."
+                            : "保存中..."
+                      }
+                    />
                   </div>
                 </div>
               )}
-
-              {/* 特色图片 - 只读展示 */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-                  特色图片
-                </h3>
-                <div className="bg-muted/20 p-4 rounded-lg">
-                  {detailsForm.featuredImage ? (
-                    <div className="space-y-2 ">
-                      <img
-                        src={detailsForm.featuredImage}
-                        alt="特色图片预览"
-                        className="w-full max-h-[20em] rounded-md object-cover"
-                      />
-                      <p className="text-xs text-foreground/60 break-all">
-                        {detailsForm.featuredImage}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">
-                      （未设置）
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* 操作按钮 */}
-              <div className="flex justify-between gap-4 pt-4 border-t border-foreground/10">
-                <Button
-                  label="取消"
-                  variant="ghost"
-                  onClick={closeConfirmDialog}
-                  size="sm"
-                  disabled={isSubmitting}
-                />
-                <div className="flex gap-2">
-                  <Button
-                    label={isEditMode ? "更改详细信息" : "设置详细信息"}
-                    variant="ghost"
-                    onClick={openDetailsFromConfirm}
-                    size="sm"
-                    disabled={isSubmitting}
-                  />
-                  <Button
-                    label="下一步"
-                    variant="primary"
-                    onClick={handleNextStep}
-                    size="sm"
-                    disabled={isSubmitting || !detailsForm.title.trim()}
-                  />
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* 提交信息输入 */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-                  提交信息
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  添加提交信息（可选）
-                </p>
-                <Input
-                  label="提交信息（可选）"
-                  value={commitMessage}
-                  onChange={(e) => setCommitMessage(e.target.value)}
-                  rows={3}
-                  size="sm"
-                  helperText="提交信息将帮助您追踪文章的修改历史"
-                />
-              </div>
-
-              {/* 操作按钮 */}
-              <div className="flex justify-between gap-4 pt-4 border-t border-foreground/10">
-                <Button
-                  label="上一步"
-                  variant="ghost"
-                  onClick={handleBackToConfirm}
-                  size="sm"
-                  disabled={isSubmitting}
-                />
-                <Button
-                  label={
-                    isEditMode
-                      ? "保存"
-                      : confirmAction === "publish"
-                        ? "发布"
-                        : "保存为草稿"
-                  }
-                  variant="primary"
-                  onClick={handleFinalSubmit}
-                  size="sm"
-                  loading={isSubmitting}
-                  loadingText={
-                    isEditMode
-                      ? "保存中..."
-                      : confirmAction === "publish"
-                        ? "发布中..."
-                        : "保存中..."
-                  }
-                />
-              </div>
-            </>
-          )}
-        </div>
+            </AutoTransition>
+          </div>
+        </AutoResizer>
       </Dialog>
     </RowGrid>
   );

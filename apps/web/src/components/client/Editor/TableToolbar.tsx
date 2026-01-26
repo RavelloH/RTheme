@@ -12,15 +12,12 @@ import {
   RiInsertRowBottom,
   RiDeleteColumn,
   RiDeleteRow,
-  RiTableLine,
   RiAlignLeft,
   RiAlignCenter,
   RiAlignRight,
 } from "@remixicon/react";
 import { Toggle } from "@/ui/Toggle";
 import { Tooltip } from "@/ui/Tooltip";
-import { AlertDialog } from "@/ui/AlertDialog";
-import { useState } from "react";
 
 interface TableToolbarProps {
   editor: Editor;
@@ -28,8 +25,6 @@ interface TableToolbarProps {
 }
 
 export function TableToolbar({ editor, isVisible }: TableToolbarProps) {
-  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
-
   // 设置当前列的对齐方式
   const setColumnAlignment = (align: "left" | "center" | "right") => {
     const { state, view } = editor;
@@ -140,7 +135,6 @@ export function TableToolbar({ editor, isVisible }: TableToolbarProps) {
 
   const handleDeleteTable = () => {
     editor.chain().focus().deleteTable().run();
-    setShowDeleteAlert(false);
   };
 
   const tableButtons = [
@@ -202,14 +196,8 @@ export function TableToolbar({ editor, isVisible }: TableToolbarProps) {
       disabled: !editor.can().deleteRow(),
     },
     {
-      icon: <RiTableLine size="1.2em" />,
-      action: () => editor.chain().focus().toggleHeaderRow().run(),
-      name: "开关表头行",
-      disabled: !editor.can().toggleHeaderRow(),
-    },
-    {
       icon: <RiDeleteBinLine size="1.2em" className="text-error" />,
-      action: () => setShowDeleteAlert(true),
+      action: () => handleDeleteTable(),
       name: "删除表格",
       disabled: !editor.can().deleteTable(),
     },
@@ -245,18 +233,6 @@ export function TableToolbar({ editor, isVisible }: TableToolbarProps) {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* 删除表格确认对话框 */}
-      <AlertDialog
-        open={showDeleteAlert}
-        onClose={() => setShowDeleteAlert(false)}
-        onConfirm={handleDeleteTable}
-        title="删除表格"
-        description="确定要删除此表格吗？此操作无法撤销。"
-        confirmText="删除"
-        cancelText="取消"
-        variant="danger"
-      />
     </>
   );
 }
