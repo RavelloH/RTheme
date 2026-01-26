@@ -11,6 +11,7 @@ import HighlightedText from "./HighlightedText";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { RiGhostLine } from "@remixicon/react";
 
 export interface PostData {
   title: string;
@@ -54,6 +55,7 @@ export default function SearchContent({
   const [posts, setPosts] = useState<PostData[]>(initialPosts);
   const [isSearching, setIsSearching] = useState(false);
   const [currentSearchQuery, setCurrentSearchQuery] = useState(searchQuery);
+  const [currentSearchToken, setCurrentSearchToken] = useState<string[]>([]);
   const hasSearched = useRef(false); // 跟踪是否执行过搜索
 
   // 监听 isSearching 变化并通知父组件
@@ -76,6 +78,7 @@ export default function SearchContent({
       });
 
       if (result.success && result.data?.posts) {
+        setCurrentSearchToken(result.data.tokensUsed);
         // 转换搜索结果为 PostData 格式
         const searchResults: PostData[] = result.data.posts.map((item) => ({
           title: item.title,
@@ -110,7 +113,6 @@ export default function SearchContent({
         }));
 
         setPosts(searchResults);
-        console.log("搜索结果:", searchResults);
       } else {
         // 搜索失败或无结果时，显示空列表
         setPosts([]);
@@ -330,9 +332,10 @@ export default function SearchContent({
               areas={createArray(1, 12)}
               width={1}
               height={1}
-              className="flex items-center justify-center text-muted-foreground"
+              className="flex items-center justify-center text-muted-foreground flex-col gap-4 p-10 text-center"
             >
-              {`未找到与 "${currentSearchQuery}" 相关的文章`}
+              <RiGhostLine size={"5em"} className="opacity-70" />
+              {`未找到与 "${currentSearchToken.join("、") || currentSearchQuery}" 相关的文章`}
             </GridItem>
           </RowGrid>
         ) : (

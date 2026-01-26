@@ -640,12 +640,23 @@ export async function addCustomWord(
     // 对词汇进行分词，找出当前分词结果中包含这些子词的文章
     const tokens = await analyzeText(word);
 
-    // 构建搜索查询：使用 OR 连接所有子词
-    const searchQuery = tokens.join(" | ");
+    // 转义 token 以便安全地用于 PostgreSQL tsquery
+    const escapeTsqueryToken = (token: string): string => {
+      // 转义反斜杠和双引号，然后用双引号包裹
+      const escaped = token.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+      return `"${escaped}"`;
+    };
+
+    // 转义所有 tokens
+    const escapedTokens = tokens.map(escapeTsqueryToken);
 
     let affectedPosts: Array<{ slug: string; title: string }> = [];
 
+    // 只有在存在 token 时才进行搜索
     if (tokens.length > 0) {
+      // 构建搜索查询：使用 OR 连接所有子词
+      const searchQuery = escapedTokens.join(" | ");
+
       affectedPosts = await prisma.$queryRawUnsafe<
         Array<{ slug: string; title: string }>
       >(
@@ -832,6 +843,15 @@ export async function deleteCustomWord(
 
     // 在删除之前，先搜索包含该词汇的文章
     // 搜索现有索引中包含该完整词汇的文章
+    // 转义 token 以便安全地用于 PostgreSQL tsquery
+    const escapeTsqueryToken = (token: string): string => {
+      // 转义反斜杠和双引号，然后用双引号包裹
+      const escaped = token.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+      return `"${escaped}"`;
+    };
+
+    const escapedWord = escapeTsqueryToken(wordData.word);
+
     const affectedPosts = await prisma.$queryRawUnsafe<
       Array<{ slug: string; title: string }>
     >(
@@ -844,7 +864,7 @@ export async function deleteCustomWord(
       ORDER BY slug
       LIMIT 100
     `,
-      wordData.word,
+      escapedWord,
     );
 
     // 删除词汇
@@ -1402,13 +1422,24 @@ export async function searchPosts(
       });
     }
 
-    // 2. 准备查询字符串
+    // 2. 转义 token 以便安全地用于 PostgreSQL tsquery
+    // 策略：直接用双引号包裹所有 token，确保安全
+    const escapeTsqueryToken = (token: string): string => {
+      // 转义反斜杠和双引号，然后用引号包裹
+      const escaped = token.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+      return `'${escaped}'`;
+    };
+
+    // 转义所有 tokens
+    const escapedTokens = tokens.map(escapeTsqueryToken);
+
+    // 3. 准备查询字符串
     // OR 查询：用于 WHERE 过滤（保证召回率）和基础相关性
-    const orQueryStr = tokens.join(" | ");
+    const orQueryStr = escapedTokens.join(" | ");
     // AND 查询：用于排序加分，奖励包含所有词的文章
-    const andQueryStr = tokens.join(" & ");
+    const andQueryStr = escapedTokens.join(" & ");
     // PHRASE 查询：用于排序加分，奖励包含连续短语的文章
-    const phraseQueryStr = tokens.join(" <-> ");
+    const phraseQueryStr = escapedTokens.join(" <-> ");
 
     // 3. 根据 searchIn 参数决定搜索字段和排名计算
     // 我们将使用三个参数 $1(OR), $2(AND), $3(PHRASE)

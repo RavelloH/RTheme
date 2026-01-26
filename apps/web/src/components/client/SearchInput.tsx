@@ -43,6 +43,7 @@ export default function SearchInput() {
       label="搜索全站文章..."
       icon={<RiSearch2Line size={"1em"} />}
       value={inputValue}
+      maxLength={200}
       onChange={handleChange}
     />
   );
