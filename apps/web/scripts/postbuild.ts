@@ -9,7 +9,7 @@ rlog.config.setConfig({
     { reg: "Standalone", color: "cyan" },
     { reg: "Standard", color: "blue" },
     { reg: "pnpm start", color: "yellow" },
-    { reg: "node .next/standalone/server.js", color: "yellow" },
+    { reg: "node .next/standalone/apps/web/server.js", color: "yellow" },
   ],
 });
 
@@ -89,15 +89,25 @@ async function main() {
     rlog.info("> Integrating static assets into standalone package...");
 
     try {
-      // 1. 复制 public -> .next/standalone/public
-      const destPublic = path.join(standaloneDir, "public");
+      // 1. 复制 public -> .next/standalone/apps/web/public
+      const destPublic = path.join(standaloneDir, "apps", "web", "public");
       if (fs.existsSync(publicDir)) {
+        fs.mkdirSync(path.dirname(destPublic), { recursive: true });
         fs.cpSync(publicDir, destPublic, { recursive: true });
       }
 
-      // 2. 复制 .next/static -> .next/standalone/.next/static
-      const destStatic = path.join(standaloneDir, ".next", "static");
+      // 2. 复制 .next/static -> .next/standalone/apps/web/.next/static
+      const destStatic = path.join(
+        standaloneDir,
+        "apps",
+        "web",
+        ".next",
+        "static",
+      );
       if (fs.existsSync(staticDir)) {
+        fs.mkdirSync(path.join(standaloneDir, "apps", "web", ".next"), {
+          recursive: true,
+        });
         fs.cpSync(staticDir, destStatic, { recursive: true });
       }
 
@@ -153,7 +163,7 @@ async function main() {
 
   if (isStandalone) {
     rlog.info("Run standalone server (Self-contained):");
-    rlog.log("  node .next/standalone/server.js");
+    rlog.log("  node .next/standalone/apps/web/server.js");
     rlog.log("OR run standard server:");
     rlog.log("  pnpm start");
   } else {

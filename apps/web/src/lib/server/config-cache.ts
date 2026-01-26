@@ -27,8 +27,8 @@ const CACHE_FILE_PATH = path.join(
 
 /**
  * 获取原始配置项
- * 在 build 阶段从缓存文件读取
- * 在开发环境和生产环境中使用 unstable_cache
+ * - 如果缓存文件存在，从缓存文件读取（构建阶段）
+ * - 否则使用 unstable_cache 从数据库读取（开发/生产环境）
  */
 export async function getRawConfig(key: string): Promise<ConfigItem | null> {
   // 检查是否为敏感配置
@@ -36,12 +36,15 @@ export async function getRawConfig(key: string): Promise<ConfigItem | null> {
     throw Error("无法获取敏感配置项");
   }
 
-  // build 阶段使用文件缓存
-  if (process.env.IS_BUILDING === "true") {
-    return getConfigFromCache(key);
+  // 如果缓存文件存在，从缓存读取（构建阶段）
+  if (fs.existsSync(CACHE_FILE_PATH)) {
+    const config = getConfigFromCache(key);
+    if (config) {
+      return config;
+    }
   }
 
-  // dev 和生产环境使用 unstable_cache
+  // 缓存文件不存在或未找到配置，使用 unstable_cache 从数据库读取
   const getCachedData = unstable_cache(
     async (k: string) => {
       return await getConfigFromDatabase(k);
@@ -159,7 +162,6 @@ async function getConfigFromDatabase(key: string): Promise<ConfigItem | null> {
 function getConfigFromCache(key: string): ConfigItem | null {
   try {
     if (!fs.existsSync(CACHE_FILE_PATH)) {
-      console.warn("配置缓存文件不存在:", CACHE_FILE_PATH);
       return null;
     }
 
@@ -188,13 +190,15 @@ function getConfigFromCache(key: string): ConfigItem | null {
  * 过滤掉 secret 开头的敏感配置项和 description 字段
  */
 export async function getAllConfigs(): Promise<Record<string, ConfigItem>> {
-  // build 阶段使用文件缓存
-  if (process.env.IS_BUILDING === "true") {
+  // 如果缓存文件存在，从缓存读取（构建阶段）
+  if (fs.existsSync(CACHE_FILE_PATH)) {
     const allConfigs = getAllConfigsFromCache();
-    return filterSensitiveConfigs(allConfigs);
+    if (Object.keys(allConfigs).length > 0) {
+      return filterSensitiveConfigs(allConfigs);
+    }
   }
 
-  // dev 和生产环境使用 unstable_cache
+  // 缓存文件不存在或为空，使用 unstable_cache 从数据库读取
   const getCachedData = unstable_cache(
     async () => {
       const allConfigs = await getAllConfigsFromDatabase();
@@ -275,7 +279,6 @@ async function getAllConfigsFromDatabase(): Promise<
 function getAllConfigsFromCache(): Record<string, ConfigItem> {
   try {
     if (!fs.existsSync(CACHE_FILE_PATH)) {
-      console.warn("配置缓存文件不存在:", CACHE_FILE_PATH);
       return {};
     }
 

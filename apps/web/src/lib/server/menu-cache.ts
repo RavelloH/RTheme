@@ -40,16 +40,19 @@ const CACHE_FILE_PATH = path.join(process.cwd(), ".cache", ".menu-cache.json");
 
 /**
  * 获取菜单项列表
- * 在 build 阶段从缓存文件读取
- * 在开发环境和生产环境中使用 unstable_cache
+ * - 如果缓存文件存在，从缓存文件读取（构建阶段）
+ * - 否则使用 unstable_cache 从数据库读取（开发/生产环境）
  */
 export async function getMenus(): Promise<MenuItem[]> {
-  // build 阶段使用文件缓存
-  if (process.env.IS_BUILDING === "true") {
-    return getMenusFromCache();
+  // 如果缓存文件存在，从缓存读取（构建阶段）
+  if (fs.existsSync(CACHE_FILE_PATH)) {
+    const menus = getMenusFromCache();
+    if (menus.length > 0) {
+      return menus;
+    }
   }
 
-  // dev 和生产环境使用 unstable_cache
+  // 缓存文件不存在或为空，使用 unstable_cache 从数据库读取
   const getCachedData = unstable_cache(
     async () => {
       return await getMenusFromDatabase();
@@ -147,7 +150,6 @@ async function getMenusFromDatabase(): Promise<MenuItem[]> {
 function getMenusFromCache(): MenuItem[] {
   try {
     if (!fs.existsSync(CACHE_FILE_PATH)) {
-      console.warn("菜单缓存文件不存在:", CACHE_FILE_PATH);
       return [];
     }
 
