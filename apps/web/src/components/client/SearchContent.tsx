@@ -420,7 +420,7 @@ export default function SearchContent({
                             category={post.categories}
                             tags={post.tags}
                             cover={post.coverData}
-                            showAll
+                            showAll={hasSearched.current}
                             summary={
                               post.excerptHighlight ? (
                                 <HighlightedText html={post.excerptHighlight} />
