@@ -31,6 +31,7 @@ export const CommentReplyRefSchema = z
   .object({
     id: z.string().uuid(),
     authorName: z.string(),
+    content: z.string(),
   })
   .nullable();
 
@@ -169,6 +170,7 @@ export type DeleteComments = z.infer<typeof DeleteCommentsSchema>;
 registerSchema("DeleteComments", DeleteCommentsSchema);
 
 export const AdminCommentItemSchema = CommentItemSchema.extend({
+  postTitle: z.string().nullable(),
   email: z.string().nullable(),
   ipAddress: z.string().nullable(),
   userAgent: z.string().nullable(),

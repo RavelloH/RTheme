@@ -233,6 +233,7 @@ model Comment {
   id        String        @id @default(uuid())
   content   String
   ipAddress String?       @db.VarChar(45) // IP地址，用于反垃圾评论
+  userAgent String?       @db.VarChar(500) // 用户代理，用于识别浏览器和设备
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   deletedAt DateTime?

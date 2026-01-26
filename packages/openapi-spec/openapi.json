@@ -14390,11 +14390,15 @@
                     },
                     "authorName": {
                       "type": "string"
+                    },
+                    "content": {
+                      "type": "string"
                     }
                   },
                   "required": [
                     "id",
-                    "authorName"
+                    "authorName",
+                    "content"
                   ],
                   "additionalProperties": false
                 },
@@ -14695,11 +14699,15 @@
                   },
                   "authorName": {
                     "type": "string"
+                  },
+                  "content": {
+                    "type": "string"
                   }
                 },
                 "required": [
                   "id",
-                  "authorName"
+                  "authorName",
+                  "content"
                 ],
                 "additionalProperties": false
               },
@@ -14908,11 +14916,15 @@
                     },
                     "authorName": {
                       "type": "string"
+                    },
+                    "content": {
+                      "type": "string"
                     }
                   },
                   "required": [
                     "id",
-                    "authorName"
+                    "authorName",
+                    "content"
                   ],
                   "additionalProperties": false
                 },
@@ -15159,11 +15171,15 @@
                     },
                     "authorName": {
                       "type": "string"
+                    },
+                    "content": {
+                      "type": "string"
                     }
                   },
                   "required": [
                     "id",
-                    "authorName"
+                    "authorName",
+                    "content"
                   ],
                   "additionalProperties": false
                 },
@@ -15523,11 +15539,15 @@
                     },
                     "authorName": {
                       "type": "string"
+                    },
+                    "content": {
+                      "type": "string"
                     }
                   },
                   "required": [
                     "id",
-                    "authorName"
+                    "authorName",
+                    "content"
                   ],
                   "additionalProperties": false
                 },
@@ -15564,6 +15584,10 @@
                 "isLiked": {
                   "type": "boolean"
                 },
+                "postTitle": {
+                  "nullable": true,
+                  "type": "string"
+                },
                 "email": {
                   "nullable": true,
                   "type": "string"
@@ -15594,6 +15618,7 @@
                 "hasMore",
                 "descendantCount",
                 "likeCount",
+                "postTitle",
                 "email",
                 "ipAddress",
                 "userAgent"

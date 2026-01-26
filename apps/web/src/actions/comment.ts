@@ -354,6 +354,7 @@ const commentSelect = {
   authorEmail: true,
   authorWebsite: true,
   ipAddress: true,
+  userAgent: true,
   // 层级树形结构字段
   depth: true,
   path: true,
@@ -373,6 +374,7 @@ const commentSelect = {
   parent: {
     select: {
       id: true,
+      content: true,
       authorName: true,
       user: { select: { nickname: true, username: true } },
     },
@@ -467,6 +469,7 @@ async function mapCommentToItem(
             comment.parent.user?.username ||
             comment.parent.authorName ||
             "匿名",
+          content: comment.parent.content,
         }
       : null,
     // 层级树形结构字段
@@ -1217,8 +1220,10 @@ export async function createComment(
     }
   }
 
-  // 获取客户端 IP 地址
+  // 获取客户端 IP 地址和 User Agent
   const ipAddress = await getClientIP();
+  const headersList = await headers();
+  const userAgent = headersList.get("user-agent") || undefined;
 
   // 检查是否启用 Akismet
   const akismetEnabled = await isAkismetEnabled();
@@ -1289,6 +1294,7 @@ export async function createComment(
       authorWebsite:
         dbUser?.website || (allowAnonWebsite ? authorWebsite || null : null),
       ipAddress,
+      userAgent,
       depth,
       path: "", // 先创建记录，稍后更新 path
       sortKey,
@@ -1351,9 +1357,7 @@ export async function createComment(
     status: akismetEnabled && !isPrivilegedUser ? normalStatus : mapped.status,
   };
 
-  // 获取 headers 用于 Akismet 检查
-  const headersList = await headers();
-  const userAgent = headersList.get("user-agent") || undefined;
+  // 获取 referrer 用于 Akismet 检查
   const referrer = headersList.get("referer") || undefined;
 
   // Akismet
@@ -1843,8 +1847,10 @@ export async function getCommentsAdmin(
       );
       return {
         ...mapped,
+        postTitle: row.post.title,
         email: row.authorEmail,
         ipAddress: row.ipAddress,
+        userAgent: row.userAgent,
       };
     }),
   );
