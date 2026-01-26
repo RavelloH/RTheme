@@ -58,72 +58,111 @@ export default function SearchContent({
   const [currentSearchToken, setCurrentSearchToken] = useState<string[]>([]);
   const hasSearched = useRef(false); // 跟踪是否执行过搜索
 
+  // 生成或获取 sessionId（在组件挂载时生成一次）
+  const [sessionId] = useState(() => {
+    // 使用 crypto API 生成 UUID
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    // 备用方案：生成简单的 UUID
+    return "xxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (_c) => {
+      const num = (Math.random() * 16) | 0;
+      return num.toString(16);
+    });
+  });
+
   // 监听 isSearching 变化并通知父组件
   useEffect(() => {
     onSearchStateChange?.(isSearching);
   }, [isSearching, onSearchStateChange]);
 
-  // 防抖搜索函数
-  const performSearch = useCallback(async (query: string) => {
-    setIsSearching(true);
-    hasSearched.current = true; // 标记已执行搜索
-
-    try {
-      const result = await searchPosts({
-        query: query.trim(),
-        page: 1,
-        pageSize: 20,
-        searchIn: "both",
-        status: "PUBLISHED",
-      });
-
-      if (result.success && result.data?.posts) {
-        setCurrentSearchToken(result.data.tokensUsed);
-        // 转换搜索结果为 PostData 格式
-        const searchResults: PostData[] = result.data.posts.map((item) => ({
-          title: item.title,
-          titleHighlight: item.titleHighlight,
-          slug: item.slug,
-          excerpt: item.excerpt,
-          excerptHighlight: item.excerptHighlight,
-          isPinned: item.isPinned,
-          publishedAt: item.publishedAt ? new Date(item.publishedAt) : null,
-          categories: item.categories
-            ? item.categories.map((cat) => ({
-                name: cat.name,
-                slug: cat.slug,
-              }))
-            : [],
-          tags: item.tags
-            ? item.tags.map((tag) => ({
-                name: tag.name,
-                slug: tag.slug,
-              }))
-            : [],
-          coverData: item.coverData
-            ? [
-                {
-                  url: item.coverData.url,
-                  width: item.coverData.width || undefined,
-                  height: item.coverData.height || undefined,
-                  blur: item.coverData.blur || undefined,
-                },
-              ]
-            : undefined,
-        }));
-
-        setPosts(searchResults);
+  // 获取或生成 visitorId
+  const getVisitorId = useCallback((): string => {
+    let visitorId = localStorage.getItem("visitor_id");
+    if (!visitorId) {
+      // 生成新的 visitorId
+      if (typeof crypto !== "undefined" && crypto.randomUUID) {
+        visitorId = crypto.randomUUID();
       } else {
-        // 搜索失败或无结果时，显示空列表
-        setPosts([]);
+        // 备用方案
+        visitorId =
+          "visitor_" +
+          "xxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (_c) => {
+            const num = (Math.random() * 16) | 0;
+            return num.toString(16);
+          });
       }
-    } catch (error) {
-      console.error("搜索出错:", error);
-      setPosts([]);
-    } finally {
-      setIsSearching(false);
+      localStorage.setItem("visitor_id", visitorId);
     }
+    return visitorId;
   }, []);
+
+  // 防抖搜索函数
+  const performSearch = useCallback(
+    async (query: string) => {
+      setIsSearching(true);
+      hasSearched.current = true; // 标记已执行搜索
+
+      try {
+        const result = await searchPosts({
+          query: query.trim(),
+          page: 1,
+          pageSize: 20,
+          searchIn: "both",
+          status: "PUBLISHED",
+          sessionId, // 传递 sessionId
+          visitorId: getVisitorId(), // 获取或生成 visitorId
+        });
+
+        if (result.success && result.data?.posts) {
+          setCurrentSearchToken(result.data.tokensUsed);
+          // 转换搜索结果为 PostData 格式
+          const searchResults: PostData[] = result.data.posts.map((item) => ({
+            title: item.title,
+            titleHighlight: item.titleHighlight,
+            slug: item.slug,
+            excerpt: item.excerpt,
+            excerptHighlight: item.excerptHighlight,
+            isPinned: item.isPinned,
+            publishedAt: item.publishedAt ? new Date(item.publishedAt) : null,
+            categories: item.categories
+              ? item.categories.map((cat) => ({
+                  name: cat.name,
+                  slug: cat.slug,
+                }))
+              : [],
+            tags: item.tags
+              ? item.tags.map((tag) => ({
+                  name: tag.name,
+                  slug: tag.slug,
+                }))
+              : [],
+            coverData: item.coverData
+              ? [
+                  {
+                    url: item.coverData.url,
+                    width: item.coverData.width || undefined,
+                    height: item.coverData.height || undefined,
+                    blur: item.coverData.blur || undefined,
+                  },
+                ]
+              : undefined,
+          }));
+
+          setPosts(searchResults);
+        } else {
+          // 搜索失败或无结果时，显示空列表
+          setPosts([]);
+        }
+      } catch (error) {
+        console.error("搜索出错:", error);
+        setPosts([]);
+      } finally {
+        setIsSearching(false);
+      }
+    },
+    [sessionId, getVisitorId],
+  );
 
   // 监听广播消息
   useBroadcast<SearchMessage>((message) => {

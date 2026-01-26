@@ -10,6 +10,8 @@ import { validateData } from "@/lib/server/validator";
 import { logAuditEvent } from "@/lib/server/audit";
 import { analyzeText } from "@/lib/server/tokenizer";
 import { generateSignature } from "@/lib/server/image-crypto";
+import { getClientIP } from "@/lib/server/get-client-info";
+import { resolveIpLocation } from "@/lib/server/ip-utils";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
@@ -41,6 +43,11 @@ import type {
   SearchIndexStatsResult,
   SearchPostsResultItem,
   PostStatus,
+  GetSearchLogStats,
+  SearchLogStatsResult,
+  SearchLogDailyTrend,
+  GetSearchLogs,
+  SearchLogItem,
 } from "@repo/shared-types/api/search";
 import {
   TestTokenizeSchema,
@@ -51,6 +58,8 @@ import {
   GetPostTokenDetailsSchema,
   DeleteCustomWordSchema,
   DeleteIndexSchema,
+  GetSearchLogStatsSchema,
+  GetSearchLogsSchema,
 } from "@repo/shared-types/api/search";
 
 type ActionEnvironment = "serverless" | "serveraction";
@@ -58,6 +67,14 @@ type ActionConfig = { environment?: ActionEnvironment };
 type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
+
+// 辅助函数：获取本地日期字符串（YYYY-MM-DD格式）
+function getLocalDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 // formatDuration 函数已弃用，保留用于未来可能的性能监控功能
 
@@ -1383,7 +1400,15 @@ export async function searchPosts(
   serverConfig?: ActionConfig,
 ): Promise<ApiResponse<SearchPostsResult | null>>;
 export async function searchPosts(
-  { query, page = 1, pageSize = 10, searchIn = "both", status }: SearchPosts,
+  {
+    query,
+    page = 1,
+    pageSize = 10,
+    searchIn = "both",
+    status,
+    sessionId,
+    visitorId,
+  }: SearchPosts,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<SearchPostsResult | null>> {
   const response = new ResponseBuilder(
@@ -1408,10 +1433,35 @@ export async function searchPosts(
   if (validationError) return response.badRequest(validationError);
 
   try {
+    // 记录搜索开始时间
+    const searchStartTime = performance.now();
+
     // 1. 对搜索词进行分词
     const tokens = await analyzeText(query);
 
     if (tokens.length === 0) {
+      // 即使没有分词结果，也要记录搜索日志
+      const searchEndTime = performance.now();
+      const durationMs = Math.round(searchEndTime - searchStartTime);
+
+      // 获取客户端 IP
+      const clientIP = await getClientIP();
+
+      const { after } = await import("next/server");
+      after(async () => {
+        await prisma.searchLog.create({
+          data: {
+            query,
+            tokens: [],
+            resultCount: 0,
+            durationMs,
+            ip: clientIP,
+            sessionId: sessionId || null,
+            visitorId: visitorId || null,
+          },
+        });
+      });
+
       return response.ok({
         data: {
           posts: [],
@@ -1519,6 +1569,28 @@ export async function searchPosts(
     const total = Number(countResult[0]?.count || 0);
 
     if (total === 0) {
+      // 即使没有搜索结果，也要记录搜索日志
+      const searchEndTime = performance.now();
+      const durationMs = Math.round(searchEndTime - searchStartTime);
+
+      // 获取客户端 IP
+      const clientIP = await getClientIP();
+
+      const { after } = await import("next/server");
+      after(async () => {
+        await prisma.searchLog.create({
+          data: {
+            query,
+            tokens,
+            resultCount: 0,
+            durationMs,
+            ip: clientIP,
+            sessionId: sessionId || null,
+            visitorId: visitorId || null,
+          },
+        });
+      });
+
       return response.ok({
         data: {
           posts: [],
@@ -1720,6 +1792,12 @@ export async function searchPosts(
       .filter((item): item is SearchPostsResultItem => item !== null);
 
     // 10. 记录搜索日志
+    const searchEndTime = performance.now();
+    const durationMs = Math.round(searchEndTime - searchStartTime);
+
+    // 获取客户端 IP
+    const clientIP = await getClientIP();
+
     const { after } = await import("next/server");
     after(async () => {
       await prisma.searchLog.create({
@@ -1727,6 +1805,10 @@ export async function searchPosts(
           query,
           tokens,
           resultCount: total,
+          durationMs,
+          ip: clientIP,
+          sessionId: sessionId || null,
+          visitorId: visitorId || null,
         },
       });
     });
@@ -2161,5 +2243,387 @@ export async function getSearchIndexStats(
   } catch (error) {
     console.error("获取搜索索引统计失败:", error);
     return response.serverError({ message: "获取搜索索引统计失败" });
+  }
+}
+
+/*
+  getSearchLogStats - 获取搜索日志统计信息
+*/
+export async function getSearchLogStats(
+  params: Omit<GetSearchLogStats, "access_token">,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<SearchLogStatsResult | null>>>;
+export async function getSearchLogStats(
+  params: Omit<GetSearchLogStats, "access_token">,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<SearchLogStatsResult | null>>;
+export async function getSearchLogStats(
+  { days = 30 }: Omit<GetSearchLogStats, "access_token">,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<SearchLogStatsResult | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "getSearchLogStats"))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    { days },
+    GetSearchLogStatsSchema.omit({ access_token: true }),
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 从 cookies 获取 access token
+  const { cookies } = await import("next/headers");
+  const cookieStore = await cookies();
+  const access_token = cookieStore.get("ACCESS_TOKEN")?.value;
+
+  if (!access_token) {
+    return response.unauthorized({ message: "请先登录" });
+  }
+
+  // 身份验证 - 仅管理员和编辑可以查看
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 计算日期范围
+    const now = new Date();
+    const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    startDate.setHours(0, 0, 0, 0);
+    now.setHours(23, 59, 59, 999);
+
+    // 1. 获取日期范围内的所有搜索日志
+    const searchLogs = await prisma.searchLog.findMany({
+      where: {
+        createdAt: {
+          gte: startDate,
+          lte: now,
+        },
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+    });
+
+    // 2. 统计基础数据
+    const totalSearches = searchLogs.length;
+    const uniqueQueriesSet = new Set(searchLogs.map((log) => log.query));
+    const uniqueQueries = uniqueQueriesSet.size;
+
+    const totalResultCount = searchLogs.reduce(
+      (sum, log) => sum + log.resultCount,
+      0,
+    );
+    const avgResultCount =
+      totalSearches > 0 ? totalResultCount / totalSearches : 0;
+
+    const zeroResultCount = searchLogs.filter(
+      (log) => log.resultCount === 0,
+    ).length;
+    const zeroResultRate =
+      totalSearches > 0 ? (zeroResultCount / totalSearches) * 100 : 0;
+
+    const totalDuration = searchLogs.reduce(
+      (sum, log) => sum + (log.durationMs || 0),
+      0,
+    );
+    const durationCount = searchLogs.filter(
+      (log) => log.durationMs !== null,
+    ).length;
+    const avgDuration = durationCount > 0 ? totalDuration / durationCount : 0;
+
+    // 3. 按日期分组统计
+    const dailyMap = new Map<string, SearchLogDailyTrend>();
+
+    for (const log of searchLogs) {
+      const dateKey = getLocalDateString(log.createdAt);
+
+      if (!dailyMap.has(dateKey)) {
+        dailyMap.set(dateKey, {
+          date: dateKey,
+          searchCount: 0,
+          uniqueVisitors: 0,
+          zeroResultCount: 0,
+          avgDuration: 0,
+        });
+      }
+
+      const trend = dailyMap.get(dateKey)!;
+      trend.searchCount++;
+      if (log.resultCount === 0) {
+        trend.zeroResultCount++;
+      }
+    }
+
+    // 4. 计算每日唯一访客数和平均耗时
+    for (const [dateKey, trend] of dailyMap.entries()) {
+      const dayLogs = searchLogs.filter((log) => {
+        const logDateKey = getLocalDateString(log.createdAt);
+        return logDateKey === dateKey;
+      });
+      // 统计唯一的 visitorId（排除 null 值）
+      const uniqueVisitorsSet = new Set(
+        dayLogs
+          .filter((log) => log.visitorId !== null)
+          .map((log) => log.visitorId),
+      );
+      trend.uniqueVisitors = uniqueVisitorsSet.size;
+
+      const dayDuration = dayLogs.reduce(
+        (sum, log) => sum + (log.durationMs || 0),
+        0,
+      );
+      const dayDurationCount = dayLogs.filter(
+        (log) => log.durationMs !== null,
+      ).length;
+      trend.avgDuration =
+        dayDurationCount > 0 ? dayDuration / dayDurationCount : 0;
+    }
+
+    // 5. 填充缺失的日期
+    const dailyTrend: SearchLogDailyTrend[] = [];
+    const currentDate = new Date(startDate);
+    while (currentDate <= now) {
+      const dateKey = getLocalDateString(currentDate);
+      dailyTrend.push(
+        dailyMap.get(dateKey) || {
+          date: dateKey,
+          searchCount: 0,
+          uniqueVisitors: 0,
+          zeroResultCount: 0,
+          avgDuration: 0,
+        },
+      );
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // 6. 统计热门搜索词（原始搜索词）
+    const queryFrequency = new Map<string, number>();
+    for (const log of searchLogs) {
+      queryFrequency.set(log.query, (queryFrequency.get(log.query) || 0) + 1);
+    }
+
+    const topQueries = Array.from(queryFrequency.entries())
+      .map(([query, count]) => ({ query, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 50);
+
+    // 7. 统计热门分词（token 频率统计）
+    // 对每次搜索的 token 去重，防止单次搜索中的重复 token 影响统计
+    const tokenFrequency = new Map<string, number>();
+    for (const log of searchLogs) {
+      // 先对本次搜索的 tokens 去重
+      const uniqueTokens = new Set(log.tokens);
+      // 然后遍历去重后的 tokens 进行统计
+      for (const token of uniqueTokens) {
+        tokenFrequency.set(token, (tokenFrequency.get(token) || 0) + 1);
+      }
+    }
+
+    const topTokens = Array.from(tokenFrequency.entries())
+      .map(([token, count]) => ({ token, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 50);
+
+    // 8. 统计无结果热门词
+    const zeroResultQueryFrequency = new Map<string, number>();
+    for (const log of searchLogs.filter((l) => l.resultCount === 0)) {
+      zeroResultQueryFrequency.set(
+        log.query,
+        (zeroResultQueryFrequency.get(log.query) || 0) + 1,
+      );
+    }
+
+    const topZeroResultQueries = Array.from(zeroResultQueryFrequency.entries())
+      .map(([query, count]) => ({ query, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 20);
+
+    // 9. 构建统计结果
+    const stats: SearchLogStatsResult = {
+      totalSearches,
+      uniqueQueries,
+      avgResultCount: Math.round(avgResultCount * 100) / 100,
+      zeroResultRate: Math.round(zeroResultRate * 100) / 100,
+      avgDuration: Math.round(avgDuration),
+      dailyTrend,
+      topQueries,
+      topTokens,
+      topZeroResultQueries,
+      generatedAt: new Date().toISOString(),
+    };
+
+    return response.ok({ data: stats });
+  } catch (error) {
+    console.error("获取搜索日志统计失败:", error);
+    return response.serverError({ message: "获取搜索日志统计失败" });
+  }
+}
+
+/*
+  getSearchLogs - 获取搜索日志列表
+*/
+export async function getSearchLogs(
+  params: Omit<GetSearchLogs, "access_token">,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<SearchLogItem[] | null>>>;
+export async function getSearchLogs(
+  params: Omit<GetSearchLogs, "access_token">,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<SearchLogItem[] | null>>;
+export async function getSearchLogs(
+  {
+    page = 1,
+    pageSize = 25,
+    sortBy = "createdAt",
+    sortOrder = "desc",
+    query: queryFilter,
+    minResultCount,
+    maxResultCount,
+    hasZeroResults,
+    dateFrom,
+    dateTo,
+  }: Omit<GetSearchLogs, "access_token">,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<SearchLogItem[] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "getSearchLogs"))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      page,
+      pageSize,
+      sortBy,
+      sortOrder,
+      query: queryFilter,
+      minResultCount,
+      maxResultCount,
+      hasZeroResults,
+      dateFrom,
+      dateTo,
+    },
+    GetSearchLogsSchema.omit({ access_token: true }),
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 从 cookies 获取 access token
+  const { cookies } = await import("next/headers");
+  const cookieStore = await cookies();
+  const access_token = cookieStore.get("ACCESS_TOKEN")?.value;
+
+  if (!access_token) {
+    return response.unauthorized({ message: "请先登录" });
+  }
+
+  // 身份验证 - 仅管理员和编辑可以查看
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    const skip = (page - 1) * pageSize;
+
+    // 构建查询条件
+    const where: Record<string, unknown> = {};
+
+    if (queryFilter) {
+      where.query = {
+        contains: queryFilter,
+        mode: "insensitive",
+      };
+    }
+
+    if (minResultCount !== undefined || maxResultCount !== undefined) {
+      where.resultCount = {};
+      if (minResultCount !== undefined) {
+        (where.resultCount as Record<string, unknown>).gte = minResultCount;
+      }
+      if (maxResultCount !== undefined) {
+        (where.resultCount as Record<string, unknown>).lte = maxResultCount;
+      }
+    }
+
+    if (hasZeroResults !== undefined) {
+      where.resultCount = hasZeroResults ? 0 : { gt: 0 };
+    }
+
+    if (dateFrom || dateTo) {
+      where.createdAt = {};
+      if (dateFrom) {
+        (where.createdAt as Record<string, unknown>).gte = new Date(dateFrom);
+      }
+      if (dateTo) {
+        (where.createdAt as Record<string, unknown>).lte = new Date(
+          dateTo + "T23:59:59.999Z",
+        );
+      }
+    }
+
+    // 获取搜索日志
+    const logs = await prisma.searchLog.findMany({
+      where,
+      skip,
+      take: pageSize,
+      orderBy: {
+        [sortBy]: sortOrder,
+      },
+    });
+
+    // 获取总数
+    const total = await prisma.searchLog.count({ where });
+
+    // 计算分页元数据
+    const totalPages = Math.ceil(total / pageSize);
+    const meta = {
+      page,
+      pageSize,
+      total,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
+    };
+
+    // 转换为返回格式
+    const items: SearchLogItem[] = logs.map((log) => ({
+      id: log.id,
+      query: log.query,
+      tokens: log.tokens,
+      resultCount: log.resultCount,
+      durationMs: log.durationMs,
+      createdAt: log.createdAt.toISOString(),
+      ip: log.ip,
+      sessionId: log.sessionId,
+      visitorId: log.visitorId,
+      location: log.ip ? resolveIpLocation(log.ip) : null,
+    }));
+
+    return response.ok({
+      data: items,
+      meta,
+    });
+  } catch (error) {
+    console.error("获取搜索日志列表失败:", error);
+    return response.serverError({ message: "获取搜索日志列表失败" });
   }
 }

@@ -72,7 +72,7 @@ export default function WordCloudPanel() {
 
         {/* 中间内容区域占据剩余空间 */}
         <div className="flex-1 min-h-0 overflow-hidden my-2">
-          <AutoTransition type="fade" className="h-full">
+          <AutoTransition type="slideUp" className="h-full">
             {error ? (
               <div className="h-full overflow-auto">
                 <ErrorPage
@@ -111,7 +111,7 @@ export default function WordCloudPanel() {
                     onScroll={handleScroll}
                     className="overflow-y-auto scrollbar-hide pr-2 h-full"
                   >
-                    <div className="flex flex-wrap gap-2 justify-between">
+                    <div className="flex flex-wrap gap-2 justify-between [&>*:last-child]:mr-auto">
                       {stats.topWords.map(({ word, count }, index) => {
                         // 计算归一化大小（0-1之间）
                         const maxCount = Math.max(

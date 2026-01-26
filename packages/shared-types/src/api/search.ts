@@ -156,6 +156,8 @@ export const SearchPostsSchema = z.object({
   pageSize: z.number().int().positive().max(50).optional().default(10),
   searchIn: z.enum(["title", "content", "both"]).optional().default("both"),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
+  sessionId: z.string().optional(), // 搜索会话 ID（同一搜索页面的多次搜索使用同一个 ID）
+  visitorId: z.string().optional(), // 访客 ID（用于长期追踪用户搜索行为）
 });
 
 export type SearchPosts = z.infer<typeof SearchPostsSchema>;
@@ -229,4 +231,72 @@ export interface SearchIndexStatsResult {
   topWords: Array<{ word: string; count: number }>; // 全站高频词（Top 100）
   cached: boolean; // 是否来自缓存
   generatedAt: string; // 生成时间
+}
+
+// ==================== 获取搜索日志统计 ====================
+
+export const GetSearchLogStatsSchema = z.object({
+  access_token: z.string().min(1, "access_token 不能为空"),
+  days: z.number().int().min(1).max(365).optional().default(30), // 统计天数
+});
+
+export type GetSearchLogStats = z.infer<typeof GetSearchLogStatsSchema>;
+
+export interface SearchLogDailyTrend {
+  date: string; // YYYY-MM-DD
+  searchCount: number; // 搜索次数
+  uniqueVisitors: number; // 搜索人数（唯一 visitorId 数）
+  zeroResultCount: number; // 无结果搜索次数
+  avgDuration: number; // 平均耗时（毫秒）
+}
+
+export interface SearchLogStatsResult {
+  totalSearches: number; // 总搜索次数
+  uniqueQueries: number; // 唯一搜索词数
+  avgResultCount: number; // 平均结果数
+  zeroResultRate: number; // 无结果率（百分比）
+  avgDuration: number; // 平均耗时（毫秒）
+  dailyTrend: SearchLogDailyTrend[]; // 每日趋势
+  topQueries: Array<{ query: string; count: number }>; // 热门搜索词 Top 50（原始搜索词）
+  topTokens: Array<{ token: string; count: number }>; // 热门分词 Top 50（分词结果）
+  topZeroResultQueries: Array<{ query: string; count: number }>; // 无结果热门词 Top 20
+  generatedAt: string; // 生成时间
+}
+
+// ==================== 获取搜索日志列表 ====================
+
+export const GetSearchLogsSchema = z.object({
+  access_token: z.string().min(1, "access_token 不能为空"),
+  page: z.number().int().positive().optional().default(1),
+  pageSize: z.number().int().positive().max(100).optional().default(25),
+  sortBy: z
+    .enum(["id", "createdAt", "query", "resultCount", "durationMs"])
+    .optional()
+    .default("createdAt"),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
+  query: z.string().optional(), // 按搜索词过滤
+  minResultCount: z.number().int().min(0).optional(), // 最小结果数
+  maxResultCount: z.number().int().min(0).optional(), // 最大结果数
+  hasZeroResults: z.boolean().optional(), // 是否无结果
+  dateFrom: z.string().optional(), // 开始日期 YYYY-MM-DD
+  dateTo: z.string().optional(), // 结束日期 YYYY-MM-DD
+});
+
+export type GetSearchLogs = z.infer<typeof GetSearchLogsSchema>;
+
+export interface SearchLogItem {
+  id: number;
+  query: string;
+  tokens: string[];
+  resultCount: number;
+  durationMs: number | null;
+  createdAt: string;
+  ip: string | null;
+  sessionId: string | null;
+  visitorId: string | null;
+  location: {
+    country: string | null;
+    region: string | null;
+    city: string | null;
+  } | null;
 }

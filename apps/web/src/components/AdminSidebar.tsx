@@ -230,7 +230,7 @@ export default function AdminSidebar() {
         <Link
           key={index}
           href={item.href}
-          className={`h-[3em] border border-border flex items-center cursor-pointer relative group/item ${pathname.startsWith(item.href) ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+          className={`h-[3em] border border-border flex items-center cursor-pointer relative group/item ${pathname.split("/")[2] === item.href.split("/")[2] ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
         >
           <div className="w-[5em] flex items-center justify-center shrink-0 group-hover/item:scale-[1.2] transition-transform duration-300">
             {item.icon}

@@ -185,11 +185,6 @@
 ::target-text {
   @apply bg-primary/50 text-foreground;
 }
-
-html {
-  overflow-y: hidden;
-}
-
 /* 搜索结果高亮样式 */
 mark {
   color: var(--color-primary);
