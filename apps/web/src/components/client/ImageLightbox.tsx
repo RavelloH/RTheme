@@ -312,6 +312,8 @@ export default function ImageLightbox() {
       width: 0,
       height: 0,
     };
+    let displayedWidth = 800;
+    let displayedHeight = 600;
     let naturalWidth = 800;
     let naturalHeight = 600;
 
@@ -323,23 +325,42 @@ export default function ImageLightbox() {
         width: rect.width,
         height: rect.height,
       };
-      // Use natural dimensions if available, otherwise fallback to rect (scaled up/down later)
+      // 图片在页面上的实际显示尺寸
+      displayedWidth = rect.width;
+      displayedHeight = rect.height;
+      // 图片的原始尺寸（用于计算最大可放大倍数）
       naturalWidth = imgElement.naturalWidth || rect.width;
       naturalHeight = imgElement.naturalHeight || rect.height;
     }
 
-    // Calculate target dimensions (fit within target box, maintain aspect ratio)
+    // 计算适配屏幕的尺寸（基于原始尺寸）
     const widthRatio = targetMaxWidth / naturalWidth;
     const heightRatio = targetMaxHeight / naturalHeight;
-    // Allow scaling up to 2x if image is small, otherwise fit to screen
-    const scale = Math.min(
-      widthRatio,
-      heightRatio,
-      naturalWidth < targetMaxWidth ? 2 : 1,
-    );
+    const fitToScreenScale = Math.min(widthRatio, heightRatio);
 
-    const targetWidth = naturalWidth * scale;
-    const targetHeight = naturalHeight * scale;
+    // 方案1：基于原始尺寸适配屏幕
+    const fitToScreenWidth = naturalWidth * fitToScreenScale;
+    const fitToScreenHeight = naturalHeight * fitToScreenScale;
+
+    // 方案2：保持页面显示尺寸
+    const displayWidth = displayedWidth;
+    const displayHeight = displayedHeight;
+
+    // 选择较大的尺寸，确保至少不比页面显示的小
+    let targetWidth, targetHeight;
+
+    if (
+      fitToScreenWidth >= displayWidth &&
+      fitToScreenHeight >= displayHeight
+    ) {
+      // 适配屏幕的尺寸更大，使用它
+      targetWidth = fitToScreenWidth;
+      targetHeight = fitToScreenHeight;
+    } else {
+      // 页面显示尺寸更大，或者适配后太小，使用页面显示尺寸
+      targetWidth = displayWidth;
+      targetHeight = displayHeight;
+    }
 
     const targetX = (viewportWidth - targetWidth) / 2;
     // Center vertically within the available space, maybe bias upwards slightly if needed
