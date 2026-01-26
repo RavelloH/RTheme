@@ -46,10 +46,6 @@ const settings = [
     name: "访问统计",
     key: "analytics",
   },
-  {
-    name: "PWA 配置",
-    key: "pwa",
-  },
 ];
 
 export interface SettingSelectMessage {
