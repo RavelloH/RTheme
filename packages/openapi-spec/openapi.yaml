@@ -5001,6 +5001,24 @@ components:
                     - type: string
                     - type: number
                     - type: boolean
+              location:
+                nullable: true
+                type: object
+                properties:
+                  country:
+                    nullable: true
+                    type: string
+                  region:
+                    nullable: true
+                    type: string
+                  city:
+                    nullable: true
+                    type: string
+                required:
+                  - country
+                  - region
+                  - city
+                additionalProperties: false
               user:
                 nullable: true
                 type: object
@@ -5030,6 +5048,7 @@ components:
               - newData
               - description
               - metadata
+              - location
               - user
             additionalProperties: false
       required:

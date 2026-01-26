@@ -5,10 +5,10 @@ import { getSearchLogStats } from "@/actions/search";
 import type { SearchLogStatsResult } from "@repo/shared-types/api/search";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { GridItem } from "@/components/RowGrid";
 import Clickable from "@/ui/Clickable";
 import { RiRefreshLine } from "@remixicon/react";
 import ErrorPage from "@/components/ui/Error";
+import Link from "@/components/Link";
 
 /**
  * 生成自然语言描述
@@ -41,10 +41,7 @@ function generateDescription(
   // 3. 搜索性能
   if (stats.avgDuration > 0) {
     elements.push(
-      <div key="performance">
-        平均搜索耗时为 {stats.avgDuration} 毫秒
-        {stats.avgDuration > 500 && "，建议优化搜索性能"}。
-      </div>,
+      <div key="performance">平均搜索耗时为 {stats.avgDuration} 毫秒。</div>,
     );
   }
 
@@ -52,25 +49,23 @@ function generateDescription(
   if (stats.topTokens && stats.topTokens.length > 0) {
     elements.push(
       <div key="topTokens">
-        最热门的分词是 &ldquo;{stats.topTokens[0]?.token}&rdquo;，共出现了{" "}
-        {stats.topTokens[0]?.count} 次。
+        最热门的分词是 &ldquo;{stats.topTokens[0]?.token}&rdquo;。
       </div>,
     );
   }
   return elements;
 }
 
-export default function SearchInsightReport() {
+export default function DashboardSearchInsightStats() {
   const [stats, setStats] = useState<SearchLogStatsResult | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const [days, setDays] = useState<number>(30);
+  const [days] = useState<number>(30);
 
   const fetchStats = async (daysParam = 30, forceRefresh = false) => {
     if (forceRefresh) {
       setStats(null);
     }
     setError(null);
-    setDays(daysParam);
 
     try {
       const result = await getSearchLogStats({
@@ -94,37 +89,39 @@ export default function SearchInsightReport() {
   }, []);
 
   return (
-    <GridItem areas={[1, 2, 3, 4]} width={3} height={0.8}>
-      <AutoTransition type="scale" className="h-full">
-        {stats ? (
-          <div
-            className="flex flex-col justify-between p-10 h-full gap-4"
-            key="content"
-          >
-            <div className="text-2xl">搜索洞察报告</div>
-            <div className="flex-1 space-y-1">
-              {generateDescription(stats, days)}
+    <AutoTransition type="scale" className="h-full">
+      {stats ? (
+        <div
+          className="flex flex-col justify-between p-10 h-full gap-4"
+          key="content"
+        >
+          <div>
+            <div className="text-2xl py-2">
+              <Link href="/admin/search-insights" presets={["hover-underline"]}>
+                搜索洞察
+              </Link>
             </div>
-            <div>
-              <div className="inline-flex items-center gap-2">
-                {stats.cached ? "统计缓存于:" : "统计刷新于:"}
-                {new Date(stats.generatedAt).toLocaleString("zh-CN")}
-                <Clickable onClick={() => fetchStats(days, true)}>
-                  <RiRefreshLine size={"1em"} />
-                </Clickable>
-              </div>
+            <div className="space-y-1">{generateDescription(stats, days)}</div>
+          </div>
+          <div>
+            <div className="inline-flex items-center gap-2">
+              {stats.cached ? "统计缓存于:" : "统计刷新于:"}{" "}
+              {new Date(stats.generatedAt).toLocaleString("zh-CN")}
+              <Clickable onClick={() => fetchStats(days, true)}>
+                <RiRefreshLine size={"1em"} />
+              </Clickable>
             </div>
           </div>
-        ) : error ? (
-          <div className="px-10 h-full" key="error">
-            <ErrorPage reason={error} reset={() => fetchStats(days)} />
-          </div>
-        ) : (
-          <div className="h-full" key="loading">
-            <LoadingIndicator />
-          </div>
-        )}
-      </AutoTransition>
-    </GridItem>
+        </div>
+      ) : error ? (
+        <div className="px-10 h-full" key="error">
+          <ErrorPage reason={error} reset={() => fetchStats(days)} />
+        </div>
+      ) : (
+        <div className="h-full" key="loading">
+          <LoadingIndicator />
+        </div>
+      )}
+    </AutoTransition>
   );
 }

@@ -238,6 +238,7 @@ export interface SearchIndexStatsResult {
 export const GetSearchLogStatsSchema = z.object({
   access_token: z.string().min(1, "access_token 不能为空"),
   days: z.number().int().min(1).max(365).optional().default(30), // 统计天数
+  force: z.boolean().optional(),
 });
 
 export type GetSearchLogStats = z.infer<typeof GetSearchLogStatsSchema>;
@@ -260,6 +261,7 @@ export interface SearchLogStatsResult {
   topQueries: Array<{ query: string; count: number }>; // 热门搜索词 Top 50（原始搜索词）
   topTokens: Array<{ token: string; count: number }>; // 热门分词 Top 50（分词结果）
   topZeroResultQueries: Array<{ query: string; count: number }>; // 无结果热门词 Top 20
+  cached?: boolean; // 是否来自缓存
   generatedAt: string; // 生成时间
 }
 

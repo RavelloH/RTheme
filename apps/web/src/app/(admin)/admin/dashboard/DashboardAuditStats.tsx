@@ -85,7 +85,7 @@ export default function DashboardAuditStats() {
           <div>
             {refreshTime && (
               <div className="inline-flex items-center gap-2">
-                {result.cache ? "统计缓存于" : "数据刷新于"}:{" "}
+                {result.cache ? "统计缓存于" : "统计刷新于"}:{" "}
                 {new Date(refreshTime).toLocaleString()}
                 <Clickable onClick={() => fetchData(true)}>
                   <RiRefreshLine size={"1em"} />

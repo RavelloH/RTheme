@@ -14,6 +14,8 @@ import DashboardMediaStats from "./DashboardMediaStats";
 import DashboardCommentsStats from "./DashboardCommentsStats";
 import DashboardSecurityStats from "./DashboardSecurityStats";
 import DashboardVisitStats from "./DashboardVisitStats";
+import DashboardSearchInsightStats from "./DashboardSearchInsightStats";
+import DashboardSearchIndexStats from "./DashboardSearchIndexStats";
 
 export const metadata = await generateMetadata(
   {
@@ -65,6 +67,17 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-center h-full">
               作品信息图表
             </div>
+          </GridItem>
+          <GridItem areas={[1, 2, 3, 4]} width={3} height={0.5}>
+            <div className="flex items-center justify-center h-full">
+              友情链接图表
+            </div>
+          </GridItem>
+          <GridItem areas={[5, 6, 7, 8]} width={3} height={0.5}>
+            <DashboardSearchInsightStats />
+          </GridItem>
+          <GridItem areas={[9, 10, 11, 12]} width={3} height={0.5}>
+            <DashboardSearchIndexStats />
           </GridItem>
           <GridItem areas={[1, 2, 3, 4]} width={3} height={0.5}>
             <DashboardPagesStats />
