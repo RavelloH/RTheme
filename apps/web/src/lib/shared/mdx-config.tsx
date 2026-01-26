@@ -62,8 +62,24 @@ export async function highlightCode(
       ...shikiConfig,
     });
   } catch (err) {
-    console.error("Shiki 语法高亮错误:", { error: err, language });
-    return `<pre class="shiki"><code>${code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`;
+    console.error("Shiki 语法高亮错误:", { error: err, language, code });
+    // 如果指定的语言不支持，尝试用 text 语言重新渲染
+    if (language !== "text") {
+      try {
+        return await codeToHtml(code, {
+          lang: "text",
+          ...shikiConfig,
+        });
+      } catch (retryErr) {
+        console.error("Shiki text 渲染失败:", { error: retryErr, code });
+      }
+    }
+    // 最后的降级方案：返回纯文本
+    const escapedCode = code
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    return `<pre class="p-4 rounded-lg overflow-x-auto my-4" style="background-color:#FFFFFF;--shiki-dark-bg:#1E1E1E;color:#000000;--shiki-dark:#D4D4D4"><code class="font-mono text-sm">${escapedCode}</code></pre>`;
   }
 }
 
@@ -133,7 +149,7 @@ export function CodeBlock({
 }) {
   const [html, setHtml] = useState("");
   const language = className?.replace(/language-/, "") || "text";
-  const code = String(children).replace(/\n$/, "");
+  const code = (children || "").replace(/\n$/, "");
 
   useEffect(() => {
     highlightCode(code, language).then(setHtml);
@@ -400,18 +416,35 @@ export function createMarkdownComponents(): Components {
     pre: ({ children }: React.HTMLAttributes<HTMLPreElement>) => (
       <>{children}</>
     ),
-    code: (props: React.HTMLAttributes<HTMLElement>) => {
-      const { children, className } = props;
+    code: ({
+      children,
+      className,
+      inline,
+    }: {
+      children?: string;
+      className?: string;
+      inline?: boolean;
+    }) => {
+      // 判断是否是行内代码
+      // ReactMarkdown 的行为：
+      // - 行内代码 `` `code` `` → inline=true, className=undefined
+      // - 代码块 ```code``` → inline=false, 可能有 className
+      const isInline = inline === true;
 
-      if (className) {
+      if (isInline) {
         return (
-          <CodeBlock className={className as string}>
-            {children as string}
-          </CodeBlock>
+          <code className="px-1.5 py-0.5 rounded bg-foreground/10 text-foreground font-mono text-sm">
+            {children}
+          </code>
         );
       }
 
-      return <code {...props}>{children}</code>;
+      // 否则是代码块（即使没有 className，也使用 text 作为默认语言）
+      return (
+        <CodeBlock className={className || "language-text"}>
+          {children}
+        </CodeBlock>
+      );
     },
 
     // 链接

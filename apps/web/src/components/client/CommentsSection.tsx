@@ -29,9 +29,13 @@ import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { Tooltip } from "@/ui/Tooltip";
 import { AlertDialog } from "@/ui/AlertDialog";
 import ReactMarkdown from "react-markdown";
+import type { Components } from "react-markdown";
 import UserAvatar from "@/components/UserAvatar";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import { highlightCode } from "@/lib/shared/mdx-config";
 import { useToast } from "@/ui/Toast";
 import {
   RiMapPin2Line,
@@ -99,6 +103,45 @@ const LOCAL_PENDING_COMMENTS_KEY = "local_pending_comments";
 const levelColors = ["text-primary/80"];
 
 // ============ 工具函数 ============
+/**
+ * 智能 HTML 转义函数
+ * - 转义 HTML 标签使其可见但不执行
+ * - 保留 Markdown 语法（引用、列表、标题等）
+ * - 防止 XSS 攻击
+ */
+const escapeHtmlButPreserveMarkdown = (text: string): string => {
+  const htmlEscapes: Record<string, string> = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  };
+
+  return (
+    text
+      // 1. 先用唯一标记保护行首的 > 符号（包括前面的空格）
+      .replace(/^(\s*>)/gm, "\x00PRESERVE_BLOCKQUOTE\x00")
+      // 2. 转义所有 HTML 特殊字符
+      .replace(/[&<>"']/g, (char) => htmlEscapes[char] ?? char)
+      // 3. 恢复 Markdown 引用符号（在转义之后）
+      // eslint-disable-next-line no-control-regex
+      .replace(/\x00PRESERVE_BLOCKQUOTE\x00/g, ">")
+  );
+};
+
+// 纯文本转义函数，用于不经过 Markdown 解析的地方
+const escapeHtml = (text: string): string => {
+  const htmlEscapes: Record<string, string> = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  };
+  return text.replace(/[&<>"']/g, (char) => htmlEscapes[char] ?? char);
+};
+
 const formatDate = (text: string) =>
   new Date(text).toLocaleString("zh-CN", {
     year: "numeric",
@@ -133,6 +176,107 @@ const isHiddenByCollapse = (
 const getParentId = (comment: CommentItem): string | null => {
   const parts = comment.path.split("/");
   return parts.length < 2 ? null : (parts[parts.length - 2] ?? null);
+};
+
+// ============ Markdown 代码高亮组件 ============
+
+/**
+ * 行内代码组件
+ */
+function InlineCode({ children }: { children?: React.ReactNode }) {
+  return (
+    <code className="px-1.5 py-0.5 rounded bg-foreground/10 text-foreground font-mono text-sm">
+      {children}
+    </code>
+  );
+}
+
+/**
+ * 代码块组件（使用 Shiki 高亮）
+ */
+function CodeBlock({
+  children,
+  className,
+}: {
+  children?: string;
+  className?: string;
+}) {
+  const [html, setHtml] = useState("");
+  const [loading, setLoading] = useState(true);
+  const language = className?.replace(/language-/, "") || "text";
+  const code = (children || "").replace(/\n$/, "");
+
+  useEffect(() => {
+    setLoading(true);
+    highlightCode(code, language)
+      .then((highlightedHtml) => {
+        setHtml(highlightedHtml);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("代码高亮失败:", { error: err, language, code });
+        setLoading(false);
+      });
+  }, [code, language]);
+
+  if (loading) {
+    return (
+      <div className="my-4 p-4 bg-muted rounded-lg">
+        <div className="animate-pulse flex space-x-2">
+          <div className="flex-1 space-y-2">
+            <div className="h-4 bg-foreground/10 rounded w-3/4"></div>
+            <div className="h-4 bg-foreground/10 rounded w-1/2"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 直接渲染 highlightCode 返回的 HTML（已包含完整的样式）
+  return <div dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+/**
+ * ReactMarkdown 组件配置
+ * 包含代码高亮、链接、图片等自定义渲染
+ */
+const markdownComponents: Components = {
+  // 代码处理
+  pre: ({ children }: { children?: React.ReactNode }) => {
+    // 检查是否是代码块（而不是其他 pre 标签）
+    const child = React.Children.only(children);
+    if (React.isValidElement(child) && child.type === "code") {
+      return <>{children}</>;
+    }
+    // 如果 pre 包含的不是 code，直接返回
+    return <>{children}</>;
+  },
+  code: ({
+    children,
+    className,
+    inline,
+  }: {
+    children?: React.ReactNode;
+    className?: string;
+    inline?: boolean;
+  }) => {
+    const code = String(children);
+
+    // 判断是否是行内代码
+    // ReactMarkdown 的行为：
+    // - 行内代码 `` `code` `` → inline=true, className=undefined
+    // - 代码块 ```code``` → inline=false, 可能有 className
+    const isInline = inline === true;
+
+    if (isInline) {
+      return <InlineCode>{children}</InlineCode>;
+    }
+
+    // 否则是代码块（即使没有 className，也使用 text 作为默认语言）
+    return (
+      <CodeBlock className={className || "language-text"}>{code}</CodeBlock>
+    );
+  },
 };
 
 // ============ 单条评论组件 ============
@@ -370,8 +514,12 @@ const SingleComment = React.memo(function SingleComment({
 
             {/* 评论内容 */}
             <div className="mt-1 prose prose-sm dark:prose-invert max-w-none break-words md-content mini-md-content">
-              <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} skipHtml>
-                {comment.content}
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkMath, remarkBreaks]}
+                rehypePlugins={[rehypeKatex]}
+                components={markdownComponents}
+              >
+                {escapeHtmlButPreserveMarkdown(comment.content)}
               </ReactMarkdown>
             </div>
 
@@ -1126,8 +1274,12 @@ export default function CommentsSection({
         emailMd5: null,
       },
       replyTo: local.replyToAuthorName
-        ? { id: local.localId, authorName: local.replyToAuthorName }
-        : undefined,
+        ? {
+            id: local.localId,
+            authorName: local.replyToAuthorName,
+            content: "",
+          }
+        : null,
     }));
   }, [currentSlugLocalComments]);
 
@@ -1259,9 +1411,9 @@ export default function CommentsSection({
                       </span>
                     </div>
                     <div className="text-sm text-muted-foreground line-clamp-2 pl-5">
-                      {replyTarget.content.length > 100
-                        ? `${replyTarget.content.slice(0, 100)}...`
-                        : replyTarget.content}
+                      {escapeHtml(replyTarget.content).length > 100
+                        ? `${escapeHtml(replyTarget.content).slice(0, 100)}...`
+                        : escapeHtml(replyTarget.content)}
                     </div>
                   </div>
                   <Clickable
@@ -1332,10 +1484,11 @@ export default function CommentsSection({
                 >
                   <div className="prose prose-sm dark:prose-invert max-w-none break-words md-content mini-md-content">
                     <ReactMarkdown
-                      remarkPlugins={[remarkGfm, remarkBreaks]}
-                      skipHtml
+                      remarkPlugins={[remarkGfm, remarkMath, remarkBreaks]}
+                      rehypePlugins={[rehypeKatex]}
+                      components={markdownComponents}
                     >
-                      {content}
+                      {escapeHtmlButPreserveMarkdown(content)}
                     </ReactMarkdown>
                   </div>
                 </div>
