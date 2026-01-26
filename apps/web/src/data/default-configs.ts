@@ -261,6 +261,12 @@ export const defaultConfigs: DefaultConfig[] = [
       "是否对自动转换的拼音slug进行分词处理。例如：zheshi-yipian-wenzhang 而不是 zhe-shi-yi-pian-wen-zhang",
   },
   {
+    key: "content.autoIndex.enabled",
+    value: { default: true },
+    description:
+      "是否在每次文章保存时自动更新搜索索引。这可能会略微增加保存时间",
+  },
+  {
     key: "content.rss.enabled",
     value: { default: true },
     description: "是否启用RSS订阅功能",

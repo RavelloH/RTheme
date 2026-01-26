@@ -52,6 +52,9 @@ import {
 } from "@/lib/server/media-reference";
 import { MEDIA_SLOTS } from "@/types/media";
 import { generateSignature } from "@/lib/server/image-crypto";
+import { getConfig } from "@/lib/server/config-cache";
+import { analyzeText } from "@/lib/server/tokenizer";
+import { markdownToPlainText } from "@/lib/server/search";
 
 /*
   辅助函数：处理内容中的图片并提取引用关系
@@ -296,6 +299,59 @@ type ActionConfig = { environment?: ActionEnvironment };
 type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
+
+/*
+  辅助函数：更新文章搜索索引
+  用于在文章保存后自动更新索引，无需认证（内部调用）
+*/
+async function updatePostSearchIndex(slug: string): Promise<void> {
+  try {
+    // 获取文章信息
+    const post = await prisma.post.findUnique({
+      where: { slug },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        content: true,
+        postMode: true,
+      },
+    });
+
+    if (!post) {
+      console.warn(`自动索引失败: 文章不存在 (${slug})`);
+      return;
+    }
+
+    // 提取标题分词
+    const titleTokens = await analyzeText(post.title);
+
+    // 将 Markdown/MDX 转换为纯文本
+    const plainText = await markdownToPlainText(post.content);
+
+    // 提取内容分词
+    const contentTokens = await analyzeText(plainText);
+
+    // 将分词结果用空格连接成字符串
+    const titleTokensStr = titleTokens.join(" ");
+    const contentTokensStr = contentTokens.join(" ");
+
+    // 使用 PostgreSQL 的 to_tsvector() 函数创建全文搜索索引
+    await prisma.$executeRaw`
+      UPDATE "Post"
+      SET
+        "titleSearchVector" = to_tsvector('simple', ${titleTokensStr}),
+        "contentSearchVector" = to_tsvector('simple', ${contentTokensStr}),
+        "plain" = ${plainText},
+        "tokenizedAt" = NOW()
+      WHERE "id" = ${post.id}
+    `;
+
+    console.log(`自动索引已更新: ${post.slug}`);
+  } catch (error) {
+    console.error(`自动更新搜索索引失败 (${slug}):`, error);
+  }
+}
 
 /*
   getPostsTrends - 获取文章趋势数据
@@ -1083,8 +1139,8 @@ export async function createPost(
     });
 
     // 记录审计日志
-    const { after } = await import("next/server");
-    after(async () => {
+    const { after: afterFn } = await import("next/server");
+    afterFn(async () => {
       await logAuditEvent({
         user: {
           uid: String(user.uid),
@@ -1121,6 +1177,19 @@ export async function createPost(
           },
         },
       });
+
+      // 自动更新搜索索引
+      try {
+        const autoIndexEnabled = await getConfig<boolean>(
+          "content.autoIndex.enabled",
+          true,
+        );
+        if (autoIndexEnabled) {
+          await updatePostSearchIndex(post.slug);
+        }
+      } catch (error) {
+        console.error("自动更新搜索索引失败:", error);
+      }
     });
 
     // 刷新缓存标签
@@ -1630,8 +1699,8 @@ export async function updatePost(
       auditNewValue.versionName = newVersionName;
     }
 
-    const { after } = await import("next/server");
-    after(async () => {
+    const { after: afterFn } = await import("next/server");
+    afterFn(async () => {
       await logAuditEvent({
         user: {
           uid: String(user.uid),
@@ -1652,6 +1721,21 @@ export async function updatePost(
           },
         },
       });
+
+      // 自动更新搜索索引（仅在内容更新时）
+      if (content !== undefined) {
+        try {
+          const autoIndexEnabled = await getConfig<boolean>(
+            "content.autoIndex.enabled",
+            true,
+          );
+          if (autoIndexEnabled) {
+            await updatePostSearchIndex(updatedPost.slug);
+          }
+        } catch (error) {
+          console.error("自动更新搜索索引失败:", error);
+        }
+      }
     });
 
     // 刷新缓存标签

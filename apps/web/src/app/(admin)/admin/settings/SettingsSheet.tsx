@@ -744,7 +744,7 @@ export default function SettingSheet() {
               该分类下暂无配置项
             </div>
           ) : (
-            <div key={category} className="grid gap-6 grid-cols-1">
+            <div key={category} className="grid grid-cols-1">
               {filteredSettings.map((setting) => {
                 const inputConfig = getInputConfig(setting);
                 return (
@@ -811,7 +811,7 @@ export default function SettingSheet() {
                       />
                     )}
 
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-sm text-muted-foreground mb-6">
                       最后更新:{" "}
                       {new Date(setting.updatedAt).toLocaleString("zh-CN")}
                     </div>
