@@ -40,8 +40,8 @@ const config = createPageConfigBuilder(getSystemPageConfig(page));
 
 // 获取配置
 const [siteTitle, siteSlogan] = await Promise.all([
-  getConfig<string>("site.title"),
-  getConfig<string>("site.slogan.primary"),
+  getConfig("site.title"),
+  getConfig("site.slogan.primary"),
 ]);
 
 export const metadata = await generateMetadata(

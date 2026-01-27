@@ -32,7 +32,6 @@ import {
 import ImageLightbox from "@/components/client/ImageLightbox";
 import { getConfig } from "@/lib/server/config-cache";
 import React from "react";
-import type { ConfigType } from "@/types/config";
 import CommentsSection from "@/components/client/CommentsSection";
 import AdjacentPostCard from "@/components/AdjacentPostCard";
 import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
@@ -107,16 +106,16 @@ export default async function PostPage({ params }: PageProps) {
     siteURL,
     shikiTheme,
   ] = await Promise.all([
-    getConfig<boolean>("comment.enable", true),
-    getConfig<string>("comment.placeholder", "输入评论内容..."),
-    getConfig<boolean>("comment.anonymous.enable", true),
-    getConfig<boolean>("comment.anonymous.email.required", true),
-    getConfig<boolean>("comment.anonymous.website.enable", true),
-    getConfig<boolean>("comment.review.enable", false),
-    getConfig<boolean>("comment.anonymous.review.enable", false),
-    getConfig<boolean>("comment.locate.enable", false),
-    getConfig<boolean>("site.url"),
-    getConfig<ConfigType<"site.shiki.theme">>("site.shiki.theme"),
+    getConfig("comment.enable", true),
+    getConfig("comment.placeholder", "输入评论内容..."),
+    getConfig("comment.anonymous.enable", true),
+    getConfig("comment.anonymous.email.required", true),
+    getConfig("comment.anonymous.website.enable", true),
+    getConfig("comment.review.enable", false),
+    getConfig("comment.anonymous.review.enable", false),
+    getConfig("comment.locate.enable", false),
+    getConfig("site.url"),
+    getConfig("site.shiki.theme"),
   ]);
 
   try {

@@ -23,7 +23,7 @@ async function getEnabledSSOProviders(): Promise<OAuthProvider[]> {
   const enabled: OAuthProvider[] = [];
 
   for (const provider of providers) {
-    const isEnabled = await getConfig<boolean>(`user.sso.${provider}.enabled`);
+    const isEnabled = await getConfig(`user.sso.${provider}.enabled`);
     if (isEnabled) {
       enabled.push(provider);
     }
@@ -35,8 +35,8 @@ async function getEnabledSSOProviders(): Promise<OAuthProvider[]> {
 export default async function RegisterPage() {
   const [canRegister, isNeedEmailVerify, enabledSSOProviders] =
     await Promise.all([
-      getConfig<boolean>("user.registration.enabled"),
-      getConfig<boolean>("user.email.verification.required"),
+      getConfig("user.registration.enabled"),
+      getConfig("user.email.verification.required"),
       getEnabledSSOProviders(),
     ]);
 

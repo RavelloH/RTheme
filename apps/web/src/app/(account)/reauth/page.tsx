@@ -19,7 +19,7 @@ export const metadata = await generateMetadata(
 );
 
 export default async function ReauthPage() {
-  const passkeyEnabled = await getConfig<boolean>("user.passkey.enabled");
+  const passkeyEnabled = await getConfig("user.passkey.enabled");
 
   return (
     <Suspense fallback={<LoadingIndicator />}>

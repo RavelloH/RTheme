@@ -44,11 +44,11 @@ function Icon({ iconName }: { iconName: string }) {
 
 export default async function Menu({ menus }: { menus: MenuItem[] }) {
   const [slogan, title, copyright, author, birthday] = await Promise.all([
-    getConfig<string>("site.slogan.secondary"),
-    getConfig<string>("site.title"),
-    getConfig<string[]>("site.copyright"),
-    getConfig<string>("author.name"),
-    getConfig<string>("site.birthday"),
+    getConfig("site.slogan.secondary"),
+    getConfig("site.title"),
+    getConfig("site.copyright"),
+    getConfig("author.name"),
+    getConfig("site.birthday"),
   ]);
 
   const mainMenus = menus.filter(

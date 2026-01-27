@@ -39,7 +39,7 @@ function calculateMD5(text: string): string {
  * 检查消息系统是否启用
  */
 async function checkMessageSystemEnabled(): Promise<boolean> {
-  const enabled = await getConfig<boolean>("message.enable", true);
+  const enabled = await getConfig("message.enable", true);
   return enabled;
 }
 
@@ -59,7 +59,7 @@ async function checkUserMessagePermission(
   if (currentUserRole === "USER") {
     // USER 给 USER 发消息
     if (targetUserRole === "USER") {
-      const userToUserEnabled = await getConfig<boolean>(
+      const userToUserEnabled = await getConfig(
         "message.userToUser.enable",
         true,
       );
@@ -71,7 +71,7 @@ async function checkUserMessagePermission(
 
     // USER 给 ADMIN/EDITOR/AUTHOR 发消息
     if (["ADMIN", "EDITOR", "AUTHOR"].includes(targetUserRole)) {
-      const userToAdminEnabled = await getConfig<boolean>(
+      const userToAdminEnabled = await getConfig(
         "message.userToAdmin.enable",
         true,
       );

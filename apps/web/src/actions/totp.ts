@@ -453,7 +453,7 @@ export async function enableTotp(
     const secret = generateTotpSecret();
 
     // 获取站点名称
-    const siteName = (await getConfig<string>("site.name")) || "NeutralPress";
+    const siteName = (await getConfig("site.title")) || "NeutralPress";
 
     // 生成 TOTP URI（用于 QR 码）
     const qrCodeUri = generateTotpUri(secret, user.username, siteName);

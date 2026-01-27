@@ -10,12 +10,8 @@ import { getConfig } from "./config-cache";
  */
 export async function initWebPush(): Promise<boolean> {
   try {
-    const vapidKeys =
-      (await getConfig<{
-        publicKey?: string;
-        privateKey?: string;
-      }>("notice.webPush.vapidKeys")) || {};
-    const siteUrl = (await getConfig<string>("site.url")) || "";
+    const vapidKeys = (await getConfig("notice.webPush.vapidKeys")) || {};
+    const siteUrl = (await getConfig("site.url")) || "";
 
     if (vapidKeys?.publicKey && vapidKeys?.privateKey) {
       let vapidSubject = siteUrl;

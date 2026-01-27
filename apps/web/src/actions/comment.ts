@@ -93,7 +93,7 @@ async function sendCommentNotification(params: {
     const NotificationEmail = (await import("@/emails/templates"))
       .NotificationEmail;
 
-    const noticeEnabled = await getConfig<boolean>("notice.enable", true);
+    const noticeEnabled = await getConfig("notice.enable", true);
     if (!noticeEnabled) return;
 
     // 获取文章完整信息
@@ -107,9 +107,7 @@ async function sendCommentNotification(params: {
     });
     if (!postInfo) return;
 
-    const siteUrl =
-      (await getConfig<{ default?: string }>("site.url"))?.default ||
-      "http://localhost:3000";
+    const siteUrl = await getConfig("site.url");
 
     const commentLink = `${siteUrl}/posts/${params.postSlug}#comment-${params.commentId}`;
     const truncatedContent =
@@ -119,10 +117,7 @@ async function sendCommentNotification(params: {
 
     // 场景1：文章被评论（无 parentId）
     if (!params.parentId) {
-      const postsNoticeEnabled = await getConfig<boolean>(
-        "notice.posts.enable",
-        true,
-      );
+      const postsNoticeEnabled = await getConfig("notice.posts.enable", true);
       if (!postsNoticeEnabled) return;
 
       // 如果是自己评论自己的文章，不通知
@@ -141,11 +136,11 @@ async function sendCommentNotification(params: {
     }
     // 场景2：评论被回复（有 parentId）
     else {
-      const commentNoticeEnabled = await getConfig<boolean>(
+      const commentNoticeEnabled = await getConfig(
         "comment.email.notice.enable",
         true,
       );
-      const anonCommentNoticeEnabled = await getConfig<boolean>(
+      const anonCommentNoticeEnabled = await getConfig(
         "comment.anonymous.email.notice.enable",
         true,
       );
@@ -204,9 +199,7 @@ async function sendCommentNotification(params: {
         parentComment.authorEmail &&
         anonCommentNoticeEnabled
       ) {
-        const siteName =
-          (await getConfig<{ default?: string }>("site.title"))?.default ||
-          "NeutralPress";
+        const siteName = await getConfig("site.title");
 
         const emailComponent = NotificationEmail({
           username: parentComment.authorName || "匿名用户",
@@ -238,13 +231,13 @@ async function sendCommentNotification(params: {
  */
 async function notifyAdminPendingComments(): Promise<void> {
   try {
-    const notifyEnabled = await getConfig<boolean>(
+    const notifyEnabled = await getConfig(
       "comment.review.notifyAdmin.enable",
       true,
     );
     if (!notifyEnabled) return;
 
-    const threshold = await getConfig<number>(
+    const threshold = await getConfig(
       "comment.review.notifyAdmin.threshold",
       1,
     );
@@ -263,14 +256,9 @@ async function notifyAdminPendingComments(): Promise<void> {
     const { sendNotice } = await import("@/lib/server/notice");
 
     // 获取应该接收通知的用户 UID 列表
-    const notifyUids = await getConfig<string[]>(
-      "comment.review.notifyAdmin.uid",
-      [],
-    );
+    const notifyUids = await getConfig("comment.review.notifyAdmin.uid", []);
 
-    const siteUrl =
-      (await getConfig<{ default?: string }>("site.url"))?.default ||
-      "http://localhost:3000";
+    const siteUrl = await getConfig("site.url");
 
     const adminLink = `${siteUrl}/admin/comments?status=PENDING`;
     const noticeTitle = `有 ${pendingCount} 条评论待审核`;
@@ -514,7 +502,7 @@ export async function getPostComments(
 
   const { slug, pageSize, cursor } = params;
 
-  const commentEnabled = await getConfig<boolean>("comment.enable", true);
+  const commentEnabled = await getConfig("comment.enable", true);
   if (!commentEnabled) {
     return response.forbidden({ message: "评论功能已关闭" });
   }
@@ -549,7 +537,7 @@ export async function getPostComments(
       take: pageSize + 1,
       select: commentSelect,
     }),
-    getConfig<boolean>("comment.locate.enable", false),
+    getConfig("comment.locate.enable", false),
     prisma.comment.count({
       where: {
         postId: post.id,
@@ -747,7 +735,7 @@ export async function getCommentContext(
   const chain: CommentItem[] = [];
   let currentId: string | null = target.id;
   let guard = 0;
-  const showLocation = await getConfig<boolean>("comment.locate.enable", false);
+  const showLocation = await getConfig("comment.locate.enable", false);
 
   // 收集所有评论ID用于批量查询点赞状态
   const commentIds: string[] = [];
@@ -843,7 +831,7 @@ export async function getCommentReplies(
 
   const authUser = await authVerify({ allowedRoles: COMMENT_ROLES });
   const currentUid = authUser?.uid ?? null;
-  const showLocation = await getConfig<boolean>("comment.locate.enable", false);
+  const showLocation = await getConfig("comment.locate.enable", false);
 
   // 获取该评论下所有深层子评论（相对深度限制）
   const maxAbsoluteDepth = parent.depth + maxDepth;
@@ -931,7 +919,7 @@ export async function getDirectChildren(
 
   const { parentId, postSlug, pageSize, cursor } = params;
 
-  const commentEnabled = await getConfig<boolean>("comment.enable", true);
+  const commentEnabled = await getConfig("comment.enable", true);
   if (!commentEnabled) {
     return response.forbidden({ message: "评论功能已关闭" });
   }
@@ -980,7 +968,7 @@ export async function getDirectChildren(
       take: pageSize + 1,
       select: commentSelect,
     }),
-    getConfig<boolean>("comment.locate.enable", false),
+    getConfig("comment.locate.enable", false),
   ]);
 
   const hasNext = rawComments.length > pageSize;
@@ -1171,7 +1159,7 @@ export async function createComment(
     access_token,
   } = params;
 
-  const commentEnabled = await getConfig<boolean>("comment.enable", true);
+  const commentEnabled = await getConfig("comment.enable", true);
   if (!commentEnabled) {
     return response.forbidden({ message: "评论功能已关闭" });
   }
@@ -1183,11 +1171,11 @@ export async function createComment(
     reviewAll,
     reviewAnon,
   ] = await Promise.all([
-    getConfig<boolean>("comment.anonymous.enable", true),
-    getConfig<boolean>("comment.anonymous.email.required", true),
-    getConfig<boolean>("comment.anonymous.website.enable", true),
-    getConfig<boolean>("comment.review.enable", false),
-    getConfig<boolean>("comment.anonymous.review.enable", false),
+    getConfig("comment.anonymous.enable", true),
+    getConfig("comment.anonymous.email.required", true),
+    getConfig("comment.anonymous.website.enable", true),
+    getConfig("comment.review.enable", false),
+    getConfig("comment.anonymous.review.enable", false),
   ]);
 
   const post = await loadPostId(slug);
@@ -1340,7 +1328,7 @@ export async function createComment(
     return response.serverError();
   }
 
-  const showLocation = await getConfig<boolean>("comment.locate.enable", false);
+  const showLocation = await getConfig("comment.locate.enable", false);
 
   // 新创建的评论，当前用户肯定没有点赞
   const mapped = await mapCommentToItem(
@@ -1375,9 +1363,7 @@ export async function createComment(
       }
 
       // 获取站点 URL 用于生成 permalink
-      const siteUrl =
-        (await getConfig<{ default?: string }>("site.url"))?.default ||
-        "http://localhost:3000";
+      const siteUrl = await getConfig("site.url");
 
       // 构建评论数据
       const commentData: CommentData = {
@@ -1572,7 +1558,7 @@ export async function updateCommentStatus(
   after(async () => {
     try {
       // 只有启用了 Akismet 报告功能才执行
-      const reportEnabled = await getConfig<boolean>(
+      const reportEnabled = await getConfig(
         "comment.akismet.report.enable",
         false,
       );
@@ -1584,9 +1570,7 @@ export async function updateCommentStatus(
       const { submitSpam, submitHam } = await import("@/lib/server/akismet");
 
       // 获取站点 URL
-      const siteUrl =
-        (await getConfig<{ default?: string }>("site.url"))?.default ||
-        "http://localhost:3000";
+      const siteUrl = await getConfig("site.url");
 
       for (const comment of oldComments) {
         // 只处理状态发生变化的评论

@@ -81,7 +81,7 @@ export async function subscribeToWebPush(
     });
 
     const maxSubscriptions =
-      ((await getConfig<number>("notice.webPush.maxPerUser")) as number) || 5;
+      ((await getConfig("notice.webPush.maxPerUser")) as number) || 5;
 
     if (count >= maxSubscriptions) {
       return response.badRequest({
@@ -157,11 +157,7 @@ export async function getVapidPublicKey(
   );
 
   try {
-    const vapidKeys =
-      (await getConfig<{
-        publicKey?: string;
-        privateKey?: string;
-      }>("notice.webPush.vapidKeys")) || {};
+    const vapidKeys = (await getConfig("notice.webPush.vapidKeys")) || {};
 
     if (!vapidKeys?.publicKey) {
       return response.serviceUnavailable({

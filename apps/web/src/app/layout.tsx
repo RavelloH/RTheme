@@ -29,7 +29,6 @@ import { getActiveMenus } from "@/lib/server/menu-cache";
 import { getConfig } from "@/lib/server/config-cache";
 
 // Types
-import type { ConfigType } from "@/types/config";
 import { ToastProvider } from "@/ui/Toast";
 import Footer from "@/components/server/Footer";
 import { Suspense } from "react";
@@ -58,11 +57,11 @@ export default async function RootLayout({
   const [menus, mainColor, siteName, enableAnalytics, ablyEnabled, shikiTheme] =
     await Promise.all([
       getActiveMenus(),
-      getConfig<ConfigType<"site.color">>("site.color"),
-      getConfig<ConfigType<"site.title">>("site.title"),
-      getConfig<ConfigType<"analytics.enable">>("analytics.enable"),
-      getConfig<ConfigType<"notice.ably.key">>("notice.ably.key"),
-      getConfig<ConfigType<"site.shiki.theme">>("site.shiki.theme"),
+      getConfig("site.color"),
+      getConfig("site.title"),
+      getConfig("analytics.enable"),
+      getConfig("notice.ably.key"),
+      getConfig("site.shiki.theme"),
     ]);
 
   // 打包配置

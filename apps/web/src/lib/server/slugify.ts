@@ -32,7 +32,7 @@ export async function slugify(text: string): Promise<string> {
   }
 
   // 获取配置，决定是否进行分词处理
-  const enableSegment = await getConfig<boolean>("content.slug.segment");
+  const enableSegment = await getConfig("content.slug.segment");
   if (enableSegment) {
     const pinyinText = segment(text, {
       toneType: "none",

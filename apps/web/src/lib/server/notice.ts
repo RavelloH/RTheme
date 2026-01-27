@@ -45,7 +45,7 @@ export async function sendNotice(
   options?: SendNoticeOptions,
 ): Promise<void> {
   // 检查全局通知是否启用
-  const noticeConfig = await getConfig<boolean>("notice.enable");
+  const noticeConfig = await getConfig("notice.enable");
   if (!noticeConfig) {
     return;
   }
@@ -134,7 +134,7 @@ export async function sendNotice(
   }
 
   // Web Push 推送逻辑
-  const webPushEnabled = await getConfig<boolean>("notice.webPush.enable");
+  const webPushEnabled = await getConfig("notice.webPush.enable");
 
   if (webPushEnabled) {
     // 决定是否发送 Web Push
@@ -143,7 +143,7 @@ export async function sendNotice(
 
     if (shouldSendWebPush) {
       const siteUrl =
-        (await getConfig<string>("site.url")) ||
+        (await getConfig("site.url")) ||
         process.env.NEXT_PUBLIC_SITE_URL ||
         "http://localhost:3000";
 
@@ -210,11 +210,10 @@ export async function sendNotice(
 
   // 构建重定向链接
   const siteUrl =
-    (await getConfig<string>("site.url")) ||
+    (await getConfig("site.url")) ||
     process.env.NEXT_PUBLIC_SITE_URL ||
     "http://localhost:3000";
-  const siteName =
-    (await getConfig<string>("site.title.default")) || "NeutralPress";
+  const siteName = (await getConfig("site.title")) || "NeutralPress";
   const redirectUrl = `${siteUrl}/r/${redirectToken}`;
 
   // 渲染邮件模板

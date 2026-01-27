@@ -14,7 +14,7 @@ import { getConfig } from "./config-cache";
  * @returns 如果配置 notice.ably.key 有值则返回 true
  */
 export const isAblyEnabled = async (): Promise<boolean> => {
-  const apiKey = await getConfig<string>("notice.ably.key", "");
+  const apiKey = await getConfig("notice.ably.key", "");
   console.log("查询了ably");
   return Boolean(apiKey);
 };
@@ -25,7 +25,7 @@ export const isAblyEnabled = async (): Promise<boolean> => {
  * @returns Ably API Key 字符串，如果未配置则返回 undefined
  */
 export const getAblyApiKey = async (): Promise<string | undefined> => {
-  const apiKey = await getConfig<string>("notice.ably.key", "");
+  const apiKey = await getConfig("notice.ably.key", "");
   return apiKey || undefined;
 };
 

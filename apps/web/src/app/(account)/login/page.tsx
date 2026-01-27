@@ -23,7 +23,7 @@ async function getEnabledSSOProviders(): Promise<OAuthProvider[]> {
   const enabled: OAuthProvider[] = [];
 
   for (const provider of providers) {
-    const isEnabled = await getConfig<boolean>(`user.sso.${provider}.enabled`);
+    const isEnabled = await getConfig(`user.sso.${provider}.enabled`);
     if (isEnabled) {
       enabled.push(provider);
     }
@@ -34,7 +34,7 @@ async function getEnabledSSOProviders(): Promise<OAuthProvider[]> {
 
 export default async function LoginPage() {
   const enabledSSOProviders = await getEnabledSSOProviders();
-  const passkeyEnabled = await getConfig<boolean>("user.passkey.enabled");
+  const passkeyEnabled = await getConfig("user.passkey.enabled");
 
   return (
     <MainLayout type="horizontal">

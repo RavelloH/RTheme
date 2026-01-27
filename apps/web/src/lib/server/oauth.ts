@@ -33,14 +33,11 @@ interface OAuthConfig {
  * 获取 OAuth 配置
  */
 async function getOAuthConfig(provider: OAuthProvider): Promise<OAuthConfig> {
-  const siteUrl = await getConfig<string>("site.url");
+  const siteUrl = await getConfig("site.url");
   const redirectUri = `${siteUrl}/sso/${provider}/callback`;
 
-  const enabled = await getConfig<boolean>(`user.sso.${provider}.enabled`);
-  const providerConfig = await getConfig<{
-    clientId: string;
-    clientSecret: string;
-  }>(`user.sso.${provider}`);
+  const enabled = await getConfig(`user.sso.${provider}.enabled`);
+  const providerConfig = await getConfig(`user.sso.${provider}`);
 
   const { clientId, clientSecret } = providerConfig || {
     clientId: "",

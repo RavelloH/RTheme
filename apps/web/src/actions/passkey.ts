@@ -36,12 +36,8 @@ const CHALLENGE_TTL = 600; // 10分钟
 
 // 公共工具：获取 RP 配置
 async function getRPConfig() {
-  const siteUrl = await getConfig<string>("site.url");
-  const rpName = await getConfig<string>(
-    "site.title",
-    "NeutralPress",
-    "default",
-  );
+  const siteUrl = await getConfig("site.url");
+  const rpName = await getConfig("site.title", "NeutralPress", "default");
   const url = new URL(siteUrl || "http://localhost:3000");
   const rpID = url.hostname; // 域名作为 rpID
   const origin = url.origin;
@@ -50,18 +46,10 @@ async function getRPConfig() {
 
 // 公共工具：检查是否启用 & 限制个数
 async function assertPasskeyEnabledAndLimit(uid?: number) {
-  const enabled = await getConfig<boolean>(
-    "user.passkey.enabled",
-    true,
-    "default",
-  );
+  const enabled = await getConfig("user.passkey.enabled", true, "default");
   if (!enabled) throw new Error("PASSKEY_DISABLED");
   if (uid) {
-    const maxPerUser = await getConfig<number>(
-      "user.passkey.maxPerUser",
-      5,
-      "default",
-    );
+    const maxPerUser = await getConfig("user.passkey.maxPerUser", 5, "default");
     const count = await prisma.passkey.count({ where: { userUid: uid } });
     if (count >= maxPerUser) throw new Error("PASSKEY_LIMIT_EXCEEDED");
   }

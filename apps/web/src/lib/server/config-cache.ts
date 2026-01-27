@@ -3,6 +3,7 @@ import "server-only";
 import fs from "fs";
 import path from "path";
 import { unstable_cache } from "next/cache";
+import { ConfigKeys, ConfigType } from "@/data/default-configs";
 
 // 配置对象类型定义
 export interface ConfigItem {
@@ -107,12 +108,22 @@ async function getConfigValue(
  * @param field 可选的字段名,用于从对象配置中获取特定字段
  * @returns 配置值
  */
-export async function getConfig<T = unknown>(
+export async function getConfig<K extends ConfigKeys>(
+  key: K,
+  defaultValue?: ConfigType<K>,
+  field?: string,
+): Promise<ConfigType<K>>;
+export async function getConfig<T>(
+  key: string,
+  defaultValue?: T,
+  field?: string,
+): Promise<T>;
+export async function getConfig<T>(
   key: string,
   defaultValue?: T,
   field?: string,
 ): Promise<T> {
-  // 定义一个被缓存包裹的内部函数
+  // 执行缓存函数
   const getCachedData = unstable_cache(
     async (k: string, def?: T, f?: string) => {
       return await getConfigValue(k, def, f);
@@ -125,7 +136,6 @@ export async function getConfig<T = unknown>(
     },
   );
 
-  // 执行缓存函数
   const value = await getCachedData(key, defaultValue, field);
   return value as T;
 }

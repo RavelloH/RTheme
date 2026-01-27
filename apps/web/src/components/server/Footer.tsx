@@ -11,9 +11,9 @@ export default async function Footer({ menus }: { menus: MenuItem[] }) {
   cacheTag("config", "menus");
   cacheLife("max");
   const [siteBirthday, siteAuthor, siteCopyright] = await Promise.all([
-    getConfig<string>("site.birthday"),
-    getConfig<string>("author.name"),
-    getConfig<string[]>("site.copyright"),
+    getConfig("site.birthday"),
+    getConfig("author.name"),
+    getConfig("site.copyright"),
   ]);
   return (
     <>

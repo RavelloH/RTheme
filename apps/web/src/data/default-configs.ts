@@ -19,13 +19,13 @@ export interface DefaultConfig {
 // ============================================
 
 /**
- * 从 defaultConfigs 中提取所有配置键的类型
+ * 从 ConfigTypes 中提取所有配置键的类型
  *
  * @example
  * type ConfigKey = ConfigKeys;
  * // ConfigKeys = "site.title" | "site.shiki.theme" | ...
  */
-export type ConfigKeys = (typeof defaultConfigs)[number]["key"];
+export type ConfigKeys = keyof ConfigTypes;
 
 /**
  * **类型映射表**：手动定义每个配置的类型
