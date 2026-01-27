@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import { unstable_cache } from "next/cache";
 import {
+  CONFIG_DEFINITIONS,
   ConfigKeys,
   ConfigType,
   defaultConfigMap,
@@ -115,10 +116,19 @@ async function getConfigValue(key: string, field?: string): Promise<unknown> {
  */
 export async function getConfig<K extends ConfigKeys>(
   key: K,
-  field?: string,
 ): Promise<ConfigType<K>>;
-export async function getConfig<T>(key: string, field?: string): Promise<T>;
-export async function getConfig<T>(key: string, field?: string): Promise<T> {
+export async function getConfig<
+  K extends ConfigKeys,
+  F extends keyof Omit<(typeof CONFIG_DEFINITIONS)[K], "description">,
+>(key: K, field: F): Promise<(typeof CONFIG_DEFINITIONS)[K][F]>;
+export async function getConfig<K extends ConfigKeys>(
+  key: K,
+  field?: string,
+): Promise<
+  | ConfigType<K>
+  | (typeof CONFIG_DEFINITIONS)[K][keyof (typeof CONFIG_DEFINITIONS)[K]]
+  | unknown
+> {
   // 执行缓存函数
   const getCachedData = unstable_cache(
     async (k: string, f?: string) => {
@@ -131,8 +141,7 @@ export async function getConfig<T>(key: string, field?: string): Promise<T> {
     },
   );
 
-  const value = await getCachedData(key, field);
-  return value as T;
+  return await getCachedData(key, field);
 }
 
 /**

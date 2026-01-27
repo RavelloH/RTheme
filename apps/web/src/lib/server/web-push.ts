@@ -14,7 +14,7 @@ export async function initWebPush(): Promise<boolean> {
     const siteUrl = await getConfig("site.url");
 
     if (vapidKeys?.publicKey && vapidKeys?.privateKey) {
-      let vapidSubject = siteUrl;
+      let vapidSubject: string = siteUrl;
       if (!vapidSubject || vapidSubject.startsWith("http://")) {
         vapidSubject = "mailto:noreply@example.com";
       }

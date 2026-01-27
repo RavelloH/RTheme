@@ -1,6 +1,7 @@
 /**
- * 默认配置数据
- * 这些配置将在首次运行时添加到数据库中
+ * 默认配置定义
+ * 这是配置系统的“真理之源”。
+ * 所有的键、默认值和类型都从这里推导。
  */
 
 // Prisma Json 类型定义
@@ -8,294 +9,103 @@ type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
 type JsonObject = { [key: string]: JsonValue };
 type JsonArray = JsonValue[];
 
-export interface DefaultConfig {
-  key: string;
-  value: JsonValue;
-  description?: string;
-}
-
-// ============================================
-// 类型工具
-// ============================================
-
 /**
- * **类型映射表**：手动定义每个配置的类型
- * 这样可以确保 100% 的类型准确性
+ * 所有配置项的结构化定义
  *
- * @internal
+ * 结构说明：
+ * - 每个配置项必须包含 `default` 键，作为该配置的主值。
+ * - `description` 是保留键，用于存储配置描述。
+ * - 也可以定义其他键，它们将作为 `default` 的兄弟字段存储在 JSON 中。
  */
-interface ConfigTypes {
-  "site.title": string;
-  "site.subtitle": string;
-  "site.title.template": string;
-  "site.url": string;
-  "site.color": {
-    primary: string;
-    background: {
-      light: string;
-      dark: string;
-    };
-    muted: {
-      light: string;
-      dark: string;
-    };
-  };
-  "site.shiki.theme": {
-    light: string;
-    dark: string;
-  };
-  "site.slogan.primary": string;
-  "site.slogan.secondary": string;
-  "site.birthday": string;
-  "site.copyright": string[];
-  "author.name": string;
-  "author.bio": string;
-  "author.mail": string;
-  "author.birthday": string;
-  "author.birthday.showAge": boolean;
-  "seo.description": string;
-  "seo.keywords": string[];
-  "seo.category": string;
-  "seo.country": string;
-  "seo.imageCard.enable": boolean;
-  "seo.index.enable": boolean;
-  "seo.twitter_site": string;
-  "seo.twitter_creator": string;
-  "seo.google_verification": string;
-  "user.registration.enabled": boolean;
-  "user.email.verification.required": boolean;
-  "user.sso.google.enabled": boolean;
-  "user.sso.google": {
-    clientId: string;
-    clientSecret: string;
-  };
-  "user.sso.github.enabled": boolean;
-  "user.sso.github": {
-    clientId: string;
-    clientSecret: string;
-  };
-  "user.sso.microsoft.enabled": boolean;
-  "user.sso.microsoft": {
-    clientId: string;
-    clientSecret: string;
-  };
-  "user.passkey.enabled": boolean;
-  "user.passkey.maxPerUser": number;
-  "content.menu.enabled": boolean;
-  "content.slug.segment": boolean;
-  "content.autoIndex.enabled": boolean;
-  "content.rss.enabled": boolean;
-  "content.rss.postCount": number;
-  "content.rss.showFullContent": boolean;
-  "content.rss.autoGenerateExcerpt": boolean;
-  "content.rss.maxExcerptLength": number;
-  "media.upload.allowed_types": string[];
-  "comment.enable": boolean;
-  "comment.placeholder": string;
-  "comment.akismet.enable": boolean;
-  "comment.akismet.apiKey": string;
-  "comment.akismet.report.enable": boolean;
-  "comment.anonymous.enable": boolean;
-  "comment.anonymous.email.required": boolean;
-  "comment.anonymous.website.enable": boolean;
-  "comment.email.notice.enable": boolean;
-  "comment.anonymous.email.notice.enable": boolean;
-  "comment.review.enable": boolean;
-  "comment.anonymous.review.enable": boolean;
-  "comment.review.notifyAdmin.enable": boolean;
-  "comment.review.notifyAdmin.uid": string[];
-  "comment.review.notifyAdmin.threshold": number;
-  "comment.locate.enable": boolean;
-  "notice.enable": boolean;
-  "notice.email": string;
-  "notice.email.from.name": string;
-  "notice.email.replyTo": string;
-  "notice.email.resend.apiKey": string;
-  "notice.email.smtp": {
-    user: string;
-    host: string;
-    port: string;
-    tls: boolean;
-    password: string;
-  };
-  "notice.posts.enable": boolean;
-  "notice.ably.key": string;
-  "notice.webPush.enable": boolean;
-  "notice.webPush.maxPerUser": number;
-  "notice.webPush.vapidKeys": {
-    publicKey: string;
-    privateKey: string;
-  };
-  "ai.enable": boolean;
-  "ai.gateway.url": string;
-  "ai.config": {
-    service: string;
-    apiKey: string;
-    model: string;
-  };
-  "message.enable": boolean;
-  "message.userToUser.enable": boolean;
-  "message.userToAdmin.enable": boolean;
-  "analytics.enable": boolean;
-  "analytics.timezone": string;
-  "analytics.precisionDays": number;
-  "analytics.retentionDays": number;
-}
-
-/**
- * 从 ConfigTypes 中提取所有配置键的类型
- *
- * @example
- * type ConfigKey = ConfigKeys;
- * // ConfigKeys = "site.title" | "site.shiki.theme" | ...
- */
-export type ConfigKeys = keyof ConfigTypes;
-
-/**
- * **核心类型工具**：根据配置 key 获取配置值的类型
- * 使用手动定义的类型映射表，确保类型 100% 准确
- *
- * @example
- * type ShikiThemeType = ConfigType<"site.shiki.theme">;
- * // ShikiThemeType = { light: string; dark: string; }
- *
- * const config = useConfig("site.shiki.theme") as ConfigType<"site.shiki.theme">;
- * // config 自动推导为 { light: string; dark: string; }
- */
-export type ConfigType<K extends ConfigKeys> = K extends keyof ConfigTypes
-  ? ConfigTypes[K]
-  : unknown;
-
-/**
- * 获取所有配置的类型映射
- *
- * @example
- * type AllConfigTypes = ConfigTypeMap;
- * // AllConfigTypes["site.shiki.theme"] = { light: string; dark: string; }
- */
-export type ConfigTypeMap = {
-  [K in ConfigKeys]: ConfigType<K>;
-};
-
-/**
- * 默认配置值的 Map 映射，用于快速查找
- * @internal
- */
-export const defaultConfigMap = new Map<string, JsonValue>();
-
-// 站点基础配置
-export const defaultConfigs: DefaultConfig[] = [
+export const CONFIG_DEFINITIONS = {
   // =====================================
   // 站点基础配置
   // =====================================
-  {
-    key: "site.title",
-    value: { default: "NeutralPress" },
+  "site.title": {
+    default: "NeutralPress",
     description:
       "站点标题。显示为：{页面标题} | {站点标题}（格式可在seo.title.template中自定义）",
   },
-  // TODO
-  {
-    key: "site.subtitle",
-    value: { default: "" },
+  "site.subtitle": {
+    default: "",
     description:
       "[可选] 站点子标题。如果设置，将显示为：{页面标题} | {站点标题} - {站点子标题}（格式可在seo.title.template中自定义）",
   },
-  {
-    key: "site.title.template",
-    value: { default: "{pageTitle} | {title}( - {subtitle})" },
+  "site.title.template": {
+    default: "{pageTitle} | {title}( - {subtitle})",
     description:
       "站点标题模板。{pageTitle}、{title}、{subtitle}将分别被替换为页面标题、站点标题、站点子标题。英文括号'()'及其内部内容将在未设置站点子标题时清空",
   },
-  {
-    key: "site.url",
-    value: { default: "https://example.com" },
+  "site.url": {
+    default: "https://example.com",
     description: "站点主域名地址。无需添加尾缀斜杠",
   },
-  {
-    key: "site.color",
-    value: {
-      default: {
-        primary: "#2dd4bf",
-        background: {
-          light: "#ffffff",
-          dark: "#111111",
-        },
-        muted: {
-          light: "#f4f4f5",
-          dark: "#202023",
-        },
+  "site.color": {
+    default: {
+      primary: "#2dd4bf",
+      background: {
+        light: "#ffffff",
+        dark: "#111111",
+      },
+      muted: {
+        light: "#f4f4f5",
+        dark: "#202023",
       },
     },
     description:
       "站点主题颜色设置。影响页面UI、用户默认头像等。需填写十六进制颜色值",
   },
-  {
-    key: "site.shiki.theme",
-    value: {
-      default: {
-        light: "light-plus",
-        dark: "dark-plus",
-      },
+  "site.shiki.theme": {
+    default: {
+      light: "light-plus",
+      dark: "dark-plus",
     },
     description:
       "代码高亮主题。参考 https://shiki.style/themes ，填写主题 ID。",
   },
-  {
-    key: "site.slogan.primary",
-    value: { default: "Beginning of meditation." },
+  "site.slogan.primary": {
+    default: "Beginning of meditation.",
     description: "站点主标语。显示在主页",
   },
-  {
-    key: "site.slogan.secondary",
-    value: { default: "Mind stuff, that's what they say when the verses fly." },
+  "site.slogan.secondary": {
+    default: "Mind stuff, that's what they say when the verses fly.",
     description: "站点副标语。显示在菜单的最上方",
   },
-  {
-    key: "site.birthday",
-    value: { default: new Date().toISOString() },
+  "site.birthday": {
+    default: new Date().toISOString(),
     description: "站点创建时间。用于计算运行天数及版权声明",
   },
-  {
-    key: "site.copyright",
-    value: {
-      default: [
-        "All rights reserved.",
-        "Powered by <a href='https://github.com/RavelloH/NeutralPress'>NeutralPress</a>.",
-      ],
-    },
+  "site.copyright": {
+    default: [
+      "All rights reserved.",
+      "Powered by <a href='https://github.com/RavelloH/NeutralPress'>NeutralPress</a>.",
+    ] as string[],
     description:
       "站点版权信息。显示在菜单底部（桌面版）或页脚（移动版）。每行一条，可使用HTML",
   },
+
   // =====================================
   // 作者相关设置
   // =====================================
-  {
-    key: "author.name",
-    value: { default: "Your Name" },
+  "author.name": {
+    default: "Your Name",
     description: "站点管理员/作者/团队名。影响版权声明、友链申请信息展示等",
   },
-  // TODO
-  {
-    key: "author.bio",
-    value: { default: "" },
+  "author.bio": {
+    default: "",
     description: "[可选] 站点管理员/作者/团队简介签名。影响友链申请信息展示等",
   },
-  {
-    key: "author.mail",
-    value: { default: "" },
+  "author.mail": {
+    default: "",
     description: "[可选] 站点管理员/作者/团队邮箱",
   },
-  // TODO
-  {
-    key: "author.birthday",
-    value: { default: new Date().toISOString() },
+  "author.birthday": {
+    default: new Date().toISOString(),
     description:
       "[可选] 站点管理员/作者/团队生日。单独设置不生效，需与author.birthday.showAge共同设置",
   },
-  {
-    key: "author.birthday.showAge",
-    value: { default: false },
+  "author.birthday.showAge": {
+    default: false,
     description:
       "单独设置不生效，需与author.birthday共同设置。开启后，在时间线中将显示当年作者年龄",
   },
@@ -303,420 +113,410 @@ export const defaultConfigs: DefaultConfig[] = [
   // =====================================
   // 站点SEO配置
   // =====================================
-  {
-    key: "seo.description",
-    value: { default: "一个现代化的内容管理系统" },
+  "seo.description": {
+    default: "一个现代化的内容管理系统",
     description: "[可选] 站点默认SEO描述",
   },
-  {
-    key: "seo.keywords",
-    value: { default: ["CMS", "Blog", "NeutralPress"] },
+  "seo.keywords": {
+    default: ["CMS", "Blog", "NeutralPress"] as string[],
     description: "[可选] 站点SEO关键词",
   },
-  {
-    key: "seo.category",
-    value: { default: "Technology" },
+  "seo.category": {
+    default: "Technology",
     description: "[可选] 站点分类。用于SEO优化，但对SEO影响极小",
   },
-  {
-    key: "seo.country",
-    value: { default: "" },
+  "seo.country": {
+    default: "",
     description:
       "[可选] 站点所属国家（英文全称）。用于SEO优化，对SEO影响极小）",
   },
-  {
-    key: "seo.imageCard.enable",
-    value: { default: true },
+  "seo.imageCard.enable": {
+    default: true,
     description:
       "是否开启站点链接在分享时显示的图片摘要。关闭以减少资源消耗，但可能影响SEO效果",
   },
-  {
-    key: "seo.index.enable",
-    value: { default: true },
+  "seo.index.enable": {
+    default: true,
     description: "是否允许搜索引擎索引此站点",
   },
-  {
-    key: "seo.twitter_site",
-    value: { default: "@ravellohh" },
+  "seo.twitter_site": {
+    default: "@ravellohh",
     description: "[可选] 官方Twitter账号",
   },
-  {
-    key: "seo.twitter_creator",
-    value: { default: "@neutralpress" },
+  "seo.twitter_creator": {
+    default: "@neutralpress",
     description: "[可选] 内容创建者Twitter账号",
   },
-  {
-    key: "seo.google_verification",
-    value: { default: "" },
+  "seo.google_verification": {
+    default: "",
     description:
       "[可选] Google Search Console网站验证码。适用于meta标签格式的验证方法",
   },
+
   // =====================================
   // 用户相关配置
   // =====================================
-  {
-    key: "user.registration.enabled",
-    value: { default: true },
+  "user.registration.enabled": {
+    default: true,
     description: "是否允许用户注册",
   },
-  {
-    key: "user.email.verification.required",
-    value: { default: false },
+  "user.email.verification.required": {
+    default: false,
     description:
       "是否需要用户注册后验证邮箱。需要设置相关环境变量以配置电子邮件发送服务，详见文档",
   },
-  // Google OAuth
-  {
-    key: "user.sso.google.enabled",
-    value: { default: false },
+  "user.sso.google.enabled": {
+    default: false,
     description:
       "是否启用 Google SSO 登录，详见 https://docs.ravelloh.com/docs/sso",
   },
-  {
-    key: "user.sso.google",
-    value: {
-      default: {
-        clientId: "",
-        clientSecret: "",
-      },
+  "user.sso.google": {
+    default: {
+      clientId: "",
+      clientSecret: "",
     },
     description: "Google OAuth 配置参数",
   },
-  // GitHub OAuth
-  {
-    key: "user.sso.github.enabled",
-    value: { default: false },
+  "user.sso.github.enabled": {
+    default: false,
     description:
       "是否启用 GitHub SSO 登录，详见 https://docs.ravelloh.com/docs/sso",
   },
-  {
-    key: "user.sso.github",
-    value: {
-      default: {
-        clientId: "",
-        clientSecret: "",
-      },
+  "user.sso.github": {
+    default: {
+      clientId: "",
+      clientSecret: "",
     },
     description: "GitHub OAuth 配置参数",
   },
-  // Microsoft OAuth
-  {
-    key: "user.sso.microsoft.enabled",
-    value: { default: false },
+  "user.sso.microsoft.enabled": {
+    default: false,
     description:
       "是否启用 Microsoft SSO 登录，详见 https://docs.ravelloh.com/docs/sso",
   },
-  {
-    key: "user.sso.microsoft",
-    value: {
-      default: {
-        clientId: "",
-        clientSecret: "",
-      },
+  "user.sso.microsoft": {
+    default: {
+      clientId: "",
+      clientSecret: "",
     },
     description: "Microsoft OAuth 配置参数",
   },
-  {
-    key: "user.passkey.enabled",
-    value: { default: true },
+  "user.passkey.enabled": {
+    default: true,
     description: "是否启用通行密钥功能",
   },
-  {
-    key: "user.passkey.maxPerUser",
-    value: { default: 5 },
+  "user.passkey.maxPerUser": {
+    default: 5,
     description: "每个用户允许绑定的最大通行密钥数量",
   },
+
   // =====================================
   // 内容相关配置
   // =====================================
-  {
-    key: "content.menu.enabled",
-    value: { default: true },
+  "content.menu.enabled": {
+    default: true,
     description: "是否启用文章目录",
   },
-  {
-    key: "content.slug.segment",
-    value: { default: false },
+  "content.slug.segment": {
+    default: false,
     description:
       "是否对自动转换的拼音slug进行分词处理。例如：zheshi-yipian-wenzhang 而不是 zhe-shi-yi-pian-wen-zhang",
   },
-  {
-    key: "content.autoIndex.enabled",
-    value: { default: true },
+  "content.autoIndex.enabled": {
+    default: true,
     description:
       "是否在每次文章保存时自动更新搜索索引。这可能会略微增加保存时间",
   },
-  {
-    key: "content.rss.enabled",
-    value: { default: true },
+  "content.rss.enabled": {
+    default: true,
     description: "是否启用RSS订阅功能",
   },
-  {
-    key: "content.rss.postCount",
-    value: { default: 10 },
+  "content.rss.postCount": {
+    default: 10,
     description: "RSS订阅中包含的最新文章数量",
   },
-  {
-    key: "content.rss.showFullContent",
-    value: { default: true },
+  "content.rss.showFullContent": {
+    default: true,
     description: "RSS订阅中是否显示文章全文，若关闭则仅显示摘要",
   },
-  {
-    key: "content.rss.autoGenerateExcerpt",
-    value: { default: true },
+  "content.rss.autoGenerateExcerpt": {
+    default: true,
     description:
       "如果文章未手动设置摘要，是否自动截取文章内容作为摘要。如果 content.rss.showFullContent 为 true 则此配置无效",
   },
-  {
-    key: "content.rss.maxExcerptLength",
-    value: { default: 200 },
+  "content.rss.maxExcerptLength": {
+    default: 200,
     description:
       "RSS订阅中自动文章摘要的最大长度，单位为字符。如果 content.rss.showFullContent 为 true 则此配置无效。需与 content.rss.autoGenerateExcerpt 配合使用",
   },
+
   // =====================================
   // 媒体相关配置
   // =====================================
-  {
-    key: "media.upload.allowed_types",
-    value: { default: ["image/jpeg", "image/png", "image/gif", "image/webp"] },
+  "media.upload.allowed_types": {
+    default: ["image/jpeg", "image/png", "image/gif", "image/webp"] as string[],
     description: "允许上传的媒体文件类型",
   },
+
   // =====================================
   // 评论相关配置
   // =====================================
-  {
-    key: "comment.enable",
-    value: { default: true },
+  "comment.enable": {
+    default: true,
     description: "是否启用评论功能",
   },
-  {
-    key: "comment.placeholder",
-    value: { default: "输入评论内容..." },
+  "comment.placeholder": {
+    default: "输入评论内容...",
     description: "[可选] 评论输入框默认占位信息",
   },
-  {
-    key: "comment.akismet.enable",
-    value: { default: false },
+  "comment.akismet.enable": {
+    default: false,
     description:
       "是否启用Akismet反垃圾功能，若开启需同时填写comment.akismet.apiKey。开启后可自动检测垃圾评论。不会对 AUTHOR/EDITOR/ADMIN 进行检查。详见 https://docs.ravelloh.com/docs/comment#akismet",
   },
-  {
-    key: "comment.akismet.apiKey",
-    value: { default: "" },
+  "comment.akismet.apiKey": {
+    default: "",
     description: "[可选] Akismet API Key。启用 Akismet 反垃圾功能所需",
   },
-  {
-    key: "comment.akismet.report.enable",
-    value: { default: true },
+  "comment.akismet.report.enable": {
+    default: true,
     description: "是否在管理员将评论标记为垃圾评论时，上报至 Akismet",
   },
-  {
-    key: "comment.anonymous.enable",
-    value: { default: true },
+  "comment.anonymous.enable": {
+    default: true,
     description: "是否允许用户匿名评论，而无需登录账户",
   },
-  {
-    key: "comment.anonymous.email.required",
-    value: { default: true },
+  "comment.anonymous.email.required": {
+    default: true,
     description: "是否需要匿名评论的用户提供邮箱。关闭后，邮箱作为可选字段",
   },
-  {
-    key: "comment.anonymous.website.enable",
-    value: { default: true },
+  "comment.anonymous.website.enable": {
+    default: true,
     description: "是否允许匿名评论的用户填写个人网站",
   },
-  {
-    key: "comment.email.notice.enable",
-    value: { default: true },
+  "comment.email.notice.enable": {
+    default: true,
     description:
       "是否在评论被回复时，向评论者发送通知邮件。控制所有用户，同时受 notice.enable 控制",
   },
-  {
-    key: "comment.anonymous.email.notice.enable",
-    value: { default: true },
+  "comment.anonymous.email.notice.enable": {
+    default: true,
     description:
       "是否在评论被回复时，向评论者发送通知邮件。控制匿名用户，同时受 notice.enable 控制",
   },
-  {
-    key: "comment.review.enable",
-    value: { default: false },
+  "comment.review.enable": {
+    default: false,
     description: "评论是否需要管理员审核后才能展示。控制所有评论",
   },
-  {
-    key: "comment.anonymous.review.enable",
-    value: { default: false },
+  "comment.anonymous.review.enable": {
+    default: false,
     description: "评论是否需要管理员审核后才能展示。控制匿名评论",
   },
-  {
-    key: "comment.review.notifyAdmin.enable",
-    value: { default: true },
+  "comment.review.notifyAdmin.enable": {
+    default: true,
     description:
       "若开启评论审核，是否在有新评论待审核时通知管理员及编辑(ADMIN/EDITOR)",
   },
-  {
-    key: "comment.review.notifyAdmin.uid",
-    value: { default: ["1"] },
+  "comment.review.notifyAdmin.uid": {
+    default: ["1"] as string[],
     description:
       "审核通知应该发送给哪个用户。填写用户UID，每行一个。不填写则发送给所有ADMIN/Editor",
   },
-  {
-    key: "comment.review.notifyAdmin.threshold",
-    value: { default: 1 },
+  "comment.review.notifyAdmin.threshold": {
+    default: 1,
     description: "当待审核评论数量达到该阈值时，才发送通知",
   },
-  {
-    key: "comment.locate.enable",
-    value: { default: false },
+  "comment.locate.enable": {
+    default: false,
     description:
       "是否在评论中显示评论者的IP归属地。管理面板中将始终显示 IP 信息，不受此选项影响",
   },
+
   // =====================================
   // 通知相关配置
   // =====================================
-  {
-    key: "notice.enable",
-    value: { default: true },
+  "notice.enable": {
+    default: true,
     description: "是否启用通知功能",
   },
-  {
-    key: "notice.email",
-    value: { default: "notice@example.com" },
+  "notice.email": {
+    default: "notice@example.com",
     description: "[可选] 邮件通知发信地址。留空以关闭邮件通知功能",
   },
-  {
-    key: "notice.email.from.name",
-    value: { default: "NeutralPress" },
+  "notice.email.from.name": {
+    default: "NeutralPress",
     description: "邮件发件人显示名称",
   },
-  {
-    key: "notice.email.replyTo",
-    value: { default: "" },
+  "notice.email.replyTo": {
+    default: "",
     description:
       "[可选] 邮件回复地址。如果留空，则使用 notice.email 作为回复地址",
   },
-  {
-    key: "notice.email.resend.apiKey",
-    value: { default: "" },
+  "notice.email.resend.apiKey": {
+    default: "",
     description:
       "[可选] Resend API key。填写后，使用 Resend 而不是 SMTP 发送邮件",
   },
-  {
-    key: "notice.email.smtp",
-    value: {
-      default: {
-        user: "",
-        host: "",
-        port: "",
-        tls: false,
-        password: "",
-      },
+  "notice.email.smtp": {
+    default: {
+      user: "",
+      host: "",
+      port: "",
+      tls: false,
+      password: "",
     },
     description:
       "邮件通知SMTP配置。字段较多，请参照文档配置。当设置 notice.email.resend.apiKey 后，自动忽略此配置",
   },
-  {
-    key: "notice.posts.enable",
-    value: { default: true },
+  "notice.posts.enable": {
+    default: true,
     description: "是否在文章被评论时，向作者发送通知",
   },
-  {
-    key: "notice.ably.key",
-    value: { default: "" },
+  "notice.ably.key": {
+    default: "",
     description:
       "[可选] Ably API 密钥。填写后可启用 WebSocket 连接，增强通知、聊天的实时性。详见 https://docs.ravelloh.com/docs/ably",
   },
-  {
-    key: "notice.webPush.enable",
-    value: { default: true },
+  "notice.webPush.enable": {
+    default: true,
     description:
       "是否启用 WebPush 通知功能，可实现实时推送服务。需要用户允许浏览器接收通知权限",
   },
-  {
-    key: "notice.webPush.maxPerUser",
-    value: { default: 5 },
+  "notice.webPush.maxPerUser": {
+    default: 5,
     description: "每个用户允许订阅的最大 Web Push 设备数量",
   },
-  {
-    key: "notice.webPush.vapidKeys",
-    value: {
-      default: {
-        publicKey: "[AUTO_GENERATED]",
-        privateKey: "[AUTO_GENERATED]",
-      },
+  "notice.webPush.vapidKeys": {
+    default: {
+      publicKey: "[AUTO_GENERATED]",
+      privateKey: "[AUTO_GENERATED]",
     },
     description:
       "WebPush VAPID 密钥对。需要同时配置 publicKey 与 privateKey。默认会初始化生成一套，一般无需修改",
   },
+
   // =====================================
   // AI 集成
   // =====================================
-  {
-    key: "ai.enable",
-    value: { default: true },
+  "ai.enable": {
+    default: true,
     description:
       "是否启用AI相关辅助功能。需要同时配置 ai.gateway.url 与 ai.config",
   },
-  {
-    key: "ai.gateway.url",
-    value: { default: "https://ai.ravelloh.com/" },
+  "ai.gateway.url": {
+    default: "https://ai.ravelloh.com/",
     description: "AI 网关地址。默认服务不保证可用性，请参考文档自建服务",
   },
-  {
-    key: "ai.config",
-    value: {
-      default: {
-        service: "",
-        apiKey: "",
-        model: "",
-      },
+  "ai.config": {
+    default: {
+      service: "",
+      apiKey: "",
+      model: "",
     },
     description: "AI 配置信息。参考文档设置",
   },
+
   // =====================================
   // 聊天系统
   // =====================================
-  {
-    key: "message.enable",
-    value: { default: true },
+  "message.enable": {
+    default: true,
     description: "是否启用站内信系统",
   },
-  {
-    key: "message.userToUser.enable",
-    value: { default: true },
+  "message.userToUser.enable": {
+    default: true,
     description: "是否允许USER与USER之间相互发送站内信",
   },
-  {
-    key: "message.userToAdmin.enable",
-    value: { default: true },
+  "message.userToAdmin.enable": {
+    default: true,
     description: "是否允许USER向ADMIN/EDITOR/AUTHOR发送站内信",
   },
+
   // =====================================
   // 访问统计
   // =====================================
-  {
-    key: "analytics.enable",
-    value: { default: true },
+  "analytics.enable": {
+    default: true,
     description: "是否启用内建访问统计系统",
   },
-  {
-    key: "analytics.timezone",
-    value: { default: "Asia/Shanghai" },
+  "analytics.timezone": {
+    default: "Asia/Shanghai",
     description:
       "访问统计使用的时区。用于确定归档数据的日期边界。请改为管理员所在时区，例如：UTC、Asia/Shanghai、America/New_York。不会影响已归档的数据",
   },
-  {
-    key: "analytics.precisionDays",
-    value: { default: 30 },
+  "analytics.precisionDays": {
+    default: 30,
     description:
       "高精度数据保留天数。超过此天数的数据将被压缩，成为低精度数据，以优化数据库占用。设置为0以保留所有数据。低精度数据在天数视图的统计结果上与高精度数据并无区别，但低精度数据无法进行关联查询（例如：不能查看目标为某路径且来源为某域名的访问量，但能查询某日的所有访问路径和所有访问来源）",
   },
-  {
-    key: "analytics.retentionDays",
-    value: { default: 365 },
+  "analytics.retentionDays": {
+    default: 365,
     description:
       "数据保留天数。超过此天数的数据将被删除（不会影响访问量统计）。设置为0以保留所有数据",
   },
-];
+} as const;
+
+/**
+ * 类型定义的内部提取器
+ * 自动处理 read-only 数组
+ */
+type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
+
+/**
+ * 自动推导出的配置类型映射表
+ * 指向每个定义项的 `default` 字段类型
+ */
+export type ConfigTypes = {
+  [K in keyof typeof CONFIG_DEFINITIONS]: DeepWriteable<
+    (typeof CONFIG_DEFINITIONS)[K]["default"]
+  >;
+};
+
+/**
+ * 所有配置键名类型
+ */
+export type ConfigKeys = keyof ConfigTypes;
+
+/**
+ * 核心类型工具：根据配置 key 获取配置值的类型
+ */
+export type ConfigType<K extends ConfigKeys> = ConfigTypes[K];
+
+/**
+ * 所有配置的类型映射
+ */
+export type ConfigTypeMap = ConfigTypes;
+
+/**
+ * 数据库初始化的配置项结构
+ */
+export interface DefaultConfig {
+  key: string;
+  value: JsonValue;
+  description?: string;
+}
+
+/**
+ * 计算生成的 defaultConfigs 数组
+ * 用于初次运行时写入数据库。
+ * 将定义中除了 description 以外的所有字段作为 JSON 对象存入 value。
+ */
+export const defaultConfigs: DefaultConfig[] = (
+  Object.keys(CONFIG_DEFINITIONS) as ConfigKeys[]
+).map((key) => {
+  const { description, ...values } = CONFIG_DEFINITIONS[key];
+  return {
+    key,
+    value: values as JsonValue,
+    description,
+  };
+});
+
+/**
+ * 默认配置值的 Map 映射，用于快速查找
+ * @internal
+ */
+export const defaultConfigMap = new Map<string, JsonValue>();
 
 // 初始化 Map
 defaultConfigs.forEach((c) => defaultConfigMap.set(c.key, c.value));
