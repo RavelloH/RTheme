@@ -4,13 +4,10 @@
 import { config } from "dotenv";
 import { pathToFileURL } from "url";
 import Rlog from "rlog-js";
-import {
-  createPrivateKey,
-  createPublicKey,
-  KeyObject,
-  generateKeyPairSync,
-} from "crypto";
-import jwt, { SignOptions, VerifyOptions } from "jsonwebtoken";
+import type { KeyObject } from "crypto";
+import { createPrivateKey, createPublicKey, generateKeyPairSync } from "crypto";
+import type { SignOptions, VerifyOptions } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 
 // Load .env file
 config({

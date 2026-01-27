@@ -1,8 +1,9 @@
 "use client";
 
 import { getTagsList, updateTag, deleteTags } from "@/actions/tag";
-import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
-import { TableColumn } from "@/ui/Table";
+import type { ActionButton, FilterConfig } from "@/components/GridTable";
+import GridTable from "@/components/GridTable";
+import type { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { TagListItem } from "@repo/shared-types/api/tag";
 import { useBroadcast } from "@/hooks/use-broadcast";

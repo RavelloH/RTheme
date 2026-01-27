@@ -1,6 +1,7 @@
 "use client";
 
-import Image, { ImageProps } from "next/image";
+import type { ImageProps } from "next/image";
+import Image from "next/image";
 import { useState } from "react";
 import { RiFileDamageFill } from "@remixicon/react";
 

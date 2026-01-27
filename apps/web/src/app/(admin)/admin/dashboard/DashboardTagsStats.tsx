@@ -7,7 +7,7 @@ import { AutoTransition } from "@/ui/AutoTransition";
 import { RiRefreshLine } from "@remixicon/react";
 import { useEffect, useState } from "react";
 import { getTagsStats } from "@/actions/stat";
-import { GetTagsStatsSuccessResponse } from "@repo/shared-types/api/stats";
+import type { GetTagsStatsSuccessResponse } from "@repo/shared-types/api/stats";
 import ErrorPage from "@/components/ui/Error";
 
 type stats = GetTagsStatsSuccessResponse["data"] | null;

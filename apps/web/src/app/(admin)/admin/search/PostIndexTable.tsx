@@ -6,8 +6,9 @@ import {
   getPostTokenDetails,
   deleteIndex,
 } from "@/actions/search";
-import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
-import { TableColumn } from "@/ui/Table";
+import type { ActionButton, FilterConfig } from "@/components/GridTable";
+import GridTable from "@/components/GridTable";
+import type { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type {
   IndexStatusItem,

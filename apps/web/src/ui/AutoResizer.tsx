@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { motion, Easing } from "framer-motion";
+import type { Easing } from "framer-motion";
+import { motion } from "framer-motion";
 
 export interface AutoResizerProps {
   children: React.ReactNode;

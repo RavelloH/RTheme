@@ -1,6 +1,6 @@
 "use client";
 
-import { ConfigType } from "@/types/config";
+import type { ConfigType } from "@/types/config";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { createContext, useContext, useEffect } from "react";
 

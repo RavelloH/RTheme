@@ -1,6 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { AccessTokenPayload, jwtTokenVerify } from "@/lib/server/jwt";
+import type { AccessTokenPayload } from "@/lib/server/jwt";
+import { jwtTokenVerify } from "@/lib/server/jwt";
 
 /**
  * 用户角色类型

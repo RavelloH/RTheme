@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import ResponseBuilder from "@/lib/server/response";
 import { authVerify } from "@/lib/server/auth-verify";
 import {

@@ -6,9 +6,10 @@ import {
   updateMenus,
   deleteMenus,
 } from "@/actions/menu";
-import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
+import type { ActionButton, FilterConfig } from "@/components/GridTable";
+import GridTable from "@/components/GridTable";
 import runWithAuth from "@/lib/client/run-with-auth";
-import { TableColumn } from "@/ui/Table";
+import type { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { MenuListItem } from "@repo/shared-types/api/menu";
 import { useBroadcast } from "@/hooks/use-broadcast";

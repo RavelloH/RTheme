@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactNode, useRef, useEffect } from "react";
+import type { ReactNode } from "react";
+import { useRef, useEffect } from "react";
 import { useMobile } from "@/hooks/use-mobile";
 interface ResponsiveFontScaleProps {
   children: ReactNode;

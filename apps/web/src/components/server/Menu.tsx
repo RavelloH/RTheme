@@ -1,6 +1,6 @@
 import "server-only";
 
-import { MenuItem } from "@/lib/server/menu-cache";
+import type { MenuItem } from "@/types/menu";
 import MenuWrapper from "../client/Menu/MenuWrapper";
 import { MenuFooter, MenuHeader, MenuLayout } from "../client/Menu/MenuMiscs";
 import { getConfigs } from "@/lib/server/config-cache";
@@ -51,15 +51,9 @@ export default async function Menu({ menus }: { menus: MenuItem[] }) {
     "site.birthday",
   ]);
 
-  const mainMenus = menus.filter(
-    (menu) => menu.category === "MAIN" && menu.status === "ACTIVE",
-  );
-  const commonMenus = menus.filter(
-    (menu) => menu.category === "COMMON" && menu.status === "ACTIVE",
-  );
-  const outsiteMenus = menus.filter(
-    (menu) => menu.category === "OUTSITE" && menu.status === "ACTIVE",
-  );
+  const mainMenus = menus.filter((menu) => menu.category === "MAIN");
+  const commonMenus = menus.filter((menu) => menu.category === "COMMON");
+  const outsiteMenus = menus.filter((menu) => menu.category === "OUTSITE");
 
   return (
     <MenuWrapper>

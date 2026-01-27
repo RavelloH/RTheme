@@ -1,7 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
 import ResponseBuilder from "@/lib/server/response";

@@ -7,8 +7,9 @@ import {
   resetPostToVersion,
   squashPostToVersion,
 } from "@/actions/post";
-import GridTable, { ActionButton } from "@/components/GridTable";
-import { TableColumn } from "@/ui/Table";
+import type { ActionButton } from "@/components/GridTable";
+import GridTable from "@/components/GridTable";
+import type { TableColumn } from "@/ui/Table";
 import type {
   PostHistoryItem,
   PostHistoryStats,

@@ -1,11 +1,11 @@
 "use client";
 
 import { Input } from "@/ui/Input";
-import {
-  STORAGE_PROVIDER_CONFIG_TEMPLATES,
+import type {
   StorageConfigTemplate,
   StorageProviderType,
 } from "@/template/storages";
+import { STORAGE_PROVIDER_CONFIG_TEMPLATES } from "@/template/storages";
 
 export type StorageConfigValues = Record<string, string>;
 

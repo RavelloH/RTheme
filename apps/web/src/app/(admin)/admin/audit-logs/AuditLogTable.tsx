@@ -1,8 +1,9 @@
 "use client";
 
 import { getAuditLogs } from "@/actions/audit";
-import GridTable, { FilterConfig } from "@/components/GridTable";
-import { TableColumn } from "@/ui/Table";
+import type { FilterConfig } from "@/components/GridTable";
+import GridTable from "@/components/GridTable";
+import type { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { AuditLogItem } from "@repo/shared-types/api/audit";
 import { useBroadcast } from "@/hooks/use-broadcast";

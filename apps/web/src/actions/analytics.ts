@@ -3,7 +3,7 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import { headers } from "next/headers";
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import { UAParser } from "ua-parser-js";
 import prisma from "@/lib/server/prisma";
 import redis from "@/lib/server/redis";

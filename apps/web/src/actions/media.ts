@@ -1,24 +1,29 @@
 "use server";
-import { NextResponse } from "next/server";
-import {
-  GetMediaListSchema,
+import type { NextResponse } from "next/server";
+import type {
   GetMediaList,
   MediaListItem,
-  GetMediaDetailSchema,
   GetMediaDetail,
   MediaDetail,
-  UpdateMediaSchema,
   UpdateMedia,
-  DeleteMediaSchema,
   DeleteMedia,
-  GetMediaStatsSchema,
   GetMediaStats,
   MediaStats,
-  GetMediaTrendsSchema,
   GetMediaTrends,
   MediaTrendItem,
 } from "@repo/shared-types/api/media";
-import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
+import {
+  GetMediaListSchema,
+  GetMediaDetailSchema,
+  UpdateMediaSchema,
+  DeleteMediaSchema,
+  GetMediaStatsSchema,
+  GetMediaTrendsSchema,
+} from "@repo/shared-types/api/media";
+import type {
+  ApiResponse,
+  ApiResponseData,
+} from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
 import limitControl from "@/lib/server/rate-limit";
 import { headers } from "next/headers";

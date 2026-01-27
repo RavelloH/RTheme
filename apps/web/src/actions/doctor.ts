@@ -1,17 +1,22 @@
 "use server";
-import { NextResponse } from "next/server";
-import {
-  DoctorSchema,
+import type { NextResponse } from "next/server";
+import type {
   Doctor,
   DoctorSuccessResponse,
-  GetDoctorHistorySchema,
   GetDoctorHistory,
   DoctorHistoryItem,
-  GetDoctorTrendsSchema,
   GetDoctorTrends,
   DoctorTrendItem,
 } from "@repo/shared-types/api/doctor";
-import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
+import {
+  DoctorSchema,
+  GetDoctorHistorySchema,
+  GetDoctorTrendsSchema,
+} from "@repo/shared-types/api/doctor";
+import type {
+  ApiResponse,
+  ApiResponseData,
+} from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
 import limitControl from "@/lib/server/rate-limit";
 import { headers } from "next/headers";

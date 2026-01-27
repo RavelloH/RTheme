@@ -1,8 +1,9 @@
 "use client";
 
 import { getPageViews } from "@/actions/analytics";
-import GridTable, { FilterConfig } from "@/components/GridTable";
-import { TableColumn } from "@/ui/Table";
+import type { FilterConfig } from "@/components/GridTable";
+import GridTable from "@/components/GridTable";
+import type { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { PageViewItem } from "@repo/shared-types";
 import { Dialog } from "@/ui/Dialog";

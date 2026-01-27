@@ -1,8 +1,9 @@
 "use client";
 
 import { getIPList, banIP, unbanIP, clearRateLimit } from "@/actions/security";
-import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
-import { TableColumn } from "@/ui/Table";
+import type { ActionButton, FilterConfig } from "@/components/GridTable";
+import GridTable from "@/components/GridTable";
+import type { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { IPInfo } from "@repo/shared-types/api/security";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";

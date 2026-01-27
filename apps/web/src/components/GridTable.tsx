@@ -7,14 +7,17 @@ import React, {
   useEffect,
   useRef,
 } from "react";
-import { GridItem, GridArea } from "@/components/RowGrid";
+import type { GridArea } from "@/components/RowGrid";
+import { GridItem } from "@/components/RowGrid";
 import { createArray } from "@/lib/client/create-array";
-import { Table, TableColumn } from "@/ui/Table";
+import type { TableColumn } from "@/ui/Table";
+import { Table } from "@/ui/Table";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { Select } from "@/ui/Select";
-import { Button, ButtonProps } from "@/ui/Button";
+import type { ButtonProps } from "@/ui/Button";
+import { Button } from "@/ui/Button";
 import { Checkbox } from "@/ui/Checkbox";
 import { Tooltip } from "@/ui/Tooltip";
 import {
@@ -27,7 +30,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
-import { SelectOption } from "@/ui/Select";
+import type { SelectOption } from "@/ui/Select";
 import { useMobile } from "@/hooks/use-mobile";
 
 // 操作按钮配置

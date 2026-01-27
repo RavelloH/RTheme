@@ -1,11 +1,14 @@
 "use server";
-import { NextResponse } from "next/server";
-import {
-  GetSystemInfoSchema,
+import type { NextResponse } from "next/server";
+import type {
   GetSystemInfo,
   GetSystemInfoSuccessResponse,
 } from "@repo/shared-types/api/system";
-import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
+import { GetSystemInfoSchema } from "@repo/shared-types/api/system";
+import type {
+  ApiResponse,
+  ApiResponseData,
+} from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
 import limitControl from "@/lib/server/rate-limit";
 import { headers } from "next/headers";

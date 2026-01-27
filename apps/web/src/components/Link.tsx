@@ -10,6 +10,7 @@ import {
   RiArrowRightUpLongLine,
 } from "@remixicon/react";
 import React, { useState, useEffect } from "react";
+import type { DynamicIcon as DynamicIconType } from "./client/DynamicIcon";
 
 type BroadcastFn = ReturnType<typeof useBroadcastSender<object>>["broadcast"];
 type GetLeftRightMenusFn = ReturnType<typeof useMenu>["getLeftRightMenus"];
@@ -505,9 +506,9 @@ function DynamicIconLink({
   onClick?: React.MouseEventHandler<HTMLAnchorElement>;
   linkRef?: React.Ref<HTMLAnchorElement>;
 }) {
-  const [DynamicIcon, setDynamicIcon] = useState<
-    typeof import("./client/DynamicIcon").DynamicIcon | null
-  >(null);
+  const [DynamicIcon, setDynamicIcon] = useState<typeof DynamicIconType | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

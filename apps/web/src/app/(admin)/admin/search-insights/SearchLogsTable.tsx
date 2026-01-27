@@ -1,8 +1,9 @@
 "use client";
 
 import { getSearchLogs } from "@/actions/search";
-import GridTable, { FilterConfig } from "@/components/GridTable";
-import { TableColumn } from "@/ui/Table";
+import type { FilterConfig } from "@/components/GridTable";
+import GridTable from "@/components/GridTable";
+import type { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { SearchLogItem } from "@repo/shared-types/api/search";
 import { Dialog } from "@/ui/Dialog";

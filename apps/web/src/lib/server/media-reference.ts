@@ -5,7 +5,7 @@
 
 import { MEDIA_SLOTS } from "@/types/media";
 import { generateSignature } from "@/lib/server/image-crypto";
-import Prisma from "@/lib/server/prisma";
+import type Prisma from "@/lib/server/prisma";
 
 /**
  * MediaReference 查询包含选项

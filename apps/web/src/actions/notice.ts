@@ -1,6 +1,6 @@
 "use server";
 
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import { cookies, headers } from "next/headers";
 import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
@@ -8,15 +8,19 @@ import { revalidatePath } from "next/cache";
 import ResponseBuilder from "@/lib/server/response";
 import limitControl from "@/lib/server/rate-limit";
 import { validateData } from "@/lib/server/validator";
-import { AccessTokenPayload, jwtTokenVerify } from "@/lib/server/jwt";
-import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
-import {
-  MarkNoticesAsReadSchema,
+import type { AccessTokenPayload } from "@/lib/server/jwt";
+import { jwtTokenVerify } from "@/lib/server/jwt";
+import type {
+  ApiResponse,
+  ApiResponseData,
+} from "@repo/shared-types/api/common";
+import type {
   GetNoticesSuccessResponse,
   MarkNoticesAsReadSuccessResponse,
   MarkAllNoticesAsReadSuccessResponse,
   GetUnreadNoticeCountSuccessResponse,
 } from "@repo/shared-types/api/notice";
+import { MarkNoticesAsReadSchema } from "@repo/shared-types/api/notice";
 import { publishNoticeToUser } from "@/lib/server/ably";
 
 type NoticeActionEnvironment = "serverless" | "serveraction";

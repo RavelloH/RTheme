@@ -4,18 +4,19 @@ import { useState } from "react";
 import { GridItem } from "@/components/RowGrid";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
-import { Select, SelectOption } from "@/ui/Select";
+import type { SelectOption } from "@/ui/Select";
+import { Select } from "@/ui/Select";
 import { Switch } from "@/ui/Switch";
 import { Button } from "@/ui/Button";
 import { useToast } from "@/ui/Toast";
 import runWithAuth from "@/lib/client/run-with-auth";
 import { createStorage } from "@/actions/storage";
-import { StorageProviderType } from "@/template/storages";
+import type { StorageProviderType } from "@/template/storages";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 import { RiServerFill } from "@remixicon/react";
+import type { StorageConfigValues } from "./StorageConfigFields";
 import {
   StorageConfigFields,
-  StorageConfigValues,
   createStorageConfigValues,
   storageConfigValuesToPayload,
 } from "./StorageConfigFields";

@@ -3,12 +3,12 @@ import "server-only";
 import fs from "fs";
 import path from "path";
 import { unstable_cache } from "next/cache";
-import {
+import type {
   CONFIG_DEFINITIONS,
   ConfigKeys,
   ConfigType,
-  defaultConfigMap,
 } from "@/data/default-configs";
+import { defaultConfigMap } from "@/data/default-configs";
 
 // 配置对象类型定义
 export interface ConfigItem {

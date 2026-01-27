@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { getPostDetail, updatePost } from "@/actions/post";
 import { connection } from "next/server";
 

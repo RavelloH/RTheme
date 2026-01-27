@@ -7,7 +7,7 @@ import { AutoTransition } from "@/ui/AutoTransition";
 import { RiRefreshLine } from "@remixicon/react";
 import { useEffect, useState } from "react";
 import { getVisitStats } from "@/actions/stat";
-import { GetVisitStatsSuccessResponse } from "@repo/shared-types/api/stats";
+import type { GetVisitStatsSuccessResponse } from "@repo/shared-types/api/stats";
 import ErrorPage from "@/components/ui/Error";
 
 type stats = GetVisitStatsSuccessResponse["data"] | null;

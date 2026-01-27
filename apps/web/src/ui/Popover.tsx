@@ -1,11 +1,13 @@
 "use client";
 
-import React, {
+import type {
   ComponentPropsWithoutRef,
   HTMLAttributes,
   MutableRefObject,
   ReactNode,
   Ref,
+} from "react";
+import React, {
   forwardRef,
   useCallback,
   useContext,

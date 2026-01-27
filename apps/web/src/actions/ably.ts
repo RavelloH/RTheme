@@ -1,6 +1,6 @@
 "use server";
 
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import * as Ably from "ably";
 import type { TokenRequest } from "ably";

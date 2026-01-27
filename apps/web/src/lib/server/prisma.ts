@@ -2,7 +2,8 @@ import "server-only";
 
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { Prisma, PrismaClient } from ".prisma/client";
+import type { Prisma } from ".prisma/client";
+import { PrismaClient } from ".prisma/client";
 
 // 创建全局 Prisma 实例
 const globalForPrisma = globalThis as unknown as {

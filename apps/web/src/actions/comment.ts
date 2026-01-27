@@ -1,47 +1,52 @@
 "use server";
 
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { after } from "next/server";
-import {
+import type {
   CreateComment,
-  CreateCommentSchema,
   CommentItem,
   CommentListResponse,
   GetPostComments,
-  GetPostCommentsSchema,
   GetCommentContext,
-  GetCommentContextSchema,
   GetCommentReplies,
-  GetCommentRepliesSchema,
   GetDirectChildren,
-  GetDirectChildrenSchema,
   DirectChildrenResponse,
   UpdateCommentStatus,
-  UpdateCommentStatusSchema,
   DeleteComments,
-  DeleteCommentsSchema,
   CommentsAdminListResponse,
   GetCommentsAdmin,
-  GetCommentsAdminSchema,
   CommentStats,
   CommentStatus,
   CommentHistoryPoint,
   GetCommentHistory,
-  GetCommentHistorySchema,
   GetCommentStats,
-  GetCommentStatsSchema,
   LikeComment,
-  LikeCommentSchema,
   LikeCommentResponse,
   UnlikeComment,
-  UnlikeCommentSchema,
   UnlikeCommentResponse,
   DeleteOwnComment,
-  DeleteOwnCommentSchema,
   DeleteOwnCommentResponse,
 } from "@repo/shared-types/api/comment";
-import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
+import {
+  CreateCommentSchema,
+  GetPostCommentsSchema,
+  GetCommentContextSchema,
+  GetCommentRepliesSchema,
+  GetDirectChildrenSchema,
+  UpdateCommentStatusSchema,
+  DeleteCommentsSchema,
+  GetCommentsAdminSchema,
+  GetCommentHistorySchema,
+  GetCommentStatsSchema,
+  LikeCommentSchema,
+  UnlikeCommentSchema,
+  DeleteOwnCommentSchema,
+} from "@repo/shared-types/api/comment";
+import type {
+  ApiResponse,
+  ApiResponseData,
+} from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
 import limitControl from "@/lib/server/rate-limit";
 import { validateData } from "@/lib/server/validator";

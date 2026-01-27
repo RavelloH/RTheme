@@ -3,7 +3,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RiArrowDownSLine } from "@remixicon/react";
-import { Tooltip, TooltipProps } from "./Tooltip";
+import type { TooltipProps } from "./Tooltip";
+import { Tooltip } from "./Tooltip";
 
 export interface DropdownOption {
   value: string;

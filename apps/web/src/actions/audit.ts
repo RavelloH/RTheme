@@ -1,16 +1,21 @@
 "use server";
 
 import prisma from "@/lib/server/prisma";
-import { NextResponse } from "next/server";
-import {
-  GetAuditLogsSchema,
+import type { NextResponse } from "next/server";
+import type {
   GetAuditLogs,
   AuditLogItem,
-  GetAuditTrendsSchema,
   GetAuditTrends,
   AuditTrendItem,
 } from "@repo/shared-types/api/audit";
-import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
+import {
+  GetAuditLogsSchema,
+  GetAuditTrendsSchema,
+} from "@repo/shared-types/api/audit";
+import type {
+  ApiResponse,
+  ApiResponseData,
+} from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
 import limitControl from "@/lib/server/rate-limit";
 import { headers } from "next/headers";

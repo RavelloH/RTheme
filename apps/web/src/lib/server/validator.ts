@@ -1,7 +1,7 @@
 import "server-only";
 
-import { z } from "zod";
-import { NextResponse } from "next/server";
+import type { z } from "zod";
+import type { NextResponse } from "next/server";
 import ResponseBuilder from "./response";
 
 /**

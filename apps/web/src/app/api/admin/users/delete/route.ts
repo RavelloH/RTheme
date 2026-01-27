@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { deleteUsers } from "@/actions/user";
 import { connection } from "next/server";
 

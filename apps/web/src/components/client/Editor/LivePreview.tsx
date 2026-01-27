@@ -9,7 +9,7 @@ import { RiAlertLine, RiRefreshLine } from "@remixicon/react";
 import Clickable from "@/ui/Clickable";
 import MarkdownClientRenderer from "../MarkdownClientRenderer";
 import { useConfig } from "@/context/ConfigContext";
-import { ConfigType } from "@/types/config";
+import type { ConfigType } from "@/types/config";
 import {
   cleanMDXSource,
   mdxSerializeOptions,

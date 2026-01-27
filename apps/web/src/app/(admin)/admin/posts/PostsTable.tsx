@@ -7,8 +7,9 @@ import {
   deletePosts,
 } from "@/actions/post";
 import { createTag } from "@/actions/tag";
-import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
-import { TableColumn } from "@/ui/Table";
+import type { ActionButton, FilterConfig } from "@/components/GridTable";
+import GridTable from "@/components/GridTable";
+import type { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { PostListItem } from "@repo/shared-types/api/post";
 import { useBroadcast } from "@/hooks/use-broadcast";
@@ -27,13 +28,15 @@ import {
 } from "@remixicon/react";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
-import { Select, SelectOption } from "@/ui/Select";
+import type { SelectOption } from "@/ui/Select";
+import { Select } from "@/ui/Select";
 import { Checkbox } from "@/ui/Checkbox";
 import { Button } from "@/ui/Button";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { useToast } from "@/ui/Toast";
 import Link, { useNavigateWithTransition } from "@/components/Link";
-import { TagInput, SelectedTag } from "@/components/client/Tag/TagInput";
+import type { SelectedTag } from "@/components/client/Tag/TagInput";
+import { TagInput } from "@/components/client/Tag/TagInput";
 import { CategoryInput } from "@/components/client/Category/CategoryInput";
 import MediaSelector from "@/components/client/MediaSelector";
 

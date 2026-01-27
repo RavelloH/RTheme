@@ -40,7 +40,8 @@ import {
   RiFunctions,
 } from "@remixicon/react";
 import { Toggle } from "@/ui/Toggle";
-import { Dropdown, DropdownOption } from "@/ui/Dropdown";
+import type { DropdownOption } from "@/ui/Dropdown";
+import { Dropdown } from "@/ui/Dropdown";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Tooltip } from "@/ui/Tooltip";
 import { Select } from "@/ui/Select";
@@ -48,7 +49,8 @@ import { Button } from "@/ui/Button";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import { Checkbox } from "@/ui/Checkbox";
-import { TagInput, SelectedTag } from "@/components/client/Tag/TagInput";
+import type { SelectedTag } from "@/components/client/Tag/TagInput";
+import { TagInput } from "@/components/client/Tag/TagInput";
 import { CategoryInput } from "@/components/client/Category/CategoryInput";
 import MediaSelector from "@/components/client/MediaSelector";
 import { TiptapEditor, setEditorToast } from "./TiptapEditor";

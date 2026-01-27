@@ -25,7 +25,7 @@ import NotificationProvider from "@/components/NotificationProvider";
 import { ConfigProvider } from "@/context/ConfigContext";
 
 // lib
-import { getActiveMenus } from "@/lib/server/menu-cache";
+import { getActiveMenusForClient } from "@/lib/server/menu-cache";
 import { getConfigs } from "@/lib/server/config-cache";
 
 // Types
@@ -58,7 +58,7 @@ export default async function RootLayout({
     menus,
     [mainColor, siteName, enableAnalytics, ablyEnabled, shikiTheme],
   ] = await Promise.all([
-    getActiveMenus(),
+    getActiveMenusForClient(),
     getConfigs([
       "site.color",
       "site.title",
@@ -96,10 +96,10 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <ConfigProvider configs={configs}>
-              <NotificationProvider isAblyEnabled={ablyEnabled ? true : false}>
+              <NotificationProvider>
                 <MenuProvider menus={menus}>
                   <ResponsiveFontScale scaleFactor={0.017} baseSize={12}>
-                    <LoadingAnimation siteName={siteName} />
+                    <LoadingAnimation />
                     <LayoutContainer>
                       <Suspense>
                         <Header menus={menus} />

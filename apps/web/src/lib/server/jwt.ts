@@ -1,6 +1,8 @@
 import "server-only";
-import jwt, { SignOptions, VerifyOptions } from "jsonwebtoken";
-import { createPrivateKey, createPublicKey, KeyObject } from "crypto";
+import type { SignOptions, VerifyOptions } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
+import type { KeyObject } from "crypto";
+import { createPrivateKey, createPublicKey } from "crypto";
 
 interface TokenSignOptions {
   inner: Record<string, unknown>;

@@ -6,8 +6,9 @@ import {
   deleteUsers,
   disable2FA,
 } from "@/actions/user";
-import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
-import { TableColumn } from "@/ui/Table";
+import type { ActionButton, FilterConfig } from "@/components/GridTable";
+import GridTable from "@/components/GridTable";
+import type { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { UserListItem } from "@repo/shared-types/api/user";
 import { useBroadcast } from "@/hooks/use-broadcast";
@@ -21,7 +22,8 @@ import {
 } from "@remixicon/react";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
-import { Select, SelectOption } from "@/ui/Select";
+import type { SelectOption } from "@/ui/Select";
+import { Select } from "@/ui/Select";
 import { Checkbox } from "@/ui/Checkbox";
 import { Button } from "@/ui/Button";
 import { AlertDialog } from "@/ui/AlertDialog";

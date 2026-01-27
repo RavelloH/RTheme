@@ -18,7 +18,7 @@ import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
 import Link from "@/components/Link";
 import DynamicReplace from "@/components/client/DynamicReplace";
 import { notFound } from "next/navigation";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import { RiArrowLeftSLine } from "@remixicon/react";
 import { cache } from "react";
 import { getFeaturedImageData } from "@/lib/server/media-reference";

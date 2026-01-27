@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, KeyboardEvent } from "react";
+import type { KeyboardEvent } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/ui/Button";
 import { RiSendPlane2Line } from "@remixicon/react";
 import { AutoResizer } from "@/ui/AutoResizer";

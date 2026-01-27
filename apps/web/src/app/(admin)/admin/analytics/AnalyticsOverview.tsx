@@ -4,7 +4,8 @@ import { GridItem } from "@/components/RowGrid";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import type { AnalyticsOverview as AnalyticsOverviewType } from "@repo/shared-types";
-import TimeRangeSelector, { TimeRangeValue } from "./TimeRangeSelector";
+import type { TimeRangeValue } from "./TimeRangeSelector";
+import TimeRangeSelector from "./TimeRangeSelector";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface AnalyticsOverviewProps {

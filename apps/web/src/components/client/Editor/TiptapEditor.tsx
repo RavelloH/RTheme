@@ -1,6 +1,7 @@
 "use client";
 
-import { useEditor, EditorContent, Editor, Extension } from "@tiptap/react";
+import type { Editor } from "@tiptap/react";
+import { useEditor, EditorContent, Extension } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
@@ -38,7 +39,7 @@ import {
 import type { JSONContent } from "@tiptap/core";
 import { useConfig } from "@/context/ConfigContext";
 import type { ConfigType } from "@/types/config";
-import { BundledTheme } from "shiki";
+import type { BundledTheme } from "shiki";
 
 // 解析 Markdown 表格中的对齐标记
 function parseTableAlignment(markdown: string): Map<number, string[]> {

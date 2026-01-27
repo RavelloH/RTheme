@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { moveCategories } from "@/actions/category";
 import { connection } from "next/server";
 

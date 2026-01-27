@@ -1,5 +1,5 @@
 import React from "react";
-import { MediaFileInfo } from "@/lib/shared/image-utils";
+import type { MediaFileInfo } from "@/lib/shared/image-utils";
 import MDXClientRenderer from "@/components/client/MDXClientRenderer";
 import MarkdownServerRenderer from "@/components/server/MarkdownServerRenderer";
 import type { ShikiTheme } from "@/lib/shared/mdx-config-shared";

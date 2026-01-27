@@ -6,8 +6,9 @@ import {
   updateMedia,
   deleteMedia,
 } from "@/actions/media";
-import GridTable, { FilterConfig, ActionButton } from "@/components/GridTable";
-import { TableColumn } from "@/ui/Table";
+import type { FilterConfig, ActionButton } from "@/components/GridTable";
+import GridTable from "@/components/GridTable";
+import type { TableColumn } from "@/ui/Table";
 import { useEffect, useState, useMemo, useCallback, useRef, memo } from "react";
 import type { MediaListItem, MediaDetail } from "@repo/shared-types/api/media";
 import { useBroadcast } from "@/hooks/use-broadcast";

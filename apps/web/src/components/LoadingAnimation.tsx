@@ -4,12 +4,10 @@ import { useRef, useState } from "react";
 import { PageLoadManager } from "./PageLoadManager";
 import { AutoTransition } from "@/ui/AutoTransition";
 import gsap from "gsap";
+import { useConfig } from "@/context/ConfigContext";
 
-interface LoadingAnimationProps {
-  siteName?: string;
-}
-
-export function LoadingAnimation({ siteName }: LoadingAnimationProps) {
+export function LoadingAnimation() {
+  const siteName = useConfig("site.title");
   const overlayRef = useRef<HTMLDivElement>(null);
   const hasTriggeredRef = useRef(false);
   const [loadingText, setLoadingText] = useState("LOADING...");

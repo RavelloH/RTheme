@@ -13,7 +13,7 @@ import {
   type LoginSuccessResponse,
 } from "@repo/shared-types/api/auth";
 import prisma from "@/lib/server/prisma";
-import { Prisma } from ".prisma/client";
+import type { Prisma } from ".prisma/client";
 import {
   jwtTokenSign,
   jwtTokenVerify,

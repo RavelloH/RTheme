@@ -1,5 +1,5 @@
 "use server";
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { updateTag } from "next/cache";
 import prisma from "@/lib/server/prisma";

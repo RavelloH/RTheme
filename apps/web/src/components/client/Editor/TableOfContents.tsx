@@ -1,6 +1,6 @@
 "use client";
 
-import { Editor } from "@tiptap/react";
+import type { Editor } from "@tiptap/react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { RiListCheck, RiArrowUpLine, RiArrowDownLine } from "@remixicon/react";
 import Clickable from "@/ui/Clickable";

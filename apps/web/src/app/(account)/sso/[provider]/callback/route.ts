@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { cookies, headers } from "next/headers";
+import { type OAuthProvider } from "@/lib/server/oauth";
 import { handleSSOCallback, handleSSOBind } from "@/actions/sso";
 import limitControl from "@/lib/server/rate-limit";
 import { jwtTokenVerify } from "@/lib/server/jwt";
@@ -157,7 +159,7 @@ export async function GET(
       try {
         const { validateOAuthCallback } = await import("@/lib/server/oauth");
         oauthUserInfo = await validateOAuthCallback(
-          provider as import("@/lib/server/oauth").OAuthProvider,
+          provider as OAuthProvider,
           code,
           codeVerifier,
         );

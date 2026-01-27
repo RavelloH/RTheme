@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getConfigs } from "@/lib/server/config-cache";
-import { MenuItem } from "@/lib/server/menu-cache";
+import type { MenuItem } from "@/types/menu";
 import FooterMobile from "../client/Footer/FooterMobile";
 import FooterDesktop from "../client/Footer/FooterDesktop";
 import { cacheLife, cacheTag } from "next/cache";

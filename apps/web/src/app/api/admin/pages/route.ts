@@ -1,4 +1,5 @@
-import { connection, NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
+import { connection } from "next/server";
 import { getPagesList, createPage } from "@/actions/page";
 
 /**

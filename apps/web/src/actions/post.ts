@@ -1,42 +1,47 @@
 "use server";
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import { updateTag } from "next/cache";
-import {
-  GetPostsTrendsSchema,
+import type {
   GetPostsTrends,
   PostTrendItem,
-  GetPostsListSchema,
   GetPostsList,
   PostListItem,
-  GetPostDetailSchema,
   GetPostDetail,
   PostDetail,
-  CreatePostSchema,
   CreatePost,
   CreatePostResult,
-  UpdatePostSchema,
   UpdatePost,
   UpdatePostResult,
-  UpdatePostsSchema,
   UpdatePosts,
-  DeletePostsSchema,
   DeletePosts,
-  GetPostHistorySchema,
   GetPostHistory,
   PostHistoryItem,
   PostHistoryWithStats,
   PostHistoryStats,
-  GetPostVersionSchema,
   GetPostVersion,
   PostVersionDetail,
-  ResetPostToVersionSchema,
   ResetPostToVersion,
   ResetPostToVersionResult,
-  SquashPostToVersionSchema,
   SquashPostToVersion,
   SquashPostToVersionResult,
 } from "@repo/shared-types/api/post";
-import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
+import {
+  GetPostsTrendsSchema,
+  GetPostsListSchema,
+  GetPostDetailSchema,
+  CreatePostSchema,
+  UpdatePostSchema,
+  UpdatePostsSchema,
+  DeletePostsSchema,
+  GetPostHistorySchema,
+  GetPostVersionSchema,
+  ResetPostToVersionSchema,
+  SquashPostToVersionSchema,
+} from "@repo/shared-types/api/post";
+import type {
+  ApiResponse,
+  ApiResponseData,
+} from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
 import limitControl from "@/lib/server/rate-limit";
 import { headers } from "next/headers";

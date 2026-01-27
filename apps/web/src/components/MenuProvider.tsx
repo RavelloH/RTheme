@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext } from "react";
-import type { MenuItem } from "@/lib/server/menu-cache";
+import type { MenuItem } from "@/types/menu";
 
 interface MenuContextType {
   menus: MenuItem[];
@@ -41,18 +41,15 @@ export function MenuProvider({
 
   const getLeftRightMenus = (currentPath: string) => {
     const activeMainMenus = menus.filter(
-      (menu) =>
-        menu.category === "MAIN" && menu.status === "ACTIVE" && !menu.link,
+      (menu) => menu.category === "MAIN" && !menu.link,
     );
 
     const activeCommonMenus = menus.filter(
-      (menu) =>
-        menu.category === "COMMON" && menu.status === "ACTIVE" && !menu.link,
+      (menu) => menu.category === "COMMON" && !menu.link,
     );
 
     const activeOutsiteMenus = menus.filter(
-      (menu) =>
-        menu.category === "OUTSITE" && menu.status === "ACTIVE" && !menu.link,
+      (menu) => menu.category === "OUTSITE" && !menu.link,
     );
 
     // 处理首页情况

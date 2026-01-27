@@ -1,8 +1,9 @@
 "use client";
 
 import { getDoctorHistory } from "@/actions/doctor";
-import GridTable, { FilterConfig } from "@/components/GridTable";
-import { TableColumn } from "@/ui/Table";
+import type { FilterConfig } from "@/components/GridTable";
+import GridTable from "@/components/GridTable";
+import type { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
 import type { DoctorHistoryItem } from "@repo/shared-types/api/doctor";
 import { useBroadcast } from "@/hooks/use-broadcast";

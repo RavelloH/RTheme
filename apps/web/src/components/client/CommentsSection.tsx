@@ -54,7 +54,7 @@ import {
 } from "@remixicon/react";
 import Clickable from "@/ui/Clickable";
 import { useNavigateWithTransition } from "../Link";
-import { ConfigType } from "@/types/config";
+import type { ConfigType } from "@/types/config";
 // ============ 类型定义 ============
 interface CommentConfig {
   placeholder: string;

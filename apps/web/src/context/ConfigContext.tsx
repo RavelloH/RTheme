@@ -1,9 +1,15 @@
 "use client";
 
-import { createContext, useContext, ReactNode } from "react";
+import type { ReactNode } from "react";
+import { createContext, useContext } from "react";
+import type {
+  ConfigKeys,
+  ConfigType,
+  ConfigTypeMap,
+} from "@/data/default-configs";
 
 interface ConfigContextType {
-  configs: Record<string, unknown>;
+  configs: Partial<ConfigTypeMap>;
 }
 
 const ConfigContext = createContext<ConfigContextType | null>(null);
@@ -16,7 +22,7 @@ const ConfigContext = createContext<ConfigContextType | null>(null);
  * @example
  * // 在 layout.tsx 中
  * const configs = {
- *   "site.theme": { light: "light-plus", dark: "dark-plus" },
+ *   "site.title": "My Site",
  *   "comment.enable": true,
  * };
  *
@@ -29,7 +35,7 @@ export function ConfigProvider({
   configs,
 }: {
   children: ReactNode;
-  configs: Record<string, unknown>;
+  configs: Partial<ConfigTypeMap>;
 }) {
   return (
     <ConfigContext.Provider value={{ configs }}>
@@ -42,30 +48,24 @@ export function ConfigProvider({
  * 获取配置的 Hook
  *
  * @param key 配置键
- * @returns 配置值，类型为 unknown，需要配合 ConfigType 使用
+ * @returns 配置值，自动推导类型
  *
  * @example
- * import type { ConfigType } from "@/data/default-configs";
- *
- * const shikiTheme = useConfig("site.theme") as ConfigType<"site.theme">;
+ * const shikiTheme = useConfig("site.shiki.theme");
  * // theme 自动推导为 { light: string; dark: string; }
  */
-export function useConfig(key: string): unknown {
+export function useConfig<K extends ConfigKeys>(key: K): ConfigType<K> {
   const context = useContext(ConfigContext);
   if (!context) {
     throw new Error(`useConfig("${key}") must be used within ConfigProvider`);
   }
-  return context.configs[key];
+  return context.configs[key] as ConfigType<K>;
 }
 
 /**
  * 获取所有配置的 Hook
- *
- * @example
- * const configs = useConfigs();
- * console.log(configs["site.theme"]);
  */
-export function useConfigs(): Record<string, unknown> {
+export function useConfigs(): Partial<ConfigTypeMap> {
   const context = useContext(ConfigContext);
   if (!context) {
     throw new Error("useConfigs must be used within ConfigProvider");

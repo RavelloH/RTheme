@@ -1,6 +1,6 @@
 "use server";
 
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import { cookies, headers } from "next/headers";
 import prisma from "@/lib/server/prisma";
 import { authVerify } from "@/lib/server/auth-verify";
@@ -11,8 +11,11 @@ import { getConfig } from "@/lib/server/config-cache";
 import { checkUserOnlineStatus, publishNoticeToUser } from "@/lib/server/ably";
 import { isAblyEnabled } from "@/lib/server/ably-config";
 import { sendNotice } from "@/lib/server/notice";
-import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
-import {
+import type {
+  ApiResponse,
+  ApiResponseData,
+} from "@repo/shared-types/api/common";
+import type {
   GetConversationsSuccessResponse,
   GetConversationMessagesSuccessResponse,
   SendMessageSuccessResponse,

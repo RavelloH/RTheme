@@ -8,7 +8,7 @@ import PathStatsChart from "./PathStatsChart";
 import PathTrendChart from "./VisitTrendChart";
 import DimensionStats from "./DimensionStats";
 import PageViewTable from "./PageViewTable";
-import { TimeRangeValue } from "./TimeRangeSelector";
+import type { TimeRangeValue } from "./TimeRangeSelector";
 import { getAnalyticsStats } from "@/actions/analytics";
 import type { AnalyticsStatsData } from "@repo/shared-types";
 import generateGradient from "@/lib/shared/gradient";

@@ -8,9 +8,10 @@ import {
   setDefaultStorage,
   getStorageDetail,
 } from "@/actions/storage";
-import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
+import type { ActionButton, FilterConfig } from "@/components/GridTable";
+import GridTable from "@/components/GridTable";
 import runWithAuth, { resolveApiResponse } from "@/lib/client/run-with-auth";
-import { TableColumn } from "@/ui/Table";
+import type { TableColumn } from "@/ui/Table";
 import React, { useCallback, useEffect, useState } from "react";
 import type { StorageListItem } from "@repo/shared-types/api/storage";
 import { useBroadcast } from "@/hooks/use-broadcast";
@@ -26,7 +27,7 @@ import {
 } from "@remixicon/react";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
-import { SelectOption } from "@/ui/Select";
+import type { SelectOption } from "@/ui/Select";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { AutoResizer } from "@/ui/AutoResizer";
@@ -34,13 +35,13 @@ import { Switch } from "@/ui/Switch";
 import { Button } from "@/ui/Button";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { useToast } from "@/ui/Toast";
+import type { StorageConfigValues } from "./StorageConfigFields";
 import {
   StorageConfigFields,
-  StorageConfigValues,
   createStorageConfigValues,
   storageConfigValuesToPayload,
 } from "./StorageConfigFields";
-import { StorageProviderType } from "@/template/storages";
+import type { StorageProviderType } from "@/template/storages";
 
 // 虚拟存储提供商的名称（与后端保持一致）
 const VIRTUAL_STORAGE_NAME = "external-url";

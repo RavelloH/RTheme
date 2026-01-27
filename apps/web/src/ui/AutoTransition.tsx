@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
-import { motion, AnimatePresence, TargetAndTransition } from "framer-motion";
+import type { TargetAndTransition } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 export type TransitionType =
   | "fade"

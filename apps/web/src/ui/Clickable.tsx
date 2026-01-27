@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ReactNode, MouseEvent, forwardRef } from "react";
+import type { ReactNode, MouseEvent } from "react";
+import { forwardRef } from "react";
 
 interface ClickableProps {
   children: ReactNode;

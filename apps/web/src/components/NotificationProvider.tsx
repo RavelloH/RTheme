@@ -16,8 +16,10 @@ import { useBroadcastSender, useBroadcast } from "@/hooks/use-broadcast";
 import { type NotificationItem } from "./NotificationToast";
 import { type MessageNotificationItem } from "./MessageNotificationToast";
 import UnifiedNotificationContainer from "./UnifiedNotificationContainer";
+import { useConfig } from "@/context/ConfigContext";
 
 // 动态导入 Ably 类型
+import type * as Ably from "ably";
 import type {
   Realtime,
   TokenParams,
@@ -272,14 +274,6 @@ interface CrossTabMessage {
   };
 }
 
-/**
- * 通知 Provider 属性
- */
-interface NotificationProviderProps {
-  children: ReactNode;
-  isAblyEnabled: boolean; // 从 layout 传递
-}
-
 const MAX_RETRIES = 5;
 const TOKEN_CACHE_DURATION = 50000; // Token 缓存时间 50 秒（Ably token 通常 60 秒有效）
 const LOCK_NAME = "ably_connection_lock"; // Web Locks API 锁名称
@@ -292,12 +286,14 @@ const LOCK_NAME = "ably_connection_lock"; // Web Locks API 锁名称
  *
  * @param props - 组件属性
  * @param props.children - 子组件
- * @param props.isAblyEnabled - 是否启用 Ably（从服务端传递）
  */
 export default function NotificationProvider({
   children,
-  isAblyEnabled,
-}: NotificationProviderProps) {
+}: {
+  children: ReactNode;
+}) {
+  const ablyKey = useConfig("notice.ably.key");
+  const isAblyEnabled = !!ablyKey;
   const { broadcast } = useBroadcastSender<BroadcastMessage>();
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("idle");
@@ -312,7 +308,7 @@ export default function NotificationProvider({
   const ablyClientRef = useRef<AblyRealtime | null>(null);
   const retryCountRef = useRef(0);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const AblyRef = useRef<typeof import("ably") | null>(null);
+  const AblyRef = useRef<typeof Ably | null>(null);
   const userUidRef = useRef<number | null>(null); // 存储用户 UID
   const tokenRequestCacheRef = useRef<{
     token: string | TokenRequest | TokenDetails;

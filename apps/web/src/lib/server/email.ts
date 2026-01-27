@@ -1,7 +1,8 @@
 import "server-only";
 
 import { getConfig, getConfigs } from "./config-cache";
-import nodemailer, { Transporter } from "nodemailer";
+import type { Transporter } from "nodemailer";
+import nodemailer from "nodemailer";
 import { Resend } from "resend";
 import type SMTPTransport from "nodemailer/lib/smtp-transport";
 import { randomInt } from "crypto";

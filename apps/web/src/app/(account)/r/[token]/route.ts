@@ -2,7 +2,8 @@ import { jwtTokenVerify } from "@/lib/server/jwt";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
 const res = new ResponseBuilder("serverless");
 

@@ -19,7 +19,7 @@ import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import Link from "@/components/Link";
 import DynamicReplace from "@/components/client/DynamicReplace";
 import { notFound } from "next/navigation";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import { RiArrowLeftSLine } from "@remixicon/react";
 import { cache } from "react";
 import CategoryContainer from "../CategoryContainer";

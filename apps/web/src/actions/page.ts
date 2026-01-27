@@ -1,25 +1,30 @@
 "use server";
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import { updateTag } from "next/cache";
-import {
-  GetPagesListSchema,
+import type {
   GetPagesList,
   PageListItem,
-  GetPageDetailSchema,
   GetPageDetail,
   PageDetail,
-  CreatePageSchema,
   CreatePage,
   CreatePageResult,
-  UpdatePageSchema,
   UpdatePage,
   UpdatePageResult,
-  UpdatePagesSchema,
   UpdatePages,
-  DeletePagesSchema,
   DeletePages,
 } from "@repo/shared-types/api/page";
-import { ApiResponse, ApiResponseData } from "@repo/shared-types/api/common";
+import {
+  GetPagesListSchema,
+  GetPageDetailSchema,
+  CreatePageSchema,
+  UpdatePageSchema,
+  UpdatePagesSchema,
+  DeletePagesSchema,
+} from "@repo/shared-types/api/page";
+import type {
+  ApiResponse,
+  ApiResponseData,
+} from "@repo/shared-types/api/common";
 import ResponseBuilder from "@/lib/server/response";
 import limitControl from "@/lib/server/rate-limit";
 import { headers } from "next/headers";

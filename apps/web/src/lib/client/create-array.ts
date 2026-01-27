@@ -1,4 +1,4 @@
-import { GridArea } from "@/components/RowGrid";
+import type { GridArea } from "@/components/RowGrid";
 
 export function createArray(from: number, to: number): GridArea[] {
   const result: GridArea[] = [];

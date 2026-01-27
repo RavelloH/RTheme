@@ -2,11 +2,11 @@ import "server-only";
 
 import path from "node:path";
 import fs from "node:fs/promises";
+import type { ObjectCannedACL } from "@aws-sdk/client-s3";
 import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
-  ObjectCannedACL,
 } from "@aws-sdk/client-s3";
 import { put as vercelPut, del as vercelDel } from "@vercel/blob";
 import { Octokit } from "@octokit/rest";

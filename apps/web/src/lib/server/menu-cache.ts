@@ -2,17 +2,11 @@ import "server-only";
 import fs from "fs";
 import path from "path";
 import { unstable_cache } from "next/cache";
+import type { MenuItem as ClientMenuItem } from "@/types/menu";
 
 // 菜单项类型定义
-export interface MenuItem {
-  id: string;
-  name: string;
-  icon?: string | null;
-  link?: string | null;
-  slug?: string | null;
+export interface MenuItem extends Omit<ClientMenuItem, "page"> {
   status: "ACTIVE" | "SUSPENDED";
-  order: number;
-  category: "MAIN" | "COMMON" | "OUTSITE";
   createdAt: Date;
   updatedAt: Date;
   page?: PageItem | null;
@@ -203,4 +197,25 @@ export async function getActiveMenusByCategory(
   return allMenus.filter(
     (menu) => menu.category === category && menu.status === "ACTIVE",
   );
+}
+
+/**
+ * 获取供客户端使用的精简菜单项（移除 Page 内容等大型字段）
+ */
+export async function getActiveMenusForClient(): Promise<ClientMenuItem[]> {
+  const menus = await getActiveMenus();
+  return menus.map((menu) => ({
+    id: menu.id,
+    name: menu.name,
+    icon: menu.icon,
+    link: menu.link,
+    slug: menu.slug,
+    order: menu.order,
+    category: menu.category,
+    page: menu.page
+      ? {
+          slug: menu.page.slug,
+        }
+      : null,
+  }));
 }

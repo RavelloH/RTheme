@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode, HTMLAttributes } from "react";
 import React, {
   createContext,
   useContext,
@@ -9,8 +10,6 @@ import React, {
   useCallback,
   useMemo,
   forwardRef,
-  ReactNode,
-  HTMLAttributes,
 } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";

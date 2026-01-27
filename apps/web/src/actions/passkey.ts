@@ -23,6 +23,8 @@ import type {
   PublicKeyCredentialRequestOptionsJSON,
   VerifiedRegistrationResponse,
   VerifiedAuthenticationResponse,
+  RegistrationResponseJSON,
+  AuthenticationResponseJSON,
 } from "@simplewebauthn/server";
 import { jwtTokenSign } from "@/lib/server/jwt";
 import { UAParser } from "ua-parser-js";
@@ -190,8 +192,7 @@ export async function verifyPasskeyRegistration(payload: {
 
     const verification: VerifiedRegistrationResponse =
       await verifyRegistrationResponse({
-        response:
-          payload.response as unknown as import("@simplewebauthn/server").RegistrationResponseJSON,
+        response: payload.response as unknown as RegistrationResponseJSON,
         expectedChallenge,
         expectedOrigin: origin,
         expectedRPID: rpID,
@@ -425,7 +426,7 @@ export async function verifyPasskeyAuthentication(payload: {
     const { rpID, origin } = await getRPConfig();
 
     const authResponse =
-      payload.response as unknown as import("@simplewebauthn/server").AuthenticationResponseJSON;
+      payload.response as unknown as AuthenticationResponseJSON;
     const incomingCredentialId = authResponse.id; // base64url
 
     // 先根据响应中的 credential id 查找数据库中的 passkey
@@ -655,7 +656,7 @@ export async function verifyPasskeyForReauth(payload: {
     const { rpID, origin } = await getRPConfig();
 
     const authResponse =
-      payload.response as unknown as import("@simplewebauthn/server").AuthenticationResponseJSON;
+      payload.response as unknown as AuthenticationResponseJSON;
     const incomingCredentialId = authResponse.id;
 
     // 查找 passkey 并验证是否属于当前用户

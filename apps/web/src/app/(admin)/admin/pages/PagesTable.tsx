@@ -6,9 +6,10 @@ import {
   updatePages,
   deletePages,
 } from "@/actions/page";
-import GridTable, { ActionButton, FilterConfig } from "@/components/GridTable";
+import type { ActionButton, FilterConfig } from "@/components/GridTable";
+import GridTable from "@/components/GridTable";
 import runWithAuth from "@/lib/client/run-with-auth";
-import { TableColumn } from "@/ui/Table";
+import type { TableColumn } from "@/ui/Table";
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import type { PageListItem } from "@repo/shared-types/api/page";
 import { useBroadcast } from "@/hooks/use-broadcast";
@@ -22,7 +23,8 @@ import {
 } from "@remixicon/react";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
-import { Select, SelectOption } from "@/ui/Select";
+import type { SelectOption } from "@/ui/Select";
+import { Select } from "@/ui/Select";
 import { Checkbox } from "@/ui/Checkbox";
 import { Button } from "@/ui/Button";
 import { AlertDialog } from "@/ui/AlertDialog";

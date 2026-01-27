@@ -5,7 +5,7 @@ import GridTable, {
   type FilterConfig,
   type ActionButton,
 } from "@/components/GridTable";
-import { TableColumn } from "@/ui/Table";
+import type { TableColumn } from "@/ui/Table";
 import {
   getCommentsAdmin,
   updateCommentStatus,
