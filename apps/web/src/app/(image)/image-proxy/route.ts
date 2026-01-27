@@ -6,6 +6,17 @@ import path from "node:path";
 import { decryptUrl } from "@/lib/server/image-crypto";
 import ResponseBuilder from "@/lib/server/response";
 import prisma from "@/lib/server/prisma";
+import { getConfigs } from "@/lib/server/config-cache";
+import {
+  checkAntiHotLink,
+  generateFallbackImage,
+} from "@/lib/server/anti-hotlink";
+import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
+import {
+  formatIpLocation,
+  parseUserAgent,
+} from "@/lib/server/user-agent-parser";
+import { resolveIpLocation } from "@/lib/server/ip-utils";
 
 const res = new ResponseBuilder("serverless");
 
@@ -38,14 +49,53 @@ export async function GET(request: NextRequest) {
     }) as Response;
   }
 
+  // 3. 防盗链检查
+  const antiHotLinkCheck = await checkAntiHotLink(request);
+  if (!antiHotLinkCheck.allowed) {
+    // 返回 403 错误或占位图片
+    const [fallbackImageEnable, siteUrl] = await getConfigs([
+      "media.antiHotLink.fallbackImage.enable",
+      "site.url",
+    ]);
+
+    if (fallbackImageEnable) {
+      const fallbackImage = generateFallbackImage({
+        siteURL: siteUrl,
+        time: new Date().toUTCString(),
+        assetsURL: request.url.split("=")[1]?.slice(0, 64) || "local",
+        ip: await getClientIP(),
+        agents: parseUserAgent(await getClientUserAgent()).displayName,
+        location:
+          formatIpLocation(resolveIpLocation(await getClientIP())) || "Unknown",
+      });
+      return new NextResponse(new Uint8Array(fallbackImage), {
+        status: 200,
+        headers: {
+          "Content-Type": "image/svg+xml",
+          "Content-Length": fallbackImage.byteLength.toString(),
+          "Cache-Control": "public, max-age=3600",
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    }
+
+    return res.forbidden({
+      message: "防盗链拦截",
+      error: {
+        code: "ANTI_HOTLINK_BLOCKED",
+        message: antiHotLinkCheck.reason || "此图片受防盗链保护",
+      },
+    }) as Response;
+  }
+
   try {
-    // 3. 查询数据库获取存储提供商信息
+    // 4. 查询数据库获取存储提供商信息
     const media = await prisma.media.findFirst({
       where: { storageUrl },
       include: { StorageProvider: true },
     });
 
-    // 4. 如果找到媒体记录且是本地存储，直接从文件系统读取
+    // 5. 如果找到媒体记录且是本地存储，直接从文件系统读取
     if (media?.StorageProvider.type === "LOCAL") {
       const config = media.StorageProvider.config as {
         rootDir: string;
@@ -94,7 +144,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 5. 非本地存储或未找到媒体记录，使用 fetch 代理
+    // 6. 非本地存储或未找到媒体记录，使用 fetch 代理
     const response = await fetch(storageUrl, {
       headers: {
         // 传递部分请求头
@@ -112,12 +162,12 @@ export async function GET(request: NextRequest) {
       }) as Response;
     }
 
-    // 6. 获取图片数据
+    // 7. 获取图片数据
     const imageBuffer = await response.arrayBuffer();
     const contentType =
       response.headers.get("content-type") || "application/octet-stream";
 
-    // 7. 返回图片，设置永久缓存
+    // 8. 返回图片，设置永久缓存
     return new NextResponse(imageBuffer, {
       status: 200,
       headers: {

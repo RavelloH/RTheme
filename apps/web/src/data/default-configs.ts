@@ -251,11 +251,33 @@ export const CONFIG_DEFINITIONS = {
   // =====================================
   // 媒体相关配置
   // =====================================
-  "media.upload.allowed_types": {
-    default: ["image/jpeg", "image/png", "image/gif", "image/webp"] as string[],
-    description: "允许上传的媒体文件类型",
+  "media.antiHotLink.enable": {
+    default: false,
+    description:
+      "是否开启防盗链功能。开启后，从其他站点直接引用本站原始图片（/p/*、/image-proxy）将被拒绝。优化图片（/_next/image）不受影响。",
   },
-
+  "media.antiHotLink.allowEmptyReferrer": {
+    default: true,
+    description:
+      "是否允许空 Referer 访问媒体资源。关闭将减小图片被爬取的可能，但可能影响部分浏览器或隐私插件的正常访问",
+  },
+  "media.antiHotLink.allowedDomains": {
+    default: [
+      "google.com",
+      "bing.com",
+      "yahoo.com",
+      "duckduckgo.com",
+      "yandex.com",
+      "baidu.com",
+    ] as string[],
+    description:
+      "除本站域名（site.url）外，允许引用本站媒体资源的域名白名单列表。填写完整域名，每行一个。建议添加常见搜索引擎域名以允许其爬取图片",
+  },
+  "media.antiHotLink.fallbackImage.enable": {
+    default: true,
+    description:
+      "是否在防盗链拦截时，返回一张占位图片来提示回到此站查看图片。关闭后将直接返回403错误",
+  },
   // =====================================
   // 评论相关配置
   // =====================================

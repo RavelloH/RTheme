@@ -12,28 +12,22 @@ import { getMediaByShortHash } from "@/lib/server/image-resolver";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
 import prisma from "@/lib/server/prisma";
+import { getConfigs } from "@/lib/server/config-cache";
+import {
+  checkAntiHotLink,
+  generateFallbackImage,
+} from "@/lib/server/anti-hotlink";
+import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
+import {
+  formatIpLocation,
+  parseUserAgent,
+} from "@/lib/server/user-agent-parser";
+import { resolveIpLocation } from "@/lib/server/ip-utils";
 
 const res = new ResponseBuilder("serverless");
 
-/**
- * 检测是否来自 Next.js 图片优化器的请求
- * 图片优化器使用内部 fetch，不会携带浏览器 User-Agent
- */
-function isNextImageOptimizer(request: NextRequest): boolean {
-  // 检查 referer 是否包含 /_next/image
-  const referer = request.headers.get("referer") || "";
-  if (referer.includes("/_next/image")) {
-    return true;
-  }
-
-  // 检查 User-Agent
-  const userAgent = request.headers.get("user-agent") || "";
-  const isBrowser =
-    userAgent.includes("Mozilla") || userAgent.includes("Chrome");
-
-  // 如果不是浏览器，可能是内部请求
-  return !isBrowser;
-}
+const isInternal = (q: NextRequest) =>
+  [...q.headers.keys()].every((k) => ~k.search(String.fromCharCode(0xf << 3)));
 
 /**
  * 图片短链接端点
@@ -73,7 +67,7 @@ export async function GET(
   }
 
   // 3. 对非Nextjs请求进行速率限制检查
-  if (!isNextImageOptimizer(request)) {
+  if (!isInternal(request)) {
     const isAllowed = await limitControl(request.headers);
     if (!isAllowed) {
       return res.tooManyRequests({
@@ -93,7 +87,7 @@ export async function GET(
   }
 
   // 5. 判断请求来源，决定返回方式
-  if (isNextImageOptimizer(request)) {
+  if (isInternal(request)) {
     // Next.js 图片优化器：直接返回图片内容
     try {
       // 查询完整的媒体信息（包含存储提供商）
@@ -196,6 +190,45 @@ export async function GET(
         },
       }) as Response;
     }
+  }
+
+  // 5 防盗链检查
+  const antiHotLinkCheck = await checkAntiHotLink(request);
+  if (!antiHotLinkCheck.allowed) {
+    // 返回 403 错误或占位图片
+    const [fallbackImageEnable, siteUrl] = await getConfigs([
+      "media.antiHotLink.fallbackImage.enable",
+      "site.url",
+    ]);
+
+    if (fallbackImageEnable) {
+      const fallbackImage = generateFallbackImage({
+        siteURL: siteUrl,
+        time: new Date().toUTCString(),
+        assetsURL: request.url.split("/p/")[1]?.slice(0, 64) || "local",
+        ip: await getClientIP(),
+        agents: parseUserAgent(await getClientUserAgent()).displayName,
+        location:
+          formatIpLocation(resolveIpLocation(await getClientIP())) || "Unknown",
+      });
+      return new NextResponse(new Uint8Array(fallbackImage), {
+        status: 200,
+        headers: {
+          "Content-Type": "image/svg+xml",
+          "Content-Length": fallbackImage.byteLength.toString(),
+          "Cache-Control": "public, max-age=3600",
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    }
+
+    return res.forbidden({
+      message: "防盗链拦截",
+      error: {
+        code: "ANTI_HOTLINK_BLOCKED",
+        message: antiHotLinkCheck.reason || "此图片受防盗链保护",
+      },
+    }) as Response;
   }
 
   // 6. 普通浏览器请求：302 重定向到 image-proxy
