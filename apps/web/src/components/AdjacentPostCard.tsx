@@ -61,7 +61,7 @@ export default function AdjacentPostCard({
       {/* 背景图片层 - 作为纹理处理 */}
       {coverImage && (
         <>
-          <div className="absolute inset-0 z-0 opacity-[0.03] grayscale transition-all duration-500 ease-out group-hover:opacity-10 group-hover:scale-105 group-hover:grayscale-0 pointer-events-none">
+          <div className="absolute inset-0 z-0 opacity-[0.05] grayscale transition-all duration-500 ease-out group-hover:opacity-20 group-hover:scale-105 group-hover:grayscale-0 pointer-events-none">
             <CMSImage
               src={coverImage.url}
               alt={title}
@@ -103,7 +103,7 @@ export default function AdjacentPostCard({
 
         {/* 中部：标题 (增加垂直间距替代分隔线) */}
         <div className="py-4">
-          <h3 className="text-lg md:text-xl font-bold leading-tight tracking-tight text-foreground group-hover:text-primary transition-colors line-clamp-2">
+          <h3 className="text-lg md:text-xl font-bold leading-tight tracking-tight text-foreground line-clamp-2 relative inline box-decoration-clone bg-[linear-gradient(white,white)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]  ">
             {title}
           </h3>
         </div>

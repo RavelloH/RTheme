@@ -359,7 +359,7 @@ export default async function PostPage({ params }: PageProps) {
               mode={renderedContent.mode}
               mediaFileMap={postMediaFileMap}
               skipFirstH1
-              shikiTheme={shikiTheme} // ✅ 传递 Shiki 主题配置
+              shikiTheme={shikiTheme}
             />
             {/* 文章底部信息 */}
             <div className="max-w-7xl mx-auto mt-12 border-t-2 py-8 border-border">
@@ -367,12 +367,12 @@ export default async function PostPage({ params }: PageProps) {
                 <div className="flex flex-wrap gap-4 ">
                   <span className="flex gap-1 items-center">
                     <RiCalendarLine size={"1em"} />
-                    {formatDate(post.publishedAt!)}
+                    发布于 {formatDate(post.publishedAt!)}
                   </span>
                   <span>{"/"}</span>
                   <span className="flex gap-1 items-center">
                     <RiEditLine size="1em" />
-                    {formatDate(post.updatedAt)}
+                    编辑于 {formatDate(post.updatedAt)}
                   </span>
                   <span>{"/"}</span>
                   <span>{post.title}</span>
