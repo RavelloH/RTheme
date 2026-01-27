@@ -1,5 +1,5 @@
 // @/store/useBroadcast.ts
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import { useBroadcastStore } from "@/store/broadcast-store";
 
 /**
@@ -31,8 +31,8 @@ export function useBroadcast<T>(
  * @returns broadcast function
  */
 export function useBroadcastSender<T>() {
-  const broadcast = (message: T) => {
+  const broadcast = useCallback((message: T) => {
     return useBroadcastStore.getState().broadcast(message);
-  };
+  }, []);
   return { broadcast };
 }

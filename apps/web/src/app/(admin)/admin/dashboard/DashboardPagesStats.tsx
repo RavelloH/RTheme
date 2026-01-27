@@ -5,11 +5,10 @@ import Link from "@/components/Link";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { RiRefreshLine } from "@remixicon/react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { getPagesStats } from "@/actions/stat";
 import runWithAuth from "@/lib/client/run-with-auth";
 import ErrorPage from "@/components/ui/Error";
-import { useBroadcastSender } from "@/hooks/use-broadcast";
 
 type StatsData = {
   updatedAt: string;
@@ -28,34 +27,25 @@ export default function DashboardPagesStats() {
   const [isCache, setIsCache] = useState(true);
   const [refreshTime, setRefreshTime] = useState<Date | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const { broadcast } = useBroadcastSender<{ type: "pages-refresh" }>();
 
-  const fetchData = useCallback(
-    async (forceRefresh: boolean = false) => {
-      if (forceRefresh) {
-        setResult(null);
-      }
-      setError(null);
-      const res = await runWithAuth(getPagesStats, { force: forceRefresh });
-      if (!res || !("data" in res) || !res.data) {
-        setError(new Error("获取页面统计数据失败"));
-        return;
-      }
-      setResult(res.data);
-      setIsCache(res.data.cache);
-      setRefreshTime(new Date(res.data.updatedAt));
-
-      // 刷新成功后广播消息,通知其他组件更新
-      if (forceRefresh) {
-        await broadcast({ type: "pages-refresh" });
-      }
-    },
-    [broadcast],
-  );
+  const fetchData = async (forceRefresh: boolean = false) => {
+    if (forceRefresh) {
+      setResult(null);
+    }
+    setError(null);
+    const res = await runWithAuth(getPagesStats, { force: forceRefresh });
+    if (!res || !("data" in res) || !res.data) {
+      setError(new Error("获取页面统计数据失败"));
+      return;
+    }
+    setResult(res.data);
+    setIsCache(res.data.cache);
+    setRefreshTime(new Date(res.data.updatedAt));
+  };
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, []);
 
   const getSummary = (result: StatsData) => {
     if (!result) return null;

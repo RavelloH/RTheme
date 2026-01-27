@@ -5,9 +5,8 @@ import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiRefreshLine } from "@remixicon/react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import ErrorPage from "@/components/ui/Error";
-import { useBroadcastSender } from "@/hooks/use-broadcast";
 import Link from "@/components/Link";
 
 type StatsData = {
@@ -28,34 +27,25 @@ export default function DashboardAuditStats() {
   const [result, setResult] = useState<StatsData | null>(null);
   const [refreshTime, setRefreshTime] = useState<Date | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const { broadcast } = useBroadcastSender<{ type: "audit-refresh" }>();
 
-  const fetchData = useCallback(
-    async (forceRefresh: boolean = false) => {
-      if (forceRefresh) {
-        setResult(null);
-      }
-      setError(null);
-      const res = await getAuditStats({ force: forceRefresh });
-      if (!res.success) {
-        setError(new Error(res.message || "获取审计日志统计失败"));
-        return;
-      }
-      if (!res.data) return;
-      setResult(res.data);
-      setRefreshTime(new Date(res.data.updatedAt));
-
-      // 刷新成功后广播消息，通知其他组件更新
-      if (forceRefresh) {
-        await broadcast({ type: "audit-refresh" });
-      }
-    },
-    [broadcast],
-  );
+  const fetchData = async (forceRefresh: boolean = false) => {
+    if (forceRefresh) {
+      setResult(null);
+    }
+    setError(null);
+    const res = await getAuditStats({ force: forceRefresh });
+    if (!res.success) {
+      setError(new Error(res.message || "获取审计日志统计失败"));
+      return;
+    }
+    if (!res.data) return;
+    setResult(res.data);
+    setRefreshTime(new Date(res.data.updatedAt));
+  };
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, []);
 
   return (
     <AutoTransition type="scale" className="h-full">
