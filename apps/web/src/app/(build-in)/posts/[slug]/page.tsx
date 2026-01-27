@@ -30,7 +30,7 @@ import {
   extractInternalHashes,
 } from "@/lib/shared/image-utils";
 import ImageLightbox from "@/components/client/ImageLightbox";
-import { getConfig } from "@/lib/server/config-cache";
+import { getConfigs } from "@/lib/server/config-cache";
 import React from "react";
 import CommentsSection from "@/components/client/CommentsSection";
 import AdjacentPostCard from "@/components/AdjacentPostCard";
@@ -105,17 +105,17 @@ export default async function PostPage({ params }: PageProps) {
     locateEnabled,
     siteURL,
     shikiTheme,
-  ] = await Promise.all([
-    getConfig("comment.enable"),
-    getConfig("comment.placeholder"),
-    getConfig("comment.anonymous.enable"),
-    getConfig("comment.anonymous.email.required"),
-    getConfig("comment.anonymous.website.enable"),
-    getConfig("comment.review.enable"),
-    getConfig("comment.anonymous.review.enable"),
-    getConfig("comment.locate.enable"),
-    getConfig("site.url"),
-    getConfig("site.shiki.theme"),
+  ] = await getConfigs([
+    "comment.enable",
+    "comment.placeholder",
+    "comment.anonymous.enable",
+    "comment.anonymous.email.required",
+    "comment.anonymous.website.enable",
+    "comment.review.enable",
+    "comment.anonymous.review.enable",
+    "comment.locate.enable",
+    "site.url",
+    "site.shiki.theme",
   ]);
 
   try {

@@ -7,7 +7,7 @@ import ResponseBuilder from "@/lib/server/response";
 import type { ApiResponse } from "@repo/shared-types/api/common";
 import limitControl from "@/lib/server/rate-limit";
 import { checkReauthToken } from "./reauth";
-import { getConfig } from "@/lib/server/config-cache";
+import { getConfig, getConfigs } from "@/lib/server/config-cache";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
 import { authVerify } from "@/lib/server/auth-verify";
 import { logAuditEvent } from "@/lib/server/audit";
@@ -36,8 +36,7 @@ const CHALLENGE_TTL = 600; // 10分钟
 
 // 公共工具：获取 RP 配置
 async function getRPConfig() {
-  const siteUrl = await getConfig("site.url");
-  const rpName = await getConfig("site.title");
+  const [siteUrl, rpName] = await getConfigs(["site.url", "site.title"]);
   const url = new URL(siteUrl || "http://localhost:3000");
   const rpID = url.hostname; // 域名作为 rpID
   const origin = url.origin;

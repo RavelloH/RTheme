@@ -50,7 +50,7 @@ import { logAuditEvent } from "@/lib/server/audit";
 import { getClientIP } from "@/lib/server/get-client-info";
 import { resolveIpLocation } from "@/lib/server/ip-utils";
 import { verifyToken } from "@/lib/server/captcha";
-import { getConfig } from "@/lib/server/config-cache";
+import { getConfig, getConfigs } from "@/lib/server/config-cache";
 import type { UserRole } from "@/lib/server/auth-verify";
 import prisma from "@/lib/server/prisma";
 import crypto from "crypto";
@@ -93,7 +93,10 @@ async function sendCommentNotification(params: {
     const NotificationEmail = (await import("@/emails/templates"))
       .NotificationEmail;
 
-    const noticeEnabled = await getConfig("notice.enable");
+    const [noticeEnabled, siteUrl] = await getConfigs([
+      "notice.enable",
+      "site.url",
+    ]);
     if (!noticeEnabled) return;
 
     // 获取文章完整信息
@@ -106,8 +109,6 @@ async function sendCommentNotification(params: {
       },
     });
     if (!postInfo) return;
-
-    const siteUrl = await getConfig("site.url");
 
     const commentLink = `${siteUrl}/posts/${params.postSlug}#comment-${params.commentId}`;
     const truncatedContent =
@@ -136,11 +137,11 @@ async function sendCommentNotification(params: {
     }
     // 场景2：评论被回复（有 parentId）
     else {
-      const commentNoticeEnabled = await getConfig(
-        "comment.email.notice.enable",
-      );
-      const anonCommentNoticeEnabled = await getConfig(
-        "comment.anonymous.email.notice.enable",
+      const [commentNoticeEnabled, anonCommentNoticeEnabled] = await getConfigs(
+        [
+          "comment.email.notice.enable",
+          "comment.anonymous.email.notice.enable",
+        ],
       );
 
       if (!commentNoticeEnabled && !anonCommentNoticeEnabled) return;
@@ -1162,12 +1163,12 @@ export async function createComment(
     allowAnonWebsite,
     reviewAll,
     reviewAnon,
-  ] = await Promise.all([
-    getConfig("comment.anonymous.enable"),
-    getConfig("comment.anonymous.email.required"),
-    getConfig("comment.anonymous.website.enable"),
-    getConfig("comment.review.enable"),
-    getConfig("comment.anonymous.review.enable"),
+  ] = await getConfigs([
+    "comment.anonymous.enable",
+    "comment.anonymous.email.required",
+    "comment.anonymous.website.enable",
+    "comment.review.enable",
+    "comment.anonymous.review.enable",
   ]);
 
   const post = await loadPostId(slug);

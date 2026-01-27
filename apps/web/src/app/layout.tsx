@@ -26,7 +26,7 @@ import { ConfigProvider } from "@/context/ConfigContext";
 
 // lib
 import { getActiveMenus } from "@/lib/server/menu-cache";
-import { getConfig } from "@/lib/server/config-cache";
+import { getConfigs } from "@/lib/server/config-cache";
 
 // Types
 import { ToastProvider } from "@/ui/Toast";
@@ -54,15 +54,19 @@ export default async function RootLayout({
   cacheLife("max");
 
   // 获取所有需要的配置
-  const [menus, mainColor, siteName, enableAnalytics, ablyEnabled, shikiTheme] =
-    await Promise.all([
-      getActiveMenus(),
-      getConfig("site.color"),
-      getConfig("site.title"),
-      getConfig("analytics.enable"),
-      getConfig("notice.ably.key"),
-      getConfig("site.shiki.theme"),
-    ]);
+  const [
+    menus,
+    [mainColor, siteName, enableAnalytics, ablyEnabled, shikiTheme],
+  ] = await Promise.all([
+    getActiveMenus(),
+    getConfigs([
+      "site.color",
+      "site.title",
+      "analytics.enable",
+      "notice.ably.key",
+      "site.shiki.theme",
+    ]),
+  ]);
 
   // 打包配置
   const configs = {

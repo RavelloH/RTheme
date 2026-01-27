@@ -145,6 +145,24 @@ export async function getConfig<K extends ConfigKeys>(
 }
 
 /**
+ * 批量获取配置项
+ * @param keys 配置键名数组
+ * @returns 配置值数组（保持元组类型）
+ *
+ * @example
+ * const [title, url] = await getConfigs(["site.title", "site.url"]);
+ * // title: string, url: string
+ */
+export async function getConfigs<T extends ConfigKeys[]>(
+  keys: [...T],
+): Promise<{ [K in keyof T]: ConfigType<T[K] & ConfigKeys> }> {
+  const results = await Promise.all(keys.map((key) => getConfig(key)));
+  return results as unknown as {
+    [K in keyof T]: ConfigType<T[K] & ConfigKeys>;
+  };
+}
+
+/**
  * 从数据库获取配置
  */
 async function getConfigFromDatabase(key: string): Promise<ConfigItem | null> {

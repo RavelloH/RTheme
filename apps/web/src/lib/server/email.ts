@@ -1,10 +1,9 @@
 import "server-only";
 
+import { getConfig, getConfigs } from "./config-cache";
+import nodemailer, { Transporter } from "nodemailer";
 import { Resend } from "resend";
-import nodemailer from "nodemailer";
-import type { Transporter } from "nodemailer";
 import type SMTPTransport from "nodemailer/lib/smtp-transport";
-import { getConfig } from "./config-cache";
 import { randomInt } from "crypto";
 
 // 验证码相关常量
@@ -106,14 +105,14 @@ async function getEmailConfig(): Promise<EmailConfig> {
     resendApiKey,
     smtpConfig,
     siteTitle,
-  ] = await Promise.all([
-    getConfig("notice.enable"),
-    getConfig("notice.email"),
-    getConfig("notice.email.from.name"),
-    getConfig("notice.email.replyTo"),
-    getConfig("notice.email.resend.apiKey"),
-    getConfig("notice.email.smtp"),
-    getConfig("site.title"),
+  ] = await getConfigs([
+    "notice.enable",
+    "notice.email",
+    "notice.email.from.name",
+    "notice.email.replyTo",
+    "notice.email.resend.apiKey",
+    "notice.email.smtp",
+    "site.title",
   ]);
 
   // 如果没有配置发件人名称，使用站点标题

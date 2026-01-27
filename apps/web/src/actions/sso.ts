@@ -13,7 +13,7 @@ import type { ApiResponse } from "@repo/shared-types/api/common";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import { after } from "next/server";
 import { logAuditEvent } from "@/lib/server/audit";
-import { getConfig } from "@/lib/server/config-cache";
+import { getConfigs } from "@/lib/server/config-cache";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 
 /**
@@ -196,8 +196,10 @@ export async function linkSSO({
         const { sendEmail } = await import("@/lib/server/email");
         const { renderEmail } = await import("@/emails/utils");
         const { SSOLinkedTemplate } = await import("@/emails/templates");
-        const siteName = await getConfig("site.title");
-        const siteUrl = await getConfig("site.url");
+        const [siteName, siteUrl] = await getConfigs([
+          "site.title",
+          "site.url",
+        ]);
 
         const emailComponent = SSOLinkedTemplate({
           username: userWithEmail.nickname || userWithEmail.username,
@@ -366,8 +368,10 @@ export async function unlinkSSO({
         const { sendEmail } = await import("@/lib/server/email");
         const { renderEmail } = await import("@/emails/utils");
         const { SSOUnlinkedTemplate } = await import("@/emails/templates");
-        const siteName = await getConfig("site.title");
-        const siteUrl = await getConfig("site.url");
+        const [siteName, siteUrl] = await getConfigs([
+          "site.title",
+          "site.url",
+        ]);
 
         const emailComponent = SSOUnlinkedTemplate({
           username: userWithEmail.nickname || userWithEmail.username,
@@ -519,8 +523,10 @@ export async function setPassword({
         const { sendEmail } = await import("@/lib/server/email");
         const { renderEmail } = await import("@/emails/utils");
         const { PasswordSetTemplate } = await import("@/emails/templates");
-        const siteName = await getConfig("site.title");
-        const siteUrl = await getConfig("site.url");
+        const [siteName, siteUrl] = await getConfigs([
+          "site.title",
+          "site.url",
+        ]);
 
         const emailComponent = PasswordSetTemplate({
           username: userWithEmail.nickname || userWithEmail.username,
@@ -782,8 +788,10 @@ export async function handleSSOBind({
         const { sendEmail } = await import("@/lib/server/email");
         const { renderEmail } = await import("@/emails/utils");
         const { SSOLinkedTemplate } = await import("@/emails/templates");
-        const siteName = await getConfig("site.title");
-        const siteUrl = await getConfig("site.url");
+        const [siteName, siteUrl] = await getConfigs([
+          "site.title",
+          "site.url",
+        ]);
 
         const emailComponent = SSOLinkedTemplate({
           username: userWithEmail.nickname || userWithEmail.username,

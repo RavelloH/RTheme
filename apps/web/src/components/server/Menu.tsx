@@ -3,7 +3,7 @@ import "server-only";
 import { MenuItem } from "@/lib/server/menu-cache";
 import MenuWrapper from "../client/Menu/MenuWrapper";
 import { MenuFooter, MenuHeader, MenuLayout } from "../client/Menu/MenuMiscs";
-import { getConfig } from "@/lib/server/config-cache";
+import { getConfigs } from "@/lib/server/config-cache";
 import Marquee from "react-fast-marquee";
 import Link from "../Link";
 import MenuItemWrapper from "../client/Menu/MenuItemLayout";
@@ -43,12 +43,12 @@ function Icon({ iconName }: { iconName: string }) {
 }
 
 export default async function Menu({ menus }: { menus: MenuItem[] }) {
-  const [slogan, title, copyright, author, birthday] = await Promise.all([
-    getConfig("site.slogan.secondary"),
-    getConfig("site.title"),
-    getConfig("site.copyright"),
-    getConfig("author.name"),
-    getConfig("site.birthday"),
+  const [slogan, title, copyright, author, birthday] = await getConfigs([
+    "site.slogan.secondary",
+    "site.title",
+    "site.copyright",
+    "author.name",
+    "site.birthday",
   ]);
 
   const mainMenus = menus.filter(
