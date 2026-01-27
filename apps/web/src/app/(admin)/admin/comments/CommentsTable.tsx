@@ -120,8 +120,7 @@ export default function CommentsTable() {
     if (refreshTrigger > 0) {
       fetchData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshTrigger]);
+  }, [refreshTrigger, fetchData]);
 
   useBroadcast<{ type: string }>((message) => {
     if (message.type === "comments-refresh") {
@@ -358,28 +357,36 @@ export default function CommentsTable() {
     {
       label: "通过",
       icon: <RiCheckLine size="1.1em" />,
-      onClick: () => operateStatus(selectedIds, "APPROVED"),
+      onClick: () => {
+        void operateStatus(selectedIds, "APPROVED");
+      },
       disabled: !selectedKeys.length,
       variant: "ghost",
     },
     {
       label: "拒绝",
       icon: <RiCloseLine size="1.1em" />,
-      onClick: () => operateStatus(selectedIds, "REJECTED"),
+      onClick: () => {
+        void operateStatus(selectedIds, "REJECTED");
+      },
       disabled: !selectedKeys.length,
       variant: "ghost",
     },
     {
       label: "标记垃圾",
       icon: <RiAlertLine size="1.1em" />,
-      onClick: () => operateStatus(selectedIds, "SPAM"),
+      onClick: () => {
+        void operateStatus(selectedIds, "SPAM");
+      },
       disabled: !selectedKeys.length,
       variant: "ghost",
     },
     {
       label: "删除",
       icon: <RiDeleteBinLine size="1.1em" />,
-      onClick: () => handleDelete(selectedIds),
+      onClick: () => {
+        void handleDelete(selectedIds);
+      },
       disabled: !selectedKeys.length,
       variant: "danger",
     },
@@ -389,23 +396,31 @@ export default function CommentsTable() {
     {
       label: "通过",
       icon: <RiCheckLine size="1.1em" />,
-      onClick: () => operateStatus([record.id], "APPROVED"),
+      onClick: () => {
+        void operateStatus([record.id], "APPROVED");
+      },
     },
     {
       label: "拒绝",
       icon: <RiCloseLine size="1.1em" />,
-      onClick: () => operateStatus([record.id], "REJECTED"),
+      onClick: () => {
+        void operateStatus([record.id], "REJECTED");
+      },
     },
     {
       label: "垃圾",
       icon: <RiAlertLine size="1.1em" />,
-      onClick: () => operateStatus([record.id], "SPAM"),
+      onClick: () => {
+        void operateStatus([record.id], "SPAM");
+      },
     },
     {
       label: "删除",
       icon: <RiDeleteBinLine size="1.1em" />,
       variant: "danger",
-      onClick: () => handleDelete([record.id]),
+      onClick: () => {
+        void handleDelete([record.id]);
+      },
     },
   ];
 
@@ -562,7 +577,7 @@ export default function CommentsTable() {
                       {selectedComment.path
                         .split("/")
                         .map((segment, index, arr) => (
-                          <span key={index}>
+                          <span key={segment}>
                             {segment}
                             {index < arr.length - 1 && (
                               <span className="text-muted-foreground">

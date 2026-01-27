@@ -484,13 +484,17 @@ export default function StoragesTable() {
     return [
       {
         label: "编辑",
-        onClick: () => handleEdit(record),
+        onClick: () => {
+          void handleEdit(record);
+        },
         icon: <RiEditLine size="1em" />,
         disabled: isVirtual, // 禁用虚拟存储的编辑
       },
       {
         label: record.isActive ? "停用" : "激活",
-        onClick: () => handleToggleStatus(record),
+        onClick: () => {
+          void handleToggleStatus(record);
+        },
         icon: record.isActive ? (
           <RiEyeOffLine size="1em" />
         ) : (
@@ -500,7 +504,9 @@ export default function StoragesTable() {
       },
       {
         label: "设为默认",
-        onClick: () => handleSetDefault(record),
+        onClick: () => {
+          void handleSetDefault(record);
+        },
         icon: <RiStarLine size="1em" />,
         disabled: record.isDefault || isVirtual, // 禁用虚拟存储设为默认
       },

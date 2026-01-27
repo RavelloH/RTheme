@@ -328,8 +328,7 @@ export default function HeaderWrapper({
     return () => {
       window.removeEventListener("loadingComplete", handleLoadingComplete);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isMobile]);
 
   // 初始化标题
   useEffect(() => {

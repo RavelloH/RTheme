@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useTransition, useRef, useEffect } from "react";
+import React, {
+  useState,
+  useTransition,
+  useRef,
+  useEffect,
+  useCallback,
+} from "react";
 import {
   RiNotification3Line,
   RiCheckDoubleLine,
@@ -96,7 +102,7 @@ export default function NotificationsClient({
   };
 
   // 加载更多已读通知
-  const loadMoreReadNotices = async () => {
+  const loadMoreReadNotices = useCallback(async () => {
     if (loadingRef.current || !hasMoreRef.current) return;
 
     loadingRef.current = true;
@@ -123,7 +129,7 @@ export default function NotificationsClient({
       setIsLoadingMore(false);
       loadingRef.current = false;
     }
-  };
+  }, [toast]);
 
   // 当触发元素进入视口时加载更多
   useEffect(() => {
@@ -136,8 +142,7 @@ export default function NotificationsClient({
       }, 100);
       return () => clearTimeout(timer);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inView]); // 只依赖 isModal 和 hasMoreRead
+  }, [inView, loadMoreReadNotices, isLoadingMore]);
 
   // 处理点击通知
   const handleNoticeClick = async (notice: Notice) => {

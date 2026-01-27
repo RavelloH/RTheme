@@ -95,8 +95,7 @@ export default function SettingSheet() {
   // 初始加载配置
   useEffect(() => {
     fetchSettings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchSettings]);
 
   // 根据分类过滤配置项
   useEffect(() => {

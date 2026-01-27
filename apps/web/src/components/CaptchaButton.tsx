@@ -59,8 +59,7 @@ export function CaptchaButton({
 
   useEffect(() => {
     solve();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [solve]);
 
   // 监听重置验证码的广播消息
   useBroadcast((message: { type: string }) => {

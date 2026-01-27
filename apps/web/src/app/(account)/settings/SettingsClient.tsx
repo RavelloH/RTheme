@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import { getUserProfile } from "@/actions/user";
@@ -93,12 +93,15 @@ export default function SettingsClient({
     },
   });
 
-  const sections = [
-    { id: "basic", label: "基本信息", icon: RiUserLine },
-    { id: "notifications", label: "通知管理", icon: RiNotification3Line },
-    { id: "sessions", label: "会话管理", icon: RiDeviceLine },
-    { id: "security", label: "安全设置", icon: RiShieldKeyholeLine },
-  ];
+  const sections = useMemo(
+    () => [
+      { id: "basic", label: "基本信息", icon: RiUserLine },
+      { id: "notifications", label: "通知管理", icon: RiNotification3Line },
+      { id: "sessions", label: "会话管理", icon: RiDeviceLine },
+      { id: "security", label: "安全设置", icon: RiShieldKeyholeLine },
+    ],
+    [],
+  );
 
   // 从 URL hash 读取当前分类
   useEffect(() => {
@@ -106,8 +109,69 @@ export default function SettingsClient({
     if (hash && sections.some((section) => section.id === hash)) {
       setActiveSection(hash);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [sections]);
+
+  // 加载用户信息
+  const loadUserInfo = useCallback(async () => {
+    try {
+      const result = await getUserProfile();
+      if (result.success && result.data) {
+        setUser(result.data);
+      } else {
+        toast.error(result.message || "加载失败");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "加载失败");
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  // 重试待处理的操作
+  const retryPendingAction = useCallback(async () => {
+    const action = getPendingAction();
+    if (!action) return;
+
+    clearPendingAction();
+
+    switch (action.type) {
+      case "link":
+        redirectToSSOBind(action.data.provider);
+        break;
+      case "unlink":
+        // 直接执行解绑操作
+        await ssoDialogsRef.current?.executeUnlinkSSO(action.data);
+        break;
+      case "setPassword":
+        // 直接执行设置密码操作
+        await passwordDialogsRef.current?.executeSetPassword(action.data);
+        break;
+      case "changePassword":
+        // 直接执行修改密码操作
+        await passwordDialogsRef.current?.executeChangePassword(action.data);
+        break;
+      case "revokeSession":
+        // 直接执行撤销会话操作
+        await sessionDialogsRef.current?.executeRevokeSession(action.data);
+        break;
+      case "enableTotp":
+        // 直接执行启用 TOTP 操作
+        await totpDialogsRef.current?.executeEnableTotp();
+        break;
+      case "disableTotp":
+        // 直接执行禁用 TOTP 操作
+        await totpDialogsRef.current?.executeDisableTotp();
+        break;
+      case "regenerateBackupCodes":
+        // 直接执行重新生成备份码操作
+        await totpDialogsRef.current?.executeRegenerateBackupCodes();
+        break;
+      case "updateProfile":
+        // 直接执行更新个人资料操作
+        await basicInfoDialogsRef.current?.executeUpdate(action.data);
+        break;
+    }
+  }, [clearPendingAction, getPendingAction, redirectToSSOBind]);
 
   // 处理 URL 参数和初始化
   useEffect(() => {
@@ -159,70 +223,14 @@ export default function SettingsClient({
     }
 
     loadUserInfo();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
-
-  // 加载用户信息
-  const loadUserInfo = async () => {
-    try {
-      const result = await getUserProfile();
-      if (result.success && result.data) {
-        setUser(result.data);
-      } else {
-        toast.error(result.message || "加载失败");
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "加载失败");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 重试待处理的操作
-  const retryPendingAction = async () => {
-    const action = getPendingAction();
-    if (!action) return;
-
-    clearPendingAction();
-
-    switch (action.type) {
-      case "link":
-        redirectToSSOBind(action.data.provider);
-        break;
-      case "unlink":
-        // 直接执行解绑操作
-        await ssoDialogsRef.current?.executeUnlinkSSO(action.data);
-        break;
-      case "setPassword":
-        // 直接执行设置密码操作
-        await passwordDialogsRef.current?.executeSetPassword(action.data);
-        break;
-      case "changePassword":
-        // 直接执行修改密码操作
-        await passwordDialogsRef.current?.executeChangePassword(action.data);
-        break;
-      case "revokeSession":
-        // 直接执行撤销会话操作
-        await sessionDialogsRef.current?.executeRevokeSession(action.data);
-        break;
-      case "enableTotp":
-        // 直接执行启用 TOTP 操作
-        await totpDialogsRef.current?.executeEnableTotp();
-        break;
-      case "disableTotp":
-        // 直接执行禁用 TOTP 操作
-        await totpDialogsRef.current?.executeDisableTotp();
-        break;
-      case "regenerateBackupCodes":
-        // 直接执行重新生成备份码操作
-        await totpDialogsRef.current?.executeRegenerateBackupCodes();
-        break;
-      case "updateProfile":
-        // 直接执行更新个人资料操作
-        await basicInfoDialogsRef.current?.executeUpdate(action.data);
-        break;
-    }
-  };
+  }, [
+    searchParams,
+    loadUserInfo,
+    router,
+    toast,
+    openReauthWindow,
+    setPendingAction,
+  ]);
 
   // 处理绑定 SSO
   const handleLinkSSO = async (provider: OAuthProvider) => {

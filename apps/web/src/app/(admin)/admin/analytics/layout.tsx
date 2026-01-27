@@ -19,7 +19,7 @@ export default async function AnalyticsLayout({
   }
 
   try {
-    const decoded = await jwtTokenVerify(token);
+    const decoded = jwtTokenVerify(token);
     const userRole = (decoded as AccessTokenPayload).role;
 
     if (!allowedRoles.includes(userRole)) {

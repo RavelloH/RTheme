@@ -397,8 +397,7 @@ export default function Editor({
       console.log("没有草稿，使用默认内容");
       setInitialContent(content);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor, editorType]); // 依赖editor和editorType，确保编辑器准备好后加载内容
+  }, [editor, editorType, content, storageKey, toast]); // 依赖editor和editorType，确保编辑器准备好后加载内容
 
   // 监控 markdownContent 变化并同步到 Monaco
   useEffect(() => {

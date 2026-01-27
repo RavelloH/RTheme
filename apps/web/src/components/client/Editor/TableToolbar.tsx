@@ -215,8 +215,8 @@ export function TableToolbar({ editor, isVisible }: TableToolbarProps) {
             className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 bg-background/95 backdrop-blur-sm border border-foreground/10 rounded-lg shadow-lg px-3 py-2"
           >
             <div className="flex gap-1 items-center">
-              {tableButtons.map((button, index) => (
-                <Tooltip key={index} content={button.name}>
+              {tableButtons.map((button) => (
+                <Tooltip key={button.name} content={button.name}>
                   <Toggle
                     size="sm"
                     variant="default"

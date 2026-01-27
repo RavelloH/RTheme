@@ -169,7 +169,9 @@ export function LivePreview({
       }
     };
 
-    const timeoutId = setTimeout(compileMdx, 300);
+    const timeoutId = setTimeout(() => {
+      void compileMdx();
+    }, 300);
     return () => clearTimeout(timeoutId);
   }, [content, mode, retryKey]);
 

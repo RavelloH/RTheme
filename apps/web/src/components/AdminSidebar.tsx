@@ -200,9 +200,9 @@ export default function AdminSidebar() {
     return (
       <div className="w-full h-[4em] border-border overflow-x-auto overflow-y-hidden mb-3">
         <div className="flex items-center h-full gap-2 min-w-max">
-          {filteredMenuItems.map((item, index) => (
+          {filteredMenuItems.map((item) => (
             <Link
-              key={index}
+              key={item.href}
               href={item.href}
               className={`flex items-center gap-2 px-3 py-2 shrink-0 transition-all duration-200 ${
                 pathname.startsWith(item.href)
@@ -226,9 +226,9 @@ export default function AdminSidebar() {
   // 桌面端:垂直侧边栏
   return (
     <div className="group admin-sidebar relative w-[5em] hover:w-[15em] h-full border-border border transition-all duration-300 ease-in-out overflow-y-auto overflow-x-hidden bg-background shrink-0 overflow-scroll">
-      {filteredMenuItems.map((item, index) => (
+      {filteredMenuItems.map((item) => (
         <Link
-          key={index}
+          key={item.href}
           href={item.href}
           className={`h-[3em] border border-border flex items-center cursor-pointer relative group/item ${pathname.split("/")[2] === item.href.split("/")[2] ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
         >

@@ -78,25 +78,8 @@ const MessageList = forwardRef<MessageListRef, MessageListProps>(
       return scrollHeight - scrollTop - clientHeight < threshold;
     }, []);
 
-    // 处理滚动事件
-    const handleScroll = useCallback(() => {
-      if (!scrollContainerRef.current) return;
-
-      const { scrollTop } = scrollContainerRef.current;
-      const atBottom = checkIfAtBottom();
-
-      // 通知父组件滚动位置变化
-      onScrollChange(atBottom);
-
-      // 如果滚动到顶部，加载更多
-      if (scrollTop < 100 && hasMore && !loadingRef.current) {
-        loadMore();
-      }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasMore, onScrollChange, checkIfAtBottom]);
-
     // 加载更多消息
-    const loadMore = async () => {
+    const loadMore = useCallback(async () => {
       if (
         loadingRef.current ||
         !hasMore ||
@@ -131,7 +114,23 @@ const MessageList = forwardRef<MessageListRef, MessageListProps>(
         setIsLoadingMore(false);
         loadingRef.current = false;
       }
-    };
+    }, [conversationId, hasMore, messages.length, onLoadMoreMessages]);
+
+    // 处理滚动事件
+    const handleScroll = useCallback(() => {
+      if (!scrollContainerRef.current) return;
+
+      const { scrollTop } = scrollContainerRef.current;
+      const atBottom = checkIfAtBottom();
+
+      // 通知父组件滚动位置变化
+      onScrollChange(atBottom);
+
+      // 如果滚动到顶部，加载更多
+      if (scrollTop < 100 && hasMore && !loadingRef.current) {
+        loadMore();
+      }
+    }, [hasMore, onScrollChange, checkIfAtBottom, loadMore]);
 
     // 当新消息到来时，如果在底部则自动滚动
     useEffect(() => {

@@ -178,8 +178,12 @@ const MediaGridItem = memo(
             data-action="true"
           >
             <div className="flex items-center justify-center gap-2 px-2 py-2">
-              {actions.map((action, index) => (
-                <Tooltip key={index} content={action.label} placement="top">
+              {actions.map((action) => (
+                <Tooltip
+                  key={action.label}
+                  content={action.label}
+                  placement="top"
+                >
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -646,7 +650,7 @@ export default function MediaTable() {
   }, [selectedMedia, toast, closeBatchDeleteDialog]);
 
   // 监听广播刷新消息
-  useBroadcast<{ type: string }>(async (message) => {
+  useBroadcast<{ type: string }>((message) => {
     if (message.type === "media-refresh") {
       setRefreshTrigger((prev) => prev + 1); // 触发刷新
     }
@@ -1066,7 +1070,9 @@ export default function MediaTable() {
       {
         label: "查看详情",
         icon: <RiEyeLine size="1.1em" />,
-        onClick: () => openDetailDialog(record),
+        onClick: () => {
+          void openDetailDialog(record);
+        },
       },
       {
         label: "编辑",
@@ -1308,9 +1314,9 @@ export default function MediaTable() {
                           </AutoTransition>
                         </div>
                         <div className="flex items-center gap-2">
-                          {batchActions.map((action, index) => (
+                          {batchActions.map((action) => (
                             <Button
-                              key={index}
+                              key={action.label}
                               label={action.label || "操作"}
                               variant={action.variant || "outline"}
                               size="sm"

@@ -449,7 +449,7 @@ export default function FooterDesktop({ menus }: FooterProps) {
 
               return (
                 <span
-                  key={index}
+                  key={menu.id}
                   className={`mx-6 relative ${isActive ? "text-white" : ""}`}
                 >
                   <Link
@@ -460,7 +460,6 @@ export default function FooterDesktop({ menus }: FooterProps) {
                         gsap.set(el, { color: "#ffffff" });
                       }
                     }}
-                    key={menu.id}
                     href={
                       menu.link ||
                       (menu.slug

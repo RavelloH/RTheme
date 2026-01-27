@@ -1,7 +1,7 @@
 "use client";
 
 import { refresh, logout } from "@/actions/auth";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 
 interface UserInfo {
@@ -57,68 +57,53 @@ export default function TokenManager() {
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const tabIdRef = useRef<string>(generateTabId());
 
-  useEffect(() => {
-    // 统一的 localStorage 操作辅助函数
-    const removeUserInfo = () => {
-      localStorage.removeItem("user_info");
-      // 使用 broadcast 通知其他组件
-      broadcastUserInfo({ type: "user_info_update" });
-    };
+  const removeUserInfo = useCallback(() => {
+    localStorage.removeItem("user_info");
+    broadcastUserInfo({ type: "user_info_update" });
+  }, [broadcastUserInfo]);
 
-    // 从 localStorage 获取用户信息，带验证和错误处理
-    const getStoredUserInfo = (): UserInfo | null => {
-      try {
-        const userInfoStr = localStorage.getItem("user_info");
-        if (!userInfoStr) return null;
+  const getStoredUserInfo = useCallback((): UserInfo | null => {
+    try {
+      const userInfoStr = localStorage.getItem("user_info");
+      if (!userInfoStr) return null;
 
-        const userInfo = JSON.parse(userInfoStr);
+      const userInfo = JSON.parse(userInfoStr);
 
-        // 验证用户信息格式
-        if (
-          !userInfo.uid ||
-          !userInfo.username ||
-          !userInfo.exp ||
-          !userInfo.lastRefresh
-        ) {
-          console.error("Invalid user_info format");
-          removeUserInfo();
-          return null;
-        }
-
-        return userInfo as UserInfo;
-      } catch {
+      if (
+        !userInfo.uid ||
+        !userInfo.username ||
+        !userInfo.exp ||
+        !userInfo.lastRefresh
+      ) {
         removeUserInfo();
         return null;
       }
-    };
 
-    // 检查用户是否已登录，未登录则跳过所有初始化
-    const userInfo = getStoredUserInfo();
-    if (!userInfo) {
-      console.log("[TokenManager] User not logged in, skipping initialization");
-      return;
+      return userInfo as UserInfo;
+    } catch {
+      removeUserInfo();
+      return null;
     }
+  }, [removeUserInfo]);
 
-    console.log("[TokenManager] Initialized in tab:", tabIdRef.current);
-
-    // 统一的定时器清理函数
-    const clearTimer = (timerKey: keyof typeof timersRef.current) => {
+  const clearTimer = useCallback(
+    (timerKey: keyof (typeof timersRef)["current"]) => {
       if (timersRef.current[timerKey]) {
         clearTimeout(timersRef.current[timerKey]!);
         timersRef.current[timerKey] = null;
       }
-    };
+    },
+    [],
+  );
 
-    const clearAllTimers = () => {
-      Object.keys(timersRef.current).forEach((key) =>
-        clearTimer(key as keyof typeof timersRef.current),
-      );
-    };
+  const clearAllTimers = useCallback(() => {
+    Object.keys(timersRef.current).forEach((key) =>
+      clearTimer(key as keyof (typeof timersRef)["current"]),
+    );
+  }, [clearTimer]);
 
-    const broadcastMessage = (
-      message: Omit<BroadcastMessage, "tabId">,
-      delay = 0,
-    ) => {
+  const broadcastMessage = useCallback(
+    (message: Omit<BroadcastMessage, "tabId">, delay = 0) => {
       const send = () => {
         if (broadcastChannelRef.current) {
           try {
@@ -137,125 +122,106 @@ export default function TokenManager() {
       } else {
         send();
       }
-    };
+    },
+    [],
+  );
 
-    const doRefresh = async () => {
-      console.log("[TokenManager] Attempting token refresh...");
-      if (stateRef.current.isRefreshing) return false;
+  const doRefresh = useCallback(async () => {
+    if (stateRef.current.isRefreshing) return false;
 
-      stateRef.current.isRefreshing = true;
-      stateRef.current.isPendingRefresh = false;
+    stateRef.current.isRefreshing = true;
+    stateRef.current.isPendingRefresh = false;
 
-      broadcastMessage({
-        type: "refresh_started",
-        timestamp: new Date().toISOString(),
-      });
+    broadcastMessage({
+      type: "refresh_started",
+      timestamp: new Date().toISOString(),
+    });
 
-      try {
-        const userInfo = getStoredUserInfo();
-        if (!userInfo) return false;
+    try {
+      const userInfo = getStoredUserInfo();
+      if (!userInfo) return false;
 
-        const now = new Date();
-        const exp = new Date(userInfo.exp);
+      const now = new Date();
+      const exp = new Date(userInfo.exp);
 
-        if (exp <= now) {
-          removeUserInfo();
-          return false;
-        }
-
-        const result = await refresh({ token_transport: "cookie" });
-        const response =
-          result instanceof Response ? await result.json() : result;
-
-        if (response.success && response.data?.userInfo) {
-          const updatedUserInfo: UserInfo = {
-            uid: response.data.userInfo.uid,
-            username: response.data.userInfo.username,
-            nickname: response.data.userInfo.nickname,
-            role: response.data.userInfo.role,
-            exp: response.data.userInfo.exp || userInfo.exp,
-            lastRefresh: now.toISOString(),
-            avatar: response.data.userInfo.avatar ?? userInfo.avatar ?? null,
-            email: response.data.userInfo.email ?? userInfo.email ?? null,
-          };
-          localStorage.setItem("user_info", JSON.stringify(updatedUserInfo));
-
-          // 使用 broadcast 通知其他组件
-          broadcastUserInfo({ type: "user_info_update" });
-
-          stateRef.current.retryCount = 0;
-
-          broadcastMessage({
-            type: "refresh_completed",
-            timestamp: now.toISOString(),
-          });
-
-          console.log("[TokenManager] Token refresh successful");
-
-          return true;
-        }
-
-        // 刷新失败,根据错误类型决定处理方式
-        const errorCode = response.error?.code;
-        console.log(
-          "[TokenManager] Token refresh failed: " +
-            (JSON.stringify(response.error) || "Unknown error"),
-        );
-
-        // 如果是 UNAUTHORIZED 错误,直接清除用户信息并登出
-        if (errorCode === "UNAUTHORIZED") {
-          console.log(
-            "[TokenManager] UNAUTHORIZED error detected, logging out immediately",
-          );
-          removeUserInfo();
-          try {
-            await logout({ refresh_token: undefined });
-          } catch (error) {
-            console.error(
-              "[TokenManager] Logout after UNAUTHORIZED error:",
-              error,
-            );
-          }
-          return false;
-        }
-
-        // 其他错误,不清除用户信息,允许重试
-        console.log(
-          "[TokenManager] Non-UNAUTHORIZED error, will retry if attempts remaining",
-        );
+      if (exp <= now) {
+        removeUserInfo();
         return false;
-      } catch {
-        return false;
-      } finally {
-        stateRef.current.isRefreshing = false;
       }
-    };
 
-    const scheduleNextRefresh = (delay: number) => {
-      const nextRefreshTime = new Date(Date.now() + delay);
-      console.log(
-        `[TokenManager] Token will refresh at: ${nextRefreshTime.toLocaleString("zh-CN")} (${Math.round(delay / 1000)}s)`,
-      );
-      timersRef.current.main = setTimeout(checkAndScheduleRefresh, delay);
-    };
+      const result = await refresh({ token_transport: "cookie" });
+      const response =
+        result instanceof Response ? await result.json() : result;
 
-    const performRefresh = () => {
-      if (stateRef.current.isPendingRefresh || stateRef.current.isRefreshing)
-        return;
+      if (response.success && response.data?.userInfo) {
+        const updatedUserInfo: UserInfo = {
+          uid: response.data.userInfo.uid,
+          username: response.data.userInfo.username,
+          nickname: response.data.userInfo.nickname,
+          role: response.data.userInfo.role,
+          exp: response.data.userInfo.exp || userInfo.exp,
+          lastRefresh: now.toISOString(),
+          avatar: response.data.userInfo.avatar ?? userInfo.avatar ?? null,
+          email: response.data.userInfo.email ?? userInfo.email ?? null,
+        };
+        localStorage.setItem("user_info", JSON.stringify(updatedUserInfo));
+        broadcastUserInfo({ type: "user_info_update" });
 
-      stateRef.current.isPendingRefresh = true;
+        stateRef.current.retryCount = 0;
+        broadcastMessage({
+          type: "refresh_completed",
+          timestamp: now.toISOString(),
+        });
 
-      broadcastMessage(
-        {
-          type: "refresh_intent",
-          timestamp: new Date().toISOString(),
-        },
-        getRandomDelay(),
-      );
+        return true;
+      }
 
-      const totalDelay = REFRESH_DELAY + BROADCAST_RANDOM_DELAY_MAX;
+      const errorCode = response.error?.code;
+      if (errorCode === "UNAUTHORIZED") {
+        removeUserInfo();
+        try {
+          await logout({ refresh_token: undefined });
+        } catch {
+          //
+        }
+        return false;
+      }
 
-      timersRef.current.refreshDelay = setTimeout(async () => {
+      return false;
+    } catch {
+      return false;
+    } finally {
+      stateRef.current.isRefreshing = false;
+    }
+  }, [broadcastMessage, broadcastUserInfo, getStoredUserInfo, removeUserInfo]);
+
+  // Forward declarations via ref
+  const checkAndScheduleRefreshRef = useRef<() => void>(() => {});
+
+  const scheduleNextRefresh = useCallback((delay: number) => {
+    timersRef.current.main = setTimeout(() => {
+      checkAndScheduleRefreshRef.current();
+    }, delay);
+  }, []);
+
+  const performRefresh = useCallback(() => {
+    if (stateRef.current.isPendingRefresh || stateRef.current.isRefreshing)
+      return;
+
+    stateRef.current.isPendingRefresh = true;
+
+    broadcastMessage(
+      {
+        type: "refresh_intent",
+        timestamp: new Date().toISOString(),
+      },
+      getRandomDelay(),
+    );
+
+    const totalDelay = REFRESH_DELAY + BROADCAST_RANDOM_DELAY_MAX;
+
+    timersRef.current.refreshDelay = setTimeout(() => {
+      void (async () => {
         if (!stateRef.current.isPendingRefresh) return;
 
         const success = await doRefresh();
@@ -268,78 +234,81 @@ export default function TokenManager() {
         } else {
           stateRef.current.retryCount = 0;
         }
-      }, totalDelay);
-    };
+      })();
+    }, totalDelay);
+  }, [broadcastMessage, doRefresh, scheduleNextRefresh]);
 
-    const cancelPendingRefresh = () => {
-      if (!stateRef.current.isPendingRefresh) return;
+  const cancelPendingRefresh = useCallback(() => {
+    if (!stateRef.current.isPendingRefresh) return;
 
-      stateRef.current.isPendingRefresh = false;
-      clearTimer("refreshDelay");
-      clearTimer("broadcastDelay");
+    stateRef.current.isPendingRefresh = false;
+    clearTimer("refreshDelay");
+    clearTimer("broadcastDelay");
 
-      broadcastMessage({
-        type: "refresh_cancelled",
-        timestamp: new Date().toISOString(),
-      });
-    };
+    broadcastMessage({
+      type: "refresh_cancelled",
+      timestamp: new Date().toISOString(),
+    });
+  }, [clearTimer, broadcastMessage]);
 
-    const checkAndScheduleRefresh = () => {
-      clearTimer("main");
+  const checkAndScheduleRefresh = useCallback(() => {
+    clearTimer("main");
 
-      try {
-        const userInfo = getStoredUserInfo();
-        if (!userInfo) return;
+    try {
+      const userInfo = getStoredUserInfo();
+      if (!userInfo) return;
 
-        const now = new Date();
-        const lastRefresh = new Date(userInfo.lastRefresh);
-        const exp = new Date(userInfo.exp);
+      const now = new Date();
+      const lastRefresh = new Date(userInfo.lastRefresh);
+      const exp = new Date(userInfo.exp);
 
-        if (exp <= now) {
-          removeUserInfo();
-          return;
-        }
-
-        const nextRefreshTime = new Date(
-          lastRefresh.getTime() + REFRESH_INTERVAL,
-        );
-        const timeUntilNextRefresh = Math.max(
-          0,
-          nextRefreshTime.getTime() - now.getTime(),
-        );
-
-        if (timeUntilNextRefresh === 0) {
-          performRefresh();
-        } else {
-          const nextRefreshTime = new Date(
-            now.getTime() + timeUntilNextRefresh,
-          );
-          console.log(
-            `[TokenManager] Token will refresh at ${nextRefreshTime.toLocaleString("zh-CN")} (${Math.round(timeUntilNextRefresh / 1000)}s)`,
-          );
-          timersRef.current.main = setTimeout(
-            performRefresh,
-            timeUntilNextRefresh,
-          );
-        }
-      } catch {
-        //
+      if (exp <= now) {
+        removeUserInfo();
+        return;
       }
-    };
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        checkAndScheduleRefresh();
+      const nextRefreshTime = new Date(
+        lastRefresh.getTime() + REFRESH_INTERVAL,
+      );
+      const timeUntilNextRefresh = Math.max(
+        0,
+        nextRefreshTime.getTime() - now.getTime(),
+      );
+
+      if (timeUntilNextRefresh === 0) {
+        performRefresh();
+      } else {
+        timersRef.current.main = setTimeout(
+          performRefresh,
+          timeUntilNextRefresh,
+        );
       }
-    };
+    } catch {
+      //
+    }
+  }, [clearTimer, getStoredUserInfo, performRefresh, removeUserInfo]);
 
-    const handleStorageChange = (e: StorageEvent) => {
+  useEffect(() => {
+    checkAndScheduleRefreshRef.current = checkAndScheduleRefresh;
+  }, [checkAndScheduleRefresh]);
+
+  const handleVisibilityChange = useCallback(() => {
+    if (document.visibilityState === "visible") {
+      checkAndScheduleRefresh();
+    }
+  }, [checkAndScheduleRefresh]);
+
+  const handleStorageChange = useCallback(
+    (e: StorageEvent) => {
       if (e.key === "user_info") {
         checkAndScheduleRefresh();
       }
-    };
+    },
+    [checkAndScheduleRefresh],
+  );
 
-    const handleBroadcastMessage = (event: MessageEvent<BroadcastMessage>) => {
+  const handleBroadcastMessage = useCallback(
+    (event: MessageEvent<BroadcastMessage>) => {
       const { type, tabId } = event.data;
 
       if (tabId === tabIdRef.current) return;
@@ -356,9 +325,14 @@ export default function TokenManager() {
         }
         checkAndScheduleRefresh();
       }
-    };
+    },
+    [cancelPendingRefresh, checkAndScheduleRefresh, clearTimer],
+  );
 
-    // 初始化广播频道
+  useEffect(() => {
+    const userInfo = getStoredUserInfo();
+    if (!userInfo) return;
+
     if (typeof BroadcastChannel !== "undefined") {
       try {
         broadcastChannelRef.current = new BroadcastChannel(
@@ -380,9 +354,6 @@ export default function TokenManager() {
 
     return () => {
       clearAllTimers();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      stateRef.current.isPendingRefresh = false;
-
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("storage", handleStorageChange);
 
@@ -395,8 +366,14 @@ export default function TokenManager() {
         broadcastChannelRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [
+    getStoredUserInfo,
+    handleBroadcastMessage,
+    checkAndScheduleRefresh,
+    handleVisibilityChange,
+    handleStorageChange,
+    clearAllTimers,
+  ]);
 
   return null;
 }

@@ -28,7 +28,7 @@ export async function GET(
 
   try {
     // 验证 JWT
-    const payload = await jwtTokenVerify<{
+    const payload = jwtTokenVerify<{
       noticeId: string;
       userUid: number;
     }>(token);

@@ -226,6 +226,47 @@ const MemoTableRow = memo(
 
 MemoTableRow.displayName = "MemoTableRow";
 
+const getAlignClass = (align?: "left" | "center" | "right") => {
+  switch (align) {
+    case "center":
+      return "text-center";
+    case "right":
+      return "text-right";
+    default:
+      return "text-left";
+  }
+};
+
+const SortIcon = ({
+  columnKey,
+  sortState,
+}: {
+  columnKey: string;
+  sortState: SortState;
+}) => {
+  const isActive = sortState.key === columnKey;
+  const order = isActive ? sortState.order : null;
+
+  return (
+    <span className="inline-flex flex-col ml-1 opacity-50 hover:opacity-100 transition-opacity">
+      <svg
+        className={`w-3 h-3 -mb-1 ${order === "asc" ? "text-primary" : ""}`}
+        fill="currentColor"
+        viewBox="0 0 20 20"
+      >
+        <path d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" />
+      </svg>
+      <svg
+        className={`w-3 h-3 -mt-1 ${order === "desc" ? "text-primary" : ""}`}
+        fill="currentColor"
+        viewBox="0 0 20 20"
+      >
+        <path d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z" />
+      </svg>
+    </span>
+  );
+};
+
 export function Table<T extends Record<string, unknown>>({
   columns = [],
   data = [],
@@ -332,44 +373,6 @@ export function Table<T extends Record<string, unknown>>({
     [],
   );
 
-  const getAlignClass = React.useCallback(
-    (align?: "left" | "center" | "right") => {
-      switch (align) {
-        case "center":
-          return "text-center";
-        case "right":
-          return "text-right";
-        default:
-          return "text-left";
-      }
-    },
-    [],
-  );
-
-  const SortIcon = ({ columnKey }: { columnKey: string }) => {
-    const isActive = sortState.key === columnKey;
-    const order = isActive ? sortState.order : null;
-
-    return (
-      <span className="inline-flex flex-col ml-1 opacity-50 hover:opacity-100 transition-opacity">
-        <svg
-          className={`w-3 h-3 -mb-1 ${order === "asc" ? "text-primary" : ""}`}
-          fill="currentColor"
-          viewBox="0 0 20 20"
-        >
-          <path d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" />
-        </svg>
-        <svg
-          className={`w-3 h-3 -mt-1 ${order === "desc" ? "text-primary" : ""}`}
-          fill="currentColor"
-          viewBox="0 0 20 20"
-        >
-          <path d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z" />
-        </svg>
-      </span>
-    );
-  };
-
   const tableContainerClasses = `
     ${stickyHeader || maxHeight ? "overflow-auto" : "overflow-x-auto"}
     ${className}
@@ -441,7 +444,9 @@ export function Table<T extends Record<string, unknown>>({
                         ? column.headerRender()
                         : column.title}
                     </span>
-                    {column.sortable && <SortIcon columnKey={column.key} />}
+                    {column.sortable && (
+                      <SortIcon columnKey={column.key} sortState={sortState} />
+                    )}
                   </div>
                 </th>
               ))}

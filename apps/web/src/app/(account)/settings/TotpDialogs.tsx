@@ -339,9 +339,9 @@ export const TotpDialogs = React.forwardRef<TotpDialogsRef, TotpDialogsProps>(
 
               {/* 备份码网格 */}
               <div className="grid grid-cols-2 gap-3 p-4 bg-foreground/5 rounded-sm border border-foreground/10">
-                {backupCodes.map((code, index) => (
+                {backupCodes.map((code) => (
                   <div
-                    key={index}
+                    key={code}
                     className="font-mono text-base text-foreground text-center py-3 px-2 bg-background rounded-sm border border-foreground/10 tracking-wider"
                   >
                     {code}

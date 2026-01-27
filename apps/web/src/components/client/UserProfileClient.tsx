@@ -32,6 +32,41 @@ interface UserProfileClientProps {
   onRequestClose?: (targetPath?: string) => void; // 请求关闭模态框的回调
 }
 
+// 在线状态图标组件
+const OnlineStatusIcon = ({
+  status,
+}: {
+  status: "online" | "recently_online" | "offline";
+}) => {
+  switch (status) {
+    case "online":
+      // Ably 检测到在线 - 带波纹动画
+      return (
+        <div className="relative w-3 h-3 flex items-center justify-center flex-shrink-0">
+          <span
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-success opacity-75 animate-ping"
+            style={{ animationDuration: "2s" }}
+          />
+          <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-success" />
+        </div>
+      );
+    case "recently_online":
+      // 最近在线 - 黄色静态圆点
+      return (
+        <div className="relative w-3 h-3 flex items-center justify-center flex-shrink-0">
+          <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-warning" />
+        </div>
+      );
+    case "offline":
+      // 离线 - 灰色静态圆点
+      return (
+        <div className="relative w-3 h-3 flex items-center justify-center flex-shrink-0">
+          <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+        </div>
+      );
+  }
+};
+
 export default function UserProfileClient({
   profile,
   initialActivities,
@@ -59,37 +94,6 @@ export default function UserProfileClient({
     recently_online: "text-warning",
     offline: "text-muted-foreground",
   }[onlineStatus.status];
-
-  // 在线状态图标组件
-  const OnlineStatusIcon = () => {
-    switch (onlineStatus.status) {
-      case "online":
-        // Ably 检测到在线 - 带波纹动画
-        return (
-          <div className="relative w-3 h-3 flex items-center justify-center flex-shrink-0">
-            <span
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-success opacity-75 animate-ping"
-              style={{ animationDuration: "2s" }}
-            />
-            <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-success" />
-          </div>
-        );
-      case "recently_online":
-        // 最近在线 - 黄色静态圆点
-        return (
-          <div className="relative w-3 h-3 flex items-center justify-center flex-shrink-0">
-            <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-warning" />
-          </div>
-        );
-      case "offline":
-        // 离线 - 灰色静态圆点
-        return (
-          <div className="relative w-3 h-3 flex items-center justify-center flex-shrink-0">
-            <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-          </div>
-        );
-    }
-  };
 
   return (
     <div
@@ -155,7 +159,7 @@ export default function UserProfileClient({
                   <span
                     className={`flex items-center gap-1.5 text-xs lg:text-sm ${onlineStatusColor}`}
                   >
-                    <OnlineStatusIcon />
+                    <OnlineStatusIcon status={onlineStatus.status} />
                     <span>{onlineStatus.lastActiveText}</span>
                   </span>
                 </p>

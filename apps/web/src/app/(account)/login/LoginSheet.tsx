@@ -75,7 +75,7 @@ export default function LoginSheet({
   const [requiresTotp, setRequiresTotp] = useState(false);
   const [totpCode, setTotpCode] = useState("");
   const [backupCode, setBackupCode] = useState("");
-  const [useBackupCode, setUseBackupCode] = useState(false);
+  const [isUsingBackupCode, setIsUsingBackupCode] = useState(false);
   const [totpError, setTotpError] = useState(false);
   const [totpVerifying, setTotpVerifying] = useState(false);
   const [totpMessage, setTotpMessage] = useState("");
@@ -93,7 +93,7 @@ export default function LoginSheet({
       setRequiresTotp(false);
       setTotpCode("");
       setBackupCode("");
-      setUseBackupCode(false);
+      setIsUsingBackupCode(false);
       setTimeRemaining(300);
       toast.error("验证超时，请重新登录");
     }
@@ -385,9 +385,9 @@ export default function LoginSheet({
     if (totpVerifying) return;
 
     // 使用传入的 code 或当前状态值
-    const codeToVerify = code || (useBackupCode ? backupCode : totpCode);
+    const codeToVerify = code || (isUsingBackupCode ? backupCode : totpCode);
 
-    if (useBackupCode) {
+    if (isUsingBackupCode) {
       if (!codeToVerify || codeToVerify.length !== 9) {
         return;
       }
@@ -401,8 +401,8 @@ export default function LoginSheet({
     setTotpMessage("验证中...");
 
     const result = await verifyTotp({
-      totp_code: useBackupCode ? undefined : codeToVerify,
-      backup_code: useBackupCode ? codeToVerify : undefined,
+      totp_code: isUsingBackupCode ? undefined : codeToVerify,
+      backup_code: isUsingBackupCode ? codeToVerify : undefined,
       token_transport: "cookie",
     });
 
@@ -444,7 +444,7 @@ export default function LoginSheet({
           setRequiresTotp(false);
           setTotpCode("");
           setBackupCode("");
-          setUseBackupCode(false);
+          setIsUsingBackupCode(false);
           setTotpError(false);
           setTotpVerifying(false);
           setTotpMessage("");
@@ -635,10 +635,10 @@ export default function LoginSheet({
                         : "text-muted-foreground"
                       : "text-muted-foreground"
                   }`}
-                  key={totpMessage || useBackupCode.toString()}
+                  key={totpMessage || isUsingBackupCode.toString()}
                 >
                   {totpMessage ||
-                    (useBackupCode
+                    (isUsingBackupCode
                       ? "请输入 8 位数字备份码以继续。"
                       : "此账号受两步验证保护， 请输入验证器中的 6 位数字验证码以继续。")}
                 </p>
@@ -647,7 +647,7 @@ export default function LoginSheet({
           </div>
 
           <AutoTransition>
-            {!useBackupCode ? (
+            {!isUsingBackupCode ? (
               <div className="mb-6" key="totp-input">
                 <OtpInput
                   value={totpCode}
@@ -675,7 +675,7 @@ export default function LoginSheet({
           <div className="mb-6 flex justify-center">
             <Clickable
               onClick={() => {
-                setUseBackupCode(!useBackupCode);
+                setIsUsingBackupCode(!isUsingBackupCode);
                 setTotpCode("");
                 setBackupCode("");
                 setTotpError(false);
@@ -684,7 +684,7 @@ export default function LoginSheet({
               disabled={totpVerifying}
               className="text-sm text-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {useBackupCode ? "使用验证器验证码" : "使用备份码"}
+              {isUsingBackupCode ? "使用验证器验证码" : "使用备份码"}
             </Clickable>
           </div>
         </div>

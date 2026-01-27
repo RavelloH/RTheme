@@ -34,9 +34,11 @@ const prisma =
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 // 防止并发超限
-process.on("beforeExit", async () => {
-  await prisma.$disconnect();
-  await pool.end();
+process.on("beforeExit", () => {
+  void (async () => {
+    await prisma.$disconnect();
+    await pool.end();
+  })();
 });
 
 export type PrismaTransaction = Prisma.TransactionClient;

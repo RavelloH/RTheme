@@ -184,6 +184,7 @@ export const PopoverTrigger = forwardRef<HTMLElement, PopoverTriggerProps>(
 
     const setTriggerRef = useCallback(
       (node: HTMLElement | null) => {
+        // eslint-disable-next-line react-compiler/react-compiler
         context.triggerRef.current = node;
       },
       [context],
@@ -434,6 +435,7 @@ export const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
 
     const setContentRef = useCallback(
       (node: HTMLDivElement | null) => {
+        // eslint-disable-next-line react-compiler/react-compiler
         context.contentRef.current = node;
       },
       [context],
@@ -489,17 +491,24 @@ export const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
 
 PopoverContent.displayName = "PopoverContent";
 
+function setRef<T>(
+  ref: Ref<T> | ((instance: T | null) => void) | undefined,
+  value: T | null,
+) {
+  if (typeof ref === "function") {
+    ref(value);
+  } else if (ref && typeof ref === "object") {
+    const mutableRef = ref as MutableRefObject<T | null>;
+    mutableRef.current = value;
+  }
+}
+
 function composeRefs<T>(
   ...refs: Array<Ref<T> | ((instance: T | null) => void) | undefined>
 ) {
   return (node: T | null) => {
     refs.forEach((ref) => {
-      if (!ref) return;
-      if (typeof ref === "function") {
-        ref(node);
-      } else if (typeof ref === "object") {
-        (ref as MutableRefObject<T | null>).current = node;
-      }
+      setRef(ref, node);
     });
   };
 }

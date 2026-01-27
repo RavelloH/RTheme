@@ -9,7 +9,7 @@ import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiRefreshLine } from "@remixicon/react";
-import { useEffect, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 type StatsData = {
   updatedAt: string;
@@ -88,30 +88,32 @@ export default function StoragesInfo() {
   const [error, setError] = useState<Error | null>(null);
   const { broadcast } = useBroadcastSender<{ type: "storages-refresh" }>();
 
-  const fetchData = async (forceRefresh: boolean = false) => {
-    if (forceRefresh) {
-      setResult(null);
-    }
-    setError(null);
-    const res = await runWithAuth(getStorageStats, { force: forceRefresh });
-    if (!res || !("data" in res) || !res.data) {
-      setError(new Error("获取存储统计失败"));
-      return;
-    }
-    const data = res.data;
-    setResult(data);
-    setRefreshTime(new Date(data.updatedAt));
+  const fetchData = useCallback(
+    async (forceRefresh: boolean = false) => {
+      if (forceRefresh) {
+        setResult(null);
+      }
+      setError(null);
+      const res = await runWithAuth(getStorageStats, { force: forceRefresh });
+      if (!res || !("data" in res) || !res.data) {
+        setError(new Error("获取存储统计失败"));
+        return;
+      }
+      const data = res.data;
+      setResult(data);
+      setRefreshTime(new Date(data.updatedAt));
 
-    // 刷新成功后广播消息，通知其他组件同步
-    if (forceRefresh) {
-      await broadcast({ type: "storages-refresh" });
-    }
-  };
+      // 刷新成功后广播消息，通知其他组件同步
+      if (forceRefresh) {
+        await broadcast({ type: "storages-refresh" });
+      }
+    },
+    [broadcast],
+  );
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchData]);
 
   return (
     <>

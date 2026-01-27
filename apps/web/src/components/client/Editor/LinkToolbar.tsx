@@ -69,8 +69,8 @@ export function LinkToolbar({
               {linkUrl}
             </div>
             <div className="w-px h-6 bg-foreground/20" />
-            {linkButtons.map((button, index) => (
-              <Tooltip key={index} content={button.name}>
+            {linkButtons.map((button) => (
+              <Tooltip key={button.name} content={button.name}>
                 <Toggle
                   size="sm"
                   variant="default"

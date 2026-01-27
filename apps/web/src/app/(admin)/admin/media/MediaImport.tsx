@@ -230,13 +230,14 @@ function MediaImportInner() {
     setUrlsInput(""); // 清空输入框
 
     // 异步加载文件大小
-    newItems.forEach(async (item) => {
-      const fileSize = await preloadImage(item.url);
-      if (fileSize) {
-        setItems((prev) =>
-          prev.map((i) => (i.id === item.id ? { ...i, fileSize } : i)),
-        );
-      }
+    newItems.forEach((item) => {
+      preloadImage(item.url).then((fileSize) => {
+        if (fileSize) {
+          setItems((prev) =>
+            prev.map((i) => (i.id === item.id ? { ...i, fileSize } : i)),
+          );
+        }
+      });
     });
   };
 
@@ -293,13 +294,14 @@ function MediaImportInner() {
       setItems((prev) => [...prev, ...newItems]);
 
       // 异步加载文件大小
-      newItems.forEach(async (item) => {
-        const fileSize = await preloadImage(item.url);
-        if (fileSize) {
-          setItems((prev) =>
-            prev.map((i) => (i.id === item.id ? { ...i, fileSize } : i)),
-          );
-        }
+      newItems.forEach((item) => {
+        preloadImage(item.url).then((fileSize) => {
+          if (fileSize) {
+            setItems((prev) =>
+              prev.map((i) => (i.id === item.id ? { ...i, fileSize } : i)),
+            );
+          }
+        });
       });
     }
   };

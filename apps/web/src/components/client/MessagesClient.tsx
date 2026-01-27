@@ -289,8 +289,7 @@ export default function MessagesClient({
       }
       // 否则依赖 ChatWindow 内部的 markAsRead action
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [connectionStatus, selectedConversationId], // 移除 broadcast，它是稳定的
+    [connectionStatus, selectedConversationId, broadcast],
   );
 
   // 当选中的会话变化时，订阅/取消订阅 chat 频道并清空消息缓存
@@ -319,8 +318,7 @@ export default function MessagesClient({
         });
       };
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedConversationId, connectionStatus]); // 移除 broadcast，它是稳定的
+  }, [selectedConversationId, connectionStatus, broadcast]); // 移除 broadcast，它是稳定的
 
   // 处理会话选择
   const handleSelectConversation = useCallback(

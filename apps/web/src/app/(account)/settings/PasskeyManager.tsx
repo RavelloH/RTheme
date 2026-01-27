@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { startRegistration } from "@simplewebauthn/browser";
 import {
   generatePasskeyRegistrationOptions,
@@ -61,6 +61,137 @@ export default function PasskeyManager() {
   const channelRef = useRef<BroadcastChannel | null>(null);
   const hasLoadedRef = useRef(false);
 
+  const load = useCallback(async () => {
+    setLoading(true);
+    const res = await listUserPasskeys();
+    if (res.success) {
+      setItems(res.data!.items);
+    } else {
+      toast.error(res.message || "获取通行密钥失败");
+    }
+    setLoading(false);
+  }, [toast]);
+
+  function openReauthWindow() {
+    const reauthWindow = window.open("/reauth", "reauth");
+    reauthWindowRef.current = reauthWindow;
+  }
+
+  const createPasskey = useCallback(
+    async (name?: string) => {
+      setActionLoading(true);
+      try {
+        const optResp = await generatePasskeyRegistrationOptions();
+        if (!optResp.success) {
+          const code = (optResp.error as { code?: string } | undefined)?.code;
+          if (code === "NEED_REAUTH") {
+            pendingActionRef.current = { type: "create", payload: { name } };
+            openReauthWindow();
+            return;
+          }
+          toast.error(optResp.message || "无法创建通行密钥");
+          setActionLoading(false);
+          return;
+        }
+        const assertion = await startRegistration({
+          optionsJSON: optResp.data!.options,
+        });
+        const verifyResp = await verifyPasskeyRegistration({
+          response: assertion,
+          name: name || newName || "新密钥",
+        });
+        if (!verifyResp.success) {
+          toast.error(verifyResp.message || "创建失败");
+          setActionLoading(false);
+          return;
+        }
+        toast.success("已创建通行密钥");
+        setNewName("");
+        setShowCreateDialog(false);
+        await load();
+        setActionLoading(false);
+      } catch (e) {
+        console.error(e);
+        toast.error("创建通行密钥失败");
+        setActionLoading(false);
+      }
+    },
+    [load, newName, toast],
+  );
+
+  const handleRename = useCallback(
+    async (credentialId: string, name: string) => {
+      setActionLoading(true);
+      const res = await renamePasskey({ credentialId, name });
+      if (!res.success) {
+        const code = (res.error as { code?: string } | undefined)?.code;
+        if (code === "NEED_REAUTH") {
+          pendingActionRef.current = {
+            type: "rename",
+            payload: { credentialId, name },
+          };
+          openReauthWindow();
+          return;
+        }
+        toast.error(res.message || "重命名失败");
+        setActionLoading(false);
+        return;
+      }
+      toast.success("重命名成功");
+      setNewName("");
+      setShowRenameDialog(false);
+      setRenameTarget(null);
+      await load();
+      setActionLoading(false);
+    },
+    [load, toast],
+  );
+
+  const handleDelete = useCallback(
+    async (credentialId: string) => {
+      setActionLoading(true);
+      const res = await deletePasskey({ credentialId });
+      if (!res.success) {
+        const code = (res.error as { code?: string } | undefined)?.code;
+        if (code === "NEED_REAUTH") {
+          pendingActionRef.current = {
+            type: "delete",
+            payload: { credentialId },
+          };
+          openReauthWindow();
+          return;
+        }
+        toast.error(res.message || "删除失败");
+        setActionLoading(false);
+        return;
+      }
+      toast.success("删除成功");
+      setShowDeleteDialog(false);
+      setDeleteTarget(null);
+      await load();
+      setActionLoading(false);
+    },
+    [load, toast],
+  );
+
+  const retryPendingAction = useCallback(async () => {
+    const act = pendingActionRef.current;
+    pendingActionRef.current = null;
+    if (!act) return;
+    const p = (act.payload || {}) as { name?: string; credentialId?: string };
+    switch (act.type) {
+      case "create":
+        await createPasskey(p.name);
+        break;
+      case "delete":
+        await handleDelete(p.credentialId as string);
+        break;
+      case "rename":
+        await handleRename(p.credentialId as string, p.name as string);
+        break;
+    }
+  }, [createPasskey, handleDelete, handleRename]);
+
   useEffect(() => {
     const channel = new BroadcastChannel("reauth-channel");
     channelRef.current = channel;
@@ -83,81 +214,7 @@ export default function PasskeyManager() {
     }
 
     return () => channel.close();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function load() {
-    setLoading(true);
-    const res = await listUserPasskeys();
-    if (res.success) {
-      setItems(res.data!.items);
-    } else {
-      toast.error(res.message || "获取通行密钥失败");
-    }
-    setLoading(false);
-  }
-
-  function openReauthWindow() {
-    const reauthWindow = window.open("/reauth", "reauth");
-    reauthWindowRef.current = reauthWindow;
-  }
-
-  async function retryPendingAction() {
-    const act = pendingActionRef.current;
-    pendingActionRef.current = null;
-    if (!act) return;
-    const p = (act.payload || {}) as { name?: string; credentialId?: string };
-    switch (act.type) {
-      case "create":
-        await createPasskey(p.name);
-        break;
-      case "delete":
-        await handleDelete(p.credentialId as string);
-        break;
-      case "rename":
-        await handleRename(p.credentialId as string, p.name as string);
-        break;
-    }
-  }
-
-  async function createPasskey(name?: string) {
-    setActionLoading(true);
-    try {
-      const optResp = await generatePasskeyRegistrationOptions();
-      if (!optResp.success) {
-        const code = (optResp.error as { code?: string } | undefined)?.code;
-        if (code === "NEED_REAUTH") {
-          pendingActionRef.current = { type: "create", payload: { name } };
-          openReauthWindow();
-          return;
-        }
-        toast.error(optResp.message || "无法创建通行密钥");
-        setActionLoading(false);
-        return;
-      }
-      const assertion = await startRegistration({
-        optionsJSON: optResp.data!.options,
-      });
-      const verifyResp = await verifyPasskeyRegistration({
-        response: assertion,
-        name: name || newName || "新密钥",
-      });
-      if (!verifyResp.success) {
-        toast.error(verifyResp.message || "创建失败");
-        setActionLoading(false);
-        return;
-      }
-      toast.success("已创建通行密钥");
-      setNewName("");
-      setShowCreateDialog(false);
-      await load();
-      setActionLoading(false);
-    } catch (e) {
-      console.error(e);
-      toast.error("创建通行密钥失败");
-      setActionLoading(false);
-    }
-  }
+  }, [load, retryPendingAction, toast]);
 
   // 根据设备类型获取图标
   function getDeviceIcon(deviceType: string | null) {
@@ -183,55 +240,6 @@ export default function PasskeyManager() {
       default:
         return "通行密钥";
     }
-  }
-
-  async function handleRename(credentialId: string, name: string) {
-    setActionLoading(true);
-    const res = await renamePasskey({ credentialId, name });
-    if (!res.success) {
-      const code = (res.error as { code?: string } | undefined)?.code;
-      if (code === "NEED_REAUTH") {
-        pendingActionRef.current = {
-          type: "rename",
-          payload: { credentialId, name },
-        };
-        openReauthWindow();
-        return;
-      }
-      toast.error(res.message || "重命名失败");
-      setActionLoading(false);
-      return;
-    }
-    toast.success("重命名成功");
-    setNewName("");
-    setShowRenameDialog(false);
-    setRenameTarget(null);
-    await load();
-    setActionLoading(false);
-  }
-
-  async function handleDelete(credentialId: string) {
-    setActionLoading(true);
-    const res = await deletePasskey({ credentialId });
-    if (!res.success) {
-      const code = (res.error as { code?: string } | undefined)?.code;
-      if (code === "NEED_REAUTH") {
-        pendingActionRef.current = {
-          type: "delete",
-          payload: { credentialId },
-        };
-        openReauthWindow();
-        return;
-      }
-      toast.error(res.message || "删除失败");
-      setActionLoading(false);
-      return;
-    }
-    toast.success("删除成功");
-    setShowDeleteDialog(false);
-    setDeleteTarget(null);
-    await load();
-    setActionLoading(false);
   }
 
   return (

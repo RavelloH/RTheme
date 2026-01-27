@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import type { ApiResponse } from "@repo/shared-types/api/common";
 import { useWebPush } from "@/hooks/use-webpush";
 import { useToast } from "@/ui/Toast";
@@ -61,16 +61,7 @@ export default function WebPushManager() {
 
   const hasLoadedRef = useRef(false);
 
-  useEffect(() => {
-    // 防止 React 严格模式下重复加载
-    if (!hasLoadedRef.current) {
-      hasLoadedRef.current = true;
-      load();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     const res = (await getUserPushSubscriptions()) as ApiResponse<{
       subscriptions: Array<{
@@ -90,7 +81,15 @@ export default function WebPushManager() {
       toast.error(res.message || "获取订阅列表失败");
     }
     setLoading(false);
-  }
+  }, [toast, getUserPushSubscriptions]);
+
+  useEffect(() => {
+    // 防止 React 严格模式下重复加载
+    if (!hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      load();
+    }
+  }, [load]);
 
   async function handleSubscribe() {
     setActionLoading(true);

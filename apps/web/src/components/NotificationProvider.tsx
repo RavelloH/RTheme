@@ -560,63 +560,66 @@ export default function NotificationProvider({
 
       // 创建 Ably 客户端
       const client = new Ably.Realtime({
-        authCallback: async (
+        authCallback: (
           tokenParams: TokenParams,
           callback: (
             error: string | ErrorInfo | null,
             tokenRequestOrDetails: string | TokenRequest | TokenDetails | null,
           ) => void,
         ) => {
-          try {
-            // 检查缓存的 token 是否还有效
-            const now = Date.now();
-            if (
-              tokenRequestCacheRef.current &&
-              now - tokenRequestCacheRef.current.timestamp <
-                TOKEN_CACHE_DURATION
-            ) {
-              console.log("[WebSocket] Using cached token");
-              callback(null, tokenRequestCacheRef.current.token);
-              return;
-            }
+          void (async () => {
+            try {
+              // 检查缓存的 token 是否还有效
+              const now = Date.now();
+              if (
+                tokenRequestCacheRef.current &&
+                now - tokenRequestCacheRef.current.timestamp <
+                  TOKEN_CACHE_DURATION
+              ) {
+                console.log("[WebSocket] Using cached token");
+                callback(null, tokenRequestCacheRef.current.token);
+                return;
+              }
 
-            console.log("[WebSocket] Requesting new token...");
-            const result = await getAblyTokenRequest();
+              console.log("[WebSocket] Requesting new token...");
+              const result = await getAblyTokenRequest();
 
-            if (result.success && result.data?.tokenRequest) {
-              console.log("[WebSocket] Token acquired successfully");
-              // 缓存 token
-              tokenRequestCacheRef.current = {
-                token: result.data.tokenRequest,
-                timestamp: now,
-              };
-              callback(null, result.data.tokenRequest);
-            } else {
+              if (result.success && result.data?.tokenRequest) {
+                console.log("[WebSocket] Token acquired successfully");
+                // 缓存 token
+                tokenRequestCacheRef.current = {
+                  token: result.data.tokenRequest,
+                  timestamp: now,
+                };
+                callback(null, result.data.tokenRequest);
+              } else {
+                const errorInfo: ErrorInfo = {
+                  name: "AuthenticationError",
+                  message:
+                    result.error?.message ||
+                    result.message ||
+                    "Failed to get token",
+                  code: 40100,
+                  statusCode: 401,
+                };
+                callback(errorInfo, null);
+              }
+            } catch (error) {
+              console.error("[WebSocket] Auth failed:", error);
               const errorInfo: ErrorInfo = {
                 name: "AuthenticationError",
                 message:
-                  result.error?.message ||
-                  result.message ||
-                  "Failed to get token",
+                  error instanceof Error ? error.message : "Unknown error",
                 code: 40100,
                 statusCode: 401,
               };
               callback(errorInfo, null);
+              // 认证失败，回退到轮询
+              if (isMounted) {
+                fallbackToPolling();
+              }
             }
-          } catch (error) {
-            console.error("[WebSocket] Auth failed:", error);
-            const errorInfo: ErrorInfo = {
-              name: "AuthenticationError",
-              message: error instanceof Error ? error.message : "Unknown error",
-              code: 40100,
-              statusCode: 401,
-            };
-            callback(errorInfo, null);
-            // 认证失败，回退到轮询
-            if (isMounted) {
-              fallbackToPolling();
-            }
-          }
+          })();
         },
       });
 
@@ -726,7 +729,7 @@ export default function NotificationProvider({
       lockControllerRef.current = controller;
 
       // 请求锁
-      navigator.locks
+      void navigator.locks
         .request(LOCK_NAME, { signal: controller.signal }, async (lock) => {
           if (!lock) {
             console.log("[Locks] Failed to acquire lock");

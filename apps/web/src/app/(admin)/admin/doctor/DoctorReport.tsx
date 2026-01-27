@@ -6,7 +6,7 @@ import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiRefreshLine } from "@remixicon/react";
-import { useEffect, useState, Fragment } from "react";
+import { useEffect, useState, Fragment, useCallback } from "react";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 
@@ -52,30 +52,32 @@ export default function DoctorReport() {
     );
   };
 
-  const fetchData = async (forceRefresh: boolean = false) => {
-    if (forceRefresh) {
-      setResult([]);
-    }
-    setError(null);
-    const res = await doctor({ force: forceRefresh });
-    if (!res.success) {
-      setError(new Error(res.message || "获取运行状况失败"));
-      return;
-    }
-    if (!res.data.issues) return;
-    setResult(res.data.issues);
-    setRefreshTime(new Date(res.data.createdAt));
+  const fetchData = useCallback(
+    async (forceRefresh: boolean = false) => {
+      if (forceRefresh) {
+        setResult([]);
+      }
+      setError(null);
+      const res = await doctor({ force: forceRefresh });
+      if (!res.success) {
+        setError(new Error(res.message || "获取运行状况失败"));
+        return;
+      }
+      if (!res.data.issues) return;
+      setResult(res.data.issues);
+      setRefreshTime(new Date(res.data.createdAt));
 
-    // 刷新成功后广播消息,通知其他组件更新
-    if (forceRefresh) {
-      await broadcast({ type: "doctor-refresh" });
-    }
-  };
+      // 刷新成功后广播消息,通知其他组件更新
+      if (forceRefresh) {
+        await broadcast({ type: "doctor-refresh" });
+      }
+    },
+    [broadcast],
+  );
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchData]);
 
   return (
     <GridItem areas={[1, 2, 3, 4, 5, 6, 7, 8]} width={1.5} height={0.8}>
@@ -93,7 +95,7 @@ export default function DoctorReport() {
             </div>
             <div>
               <div className="grid grid-cols-[auto_auto_auto] gap-x-4 gap-y-1 w-fit">
-                {getSortedResult().map((issue, index) => {
+                {getSortedResult().map((issue) => {
                   const colorClass =
                     issue.severity === "error"
                       ? "text-error"
@@ -101,7 +103,7 @@ export default function DoctorReport() {
                         ? "text-warning"
                         : "";
                   return (
-                    <Fragment key={`issue-${index}`}>
+                    <Fragment key={issue.code}>
                       <span className={`text-right ${colorClass}`}>
                         {issue.severity.toUpperCase()}:
                       </span>

@@ -290,7 +290,9 @@ export default function PostIndexTable() {
   const rowActions = (record: Record<string, unknown>): ActionButton[] => [
     {
       label: "查看详情",
-      onClick: () => openDetailDialog(record as unknown as IndexStatusItem),
+      onClick: () => {
+        void openDetailDialog(record as unknown as IndexStatusItem);
+      },
       icon: <RiEyeLine size="1em" />,
       variant: "ghost",
     },
@@ -725,7 +727,7 @@ export default function PostIndexTable() {
                       <div className="flex flex-wrap gap-2">
                         {tokenDetails.titleTokens.map((token, index) => (
                           <span
-                            key={index}
+                            key={`${token}-${index}`}
                             className="inline-block px-2 py-1 text-xs bg-primary/10 text-primary rounded-xs"
                           >
                             {token}
@@ -748,7 +750,7 @@ export default function PostIndexTable() {
                         <div className="flex flex-wrap gap-2">
                           {tokenDetails.contentTokens.map((token, index) => (
                             <span
-                              key={index}
+                              key={`${token}-${index}`}
                               className="inline-block px-2 py-1 text-xs bg-muted text-foreground rounded-xs"
                             >
                               {token}
@@ -770,36 +772,34 @@ export default function PostIndexTable() {
                       </h3>
                       <div className="pb-4">
                         <div className="flex flex-wrap gap-2">
-                          {tokenDetails.wordCloud.map(
-                            ({ word, count }, index) => {
-                              // 根据出现次数计算字体大小和颜色深度
-                              const maxCount = Math.max(
-                                ...tokenDetails.wordCloud.map((w) => w.count),
-                              );
-                              const minCount = Math.min(
-                                ...tokenDetails.wordCloud.map((w) => w.count),
-                              );
-                              const normalizedSize =
-                                minCount === maxCount
-                                  ? 0.5
-                                  : (count - minCount) / (maxCount - minCount);
+                          {tokenDetails.wordCloud.map(({ word, count }) => {
+                            // 根据出现次数计算字体大小和颜色深度
+                            const maxCount = Math.max(
+                              ...tokenDetails.wordCloud.map((w) => w.count),
+                            );
+                            const minCount = Math.min(
+                              ...tokenDetails.wordCloud.map((w) => w.count),
+                            );
+                            const normalizedSize =
+                              minCount === maxCount
+                                ? 0.5
+                                : (count - minCount) / (maxCount - minCount);
 
-                              return (
-                                <span
-                                  key={index}
-                                  className={`inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-xs text-xs`}
-                                  style={{
-                                    opacity: normalizedSize * 0.7 + 0.3,
-                                  }}
-                                >
-                                  {word}
-                                  <span className="text-xs opacity-60">
-                                    ×{count}
-                                  </span>
+                            return (
+                              <span
+                                key={word}
+                                className={`inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-xs text-xs`}
+                                style={{
+                                  opacity: normalizedSize * 0.7 + 0.3,
+                                }}
+                              >
+                                {word}
+                                <span className="text-xs opacity-60">
+                                  ×{count}
                                 </span>
-                              );
-                            },
-                          )}
+                              </span>
+                            );
+                          })}
                           {tokenDetails.wordCloud.length === 0 && (
                             <p className="text-sm text-muted-foreground">
                               暂无词频数据

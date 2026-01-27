@@ -411,14 +411,14 @@ export default async function Home() {
                   </div>
                   <div className="block mt-4" data-line-reveal>
                     {config.getBlockContent(1).map((line, index) => (
-                      <div key={index}>{line || " "}</div>
+                      <div key={`content1-${index}`}>{line || " "}</div>
                     ))}
                   </div>
                 </div>
                 <div>
                   <div className="mt-10">
                     {config.getBlockContent(1, "bottom").map((line, index) => (
-                      <div key={index} data-fade-char>
+                      <div key={`bottom1-${index}`} data-fade-char>
                         {line.replaceAll("{posts}", String(totalPosts)) || " "}
                       </div>
                     ))}
@@ -581,7 +581,7 @@ export default async function Home() {
                 {config
                   .getComponentContentArray("works-summary")
                   ?.map((item, index) => {
-                    return <div key={index}>{item || " "}</div>;
+                    return <div key={`works-${index}`}>{item || " "}</div>;
                   })}
               </div>
             </GridItem>
@@ -643,14 +643,14 @@ export default async function Home() {
                   </div>
                   <div className="block mt-4" data-line-reveal>
                     {config.getBlockContent(2).map((line, index) => (
-                      <div key={index}>{line || " "}</div>
+                      <div key={`content2-${index}`}>{line || " "}</div>
                     ))}
                   </div>
                 </div>
                 <div>
                   <div className="mt-10">
                     {config.getBlockContent(2, "bottom").map((line, index) => (
-                      <div key={index} data-fade-char>
+                      <div key={`bottom2-${index}`} data-fade-char>
                         {line || " "}
                       </div>
                     ))}
@@ -949,14 +949,14 @@ export default async function Home() {
                   </div>
                   <div className="block mt-4" data-line-reveal>
                     {config.getBlockContent(3).map((line, index) => (
-                      <div key={index}>{line || " "}</div>
+                      <div key={`content3-${index}`}>{line || " "}</div>
                     ))}
                   </div>
                 </div>
                 <div>
                   <div className="mt-10">
                     {config.getBlockContent(3, "bottom").map((line, index) => (
-                      <div key={index} data-fade-char>
+                      <div key={`bottom3-${index}`} data-fade-char>
                         {line || " "}
                       </div>
                     ))}
@@ -991,9 +991,9 @@ export default async function Home() {
                 className="flex flex-col gap-2 justify-center items-center"
                 data-line-reveal
               >
-                {displayTags.map((tag, index) =>
+                {displayTags.map((tag) =>
                   tag.isPlaceholder ? (
-                    <div key={tag.slug + index}>---</div>
+                    <div key={tag.slug}>---</div>
                   ) : (
                     <Link key={tag.slug} href={`/tags/${tag.slug}`}>
                       <div className=" hover:scale-110 transition-all">
@@ -1017,9 +1017,9 @@ export default async function Home() {
                 className="flex flex-col gap-2 justify-center items-center"
                 data-line-reveal
               >
-                {displayCategories.map((category, index) =>
+                {displayCategories.map((category) =>
                   category.isPlaceholder ? (
-                    <div key={category.slug + index}>---</div>
+                    <div key={category.slug}>---</div>
                   ) : (
                     <Link
                       key={category.slug}
@@ -1089,14 +1089,14 @@ export default async function Home() {
                   </div>
                   <div className="block mt-4" data-line-reveal>
                     {config.getBlockContent(4).map((line, index) => (
-                      <div key={index}>{line || " "}</div>
+                      <div key={`content4-${index}`}>{line || " "}</div>
                     ))}
                   </div>
                 </div>
                 <div>
                   <div className="mt-10">
                     {config.getBlockContent(4, "bottom").map((line, index) => (
-                      <div key={index} data-fade-char>
+                      <div key={`bottom4-${index}`} data-fade-char>
                         {line || " "}
                       </div>
                     ))}

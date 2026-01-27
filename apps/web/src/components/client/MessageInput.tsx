@@ -7,7 +7,7 @@ import { RiSendPlane2Line } from "@remixicon/react";
 import { AutoResizer } from "@/ui/AutoResizer";
 
 interface MessageInputProps {
-  onSendMessage: (content: string) => void;
+  onSendMessage: (content: string) => Promise<void> | void;
   onTyping?: () => void;
   onStopTyping?: () => void;
 }

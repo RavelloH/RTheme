@@ -387,13 +387,14 @@ export default function MediaSelector({
     setUrlInput(""); // 清空输入框
 
     // 异步加载文件大小
-    newItems.forEach(async (item) => {
-      const fileSize = await preloadImage(item.url);
-      if (fileSize) {
-        setImportItems((prev) =>
-          prev.map((i) => (i.id === item.id ? { ...i, fileSize } : i)),
-        );
-      }
+    newItems.forEach((item) => {
+      preloadImage(item.url).then((fileSize) => {
+        if (fileSize) {
+          setImportItems((prev) =>
+            prev.map((i) => (i.id === item.id ? { ...i, fileSize } : i)),
+          );
+        }
+      });
     });
   };
 
@@ -450,13 +451,14 @@ export default function MediaSelector({
       setImportItems((prev) => [...prev, ...newItems]);
 
       // 异步加载文件大小
-      newItems.forEach(async (item) => {
-        const fileSize = await preloadImage(item.url);
-        if (fileSize) {
-          setImportItems((prev) =>
-            prev.map((i) => (i.id === item.id ? { ...i, fileSize } : i)),
-          );
-        }
+      newItems.forEach((item) => {
+        preloadImage(item.url).then((fileSize) => {
+          if (fileSize) {
+            setImportItems((prev) =>
+              prev.map((i) => (i.id === item.id ? { ...i, fileSize } : i)),
+            );
+          }
+        });
       });
     }
   };
@@ -817,8 +819,7 @@ export default function MediaSelector({
       hasMoreRef.current = true;
       loadMediaList(1, false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, dialogOpen]); // 只依赖 activeTab 和 dialogOpen
+  }, [activeTab, dialogOpen, loadMediaList]);
 
   // Intersection Observer 触发加载更多
   useEffect(() => {
@@ -960,8 +961,7 @@ export default function MediaSelector({
         }
       });
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [uploadFiles]);
 
   // 拖拽处理
   const handleDrag = useCallback((e: React.DragEvent) => {

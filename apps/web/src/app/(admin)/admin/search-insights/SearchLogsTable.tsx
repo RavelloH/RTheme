@@ -459,9 +459,9 @@ export default function SearchLogsTable() {
               <div>
                 {selectedLog.tokens.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {selectedLog.tokens.map((token, index) => (
+                    {selectedLog.tokens.map((token, i) => (
                       <span
-                        key={index}
+                        key={`t-${token}-${i}`}
                         className="inline-block px-2 py-1 text-xs bg-primary/10 text-primary rounded-xs"
                       >
                         {token}

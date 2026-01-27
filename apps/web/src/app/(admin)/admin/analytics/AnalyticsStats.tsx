@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import RowGrid from "@/components/RowGrid";
 import AnalyticsOverview from "./AnalyticsOverview";
 import AnalyticsTrendChart from "./AnalyticsTrendChart";
@@ -43,7 +43,7 @@ export default function AnalyticsStats() {
     }
   };
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
       let params: {
@@ -76,12 +76,11 @@ export default function AnalyticsStats() {
       // 静默处理错误，各个子组件会显示loading状态
       setIsLoading(false);
     }
-  };
+  }, [timeRange]);
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRange]);
+  }, [fetchData]);
 
   // 为不同维度生成不同的颜色
   const generateColorForDimension = (index: number): string => {

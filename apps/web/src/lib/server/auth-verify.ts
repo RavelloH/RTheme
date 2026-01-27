@@ -43,7 +43,7 @@ export async function authVerify(
   }
 
   // 验证 token 有效性
-  const user = await jwtTokenVerify<AccessTokenPayload>(token);
+  const user = jwtTokenVerify<AccessTokenPayload>(token);
   if (!user) {
     return null;
   }

@@ -42,9 +42,9 @@ export default function SystemNetworkInfo() {
             {/* 网络接口列表 */}
             <div className="flex-1 overflow-y-auto divide-y divide-muted">
               {systemInfo.network.length > 0 ? (
-                systemInfo.network.map((iface, index) => (
+                systemInfo.network.map((iface) => (
                   <div
-                    key={`${iface.name}-${index}`}
+                    key={`${iface.name}-${iface.address}`}
                     className="py-3 first:pt-0 last:pb-0"
                   >
                     <div className="flex items-center justify-between mb-2">

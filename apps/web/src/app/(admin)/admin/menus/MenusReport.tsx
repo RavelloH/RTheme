@@ -8,7 +8,7 @@ import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiRefreshLine, RiAddLine } from "@remixicon/react";
-import { useEffect, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 import { Dialog } from "@/ui/Dialog";
@@ -51,29 +51,31 @@ export default function MenusReport() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchData = async (forceRefresh: boolean = false) => {
-    if (forceRefresh) {
-      setResult(null);
-    }
-    setError(null);
-    const res = await runWithAuth(getMenusStats, { force: forceRefresh });
-    if (!res || !("data" in res) || !res.data) {
-      setError(new Error("获取菜单统计失败"));
-      return;
-    }
-    setResult(res.data);
-    setRefreshTime(new Date(res.data.updatedAt));
+  const fetchData = useCallback(
+    async (forceRefresh: boolean = false) => {
+      if (forceRefresh) {
+        setResult(null);
+      }
+      setError(null);
+      const res = await runWithAuth(getMenusStats, { force: forceRefresh });
+      if (!res || !("data" in res) || !res.data) {
+        setError(new Error("获取菜单统计失败"));
+        return;
+      }
+      setResult(res.data);
+      setRefreshTime(new Date(res.data.updatedAt));
 
-    // 刷新成功后广播消息,通知其他组件更新
-    if (forceRefresh) {
-      await broadcast({ type: "menus-refresh" });
-    }
-  };
+      // 刷新成功后广播消息,通知其他组件更新
+      if (forceRefresh) {
+        await broadcast({ type: "menus-refresh" });
+      }
+    },
+    [broadcast],
+  );
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchData]);
 
   // 打开创建对话框
   const openCreateDialog = () => {

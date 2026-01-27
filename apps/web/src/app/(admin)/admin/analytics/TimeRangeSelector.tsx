@@ -168,14 +168,14 @@ export default function TimeRangeSelector({
             {!showCustom ? (
               <div className="py-2">
                 {timeRangeGroups.map((group, groupIndex) => (
-                  <div key={groupIndex}>
+                  <div key={group.title}>
                     {/* 分组标题 */}
                     <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase">
                       {group.title}
                     </div>
 
                     {/* 选项列表 */}
-                    {group.options.map((option, optionIndex) => {
+                    {group.options.map((option) => {
                       const isSelected =
                         (value.type === "preset" &&
                           option.mode === "days" &&
@@ -187,7 +187,7 @@ export default function TimeRangeSelector({
                       return (
                         <Clickable
                           hoverScale={1}
-                          key={optionIndex}
+                          key={`${option.mode}-${option.value}`}
                           onClick={() => handlePresetClick(option)}
                           className={`w-full px-4 py-2 text-left hover:bg-muted/50 transition-colors ${
                             isSelected

@@ -131,7 +131,7 @@ export default function DonutChart({
 
                 return (
                   <g
-                    key={`arc-${arc.data.name}-${index}`}
+                    key={`arc-${arc.data.name}`}
                     onMouseMove={handleMouseMove}
                     onMouseLeave={() => setHoveredSlice(null)}
                     style={{ cursor: "pointer" }}

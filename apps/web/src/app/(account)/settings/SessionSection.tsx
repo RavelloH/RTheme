@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/ui/Button";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { AutoTransition } from "@/ui/AutoTransition";
@@ -34,16 +34,14 @@ interface SessionSectionProps {
 /**
  * 会话管理板块组件
  */
-export const SessionSection: React.FC<SessionSectionProps> = ({
-  onRevokeSession,
-}) => {
+export function SessionSection({ onRevokeSession }: SessionSectionProps) {
   const toast = useToast();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const hasLoadedRef = useRef(false);
 
   // 加载会话列表
-  const loadSessions = async () => {
+  const loadSessions = useCallback(async () => {
     setSessionsLoading(true);
     try {
       const result = await getSessions();
@@ -57,7 +55,7 @@ export const SessionSection: React.FC<SessionSectionProps> = ({
     } finally {
       setSessionsLoading(false);
     }
-  };
+  }, [toast]);
 
   // 自动加载会话列表（只加载一次）
   useEffect(() => {
@@ -65,8 +63,7 @@ export const SessionSection: React.FC<SessionSectionProps> = ({
       loadSessions();
       hasLoadedRef.current = true;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadSessions]);
 
   return (
     <div className="space-y-6">
@@ -207,4 +204,4 @@ export const SessionSection: React.FC<SessionSectionProps> = ({
       </div>
     </div>
   );
-};
+}

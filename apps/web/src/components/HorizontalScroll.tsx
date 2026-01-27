@@ -111,11 +111,13 @@ export default function HorizontalScroll({
       // DOM 预处理：仅执行一次 (拆分文本等)
       const initDOM = () => {
         if (enableFadeElements) {
-          // 初始状态设置 - Fade
-          content.querySelectorAll("[data-fade]").forEach((element) => {
-            gsap.set(element, { opacity: 0 });
+          content.querySelectorAll("[data-fade]").forEach((el) => {
+            void gsap.set(el, {
+              opacity: 0,
+              clearProps: "transform,opacity",
+              force3D: true,
+            });
           });
-
           // Word Fade Split
           content.querySelectorAll("[data-fade-word]").forEach((element) => {
             if (element.hasAttribute("data-processed")) return;
@@ -219,7 +221,6 @@ export default function HorizontalScroll({
           });
         }
       };
-
       initDOM();
 
       // 测量所有元素位置 (在 Init 和 Resize 时调用)
@@ -814,13 +815,13 @@ export default function HorizontalScroll({
         const initDOM = () => {
           // Split logic mirrors desktop... can extract to shared function but keeping inline for now
           if (enableFadeElements) {
-            content.querySelectorAll("[data-fade]").forEach((el) =>
-              gsap.set(el, {
+            content.querySelectorAll("[data-fade]").forEach((el) => {
+              void gsap.set(el, {
                 opacity: 0,
                 clearProps: "transform,opacity",
                 force3D: true,
-              }),
-            );
+              });
+            });
 
             // ... Split logic for word/char ... (Re-implementing split logic here is redundant if it ran in desktop effect, BUT isMobile changes, causing unmount/remount, so we must run it.)
             // However, split modifies DOM. If we switch mobile->desktop->mobile, we might double split if not careful.
@@ -884,9 +885,9 @@ export default function HorizontalScroll({
                   });
                 }
                 // Init style
-                Array.from(element.children).forEach((c) =>
-                  gsap.set(c, { opacity: 0, y: 20, rotationX: -90 }),
-                );
+                Array.from(element.children).forEach((c) => {
+                  void gsap.set(c, { opacity: 0, y: 20, rotationX: -90 });
+                });
                 element.setAttribute("data-processed", "true");
               });
           }
@@ -963,6 +964,7 @@ export default function HorizontalScroll({
               if (center <= animEnd) progress = 1;
               else if (center >= animStart) progress = 0;
               else progress = (animStart - center) / totalDist;
+
               gsap.to(item.el, {
                 opacity: progress,
                 duration: 0.3,
@@ -983,14 +985,14 @@ export default function HorizontalScroll({
               item.spans.forEach((span, i) => {
                 const isSpace = SPACE_REGEX.test(span.textContent || "");
                 if (i < count) {
-                  if (isSpace)
+                  if (isSpace) {
                     gsap.to(span, {
                       opacity: 1,
                       duration: 0.3,
                       ease: "power2.out",
                       overwrite: true,
                     });
-                  else
+                  } else {
                     gsap.to(span, {
                       opacity: 1,
                       y: 0,
@@ -999,14 +1001,15 @@ export default function HorizontalScroll({
                       ease: "back.out(1.2)",
                       overwrite: true,
                     });
+                  }
                 } else {
-                  if (isSpace)
+                  if (isSpace) {
                     gsap.to(span, {
                       opacity: 0,
                       duration: 0.2,
                       overwrite: true,
                     });
-                  else
+                  } else {
                     gsap.to(span, {
                       opacity: 0,
                       y: 10,
@@ -1014,6 +1017,7 @@ export default function HorizontalScroll({
                       duration: 0.2,
                       overwrite: true,
                     });
+                  }
                 }
               });
             });
@@ -1028,7 +1032,7 @@ export default function HorizontalScroll({
 
               const count = Math.floor(progress * item.spans.length);
               item.spans.forEach((span, i) => {
-                if (i < count)
+                if (i < count) {
                   gsap.to(span, {
                     opacity: 1,
                     y: 0,
@@ -1037,7 +1041,7 @@ export default function HorizontalScroll({
                     ease: "power2.out",
                     overwrite: true,
                   });
-                else
+                } else {
                   gsap.to(span, {
                     opacity: 0,
                     y: 15,
@@ -1045,6 +1049,7 @@ export default function HorizontalScroll({
                     duration: 0.3,
                     overwrite: true,
                   });
+                }
               });
             });
           }
@@ -1059,7 +1064,7 @@ export default function HorizontalScroll({
 
               const count = Math.floor(progress * item.lines.length);
               item.lines.forEach((line, i) => {
-                if (i < count)
+                if (i < count) {
                   gsap.to(line, {
                     opacity: 1,
                     y: 0,
@@ -1067,7 +1072,7 @@ export default function HorizontalScroll({
                     duration: 0.4,
                     overwrite: true,
                   });
-                else
+                } else {
                   gsap.to(line, {
                     opacity: 0,
                     y: 20,
@@ -1075,6 +1080,7 @@ export default function HorizontalScroll({
                     duration: 0.3,
                     overwrite: true,
                   });
+                }
               });
             });
           }

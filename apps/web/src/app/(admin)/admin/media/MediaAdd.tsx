@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { GridItem } from "@/components/RowGrid";
 import { Dialog } from "@/ui/Dialog";
@@ -192,50 +192,56 @@ function MediaAddInner() {
     setFiles([]);
   };
 
-  const handleFileSelect = (selectedFiles: FileList | null) => {
-    if (!selectedFiles) return;
-
-    const newFiles: UploadFile[] = Array.from(selectedFiles).map((file) => ({
+  // 处理选择文件
+  const handleFileSelect = useCallback((selectedFiles: FileList) => {
+    const newFiles = Array.from(selectedFiles).map((file) => ({
+      id: Math.random().toString(36).substring(2, 11),
       file,
-      id: `${file.name}-${Date.now()}-${Math.random()}`,
       status: "pending" as const,
       originalSize: file.size,
       previewUrl: URL.createObjectURL(file),
     }));
 
     setFiles((prev) => [...prev, ...newFiles]);
-  };
+  }, []);
 
   // 处理粘贴事件
-  const handlePaste = (e: ClipboardEvent) => {
-    if (!dialogOpen || uploading) return;
+  const handlePaste = useCallback(
+    (e: ClipboardEvent) => {
+      if (!dialogOpen || uploading) return;
 
-    const items = e.clipboardData?.items;
-    if (!items) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
 
-    const imageFiles: File[] = [];
-    for (const item of items) {
-      if (item.type.startsWith("image/")) {
-        const file = item.getAsFile();
-        if (file) {
-          // 为粘贴的图片生成默认文件名
-          const ext = file.type.split("/")[1] || "png";
-          const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-          const namedFile = new File([file], `粘贴的图片_${timestamp}.${ext}`, {
-            type: file.type,
-          });
-          imageFiles.push(namedFile);
+      const imageFiles: File[] = [];
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            // 为粘贴的图片生成默认文件名
+            const ext = file.type.split("/")[1] || "png";
+            const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+            const namedFile = new File(
+              [file],
+              `粘贴的图片_${timestamp}.${ext}`,
+              {
+                type: file.type,
+              },
+            );
+            imageFiles.push(namedFile);
+          }
         }
       }
-    }
 
-    if (imageFiles.length > 0) {
-      e.preventDefault();
-      const dataTransfer = new DataTransfer();
-      imageFiles.forEach((file) => dataTransfer.items.add(file));
-      handleFileSelect(dataTransfer.files);
-    }
-  };
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        const dataTransfer = new DataTransfer();
+        imageFiles.forEach((file) => dataTransfer.items.add(file));
+        handleFileSelect(dataTransfer.files);
+      }
+    },
+    [dialogOpen, uploading, handleFileSelect],
+  );
 
   // 监听粘贴事件
   useEffect(() => {
@@ -243,8 +249,7 @@ function MediaAddInner() {
       document.addEventListener("paste", handlePaste);
       return () => document.removeEventListener("paste", handlePaste);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dialogOpen, uploading]);
+  }, [dialogOpen, handlePaste]);
 
   // 组件卸载时清理所有预览 URL
   useEffect(() => {
@@ -255,8 +260,7 @@ function MediaAddInner() {
         }
       });
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [files]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -712,7 +716,11 @@ function MediaAddInner() {
               type="file"
               multiple
               accept="image/*"
-              onChange={(e) => handleFileSelect(e.target.files)}
+              onChange={(e) => {
+                if (e.target.files) {
+                  handleFileSelect(e.target.files);
+                }
+              }}
               className="hidden"
               aria-label="选择图片文件"
             />

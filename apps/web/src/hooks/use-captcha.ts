@@ -33,16 +33,10 @@ export function useCaptcha(callbacks?: CaptchaCallbacks) {
   const capRef = useRef<unknown>(null);
   const isInitializedRef = useRef(false);
 
-  const initializeCaptcha = useCallback(async () => {
-    if (isInitializedRef.current) return;
+  // 设置自定义fetch
+  useEffect(() => {
+    if (typeof window === "undefined") return;
 
-    // 动态加载Cap类
-    const CapClass = await loadCap();
-    if (!CapClass) {
-      throw new Error("Failed to load Cap.js widget");
-    }
-
-    // 设置自定义fetch
     window.CAP_CUSTOM_FETCH = async function (url, options) {
       const result =
         url === "/challenge"
@@ -64,6 +58,20 @@ export function useCaptcha(callbacks?: CaptchaCallbacks) {
         },
       );
     };
+
+    return () => {
+      delete window.CAP_CUSTOM_FETCH;
+    };
+  }, []);
+
+  const initializeCaptcha = useCallback(async () => {
+    if (isInitializedRef.current) return;
+
+    // 动态加载Cap类
+    const CapClass = await loadCap();
+    if (!CapClass) {
+      throw new Error("Failed to load Cap.js widget");
+    }
 
     // 创建新的Captcha实例
     const CapConstructor = CapClass as new (config?: {

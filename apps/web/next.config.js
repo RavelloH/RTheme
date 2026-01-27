@@ -24,6 +24,7 @@ const nextConfig = () => {
     output: "standalone",
     serverExternalPackages: ["ably", "akismet-api", "@node-rs/jieba"],
     cacheComponents: true,
+    reactCompiler: true,
     experimental: {
       optimizePackageImports: ["@remixicon/react"],
     },

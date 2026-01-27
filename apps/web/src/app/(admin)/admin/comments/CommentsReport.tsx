@@ -6,7 +6,7 @@ import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiRefreshLine } from "@remixicon/react";
-import { useEffect, useState, Fragment } from "react";
+import { useEffect, useState, Fragment, useCallback } from "react";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 
@@ -73,30 +73,32 @@ export default function CommentsReport() {
   const [error, setError] = useState<Error | null>(null);
   const { broadcast } = useBroadcastSender<{ type: "comments-refresh" }>();
 
-  const fetchData = async (forceRefresh: boolean = false) => {
-    if (forceRefresh) {
-      setResult(null);
-    }
-    setError(null);
-    const res = await getCommentStats({ force: forceRefresh });
-    if (!res.success) {
-      setError(new Error(res.message || "获取评论统计失败"));
-      return;
-    }
-    if (!res.data) return;
-    setResult(res.data);
-    setRefreshTime(new Date(res.data.updatedAt));
+  const fetchData = useCallback(
+    async (forceRefresh: boolean = false) => {
+      if (forceRefresh) {
+        setResult(null);
+      }
+      setError(null);
+      const res = await getCommentStats({ force: forceRefresh });
+      if (!res.success) {
+        setError(new Error(res.message || "获取评论统计失败"));
+        return;
+      }
+      if (!res.data) return;
+      setResult(res.data);
+      setRefreshTime(new Date(res.data.updatedAt));
 
-    // 刷新成功后广播消息,通知其他组件更新
-    if (forceRefresh) {
-      await broadcast({ type: "comments-refresh" });
-    }
-  };
+      // 刷新成功后广播消息,通知其他组件更新
+      if (forceRefresh) {
+        await broadcast({ type: "comments-refresh" });
+      }
+    },
+    [broadcast],
+  );
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchData]);
 
   return (
     <GridItem areas={[1, 2, 3, 4]} width={3} height={0.8}>
@@ -126,7 +128,7 @@ export default function CommentsReport() {
                     ]
                       .filter(Boolean)
                       .map((item, idx) => (
-                        <Fragment key={idx}>
+                        <Fragment key={(item as React.ReactElement).key || idx}>
                           {idx > 0 && "、"}
                           {item}
                         </Fragment>

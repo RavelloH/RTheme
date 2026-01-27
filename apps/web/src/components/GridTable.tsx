@@ -208,8 +208,7 @@ export default function GridTable<T extends Record<string, unknown>>({
       // 通知父组件初始筛选条件
       onFilterChange?.(initialFilters);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 只在首次加载时执行
+  }, [columns, filterConfig, onFilterChange]);
 
   // 判断是否有激活的筛选
   const hasActiveFilters = useMemo(() => {
@@ -249,8 +248,7 @@ export default function GridTable<T extends Record<string, unknown>>({
       setSelectedKeys(new Set());
       onSelectionChange?.([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]); // 只依赖 page，不需要依赖 selectedKeys.size 和 onSelectionChange
+  }, [page, selectedKeys.size, onSelectionChange]); // 只依赖 page，不需要依赖 selectedKeys.size 和 onSelectionChange
 
   // 获取行的唯一键
   const getRowKey = useCallback(
@@ -514,8 +512,12 @@ export default function GridTable<T extends Record<string, unknown>>({
           const actions = rowActions(record);
           return (
             <div className="flex items-center" data-action-cell="true">
-              {actions.map((action, index) => (
-                <Tooltip key={index} content={action.label} placement="top">
+              {actions.map((action) => (
+                <Tooltip
+                  key={action.label}
+                  content={action.label}
+                  placement="top"
+                >
                   <Clickable
                     onClick={action.onClick}
                     className={`
@@ -688,9 +690,9 @@ export default function GridTable<T extends Record<string, unknown>>({
                       </AutoTransition>
                     </div>
                     <div className="flex items-center gap-2">
-                      {batchActions.map((action, index) => (
+                      {batchActions.map((action) => (
                         <Button
-                          key={index}
+                          key={action.label}
                           label={action.label || "操作"}
                           variant={action.variant || "outline"}
                           size={"sm"}

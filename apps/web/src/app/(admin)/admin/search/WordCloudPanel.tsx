@@ -112,7 +112,7 @@ export default function WordCloudPanel() {
                     className="overflow-y-auto scrollbar-hide pr-2 h-full"
                   >
                     <div className="flex flex-wrap gap-2 justify-between [&>*:last-child]:mr-auto">
-                      {stats.topWords.map(({ word, count }, index) => {
+                      {stats.topWords.map(({ word, count }) => {
                         // 计算归一化大小（0-1之间）
                         const maxCount = Math.max(
                           ...stats.topWords.map((w) => w.count),
@@ -131,7 +131,7 @@ export default function WordCloudPanel() {
 
                         return (
                           <Tooltip
-                            key={index}
+                            key={word}
                             content={`出现 ${count} 次`}
                             placement="top"
                             delay={100}

@@ -43,8 +43,7 @@ export function ThemeProvider({
       "--color-muted",
       mainColor.muted.dark || "#111111",
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [mainColor]);
 
   return (
     <ColorContext.Provider value={mainColor}>

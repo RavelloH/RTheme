@@ -147,9 +147,12 @@ export function Dropdown({
             <div className="py-1">
               {options.map((option, index) =>
                 option.Tooltip ? (
-                  <Tooltip className="w-full" key={index} {...option.Tooltip}>
+                  <Tooltip
+                    className="w-full"
+                    key={option.value}
+                    {...option.Tooltip}
+                  >
                     <button
-                      key={option.value}
                       onClick={() => handleOptionClick(option)}
                       className={`
                     w-full

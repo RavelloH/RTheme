@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useInView } from "react-intersection-observer";
 import { RiTimeLine, RiLockLine } from "@remixicon/react";
 import type { UserActivityItem } from "@repo/shared-types/api/user";
@@ -44,16 +44,8 @@ export default function UserActivityTimeline({
     hasMoreRef.current = hasMore;
   }, [hasMore]);
 
-  // 初始加载：如果 initialActivities 为空且 hasMore 为 true，自动加载第一批数据
-  useEffect(() => {
-    if (initialActivities.length === 0 && initialHasMore) {
-      loadMoreActivities();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 只在挂载时执行一次
-
   // 加载更多活动
-  const loadMoreActivities = async () => {
+  const loadMoreActivities = useCallback(async () => {
     // 如果是访客且已经加载过数据，不允许再加载
     if (isGuest && hasLoadedOnceRef.current) return;
     if (loadingRef.current || !hasMoreRef.current) return;
@@ -82,7 +74,14 @@ export default function UserActivityTimeline({
       setIsLoading(false);
       loadingRef.current = false;
     }
-  };
+  }, [uid, isGuest]);
+
+  // 初始加载：如果 initialActivities 为空且 hasMore 为 true，自动加载第一批数据
+  useEffect(() => {
+    if (initialActivities.length === 0 && initialHasMore) {
+      loadMoreActivities();
+    }
+  }, [initialActivities.length, initialHasMore, loadMoreActivities]);
 
   // 当触发元素进入视口时加载更多
   useEffect(() => {
@@ -94,8 +93,7 @@ export default function UserActivityTimeline({
       }, 100);
       return () => clearTimeout(timer);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inView]);
+  }, [inView, isLoading, loadMoreActivities]);
 
   // 计算哨兵位置（第 15 条）
   const shouldAttachRef = (index: number) => {

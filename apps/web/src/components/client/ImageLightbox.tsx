@@ -466,7 +466,7 @@ export default function ImageLightbox() {
                   {images.map((img, idx) => (
                     <button
                       title="Jump to image"
-                      key={idx}
+                      key={`${img.src}-${idx}`}
                       ref={(el) => {
                         thumbnailRefs.current[idx] = el;
                       }}

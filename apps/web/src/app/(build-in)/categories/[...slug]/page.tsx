@@ -646,10 +646,11 @@ export default async function CategorySlugPage({
                   <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
                     {config.getBlockContent(1).map((line, index) => {
                       // 检查是否包含需要动态处理的占位符
+                      const lineKey = `${line}-${index}`;
                       if (line.includes("{lastUpdatedDays}")) {
                         return (
                           <DynamicReplace
-                            key={index}
+                            key={lineKey}
                             text={line}
                             params={[
                               ["{categoryName}", currentCategoryData.name],
@@ -661,7 +662,7 @@ export default async function CategorySlugPage({
                         );
                       } else {
                         return (
-                          <div key={index}>
+                          <div key={lineKey}>
                             {line
                               .replaceAll(
                                 "{categoryName}",
@@ -682,7 +683,7 @@ export default async function CategorySlugPage({
               <div>
                 <div className="mt-10">
                   {config.getBlockContent(1, "bottom").map((line, index) => (
-                    <div key={index} data-fade-char>
+                    <div key={`bottom1-${index}`} data-fade-char>
                       {line
                         .replaceAll("{pageInfo}", pageInfo)
                         .replaceAll("{page}", String(currentPage))
@@ -709,7 +710,7 @@ export default async function CategorySlugPage({
                     </Link>
                     {" / "}
                     {currentCategoryData.path.map((slug, index) => (
-                      <span key={index}>
+                      <span key={slug}>
                         <Link
                           href={`/categories/${currentCategoryData.path
                             .slice(0, index + 1)
@@ -769,51 +770,57 @@ export default async function CategorySlugPage({
           <RowGrid>
             {Array(Math.ceil(postsWithExpandedCategories.length / 4))
               .fill(0)
-              .map((_, rowIndex) => (
-                <React.Fragment key={rowIndex}>
-                  {Array.from({ length: 4 }, (_, index) => {
-                    const postIndex = rowIndex * 4 + index;
-                    const post = postsWithExpandedCategories[postIndex];
+              .map((_, rowIndex) => {
+                const firstPostInRow =
+                  postsWithExpandedCategories[rowIndex * 4];
+                return (
+                  <React.Fragment
+                    key={firstPostInRow?.slug || `row-${rowIndex}`}
+                  >
+                    {Array.from({ length: 4 }, (_, index) => {
+                      const postIndex = rowIndex * 4 + index;
+                      const post = postsWithExpandedCategories[postIndex];
 
-                    return (
-                      <GridItem
-                        key={post ? post.slug : `empty-${postIndex}`}
-                        areas={createArray(index * 3 + 1, (index + 1) * 3)}
-                        width={4}
-                        height={0.4}
-                        className=""
-                      >
-                        {post ? (
-                          <PostCard
-                            title={post.title}
-                            slug={post.slug}
-                            isPinned={post.isPinned}
-                            date={
-                              post.publishedAt
-                                ? new Date(post.publishedAt)
-                                    .toLocaleDateString("zh-CN", {
-                                      year: "numeric",
-                                      month: "2-digit",
-                                      day: "2-digit",
-                                    })
-                                    .replace(/\//g, "/")
-                                : ""
-                            }
-                            category={post.categories}
-                            tags={post.tags}
-                            cover={post.coverData}
-                            summary={post.excerpt || ""}
-                          />
-                        ) : (
-                          <EmptyPostCard
-                            direction={index % 2 === 0 ? "left" : "right"}
-                          />
-                        )}
-                      </GridItem>
-                    );
-                  })}
-                </React.Fragment>
-              ))}
+                      return (
+                        <GridItem
+                          key={post ? post.slug : `empty-${postIndex}`}
+                          areas={createArray(index * 3 + 1, (index + 1) * 3)}
+                          width={4}
+                          height={0.4}
+                          className=""
+                        >
+                          {post ? (
+                            <PostCard
+                              title={post.title}
+                              slug={post.slug}
+                              isPinned={post.isPinned}
+                              date={
+                                post.publishedAt
+                                  ? new Date(post.publishedAt)
+                                      .toLocaleDateString("zh-CN", {
+                                        year: "numeric",
+                                        month: "2-digit",
+                                        day: "2-digit",
+                                      })
+                                      .replace(/\//g, "/")
+                                  : ""
+                              }
+                              category={post.categories}
+                              tags={post.tags}
+                              cover={post.coverData}
+                              summary={post.excerpt || ""}
+                            />
+                          ) : (
+                            <EmptyPostCard
+                              direction={index % 2 === 0 ? "left" : "right"}
+                            />
+                          )}
+                        </GridItem>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              })}
           </RowGrid>
         )}
 
@@ -864,14 +871,14 @@ export default async function CategorySlugPage({
                 </div>
                 <div className="block mt-4" data-line-reveal>
                   {config.getBlockContent(2).map((line, index) => (
-                    <div key={index}>{line || " "}</div>
+                    <div key={`content2-${index}`}>{line || " "}</div>
                   ))}
                 </div>
               </div>
               <div>
                 <div className="mt-10">
                   {config.getBlockContent(2, "bottom").map((line, index) => (
-                    <div key={index} data-fade-char>
+                    <div key={`bottom2-${index}`} data-fade-char>
                       {line || " "}
                     </div>
                   ))}

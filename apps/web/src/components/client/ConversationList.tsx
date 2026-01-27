@@ -48,6 +48,20 @@ export default function ConversationList({
     skip: !hasMore,
   });
 
+  const loadMore = useCallback(async () => {
+    if (loadingRef.current) return;
+
+    loadingRef.current = true;
+    setIsLoadingMore(true);
+
+    try {
+      await onLoadMore(conversations.length);
+    } finally {
+      setIsLoadingMore(false);
+      loadingRef.current = false;
+    }
+  }, [conversations.length, onLoadMore]);
+
   // 当触发元素进入视口时加载更多
   useEffect(() => {
     if (inView && hasMore && !loadingRef.current && !isLoadingMore) {
@@ -58,8 +72,7 @@ export default function ConversationList({
       }, 100);
       return () => clearTimeout(timer);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inView, hasMore]);
+  }, [inView, hasMore, isLoadingMore, loadMore]);
 
   // 处理选择用户发起新会话
   const handleSelectUser = useCallback(
@@ -81,20 +94,6 @@ export default function ConversationList({
     },
     [isModal, router, onNewConversation],
   );
-
-  const loadMore = async () => {
-    if (loadingRef.current) return;
-
-    loadingRef.current = true;
-    setIsLoadingMore(true);
-
-    try {
-      await onLoadMore(conversations.length);
-    } finally {
-      setIsLoadingMore(false);
-      loadingRef.current = false;
-    }
-  };
 
   return (
     <div className="flex flex-col h-full">

@@ -332,7 +332,7 @@ export default function HomeImageGallery({
         <div className="relative w-full h-full flex items-center justify-center">
           {displayImages.map((src, index) => (
             <div
-              key={index}
+              key={src}
               className={`absolute inset-0 transition-opacity duration-500 ${
                 index === activeIndex ? "opacity-100" : "opacity-0"
               }`}
@@ -354,7 +354,7 @@ export default function HomeImageGallery({
           <div className="relative h-full w-full">
             {displayImages.map((src, index) => (
               <div
-                key={index}
+                key={src}
                 ref={(el) => {
                   imagesRef.current[index] = el;
                 }}

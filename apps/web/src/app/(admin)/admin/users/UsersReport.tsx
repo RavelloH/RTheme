@@ -6,7 +6,7 @@ import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiRefreshLine } from "@remixicon/react";
-import { useEffect, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 
@@ -38,30 +38,32 @@ export default function UsersReport() {
   const [error, setError] = useState<Error | null>(null);
   const { broadcast } = useBroadcastSender<{ type: "users-refresh" }>();
 
-  const fetchData = async (forceRefresh: boolean = false) => {
-    if (forceRefresh) {
-      setResult(null);
-    }
-    setError(null);
-    const res = await getUsersStats({ force: forceRefresh });
-    if (!res.success) {
-      setError(new Error(res.message || "获取用户统计失败"));
-      return;
-    }
-    if (!res.data) return;
-    setResult(res.data);
-    setRefreshTime(new Date(res.data.updatedAt));
+  const fetchData = useCallback(
+    async (forceRefresh: boolean = false) => {
+      if (forceRefresh) {
+        setResult(null);
+      }
+      setError(null);
+      const res = await getUsersStats({ force: forceRefresh });
+      if (!res.success) {
+        setError(new Error(res.message || "获取用户统计失败"));
+        return;
+      }
+      if (!res.data) return;
+      setResult(res.data);
+      setRefreshTime(new Date(res.data.updatedAt));
 
-    // 刷新成功后广播消息,通知其他组件更新
-    if (forceRefresh) {
-      await broadcast({ type: "users-refresh" });
-    }
-  };
+      // 刷新成功后广播消息,通知其他组件更新
+      if (forceRefresh) {
+        await broadcast({ type: "users-refresh" });
+      }
+    },
+    [broadcast],
+  );
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchData]);
 
   return (
     <GridItem areas={[1, 2, 3, 4, 5, 6, 7, 8]} width={1.5} height={0.5}>

@@ -121,8 +121,8 @@ export function CodeBlockToolbar({
                 </span>
               </div>
               <div className="w-px h-6 bg-foreground/20" />
-              {codeBlockButtons.map((button, index) => (
-                <Tooltip key={index} content={button.name}>
+              {codeBlockButtons.map((button) => (
+                <Tooltip key={button.name} content={button.name}>
                   <Toggle
                     size="sm"
                     variant="default"

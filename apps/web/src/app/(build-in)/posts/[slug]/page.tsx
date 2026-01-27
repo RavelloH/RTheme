@@ -228,7 +228,7 @@ export default async function PostPage({ params }: PageProps) {
               <span className="flex items-center gap-1">
                 <RiListView size={"1em"} />
                 {categoryPath.map((categoryName, index) => (
-                  <span key={index}>
+                  <span key={categoryName}>
                     <Link
                       href={generateCategoryLink(categorySlugPath, index)}
                       presets={["hover-underline"]}

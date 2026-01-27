@@ -79,8 +79,8 @@ export function ImageToolbar({
                 {imageAlt || "（无 Alt 文本）"}
               </div>
               <div className="w-px h-6 bg-foreground/20" />
-              {imageButtons.map((button, index) => (
-                <Tooltip key={index} content={button.name}>
+              {imageButtons.map((button) => (
+                <Tooltip key={button.name} content={button.name}>
                   <Toggle
                     size="sm"
                     variant="default"

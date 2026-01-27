@@ -7,7 +7,7 @@ import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiRefreshLine, RiFileAddLine } from "@remixicon/react";
-import { useEffect, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 import Link from "@/components/Link";
@@ -30,29 +30,31 @@ export default function PagesReport() {
   const [error, setError] = useState<Error | null>(null);
   const { broadcast } = useBroadcastSender<{ type: "pages-refresh" }>();
 
-  const fetchData = async (forceRefresh: boolean = false) => {
-    if (forceRefresh) {
-      setResult(null);
-    }
-    setError(null);
-    const res = await runWithAuth(getPagesStats, { force: forceRefresh });
-    if (!res || !("data" in res) || !res.data) {
-      setError(new Error("获取页面统计失败"));
-      return;
-    }
-    setResult(res.data);
-    setRefreshTime(new Date(res.data.updatedAt));
+  const fetchData = useCallback(
+    async (forceRefresh: boolean = false) => {
+      if (forceRefresh) {
+        setResult(null);
+      }
+      setError(null);
+      const res = await runWithAuth(getPagesStats, { force: forceRefresh });
+      if (!res || !("data" in res) || !res.data) {
+        setError(new Error("获取页面统计失败"));
+        return;
+      }
+      setResult(res.data);
+      setRefreshTime(new Date(res.data.updatedAt));
 
-    // 刷新成功后广播消息,通知其他组件更新
-    if (forceRefresh) {
-      await broadcast({ type: "pages-refresh" });
-    }
-  };
+      // 刷新成功后广播消息,通知其他组件更新
+      if (forceRefresh) {
+        await broadcast({ type: "pages-refresh" });
+      }
+    },
+    [broadcast],
+  );
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchData]);
 
   return (
     <>

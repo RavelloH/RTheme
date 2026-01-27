@@ -131,7 +131,7 @@ export default function TokenizeTest() {
                 <div className="flex flex-wrap gap-2 py-4 overflow-y-auto">
                   {tokens.map((token, index) => (
                     <span
-                      key={index}
+                      key={`${token}-${index}`}
                       className="px-3 py-1 text-sm bg-primary/10 text-primary rounded-xs font-mono"
                     >
                       {token}

@@ -530,9 +530,10 @@ export default function PagesTable() {
               const enabledPath = ["blocks", blockIndex.toString(), "enabled"];
               const blockDescription =
                 typeof block.description === "string" ? block.description : "";
+              const blockKey = String(block.id || `block-${blockIndex}`);
 
               return (
-                <div key={`block-${blockIndex}`} className="space-y-4">
+                <div key={blockKey} className="space-y-4">
                   <div className="space-y-1">
                     <div className="flex items-center justify-between py-2">
                       <div className="text-lg font-semibold text-foreground">
@@ -581,7 +582,7 @@ export default function PagesTable() {
 
                         return (
                           <div
-                            key={`block-${blockIndex}-content-${fieldKey}`}
+                            key={`${blockKey}-content-${fieldKey}`}
                             className="space-y-2"
                           >
                             {renderConfigFieldInput(
@@ -623,8 +624,11 @@ export default function PagesTable() {
                 typeof component.description === "string"
                   ? component.description
                   : "";
+              const componentKey = String(
+                component.id || `component-${componentIndex}`,
+              );
               return (
-                <div key={`component-${componentIndex}`} className="space-y-3">
+                <div key={componentKey} className="space-y-3">
                   <div className="space-y-1">
                     <span className="text-base font-semibold text-foreground">
                       {String(component.id ?? componentIndex + 1)}
@@ -645,9 +649,7 @@ export default function PagesTable() {
                           valueKey,
                         ];
                         return (
-                          <div
-                            key={`component-${componentIndex}-value-${valueKey}`}
-                          >
+                          <div key={`${componentKey}-value-${valueKey}`}>
                             {renderConfigFieldInput(
                               valuePath,
                               valueData,
@@ -1023,7 +1025,7 @@ export default function PagesTable() {
   ];
 
   // 监听广播刷新消息
-  useBroadcast<{ type: string }>(async (message) => {
+  useBroadcast<{ type: string }>((message) => {
     if (message.type === "pages-refresh") {
       setRefreshTrigger((prev) => prev + 1);
     }

@@ -244,6 +244,18 @@ export interface MenuTriggerProps
   asChild?: boolean;
 }
 
+function setRef<T>(
+  ref: React.Ref<T> | ((instance: T | null) => void) | undefined,
+  value: T | null,
+) {
+  if (typeof ref === "function") {
+    ref(value);
+  } else if (ref && typeof ref === "object") {
+    const mutableRef = ref as React.MutableRefObject<T | null>;
+    mutableRef.current = value;
+  }
+}
+
 /**
  * MenuTrigger 菜单触发按钮
  *
@@ -268,14 +280,11 @@ export const MenuTrigger = forwardRef<HTMLButtonElement, MenuTriggerProps>(
       }
     }, [menuContext.orientation, menuContext.openMenuId, itemContext]);
 
-    const setRef = useCallback(
+    const handleRef = useCallback(
       (node: HTMLButtonElement | null) => {
+        // eslint-disable-next-line react-compiler/react-compiler
         itemContext.triggerRef.current = node;
-        if (typeof forwardedRef === "function") {
-          forwardedRef(node);
-        } else if (forwardedRef) {
-          forwardedRef.current = node;
-        }
+        setRef(forwardedRef, node);
       },
       [forwardedRef, itemContext.triggerRef],
     );
@@ -296,22 +305,12 @@ export const MenuTrigger = forwardRef<HTMLButtonElement, MenuTriggerProps>(
       const childProps = {
         ...child.props,
         ref: (node: HTMLButtonElement | null) => {
-          setRef(node);
+          handleRef(node);
           // 处理子元素的原始 ref
           const childRef = (
             child as React.ReactElement & { ref?: React.Ref<HTMLButtonElement> }
           ).ref;
-          if (typeof childRef === "function") {
-            childRef(node);
-          } else if (
-            childRef &&
-            typeof childRef === "object" &&
-            "current" in childRef
-          ) {
-            (
-              childRef as React.MutableRefObject<HTMLButtonElement | null>
-            ).current = node;
-          }
+          setRef(childRef, node);
         },
         className: mergedClassName || undefined,
         onClick: (e: React.MouseEvent) => {
@@ -337,7 +336,7 @@ export const MenuTrigger = forwardRef<HTMLButtonElement, MenuTriggerProps>(
 
     return (
       <button
-        ref={setRef}
+        ref={handleRef}
         type="button"
         onClick={handleClick}
         onMouseEnter={handleMouseEnter}

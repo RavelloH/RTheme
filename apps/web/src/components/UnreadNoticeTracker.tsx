@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { getUnreadNoticeCount } from "@/actions/notice";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 
@@ -63,58 +63,25 @@ export default function UnreadNoticeTracker() {
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const tabIdRef = useRef<string>(generateTabId());
 
-  useEffect(() => {
-    console.log("[UnreadNoticeTracker] Initialized in tab:", tabIdRef.current);
-
-    // 从 localStorage 获取缓存的未读数
-    const getCachedCount = (): CachedNoticeCount | null => {
-      try {
-        const cached = localStorage.getItem(CACHE_KEY);
-        if (!cached) return null;
-
-        const data = JSON.parse(cached);
-        if (
-          typeof data.count === "number" &&
-          typeof data.cachedAt === "number"
-        ) {
-          return data;
-        }
-        return null;
-      } catch {
-        return null;
-      }
-    };
-
-    // 保存未读数到 localStorage
-    const setCachedCount = (count: number) => {
-      const data: CachedNoticeCount = {
-        count,
-        cachedAt: Date.now(),
-      };
-      localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-
-      // 使用 broadcast 通知其他组件
-      broadcast({ type: "unread_notice_update", count });
-    };
-
-    // 统一的定时器清理函数
-    const clearTimer = (timerKey: keyof typeof timersRef.current) => {
+  // 统一的定时器清理函数
+  const clearTimer = useCallback(
+    (timerKey: keyof (typeof timersRef)["current"]) => {
       if (timersRef.current[timerKey]) {
         clearTimeout(timersRef.current[timerKey]!);
         timersRef.current[timerKey] = null;
       }
-    };
+    },
+    [],
+  );
 
-    const clearAllTimers = () => {
-      Object.keys(timersRef.current).forEach((key) =>
-        clearTimer(key as keyof typeof timersRef.current),
-      );
-    };
+  const clearAllTimers = useCallback(() => {
+    Object.keys(timersRef.current).forEach((key) =>
+      clearTimer(key as keyof (typeof timersRef)["current"]),
+    );
+  }, [clearTimer]);
 
-    const broadcastMessage = (
-      message: Omit<BroadcastMessage, "tabId">,
-      delay = 0,
-    ) => {
+  const broadcastMessage = useCallback(
+    (message: Omit<BroadcastMessage, "tabId">, delay = 0) => {
       const send = () => {
         if (broadcastChannelRef.current) {
           try {
@@ -133,59 +100,79 @@ export default function UnreadNoticeTracker() {
       } else {
         send();
       }
-    };
+    },
+    [],
+  );
 
-    const doCheck = async () => {
-      console.log("[UnreadNoticeTracker] Checking unread notice count...");
-      if (stateRef.current.isChecking) return false;
+  // 从 localStorage 获取缓存的未读数
+  const getCachedCount = useCallback((): CachedNoticeCount | null => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (!cached) return null;
 
-      stateRef.current.isChecking = true;
-      stateRef.current.isPendingCheck = false;
-
-      broadcastMessage({
-        type: "check_started",
-        timestamp: new Date().toISOString(),
-      });
-
-      try {
-        const result = await getUnreadNoticeCount();
-
-        if (result.success && result.data) {
-          const count = result.data.count;
-          setCachedCount(count);
-
-          broadcastMessage({
-            type: "check_completed",
-            timestamp: new Date().toISOString(),
-            count,
-          });
-
-          console.log("[UnreadNoticeTracker] Unread count:", count);
-          return true;
-        }
-
-        console.log(
-          "[UnreadNoticeTracker] Check failed:",
-          result.message || "Unknown error",
-        );
-        return false;
-      } catch (error) {
-        console.error("[UnreadNoticeTracker] Check error:", error);
-        return false;
-      } finally {
-        stateRef.current.isChecking = false;
+      const data = JSON.parse(cached);
+      if (typeof data.count === "number" && typeof data.cachedAt === "number") {
+        return data;
       }
-    };
+      return null;
+    } catch {
+      return null;
+    }
+  }, []);
 
-    const scheduleNextCheck = (delay: number) => {
-      const nextCheckTime = new Date(Date.now() + delay);
-      console.log(
-        `[UnreadNoticeTracker] Next check at: ${nextCheckTime.toLocaleString("zh-CN")} (${Math.round(delay / 1000)}s)`,
-      );
-      timersRef.current.main = setTimeout(checkAndSchedule, delay);
-    };
+  // 保存未读数到 localStorage
+  const setCachedCount = useCallback(
+    (count: number) => {
+      const data: CachedNoticeCount = {
+        count,
+        cachedAt: Date.now(),
+      };
+      localStorage.setItem(CACHE_KEY, JSON.stringify(data));
 
-    const performCheck = (immediate = false) => {
+      // 使用 broadcast 通知其他组件
+      broadcast({ type: "unread_notice_update", count });
+    },
+    [broadcast],
+  );
+
+  const doCheck = useCallback(async () => {
+    if (stateRef.current.isChecking) return false;
+
+    stateRef.current.isChecking = true;
+    stateRef.current.isPendingCheck = false;
+
+    broadcastMessage({
+      type: "check_started",
+      timestamp: new Date().toISOString(),
+    });
+
+    try {
+      const result = await getUnreadNoticeCount();
+
+      if (result.success && result.data) {
+        const count = result.data.count;
+        setCachedCount(count);
+
+        broadcastMessage({
+          type: "check_completed",
+          timestamp: new Date().toISOString(),
+          count,
+        });
+
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    } finally {
+      stateRef.current.isChecking = false;
+    }
+  }, [broadcastMessage, setCachedCount]);
+
+  // Forward declarations via ref
+  const checkAndScheduleRef = useRef<() => void>(() => {});
+  const performCheckRef = useRef<(immediate?: boolean) => void>(
+    (immediate = false) => {
       if (stateRef.current.isPendingCheck || stateRef.current.isChecking)
         return;
 
@@ -193,9 +180,6 @@ export default function UnreadNoticeTracker() {
 
       // 如果是立即检查（首次加载），跳过广播协调直接执行
       if (immediate) {
-        console.log(
-          "[UnreadNoticeTracker] Immediate check, skipping coordination",
-        );
         (async () => {
           await doCheck();
           scheduleNextCheck(CHECK_INTERVAL);
@@ -213,131 +197,168 @@ export default function UnreadNoticeTracker() {
 
       const totalDelay = CHECK_DELAY + BROADCAST_RANDOM_DELAY_MAX;
 
-      timersRef.current.checkDelay = setTimeout(async () => {
-        if (!stateRef.current.isPendingCheck) return;
+      timersRef.current.checkDelay = setTimeout(() => {
+        void (async () => {
+          if (!stateRef.current.isPendingCheck) return;
 
-        await doCheck();
-        scheduleNextCheck(CHECK_INTERVAL);
+          await doCheck();
+
+          scheduleNextCheck(CHECK_INTERVAL);
+        })();
       }, totalDelay);
-    };
+    },
+  );
 
-    const cancelPendingCheck = () => {
-      if (!stateRef.current.isPendingCheck) return;
-
-      stateRef.current.isPendingCheck = false;
-      clearTimer("checkDelay");
-      clearTimer("broadcastDelay");
-    };
-
-    const checkAndSchedule = () => {
+  const scheduleNextCheck = useCallback(
+    (delay: number) => {
       clearTimer("main");
+      timersRef.current.main = setTimeout(() => {
+        checkAndScheduleRef.current();
+      }, delay);
+    },
+    [clearTimer],
+  );
 
-      try {
-        const cached = getCachedCount();
-        const now = Date.now();
+  const performCheck = useCallback(
+    (immediate = false) => {
+      if (stateRef.current.isPendingCheck || stateRef.current.isChecking)
+        return;
 
-        // 首次检查时，检查缓存是否足够新
-        if (stateRef.current.isFirstCheck) {
-          // 检查是否有其他组件正在加载
-          if (isLoadingUnreadCount()) {
-            console.log(
-              "[UnreadNoticeTracker] Other component is loading, waiting...",
-            );
-            // 延迟 100ms 后重新检查（保持 isFirstCheck 状态）
-            timersRef.current.main = setTimeout(checkAndSchedule, 100);
-            return;
-          }
+      stateRef.current.isPendingCheck = true;
 
-          // 清除首次检查标志
-          stateRef.current.isFirstCheck = false;
-
-          // 如果缓存存在且很新（< 30秒），说明其他组件刚刚获取过数据
-          if (cached && now - cached.cachedAt < 30000) {
-            console.log(
-              "[UnreadNoticeTracker] Fresh cache found, skipping initial check",
-            );
-            // 直接计划下次检查，避免重复调用
-            const timeUntilNextCheck = CHECK_INTERVAL - (now - cached.cachedAt);
-            scheduleNextCheck(timeUntilNextCheck);
-            return;
-          }
-
-          // 缓存不存在或已过期，立即检查
-          console.log(
-            "[UnreadNoticeTracker] No fresh cache, performing initial check",
-          );
-          performCheck(true); // 传入 true 表示立即执行
-          return;
-        }
-
-        if (!cached) {
-          // 没有缓存，立即检查
-          performCheck();
-          return;
-        }
-
-        const timeSinceLastCheck = now - cached.cachedAt;
-        const timeUntilNextCheck = Math.max(
-          0,
-          CHECK_INTERVAL - timeSinceLastCheck,
-        );
-
-        if (timeUntilNextCheck === 0) {
-          // 已经过了5分钟，立即检查
-          performCheck();
-        } else {
-          // 还没到5分钟，等待剩余时间
-          const nextCheckTime = new Date(now + timeUntilNextCheck);
-          console.log(
-            `[UnreadNoticeTracker] Next check at ${nextCheckTime.toLocaleString("zh-CN")} (${Math.round(timeUntilNextCheck / 1000)}s)`,
-          );
-          timersRef.current.main = setTimeout(performCheck, timeUntilNextCheck);
-        }
-      } catch {
-        // 出错时等待完整周期
-        scheduleNextCheck(CHECK_INTERVAL);
+      if (immediate) {
+        (async () => {
+          await doCheck();
+          scheduleNextCheck(CHECK_INTERVAL);
+        })();
+        return;
       }
-    };
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        console.log("[UnreadNoticeTracker] Page became visible, rescheduling");
-        checkAndSchedule();
+      broadcastMessage(
+        {
+          type: "check_intent",
+          timestamp: new Date().toISOString(),
+        },
+        getRandomDelay(),
+      );
+
+      const totalDelay = CHECK_DELAY + BROADCAST_RANDOM_DELAY_MAX;
+
+      timersRef.current.checkDelay = setTimeout(() => {
+        void (async () => {
+          if (!stateRef.current.isPendingCheck) return;
+
+          await doCheck();
+          scheduleNextCheck(CHECK_INTERVAL);
+        })();
+      }, totalDelay);
+    },
+    [broadcastMessage, doCheck, scheduleNextCheck],
+  );
+
+  const checkAndSchedule = useCallback(() => {
+    clearTimer("main");
+
+    try {
+      const cached = getCachedCount();
+      const now = Date.now();
+
+      if (stateRef.current.isFirstCheck) {
+        if (isLoadingUnreadCount()) {
+          timersRef.current.main = setTimeout(() => {
+            checkAndSchedule();
+          }, 100);
+          return;
+        }
+
+        stateRef.current.isFirstCheck = false;
+
+        if (cached && now - cached.cachedAt < 30000) {
+          const timeUntilNextCheck = CHECK_INTERVAL - (now - cached.cachedAt);
+          scheduleNextCheck(timeUntilNextCheck);
+          return;
+        }
+
+        performCheck(true);
+        return;
+      }
+
+      if (!cached) {
+        performCheck();
+        return;
+      }
+
+      const timeSinceLastCheck = now - cached.cachedAt;
+      const timeUntilNextCheck = Math.max(
+        0,
+        CHECK_INTERVAL - timeSinceLastCheck,
+      );
+
+      if (timeUntilNextCheck === 0) {
+        performCheck();
       } else {
-        console.log("[UnreadNoticeTracker] Page hidden, clearing timers");
-        clearAllTimers();
+        timersRef.current.main = setTimeout(() => {
+          performCheck();
+        }, timeUntilNextCheck);
       }
-    };
+    } catch {
+      scheduleNextCheck(CHECK_INTERVAL);
+    }
+  }, [clearTimer, getCachedCount, performCheck, scheduleNextCheck]);
 
-    const handleStorageChange = (e: StorageEvent) => {
+  // Sync refs
+  useEffect(() => {
+    checkAndScheduleRef.current = checkAndSchedule;
+    performCheckRef.current = performCheck;
+  }, [checkAndSchedule, performCheck]);
+
+  const cancelPendingCheck = useCallback(() => {
+    if (!stateRef.current.isPendingCheck) return;
+
+    stateRef.current.isPendingCheck = false;
+    clearTimer("checkDelay");
+    clearTimer("broadcastDelay");
+  }, [clearTimer]);
+
+  const handleVisibilityChange = useCallback(() => {
+    if (document.visibilityState === "visible") {
+      checkAndSchedule();
+    } else {
+      clearAllTimers();
+    }
+  }, [checkAndSchedule, clearAllTimers]);
+
+  const handleStorageChange = useCallback(
+    (e: StorageEvent) => {
       if (e.key === CACHE_KEY) {
-        // 其他标签页更新了缓存，重新调度
         checkAndSchedule();
       }
-    };
+    },
+    [checkAndSchedule],
+  );
 
-    const handleBroadcastMessage = (event: MessageEvent<BroadcastMessage>) => {
+  const handleBroadcastMessage = useCallback(
+    (event: MessageEvent<BroadcastMessage>) => {
       const { type, tabId, count } = event.data;
 
       if (tabId === tabIdRef.current) return;
 
       if (type === "check_intent" || type === "check_started") {
-        // 其他标签页正在或准备检查，取消本页面的检查
         if (stateRef.current.isPendingCheck) {
           cancelPendingCheck();
         }
         clearTimer("main");
       } else if (type === "check_completed") {
-        // 其他标签页完成检查，更新本地缓存（如果提供了 count）
         if (typeof count === "number") {
           setCachedCount(count);
         }
-        // 重新调度下次检查
         checkAndSchedule();
       }
-    };
+    },
+    [cancelPendingCheck, checkAndSchedule, clearTimer, setCachedCount],
+  );
 
-    // 初始化广播频道
+  useEffect(() => {
     if (typeof BroadcastChannel !== "undefined") {
       try {
         broadcastChannelRef.current = new BroadcastChannel(
@@ -352,7 +373,6 @@ export default function UnreadNoticeTracker() {
       }
     }
 
-    // 初始化：立即检查一次
     checkAndSchedule();
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -360,9 +380,6 @@ export default function UnreadNoticeTracker() {
 
     return () => {
       clearAllTimers();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      stateRef.current.isPendingCheck = false;
-
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("storage", handleStorageChange);
 
@@ -375,8 +392,13 @@ export default function UnreadNoticeTracker() {
         broadcastChannelRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [
+    checkAndSchedule,
+    handleBroadcastMessage,
+    handleStorageChange,
+    handleVisibilityChange,
+    clearAllTimers,
+  ]);
 
   return null;
 }

@@ -6,7 +6,7 @@ import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiRefreshLine, RiStickyNoteAddFill } from "@remixicon/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 import runWithAuth from "@/lib/client/run-with-auth";
@@ -78,30 +78,32 @@ export default function PostsReport() {
   const [error, setError] = useState<Error | null>(null);
   const { broadcast } = useBroadcastSender<{ type: "posts-refresh" }>();
 
-  const fetchData = async (forceRefresh: boolean = false) => {
-    if (forceRefresh) {
-      setResult(null);
-    }
-    setError(null);
-    const res = await runWithAuth(getPostsStats, { force: forceRefresh });
-    if (!res || !("data" in res) || !res.data) {
-      setError(new Error("获取文章统计失败"));
-      return;
-    }
-    const data = res.data;
-    setResult(data);
-    setRefreshTime(new Date(data.updatedAt));
+  const fetchData = useCallback(
+    async (forceRefresh: boolean = false) => {
+      if (forceRefresh) {
+        setResult(null);
+      }
+      setError(null);
+      const res = await runWithAuth(getPostsStats, { force: forceRefresh });
+      if (!res || !("data" in res) || !res.data) {
+        setError(new Error("获取文章统计失败"));
+        return;
+      }
+      const data = res.data;
+      setResult(data);
+      setRefreshTime(new Date(data.updatedAt));
 
-    // 刷新成功后广播消息,通知其他组件更新
-    if (forceRefresh) {
-      await broadcast({ type: "posts-refresh" });
-    }
-  };
+      // 刷新成功后广播消息,通知其他组件更新
+      if (forceRefresh) {
+        await broadcast({ type: "posts-refresh" });
+      }
+    },
+    [broadcast],
+  );
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchData]);
 
   return (
     <>

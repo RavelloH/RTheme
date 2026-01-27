@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   verifyPasswordForReauth,
@@ -61,8 +61,6 @@ export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
 
   // 标志：是否正在进行 SSO 验证
   const isSSORedirectingRef = useRef(false);
-  // 标志：是否已经发送过消息（成功或取消）
-  const messageSentRef = useRef(false);
   // BroadcastChannel 用于通知父窗口
   const [channel] = useState(() => {
     if (typeof window !== "undefined" && "BroadcastChannel" in window) {
@@ -72,15 +70,14 @@ export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
   });
 
   // 统一的消息发送函数，确保只发送一次
-  const sendReauthMessage = (type: "reauth-success" | "reauth-cancelled") => {
-    if (messageSentRef.current) {
-      return; // 已经发送过消息，不再发送
-    }
-    messageSentRef.current = true;
-    if (channel) {
-      channel.postMessage({ type });
-    }
-  };
+  const sendReauthMessage = useCallback(
+    (type: "reauth-success" | "reauth-cancelled") => {
+      if (channel) {
+        channel.postMessage({ type });
+      }
+    },
+    [channel],
+  );
 
   // 监听验证码解决事件
   useBroadcast((message: { type: string; token?: string }) => {
@@ -109,6 +106,29 @@ export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
       }
     };
   }, [requiresTotp, timeRemaining, toast]);
+
+  // 加载用户信息
+  const loadUserInfo = useCallback(async () => {
+    try {
+      const result = await getCurrentUserForReauth();
+      if (result.success && result.data) {
+        setUser(result.data);
+      } else {
+        toast.error(result.message || "加载失败");
+        // 如果未登录，关闭窗口
+        setTimeout(() => {
+          if (channel) {
+            channel.postMessage({ type: "reauth-cancelled" });
+          }
+          window.close();
+        }, 1000);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "加载失败");
+    } finally {
+      setLoading(false);
+    }
+  }, [channel, toast]);
 
   useEffect(() => {
     // 检查 SSO 回调的成功/错误参数
@@ -151,30 +171,7 @@ export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
       window.removeEventListener("beforeunload", handleBeforeUnload);
       channel?.close();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
-
-  const loadUserInfo = async () => {
-    try {
-      const result = await getCurrentUserForReauth();
-      if (result.success && result.data) {
-        setUser(result.data);
-      } else {
-        toast.error(result.message || "加载失败");
-        // 如果未登录，关闭窗口
-        setTimeout(() => {
-          if (channel) {
-            channel.postMessage({ type: "reauth-cancelled" });
-          }
-          window.close();
-        }, 1000);
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "加载失败");
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [searchParams, loadUserInfo, channel, toast, sendReauthMessage]);
 
   const handlePasswordVerify = async () => {
     if (!password) {

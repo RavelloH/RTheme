@@ -55,8 +55,7 @@ export default function DashboardPagesStats() {
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchData]);
 
   const getSummary = (result: StatsData) => {
     if (!result) return null;

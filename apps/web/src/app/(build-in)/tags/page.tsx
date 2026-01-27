@@ -145,11 +145,12 @@ export default async function TagsIndex() {
                 <Suspense>
                   <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
                     {config.getBlockContent(1).map((line, index) => {
+                      const lineKey = `${line}-${index}`;
                       // 检查是否包含需要动态处理的占位符
                       if (line.includes("{lastUpdatedDays}")) {
                         return (
                           <DynamicReplace
-                            key={index}
+                            key={lineKey}
                             text={line}
                             params={[
                               ["{tags}", String(totalTags)],
@@ -159,7 +160,7 @@ export default async function TagsIndex() {
                         );
                       } else {
                         return (
-                          <div key={index}>
+                          <div key={lineKey}>
                             {line.replaceAll("{tags}", String(totalTags)) ||
                               " "}
                           </div>
@@ -172,7 +173,7 @@ export default async function TagsIndex() {
               <div>
                 <div className="mt-10">
                   {config.getBlockContent(1, "bottom").map((line, index) => (
-                    <div key={index} data-fade-char>
+                    <div key={`bottom1-${index}`} data-fade-char>
                       {line.replaceAll("{pageInfo}", pageInfo) || " "}
                     </div>
                   ))}
@@ -251,14 +252,14 @@ export default async function TagsIndex() {
                 </div>
                 <div className="block mt-4" data-line-reveal>
                   {config.getBlockContent(2).map((line, index) => (
-                    <div key={index}>{line || " "}</div>
+                    <div key={`content2-${index}`}>{line || " "}</div>
                   ))}
                 </div>
               </div>
               <div>
                 <div className="mt-10">
                   {config.getBlockContent(2, "bottom").map((line, index) => (
-                    <div key={index} data-fade-char>
+                    <div key={`bottom2-${index}`} data-fade-char>
                       {line || " "}
                     </div>
                   ))}
