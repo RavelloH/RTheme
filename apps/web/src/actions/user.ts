@@ -1155,7 +1155,6 @@ export async function updateUserProfile(
       const { getConfig } = await import("@/lib/server/config-cache");
       const emailVerificationEnabled = await getConfig(
         "user.email.verification.required",
-        false,
       );
       if (emailVerificationEnabled) {
         updateData.emailVerified = false;
@@ -1176,8 +1175,8 @@ export async function updateUserProfile(
         const { sendEmail } = await import("@/lib/server/email");
         const { renderEmail } = await import("@/emails/utils");
         const { getConfig } = await import("@/lib/server/config-cache");
-        const siteName = (await getConfig("site.title")) || "NeutralPress";
-        const siteUrl = (await getConfig("site.url")) || "";
+        const siteName = await getConfig("site.title");
+        const siteUrl = await getConfig("site.url");
 
         if (field === "username" && validatedValue) {
           // 发送用户名变更通知

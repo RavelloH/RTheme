@@ -13,8 +13,8 @@ let akismetClient: AkismetClient | null = null;
  * 获取 Akismet 客户端实例（单例模式）
  */
 async function getAkismetClient(): Promise<AkismetClient | null> {
-  const enabled = await getConfig("comment.akismet.enable", false);
-  const apiKey = await getConfig("comment.akismet.apiKey", "");
+  const enabled = await getConfig("comment.akismet.enable");
+  const apiKey = await getConfig("comment.akismet.apiKey");
 
   if (!enabled || !apiKey) {
     return null;
@@ -27,10 +27,7 @@ async function getAkismetClient(): Promise<AkismetClient | null> {
 
   try {
     // 从配置中获取站点 URL
-    const siteUrl =
-      (await getConfig("site.url")) ||
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      "http://localhost:3000";
+    const siteUrl = await getConfig("site.url");
 
     // 创建 Akismet 客户端
     akismetClient = new AkismetClient({
@@ -139,10 +136,7 @@ export async function checkSpam(comment: CommentData): Promise<boolean> {
  */
 export async function submitSpam(comment: CommentData): Promise<boolean> {
   try {
-    const reportEnabled = await getConfig(
-      "comment.akismet.report.enable",
-      false,
-    );
+    const reportEnabled = await getConfig("comment.akismet.report.enable");
     if (!reportEnabled) {
       // 如果未启用报告功能，直接返回成功
       return true;
@@ -185,10 +179,7 @@ export async function submitSpam(comment: CommentData): Promise<boolean> {
  */
 export async function submitHam(comment: CommentData): Promise<boolean> {
   try {
-    const reportEnabled = await getConfig(
-      "comment.akismet.report.enable",
-      false,
-    );
+    const reportEnabled = await getConfig("comment.akismet.report.enable");
     if (!reportEnabled) {
       // 如果未启用报告功能，直接返回成功
       return true;

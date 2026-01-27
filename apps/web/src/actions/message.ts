@@ -39,7 +39,7 @@ function calculateMD5(text: string): string {
  * 检查消息系统是否启用
  */
 async function checkMessageSystemEnabled(): Promise<boolean> {
-  const enabled = await getConfig("message.enable", true);
+  const enabled = await getConfig("message.enable");
   return enabled;
 }
 
@@ -59,10 +59,7 @@ async function checkUserMessagePermission(
   if (currentUserRole === "USER") {
     // USER 给 USER 发消息
     if (targetUserRole === "USER") {
-      const userToUserEnabled = await getConfig(
-        "message.userToUser.enable",
-        true,
-      );
+      const userToUserEnabled = await getConfig("message.userToUser.enable");
       if (!userToUserEnabled) {
         return { allowed: false, reason: "用户间私信功能已关闭" };
       }
@@ -71,10 +68,7 @@ async function checkUserMessagePermission(
 
     // USER 给 ADMIN/EDITOR/AUTHOR 发消息
     if (["ADMIN", "EDITOR", "AUTHOR"].includes(targetUserRole)) {
-      const userToAdminEnabled = await getConfig(
-        "message.userToAdmin.enable",
-        true,
-      );
+      const userToAdminEnabled = await getConfig("message.userToAdmin.enable");
       if (!userToAdminEnabled) {
         return { allowed: false, reason: "不允许向管理员发送私信" };
       }

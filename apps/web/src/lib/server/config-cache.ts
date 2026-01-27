@@ -3,7 +3,11 @@ import "server-only";
 import fs from "fs";
 import path from "path";
 import { unstable_cache } from "next/cache";
-import { ConfigKeys, ConfigType } from "@/data/default-configs";
+import {
+  ConfigKeys,
+  ConfigType,
+  defaultConfigMap,
+} from "@/data/default-configs";
 
 // 配置对象类型定义
 export interface ConfigItem {
@@ -63,23 +67,25 @@ export async function getRawConfig(key: string): Promise<ConfigItem | null> {
 /**
  * 获取配置值的辅助函数
  */
-async function getConfigValue(
-  key: string,
-  defaultValue?: unknown,
-  field?: string,
-): Promise<unknown> {
+async function getConfigValue(key: string, field?: string): Promise<unknown> {
   const config = await getRawConfig(key);
 
-  // 如果配置不存在,返回默认值
-  if (!config?.value) {
-    return defaultValue;
+  // 优先使用数据库或缓存中的值
+  let configValue = config?.value;
+
+  // 如果数据库中不存在该配置，则回退到代码定义的默认配置
+  if (configValue === undefined || configValue === null) {
+    configValue = defaultConfigMap.get(key);
   }
 
-  const configValue = config.value;
+  // 如果最终仍然没有找到值，返回 undefined
+  if (configValue === undefined || configValue === null) {
+    return undefined;
+  }
 
   // 如果指定了字段名且配置值是对象,尝试获取指定字段
   if (field && typeof configValue === "object" && configValue !== null) {
-    return (configValue as ConfigValueObject)[field] ?? defaultValue;
+    return (configValue as ConfigValueObject)[field];
   }
 
   // 如果没有指定字段,但配置值是对象且有default属性,返回default值
@@ -102,41 +108,30 @@ async function getConfigValue(
 }
 
 /**
- * 获取配置项(带泛型支持)
+ * 获取配置项
  * @param key 配置键名
- * @param defaultValue 默认值
  * @param field 可选的字段名,用于从对象配置中获取特定字段
  * @returns 配置值
  */
 export async function getConfig<K extends ConfigKeys>(
   key: K,
-  defaultValue?: ConfigType<K>,
   field?: string,
 ): Promise<ConfigType<K>>;
-export async function getConfig<T>(
-  key: string,
-  defaultValue?: T,
-  field?: string,
-): Promise<T>;
-export async function getConfig<T>(
-  key: string,
-  defaultValue?: T,
-  field?: string,
-): Promise<T> {
+export async function getConfig<T>(key: string, field?: string): Promise<T>;
+export async function getConfig<T>(key: string, field?: string): Promise<T> {
   // 执行缓存函数
   const getCachedData = unstable_cache(
-    async (k: string, def?: T, f?: string) => {
-      return await getConfigValue(k, def, f);
+    async (k: string, f?: string) => {
+      return await getConfigValue(k, f);
     },
     [`config-${key}-${field ?? "default"}`],
     {
       tags: ["config", `config/${key}`],
-
       revalidate: false,
     },
   );
 
-  const value = await getCachedData(key, defaultValue, field);
+  const value = await getCachedData(key, field);
   return value as T;
 }
 

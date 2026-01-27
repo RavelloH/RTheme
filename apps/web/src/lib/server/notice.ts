@@ -142,11 +142,7 @@ export async function sendNotice(
     const shouldSendWebPush = options?.isTest || !isUserOnline || !ablyEnabled;
 
     if (shouldSendWebPush) {
-      const siteUrl =
-        (await getConfig("site.url")) ||
-        process.env.NEXT_PUBLIC_SITE_URL ||
-        "http://localhost:3000";
-
+      const siteUrl = await getConfig("site.url");
       const reason = options?.isTest
         ? "test notification"
         : `online: ${isUserOnline}, ably: ${ablyEnabled}`;
@@ -209,11 +205,8 @@ export async function sendNotice(
   });
 
   // 构建重定向链接
-  const siteUrl =
-    (await getConfig("site.url")) ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    "http://localhost:3000";
-  const siteName = (await getConfig("site.title")) || "NeutralPress";
+  const siteUrl = await getConfig("site.url");
+  const siteName = await getConfig("site.title");
   const redirectUrl = `${siteUrl}/r/${redirectToken}`;
 
   // 渲染邮件模板

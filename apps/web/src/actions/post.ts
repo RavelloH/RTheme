@@ -1180,10 +1180,7 @@ export async function createPost(
 
       // 自动更新搜索索引
       try {
-        const autoIndexEnabled = await getConfig(
-          "content.autoIndex.enabled",
-          true,
-        );
+        const autoIndexEnabled = await getConfig("content.autoIndex.enabled");
         if (autoIndexEnabled) {
           await updatePostSearchIndex(post.slug);
         }
@@ -1725,10 +1722,7 @@ export async function updatePost(
       // 自动更新搜索索引（仅在内容更新时）
       if (content !== undefined) {
         try {
-          const autoIndexEnabled = await getConfig(
-            "content.autoIndex.enabled",
-            true,
-          );
+          const autoIndexEnabled = await getConfig("content.autoIndex.enabled");
           if (autoIndexEnabled) {
             await updatePostSearchIndex(updatedPost.slug);
           }

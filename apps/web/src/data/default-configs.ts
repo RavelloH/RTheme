@@ -19,15 +19,6 @@ export interface DefaultConfig {
 // ============================================
 
 /**
- * 从 ConfigTypes 中提取所有配置键的类型
- *
- * @example
- * type ConfigKey = ConfigKeys;
- * // ConfigKeys = "site.title" | "site.shiki.theme" | ...
- */
-export type ConfigKeys = keyof ConfigTypes;
-
-/**
  * **类型映射表**：手动定义每个配置的类型
  * 这样可以确保 100% 的类型准确性
  *
@@ -152,6 +143,15 @@ interface ConfigTypes {
 }
 
 /**
+ * 从 ConfigTypes 中提取所有配置键的类型
+ *
+ * @example
+ * type ConfigKey = ConfigKeys;
+ * // ConfigKeys = "site.title" | "site.shiki.theme" | ...
+ */
+export type ConfigKeys = keyof ConfigTypes;
+
+/**
  * **核心类型工具**：根据配置 key 获取配置值的类型
  * 使用手动定义的类型映射表，确保类型 100% 准确
  *
@@ -176,6 +176,12 @@ export type ConfigType<K extends ConfigKeys> = K extends keyof ConfigTypes
 export type ConfigTypeMap = {
   [K in ConfigKeys]: ConfigType<K>;
 };
+
+/**
+ * 默认配置值的 Map 映射，用于快速查找
+ * @internal
+ */
+export const defaultConfigMap = new Map<string, JsonValue>();
 
 // 站点基础配置
 export const defaultConfigs: DefaultConfig[] = [
@@ -711,3 +717,6 @@ export const defaultConfigs: DefaultConfig[] = [
       "数据保留天数。超过此天数的数据将被删除（不会影响访问量统计）。设置为0以保留所有数据",
   },
 ];
+
+// 初始化 Map
+defaultConfigs.forEach((c) => defaultConfigMap.set(c.key, c.value));

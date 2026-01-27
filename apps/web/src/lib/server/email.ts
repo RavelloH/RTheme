@@ -107,13 +107,13 @@ async function getEmailConfig(): Promise<EmailConfig> {
     smtpConfig,
     siteTitle,
   ] = await Promise.all([
-    getConfig("notice.enable", false),
-    getConfig("notice.email", ""),
-    getConfig("notice.email.from.name", "NeutralPress"),
-    getConfig("notice.email.replyTo", ""),
-    getConfig("notice.email.resend.apiKey", ""),
+    getConfig("notice.enable"),
+    getConfig("notice.email"),
+    getConfig("notice.email.from.name"),
+    getConfig("notice.email.replyTo"),
+    getConfig("notice.email.resend.apiKey"),
     getConfig("notice.email.smtp"),
-    getConfig("site.title", "NeutralPress"),
+    getConfig("site.title"),
   ]);
 
   // 如果没有配置发件人名称，使用站点标题
@@ -187,7 +187,7 @@ async function sendViaResend(
     const from = `${config.fromName} <${config.fromEmail}>`;
 
     // 获取站点标题作为主题前缀
-    const siteTitle = await getConfig("site.title", "");
+    const siteTitle = await getConfig("site.title");
     const subjectPrefix = siteTitle ? `[${siteTitle}] ` : "";
 
     const result = await resend.emails.send({
@@ -240,7 +240,7 @@ async function sendViaSMTP(
     const from = `${config.fromName} <${config.fromEmail}>`;
 
     // 获取站点标题作为主题前缀
-    const siteTitle = await getConfig("site.title", "");
+    const siteTitle = await getConfig("site.title");
     const subjectPrefix = siteTitle ? `[${siteTitle}] ` : "";
 
     const result = await transporter.sendMail({

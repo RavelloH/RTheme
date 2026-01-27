@@ -80,8 +80,7 @@ export async function subscribeToWebPush(
       where: { userUid: user.uid, isActive: true },
     });
 
-    const maxSubscriptions =
-      ((await getConfig("notice.webPush.maxPerUser")) as number) || 5;
+    const maxSubscriptions = await getConfig("notice.webPush.maxPerUser");
 
     if (count >= maxSubscriptions) {
       return response.badRequest({
@@ -157,7 +156,7 @@ export async function getVapidPublicKey(
   );
 
   try {
-    const vapidKeys = (await getConfig("notice.webPush.vapidKeys")) || {};
+    const vapidKeys = await getConfig("notice.webPush.vapidKeys");
 
     if (!vapidKeys?.publicKey) {
       return response.serviceUnavailable({

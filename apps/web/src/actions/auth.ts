@@ -170,8 +170,8 @@ export async function login(
           const { sendEmail } = await import("@/lib/server/email");
           const { renderEmail } = await import("@/emails/utils");
           const { PasswordResetTemplate } = await import("@/emails/templates");
-          const siteName = (await getConfig("site.title")) || "NeutralPress";
-          const siteUrl = (await getConfig("site.url")) || "";
+          const siteName = await getConfig("site.title");
+          const siteUrl = await getConfig("site.url");
 
           const emailComponent = PasswordResetTemplate({
             username: user.nickname || user.username,
@@ -532,8 +532,8 @@ export async function register(
         const { EmailVerificationTemplate } = await import(
           "@/emails/templates"
         );
-        const siteName = (await getConfig("site.title")) || "NeutralPress";
-        const siteUrl = (await getConfig("site.url")) || "";
+        const siteName = await getConfig("site.title");
+        const siteUrl = await getConfig("site.url");
 
         const emailComponent = EmailVerificationTemplate({
           username: user.nickname || user.username,
@@ -979,8 +979,8 @@ export async function changePassword(
         const { sendEmail } = await import("@/lib/server/email");
         const { renderEmail } = await import("@/emails/utils");
         const { PasswordChangedTemplate } = await import("@/emails/templates");
-        const siteName = (await getConfig("site.title")) || "NeutralPress";
-        const siteUrl = (await getConfig("site.url")) || "";
+        const siteName = await getConfig("site.title");
+        const siteUrl = await getConfig("site.url");
 
         const emailComponent = PasswordChangedTemplate({
           username: userWithEmail.nickname || userWithEmail.username,
@@ -1103,8 +1103,8 @@ export async function requestPasswordReset(
         const { sendEmail } = await import("@/lib/server/email");
         const { renderEmail } = await import("@/emails/utils");
         const { PasswordResetTemplate } = await import("@/emails/templates");
-        const siteName = (await getConfig("site.title")) || "NeutralPress";
-        const siteUrl = (await getConfig("site.url")) || "";
+        const siteName = await getConfig("site.title");
+        const siteUrl = await getConfig("site.url");
 
         const emailComponent = PasswordResetTemplate({
           username: user.nickname || user.username,
@@ -1284,8 +1284,8 @@ export async function resetPassword(
         const { sendEmail } = await import("@/lib/server/email");
         const { renderEmail } = await import("@/emails/utils");
         const { PasswordChangedTemplate } = await import("@/emails/templates");
-        const siteName = (await getConfig("site.title")) || "NeutralPress";
-        const siteUrl = (await getConfig("site.url")) || "";
+        const siteName = await getConfig("site.title");
+        const siteUrl = await getConfig("site.url");
 
         const emailComponent = PasswordChangedTemplate({
           username: passwordReset.user.nickname || passwordReset.user.username,
@@ -1396,8 +1396,8 @@ export async function resendEmailVerification(
         const { EmailVerificationTemplate } = await import(
           "@/emails/templates"
         );
-        const siteName = (await getConfig("site.title")) || "NeutralPress";
-        const siteUrl = (await getConfig("site.url")) || "";
+        const siteName = await getConfig("site.title");
+        const siteUrl = await getConfig("site.url");
 
         const emailComponent = EmailVerificationTemplate({
           username: user.email,

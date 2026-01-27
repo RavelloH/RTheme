@@ -93,7 +93,7 @@ async function sendCommentNotification(params: {
     const NotificationEmail = (await import("@/emails/templates"))
       .NotificationEmail;
 
-    const noticeEnabled = await getConfig("notice.enable", true);
+    const noticeEnabled = await getConfig("notice.enable");
     if (!noticeEnabled) return;
 
     // 获取文章完整信息
@@ -117,7 +117,7 @@ async function sendCommentNotification(params: {
 
     // 场景1：文章被评论（无 parentId）
     if (!params.parentId) {
-      const postsNoticeEnabled = await getConfig("notice.posts.enable", true);
+      const postsNoticeEnabled = await getConfig("notice.posts.enable");
       if (!postsNoticeEnabled) return;
 
       // 如果是自己评论自己的文章，不通知
@@ -138,11 +138,9 @@ async function sendCommentNotification(params: {
     else {
       const commentNoticeEnabled = await getConfig(
         "comment.email.notice.enable",
-        true,
       );
       const anonCommentNoticeEnabled = await getConfig(
         "comment.anonymous.email.notice.enable",
-        true,
       );
 
       if (!commentNoticeEnabled && !anonCommentNoticeEnabled) return;
@@ -231,16 +229,10 @@ async function sendCommentNotification(params: {
  */
 async function notifyAdminPendingComments(): Promise<void> {
   try {
-    const notifyEnabled = await getConfig(
-      "comment.review.notifyAdmin.enable",
-      true,
-    );
+    const notifyEnabled = await getConfig("comment.review.notifyAdmin.enable");
     if (!notifyEnabled) return;
 
-    const threshold = await getConfig(
-      "comment.review.notifyAdmin.threshold",
-      1,
-    );
+    const threshold = await getConfig("comment.review.notifyAdmin.threshold");
 
     // 统计待审核评论数量
     const pendingCount = await prisma.comment.count({
@@ -256,7 +248,7 @@ async function notifyAdminPendingComments(): Promise<void> {
     const { sendNotice } = await import("@/lib/server/notice");
 
     // 获取应该接收通知的用户 UID 列表
-    const notifyUids = await getConfig("comment.review.notifyAdmin.uid", []);
+    const notifyUids = await getConfig("comment.review.notifyAdmin.uid");
 
     const siteUrl = await getConfig("site.url");
 
@@ -502,7 +494,7 @@ export async function getPostComments(
 
   const { slug, pageSize, cursor } = params;
 
-  const commentEnabled = await getConfig("comment.enable", true);
+  const commentEnabled = await getConfig("comment.enable");
   if (!commentEnabled) {
     return response.forbidden({ message: "评论功能已关闭" });
   }
@@ -537,7 +529,7 @@ export async function getPostComments(
       take: pageSize + 1,
       select: commentSelect,
     }),
-    getConfig("comment.locate.enable", false),
+    getConfig("comment.locate.enable"),
     prisma.comment.count({
       where: {
         postId: post.id,
@@ -735,7 +727,7 @@ export async function getCommentContext(
   const chain: CommentItem[] = [];
   let currentId: string | null = target.id;
   let guard = 0;
-  const showLocation = await getConfig("comment.locate.enable", false);
+  const showLocation = await getConfig("comment.locate.enable");
 
   // 收集所有评论ID用于批量查询点赞状态
   const commentIds: string[] = [];
@@ -831,7 +823,7 @@ export async function getCommentReplies(
 
   const authUser = await authVerify({ allowedRoles: COMMENT_ROLES });
   const currentUid = authUser?.uid ?? null;
-  const showLocation = await getConfig("comment.locate.enable", false);
+  const showLocation = await getConfig("comment.locate.enable");
 
   // 获取该评论下所有深层子评论（相对深度限制）
   const maxAbsoluteDepth = parent.depth + maxDepth;
@@ -919,7 +911,7 @@ export async function getDirectChildren(
 
   const { parentId, postSlug, pageSize, cursor } = params;
 
-  const commentEnabled = await getConfig("comment.enable", true);
+  const commentEnabled = await getConfig("comment.enable");
   if (!commentEnabled) {
     return response.forbidden({ message: "评论功能已关闭" });
   }
@@ -968,7 +960,7 @@ export async function getDirectChildren(
       take: pageSize + 1,
       select: commentSelect,
     }),
-    getConfig("comment.locate.enable", false),
+    getConfig("comment.locate.enable"),
   ]);
 
   const hasNext = rawComments.length > pageSize;
@@ -1159,7 +1151,7 @@ export async function createComment(
     access_token,
   } = params;
 
-  const commentEnabled = await getConfig("comment.enable", true);
+  const commentEnabled = await getConfig("comment.enable");
   if (!commentEnabled) {
     return response.forbidden({ message: "评论功能已关闭" });
   }
@@ -1171,11 +1163,11 @@ export async function createComment(
     reviewAll,
     reviewAnon,
   ] = await Promise.all([
-    getConfig("comment.anonymous.enable", true),
-    getConfig("comment.anonymous.email.required", true),
-    getConfig("comment.anonymous.website.enable", true),
-    getConfig("comment.review.enable", false),
-    getConfig("comment.anonymous.review.enable", false),
+    getConfig("comment.anonymous.enable"),
+    getConfig("comment.anonymous.email.required"),
+    getConfig("comment.anonymous.website.enable"),
+    getConfig("comment.review.enable"),
+    getConfig("comment.anonymous.review.enable"),
   ]);
 
   const post = await loadPostId(slug);
@@ -1328,7 +1320,7 @@ export async function createComment(
     return response.serverError();
   }
 
-  const showLocation = await getConfig("comment.locate.enable", false);
+  const showLocation = await getConfig("comment.locate.enable");
 
   // 新创建的评论，当前用户肯定没有点赞
   const mapped = await mapCommentToItem(
@@ -1558,10 +1550,7 @@ export async function updateCommentStatus(
   after(async () => {
     try {
       // 只有启用了 Akismet 报告功能才执行
-      const reportEnabled = await getConfig(
-        "comment.akismet.report.enable",
-        false,
-      );
+      const reportEnabled = await getConfig("comment.akismet.report.enable");
       if (!reportEnabled) return;
 
       const akismetEnabled = await isAkismetEnabled();
