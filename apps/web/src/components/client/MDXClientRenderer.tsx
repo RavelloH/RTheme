@@ -6,6 +6,8 @@ import { serialize } from "next-mdx-remote-client/serialize";
 import type { SerializeResult } from "next-mdx-remote-client/serialize";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 import type { MDXContentMessage } from "@/types/broadcast-messages";
+import { useConfig } from "@/context/ConfigContext";
+import type { ConfigType } from "@/types/config";
 import {
   cleanMDXSource,
   mdxSerializeOptions,
@@ -22,6 +24,11 @@ interface MDXClientRendererProps {
  * 客户端 MDX 渲染器
  */
 export default function MDXClientRenderer({ source }: MDXClientRendererProps) {
+  // 从 ConfigProvider 获取 Shiki 主题配置
+  const shikiTheme = useConfig(
+    "site.shiki.theme",
+  ) as ConfigType<"site.shiki.theme">;
+
   const [mdxSource, setMdxSource] = useState<SerializeResult<
     Record<string, unknown>,
     Record<string, unknown>
@@ -101,8 +108,8 @@ export default function MDXClientRenderer({ source }: MDXClientRendererProps) {
 
   // 水合渲染
   try {
-    // 使用统一的组件配置
-    const components = createBaseMDXComponents();
+    // 使用统一的组件配置，传入 Shiki 主题
+    const components = createBaseMDXComponents(undefined, shikiTheme);
 
     const { content: hydratedContent, error: hydrateError } = hydrate({
       ...mdxSource,

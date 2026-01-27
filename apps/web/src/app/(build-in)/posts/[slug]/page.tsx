@@ -32,6 +32,7 @@ import {
 import ImageLightbox from "@/components/client/ImageLightbox";
 import { getConfig } from "@/lib/server/config-cache";
 import React from "react";
+import type { ConfigType } from "@/types/config";
 import CommentsSection from "@/components/client/CommentsSection";
 import AdjacentPostCard from "@/components/AdjacentPostCard";
 import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
@@ -104,6 +105,7 @@ export default async function PostPage({ params }: PageProps) {
     reviewAnonymous,
     locateEnabled,
     siteURL,
+    shikiTheme,
   ] = await Promise.all([
     getConfig<boolean>("comment.enable", true),
     getConfig<string>("comment.placeholder", "输入评论内容..."),
@@ -114,6 +116,7 @@ export default async function PostPage({ params }: PageProps) {
     getConfig<boolean>("comment.anonymous.review.enable", false),
     getConfig<boolean>("comment.locate.enable", false),
     getConfig<boolean>("site.url"),
+    getConfig<ConfigType<"site.shiki.theme">>("site.shiki.theme"),
   ]);
 
   try {
@@ -357,6 +360,7 @@ export default async function PostPage({ params }: PageProps) {
               mode={renderedContent.mode}
               mediaFileMap={postMediaFileMap}
               skipFirstH1
+              shikiTheme={shikiTheme} // ✅ 传递 Shiki 主题配置
             />
             {/* 文章底部信息 */}
             <div className="max-w-7xl mx-auto mt-12 border-t-2 py-8 border-border">

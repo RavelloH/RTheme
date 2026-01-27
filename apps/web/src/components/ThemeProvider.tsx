@@ -1,15 +1,15 @@
 "use client";
 
-import { ColorConfig } from "@/types/config";
+import { ConfigType } from "@/types/config";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { createContext, useContext, useEffect } from "react";
 
 type ThemeProviderProps = React.ComponentProps<typeof NextThemesProvider> & {
-  mainColor: ColorConfig;
+  mainColor: ConfigType<"site.color">;
 };
 
 // 创建 Context
-const ColorContext = createContext<ColorConfig | null>(null);
+const ColorContext = createContext<ConfigType<"site.color"> | null>(null);
 
 /**
  * 获取主题颜色配置的 Hook

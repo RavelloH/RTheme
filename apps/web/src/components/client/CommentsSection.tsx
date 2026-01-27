@@ -37,6 +37,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { highlightCode } from "@/lib/shared/mdx-config";
 import { useToast } from "@/ui/Toast";
+import { useConfig } from "@/context/ConfigContext";
 import {
   RiMapPin2Line,
   RiReplyLine,
@@ -53,7 +54,7 @@ import {
 } from "@remixicon/react";
 import Clickable from "@/ui/Clickable";
 import { useNavigateWithTransition } from "../Link";
-
+import { ConfigType } from "@/types/config";
 // ============ 类型定义 ============
 interface CommentConfig {
   placeholder: string;
@@ -197,9 +198,11 @@ function InlineCode({ children }: { children?: React.ReactNode }) {
 function CodeBlock({
   children,
   className,
+  shikiTheme,
 }: {
   children?: string;
   className?: string;
+  shikiTheme?: { light: string; dark: string };
 }) {
   const [html, setHtml] = useState("");
   const [loading, setLoading] = useState(true);
@@ -208,7 +211,7 @@ function CodeBlock({
 
   useEffect(() => {
     setLoading(true);
-    highlightCode(code, language)
+    highlightCode(code, language, shikiTheme)
       .then((highlightedHtml) => {
         setHtml(highlightedHtml);
         setLoading(false);
@@ -217,7 +220,7 @@ function CodeBlock({
         console.error("代码高亮失败:", { error: err, language, code });
         setLoading(false);
       });
-  }, [code, language]);
+  }, [code, language, shikiTheme]);
 
   if (loading) {
     return (
@@ -240,7 +243,10 @@ function CodeBlock({
  * ReactMarkdown 组件配置
  * 包含代码高亮、链接、图片等自定义渲染
  */
-const markdownComponents: Components = {
+const markdownComponents = (shikiTheme?: {
+  light: string;
+  dark: string;
+}): Components => ({
   // 代码处理
   pre: ({ children }: { children?: React.ReactNode }) => {
     // 检查是否是代码块（而不是其他 pre 标签）
@@ -274,10 +280,15 @@ const markdownComponents: Components = {
 
     // 否则是代码块（即使没有 className，也使用 text 作为默认语言）
     return (
-      <CodeBlock className={className || "language-text"}>{code}</CodeBlock>
+      <CodeBlock
+        className={className || "language-text"}
+        shikiTheme={shikiTheme}
+      >
+        {code}
+      </CodeBlock>
     );
   },
-};
+});
 
 // ============ 单条评论组件 ============
 interface SingleCommentProps {
@@ -296,6 +307,7 @@ interface SingleCommentProps {
   isDirectParent: boolean;
   authorUid: number;
   navigate: (href: string) => void;
+  components: Components;
 }
 
 const SingleComment = React.memo(function SingleComment({
@@ -314,6 +326,7 @@ const SingleComment = React.memo(function SingleComment({
   isDirectParent,
   authorUid,
   navigate,
+  components,
 }: SingleCommentProps) {
   const [isNameHovered, setIsNameHovered] = useState(false);
 
@@ -517,7 +530,7 @@ const SingleComment = React.memo(function SingleComment({
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkMath, remarkBreaks]}
                 rehypePlugins={[rehypeKatex]}
-                components={markdownComponents}
+                components={components}
               >
                 {escapeHtmlButPreserveMarkdown(comment.content)}
               </ReactMarkdown>
@@ -695,6 +708,11 @@ export default function CommentsSection({
   authorUid,
   commentConfig,
 }: CommentsSectionProps) {
+  // 从 ConfigProvider 获取 Shiki 主题配置
+  const shikiTheme = useConfig(
+    "site.shiki.theme",
+  ) as ConfigType<"site.shiki.theme">;
+
   // 基础状态
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -760,6 +778,12 @@ export default function CommentsSection({
   const commentsMap = useMemo(
     () => new Map(comments.map((c) => [c.id, c])),
     [comments],
+  );
+
+  // 创建 markdown 组件配置
+  const components = useMemo(
+    () => markdownComponents(shikiTheme),
+    [shikiTheme],
   );
 
   // 监听验证码消息
@@ -1486,7 +1510,7 @@ export default function CommentsSection({
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm, remarkMath, remarkBreaks]}
                       rehypePlugins={[rehypeKatex]}
-                      components={markdownComponents}
+                      components={components}
                     >
                       {escapeHtmlButPreserveMarkdown(content)}
                     </ReactMarkdown>
@@ -1654,6 +1678,7 @@ export default function CommentsSection({
                           isDirectParent={isDirectParent(comment)}
                           authorUid={authorUid}
                           navigate={navigate}
+                          components={components}
                         />
                       </motion.div>
                       <AutoResizer duration={0.3}>

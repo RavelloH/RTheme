@@ -12,7 +12,10 @@ import { codeToHtml } from "shiki";
 import type { Components } from "react-markdown";
 import Link from "@/components/Link";
 import CMSImage from "@/components/CMSImage";
-import { shikiConfig } from "@/lib/shared/mdx-config-shared";
+import {
+  createShikiConfig,
+  type ShikiTheme,
+} from "@/lib/shared/mdx-config-shared";
 import { processImageUrl, type MediaFileInfo } from "@/lib/shared/image-utils";
 
 // ============ 服务器端组件 ============
@@ -24,17 +27,20 @@ import { processImageUrl, type MediaFileInfo } from "@/lib/shared/image-utils";
 export async function CodeBlockServer({
   children,
   className,
+  shikiTheme,
 }: {
   children?: string;
   className?: string;
+  shikiTheme?: ShikiTheme;
 }) {
   const language = className?.replace(/language-/, "") || "text";
   const code = String(children).replace(/\n$/, "");
 
   try {
+    const config = createShikiConfig(shikiTheme);
     const html = await codeToHtml(code, {
       lang: language,
-      ...shikiConfig,
+      ...config,
     });
     return <div dangerouslySetInnerHTML={{ __html: html }} />;
   } catch (err) {
@@ -157,10 +163,12 @@ export function LinkComponentServer({
  * 创建服务器端 react-markdown 组件配置
  *
  * @param mediaFileMap - 媒体文件映射（用于图片优化）
+ * @param shikiTheme - 可选的 Shiki 主题配置
  * @returns react-markdown 组件配置对象
  */
 export function createServerMarkdownComponents(
   mediaFileMap?: Map<string, MediaFileInfo>,
+  shikiTheme?: ShikiTheme,
 ): Components {
   return {
     // 代码处理
@@ -173,7 +181,7 @@ export function createServerMarkdownComponents(
       if (className) {
         // 代码块 - 使用服务端高亮
         return (
-          <CodeBlockServer className={className}>
+          <CodeBlockServer className={className} shikiTheme={shikiTheme}>
             {children as string}
           </CodeBlockServer>
         );

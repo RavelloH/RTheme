@@ -22,13 +22,14 @@ import PageTransition from "@/components/PageTransition";
 import TokenManager from "@/components/TokenManager";
 import { AnalyticsTracker } from "@/components/client/AnalyticsTracker";
 import NotificationProvider from "@/components/NotificationProvider";
+import { ConfigProvider } from "@/context/ConfigContext";
 
 // lib
 import { getActiveMenus } from "@/lib/server/menu-cache";
 import { getConfig } from "@/lib/server/config-cache";
 
 // Types
-import { ColorConfig } from "@/types/config";
+import type { ConfigType } from "@/types/config";
 import { ToastProvider } from "@/ui/Toast";
 import Footer from "@/components/server/Footer";
 import { Suspense } from "react";
@@ -52,14 +53,26 @@ export default async function RootLayout({
   "use cache";
   cacheTag("config", "menus");
   cacheLife("max");
-  const [menus, mainColor, siteName, enableAnalytics, ablyEnabled] =
+
+  // 获取所有需要的配置
+  const [menus, mainColor, siteName, enableAnalytics, ablyEnabled, shikiTheme] =
     await Promise.all([
       getActiveMenus(),
-      getConfig<ColorConfig>("site.color"),
-      getConfig<string>("site.title"),
-      getConfig<boolean>("analytics.enable"),
-      getConfig<string>("notice.ably.key"),
+      getConfig<ConfigType<"site.color">>("site.color"),
+      getConfig<ConfigType<"site.title">>("site.title"),
+      getConfig<ConfigType<"analytics.enable">>("analytics.enable"),
+      getConfig<ConfigType<"notice.ably.key">>("notice.ably.key"),
+      getConfig<ConfigType<"site.shiki.theme">>("site.shiki.theme"),
     ]);
+
+  // 打包配置
+  const configs = {
+    "site.color": mainColor,
+    "site.title": siteName,
+    "site.shiki.theme": shikiTheme,
+    "analytics.enable": enableAnalytics,
+    "notice.ably.key": ablyEnabled,
+  };
 
   return (
     <html
@@ -79,27 +92,29 @@ export default async function RootLayout({
             mainColor={mainColor}
             disableTransitionOnChange
           >
-            <NotificationProvider isAblyEnabled={ablyEnabled ? true : false}>
-              <MenuProvider menus={menus}>
-                <ResponsiveFontScale scaleFactor={0.017} baseSize={12}>
-                  <LoadingAnimation siteName={siteName} />
-                  <LayoutContainer>
-                    <Suspense>
-                      <Header menus={menus} />
-                    </Suspense>
-                    <MainContent>
+            <ConfigProvider configs={configs}>
+              <NotificationProvider isAblyEnabled={ablyEnabled ? true : false}>
+                <MenuProvider menus={menus}>
+                  <ResponsiveFontScale scaleFactor={0.017} baseSize={12}>
+                    <LoadingAnimation siteName={siteName} />
+                    <LayoutContainer>
                       <Suspense>
-                        <PageTransition>{children}</PageTransition>
+                        <Header menus={menus} />
                       </Suspense>
-                    </MainContent>
-                  </LayoutContainer>
-                  <Suspense>
-                    <Footer menus={menus} />
-                  </Suspense>
-                </ResponsiveFontScale>
-              </MenuProvider>
-              {modal}
-            </NotificationProvider>
+                      <MainContent>
+                        <Suspense>
+                          <PageTransition>{children}</PageTransition>
+                        </Suspense>
+                      </MainContent>
+                    </LayoutContainer>
+                    <Suspense>
+                      <Footer menus={menus} />
+                    </Suspense>
+                  </ResponsiveFontScale>
+                </MenuProvider>
+                {modal}
+              </NotificationProvider>
+            </ConfigProvider>
           </ThemeProvider>
           {enableAnalytics && (
             <Suspense>

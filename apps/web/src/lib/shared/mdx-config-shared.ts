@@ -17,15 +17,49 @@ import rehypeRaw from "rehype-raw";
 // ============ Shiki 配置 ============
 
 /**
- * 统一的 Shiki 主题配置
- * 可在客户端和服务器端使用
+ * Shiki 主题类型
  */
-export const shikiConfig = {
-  themes: {
-    light: "light-plus",
-    dark: "dark-plus",
-  },
-} as const;
+export interface ShikiTheme {
+  light: string;
+  dark: string;
+}
+
+/**
+ * 默认 Shiki 主题配置（降级方案）
+ */
+export const defaultShikiTheme: ShikiTheme = {
+  light: "light-plus",
+  dark: "dark-plus",
+};
+
+/**
+ * 创建 Shiki 配置对象
+ *
+ * @param theme 可选的主题配置，如果不提供则使用默认主题
+ * @returns Shiki 配置对象
+ *
+ * @example
+ * // 使用默认主题
+ * const config = createShikiConfig();
+ *
+ * // 使用自定义主题
+ * const config = createShikiConfig({ light: "github-light", dark: "github-dark" });
+ */
+export function createShikiConfig(theme?: ShikiTheme) {
+  const selectedTheme = theme || defaultShikiTheme;
+  return {
+    themes: {
+      light: selectedTheme.light,
+      dark: selectedTheme.dark,
+    },
+  } as const;
+}
+
+/**
+ * 统一的 Shiki 主题配置（向后兼容，使用默认主题）
+ * @deprecated 建议使用 createShikiConfig() 或从配置中获取主题
+ */
+export const shikiConfig = createShikiConfig();
 
 // ============ Remark/Rehype 插件配置 ============
 

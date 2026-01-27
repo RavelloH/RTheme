@@ -14,6 +14,169 @@ export interface DefaultConfig {
   description?: string;
 }
 
+// ============================================
+// 类型工具
+// ============================================
+
+/**
+ * 从 defaultConfigs 中提取所有配置键的类型
+ *
+ * @example
+ * type ConfigKey = ConfigKeys;
+ * // ConfigKeys = "site.title" | "site.shiki.theme" | ...
+ */
+export type ConfigKeys = (typeof defaultConfigs)[number]["key"];
+
+/**
+ * **类型映射表**：手动定义每个配置的类型
+ * 这样可以确保 100% 的类型准确性
+ *
+ * @internal
+ */
+interface ConfigTypes {
+  "site.title": string;
+  "site.subtitle": string;
+  "site.title.template": string;
+  "site.url": string;
+  "site.color": {
+    primary: string;
+    background: {
+      light: string;
+      dark: string;
+    };
+    muted: {
+      light: string;
+      dark: string;
+    };
+  };
+  "site.shiki.theme": {
+    light: string;
+    dark: string;
+  };
+  "site.slogan.primary": string;
+  "site.slogan.secondary": string;
+  "site.birthday": string;
+  "site.copyright": string[];
+  "author.name": string;
+  "author.bio": string;
+  "author.mail": string;
+  "author.birthday": string;
+  "author.birthday.showAge": boolean;
+  "seo.description": string;
+  "seo.keywords": string[];
+  "seo.category": string;
+  "seo.country": string;
+  "seo.imageCard.enable": boolean;
+  "seo.index.enable": boolean;
+  "seo.twitter_site": string;
+  "seo.twitter_creator": string;
+  "seo.google_verification": string;
+  "user.registration.enabled": boolean;
+  "user.email.verification.required": boolean;
+  "user.sso.google.enabled": boolean;
+  "user.sso.google": {
+    clientId: string;
+    clientSecret: string;
+  };
+  "user.sso.github.enabled": boolean;
+  "user.sso.github": {
+    clientId: string;
+    clientSecret: string;
+  };
+  "user.sso.microsoft.enabled": boolean;
+  "user.sso.microsoft": {
+    clientId: string;
+    clientSecret: string;
+  };
+  "user.passkey.enabled": boolean;
+  "user.passkey.maxPerUser": number;
+  "content.menu.enabled": boolean;
+  "content.slug.segment": boolean;
+  "content.autoIndex.enabled": boolean;
+  "content.rss.enabled": boolean;
+  "content.rss.postCount": number;
+  "content.rss.showFullContent": boolean;
+  "content.rss.autoGenerateExcerpt": boolean;
+  "content.rss.maxExcerptLength": number;
+  "media.upload.allowed_types": string[];
+  "comment.enable": boolean;
+  "comment.placeholder": string;
+  "comment.akismet.enable": boolean;
+  "comment.akismet.apiKey": string;
+  "comment.akismet.report.enable": boolean;
+  "comment.anonymous.enable": boolean;
+  "comment.anonymous.email.required": boolean;
+  "comment.anonymous.website.enable": boolean;
+  "comment.email.notice.enable": boolean;
+  "comment.anonymous.email.notice.enable": boolean;
+  "comment.review.enable": boolean;
+  "comment.anonymous.review.enable": boolean;
+  "comment.review.notifyAdmin.enable": boolean;
+  "comment.review.notifyAdmin.uid": string[];
+  "comment.review.notifyAdmin.threshold": number;
+  "comment.locate.enable": boolean;
+  "notice.enable": boolean;
+  "notice.email": string;
+  "notice.email.from.name": string;
+  "notice.email.replyTo": string;
+  "notice.email.resend.apiKey": string;
+  "notice.email.smtp": {
+    user: string;
+    host: string;
+    port: string;
+    tls: boolean;
+    password: string;
+  };
+  "notice.posts.enable": boolean;
+  "notice.ably.key": string;
+  "notice.webPush.enable": boolean;
+  "notice.webPush.maxPerUser": number;
+  "notice.webPush.vapidKeys": {
+    publicKey: string;
+    privateKey: string;
+  };
+  "ai.enable": boolean;
+  "ai.gateway.url": string;
+  "ai.config": {
+    service: string;
+    apiKey: string;
+    model: string;
+  };
+  "message.enable": boolean;
+  "message.userToUser.enable": boolean;
+  "message.userToAdmin.enable": boolean;
+  "analytics.enable": boolean;
+  "analytics.timezone": string;
+  "analytics.precisionDays": number;
+  "analytics.retentionDays": number;
+}
+
+/**
+ * **核心类型工具**：根据配置 key 获取配置值的类型
+ * 使用手动定义的类型映射表，确保类型 100% 准确
+ *
+ * @example
+ * type ShikiThemeType = ConfigType<"site.shiki.theme">;
+ * // ShikiThemeType = { light: string; dark: string; }
+ *
+ * const config = useConfig("site.shiki.theme") as ConfigType<"site.shiki.theme">;
+ * // config 自动推导为 { light: string; dark: string; }
+ */
+export type ConfigType<K extends ConfigKeys> = K extends keyof ConfigTypes
+  ? ConfigTypes[K]
+  : unknown;
+
+/**
+ * 获取所有配置的类型映射
+ *
+ * @example
+ * type AllConfigTypes = ConfigTypeMap;
+ * // AllConfigTypes["site.shiki.theme"] = { light: string; dark: string; }
+ */
+export type ConfigTypeMap = {
+  [K in ConfigKeys]: ConfigType<K>;
+};
+
 // 站点基础配置
 export const defaultConfigs: DefaultConfig[] = [
   // =====================================
@@ -60,6 +223,17 @@ export const defaultConfigs: DefaultConfig[] = [
     },
     description:
       "站点主题颜色设置。影响页面UI、用户默认头像等。需填写十六进制颜色值",
+  },
+  {
+    key: "site.shiki.theme",
+    value: {
+      default: {
+        light: "light-plus",
+        dark: "dark-plus",
+      },
+    },
+    description:
+      "代码高亮主题。参考 https://shiki.style/themes ，填写主题 ID。",
   },
   {
     key: "site.slogan.primary",

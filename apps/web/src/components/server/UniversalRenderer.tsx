@@ -2,6 +2,7 @@ import React from "react";
 import { MediaFileInfo } from "@/lib/shared/image-utils";
 import MDXClientRenderer from "@/components/client/MDXClientRenderer";
 import MarkdownServerRenderer from "@/components/server/MarkdownServerRenderer";
+import type { ShikiTheme } from "@/lib/shared/mdx-config-shared";
 
 interface UniversalRendererProps {
   source: string;
@@ -9,6 +10,8 @@ interface UniversalRendererProps {
   mediaFileMap?: Map<string, MediaFileInfo>;
   /** 是否跳过渲染第一个 h1 标题（用于文章页面，因为封面已经显示了标题） */
   skipFirstH1?: boolean;
+  /** Shiki 主题配置 */
+  shikiTheme?: ShikiTheme;
 }
 
 /**
@@ -51,6 +54,7 @@ export default async function UniversalRenderer({
   mode,
   mediaFileMap,
   skipFirstH1 = false,
+  shikiTheme,
 }: UniversalRendererProps) {
   // 如果需要跳过第一个 h1，在渲染前处理内容
   const processedSource = skipFirstH1 ? removeFirstH1(source) : source;
@@ -65,6 +69,7 @@ export default async function UniversalRenderer({
     <MarkdownServerRenderer
       source={processedSource}
       mediaFileMap={mediaFileMap}
+      shikiTheme={shikiTheme}
     />
   );
 }

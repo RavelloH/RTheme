@@ -6,6 +6,7 @@ import { createServerMarkdownComponents } from "@/lib/server/mdx-config-server";
 import {
   markdownRemarkPlugins,
   markdownRehypePlugins,
+  type ShikiTheme,
 } from "@/lib/shared/mdx-config-shared";
 import type { MediaFileInfo } from "@/lib/shared/image-utils";
 
@@ -13,6 +14,7 @@ interface MarkdownServerRendererProps {
   source: string;
   className?: string;
   mediaFileMap?: Map<string, MediaFileInfo>;
+  shikiTheme?: ShikiTheme;
 }
 
 /**
@@ -23,9 +25,10 @@ export default async function MarkdownServerRenderer({
   source,
   className = "max-w-4xl mx-auto md-content",
   mediaFileMap,
+  shikiTheme,
 }: MarkdownServerRendererProps) {
-  // 使用统一的服务器端组件配置
-  const components = createServerMarkdownComponents(mediaFileMap);
+  // 使用统一的服务器端组件配置，传入主题
+  const components = createServerMarkdownComponents(mediaFileMap, shikiTheme);
 
   return (
     <div className={className}>

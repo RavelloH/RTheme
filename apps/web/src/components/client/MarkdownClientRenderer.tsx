@@ -6,11 +6,13 @@ import { createMarkdownComponents } from "@/lib/shared/mdx-config";
 import {
   markdownRemarkPlugins,
   markdownRehypePlugins,
+  type ShikiTheme,
 } from "@/lib/shared/mdx-config-shared";
 
 interface MarkdownRendererProps {
   source: string;
   className?: string;
+  shikiTheme?: ShikiTheme;
 }
 
 /**
@@ -19,8 +21,10 @@ interface MarkdownRendererProps {
 export default function MarkdownClientRenderer({
   source,
   className = "max-w-4xl mx-auto md-content",
+  shikiTheme,
 }: MarkdownRendererProps) {
-  const markdownComponents = createMarkdownComponents();
+  // ✅ 传递 shikiTheme 给 createMarkdownComponents
+  const markdownComponents = createMarkdownComponents(shikiTheme);
 
   return (
     <div className={className}>

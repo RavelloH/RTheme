@@ -36,6 +36,9 @@ import {
   TableRowWithMarkdown,
 } from "@/lib/tiptap/table-with-markdown";
 import type { JSONContent } from "@tiptap/core";
+import { useConfig } from "@/context/ConfigContext";
+import type { ConfigType } from "@/types/config";
+import { BundledTheme } from "shiki";
 
 // 解析 Markdown 表格中的对齐标记
 function parseTableAlignment(markdown: string): Map<number, string[]> {
@@ -674,6 +677,10 @@ export function TiptapEditor({
   showTableOfContents = false,
   onMathClick,
 }: TiptapEditorProps) {
+  const shikiTheme = useConfig(
+    "site.shiki.theme",
+  ) as ConfigType<"site.shiki.theme">;
+
   // 用于跟踪是否是首次渲染，避免初始化时触发保存
   const isFirstRender = useRef(true);
 
@@ -694,10 +701,10 @@ export function TiptapEditor({
       }),
       CustomParagraph,
       CodeBlockShiki.configure({
-        defaultTheme: "light-plus",
+        defaultTheme: shikiTheme.dark as BundledTheme,
         themes: {
-          light: "light-plus",
-          dark: "dark-plus",
+          light: shikiTheme.light as BundledTheme,
+          dark: shikiTheme.dark as BundledTheme,
         },
         defaultLanguage: null,
       }),

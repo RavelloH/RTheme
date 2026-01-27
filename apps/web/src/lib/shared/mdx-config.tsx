@@ -22,10 +22,11 @@ import type { Components } from "react-markdown";
 import Link from "@/components/Link";
 import CMSImage from "@/components/CMSImage";
 import {
-  shikiConfig,
+  createShikiConfig,
   cleanMDXSource as cleanMDXSourceShared,
   mdxRemarkPlugins,
   mdxRehypePlugins,
+  type ShikiTheme,
 } from "@/lib/shared/mdx-config-shared";
 import {
   useState as reactUseState,
@@ -45,30 +46,33 @@ import {
 // ============ 导出共享配置 ============
 
 /**
- * 导出 Shiki 配置（从共享模块）
- */
-export { shikiConfig };
-
-/**
  * 统一的代码高亮函数
+ *
+ * @param code 代码内容
+ * @param language 编程语言
+ * @param shikiTheme 可选的 Shiki 主题配置
+ * @returns 高亮后的 HTML
  */
 export async function highlightCode(
   code: string,
   language: string,
+  shikiTheme?: ShikiTheme,
 ): Promise<string> {
   try {
+    const config = createShikiConfig(shikiTheme);
     return await codeToHtml(code, {
       lang: language,
-      ...shikiConfig,
+      ...config,
     });
   } catch (err) {
     console.error("Shiki 语法高亮错误:", { error: err, language, code });
     // 如果指定的语言不支持，尝试用 text 语言重新渲染
     if (language !== "text") {
       try {
+        const config = createShikiConfig(shikiTheme);
         return await codeToHtml(code, {
           lang: "text",
-          ...shikiConfig,
+          ...config,
         });
       } catch (retryErr) {
         console.error("Shiki text 渲染失败:", { error: retryErr, code });
@@ -143,17 +147,19 @@ export function InlineCode({ children }: { children?: React.ReactNode }) {
 export function CodeBlock({
   children,
   className,
+  shikiTheme,
 }: {
   children?: string;
   className?: string;
+  shikiTheme?: ShikiTheme;
 }) {
   const [html, setHtml] = useState("");
   const language = className?.replace(/language-/, "") || "text";
   const code = (children || "").replace(/\n$/, "");
 
   useEffect(() => {
-    highlightCode(code, language).then(setHtml);
-  }, [code, language]);
+    highlightCode(code, language, shikiTheme).then(setHtml);
+  }, [code, language, shikiTheme]);
 
   return <div dangerouslySetInnerHTML={{ __html: html }} />;
 }
@@ -231,9 +237,13 @@ export function LinkComponent({
 /**
  * 创建基础的 MDX 组件配置
  * 适用于 MDXClientRenderer 和 MDXPreview
+ *
+ * @param overrides 可选的组件覆盖
+ * @param shikiTheme 可选的 Shiki 主题配置
  */
 export function createBaseMDXComponents(
   overrides?: Partial<MDXComponents>,
+  shikiTheme?: ShikiTheme,
 ): MDXComponents {
   return {
     // 代码处理
@@ -246,7 +256,11 @@ export function createBaseMDXComponents(
       className?: string;
     }) => {
       if (className) {
-        return <CodeBlock className={className}>{children}</CodeBlock>;
+        return (
+          <CodeBlock className={className} shikiTheme={shikiTheme}>
+            {children}
+          </CodeBlock>
+        );
       }
       return <InlineCode>{children}</InlineCode>;
     },
@@ -283,13 +297,21 @@ export function createBaseMDXComponents(
  * 创建增强的 MDX 组件配置（用于编辑器预览）
  * 包含更详细的表格样式和扩展元素
  */
+/**
+ * 创建增强的 MDX 组件配置
+ *
+ * @param errorBoundaryWrapper - 可选的 ErrorBoundary 包装器
+ * @param shikiTheme - 可选的 Shiki 主题配置
+ * @returns MDX 组件配置
+ */
 export function createEnhancedMDXComponents(
   errorBoundaryWrapper?: <P extends object>(
     component: React.ComponentType<P>,
     displayName: string,
   ) => React.ComponentType<P>,
+  shikiTheme?: ShikiTheme,
 ): MDXComponents {
-  const base = createBaseMDXComponents();
+  const base = createBaseMDXComponents(undefined, shikiTheme);
 
   // 如果提供了 ErrorBoundary 包装器，使用它
   const wrap =
@@ -371,9 +393,7 @@ export function createEnhancedMDXComponents(
     ),
     mark: wrap(
       ({ children }: React.ComponentPropsWithoutRef<"mark">) => (
-        <mark className="bg-yellow-200 dark:bg-yellow-800 px-1 rounded">
-          {children}
-        </mark>
+        <mark>{children}</mark>
       ),
       "mark",
     ),
@@ -410,7 +430,12 @@ export function createEnhancedMDXComponents(
  * 创建 react-markdown 的组件配置
  * 适用于 MarkdownRenderer
  */
-export function createMarkdownComponents(): Components {
+/**
+ * 创建 Markdown 组件配置
+ *
+ * @param shikiTheme 可选的 Shiki 主题配置
+ */
+export function createMarkdownComponents(shikiTheme?: ShikiTheme): Components {
   return {
     // 代码处理
     pre: ({ children }: React.HTMLAttributes<HTMLPreElement>) => (
@@ -441,7 +466,10 @@ export function createMarkdownComponents(): Components {
 
       // 否则是代码块（即使没有 className，也使用 text 作为默认语言）
       return (
-        <CodeBlock className={className || "language-text"}>
+        <CodeBlock
+          className={className || "language-text"}
+          shikiTheme={shikiTheme}
+        >
           {children}
         </CodeBlock>
       );

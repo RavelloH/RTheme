@@ -21,7 +21,8 @@
     "next.config.js",
     ".next/types/**/*.ts",
     "src/types/**/*.d.ts",
-    "src/app/icon.js"
+    "src/app/icon.js",
+    "src/types/config.ts"
   ],
   "exclude": ["node_modules"],
   "ts-node": {

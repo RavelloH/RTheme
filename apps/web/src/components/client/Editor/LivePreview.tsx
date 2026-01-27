@@ -8,6 +8,8 @@ import { AutoTransition } from "@/ui/AutoTransition";
 import { RiAlertLine, RiRefreshLine } from "@remixicon/react";
 import Clickable from "@/ui/Clickable";
 import MarkdownClientRenderer from "../MarkdownClientRenderer";
+import { useConfig } from "@/context/ConfigContext";
+import { ConfigType } from "@/types/config";
 import {
   cleanMDXSource,
   mdxSerializeOptions,
@@ -121,6 +123,10 @@ export function LivePreview({
   className = "",
   onScroll,
 }: LivePreview) {
+  const shikiTheme = useConfig(
+    "site.shiki.theme",
+  ) as ConfigType<"site.shiki.theme">;
+
   // MDX 模式状态
   const [mdxSource, setMdxSource] = useState<SerializeResult<
     Record<string, unknown>,
@@ -188,10 +194,10 @@ export function LivePreview({
       <RenderError error={renderError} onReset={handleResetError} />
     );
   } else if (mode === "markdown") {
-    // Markdown 模式: 使用 MarkdownRenderer 渲染
+    // Markdown 模式: 使用 MarkdownRenderer 渲染，传递 shikiTheme
     renderedContent = (
       <MDXErrorBoundary onReset={handleResetError}>
-        <MarkdownClientRenderer source={content} />
+        <MarkdownClientRenderer source={content} shikiTheme={shikiTheme} />
       </MDXErrorBoundary>
     );
   } else {
@@ -203,8 +209,11 @@ export function LivePreview({
         );
       } else {
         try {
-          // 使用增强的组件配置（带 ErrorBoundary）
-          const components = createEnhancedMDXComponents(withErrorBoundary);
+          // 使用增强的组件配置（带 ErrorBoundary），传入 Shiki 主题
+          const components = createEnhancedMDXComponents(
+            withErrorBoundary,
+            shikiTheme,
+          );
 
           const { content: hydratedContent, error: hydrateError } = hydrate({
             ...mdxSource,
