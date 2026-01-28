@@ -241,14 +241,20 @@ export default function GridTable<T extends Record<string, unknown>>({
     };
   }, [searchValue, onSearchChange]);
 
+  // 记录上一次的 page 值
+  const prevPageRef = useRef(page);
+
   // 翻页时清理选中状态
   useEffect(() => {
-    // 翻页时清空选中状态
-    if (selectedKeys.size > 0) {
-      setSelectedKeys(new Set());
-      onSelectionChange?.([]);
+    // 只有当 page 真正变化时才清空选中状态
+    if (prevPageRef.current !== page) {
+      if (selectedKeys.size > 0) {
+        setSelectedKeys(new Set());
+        onSelectionChange?.([]);
+      }
+      prevPageRef.current = page;
     }
-  }, [page, selectedKeys.size, onSelectionChange]); // 只依赖 page，不需要依赖 selectedKeys.size 和 onSelectionChange
+  }, [page, selectedKeys.size, onSelectionChange]);
 
   // 获取行的唯一键
   const getRowKey = useCallback(
