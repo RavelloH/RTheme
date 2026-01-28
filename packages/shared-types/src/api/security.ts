@@ -67,7 +67,7 @@ registerSchema(
 export const GetIPListSchema = z.object({
   access_token: z.string().optional(),
   page: z.number().int().positive().default(1),
-  pageSize: z.number().int().positive().max(100).default(20),
+  pageSize: z.number().int().positive().max(500).default(20),
   filter: z.enum(["all", "banned", "rate-limited", "active"]).default("all"),
   sortBy: z
     .enum([

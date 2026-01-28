@@ -181,7 +181,7 @@ export type AdminCommentItem = z.infer<typeof AdminCommentItemSchema>;
 export const GetCommentsAdminSchema = z.object({
   access_token: z.string().optional(),
   page: z.number().int().min(1).default(1),
-  pageSize: z.number().int().min(1).max(100).default(25),
+  pageSize: z.number().int().min(1).max(500).default(25),
   sortBy: z
     .enum(["createdAt", "status", "id", "postSlug"])
     .default("createdAt"),

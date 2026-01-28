@@ -300,7 +300,7 @@ export const GetPostHistorySchema = z.object({
   access_token: z.string().optional(),
   slug: z.string().min(1, "slug 不能为空"),
   page: z.number().int().positive().default(1),
-  pageSize: z.number().int().positive().max(100).default(25),
+  pageSize: z.number().int().positive().max(500).default(25),
   sortBy: z.enum(["timestamp"]).optional().default("timestamp"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
 });

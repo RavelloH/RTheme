@@ -26,7 +26,7 @@ export type TrackPageViewResponse = ApiResponse<null>;
 export const GetPageViewsSchema = z.object({
   access_token: z.string().optional(),
   page: z.number().int().min(1).default(1),
-  pageSize: z.number().int().min(1).max(100).default(25),
+  pageSize: z.number().int().min(1).max(500).default(25),
   sortBy: z
     .enum(["id", "timestamp", "path", "visitorId", "country", "city"])
     .optional(),

@@ -104,7 +104,7 @@ export interface DeleteIndexResult {
 export const GetIndexStatusSchema = z.object({
   access_token: z.string().min(1, "access_token 不能为空"),
   page: z.number().int().positive().optional(),
-  pageSize: z.number().int().positive().max(100).optional(),
+  pageSize: z.number().int().positive().max(500).optional().default(25),
   sortBy: z.enum(["id", "slug", "updatedAt", "tokenizedAt"]).optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
   status: z.enum(["outdated", "up-to-date", "never-indexed"]).optional(),
@@ -270,7 +270,7 @@ export interface SearchLogStatsResult {
 export const GetSearchLogsSchema = z.object({
   access_token: z.string().min(1, "access_token 不能为空"),
   page: z.number().int().positive().optional().default(1),
-  pageSize: z.number().int().positive().max(100).optional().default(25),
+  pageSize: z.number().int().positive().max(500).optional().default(25),
   sortBy: z
     .enum(["id", "createdAt", "query", "resultCount", "durationMs"])
     .optional()

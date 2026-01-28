@@ -3,7 +3,7 @@ import { z } from "zod";
 // 分页元数据 Schema
 export const PaginationMetaSchema = z.object({
   page: z.number().min(1),
-  pageSize: z.number().min(1).max(100),
+  pageSize: z.number().min(1).max(500),
   total: z.number().min(0),
   totalPages: z.number().min(0),
   hasNext: z.boolean(),
@@ -69,7 +69,7 @@ export function createPaginatedResponseSchema<T extends z.ZodTypeAny>(
 // 分页请求参数 Schema
 export const PaginationSchema = z.object({
   page: z.number().min(1).default(1),
-  pageSize: z.number().min(1).max(100).default(10),
+  pageSize: z.number().min(1).max(500).default(10),
   sortBy: z.string().optional(),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
 });
