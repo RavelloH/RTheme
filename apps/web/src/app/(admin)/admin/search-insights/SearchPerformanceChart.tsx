@@ -12,11 +12,20 @@ import AreaChart, {
 } from "@/components/AreaChart";
 import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useBroadcast } from "@/hooks/use-broadcast";
 
 export default function SearchPerformanceChart() {
   const [stats, setStats] = useState<SearchLogStatsResult | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // 监听广播刷新消息
+  useBroadcast<{ type: string }>(async (message) => {
+    if (message.type === "search-insight-refresh") {
+      setRefreshTrigger((prev) => prev + 1); // 触发刷新
+    }
+  });
 
   const fetchStats = async () => {
     setIsLoading(true);
@@ -40,7 +49,7 @@ export default function SearchPerformanceChart() {
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [refreshTrigger]);
 
   // 转换数据格式为面积图需要的格式
   const { chartData, series } = useMemo(() => {

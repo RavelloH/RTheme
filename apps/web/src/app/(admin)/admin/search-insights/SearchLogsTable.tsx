@@ -9,6 +9,7 @@ import type { SearchLogItem } from "@repo/shared-types/api/search";
 import { Dialog } from "@/ui/Dialog";
 import { RiEyeLine } from "@remixicon/react";
 import Clickable from "@/ui/Clickable";
+import { useBroadcast } from "@/hooks/use-broadcast";
 
 /**
  * 格式化地理位置信息
@@ -39,12 +40,19 @@ export default function SearchLogsTable() {
   const [pageSize, setPageSize] = useState(25);
   const [sortKey, setSortKey] = useState<string | null>("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>("desc");
-  const [refreshTrigger] = useState(0);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [filterValues, setFilterValues] = useState<
     Record<string, string | string[] | { start?: string; end?: string }>
   >({});
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<SearchLogItem | null>(null);
+
+  // 监听广播刷新消息
+  useBroadcast<{ type: string }>(async (message) => {
+    if (message.type === "search-insight-refresh") {
+      setRefreshTrigger((prev) => prev + 1); // 触发刷新
+    }
+  });
 
   // 打开详情对话框
   const openDetailDialog = (log: SearchLogItem) => {

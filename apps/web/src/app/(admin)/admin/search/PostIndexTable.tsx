@@ -29,6 +29,7 @@ import Link from "@/components/Link";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { AutoTransition } from "@/ui/AutoTransition";
+import { useBroadcast } from "@/hooks/use-broadcast";
 
 export default function PostIndexTable() {
   const toast = useToast();
@@ -45,6 +46,13 @@ export default function PostIndexTable() {
   const [filterValues, setFilterValues] = useState<
     Record<string, string | string[] | { start?: string; end?: string }>
   >({});
+
+  // 监听广播刷新消息
+  useBroadcast<{ type: string }>(async (message) => {
+    if (message.type === "search-index-refresh") {
+      setRefreshTrigger((prev) => prev + 1); // 触发刷新
+    }
+  });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [indexDialogOpen, setIndexDialogOpen] = useState(false);

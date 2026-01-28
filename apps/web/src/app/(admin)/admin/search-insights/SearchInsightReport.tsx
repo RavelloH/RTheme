@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { getSearchLogStats } from "@/actions/search";
 import type { SearchLogStatsResult } from "@repo/shared-types/api/search";
 import { AutoTransition } from "@/ui/AutoTransition";
@@ -9,6 +9,7 @@ import { GridItem } from "@/components/RowGrid";
 import Clickable from "@/ui/Clickable";
 import { RiRefreshLine } from "@remixicon/react";
 import ErrorPage from "@/components/ui/Error";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 
 /**
  * 生成自然语言描述
@@ -64,34 +65,48 @@ export default function SearchInsightReport() {
   const [stats, setStats] = useState<SearchLogStatsResult | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [days, setDays] = useState<number>(30);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const { broadcast } = useBroadcastSender<{ type: string }>();
 
-  const fetchStats = async (daysParam = 30, forceRefresh = false) => {
-    if (forceRefresh) {
-      setStats(null);
+  // 监听广播刷新消息
+  useBroadcast<{ type: string }>(async (message) => {
+    if (message.type === "search-insight-refresh") {
+      setRefreshTrigger((prev) => prev + 1); // 触发刷新
     }
-    setError(null);
-    setDays(daysParam);
+  });
 
-    try {
-      const result = await getSearchLogStats({
-        days: daysParam,
-        force: forceRefresh,
-      });
-
-      if (result.success && result.data) {
-        setStats(result.data);
-      } else {
-        setError(new Error(result.message || "获取统计数据失败"));
+  const fetchStats = useCallback(
+    async (daysParam = 30, forceRefresh = false) => {
+      if (forceRefresh) {
+        setStats(null);
+        broadcast({ type: "search-insight-refresh" });
+        return;
       }
-    } catch (err) {
-      console.error("获取搜索日志统计失败:", err);
-      setError(new Error("获取统计数据失败"));
-    }
-  };
+      setError(null);
+      setDays(daysParam);
+
+      try {
+        const result = await getSearchLogStats({
+          days: daysParam,
+          force: forceRefresh,
+        });
+
+        if (result.success && result.data) {
+          setStats(result.data);
+        } else {
+          setError(new Error(result.message || "获取统计数据失败"));
+        }
+      } catch (err) {
+        console.error("获取搜索日志统计失败:", err);
+        setError(new Error("获取统计数据失败"));
+      }
+    },
+    [broadcast],
+  );
 
   useEffect(() => {
-    fetchStats();
-  }, []);
+    fetchStats(days);
+  }, [refreshTrigger, days, fetchStats]);
 
   return (
     <GridItem areas={[1, 2, 3, 4]} width={3} height={0.8}>

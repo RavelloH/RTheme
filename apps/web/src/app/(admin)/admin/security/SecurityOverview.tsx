@@ -108,18 +108,18 @@ export default function SecurityOverview() {
     return (
       <div className="leading-relaxed">
         <p>
-          共处理{formatNumber(totalRequests)}个函数请求，其中{" "}
-          {formatNumber(totalError)}个超过速率限制，错误率{" "}
+          共处理 {formatNumber(totalRequests)} 个函数请求，其中{" "}
+          {formatNumber(totalError)} 个超过速率限制，错误率{" "}
           {calcErrorRate(totalSuccess, totalError)}。
         </p>
         <p>
-          最近 24 小时处理 {formatNumber(last24hTotal)} 个请求，
+          最近 24 小时处理 {formatNumber(last24hTotal)} 个，
           {formatNumber(last24hError)} 个超过速率限制，错误率{" "}
           {calcErrorRate(last24hSuccess, last24hError)}
           ，平均每小时 {formatNumber(avgPerHour)} 个。
         </p>
         <p>
-          最近 30 天处理 {formatNumber(last30dTotal)} 个请求，
+          最近 30 天处理 {formatNumber(last30dTotal)} 个，
           {formatNumber(last30dError)} 个超过速率限制，错误率{" "}
           {calcErrorRate(last30dSuccess, last30dError)}
           ，平均每天 {formatNumber(avgPerDay)} 个。

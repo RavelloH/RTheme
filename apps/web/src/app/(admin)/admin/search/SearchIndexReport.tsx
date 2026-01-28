@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { getSearchIndexStats } from "@/actions/search";
 import type { SearchIndexStatsResult } from "@repo/shared-types/api/search";
 import { AutoTransition } from "@/ui/AutoTransition";
@@ -9,6 +9,7 @@ import { GridItem } from "@/components/RowGrid";
 import Clickable from "@/ui/Clickable";
 import { RiRefreshLine } from "@remixicon/react";
 import ErrorPage from "@/components/ui/Error";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 
 /**
  * 格式化文件大小
@@ -121,30 +122,44 @@ function generateDescription(
 export default function SearchIndexReport() {
   const [stats, setStats] = useState<SearchIndexStatsResult | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const { broadcast } = useBroadcastSender<{ type: string }>();
 
-  const fetchStats = async (forceRefresh = false) => {
-    if (forceRefresh) {
-      setStats(null);
+  // 监听广播刷新消息
+  useBroadcast<{ type: string }>(async (message) => {
+    if (message.type === "search-index-refresh") {
+      setRefreshTrigger((prev) => prev + 1); // 触发刷新
     }
-    setError(null);
+  });
 
-    try {
-      const result = await getSearchIndexStats({ force: forceRefresh });
-
-      if (result.success && result.data) {
-        setStats(result.data);
-      } else {
-        setError(new Error(result.message || "获取统计数据失败"));
+  const fetchStats = useCallback(
+    async (forceRefresh = false) => {
+      if (forceRefresh) {
+        setStats(null);
+        broadcast({ type: "search-index-refresh" });
+        return;
       }
-    } catch (err) {
-      console.error("获取搜索索引统计失败:", err);
-      setError(new Error("获取统计数据失败"));
-    }
-  };
+      setError(null);
+
+      try {
+        const result = await getSearchIndexStats({ force: forceRefresh });
+
+        if (result.success && result.data) {
+          setStats(result.data);
+        } else {
+          setError(new Error(result.message || "获取统计数据失败"));
+        }
+      } catch (err) {
+        console.error("获取搜索索引统计失败:", err);
+        setError(new Error("获取统计数据失败"));
+      }
+    },
+    [broadcast],
+  );
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [refreshTrigger, fetchStats]);
 
   return (
     <GridItem areas={[1, 2, 3, 4, 5, 6]} width={2} height={0.8}>

@@ -3,10 +3,10 @@
 import { GridItem } from "@/components/RowGrid";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { getMediaStats } from "@/actions/media";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import ErrorPage from "@/components/ui/Error";
-import { useBroadcast } from "@/hooks/use-broadcast";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import Clickable from "@/ui/Clickable";
 import { RiRefreshLine } from "@remixicon/react";
 
@@ -34,6 +34,7 @@ export default function MediaStats() {
   const [refreshTime, setRefreshTime] = useState<Date | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const { broadcast } = useBroadcastSender<{ type: string }>();
 
   // 监听广播刷新消息
   useBroadcast<{ type: string }>(async (message) => {
@@ -42,76 +43,80 @@ export default function MediaStats() {
     }
   });
 
-  const fetchData = async (forceRefresh: boolean = false) => {
-    if (forceRefresh) {
-      setResult(null);
-    }
-    setError(null);
-    try {
-      const res = await getMediaStats({ days: 30, force: forceRefresh });
-      if (!res.success) {
-        setError(new Error(res.message || "获取媒体统计失败"));
+  const fetchData = useCallback(
+    async (forceRefresh: boolean = false) => {
+      if (forceRefresh) {
+        setResult(null);
+        broadcast({ type: "media-refresh" });
         return;
       }
-      if (!res.data) return;
-
-      // 获取文件类型名称
-      const getFileTypeName = (type: string) => {
-        switch (type) {
-          case "IMAGE":
-            return "图片";
-          case "VIDEO":
-            return "视频";
-          case "AUDIO":
-            return "音频";
-          case "FILE":
-            return "文件";
-          default:
-            return "其他";
+      setError(null);
+      try {
+        const res = await getMediaStats({ days: 30, force: forceRefresh });
+        if (!res.success) {
+          setError(new Error(res.message || "获取媒体统计失败"));
+          return;
         }
-      };
+        if (!res.data) return;
 
-      // 计算最近统计数据
-      const last7Days = res.data.dailyStats
-        .slice(0, 7)
-        .reduce((sum, day) => sum + day.newFiles, 0);
-      const last30Days = res.data.dailyStats.reduce(
-        (sum, day) => sum + day.newFiles,
-        0,
-      );
-      const averageDailyNew =
-        res.data.dailyStats.length > 0
-          ? Math.round(last30Days / res.data.dailyStats.length)
-          : 0;
+        // 获取文件类型名称
+        const getFileTypeName = (type: string) => {
+          switch (type) {
+            case "IMAGE":
+              return "图片";
+            case "VIDEO":
+              return "视频";
+            case "AUDIO":
+              return "音频";
+            case "FILE":
+              return "文件";
+            default:
+              return "其他";
+          }
+        };
 
-      const formattedData: StatsData = {
-        updatedAt: res.data.updatedAt,
-        cache: res.data.cache,
-        totalFiles: res.data.totalFiles,
-        totalSize: res.data.totalSize,
-        averageDailyNew,
-        typeDistribution: res.data.typeDistribution.map((type) => ({
-          ...type,
-          name: getFileTypeName(type.type),
-        })),
-        recentStats: {
-          last7Days,
-          last30Days,
-        },
-      };
+        // 计算最近统计数据
+        const last7Days = res.data.dailyStats
+          .slice(0, 7)
+          .reduce((sum, day) => sum + day.newFiles, 0);
+        const last30Days = res.data.dailyStats.reduce(
+          (sum, day) => sum + day.newFiles,
+          0,
+        );
+        const averageDailyNew =
+          res.data.dailyStats.length > 0
+            ? Math.round(last30Days / res.data.dailyStats.length)
+            : 0;
 
-      setResult(formattedData);
-      setIsCache(res.data.cache);
-      setRefreshTime(new Date(res.data.updatedAt));
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error("获取统计数据失败"));
-    }
-  };
+        const formattedData: StatsData = {
+          updatedAt: res.data.updatedAt,
+          cache: res.data.cache,
+          totalFiles: res.data.totalFiles,
+          totalSize: res.data.totalSize,
+          averageDailyNew,
+          typeDistribution: res.data.typeDistribution.map((type) => ({
+            ...type,
+            name: getFileTypeName(type.type),
+          })),
+          recentStats: {
+            last7Days,
+            last30Days,
+          },
+        };
+
+        setResult(formattedData);
+        setIsCache(res.data.cache);
+        setRefreshTime(new Date(res.data.updatedAt));
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error("获取统计数据失败"));
+      }
+    },
+    [broadcast],
+  );
 
   useEffect(() => {
     fetchData();
-  }, [refreshTrigger]);
-
+  }, [refreshTrigger, fetchData]);
   // 格式化文件大小
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return "0 B";

@@ -9,8 +9,7 @@ import type {
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { GridItem } from "@/components/RowGrid";
-import Clickable from "@/ui/Clickable";
-import { RiRefreshLine } from "@remixicon/react";
+import { useBroadcast } from "@/hooks/use-broadcast";
 import ErrorPage from "@/components/ui/Error";
 import { Tooltip } from "@/ui/Tooltip";
 
@@ -33,6 +32,14 @@ export default function SearchWordCloud() {
     showBottom: true,
   });
   const [hoveredWord, setHoveredWord] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // 监听广播刷新消息
+  useBroadcast<{ type: string }>(async (message) => {
+    if (message.type === "search-insight-refresh") {
+      setRefreshTrigger((prev) => prev + 1); // 触发刷新
+    }
+  });
 
   const fetchStats = async () => {
     setSearchStats(null);
@@ -62,7 +69,7 @@ export default function SearchWordCloud() {
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [refreshTrigger]);
 
   // 判断词是否在两边都出现
   const getWordType = (word: string) => {
@@ -176,12 +183,9 @@ export default function SearchWordCloud() {
     >
       <div className="flex flex-col h-full p-10 overflow-hidden">
         {/* 顶部固定高度 */}
-        <div className="flex flex-col gap-2 shrink-0">
+        <div className="flex flex-col gap-2 shrink-0 pb-2">
           <div className="flex items-center justify-between">
-            <div className="text-2xl">搜索热词 vs 全站词云</div>
-            <Clickable onClick={fetchStats}>
-              <RiRefreshLine size={"1em"} />
-            </Clickable>
+            <div className="text-2xl">搜索热词</div>
           </div>
         </div>
 
