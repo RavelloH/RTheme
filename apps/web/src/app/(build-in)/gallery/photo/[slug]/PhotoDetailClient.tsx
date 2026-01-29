@@ -258,13 +258,9 @@ export default function PhotoDetailClient({
             <div className="font-medium text-sm text-foreground truncate">
               {uploader.nickname || uploader.username}
             </div>
-            {uploader.nickname ? (
+            {uploader.nickname && (
               <div className="text-xs text-muted-foreground truncate">
-                @{uploader.username} {uploader.bio}
-              </div>
-            ) : (
-              <div className="text-xs text-muted-foreground truncate">
-                {uploader.bio}
+                @{uploader.username}
               </div>
             )}
           </div>
@@ -276,7 +272,7 @@ export default function PhotoDetailClient({
         <h3 className="mb-3 text-sm font-semibold text-foreground/80">
           图片信息
         </h3>
-        <div className="grid grid-cols-4 gap-x-4 gap-y-2 text-xs">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-xs">
           {photo.media.width && photo.media.height && (
             <div>
               <span className="text-muted-foreground">尺寸</span>
@@ -362,7 +358,7 @@ export default function PhotoDetailClient({
               <h3 className="mb-3 text-sm font-semibold text-foreground/80">
                 相机信息
               </h3>
-              <div className="grid grid-cols-4 gap-y-2 gap-x-4 text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-y-2 gap-x-4 text-xs">
                 {(parsedExif.make || parsedExif.model) && (
                   <div>
                     <span className="text-muted-foreground">相机</span>
@@ -406,7 +402,7 @@ export default function PhotoDetailClient({
               <h3 className="mb-3 text-sm font-semibold text-foreground/80">
                 拍摄参数
               </h3>
-              <div className="grid grid-cols-4 gap-x-4 gap-y-2 text-xs">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-xs">
                 {parsedExif.exposureTime !== undefined && (
                   <div>
                     <span className="text-muted-foreground">快门</span>

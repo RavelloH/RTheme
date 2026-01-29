@@ -8,6 +8,8 @@ import { generateSkeletonPhotos } from "@/lib/gallery-skeleton";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import { getGalleryPhotos } from "@/actions/media";
 import { useInView } from "react-intersection-observer";
+import { useMobile } from "@/hooks/use-mobile";
+import GalleryListMobile from "./GalleryListMobile";
 
 interface GalleryClientProps {
   initialPhotos: GalleryPhoto[];
@@ -18,6 +20,7 @@ export default function GalleryClient({
   initialPhotos,
   initialCursor,
 }: GalleryClientProps) {
+  const isMobile = useMobile();
   const initialResult = useMemo(
     () => generateLayout(initialPhotos),
     [initialPhotos],
@@ -90,6 +93,18 @@ export default function GalleryClient({
     const index = Math.max(0, tiles.length - 20);
     return tiles[index];
   }, [tiles]);
+
+  if (isMobile) {
+    return (
+      <div className="h-full w-full">
+        <GalleryListMobile tiles={displayTiles} />
+        {/* Mobile Sentinel: Just a div at the bottom (or near bottom if we want pre-fetching) */}
+        {cursor !== undefined && (
+          <div ref={ref} className="h-10 w-full opacity-0" />
+        )}
+      </div>
+    );
+  }
 
   return (
     <HorizontalScroll className="h-full w-full [container-type:size]">
