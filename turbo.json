@@ -54,7 +54,6 @@
       "outputLogs": "full"
     },
     "docs#dev": {
-      "dependsOn": ["generate-openapi"],
       "cache": false,
       "persistent": true,
       "env": ["NODE_ENV"]
@@ -75,23 +74,10 @@
       ],
       "env": ["NODE_ENV"]
     },
-    "generate-api-docs": {
-      "dependsOn": ["generate-openapi"],
-      "inputs": [
-        "packages/openapi-spec/openapi.json",
-        "packages/openapi-spec/openapi.yaml"
-      ],
-      "outputs": ["docs/api/**"],
-      "env": ["NODE_ENV"]
-    },
     "docs#build": {
-      "dependsOn": ["generate-openapi"],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        "packages/openapi-spec/openapi.json",
-        "packages/openapi-spec/openapi.yaml"
-      ],
-      "outputs": ["build/**"],
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": [".next/**", "!.next/cache/**"],
       "env": ["NODE_ENV"]
     }
   }
