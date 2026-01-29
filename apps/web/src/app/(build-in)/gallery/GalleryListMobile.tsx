@@ -5,13 +5,12 @@ import { useCallback, useRef } from "react";
 import type { Tile } from "@/lib/gallery-layout";
 import { GalleryTile } from "./GalleryTile";
 
-interface GalleryGridProps {
+interface GalleryListMobileProps {
   tiles: Tile[];
 }
 
-export default function GalleryGrid({ tiles }: GalleryGridProps) {
+export default function GalleryListMobile({ tiles }: GalleryListMobileProps) {
   const setSourceRect = useGalleryLightboxStore((s) => s.setSourceRect);
-  // 存储每个图片容器的 ref
   const containerRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
   const handleClick = useCallback(
@@ -19,7 +18,6 @@ export default function GalleryGrid({ tiles }: GalleryGridProps) {
       const container = containerRefs.current.get(tileId);
       if (container) {
         const rect = container.getBoundingClientRect();
-        // 获取实际渲染的缩略图 URL（包含 Next.js 的图片优化参数）
         const imgElement = container.querySelector("img");
         const actualThumbnailUrl =
           imgElement?.currentSrc || imgElement?.src || imageUrl;
@@ -40,11 +38,31 @@ export default function GalleryGrid({ tiles }: GalleryGridProps) {
   );
 
   return (
-    <>
+    <div className="grid grid-cols-2 grid-flow-dense gap-1 p-1 pb-20">
       {tiles.map((tile) => {
-        const colSpan = tile.type === "fat" || tile.type === "bigCube4" ? 2 : 1;
-        const rowSpan =
-          tile.type === "tall" || tile.type === "bigCube4" ? 2 : 1;
+        let className = "relative overflow-hidden";
+        const style: React.CSSProperties = {};
+
+        // Determine spans and aspect ratios based on tile type
+        // Assuming grid-cols-2
+        switch (tile.type) {
+          case "fat":
+            className += " col-span-2";
+            style.aspectRatio = "2 / 1";
+            break;
+          case "bigCube4":
+            className += " col-span-2";
+            style.aspectRatio = "1 / 1";
+            break;
+          case "tall":
+            className += " row-span-2";
+            style.aspectRatio = "1 / 2";
+            break;
+          default:
+            // cube
+            style.aspectRatio = "1 / 1";
+            break;
+        }
 
         return (
           <GalleryTile
@@ -55,15 +73,11 @@ export default function GalleryGrid({ tiles }: GalleryGridProps) {
               if (el) containerRefs.current.set(tile.id, el);
               else containerRefs.current.delete(tile.id);
             }}
-            style={{
-              gridColumn: `span ${colSpan} / span ${colSpan}`,
-              gridRow: `span ${rowSpan} / span ${rowSpan}`,
-              gridColumnStart: tile.col + 1,
-              gridRowStart: tile.row + 1,
-            }}
+            className={className}
+            style={style}
           />
         );
       })}
-    </>
+    </div>
   );
 }
