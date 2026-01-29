@@ -313,12 +313,15 @@ model Media {
   blur        String? @db.VarChar(2048)
   thumbnails  Json
   exif        Json
-  inGallery   Boolean @default(false)
   isOptimized Boolean @default(false)
 
   storageUrl        String   @db.VarChar(500)
   createdAt         DateTime @default(now())
   storageProviderId String
+
+  // 图库相关
+  // inGallery       Boolean         @default(false) 删除这个字段，使用是否有 galleryPhoto 关系来判断
+  galleryPhoto Photo?
 
   // 上传者
   userUid         Int
@@ -330,10 +333,34 @@ model Media {
 
   @@unique([shortHash])
   // 索引优化
-  @@index([inGallery])
   @@index([userUid])
   @@index([createdAt])
   @@index([fileName])
+}
+
+model Photo {
+  id          Int         @id @default(autoincrement())
+  slug        String      @unique
+  name        String      @db.VarChar(100)
+  size        GallerySize @default(AUTO)
+  description String?
+
+  showExif Boolean @default(true)
+  hideGPS  Boolean @default(true)
+
+  // Exif 覆盖信息，显示的时候与 Media.exif 合并
+  overrideExif Json?
+
+  media   Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  mediaId Int   @unique
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  shotAt    DateTime?
+  sortTime  DateTime  @default(now())
+
+  // 索引优化
+  @@index([sortTime(sort: Desc)])
 }
 
 // 媒体引用关系表 - 统一管理所有图片引用
@@ -821,4 +848,12 @@ enum AccountProvider {
 enum MessageType {
   TEXT
   SYSTEM
+}
+
+enum GallerySize {
+  SQUARE
+  TALL
+  WIDE
+  LARGE
+  AUTO
 }

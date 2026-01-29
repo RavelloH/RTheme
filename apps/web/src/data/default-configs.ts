@@ -278,6 +278,16 @@ export const CONFIG_DEFINITIONS = {
     description:
       "是否在防盗链拦截时，返回一张占位图片来提示回到此站查看图片。关闭后将直接返回403错误",
   },
+  "media.gallery.sortByShotTime": {
+    default: false,
+    description:
+      "画廊页面是否优先按拍摄时间排序。开启后，若照片包含拍摄时间元数据，则优先按拍摄时间排列；否则按当前上传时间排列",
+  },
+  "media.gallery.sortOrder": {
+    default: "desc" as "asc" | "desc",
+    description:
+      "画廊页面照片的排序顺序，最新照片在前（desc）或最早照片在前（asc）",
+  },
   // =====================================
   // 评论相关配置
   // =====================================

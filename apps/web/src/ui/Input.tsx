@@ -152,7 +152,7 @@ export const Input = forwardRef<
     relative w-full bg-transparent border-0
     px-0 ${sizeStyles.input} text-white
     focus:outline-none
-    disabled:opacity-50 disabled:cursor-not-allowed
+    disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-500
     ${isTextarea ? "resize-none" : ""}
   `;
 

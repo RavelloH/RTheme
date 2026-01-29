@@ -219,6 +219,7 @@ export function Select({
             focus:outline-none
             disabled:opacity-50
             disabled:cursor-not-allowed
+            transition-opacity duration-500
             min-w-[120px]
             w-full
           `}

@@ -43,6 +43,7 @@ export default function CMSImage({
   alt,
   onError,
   className,
+  priority,
   ...rest
 }: CMSImageProps) {
   const [hasError, setHasError] = useState(false);
@@ -84,6 +85,8 @@ export default function CMSImage({
       {...(fill ? { fill: true } : { width, height })}
       alt={alt}
       unoptimized={!shouldOptimize}
+      priority={priority}
+      loading={priority ? undefined : "lazy"}
       placeholder={isValidBlur ? "blur" : "empty"}
       blurDataURL={isValidBlur ? blur : undefined}
       onError={handleError}

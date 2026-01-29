@@ -686,4 +686,18 @@ export const defaultPages: DefaultPage[] = [
     metaKeywords: "关于我们, 团队介绍, 公司简介, 使命愿景, 团队故事",
     robotsIndex: true,
   },
+  {
+    id: "gallery-page",
+    title: "照片墙",
+    slug: "/gallery",
+    content: "",
+    contentType: "MARKDOWN",
+    config: {},
+    status: "ACTIVE",
+    isSystemPage: true,
+    // SEO 字段
+    metaDescription: "展示个人和团队的摄影作品，捕捉生活中的精彩瞬间与美好回忆",
+    metaKeywords: "照片墙, 摄影作品, 生活瞬间, 作品展示, 视觉故事",
+    robotsIndex: true,
+  },
 ];

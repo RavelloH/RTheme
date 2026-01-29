@@ -13,6 +13,34 @@ export const MediaTypeSchema = z.enum(["IMAGE", "VIDEO", "AUDIO", "FILE"]);
 
 export type MediaType = z.infer<typeof MediaTypeSchema>;
 
+export const GallerySizeSchema = z.enum([
+  "SQUARE",
+  "TALL",
+  "WIDE",
+  "LARGE",
+  "AUTO",
+]);
+
+export type GallerySize = z.infer<typeof GallerySizeSchema>;
+
+export const PhotoSchema = z.object({
+  id: z.number(),
+  slug: z.string(),
+  name: z.string(),
+  size: GallerySizeSchema,
+  description: z.string().nullable(),
+  showExif: z.boolean(),
+  hideGPS: z.boolean(),
+  overrideExif: z.any().nullable(),
+  mediaId: z.number(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  shotAt: z.string().nullable(),
+  sortTime: z.string(),
+});
+
+export type Photo = z.infer<typeof PhotoSchema>;
+
 // ============================================================================
 // Get Media List
 // ============================================================================
@@ -94,6 +122,7 @@ export const MediaDetailSchema = z.object({
   thumbnails: z.any().nullable(),
   exif: z.any().nullable(),
   inGallery: z.boolean(),
+  galleryPhoto: PhotoSchema.nullable().optional(),
   isOptimized: z.boolean(),
   storageUrl: z.string(),
   createdAt: z.string(),
@@ -160,6 +189,14 @@ export const UpdateMediaSchema = z.object({
   originalName: z.string().min(1).max(255).optional(),
   altText: z.string().max(255).nullable().optional(),
   inGallery: z.boolean().optional(),
+  // Gallery fields
+  name: z.string().optional(),
+  slug: z.string().optional(),
+  description: z.string().optional(),
+  gallerySize: GallerySizeSchema.optional(),
+  showExif: z.boolean().optional(),
+  hideGPS: z.boolean().optional(),
+  overrideExif: z.any().optional(),
 });
 
 export type UpdateMedia = z.infer<typeof UpdateMediaSchema>;
@@ -173,6 +210,28 @@ export const UpdateMediaResponseSchema = z.object({
 });
 
 export type UpdateMediaResponse = z.infer<typeof UpdateMediaResponseSchema>;
+
+// ============================================================================
+// Batch Update Media
+// ============================================================================
+
+export const BatchUpdateMediaSchema = z.object({
+  access_token: z.string().optional(),
+  ids: z.array(z.number().int().positive()).min(1),
+  inGallery: z.boolean().optional(),
+  isOptimized: z.boolean().optional(),
+});
+
+export type BatchUpdateMedia = z.infer<typeof BatchUpdateMediaSchema>;
+
+export const BatchUpdateMediaResponseSchema = z.object({
+  updated: z.number(),
+  ids: z.array(z.number()),
+});
+
+export type BatchUpdateMediaResponse = z.infer<
+  typeof BatchUpdateMediaResponseSchema
+>;
 
 // ============================================================================
 // Delete Media
@@ -283,6 +342,13 @@ export type DeleteMediaResponseWrapper = z.infer<
   typeof DeleteMediaResponseWrapperSchema
 >;
 
+export const BatchUpdateMediaResponseWrapperSchema =
+  createSuccessResponseSchema(BatchUpdateMediaResponseSchema);
+
+export type BatchUpdateMediaResponseWrapper = z.infer<
+  typeof BatchUpdateMediaResponseWrapperSchema
+>;
+
 export const GetMediaStatsResponseSchema =
   createSuccessResponseSchema(MediaStatsSchema);
 
@@ -303,6 +369,7 @@ export type GetMediaTrendsResponse = z.infer<
 registerSchema("GetMediaList", GetMediaListSchema);
 registerSchema("GetMediaDetail", GetMediaDetailSchema);
 registerSchema("UpdateMedia", UpdateMediaSchema);
+registerSchema("BatchUpdateMedia", BatchUpdateMediaSchema);
 registerSchema("DeleteMedia", DeleteMediaSchema);
 registerSchema("GetMediaStats", GetMediaStatsSchema);
 registerSchema("GetMediaTrends", GetMediaTrendsSchema);
