@@ -3290,7 +3290,7 @@ components:
             pageSize:
               type: number
               minimum: 1
-              maximum: 100
+              maximum: 500
             total:
               type: number
               minimum: 0
@@ -3345,7 +3345,7 @@ components:
           default: 10
           type: number
           minimum: 1
-          maximum: 100
+          maximum: 500
         sortBy:
           type: string
         sortOrder:
@@ -8225,7 +8225,7 @@ components:
           default: 25
           type: integer
           exclusiveMinimum: true
-          maximum: 100
+          maximum: 500
         sortBy:
           default: timestamp
           type: string
@@ -10067,7 +10067,7 @@ components:
             pageSize:
               type: number
               minimum: 1
-              maximum: 100
+              maximum: 500
             total:
               type: number
               minimum: 0
@@ -10669,7 +10669,7 @@ components:
             pageSize:
               type: number
               minimum: 1
-              maximum: 100
+              maximum: 500
             total:
               type: number
               minimum: 0
@@ -10750,7 +10750,7 @@ components:
           default: 25
           type: integer
           minimum: 1
-          maximum: 100
+          maximum: 500
         sortBy:
           default: createdAt
           type: string
@@ -10966,7 +10966,7 @@ components:
             pageSize:
               type: number
               minimum: 1
-              maximum: 100
+              maximum: 500
             total:
               type: number
               minimum: 0
@@ -11392,7 +11392,7 @@ components:
           default: 20
           type: integer
           exclusiveMinimum: true
-          maximum: 100
+          maximum: 500
         filter:
           default: all
           type: string
@@ -12443,7 +12443,7 @@ components:
           default: 25
           type: integer
           minimum: 1
-          maximum: 100
+          maximum: 500
         sortBy:
           default: createdAt
           type: string
@@ -12966,7 +12966,7 @@ components:
           default: 25
           type: integer
           minimum: 1
-          maximum: 100
+          maximum: 500
         sortBy:
           default: createdAt
           type: string
@@ -13050,8 +13050,46 @@ components:
           maxLength: 255
         inGallery:
           type: boolean
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        gallerySize:
+          type: string
+          enum:
+            - SQUARE
+            - TALL
+            - WIDE
+            - LARGE
+            - AUTO
+        showExif:
+          type: boolean
+        hideGPS:
+          type: boolean
+        overrideExif: {}
       required:
         - id
+      additionalProperties: false
+    BatchUpdateMedia:
+      type: object
+      properties:
+        access_token:
+          type: string
+        ids:
+          minItems: 1
+          type: array
+          items:
+            type: integer
+            exclusiveMinimum: true
+            maximum: 9007199254740991
+        inGallery:
+          type: boolean
+        isOptimized:
+          type: boolean
+      required:
+        - ids
       additionalProperties: false
     DeleteMedia:
       type: object
@@ -13224,6 +13262,59 @@ components:
           nullable: true
         inGallery:
           type: boolean
+        galleryPhoto:
+          nullable: true
+          type: object
+          properties:
+            id:
+              type: number
+            slug:
+              type: string
+            name:
+              type: string
+            size:
+              type: string
+              enum:
+                - SQUARE
+                - TALL
+                - WIDE
+                - LARGE
+                - AUTO
+            description:
+              nullable: true
+              type: string
+            showExif:
+              type: boolean
+            hideGPS:
+              type: boolean
+            overrideExif:
+              nullable: true
+            mediaId:
+              type: number
+            createdAt:
+              type: string
+            updatedAt:
+              type: string
+            shotAt:
+              nullable: true
+              type: string
+            sortTime:
+              type: string
+          required:
+            - id
+            - slug
+            - name
+            - size
+            - description
+            - showExif
+            - hideGPS
+            - overrideExif
+            - mediaId
+            - createdAt
+            - updatedAt
+            - shotAt
+            - sortTime
+          additionalProperties: false
         isOptimized:
           type: boolean
         storageUrl:

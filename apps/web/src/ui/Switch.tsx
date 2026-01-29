@@ -115,7 +115,7 @@ export function Switch({
 
   return (
     <div
-      className={`inline-flex items-center gap-3 ${
+      className={`inline-flex items-center gap-3 transition-opacity duration-500 ${
         disabled ? "opacity-60" : ""
       } ${className}`}
     >
@@ -151,7 +151,7 @@ export function Switch({
         }}
       >
         <span
-          className={`absolute inset-0 rounded-sm transition-colors duration-200 ${
+          className={`absolute inset-0 rounded-sm transition-[opacity,colors] duration-500  ${
             isChecked
               ? "bg-primary"
               : "bg-foreground/30 dark:bg-muted-foreground/40"

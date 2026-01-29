@@ -241,6 +241,7 @@ export default function SearchLogsTable() {
       key: "durationMs",
       title: "耗时",
       dataIndex: "durationMs",
+      align: "right",
       sortable: true,
       mono: true,
       render: (value: unknown) => {
@@ -260,6 +261,7 @@ export default function SearchLogsTable() {
       key: "resultCount",
       title: "结果数",
       dataIndex: "resultCount",
+      align: "center",
       sortable: true,
       mono: true,
       render: (value: unknown) => {

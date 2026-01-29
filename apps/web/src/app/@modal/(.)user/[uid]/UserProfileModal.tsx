@@ -47,6 +47,7 @@ export default function UserProfileModal({
       onClose={() => handleClose()}
       title={`${displayName} 的个人主页`}
       size="xl"
+      className="z-[100]"
       showCloseButton={true}
       dismissable={true}
     >

@@ -648,7 +648,7 @@ function MediaAddInner() {
                 {
                   value: "lossless",
                   label: "无损转换",
-                  description: "无损转换为 WebP ，并保留元数据",
+                  description: "无损转换为 WebP ",
                 },
                 {
                   value: "original",

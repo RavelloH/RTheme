@@ -41,7 +41,7 @@ export async function slugify(text: string): Promise<string> {
       format: OutputFormat.AllString,
     })
       .result.toLowerCase()
-      .replace(/\s+/g, "-")
+      .replace(/[\s_]+/g, "-")
       .replace(/[^a-z0-9-]/g, "");
 
     const slug = pinyinText
@@ -68,7 +68,7 @@ export async function slugify(text: string): Promise<string> {
         // 统一转换为小写并清理
         return word
           .toLowerCase()
-          .replace(/\s+/g, "-")
+          .replace(/[\s_]+/g, "-")
           .replace(/[^a-z0-9-]/g, "");
       })
       .filter((word: string) => word !== "");
@@ -145,7 +145,7 @@ export function sanitizeUserSlug(userSlug: string): string {
   return userSlug
     .trim()
     .toLowerCase()
-    .replace(/\s+/g, "-") // 空格替换为连字符
+    .replace(/[\s_]+/g, "-") // 空格和下划线替换为连字符
     .replace(/[^a-z0-9-]/g, "") // 删除非法字符
     .replace(/-+/g, "-") // 多个连字符替换为一个
     .replace(/^-+|-+$/g, ""); // 去除首尾连字符

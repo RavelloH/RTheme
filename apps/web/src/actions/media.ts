@@ -1,5 +1,6 @@
 "use server";
 import type { NextResponse } from "next/server";
+import { updateTag } from "next/cache";
 import type {
   GetMediaList,
   MediaListItem,
@@ -7,16 +8,19 @@ import type {
   MediaDetail,
   UpdateMedia,
   DeleteMedia,
+  BatchUpdateMedia,
   GetMediaStats,
   MediaStats,
   GetMediaTrends,
   MediaTrendItem,
+  GallerySize,
 } from "@repo/shared-types/api/media";
 import {
   GetMediaListSchema,
   GetMediaDetailSchema,
   UpdateMediaSchema,
   DeleteMediaSchema,
+  BatchUpdateMediaSchema,
   GetMediaStatsSchema,
   GetMediaTrendsSchema,
 } from "@repo/shared-types/api/media";
@@ -39,12 +43,91 @@ import {
 import { uploadObject } from "@/lib/server/oss";
 import { generateSignedImageId } from "@/lib/server/image-crypto";
 import { getCache, setCache, generateCacheKey } from "@/lib/server/cache";
+import { slugify } from "@/lib/server/slugify";
+import type { GalleryPhoto } from "@/lib/gallery-layout";
+import { getGalleryPhotosData } from "@/lib/server/media";
+import { parseExifBuffer } from "@/lib/client/media-exif";
 
 type ActionEnvironment = "serverless" | "serveraction";
+// ... (rest of the type definitions)
+
+/**
+ * 内部辅助函数：从 Media 记录中提取拍摄时间
+ */
+function extractShotAtFromMedia(exif: unknown): Date | null {
+  if (!exif || typeof exif !== "object") return null;
+
+  const exifObj = exif as Record<string, unknown>;
+  if (!exifObj.raw) return null;
+
+  const raw = exifObj.raw as Record<string, unknown>;
+
+  try {
+    // Prisma 的 Json 字段会将 Buffer 序列化为 { type: 'Buffer', data: [...] }
+    let buffer: Buffer;
+    if (Buffer.isBuffer(raw)) {
+      buffer = raw as unknown as Buffer;
+    } else if (
+      raw &&
+      typeof raw === "object" &&
+      raw.type === "Buffer" &&
+      Array.isArray(raw.data)
+    ) {
+      buffer = Buffer.from(raw.data as number[]);
+    } else {
+      return null;
+    }
+
+    const parsed = parseExifBuffer(buffer);
+    return parsed?.dateTimeOriginal || parsed?.dateTime || null;
+  } catch (error) {
+    console.error("Failed to extract shotAt from exif:", error);
+    return null;
+  }
+}
 type ActionConfig = { environment?: ActionEnvironment };
 type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
+
+/*
+  getGalleryPhotos - 获取画廊照片列表（公开）
+*/
+export async function getGalleryPhotos(
+  params: { cursorId?: number },
+  serverConfig: { environment: "serverless" },
+): Promise<
+  NextResponse<
+    ApiResponse<{ photos: GalleryPhoto[]; nextCursor?: number } | null>
+  >
+>;
+export async function getGalleryPhotos(
+  params?: { cursorId?: number },
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<{ photos: GalleryPhoto[]; nextCursor?: number } | null>>;
+export async function getGalleryPhotos(
+  params: { cursorId?: number } = {},
+  serverConfig?: ActionConfig,
+): Promise<
+  ActionResult<{ photos: GalleryPhoto[]; nextCursor?: number } | null>
+> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  // Server Action 仍然需要速率限制
+  if (!(await limitControl(await headers(), "getGalleryPhotos"))) {
+    return response.tooManyRequests();
+  }
+
+  try {
+    const data = await getGalleryPhotosData(params);
+    return response.ok({ data });
+  } catch (error) {
+    console.error("GetGalleryPhotos error:", error);
+    return response.serverError();
+  }
+}
 
 /*
   getMediaList - 获取媒体文件列表
@@ -180,9 +263,13 @@ export async function getMediaList(
       conditions.push(sizeCondition);
     }
 
-    // 是否在图库中显示
+    // 是否在图库中显示 (使用 galleryPhoto 关系判断)
     if (inGallery !== undefined) {
-      conditions.push({ inGallery });
+      if (inGallery) {
+        conditions.push({ galleryPhoto: { isNot: null } });
+      } else {
+        conditions.push({ galleryPhoto: { is: null } });
+      }
     }
 
     // 是否已优化
@@ -243,7 +330,11 @@ export async function getMediaList(
         height: true,
         altText: true,
         blur: true,
-        inGallery: true,
+        galleryPhoto: {
+          select: {
+            id: true,
+          },
+        },
         createdAt: true,
         user: {
           select: {
@@ -278,7 +369,7 @@ export async function getMediaList(
       height: item.height,
       altText: item.altText,
       blur: item.blur,
-      inGallery: item.inGallery,
+      inGallery: item.galleryPhoto !== null, // 根据 galleryPhoto 是否存在判断
       createdAt: item.createdAt.toISOString(),
       postsCount: item._count.references, // 使用 references 计数
       user: item.user,
@@ -351,6 +442,7 @@ export async function getMediaDetail(
     const media = await prisma.media.findUnique({
       where: { id },
       include: {
+        galleryPhoto: true, // 获取图库信息
         user: {
           select: {
             uid: true,
@@ -467,7 +559,16 @@ export async function getMediaDetail(
       blur: media.blur,
       thumbnails: media.thumbnails,
       exif: media.exif,
-      inGallery: media.inGallery,
+      inGallery: media.galleryPhoto !== null,
+      galleryPhoto: media.galleryPhoto
+        ? {
+            ...media.galleryPhoto,
+            createdAt: media.galleryPhoto.createdAt.toISOString(),
+            updatedAt: media.galleryPhoto.updatedAt.toISOString(),
+            shotAt: media.galleryPhoto.shotAt?.toISOString() || null,
+            sortTime: media.galleryPhoto.sortTime.toISOString(),
+          }
+        : null,
       isOptimized: media.isOptimized,
       storageUrl: media.storageUrl,
       createdAt: media.createdAt.toISOString(),
@@ -533,7 +634,20 @@ export async function updateMedia(
   } | null>
 >;
 export async function updateMedia(
-  { access_token, id, originalName, altText, inGallery }: UpdateMedia,
+  {
+    access_token,
+    id,
+    originalName,
+    altText,
+    inGallery,
+    name,
+    slug,
+    description,
+    gallerySize,
+    showExif,
+    hideGPS,
+    overrideExif,
+  }: UpdateMedia,
   serverConfig?: ActionConfig,
 ): Promise<
   ActionResult<{
@@ -559,6 +673,13 @@ export async function updateMedia(
       originalName,
       altText,
       inGallery,
+      name,
+      slug,
+      description,
+      gallerySize,
+      showExif,
+      hideGPS,
+      overrideExif,
     },
     UpdateMediaSchema,
   );
@@ -579,12 +700,8 @@ export async function updateMedia(
     // 检查文件是否存在
     const existingMedia = await prisma.media.findUnique({
       where: { id },
-      select: {
-        id: true,
-        originalName: true,
-        altText: true,
-        inGallery: true,
-        userUid: true,
+      include: {
+        galleryPhoto: true,
       },
     });
 
@@ -598,18 +715,143 @@ export async function updateMedia(
     }
 
     // 更新媒体文件信息
+    const updateData: Record<string, unknown> = {
+      ...(originalName !== undefined ? { originalName } : {}),
+      ...(altText !== undefined ? { altText } : {}),
+    };
+
+    // 1. 如果用户指定了 slug，检查唯一性
+    if (slug) {
+      const collision = await prisma.photo.findUnique({
+        where: { slug },
+        select: { mediaId: true },
+      });
+      if (collision && collision.mediaId !== id) {
+        return response.badRequest({
+          message: "Slug 已被占用，请更换一个",
+          error: { code: "SLUG_EXISTS", message: "Slug 已被占用" },
+        });
+      }
+    }
+
+    // 处理图库信息
+    if (inGallery !== undefined) {
+      if (inGallery) {
+        // 如果开启图库显示，upsert GalleryPhoto
+
+        // 提取拍摄时间
+        const extractedShotAt = extractShotAtFromMedia(existingMedia.exif);
+
+        // 计算 Photo Name (去除后缀)
+        let photoName = name;
+        if (!photoName) {
+          const sourceName = originalName || existingMedia.originalName;
+          const lastDotIndex = sourceName.lastIndexOf(".");
+          photoName =
+            lastDotIndex > 0
+              ? sourceName.substring(0, lastDotIndex)
+              : sourceName;
+        }
+        photoName = photoName || "Untitled";
+
+        // 计算 Photo Slug
+        let photoSlug = slug;
+        if (!photoSlug) {
+          const baseSlug = (await slugify(photoName)) || "photo";
+          if (!existingMedia.galleryPhoto) {
+            // 新增且未指定 slug，检查冲突
+            const collision = await prisma.photo.findUnique({
+              where: { slug: baseSlug },
+              select: { id: true },
+            });
+            photoSlug = collision ? `${baseSlug}-${id}` : baseSlug;
+          } else {
+            // 更新且未指定 slug，upsert.create 需要一个值（虽然不会被使用）
+            photoSlug = baseSlug;
+          }
+        }
+
+        updateData.galleryPhoto = {
+          upsert: {
+            create: {
+              slug: photoSlug,
+              name: photoName,
+              description: description || null,
+              size: (gallerySize as GallerySize) || "AUTO",
+              showExif: showExif ?? true,
+              hideGPS: hideGPS ?? true,
+              overrideExif: overrideExif ?? undefined,
+              shotAt: extractedShotAt,
+              sortTime: extractedShotAt || new Date(),
+            },
+            update: {
+              // 只有提供了相应字段时才更新
+              ...(slug ? { slug } : {}),
+              ...(name ? { name } : {}),
+              ...(description !== undefined ? { description } : {}),
+              ...(gallerySize ? { size: gallerySize as GallerySize } : {}),
+              ...(showExif !== undefined ? { showExif } : {}),
+              ...(hideGPS !== undefined ? { hideGPS } : {}),
+              ...(overrideExif !== undefined ? { overrideExif } : {}),
+              // 如果是从非图库状态转为图库状态，或者显式提供了拍摄时间相关信息（目前还没开放显式设置 shotAt）
+              // 自动更新一次时间
+              ...(!existingMedia.galleryPhoto
+                ? {
+                    shotAt: extractedShotAt,
+                    sortTime: extractedShotAt || new Date(),
+                  }
+                : {}),
+            },
+          },
+        };
+      } else {
+        // 如果关闭图库显示，删除 GalleryPhoto
+        updateData.galleryPhoto = {
+          delete: existingMedia.galleryPhoto ? true : undefined,
+        };
+        // 如果没有关联照片，delete: true 会报错吗？prisma delete: true for optional one-to-one expects relation to exist?
+        // 文档说: If the record does not exist, the operation will fail.
+        // 所以我们只在 existingMedia.galleryPhoto 存在时才添加 delete 指令
+        if (!existingMedia.galleryPhoto) {
+          delete updateData.galleryPhoto;
+        }
+      }
+    } else if (existingMedia.galleryPhoto) {
+      // 如果 inGallery 未定义，但存在图库照片，且有图库相关字段更新
+      if (
+        name ||
+        slug ||
+        description !== undefined ||
+        gallerySize ||
+        showExif !== undefined ||
+        hideGPS !== undefined ||
+        overrideExif !== undefined
+      ) {
+        updateData.galleryPhoto = {
+          update: {
+            ...(slug ? { slug } : {}),
+            ...(name ? { name } : {}),
+            ...(description !== undefined ? { description } : {}),
+            ...(gallerySize ? { size: gallerySize as GallerySize } : {}),
+            ...(showExif !== undefined ? { showExif } : {}),
+            ...(hideGPS !== undefined ? { hideGPS } : {}),
+            ...(overrideExif !== undefined ? { overrideExif } : {}),
+          },
+        };
+      }
+    }
+
     const updatedMedia = await prisma.media.update({
       where: { id },
-      data: {
-        ...(originalName !== undefined ? { originalName } : {}),
-        ...(altText !== undefined ? { altText } : {}),
-        ...(inGallery !== undefined ? { inGallery } : {}),
+      data: updateData,
+      include: {
+        galleryPhoto: true,
       },
     });
 
     // 记录审计日志
-    const auditOldValue: Record<string, string | boolean | null> = {};
-    const auditNewValue: Record<string, string | boolean | null> = {};
+    const auditOldValue: Record<string, string | boolean | null | object> = {};
+    const auditNewValue: Record<string, string | boolean | null | object> = {};
 
     if (
       originalName !== undefined &&
@@ -622,14 +864,27 @@ export async function updateMedia(
       auditOldValue.altText = existingMedia.altText;
       auditNewValue.altText = altText;
     }
-    if (inGallery !== undefined && inGallery !== existingMedia.inGallery) {
-      auditOldValue.inGallery = existingMedia.inGallery;
+    if (inGallery !== undefined) {
+      updateTag("photos");
+      auditOldValue.inGallery = !!existingMedia.galleryPhoto;
       auditNewValue.inGallery = inGallery;
     }
+
+    // 记录图库相关变更
+    if (updateData.galleryPhoto) {
+      auditNewValue.galleryPhotoChange = true;
+    }
+
+    const oldSlug = existingMedia.galleryPhoto?.slug;
+    const newSlug = updatedMedia.galleryPhoto?.slug;
 
     if (Object.keys(auditNewValue).length > 0) {
       const { after } = await import("next/server");
       after(async () => {
+        // 更新特定照片的缓存
+        if (oldSlug) updateTag(`photos/${oldSlug}`);
+        if (newSlug && newSlug !== oldSlug) updateTag(`photos/${newSlug}`);
+
         await logAuditEvent({
           user: {
             uid: String(user.uid),
@@ -653,13 +908,239 @@ export async function updateMedia(
         id: updatedMedia.id,
         originalName: updatedMedia.originalName,
         altText: updatedMedia.altText,
-        inGallery: updatedMedia.inGallery,
+        inGallery: !!updatedMedia.galleryPhoto,
         updatedAt: new Date().toISOString(), // 使用当前时间作为更新时间
       },
       message: "媒体文件信息更新成功",
     });
   } catch (error) {
     console.error("UpdateMedia error:", error);
+    return response.serverError();
+  }
+}
+
+/*
+  batchUpdateMedia - 批量更新媒体文件
+*/
+export async function batchUpdateMedia(
+  params: BatchUpdateMedia,
+  serverConfig: { environment: "serverless" },
+): Promise<
+  NextResponse<ApiResponse<{ updated: number; ids: number[] } | null>>
+>;
+export async function batchUpdateMedia(
+  params: BatchUpdateMedia,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<{ updated: number; ids: number[] } | null>>;
+export async function batchUpdateMedia(
+  { access_token, ids, inGallery, isOptimized }: BatchUpdateMedia,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<{ updated: number; ids: number[] } | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "batchUpdateMedia"))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      ids,
+      inGallery,
+      isOptimized,
+    },
+    BatchUpdateMediaSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 获取要更新的文件信息用于权限检查
+    const mediaToUpdate = await prisma.media.findMany({
+      where: {
+        id: { in: ids },
+      },
+      select: {
+        id: true,
+        userUid: true,
+        originalName: true,
+        exif: true,
+        galleryPhoto: {
+          select: {
+            id: true,
+            slug: true,
+          },
+        },
+      },
+    });
+
+    if (mediaToUpdate.length === 0) {
+      return response.notFound({ message: "没有找到可更新的媒体文件" });
+    }
+
+    // 权限检查：AUTHOR 只能更新自己的文件
+    let updatableMedia = mediaToUpdate;
+    if (user.role === "AUTHOR") {
+      updatableMedia = mediaToUpdate.filter(
+        (media) => media.userUid === user.uid,
+      );
+
+      if (updatableMedia.length === 0) {
+        return response.forbidden({ message: "没有权限更新这些文件" });
+      }
+    }
+
+    const updatableIds = updatableMedia.map((m) => m.id);
+
+    // 执行更新
+    await prisma.$transaction(async (tx) => {
+      // 1. 更新普通字段 (isOptimized)
+      if (isOptimized !== undefined) {
+        await tx.media.updateMany({
+          where: {
+            id: { in: updatableIds },
+          },
+          data: {
+            isOptimized,
+          },
+        });
+      }
+
+      // 2. 处理 inGallery
+      if (inGallery !== undefined) {
+        if (inGallery) {
+          // 批量添加到图库
+          // 找出还没有 galleryPhoto 的 media
+          const mediaWithoutGallery = updatableMedia.filter(
+            (m) => !m.galleryPhoto,
+          );
+
+          if (mediaWithoutGallery.length > 0) {
+            // 准备数据候选集（异步处理 slug 生成）
+            const candidates = await Promise.all(
+              mediaWithoutGallery.map(async (media) => {
+                // 去除后缀名
+                const lastDotIndex = media.originalName.lastIndexOf(".");
+                const nameWithoutExt =
+                  lastDotIndex > 0 // 确保不是隐藏文件（如 .gitignore）且有后缀
+                    ? media.originalName.substring(0, lastDotIndex)
+                    : media.originalName;
+
+                const cleanName = nameWithoutExt || "Untitled";
+                const baseSlug = (await slugify(cleanName)) || "photo";
+
+                return {
+                  media,
+                  name: cleanName,
+                  baseSlug,
+                };
+              }),
+            );
+
+            // 检查数据库中已存在的 slug
+            const baseSlugs = candidates.map((c) => c.baseSlug);
+            const existingPhotos = await tx.photo.findMany({
+              where: {
+                slug: { in: baseSlugs },
+              },
+              select: { slug: true },
+            });
+            const existingSlugSet = new Set(existingPhotos.map((p) => p.slug));
+            const usedSlugsInBatch = new Set<string>();
+
+            await tx.photo.createMany({
+              data: candidates.map((c) => {
+                let slug = c.baseSlug;
+                // 如果 slug 已存在于数据库或当前批次中，追加 ID
+                if (existingSlugSet.has(slug) || usedSlugsInBatch.has(slug)) {
+                  slug = `${slug}-${c.media.id}`;
+                }
+                usedSlugsInBatch.add(slug);
+
+                // 提取拍摄时间
+                const extractedShotAt = extractShotAtFromMedia(c.media.exif);
+
+                return {
+                  mediaId: c.media.id,
+                  slug,
+                  name: c.name,
+                  size: "AUTO",
+                  showExif: true,
+                  hideGPS: true,
+                  shotAt: extractedShotAt,
+                  sortTime: extractedShotAt || new Date(),
+                };
+              }),
+            });
+          }
+        } else {
+          // 批量从图库移除
+          await tx.photo.deleteMany({
+            where: {
+              mediaId: { in: updatableIds },
+            },
+          });
+        }
+      }
+    });
+
+    // 记录审计日志
+    const { after } = await import("next/server");
+    if (inGallery !== undefined) {
+      updateTag("photos");
+    }
+    after(async () => {
+      // 如果是从图库移除，需要更新对应照片页面的缓存
+      if (inGallery === false) {
+        updatableMedia.forEach((media) => {
+          if (media.galleryPhoto?.slug) {
+            updateTag(`photos/${media.galleryPhoto.slug}`);
+          }
+        });
+      }
+
+      await logAuditEvent({
+        user: {
+          uid: String(user.uid),
+        },
+        details: {
+          action: "BATCH_UPDATE_MEDIA",
+          resourceType: "Media",
+          resourceId: updatableIds.join(", "),
+          value: {
+            old: null,
+            new: {
+              count: updatableIds.length,
+              inGallery,
+              isOptimized,
+            },
+          },
+          description: `批量更新 ${updatableIds.length} 个媒体文件`,
+        },
+      });
+    });
+
+    return response.ok({
+      data: {
+        updated: updatableIds.length,
+        ids: updatableIds,
+      },
+      message: `成功更新 ${updatableIds.length} 个媒体文件`,
+    });
+  } catch (error) {
+    console.error("BatchUpdateMedia error:", error);
     return response.serverError();
   }
 }
@@ -719,6 +1200,9 @@ export async function deleteMedia(
         id: true,
         originalName: true,
         userUid: true,
+        galleryPhoto: {
+          select: { id: true, slug: true },
+        },
       },
     });
 
@@ -728,16 +1212,20 @@ export async function deleteMedia(
 
     // 权限检查：AUTHOR 只能删除自己的文件
     let deletableIds: number[] = [];
+    let hasPhotosInBatch = false;
     if (user.role === "AUTHOR") {
-      deletableIds = mediaToDelete
-        .filter((media) => media.userUid === user.uid)
-        .map((media) => media.id);
+      const deletableMedia = mediaToDelete.filter(
+        (media) => media.userUid === user.uid,
+      );
+      deletableIds = deletableMedia.map((media) => media.id);
+      hasPhotosInBatch = deletableMedia.some((m) => !!m.galleryPhoto);
 
       if (deletableIds.length === 0) {
         return response.forbidden({ message: "没有权限删除这些文件" });
       }
     } else {
       deletableIds = ids;
+      hasPhotosInBatch = mediaToDelete.some((m) => !!m.galleryPhoto);
     }
 
     // 删除媒体文件（Prisma 会自动处理关系）
@@ -751,7 +1239,17 @@ export async function deleteMedia(
 
     // 记录审计日志
     const { after } = await import("next/server");
+    if (hasPhotosInBatch) {
+      updateTag("photos");
+    }
     after(async () => {
+      // 刷新被删除照片的页面缓存
+      mediaToDelete.forEach((media) => {
+        if (deletableIds.includes(media.id) && media.galleryPhoto?.slug) {
+          updateTag(`photos/${media.galleryPhoto.slug}`);
+        }
+      });
+
       await logAuditEvent({
         user: {
           uid: String(user.uid),
@@ -1241,7 +1739,6 @@ export async function uploadMedia(
             thumbnails: {},
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             exif: processed.exif as any, // Prisma JsonValue 类型转换
-            inGallery: false,
             isOptimized: mode !== "original",
             storageUrl: uploadResult.url,
             storageProviderId: storageProvider.id,

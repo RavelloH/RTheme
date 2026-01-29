@@ -12,7 +12,6 @@ import {
   RiFileLine,
   RiServerLine,
   RiLoader4Line,
-  RiCameraLine,
 } from "@remixicon/react";
 import {
   RiExternalLinkLine,
@@ -24,7 +23,8 @@ import Link from "@/components/Link";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { useState, useEffect } from "react";
-import exifReader from "exif-reader";
+import { type ParsedExifData, parseExifBuffer } from "@/lib/client/media-exif";
+import ImageLightbox from "@/components/client/ImageLightbox";
 
 interface MediaPreviewDialogProps {
   open: boolean;
@@ -38,58 +38,6 @@ function isMediaDetail(
   media: MediaDetail | MediaListItem,
 ): media is MediaDetail {
   return "hash" in media;
-}
-
-// EXIF 解析后的数据类型
-interface ParsedExifData {
-  // 相机信息
-  make?: string; // 制造商
-  model?: string; // 型号
-  software?: string; // 软件
-  hostComputer?: string; // 设备型号
-  // 拍摄参数
-  exposureTime?: number; // 曝光时间
-  fNumber?: number; // 光圈
-  iso?: number; // ISO
-  focalLength?: number; // 焦距
-  focalLengthIn35mm?: number; // 等效35mm焦距
-  exposureBiasValue?: number; // 曝光补偿
-  brightnessValue?: number; // 亮度值
-  lensModel?: string; // 镜头型号
-  lensMake?: string; // 镜头制造商
-  lensSpecification?: number[]; // 镜头规格
-  // 拍摄模式
-  exposureProgram?: number; // 曝光程序
-  exposureMode?: number; // 曝光模式
-  meteringMode?: number; // 测光模式
-  sceneCaptureType?: number; // 场景类型
-  whiteBalance?: number; // 白平衡
-  flash?: number; // 闪光灯
-  // 图片信息
-  colorSpace?: number; // 色彩空间
-  sensingMethod?: number; // 传感器类型
-  pixelXDimension?: number; // 原始宽度
-  pixelYDimension?: number; // 原始高度
-  xResolution?: number; // X分辨率
-  yResolution?: number; // Y分辨率
-  resolutionUnit?: number; // 分辨率单位
-  // 日期时间
-  dateTime?: Date; // 拍摄时间
-  dateTimeOriginal?: Date; // 原始拍摄时间
-  offsetTime?: string; // 时区
-  subSecTime?: string; // 毫秒
-  // GPS 信息
-  latitude?: number; // 纬度
-  longitude?: number; // 经度
-  altitude?: number; // 海拔
-  gpsImgDirection?: number; // 拍摄方向
-  gpsSpeed?: number; // 移动速度
-  gpsSpeedRef?: string; // 速度单位
-  gpsHPositioningError?: number; // 定位精度
-  gpsDateTime?: string; // GPS时间
-  // 其他
-  orientation?: number; // 方向
-  subjectArea?: number[]; // 对焦区域
 }
 
 export default function MediaPreviewDialog({
@@ -165,96 +113,12 @@ export default function MediaPreviewDialog({
 
           console.log("Buffer 长度:", buffer.length);
 
-          // 使用 exif-reader 解析原始 EXIF buffer
-          const parsed = exifReader(buffer);
+          const parsed = parseExifBuffer(buffer);
 
           console.log("解析后的 EXIF 数据:", parsed);
 
           if (parsed) {
-            // exif-reader 返回的数据结构
-            const photo = parsed.Photo || {}; // 拍摄参数
-            const image = parsed.Image || {}; // 图片信息
-            const gpsInfo = parsed.GPSInfo || {}; // GPS 信息
-
-            // GPS 坐标转换（从 [度, 分, 秒] 转为十进制）
-            const convertGPSCoordinate = (
-              coords: number[],
-            ): number | undefined => {
-              if (!coords || coords.length !== 3) return undefined;
-              const [degrees = 0, minutes = 0, seconds = 0] = coords;
-              return degrees + minutes / 60 + seconds / 3600;
-            };
-
-            let latitude: number | undefined;
-            let longitude: number | undefined;
-
-            if (gpsInfo.GPSLatitude && gpsInfo.GPSLongitude) {
-              latitude = convertGPSCoordinate(gpsInfo.GPSLatitude);
-              longitude = convertGPSCoordinate(gpsInfo.GPSLongitude);
-
-              // 处理南纬和西经
-              if (gpsInfo.GPSLatitudeRef === "S" && latitude) {
-                latitude = -latitude;
-              }
-              if (gpsInfo.GPSLongitudeRef === "W" && longitude) {
-                longitude = -longitude;
-              }
-            }
-
-            const exifData = {
-              // 从 Image 获取相机信息
-              make: image.Make,
-              model: image.Model,
-              software: image.Software,
-              hostComputer: image.HostComputer,
-              // 从 Photo 获取拍摄参数
-              exposureTime: photo.ExposureTime,
-              fNumber: photo.FNumber,
-              iso: photo.ISOSpeedRatings,
-              focalLength: photo.FocalLength,
-              focalLengthIn35mm: photo.FocalLengthIn35mmFilm,
-              exposureBiasValue: photo.ExposureBiasValue,
-              brightnessValue: photo.BrightnessValue,
-              lensModel: photo.LensModel,
-              lensMake: photo.LensMake,
-              lensSpecification: photo.LensSpecification,
-              // 拍摄模式
-              exposureProgram: photo.ExposureProgram,
-              exposureMode: photo.ExposureMode,
-              meteringMode: photo.MeteringMode,
-              sceneCaptureType: photo.SceneCaptureType,
-              whiteBalance: photo.WhiteBalance,
-              flash: photo.Flash,
-              // 图片信息
-              colorSpace: photo.ColorSpace,
-              sensingMethod: photo.SensingMethod,
-              pixelXDimension: photo.PixelXDimension,
-              pixelYDimension: photo.PixelYDimension,
-              xResolution: image.XResolution,
-              yResolution: image.YResolution,
-              resolutionUnit: image.ResolutionUnit,
-              // 日期时间
-              dateTime: image.DateTime,
-              dateTimeOriginal: photo.DateTimeOriginal,
-              offsetTime: photo.OffsetTime,
-              subSecTime: photo.SubSecTimeOriginal,
-              // GPS 信息
-              latitude,
-              longitude,
-              altitude: gpsInfo.GPSAltitude,
-              gpsImgDirection: gpsInfo.GPSImgDirection,
-              gpsSpeed: gpsInfo.GPSSpeed,
-              gpsSpeedRef: gpsInfo.GPSSpeedRef,
-              gpsHPositioningError: gpsInfo.GPSHPositioningError,
-              gpsDateTime: gpsInfo.GPSDateStamp
-                ? `${gpsInfo.GPSDateStamp} ${gpsInfo.GPSTimeStamp?.join(":")}`
-                : undefined,
-              // 其他
-              orientation: image.Orientation,
-              subjectArea: photo.SubjectArea,
-            };
-
-            setParsedExif(exifData);
+            setParsedExif(parsed);
 
             // 异步分组加载：先加载基本信息，再逐步加载其他组
             setExifLoading(false);
@@ -584,8 +448,10 @@ export default function MediaPreviewDialog({
                     fill
                     blur={media.blur}
                     optimized={false}
+                    data-lightbox
                     className="object-contain"
                   />
+                  <ImageLightbox skipFooterClose hideImageList />
                 </div>
               </div>
               <div className="flex gap-2 flex-wrap">
@@ -922,408 +788,607 @@ export default function MediaPreviewDialog({
               </div>
             )}
 
+            {/* 图库信息 */}
+            {isMediaDetail(media) && media.galleryPhoto && (
+              <div className="space-y-4 mt-5">
+                <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                  图库信息
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-muted-foreground">
+                      名称
+                    </label>
+                    <p className="text-sm font-medium">
+                      {media.galleryPhoto.name}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">
+                      Slug
+                    </label>
+                    <p className="text-sm font-mono">
+                      {media.galleryPhoto.slug}
+                    </p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-sm text-muted-foreground">
+                      描述
+                    </label>
+                    <p className="text-sm">
+                      {media.galleryPhoto.description || "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">
+                      展示尺寸
+                    </label>
+                    <p className="text-sm font-mono">
+                      {media.galleryPhoto.size}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">
+                      展示设置
+                    </label>
+                    <div className="flex gap-3 text-sm">
+                      <span
+                        className={
+                          media.galleryPhoto.showExif
+                            ? "text-foteground"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        {media.galleryPhoto.showExif
+                          ? "显示 Exif"
+                          : "隐藏 Exif"}
+                      </span>
+                      <span
+                        className={
+                          media.galleryPhoto.hideGPS
+                            ? "text-foreground"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        {media.galleryPhoto.hideGPS ? "隐藏 GPS" : "显示 GPS"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                {/* 自定义 Exif 展示 */}
+                {isMediaDetail(media) &&
+                  media.galleryPhoto &&
+                  media.galleryPhoto.overrideExif &&
+                  Object.keys(media.galleryPhoto.overrideExif).length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                      <div className="md:col-span-2">
+                        <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                          自定义 Exif 信息（覆盖拍摄信息）
+                        </h3>
+                      </div>
+                      {Object.entries(media.galleryPhoto.overrideExif).map(
+                        ([key, value]) => {
+                          // 获取中文标签
+                          const label =
+                            {
+                              make: "相机品牌",
+                              model: "相机型号",
+                              software: "系统版本",
+                              hostComputer: "设备型号",
+                              dateTimeOriginal: "拍摄时间",
+                              offsetTime: "时区偏移",
+                              subSecTime: "亚秒时间",
+                              exposureTime: "快门速度",
+                              fNumber: "光圈",
+                              iso: "ISO 感光度",
+                              exposureBiasValue: "曝光补偿",
+                              focalLength: "焦距",
+                              focalLengthIn35mm: "等效焦距 (35mm)",
+                              meteringMode: "测光模式",
+                              exposureProgram: "曝光程序",
+                              exposureMode: "曝光模式",
+                              whiteBalance: "白平衡",
+                              sceneCaptureType: "场景类型",
+                              flash: "闪光灯",
+                              lensModel: "镜头型号",
+                              lensMake: "镜头制造商",
+                              lensSpecification: "镜头规格",
+                              latitude: "GPS 纬度",
+                              longitude: "GPS 经度",
+                              altitude: "GPS 海拔",
+                              gpsImgDirection: "拍摄方向",
+                              gpsHPositioningError: "定位精度",
+                              gpsSpeed: "移动速度",
+                              colorSpace: "色彩空间",
+                              sensingMethod: "传感器类型",
+                              pixelXDimension: "原始像素宽度",
+                              pixelYDimension: "原始像素高度",
+                              xResolution: "水平分辨率",
+                              yResolution: "垂直分辨率",
+                              resolutionUnit: "分辨率单位",
+                            }[key] || key;
+
+                          // 格式化值
+                          let displayValue: string;
+                          if (
+                            key === "exposureTime" &&
+                            typeof value === "number"
+                          ) {
+                            displayValue = formatExposureTime(value);
+                          } else if (
+                            key === "fNumber" &&
+                            typeof value === "number"
+                          ) {
+                            displayValue = formatAperture(value);
+                          } else if (
+                            key === "focalLength" &&
+                            typeof value === "number"
+                          ) {
+                            displayValue = formatFocalLength(value);
+                          } else if (
+                            key === "exposureBiasValue" &&
+                            typeof value === "number"
+                          ) {
+                            displayValue = formatExposureBias(value);
+                          } else if (
+                            key === "lensSpecification" &&
+                            Array.isArray(value)
+                          ) {
+                            displayValue = formatLensSpec(value);
+                          } else if (
+                            key === "flash" &&
+                            typeof value === "number"
+                          ) {
+                            displayValue = formatFlash(value);
+                          } else if (
+                            key === "meteringMode" &&
+                            typeof value === "number"
+                          ) {
+                            displayValue = formatMeteringMode(value);
+                          } else if (
+                            key === "exposureProgram" &&
+                            typeof value === "number"
+                          ) {
+                            displayValue = formatExposureProgram(value);
+                          } else if (
+                            key === "exposureMode" &&
+                            typeof value === "number"
+                          ) {
+                            displayValue = formatExposureMode(value);
+                          } else if (
+                            key === "whiteBalance" &&
+                            typeof value === "number"
+                          ) {
+                            displayValue = formatWhiteBalance(value);
+                          } else if (
+                            key === "sceneCaptureType" &&
+                            typeof value === "number"
+                          ) {
+                            displayValue = formatSceneCaptureType(value);
+                          } else if (
+                            key === "colorSpace" &&
+                            typeof value === "number"
+                          ) {
+                            displayValue = formatColorSpace(value);
+                          } else if (
+                            key === "sensingMethod" &&
+                            typeof value === "number"
+                          ) {
+                            displayValue = formatSensingMethod(value);
+                          } else if (key === "dateTimeOriginal") {
+                            displayValue = formatDateTime(String(value));
+                          } else {
+                            displayValue = String(value);
+                          }
+
+                          return (
+                            <div key={key}>
+                              <label className="text-sm text-muted-foreground">
+                                {label}
+                              </label>
+                              <p className="text-sm font-mono">
+                                {displayValue}
+                              </p>
+                            </div>
+                          );
+                        },
+                      )}
+                    </div>
+                  )}
+              </div>
+            )}
             {/* 拍摄信息（EXIF） */}
             {parsedExif && (
-              <AutoResizer>
-                <div className="space-y-4 mt-5">
-                  <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2 flex items-center gap-2">
-                    <RiCameraLine size="1.2em" />
-                    拍摄信息
-                  </h3>
+              <div className="space-y-4 mt-5">
+                <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2 flex items-center gap-2">
+                  拍摄信息
+                </h3>
 
-                  {/* 基本信息组 */}
-                  <AutoTransition type="slideUp" duration={0.3}>
-                    {loadedGroups.has("basic") && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* 相机品牌 */}
-                        {parsedExif.make && (
-                          <div>
-                            <label className="text-sm text-muted-foreground">
-                              相机品牌
-                            </label>
-                            <p className="text-sm">{parsedExif.make}</p>
-                          </div>
-                        )}
-
-                        {/* 相机型号 */}
-                        {parsedExif.model && (
-                          <div>
-                            <label className="text-sm text-muted-foreground">
-                              相机型号
-                            </label>
-                            <p className="text-sm">{parsedExif.model}</p>
-                          </div>
-                        )}
-
-                        {/* 系统版本 */}
-                        {parsedExif.software && (
-                          <div>
-                            <label className="text-sm text-muted-foreground">
-                              系统版本
-                            </label>
-                            <p className="text-sm">{parsedExif.software}</p>
-                          </div>
-                        )}
-
-                        {/* 设备型号 */}
-                        {parsedExif.hostComputer && (
-                          <div>
-                            <label className="text-sm text-muted-foreground">
-                              设备型号
-                            </label>
-                            <p className="text-sm">{parsedExif.hostComputer}</p>
-                          </div>
-                        )}
-
-                        {/* 拍摄时间 */}
-                        {parsedExif.dateTimeOriginal && (
-                          <div className="md:col-span-2">
-                            <label className="text-sm text-muted-foreground">
-                              拍摄时间
-                            </label>
-                            <p className="text-sm">
-                              {formatDateTime(
-                                parsedExif.dateTimeOriginal.toISOString(),
-                              )}
-                              {parsedExif.offsetTime && (
-                                <span className="text-muted-foreground ml-1">
-                                  ({parsedExif.offsetTime})
-                                </span>
-                              )}
-                              {parsedExif.subSecTime && (
-                                <span className="text-muted-foreground ml-1">
-                                  .{parsedExif.subSecTime}
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </AutoTransition>
-
-                  {/* 拍摄参数组 */}
-                  <AutoTransition type="slideUp" duration={0.3}>
-                    {loadedGroups.has("shooting") && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-border/50">
-                        {/* 快门速度 */}
-                        {parsedExif.exposureTime && (
-                          <div>
-                            <label className="text-sm text-muted-foreground">
-                              快门速度
-                            </label>
-                            <p className="text-sm font-mono">
-                              {formatExposureTime(parsedExif.exposureTime)}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* 光圈 */}
-                        {parsedExif.fNumber && (
-                          <div>
-                            <label className="text-sm text-muted-foreground">
-                              光圈
-                            </label>
-                            <p className="text-sm font-mono">
-                              {formatAperture(parsedExif.fNumber)}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* ISO */}
-                        {parsedExif.iso && (
-                          <div>
-                            <label className="text-sm text-muted-foreground">
-                              ISO 感光度
-                            </label>
-                            <p className="text-sm font-mono">
-                              {parsedExif.iso}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* 曝光补偿 */}
-                        {parsedExif.exposureBiasValue !== undefined && (
-                          <div>
-                            <label className="text-sm text-muted-foreground">
-                              曝光补偿
-                            </label>
-                            <p className="text-sm font-mono">
-                              {formatExposureBias(parsedExif.exposureBiasValue)}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* 焦距 */}
-                        {parsedExif.focalLength && (
-                          <div>
-                            <label className="text-sm text-muted-foreground">
-                              焦距
-                            </label>
-                            <p className="text-sm font-mono">
-                              {formatFocalLength(parsedExif.focalLength)}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* 等效35mm焦距 */}
-                        {parsedExif.focalLengthIn35mm && (
-                          <div>
-                            <label className="text-sm text-muted-foreground">
-                              等效焦距 (35mm)
-                            </label>
-                            <p className="text-sm font-mono">
-                              {parsedExif.focalLengthIn35mm}mm
-                            </p>
-                          </div>
-                        )}
-
-                        {/* 测光模式 */}
-                        {parsedExif.meteringMode !== undefined && (
-                          <div>
-                            <label className="text-sm text-muted-foreground">
-                              测光模式
-                            </label>
-                            <p className="text-sm">
-                              {formatMeteringMode(parsedExif.meteringMode)}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* 曝光程序 */}
-                        {parsedExif.exposureProgram !== undefined && (
-                          <div>
-                            <label className="text-sm text-muted-foreground">
-                              曝光程序
-                            </label>
-                            <p className="text-sm">
-                              {formatExposureProgram(
-                                parsedExif.exposureProgram,
-                              )}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* 曝光模式 */}
-                        {parsedExif.exposureMode !== undefined && (
-                          <div>
-                            <label className="text-sm text-muted-foreground">
-                              曝光模式
-                            </label>
-                            <p className="text-sm">
-                              {formatExposureMode(parsedExif.exposureMode)}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* 白平衡 */}
-                        {parsedExif.whiteBalance !== undefined && (
-                          <div>
-                            <label className="text-sm text-muted-foreground">
-                              白平衡
-                            </label>
-                            <p className="text-sm">
-                              {formatWhiteBalance(parsedExif.whiteBalance)}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* 场景类型 */}
-                        {parsedExif.sceneCaptureType !== undefined && (
-                          <div>
-                            <label className="text-sm text-muted-foreground">
-                              场景类型
-                            </label>
-                            <p className="text-sm">
-                              {formatSceneCaptureType(
-                                parsedExif.sceneCaptureType,
-                              )}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* 闪光灯 */}
-                        {parsedExif.flash !== undefined && (
-                          <div className="md:col-span-2">
-                            <label className="text-sm text-muted-foreground">
-                              闪光灯
-                            </label>
-                            <p className="text-sm">
-                              {formatFlash(parsedExif.flash)}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </AutoTransition>
-
-                  {/* 镜头信息组 */}
-                  <AutoTransition type="slideUp" duration={0.3}>
-                    {loadedGroups.has("lens") && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-border/50">
-                        {/* 镜头型号 */}
-                        {parsedExif.lensModel && (
-                          <div className="md:col-span-2">
-                            <label className="text-sm text-muted-foreground">
-                              镜头型号
-                            </label>
-                            <p className="text-sm">{parsedExif.lensModel}</p>
-                          </div>
-                        )}
-
-                        {/* 镜头制造商 */}
-                        {parsedExif.lensMake && (
-                          <div>
-                            <label className="text-sm text-muted-foreground">
-                              镜头制造商
-                            </label>
-                            <p className="text-sm">{parsedExif.lensMake}</p>
-                          </div>
-                        )}
-
-                        {/* 镜头规格 */}
-                        {parsedExif.lensSpecification && (
-                          <div>
-                            <label className="text-sm text-muted-foreground">
-                              镜头规格
-                            </label>
-                            <p className="text-sm font-mono">
-                              {formatLensSpec(parsedExif.lensSpecification)}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </AutoTransition>
-
-                  {/* GPS 信息组 */}
-                  <AutoTransition type="slideUp" duration={0.3}>
-                    {loadedGroups.has("gps") &&
-                      (parsedExif.latitude || parsedExif.longitude) && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-border/50">
-                          {/* GPS 位置 */}
-                          {parsedExif.latitude && parsedExif.longitude && (
-                            <div className="md:col-span-2">
-                              <label className="text-sm text-muted-foreground">
-                                拍摄地点
-                              </label>
-                              <p className="text-sm font-mono">
-                                {formatGPS(
-                                  parsedExif.latitude,
-                                  parsedExif.longitude,
-                                )}
-                                {parsedExif.altitude && (
-                                  <span className="text-muted-foreground ml-2">
-                                    (海拔: {parsedExif.altitude.toFixed(1)}m)
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* GPS 拍摄方向 */}
-                          {parsedExif.gpsImgDirection !== undefined && (
-                            <div>
-                              <label className="text-sm text-muted-foreground">
-                                拍摄方向
-                              </label>
-                              <p className="text-sm font-mono">
-                                {parsedExif.gpsImgDirection.toFixed(1)}°
-                                (罗盘方位)
-                              </p>
-                            </div>
-                          )}
-
-                          {/* GPS 定位精度 */}
-                          {parsedExif.gpsHPositioningError !== undefined && (
-                            <div>
-                              <label className="text-sm text-muted-foreground">
-                                定位精度
-                              </label>
-                              <p className="text-sm font-mono">
-                                ±{parsedExif.gpsHPositioningError.toFixed(1)}m
-                              </p>
-                            </div>
-                          )}
-
-                          {/* GPS 移动速度 */}
-                          {parsedExif.gpsSpeed !== undefined && (
-                            <div>
-                              <label className="text-sm text-muted-foreground">
-                                移动速度
-                              </label>
-                              <p className="text-sm font-mono">
-                                {parsedExif.gpsSpeed.toFixed(1)}{" "}
-                                {parsedExif.gpsSpeedRef === "K"
-                                  ? "km/h"
-                                  : "mph"}
-                              </p>
-                            </div>
-                          )}
+                {/* 基本信息组 */}
+                <AutoTransition type="slideUp" duration={0.3}>
+                  {loadedGroups.has("basic") && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* 相机品牌 */}
+                      {parsedExif.make && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            相机品牌
+                          </label>
+                          <p className="text-sm">{parsedExif.make}</p>
                         </div>
                       )}
-                  </AutoTransition>
 
-                  {/* 技术信息组 */}
-                  <AutoTransition type="slideUp" duration={0.3}>
-                    {loadedGroups.has("technical") && (
+                      {/* 相机型号 */}
+                      {parsedExif.model && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            相机型号
+                          </label>
+                          <p className="text-sm">{parsedExif.model}</p>
+                        </div>
+                      )}
+
+                      {/* 系统版本 */}
+                      {parsedExif.software && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            系统版本
+                          </label>
+                          <p className="text-sm">{parsedExif.software}</p>
+                        </div>
+                      )}
+
+                      {/* 设备型号 */}
+                      {parsedExif.hostComputer && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            设备型号
+                          </label>
+                          <p className="text-sm">{parsedExif.hostComputer}</p>
+                        </div>
+                      )}
+
+                      {/* 拍摄时间 */}
+                      {parsedExif.dateTimeOriginal && (
+                        <div className="md:col-span-2">
+                          <label className="text-sm text-muted-foreground">
+                            拍摄时间
+                          </label>
+                          <p className="text-sm">
+                            {formatDateTime(
+                              parsedExif.dateTimeOriginal.toISOString(),
+                            )}
+                            {parsedExif.offsetTime && (
+                              <span className="text-muted-foreground ml-1">
+                                ({parsedExif.offsetTime})
+                              </span>
+                            )}
+                            {parsedExif.subSecTime && (
+                              <span className="text-muted-foreground ml-1">
+                                .{parsedExif.subSecTime}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </AutoTransition>
+
+                {/* 拍摄参数组 */}
+                <AutoTransition type="slideUp" duration={0.3}>
+                  {loadedGroups.has("shooting") && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-border/50">
+                      {/* 快门速度 */}
+                      {parsedExif.exposureTime && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            快门速度
+                          </label>
+                          <p className="text-sm font-mono">
+                            {formatExposureTime(parsedExif.exposureTime)}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 光圈 */}
+                      {parsedExif.fNumber && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            光圈
+                          </label>
+                          <p className="text-sm font-mono">
+                            {formatAperture(parsedExif.fNumber)}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* ISO */}
+                      {parsedExif.iso && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            ISO 感光度
+                          </label>
+                          <p className="text-sm font-mono">{parsedExif.iso}</p>
+                        </div>
+                      )}
+
+                      {/* 曝光补偿 */}
+                      {parsedExif.exposureBiasValue !== undefined && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            曝光补偿
+                          </label>
+                          <p className="text-sm font-mono">
+                            {formatExposureBias(parsedExif.exposureBiasValue)}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 焦距 */}
+                      {parsedExif.focalLength && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            焦距
+                          </label>
+                          <p className="text-sm font-mono">
+                            {formatFocalLength(parsedExif.focalLength)}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 等效35mm焦距 */}
+                      {parsedExif.focalLengthIn35mm && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            等效焦距 (35mm)
+                          </label>
+                          <p className="text-sm font-mono">
+                            {parsedExif.focalLengthIn35mm}mm
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 测光模式 */}
+                      {parsedExif.meteringMode !== undefined && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            测光模式
+                          </label>
+                          <p className="text-sm">
+                            {formatMeteringMode(parsedExif.meteringMode)}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 曝光程序 */}
+                      {parsedExif.exposureProgram !== undefined && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            曝光程序
+                          </label>
+                          <p className="text-sm">
+                            {formatExposureProgram(parsedExif.exposureProgram)}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 曝光模式 */}
+                      {parsedExif.exposureMode !== undefined && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            曝光模式
+                          </label>
+                          <p className="text-sm">
+                            {formatExposureMode(parsedExif.exposureMode)}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 白平衡 */}
+                      {parsedExif.whiteBalance !== undefined && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            白平衡
+                          </label>
+                          <p className="text-sm">
+                            {formatWhiteBalance(parsedExif.whiteBalance)}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 场景类型 */}
+                      {parsedExif.sceneCaptureType !== undefined && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            场景类型
+                          </label>
+                          <p className="text-sm">
+                            {formatSceneCaptureType(
+                              parsedExif.sceneCaptureType,
+                            )}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 闪光灯 */}
+                      {parsedExif.flash !== undefined && (
+                        <div className="md:col-span-2">
+                          <label className="text-sm text-muted-foreground">
+                            闪光灯
+                          </label>
+                          <p className="text-sm">
+                            {formatFlash(parsedExif.flash)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </AutoTransition>
+
+                {/* 镜头信息组 */}
+                <AutoTransition type="slideUp" duration={0.3}>
+                  {loadedGroups.has("lens") && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-border/50">
+                      {/* 镜头型号 */}
+                      {parsedExif.lensModel && (
+                        <div className="md:col-span-2">
+                          <label className="text-sm text-muted-foreground">
+                            镜头型号
+                          </label>
+                          <p className="text-sm">{parsedExif.lensModel}</p>
+                        </div>
+                      )}
+
+                      {/* 镜头制造商 */}
+                      {parsedExif.lensMake && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            镜头制造商
+                          </label>
+                          <p className="text-sm">{parsedExif.lensMake}</p>
+                        </div>
+                      )}
+
+                      {/* 镜头规格 */}
+                      {parsedExif.lensSpecification && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            镜头规格
+                          </label>
+                          <p className="text-sm font-mono">
+                            {formatLensSpec(parsedExif.lensSpecification)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </AutoTransition>
+
+                {/* GPS 信息组 */}
+                <AutoTransition type="slideUp" duration={0.3}>
+                  {loadedGroups.has("gps") &&
+                    (parsedExif.latitude || parsedExif.longitude) && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-border/50">
-                        {/* 色彩空间 */}
-                        {parsedExif.colorSpace !== undefined && (
-                          <div>
+                        {/* GPS 位置 */}
+                        {parsedExif.latitude && parsedExif.longitude && (
+                          <div className="md:col-span-2">
                             <label className="text-sm text-muted-foreground">
-                              色彩空间
-                            </label>
-                            <p className="text-sm">
-                              {formatColorSpace(parsedExif.colorSpace)}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* 传感器类型 */}
-                        {parsedExif.sensingMethod !== undefined && (
-                          <div>
-                            <label className="text-sm text-muted-foreground">
-                              传感器类型
-                            </label>
-                            <p className="text-sm">
-                              {formatSensingMethod(parsedExif.sensingMethod)}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* 原始像素尺寸 */}
-                        {parsedExif.pixelXDimension &&
-                          parsedExif.pixelYDimension && (
-                            <div>
-                              <label className="text-sm text-muted-foreground">
-                                原始像素尺寸
-                              </label>
-                              <p className="text-sm font-mono">
-                                {parsedExif.pixelXDimension} ×{" "}
-                                {parsedExif.pixelYDimension}
-                              </p>
-                            </div>
-                          )}
-
-                        {/* 图片分辨率 */}
-                        {parsedExif.xResolution && parsedExif.yResolution && (
-                          <div>
-                            <label className="text-sm text-muted-foreground">
-                              图片分辨率
+                              拍摄地点
                             </label>
                             <p className="text-sm font-mono">
-                              {parsedExif.xResolution} ×{" "}
-                              {parsedExif.yResolution}{" "}
-                              {parsedExif.resolutionUnit === 2 ? "dpi" : "dpcm"}
+                              {formatGPS(
+                                parsedExif.latitude,
+                                parsedExif.longitude,
+                              )}
+                              {parsedExif.altitude && (
+                                <span className="text-muted-foreground ml-2">
+                                  (海拔: {parsedExif.altitude.toFixed(1)}m)
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* GPS 拍摄方向 */}
+                        {parsedExif.gpsImgDirection !== undefined && (
+                          <div>
+                            <label className="text-sm text-muted-foreground">
+                              拍摄方向
+                            </label>
+                            <p className="text-sm font-mono">
+                              {parsedExif.gpsImgDirection.toFixed(1)}°
+                              (罗盘方位)
+                            </p>
+                          </div>
+                        )}
+
+                        {/* GPS 定位精度 */}
+                        {parsedExif.gpsHPositioningError !== undefined && (
+                          <div>
+                            <label className="text-sm text-muted-foreground">
+                              定位精度
+                            </label>
+                            <p className="text-sm font-mono">
+                              ±{parsedExif.gpsHPositioningError.toFixed(1)}m
+                            </p>
+                          </div>
+                        )}
+
+                        {/* GPS 移动速度 */}
+                        {parsedExif.gpsSpeed !== undefined && (
+                          <div>
+                            <label className="text-sm text-muted-foreground">
+                              移动速度
+                            </label>
+                            <p className="text-sm font-mono">
+                              {parsedExif.gpsSpeed.toFixed(1)}{" "}
+                              {parsedExif.gpsSpeedRef === "K" ? "km/h" : "mph"}
                             </p>
                           </div>
                         )}
                       </div>
                     )}
-                  </AutoTransition>
-                </div>
-              </AutoResizer>
+                </AutoTransition>
+
+                {/* 技术信息组 */}
+                <AutoTransition type="slideUp" duration={0.3}>
+                  {loadedGroups.has("technical") && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-border/50">
+                      {/* 色彩空间 */}
+                      {parsedExif.colorSpace !== undefined && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            色彩空间
+                          </label>
+                          <p className="text-sm">
+                            {formatColorSpace(parsedExif.colorSpace)}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 传感器类型 */}
+                      {parsedExif.sensingMethod !== undefined && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            传感器类型
+                          </label>
+                          <p className="text-sm">
+                            {formatSensingMethod(parsedExif.sensingMethod)}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 原始像素尺寸 */}
+                      {parsedExif.pixelXDimension &&
+                        parsedExif.pixelYDimension && (
+                          <div>
+                            <label className="text-sm text-muted-foreground">
+                              原始像素尺寸
+                            </label>
+                            <p className="text-sm font-mono">
+                              {parsedExif.pixelXDimension} ×{" "}
+                              {parsedExif.pixelYDimension}
+                            </p>
+                          </div>
+                        )}
+
+                      {/* 图片分辨率 */}
+                      {parsedExif.xResolution && parsedExif.yResolution && (
+                        <div>
+                          <label className="text-sm text-muted-foreground">
+                            图片分辨率
+                          </label>
+                          <p className="text-sm font-mono">
+                            {parsedExif.xResolution} × {parsedExif.yResolution}{" "}
+                            {parsedExif.resolutionUnit === 2 ? "dpi" : "dpcm"}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </AutoTransition>
+              </div>
             )}
 
             {exifLoading && (

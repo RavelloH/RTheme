@@ -3,8 +3,8 @@
 import {
   getMediaList,
   getMediaDetail,
-  updateMedia,
   deleteMedia,
+  batchUpdateMedia,
 } from "@/actions/media";
 import type { FilterConfig, ActionButton } from "@/components/GridTable";
 import GridTable from "@/components/GridTable";
@@ -29,10 +29,11 @@ import {
   RiArrowLeftSLine,
   RiArrowRightSLine,
   RiFilter3Line,
+  RiCheckLine,
 } from "@remixicon/react";
 import MediaPreviewDialog from "./MediaPreviewDialog";
+import MediaEditDialog from "./MediaEditDialog";
 import { Input } from "@/ui/Input";
-import { Switch } from "@/ui/Switch";
 import { Button } from "@/ui/Button";
 import { useToast } from "@/ui/Toast";
 import Link from "@/components/Link";
@@ -250,11 +251,6 @@ export default function MediaTable() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false);
-  const [editForm, setEditForm] = useState({
-    originalName: "",
-    altText: "",
-    inGallery: false,
-  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchValue, setSearchValue] = useState(""); // 搜索输入框的值
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -521,11 +517,6 @@ export default function MediaTable() {
   // 打开编辑对话框
   const openEditDialog = useCallback((media: MediaListItem) => {
     setSelectedMediaItem(media);
-    setEditForm({
-      originalName: media.originalName,
-      altText: media.altText || "",
-      inGallery: media.inGallery,
-    });
     setEditDialogOpen(true);
   }, []);
 
@@ -533,48 +524,12 @@ export default function MediaTable() {
   const closeEditDialog = useCallback(() => {
     setEditDialogOpen(false);
     setSelectedMediaItem(null);
-    setEditForm({
-      originalName: "",
-      altText: "",
-      inGallery: false,
-    });
   }, []);
 
-  // 处理编辑表单字段变化
-  const handleEditFormChange = useCallback(
-    (field: keyof typeof editForm, value: string | boolean) => {
-      setEditForm((prev) => ({ ...prev, [field]: value }));
-    },
-    [],
-  );
-
-  // 处理编辑提交
-  const handleEditSubmit = useCallback(async () => {
-    if (!selectedMediaItem) return;
-
-    setIsSubmitting(true);
-    try {
-      const result = await updateMedia({
-        id: selectedMediaItem.id,
-        originalName: editForm.originalName,
-        altText: editForm.altText || null,
-        inGallery: editForm.inGallery,
-      });
-
-      if (result.success) {
-        toast.success(`文件 "${selectedMediaItem.originalName}" 已更新`);
-        closeEditDialog();
-        setRefreshTrigger((prev) => prev + 1); // 触发刷新
-      } else {
-        toast.error(result.message || "更新失败");
-      }
-    } catch (error) {
-      console.error("Update media error:", error);
-      toast.error("更新失败，请稍后重试");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [selectedMediaItem, editForm, toast, closeEditDialog]);
+  // 处理编辑更新
+  const handleEditUpdate = useCallback(() => {
+    setRefreshTrigger((prev) => prev + 1);
+  }, []);
 
   // 打开删除对话框
   const openDeleteDialog = useCallback((media: MediaListItem) => {
@@ -612,6 +567,54 @@ export default function MediaTable() {
       setIsSubmitting(false);
     }
   }, [selectedMediaItem, toast, closeDeleteDialog]);
+
+  // 批量加入图库
+  const handleBatchAddToGallery = useCallback(async () => {
+    setIsSubmitting(true);
+    try {
+      const result = await batchUpdateMedia({
+        ids: Array.from(selectedMedia).map((id) => Number(id)),
+        inGallery: true,
+      });
+
+      if (result.success) {
+        toast.success(`已将 ${result.data?.updated || 0} 个文件加入图库`);
+        setSelectedMedia(new Set());
+        setRefreshTrigger((prev) => prev + 1);
+      } else {
+        toast.error(result.message || "操作失败");
+      }
+    } catch (error) {
+      console.error("Batch add to gallery error:", error);
+      toast.error("操作失败，请稍后重试");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [selectedMedia, toast]);
+
+  // 批量移出图库
+  const handleBatchRemoveFromGallery = useCallback(async () => {
+    setIsSubmitting(true);
+    try {
+      const result = await batchUpdateMedia({
+        ids: Array.from(selectedMedia).map((id) => Number(id)),
+        inGallery: false,
+      });
+
+      if (result.success) {
+        toast.success(`已将 ${result.data?.updated || 0} 个文件移出图库`);
+        setSelectedMedia(new Set());
+        setRefreshTrigger((prev) => prev + 1);
+      } else {
+        toast.error(result.message || "操作失败");
+      }
+    } catch (error) {
+      console.error("Batch remove from gallery error:", error);
+      toast.error("操作失败，请稍后重试");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [selectedMedia, toast]);
 
   // 打开批量删除对话框
   const openBatchDeleteDialog = useCallback(() => {
@@ -924,43 +927,10 @@ export default function MediaTable() {
         },
       },
       {
-        key: "mediaType",
-        title: "类型",
-        dataIndex: "mediaType",
-        align: "left",
-        sortable: true,
-        render: (value: unknown) => {
-          const type = String(value);
-          let typeName = "";
-          switch (type) {
-            case "IMAGE":
-              typeName = "图片";
-              break;
-            case "VIDEO":
-              typeName = "视频";
-              break;
-            case "AUDIO":
-              typeName = "音频";
-              break;
-            case "FILE":
-              typeName = "文件";
-              break;
-            default:
-              typeName = "其他";
-          }
-          return (
-            <div className="flex items-center gap-2">
-              {getFileTypeIcon(type)}
-              <span>{typeName}</span>
-            </div>
-          );
-        },
-      },
-      {
         key: "size",
         title: "大小",
         dataIndex: "size",
-        align: "left",
+        align: "right",
         sortable: true,
         mono: true,
         render: (value: unknown) => {
@@ -971,7 +941,8 @@ export default function MediaTable() {
         key: "dimensions",
         title: "尺寸",
         dataIndex: "width",
-        align: "left",
+        mono: true,
+        align: "center",
         render: (value: unknown, record: MediaListItem) => {
           if (record.width && record.height) {
             return `${record.width} × ${record.height}`;
@@ -983,7 +954,7 @@ export default function MediaTable() {
         key: "user",
         title: "上传者",
         dataIndex: "user",
-        align: "left",
+        align: "center",
         render: (value: unknown, record: MediaListItem) => {
           const user = record.user;
           if (!user) {
@@ -1004,15 +975,25 @@ export default function MediaTable() {
         key: "inGallery",
         title: "图库",
         dataIndex: "inGallery",
+        align: "center",
         sortable: true,
         render: (value: unknown) => {
-          return <span>{value ? "是" : "否"}</span>;
+          return value ? (
+            <span className="text-success flex items-center justify-center">
+              <RiCheckLine size="1.5em" />
+            </span>
+          ) : (
+            <span className="text-muted-foreground flex items-center justify-center">
+              <RiCloseLine size="1.5em" />
+            </span>
+          );
         },
       },
       {
         key: "createdAt",
         title: "上传时间",
         dataIndex: "createdAt",
+        align: "center",
         sortable: true,
         mono: true,
         render: (value: unknown) => {
@@ -1032,15 +1013,13 @@ export default function MediaTable() {
         key: "postsCount",
         title: "引用次数",
         dataIndex: "postsCount",
-        align: "left",
+        align: "center",
         sortable: true,
         render: (value: unknown) => {
           const count = Number(value) || 0;
           return (
             <span
-              className={
-                count > 0 ? "text-foreground" : "text-muted-foreground"
-              }
+              className={count > 0 ? "text-primary" : "text-muted-foreground"}
             >
               {count}
             </span>
@@ -1055,13 +1034,29 @@ export default function MediaTable() {
   const batchActions: ActionButton[] = useMemo(
     () => [
       {
+        label: "加入图库",
+        onClick: handleBatchAddToGallery,
+        icon: <RiImageLine size="1em" />,
+        variant: "ghost",
+      },
+      {
+        label: "移出图库",
+        onClick: handleBatchRemoveFromGallery,
+        icon: <RiCloseLine size="1em" />,
+        variant: "ghost",
+      },
+      {
         label: "删除",
         onClick: openBatchDeleteDialog,
         icon: <RiDeleteBinLine size="1em" />,
-        variant: "danger" as const,
+        variant: "danger",
       },
     ],
-    [openBatchDeleteDialog],
+    [
+      openBatchDeleteDialog,
+      handleBatchAddToGallery,
+      handleBatchRemoveFromGallery,
+    ],
   );
 
   // 行操作按钮
@@ -1453,62 +1448,12 @@ export default function MediaTable() {
       />
 
       {/* 编辑对话框 */}
-      <Dialog
+      <MediaEditDialog
         open={editDialogOpen}
         onClose={closeEditDialog}
-        title={`编辑文件 - ${selectedMediaItem?.originalName || ""}`}
-        size="md"
-      >
-        <div className="px-6 py-6 space-y-6">
-          <div>
-            <Input
-              label="显示名称"
-              value={editForm.originalName}
-              onChange={(e) =>
-                handleEditFormChange("originalName", e.target.value)
-              }
-              size="sm"
-              placeholder="输入显示名称"
-            />
-          </div>
-          <div>
-            <Input
-              label="替代文本"
-              value={editForm.altText}
-              onChange={(e) => handleEditFormChange("altText", e.target.value)}
-              size="sm"
-              helperText="用于图片的 alt 属性，提升可访问性和 SEO"
-            />
-          </div>
-          <div className="flex items-center gap-3">
-            <Switch
-              size="sm"
-              checked={editForm.inGallery}
-              onCheckedChange={(checked) =>
-                handleEditFormChange("inGallery", checked)
-              }
-            />
-            <label className="text-sm font-medium">在图库中显示</label>
-          </div>
-          <div className="flex justify-end gap-4 pt-4 border-t border-foreground/10">
-            <Button
-              label="取消"
-              variant="ghost"
-              onClick={closeEditDialog}
-              size="sm"
-              disabled={isSubmitting}
-            />
-            <Button
-              label="保存"
-              variant="primary"
-              onClick={handleEditSubmit}
-              size="sm"
-              loading={isSubmitting}
-              loadingText="保存中..."
-            />
-          </div>
-        </div>
-      </Dialog>
+        media={selectedMediaItem}
+        onUpdate={handleEditUpdate}
+      />
 
       {/* 删除确认对话框 */}
       <AlertDialog

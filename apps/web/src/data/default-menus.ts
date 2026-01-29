@@ -112,7 +112,7 @@ export const defaultMenus: DefaultMenu[] = [
     category: "COMMON",
   },
   {
-    name: "图库",
+    name: "照片墙",
     id: "menu-gallery",
     icon: "image-2-fill",
     slug: "gallery",

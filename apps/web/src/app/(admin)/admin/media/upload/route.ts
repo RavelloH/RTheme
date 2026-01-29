@@ -157,13 +157,31 @@ export async function POST(request: NextRequest): Promise<Response> {
           pathParts[pathParts.length - 1] ||
           `external-${Date.now()}.jpg`;
 
-        // 处理图片元数据（不压缩,使用 original 模式提取元数据）
-        const processed = await processImage(
+        // 先使用 original 模式提取完整的元数据（包括 EXIF）
+        const metadata = await processImage(
           buffer,
           urlFilename,
           contentType,
           "original",
         );
+
+        // 根据用户选择的模式处理图片（如果需要压缩）
+        const processed =
+          mode === "original"
+            ? metadata
+            : await processImage(
+                buffer,
+                urlFilename,
+                contentType,
+                mode as ProcessMode,
+              );
+
+        // 合并元数据（确保使用原始元数据）
+        processed.exif = metadata.exif;
+        processed.hash = metadata.hash;
+        processed.shortHash = metadata.shortHash;
+        processed.width = metadata.width;
+        processed.height = metadata.height;
 
         // 检查去重
         const existingMedia = await prisma.media.findFirst({
@@ -204,8 +222,8 @@ export async function POST(request: NextRequest): Promise<Response> {
           data: {
             fileName: urlFilename,
             originalName: urlFilename,
-            mimeType: contentType,
-            size: buffer.length,
+            mimeType: processed.mimeType,
+            size: processed.size,
             shortHash: processed.shortHash,
             hash: processed.hash,
             mediaType: "IMAGE",
@@ -215,9 +233,8 @@ export async function POST(request: NextRequest): Promise<Response> {
             blur: processed.blur,
             thumbnails: {},
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            exif: processed.exif as any,
-            inGallery: false,
-            isOptimized: false,
+            exif: (processed.exif || {}) as any,
+            isOptimized: mode !== "original",
             storageUrl: externalUrl, // 直接存储外部 URL
             storageProviderId: virtualStorage.id, // 使用虚拟存储提供商
             userUid: user.uid,
@@ -377,13 +394,26 @@ export async function POST(request: NextRequest): Promise<Response> {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // 处理图片
-    const processed = await processImage(
+    // 先使用 original 模式提取完整的元数据（包括 EXIF）
+    const metadata = await processImage(
       buffer,
       file.name,
       file.type,
-      mode as ProcessMode,
+      "original",
     );
+
+    // 根据用户选择的模式处理图片（如果需要压缩）
+    const processed =
+      mode === "original"
+        ? metadata
+        : await processImage(buffer, file.name, file.type, mode as ProcessMode);
+
+    // 合并元数据（确保使用原始元数据）
+    processed.exif = metadata.exif;
+    processed.hash = metadata.hash;
+    processed.shortHash = metadata.shortHash;
+    processed.width = metadata.width;
+    processed.height = metadata.height;
 
     // 检查去重
     const existingMedia = await prisma.media.findFirst({
@@ -449,8 +479,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         blur: processed.blur,
         thumbnails: {},
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        exif: processed.exif as any,
-        inGallery: false,
+        exif: (processed.exif || {}) as any,
         isOptimized: mode !== "original",
         storageUrl: uploadResult.url,
         storageProviderId: storageProvider.id,

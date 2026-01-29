@@ -21,7 +21,13 @@ interface LightboxImage {
  * Adds click-to-zoom functionality for images with data-lightbox attribute.
  * Supports navigation (prev/next), keyboard shortcuts, and "zoom-from-origin" animations.
  */
-export default function ImageLightbox() {
+export default function ImageLightbox({
+  skipFooterClose,
+  hideImageList,
+}: {
+  skipFooterClose?: boolean;
+  hideImageList?: boolean;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [images, setImages] = useState<LightboxImage[]>([]);
@@ -112,15 +118,13 @@ export default function ImageLightbox() {
   const scanImages = useCallback(() => {
     const imgElements = Array.from(
       document.querySelectorAll<HTMLImageElement>("img[data-lightbox]"),
-    );
+    ).filter((img) => img.offsetParent !== null); // Filter out hidden/deleted images
 
     const newImages = imgElements.map((img) => ({
       src: img.src,
       alt: img.alt || "",
     }));
 
-    setImages(newImages);
-    imageElementsRef.current = imgElements;
     return { elements: imgElements, data: newImages };
   }, []);
 
@@ -133,9 +137,11 @@ export default function ImageLightbox() {
       imageElementsRef.current = freshElements;
 
       // Record current footer state and hide it
-      previousFooterVisibleRef.current =
-        useFooterStore.getState().isFooterVisible;
-      setFooterVisible(false);
+      if (!skipFooterClose) {
+        previousFooterVisibleRef.current =
+          useFooterStore.getState().isFooterVisible;
+        setFooterVisible(false);
+      }
 
       setOriginalImageVisible(index, false); // Hide original immediately
       setCurrentIndex(index);
@@ -145,7 +151,7 @@ export default function ImageLightbox() {
       setIsClosing(false);
       setIsOpen(true);
     },
-    [setOriginalImageVisible, setFooterVisible, scanImages],
+    [setOriginalImageVisible, setFooterVisible, scanImages, skipFooterClose],
   );
 
   // Close the lightbox
@@ -159,6 +165,7 @@ export default function ImageLightbox() {
   // Navigate to previous image
   const prevImage = useCallback(
     (e?: React.MouseEvent) => {
+      if (images.length <= 1 || hideImageList) return;
       e?.stopPropagation();
       setOriginalImageVisible(currentIndex, true); // Show old
       const newIndex = (currentIndex - 1 + images.length) % images.length;
@@ -168,12 +175,13 @@ export default function ImageLightbox() {
       setIsSliding(true);
       setCurrentIndex(newIndex);
     },
-    [images.length, currentIndex, setOriginalImageVisible],
+    [images.length, currentIndex, setOriginalImageVisible, hideImageList],
   );
 
   // Navigate to next image
   const nextImage = useCallback(
     (e?: React.MouseEvent) => {
+      if (images.length <= 1 || hideImageList) return;
       e?.stopPropagation();
       setOriginalImageVisible(currentIndex, true); // Show old
       const newIndex = (currentIndex + 1) % images.length;
@@ -183,7 +191,7 @@ export default function ImageLightbox() {
       setIsSliding(true);
       setCurrentIndex(newIndex);
     },
-    [images.length, currentIndex, setOriginalImageVisible],
+    [images.length, currentIndex, setOriginalImageVisible, hideImageList],
   );
 
   // Jump to specific image
@@ -220,11 +228,9 @@ export default function ImageLightbox() {
 
       if (img && !isOpen) {
         e.preventDefault();
-        // Scan images at click time to get fresh references
-        const imgElements = Array.from(
-          document.querySelectorAll<HTMLImageElement>("img[data-lightbox]"),
-        );
-        const index = imgElements.indexOf(img);
+        // Scan images at click time to get fresh references and correct index
+        const { elements } = scanImages();
+        const index = elements.indexOf(img);
         if (index !== -1) {
           openLightbox(index);
         }
@@ -235,7 +241,7 @@ export default function ImageLightbox() {
     return () => {
       document.removeEventListener("click", handleGlobalClick, true);
     };
-  }, [isOpen, openLightbox]);
+  }, [isOpen, openLightbox, scanImages]);
 
   // Apply global styles for lightbox-enabled images
   useEffect(() => {
@@ -301,9 +307,12 @@ export default function ImageLightbox() {
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
+    const hasThumbnails = !hideImageList && images.length > 1;
     const targetMaxWidth = viewportWidth * 0.9;
     // Reserve space for top bar and bottom strip
-    const targetMaxHeight = viewportHeight * 0.75;
+    const targetMaxHeight = hasThumbnails
+      ? viewportHeight * 0.75
+      : viewportHeight * 0.85;
 
     const imgElement = imageElementsRef.current[currentIndex];
     let initialRect = {
@@ -363,8 +372,9 @@ export default function ImageLightbox() {
     }
 
     const targetX = (viewportWidth - targetWidth) / 2;
-    // Center vertically within the available space, maybe bias upwards slightly if needed
-    const targetY = (viewportHeight - targetHeight) / 2 - 40;
+    // Center vertically within the available space, maybe bias upwards slightly if thumbnails are present
+    const targetY =
+      (viewportHeight - targetHeight) / 2 - (hasThumbnails ? 40 : 0);
 
     return {
       initialRect,
@@ -375,7 +385,7 @@ export default function ImageLightbox() {
         height: targetHeight,
       },
     };
-  }, [currentIndex, isOpen, images]); // Recalculate when index changes
+  }, [currentIndex, isOpen, images, hideImageList]); // Recalculate when index changes
 
   if (!mounted) return null;
 
@@ -414,7 +424,7 @@ export default function ImageLightbox() {
                       {currentImage.alt}
                     </span>
                   )}
-                  {images.length > 1 && (
+                  {images.length > 1 && !hideImageList && (
                     <span className="text-sm opacity-70 mt-1">
                       {currentIndex + 1} / {images.length}
                     </span>
@@ -430,7 +440,7 @@ export default function ImageLightbox() {
               </motion.div>
 
               {/* Navigation Arrows (Absolute Center) */}
-              {images.length > 1 && (
+              {images.length > 1 && !hideImageList && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: isClosing ? 0 : 1 }}
@@ -455,41 +465,46 @@ export default function ImageLightbox() {
               )}
 
               {/* Bottom Bar: Thumbnail Strip */}
-              <motion.div
-                initial={{ opacity: 0, y: 100 }}
-                animate={{ opacity: isClosing ? 0 : 1, y: isClosing ? 100 : 0 }}
-                exit={{ opacity: 0, y: 100 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-                className="w-full bg-black/80 backdrop-blur-md h-24 overflow-x-auto pointer-events-auto z-20"
-              >
-                <div className="w-fit h-full flex items-center gap-2 px-4 mx-auto">
-                  {images.map((img, idx) => (
-                    <button
-                      title="Jump to image"
-                      key={`${img.src}-${idx}`}
-                      ref={(el) => {
-                        thumbnailRefs.current[idx] = el;
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        jumpToImage(idx);
-                      }}
-                      className={`relative h-16 flex-shrink-0 transition-all rounded-md overflow-hidden border-2 ${
-                        currentIndex === idx
-                          ? "border-white opacity-100 scale-105"
-                          : "border-transparent opacity-50 hover:opacity-80"
-                      }`}
-                    >
-                      <img
-                        src={img.src}
-                        alt={img.alt}
-                        className="h-full w-auto object-cover"
-                        loading="lazy"
-                      />
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
+              {images.length > 1 && !hideImageList && (
+                <motion.div
+                  initial={{ opacity: 0, y: 100 }}
+                  animate={{
+                    opacity: isClosing ? 0 : 1,
+                    y: isClosing ? 100 : 0,
+                  }}
+                  exit={{ opacity: 0, y: 100 }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                  className="w-full bg-black/80 backdrop-blur-md h-24 overflow-x-auto pointer-events-auto z-20"
+                >
+                  <div className="w-fit h-full flex items-center gap-2 px-4 mx-auto">
+                    {images.map((img, idx) => (
+                      <button
+                        title="Jump to image"
+                        key={`${img.src}-${idx}`}
+                        ref={(el) => {
+                          thumbnailRefs.current[idx] = el;
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          jumpToImage(idx);
+                        }}
+                        className={`relative h-16 flex-shrink-0 transition-all rounded-md overflow-hidden border-2 ${
+                          currentIndex === idx
+                            ? "border-white opacity-100 scale-105"
+                            : "border-transparent opacity-50 hover:opacity-80"
+                        }`}
+                      >
+                        <img
+                          src={img.src}
+                          alt={img.alt}
+                          className="h-full w-auto object-cover"
+                          loading="lazy"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
             </div>
           </>
         )}
@@ -640,7 +655,8 @@ export default function ImageLightbox() {
                 setIsClosing(false);
                 // 4. Restore footer visibility
                 setTimeout(() => {
-                  setFooterVisible(previousFooterVisibleRef.current);
+                  if (!skipFooterClose)
+                    setFooterVisible(previousFooterVisibleRef.current);
                 }, 200);
               }
             }}
