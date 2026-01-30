@@ -18,9 +18,9 @@ export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
 
   const MDX = page.data.body;
   const gitConfig = {
-    user: "username",
-    repo: "repo",
-    branch: "main",
+    user: "RavelloH",
+    repo: "RTheme",
+    branch: "dev",
   };
 
   return (
@@ -34,7 +34,7 @@ export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
         <ViewOptions
           markdownUrl={`${page.url}.mdx`}
           // update it to match your repo
-          githubUrl={`https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/docs/content/docs/${page.path}`}
+          githubUrl={`https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/apps/docs/content/${page.path}`}
         />
       </div>
       <DocsBody>

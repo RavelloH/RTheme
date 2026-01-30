@@ -3,8 +3,8 @@ title: 简介
 ---
 
 <Callout>
-  NeutralPress 的前身是 RavelloH/RTheme，于 2026 年更名为 NeutralPress。[>
-  详细了解](/rename)
+  NeutralPress 的前身是 RavelloH/RTheme，于 2026 年更名为
+  NeutralPress。[详细了解](/rename)
 </Callout>
 
 ## 什么是 NeutralPress？
@@ -31,6 +31,8 @@ WordPress 之所以流行，是因为它易于使用且功能强大。但其技�
 
 ———— 保持中性，将情绪留给内容本身。**Neutral**，意为“**中性**”，象征着简洁与纯粹。
 
+---
+
 ## 功能
 
 不仅仅只是个文章发布平台。一键部署，你就可以拥有：
@@ -42,14 +44,14 @@ WordPress 之所以流行，是因为它易于使用且功能强大。但其技�
 - **多用户权限管理系统**，支持多角色、多权限分配，支持访客注册、 Github / Google / Microsoft OAuth 登录、Passkey 登录、TOTP 双因素认证、会话管理、敏感操作二次验证。
 - **毫不妥协的安全系统**，内置速率限制 WAF、IP 封禁系统，重要端点自带 PoW 验证码，并使用 Server Action 代替 API 通信以增强安全性。
 - **详细的访问统计系统**，内置访客分析、搜索关键词与全站关键词对比、访客来源、设备分析、文章热度分析等。
-- **无限层级的评论系统**，支持嵌套回复、评论审核、评论点赞，内置反垃圾评论系统。
+- **无限层级的评论系统**，支持嵌套回复、评论审核、评论点赞，内置评论反垃圾系统。
 - **事无巨细的审计系统**，记录每一次内容更改，所有操作可追溯、可还原。
 - **洞察秋毫的搜索系统**，高性能分词与索引，专为中文内容及编程术语进行了优化。后续将支持AI向量搜索。
 - **即时通达的通讯系统**，基于 WebSocket ，支持实时私信、在线 / 输入状态显示等。后续将支持端对端加密私聊。
 - **无远弗届的通知系统**，整合站内信、Email、WebPush 推送，支持精细化的通知订阅策略。
 - **兼容并蓄的订阅系统**，支持 RSS ，支持邮件通讯录订阅。
 - **别出心裁的作品系统**，独立于文章的展示维度，专为项目展示设计的网格布局与详情页、GitHub 仓库卡片同步。
-- **守望相助的友链系统**，支持友链自助申请、自动抓取元信息、手动健康度巡检，自动标记或隐藏失效链接。
+- **守望相助的友链系统**，支持友链自助申请、自动抓取元信息、健康度巡检，自动标记或隐藏失效链接。
 - **海纳百川的存储系统**，同时支持本地文件系统、AWS S3、Cloudflare R2、Vercel Blob 、OSS，甚至 Github Pages 。多种对象存储策略可并存，切换自如。
 - **防微杜渐的诊断系统**，支持定时健康检查、性能分析，自动优化。
 
@@ -61,6 +63,8 @@ WordPress 之所以流行，是因为它易于使用且功能强大。但其技�
 
 ———— AI 时代，仅靠内容是不够的。NeutralPress 不仅仅只是一个内容管理系统，也是你的私人社区、数字门户、个人知识库。
 
+---
+
 ## Demo
 
 你可以前往 [https://ravelloh.com](https://ravelloh.com) 来体验其前台显示效果。
@@ -71,26 +75,13 @@ WordPress 之所以流行，是因为它易于使用且功能强大。但其技�
 
 （如果需要，你可以前往后台的“备份还原”页面，导出 Demo 的数据并导入到自己的实例中。参照 [备份与还原](/docs/feature/backup) ）
 
+---
+
 ## 快速开始
 
-NeutralPress 支持多种部署方式，你可以选择：
+<include>../part/deploy-options.mdx</include>
 
-<Cards>
-  <Card title="云平台部署" href="/deploy/cloud">
-    在 Vercel 、Netlify 、AWS 等主流Serverless 云平台上一键免费部署 NeutralPress
-    。
-  </Card>
-  <Card title="Docker 部署" href="/deploy/docker">
-    在你自己的服务器、VPS，或者其他支持 Docker 的云平台上部署 NeutralPress 。
-  </Card>
-  <Card title="一键部署" href="/deploy/shell">
-    使用我们提供的一键部署脚本，在支持 Node.js 的 Linux 服务器上快速部署
-    NeutralPress。
-  </Card>
-  <Card title="从源码构建" href="/deploy/source">
-    手动 Clone 仓库，从源码构建并部署 NeutralPress ，适合有特殊需求的用户。
-  </Card>
-</Cards>
+---
 
 ## 贡献
 
