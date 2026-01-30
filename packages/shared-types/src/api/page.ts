@@ -51,10 +51,10 @@ export const GetPagesListSchema = z.object({
   // 筛选参数
   isSystemPage: z.array(z.boolean()).optional(),
   robotsIndex: z.array(z.boolean()).optional(),
-  createdAtStart: z.string().datetime().optional(),
-  createdAtEnd: z.string().datetime().optional(),
-  updatedAtStart: z.string().datetime().optional(),
-  updatedAtEnd: z.string().datetime().optional(),
+  createdAtStart: z.string().optional(),
+  createdAtEnd: z.string().optional(),
+  updatedAtStart: z.string().optional(),
+  updatedAtEnd: z.string().optional(),
 });
 export type GetPagesList = z.infer<typeof GetPagesListSchema>;
 registerSchema("GetPagesList", GetPagesListSchema);

@@ -1,11 +1,11 @@
 "use client";
 
 interface DateDividerProps {
-  date: Date;
+  date: string; // ISO 8601 格式
 }
 
 // 格式化日期显示
-const formatDate = (date: Date) => {
+const formatDate = (date: string) => {
   const now = new Date();
   const messageDate = new Date(date);
 

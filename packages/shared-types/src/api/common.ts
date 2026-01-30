@@ -23,7 +23,7 @@ export const ApiErrorSchema = z.object({
 export const BaseResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
-  timestamp: z.iso.datetime(),
+  timestamp: z.string(),
   requestId: z.string(),
 });
 

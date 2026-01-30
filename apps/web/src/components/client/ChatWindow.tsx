@@ -114,7 +114,10 @@ export default function ChatWindow({
       appendMessages([
         {
           ...msg.message,
-          createdAt: new Date(msg.message.createdAt),
+          createdAt:
+            typeof msg.message.createdAt === "string"
+              ? msg.message.createdAt
+              : new Date(msg.message.createdAt).toISOString(),
         },
       ]);
 

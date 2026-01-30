@@ -13,7 +13,7 @@ registerSchema("GetUsersStats", GetUsersStatsSchema);
 
 export const GetUsersStatsSuccessResponseSchema = createSuccessResponseSchema(
   z.object({
-    updatedAt: z.iso.datetime(),
+    updatedAt: z.string(),
     cache: z.boolean(),
     total: z.object({
       total: z.number().int().nonnegative(),
@@ -55,7 +55,7 @@ registerSchema("GetAuditStats", GetAuditStatsSchema);
 
 export const GetAuditStatsSuccessResponseSchema = createSuccessResponseSchema(
   z.object({
-    updatedAt: z.iso.datetime(),
+    updatedAt: z.string(),
     cache: z.boolean(),
     total: z.object({
       logs: z.number().int().nonnegative(),
@@ -89,7 +89,7 @@ registerSchema("GetPostsStats", GetPostsStatsSchema);
 
 export const GetPostsStatsSuccessResponseSchema = createSuccessResponseSchema(
   z.object({
-    updatedAt: z.iso.datetime(),
+    updatedAt: z.string(),
     cache: z.boolean(),
     total: z.object({
       total: z.number().int().nonnegative(),
@@ -102,8 +102,8 @@ export const GetPostsStatsSuccessResponseSchema = createSuccessResponseSchema(
       last30Days: z.number().int().nonnegative(),
       lastYear: z.number().int().nonnegative(),
     }),
-    lastPublished: z.iso.datetime().nullable(),
-    firstPublished: z.iso.datetime().nullable(),
+    lastPublished: z.string().nullable(),
+    firstPublished: z.string().nullable(),
     averageDaysBetweenPosts: z.number().nullable(),
   }),
 );
@@ -128,7 +128,7 @@ registerSchema("GetTagsStats", GetTagsStatsSchema);
 
 export const GetTagsStatsSuccessResponseSchema = createSuccessResponseSchema(
   z.object({
-    updatedAt: z.iso.datetime(),
+    updatedAt: z.string(),
     cache: z.boolean(),
     total: z.object({
       total: z.number().int().nonnegative(),
@@ -164,7 +164,7 @@ registerSchema("GetCategoriesStats", GetCategoriesStatsSchema);
 export const GetCategoriesStatsSuccessResponseSchema =
   createSuccessResponseSchema(
     z.object({
-      updatedAt: z.iso.datetime(),
+      updatedAt: z.string(),
       cache: z.boolean(),
       total: z.object({
         total: z.number().int().nonnegative(),
@@ -204,7 +204,7 @@ registerSchema("GetVisitStats", GetVisitStatsSchema);
 
 export const GetVisitStatsSuccessResponseSchema = createSuccessResponseSchema(
   z.object({
-    updatedAt: z.iso.datetime(),
+    updatedAt: z.string(),
     cache: z.boolean(),
     last24Hours: z.object({
       visitors: z.number().int().nonnegative(), // 访客数

@@ -251,13 +251,13 @@ export async function getConversations(
           lastMessage: lastMessage
             ? {
                 content: lastMessage.content,
-                createdAt: lastMessage.createdAt,
+                createdAt: lastMessage.createdAt.toISOString(),
                 senderUid: lastMessage.senderUid,
               }
             : null,
           unreadCount: participant.unreadCount,
-          updatedAt: participant.updatedAt,
-          lastMessageAt: participant.lastMessageAt,
+          updatedAt: participant.updatedAt.toISOString(),
+          lastMessageAt: participant.lastMessageAt.toISOString(),
           // 获取对方的已读状态（对方读到了我发的哪条消息）
           otherUserLastReadMessageId: otherParticipant.lastReadMessageId,
         };

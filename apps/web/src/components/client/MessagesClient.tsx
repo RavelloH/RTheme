@@ -43,7 +43,7 @@ export default function MessagesClient({
     useState<ConversationUser | null>(null);
   const [temporaryLastMessage, setTemporaryLastMessage] = useState<{
     content: string;
-    createdAt: Date;
+    createdAt: string;
     senderUid: number;
   } | null>(null);
   const [_isLoadingTargetUser, setIsLoadingTargetUser] = useState(false);
@@ -112,7 +112,7 @@ export default function MessagesClient({
 
         const lastMessage = {
           content: newMsg.content,
-          createdAt: new Date(newMsg.createdAt),
+          createdAt: newMsg.createdAt,
           senderUid: newMsg.senderUid,
         };
 
@@ -130,7 +130,7 @@ export default function MessagesClient({
           updated[existingIndex] = {
             ...conversation,
             lastMessage,
-            lastMessageAt: new Date(newMsg.createdAt),
+            lastMessageAt: newMsg.createdAt,
             unreadCount: isCurrentConversation
               ? 0
               : (conversation.unreadCount || 0) + 1,
@@ -151,8 +151,8 @@ export default function MessagesClient({
               emailMd5: null,
             },
             lastMessage,
-            lastMessageAt: new Date(newMsg.createdAt),
-            updatedAt: new Date(newMsg.createdAt),
+            lastMessageAt: new Date(newMsg.createdAt).toISOString(),
+            updatedAt: new Date(newMsg.createdAt).toISOString(),
             unreadCount: selectedConversationId === conversationId ? 0 : 1,
             otherUserLastReadMessageId: null,
           };
@@ -516,8 +516,8 @@ export default function MessagesClient({
           otherUser: temporaryTargetUser,
           lastMessage: temporaryLastMessage,
           unreadCount: 0,
-          updatedAt: new Date(),
-          lastMessageAt: new Date(),
+          updatedAt: new Date().toISOString(),
+          lastMessageAt: new Date().toISOString(),
           otherUserLastReadMessageId: null,
         },
         ...conversations,

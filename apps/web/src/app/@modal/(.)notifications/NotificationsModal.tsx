@@ -13,7 +13,7 @@ interface NotificationsModalProps {
     content: string;
     link: string | null;
     isRead: boolean;
-    createdAt: Date;
+    createdAt: string; // ISO 8601 格式
   }>;
   readNotices: Array<{
     id: string;
@@ -21,7 +21,7 @@ interface NotificationsModalProps {
     content: string;
     link: string | null;
     isRead: boolean;
-    createdAt: Date;
+    createdAt: string; // ISO 8601 格式
   }>;
   totalReadCount: number; // 已读通知总数
   hasMoreRead?: boolean; // 是否有更多已读通知

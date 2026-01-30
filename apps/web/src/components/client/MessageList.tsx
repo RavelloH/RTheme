@@ -149,7 +149,7 @@ const MessageList = forwardRef<MessageListRef, MessageListProps>(
     }, [messages.length, scrollToBottom]);
 
     // 检查两个日期是否在同一天
-    const isSameDay = (date1: Date, date2: Date) => {
+    const isSameDay = (date1: string, date2: string) => {
       const d1 = new Date(date1);
       const d2 = new Date(date2);
       return (

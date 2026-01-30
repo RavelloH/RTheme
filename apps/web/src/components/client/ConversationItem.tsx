@@ -13,7 +13,7 @@ interface ConversationItemProps {
 }
 
 // 格式化时间
-const formatTime = (date: Date) => {
+const formatTime = (date: string) => {
   const now = new Date();
   const diff = now.getTime() - new Date(date).getTime();
   const seconds = Math.floor(diff / 1000);

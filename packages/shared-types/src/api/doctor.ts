@@ -13,7 +13,7 @@ registerSchema("Doctor", DoctorSchema);
 
 export const DoctorSuccessResponseSchema = createSuccessResponseSchema(
   z.object({
-    createdAt: z.iso.datetime(),
+    createdAt: z.string(),
     issues: z.array(
       z.object({
         code: z.string(),
@@ -25,7 +25,7 @@ export const DoctorSuccessResponseSchema = createSuccessResponseSchema(
   }),
 );
 export type DoctorSuccessResponse = z.infer<typeof DoctorSuccessResponseSchema>;
-registerSchema("DcotorSuccessResponse", DoctorSuccessResponseSchema);
+registerSchema("DoctorSuccessResponse", DoctorSuccessResponseSchema);
 
 /*
     getDoctorHistory() Schema
@@ -40,15 +40,15 @@ export const GetDoctorHistorySchema = z.object({
   id: z.number().int().optional(),
   errorCount: z.number().int().optional(),
   warningCount: z.number().int().optional(),
-  createdAtStart: z.string().datetime().optional(),
-  createdAtEnd: z.string().datetime().optional(),
+  createdAtStart: z.string().optional(),
+  createdAtEnd: z.string().optional(),
 });
 export type GetDoctorHistory = z.infer<typeof GetDoctorHistorySchema>;
 registerSchema("GetDoctorHistory", GetDoctorHistorySchema);
 
 export const DoctorHistoryItemSchema = z.object({
   id: z.number(),
-  createdAt: z.iso.datetime(),
+  createdAt: z.string(),
   issues: z.array(
     z.object({
       code: z.string(),

@@ -17,11 +17,11 @@ export const GetAuditLogsSchema = z.object({
   action: z.string().optional(),
   resource: z.string().optional(),
   userUid: z.number().int().optional(),
-  timestampStart: z.string().datetime().optional(),
-  timestampEnd: z.string().datetime().optional(),
+  timestampStart: z.string().optional(),
+  timestampEnd: z.string().optional(),
   // 保留旧的 startDate 和 endDate 以保持向后兼容
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
   // 通用搜索（搜索描述、资源ID、IP地址等）
   search: z.string().optional(),
 });
@@ -30,7 +30,7 @@ registerSchema("GetAuditLogs", GetAuditLogsSchema);
 
 export const AuditLogItemSchema = z.object({
   id: z.number(),
-  timestamp: z.iso.datetime(),
+  timestamp: z.string(),
   action: z.string(),
   resource: z.string(),
   resourceId: z.string(),

@@ -108,11 +108,17 @@ export async function getNotices(
       },
     });
 
+    // 转换 Date 对象为 ISO 字符串
+    const formatNotice = (notice: any) => ({
+      ...notice,
+      createdAt: notice.createdAt.toISOString(),
+    });
+
     return response.ok({
       message: "获取通知成功",
       data: {
-        unread: unreadNotices,
-        read: readNotices,
+        unread: unreadNotices.map(formatNotice),
+        read: readNotices.map(formatNotice),
         total: unreadNotices.length + totalReadCount,
         unreadCount: unreadNotices.length,
         hasMoreRead: readNotices.length < totalReadCount,

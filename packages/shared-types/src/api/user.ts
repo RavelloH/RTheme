@@ -242,8 +242,8 @@ export const UserProfileSchema = z.object({
     website: z.string().nullable(),
     role: z.enum(["USER", "ADMIN", "EDITOR", "AUTHOR"]),
     status: z.enum(["ACTIVE", "SUSPENDED", "NEEDS_UPDATE"]),
-    createdAt: z.string().datetime(),
-    lastUseAt: z.string().datetime(),
+    createdAt: z.string(),
+    lastUseAt: z.string(),
   }),
   // 统计信息
   stats: z.object({

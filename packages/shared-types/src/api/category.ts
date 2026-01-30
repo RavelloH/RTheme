@@ -28,10 +28,10 @@ export const GetCategoriesListSchema = z.object({
   parentSlug: z.string().optional(), // 使用 slug 筛选父分类（与 parentId 二选一）
   postIds: z.array(z.number().int().positive()).optional(), // 筛选包含指定文章的分类
   hasZeroPosts: z.boolean().optional(), // 筛选无文章关联的分类
-  createdAtStart: z.string().datetime().optional(),
-  createdAtEnd: z.string().datetime().optional(),
-  updatedAtStart: z.string().datetime().optional(),
-  updatedAtEnd: z.string().datetime().optional(),
+  createdAtStart: z.string().optional(),
+  createdAtEnd: z.string().optional(),
+  updatedAtStart: z.string().optional(),
+  updatedAtEnd: z.string().optional(),
 });
 export type GetCategoriesList = z.infer<typeof GetCategoriesListSchema>;
 registerSchema("GetCategoriesList", GetCategoriesListSchema);

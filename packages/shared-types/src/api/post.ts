@@ -53,12 +53,12 @@ export const GetPostsListSchema = z.object({
   isPinned: z.array(z.boolean()).optional(),
   allowComments: z.array(z.boolean()).optional(),
   robotsIndex: z.array(z.boolean()).optional(),
-  publishedAtStart: z.string().datetime().optional(),
-  publishedAtEnd: z.string().datetime().optional(),
-  updatedAtStart: z.string().datetime().optional(),
-  updatedAtEnd: z.string().datetime().optional(),
-  createdAtStart: z.string().datetime().optional(),
-  createdAtEnd: z.string().datetime().optional(),
+  publishedAtStart: z.string().optional(),
+  publishedAtEnd: z.string().optional(),
+  updatedAtStart: z.string().optional(),
+  updatedAtEnd: z.string().optional(),
+  createdAtStart: z.string().optional(),
+  createdAtEnd: z.string().optional(),
 });
 export type GetPostsList = z.infer<typeof GetPostsListSchema>;
 registerSchema("GetPostsList", GetPostsListSchema);
