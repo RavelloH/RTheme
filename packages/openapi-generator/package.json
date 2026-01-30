@@ -8,11 +8,16 @@
   "bin": {
     "generate-openapi": "./dist/cli.js"
   },
+  "files": [
+    "dist/**/*",
+    "openapi.yaml",
+    "openapi.json"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/dev-watcher.ts",
     "dev:tsc": "tsc --watch",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist openapi.yaml openapi.json",
     "generate": "tsx src/cli.ts",
     "generate-openapi": "tsx src/cli.ts",
     "check-types": "tsc --noEmit"

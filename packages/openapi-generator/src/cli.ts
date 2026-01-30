@@ -10,8 +10,8 @@ async function main() {
 
   try {
     const spec = await generateOpenAPISpec(); // 现在是异步的
-    // 生成到 openapi-spec 包目录
-    const outputPath = resolve(process.cwd(), "../openapi-spec/openapi.yaml");
+    // 输出到当前包目录（openapi-generator）
+    const outputPath = resolve(process.cwd(), "openapi.yaml");
 
     saveOpenAPISpec(spec, outputPath);
   } catch (error) {

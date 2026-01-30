@@ -67,7 +67,6 @@ class DevWatcher {
       })
       .on("add", (path: string) => {
         if (path.endsWith("route.ts") || path.endsWith("route.js")) {
-          rlog.info(`检测到新 API 文件: ${path}`);
           this.queueGeneration();
         }
       })
@@ -112,7 +111,6 @@ class DevWatcher {
       })
       .on("add", (path: string) => {
         if (path.endsWith(".ts")) {
-          rlog.info(`检测到新 shared-types API 文件: ${path}`);
           this.queueGeneration();
         }
       })

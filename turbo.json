@@ -62,15 +62,16 @@
       "cache": false,
       "persistent": true,
       "inputs": [
-        "packages/openapi-spec/openapi.json",
-        "packages/openapi-spec/openapi.yaml"
+        "packages/openapi-generator/openapi.json",
+        "packages/openapi-generator/openapi.yaml"
       ],
       "env": ["NODE_ENV"]
     },
     "generate-openapi": {
-      "dependsOn": [
-        "@repo/shared-types#build",
-        "@repo/openapi-generator#build"
+      "inputs": [
+        "packages/shared-types/src/**/*.ts",
+        "packages/openapi-generator/src/**/*.ts",
+        "apps/web/src/app/api/**/*.ts"
       ],
       "env": ["NODE_ENV"]
     },

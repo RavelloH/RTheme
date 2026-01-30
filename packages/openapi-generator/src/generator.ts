@@ -190,9 +190,16 @@ export async function generateOpenAPISpec(): Promise<OpenAPISpec> {
       rlog.warning("未发现任何已注册的schemas，可能是因为没有正确导入API模块");
     } else {
       rlog.info(`发现 ${registeredSchemas.length} 个已注册的schemas`);
+      rlog.info("转换 schema:");
       registeredSchemas.forEach(
-        ({ name, schema }: { name: string; schema: any }) => {
-          convertAndAddSchema(spec, name, schema);
+        ({ name, schema }: { name: string; schema: any }, index: number) => {
+          convertAndAddSchema(
+            spec,
+            name,
+            schema,
+            index,
+            registeredSchemas.length,
+          );
         },
       );
     }
@@ -204,10 +211,14 @@ export async function generateOpenAPISpec(): Promise<OpenAPISpec> {
 }
 
 // 辅助函数：转换并添加schema
-function convertAndAddSchema(spec: OpenAPISpec, name: string, schema: any) {
+function convertAndAddSchema(
+  spec: OpenAPISpec,
+  name: string,
+  schema: any,
+  index: number,
+  total: number,
+) {
   try {
-    rlog.info(`正在转换schema: ${name}`);
-
     // 确保schema是有效的Zod schema
     if (!schema || !schema._def) {
       rlog.error(`Schema ${name} 不是有效的Zod schema`);
@@ -226,7 +237,7 @@ function convertAndAddSchema(spec: OpenAPISpec, name: string, schema: any) {
     // 添加到组件schemas中
     spec.components.schemas[name] = cleanSchema;
 
-    rlog.success(`成功转换schema: ${name}`);
+    rlog.progress(index + 1, total);
   } catch (error) {
     rlog.error(`转换schema ${name} 时出错:`, error);
   }
@@ -238,19 +249,22 @@ export function saveOpenAPISpec(
   spec: OpenAPISpec,
   outputPath: string = "./openapi.yaml",
 ) {
+  // 默认输出到当前包目录
+  const finalOutputPath = outputPath || join(process.cwd(), "openapi.yaml");
+
   // 确保输出目录存在
-  const dir = dirname(outputPath);
+  const dir = dirname(finalOutputPath);
   mkdirSync(dir, { recursive: true });
 
   // 保存为 YAML 格式
   const yamlContent = YAML.stringify(spec, { indent: 2 });
-  writeFileSync(outputPath, yamlContent, "utf8");
+  writeFileSync(finalOutputPath, yamlContent, "utf8");
 
   // 同时保存为 JSON 格式
-  const jsonPath = outputPath.replace(".yaml", ".json");
+  const jsonPath = finalOutputPath.replace(".yaml", ".json");
   writeFileSync(jsonPath, JSON.stringify(spec, null, 2), "utf8");
 
   rlog.success(`OpenAPI 规范已生成:`);
-  rlog.success(` YAML: ${outputPath}`);
+  rlog.success(` YAML: ${finalOutputPath}`);
   rlog.success(` JSON: ${jsonPath}`);
 }
