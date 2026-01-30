@@ -24,8 +24,7 @@ import { connection } from "next/server";
  *                 type: string
  *                 description: 标签名称
  *               description:
- *                 type: string
- *                 nullable: true
+ *                 type: [string, null]
  *                 description: 标签描述
  *     responses:
  *       200:

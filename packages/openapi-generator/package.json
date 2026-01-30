@@ -29,7 +29,8 @@
     "rlog-js": "^1.5.2",
     "typescript": "5.9.2",
     "yaml": "^2.8.1",
-    "zod": "^4.1.5"
+    "zod": "^4.1.5",
+    "zod-openapi": "^5.4.6"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

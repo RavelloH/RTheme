@@ -28,12 +28,10 @@ import { connection } from "next/server";
  *                 description: 要移动的分类ID数组
  *                 minItems: 1
  *               targetParentId:
- *                 type: integer
- *                 nullable: true
+ *                 type: [integer, null]
  *                 description: 目标父分类ID（null表示移动到顶级）
  *               targetParentSlug:
- *                 type: string
- *                 nullable: true
+ *                 type: [string, null]
  *                 description: 目标父分类slug（与targetParentId二选一）
  *     responses:
  *       200:

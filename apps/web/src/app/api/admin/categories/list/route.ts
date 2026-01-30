@@ -43,8 +43,7 @@ const response = new ResponseBuilder("serverless");
  *       - in: query
  *         name: parentId
  *         schema:
- *           type: integer
- *           nullable: true
+ *           type: [integer, null]
  *         description: 父分类ID（null表示顶级分类）
  *       - in: query
  *         name: parentSlug

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createSchema } from "zod-openapi";
 import {
   writeFileSync,
   mkdirSync,
@@ -104,77 +105,6 @@ function normalizeOpenAPISpec(spec: any): any {
   return normalized;
 }
 
-// 修复 schema 中的 $ref 引用路径，并提取内部定义
-function fixSchemaRefs(
-  schema: any,
-  definitionsMap: Map<string, any> = new Map(),
-): any {
-  if (!schema || typeof schema !== "object") {
-    return schema;
-  }
-
-  // 处理数组
-  if (Array.isArray(schema)) {
-    return schema.map((item) => fixSchemaRefs(item, definitionsMap));
-  }
-
-  // 如果这个对象有 definitions 字段，提取它们
-  if (schema.definitions && typeof schema.definitions === "object") {
-    for (const [name, def] of Object.entries(schema.definitions)) {
-      definitionsMap.set(name, fixSchemaRefs(def, definitionsMap));
-    }
-    delete schema.definitions;
-  }
-
-  // 处理 $ref 字段
-  if (schema.$ref) {
-    // 将 #/definitions/xxx 替换为 #/components/schemas/xxx
-    if (schema.$ref.startsWith("#/definitions/")) {
-      schema.$ref = schema.$ref.replace(
-        "#/definitions/",
-        "#/components/schemas/",
-      );
-    }
-  }
-
-  // 递归处理所有字段
-  const result: any = {};
-  for (const [key, value] of Object.entries(schema)) {
-    if (key !== "$ref") {
-      result[key] = fixSchemaRefs(value, definitionsMap);
-    } else {
-      result[key] = schema.$ref;
-    }
-  }
-
-  return result;
-}
-
-// 替换 schema 中的 $ref 引用
-function replaceRef(schema: any, oldRef: string, newRef: string): any {
-  if (!schema || typeof schema !== "object") {
-    return schema;
-  }
-
-  // 处理数组
-  if (Array.isArray(schema)) {
-    return schema.map((item) => replaceRef(item, oldRef, newRef));
-  }
-
-  // 处理 $ref 字段
-  if (schema.$ref && schema.$ref === oldRef) {
-    schema = { ...schema, $ref: newRef };
-  }
-
-  // 递归处理所有字段
-  const result: any = Array.isArray(schema) ? [] : {};
-  for (const [key, value] of Object.entries(schema)) {
-    result[key] = replaceRef(value, oldRef, newRef);
-  }
-
-  return result;
-}
-
 // 从文件内容中提取OpenAPI规范
 function extractOpenAPIFromFile(
   content: string,
@@ -238,7 +168,7 @@ interface OpenAPISpec {
 
 export async function generateOpenAPISpec(): Promise<OpenAPISpec> {
   const spec: OpenAPISpec = {
-    openapi: "3.0.3",
+    openapi: "3.1.0",
     info: {
       title: "NeutralPress API",
       description: "NeutralPress CMS API 文档",
@@ -325,7 +255,7 @@ export async function generateOpenAPISpec(): Promise<OpenAPISpec> {
   return spec;
 }
 
-// 辅助函数：转换并添加schema
+// 辅助函数：转换并添加schema（使用 zod-openapi 的 createSchema API）
 function convertAndAddSchema(
   spec: OpenAPISpec,
   name: string,
@@ -340,47 +270,159 @@ function convertAndAddSchema(
       return;
     }
 
-    // 使用Zod v4的原生JSON Schema转换
-    const jsonSchema = z.toJSONSchema(schema, {
-      target: "openapi-3.0",
+    // 使用 zod-openapi 的 createSchema API
+    // 这会正确处理 OpenAPI 3.1 的特性（nullable、components 等）
+    const { schema: initialOpenapiSchema, components } = createSchema(schema, {
+      io: "output", // 默认使用 output 模式（用于响应）
+      openapiVersion: "3.1.0", // 指定 OpenAPI 版本，确保 nullable 正确转换为 type: ["string", "null"]
+      opts: {
+        reused: "ref", // 将重用的 schema 提取为引用
+        // 修复 OpenAPI 3.1 的 exclusiveMinimum/exclusiveMaximum 格式
+        override: ({ jsonSchema }) => {
+          // 递归处理 schema
+          const fixExclusiveBounds = (schema: any) => {
+            if (!schema || typeof schema !== "object") return;
+
+            // OpenAPI 3.0: exclusiveMinimum: 0 (number)
+            // OpenAPI 3.1: exclusiveMinimum: true (boolean) + minimum: 0 (number)
+            if (
+              typeof schema.exclusiveMinimum === "number" &&
+              schema.exclusiveMinimum !== undefined
+            ) {
+              schema.minimum = schema.exclusiveMinimum;
+              schema.exclusiveMinimum = true;
+            }
+            if (
+              typeof schema.exclusiveMaximum === "number" &&
+              schema.exclusiveMaximum !== undefined
+            ) {
+              schema.maximum = schema.exclusiveMaximum;
+              schema.exclusiveMaximum = true;
+            }
+
+            // 递归处理嵌套对象
+            if (schema.properties) {
+              Object.values(schema.properties).forEach(fixExclusiveBounds);
+            }
+            if (schema.items) {
+              if (Array.isArray(schema.items)) {
+                schema.items.forEach(fixExclusiveBounds);
+              } else {
+                fixExclusiveBounds(schema.items);
+              }
+            }
+            // 处理 allOf, anyOf, oneOf
+            ["allOf", "anyOf", "oneOf"].forEach((key) => {
+              if (Array.isArray(schema[key])) {
+                schema[key].forEach(fixExclusiveBounds);
+              }
+            });
+          };
+
+          fixExclusiveBounds(jsonSchema);
+        },
+      },
     });
 
-    // 清理schema，移除不需要的元数据
-    let cleanSchema = { ...jsonSchema };
-    delete cleanSchema.$schema;
+    // 合并 components（如果 schema 使用了 .meta({ id: 'xxx' }) 注册的组件）
+    let openapiSchema = initialOpenapiSchema;
+    if (components) {
+      // 处理 $defs - zod-openapi 可能将内部引用放在这里
+      if (components.$defs) {
+        // 将 $defs 合并到 schemas，并生成唯一名称避免冲突
+        for (const [defName, originalDefSchema] of Object.entries(
+          components.$defs,
+        )) {
+          const uniqueName = `${name}_${defName}`;
 
-    // 修复 $ref 引用路径并提取内部定义
-    const definitionsMap = new Map<string, any>();
-    cleanSchema = fixSchemaRefs(cleanSchema, definitionsMap);
+          // 修复引用路径：将 #/$defs/__schemaX 替换为 #/components/schemas/Name___schemaX
+          const updatedDefSchema = replaceRefs(
+            originalDefSchema,
+            `#/$defs/${defName}`,
+            `#/components/schemas/${uniqueName}`,
+          );
+          spec.components.schemas[uniqueName] = updatedDefSchema;
 
-    // 将提取的内部定义添加到顶层 components.schemas
-    for (const [defName, defSchema] of definitionsMap.entries()) {
-      // 使用唯一名称避免冲突
-      const uniqueName = `${name}_${defName}`;
+          // 同时修复主 schema 中的引用
+          openapiSchema = replaceRefs(
+            openapiSchema,
+            `#/$defs/${defName}`,
+            `#/components/schemas/${uniqueName}`,
+          );
+        }
+      }
 
-      // 修复定义内部的引用（自引用等情况）
-      const fixedDefSchema = replaceRef(
-        defSchema,
-        `#/components/schemas/${defName}`,
-        `#/components/schemas/${uniqueName}`,
-      );
-      spec.components.schemas[uniqueName] = fixedDefSchema;
-
-      // 替换主 schema 中对这个定义的引用
-      cleanSchema = replaceRef(
-        cleanSchema,
-        `#/components/schemas/${defName}`,
-        `#/components/schemas/${uniqueName}`,
-      );
+      if (components.schemas) {
+        Object.assign(spec.components.schemas, components.schemas);
+      }
+      // 可以根据需要合并其他类型的 components
+      // if (components.parameters) {
+      //   Object.assign(spec.components.parameters, components.parameters);
+      // }
     }
 
-    // 添加到组件schemas中
-    spec.components.schemas[name] = cleanSchema;
+    // 添加主 schema
+    spec.components.schemas[name] = openapiSchema;
+
+    // 修复循环引用：递归检查并修复所有指向 __schemaX 的引用
+    // 对于 z.lazy() 的循环引用，将 #/components/schemas/__schemaX 替换为指向当前 schema
+    if (openapiSchema && typeof openapiSchema === "object") {
+      // 查找所有指向 __schema 的引用
+      const findAndFixSchemaRefs = (obj: any): any => {
+        if (!obj || typeof obj !== "object") {
+          return obj;
+        }
+
+        if (Array.isArray(obj)) {
+          return obj.map(findAndFixSchemaRefs);
+        }
+
+        // 如果是 $ref 指向 __schema，替换为当前 schema
+        if (
+          obj.$ref &&
+          typeof obj.$ref === "string" &&
+          obj.$ref.includes("__schema")
+        ) {
+          return { ...obj, $ref: `#/components/schemas/${name}` };
+        }
+
+        // 递归处理对象的所有属性
+        const result: any = {};
+        for (const [key, value] of Object.entries(obj)) {
+          result[key] = findAndFixSchemaRefs(value);
+        }
+        return result;
+      };
+
+      spec.components.schemas[name] = findAndFixSchemaRefs(openapiSchema);
+    }
 
     rlog.progress(index + 1, total);
   } catch (error) {
     rlog.error(`转换schema ${name} 时出错:`, error);
   }
+}
+
+// 递归替换 schema 中的 $ref 路径
+function replaceRefs(obj: any, oldRef: string, newRef: string): any {
+  if (!obj || typeof obj !== "object") {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) => replaceRefs(item, oldRef, newRef));
+  }
+
+  if (obj.$ref === oldRef) {
+    return { ...obj, $ref: newRef };
+  }
+
+  const result: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    result[key] = replaceRefs(value, oldRef, newRef);
+  }
+
+  return result;
 }
 
 // 默认路径定义作为后备

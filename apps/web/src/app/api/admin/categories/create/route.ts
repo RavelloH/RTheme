@@ -27,12 +27,10 @@ import { createCategory } from "@/actions/category";
  *                 type: string
  *                 description: 分类slug（可选，不提供则自动生成）
  *               description:
- *                 type: string
- *                 nullable: true
+ *                 type: [string, null]
  *                 description: 分类描述
  *               parentId:
- *                 type: integer
- *                 nullable: true
+ *                 type: [integer, null]
  *                 description: 父分类ID（null表示顶级分类）
  *               parentSlug:
  *                 type: string

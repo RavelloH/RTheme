@@ -30,8 +30,7 @@ import { connection } from "next/server";
  *                 type: string
  *                 description: 新标签名称（可选）
  *               description:
- *                 type: string
- *                 nullable: true
+ *                 type: [string, null]
  *                 description: 标签描述
  *     responses:
  *       200:
