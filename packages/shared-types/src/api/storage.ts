@@ -271,6 +271,7 @@ export const GetStorageListResponseSchema = createPaginatedResponseSchema(
 export type GetStorageListResponse = z.infer<
   typeof GetStorageListResponseSchema
 >;
+registerSchema("GetStorageListResponse", GetStorageListResponseSchema);
 
 export const GetStorageDetailResponseSchema =
   createSuccessResponseSchema(StorageDetailSchema);
@@ -278,6 +279,7 @@ export const GetStorageDetailResponseSchema =
 export type GetStorageDetailResponse = z.infer<
   typeof GetStorageDetailResponseSchema
 >;
+registerSchema("GetStorageDetailResponse", GetStorageDetailResponseSchema);
 
 export const CreateStorageResponseWrapperSchema = createSuccessResponseSchema(
   CreateStorageResponseSchema,
@@ -286,6 +288,10 @@ export const CreateStorageResponseWrapperSchema = createSuccessResponseSchema(
 export type CreateStorageResponseWrapper = z.infer<
   typeof CreateStorageResponseWrapperSchema
 >;
+registerSchema(
+  "CreateStorageResponseWrapper",
+  CreateStorageResponseWrapperSchema,
+);
 
 export const UpdateStorageResponseWrapperSchema = createSuccessResponseSchema(
   UpdateStorageResponseSchema,
@@ -294,6 +300,10 @@ export const UpdateStorageResponseWrapperSchema = createSuccessResponseSchema(
 export type UpdateStorageResponseWrapper = z.infer<
   typeof UpdateStorageResponseWrapperSchema
 >;
+registerSchema(
+  "UpdateStorageResponseWrapper",
+  UpdateStorageResponseWrapperSchema,
+);
 
 export const DeleteStorageResponseWrapperSchema = createSuccessResponseSchema(
   DeleteStorageResponseSchema,
@@ -302,6 +312,10 @@ export const DeleteStorageResponseWrapperSchema = createSuccessResponseSchema(
 export type DeleteStorageResponseWrapper = z.infer<
   typeof DeleteStorageResponseWrapperSchema
 >;
+registerSchema(
+  "DeleteStorageResponseWrapper",
+  DeleteStorageResponseWrapperSchema,
+);
 
 export const ToggleStorageStatusResponseWrapperSchema =
   createSuccessResponseSchema(ToggleStorageStatusResponseSchema);
@@ -309,6 +323,10 @@ export const ToggleStorageStatusResponseWrapperSchema =
 export type ToggleStorageStatusResponseWrapper = z.infer<
   typeof ToggleStorageStatusResponseWrapperSchema
 >;
+registerSchema(
+  "ToggleStorageStatusResponseWrapper",
+  ToggleStorageStatusResponseWrapperSchema,
+);
 
 export const SetDefaultStorageResponseWrapperSchema =
   createSuccessResponseSchema(SetDefaultStorageResponseSchema);
@@ -316,6 +334,10 @@ export const SetDefaultStorageResponseWrapperSchema =
 export type SetDefaultStorageResponseWrapper = z.infer<
   typeof SetDefaultStorageResponseWrapperSchema
 >;
+registerSchema(
+  "SetDefaultStorageResponseWrapper",
+  SetDefaultStorageResponseWrapperSchema,
+);
 
 export const GetStorageStatsResponseSchema = createSuccessResponseSchema(
   GetStorageStatsSuccessResponseSchema,

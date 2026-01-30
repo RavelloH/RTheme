@@ -25,7 +25,7 @@ const response = new ResponseBuilder("serverless");
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/DcotorSuccessResponse'
+ *               $ref: '#/components/schemas/DoctorSuccessResponse'
  *       400:
  *         description: 请求参数错误
  *         content:

@@ -63,6 +63,104 @@ function scanApiFiles(apiDir: string): Record<string, any> {
   return paths;
 }
 
+// 规范化 OpenAPI spec（修复常见的类型问题）
+function normalizeOpenAPISpec(spec: any): any {
+  if (!spec || typeof spec !== "object") {
+    return spec;
+  }
+
+  const normalized = { ...spec };
+
+  // 遍历所有路径
+  for (const pathKey of Object.keys(normalized)) {
+    const pathItem = normalized[pathKey];
+    if (!pathItem || typeof pathItem !== "object") continue;
+
+    // 遍历所有 HTTP 方法
+    for (const method of ["get", "post", "put", "delete", "patch", "options", "head"]) {
+      const operation = pathItem[method];
+      if (!operation || typeof operation !== "object") continue;
+
+      // 修复 tags 字段：如果是字符串，转换为字符串数组
+      if (operation.tags && typeof operation.tags === "string") {
+        operation.tags = [operation.tags];
+      }
+
+      // 修复其他可能需要数组的字段
+      if (operation.security && typeof operation.security === "string") {
+        operation.security = [[operation.security]];
+      }
+    }
+  }
+
+  return normalized;
+}
+
+// 修复 schema 中的 $ref 引用路径，并提取内部定义
+function fixSchemaRefs(schema: any, definitionsMap: Map<string, any> = new Map()): any {
+  if (!schema || typeof schema !== "object") {
+    return schema;
+  }
+
+  // 处理数组
+  if (Array.isArray(schema)) {
+    return schema.map((item) => fixSchemaRefs(item, definitionsMap));
+  }
+
+  // 如果这个对象有 definitions 字段，提取它们
+  if (schema.definitions && typeof schema.definitions === "object") {
+    for (const [name, def] of Object.entries(schema.definitions)) {
+      definitionsMap.set(name, fixSchemaRefs(def, definitionsMap));
+    }
+    delete schema.definitions;
+  }
+
+  // 处理 $ref 字段
+  if (schema.$ref) {
+    // 将 #/definitions/xxx 替换为 #/components/schemas/xxx
+    if (schema.$ref.startsWith("#/definitions/")) {
+      schema.$ref = schema.$ref.replace("#/definitions/", "#/components/schemas/");
+    }
+  }
+
+  // 递归处理所有字段
+  const result: any = {};
+  for (const [key, value] of Object.entries(schema)) {
+    if (key !== "$ref") {
+      result[key] = fixSchemaRefs(value, definitionsMap);
+    } else {
+      result[key] = schema.$ref;
+    }
+  }
+
+  return result;
+}
+
+// 替换 schema 中的 $ref 引用
+function replaceRef(schema: any, oldRef: string, newRef: string): any {
+  if (!schema || typeof schema !== "object") {
+    return schema;
+  }
+
+  // 处理数组
+  if (Array.isArray(schema)) {
+    return schema.map((item) => replaceRef(item, oldRef, newRef));
+  }
+
+  // 处理 $ref 字段
+  if (schema.$ref && schema.$ref === oldRef) {
+    schema = { ...schema, $ref: newRef };
+  }
+
+  // 递归处理所有字段
+  const result: any = Array.isArray(schema) ? [] : {};
+  for (const [key, value] of Object.entries(schema)) {
+    result[key] = replaceRef(value, oldRef, newRef);
+  }
+
+  return result;
+}
+
 // 从文件内容中提取OpenAPI规范
 function extractOpenAPIFromFile(
   content: string,
@@ -89,9 +187,12 @@ function extractOpenAPIFromFile(
         // 解析YAML内容
         const spec = YAML.parse(yamlContent);
 
+        // 规范化 spec（修复类型问题）
+        const normalizedSpec = normalizeOpenAPISpec(spec);
+
         // 合并到paths对象中
-        if (spec && typeof spec === "object") {
-          Object.assign(paths, spec);
+        if (normalizedSpec && typeof normalizedSpec === "object") {
+          Object.assign(paths, normalizedSpec);
         }
       }
     } catch (error) {
@@ -231,8 +332,25 @@ function convertAndAddSchema(
     });
 
     // 清理schema，移除不需要的元数据
-    const cleanSchema = { ...jsonSchema };
+    let cleanSchema = { ...jsonSchema };
     delete cleanSchema.$schema;
+
+    // 修复 $ref 引用路径并提取内部定义
+    const definitionsMap = new Map<string, any>();
+    cleanSchema = fixSchemaRefs(cleanSchema, definitionsMap);
+
+    // 将提取的内部定义添加到顶层 components.schemas
+    for (const [defName, defSchema] of definitionsMap.entries()) {
+      // 使用唯一名称避免冲突
+      const uniqueName = `${name}_${defName}`;
+
+      // 修复定义内部的引用（自引用等情况）
+      const fixedDefSchema = replaceRef(defSchema, `#/components/schemas/${defName}`, `#/components/schemas/${uniqueName}`);
+      spec.components.schemas[uniqueName] = fixedDefSchema;
+
+      // 替换主 schema 中对这个定义的引用
+      cleanSchema = replaceRef(cleanSchema, `#/components/schemas/${defName}`, `#/components/schemas/${uniqueName}`);
+    }
 
     // 添加到组件schemas中
     spec.components.schemas[name] = cleanSchema;
