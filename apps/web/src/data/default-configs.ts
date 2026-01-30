@@ -285,6 +285,10 @@ export const CONFIG_DEFINITIONS = {
   },
   "media.gallery.sortOrder": {
     default: "desc" as "asc" | "desc",
+    options: [
+      { value: "desc", label: "最新在前 (desc)" },
+      { value: "asc", label: "最早在前 (asc)" },
+    ],
     description:
       "画廊页面照片的排序顺序，最新照片在前（desc）或最早照片在前（asc）",
   },
@@ -550,3 +554,34 @@ export const defaultConfigMap = new Map<string, JsonValue>();
 
 // 初始化 Map
 defaultConfigs.forEach((c) => defaultConfigMap.set(c.key, c.value));
+
+export interface ConfigOption {
+  label: string;
+  value: string | number;
+}
+
+// 提取 default 字段的值
+export const extractDefaultValue = (value: unknown): unknown => {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "default" in value &&
+    (value as { default: unknown }).default !== undefined
+  ) {
+    return (value as { default: unknown }).default;
+  }
+  return value;
+};
+
+// 提取 options 字段的值
+export const extractOptions = (value: unknown): ConfigOption[] | undefined => {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "options" in value &&
+    Array.isArray((value as { options: unknown }).options)
+  ) {
+    return (value as { options: ConfigOption[] }).options;
+  }
+  return undefined;
+};

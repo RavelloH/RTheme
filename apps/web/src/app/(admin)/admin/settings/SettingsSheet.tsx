@@ -5,7 +5,7 @@ import { useBroadcast } from "@/hooks/use-broadcast";
 import { useState, useEffect, useCallback } from "react";
 import type { SettingSelectMessage } from "./SettingsSelect";
 import { Input } from "@/ui/Input";
-import { Select } from "@/ui/Select";
+import { Select, type SelectOption } from "@/ui/Select";
 import { Button } from "@/ui/Button";
 import { useToast } from "@/ui/Toast";
 import { AutoTransition } from "@/ui/AutoTransition";
@@ -13,7 +13,11 @@ import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiSaveLine, RiRefreshLine } from "@remixicon/react";
 import { getSettings, updateSettings } from "@/actions/setting";
 import runWithAuth from "@/lib/client/run-with-auth";
-import { defaultConfigs } from "@/data/default-configs";
+import {
+  defaultConfigs,
+  extractDefaultValue,
+  extractOptions,
+} from "@/data/default-configs";
 
 interface SettingConfig {
   key: string;
@@ -334,19 +338,6 @@ export default function SettingSheet() {
     return !isNaN(date.getTime());
   };
 
-  // 提取 default 字段的值
-  const extractDefaultValue = (value: unknown): unknown => {
-    if (
-      typeof value === "object" &&
-      value !== null &&
-      "default" in value &&
-      value.default !== undefined
-    ) {
-      return value.default;
-    }
-    return value;
-  };
-
   // 获取原始显示值（不考虑编辑状态）
   const getOriginalDisplayValue = (setting: SettingConfig): string => {
     // 提取 default 字段
@@ -604,16 +595,31 @@ export default function SettingSheet() {
     type?: string;
     rows?: number;
     useSelect?: boolean;
+    options?: SelectOption[];
     isJsonObject?: boolean;
   } => {
     const defaultValue = extractDefaultValue(setting.value);
+
+    // 检查是否有预定义的选项 (从默认配置中获取)
+    const defaultConfig = defaultConfigs.find((c) => c.key === setting.key);
+    const predefinedOptions = extractOptions(defaultConfig?.value);
+
+    if (predefinedOptions) {
+      return {
+        useSelect: true,
+        options: predefinedOptions,
+        isJsonObject: false,
+      };
+    }
 
     // 如果是布尔值，使用 Select 组件
     if (typeof defaultValue === "boolean") {
       return {
         useSelect: true,
-        type: "text",
-        rows: undefined,
+        options: [
+          { value: "true", label: "是 (true)" },
+          { value: "false", label: "否 (false)" },
+        ],
         isJsonObject: false,
       };
     }
@@ -763,7 +769,7 @@ export default function SettingSheet() {
                     </div>
 
                     {inputConfig.useSelect ? (
-                      // 布尔值使用 Select 组件
+                      // 预定义选项或布尔值使用 Select 组件
                       <div className="space-y-1">
                         <div className="text-sm text-muted-foreground">
                           配置值
@@ -773,10 +779,7 @@ export default function SettingSheet() {
                           onChange={(value) =>
                             handleValueChange(setting.key, String(value))
                           }
-                          options={[
-                            { value: "true", label: "是 (true)" },
-                            { value: "false", label: "否 (false)" },
-                          ]}
+                          options={inputConfig.options || []}
                           size="sm"
                         />
                       </div>
