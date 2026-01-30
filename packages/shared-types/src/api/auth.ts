@@ -55,7 +55,7 @@ export const LoginSuccessResponseSchema = createSuccessResponseSchema(
       username: z.string(),
       nickname: z.string(),
       role: z.enum(["USER", "ADMIN", "EDITOR", "AUTHOR"]),
-      exp: z.iso.datetime().optional(),
+      exp: z.string().optional(),
     }),
   }),
 );
@@ -366,7 +366,7 @@ registerSchema("Logout", LogoutSchema);
 export const LogoutSuccessResponseSchema = z.object({
   success: z.literal(true),
   message: z.string(),
-  timestamp: z.iso.datetime(),
+  timestamp: z.string(),
   requestId: z.string(),
   data: z.null(),
 });

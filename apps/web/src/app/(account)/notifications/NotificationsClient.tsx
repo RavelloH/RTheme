@@ -36,7 +36,7 @@ interface Notice {
   content: string; // 通知正文
   link: string | null;
   isRead: boolean;
-  createdAt: Date;
+  createdAt: string; // ISO 8601 格式
 }
 
 interface UnreadNoticeUpdateMessage {
@@ -223,7 +223,7 @@ export default function NotificationsClient({
   };
 
   // 格式化时间
-  const formatTime = (date: Date) => {
+  const formatTime = (date: string | Date) => {
     const now = new Date();
     const diff = now.getTime() - new Date(date).getTime();
     const seconds = Math.floor(diff / 1000);

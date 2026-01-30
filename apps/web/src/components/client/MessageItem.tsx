@@ -19,7 +19,7 @@ interface MessageItemProps {
 }
 
 // 格式化时间（只显示时分）
-const formatTime = (date: Date) => {
+const formatTime = (date: string) => {
   return new Date(date).toLocaleTimeString("zh-CN", {
     hour: "2-digit",
     minute: "2-digit",

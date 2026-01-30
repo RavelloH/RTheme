@@ -32,7 +32,7 @@ export function useOptimisticMessages(initialMessages: Message[] = []) {
         content,
         type: "TEXT",
         senderUid,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
         status: "sending",
         tempId,
       };

@@ -38,7 +38,7 @@ export const MessageSchema = z.object({
   content: z.string(),
   type: z.enum(["TEXT", "SYSTEM"]),
   senderUid: z.number(),
-  createdAt: z.coerce.date(),
+  createdAt: z.string(), // ISO 8601 字符串
   // 客户端状态（可选，用于乐观更新）
   status: MessageStatusSchema.optional(),
   // 临时 ID（可选，用于乐观更新）
@@ -54,13 +54,13 @@ export const ConversationSchema = z.object({
   lastMessage: z
     .object({
       content: z.string(),
-      createdAt: z.coerce.date(),
+      createdAt: z.string(), // ISO 8601 字符串
       senderUid: z.number(),
     })
     .nullable(),
   unreadCount: z.number(),
-  updatedAt: z.coerce.date(),
-  lastMessageAt: z.coerce.date(), // 最后一条消息的时间（专门用于排序）
+  updatedAt: z.string(), // ISO 8601 字符串
+  lastMessageAt: z.string(), // ISO 8601 字符串
   otherUserLastReadMessageId: z.string().nullable().optional(), // 对方已读的最后一条消息ID
 });
 export type Conversation = z.infer<typeof ConversationSchema>;
@@ -72,7 +72,7 @@ registerSchema("Conversation", ConversationSchema);
 
 // 获取会话列表请求
 export const GetConversationsRequestSchema = z.object({
-  lastPolledAt: z.coerce.date().optional(), // 上次轮询时间（用于增量更新）
+  lastPolledAt: z.string().optional(), // ISO 8601 字符串
   skip: z.number().min(0).default(0),
   take: z.number().min(1).max(50).default(20),
 });

@@ -16,7 +16,7 @@ export const NoticeSchema = z.object({
   content: z.string(), // 通知正文
   link: z.string().nullable(),
   isRead: z.boolean(),
-  createdAt: z.coerce.date(),
+  createdAt: z.string(), // ISO 8601 字符串
 });
 export type Notice = z.infer<typeof NoticeSchema>;
 registerSchema("Notice", NoticeSchema);

@@ -17,10 +17,10 @@ export const GetTagsListSchema = z.object({
   // 筛选参数
   postIds: z.array(z.number().int().positive()).optional(), // 筛选包含指定文章的标签
   hasZeroPosts: z.boolean().optional(), // 筛选无文章关联的标签
-  createdAtStart: z.string().datetime().optional(),
-  createdAtEnd: z.string().datetime().optional(),
-  updatedAtStart: z.string().datetime().optional(),
-  updatedAtEnd: z.string().datetime().optional(),
+  createdAtStart: z.string().optional(),
+  createdAtEnd: z.string().optional(),
+  updatedAtStart: z.string().optional(),
+  updatedAtEnd: z.string().optional(),
 });
 export type GetTagsList = z.infer<typeof GetTagsListSchema>;
 registerSchema("GetTagsList", GetTagsListSchema);

@@ -51,10 +51,10 @@ export const GetMenusListSchema = z.object({
   category: z.array(z.enum(["MAIN", "COMMON", "OUTSITE"])).optional(),
   search: z.string().optional(),
   // 筛选参数
-  createdAtStart: z.string().datetime().optional(),
-  createdAtEnd: z.string().datetime().optional(),
-  updatedAtStart: z.string().datetime().optional(),
-  updatedAtEnd: z.string().datetime().optional(),
+  createdAtStart: z.string().optional(),
+  createdAtEnd: z.string().optional(),
+  updatedAtStart: z.string().optional(),
+  updatedAtEnd: z.string().optional(),
 });
 export type GetMenusList = z.infer<typeof GetMenusListSchema>;
 registerSchema("GetMenusList", GetMenusListSchema);

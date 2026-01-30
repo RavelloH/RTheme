@@ -113,12 +113,12 @@ export const SystemInfoSchema = z.object({
   }),
   // 时间信息
   time: z.object({
-    serverTime: z.iso.datetime(), // 服务器当前时间
+    serverTime: z.string(), // 服务器当前时间
     timezone: z.string(), // 时区
     timezoneOffset: z.number(), // 时区偏移（分钟）
   }),
   // 收集时间
-  collectedAt: z.iso.datetime(),
+  collectedAt: z.string(),
 });
 
 export type SystemInfo = z.infer<typeof SystemInfoSchema>;
