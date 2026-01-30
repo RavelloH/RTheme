@@ -7,9 +7,9 @@ import type { BlockConfig, BlockProps } from "@/blocks/types";
 // 保持动态导入映射不变
 const BLOCK_COMPONENTS: Record<string, React.ComponentType<BlockProps>> = {
   default: dynamic(() => import("@/blocks/Default")),
-  hero: dynamic(() => import("@/blocks/Hero")),
-  projects: dynamic(() => import("@/blocks/Projects")),
-  posts: dynamic(() => import("@/blocks/Posts")),
+  hero: dynamic(() => import("@/blocks/HeroGallery")),
+  projects: dynamic(() => import("@/blocks/RecentProjects")),
+  posts: dynamic(() => import("@/blocks/RecentPosts")),
   "tags-categories": dynamic(() => import("@/blocks/TagsCategories")),
 };
 

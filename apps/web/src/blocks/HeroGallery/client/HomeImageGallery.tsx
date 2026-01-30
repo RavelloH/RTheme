@@ -14,7 +14,6 @@ export default function HomeImageGallery({
 }: {
   images?: string[];
 }) {
-  // 如果传入的图片不足9张，使用后备图片填充
   const displayImages = [...images].slice(0, 9);
   const containerRef = useRef<HTMLDivElement>(null);
   const imagesRef = useRef<(HTMLDivElement | null)[]>([]);
