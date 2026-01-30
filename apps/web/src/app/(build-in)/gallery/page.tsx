@@ -6,6 +6,7 @@ import GalleryClient from "./GalleryClient";
 import { getGalleryPhotosData } from "@/lib/server/media";
 
 const page = await getRawPage("/gallery");
+
 export const metadata = await generateMetadata(
   {
     title: page?.title,

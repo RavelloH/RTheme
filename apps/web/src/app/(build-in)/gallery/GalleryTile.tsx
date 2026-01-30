@@ -1,7 +1,7 @@
 "use client";
 
 import CMSImage from "@/components/CMSImage";
-import Link from "@/components/Link";
+import Link from "next/link";
 import { useGalleryLightboxStore } from "@/store/gallery-lightbox-store";
 import type { Tile } from "@/lib/gallery-layout";
 import { memo } from "react";
