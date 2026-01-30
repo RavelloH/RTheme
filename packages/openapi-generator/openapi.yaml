@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
   title: NeutralPress API
   description: NeutralPress CMS API 文档
@@ -202,12 +202,14 @@ paths:
                   type: string
                   description: 分类slug（可选，不提供则自动生成）
                 description:
-                  type: string
-                  nullable: true
+                  type:
+                    - string
+                    - null
                   description: 分类描述
                 parentId:
-                  type: integer
-                  nullable: true
+                  type:
+                    - integer
+                    - null
                   description: 父分类ID（null表示顶级分类）
                 parentSlug:
                   type: string
@@ -269,8 +271,9 @@ paths:
         - in: query
           name: parentId
           schema:
-            type: integer
-            nullable: true
+            type:
+              - integer
+              - null
           description: 父分类ID（null表示顶级分类）
         - in: query
           name: parentSlug
@@ -344,8 +347,9 @@ paths:
         - in: query
           name: parentId
           schema:
-            type: integer
-            nullable: true
+            type:
+              - integer
+              - null
           description: 父分类ID（null表示顶级分类）
         - in: query
           name: parentSlug
@@ -399,12 +403,14 @@ paths:
                   description: 要移动的分类ID数组
                   minItems: 1
                 targetParentId:
-                  type: integer
-                  nullable: true
+                  type:
+                    - integer
+                    - null
                   description: 目标父分类ID（null表示移动到顶级）
                 targetParentSlug:
-                  type: string
-                  nullable: true
+                  type:
+                    - string
+                    - null
                   description: 目标父分类slug（与targetParentId二选一）
       responses:
         "200":
@@ -447,16 +453,19 @@ paths:
                   type: string
                   description: 新的名称
                 description:
-                  type: string
-                  nullable: true
+                  type:
+                    - string
+                    - null
                   description: 描述
                 parentId:
-                  type: integer
-                  nullable: true
+                  type:
+                    - integer
+                    - null
                   description: 新的父分类ID（移动分类）
                 parentSlug:
-                  type: string
-                  nullable: true
+                  type:
+                    - string
+                    - null
                   description: 新的父分类slug
       responses:
         "200":
@@ -1899,8 +1908,9 @@ paths:
                   type: string
                   description: 标签名称
                 description:
-                  type: string
-                  nullable: true
+                  type:
+                    - string
+                    - null
                   description: 标签描述
       responses:
         "200":
@@ -2064,8 +2074,9 @@ paths:
                   type: string
                   description: 新标签名称（可选）
                 description:
-                  type: string
-                  nullable: true
+                  type:
+                    - string
+                    - null
                   description: 标签描述
       responses:
         "200":
@@ -2882,14 +2893,16 @@ paths:
                             title:
                               type: string
                             excerpt:
-                              type: string
-                              nullable: true
+                              type:
+                                - string
+                                - null
                             status:
                               type: string
                             publishedAt:
-                              type: string
+                              type:
+                                - string
+                                - null
                               format: date-time
-                              nullable: true
                             createdAt:
                               type: string
                               format: date-time
@@ -2904,8 +2917,9 @@ paths:
                                 username:
                                   type: string
                                 nickname:
-                                  type: string
-                                  nullable: true
+                                  type:
+                                    - string
+                                    - null
                             rank:
                               type: number
                               description: 搜索相关性排名分数
@@ -3263,7 +3277,9 @@ components:
         requestId:
           type: string
         data:
-          nullable: true
+          anyOf:
+            - {}
+            - type: "null"
         error:
           type: object
           properties:
@@ -3273,6 +3289,8 @@ components:
               type: string
             details:
               type: object
+              propertyNames:
+                type: string
               additionalProperties: {}
             field:
               type: string
@@ -3326,6 +3344,8 @@ components:
           type: string
         details:
           type: object
+          propertyNames:
+            type: string
           additionalProperties: {}
         field:
           type: string
@@ -3363,8 +3383,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -3372,21 +3391,19 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - BAD_REQUEST
+              const: BAD_REQUEST
             message:
               type: string
             details:
               type: object
+              propertyNames:
+                type: string
               additionalProperties: {}
             field:
               type: string
@@ -3407,8 +3424,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -3416,21 +3432,19 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - FORBIDDEN
+              const: FORBIDDEN
             message:
               type: string
             details:
               type: object
+              propertyNames:
+                type: string
               additionalProperties: {}
             field:
               type: string
@@ -3451,8 +3465,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -3460,21 +3473,19 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - NOT_FOUND
+              const: NOT_FOUND
             message:
               type: string
             details:
               type: object
+              propertyNames:
+                type: string
               additionalProperties: {}
             field:
               type: string
@@ -3522,8 +3533,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -3576,8 +3586,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -3585,17 +3594,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - INVALID_CREDENTIALS
+              const: INVALID_CREDENTIALS
             message:
               type: string
           required:
@@ -3615,8 +3620,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -3624,17 +3628,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - SSO_USER
+              const: SSO_USER
             message:
               type: string
             details:
@@ -3664,8 +3664,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -3673,17 +3672,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - EMAIL_NOT_VERIFIED
+              const: EMAIL_NOT_VERIFIED
             message:
               type: string
           required:
@@ -3732,8 +3727,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -3741,10 +3735,7 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
       required:
         - success
         - message
@@ -3757,8 +3748,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -3766,17 +3756,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - USER_EXISTS
+              const: USER_EXISTS
             message:
               type: string
           required:
@@ -3828,8 +3814,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -3837,10 +3822,7 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
       required:
         - success
         - message
@@ -3852,13 +3834,9 @@ components:
       type: object
       properties:
         old_password:
-          type: string
-          minLength: 6
-          maxLength: 100
+          $ref: "#/components/schemas/ChangePassword"
         new_password:
-          type: string
-          minLength: 6
-          maxLength: 100
+          $ref: "#/components/schemas/ChangePassword"
         access_token:
           type: string
       required:
@@ -3870,8 +3848,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -3879,10 +3856,7 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
       required:
         - success
         - message
@@ -3895,8 +3869,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -3904,17 +3877,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - NO_PASSWORD_SET
+              const: NO_PASSWORD_SET
             message:
               type: string
           required:
@@ -3934,8 +3903,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -3943,17 +3911,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - INVALID_OLD_PASSWORD
+              const: INVALID_OLD_PASSWORD
             message:
               type: string
           required:
@@ -3973,8 +3937,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -3982,17 +3945,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - PASSWORDS_IDENTICAL
+              const: PASSWORDS_IDENTICAL
             message:
               type: string
           required:
@@ -4026,8 +3985,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -4035,10 +3993,7 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
       required:
         - success
         - message
@@ -4069,8 +4024,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -4078,10 +4032,7 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
       required:
         - success
         - message
@@ -4094,8 +4045,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -4103,17 +4053,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - INVALID_OR_EXPIRED_CODE
+              const: INVALID_OR_EXPIRED_CODE
             message:
               type: string
           required:
@@ -4133,8 +4079,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -4142,17 +4087,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - INVALID_RESET_CODE
+              const: INVALID_RESET_CODE
             message:
               type: string
           required:
@@ -4172,8 +4113,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -4181,17 +4121,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - EXPIRED_RESET_CODE
+              const: EXPIRED_RESET_CODE
             message:
               type: string
           required:
@@ -4225,8 +4161,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -4234,10 +4169,7 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
       required:
         - success
         - message
@@ -4250,8 +4182,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -4259,17 +4190,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - EMAIL_ALREADY_VERIFIED
+              const: EMAIL_ALREADY_VERIFIED
             message:
               type: string
           required:
@@ -4295,8 +4222,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -4304,10 +4230,7 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
       required:
         - success
         - message
@@ -4333,16 +4256,19 @@ components:
         createdAt:
           type: string
         lastUsedAt:
-          nullable: true
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
         ipAddress:
           type: string
         ipLocation:
-          nullable: true
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
         revokedAt:
-          nullable: true
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
         isCurrent:
           type: boolean
       required:
@@ -4364,8 +4290,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -4395,16 +4320,19 @@ components:
                   createdAt:
                     type: string
                   lastUsedAt:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   ipAddress:
                     type: string
                   ipLocation:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   revokedAt:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   isCurrent:
                     type: boolean
                 required:
@@ -4445,8 +4373,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -4454,10 +4381,7 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
       required:
         - success
         - message
@@ -4470,8 +4394,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -4479,17 +4402,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - NEED_REAUTH
+              const: NEED_REAUTH
             message:
               type: string
           required:
@@ -4509,8 +4428,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -4518,17 +4436,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - CANNOT_REVOKE_CURRENT_SESSION
+              const: CANNOT_REVOKE_CURRENT_SESSION
             message:
               type: string
           required:
@@ -4568,8 +4482,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -4581,8 +4494,7 @@ components:
           properties:
             requiresTotp:
               type: boolean
-              enum:
-                - true
+              const: true
             totp_token:
               type: string
           required:
@@ -4611,8 +4523,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -4642,8 +4553,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -4672,8 +4582,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -4703,8 +4612,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -4712,17 +4620,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - TOTP_VERIFICATION_FAILED
+              const: TOTP_VERIFICATION_FAILED
             message:
               type: string
           required:
@@ -4742,8 +4646,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -4751,17 +4654,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - TOTP_NOT_ENABLED
+              const: TOTP_NOT_ENABLED
             message:
               type: string
           required:
@@ -4781,8 +4680,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -4790,17 +4688,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - TOTP_ALREADY_ENABLED
+              const: TOTP_ALREADY_ENABLED
             message:
               type: string
           required:
@@ -4825,11 +4719,13 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         pageSize:
           default: 10
           type: integer
           exclusiveMinimum: true
           maximum: 500
+          minimum: 0
         sortBy:
           type: string
           enum:
@@ -4874,8 +4770,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -4898,62 +4793,78 @@ components:
               resourceId:
                 type: string
               userUid:
-                nullable: true
-                type: number
+                anyOf:
+                  - type: number
+                  - type: "null"
               ipAddress:
                 type: string
               userAgent:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               oldData:
-                nullable: true
+                anyOf:
+                  - {}
+                  - type: "null"
               newData:
-                nullable: true
+                anyOf:
+                  - {}
+                  - type: "null"
               description:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               metadata:
-                nullable: true
-                type: object
-                additionalProperties:
-                  anyOf:
-                    - type: string
-                    - type: number
-                    - type: boolean
+                anyOf:
+                  - type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      anyOf:
+                        - type: string
+                        - type: number
+                        - type: boolean
+                  - type: "null"
               location:
-                nullable: true
-                type: object
-                properties:
-                  country:
-                    nullable: true
-                    type: string
-                  region:
-                    nullable: true
-                    type: string
-                  city:
-                    nullable: true
-                    type: string
-                required:
-                  - country
-                  - region
-                  - city
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      country:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                      region:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                      city:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                    required:
+                      - country
+                      - region
+                      - city
+                    additionalProperties: false
+                  - type: "null"
               user:
-                nullable: true
-                type: object
-                properties:
-                  uid:
-                    type: number
-                  username:
-                    type: string
-                  nickname:
-                    nullable: true
-                    type: string
-                required:
-                  - uid
-                  - username
-                  - nickname
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      uid:
+                        type: number
+                      username:
+                        type: string
+                      nickname:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                    required:
+                      - uid
+                      - username
+                      - nickname
+                    additionalProperties: false
+                  - type: "null"
             required:
               - id
               - timestamp
@@ -4987,11 +4898,13 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 365
+          minimum: 0
         count:
           default: 30
           type: integer
           exclusiveMinimum: true
           maximum: 1000
+          minimum: 0
         groupBy:
           default: action
           type: string
@@ -5008,8 +4921,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -5025,6 +4937,8 @@ components:
                 type: string
               data:
                 type: object
+                propertyNames:
+                  type: string
                 additionalProperties:
                   type: number
             required:
@@ -5043,8 +4957,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -5104,8 +5017,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -5146,8 +5058,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -5202,11 +5113,13 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         pageSize:
           default: 10
           type: integer
           exclusiveMinimum: true
           maximum: 500
+          minimum: 0
         sortBy:
           type: string
           enum:
@@ -5244,8 +5157,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -5305,11 +5217,13 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 365
+          minimum: 0
         count:
           default: 30
           type: integer
           exclusiveMinimum: true
           maximum: 1000
+          minimum: 0
       required:
         - days
         - count
@@ -5319,8 +5233,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -5364,8 +5277,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -5373,17 +5285,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - TOO_MANY_REQUESTS
+              const: TOO_MANY_REQUESTS
             message:
               type: string
           required:
@@ -5403,8 +5311,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -5412,17 +5319,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - INTERNAL_SERVER_ERROR
+              const: INTERNAL_SERVER_ERROR
             message:
               type: string
           required:
@@ -5442,8 +5345,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -5451,17 +5353,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - UNAUTHORIZED
+              const: UNAUTHORIZED
             message:
               type: string
           required:
@@ -5481,8 +5379,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -5490,17 +5387,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - VALIDATION_ERROR
+              const: VALIDATION_ERROR
             message:
               type: string
             details:
@@ -5539,8 +5432,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -5596,8 +5488,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -5637,8 +5528,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -5752,8 +5642,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -5831,8 +5720,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -5892,14 +5780,17 @@ components:
                 - lastYear
               additionalProperties: false
             lastPublished:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             firstPublished:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             averageDaysBetweenPosts:
-              nullable: true
-              type: number
+              anyOf:
+                - type: number
+                - type: "null"
           required:
             - updatedAt
             - cache
@@ -5932,8 +5823,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -6016,8 +5906,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -6120,8 +6009,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -6231,8 +6119,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -6495,11 +6382,13 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         count:
           default: 30
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
       required:
         - days
         - count
@@ -6509,8 +6398,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -6565,11 +6453,13 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         pageSize:
           default: 25
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         sortBy:
           default: uid
           type: string
@@ -6588,6 +6478,7 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         role:
           type: array
           items:
@@ -6634,8 +6525,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -6662,17 +6552,21 @@ components:
               username:
                 type: string
               nickname:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               website:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               bio:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               avatar:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               createdAt:
                 type: string
               lastUseAt:
@@ -6737,6 +6631,7 @@ components:
             type: integer
             exclusiveMinimum: true
             maximum: 9007199254740991
+            minimum: 0
         role:
           type: string
           enum:
@@ -6766,15 +6661,13 @@ components:
             - type: string
               format: uri
             - type: string
-              enum:
-                - ""
+              const: ""
         website:
           anyOf:
             - type: string
               format: uri
             - type: string
-              enum:
-                - ""
+              const: ""
         bio:
           type: string
           maxLength: 500
@@ -6790,8 +6683,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -6827,6 +6719,7 @@ components:
             type: integer
             exclusiveMinimum: true
             maximum: 9007199254740991
+            minimum: 0
       required:
         - uids
       additionalProperties: false
@@ -6835,8 +6728,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -6869,6 +6761,7 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
       required:
         - uid
       additionalProperties: false
@@ -6877,8 +6770,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -6922,8 +6814,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -6952,8 +6843,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -6973,19 +6863,23 @@ components:
                 username:
                   type: string
                 nickname:
-                  nullable: true
-                  type: string
+                  anyOf:
+                    - type: string
+                    - type: "null"
                 emailMd5:
                   type: string
                 avatar:
-                  nullable: true
-                  type: string
+                  anyOf:
+                    - type: string
+                    - type: "null"
                 bio:
-                  nullable: true
-                  type: string
+                  anyOf:
+                    - type: string
+                    - type: "null"
                 website:
-                  nullable: true
-                  type: string
+                  anyOf:
+                    - type: string
+                    - type: "null"
                 role:
                   type: string
                   enum:
@@ -7088,8 +6982,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -7102,15 +6995,14 @@ components:
             activities:
               type: array
               items:
-                anyOf:
+                oneOf:
                   - type: object
                     properties:
                       id:
                         type: string
                       type:
                         type: string
-                        enum:
-                          - post
+                        const: post
                       createdAt:
                         type: string
                         format: date-time
@@ -7171,8 +7063,7 @@ components:
                         type: string
                       type:
                         type: string
-                        enum:
-                          - comment
+                        const: comment
                       createdAt:
                         type: string
                         format: date-time
@@ -7191,17 +7082,18 @@ components:
                             minimum: 0
                             maximum: 9007199254740991
                           parentComment:
-                            nullable: true
-                            type: object
-                            properties:
-                              content:
-                                type: string
-                              authorUsername:
-                                type: string
-                            required:
-                              - content
-                              - authorUsername
-                            additionalProperties: false
+                            anyOf:
+                              - type: object
+                                properties:
+                                  content:
+                                    type: string
+                                  authorUsername:
+                                    type: string
+                                required:
+                                  - content
+                                  - authorUsername
+                                additionalProperties: false
+                              - type: "null"
                         required:
                           - content
                           - postSlug
@@ -7221,8 +7113,7 @@ components:
                         type: string
                       type:
                         type: string
-                        enum:
-                          - like
+                        const: like
                       createdAt:
                         type: string
                         format: date-time
@@ -7255,6 +7146,7 @@ components:
                       - createdAt
                       - like
                     additionalProperties: false
+                type: object
             pagination:
               type: object
               properties:
@@ -7266,6 +7158,7 @@ components:
                   type: integer
                   exclusiveMinimum: true
                   maximum: 9007199254740991
+                  minimum: 0
                 offset:
                   type: integer
                   minimum: 0
@@ -7299,11 +7192,13 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         count:
           default: 30
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
       required:
         - days
         - count
@@ -7313,8 +7208,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -7369,11 +7263,13 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         pageSize:
           default: 25
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         sortBy:
           default: id
           type: string
@@ -7443,8 +7339,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -7465,8 +7360,9 @@ components:
               slug:
                 type: string
               excerpt:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               status:
                 type: string
                 enum:
@@ -7478,8 +7374,9 @@ components:
               allowComments:
                 type: boolean
               publishedAt:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               createdAt:
                 type: string
               updatedAt:
@@ -7494,8 +7391,9 @@ components:
                   username:
                     type: string
                   nickname:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                 required:
                   - uid
                   - username
@@ -7519,14 +7417,17 @@ components:
                     - slug
                   additionalProperties: false
               featuredImage:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               metaDescription:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               metaKeywords:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               robotsIndex:
                 type: boolean
               postMode:
@@ -7583,8 +7484,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -7605,8 +7505,9 @@ components:
             content:
               type: string
             excerpt:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             status:
               type: string
               enum:
@@ -7618,8 +7519,9 @@ components:
             allowComments:
               type: boolean
             publishedAt:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             createdAt:
               type: string
             updatedAt:
@@ -7634,8 +7536,9 @@ components:
                 username:
                   type: string
                 nickname:
-                  nullable: true
-                  type: string
+                  anyOf:
+                    - type: string
+                    - type: "null"
               required:
                 - uid
                 - username
@@ -7650,14 +7553,17 @@ components:
               items:
                 type: string
             featuredImage:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             metaDescription:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             metaKeywords:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             robotsIndex:
               type: boolean
             postMode:
@@ -7705,6 +7611,7 @@ components:
             type: integer
             exclusiveMinimum: true
             maximum: 9007199254740991
+            minimum: 0
         status:
           type: string
           enum:
@@ -7746,8 +7653,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -7846,8 +7752,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -7942,8 +7847,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -7982,6 +7886,7 @@ components:
             type: integer
             exclusiveMinimum: true
             maximum: 9007199254740991
+            minimum: 0
       required:
         - ids
       additionalProperties: false
@@ -7990,8 +7895,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -8028,11 +7932,13 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         pageSize:
           default: 25
           type: integer
           exclusiveMinimum: true
           maximum: 500
+          minimum: 0
         sortBy:
           default: timestamp
           type: string
@@ -8056,8 +7962,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -8090,8 +7995,9 @@ components:
                       username:
                         type: string
                       nickname:
-                        nullable: true
-                        type: string
+                        anyOf:
+                          - type: string
+                          - type: "null"
                     required:
                       - userUid
                       - username
@@ -8120,8 +8026,9 @@ components:
                   username:
                     type: string
                   nickname:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   isSnapshot:
                     type: boolean
                 required:
@@ -8162,8 +8069,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -8186,8 +8092,9 @@ components:
             username:
               type: string
             nickname:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             isSnapshot:
               type: boolean
             content:
@@ -8229,8 +8136,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -8277,8 +8183,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -8315,11 +8220,13 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         pageSize:
           default: 25
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         sortBy:
           default: postCount
           type: string
@@ -8343,6 +8250,7 @@ components:
             type: integer
             exclusiveMinimum: true
             maximum: 9007199254740991
+            minimum: 0
         hasZeroPosts:
           type: boolean
         createdAtStart:
@@ -8364,8 +8272,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -8382,11 +8289,13 @@ components:
               name:
                 type: string
               description:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               featuredImage:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               postCount:
                 type: integer
                 minimum: 0
@@ -8427,8 +8336,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -8443,11 +8351,13 @@ components:
             name:
               type: string
             description:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             featuredImage:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             postCount:
               type: integer
               minimum: 0
@@ -8511,13 +8421,15 @@ components:
           type: string
           maxLength: 200
         description:
-          nullable: true
-          type: string
-          maxLength: 255
+          anyOf:
+            - type: string
+              maxLength: 255
+            - type: "null"
         featuredImage:
-          nullable: true
-          type: string
-          maxLength: 255
+          anyOf:
+            - type: string
+              maxLength: 255
+            - type: "null"
       required:
         - name
       additionalProperties: false
@@ -8526,8 +8438,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -8542,11 +8453,13 @@ components:
             name:
               type: string
             description:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             featuredImage:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             createdAt:
               type: string
             updatedAt:
@@ -8583,13 +8496,15 @@ components:
           minLength: 1
           maxLength: 100
         description:
-          nullable: true
-          type: string
-          maxLength: 255
+          anyOf:
+            - type: string
+              maxLength: 255
+            - type: "null"
         featuredImage:
-          nullable: true
-          type: string
-          maxLength: 255
+          anyOf:
+            - type: string
+              maxLength: 255
+            - type: "null"
       required:
         - slug
       additionalProperties: false
@@ -8598,8 +8513,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -8614,11 +8528,13 @@ components:
             name:
               type: string
             description:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             featuredImage:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             updatedAt:
               type: string
           required:
@@ -8653,8 +8569,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -8696,6 +8611,7 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
       required:
         - query
         - limit
@@ -8705,8 +8621,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -8748,6 +8663,7 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
       required:
         - limit
       additionalProperties: false
@@ -8756,8 +8672,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -8800,11 +8715,13 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         pageSize:
           default: 25
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         sortBy:
           default: totalPostCount
           type: string
@@ -8826,10 +8743,11 @@ components:
         search:
           type: string
         parentId:
-          nullable: true
-          type: integer
-          minimum: -9007199254740991
-          maximum: 9007199254740991
+          anyOf:
+            - type: integer
+              minimum: -9007199254740991
+              maximum: 9007199254740991
+            - type: "null"
         parentSlug:
           type: string
         postIds:
@@ -8838,6 +8756,7 @@ components:
             type: integer
             exclusiveMinimum: true
             maximum: 9007199254740991
+            minimum: 0
         hasZeroPosts:
           type: boolean
         createdAtStart:
@@ -8859,8 +8778,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -8881,22 +8799,27 @@ components:
               name:
                 type: string
               description:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               featuredImage:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               parentId:
-                nullable: true
-                type: integer
-                minimum: -9007199254740991
-                maximum: 9007199254740991
+                anyOf:
+                  - type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  - type: "null"
               parentSlug:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               parentName:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               directPostCount:
                 type: integer
                 minimum: 0
@@ -8970,8 +8893,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -8990,22 +8912,27 @@ components:
             name:
               type: string
             description:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             featuredImage:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             parentId:
-              nullable: true
-              type: integer
-              minimum: -9007199254740991
-              maximum: 9007199254740991
+              anyOf:
+                - type: integer
+                  minimum: -9007199254740991
+                  maximum: 9007199254740991
+                - type: "null"
             parentSlug:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             parentName:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             directPostCount:
               type: integer
               minimum: 0
@@ -9122,18 +9049,21 @@ components:
           type: string
           maxLength: 200
         description:
-          nullable: true
-          type: string
-          maxLength: 255
+          anyOf:
+            - type: string
+              maxLength: 255
+            - type: "null"
         featuredImage:
-          nullable: true
-          type: string
-          maxLength: 255
+          anyOf:
+            - type: string
+              maxLength: 255
+            - type: "null"
         parentId:
-          nullable: true
-          type: integer
-          minimum: -9007199254740991
-          maximum: 9007199254740991
+          anyOf:
+            - type: integer
+              minimum: -9007199254740991
+              maximum: 9007199254740991
+            - type: "null"
         parentSlug:
           type: string
       required:
@@ -9144,8 +9074,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -9164,16 +9093,19 @@ components:
             name:
               type: string
             description:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             featuredImage:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             parentId:
-              nullable: true
-              type: integer
-              minimum: -9007199254740991
-              maximum: 9007199254740991
+              anyOf:
+                - type: integer
+                  minimum: -9007199254740991
+                  maximum: 9007199254740991
+                - type: "null"
             createdAt:
               type: string
             updatedAt:
@@ -9204,6 +9136,7 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         slug:
           type: string
         newSlug:
@@ -9215,21 +9148,25 @@ components:
           minLength: 1
           maxLength: 100
         description:
-          nullable: true
-          type: string
-          maxLength: 255
+          anyOf:
+            - type: string
+              maxLength: 255
+            - type: "null"
         featuredImage:
-          nullable: true
-          type: string
-          maxLength: 255
+          anyOf:
+            - type: string
+              maxLength: 255
+            - type: "null"
         parentId:
-          nullable: true
-          type: integer
-          minimum: -9007199254740991
-          maximum: 9007199254740991
+          anyOf:
+            - type: integer
+              minimum: -9007199254740991
+              maximum: 9007199254740991
+            - type: "null"
         parentSlug:
-          nullable: true
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
       required:
         - id
       additionalProperties: false
@@ -9238,8 +9175,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -9258,16 +9194,19 @@ components:
             name:
               type: string
             description:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             featuredImage:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             parentId:
-              nullable: true
-              type: integer
-              minimum: -9007199254740991
-              maximum: 9007199254740991
+              anyOf:
+                - type: integer
+                  minimum: -9007199254740991
+                  maximum: 9007199254740991
+                - type: "null"
             updatedAt:
               type: string
           required:
@@ -9298,6 +9237,7 @@ components:
             type: integer
             exclusiveMinimum: true
             maximum: 9007199254740991
+            minimum: 0
       required:
         - ids
       additionalProperties: false
@@ -9306,8 +9246,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -9355,14 +9294,17 @@ components:
             type: integer
             exclusiveMinimum: true
             maximum: 9007199254740991
+            minimum: 0
         targetParentId:
-          nullable: true
-          type: integer
-          minimum: -9007199254740991
-          maximum: 9007199254740991
+          anyOf:
+            - type: integer
+              minimum: -9007199254740991
+              maximum: 9007199254740991
+            - type: "null"
         targetParentSlug:
-          nullable: true
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
       required:
         - ids
         - targetParentId
@@ -9372,8 +9314,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -9394,10 +9335,11 @@ components:
                 minimum: -9007199254740991
                 maximum: 9007199254740991
             targetParentId:
-              nullable: true
-              type: integer
-              minimum: -9007199254740991
-              maximum: 9007199254740991
+              anyOf:
+                - type: integer
+                  minimum: -9007199254740991
+                  maximum: 9007199254740991
+                - type: "null"
           required:
             - moved
             - ids
@@ -9423,11 +9365,13 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         parentId:
-          nullable: true
-          type: integer
-          minimum: -9007199254740991
-          maximum: 9007199254740991
+          anyOf:
+            - type: integer
+              minimum: -9007199254740991
+              maximum: 9007199254740991
+            - type: "null"
       required:
         - query
         - limit
@@ -9437,8 +9381,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -9459,10 +9402,11 @@ components:
               name:
                 type: string
               parentId:
-                nullable: true
-                type: integer
-                minimum: -9007199254740991
-                maximum: 9007199254740991
+                anyOf:
+                  - type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  - type: "null"
               postCount:
                 type: integer
                 minimum: 0
@@ -9492,10 +9436,11 @@ components:
         access_token:
           type: string
         parentId:
-          nullable: true
-          type: integer
-          minimum: -9007199254740991
-          maximum: 9007199254740991
+          anyOf:
+            - type: integer
+              minimum: -9007199254740991
+              maximum: 9007199254740991
+            - type: "null"
         parentSlug:
           type: string
         limit:
@@ -9503,6 +9448,7 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
       required:
         - limit
       additionalProperties: false
@@ -9511,8 +9457,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -9559,106 +9504,25 @@ components:
         access_token:
           type: string
         parentId:
-          nullable: true
-          type: integer
-          minimum: -9007199254740991
-          maximum: 9007199254740991
+          anyOf:
+            - type: integer
+              minimum: -9007199254740991
+              maximum: 9007199254740991
+            - type: "null"
         maxDepth:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
       additionalProperties: false
     CategoryTreeNode:
-      type: object
-      properties:
-        id:
-          type: integer
-          minimum: -9007199254740991
-          maximum: 9007199254740991
-        slug:
-          type: string
-        name:
-          type: string
-        description:
-          nullable: true
-          type: string
-        parentId:
-          nullable: true
-          type: integer
-          minimum: -9007199254740991
-          maximum: 9007199254740991
-        postCount:
-          type: integer
-          minimum: 0
-          maximum: 9007199254740991
-        createdAt:
-          type: string
-        updatedAt:
-          type: string
-        children:
-          type: array
-          items:
-            $ref: "#"
-      required:
-        - id
-        - slug
-        - name
-        - description
-        - parentId
-        - postCount
-        - createdAt
-        - updatedAt
-        - children
-      additionalProperties: false
-    GetCategoriesTreeSuccessResponse___schema0:
-      type: object
-      properties:
-        id:
-          type: integer
-          minimum: -9007199254740991
-          maximum: 9007199254740991
-        slug:
-          type: string
-        name:
-          type: string
-        description:
-          nullable: true
-          type: string
-        parentId:
-          nullable: true
-          type: integer
-          minimum: -9007199254740991
-          maximum: 9007199254740991
-        postCount:
-          type: integer
-          minimum: 0
-          maximum: 9007199254740991
-        createdAt:
-          type: string
-        updatedAt:
-          type: string
-        children:
-          type: array
-          items:
-            $ref: "#/components/schemas/GetCategoriesTreeSuccessResponse___schema0"
-      required:
-        - id
-        - slug
-        - name
-        - description
-        - parentId
-        - postCount
-        - createdAt
-        - updatedAt
-        - children
-      additionalProperties: false
+      $ref: "#/components/schemas/CategoryTreeNode"
     GetCategoriesTreeSuccessResponse:
       type: object
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -9668,7 +9532,7 @@ components:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/GetCategoriesTreeSuccessResponse___schema0"
+            $ref: "#/components/schemas/GetCategoriesTreeSuccessResponse"
       required:
         - success
         - message
@@ -9704,8 +9568,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -9724,10 +9587,11 @@ components:
               postSlug:
                 type: string
               parentId:
-                nullable: true
-                type: string
-                format: uuid
-                pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                anyOf:
+                  - type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  - type: "null"
               content:
                 type: string
               status:
@@ -9751,30 +9615,36 @@ components:
                 type: object
                 properties:
                   uid:
-                    nullable: true
-                    type: integer
-                    minimum: -9007199254740991
-                    maximum: 9007199254740991
+                    anyOf:
+                      - type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      - type: "null"
                   username:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   nickname:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   avatar:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   displayName:
                     type: string
                   website:
-                    nullable: true
-                    type: string
-                    format: uri
+                    anyOf:
+                      - type: string
+                        format: uri
+                      - type: "null"
                   isAnonymous:
                     type: boolean
                   emailMd5:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                 required:
                   - uid
                   - username
@@ -9785,25 +9655,27 @@ components:
                   - emailMd5
                 additionalProperties: false
               location:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               replyTo:
-                nullable: true
-                type: object
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-                  authorName:
-                    type: string
-                  content:
-                    type: string
-                required:
-                  - id
-                  - authorName
-                  - content
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                      authorName:
+                        type: string
+                      content:
+                        type: string
+                    required:
+                      - id
+                      - authorName
+                      - content
+                    additionalProperties: false
+                  - type: "null"
               depth:
                 default: 0
                 type: integer
@@ -9941,8 +9813,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -9959,10 +9830,11 @@ components:
             postSlug:
               type: string
             parentId:
-              nullable: true
-              type: string
-              format: uuid
-              pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+              anyOf:
+                - type: string
+                  format: uuid
+                  pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                - type: "null"
             content:
               type: string
             status:
@@ -9986,30 +9858,36 @@ components:
               type: object
               properties:
                 uid:
-                  nullable: true
-                  type: integer
-                  minimum: -9007199254740991
-                  maximum: 9007199254740991
+                  anyOf:
+                    - type: integer
+                      minimum: -9007199254740991
+                      maximum: 9007199254740991
+                    - type: "null"
                 username:
-                  nullable: true
-                  type: string
+                  anyOf:
+                    - type: string
+                    - type: "null"
                 nickname:
-                  nullable: true
-                  type: string
+                  anyOf:
+                    - type: string
+                    - type: "null"
                 avatar:
-                  nullable: true
-                  type: string
+                  anyOf:
+                    - type: string
+                    - type: "null"
                 displayName:
                   type: string
                 website:
-                  nullable: true
-                  type: string
-                  format: uri
+                  anyOf:
+                    - type: string
+                      format: uri
+                    - type: "null"
                 isAnonymous:
                   type: boolean
                 emailMd5:
-                  nullable: true
-                  type: string
+                  anyOf:
+                    - type: string
+                    - type: "null"
               required:
                 - uid
                 - username
@@ -10020,25 +9898,27 @@ components:
                 - emailMd5
               additionalProperties: false
             location:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             replyTo:
-              nullable: true
-              type: object
-              properties:
-                id:
-                  type: string
-                  format: uuid
-                  pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-                authorName:
-                  type: string
-                content:
-                  type: string
-              required:
-                - id
-                - authorName
-                - content
-              additionalProperties: false
+              anyOf:
+                - type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                      pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                    authorName:
+                      type: string
+                    content:
+                      type: string
+                  required:
+                    - id
+                    - authorName
+                    - content
+                  additionalProperties: false
+                - type: "null"
             depth:
               default: 0
               type: integer
@@ -10105,8 +9985,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -10125,10 +10004,11 @@ components:
               postSlug:
                 type: string
               parentId:
-                nullable: true
-                type: string
-                format: uuid
-                pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                anyOf:
+                  - type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  - type: "null"
               content:
                 type: string
               status:
@@ -10152,30 +10032,36 @@ components:
                 type: object
                 properties:
                   uid:
-                    nullable: true
-                    type: integer
-                    minimum: -9007199254740991
-                    maximum: 9007199254740991
+                    anyOf:
+                      - type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      - type: "null"
                   username:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   nickname:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   avatar:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   displayName:
                     type: string
                   website:
-                    nullable: true
-                    type: string
-                    format: uri
+                    anyOf:
+                      - type: string
+                        format: uri
+                      - type: "null"
                   isAnonymous:
                     type: boolean
                   emailMd5:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                 required:
                   - uid
                   - username
@@ -10186,25 +10072,27 @@ components:
                   - emailMd5
                 additionalProperties: false
               location:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               replyTo:
-                nullable: true
-                type: object
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-                  authorName:
-                    type: string
-                  content:
-                    type: string
-                required:
-                  - id
-                  - authorName
-                  - content
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                      authorName:
+                        type: string
+                      content:
+                        type: string
+                    required:
+                      - id
+                      - authorName
+                      - content
+                    additionalProperties: false
+                  - type: "null"
               depth:
                 default: 0
                 type: integer
@@ -10276,10 +10164,11 @@ components:
       type: object
       properties:
         parentId:
-          nullable: true
-          type: string
-          format: uuid
-          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          anyOf:
+            - type: string
+              format: uuid
+              pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+            - type: "null"
         postSlug:
           type: string
           minLength: 1
@@ -10300,8 +10189,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -10320,10 +10208,11 @@ components:
               postSlug:
                 type: string
               parentId:
-                nullable: true
-                type: string
-                format: uuid
-                pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                anyOf:
+                  - type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  - type: "null"
               content:
                 type: string
               status:
@@ -10347,30 +10236,36 @@ components:
                 type: object
                 properties:
                   uid:
-                    nullable: true
-                    type: integer
-                    minimum: -9007199254740991
-                    maximum: 9007199254740991
+                    anyOf:
+                      - type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      - type: "null"
                   username:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   nickname:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   avatar:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   displayName:
                     type: string
                   website:
-                    nullable: true
-                    type: string
-                    format: uri
+                    anyOf:
+                      - type: string
+                        format: uri
+                      - type: "null"
                   isAnonymous:
                     type: boolean
                   emailMd5:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                 required:
                   - uid
                   - username
@@ -10381,25 +10276,27 @@ components:
                   - emailMd5
                 additionalProperties: false
               location:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               replyTo:
-                nullable: true
-                type: object
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-                  authorName:
-                    type: string
-                  content:
-                    type: string
-                required:
-                  - id
-                  - authorName
-                  - content
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                      authorName:
+                        type: string
+                      content:
+                        type: string
+                    required:
+                      - id
+                      - authorName
+                      - content
+                    additionalProperties: false
+                  - type: "null"
               depth:
                 default: 0
                 type: integer
@@ -10579,8 +10476,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -10599,10 +10495,11 @@ components:
               postSlug:
                 type: string
               parentId:
-                nullable: true
-                type: string
-                format: uuid
-                pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                anyOf:
+                  - type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  - type: "null"
               content:
                 type: string
               status:
@@ -10626,30 +10523,36 @@ components:
                 type: object
                 properties:
                   uid:
-                    nullable: true
-                    type: integer
-                    minimum: -9007199254740991
-                    maximum: 9007199254740991
+                    anyOf:
+                      - type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      - type: "null"
                   username:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   nickname:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   avatar:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   displayName:
                     type: string
                   website:
-                    nullable: true
-                    type: string
-                    format: uri
+                    anyOf:
+                      - type: string
+                        format: uri
+                      - type: "null"
                   isAnonymous:
                     type: boolean
                   emailMd5:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                 required:
                   - uid
                   - username
@@ -10660,25 +10563,27 @@ components:
                   - emailMd5
                 additionalProperties: false
               location:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               replyTo:
-                nullable: true
-                type: object
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-                  authorName:
-                    type: string
-                  content:
-                    type: string
-                required:
-                  - id
-                  - authorName
-                  - content
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                      authorName:
+                        type: string
+                      content:
+                        type: string
+                    required:
+                      - id
+                      - authorName
+                      - content
+                    additionalProperties: false
+                  - type: "null"
               depth:
                 default: 0
                 type: integer
@@ -10706,17 +10611,21 @@ components:
               isLiked:
                 type: boolean
               postTitle:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               email:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               ipAddress:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               userAgent:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
             required:
               - id
               - postSlug
@@ -10790,8 +10699,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -10826,8 +10734,9 @@ components:
               minimum: 0
               maximum: 9007199254740991
             lastCommentAt:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             new:
               type: object
               properties:
@@ -10883,8 +10792,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -10919,8 +10827,9 @@ components:
                     slug:
                       type: string
                     title:
-                      nullable: true
-                      type: string
+                      anyOf:
+                        - type: string
+                        - type: "null"
                     count:
                       type: integer
                       minimum: 0
@@ -10959,8 +10868,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -11002,8 +10910,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -11045,8 +10952,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -11054,10 +10960,7 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
       required:
         - success
         - message
@@ -11078,8 +10981,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -11158,11 +11060,13 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         pageSize:
           default: 20
           type: integer
           exclusiveMinimum: true
           maximum: 500
+          minimum: 0
         filter:
           default: all
           type: string
@@ -11215,14 +11119,17 @@ components:
         banReason:
           type: string
         country:
-          nullable: true
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
         province:
-          nullable: true
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
         city:
-          nullable: true
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
       required:
         - ip
         - requestCount
@@ -11234,8 +11141,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -11267,14 +11173,17 @@ components:
                   banReason:
                     type: string
                   country:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   province:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   city:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                 required:
                   - ip
                   - requestCount
@@ -11316,6 +11225,7 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         reason:
           type: string
       required:
@@ -11327,8 +11237,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -11371,8 +11280,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -11407,6 +11315,7 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 168
+          minimum: 0
       required:
         - hours
       additionalProperties: false
@@ -11415,8 +11324,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -11477,6 +11385,7 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 720
+          minimum: 0
         granularity:
           default: hour
           type: string
@@ -11492,8 +11401,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -11543,8 +11451,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -11585,8 +11492,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -11652,11 +11558,13 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         pageSize:
           default: 25
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         sortBy:
           default: id
           type: string
@@ -11708,8 +11616,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -11746,33 +11653,40 @@ components:
                 type: object
                 properties:
                   uid:
-                    nullable: true
-                    type: integer
-                    minimum: -9007199254740991
-                    maximum: 9007199254740991
+                    anyOf:
+                      - type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      - type: "null"
                   username:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   nickname:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                 required:
                   - uid
                   - username
                   - nickname
                 additionalProperties: false
               metaDescription:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               metaKeywords:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               robotsIndex:
                 type: boolean
               isSystemPage:
                 type: boolean
               config:
-                nullable: true
+                anyOf:
+                  - {}
+                  - type: "null"
             required:
               - id
               - title
@@ -11811,8 +11725,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -11849,29 +11762,36 @@ components:
               type: object
               properties:
                 uid:
-                  nullable: true
-                  type: integer
-                  minimum: -9007199254740991
-                  maximum: 9007199254740991
+                  anyOf:
+                    - type: integer
+                      minimum: -9007199254740991
+                      maximum: 9007199254740991
+                    - type: "null"
                 username:
-                  nullable: true
-                  type: string
+                  anyOf:
+                    - type: string
+                    - type: "null"
                 nickname:
-                  nullable: true
-                  type: string
+                  anyOf:
+                    - type: string
+                    - type: "null"
               required:
                 - uid
                 - username
                 - nickname
               additionalProperties: false
             config:
-              nullable: true
+              anyOf:
+                - {}
+                - type: "null"
             metaDescription:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             metaKeywords:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             robotsIndex:
               type: boolean
             isSystemPage:
@@ -11944,8 +11864,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -12015,8 +11934,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -12095,8 +12013,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -12140,8 +12057,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -12170,8 +12086,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -12273,8 +12188,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -12345,8 +12259,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -12409,8 +12322,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -12472,8 +12384,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -12505,8 +12416,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -12539,8 +12449,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -13001,8 +12910,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -13132,6 +13040,7 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         sizeMin:
           type: integer
           minimum: 0
@@ -13165,6 +13074,7 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
       required:
         - id
       additionalProperties: false
@@ -13177,14 +13087,16 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         originalName:
           type: string
           minLength: 1
           maxLength: 255
         altText:
-          nullable: true
-          type: string
-          maxLength: 255
+          anyOf:
+            - type: string
+              maxLength: 255
+            - type: "null"
         inGallery:
           type: boolean
         name:
@@ -13221,6 +13133,7 @@ components:
             type: integer
             exclusiveMinimum: true
             maximum: 9007199254740991
+            minimum: 0
         inGallery:
           type: boolean
         isOptimized:
@@ -13240,6 +13153,7 @@ components:
             type: integer
             exclusiveMinimum: true
             maximum: 9007199254740991
+            minimum: 0
       required:
         - ids
       additionalProperties: false
@@ -13304,17 +13218,21 @@ components:
         size:
           type: number
         width:
-          nullable: true
-          type: number
+          anyOf:
+            - type: number
+            - type: "null"
         height:
-          nullable: true
-          type: number
+          anyOf:
+            - type: number
+            - type: "null"
         altText:
-          nullable: true
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
         blur:
-          nullable: true
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
         inGallery:
           type: boolean
         createdAt:
@@ -13322,21 +13240,23 @@ components:
         postsCount:
           type: number
         user:
-          nullable: true
-          type: object
-          properties:
-            uid:
-              type: number
-            username:
-              type: string
-            nickname:
-              nullable: true
-              type: string
-          required:
-            - uid
-            - username
-            - nickname
-          additionalProperties: false
+          anyOf:
+            - type: object
+              properties:
+                uid:
+                  type: number
+                username:
+                  type: string
+                nickname:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+              required:
+                - uid
+                - username
+                - nickname
+              additionalProperties: false
+            - type: "null"
       required:
         - id
         - fileName
@@ -13382,76 +13302,89 @@ components:
             - AUDIO
             - FILE
         width:
-          nullable: true
-          type: number
+          anyOf:
+            - type: number
+            - type: "null"
         height:
-          nullable: true
-          type: number
+          anyOf:
+            - type: number
+            - type: "null"
         altText:
-          nullable: true
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
         blur:
-          nullable: true
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
         thumbnails:
-          nullable: true
+          anyOf:
+            - {}
+            - type: "null"
         exif:
-          nullable: true
+          anyOf:
+            - {}
+            - type: "null"
         inGallery:
           type: boolean
         galleryPhoto:
-          nullable: true
-          type: object
-          properties:
-            id:
-              type: number
-            slug:
-              type: string
-            name:
-              type: string
-            size:
-              type: string
-              enum:
-                - SQUARE
-                - TALL
-                - WIDE
-                - LARGE
-                - AUTO
-            description:
-              nullable: true
-              type: string
-            showExif:
-              type: boolean
-            hideGPS:
-              type: boolean
-            overrideExif:
-              nullable: true
-            mediaId:
-              type: number
-            createdAt:
-              type: string
-            updatedAt:
-              type: string
-            shotAt:
-              nullable: true
-              type: string
-            sortTime:
-              type: string
-          required:
-            - id
-            - slug
-            - name
-            - size
-            - description
-            - showExif
-            - hideGPS
-            - overrideExif
-            - mediaId
-            - createdAt
-            - updatedAt
-            - shotAt
-            - sortTime
-          additionalProperties: false
+          anyOf:
+            - type: object
+              properties:
+                id:
+                  type: number
+                slug:
+                  type: string
+                name:
+                  type: string
+                size:
+                  type: string
+                  enum:
+                    - SQUARE
+                    - TALL
+                    - WIDE
+                    - LARGE
+                    - AUTO
+                description:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                showExif:
+                  type: boolean
+                hideGPS:
+                  type: boolean
+                overrideExif:
+                  anyOf:
+                    - {}
+                    - type: "null"
+                mediaId:
+                  type: number
+                createdAt:
+                  type: string
+                updatedAt:
+                  type: string
+                shotAt:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                sortTime:
+                  type: string
+              required:
+                - id
+                - slug
+                - name
+                - size
+                - description
+                - showExif
+                - hideGPS
+                - overrideExif
+                - mediaId
+                - createdAt
+                - updatedAt
+                - shotAt
+                - sortTime
+              additionalProperties: false
+            - type: "null"
         isOptimized:
           type: boolean
         storageUrl:
@@ -13461,36 +13394,39 @@ components:
         storageProviderId:
           type: string
         user:
-          nullable: true
-          type: object
-          properties:
-            uid:
-              type: number
-            username:
-              type: string
-            nickname:
-              nullable: true
-              type: string
-          required:
-            - uid
-            - username
-            - nickname
-          additionalProperties: false
+          anyOf:
+            - type: object
+              properties:
+                uid:
+                  type: number
+                username:
+                  type: string
+                nickname:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+              required:
+                - uid
+                - username
+                - nickname
+              additionalProperties: false
+            - type: "null"
         storageProvider:
-          nullable: true
-          type: object
-          properties:
-            id:
-              type: string
-            name:
-              type: string
-            displayName:
-              type: string
-          required:
-            - id
-            - name
-            - displayName
-          additionalProperties: false
+          anyOf:
+            - type: object
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                displayName:
+                  type: string
+              required:
+                - id
+                - name
+                - displayName
+              additionalProperties: false
+            - type: "null"
         references:
           type: object
           properties:
@@ -13693,8 +13629,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -13765,11 +13700,13 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         pageSize:
           default: 25
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         sortBy:
           default: order
           type: string
@@ -13820,8 +13757,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -13838,14 +13774,17 @@ components:
               name:
                 type: string
               icon:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               link:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               slug:
-                nullable: true
-                type: string
+                anyOf:
+                  - type: string
+                  - type: "null"
               status:
                 type: string
                 enum:
@@ -13866,20 +13805,21 @@ components:
               updatedAt:
                 type: string
               page:
-                nullable: true
-                type: object
-                properties:
-                  id:
-                    type: string
-                  slug:
-                    type: string
-                  title:
-                    type: string
-                required:
-                  - id
-                  - slug
-                  - title
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      id:
+                        type: string
+                      slug:
+                        type: string
+                      title:
+                        type: string
+                    required:
+                      - id
+                      - slug
+                      - title
+                    additionalProperties: false
+                  - type: "null"
             required:
               - id
               - name
@@ -13916,8 +13856,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -13932,14 +13871,17 @@ components:
             name:
               type: string
             icon:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             link:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             slug:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             status:
               type: string
               enum:
@@ -13960,20 +13902,21 @@ components:
             updatedAt:
               type: string
             page:
-              nullable: true
-              type: object
-              properties:
-                id:
-                  type: string
-                slug:
-                  type: string
-                title:
-                  type: string
-              required:
-                - id
-                - slug
-                - title
-              additionalProperties: false
+              anyOf:
+                - type: object
+                  properties:
+                    id:
+                      type: string
+                    slug:
+                      type: string
+                    title:
+                      type: string
+                  required:
+                    - id
+                    - slug
+                    - title
+                  additionalProperties: false
+                - type: "null"
           required:
             - id
             - name
@@ -14043,8 +13986,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -14079,17 +14021,20 @@ components:
           minLength: 1
           maxLength: 100
         icon:
-          nullable: true
-          type: string
-          maxLength: 100
+          anyOf:
+            - type: string
+              maxLength: 100
+            - type: "null"
         link:
-          nullable: true
-          type: string
-          maxLength: 255
+          anyOf:
+            - type: string
+              maxLength: 255
+            - type: "null"
         slug:
-          nullable: true
-          type: string
-          maxLength: 100
+          anyOf:
+            - type: string
+              maxLength: 100
+            - type: "null"
         status:
           type: string
           enum:
@@ -14106,8 +14051,9 @@ components:
             - COMMON
             - OUTSITE
         pageId:
-          nullable: true
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
       required:
         - id
       additionalProperties: false
@@ -14116,8 +14062,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -14166,24 +14111,28 @@ components:
           minLength: 1
           maxLength: 100
         icon:
-          nullable: true
-          type: string
-          maxLength: 100
+          anyOf:
+            - type: string
+              maxLength: 100
+            - type: "null"
         link:
-          nullable: true
-          type: string
-          maxLength: 255
+          anyOf:
+            - type: string
+              maxLength: 255
+            - type: "null"
         slug:
-          nullable: true
-          type: string
-          maxLength: 100
+          anyOf:
+            - type: string
+              maxLength: 100
+            - type: "null"
         order:
           type: integer
           minimum: -9007199254740991
           maximum: 9007199254740991
         pageId:
-          nullable: true
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
       required:
         - ids
       additionalProperties: false
@@ -14192,8 +14141,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -14236,8 +14184,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -14271,8 +14218,9 @@ components:
         content:
           type: string
         link:
-          nullable: true
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
         isRead:
           type: boolean
         createdAt:
@@ -14290,8 +14238,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -14304,55 +14251,11 @@ components:
             unread:
               type: array
               items:
-                type: object
-                properties:
-                  id:
-                    type: string
-                  title:
-                    type: string
-                  content:
-                    type: string
-                  link:
-                    nullable: true
-                    type: string
-                  isRead:
-                    type: boolean
-                  createdAt:
-                    type: string
-                required:
-                  - id
-                  - title
-                  - content
-                  - link
-                  - isRead
-                  - createdAt
-                additionalProperties: false
+                $ref: "#/components/schemas/GetNoticesSuccessResponse"
             read:
               type: array
               items:
-                type: object
-                properties:
-                  id:
-                    type: string
-                  title:
-                    type: string
-                  content:
-                    type: string
-                  link:
-                    nullable: true
-                    type: string
-                  isRead:
-                    type: boolean
-                  createdAt:
-                    type: string
-                required:
-                  - id
-                  - title
-                  - content
-                  - link
-                  - isRead
-                  - createdAt
-                additionalProperties: false
+                $ref: "#/components/schemas/GetNoticesSuccessResponse"
             total:
               type: number
             unreadCount:
@@ -14388,8 +14291,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -14416,8 +14318,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -14444,8 +14345,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -14475,8 +14375,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -14484,17 +14383,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - UNAUTHORIZED
+              const: UNAUTHORIZED
             message:
               type: string
           required:
@@ -14514,8 +14409,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -14523,17 +14417,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - INVALID_NOTICE_IDS
+              const: INVALID_NOTICE_IDS
             message:
               type: string
           required:
@@ -14553,8 +14443,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -14562,17 +14451,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - NOTICE_NOT_FOUND
+              const: NOTICE_NOT_FOUND
             message:
               type: string
           required:
@@ -14595,11 +14480,13 @@ components:
         username:
           type: string
         nickname:
-          nullable: true
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
         avatar:
-          nullable: true
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
         role:
           type: string
           enum:
@@ -14608,8 +14495,9 @@ components:
             - EDITOR
             - AUTHOR
         emailMd5:
-          nullable: true
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
         isOnline:
           type: boolean
       required:
@@ -14665,11 +14553,13 @@ components:
             username:
               type: string
             nickname:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             avatar:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             role:
               type: string
               enum:
@@ -14678,8 +14568,9 @@ components:
                 - EDITOR
                 - AUTHOR
             emailMd5:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             isOnline:
               type: boolean
           required:
@@ -14691,20 +14582,21 @@ components:
             - emailMd5
           additionalProperties: false
         lastMessage:
-          nullable: true
-          type: object
-          properties:
-            content:
-              type: string
-            createdAt:
-              type: string
-            senderUid:
-              type: number
-          required:
-            - content
-            - createdAt
-            - senderUid
-          additionalProperties: false
+          anyOf:
+            - type: object
+              properties:
+                content:
+                  type: string
+                createdAt:
+                  type: string
+                senderUid:
+                  type: number
+              required:
+                - content
+                - createdAt
+                - senderUid
+              additionalProperties: false
+            - type: "null"
         unreadCount:
           type: number
         updatedAt:
@@ -14712,8 +14604,9 @@ components:
         lastMessageAt:
           type: string
         otherUserLastReadMessageId:
-          nullable: true
-          type: string
+          anyOf:
+            - type: string
+            - type: "null"
       required:
         - conversationId
         - otherUser
@@ -14745,8 +14638,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -14771,11 +14663,13 @@ components:
                       username:
                         type: string
                       nickname:
-                        nullable: true
-                        type: string
+                        anyOf:
+                          - type: string
+                          - type: "null"
                       avatar:
-                        nullable: true
-                        type: string
+                        anyOf:
+                          - type: string
+                          - type: "null"
                       role:
                         type: string
                         enum:
@@ -14784,8 +14678,9 @@ components:
                           - EDITOR
                           - AUTHOR
                       emailMd5:
-                        nullable: true
-                        type: string
+                        anyOf:
+                          - type: string
+                          - type: "null"
                       isOnline:
                         type: boolean
                     required:
@@ -14797,20 +14692,21 @@ components:
                       - emailMd5
                     additionalProperties: false
                   lastMessage:
-                    nullable: true
-                    type: object
-                    properties:
-                      content:
-                        type: string
-                      createdAt:
-                        type: string
-                      senderUid:
-                        type: number
-                    required:
-                      - content
-                      - createdAt
-                      - senderUid
-                    additionalProperties: false
+                    anyOf:
+                      - type: object
+                        properties:
+                          content:
+                            type: string
+                          createdAt:
+                            type: string
+                          senderUid:
+                            type: number
+                        required:
+                          - content
+                          - createdAt
+                          - senderUid
+                        additionalProperties: false
+                      - type: "null"
                   unreadCount:
                     type: number
                   updatedAt:
@@ -14818,8 +14714,9 @@ components:
                   lastMessageAt:
                     type: string
                   otherUserLastReadMessageId:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                 required:
                   - conversationId
                   - otherUser
@@ -14870,8 +14767,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -14918,8 +14814,9 @@ components:
             hasMore:
               type: boolean
             otherUserLastReadMessageId:
-              nullable: true
-              type: string
+              anyOf:
+                - type: string
+                - type: "null"
             unreadMessageCount:
               type: number
           required:
@@ -14941,6 +14838,7 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
         content:
           type: string
           minLength: 1
@@ -14956,8 +14854,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -15029,8 +14926,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -15069,8 +14965,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -15107,8 +15002,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -15128,11 +15022,13 @@ components:
                   username:
                     type: string
                   nickname:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   avatar:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   role:
                     type: string
                     enum:
@@ -15141,8 +15037,9 @@ components:
                       - EDITOR
                       - AUTHOR
                   emailMd5:
-                    nullable: true
-                    type: string
+                    anyOf:
+                      - type: string
+                      - type: "null"
                   isOnline:
                     type: boolean
                 required:
@@ -15170,6 +15067,7 @@ components:
           type: integer
           exclusiveMinimum: true
           maximum: 9007199254740991
+          minimum: 0
       required:
         - targetUid
       additionalProperties: false
@@ -15178,8 +15076,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - true
+          const: true
         message:
           type: string
         timestamp:
@@ -15208,8 +15105,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -15217,17 +15113,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - UNAUTHORIZED
+              const: UNAUTHORIZED
             message:
               type: string
           required:
@@ -15247,8 +15139,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -15256,17 +15147,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - CONVERSATION_NOT_FOUND
+              const: CONVERSATION_NOT_FOUND
             message:
               type: string
           required:
@@ -15286,8 +15173,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -15295,17 +15181,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - USER_NOT_FOUND
+              const: USER_NOT_FOUND
             message:
               type: string
           required:
@@ -15325,8 +15207,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -15334,17 +15215,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - PERMISSION_DENIED
+              const: PERMISSION_DENIED
             message:
               type: string
           required:
@@ -15364,8 +15241,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -15373,17 +15249,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - MESSAGE_SYSTEM_DISABLED
+              const: MESSAGE_SYSTEM_DISABLED
             message:
               type: string
           required:
@@ -15403,8 +15275,7 @@ components:
       properties:
         success:
           type: boolean
-          enum:
-            - false
+          const: false
         message:
           type: string
         timestamp:
@@ -15412,17 +15283,13 @@ components:
         requestId:
           type: string
         data:
-          type: string
-          nullable: true
-          enum:
-            - null
+          type: "null"
         error:
           type: object
           properties:
             code:
               type: string
-              enum:
-                - INVALID_REQUEST
+              const: INVALID_REQUEST
             message:
               type: string
           required:

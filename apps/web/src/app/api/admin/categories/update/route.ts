@@ -31,16 +31,13 @@ import { connection } from "next/server";
  *                 type: string
  *                 description: 新的名称
  *               description:
- *                 type: string
- *                 nullable: true
+ *                 type: [string, null]
  *                 description: 描述
  *               parentId:
- *                 type: integer
- *                 nullable: true
+ *                 type: [integer, null]
  *                 description: 新的父分类ID（移动分类）
  *               parentSlug:
- *                 type: string
- *                 nullable: true
+ *                 type: [string, null]
  *                 description: 新的父分类slug
  *     responses:
  *       200:

@@ -70,14 +70,12 @@ import { connection } from "next/server";
  *                           title:
  *                             type: string
  *                           excerpt:
- *                             type: string
- *                             nullable: true
+ *                             type: [string, null]
  *                           status:
  *                             type: string
  *                           publishedAt:
- *                             type: string
+ *                             type: [string, null]
  *                             format: date-time
- *                             nullable: true
  *                           createdAt:
  *                             type: string
  *                             format: date-time
@@ -92,8 +90,7 @@ import { connection } from "next/server";
  *                               username:
  *                                 type: string
  *                               nickname:
- *                                 type: string
- *                                 nullable: true
+ *                                 type: [string, null]
  *                           rank:
  *                             type: number
  *                             description: 搜索相关性排名分数
