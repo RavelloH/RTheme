@@ -29,6 +29,8 @@ import {
 import { RiLoader4Line } from "@remixicon/react";
 import ImageLightbox from "@/components/client/ImageLightbox";
 import Link from "@/components/Link";
+import { useMobile } from "@/hooks/use-mobile";
+import { Drawer } from "@/ui/Drawer";
 
 // 格式化文件大小
 function formatFileSize(bytes: number): string {
@@ -147,6 +149,7 @@ export default function PhotoModalClient({
   imageType: _imageType,
 }: PhotoModalClientProps) {
   const router = useRouter();
+  const isMobile = useMobile();
   const [isOpen, setIsOpen] = useState(true);
   const [isClosing, setIsClosing] = useState(false);
   const [hdImageLoaded, setHdImageLoaded] = useState(false);
@@ -252,14 +255,17 @@ export default function PhotoModalClient({
 
     if (isOpen) {
       document.addEventListener("keydown", handleEscape);
-      document.body.style.overflow = "hidden";
+      // 只有非移动端才在这里禁用 body 滚动，移动端由 Drawer 处理或不需要
+      if (!isMobile) {
+        document.body.style.overflow = "hidden";
+      }
     }
 
     return () => {
       document.removeEventListener("keydown", handleEscape);
       document.body.style.overflow = "";
     };
-  }, [isOpen, isClosing, handleClose]);
+  }, [isOpen, isClosing, handleClose, isMobile]);
 
   // 组件卸载时清理
   useEffect(() => {
@@ -372,7 +378,6 @@ export default function PhotoModalClient({
 
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const isMobile = viewportWidth < 768;
 
     // 获取根元素的 font-size（通常是 16px）
     const rootFontSize = parseFloat(
@@ -386,8 +391,10 @@ export default function PhotoModalClient({
     const infoHeight = infoHeightEm * rootFontSize;
     const gap = 0; // 图片和信息区域的间距
 
-    // 判断信息区域位置：手机端在下方，电脑端始终在右侧
-    const infoPosition = isMobile ? "bottom" : "right";
+    // 判断信息区域位置
+    // 手机端使用 Drawer，信息区域不参与几何计算（覆盖式），图片占据主要区域
+    // 电脑端在右侧
+    const infoPosition = isMobile ? "drawer" : "right";
 
     // 计算可用于图片的最大空间
     let maxImageWidth: number;
@@ -398,9 +405,11 @@ export default function PhotoModalClient({
       maxImageWidth = viewportWidth * 0.9 - infoWidth - gap;
       maxImageHeight = viewportHeight * 0.85;
     } else {
-      // 信息在下方：图片高度要减去信息区域高度
-      maxImageWidth = viewportWidth * 1;
-      maxImageHeight = viewportHeight * 0.9 - infoHeight - gap;
+      // 手机端（Drawer）：图片占据上方大部分空间，留出底部给 Drawer peek
+      // Drawer peek 设置为 35% (0.35)
+      // 为了完全不重叠，我们将图片的最大高度限制在 60% 以内
+      maxImageWidth = viewportWidth;
+      maxImageHeight = viewportHeight * 0.6;
     }
 
     // 图片原始尺寸
@@ -423,15 +432,20 @@ export default function PhotoModalClient({
       containerWidth = targetWidth + infoWidth + gap;
       containerHeight = targetHeight;
     } else {
+      // Drawer 模式下容器就是图片本身
       containerWidth = targetWidth;
-      containerHeight = targetHeight + infoHeight + gap;
+      containerHeight = targetHeight;
     }
 
     // 整体容器居中位置
     const containerX = (viewportWidth - containerWidth) / 2;
-    const containerY = (viewportHeight - containerHeight) / 2;
+    // 手机端让图片在抽屉之上可见区域 (65%) 内居中
+    const containerY =
+      infoPosition === "right"
+        ? (viewportHeight - containerHeight) / 2
+        : (viewportHeight * 0.65 - containerHeight) / 2;
 
-    // 图片在容器内的位置（始终在左上角）
+    // 图片在容器内的位置
     const imageX = containerX;
     const imageY = containerY;
 
@@ -459,7 +473,7 @@ export default function PhotoModalClient({
       containerX,
       containerY,
     };
-  }, [photo.media.width, photo.media.height, sourceRect]);
+  }, [photo.media.width, photo.media.height, sourceRect, isMobile]);
 
   // 如果没有 geometry，不渲染
   if (!geometry) return null;
@@ -469,20 +483,32 @@ export default function PhotoModalClient({
 
   // 信息区域内容
   const InfoContent = (
-    <div className="space-y-4">
+    <div className={`space-y-6 ${isMobile ? "pb-10" : ""}`}>
       {/* 标题和描述 */}
       <div>
-        <h1 className="mb-2 text-lg font-bold text-foreground truncate">
+        <h1
+          className={`mb-2 font-bold text-foreground truncate ${
+            isMobile ? "text-2xl" : "text-lg"
+          }`}
+        >
           {photo.name}
         </h1>
         {photo.description && (
-          <p className="text-sm text-muted-foreground">{photo.description}</p>
+          <p
+            className={`${isMobile ? "text-base" : "text-sm"} text-muted-foreground`}
+          >
+            {photo.description}
+          </p>
         )}
       </div>
 
       {/* 上传者信息 */}
       <div className="border-t border-foreground/10 pt-4">
-        <h3 className="mb-3 text-sm font-semibold text-foreground/80">
+        <h3
+          className={`mb-3 font-semibold text-foreground/80 ${
+            isMobile ? "text-base" : "sm"
+          }`}
+        >
           上传者
         </h3>
         <Link href={`/user/${uploader.uid}`} className="no-underline">
@@ -491,15 +517,23 @@ export default function PhotoModalClient({
               username={uploader.nickname || uploader.username}
               avatarUrl={uploader.avatar}
               emailMd5={uploader.emailMd5}
-              size={36}
+              size={isMobile ? 44 : 36}
               shape="circle"
             />
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-sm text-foreground truncate">
+              <div
+                className={`font-medium text-foreground truncate ${
+                  isMobile ? "text-base" : "text-sm"
+                }`}
+              >
                 {uploader.nickname || uploader.username}
               </div>
               {uploader.nickname && (
-                <div className="text-xs text-muted-foreground truncate">
+                <div
+                  className={`text-muted-foreground truncate ${
+                    isMobile ? "text-sm" : "text-xs"
+                  }`}
+                >
                   @{uploader.username}
                 </div>
               )}
@@ -510,29 +544,37 @@ export default function PhotoModalClient({
 
       {/* 基本信息 */}
       <div className="border-t border-foreground/10 pt-4">
-        <h3 className="mb-3 text-sm font-semibold text-foreground/80">
+        <h3
+          className={`mb-3 font-semibold text-foreground/80 ${
+            isMobile ? "text-base" : "text-sm"
+          }`}
+        >
           图片信息
         </h3>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+        <div
+          className={`grid ${
+            isMobile ? "grid-cols-1 gap-y-4" : "grid-cols-2 gap-x-4 gap-y-2"
+          } ${isMobile ? "text-sm" : "text-xs"}`}
+        >
           {photo.media.width && photo.media.height && (
             <div>
               <span className="text-muted-foreground">尺寸</span>
-              <p className="text-foreground">
+              <p className="text-foreground font-medium">
                 {photo.media.width} × {photo.media.height}
               </p>
             </div>
           )}
           <div>
             <span className="text-muted-foreground">文件大小</span>
-            <p className="text-foreground">
+            <p className="text-foreground font-medium">
               {formatFileSize(photo.media.size)}
             </p>
           </div>
           {/* 优先显示 EXIF 中的拍摄时间 */}
           {photo.showExif && parsedExif?.dateTimeOriginal ? (
-            <div className="col-span-2">
+            <div className={isMobile ? "" : "col-span-2"}>
               <span className="text-muted-foreground">拍摄时间</span>
-              <p className="text-foreground">
+              <p className="text-foreground font-medium">
                 {(() => {
                   const parts = formatShotDateTime(
                     parsedExif.dateTimeOriginal,
@@ -544,13 +586,13 @@ export default function PhotoModalClient({
                     <>
                       {parts.dateStr}
                       {parts.offsetTime && (
-                        <span className="text-muted-foreground">
+                        <span className="text-muted-foreground font-normal">
                           {" "}
                           ({parts.offsetTime})
                         </span>
                       )}
                       {parts.subSecTime && (
-                        <span className="text-muted-foreground">
+                        <span className="text-muted-foreground font-normal">
                           .{parts.subSecTime}
                         </span>
                       )}
@@ -562,12 +604,14 @@ export default function PhotoModalClient({
           ) : photo.shotAt ? (
             <div>
               <span className="text-muted-foreground">拍摄时间</span>
-              <p className="text-foreground">{formatDateTime(photo.shotAt)}</p>
+              <p className="text-foreground font-medium">
+                {formatDateTime(photo.shotAt)}
+              </p>
             </div>
           ) : null}
           <div>
             <span className="text-muted-foreground">上传时间</span>
-            <p className="text-foreground">
+            <p className="text-foreground font-medium">
               {formatDateTime(photo.media.createdAt)}
             </p>
           </div>
@@ -577,7 +621,7 @@ export default function PhotoModalClient({
             (parsedExif.xResolution || parsedExif.yResolution) && (
               <div>
                 <span className="text-muted-foreground">分辨率</span>
-                <p className="text-foreground">
+                <p className="text-foreground font-medium">
                   {formatResolution(
                     parsedExif.xResolution,
                     parsedExif.yResolution,
@@ -595,14 +639,22 @@ export default function PhotoModalClient({
           {/* 相机信息 */}
           {(parsedExif.make || parsedExif.model || parsedExif.lensModel) && (
             <div className="border-t border-foreground/10 pt-4">
-              <h3 className="mb-3 text-sm font-semibold text-foreground/80">
+              <h3
+                className={`mb-3 font-semibold text-foreground/80 ${
+                  isMobile ? "text-base" : "text-sm"
+                }`}
+              >
                 相机信息
               </h3>
-              <div className="grid grid-cols-1 gap-y-2 text-xs">
+              <div
+                className={`grid grid-cols-1 ${
+                  isMobile ? "gap-y-4 text-sm" : "gap-y-2 text-xs"
+                }`}
+              >
                 {(parsedExif.make || parsedExif.model) && (
                   <div>
                     <span className="text-muted-foreground">相机</span>
-                    <p className="text-foreground">
+                    <p className="text-foreground font-medium">
                       {[parsedExif.make, parsedExif.model]
                         .filter(Boolean)
                         .join(" ")}
@@ -612,13 +664,15 @@ export default function PhotoModalClient({
                 {parsedExif.lensModel && (
                   <div>
                     <span className="text-muted-foreground">镜头</span>
-                    <p className="text-foreground">{parsedExif.lensModel}</p>
+                    <p className="text-foreground font-medium">
+                      {parsedExif.lensModel}
+                    </p>
                   </div>
                 )}
                 {parsedExif.lensSpecification && (
                   <div>
                     <span className="text-muted-foreground">镜头规格</span>
-                    <p className="text-foreground">
+                    <p className="text-foreground font-medium">
                       {formatLensSpec(parsedExif.lensSpecification)}
                     </p>
                   </div>
@@ -626,7 +680,9 @@ export default function PhotoModalClient({
                 {parsedExif.software && (
                   <div>
                     <span className="text-muted-foreground">软件</span>
-                    <p className="text-foreground">{parsedExif.software}</p>
+                    <p className="text-foreground font-medium">
+                      {parsedExif.software}
+                    </p>
                   </div>
                 )}
               </div>
@@ -639,14 +695,24 @@ export default function PhotoModalClient({
             parsedExif.iso ||
             parsedExif.focalLength) && (
             <div className="border-t border-foreground/10 pt-4">
-              <h3 className="mb-3 text-sm font-semibold text-foreground/80">
+              <h3
+                className={`mb-3 font-semibold text-foreground/80 ${
+                  isMobile ? "text-base" : "text-sm"
+                }`}
+              >
                 拍摄参数
               </h3>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+              <div
+                className={`grid ${
+                  isMobile
+                    ? "grid-cols-1 gap-y-4"
+                    : "grid-cols-2 gap-x-4 gap-y-2"
+                } ${isMobile ? "text-sm" : "text-xs"}`}
+              >
                 {parsedExif.exposureTime !== undefined && (
                   <div>
                     <span className="text-muted-foreground">快门</span>
-                    <p className="text-foreground">
+                    <p className="text-foreground font-medium">
                       {formatExposureTime(parsedExif.exposureTime)}
                     </p>
                   </div>
@@ -654,7 +720,7 @@ export default function PhotoModalClient({
                 {parsedExif.fNumber !== undefined && (
                   <div>
                     <span className="text-muted-foreground">光圈</span>
-                    <p className="text-foreground">
+                    <p className="text-foreground font-medium">
                       {formatAperture(parsedExif.fNumber)}
                     </p>
                   </div>
@@ -662,13 +728,15 @@ export default function PhotoModalClient({
                 {parsedExif.iso !== undefined && (
                   <div>
                     <span className="text-muted-foreground">ISO</span>
-                    <p className="text-foreground">{parsedExif.iso}</p>
+                    <p className="text-foreground font-medium">
+                      {parsedExif.iso}
+                    </p>
                   </div>
                 )}
                 {parsedExif.focalLength !== undefined && (
                   <div>
                     <span className="text-muted-foreground">焦距</span>
-                    <p className="text-foreground">
+                    <p className="text-foreground font-medium">
                       {formatFocalLength(parsedExif.focalLength)}
                     </p>
                   </div>
@@ -676,7 +744,7 @@ export default function PhotoModalClient({
                 {parsedExif.focalLengthIn35mm !== undefined && (
                   <div>
                     <span className="text-muted-foreground">等效焦距</span>
-                    <p className="text-foreground">
+                    <p className="text-foreground font-medium">
                       {parsedExif.focalLengthIn35mm}mm
                     </p>
                   </div>
@@ -684,7 +752,7 @@ export default function PhotoModalClient({
                 {parsedExif.exposureBiasValue !== undefined && (
                   <div>
                     <span className="text-muted-foreground">曝光补偿</span>
-                    <p className="text-foreground">
+                    <p className="text-foreground font-medium">
                       {formatExposureBias(parsedExif.exposureBiasValue)}
                     </p>
                   </div>
@@ -692,7 +760,7 @@ export default function PhotoModalClient({
                 {parsedExif.exposureProgram !== undefined && (
                   <div>
                     <span className="text-muted-foreground">曝光程序</span>
-                    <p className="text-foreground">
+                    <p className="text-foreground font-medium">
                       {formatExposureProgram(parsedExif.exposureProgram)}
                     </p>
                   </div>
@@ -700,7 +768,7 @@ export default function PhotoModalClient({
                 {parsedExif.exposureMode !== undefined && (
                   <div>
                     <span className="text-muted-foreground">曝光模式</span>
-                    <p className="text-foreground">
+                    <p className="text-foreground font-medium">
                       {formatExposureMode(parsedExif.exposureMode)}
                     </p>
                   </div>
@@ -708,7 +776,7 @@ export default function PhotoModalClient({
                 {parsedExif.meteringMode !== undefined && (
                   <div>
                     <span className="text-muted-foreground">测光模式</span>
-                    <p className="text-foreground">
+                    <p className="text-foreground font-medium">
                       {formatMeteringMode(parsedExif.meteringMode)}
                     </p>
                   </div>
@@ -716,15 +784,15 @@ export default function PhotoModalClient({
                 {parsedExif.whiteBalance !== undefined && (
                   <div>
                     <span className="text-muted-foreground">白平衡</span>
-                    <p className="text-foreground">
+                    <p className="text-foreground font-medium">
                       {formatWhiteBalance(parsedExif.whiteBalance)}
                     </p>
                   </div>
                 )}
                 {parsedExif.flash !== undefined && (
-                  <div className="col-span-2">
+                  <div className={isMobile ? "" : "col-span-2"}>
                     <span className="text-muted-foreground">闪光灯</span>
-                    <p className="text-foreground">
+                    <p className="text-foreground font-medium">
                       {formatFlash(parsedExif.flash)}
                     </p>
                   </div>
@@ -732,7 +800,7 @@ export default function PhotoModalClient({
                 {parsedExif.sceneCaptureType !== undefined && (
                   <div>
                     <span className="text-muted-foreground">场景类型</span>
-                    <p className="text-foreground">
+                    <p className="text-foreground font-medium">
                       {formatSceneCaptureType(parsedExif.sceneCaptureType)}
                     </p>
                   </div>
@@ -740,7 +808,7 @@ export default function PhotoModalClient({
                 {parsedExif.colorSpace !== undefined && (
                   <div>
                     <span className="text-muted-foreground">色彩空间</span>
-                    <p className="text-foreground">
+                    <p className="text-foreground font-medium">
                       {formatColorSpace(parsedExif.colorSpace)}
                     </p>
                   </div>
@@ -748,7 +816,7 @@ export default function PhotoModalClient({
                 {parsedExif.sensingMethod !== undefined && (
                   <div>
                     <span className="text-muted-foreground">传感器类型</span>
-                    <p className="text-foreground">
+                    <p className="text-foreground font-medium">
                       {formatSensingMethod(parsedExif.sensingMethod)}
                     </p>
                   </div>
@@ -762,20 +830,28 @@ export default function PhotoModalClient({
             parsedExif.latitude !== undefined &&
             parsedExif.longitude !== undefined && (
               <div className="border-t border-foreground/10 pt-4">
-                <h3 className="mb-3 text-sm font-semibold text-foreground/80">
+                <h3
+                  className={`mb-3 font-semibold text-foreground/80 ${
+                    isMobile ? "text-base" : "text-sm"
+                  }`}
+                >
                   位置信息
                 </h3>
-                <div className="grid grid-cols-1 gap-y-2 text-xs">
+                <div
+                  className={`grid grid-cols-1 ${
+                    isMobile ? "gap-y-4 text-sm" : "gap-y-2 text-xs"
+                  }`}
+                >
                   <div>
                     <span className="text-muted-foreground">坐标</span>
-                    <p className="text-foreground">
+                    <p className="text-foreground font-medium">
                       {formatGPS(parsedExif.latitude, parsedExif.longitude)}
                     </p>
                   </div>
                   {parsedExif.altitude !== undefined && (
                     <div>
                       <span className="text-muted-foreground">海拔</span>
-                      <p className="text-foreground">
+                      <p className="text-foreground font-medium">
                         {parsedExif.altitude.toFixed(1)}m
                       </p>
                     </div>
@@ -783,7 +859,7 @@ export default function PhotoModalClient({
                   {parsedExif.gpsImgDirection !== undefined && (
                     <div>
                       <span className="text-muted-foreground">拍摄方向</span>
-                      <p className="text-foreground">
+                      <p className="text-foreground font-medium">
                         {formatGpsDirection(parsedExif.gpsImgDirection)}
                       </p>
                     </div>
@@ -791,7 +867,7 @@ export default function PhotoModalClient({
                   {parsedExif.gpsHPositioningError !== undefined && (
                     <div>
                       <span className="text-muted-foreground">定位精度</span>
-                      <p className="text-foreground">
+                      <p className="text-foreground font-medium">
                         {formatGpsAccuracy(parsedExif.gpsHPositioningError)}
                       </p>
                     </div>
@@ -799,7 +875,7 @@ export default function PhotoModalClient({
                   {parsedExif.gpsSpeed !== undefined && (
                     <div>
                       <span className="text-muted-foreground">移动速度</span>
-                      <p className="text-foreground">
+                      <p className="text-foreground font-medium">
                         {formatGpsSpeed(
                           parsedExif.gpsSpeed,
                           parsedExif.gpsSpeedRef,
@@ -816,7 +892,11 @@ export default function PhotoModalClient({
       {/* EXIF 加载中 */}
       {photo.showExif && exifLoading && (
         <div className="border-t border-foreground/10 pt-4">
-          <div className="flex items-center gap-2 text-muted-foreground text-xs">
+          <div
+            className={`flex items-center gap-2 text-muted-foreground ${
+              isMobile ? "text-sm" : "text-xs"
+            }`}
+          >
             <RiLoader4Line size="1em" className="animate-spin" />
             <span>正在加载 EXIF 信息...</span>
           </div>
@@ -843,31 +923,33 @@ export default function PhotoModalClient({
           />
 
           {/* 关闭按钮 */}
-          <motion.button
-            type="button"
-            onClick={handleClose}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: isClosing ? 0 : 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, delay: 0.1 }}
-            className="absolute right-4 top-4 z-[62] rounded-full bg-white/10 p-3 text-foreground transition hover:bg-white/20"
-            aria-label="关闭"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="h-6 w-6"
+          {!isMobile && (
+            <motion.button
+              type="button"
+              onClick={handleClose}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: isClosing ? 0 : 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, delay: 0.1 }}
+              className="absolute right-4 top-4 z-[62] rounded-full bg-white/10 p-3 text-foreground transition hover:bg-white/20"
+              aria-label="关闭"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </motion.button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                className="h-6 w-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </motion.button>
+          )}
 
           {/* 图片容器 - 使用位置动画 */}
           <motion.div
@@ -887,7 +969,7 @@ export default function PhotoModalClient({
                 borderRadius:
                   geometry.infoPosition === "right"
                     ? "8px 0 0 8px"
-                    : "8px 8px 0 0",
+                    : "8px 8px 8px 8px", // Drawer 模式下图片圆角统一
                 transition: {
                   type: "spring",
                   stiffness: 300,
@@ -951,107 +1033,121 @@ export default function PhotoModalClient({
 
           <ImageLightbox skipFooterClose hideImageList />
 
-          {/* 信息区域 - 从图片后面整体滑出 */}
-          <motion.div
-            variants={{
-              // 初始状态：隐藏在图片后面（通过偏移位置）
-              initial:
-                geometry.infoPosition === "right"
-                  ? {
-                      // 右侧布局：初始位置在图片下面，向左偏移隐藏
-                      x:
-                        geometry.targetRect.x +
-                        geometry.targetRect.width -
-                        geometry.infoWidth,
-                      y: geometry.targetRect.y,
-                      opacity: 0,
-                    }
-                  : {
-                      // 底部布局：初始位置在图片下面，向上偏移隐藏
-                      x: geometry.targetRect.x,
-                      y:
-                        geometry.targetRect.y +
-                        geometry.targetRect.height -
-                        geometry.infoHeight,
-                      opacity: 0,
-                    },
-              // 打开状态：滑出到最终位置
-              open:
-                geometry.infoPosition === "right"
-                  ? {
-                      x: geometry.targetRect.x + geometry.targetRect.width,
-                      y: geometry.targetRect.y,
-                      opacity: 1,
-                      transition: {
-                        duration: 0.3,
-                        ease: [0.32, 0.72, 0, 1],
-                        delay: 0.25, // 等图片动画快完成时再显示
+          {/* 信息区域 - 桌面端从图片侧边/底部滑出 */}
+          {!isMobile && (
+            <motion.div
+              variants={{
+                // 初始状态：隐藏在图片后面（通过偏移位置）
+                initial:
+                  geometry.infoPosition === "right"
+                    ? {
+                        // 右侧布局：初始位置在图片下面，向左偏移隐藏
+                        x:
+                          geometry.targetRect.x +
+                          geometry.targetRect.width -
+                          geometry.infoWidth,
+                        y: geometry.targetRect.y,
+                        opacity: 0,
+                      }
+                    : {
+                        // 底部布局（旧逻辑，现在 Mobile 用 Drawer）：初始位置在图片下面，向上偏移隐藏
+                        x: geometry.targetRect.x,
+                        y:
+                          geometry.targetRect.y +
+                          geometry.targetRect.height -
+                          geometry.infoHeight,
+                        opacity: 0,
                       },
-                    }
-                  : {
-                      x: geometry.targetRect.x,
-                      y: geometry.targetRect.y + geometry.targetRect.height,
-                      opacity: 1,
-                      transition: {
-                        duration: 0.3,
-                        ease: [0.32, 0.72, 0, 1],
-                        delay: 0.25,
+                // 打开状态：滑出到最终位置
+                open:
+                  geometry.infoPosition === "right"
+                    ? {
+                        x: geometry.targetRect.x + geometry.targetRect.width,
+                        y: geometry.targetRect.y,
+                        opacity: 1,
+                        transition: {
+                          duration: 0.3,
+                          ease: [0.32, 0.72, 0, 1],
+                          delay: 0.25, // 等图片动画快完成时再显示
+                        },
+                      }
+                    : {
+                        x: geometry.targetRect.x,
+                        y: geometry.targetRect.y + geometry.targetRect.height,
+                        opacity: 1,
+                        transition: {
+                          duration: 0.3,
+                          ease: [0.32, 0.72, 0, 1],
+                          delay: 0.25,
+                        },
                       },
-                    },
-              // 关闭状态：滑回图片后面
-              closed:
-                geometry.infoPosition === "right"
-                  ? {
-                      x:
-                        geometry.targetRect.x +
-                        geometry.targetRect.width -
-                        geometry.infoWidth,
-                      y: geometry.targetRect.y,
-                      opacity: 0,
-                      transition: {
-                        duration: 0.3,
-                        ease: [0.32, 0.72, 0, 1],
+                // 关闭状态：滑回图片后面
+                closed:
+                  geometry.infoPosition === "right"
+                    ? {
+                        x:
+                          geometry.targetRect.x +
+                          geometry.targetRect.width -
+                          geometry.infoWidth,
+                        y: geometry.targetRect.y,
+                        opacity: 0,
+                        transition: {
+                          duration: 0.3,
+                          ease: [0.32, 0.72, 0, 1],
+                        },
+                      }
+                    : {
+                        x: geometry.targetRect.x,
+                        y:
+                          geometry.targetRect.y +
+                          geometry.targetRect.height -
+                          geometry.infoHeight,
+                        opacity: 0,
+                        transition: {
+                          duration: 0.3,
+                          ease: [0.32, 0.72, 0, 1],
+                        },
                       },
-                    }
-                  : {
-                      x: geometry.targetRect.x,
-                      y:
-                        geometry.targetRect.y +
-                        geometry.targetRect.height -
-                        geometry.infoHeight,
-                      opacity: 0,
-                      transition: {
-                        duration: 0.3,
-                        ease: [0.32, 0.72, 0, 1],
-                      },
-                    },
-            }}
-            initial="initial"
-            animate={isClosing ? "closed" : "open"}
-            onClick={(e) => e.stopPropagation()}
-            className="fixed left-0 top-0 z-[59] bg-background overflow-y-auto"
-            style={{
-              width:
-                geometry.infoPosition === "right"
-                  ? geometry.infoWidth
-                  : geometry.targetRect.width,
-              height:
-                geometry.infoPosition === "right"
-                  ? geometry.targetRect.height
-                  : geometry.infoHeight,
-              borderRadius:
-                geometry.infoPosition === "right"
-                  ? "0 8px 8px 0"
-                  : "0 0 8px 8px",
-              // 左侧或上侧添加阴影遮盖缝隙
-              boxShadow:
-                geometry.infoPosition === "right"
-                  ? "-16px 0 0 0 var(--color-background)"
-                  : "0 -16px 0 0 var(--color-background)",
-            }}
-          >
-            <div className="p-4">{InfoContent}</div>
-          </motion.div>
+              }}
+              initial="initial"
+              animate={isClosing ? "closed" : "open"}
+              onClick={(e) => e.stopPropagation()}
+              className="fixed left-0 top-0 z-[59] bg-background overflow-y-auto"
+              style={{
+                width:
+                  geometry.infoPosition === "right"
+                    ? geometry.infoWidth
+                    : geometry.targetRect.width,
+                height:
+                  geometry.infoPosition === "right"
+                    ? geometry.targetRect.height
+                    : geometry.infoHeight,
+                borderRadius:
+                  geometry.infoPosition === "right"
+                    ? "0 8px 8px 0"
+                    : "0 0 8px 8px",
+                // 左侧或上侧添加阴影遮盖缝隙
+                boxShadow:
+                  geometry.infoPosition === "right"
+                    ? "-16px 0 0 0 var(--color-background)"
+                    : "0 -16px 0 0 var(--color-background)",
+              }}
+            >
+              <div className="p-4">{InfoContent}</div>
+            </motion.div>
+          )}
+
+          {/* 移动端 Drawer */}
+          {isMobile && (
+            <Drawer
+              open={!isClosing}
+              onClose={handleClose}
+              initialHeight={0.35} // 初始高度 35%
+              showBackdrop={false} // 背景已经在 Modal 中有了
+            >
+              {InfoContent}
+            </Drawer>
+          )}
         </div>
       )}
     </AnimatePresence>,
