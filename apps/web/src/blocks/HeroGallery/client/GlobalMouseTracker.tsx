@@ -57,5 +57,5 @@ export default function GlobalMouseTracker() {
     };
   }, [broadcast, isMobile]);
 
-  return null; // 无需渲染任何内容
+  return null;
 }

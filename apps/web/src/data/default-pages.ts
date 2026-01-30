@@ -1,33 +1,52 @@
-/**
- * 默认页面数据
- * 定义系统初始化时创建的默认页面
- */
+// apps/web/src/data/default-pages.ts
+// 默认页面数据定义
+
+import type { BlockConfig } from "../blocks/types";
 
 // Prisma Json 类型定义
 type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
 type JsonObject = { [key: string]: JsonValue };
 type JsonArray = JsonValue[];
 
+// 页面配置接口
+export interface PageConfig {
+  blocks?: BlockConfig[];
+  components?: unknown[]; // components 暂未重构类型，保持原样或定义为 unknown
+  [key: string]: unknown;
+}
+
 export interface DefaultPage {
-  id: string; // UUID 字符串，用于指定特定 ID
+  id: string;
   title: string;
   slug: string;
-  content: string; // Markdown/HTML/MDX 文本内容
+  content: string;
   contentType?: "MARKDOWN" | "HTML" | "MDX";
-  config?: JsonValue; // 页面配置（用于系统页面的显示设置）
+  config?: PageConfig;
   status: "DRAFT" | "ACTIVE" | "SUSPENDED";
   // SEO 字段
   metaDescription?: string;
   metaKeywords?: string;
-  robotsIndex?: boolean; // SEO 索引控制
+  robotsIndex?: boolean;
   // 系统字段
-  isSystemPage?: boolean; // 是否为系统预设页面
+  isSystemPage?: boolean;
 }
+
+// 定义 Block 模板，方便复用
+const createDefaultBlock = (
+  id: number,
+  description: string,
+  enabled: boolean,
+  content: BlockConfig["content"],
+): BlockConfig => ({
+  id,
+  block: "default",
+  description,
+  enabled,
+  content,
+});
 
 /**
  * 默认页面列表
- * 系统页面（isSystemPage: true）：由系统逻辑渲染，可通过 config 配置显示行为
- * 自定义页面（isSystemPage: false）：通过 content 字段存储用户自定义内容
  */
 export const defaultPages: DefaultPage[] = [
   {
@@ -38,12 +57,20 @@ export const defaultPages: DefaultPage[] = [
     contentType: "MARKDOWN",
     config: {
       blocks: [
+        // Block 0: Hero
         {
-          id: 1,
-          description:
-            "自定义块1，显示在Slogen与“作品”之间。正文下半部分可显示文章、作品计数。",
+          id: 100,
+          block: "hero",
+          description: "首页顶部 Hero 区域",
           enabled: true,
-          content: {
+          content: {},
+        },
+        // Block 1: Default (Introduction)
+        createDefaultBlock(
+          1,
+          "自定义块1，显示在Slogen与“作品”之间。正文下半部分可显示文章、作品计数。",
+          true,
+          {
             header: {
               value: "Welcome. I'm...",
               description: "头部显示文本",
@@ -64,10 +91,10 @@ export const defaultPages: DefaultPage[] = [
                   "经济的无服务器模式，",
                   "可靠的系统安全防御。",
                 ],
-                bottom: ["共有文章 {posts} 篇，", "收录作品 {works} 件。"],
+                bottom: ["共有文章 {posts} 篇，", "收录作品 {projects} 件。"],
               },
               description:
-                "正文文本，分别显示在正文顶部和底部。使用 {works} 来表示作品数，{posts} 来表示文章数",
+                "正文文本，分别显示在正文顶部和底部。使用 {works} 来表示作品数，{projects} 来表示文章数",
             },
             footer: {
               value: {
@@ -77,105 +104,156 @@ export const defaultPages: DefaultPage[] = [
               description: "底部显示文本，可提供链接用于跳转",
             },
           },
-        },
+        ),
+        // Block 2: Projects
         {
-          id: 2,
-          description: "自定义块2，显示在“作品”与“文章”之间",
-          enabled: false,
-          content: {
-            header: {
-              value: "",
-              description: "头部显示文本",
-            },
-            title: {
-              value: "",
-              description: "标题文本",
-            },
-            content: {
-              value: {
-                top: [],
-                bottom: [],
-              },
-              description: "正文文本，分别显示在正文顶部和底部",
-            },
-            footer: {
-              value: {
-                link: "",
-                description: "",
-              },
-              description: "底部显示文本，可提供链接用于跳转",
-            },
-          },
-        },
-        {
-          id: 3,
-          description: "自定义块3，显示在“文章”与“标签 & 分类”之间",
-          enabled: false,
-          content: {
-            header: {
-              value: "",
-              description: "头部显示文本",
-            },
-            title: {
-              value: "",
-              description: "标题文本",
-            },
-            content: {
-              value: {
-                top: [],
-                bottom: [],
-              },
-              description: "正文文本，分别显示在正文顶部和底部",
-            },
-            footer: {
-              value: {
-                link: "",
-                description: "",
-              },
-              description: "底部显示文本，可提供链接用于跳转",
-            },
-          },
-        },
-        {
-          id: 4,
-          description: "自定义块4，显示在页面最后",
+          id: 101,
+          block: "projects",
+          description: "作品展示区域",
           enabled: true,
           content: {
+            // 将原 component 数据内联
+            worksDescription: {
+              header: {
+                value: "My main tech stack includes",
+                description: "Header",
+              },
+              content: {
+                value:
+                  "React / Next.js / TypeScript / JavaScript / TailwindCSS / Node.js / Express.js / Serverless / GraphQL / PostgreSQL / MySQL / Redis / Docker / Kubernetes / Webpack / Vite / C / C++ / C# / Jest / Cypress / Shell ...",
+                description: "Content",
+              },
+            },
+            worksSummary: {
+              content: {
+                value: [
+                  "不止这些。",
+                  "想要查看更多？",
+                  "前往我的 Github 来查看我的所有项目，",
+                  "或者在 Projects 页面看看相关描述。",
+                  "",
+                  "Github: [@xxx](https://github.com/RavelloH)",
+                ],
+                description: "Summary Content",
+              },
+              footer: {
+                value: {
+                  link: "/works",
+                  description: "View more projects",
+                },
+                description: "Footer",
+              },
+            },
+          },
+        },
+        // Block 3: Default (Between Projects & Posts)
+        createDefaultBlock(2, "自定义块2，显示在“作品”与“文章”之间", false, {
+          header: {
+            value: "",
+            description: "头部显示文本",
+          },
+          title: {
+            value: "",
+            description: "标题文本",
+          },
+          content: {
+            value: {
+              top: [],
+              bottom: [],
+            },
+            description: "正文文本，分别显示在正文顶部和底部",
+          },
+          footer: {
+            value: {
+              link: "",
+              description: "",
+            },
+            description: "底部显示文本，可提供链接用于跳转",
+          },
+        }),
+        // Block 4: Posts
+        {
+          id: 102,
+          block: "posts",
+          description: "文章列表区域",
+          enabled: true,
+          content: {},
+        },
+        // Block 5: Default (Between Posts & Tags)
+        createDefaultBlock(
+          3,
+          "自定义块3，显示在“文章”与“标签 & 分类”之间",
+          false,
+          {
             header: {
-              value: "Want to...",
+              value: "",
               description: "头部显示文本",
             },
             title: {
-              value: "Contact me / 联系我",
+              value: "",
               description: "标题文本",
             },
             content: {
               value: {
-                top: [
-                  "学习交流?",
-                  "洽谈合作?",
-                  "交个朋友?",
-                  "......",
-                  "欢迎通过邮箱联系我：",
-                  "xxx@example.com",
-                ],
-                bottom: [
-                  "或者，不用那么正式，",
-                  "直接使用下方的站内信系统和我聊聊。",
-                ],
+                top: [],
+                bottom: [],
               },
               description: "正文文本，分别显示在正文顶部和底部",
             },
             footer: {
               value: {
-                link: "/messages?uid=1",
-                description: "Start chatting with me",
+                link: "",
+                description: "",
               },
               description: "底部显示文本，可提供链接用于跳转",
             },
           },
+        ),
+        // Block 6: Tags & Categories
+        {
+          id: 103,
+          block: "tags-categories",
+          description: "标签与分类区域",
+          enabled: true,
+          content: {},
         },
+        // Block 7: Default (Footer)
+        createDefaultBlock(4, "自定义块4，显示在页面最后", true, {
+          header: {
+            value: "Want to...",
+            description: "头部显示文本",
+          },
+          title: {
+            value: "Contact me / 联系我",
+            description: "标题文本",
+          },
+          content: {
+            value: {
+              top: [
+                "学习交流?",
+                "洽谈合作?",
+                "交个朋友?",
+                "......",
+                "欢迎通过邮箱联系我：",
+                "xxx@example.com",
+              ],
+              bottom: [
+                "或者，不用那么正式，",
+                "直接使用下方的站内信系统和我聊聊。",
+              ],
+            },
+            description: "正文文本，分别显示在正文顶部和底部",
+          },
+          footer: {
+            value: {
+              link: "/messages?uid=1",
+              description: "Start chatting with me",
+            },
+            description: "底部显示文本，可提供链接用于跳转",
+          },
+        }),
       ],
+      // 保留 components 以防兼容性问题，虽然新逻辑不再依赖它们
       components: [
         {
           id: "works-description",
@@ -210,7 +288,6 @@ export const defaultPages: DefaultPage[] = [
     },
     status: "ACTIVE",
     isSystemPage: true,
-    // SEO 字段
     metaDescription:
       "NeutralPress 是专为博客和内容创作者设计的现代化CMS系统，提供完整的内容管理、发布和分析功能",
     metaKeywords: "CMS, 内容管理系统, 博客, NeutralPress, 现代化, 内容创作",
@@ -225,7 +302,6 @@ export const defaultPages: DefaultPage[] = [
     config: {},
     status: "ACTIVE",
     isSystemPage: true,
-    // SEO 字段
     metaDescription:
       "展示个人和团队的项目作品集，包含开源项目、商业案例和技术实践",
     metaKeywords: "作品集, 项目, 开源, 技术实践, 案例展示, 个人项目",
@@ -239,12 +315,11 @@ export const defaultPages: DefaultPage[] = [
     contentType: "MARKDOWN",
     config: {
       blocks: [
-        {
-          id: 1,
-          description:
-            "自定义块1，显示在页面开头。可显示文章统计信息。标题下方将显示搜索栏。",
-          enabled: true,
-          content: {
+        createDefaultBlock(
+          1,
+          "自定义块1，显示在页面开头。可显示文章统计信息。标题下方将显示搜索栏。",
+          true,
+          {
             header: {
               value: "Thoughts. Notes. Stories.",
               description: "头部显示文本",
@@ -277,41 +352,35 @@ export const defaultPages: DefaultPage[] = [
               description: "底部显示文本，可提供链接用于跳转",
             },
           },
-        },
-        {
-          id: 2,
-          description: "自定义块2，显示在页面结尾。",
-          enabled: false,
-          content: {
-            header: {
-              value: "",
-              description: "头部显示文本",
-            },
-            title: {
-              value: "",
-              description: "标题文本",
-            },
-            content: {
-              value: {
-                top: [""],
-                bottom: [""],
-              },
-              description: "正文文本，分别显示在正文顶部和底部",
-            },
-            footer: {
-              value: {
-                link: "",
-                description: "",
-              },
-              description: "底部显示文本，可提供链接用于跳转",
-            },
+        ),
+        createDefaultBlock(2, "自定义块2，显示在页面结尾。", false, {
+          header: {
+            value: "",
+            description: "头部显示文本",
           },
-        },
+          title: {
+            value: "",
+            description: "标题文本",
+          },
+          content: {
+            value: {
+              top: [""],
+              bottom: [""],
+            },
+            description: "正文文本，分别显示在正文顶部和底部",
+          },
+          footer: {
+            value: {
+              link: "",
+              description: "",
+            },
+            description: "底部显示文本，可提供链接用于跳转",
+          },
+        }),
       ],
     },
     status: "ACTIVE",
     isSystemPage: true,
-    // SEO 字段
     metaDescription:
       "分享技术见解、开发经验和行业思考的博客文章，涵盖前端、后端、系统设计等多个领域",
     metaKeywords: "博客, 技术文章, 开发经验, 前端, 后端, 系统设计, 技术分享",
@@ -325,12 +394,11 @@ export const defaultPages: DefaultPage[] = [
     contentType: "MARKDOWN",
     config: {
       blocks: [
-        {
-          id: 1,
-          description:
-            "自定义块1，显示在页面开头。可显示分类统计信息。底部文本的最后一行将始终显示路径",
-          enabled: true,
-          content: {
+        createDefaultBlock(
+          1,
+          "自定义块1，显示在页面开头。可显示分类统计信息。底部文本的最后一行将始终显示路径",
+          true,
+          {
             header: {
               value: "Topics. Themes. Paths.",
               description: "头部显示文本",
@@ -362,41 +430,35 @@ export const defaultPages: DefaultPage[] = [
                 "底部显示文本，将始终显示随机页面的链接。修改link无效，但description可自定义",
             },
           },
-        },
-        {
-          id: 2,
-          description: "自定义块2，显示在页面结尾。",
-          enabled: false,
-          content: {
-            header: {
-              value: "",
-              description: "头部显示文本",
-            },
-            title: {
-              value: "",
-              description: "标题文本",
-            },
-            content: {
-              value: {
-                top: [""],
-                bottom: [""],
-              },
-              description: "正文文本，分别显示在正文顶部和底部",
-            },
-            footer: {
-              value: {
-                link: "",
-                description: "",
-              },
-              description: "底部显示文本，可提供链接用于跳转",
-            },
+        ),
+        createDefaultBlock(2, "自定义块2，显示在页面结尾。", false, {
+          header: {
+            value: "",
+            description: "头部显示文本",
           },
-        },
+          title: {
+            value: "",
+            description: "标题文本",
+          },
+          content: {
+            value: {
+              top: [""],
+              bottom: [""],
+            },
+            description: "正文文本，分别显示在正文顶部和底部",
+          },
+          footer: {
+            value: {
+              link: "",
+              description: "",
+            },
+            description: "底部显示文本，可提供链接用于跳转",
+          },
+        }),
       ],
     },
     status: "ACTIVE",
     isSystemPage: true,
-    // SEO 字段
     metaDescription: "按主题和领域分类整理的文章列表，方便快速找到感兴趣的内容",
     metaKeywords: "文章分类, 内容分类, 主题导航, 文章目录",
     robotsIndex: true,
@@ -409,12 +471,11 @@ export const defaultPages: DefaultPage[] = [
     contentType: "MARKDOWN",
     config: {
       blocks: [
-        {
-          id: 1,
-          description:
-            "自定义块1，显示在页面开头。可显示分类统计信息。底部文本的最后一行将始终显示路径",
-          enabled: true,
-          content: {
+        createDefaultBlock(
+          1,
+          "自定义块1，显示在页面开头。可显示分类统计信息。底部文本的最后一行将始终显示路径",
+          true,
+          {
             header: {
               value: "Topics. Themes. Paths.",
               description: "头部显示文本",
@@ -450,41 +511,35 @@ export const defaultPages: DefaultPage[] = [
                 "底部显示文本，将始终显示返回上一级分类的链接。修改link无效，但description可自定义",
             },
           },
-        },
-        {
-          id: 2,
-          description: "自定义块2，显示在页面结尾。",
-          enabled: false,
-          content: {
-            header: {
-              value: "",
-              description: "头部显示文本",
-            },
-            title: {
-              value: "",
-              description: "标题文本",
-            },
-            content: {
-              value: {
-                top: [""],
-                bottom: [""],
-              },
-              description: "正文文本，分别显示在正文顶部和底部",
-            },
-            footer: {
-              value: {
-                link: "",
-                description: "",
-              },
-              description: "底部显示文本，可提供链接用于跳转",
-            },
+        ),
+        createDefaultBlock(2, "自定义块2，显示在页面结尾。", false, {
+          header: {
+            value: "",
+            description: "头部显示文本",
           },
-        },
+          title: {
+            value: "",
+            description: "标题文本",
+          },
+          content: {
+            value: {
+              top: [""],
+              bottom: [""],
+            },
+            description: "正文文本，分别显示在正文顶部和底部",
+          },
+          footer: {
+            value: {
+              link: "",
+              description: "",
+            },
+            description: "底部显示文本，可提供链接用于跳转",
+          },
+        }),
       ],
     },
     status: "ACTIVE",
     isSystemPage: true,
-    // SEO 字段
     metaDescription: "按主题和领域分类整理的文章列表，方便快速找到感兴趣的内容",
     metaKeywords: "文章分类, 内容分类, 主题导航, 文章目录",
     robotsIndex: true,
@@ -497,11 +552,11 @@ export const defaultPages: DefaultPage[] = [
     contentType: "MARKDOWN",
     config: {
       blocks: [
-        {
-          id: 1,
-          description: "自定义块1，显示在页面开头。可显示标签统计信息。",
-          enabled: true,
-          content: {
+        createDefaultBlock(
+          1,
+          "自定义块1，显示在页面开头。可显示标签统计信息。",
+          true,
+          {
             header: {
               value: "Keywords. Connections. Traces.",
               description: "头部显示文本",
@@ -532,41 +587,35 @@ export const defaultPages: DefaultPage[] = [
                 "底部显示文本，将始终显示随机页面的链接。修改link无效，但description可自定义",
             },
           },
-        },
-        {
-          id: 2,
-          description: "自定义块2，显示在页面结尾。",
-          enabled: false,
-          content: {
-            header: {
-              value: "",
-              description: "头部显示文本",
-            },
-            title: {
-              value: "",
-              description: "标题文本",
-            },
-            content: {
-              value: {
-                top: [""],
-                bottom: [""],
-              },
-              description: "正文文本，分别显示在正文顶部和底部",
-            },
-            footer: {
-              value: {
-                link: "",
-                description: "",
-              },
-              description: "底部显示文本，可提供链接用于跳转",
-            },
+        ),
+        createDefaultBlock(2, "自定义块2，显示在页面结尾。", false, {
+          header: {
+            value: "",
+            description: "头部显示文本",
           },
-        },
+          title: {
+            value: "",
+            description: "标题文本",
+          },
+          content: {
+            value: {
+              top: [""],
+              bottom: [""],
+            },
+            description: "正文文本，分别显示在正文顶部和底部",
+          },
+          footer: {
+            value: {
+              link: "",
+              description: "",
+            },
+            description: "底部显示文本，可提供链接用于跳转",
+          },
+        }),
       ],
     },
     status: "ACTIVE",
     isSystemPage: true,
-    // SEO 字段
     metaDescription: "通过标签快速发现相关文章，标签云展示内容的分布和热点话题",
     metaKeywords: "标签, 标签云, 关键词, 文章标签, 内容索引",
     robotsIndex: true,
@@ -579,11 +628,11 @@ export const defaultPages: DefaultPage[] = [
     contentType: "MARKDOWN",
     config: {
       blocks: [
-        {
-          id: 1,
-          description: "自定义块1，显示在页面开头。可显示标签统计信息。",
-          enabled: true,
-          content: {
+        createDefaultBlock(
+          1,
+          "自定义块1，显示在页面开头。可显示标签统计信息。",
+          true,
+          {
             header: {
               value: "Keywords. Connections. Traces.",
               description: "头部显示文本",
@@ -617,41 +666,35 @@ export const defaultPages: DefaultPage[] = [
                 "底部显示文本，将始终显示返回标签列表的链接。修改link无效，但description可自定义",
             },
           },
-        },
-        {
-          id: 2,
-          description: "自定义块2，显示在页面结尾。",
-          enabled: false,
-          content: {
-            header: {
-              value: "",
-              description: "头部显示文本",
-            },
-            title: {
-              value: "",
-              description: "标题文本",
-            },
-            content: {
-              value: {
-                top: [""],
-                bottom: [""],
-              },
-              description: "正文文本，分别显示在正文顶部和底部",
-            },
-            footer: {
-              value: {
-                link: "",
-                description: "",
-              },
-              description: "底部显示文本，可提供链接用于跳转",
-            },
+        ),
+        createDefaultBlock(2, "自定义块2，显示在页面结尾。", false, {
+          header: {
+            value: "",
+            description: "头部显示文本",
           },
-        },
+          title: {
+            value: "",
+            description: "标题文本",
+          },
+          content: {
+            value: {
+              top: [""],
+              bottom: [""],
+            },
+            description: "正文文本，分别显示在正文顶部和底部",
+          },
+          footer: {
+            value: {
+              link: "",
+              description: "",
+            },
+            description: "底部显示文本，可提供链接用于跳转",
+          },
+        }),
       ],
     },
     status: "ACTIVE",
     isSystemPage: true,
-    // SEO 字段
     metaDescription: "通过标签快速发现相关文章，标签云展示内容的分布和热点话题",
     metaKeywords: "标签, 标签云, 关键词, 文章标签, 内容索引",
     robotsIndex: true,
@@ -665,7 +708,6 @@ export const defaultPages: DefaultPage[] = [
     config: {},
     status: "ACTIVE",
     isSystemPage: true,
-    // SEO 字段
     metaDescription:
       "推荐的优秀网站、技术博客和合作伙伴，包含高质量的技术资源和创意作品",
     metaKeywords: "友情链接, 推荐网站, 技术博客, 合作伙伴, 网站导航",
@@ -680,7 +722,6 @@ export const defaultPages: DefaultPage[] = [
     config: {},
     status: "ACTIVE",
     isSystemPage: true,
-    // SEO 字段
     metaDescription:
       "了解 NeutralPress 团队的故事、使命和愿景，以及我们如何为内容创作者提供更好的工具",
     metaKeywords: "关于我们, 团队介绍, 公司简介, 使命愿景, 团队故事",
@@ -695,7 +736,6 @@ export const defaultPages: DefaultPage[] = [
     config: {},
     status: "ACTIVE",
     isSystemPage: true,
-    // SEO 字段
     metaDescription: "展示个人和团队的摄影作品，捕捉生活中的精彩瞬间与美好回忆",
     metaKeywords: "照片墙, 摄影作品, 生活瞬间, 作品展示, 视觉故事",
     robotsIndex: true,

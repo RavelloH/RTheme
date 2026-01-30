@@ -1,10 +1,7 @@
-"use cache";
-
 import { generateMetadata as getBaseMetadata } from "@/lib/server/seo";
 import { getSystemPageConfig, getRawPage } from "@/lib/server/page-cache";
 import { resolveBlockData } from "@/lib/server/block-data-resolver";
 import { notFound } from "next/navigation";
-import { cacheLife } from "next/cache";
 import MainLayout from "@/components/MainLayout";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import BlockRenderer from "@/components/BlockRenderer";
@@ -43,7 +40,7 @@ export default async function Page({ params }: PageProps<"/[[...slug]]">) {
   const { blocks = [] } =
     (await resolveBlockData(config as unknown as PageConfig)) || {};
 
-  cacheLife("max");
+  // cacheLife("max");
   // TODO: Cache Tag
 
   return (

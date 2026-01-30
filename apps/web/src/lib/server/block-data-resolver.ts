@@ -3,10 +3,11 @@ import type { BlockFetcher } from "@/blocks/types";
 
 // 保持映射表不变，但可以将类型定义简化
 const fetcherLoaders: Record<string, () => Promise<BlockFetcher>> = {
-  hero: () => import("@/blocks/Hero/fetcher").then((m) => m.heroFetcher),
-  posts: () => import("@/blocks/Posts/fetcher").then((m) => m.postsFetcher),
+  hero: () => import("@/blocks/HeroGallery/fetcher").then((m) => m.heroFetcher),
+  posts: () =>
+    import("@/blocks/RecentPosts/fetcher").then((m) => m.postsFetcher),
   projects: () =>
-    import("@/blocks/Projects/fetcher").then((m) => m.projectsFetcher),
+    import("@/blocks/RecentProjects/fetcher").then((m) => m.projectsFetcher),
   "tags-categories": () =>
     import("@/blocks/TagsCategories/fetcher").then(
       (m) => m.tagsCategoriesFetcher,
