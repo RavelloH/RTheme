@@ -1,14 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   motion,
   AnimatePresence,
   useMotionValue,
-  PanInfo,
   useDragControls,
 } from "framer-motion";
+import type { PanInfo } from "framer-motion";
 
 export interface DrawerProps {
   open: boolean;

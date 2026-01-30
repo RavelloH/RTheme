@@ -109,7 +109,7 @@ export async function getNotices(
     });
 
     // 转换 Date 对象为 ISO 字符串
-    const formatNotice = (notice: any) => ({
+    const formatNotice = (notice: { createdAt: Date }) => ({
       ...notice,
       createdAt: notice.createdAt.toISOString(),
     });

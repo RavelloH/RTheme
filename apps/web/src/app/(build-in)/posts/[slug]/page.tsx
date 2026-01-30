@@ -24,8 +24,8 @@ import {
   getCategoryNamePath,
   getCategoryPath,
 } from "@/lib/server/category-utils";
+import { batchQueryMediaFiles } from "@/lib/server/image-query";
 import {
-  batchQueryMediaFiles,
   processImageUrl,
   extractInternalHashes,
 } from "@/lib/shared/image-utils";
