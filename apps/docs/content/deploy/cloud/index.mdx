@@ -1,0 +1,77 @@
+---
+title: 云平台部署
+---
+
+## 注意
+
+NeutralPress 在部署时，同时需要 PostgresSQL 和 Redis 两个服务的支持。
+
+以下的服务列表中，有注明其是否包含这两个云服务。如果没有包含，你可以查看底部的专门用于提供 PostgresSQL 的平台，单独从这些平台获取服务。
+
+以下所有平台均是完全免费的。
+
+---
+
+## Serverless 云平台
+
+以下是我们推荐的两大主流 Serverless 云平台，你可以选择其中之一来免费部署 NeutralPress 。
+
+<Cards>
+  <Card title="Vercel (推荐)" href="/docs/deploy/cloud/vercel">
+    支持 PostgresSQL 和 Redis 云服务，一键式解决方案。Next.js
+    的官方托管平台，支持免费部署，性能优异且易于使用。
+  </Card>
+  <Card title="Netlify" href="/docs/deploy/cloud/netlify">
+    不支持 PostgresSQL 和 Redis 云服务。另一个流行的 Serverless 平台。
+  </Card>
+</Cards>
+
+## Docker 云平台
+
+此外，这些云平台可以使用 Docker 镜像进行部署：
+
+<Cards>
+  <Card title="Zeabur (推荐)" href="/docs/deploy/cloud/zeabur">
+    支持 Docker 部署，限额充足，但需要验证信用卡。
+  </Card>
+  <Card title="Claw Cloud" href="/docs/deploy/cloud/claw">
+    支持 Docker 部署，完全免费，但不太稳定。
+  </Card>
+</Cards>
+
+## PostgresSQL 云服务
+
+如果你选择的云平台不包含 PostgresSQL 服务，你可以单独使用以下平台来获取免费的 PostgresSQL 数据库服务：
+
+<Cards>  
+  <Card title="Neon（推荐）" href="/docs/deploy/cloud/neon">
+    专注于 PostgresSQL 的云服务，提供免费套餐，性能优异。
+  </Card>
+  <Card title="Supabase" href="/docs/deploy/cloud/supabase">
+    提供免费 PostgresSQL 数据库，易于使用且功能强大。
+  </Card>
+
+</Cards>
+
+## Redis 云服务
+
+如果你选择的云平台不包含 Redis 服务，你可以单独使用以下平台来获取免费的 Redis 数据库服务：
+
+<Cards>
+  <Card title="Upstash（推荐）" href="/docs/deploy/cloud/upstash">
+    提供免费 Redis 数据库，易于使用且功能强大。限额较高，推荐使用。
+  </Card>
+  <Card title="Redis Labs" href="/docs/deploy/cloud/redis">
+    专注于 Redis 的云服务，提供免费套餐，但限额较少。
+  </Card>
+</Cards>
+
+---
+
+## 其他云平台
+
+精力有限，我们目前只测试并推荐了上述云平台。如果你想在其他云平台上部署 NeutralPress ，请参考相应平台的文档进行操作。
+
+理论上，任何支持 Next.js 应用部署的 Serverless 云平台均可用于部署 NeutralPress ，任何支持 Docker 部署的云平台均可用于部署 NeutralPress Docker 镜像。
+
+如果你进行了测试并成功部署，欢迎来补充贡献这个文档。

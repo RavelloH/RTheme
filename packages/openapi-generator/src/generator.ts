@@ -77,7 +77,15 @@ function normalizeOpenAPISpec(spec: any): any {
     if (!pathItem || typeof pathItem !== "object") continue;
 
     // 遍历所有 HTTP 方法
-    for (const method of ["get", "post", "put", "delete", "patch", "options", "head"]) {
+    for (const method of [
+      "get",
+      "post",
+      "put",
+      "delete",
+      "patch",
+      "options",
+      "head",
+    ]) {
       const operation = pathItem[method];
       if (!operation || typeof operation !== "object") continue;
 
@@ -97,7 +105,10 @@ function normalizeOpenAPISpec(spec: any): any {
 }
 
 // 修复 schema 中的 $ref 引用路径，并提取内部定义
-function fixSchemaRefs(schema: any, definitionsMap: Map<string, any> = new Map()): any {
+function fixSchemaRefs(
+  schema: any,
+  definitionsMap: Map<string, any> = new Map(),
+): any {
   if (!schema || typeof schema !== "object") {
     return schema;
   }
@@ -119,7 +130,10 @@ function fixSchemaRefs(schema: any, definitionsMap: Map<string, any> = new Map()
   if (schema.$ref) {
     // 将 #/definitions/xxx 替换为 #/components/schemas/xxx
     if (schema.$ref.startsWith("#/definitions/")) {
-      schema.$ref = schema.$ref.replace("#/definitions/", "#/components/schemas/");
+      schema.$ref = schema.$ref.replace(
+        "#/definitions/",
+        "#/components/schemas/",
+      );
     }
   }
 
@@ -345,11 +359,19 @@ function convertAndAddSchema(
       const uniqueName = `${name}_${defName}`;
 
       // 修复定义内部的引用（自引用等情况）
-      const fixedDefSchema = replaceRef(defSchema, `#/components/schemas/${defName}`, `#/components/schemas/${uniqueName}`);
+      const fixedDefSchema = replaceRef(
+        defSchema,
+        `#/components/schemas/${defName}`,
+        `#/components/schemas/${uniqueName}`,
+      );
       spec.components.schemas[uniqueName] = fixedDefSchema;
 
       // 替换主 schema 中对这个定义的引用
-      cleanSchema = replaceRef(cleanSchema, `#/components/schemas/${defName}`, `#/components/schemas/${uniqueName}`);
+      cleanSchema = replaceRef(
+        cleanSchema,
+        `#/components/schemas/${defName}`,
+        `#/components/schemas/${uniqueName}`,
+      );
     }
 
     // 添加到组件schemas中
