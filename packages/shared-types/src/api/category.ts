@@ -357,6 +357,7 @@ export const CategoryTreeNodeSchema: z.ZodType<any> = z.lazy(() =>
   }),
 );
 export type CategoryTreeNode = z.infer<typeof CategoryTreeNodeSchema>;
+registerSchema("CategoryTreeNode", CategoryTreeNodeSchema);
 
 export const GetCategoriesTreeSuccessResponseSchema =
   createSuccessResponseSchema(z.array(CategoryTreeNodeSchema));

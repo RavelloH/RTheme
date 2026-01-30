@@ -834,7 +834,9 @@
       "post": {
         "summary": "运行自检",
         "description": "自我检查系统的健康状态。带有force参数时，忽略最近24小时内的缓存结果，强制重新运行自检。",
-        "tags": "Admin",
+        "tags": [
+          "Admin"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -851,7 +853,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DcotorSuccessResponse"
+                  "$ref": "#/components/schemas/DoctorSuccessResponse"
                 }
               }
             }
@@ -13917,6 +13919,116 @@
         },
         "additionalProperties": false
       },
+      "CategoryTreeNode": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "nullable": true,
+            "type": "string"
+          },
+          "parentId": {
+            "nullable": true,
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "postCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "description",
+          "parentId",
+          "postCount",
+          "createdAt",
+          "updatedAt",
+          "children"
+        ],
+        "additionalProperties": false
+      },
+      "GetCategoriesTreeSuccessResponse___schema0": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "nullable": true,
+            "type": "string"
+          },
+          "parentId": {
+            "nullable": true,
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "postCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GetCategoriesTreeSuccessResponse___schema0"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "description",
+          "parentId",
+          "postCount",
+          "createdAt",
+          "updatedAt",
+          "children"
+        ],
+        "additionalProperties": false
+      },
       "GetCategoriesTreeSuccessResponse": {
         "type": "object",
         "properties": {
@@ -13938,7 +14050,7 @@
           "data": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/__schema0"
+              "$ref": "#/components/schemas/GetCategoriesTreeSuccessResponse___schema0"
             }
           }
         },
@@ -13949,64 +14061,7 @@
           "requestId",
           "data"
         ],
-        "additionalProperties": false,
-        "definitions": {
-          "__schema0": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "integer",
-                "minimum": -9007199254740991,
-                "maximum": 9007199254740991
-              },
-              "slug": {
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              },
-              "description": {
-                "nullable": true,
-                "type": "string"
-              },
-              "parentId": {
-                "nullable": true,
-                "type": "integer",
-                "minimum": -9007199254740991,
-                "maximum": 9007199254740991
-              },
-              "postCount": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 9007199254740991
-              },
-              "createdAt": {
-                "type": "string"
-              },
-              "updatedAt": {
-                "type": "string"
-              },
-              "children": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/definitions/__schema0"
-                }
-              }
-            },
-            "required": [
-              "id",
-              "slug",
-              "name",
-              "description",
-              "parentId",
-              "postCount",
-              "createdAt",
-              "updatedAt",
-              "children"
-            ],
-            "additionalProperties": false
-          }
-        }
+        "additionalProperties": false
       },
       "GetPostComments": {
         "type": "object",
@@ -17344,6 +17399,557 @@
             },
             "required": [
               "deleted"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "GetStorageListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "LOCAL",
+                    "AWS_S3",
+                    "GITHUB_PAGES",
+                    "VERCEL_BLOB",
+                    "EXTERNAL_URL"
+                  ]
+                },
+                "displayName": {
+                  "type": "string"
+                },
+                "baseUrl": {
+                  "type": "string"
+                },
+                "isActive": {
+                  "type": "boolean"
+                },
+                "isDefault": {
+                  "type": "boolean"
+                },
+                "maxFileSize": {
+                  "type": "number"
+                },
+                "pathTemplate": {
+                  "type": "string"
+                },
+                "mediaCount": {
+                  "type": "number"
+                },
+                "totalSize": {
+                  "type": "number"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "type",
+                "displayName",
+                "baseUrl",
+                "isActive",
+                "isDefault",
+                "maxFileSize",
+                "pathTemplate",
+                "mediaCount",
+                "totalSize",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "number",
+                "minimum": 1
+              },
+              "pageSize": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 500
+              },
+              "total": {
+                "type": "number",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "number",
+                "minimum": 0
+              },
+              "hasNext": {
+                "type": "boolean"
+              },
+              "hasPrev": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "page",
+              "pageSize",
+              "total",
+              "totalPages",
+              "hasNext",
+              "hasPrev"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "GetStorageDetailResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "LOCAL",
+                  "AWS_S3",
+                  "GITHUB_PAGES",
+                  "VERCEL_BLOB",
+                  "EXTERNAL_URL"
+                ]
+              },
+              "displayName": {
+                "type": "string"
+              },
+              "baseUrl": {
+                "type": "string"
+              },
+              "isActive": {
+                "type": "boolean"
+              },
+              "isDefault": {
+                "type": "boolean"
+              },
+              "maxFileSize": {
+                "type": "number"
+              },
+              "pathTemplate": {
+                "type": "string"
+              },
+              "config": {},
+              "mediaCount": {
+                "type": "number"
+              },
+              "totalSize": {
+                "type": "number"
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "type",
+              "displayName",
+              "baseUrl",
+              "isActive",
+              "isDefault",
+              "maxFileSize",
+              "pathTemplate",
+              "config",
+              "mediaCount",
+              "totalSize",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "CreateStorageResponseWrapper": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "LOCAL",
+                  "AWS_S3",
+                  "GITHUB_PAGES",
+                  "VERCEL_BLOB",
+                  "EXTERNAL_URL"
+                ]
+              },
+              "displayName": {
+                "type": "string"
+              },
+              "baseUrl": {
+                "type": "string"
+              },
+              "isActive": {
+                "type": "boolean"
+              },
+              "isDefault": {
+                "type": "boolean"
+              },
+              "maxFileSize": {
+                "type": "number"
+              },
+              "pathTemplate": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "type",
+              "displayName",
+              "baseUrl",
+              "isActive",
+              "isDefault",
+              "maxFileSize",
+              "pathTemplate",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateStorageResponseWrapper": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "LOCAL",
+                  "AWS_S3",
+                  "GITHUB_PAGES",
+                  "VERCEL_BLOB",
+                  "EXTERNAL_URL"
+                ]
+              },
+              "displayName": {
+                "type": "string"
+              },
+              "baseUrl": {
+                "type": "string"
+              },
+              "isActive": {
+                "type": "boolean"
+              },
+              "isDefault": {
+                "type": "boolean"
+              },
+              "maxFileSize": {
+                "type": "number"
+              },
+              "pathTemplate": {
+                "type": "string"
+              },
+              "config": {},
+              "updatedAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "type",
+              "displayName",
+              "baseUrl",
+              "isActive",
+              "isDefault",
+              "maxFileSize",
+              "pathTemplate",
+              "config",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "DeleteStorageResponseWrapper": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "deleted": {
+                "type": "number"
+              },
+              "ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "deleted",
+              "ids"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "ToggleStorageStatusResponseWrapper": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "isActive": {
+                "type": "boolean"
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "isActive",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "SetDefaultStorageResponseWrapper": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "isDefault": {
+                "type": "boolean"
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "isDefault",
+              "updatedAt"
             ],
             "additionalProperties": false
           }
