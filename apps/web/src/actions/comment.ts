@@ -173,12 +173,17 @@ async function sendCommentNotification(params: {
       if (!parentComment) return;
 
       // 如果是自己回复自己，不通知
-      if (
+      const isSameUser =
         params.currentUid &&
         parentComment.userUid &&
-        params.currentUid === parentComment.userUid
-      )
-        return;
+        params.currentUid === parentComment.userUid;
+      const isSameEmail =
+        params.commenterEmail &&
+        parentComment.authorEmail &&
+        params.commenterEmail.toLowerCase().trim() ===
+          parentComment.authorEmail.toLowerCase().trim();
+
+      if (isSameUser || isSameEmail) return;
 
       const truncatedParentContent =
         parentComment.content.length > 50
