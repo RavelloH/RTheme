@@ -93,6 +93,12 @@ export async function getSettings(
   }
 }
 
+import {
+  defaultConfigs,
+  extractDefaultValue,
+  extractOptions,
+} from "@/data/default-configs";
+
 /*
   updateSettings - 批量更新配置项
 */
@@ -134,6 +140,76 @@ export async function updateSettings(
 
   if (!user) {
     return response.unauthorized();
+  }
+
+  // 校验配置值
+  for (const setting of settings) {
+    const configDef = defaultConfigs.find((c) => c.key === setting.key);
+    if (!configDef) {
+      // 允许更新未知配置吗？如果不允许，可以取消注释下面这行
+      // return response.badRequest({ message: `未知的配置项: ${setting.key}` });
+      continue;
+    }
+
+    const options = extractOptions(configDef.value);
+    const newValue = extractDefaultValue(setting.value);
+    const defaultValue = extractDefaultValue(configDef.value);
+
+    // 1. Options 校验
+    if (options && options.length > 0) {
+      const isValid = options.some(
+        (opt) => String(opt.value) === String(newValue),
+      );
+      if (!isValid) {
+        return response.badRequest({
+          message: `配置项 ${setting.key} 的值无效。允许的值为: ${options.map((o) => o.value).join(", ")}`,
+        });
+      }
+    }
+
+    // 2. 类型推断校验
+    if (defaultValue !== undefined && defaultValue !== null) {
+      const defaultType = typeof defaultValue;
+
+      if (Array.isArray(defaultValue)) {
+        if (!Array.isArray(newValue)) {
+          return response.badRequest({
+            message: `配置项 ${setting.key} 格式错误。应为数组。`,
+          });
+        }
+        // 简单校验数组元素类型（假设数组元素类型一致且非空数组能推断）
+        if (defaultValue.length > 0) {
+          const itemType = typeof defaultValue[0];
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const invalidItem = (newValue as any[]).find(
+            (item) => typeof item !== itemType,
+          );
+          if (invalidItem !== undefined) {
+            return response.badRequest({
+              message: `配置项 ${setting.key} 数组元素类型错误。应为 ${itemType}。`,
+            });
+          }
+        }
+      } else if (defaultType === "object") {
+        // 普通对象
+        if (
+          typeof newValue !== "object" ||
+          newValue === null ||
+          Array.isArray(newValue)
+        ) {
+          return response.badRequest({
+            message: `配置项 ${setting.key} 格式错误。应为对象。`,
+          });
+        }
+      } else {
+        // 基本类型：string, number, boolean
+        if (typeof newValue !== defaultType) {
+          return response.badRequest({
+            message: `配置项 ${setting.key} 类型错误。应为 ${defaultType}，实际为 ${typeof newValue}。`,
+          });
+        }
+      }
+    }
   }
 
   try {
