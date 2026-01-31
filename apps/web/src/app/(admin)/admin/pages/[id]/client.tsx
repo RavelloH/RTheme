@@ -1,0 +1,59 @@
+"use client";
+
+import React from "react";
+import { useRouter } from "next/navigation";
+import VisualPageEditor from "@/components/PageEditor/VisualPageEditor";
+import { updatePage } from "@/actions/page";
+import { useToast } from "@/ui/Toast";
+import type { BlockConfig } from "@/blocks/types";
+import runWithAuth from "@/lib/client/run-with-auth";
+import type { PageItem } from "@/lib/server/page-cache";
+
+export default function LayoutEditorClientWrapper({
+  page,
+}: {
+  page: PageItem;
+}) {
+  const router = useRouter();
+  const toast = useToast();
+
+  const handleSave = async (blocks: BlockConfig[]) => {
+    try {
+      // 构造更新 payload
+      // 注意：这里只更新 config.blocks，保留 components 和其他 config 字段
+      const currentConfig = (page.config as Record<string, unknown>) || {};
+      const newConfig = {
+        ...currentConfig,
+        blocks,
+      };
+
+      const result = await runWithAuth(updatePage, {
+        slug: page.slug, // 标识符
+        config: newConfig,
+      });
+
+      if (result && "data" in result && result.data) {
+        toast.success("页面布局已保存");
+        router.refresh();
+      } else {
+        toast.error("保存失败");
+      }
+    } catch (error) {
+      console.error("Save failed:", error);
+      toast.error("保存出错");
+    }
+  };
+
+  const initialBlocks =
+    ((page.config as { blocks?: BlockConfig[] })?.blocks as BlockConfig[]) ||
+    [];
+
+  return (
+    <VisualPageEditor
+      initialBlocks={initialBlocks}
+      onSave={handleSave}
+      onBack={() => router.back()} // 或者 router.push('/admin/pages')
+      pageTitle={page.title}
+    />
+  );
+}

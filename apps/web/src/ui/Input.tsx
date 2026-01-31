@@ -153,7 +153,7 @@ export const Input = forwardRef<
     px-0 ${sizeStyles.input} text-white
     focus:outline-none
     disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-500
-    ${isTextarea ? "resize-none" : ""}
+    ${isTextarea ? "resize-y whitespace-pre-wrap wrap" : ""}
   `;
 
   return (

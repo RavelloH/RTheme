@@ -516,98 +516,7 @@ export default function PagesTable() {
     }
     const config = configSource as ConfigRecord;
 
-    if (Array.isArray(config.blocks)) {
-      const blocks = config.blocks as Record<string, unknown>[];
-      fields.push(
-        <div key="blocks-section" className="space-y-4">
-          <div>
-            <h4 className="text-lg font-semibold text-foreground">
-              页面区块 (Blocks)
-            </h4>
-          </div>
-          <div className="space-y-6">
-            {blocks.map((block, blockIndex) => {
-              const enabledPath = ["blocks", blockIndex.toString(), "enabled"];
-              const blockDescription =
-                typeof block.description === "string" ? block.description : "";
-              const blockKey = String(block.id || `block-${blockIndex}`);
-
-              return (
-                <div key={blockKey} className="space-y-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between py-2">
-                      <div className="text-lg font-semibold text-foreground">
-                        区块 {String(block.id ?? blockIndex + 1)}
-                      </div>
-                      <Select
-                        value={getConfigFieldDisplayValue(enabledPath)}
-                        onChange={(value) =>
-                          handleConfigSelectChange(enabledPath, value)
-                        }
-                        options={[
-                          { value: "true", label: "启用" },
-                          { value: "false", label: "禁用" },
-                        ]}
-                        size="sm"
-                      />
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {blockDescription || "无描述"}
-                    </div>
-                  </div>
-
-                  {isConfigObject(block.content) && (
-                    <div className="space-y-4">
-                      {Object.entries(
-                        (block.content as Record<string, unknown>) || {},
-                      ).map(([fieldKey, fieldData]) => {
-                        const fieldInfo = isConfigObject(fieldData)
-                          ? (fieldData as {
-                              value?: unknown;
-                              description?: string;
-                            })
-                          : { value: fieldData };
-
-                        if (fieldInfo.value === undefined) {
-                          return null;
-                        }
-
-                        const fieldPath = [
-                          "blocks",
-                          blockIndex.toString(),
-                          "content",
-                          fieldKey,
-                          "value",
-                        ];
-
-                        return (
-                          <div
-                            key={`${blockKey}-content-${fieldKey}`}
-                            className="space-y-2"
-                          >
-                            {renderConfigFieldInput(
-                              fieldPath,
-                              fieldInfo.value,
-                              `输入 ${fieldKey} 内容`,
-                              fieldKey,
-                            )}
-                            {fieldInfo.description && (
-                              <p className="text-xs text-muted-foreground">
-                                {fieldInfo.description}
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>,
-      );
-    }
+    // 移除 blocks 列表渲染，使用独立编辑器
 
     if (Array.isArray(config.components)) {
       const components = config.components as Record<string, unknown>[];
@@ -936,11 +845,10 @@ export default function PagesTable() {
       variant: "ghost",
     },
     {
-      label: "编辑页面",
-      onClick: () => navigate("/admin/pages/" + record.slug),
+      label: record.isSystemPage ? "布局编辑器" : "编辑页面",
+      onClick: () => navigate("/admin/pages/" + record.id),
       icon: <RiFileEditLine size="1em" />,
       variant: "ghost",
-      disabled: record.isSystemPage, // 系统页面禁用
     },
     {
       label: "快速编辑",

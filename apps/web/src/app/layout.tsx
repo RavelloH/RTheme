@@ -98,7 +98,7 @@ export default async function RootLayout({
             <ConfigProvider configs={configs}>
               <NotificationProvider>
                 <MenuProvider menus={menus}>
-                  <ResponsiveFontScale scaleFactor={0.017} baseSize={12}>
+                  <ResponsiveFontScale scaleFactor={0.017} baseSize={0}>
                     <LoadingAnimation />
                     <LayoutContainer>
                       <Suspense>

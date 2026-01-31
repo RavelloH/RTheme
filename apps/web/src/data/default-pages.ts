@@ -2,6 +2,10 @@
 // 默认页面数据定义
 
 import type { BlockConfig } from "../blocks/types";
+import type {
+  DefaultBlockConfig,
+  DefaultBlockContent,
+} from "../blocks/Default/types";
 
 // Prisma Json 类型定义
 type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
@@ -35,13 +39,11 @@ export interface DefaultPage {
 const createDefaultBlock = (
   id: number,
   description: string,
-  enabled: boolean,
-  content: BlockConfig["content"],
-): BlockConfig => ({
+  content: DefaultBlockContent,
+): DefaultBlockConfig => ({
   id,
   block: "default",
   description,
-  enabled,
   content,
 });
 
@@ -62,46 +64,31 @@ export const defaultPages: DefaultPage[] = [
           id: 100,
           block: "hero",
           description: "首页顶部 Hero 区域",
-          enabled: true,
           content: {},
         },
         // Block 1: Default (Introduction)
         createDefaultBlock(
           1,
-          "自定义块1，显示在Slogen与“作品”之间。正文下半部分可显示文章、作品计数。",
-          true,
+          "自定义块1，显示在Slogen与「作品」之间。正文下半部分可显示文章、作品计数。",
           {
-            header: {
-              value: "Welcome. I'm...",
-              description: "头部显示文本",
-            },
-            title: {
-              value: "NeutralPress | 中性色",
-              description: "标题文本",
-            },
+            header: "Welcome. I'm...",
+            title: "NeutralPress | 中性色",
             content: {
-              value: {
-                top: [
-                  "专为博客而打造的CMS系统。",
-                  "独特的横板滚动布局，",
-                  "完整的后台管理功能，",
-                  "便捷的可视化编辑器，",
-                  "方便的媒体管理面板，",
-                  "强大的内置访问统计，",
-                  "经济的无服务器模式，",
-                  "可靠的系统安全防御。",
-                ],
-                bottom: ["共有文章 {posts} 篇，", "收录作品 {projects} 件。"],
-              },
-              description:
-                "正文文本，分别显示在正文顶部和底部。使用 {works} 来表示作品数，{projects} 来表示文章数",
+              top: [
+                "专为博客而打造的CMS系统。",
+                "独特的横板滚动布局，",
+                "完整的后台管理功能，",
+                "便捷的可视化编辑器，",
+                "方便的媒体管理面板，",
+                "强大的内置访问统计，",
+                "经济的无服务器模式，",
+                "可靠的系统安全防御。",
+              ],
+              bottom: ["共有文章 {posts} 篇，", "收录作品 {projects} 件。"],
             },
             footer: {
-              value: {
-                link: "/about",
-                description: "Learn more about me",
-              },
-              description: "底部显示文本，可提供链接用于跳转",
+              link: "/about",
+              text: "Learn more about me",
             },
           },
         ),
@@ -110,65 +97,40 @@ export const defaultPages: DefaultPage[] = [
           id: 101,
           block: "projects",
           description: "作品展示区域",
-          enabled: true,
           content: {
             // 将原 component 数据内联
             worksDescription: {
-              header: {
-                value: "My main tech stack includes",
-                description: "Header",
-              },
-              content: {
-                value:
-                  "React / Next.js / TypeScript / JavaScript / TailwindCSS / Node.js / Express.js / Serverless / GraphQL / PostgreSQL / MySQL / Redis / Docker / Kubernetes / Webpack / Vite / C / C++ / C# / Jest / Cypress / Shell ...",
-                description: "Content",
-              },
+              header: "My main tech stack includes",
+              content:
+                "React / Next.js / TypeScript / JavaScript / TailwindCSS / Node.js / Express.js / Serverless / GraphQL / PostgreSQL / MySQL / Redis / Docker / Kubernetes / Webpack / Vite / C / C++ / C# / Jest / Cypress / Shell ...",
             },
             worksSummary: {
-              content: {
-                value: [
-                  "不止这些。",
-                  "想要查看更多？",
-                  "前往我的 Github 来查看我的所有项目，",
-                  "或者在 Projects 页面看看相关描述。",
-                  "",
-                  "Github: [@xxx](https://github.com/RavelloH)",
-                ],
-                description: "Summary Content",
-              },
+              content: [
+                "不止这些。",
+                "想要查看更多？",
+                "前往我的 Github 来查看我的所有项目，",
+                "或者在 Projects 页面看看相关描述。",
+                "",
+                "Github: [@xxx](https://github.com/RavelloH)",
+              ],
               footer: {
-                value: {
-                  link: "/works",
-                  description: "View more projects",
-                },
-                description: "Footer",
+                link: "/works",
+                text: "View more projects",
               },
             },
           },
         },
         // Block 3: Default (Between Projects & Posts)
-        createDefaultBlock(2, "自定义块2，显示在“作品”与“文章”之间", false, {
-          header: {
-            value: "",
-            description: "头部显示文本",
-          },
-          title: {
-            value: "",
-            description: "标题文本",
-          },
+        createDefaultBlock(2, "自定义块2，显示在「作品」与「文章」之间", {
+          header: "",
+          title: "",
           content: {
-            value: {
-              top: [],
-              bottom: [],
-            },
-            description: "正文文本，分别显示在正文顶部和底部",
+            top: [],
+            bottom: [],
           },
           footer: {
-            value: {
-              link: "",
-              description: "",
-            },
-            description: "底部显示文本，可提供链接用于跳转",
+            link: "",
+            text: "",
           },
         }),
         // Block 4: Posts
@@ -176,36 +138,22 @@ export const defaultPages: DefaultPage[] = [
           id: 102,
           block: "posts",
           description: "文章列表区域",
-          enabled: true,
           content: {},
         },
         // Block 5: Default (Between Posts & Tags)
         createDefaultBlock(
           3,
-          "自定义块3，显示在“文章”与“标签 & 分类”之间",
-          false,
+          "自定义块3，显示在「文章」与「标签 & 分类」之间",
           {
-            header: {
-              value: "",
-              description: "头部显示文本",
-            },
-            title: {
-              value: "",
-              description: "标题文本",
-            },
+            header: "",
+            title: "",
             content: {
-              value: {
-                top: [],
-                bottom: [],
-              },
-              description: "正文文本，分别显示在正文顶部和底部",
+              top: [],
+              bottom: [],
             },
             footer: {
-              value: {
-                link: "",
-                description: "",
-              },
-              description: "底部显示文本，可提供链接用于跳转",
+              link: "",
+              text: "",
             },
           },
         ),
@@ -214,42 +162,29 @@ export const defaultPages: DefaultPage[] = [
           id: 103,
           block: "tags-categories",
           description: "标签与分类区域",
-          enabled: true,
           content: {},
         },
         // Block 7: Default (Footer)
-        createDefaultBlock(4, "自定义块4，显示在页面最后", true, {
-          header: {
-            value: "Want to...",
-            description: "头部显示文本",
-          },
-          title: {
-            value: "Contact me / 联系我",
-            description: "标题文本",
-          },
+        createDefaultBlock(4, "自定义块4，显示在页面最后", {
+          header: "Want to...",
+          title: "Contact me / 联系我",
           content: {
-            value: {
-              top: [
-                "学习交流?",
-                "洽谈合作?",
-                "交个朋友?",
-                "......",
-                "欢迎通过邮箱联系我：",
-                "xxx@example.com",
-              ],
-              bottom: [
-                "或者，不用那么正式，",
-                "直接使用下方的站内信系统和我聊聊。",
-              ],
-            },
-            description: "正文文本，分别显示在正文顶部和底部",
+            top: [
+              "学习交流?",
+              "洽谈合作?",
+              "交个朋友?",
+              "......",
+              "欢迎通过邮箱联系我：",
+              "xxx@example.com",
+            ],
+            bottom: [
+              "或者，不用那么正式，",
+              "直接使用下方的站内信系统和我聊聊。",
+            ],
           },
           footer: {
-            value: {
-              link: "/messages?uid=1",
-              description: "Start chatting with me",
-            },
-            description: "底部显示文本，可提供链接用于跳转",
+            link: "/messages?uid=1",
+            text: "Start chatting with me",
           },
         }),
       ],
@@ -318,63 +253,37 @@ export const defaultPages: DefaultPage[] = [
         createDefaultBlock(
           1,
           "自定义块1，显示在页面开头。可显示文章统计信息。标题下方将显示搜索栏。",
-          true,
           {
-            header: {
-              value: "Thoughts. Notes. Stories.",
-              description: "头部显示文本",
-            },
-            title: {
-              value: "Posts / 文章",
-              description: "标题文本",
-            },
+            header: "Thoughts. Notes. Stories.",
+            title: "Posts / 文章",
             content: {
-              value: {
-                top: [
-                  "记录 & 索引所有文章。",
-                  "",
-                  "最近更新于 {lastPublishDays}。",
-                  "自 {firstPublishAt} 以来，共索引 {posts} 篇文章。",
-                ],
-                bottom: [
-                  "第 {page} 页，共 {totalPage} 页。",
-                  "正在查看第 {firstPage} - {lastPage} 篇文章。",
-                ],
-              },
-              description:
-                "正文文本，分别显示在正文顶部和底部。使用 {lastPublishDays} 来表示距离上次更新所过的天数，{firstPublishAt} 来表示首次发布的日期，{posts} 来表示文章数，{page} 当前页码，{totalPage} 总页数，{firstPage} 当前页首篇文章序号，{lastPage} 当前页末篇文章序号",
+              top: [
+                "记录 & 索引所有文章。",
+                "",
+                "最近更新于 {lastPublishDays}。",
+                "自 {firstPublishAt} 以来，共索引 {posts} 篇文章。",
+              ],
+              bottom: [
+                "第 {page} 页，共 {totalPage} 页。",
+                "正在查看第 {firstPage} - {lastPage} 篇文章。",
+              ],
             },
             footer: {
-              value: {
-                link: "",
-                description: "",
-              },
-              description: "底部显示文本，可提供链接用于跳转",
+              link: "",
+              text: "",
             },
           },
         ),
-        createDefaultBlock(2, "自定义块2，显示在页面结尾。", false, {
-          header: {
-            value: "",
-            description: "头部显示文本",
-          },
-          title: {
-            value: "",
-            description: "标题文本",
-          },
+        createDefaultBlock(2, "自定义块2，显示在页面结尾。", {
+          header: "",
+          title: "",
           content: {
-            value: {
-              top: [""],
-              bottom: [""],
-            },
-            description: "正文文本，分别显示在正文顶部和底部",
+            top: [""],
+            bottom: [""],
           },
           footer: {
-            value: {
-              link: "",
-              description: "",
-            },
-            description: "底部显示文本，可提供链接用于跳转",
+            link: "",
+            text: "",
           },
         }),
       ],
@@ -397,62 +306,35 @@ export const defaultPages: DefaultPage[] = [
         createDefaultBlock(
           1,
           "自定义块1，显示在页面开头。可显示分类统计信息。底部文本的最后一行将始终显示路径",
-          true,
           {
-            header: {
-              value: "Topics. Themes. Paths.",
-              description: "头部显示文本",
-            },
-            title: {
-              value: "Categories / 分类",
-              description: "标题文本",
-            },
+            header: "Topics. Themes. Paths.",
+            title: "Categories / 分类",
             content: {
-              value: {
-                top: [
-                  "整理 & 索引所有分类。",
-                  "",
-                  "最近更新于 {lastUpdatedDays}。",
-                  "共索引 {categories} 个分类，",
-                  "其中包含 {root} 个根分类，{child} 个子分类。",
-                ],
-                bottom: ["当前正在查看 {pageInfo}。"],
-              },
-              description:
-                "正文文本，分别显示在正文顶部和底部。使用 {lastUpdatedDays} 来表示距离上次更新所过的天数，{categories} 来表示分类数，{root} 来表示根分类数，{child} 来表示子分类数，{pageInfo} 来表示当前页信息。",
+              top: [
+                "整理 & 索引所有分类。",
+                "",
+                "最近更新于 {lastUpdatedDays}。",
+                "共索引 {categories} 个分类，",
+                "其中包含 {root} 个根分类，{child} 个子分类。",
+              ],
+              bottom: ["当前正在查看 {pageInfo}。"],
             },
             footer: {
-              value: {
-                link: "",
-                description: "Random / 随便看看",
-              },
-              description:
-                "底部显示文本，将始终显示随机页面的链接。修改link无效，但description可自定义",
+              link: "",
+              text: "Random / 随便看看",
             },
           },
         ),
-        createDefaultBlock(2, "自定义块2，显示在页面结尾。", false, {
-          header: {
-            value: "",
-            description: "头部显示文本",
-          },
-          title: {
-            value: "",
-            description: "标题文本",
-          },
+        createDefaultBlock(2, "自定义块2，显示在页面结尾。", {
+          header: "",
+          title: "",
           content: {
-            value: {
-              top: [""],
-              bottom: [""],
-            },
-            description: "正文文本，分别显示在正文顶部和底部",
+            top: [""],
+            bottom: [""],
           },
           footer: {
-            value: {
-              link: "",
-              description: "",
-            },
-            description: "底部显示文本，可提供链接用于跳转",
+            link: "",
+            text: "",
           },
         }),
       ],
@@ -474,66 +356,39 @@ export const defaultPages: DefaultPage[] = [
         createDefaultBlock(
           1,
           "自定义块1，显示在页面开头。可显示分类统计信息。底部文本的最后一行将始终显示路径",
-          true,
           {
-            header: {
-              value: "Topics. Themes. Paths.",
-              description: "头部显示文本",
-            },
-            title: {
-              value: "分类：{categoryName}",
-              description: "标题文本，其中 {categoryName} 显示当前分类名称",
-            },
+            header: "Topics. Themes. Paths.",
+            title: "分类：{categoryName}",
             content: {
-              value: {
-                top: [
-                  "整理 & 索引 {categoryName} 下的所有子分类及文章。",
-                  "",
-                  "最近更新于 {lastUpdatedDays}。",
-                  "此分类共包含 {categories} 个子分类，",
-                  "{posts} 篇文章。",
-                ],
-                bottom: [
-                  "当前正在查看 {pageInfo}。",
-                  "第 {page} 页，共 {totalPage} 页。",
-                  "正在查看第 {firstPage} - {lastPage} 篇文章。",
-                ],
-              },
-              description:
-                "正文文本，分别显示在正文顶部和底部。使用 {categoryName} 来表示当前分类名称，{lastUpdatedDays} 来表示距离上次更新所过的天数，{categories} 来表示子分类数，{posts} 来表示文章数，{pageInfo} 来表示当前页信息，{page} 当前页码，{totalPage} 总页数，{firstPage} 当前页首篇文章序号，{lastPage} 当前页末篇文章序号",
+              top: [
+                "整理 & 索引 {categoryName} 下的所有子分类及文章。",
+                "",
+                "最近更新于 {lastUpdatedDays}。",
+                "此分类共包含 {categories} 个子分类，",
+                "{posts} 篇文章。",
+              ],
+              bottom: [
+                "当前正在查看 {pageInfo}。",
+                "第 {page} 页，共 {totalPage} 页。",
+                "正在查看第 {firstPage} - {lastPage} 篇文章。",
+              ],
             },
             footer: {
-              value: {
-                link: "",
-                description: "Back / 返回上一级分类",
-              },
-              description:
-                "底部显示文本，将始终显示返回上一级分类的链接。修改link无效，但description可自定义",
+              link: "",
+              text: "Back / 返回上一级分类",
             },
           },
         ),
-        createDefaultBlock(2, "自定义块2，显示在页面结尾。", false, {
-          header: {
-            value: "",
-            description: "头部显示文本",
-          },
-          title: {
-            value: "",
-            description: "标题文本",
-          },
+        createDefaultBlock(2, "自定义块2，显示在页面结尾。", {
+          header: "",
+          title: "",
           content: {
-            value: {
-              top: [""],
-              bottom: [""],
-            },
-            description: "正文文本，分别显示在正文顶部和底部",
+            top: [""],
+            bottom: [""],
           },
           footer: {
-            value: {
-              link: "",
-              description: "",
-            },
-            description: "底部显示文本，可提供链接用于跳转",
+            link: "",
+            text: "",
           },
         }),
       ],
@@ -555,61 +410,34 @@ export const defaultPages: DefaultPage[] = [
         createDefaultBlock(
           1,
           "自定义块1，显示在页面开头。可显示标签统计信息。",
-          true,
           {
-            header: {
-              value: "Keywords. Connections. Traces.",
-              description: "头部显示文本",
-            },
-            title: {
-              value: "Tags / 标签",
-              description: "标题文本",
-            },
+            header: "Keywords. Connections. Traces.",
+            title: "Tags / 标签",
             content: {
-              value: {
-                top: [
-                  "整理 & 索引所有标签。",
-                  "",
-                  "最近更新于 {lastUpdatedDays}。",
-                  "共索引 {tags} 个标签。",
-                ],
-                bottom: ["当前正在查看 {pageInfo}。"],
-              },
-              description:
-                "正文文本，分别显示在正文顶部和底部。使用 {lastUpdatedDays} 来表示距离上次更新所过的天数，{tags} 来表示标签数，{page} 当前页码，{totalPage} 总页数，{firstTag} 当前页首个标签序号，{lastTag} 当前页末个标签序号",
+              top: [
+                "整理 & 索引所有标签。",
+                "",
+                "最近更新于 {lastUpdatedDays}。",
+                "共索引 {tags} 个标签。",
+              ],
+              bottom: ["当前正在查看 {pageInfo}。"],
             },
             footer: {
-              value: {
-                link: "",
-                description: "Random / 随便看看",
-              },
-              description:
-                "底部显示文本，将始终显示随机页面的链接。修改link无效，但description可自定义",
+              link: "",
+              text: "Random / 随便看看",
             },
           },
         ),
-        createDefaultBlock(2, "自定义块2，显示在页面结尾。", false, {
-          header: {
-            value: "",
-            description: "头部显示文本",
-          },
-          title: {
-            value: "",
-            description: "标题文本",
-          },
+        createDefaultBlock(2, "自定义块2，显示在页面结尾。", {
+          header: "",
+          title: "",
           content: {
-            value: {
-              top: [""],
-              bottom: [""],
-            },
-            description: "正文文本，分别显示在正文顶部和底部",
+            top: [""],
+            bottom: [""],
           },
           footer: {
-            value: {
-              link: "",
-              description: "",
-            },
-            description: "底部显示文本，可提供链接用于跳转",
+            link: "",
+            text: "",
           },
         }),
       ],
@@ -631,64 +459,37 @@ export const defaultPages: DefaultPage[] = [
         createDefaultBlock(
           1,
           "自定义块1，显示在页面开头。可显示标签统计信息。",
-          true,
           {
-            header: {
-              value: "Keywords. Connections. Traces.",
-              description: "头部显示文本",
-            },
-            title: {
-              value: "标签：{tagName}",
-              description: "标题文本",
-            },
+            header: "Keywords. Connections. Traces.",
+            title: "标签：{tagName}",
             content: {
-              value: {
-                top: [
-                  "整理 & 索引 {tag} 下的所有文章。",
-                  "",
-                  "此标签共包含 {posts} 个文章。",
-                ],
-                bottom: [
-                  "当前正在查看 {pageInfo}。",
-                  "第 {page} 页，共 {totalPage} 页。",
-                  "正在查看第 {firstPage} - {lastPage} 篇文章。",
-                ],
-              },
-              description:
-                "正文文本，分别显示在正文顶部和底部。使用 {tag} 来表示当前标签名称，{posts} 来表示文章数，{pageInfo} 来表示当前页信息，{page} 当前页码，{totalPage} 总页数，{firstPage} 当前页首篇文章序号，{lastPage} 当前页末篇文章序号",
+              top: [
+                "整理 & 索引 {tag} 下的所有文章。",
+                "",
+                "此标签共包含 {posts} 个文章。",
+              ],
+              bottom: [
+                "当前正在查看 {pageInfo}。",
+                "第 {page} 页，共 {totalPage} 页。",
+                "正在查看第 {firstPage} - {lastPage} 篇文章。",
+              ],
             },
             footer: {
-              value: {
-                link: "",
-                description: "Back / 返回标签列表",
-              },
-              description:
-                "底部显示文本，将始终显示返回标签列表的链接。修改link无效，但description可自定义",
+              link: "",
+              text: "Back / 返回标签列表",
             },
           },
         ),
-        createDefaultBlock(2, "自定义块2，显示在页面结尾。", false, {
-          header: {
-            value: "",
-            description: "头部显示文本",
-          },
-          title: {
-            value: "",
-            description: "标题文本",
-          },
+        createDefaultBlock(2, "自定义块2，显示在页面结尾。", {
+          header: "",
+          title: "",
           content: {
-            value: {
-              top: [""],
-              bottom: [""],
-            },
-            description: "正文文本，分别显示在正文顶部和底部",
+            top: [""],
+            bottom: [""],
           },
           footer: {
-            value: {
-              link: "",
-              description: "",
-            },
-            description: "底部显示文本，可提供链接用于跳转",
+            link: "",
+            text: "",
           },
         }),
       ],

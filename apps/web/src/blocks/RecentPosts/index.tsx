@@ -93,7 +93,7 @@ export default function PostsBlock({ config }: { config: BlockConfig }) {
                 category={post.categories}
                 tags={post.tags}
                 cover={post.cover}
-                summary={post.excerpt || ""}
+                summary={post.excerpt ?? ""}
               />
             ) : (
               <EmptyPostCard direction={index % 2 === 0 ? "left" : "right"} />

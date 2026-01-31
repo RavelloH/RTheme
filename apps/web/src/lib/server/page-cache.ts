@@ -3,6 +3,7 @@ import "server-only";
 import fs from "fs";
 import path from "path";
 import { unstable_cache } from "next/cache";
+import type { BlockConfig } from "@/blocks/types";
 
 // 自定义 JSON 类型定义（避免与 Prisma 的 JsonValue 冲突）
 type CustomJsonValue =
@@ -14,37 +15,6 @@ type CustomJsonValue =
   | CustomJsonArray;
 type CustomJsonObject = { [key: string]: CustomJsonValue };
 type CustomJsonArray = CustomJsonValue[];
-
-// 页面配置块类型定义
-export interface PageBlock {
-  id: number;
-  description: string;
-  enabled: boolean;
-  content: {
-    header: {
-      value: string;
-      description: string;
-    };
-    title: {
-      value: string;
-      description: string;
-    };
-    content: {
-      value: {
-        top: string[];
-        bottom: string[];
-      };
-      description: string;
-    };
-    footer: {
-      value: {
-        link: string;
-        description: string;
-      };
-      description: string;
-    };
-  };
-}
 
 // 页面组件类型定义
 export interface PageComponent {
@@ -67,7 +37,7 @@ export interface PageComponent {
 
 // 系统页面配置类型定义
 export interface SystemPageConfig {
-  blocks?: PageBlock[];
+  blocks?: BlockConfig[];
   components?: PageComponent[];
 }
 
@@ -216,7 +186,7 @@ export function getSystemPageConfig(
 
   if (config.blocks || config.components) {
     return {
-      blocks: config.blocks as PageBlock[] | undefined,
+      blocks: config.blocks as BlockConfig[] | undefined,
       components: config.components as PageComponent[] | undefined,
     };
   }
@@ -734,4 +704,216 @@ export function getBlocksAreas(
   }
 
   return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+}
+
+/**
+ * 从配置对象中获取指定 ID 的 block
+ */
+export function getPageBlock(
+  config: SystemPageConfig | null,
+  blockId: number | string,
+): BlockConfig | null {
+  if (!config?.blocks) {
+    return null;
+  }
+
+  const block = config.blocks.find(
+    (block) => String(block.id) === String(blockId),
+  );
+  return block || null;
+}
+
+/**
+ * 从配置对象中获取指定 ID 的 component
+ */
+export function getPageComponent(
+  config: SystemPageConfig | null,
+  componentId: string,
+): PageComponent | null {
+  if (!config?.components) {
+    return null;
+  }
+
+  const component = config.components.find(
+    (component) => component.id === componentId,
+  );
+  return component || null;
+}
+
+/**
+ * 获取 block 的字段值 (支持新结构)
+ */
+export function getPageBlockValue<T = unknown>(
+  config: SystemPageConfig | null,
+  blockId: number | string,
+  fieldPath: string,
+  defaultValue?: T,
+): T | null {
+  const block = getPageBlock(config, blockId);
+
+  if (!block) {
+    return defaultValue ?? null;
+  }
+
+  try {
+    const pathParts = fieldPath.split(".");
+    let currentValue: unknown = block.content;
+
+    for (const part of pathParts) {
+      if (
+        currentValue &&
+        typeof currentValue === "object" &&
+        part in currentValue
+      ) {
+        currentValue = (currentValue as Record<string, unknown>)[part];
+      } else {
+        return defaultValue ?? null;
+      }
+    }
+
+    return currentValue as T;
+  } catch (error) {
+    console.error(`获取页面 block 字段值失败: ${fieldPath}`, error);
+    return defaultValue ?? null;
+  }
+}
+
+/**
+ * 获取 component 的字段值
+ */
+export function getPageComponentValue<T = unknown>(
+  config: SystemPageConfig | null,
+  componentId: string,
+  fieldPath: string,
+  defaultValue?: T,
+): T | null {
+  const component = getPageComponent(config, componentId);
+
+  if (!component) {
+    return defaultValue ?? null;
+  }
+
+  try {
+    const pathParts = fieldPath.split(".");
+    let currentValue: unknown = component.value;
+
+    for (const part of pathParts) {
+      if (
+        currentValue &&
+        typeof currentValue === "object" &&
+        part in currentValue
+      ) {
+        currentValue = (currentValue as Record<string, unknown>)[part];
+      } else {
+        return defaultValue ?? null;
+      }
+    }
+
+    return currentValue as T;
+  } catch (error) {
+    console.error(`获取页面 component 字段值失败: ${fieldPath}`, error);
+    return defaultValue ?? null;
+  }
+}
+
+/**
+ * 页面配置构建器类
+ */
+export class PageConfigBuilder {
+  constructor(private config: SystemPageConfig | null) {}
+
+  getBlock(blockId: number | string) {
+    return getPageBlock(this.config, blockId);
+  }
+
+  getBlockValue<T = unknown>(
+    blockId: number | string,
+    fieldPath: string,
+    defaultValue?: T,
+  ): T | null {
+    return getPageBlockValue(this.config, blockId, fieldPath, defaultValue);
+  }
+
+  getComponentValue<T = unknown>(
+    componentId: string,
+    fieldPath: string,
+    defaultValue?: T,
+  ): T | null {
+    return getPageComponentValue(
+      this.config,
+      componentId,
+      fieldPath,
+      defaultValue,
+    );
+  }
+
+  // === 快捷方法 (适配新数据结构) ===
+
+  getBlockTitle(blockId: number | string, defaultValue: string = ""): string {
+    return (
+      this.getBlockValue<string>(blockId, "title", defaultValue) ?? defaultValue
+    );
+  }
+
+  getBlockHeader(blockId: number | string, defaultValue: string = ""): string {
+    return (
+      this.getBlockValue<string>(blockId, "header", defaultValue) ??
+      defaultValue
+    );
+  }
+
+  getBlockContent(
+    blockId: number | string,
+    field: "top" | "bottom" = "top",
+    defaultValue: string[] = [],
+  ): string[] {
+    return (
+      this.getBlockValue<string[]>(blockId, `content.${field}`, defaultValue) ??
+      defaultValue
+    );
+  }
+
+  getBlockFooterLink(
+    blockId: number | string,
+    defaultValue: string = "",
+  ): string {
+    return (
+      this.getBlockValue<string>(blockId, "footer.link", defaultValue) ??
+      defaultValue
+    );
+  }
+
+  getBlockFooterText(
+    blockId: number | string,
+    defaultValue: string = "",
+  ): string {
+    return (
+      this.getBlockValue<string>(blockId, "footer.text", defaultValue) ??
+      defaultValue
+    );
+  }
+
+  /**
+   * 快捷获取 block 的底部描述 (别名，兼容旧代码)
+   */
+  getBlockFooterDesc(
+    blockId: number | string,
+    defaultValue: string = "",
+  ): string {
+    return this.getBlockFooterText(blockId, defaultValue);
+  }
+
+  /**
+   * 检查指定 block 是否存在
+   */
+  isBlockEnabled(blockId: number | string): boolean {
+    const block = this.getBlock(blockId);
+    return !!block;
+  }
+}
+
+export function createPageConfigBuilder(
+  config: SystemPageConfig | null,
+): PageConfigBuilder {
+  return new PageConfigBuilder(config);
 }

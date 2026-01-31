@@ -482,8 +482,8 @@ export function LoginButton() {
                 ) : (
                   <svg
                     key="default-avatar"
-                    width="40"
-                    height="40"
+                    width="2.5em"
+                    height="2.5em"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"

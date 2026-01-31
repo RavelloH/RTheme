@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import BlockRenderer from "@/components/BlockRenderer";
-import type { PageConfig } from "next";
+import type { PageConfig } from "@/data/default-pages";
 
 // TODO: Static Params
 
@@ -37,8 +37,7 @@ export default async function Page({ params }: PageProps<"/[[...slug]]">) {
   const data = await loadPageData(params);
   if (!data) return notFound();
   const config = getSystemPageConfig(data.page);
-  const { blocks = [] } =
-    (await resolveBlockData(config as unknown as PageConfig)) || {};
+  const { blocks = [] } = (await resolveBlockData(config as PageConfig)) || {};
 
   // cacheLife("max");
   // TODO: Cache Tag

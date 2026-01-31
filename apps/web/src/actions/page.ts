@@ -25,6 +25,7 @@ import type {
   ApiResponse,
   ApiResponseData,
 } from "@repo/shared-types/api/common";
+import type { BlockConfig } from "@/blocks/types";
 import ResponseBuilder from "@/lib/server/response";
 import limitControl from "@/lib/server/rate-limit";
 import { headers } from "next/headers";
@@ -771,6 +772,52 @@ export async function updatePages(
   } catch (error) {
     console.error("批量更新页面失败:", error);
     return response.serverError({ message: "批量更新页面失败" });
+  }
+}
+
+/*
+    fetchBlockData() - 获取单个 Block 的数据
+*/
+export async function fetchBlockData(
+  params: { access_token: string; block: BlockConfig },
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<{ data: Record<string, unknown> } | null>>>;
+export async function fetchBlockData(
+  params: { access_token: string; block: BlockConfig },
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<{ data: Record<string, unknown> } | null>>;
+export async function fetchBlockData(
+  params: { access_token: string; block: BlockConfig },
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<{ data: Record<string, unknown> } | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "fetchBlockData"))) {
+    return response.tooManyRequests();
+  }
+
+  // 验证用户身份（仅管理员）
+  const authResult = await authVerify({
+    accessToken: params.access_token,
+    allowedRoles: ["ADMIN"],
+  });
+  if (!authResult) {
+    return response.unauthorized({ message: "需要管理员权限" });
+  }
+
+  try {
+    // 动态导入 fetcher 并执行
+    const { resolveSingleBlockData } = await import(
+      "@/lib/server/block-data-resolver"
+    );
+    const data = await resolveSingleBlockData(params.block);
+
+    return response.ok({ data: { data } });
+  } catch (error) {
+    console.error("获取 Block 数据失败:", error);
+    return response.serverError({ message: "获取 Block 数据失败" });
   }
 }
 

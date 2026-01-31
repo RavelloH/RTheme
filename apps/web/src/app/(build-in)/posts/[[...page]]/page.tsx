@@ -8,7 +8,7 @@ import {
   getRawPage,
   getSystemPageConfig,
 } from "@/lib/server/page-cache";
-import { createPageConfigBuilder } from "@/lib/server/page-utils";
+import { createPageConfigBuilder } from "@/lib/server/page-cache";
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import prisma from "@/lib/server/prisma";
 import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
@@ -285,79 +285,84 @@ export default async function PostsPage({
                 <SearchInput />
                 <Suspense>
                   <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
-                    {config.getBlockContent(1).map((line, index) => {
-                      const lineKey = `${line}-${index}`;
-                      // 检查是否包含需要动态处理的占位符
-                      if (line.includes("{lastPublishDays}")) {
-                        return (
-                          <DynamicReplace
-                            key={lineKey}
-                            text={line}
-                            params={[
-                              [
-                                "{firstPublishAt}",
-                                oldestDate
-                                  ? new Date(oldestDate).toLocaleDateString(
-                                      "zh-CN",
-                                      {
-                                        year: "numeric",
-                                        month: "2-digit",
-                                        day: "2-digit",
-                                      },
-                                    )
-                                  : "",
-                              ],
-                              ["{posts}", String(totalPosts)],
-                              ["__date", newestDate?.toISOString() || ""],
-                            ]}
-                          />
-                        );
-                      } else {
-                        return (
-                          <div key={lineKey}>
-                            {line
-                              .replaceAll(
-                                "{firstPublishAt}",
-                                new Date(oldestDate || "").toLocaleDateString(
-                                  "zh-CN",
-                                  {
-                                    year: "numeric",
-                                    month: "2-digit",
-                                    day: "2-digit",
-                                  },
-                                ),
-                              )
-                              .replaceAll("{posts}", String(totalPosts)) || " "}
-                          </div>
-                        );
-                      }
-                    })}
+                    {config
+                      .getBlockContent(1)
+                      .map((line: string, index: number) => {
+                        const lineKey = `${line}-${index}`;
+                        // 检查是否包含需要动态处理的占位符
+                        if (line.includes("{lastPublishDays}")) {
+                          return (
+                            <DynamicReplace
+                              key={lineKey}
+                              text={line}
+                              params={[
+                                [
+                                  "{firstPublishAt}",
+                                  oldestDate
+                                    ? new Date(oldestDate).toLocaleDateString(
+                                        "zh-CN",
+                                        {
+                                          year: "numeric",
+                                          month: "2-digit",
+                                          day: "2-digit",
+                                        },
+                                      )
+                                    : "",
+                                ],
+                                ["{posts}", String(totalPosts)],
+                                ["__date", newestDate?.toISOString() || ""],
+                              ]}
+                            />
+                          );
+                        } else {
+                          return (
+                            <div key={lineKey}>
+                              {line
+                                .replaceAll(
+                                  "{firstPublishAt}",
+                                  new Date(oldestDate || "").toLocaleDateString(
+                                    "zh-CN",
+                                    {
+                                      year: "numeric",
+                                      month: "2-digit",
+                                      day: "2-digit",
+                                    },
+                                  ),
+                                )
+                                .replaceAll("{posts}", String(totalPosts)) ||
+                                " "}
+                            </div>
+                          );
+                        }
+                      })}
                   </div>
                 </Suspense>
               </div>
               <div>
                 <div className="mt-10">
-                  {config.getBlockContent(1, "bottom").map((line, index) => (
-                    <div key={`bottom1-${index}`} data-fade-char>
-                      {line
-                        .replaceAll("{page}", page)
-                        .replaceAll("{totalPage}", String(totalPages))
-                        .replaceAll(
-                          "{firstPage}",
-                          String(PRE_PAGE_SIZE * (Number(page) - 1) + 1),
-                        )
-                        .replaceAll(
-                          "{lastPage}",
-                          String(
-                            totalPages === Number(page)
-                              ? PRE_PAGE_SIZE * (Number(page) - 1) +
-                                  posts.length
-                              : PRE_PAGE_SIZE * (Number(page) - 1) +
-                                  PRE_PAGE_SIZE,
-                          ),
-                        ) || " "}
-                    </div>
-                  ))}
+                  {config
+                    .getBlockContent(1, "bottom")
+                    .map((line: string, index: number) => (
+                      <div key={`bottom1-${index}`} data-fade-char>
+                        {line
+                          .replaceAll("{page}", page)
+                          .replaceAll("{totalPage}", String(totalPages))
+                          .replaceAll(
+                            "{firstPage}",
+                            String(PRE_PAGE_SIZE * (Number(page) - 1) + 1),
+                          )
+                          .replaceAll(
+                            "{lastPage}",
+                            String(
+                              totalPages === Number(page)
+                                ? PRE_PAGE_SIZE * (Number(page) - 1) +
+                                    posts.length
+                                : PRE_PAGE_SIZE * (Number(page) - 1) +
+                                    PRE_PAGE_SIZE,
+                            ),
+                          ) || " "}
+                      </div>
+                    ))}
                 </div>
               </div>
             </GridItem>
@@ -426,18 +431,22 @@ export default async function PostsPage({
                   <p>{config.getBlockTitle(2)}</p>
                 </div>
                 <div className="block mt-4" data-line-reveal>
-                  {config.getBlockContent(2).map((line, index) => (
-                    <div key={`content2-${index}`}>{line || " "}</div>
-                  ))}
+                  {config
+                    .getBlockContent(2)
+                    .map((line: string, index: number) => (
+                      <div key={`content2-${index}`}>{line || " "}</div>
+                    ))}
                 </div>
               </div>
               <div>
                 <div className="mt-10">
-                  {config.getBlockContent(2, "bottom").map((line, index) => (
-                    <div key={`bottom2-${index}`} data-fade-char>
-                      {line || " "}
-                    </div>
-                  ))}
+                  {config
+                    .getBlockContent(2, "bottom")
+                    .map((line: string, index: number) => (
+                      <div key={`bottom2-${index}`} data-fade-char>
+                        {line || " "}
+                      </div>
+                    ))}
                 </div>
               </div>
             </GridItem>

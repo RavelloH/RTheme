@@ -1,4 +1,4 @@
-import { nextJsConfig } from "@repo/eslint-config/next-js";
+import { config as baseConfig } from "@repo/eslint-config/base";
 
 /** @type {import("eslint").Linter.Config[]} */
 export default [
@@ -13,5 +13,5 @@ export default [
       'sidebars.json',
     ],
   },
-  ...nextJsConfig,
+  ...baseConfig,
 ];
