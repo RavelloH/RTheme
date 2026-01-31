@@ -115,6 +115,8 @@ export interface BlockFormConfig {
     /** 主题链接 */
     url?: string;
   };
+  /** 预览数据（用于预览时展示示例内容） */
+  previewData?: Record<string, unknown>;
 }
 
 /**
