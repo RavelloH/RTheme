@@ -411,9 +411,9 @@ export default function VisualPageEditor({
         open={isLibraryOpen}
         onClose={() => setIsLibraryOpen(false)}
         title="添加区块"
-        size="md"
+        size="xl"
       >
-        <div className="h-[400px]">
+        <div>
           <BlockLibrary onAdd={handleAddBlock} isLoading={isAddingBlock} />
         </div>
       </Dialog>

@@ -17,15 +17,24 @@ async function loadBlockFormConfigs(): Promise<
   const configs: Record<string, BlockFormConfig> = {};
 
   try {
-    const [defaultConfig, projectsConfig] = await Promise.all([
-      import("./Default/schema").then((m) => m.DEFAULT_BLOCK_FORM_CONFIG),
-      import("./RecentProjects/schema").then(
-        (m) => m.PROJECTS_BLOCK_FORM_CONFIG,
-      ),
-    ]);
+    const [defaultConfig, projectsConfig, heroConfig, postsConfig, tagsConfig] =
+      await Promise.all([
+        import("./Default/schema").then((m) => m.DEFAULT_BLOCK_FORM_CONFIG),
+        import("./RecentProjects/schema").then(
+          (m) => m.PROJECTS_BLOCK_FORM_CONFIG,
+        ),
+        import("./HeroGallery/schema").then((m) => m.HERO_BLOCK_FORM_CONFIG),
+        import("./RecentPosts/schema").then((m) => m.POSTS_BLOCK_FORM_CONFIG),
+        import("./TagsCategories/schema").then(
+          (m) => m.TAGS_CATEGORIES_BLOCK_FORM_CONFIG,
+        ),
+      ]);
 
     configs.default = defaultConfig;
     configs.projects = projectsConfig;
+    configs.hero = heroConfig;
+    configs.posts = postsConfig;
+    configs["tags-categories"] = tagsConfig;
   } catch (error) {
     console.error("Failed to load block form configs:", error);
   }
@@ -49,6 +58,16 @@ export async function getBlockFormConfig(
   }
 
   return cachedConfigs[blockType] || null;
+}
+
+/**
+ * 获取所有 block 类型的表单配置
+ */
+export async function getAllBlockFormConfigs(): Promise<BlockFormConfig[]> {
+  if (process.env.NODE_ENV === "development" || !cachedConfigs) {
+    cachedConfigs = await loadBlockFormConfigs();
+  }
+  return Object.values(cachedConfigs);
 }
 
 /**

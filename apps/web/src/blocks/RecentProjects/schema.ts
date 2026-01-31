@@ -25,6 +25,14 @@ export const PROJECTS_BLOCK_FORM_CONFIG: BlockFormConfig = {
   blockType: "projects",
   displayName: "Recent Projects Block",
   description: "作品展示区块",
+  author: {
+    name: "RavelloH",
+    url: "https://ravelloh.com",
+  },
+  theme: {
+    name: "neutral",
+    url: "https://docs.ravelloh.com",
+  },
   fields: [
     {
       label: "Works Description Header",
@@ -78,4 +86,22 @@ export const PROJECTS_BLOCK_FORM_CONFIG: BlockFormConfig = {
       ],
     },
   ],
+  previewData: {
+    worksDescription: {
+      header: "Header",
+      content:
+        "A / B / C / D / E / F / G / H / I / J / K / L / M / N / O / P / Q / R / S / T / U / V / W / X / Y / Z",
+    },
+    worksSummary: {
+      content: [
+        "Summary Content",
+        "这里展示了最新的个人项目和技术实践。",
+        "每个项目都体现了对技术的深入探索和创新思维。",
+      ],
+      footer: {
+        text: "Footer",
+        link: "/works",
+      },
+    },
+  },
 };

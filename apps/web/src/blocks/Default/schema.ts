@@ -75,4 +75,16 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
       fields: ["footer.text", "footer.link"],
     },
   ],
+  previewData: {
+    header: "WELCOME",
+    title: "示例标题",
+    content: {
+      top: ["这是正文顶部的示例文本，", "用于展示预览效果。"],
+      bottom: ["正文底部的示例文本", "会在下方显示。"],
+    },
+    footer: {
+      text: "了解更多",
+      link: "/about",
+    },
+  },
 };
