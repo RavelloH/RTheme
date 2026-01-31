@@ -1,6 +1,6 @@
 import RowGrid, { GridItem, type GridArea } from "@/components/RowGrid";
 import LinkButton from "@/components/LinkButton";
-import type { BlockConfig } from "@/blocks/types";
+import type { DefaultBlockConfig } from "./types";
 
 interface DefaultBlockData {
   [key: string]: unknown;
@@ -10,14 +10,16 @@ interface DefaultBlockData {
  * DefaultBlock - 服务端组件
  * 显示可配置的内容块，支持占位符插值
  */
-export default function DefaultBlock({ config }: { config: BlockConfig }) {
+export default function DefaultBlock({
+  config,
+}: {
+  config: DefaultBlockConfig;
+}) {
   const data = (config.data as DefaultBlockData) || {};
   const { content } = config;
 
-  const hasHeader = !!content.header?.value;
-  const hasFooter = !!(
-    content.footer?.value.link || content.footer?.value.description
-  );
+  const hasHeader = !!content.header;
+  const hasFooter = !!(content.footer?.link || content.footer?.text);
 
   // 根据是否有 header/footer 计算 areas
   const getAreas = (): GridArea[] => {
@@ -54,7 +56,7 @@ export default function DefaultBlock({ config }: { config: BlockConfig }) {
           height={0.1}
           className="bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl h-full"
         >
-          <span>{replacePlaceholders(content.header?.value || "")}</span>
+          <span>{replacePlaceholders(content.header ?? "")}</span>
         </GridItem>
       )}
 
@@ -67,25 +69,23 @@ export default function DefaultBlock({ config }: { config: BlockConfig }) {
       >
         <div>
           <div className="text-7xl" data-fade-char>
-            <p>{replacePlaceholders(content.title?.value || "")}</p>
+            <p>{replacePlaceholders(content.title ?? "")}</p>
           </div>
           <div className="block mt-4" data-line-reveal>
-            {content.content?.value.top.map((line: string, index: number) => (
+            {content.content?.top.map((line: string, index: number) => (
               <div key={`content-top-${index}`}>
-                {replacePlaceholders(line) || " "}
+                {replacePlaceholders(line) ?? " "}
               </div>
             ))}
           </div>
         </div>
         <div>
           <div className="mt-10">
-            {content.content?.value.bottom.map(
-              (line: string, index: number) => (
-                <div key={`content-bottom-${index}`} data-fade-char>
-                  {replacePlaceholders(line) || " "}
-                </div>
-              ),
-            )}
+            {content.content?.bottom.map((line: string, index: number) => (
+              <div key={`content-bottom-${index}`} data-fade-char>
+                {replacePlaceholders(line) ?? " "}
+              </div>
+            ))}
           </div>
         </div>
       </GridItem>
@@ -100,8 +100,8 @@ export default function DefaultBlock({ config }: { config: BlockConfig }) {
         >
           <LinkButton
             mode="link"
-            href={replacePlaceholders(content.footer?.value.link || "")}
-            text={replacePlaceholders(content.footer?.value.description || "")}
+            href={replacePlaceholders(content.footer?.link ?? "")}
+            text={replacePlaceholders(content.footer?.text ?? "")}
           />
         </GridItem>
       )}

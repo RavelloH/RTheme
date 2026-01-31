@@ -6,14 +6,14 @@ interface TagsCategoriesData {
   displayTags: Array<{
     slug: string;
     name: string;
-    postCount: number;
+    count: number;
     isPlaceholder?: boolean;
   }>;
   displayCategories: Array<{
     id: number;
     slug: string;
     name: string;
-    totalPostCount: number;
+    count: number;
     isPlaceholder?: boolean;
   }>;
 }
@@ -49,7 +49,7 @@ export default function TagsCategoriesBlock({
             ) : (
               <Link key={tag.slug} href={`/tags/${tag.slug}`}>
                 <div className=" hover:scale-110 transition-all">
-                  #{tag.name} x {tag.postCount}
+                  #{tag.name} x {tag.count}
                 </div>
               </Link>
             ),
@@ -77,7 +77,7 @@ export default function TagsCategoriesBlock({
             ) : (
               <Link key={category.slug} href={`/categories/${category.slug}`}>
                 <div className=" hover:scale-110 transition-all">
-                  {category.name} x {category.totalPostCount}
+                  {category.name} x {category.count}
                 </div>
               </Link>
             ),

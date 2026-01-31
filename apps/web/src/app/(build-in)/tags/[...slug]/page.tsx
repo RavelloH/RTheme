@@ -12,7 +12,7 @@ import {
   getRawPage,
   getSystemPageConfig,
 } from "@/lib/server/page-cache";
-import { createPageConfigBuilder } from "@/lib/server/page-utils";
+import { createPageConfigBuilder } from "@/lib/server/page-cache";
 import prisma from "@/lib/server/prisma";
 import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
 import Link from "@/components/Link";
@@ -306,58 +306,64 @@ export default async function TagSlugPage({ params }: TagSlugPageProps) {
                 </div>
                 <Suspense>
                   <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
-                    {config.getBlockContent(1).map((line, index) => {
-                      const lineKey = `${line}-${index}`;
-                      // 检查是否包含需要动态处理的占位符
-                      if (line.includes("{lastUpdatedDays}")) {
-                        return (
-                          <DynamicReplace
-                            key={lineKey}
-                            text={line}
-                            params={[
-                              ["{tag}", tagInfo.name],
-                              ["{tagName}", tagInfo.name],
-                              ["{posts}", String(totalPosts)],
-                              ["__date", lastUpdatedDate.toISOString()],
-                            ]}
-                          />
-                        );
-                      } else {
-                        return (
-                          <div key={lineKey}>
-                            {line
-                              .replaceAll("{tag}", tagInfo.name)
-                              .replaceAll("{tagName}", tagInfo.name)
-                              .replaceAll("{posts}", String(totalPosts)) || " "}
-                          </div>
-                        );
-                      }
-                    })}
+                    {config
+                      .getBlockContent(1)
+                      .map((line: string, index: number) => {
+                        const lineKey = `${line}-${index}`;
+                        // 检查是否包含需要动态处理的占位符
+                        if (line.includes("{lastUpdatedDays}")) {
+                          return (
+                            <DynamicReplace
+                              key={lineKey}
+                              text={line}
+                              params={[
+                                ["{tag}", tagInfo.name],
+                                ["{tagName}", tagInfo.name],
+                                ["{posts}", String(totalPosts)],
+                                ["__date", lastUpdatedDate.toISOString()],
+                              ]}
+                            />
+                          );
+                        } else {
+                          return (
+                            <div key={lineKey}>
+                              {line
+                                .replaceAll("{tag}", tagInfo.name)
+                                .replaceAll("{tagName}", tagInfo.name)
+                                .replaceAll("{posts}", String(totalPosts)) ||
+                                " "}
+                            </div>
+                          );
+                        }
+                      })}
                   </div>
                 </Suspense>
               </div>
               <div>
                 <div className="mt-10">
-                  {config.getBlockContent(1, "bottom").map((line, index) => (
-                    <div key={`bottom1-${index}`} data-fade-char>
-                      {line
-                        .replaceAll("{pageInfo}", pageInfo)
-                        .replaceAll("{page}", String(currentPage))
-                        .replaceAll("{totalPage}", String(totalPages))
-                        .replaceAll(
-                          "{firstPage}",
-                          String(PRE_PAGE_SIZE * (currentPage - 1) + 1),
-                        )
-                        .replaceAll(
-                          "{lastPage}",
-                          String(
-                            totalPages === currentPage
-                              ? PRE_PAGE_SIZE * (currentPage - 1) + posts.length
-                              : PRE_PAGE_SIZE * currentPage,
-                          ),
-                        ) || " "}
-                    </div>
-                  ))}
+                  {config
+                    .getBlockContent(1, "bottom")
+                    .map((line: string, index: number) => (
+                      <div key={`bottom1-${index}`} data-fade-char>
+                        {line
+                          .replaceAll("{pageInfo}", pageInfo)
+                          .replaceAll("{page}", String(currentPage))
+                          .replaceAll("{totalPage}", String(totalPages))
+                          .replaceAll(
+                            "{firstPage}",
+                            String(PRE_PAGE_SIZE * (currentPage - 1) + 1),
+                          )
+                          .replaceAll(
+                            "{lastPage}",
+                            String(
+                              totalPages === currentPage
+                                ? PRE_PAGE_SIZE * (currentPage - 1) +
+                                    posts.length
+                                : PRE_PAGE_SIZE * currentPage,
+                            ),
+                          ) || " "}
+                      </div>
+                    ))}
                   <div>
                     路径：
                     <Link href="/tags" presets={["hover-underline"]}>
@@ -491,18 +497,22 @@ export default async function TagSlugPage({ params }: TagSlugPageProps) {
                   <p>{config.getBlockTitle(2)}</p>
                 </div>
                 <div className="block mt-4" data-line-reveal>
-                  {config.getBlockContent(2).map((line, index) => (
-                    <div key={`content2-${index}`}>{line || " "}</div>
-                  ))}
+                  {config
+                    .getBlockContent(2)
+                    .map((line: string, index: number) => (
+                      <div key={`content2-${index}`}>{line || " "}</div>
+                    ))}
                 </div>
               </div>
               <div>
                 <div className="mt-10">
-                  {config.getBlockContent(2, "bottom").map((line, index) => (
-                    <div key={`bottom2-${index}`} data-fade-char>
-                      {line || " "}
-                    </div>
-                  ))}
+                  {config
+                    .getBlockContent(2, "bottom")
+                    .map((line: string, index: number) => (
+                      <div key={`bottom2-${index}`} data-fade-char>
+                        {line || " "}
+                      </div>
+                    ))}
                 </div>
               </div>
             </GridItem>

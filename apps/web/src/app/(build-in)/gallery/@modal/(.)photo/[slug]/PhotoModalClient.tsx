@@ -26,7 +26,7 @@ import {
   formatLensSpec,
   formatSensingMethod,
 } from "@/lib/client/media-exif";
-import { RiLoader4Line } from "@remixicon/react";
+import { RiCloseLine, RiLoader4Line } from "@remixicon/react";
 import ImageLightbox from "@/components/client/ImageLightbox";
 import Link from "@/components/Link";
 import { useMobile } from "@/hooks/use-mobile";
@@ -931,23 +931,10 @@ export default function PhotoModalClient({
               animate={{ opacity: isClosing ? 0 : 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2, delay: 0.1 }}
-              className="absolute right-4 top-4 z-[62] rounded-full bg-white/10 p-3 text-foreground transition hover:bg-white/20"
+              className="absolute right-4 top-4 z-[62] p-2 text-white/70 hover:text-white transition-colors hover:bg-white/10 rounded-full"
               aria-label="关闭"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-                className="h-6 w-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <RiCloseLine size="2em" />
             </motion.button>
           )}
 
@@ -1142,7 +1129,7 @@ export default function PhotoModalClient({
             <Drawer
               open={!isClosing}
               onClose={handleClose}
-              initialHeight={0.35} // 初始高度 35%
+              initialSize={0.35} // 初始高度 35%
               showBackdrop={false} // 背景已经在 Modal 中有了
             >
               {InfoContent}

@@ -98,7 +98,7 @@ export function AlertDialog({
   const dialogContent = (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[80] overflow-hidden">
+        <div className="fixed inset-0 z-[100] overflow-hidden">
           {/* 背景遮罩 */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -162,7 +162,7 @@ export function AlertDialog({
                         {title}
                       </h3>
                       {description && (
-                        <p className="text-sm text-muted-foreground leading-relaxed">
+                        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
                           {description}
                         </p>
                       )}

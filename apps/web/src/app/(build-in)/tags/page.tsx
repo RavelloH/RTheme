@@ -7,7 +7,7 @@ import {
   getRawPage,
   getSystemPageConfig,
 } from "@/lib/server/page-cache";
-import { createPageConfigBuilder } from "@/lib/server/page-utils";
+import { createPageConfigBuilder } from "@/lib/server/page-cache";
 import prisma from "@/lib/server/prisma";
 import { generateMetadata } from "@/lib/server/seo";
 import Link from "@/components/Link";
@@ -144,39 +144,43 @@ export default async function TagsIndex() {
                 </div>
                 <Suspense>
                   <div className="mt-10 flex flex-col gap-y-1" data-line-reveal>
-                    {config.getBlockContent(1).map((line, index) => {
-                      const lineKey = `${line}-${index}`;
-                      // 检查是否包含需要动态处理的占位符
-                      if (line.includes("{lastUpdatedDays}")) {
-                        return (
-                          <DynamicReplace
-                            key={lineKey}
-                            text={line}
-                            params={[
-                              ["{tags}", String(totalTags)],
-                              ["__date", lastUpdatedDate.toISOString()],
-                            ]}
-                          />
-                        );
-                      } else {
-                        return (
-                          <div key={lineKey}>
-                            {line.replaceAll("{tags}", String(totalTags)) ||
-                              " "}
-                          </div>
-                        );
-                      }
-                    })}
+                    {config
+                      .getBlockContent(1)
+                      .map((line: string, index: number) => {
+                        const lineKey = `${line}-${index}`;
+                        // 检查是否包含需要动态处理的占位符
+                        if (line.includes("{lastUpdatedDays}")) {
+                          return (
+                            <DynamicReplace
+                              key={lineKey}
+                              text={line}
+                              params={[
+                                ["{tags}", String(totalTags)],
+                                ["__date", lastUpdatedDate.toISOString()],
+                              ]}
+                            />
+                          );
+                        } else {
+                          return (
+                            <div key={lineKey}>
+                              {line.replaceAll("{tags}", String(totalTags)) ||
+                                " "}
+                            </div>
+                          );
+                        }
+                      })}
                   </div>
                 </Suspense>
               </div>
               <div>
                 <div className="mt-10">
-                  {config.getBlockContent(1, "bottom").map((line, index) => (
-                    <div key={`bottom1-${index}`} data-fade-char>
-                      {line.replaceAll("{pageInfo}", pageInfo) || " "}
-                    </div>
-                  ))}
+                  {config
+                    .getBlockContent(1, "bottom")
+                    .map((line: string, index: number) => (
+                      <div key={`bottom1-${index}`} data-fade-char>
+                        {line.replaceAll("{pageInfo}", pageInfo) || " "}
+                      </div>
+                    ))}
                   <div>
                     路径：
                     <Link href={"/tags"} presets={["hover-underline"]}>
@@ -251,18 +255,22 @@ export default async function TagsIndex() {
                   <p>{config.getBlockTitle(2)}</p>
                 </div>
                 <div className="block mt-4" data-line-reveal>
-                  {config.getBlockContent(2).map((line, index) => (
-                    <div key={`content2-${index}`}>{line || " "}</div>
-                  ))}
+                  {config
+                    .getBlockContent(2)
+                    .map((line: string, index: number) => (
+                      <div key={`content2-${index}`}>{line || " "}</div>
+                    ))}
                 </div>
               </div>
               <div>
                 <div className="mt-10">
-                  {config.getBlockContent(2, "bottom").map((line, index) => (
-                    <div key={`bottom2-${index}`} data-fade-char>
-                      {line || " "}
-                    </div>
-                  ))}
+                  {config
+                    .getBlockContent(2, "bottom")
+                    .map((line: string, index: number) => (
+                      <div key={`bottom2-${index}`} data-fade-char>
+                        {line || " "}
+                      </div>
+                    ))}
                 </div>
               </div>
             </GridItem>

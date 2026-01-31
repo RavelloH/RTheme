@@ -2,31 +2,19 @@ import RowGrid, { GridItem } from "@/components/RowGrid";
 import ParallaxImageCarousel from "@/components/ParallaxImageCarousel";
 import Marquee from "react-fast-marquee";
 import LinkButton from "@/components/LinkButton";
-import type { BlockConfig } from "@/blocks/types";
-
-// 定义局部接口来描述预期的内容结构
-interface WorksDescription {
-  header?: { value: string };
-  content?: { value: string };
-}
-
-interface WorksSummary {
-  content?: { value: string | string[] };
-  footer?: { value: { link: string; description: string } };
-}
+import type { ProjectsBlockConfig } from "./types";
 
 /**
  * ProjectsBlock - 服务端组件
  * 布局和静态内容在服务端渲染，直接使用客户端组件处理交互功能
  */
-export default function ProjectsBlock({ config }: { config: BlockConfig }) {
+export default function ProjectsBlock({
+  config,
+}: {
+  config: ProjectsBlockConfig;
+}) {
   const content = config.content || {};
-
-  // 类型断言
-  const worksDescription = content.worksDescription as
-    | WorksDescription
-    | undefined;
-  const worksSummary = content.worksSummary as WorksSummary | undefined;
+  const { worksDescription, worksSummary } = content;
 
   return (
     <RowGrid>
@@ -93,9 +81,7 @@ export default function ProjectsBlock({ config }: { config: BlockConfig }) {
         mobileIndex={2}
         className="flex items-center px-10 text-2xl bg-primary text-primary-foreground uppercase"
       >
-        <span data-fade-word>
-          {worksDescription?.header?.value || "My main tech stack includes"}
-        </span>
+        <span data-fade-word>{worksDescription?.header ?? ""}</span>
       </GridItem>
 
       {/* 技术栈内容（静态内容） */}
@@ -106,9 +92,7 @@ export default function ProjectsBlock({ config }: { config: BlockConfig }) {
         className="flex items-center px-10 py-15"
       >
         <div className="text-2xl block">
-          <div data-fade-word>
-            {worksDescription?.content?.value || "React / ..."}
-          </div>
+          <div data-fade-word>{worksDescription?.content ?? " "}</div>
         </div>
       </GridItem>
 
@@ -177,12 +161,12 @@ export default function ProjectsBlock({ config }: { config: BlockConfig }) {
         className="flex items-center px-10 py-15"
       >
         <div className="text-2xl block" data-line-reveal>
-          {Array.isArray(worksSummary?.content?.value) ? (
-            worksSummary!.content!.value.map((item: string, index: number) => (
-              <div key={`works-${index}`}>{item || " "}</div>
+          {Array.isArray(worksSummary?.content) ? (
+            worksSummary!.content.map((item: string, index: number) => (
+              <div key={`works-${index}`}>{item ?? " "}</div>
             ))
           ) : (
-            <div>{(worksSummary?.content?.value as string) || " "}</div>
+            <div>{(worksSummary?.content as unknown as string) ?? " "}</div>
           )}
         </div>
       </GridItem>
@@ -197,10 +181,8 @@ export default function ProjectsBlock({ config }: { config: BlockConfig }) {
       >
         <LinkButton
           mode="link"
-          href={worksSummary?.footer?.value?.link || "/works"}
-          text={
-            worksSummary?.footer?.value?.description || "View more projects"
-          }
+          href={worksSummary?.footer?.link ?? "/works"}
+          text={worksSummary?.footer?.text ?? "View more projects"}
         />
       </GridItem>
     </RowGrid>

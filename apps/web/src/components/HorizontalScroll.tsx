@@ -13,6 +13,7 @@ interface GSAPHorizontalScrollProps {
   enableFadeElements?: boolean;
   enableLineReveal?: boolean;
   snapToElements?: boolean;
+  forceNativeScroll?: boolean;
 }
 
 const SPACE_REGEX = /^\s+$/;
@@ -24,6 +25,7 @@ export default function HorizontalScroll({
   enableParallax = false,
   enableFadeElements = false,
   enableLineReveal = false,
+  forceNativeScroll = false,
 }: GSAPHorizontalScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -47,13 +49,119 @@ export default function HorizontalScroll({
   });
 
   useEffect(() => {
+    if (!forceNativeScroll || isMobile) return;
+    const content = contentRef.current;
+    if (!content) return;
+
+    // 原生滚动模式下的平滑插值
+    const smoothScrollState = {
+      targetScrollLeft: content.scrollLeft,
+      currentScrollLeft: content.scrollLeft,
+      isAnimating: false,
+    };
+
+    // 检查是否在垂直滚动的子元素内
+    const shouldIgnoreScroll = (
+      target: HTMLElement,
+      deltaY: number,
+    ): boolean => {
+      let element: HTMLElement | null = target;
+      while (element && element !== content) {
+        const style = window.getComputedStyle(element);
+        const hasVerticalScroll =
+          (style.overflowY === "auto" || style.overflowY === "scroll") &&
+          element.scrollHeight > element.clientHeight;
+        if (hasVerticalScroll) {
+          const isScrollingDown = deltaY > 0;
+          const isScrollingUp = deltaY < 0;
+          const isAtTop = element.scrollTop === 0;
+          const isAtBottom =
+            element.scrollTop + element.clientHeight >=
+            element.scrollHeight - 1;
+          if ((isScrollingDown && !isAtBottom) || (isScrollingUp && !isAtTop)) {
+            return true;
+          }
+        }
+        element = element.parentElement;
+      }
+      return false;
+    };
+
+    // 动画循环：使用插值平滑过渡
+    let animationFrameId: number | null = null;
+    const animateScroll = () => {
+      const diff =
+        smoothScrollState.targetScrollLeft -
+        smoothScrollState.currentScrollLeft;
+
+      // 如果差距很小，直接设置目标值并停止动画
+      if (Math.abs(diff) < 0.1) {
+        smoothScrollState.currentScrollLeft =
+          smoothScrollState.targetScrollLeft;
+        content.scrollLeft = smoothScrollState.targetScrollLeft;
+        smoothScrollState.isAnimating = false;
+        return;
+      }
+
+      // 使用插值系数 0.1 实现平滑过渡
+      smoothScrollState.currentScrollLeft += diff * 0.1;
+      content.scrollLeft = smoothScrollState.currentScrollLeft;
+
+      animationFrameId = requestAnimationFrame(animateScroll);
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      // 如果已经是水平滚动（如触控板手势），则不干预
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+
+      // 检查是否应该忽略滚动
+      if (shouldIgnoreScroll(e.target as HTMLElement, e.deltaY)) return;
+
+      e.preventDefault();
+
+      // 同步当前滚动位置（处理手动拖动滚动条的情况）
+      if (
+        Math.abs(content.scrollLeft - smoothScrollState.currentScrollLeft) > 1
+      ) {
+        smoothScrollState.targetScrollLeft = content.scrollLeft;
+        smoothScrollState.currentScrollLeft = content.scrollLeft;
+      }
+
+      // 更新目标滚动位置
+      smoothScrollState.targetScrollLeft += e.deltaY * scrollSpeed;
+
+      // 限制在有效范围内
+      const maxScrollLeft = content.scrollWidth - content.clientWidth;
+      smoothScrollState.targetScrollLeft = Math.max(
+        0,
+        Math.min(maxScrollLeft, smoothScrollState.targetScrollLeft),
+      );
+
+      // 启动动画循环
+      if (!smoothScrollState.isAnimating) {
+        smoothScrollState.isAnimating = true;
+        animateScroll();
+      }
+    };
+
+    content.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      content.removeEventListener("wheel", handleWheel);
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [forceNativeScroll, isMobile, scrollSpeed]);
+
+  useEffect(() => {
     const container = containerRef.current;
     const content = contentRef.current;
 
     if (!container || !content) return;
 
-    // 移动设备上直接返回，使用原生滚动
-    if (isMobile) {
+    // 移动设备或强制原生滚动时直接返回
+    if (isMobile || forceNativeScroll) {
       return;
     }
 
@@ -777,6 +885,7 @@ export default function HorizontalScroll({
     enableFadeElements,
     enableLineReveal,
     isMobile,
+    forceNativeScroll,
   ]);
 
   // Mobile optimization
@@ -1107,7 +1216,7 @@ export default function HorizontalScroll({
     <div ref={containerRef} className={"overflow-hidden " + className}>
       <div
         ref={contentRef}
-        className={`${isMobile ? "block" : "flex"} h-full will-change-transform`}
+        className={`${isMobile || forceNativeScroll ? "flex overflow-x-auto" : "flex"} h-full will-change-transform`}
       >
         {children}
       </div>

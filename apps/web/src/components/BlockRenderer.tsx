@@ -1,49 +1,49 @@
-"use client";
-
-import React, { useMemo } from "react";
+import React from "react";
 import dynamic from "next/dynamic";
-import type { BlockConfig, BlockProps } from "@/blocks/types";
+import type { BlockConfig, BlockComponentMap, BlockType } from "@/blocks/types";
 
-// 保持动态导入映射不变
-const BLOCK_COMPONENTS: Record<string, React.ComponentType<BlockProps>> = {
-  default: dynamic(() => import("@/blocks/Default")),
-  hero: dynamic(() => import("@/blocks/HeroGallery")),
-  projects: dynamic(() => import("@/blocks/RecentProjects")),
-  posts: dynamic(() => import("@/blocks/RecentPosts")),
-  "tags-categories": dynamic(() => import("@/blocks/TagsCategories")),
+// 类型安全的组件映射：使用动态导入，并为每个组件添加类型断言
+const BLOCK_COMPONENTS: BlockComponentMap = {
+  default: dynamic(
+    () => import("@/blocks/Default"),
+  ) as BlockComponentMap["default"],
+  hero: dynamic(
+    () => import("@/blocks/HeroGallery"),
+  ) as BlockComponentMap["hero"],
+  projects: dynamic(
+    () => import("@/blocks/RecentProjects"),
+  ) as BlockComponentMap["projects"],
+  posts: dynamic(
+    () => import("@/blocks/RecentPosts"),
+  ) as BlockComponentMap["posts"],
+  "tags-categories": dynamic(
+    () => import("@/blocks/TagsCategories"),
+  ) as BlockComponentMap["tags-categories"],
 };
+
+// 获取组件的类型安全辅助函数
+function getBlockComponent(type: BlockType) {
+  return BLOCK_COMPONENTS[type];
+}
 
 interface BlockRendererProps {
   config?: BlockConfig[]; // 允许 undefined，但在函数参数中给默认值
   data?: Record<string, unknown>;
-  enabledBlocks?: (string | number)[];
 }
 
 export default function BlockRenderer({
-  config = [], // 1. 默认值简化 null 检查
+  config = [],
   data = {},
-  enabledBlocks,
 }: BlockRendererProps) {
-  // 2. 使用 useMemo 缓存过滤结果
-  const activeBlocks = useMemo(() => {
-    if (!config.length) return [];
-    const allowList = enabledBlocks?.length
-      ? new Set(enabledBlocks.map(String))
-      : null;
-    return config.filter((block) => {
-      if (!block.enabled) return false;
-      // 如果存在白名单，必须在白名单内；否则直接通过
-      return allowList ? allowList.has(String(block.id)) : true;
-    });
-  }, [config, enabledBlocks]);
-  // 如果没有激活的块，直接返回 null
-  if (!activeBlocks.length) return null;
+  // 如果没有块，直接返回 null
+  if (!config.length) return null;
 
   return (
     <>
-      {activeBlocks.map((block, index) => {
-        // 4. 获取组件，若未定义则回退到 null (或者 default)
-        const Component = BLOCK_COMPONENTS[block.block || "default"];
+      {config.map((block, index) => {
+        const blockType = (block.block || "default") as BlockType;
+        const Component = getBlockComponent(blockType);
+
         if (!Component) {
           // 仅在开发环境警告，避免生产环境控制台刷屏
           if (process.env.NODE_ENV === "development") {
@@ -51,11 +51,11 @@ export default function BlockRenderer({
           }
           return null;
         }
+
         return (
           <Component
-            // 5. Key 优化：优先使用唯一 ID，索引作为最后的兜底
             key={block.id ?? index}
-            config={block}
+            config={block as never} // 类型断言：因为 Component 的类型与 block 匹配
             data={data}
           />
         );

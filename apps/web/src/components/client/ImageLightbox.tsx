@@ -435,7 +435,7 @@ export default function ImageLightbox({
                   onClick={closeLightbox}
                   aria-label="Close lightbox"
                 >
-                  <RiCloseLine size={32} />
+                  <RiCloseLine size={"2em"} />
                 </button>
               </motion.div>
 
