@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   RiAddLine,
+  RiCodeBoxLine,
   RiLayoutGridLine,
   RiLayoutMasonryLine,
   RiLoader4Line,
@@ -16,6 +17,7 @@ import Link from "@/components/ui/Link";
 import runWithAuth from "@/lib/client/run-with-auth";
 import { Button } from "@/ui/Button";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { Tooltip } from "@/ui/Tooltip";
 
 // 分类配置
 const THEMES_CONFIG: Record<
@@ -30,6 +32,10 @@ const THEMES_CONFIG: Record<
     label: "未知主题",
     icon: RiQuestionLine,
   },
+  import: {
+    label: "导入",
+    icon: RiCodeBoxLine,
+  },
 };
 
 const DEFAULT_THEME_ICON = RiLayoutGridLine;
@@ -38,7 +44,7 @@ export default function BlockLibrary({
   onAdd,
   isLoading: isAdding,
 }: {
-  onAdd: (type: string) => Promise<void>;
+  onAdd: (type: string, data?: Partial<BlockConfig>) => Promise<void>;
   isLoading?: boolean;
 }) {
   const [configs, setConfigs] = useState<BlockFormConfig[]>([]);
@@ -47,6 +53,9 @@ export default function BlockLibrary({
   const [selectedBlock, setSelectedBlock] = useState<BlockFormConfig | null>(
     null,
   );
+  // Import state
+  const [importJson, setImportJson] = useState("");
+
   // 预览相关状态
   const [previewBlock, setPreviewBlock] = useState<BlockConfig | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -78,6 +87,8 @@ export default function BlockLibrary({
 
   // 当选中 block 改变时，加载预览数据
   useEffect(() => {
+    if (selectedTheme === "import") return;
+
     if (!selectedBlock) {
       setPreviewBlock(null);
       setPreviewVisible(false);
@@ -130,7 +141,7 @@ export default function BlockLibrary({
     };
 
     loadPreviewData();
-  }, [selectedBlock]);
+  }, [selectedBlock, selectedTheme]);
 
   // 计算预览区域的缩放比例
   useEffect(() => {
@@ -225,7 +236,9 @@ export default function BlockLibrary({
 
   // 获取分类列表（按照 CATEGORY_CONFIG 顺序排列）
   const categoryList = useMemo(() => {
-    return Object.keys(THEMES_CONFIG).filter((cat) => categories[cat]);
+    return Object.keys(THEMES_CONFIG).filter(
+      (cat) => cat === "import" || categories[cat],
+    );
   }, [categories]);
 
   // 自动修正选中状态
@@ -244,11 +257,81 @@ export default function BlockLibrary({
   // 处理分类切换
   const handleCategoryClick = (cat: string) => {
     setSelectedCategory(cat);
+    if (cat === "import") {
+      setSelectedBlock(null);
+      setPreviewBlock(null);
+      setImportJson("");
+      return;
+    }
     if (categories[cat] && categories[cat]!.length > 0) {
       setSelectedBlock(categories[cat]![0] || null);
     }
   };
 
+  // 监听 importJson 变化，防抖加载预览数据
+  useEffect(() => {
+    if (selectedTheme !== "import" || !importJson) return;
+
+    const timer = setTimeout(() => {
+      void (async () => {
+        try {
+          const parsed = JSON.parse(importJson);
+          if (parsed && typeof parsed === "object" && parsed.block) {
+            setPreviewLoading(true);
+            setPreviewVisible(false);
+
+            try {
+              // 调用 Server Action 获取动态数据
+              const result = await runWithAuth(fetchBlockData, {
+                access_token: undefined,
+                block: parsed as BlockConfig,
+              } as never);
+
+              if (result && "data" in result && result.data) {
+                setPreviewBlock({
+                  ...(parsed as BlockConfig),
+                  data: result.data.data,
+                });
+              } else {
+                setPreviewBlock(parsed as BlockConfig);
+              }
+            } catch (error) {
+              console.error("加载预览数据失败:", error);
+              setPreviewBlock(parsed as BlockConfig);
+            } finally {
+              setPreviewLoading(false);
+              setTimeout(() => {
+                setPreviewVisible(true);
+              }, 300);
+            }
+          }
+        } catch (_err) {
+          // Ignore parse errors
+        }
+      })();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [importJson, selectedTheme]);
+
+  const handleImportChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setImportJson(value);
+
+    try {
+      const parsed = JSON.parse(value);
+      if (parsed && typeof parsed === "object") {
+        const blockType = parsed.block;
+        const config = configs.find((c) => c.blockType === blockType);
+
+        if (config) {
+          setSelectedBlock(config);
+        }
+      }
+    } catch (_err) {
+      // Ignore parse errors
+    }
+  };
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground bg-background">
@@ -271,24 +354,27 @@ export default function BlockLibrary({
           const Icon = config?.icon || DEFAULT_THEME_ICON;
           const isActive = selectedTheme === cat;
           return (
-            <button
-              key={cat}
-              onClick={() => handleCategoryClick(cat)}
-              className="relative group w-12 h-12 flex items-center justify-center transition-all duration-200"
-              title={config?.label || cat}
-            >
-              <div
-                className={`
+            <Tooltip content={config?.label || cat} key={cat} placement="left">
+              <button
+                onClick={() => handleCategoryClick(cat)}
+                className="relative group w-12 h-12 flex items-center justify-center transition-all duration-200"
+                title={config?.label || cat}
+              >
+                <div
+                  className={`
                   absolute left-0 bg-primary transition-all duration-200
                   ${isActive ? "h-8 w-1" : "h-2 w-1 opacity-0 group-hover:opacity-50 group-hover:h-4"}
                 `}
-              />
-              <div
-                className={isActive ? "text-primary" : "text-muted-foreground"}
-              >
-                <Icon size={20} />
-              </div>
-            </button>
+                />
+                <div
+                  className={
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  }
+                >
+                  <Icon size={20} />
+                </div>
+              </button>
+            </Tooltip>
           );
         })}
       </div>
@@ -301,11 +387,22 @@ export default function BlockLibrary({
             : "BLOCKS"}
         </div>
         <div className="flex-1 overflow-y-auto">
-          {currentCategoryBlocks.map((block) => (
-            <button
-              key={block.blockType}
-              onClick={() => setSelectedBlock(block)}
-              className={`
+          {selectedTheme === "import" ? (
+            <div className="h-full overflow-hidden">
+              <textarea
+                className="w-full h-full p-2 bg-background border border-border font-mono text-xs resize-none focus:outline-none focus:ring-1 text-secondary-foreground focus:ring-primary"
+                placeholder="在此粘贴 Block JSON..."
+                value={importJson}
+                onChange={handleImportChange}
+              />
+            </div>
+          ) : (
+            <>
+              {currentCategoryBlocks.map((block) => (
+                <button
+                  key={block.blockType}
+                  onClick={() => setSelectedBlock(block)}
+                  className={`
                 w-full text-left px-4 py-3 border-b border-border/50 transition-all duration-200 flex flex-col gap-1
                 ${
                   selectedBlock?.blockType === block.blockType
@@ -313,23 +410,25 @@ export default function BlockLibrary({
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 }
               `}
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className={`font-semibold text-sm truncate ${selectedBlock?.blockType === block.blockType ? "text-primary" : "text-foreground"}`}
                 >
-                  {block.displayName}
-                </span>
-              </div>
-              <div className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                {block.description || "暂无描述"}
-              </div>
-            </button>
-          ))}
-          {currentCategoryBlocks.length === 0 && (
-            <div className="p-8 text-xs text-muted-foreground text-center">
-              该分类下暂无 Block
-            </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`font-semibold text-sm truncate ${selectedBlock?.blockType === block.blockType ? "text-primary" : "text-foreground"}`}
+                    >
+                      {block.displayName}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                    {block.description || "暂无描述"}
+                  </div>
+                </button>
+              ))}
+              {currentCategoryBlocks.length === 0 && (
+                <div className="p-8 text-xs text-muted-foreground text-center">
+                  该分类下暂无 Block
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -489,7 +588,15 @@ export default function BlockLibrary({
                       size="md"
                       className="w-full"
                       fullWidth
-                      onClick={() => onAdd(selectedBlock.blockType)}
+                      onClick={() => {
+                        if (selectedTheme === "import" && previewBlock) {
+                          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                          const { id, ...rest } = previewBlock;
+                          onAdd(selectedBlock.blockType, rest);
+                        } else {
+                          onAdd(selectedBlock.blockType);
+                        }
+                      }}
                       loading={isAdding}
                       icon={<RiAddLine size={18} />}
                       label={`添加到页面`}

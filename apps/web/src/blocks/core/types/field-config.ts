@@ -42,6 +42,8 @@ export interface BaseFieldConfig {
  */
 export interface TextFieldConfig extends BaseFieldConfig {
   type: "text" | "textarea" | "number" | "date";
+  /** 默认值 */
+  defaultValue?: string | number;
 }
 
 /**
@@ -51,6 +53,8 @@ export interface ArrayFieldConfig extends BaseFieldConfig {
   type: "array";
   /** 数组项分隔符提示 */
   separatorHint?: string;
+  /** 默认值 */
+  defaultValue?: unknown[];
 }
 
 /**
@@ -71,6 +75,8 @@ export interface SelectFieldConfig extends BaseFieldConfig {
  */
 export interface ToggleFieldConfig extends BaseFieldConfig {
   type: "toggle";
+  /** 默认值 */
+  defaultValue?: boolean;
 }
 
 /**
