@@ -1,13 +1,14 @@
 "use client";
 
+import { useState } from "react";
+import { RiGlobalLine, RiServerLine } from "@remixicon/react";
+
+import { useSystemInfo } from "@/app/(admin)/admin/system/use-system-info";
 import { GridItem } from "@/components/RowGrid";
+import ErrorPage from "@/components/ui/Error";
+import { useBroadcast } from "@/hooks/use-broadcast";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { RiGlobalLine, RiServerLine } from "@remixicon/react";
-import ErrorPage from "@/components/ui/Error";
-import { useSystemInfo } from "./use-system-info";
-import { useBroadcast } from "@/hooks/use-broadcast";
-import { useState } from "react";
 
 export default function SystemNetworkInfo() {
   const { data: systemInfo, error, refresh, lastFetchTime } = useSystemInfo();

@@ -1,24 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { RiBook2Line, RiBookLine, RiCloseLine } from "@remixicon/react";
+import type { CustomWordItem } from "@repo/shared-types/api/search";
+import { AnimatePresence, motion } from "framer-motion";
+
 import {
   addCustomWord,
-  getCustomWords,
   deleteCustomWord,
+  getCustomWords,
   indexPosts,
 } from "@/actions/search";
 import { GridItem } from "@/components/RowGrid";
-import { Input } from "@/ui/Input";
-import { Button } from "@/ui/Button";
-import { useToast } from "@/ui/Toast";
-import { RiBook2Line, RiBookLine, RiCloseLine } from "@remixicon/react";
-import { Dialog } from "@/ui/Dialog";
 import { AlertDialog } from "@/ui/AlertDialog";
-import { motion, AnimatePresence } from "framer-motion";
-import type { CustomWordItem } from "@repo/shared-types/api/search";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
+import { Button } from "@/ui/Button";
+import { Dialog } from "@/ui/Dialog";
+import { Input } from "@/ui/Input";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { useToast } from "@/ui/Toast";
 
 export default function CustomWordManager() {
   const toast = useToast();

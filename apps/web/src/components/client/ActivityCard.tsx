@@ -4,22 +4,23 @@ import React from "react";
 import {
   RiArticleLine,
   RiChat3Line,
-  RiHeartLine,
-  RiTimeLine,
   RiEye2Line,
-  RiReplyLine,
   RiFolderLine,
+  RiHeartLine,
   RiPriceTag3Line,
+  RiReplyLine,
+  RiTimeLine,
 } from "@remixicon/react";
 import type {
-  UserActivityItem,
-  PostActivity,
   CommentActivity,
   LikeActivity,
+  PostActivity,
+  UserActivityItem,
 } from "@repo/shared-types/api/user";
-import { formatRelativeTime } from "@/lib/shared/relative-time";
+
 import { useNavigateWithTransition } from "@/components/Link";
 import Link from "@/components/Link";
+import { formatRelativeTime } from "@/lib/shared/relative-time";
 import { Tooltip } from "@/ui/Tooltip";
 
 interface ActivityCardProps {

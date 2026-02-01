@@ -5,14 +5,14 @@
  */
 
 import type {
-  IEditorAdapter,
-  EditorState,
-  EditorCommand,
-  CommandWithParams,
-  TiptapInstance,
   AdapterConfig,
-} from "./types";
-import { defaultEditorState } from "./types";
+  CommandWithParams,
+  EditorCommand,
+  EditorState,
+  IEditorAdapter,
+  TiptapInstance,
+} from "@/components/client/Editor/adapters/types";
+import { defaultEditorState } from "@/components/client/Editor/adapters/types";
 
 export class TiptapAdapter implements IEditorAdapter {
   readonly type = "visual" as const;

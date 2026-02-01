@@ -1,13 +1,14 @@
 "use client";
 
-import type { Message } from "@repo/shared-types/api/message";
 import {
-  RiLoader4Line,
-  RiCheckLine,
   RiCheckDoubleLine,
+  RiCheckLine,
   RiErrorWarningLine,
+  RiLoader4Line,
   RiRefreshLine,
 } from "@remixicon/react";
+import type { Message } from "@repo/shared-types/api/message";
+
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 

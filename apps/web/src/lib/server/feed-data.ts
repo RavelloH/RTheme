@@ -1,15 +1,16 @@
-import { cacheTag, cacheLife } from "next/cache";
-import prisma from "@/lib/server/prisma";
-import { getRawConfig, type ConfigItem } from "@/lib/server/config-cache";
-import { getFeaturedImageUrl } from "@/lib/server/media-reference";
-import { batchGetCategoryPaths } from "@/lib/server/category-utils";
-import { unified } from "unified";
+import { cacheLife, cacheTag } from "next/cache";
+import rehypeStringify from "rehype-stringify";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
-import rehypeStringify from "rehype-stringify";
+import { unified } from "unified";
+
+import { batchGetCategoryPaths } from "@/lib/server/category-utils";
+import { type ConfigItem, getRawConfig } from "@/lib/server/config-cache";
+import { getFeaturedImageUrl } from "@/lib/server/media-reference";
+import prisma from "@/lib/server/prisma";
 import {
-  markdownRemarkPlugins,
   markdownRehypePlugins,
+  markdownRemarkPlugins,
 } from "@/lib/shared/mdx-config-shared";
 
 export type FeedPost = {

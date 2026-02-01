@@ -1,10 +1,10 @@
 // script/check-env.ts
 // 检查环境变量设置是否正确
 
-import { config } from "dotenv";
-import { pathToFileURL } from "url";
 import { randomBytes } from "crypto";
+import { config } from "dotenv";
 import Rlog from "rlog-js";
+import { pathToFileURL } from "url";
 
 // 加载 .env 文件
 config({

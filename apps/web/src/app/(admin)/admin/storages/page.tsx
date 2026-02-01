@@ -1,12 +1,12 @@
+import StoragesAdd from "@/app/(admin)/admin/storages/StoragesAdd";
+import StoragesInfo from "@/app/(admin)/admin/storages/StoragesInfo";
+import StoragesTable from "@/app/(admin)/admin/storages/StoragesTable";
+import AdminSidebar from "@/components/AdminSidebar";
 import HorizontalScroll from "@/components/HorizontalScroll";
+import Link from "@/components/Link";
 import MainLayout from "@/components/MainLayout";
 import RowGrid, { GridItem } from "@/components/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
-import AdminSidebar from "@/components/AdminSidebar";
-import StoragesInfo from "./StoragesInfo";
-import StoragesTable from "./StoragesTable";
-import Link from "@/components/Link";
-import StoragesAdd from "./StoragesAdd";
 
 export const metadata = await generateMetadata(
   {

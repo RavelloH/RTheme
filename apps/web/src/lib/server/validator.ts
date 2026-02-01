@@ -1,8 +1,9 @@
 import "server-only";
 
-import type { z } from "zod";
 import type { NextResponse } from "next/server";
-import ResponseBuilder from "./response";
+import type { z } from "zod";
+
+import ResponseBuilder from "@/lib/server/response";
 
 /**
  * 验证错误详情

@@ -1,8 +1,9 @@
 import { cookies } from "next/headers";
-import UnauthorizedPage from "@/app/unauthorized";
-import { jwtTokenVerify } from "@/lib/server/jwt";
+
 import ForbiddenPage from "@/app/forbidden";
+import UnauthorizedPage from "@/app/unauthorized";
 import type { AccessTokenPayload } from "@/lib/server/jwt";
+import { jwtTokenVerify } from "@/lib/server/jwt";
 
 const allowedRoles = ["ADMIN", "EDITOR", "AUTHOR"];
 

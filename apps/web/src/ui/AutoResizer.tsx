@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { Easing } from "framer-motion";
 import { motion } from "framer-motion";
 

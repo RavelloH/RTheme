@@ -1,11 +1,12 @@
 "use client";
 
-import { useMobile } from "@/hooks/use-mobile";
-import MarqueeText from "./MarqueeText";
 import Image from "next/image";
+
 import Avatar from "@/../public/avatar.jpg";
+import { ProcessedText } from "@/blocks/components";
+import MarqueeText from "@/blocks/HeroGallery/client/MarqueeText";
 import { GridItem } from "@/components/RowGrid";
-import { ProcessedText } from "../../components";
+import { useMobile } from "@/hooks/use-mobile";
 
 interface HomeTextSectionProps {
   title?: string;

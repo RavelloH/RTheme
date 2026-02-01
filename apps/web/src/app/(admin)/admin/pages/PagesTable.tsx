@@ -1,35 +1,36 @@
 "use client";
 
-import {
-  getPagesList,
-  updatePage,
-  updatePages,
-  deletePages,
-} from "@/actions/page";
-import type { ActionButton, FilterConfig } from "@/components/GridTable";
-import GridTable from "@/components/GridTable";
-import runWithAuth from "@/lib/client/run-with-auth";
-import type { TableColumn } from "@/ui/Table";
-import { useEffect, useRef, useState, type ReactElement } from "react";
-import type { PageListItem } from "@repo/shared-types/api/page";
-import { useBroadcast } from "@/hooks/use-broadcast";
+import { type ReactElement, useEffect, useRef, useState } from "react";
 import {
   RiCheckLine,
   RiCloseLine,
-  RiEditLine,
   RiDeleteBinLine,
-  RiFileEditLine,
+  RiEditLine,
   RiExternalLinkLine,
+  RiFileEditLine,
 } from "@remixicon/react";
+import type { PageListItem } from "@repo/shared-types/api/page";
+
+import {
+  deletePages,
+  getPagesList,
+  updatePage,
+  updatePages,
+} from "@/actions/page";
+import type { ActionButton, FilterConfig } from "@/components/GridTable";
+import GridTable from "@/components/GridTable";
+import { useNavigateWithTransition } from "@/components/Link";
+import { useBroadcast } from "@/hooks/use-broadcast";
+import runWithAuth from "@/lib/client/run-with-auth";
+import { AlertDialog } from "@/ui/AlertDialog";
+import { Button } from "@/ui/Button";
+import { Checkbox } from "@/ui/Checkbox";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import type { SelectOption } from "@/ui/Select";
 import { Select } from "@/ui/Select";
-import { Checkbox } from "@/ui/Checkbox";
-import { Button } from "@/ui/Button";
-import { AlertDialog } from "@/ui/AlertDialog";
+import type { TableColumn } from "@/ui/Table";
 import { useToast } from "@/ui/Toast";
-import { useNavigateWithTransition } from "@/components/Link";
 
 type ConfigRecord = Record<string, unknown>;
 

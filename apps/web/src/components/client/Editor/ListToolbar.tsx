@@ -1,10 +1,11 @@
 "use client";
 
-import type { Editor } from "@tiptap/react";
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Toggle } from "@/ui/Toggle";
 import { RiIndentDecrease, RiIndentIncrease } from "@remixicon/react";
+import type { Editor } from "@tiptap/react";
+import { AnimatePresence, motion } from "framer-motion";
+
+import { Toggle } from "@/ui/Toggle";
 import { Tooltip } from "@/ui/Tooltip";
 
 interface ListToolbarProps {

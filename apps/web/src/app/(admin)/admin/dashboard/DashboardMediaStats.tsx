@@ -1,13 +1,14 @@
 "use client";
 
-import { AutoTransition } from "@/ui/AutoTransition";
-import { getMediaStats } from "@/actions/media";
 import { useEffect, useState } from "react";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import ErrorPage from "@/components/ui/Error";
-import Clickable from "@/ui/Clickable";
 import { RiRefreshLine } from "@remixicon/react";
+
+import { getMediaStats } from "@/actions/media";
 import Link from "@/components/Link";
+import ErrorPage from "@/components/ui/Error";
+import { AutoTransition } from "@/ui/AutoTransition";
+import Clickable from "@/ui/Clickable";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 type StatsData = {
   updatedAt: string;

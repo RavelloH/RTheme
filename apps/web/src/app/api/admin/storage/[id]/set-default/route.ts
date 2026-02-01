@@ -1,8 +1,9 @@
-import { setDefaultStorage } from "@/actions/storage";
-import ResponseBuilder from "@/lib/server/response";
-import { validatePatchRequest } from "@/lib/server/request-converter";
 import { SetDefaultStorageSchema } from "@repo/shared-types/api/storage";
 import { connection } from "next/server";
+
+import { setDefaultStorage } from "@/actions/storage";
+import { validatePatchRequest } from "@/lib/server/request-converter";
+import ResponseBuilder from "@/lib/server/response";
 
 const response = new ResponseBuilder("serverless");
 

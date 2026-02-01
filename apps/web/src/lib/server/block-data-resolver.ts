@@ -1,4 +1,4 @@
-import type { BlockFetcher, BlockConfig } from "@/blocks/types";
+import type { BlockConfig, BlockFetcher } from "@/blocks/types";
 
 // 页面配置最小接口（只需要 blocks 属性）
 interface BlockPageConfig {

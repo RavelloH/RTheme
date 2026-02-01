@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  motion,
-  AnimatePresence,
-  useMotionValue,
-  useDragControls,
-  animate,
-} from "framer-motion";
 import type { PanInfo } from "framer-motion";
+import {
+  animate,
+  AnimatePresence,
+  motion,
+  useDragControls,
+  useMotionValue,
+} from "framer-motion";
+
 import { useMobile } from "@/hooks/use-mobile";
 
 export interface DrawerProps {

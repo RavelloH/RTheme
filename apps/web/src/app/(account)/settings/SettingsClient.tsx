@@ -1,29 +1,45 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import type { OAuthProvider } from "@/lib/server/oauth";
-import { getUserProfile } from "@/actions/user";
-import { useToast } from "@/ui/Toast";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { AutoTransition } from "@/ui/AutoTransition";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  RiUserLine,
+  RiDeviceLine,
   RiNotification3Line,
   RiShieldKeyholeLine,
-  RiDeviceLine,
+  RiUserLine,
 } from "@remixicon/react";
-import UnauthorizedPage from "../../unauthorized";
-import { useReauth, type PendingAction } from "./use-reauth";
-import { BasicInfoSection } from "./BasicInfoSection";
-import { NotificationSection } from "./NotificationSection";
-import { SessionSection } from "./SessionSection";
-import { SecuritySection } from "./SecuritySection";
-import { PasswordDialogs, type PasswordDialogsRef } from "./PasswordDialogs";
-import { SSODialogs, type SSODialogsRef } from "./SSODialogs";
-import { SessionDialogs, type SessionDialogsRef } from "./SessionDialogs";
-import { type TotpDialogsRef } from "./TotpDialogs";
-import { BasicInfoDialogs, type BasicInfoDialogsRef } from "./BasicInfoDialogs";
+import { useRouter, useSearchParams } from "next/navigation";
+
+import { getUserProfile } from "@/actions/user";
+import {
+  BasicInfoDialogs,
+  type BasicInfoDialogsRef,
+} from "@/app/(account)/settings/BasicInfoDialogs";
+import { BasicInfoSection } from "@/app/(account)/settings/BasicInfoSection";
+import { NotificationSection } from "@/app/(account)/settings/NotificationSection";
+import {
+  PasswordDialogs,
+  type PasswordDialogsRef,
+} from "@/app/(account)/settings/PasswordDialogs";
+import { SecuritySection } from "@/app/(account)/settings/SecuritySection";
+import {
+  SessionDialogs,
+  type SessionDialogsRef,
+} from "@/app/(account)/settings/SessionDialogs";
+import { SessionSection } from "@/app/(account)/settings/SessionSection";
+import {
+  SSODialogs,
+  type SSODialogsRef,
+} from "@/app/(account)/settings/SSODialogs";
+import { type TotpDialogsRef } from "@/app/(account)/settings/TotpDialogs";
+import {
+  type PendingAction,
+  useReauth,
+} from "@/app/(account)/settings/use-reauth";
+import UnauthorizedPage from "@/app/unauthorized";
+import type { OAuthProvider } from "@/lib/server/oauth";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { useToast } from "@/ui/Toast";
 
 interface LinkedAccount {
   provider: string;

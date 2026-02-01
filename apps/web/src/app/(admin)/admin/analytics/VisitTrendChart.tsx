@@ -1,15 +1,16 @@
 "use client";
 
-import { GridItem } from "@/components/RowGrid";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { useMemo } from "react";
 import type { DailyTrend } from "@repo/shared-types";
+import { AnimatePresence, motion } from "framer-motion";
+
 import BarChart, {
   type BarChartDataPoint,
   type SeriesConfig,
 } from "@/components/BarChart";
-import { useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { GridItem } from "@/components/RowGrid";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 interface PathTrendChartProps {
   dailyTrend: DailyTrend[] | null;

@@ -1,8 +1,9 @@
-import { getPostsTrends } from "@/actions/post";
-import ResponseBuilder from "@/lib/server/response";
-import { validateGetRequest } from "@/lib/server/request-converter";
 import { GetPostsTrendsSchema } from "@repo/shared-types/api/post";
 import { connection } from "next/server";
+
+import { getPostsTrends } from "@/actions/post";
+import { validateGetRequest } from "@/lib/server/request-converter";
+import ResponseBuilder from "@/lib/server/response";
 
 const response = new ResponseBuilder("serverless");
 

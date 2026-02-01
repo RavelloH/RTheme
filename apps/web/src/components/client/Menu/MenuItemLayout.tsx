@@ -1,7 +1,8 @@
 "use client";
-import { useBroadcastSender } from "@/hooks/use-broadcast";
-import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+
+import { useBroadcastSender } from "@/hooks/use-broadcast";
 
 export default function MenuItemWrapper({
   children,

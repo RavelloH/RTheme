@@ -3,14 +3,16 @@
  * 用于将中文和英文文本转换为 URL 友好的 slug 格式
  */
 import "server-only";
-import {
-  pinyin as pinyinPro,
-  addDict,
-  segment,
-  OutputFormat,
-} from "pinyin-pro";
+
 import CompleteDict from "@pinyin-pro/data/complete";
-import { getConfig } from "./config-cache";
+import {
+  addDict,
+  OutputFormat,
+  pinyin as pinyinPro,
+  segment,
+} from "pinyin-pro";
+
+import { getConfig } from "@/lib/server/config-cache";
 
 addDict(CompleteDict);
 

@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import RowGrid, { GridItem } from "@/components/RowGrid";
+
 import SearchContent, {
   type PostData,
 } from "@/components/client/SearchContent";
 import PaginationNav from "@/components/PaginationNav";
-import { AutoTransition } from "@/ui/AutoTransition";
+import RowGrid, { GridItem } from "@/components/RowGrid";
 import { createArray } from "@/lib/client/create-array";
+import { AutoTransition } from "@/ui/AutoTransition";
 
 interface PostsPageContentProps {
   initialPosts: PostData[];

@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { RiKey2Line } from "@remixicon/react";
 import { startAuthentication } from "@simplewebauthn/browser";
+
 import {
   generatePasskeyAuthenticationOptions,
   verifyPasskeyForReauth,
 } from "@/actions/passkey";
 import { Button } from "@/ui/Button";
-import { RiKey2Line } from "@remixicon/react";
 import { useToast } from "@/ui/Toast";
 
 export default function PasskeyReauthButton({

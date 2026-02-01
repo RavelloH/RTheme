@@ -1,11 +1,11 @@
+import DoctorHistoryChart from "@/app/(admin)/admin/doctor/DoctorHistoryChart";
+import DoctorHistoryTable from "@/app/(admin)/admin/doctor/DoctorHistoryTable";
+import DoctorReport from "@/app/(admin)/admin/doctor/DoctorReport";
+import AdminSidebar from "@/components/AdminSidebar";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import MainLayout from "@/components/MainLayout";
 import RowGrid from "@/components/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
-import AdminSidebar from "@/components/AdminSidebar";
-import DoctorReport from "./DoctorReport";
-import DoctorHistoryChart from "./DoctorHistoryChart";
-import DoctorHistoryTable from "./DoctorHistoryTable";
 
 export const metadata = await generateMetadata(
   {

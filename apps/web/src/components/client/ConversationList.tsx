@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useInView } from "react-intersection-observer";
-import type { Conversation } from "@repo/shared-types/api/message";
-import ConversationItem from "./ConversationItem";
-import NewConversationDialog from "./NewConversationDialog";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { RiAddLine, RiChatNewLine, RiMailLine } from "@remixicon/react";
+import type { Conversation } from "@repo/shared-types/api/message";
+import { useRouter } from "next/navigation";
+
+import ConversationItem from "@/components/client/ConversationItem";
+import NewConversationDialog from "@/components/client/NewConversationDialog";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 interface ConversationListProps {
   conversations: Conversation[];

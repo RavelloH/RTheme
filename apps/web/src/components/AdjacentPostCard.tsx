@@ -1,6 +1,7 @@
 import { RiArrowLeftLine, RiArrowRightLine, RiHashtag } from "@remixicon/react";
-import Link from "./Link";
-import CMSImage from "./CMSImage";
+
+import CMSImage from "@/components/CMSImage";
+import Link from "@/components/Link";
 
 interface AdjacentPostCardProps {
   title: string;

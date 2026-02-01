@@ -1,5 +1,5 @@
-import { interpolatorMap } from "../interpolators";
-import { extractPlaceholdersFromValue } from "./shared";
+import { interpolatorMap } from "@/blocks/interpolators";
+import { extractPlaceholdersFromValue } from "@/blocks/lib/shared";
 
 /**
  * 通用 Block Fetcher 逻辑

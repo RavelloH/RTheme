@@ -1,22 +1,22 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Dialog } from "@/ui/Dialog";
+import React, { useEffect, useState } from "react";
+import QRCode from "qrcode";
+
+import {
+  confirmTotp,
+  disableTotp,
+  enableTotp,
+  regenerateBackupCodes,
+} from "@/actions/totp";
+import type { PendingAction } from "@/app/(account)/settings/use-reauth";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { Button } from "@/ui/Button";
 import { Checkbox } from "@/ui/Checkbox";
+import { Dialog } from "@/ui/Dialog";
 import { OtpInput } from "@/ui/OtpInput";
 import { useToast } from "@/ui/Toast";
-import {
-  enableTotp,
-  confirmTotp,
-  disableTotp,
-  regenerateBackupCodes,
-} from "@/actions/totp";
-import QRCode from "qrcode";
-
-import type { PendingAction } from "./use-reauth";
 
 interface TotpDialogsProps {
   onTotpStatusChange: () => void;

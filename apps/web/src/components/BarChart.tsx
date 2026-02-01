@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { scaleLinear, scaleBand } from "@visx/scale";
+import { useEffect, useRef, useState } from "react";
 import { Group } from "@visx/group";
+import { scaleBand, scaleLinear } from "@visx/scale";
+import { AnimatePresence, motion } from "framer-motion";
+
 import { AutoResizer } from "@/ui/AutoResizer";
-import { motion, AnimatePresence } from "framer-motion";
 
 export interface BarChartDataPoint {
   time: string; // ISO 8601 格式的时间字符串

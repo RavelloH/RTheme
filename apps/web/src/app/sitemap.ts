@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+
 import { getFeedData } from "@/lib/server/feed-data";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

@@ -1,14 +1,14 @@
+import { fetchBlockInterpolatedData } from "@/blocks/lib/server";
+import type { BlockConfig } from "@/blocks/types";
 import { getConfigs } from "@/lib/server/config-cache";
 import { batchQueryMediaFiles } from "@/lib/server/image-query";
-import { processImageUrl } from "@/lib/shared/image-common";
-import prisma from "@/lib/server/prisma";
 import {
   getFeaturedImageUrl,
   mediaRefsInclude,
 } from "@/lib/server/media-reference";
+import prisma from "@/lib/server/prisma";
+import { processImageUrl } from "@/lib/shared/image-common";
 import { MEDIA_SLOTS } from "@/types/media";
-import type { BlockConfig } from "@/blocks/types";
-import { fetchBlockInterpolatedData } from "../lib/server";
 
 export async function heroFetcher(config: BlockConfig) {
   // 0. 启动插值数据获取

@@ -1,7 +1,8 @@
 import "server-only";
 
 import type { NextRequest } from "next/server";
-import { getConfigs } from "./config-cache";
+
+import { getConfigs } from "@/lib/server/config-cache";
 
 /**
  * 从 URL 中提取域名（去除协议和端口）

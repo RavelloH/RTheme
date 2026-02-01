@@ -1,6 +1,6 @@
 import { readFile } from "fs/promises";
-import { join } from "path";
 import { ImageResponse } from "next/og";
+import { join } from "path";
 
 interface IconMetadata {
   contentType: string;

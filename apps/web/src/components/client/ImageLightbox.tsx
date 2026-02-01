@@ -1,14 +1,15 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useCallback, useState, useRef, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
 import {
   RiArrowLeftLine,
   RiArrowRightLine,
   RiCloseLine,
 } from "@remixicon/react";
+import { AnimatePresence, motion } from "framer-motion";
+
 import { useFooterStore } from "@/store/footer-store";
 
 interface LightboxImage {

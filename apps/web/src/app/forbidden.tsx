@@ -1,9 +1,10 @@
-import LinkButton from "@/components/LinkButton";
+import { RiArrowGoBackLine, RiLogoutBoxLine } from "@remixicon/react";
+
 import ClientDiagnostics from "@/components/ClientDiagnostics";
 import HorizontalScroll from "@/components/HorizontalScroll";
+import LinkButton from "@/components/LinkButton";
 import MainLayout from "@/components/MainLayout";
 import RowGrid, { GridItem } from "@/components/RowGrid";
-import { RiArrowGoBackLine, RiLogoutBoxLine } from "@remixicon/react";
 
 export default function ForbiddenPage({
   role,

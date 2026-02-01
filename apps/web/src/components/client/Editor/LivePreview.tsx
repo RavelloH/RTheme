@@ -1,20 +1,21 @@
 "use client";
 
-import { Component, useEffect, useState, useRef } from "react";
-import { hydrate } from "next-mdx-remote-client/csr";
-import { serialize } from "next-mdx-remote-client/serialize";
-import type { SerializeResult } from "next-mdx-remote-client/serialize";
-import { AutoTransition } from "@/ui/AutoTransition";
+import { Component, useEffect, useRef, useState } from "react";
 import { RiAlertLine, RiRefreshLine } from "@remixicon/react";
-import Clickable from "@/ui/Clickable";
-import MarkdownClientRenderer from "../MarkdownClientRenderer";
+import { hydrate } from "next-mdx-remote-client/csr";
+import type { SerializeResult } from "next-mdx-remote-client/serialize";
+import { serialize } from "next-mdx-remote-client/serialize";
+
+import MarkdownClientRenderer from "@/components/client/MarkdownClientRenderer";
 import { useConfig } from "@/context/ConfigContext";
-import type { ConfigType } from "@/types/config";
 import {
   cleanMDXSource,
-  mdxSerializeOptions,
   createEnhancedMDXComponents,
+  mdxSerializeOptions,
 } from "@/lib/shared/mdx-config";
+import type { ConfigType } from "@/types/config";
+import { AutoTransition } from "@/ui/AutoTransition";
+import Clickable from "@/ui/Clickable";
 
 export interface LivePreview {
   content: string;

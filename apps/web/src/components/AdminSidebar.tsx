@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   RiArticleFill,
   RiAttachment2,
@@ -25,10 +26,11 @@ import {
   RiUserFill,
 } from "@remixicon/react";
 import { usePathname } from "next/navigation";
+
+import Link from "@/components/Link";
 import { useMobile } from "@/hooks/use-mobile";
-import Link from "./Link";
-import { useEffect, useState } from "react";
-import "./AdminSidebar.css";
+
+import "@/components/AdminSidebar.css";
 
 const roles = {
   author: ["ADMIN", "EDITOR", "AUTHOR"],

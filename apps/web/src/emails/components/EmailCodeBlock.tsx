@@ -1,5 +1,5 @@
-import { Section } from "@react-email/components";
 import * as React from "react";
+import { Section } from "@react-email/components";
 
 /**
  * 邮件代码块组件属性

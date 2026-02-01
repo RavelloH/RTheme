@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+
 import PaginationNav from "@/components/PaginationNav";
 import { AutoTransition } from "@/ui/AutoTransition";
 

@@ -1,6 +1,6 @@
 import "server-only";
 
-import redis, { ensureRedisConnection } from "./redis";
+import redis, { ensureRedisConnection } from "@/lib/server/redis";
 
 /**
  * Redis 缓存工具类

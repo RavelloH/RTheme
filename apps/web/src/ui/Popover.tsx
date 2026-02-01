@@ -18,8 +18,8 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
 
 type PopoverSide = "top" | "bottom" | "left" | "right";
 type PopoverAlign = "start" | "center" | "end";

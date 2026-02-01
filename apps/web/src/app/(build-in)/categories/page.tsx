@@ -1,7 +1,16 @@
+import { Suspense } from "react";
+import { cacheLife, cacheTag } from "next/cache";
+
+import CategoriesRandomPage from "@/app/(build-in)/categories/CategoriesRandomPage";
+import CategoryContainer from "@/app/(build-in)/categories/CategoryContainer";
+import DynamicReplace from "@/components/client/DynamicReplace";
 import HorizontalScroll from "@/components/HorizontalScroll";
+import Link from "@/components/Link";
 import LinkButton from "@/components/LinkButton";
 import MainLayout from "@/components/MainLayout";
 import RowGrid, { GridItem } from "@/components/RowGrid";
+import { batchGetCategoryPaths } from "@/lib/server/category-utils";
+import { getFeaturedImageData } from "@/lib/server/media-reference";
 import {
   getBlocksAreas,
   getRawPage,
@@ -10,14 +19,6 @@ import {
 import { createPageConfigBuilder } from "@/lib/server/page-cache";
 import prisma from "@/lib/server/prisma";
 import { generateMetadata } from "@/lib/server/seo";
-import { batchGetCategoryPaths } from "@/lib/server/category-utils";
-import Link from "@/components/Link";
-import CategoriesRandomPage from "./CategoriesRandomPage";
-import DynamicReplace from "@/components/client/DynamicReplace";
-import CategoryContainer from "./CategoryContainer";
-import { getFeaturedImageData } from "@/lib/server/media-reference";
-import { cacheLife, cacheTag } from "next/cache";
-import { Suspense } from "react";
 
 // 获取系统页面配置
 const page = await getRawPage("/categories");

@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { RiDatabase2Line } from "@remixicon/react";
+
 import { indexPosts } from "@/actions/search";
 import { GridItem } from "@/components/RowGrid";
-import { useToast } from "@/ui/Toast";
 import { AlertDialog } from "@/ui/AlertDialog";
-import { RiDatabase2Line } from "@remixicon/react";
+import { useToast } from "@/ui/Toast";
 
 export default function RebuildAllIndexButton() {
   const toast = useToast();

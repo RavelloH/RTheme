@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
+
+import { revokeSession } from "@/actions/auth";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { useToast } from "@/ui/Toast";
-import { revokeSession } from "@/actions/auth";
 
 interface SessionDialogsProps {
   sessionId: string | null;

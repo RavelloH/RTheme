@@ -5,8 +5,9 @@ import {
   RiPushpin2Fill,
   RiTimeLine,
 } from "@remixicon/react";
-import Link from "./Link";
-import CMSImage from "./CMSImage";
+
+import CMSImage from "@/components/CMSImage";
+import Link from "@/components/Link";
 
 interface PostCardProps {
   title: string | React.ReactNode;

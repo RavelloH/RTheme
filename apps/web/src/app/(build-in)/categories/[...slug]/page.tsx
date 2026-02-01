@@ -1,12 +1,27 @@
 import React, { Suspense } from "react";
+import { cache } from "react";
+import { RiArrowLeftSLine } from "@remixicon/react";
+import type { Metadata } from "next";
+import { cacheLife, cacheTag } from "next/cache";
+import { notFound } from "next/navigation";
+
+import CategoryContainer from "@/app/(build-in)/categories/CategoryContainer";
+import DynamicReplace from "@/components/client/DynamicReplace";
+import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
+import EmptyPostCard from "@/components/EmptyPostCard";
 import HorizontalScroll from "@/components/HorizontalScroll";
+import Link from "@/components/Link";
 import LinkButton from "@/components/LinkButton";
 import MainLayout from "@/components/MainLayout";
-import RowGrid, { GridItem } from "@/components/RowGrid";
-import PostCard from "@/components/PostCard";
-import EmptyPostCard from "@/components/EmptyPostCard";
 import PaginationNav from "@/components/PaginationNav";
+import PostCard from "@/components/PostCard";
+import RowGrid, { GridItem } from "@/components/RowGrid";
 import { createArray } from "@/lib/client/create-array";
+import { batchGetCategoryPaths } from "@/lib/server/category-utils";
+import {
+  getFeaturedImageData,
+  getFeaturedImageUrl,
+} from "@/lib/server/media-reference";
 import {
   getBlocksAreas,
   getRawPage,
@@ -15,20 +30,6 @@ import {
 import { createPageConfigBuilder } from "@/lib/server/page-cache";
 import prisma from "@/lib/server/prisma";
 import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
-import { batchGetCategoryPaths } from "@/lib/server/category-utils";
-import Link from "@/components/Link";
-import DynamicReplace from "@/components/client/DynamicReplace";
-import { notFound } from "next/navigation";
-import type { Metadata } from "next";
-import { RiArrowLeftSLine } from "@remixicon/react";
-import { cache } from "react";
-import CategoryContainer from "../CategoryContainer";
-import {
-  getFeaturedImageUrl,
-  getFeaturedImageData,
-} from "@/lib/server/media-reference";
-import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
-import { cacheLife, cacheTag } from "next/cache";
 
 // 缓存函数：获取所有分类的完整数据
 const getCategoriesWithFullData = cache(async () => {

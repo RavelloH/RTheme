@@ -1,19 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { RiArrowLeftSLine } from "@remixicon/react";
+import type { PostVersionDetail } from "@repo/shared-types/api/post";
 import { useParams } from "next/navigation";
+
 import { getPostVersion } from "@/actions/post";
 import { getPostDetail } from "@/actions/post";
-import type { PostVersionDetail } from "@repo/shared-types/api/post";
-import { Button } from "@/ui/Button";
+import AdminSidebar from "@/components/AdminSidebar";
+import { LivePreview } from "@/components/client/Editor/LivePreview";
+import HorizontalScroll from "@/components/HorizontalScroll";
 import { useNavigateWithTransition } from "@/components/Link";
 import MainLayout from "@/components/MainLayout";
-import HorizontalScroll from "@/components/HorizontalScroll";
 import RowGrid, { GridItem } from "@/components/RowGrid";
-import AdminSidebar from "@/components/AdminSidebar";
-import { RiArrowLeftSLine } from "@remixicon/react";
+import { Button } from "@/ui/Button";
 import Clickable from "@/ui/Clickable";
-import { LivePreview } from "@/components/client/Editor/LivePreview";
 
 export default function PostPreviewPage() {
   const params = useParams();

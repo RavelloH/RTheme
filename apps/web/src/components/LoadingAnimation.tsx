@@ -1,10 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { PageLoadManager } from "./PageLoadManager";
-import { AutoTransition } from "@/ui/AutoTransition";
 import gsap from "gsap";
+
+import { PageLoadManager } from "@/components/PageLoadManager";
 import { useConfig } from "@/context/ConfigContext";
+import { AutoTransition } from "@/ui/AutoTransition";
 
 export function LoadingAnimation() {
   const siteName = useConfig("site.title");

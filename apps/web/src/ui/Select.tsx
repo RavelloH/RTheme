@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import { RiArrowDownSLine } from "@remixicon/react";
+import { AnimatePresence, motion } from "framer-motion";
 
 export interface SelectOption {
   value: string | number;

@@ -1,10 +1,11 @@
-import { generateMetadata } from "@/lib/server/seo";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import RowGrid, { GridItem } from "@/components/RowGrid";
-import MainLayout from "@/components/MainLayout";
-import Marquee from "react-fast-marquee";
-import VerifySheet from "./VerifySheet";
 import { Suspense } from "react";
+import Marquee from "react-fast-marquee";
+
+import VerifySheet from "@/app/(account)/email-verify/VerifySheet";
+import HorizontalScroll from "@/components/HorizontalScroll";
+import MainLayout from "@/components/MainLayout";
+import RowGrid, { GridItem } from "@/components/RowGrid";
+import { generateMetadata } from "@/lib/server/seo";
 
 export const metadata = await generateMetadata(
   {

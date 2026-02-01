@@ -1,21 +1,21 @@
+import DashboardAuditStats from "@/app/(admin)/admin/dashboard/DashboardAuditStats";
+import DashboardCategoriesStats from "@/app/(admin)/admin/dashboard/DashboardCategoriesStats";
+import DashboardCommentsStats from "@/app/(admin)/admin/dashboard/DashboardCommentsStats";
+import DashboardDoctor from "@/app/(admin)/admin/dashboard/DashboardDoctor";
+import DashboardMediaStats from "@/app/(admin)/admin/dashboard/DashboardMediaStats";
+import DashboardPagesStats from "@/app/(admin)/admin/dashboard/DashboardPagesStats";
+import DashboardPostsStats from "@/app/(admin)/admin/dashboard/DashboardPostsStats";
+import DashboardSearchIndexStats from "@/app/(admin)/admin/dashboard/DashboardSearchIndexStats";
+import DashboardSearchInsightStats from "@/app/(admin)/admin/dashboard/DashboardSearchInsightStats";
+import DashboardSecurityStats from "@/app/(admin)/admin/dashboard/DashboardSecurityStats";
+import DashboardTagsStats from "@/app/(admin)/admin/dashboard/DashboardTagsStats";
+import DashboardUsersStats from "@/app/(admin)/admin/dashboard/DashboardUsersStats";
+import DashboardVisitStats from "@/app/(admin)/admin/dashboard/DashboardVisitStats";
+import AdminSidebar from "@/components/AdminSidebar";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import MainLayout from "@/components/MainLayout";
 import RowGrid, { GridItem } from "@/components/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
-import DashboardDoctor from "./DashboardDoctor";
-import AdminSidebar from "@/components/AdminSidebar";
-import DashboardUsersStats from "./DashboardUsersStats";
-import DashboardAuditStats from "./DashboardAuditStats";
-import DashboardPostsStats from "./DashboardPostsStats";
-import DashboardTagsStats from "./DashboardTagsStats";
-import DashboardCategoriesStats from "./DashboardCategoriesStats";
-import DashboardPagesStats from "./DashboardPagesStats";
-import DashboardMediaStats from "./DashboardMediaStats";
-import DashboardCommentsStats from "./DashboardCommentsStats";
-import DashboardSecurityStats from "./DashboardSecurityStats";
-import DashboardVisitStats from "./DashboardVisitStats";
-import DashboardSearchInsightStats from "./DashboardSearchInsightStats";
-import DashboardSearchIndexStats from "./DashboardSearchIndexStats";
 
 export const metadata = await generateMetadata(
   {

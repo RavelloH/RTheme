@@ -1,20 +1,21 @@
 "use client";
 
-import type { Editor } from "@tiptap/react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
 import {
   RiCodeSSlashLine,
   RiDeleteBinLine,
-  RiFileCopyLine,
   RiEdit2Line,
+  RiFileCopyLine,
 } from "@remixicon/react";
-import { Toggle } from "@/ui/Toggle";
-import { Tooltip } from "@/ui/Tooltip";
-import { useToast } from "@/ui/Toast";
-import { useState } from "react";
+import type { Editor } from "@tiptap/react";
+import { AnimatePresence, motion } from "framer-motion";
+
+import { Button } from "@/ui/Button";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
-import { Button } from "@/ui/Button";
+import { useToast } from "@/ui/Toast";
+import { Toggle } from "@/ui/Toggle";
+import { Tooltip } from "@/ui/Tooltip";
 
 interface CodeBlockToolbarProps {
   editor: Editor;

@@ -1,4 +1,4 @@
-import type { BaseBlockConfig } from "../types/base";
+import type { BaseBlockConfig } from "@/blocks/types/base";
 
 export interface PostsBlockContent {
   [key: string]: unknown;

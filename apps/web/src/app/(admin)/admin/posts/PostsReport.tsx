@@ -1,16 +1,17 @@
 "use client";
 
-import { getPostsStats } from "@/actions/stat";
-import { GridItem } from "@/components/RowGrid";
-import { AutoTransition } from "@/ui/AutoTransition";
-import Clickable from "@/ui/Clickable";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { useCallback, useEffect, useState } from "react";
 import { RiRefreshLine, RiStickyNoteAddFill } from "@remixicon/react";
-import { useEffect, useState, useCallback } from "react";
+
+import { getPostsStats } from "@/actions/stat";
+import Link from "@/components/Link";
+import { GridItem } from "@/components/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 import runWithAuth from "@/lib/client/run-with-auth";
-import Link from "@/components/Link";
+import { AutoTransition } from "@/ui/AutoTransition";
+import Clickable from "@/ui/Clickable";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 type StatsData = {
   updatedAt: string;

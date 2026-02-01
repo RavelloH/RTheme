@@ -1,27 +1,28 @@
 "use client";
 
-import { Dialog } from "@/ui/Dialog";
-import { Button } from "@/ui/Button";
-import { Input } from "@/ui/Input";
-import { Switch } from "@/ui/Switch";
-import { Select } from "@/ui/Select";
-import { useToast } from "@/ui/Toast";
-import { useState, useEffect } from "react";
-import { updateMedia, getMediaDetail } from "@/actions/media";
-import type { MediaListItem, GallerySize } from "@repo/shared-types/api/media";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { AutoResizer } from "@/ui/AutoResizer";
+import { useEffect, useState } from "react";
+import type { GallerySize, MediaListItem } from "@repo/shared-types/api/media";
+
+import { getMediaDetail, updateMedia } from "@/actions/media";
 import {
+  formatAperture,
+  formatExposureBias,
+  formatExposureTime,
+  formatFlash,
+  formatFocalLength,
+  formatLensSpec,
   type ParsedExifData,
   parseExifBuffer,
-  formatExposureTime,
-  formatAperture,
-  formatFocalLength,
-  formatExposureBias,
-  formatLensSpec,
-  formatFlash,
 } from "@/lib/client/media-exif";
+import { AutoResizer } from "@/ui/AutoResizer";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { Button } from "@/ui/Button";
+import { Dialog } from "@/ui/Dialog";
+import { Input } from "@/ui/Input";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { Select } from "@/ui/Select";
+import { Switch } from "@/ui/Switch";
+import { useToast } from "@/ui/Toast";
 
 // Group definitions matching MediaPreviewDialog
 const EXIF_GROUPS = {

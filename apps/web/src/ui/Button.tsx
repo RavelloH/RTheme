@@ -2,7 +2,8 @@
 
 import React, { useId } from "react";
 import { motion, type MotionStyle } from "framer-motion";
-import { AutoTransition } from "./AutoTransition";
+
+import { AutoTransition } from "@/ui/AutoTransition";
 
 export interface ButtonProps
   extends Omit<

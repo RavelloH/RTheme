@@ -1,53 +1,54 @@
 "use client";
 
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  getMediaList,
-  getMediaDetail,
-  deleteMedia,
-  batchUpdateMedia,
-} from "@/actions/media";
-import type { FilterConfig, ActionButton } from "@/components/GridTable";
-import GridTable from "@/components/GridTable";
-import type { TableColumn } from "@/ui/Table";
-import { useEffect, useState, useMemo, useCallback, useRef, memo } from "react";
-import type { MediaListItem, MediaDetail } from "@repo/shared-types/api/media";
-import { useBroadcast } from "@/hooks/use-broadcast";
-import { Dialog } from "@/ui/Dialog";
-import { AlertDialog } from "@/ui/AlertDialog";
-import {
-  RiEyeLine,
-  RiEditLine,
-  RiDeleteBinLine,
-  RiImageLine,
-  RiVideoLine,
-  RiMusicLine,
-  RiFileLine,
-  RiGridLine,
-  RiListUnordered,
-  RiSearchLine,
-  RiCloseLine,
   RiArrowLeftSLine,
   RiArrowRightSLine,
-  RiFilter3Line,
   RiCheckLine,
+  RiCloseLine,
+  RiDeleteBinLine,
+  RiEditLine,
+  RiEyeLine,
+  RiFileLine,
+  RiFilter3Line,
+  RiGridLine,
+  RiImageLine,
+  RiListUnordered,
+  RiMusicLine,
+  RiSearchLine,
+  RiVideoLine,
 } from "@remixicon/react";
-import MediaPreviewDialog from "./MediaPreviewDialog";
-import MediaEditDialog from "./MediaEditDialog";
-import { Input } from "@/ui/Input";
-import { Button } from "@/ui/Button";
-import { useToast } from "@/ui/Toast";
-import Link from "@/components/Link";
+import type { MediaDetail, MediaListItem } from "@repo/shared-types/api/media";
+import { AnimatePresence, motion } from "framer-motion";
+
+import {
+  batchUpdateMedia,
+  deleteMedia,
+  getMediaDetail,
+  getMediaList,
+} from "@/actions/media";
+import MediaEditDialog from "@/app/(admin)/admin/media/MediaEditDialog";
+import MediaPreviewDialog from "@/app/(admin)/admin/media/MediaPreviewDialog";
 import CMSImage from "@/components/CMSImage";
+import type { ActionButton, FilterConfig } from "@/components/GridTable";
+import GridTable from "@/components/GridTable";
+import Link from "@/components/Link";
 import { GridItem } from "@/components/RowGrid";
-import { createArray } from "@/lib/client/create-array";
-import { Checkbox } from "@/ui/Checkbox";
-import { Tooltip } from "@/ui/Tooltip";
-import Clickable from "@/ui/Clickable";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { motion, AnimatePresence } from "framer-motion";
-import { Select } from "@/ui/Select";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { useBroadcast } from "@/hooks/use-broadcast";
 import { useMobile } from "@/hooks/use-mobile";
+import { createArray } from "@/lib/client/create-array";
+import { AlertDialog } from "@/ui/AlertDialog";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { Button } from "@/ui/Button";
+import { Checkbox } from "@/ui/Checkbox";
+import Clickable from "@/ui/Clickable";
+import { Dialog } from "@/ui/Dialog";
+import { Input } from "@/ui/Input";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { Select } from "@/ui/Select";
+import type { TableColumn } from "@/ui/Table";
+import { useToast } from "@/ui/Toast";
+import { Tooltip } from "@/ui/Tooltip";
 
 // 提取图片卡片为独立组件并使用 memo
 const MediaGridItem = memo(

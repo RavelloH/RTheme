@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
-import { updateTag } from "@/actions/tag";
 import { connection } from "next/server";
+
+import { updateTag } from "@/actions/tag";
 
 /**
  * @openapi

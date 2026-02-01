@@ -1,7 +1,8 @@
 import "server-only";
 
 import * as Ably from "ably";
-import { getAblyApiKey } from "./ably-config";
+
+import { getAblyApiKey } from "@/lib/server/ably-config";
 
 /**
  * Ably 服务端客户端单例

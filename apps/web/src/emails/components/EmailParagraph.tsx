@@ -1,5 +1,5 @@
-import { Text } from "@react-email/components";
 import * as React from "react";
+import { Text } from "@react-email/components";
 
 /**
  * 邮件段落组件属性

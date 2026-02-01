@@ -1,9 +1,11 @@
 import "server-only";
+
 import { cookies } from "next/headers";
-import { authVerify } from "@/lib/server/auth-verify";
+
 import { getNotices } from "@/actions/notice";
-import NotificationsClient from "./NotificationsClient";
+import NotificationsClient from "@/app/(account)/notifications/NotificationsClient";
 import UnauthorizedPage from "@/app/unauthorized";
+import { authVerify } from "@/lib/server/auth-verify";
 import { generateMetadata } from "@/lib/server/seo";
 
 export const metadata = await generateMetadata(

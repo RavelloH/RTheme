@@ -1,9 +1,9 @@
-import RowGrid, { GridItem } from "@/components/RowGrid";
-import HomeImageGallery from "./client/HomeImageGallery";
-import GlobalMouseTracker from "./client/GlobalMouseTracker";
-import HomeTextSection from "./client/HomeTextSection";
-import { replacePlaceholders as replaceFn } from "../lib";
+import GlobalMouseTracker from "@/blocks/HeroGallery/client/GlobalMouseTracker";
+import HomeImageGallery from "@/blocks/HeroGallery/client/HomeImageGallery";
+import HomeTextSection from "@/blocks/HeroGallery/client/HomeTextSection";
+import { replacePlaceholders as replaceFn } from "@/blocks/lib";
 import type { BlockConfig } from "@/blocks/types";
+import RowGrid, { GridItem } from "@/components/RowGrid";
 
 interface HeroData {
   galleryImages: string[];

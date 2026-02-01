@@ -1,15 +1,16 @@
 "use client";
 
-import HorizontalScroll from "@/components/HorizontalScroll";
-import RowGrid, { GridItem } from "@/components/RowGrid";
-import MainLayout from "@/components/MainLayout";
-import ClientDiagnostics from "../components/ClientDiagnostics";
-import LinkButton from "@/components/LinkButton";
 import {
   RiArrowGoBackLine,
   RiFeedbackLine,
   RiResetRightFill,
 } from "@remixicon/react";
+
+import ClientDiagnostics from "@/components/ClientDiagnostics";
+import HorizontalScroll from "@/components/HorizontalScroll";
+import LinkButton from "@/components/LinkButton";
+import MainLayout from "@/components/MainLayout";
+import RowGrid, { GridItem } from "@/components/RowGrid";
 import { AutoTransition } from "@/ui/AutoTransition";
 
 export default function Error({

@@ -1,10 +1,10 @@
 import type {
   BaseBlockConfig,
-  BlockContentHeader,
-  BlockContentTitle,
   BlockContentBody,
   BlockContentFooter,
-} from "../types/base";
+  BlockContentHeader,
+  BlockContentTitle,
+} from "@/blocks/types/base";
 
 export interface DefaultBlockContent {
   header?: BlockContentHeader;

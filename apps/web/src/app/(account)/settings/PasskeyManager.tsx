@@ -1,32 +1,33 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { startRegistration } from "@simplewebauthn/browser";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  generatePasskeyRegistrationOptions,
-  verifyPasskeyRegistration,
-  listUserPasskeys,
-  renamePasskey,
-  deletePasskey,
-} from "@/actions/passkey";
-import { useToast } from "@/ui/Toast";
-import { Button } from "@/ui/Button";
-import { Input } from "@/ui/Input";
-import { Dialog } from "@/ui/Dialog";
-import { AlertDialog } from "@/ui/AlertDialog";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { AutoResizer } from "@/ui/AutoResizer";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import Clickable from "@/ui/Clickable";
-import {
-  RiKey2Line,
-  RiDeleteBinLine,
-  RiPencilLine,
   RiAddLine,
   RiComputerLine,
+  RiDeleteBinLine,
+  RiKey2Line,
+  RiPencilLine,
   RiSmartphoneLine,
 } from "@remixicon/react";
+import { startRegistration } from "@simplewebauthn/browser";
+
+import {
+  deletePasskey,
+  generatePasskeyRegistrationOptions,
+  listUserPasskeys,
+  renamePasskey,
+  verifyPasskeyRegistration,
+} from "@/actions/passkey";
 import { formatRelativeTime } from "@/lib/shared/relative-time";
+import { AlertDialog } from "@/ui/AlertDialog";
+import { AutoResizer } from "@/ui/AutoResizer";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { Button } from "@/ui/Button";
+import Clickable from "@/ui/Clickable";
+import { Dialog } from "@/ui/Dialog";
+import { Input } from "@/ui/Input";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { useToast } from "@/ui/Toast";
 
 export default function PasskeyManager() {
   const toast = useToast();

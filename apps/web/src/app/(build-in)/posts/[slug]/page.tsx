@@ -1,44 +1,45 @@
-import MainLayout from "@/components/MainLayout";
-import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
+import React from "react";
 import {
+  RiCalendarLine,
+  RiEditLine,
+  RiEye2Line,
   RiHashtag,
+  RiInformationLine,
   RiListView,
   RiText,
   RiUserLine,
-  RiCalendarLine,
-  RiEye2Line,
-  RiEditLine,
-  RiInformationLine,
 } from "@remixicon/react";
-import CMSImage from "@/components/CMSImage";
-import UniversalRenderer from "@/components/server/UniversalRenderer";
-import PostToc from "@/components/PostToc";
-import {
-  getPublishedPost,
-  renderPostContent,
-  getAdjacentPosts,
-} from "@/lib/server/post";
+import { cacheLife, cacheTag } from "next/cache";
 import { notFound } from "next/navigation";
+
+import AdjacentPostCard from "@/components/AdjacentPostCard";
+import CommentCount from "@/components/client/CommentCount";
+import CommentsSection from "@/components/client/CommentsSection";
+import ImageLightbox from "@/components/client/ImageLightbox";
+import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
+import CMSImage from "@/components/CMSImage";
 import Link from "@/components/Link";
+import MainLayout from "@/components/MainLayout";
+import PostToc from "@/components/PostToc";
+import UniversalRenderer from "@/components/server/UniversalRenderer";
 import {
   getCategoryNamePath,
   getCategoryPath,
 } from "@/lib/server/category-utils";
-import { batchQueryMediaFiles } from "@/lib/server/image-query";
-import {
-  processImageUrl,
-  extractInternalHashes,
-} from "@/lib/shared/image-utils";
-import ImageLightbox from "@/components/client/ImageLightbox";
 import { getConfigs } from "@/lib/server/config-cache";
-import React from "react";
-import CommentsSection from "@/components/client/CommentsSection";
-import AdjacentPostCard from "@/components/AdjacentPostCard";
-import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
-import CommentCount from "@/components/client/CommentCount";
+import { batchQueryMediaFiles } from "@/lib/server/image-query";
 import { getFeaturedImageUrl } from "@/lib/server/media-reference";
+import {
+  getAdjacentPosts,
+  getPublishedPost,
+  renderPostContent,
+} from "@/lib/server/post";
 import prisma from "@/lib/server/prisma";
-import { cacheLife, cacheTag } from "next/cache";
+import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
+import {
+  extractInternalHashes,
+  processImageUrl,
+} from "@/lib/shared/image-utils";
 
 interface PageProps {
   params: Promise<{ slug: string }>;

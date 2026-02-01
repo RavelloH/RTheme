@@ -1,20 +1,21 @@
 "use client";
 
-import Clickable from "@/ui/Clickable";
-import Link from "@/components/Link";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { AutoTransition } from "@/ui/AutoTransition";
+import { useEffect, useState } from "react";
 import {
   RiFolderAddFill,
   RiRefreshLine,
   RiStickyNoteAddFill,
   RiUpload2Fill,
 } from "@remixicon/react";
-import { useEffect, useState } from "react";
-import { getPostsStats } from "@/actions/stat";
 import type { GetPostsStatsSuccessResponse } from "@repo/shared-types/api/stats";
+
+import { getPostsStats } from "@/actions/stat";
+import Link from "@/components/Link";
 import ErrorPage from "@/components/ui/Error";
 import { useMobile } from "@/hooks/use-mobile";
+import { AutoTransition } from "@/ui/AutoTransition";
+import Clickable from "@/ui/Clickable";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 type stats = GetPostsStatsSuccessResponse["data"] | null;
 

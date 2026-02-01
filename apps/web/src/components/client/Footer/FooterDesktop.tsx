@@ -1,18 +1,19 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
-import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { gsap } from "gsap";
-import { useMenuStore } from "@/store/menu-store";
+import { usePathname } from "next/navigation";
+
+import { ConsoleButton } from "@/components/ConsoleButton";
+import Link from "@/components/Link";
+import { Panel } from "@/components/Panel";
+import { LoginButton } from "@/components/UserInfo";
+import { useMobile } from "@/hooks/use-mobile";
 import { useConsoleStore } from "@/store/console-store";
 import { useFooterStore } from "@/store/footer-store";
-import { useMobile } from "@/hooks/use-mobile";
-import { Panel } from "../../Panel";
-import { ConsoleButton } from "../../ConsoleButton";
+import { useMenuStore } from "@/store/menu-store";
 import type { MenuItem } from "@/types/menu";
-import Link from "../../Link";
-import { LoginButton } from "../../UserInfo";
 
 interface FooterProps {
   menus: MenuItem[];

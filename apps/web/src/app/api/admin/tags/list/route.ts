@@ -1,8 +1,9 @@
-import { getTagsList } from "@/actions/tag";
-import ResponseBuilder from "@/lib/server/response";
-import { validateGetRequest } from "@/lib/server/request-converter";
 import { GetTagsListSchema } from "@repo/shared-types/api/tag";
 import { connection } from "next/server";
+
+import { getTagsList } from "@/actions/tag";
+import { validateGetRequest } from "@/lib/server/request-converter";
+import ResponseBuilder from "@/lib/server/response";
 
 const response = new ResponseBuilder("serverless");
 

@@ -1,5 +1,7 @@
 import { nextJsConfig } from "@repo/eslint-config/next-js";
+import noRelativeImportPaths from "eslint-plugin-no-relative-import-paths";
 import reactCompiler from "eslint-plugin-react-compiler";
+import simpleImportSort from "eslint-plugin-simple-import-sort";
 
 /** @type {import("eslint").Linter.Config[]} */
 export default [
@@ -12,9 +14,49 @@ export default [
   {
     plugins: {
       "react-compiler": reactCompiler,
+      "no-relative-import-paths": noRelativeImportPaths,
+      "simple-import-sort": simpleImportSort,
     },
     rules: {
       "react-compiler/react-compiler": "error",
+      "no-relative-import-paths/no-relative-import-paths": [
+        "error",
+        {
+          allowSameFolder: false,
+          rootDir: "src",
+          prefix: "@",
+        },
+      ],
+      "simple-import-sort/imports": [
+        "error",
+        {
+          groups: [
+            // 副作用引入
+            ["^\\u0000"],
+
+            // 内置模块
+            ["^node:"],
+
+            // 第三方库
+            ["^react", "^@?\\w"],
+
+            // 内部别名模块
+            ["^@/"],
+
+            // 相对路径
+            [
+              "^\\.\\.(?!/?$)",
+              "^\\.\\./?$",
+              "^\\./(?=.*/)(?!/?$)",
+              "^\\.(?!/?$)",
+              "^\\./?$",
+            ],
+
+            // 样式文件
+            ["^.+\\.s?css$"],
+          ],
+        },
+      ],
     },
   },
   // 针对 TypeScript 文件的特定配置

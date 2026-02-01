@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Input } from "../../../ui/Input";
-import { RiFolderLine, RiCloseLine, RiAddLine } from "@remixicon/react";
-import { searchCategories } from "@/actions/category";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { RiAddLine, RiCloseLine, RiFolderLine } from "@remixicon/react";
 import type { SearchCategoryItem } from "@repo/shared-types/api/category";
-import { AutoTransition } from "@/ui/AutoTransition";
+import { AnimatePresence, motion } from "framer-motion";
+
+import { searchCategories } from "@/actions/category";
 import { AutoResizer } from "@/ui/AutoResizer";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { Input } from "@/ui/Input";
 
 export interface CategoryInputProps {
   value: string | null; // 单个分类路径，如 "技术/前端/React"

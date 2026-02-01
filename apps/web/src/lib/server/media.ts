@@ -1,8 +1,9 @@
 import "server-only";
-import prisma from "@/lib/server/prisma";
-import { generateSignedImageId } from "@/lib/server/image-crypto";
+
 import type { GalleryPhoto } from "@/lib/gallery-layout";
 import { getConfig } from "@/lib/server/config-cache";
+import { generateSignedImageId } from "@/lib/server/image-crypto";
+import prisma from "@/lib/server/prisma";
 
 const GALLERY_PAGE_SIZE = 50;
 

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { Pie } from "@visx/shape";
+import { useEffect, useRef, useState } from "react";
 import { Group } from "@visx/group";
 import { scaleOrdinal } from "@visx/scale";
-import { motion, AnimatePresence } from "framer-motion";
-import generateGradient from "@/lib/shared/gradient";
+import { Pie } from "@visx/shape";
+import { AnimatePresence, motion } from "framer-motion";
+
 import generateComplementary from "@/lib/shared/complementary";
+import generateGradient from "@/lib/shared/gradient";
 
 export interface DonutChartDataPoint {
   name: string;

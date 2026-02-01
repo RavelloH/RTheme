@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Dialog } from "@/ui/Dialog";
+import { useEffect, useRef, useState } from "react";
+import type { Editor } from "@tiptap/react";
+import katex from "katex";
+
+import { AutoResizer } from "@/ui/AutoResizer";
+import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
+import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import { SegmentedControl } from "@/ui/SegmentedControl";
-import katex from "katex";
-import type { Editor } from "@tiptap/react";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { AutoResizer } from "@/ui/AutoResizer";
 
 interface MathDialogProps {
   isOpen: boolean;

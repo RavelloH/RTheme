@@ -1,7 +1,7 @@
 "use client";
 
-import Editor from "@monaco-editor/react";
 import { useEffect, useState } from "react";
+import Editor from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 
 export interface MonacoEditorProps {

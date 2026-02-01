@@ -1,21 +1,22 @@
 "use client";
 
-import type { Editor } from "@tiptap/react";
-import { TextSelection } from "@tiptap/pm/state";
-import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
-import { motion, AnimatePresence } from "framer-motion";
 import {
+  RiAlignCenter,
+  RiAlignLeft,
+  RiAlignRight,
   RiDeleteBinLine,
-  RiInsertColumnLeft,
-  RiInsertColumnRight,
-  RiInsertRowTop,
-  RiInsertRowBottom,
   RiDeleteColumn,
   RiDeleteRow,
-  RiAlignLeft,
-  RiAlignCenter,
-  RiAlignRight,
+  RiInsertColumnLeft,
+  RiInsertColumnRight,
+  RiInsertRowBottom,
+  RiInsertRowTop,
 } from "@remixicon/react";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import { TextSelection } from "@tiptap/pm/state";
+import type { Editor } from "@tiptap/react";
+import { AnimatePresence, motion } from "framer-motion";
+
 import { Toggle } from "@/ui/Toggle";
 import { Tooltip } from "@/ui/Tooltip";
 

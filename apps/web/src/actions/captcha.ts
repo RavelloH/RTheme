@@ -1,11 +1,12 @@
 "use server";
 
+import { CaptchaVerifyRequestSchema } from "@repo/shared-types/api/captcha";
+import { headers } from "next/headers";
+
+import { cap } from "@/lib/server/captcha";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
 import { validateData } from "@/lib/server/validator";
-import { CaptchaVerifyRequestSchema } from "@repo/shared-types/api/captcha";
-import { headers } from "next/headers";
-import { cap } from "@/lib/server/captcha";
 
 export async function createChallenge(serverConfig?: {
   environment?: "serverless" | "serveraction";

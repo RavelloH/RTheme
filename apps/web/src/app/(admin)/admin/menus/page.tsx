@@ -1,11 +1,11 @@
+import MenusReport from "@/app/(admin)/admin/menus/MenusReport";
+import MenusTable from "@/app/(admin)/admin/menus/MenusTable";
+import AdminSidebar from "@/components/AdminSidebar";
 import HorizontalScroll from "@/components/HorizontalScroll";
+import Link from "@/components/Link";
 import MainLayout from "@/components/MainLayout";
 import RowGrid, { GridItem } from "@/components/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
-import AdminSidebar from "@/components/AdminSidebar";
-import MenusReport from "./MenusReport";
-import MenusTable from "./MenusTable";
-import Link from "@/components/Link";
 
 export const metadata = await generateMetadata(
   {

@@ -1,13 +1,13 @@
+import SearchInsightReport from "@/app/(admin)/admin/search-insights/SearchInsightReport";
+import SearchLogsTable from "@/app/(admin)/admin/search-insights/SearchLogsTable";
+import SearchPerformanceChart from "@/app/(admin)/admin/search-insights/SearchPerformanceChart";
+import SearchTrendChart from "@/app/(admin)/admin/search-insights/SearchTrendChart";
+import SearchWordCloud from "@/app/(admin)/admin/search-insights/SearchWordCloud";
+import AdminSidebar from "@/components/AdminSidebar";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import MainLayout from "@/components/MainLayout";
 import RowGrid from "@/components/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
-import AdminSidebar from "@/components/AdminSidebar";
-import SearchInsightReport from "./SearchInsightReport";
-import SearchTrendChart from "./SearchTrendChart";
-import SearchPerformanceChart from "./SearchPerformanceChart";
-import SearchWordCloud from "./SearchWordCloud";
-import SearchLogsTable from "./SearchLogsTable";
 
 export const metadata = await generateMetadata(
   {

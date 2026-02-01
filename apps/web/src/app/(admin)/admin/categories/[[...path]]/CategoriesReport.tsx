@@ -1,20 +1,21 @@
 "use client";
 
-import { getCategoriesStats } from "@/actions/stat";
+import { useCallback, useEffect, useState } from "react";
+import { RiAddLine, RiArrowLeftSLine, RiRefreshLine } from "@remixicon/react";
+
 import { createCategory } from "@/actions/category";
+import { getCategoriesStats } from "@/actions/stat";
+import { useNavigateWithTransition } from "@/components/Link";
 import { GridItem } from "@/components/RowGrid";
-import { AutoTransition } from "@/ui/AutoTransition";
-import Clickable from "@/ui/Clickable";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { RiRefreshLine, RiAddLine, RiArrowLeftSLine } from "@remixicon/react";
-import { useState, useEffect, useCallback } from "react";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { Button } from "@/ui/Button";
+import Clickable from "@/ui/Clickable";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
-import { Button } from "@/ui/Button";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { useToast } from "@/ui/Toast";
-import { useNavigateWithTransition } from "@/components/Link";
 
 type StatsData = {
   updatedAt: string;

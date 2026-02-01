@@ -1,11 +1,12 @@
-import { generateMetadata } from "@/lib/server/seo";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import RowGrid, { GridItem } from "@/components/RowGrid";
-import MainLayout from "@/components/MainLayout";
-import ClientDiagnostics from "../components/ClientDiagnostics";
-import LinkButton from "@/components/LinkButton";
-import { RiArrowGoBackLine, RiFeedbackLine } from "@remixicon/react";
 import { Suspense } from "react";
+import { RiArrowGoBackLine, RiFeedbackLine } from "@remixicon/react";
+
+import ClientDiagnostics from "@/components/ClientDiagnostics";
+import HorizontalScroll from "@/components/HorizontalScroll";
+import LinkButton from "@/components/LinkButton";
+import MainLayout from "@/components/MainLayout";
+import RowGrid, { GridItem } from "@/components/RowGrid";
+import { generateMetadata } from "@/lib/server/seo";
 
 export const metadata = await generateMetadata({
   title: "404 Not Found",

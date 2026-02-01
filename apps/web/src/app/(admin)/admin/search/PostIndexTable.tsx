@@ -1,35 +1,36 @@
 "use client";
 
-import {
-  getIndexStatus,
-  indexPosts,
-  getPostTokenDetails,
-  deleteIndex,
-} from "@/actions/search";
-import type { ActionButton, FilterConfig } from "@/components/GridTable";
-import GridTable from "@/components/GridTable";
-import type { TableColumn } from "@/ui/Table";
 import { useEffect, useState } from "react";
+import {
+  RiAlertLine,
+  RiCheckLine,
+  RiDeleteBinLine,
+  RiErrorWarningLine,
+  RiEyeLine,
+  RiRefreshLine,
+} from "@remixicon/react";
 import type {
   IndexStatusItem,
   PostTokenDetails,
 } from "@repo/shared-types/api/search";
-import { useToast } from "@/ui/Toast";
+
 import {
-  RiRefreshLine,
-  RiCheckLine,
-  RiEyeLine,
-  RiDeleteBinLine,
-  RiAlertLine,
-  RiErrorWarningLine,
-} from "@remixicon/react";
-import { AlertDialog } from "@/ui/AlertDialog";
-import { Dialog } from "@/ui/Dialog";
+  deleteIndex,
+  getIndexStatus,
+  getPostTokenDetails,
+  indexPosts,
+} from "@/actions/search";
+import type { ActionButton, FilterConfig } from "@/components/GridTable";
+import GridTable from "@/components/GridTable";
 import Link from "@/components/Link";
-import { AutoResizer } from "@/ui/AutoResizer";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { AutoTransition } from "@/ui/AutoTransition";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { AlertDialog } from "@/ui/AlertDialog";
+import { AutoResizer } from "@/ui/AutoResizer";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { Dialog } from "@/ui/Dialog";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import type { TableColumn } from "@/ui/Table";
+import { useToast } from "@/ui/Toast";
 
 export default function PostIndexTable() {
   const toast = useToast();

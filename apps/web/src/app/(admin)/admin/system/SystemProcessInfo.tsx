@@ -1,17 +1,18 @@
 "use client";
 
-import { GridItem } from "@/components/RowGrid";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { RiTerminalBoxLine } from "@remixicon/react";
-import ErrorPage from "@/components/ui/Error";
-import { useSystemInfo } from "./use-system-info";
-import { useBroadcast } from "@/hooks/use-broadcast";
 import { useState } from "react";
+import { RiTerminalBoxLine } from "@remixicon/react";
+
+import { useSystemInfo } from "@/app/(admin)/admin/system/use-system-info";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig,
 } from "@/components/AreaChart";
+import { GridItem } from "@/components/RowGrid";
+import ErrorPage from "@/components/ui/Error";
+import { useBroadcast } from "@/hooks/use-broadcast";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 // 格式化字节大小
 function formatBytes(bytes: number): string {

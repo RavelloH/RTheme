@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useEffect, useRef, useState } from "react";
 import { RiArrowDownSLine } from "@remixicon/react";
-import type { TooltipProps } from "./Tooltip";
-import { Tooltip } from "./Tooltip";
+import { AnimatePresence, motion } from "framer-motion";
+
+import type { TooltipProps } from "@/ui/Tooltip";
+import { Tooltip } from "@/ui/Tooltip";
 
 export interface DropdownOption {
   value: string;

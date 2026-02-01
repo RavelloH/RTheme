@@ -1,10 +1,11 @@
-import RowGrid, { GridItem } from "@/components/RowGrid";
-import ParallaxImageCarousel from "@/components/ParallaxImageCarousel";
 import Marquee from "react-fast-marquee";
+
+import { ProcessedText } from "@/blocks/components";
+import { replacePlaceholders } from "@/blocks/lib/shared";
+import type { ProjectsBlockConfig } from "@/blocks/RecentProjects/types";
 import LinkButton from "@/components/LinkButton";
-import { replacePlaceholders } from "../lib/shared";
-import { ProcessedText } from "../components";
-import type { ProjectsBlockConfig } from "./types";
+import ParallaxImageCarousel from "@/components/ParallaxImageCarousel";
+import RowGrid, { GridItem } from "@/components/RowGrid";
 
 /**
  * ProjectsBlock - 服务端组件

@@ -1,26 +1,27 @@
 "use client";
 
 import { useState } from "react";
+import { RiServerFill } from "@remixicon/react";
+
+import { createStorage } from "@/actions/storage";
+import type { StorageConfigValues } from "@/app/(admin)/admin/storages/StorageConfigFields";
+import {
+  createStorageConfigValues,
+  StorageConfigFields,
+  storageConfigValuesToPayload,
+} from "@/app/(admin)/admin/storages/StorageConfigFields";
+import Link from "@/components/Link";
 import { GridItem } from "@/components/RowGrid";
+import { useBroadcastSender } from "@/hooks/use-broadcast";
+import runWithAuth from "@/lib/client/run-with-auth";
+import type { StorageProviderType } from "@/template/storages";
+import { Button } from "@/ui/Button";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import type { SelectOption } from "@/ui/Select";
 import { Select } from "@/ui/Select";
 import { Switch } from "@/ui/Switch";
-import { Button } from "@/ui/Button";
 import { useToast } from "@/ui/Toast";
-import runWithAuth from "@/lib/client/run-with-auth";
-import { createStorage } from "@/actions/storage";
-import type { StorageProviderType } from "@/template/storages";
-import { useBroadcastSender } from "@/hooks/use-broadcast";
-import { RiServerFill } from "@remixicon/react";
-import type { StorageConfigValues } from "./StorageConfigFields";
-import {
-  StorageConfigFields,
-  createStorageConfigValues,
-  storageConfigValuesToPayload,
-} from "./StorageConfigFields";
-import Link from "@/components/Link";
 
 interface StorageFormState {
   name: string;

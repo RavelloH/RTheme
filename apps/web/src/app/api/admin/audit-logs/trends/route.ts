@@ -1,8 +1,9 @@
-import { getAuditTrends } from "@/actions/audit";
-import { connection } from "next/server";
-import ResponseBuilder from "@/lib/server/response";
-import { validateGetRequest } from "@/lib/server/request-converter";
 import { GetAuditTrendsSchema } from "@repo/shared-types/api/audit";
+import { connection } from "next/server";
+
+import { getAuditTrends } from "@/actions/audit";
+import { validateGetRequest } from "@/lib/server/request-converter";
+import ResponseBuilder from "@/lib/server/response";
 
 const response = new ResponseBuilder("serverless");
 

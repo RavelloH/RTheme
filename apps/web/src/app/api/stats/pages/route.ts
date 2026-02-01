@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
-import { getPagesStats } from "@/actions/stat";
 import { connection } from "next/server";
+
+import { getPagesStats } from "@/actions/stat";
 
 /**
  * @openapi

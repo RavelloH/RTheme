@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { connection } from "next/server";
-import { getPostsList, createPost } from "@/actions/post";
+
+import { createPost, getPostsList } from "@/actions/post";
 
 /**
  * @openapi

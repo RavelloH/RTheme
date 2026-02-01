@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+
 import { trackPageView } from "@/actions/analytics";
 
 const VISITOR_ID_KEY = "visitor_id";

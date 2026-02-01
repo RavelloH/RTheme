@@ -1,16 +1,17 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { Button } from "@/ui/Button";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { AutoResizer } from "@/ui/AutoResizer";
-import Clickable from "@/ui/Clickable";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { RiDeleteBinLine } from "@remixicon/react";
+
 import { getSessions } from "@/actions/auth";
-import { useToast } from "@/ui/Toast";
-import { getDeviceIcon } from "./settingsHelpers";
+import { getDeviceIcon } from "@/app/(account)/settings/settingsHelpers";
 import { formatRelativeTime } from "@/lib/shared/relative-time";
+import { AutoResizer } from "@/ui/AutoResizer";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { Button } from "@/ui/Button";
+import Clickable from "@/ui/Clickable";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { useToast } from "@/ui/Toast";
 
 export interface Session {
   id: string;

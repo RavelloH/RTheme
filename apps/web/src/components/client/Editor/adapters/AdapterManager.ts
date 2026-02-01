@@ -8,19 +8,22 @@
  * 4. 状态同步和事件分发
  */
 
-import { TiptapAdapter } from "./TiptapAdapter";
-import { MarkdownAdapter, MDXAdapter } from "./MonacoAdapters";
+import {
+  MarkdownAdapter,
+  MDXAdapter,
+} from "@/components/client/Editor/adapters/MonacoAdapters";
+import { TiptapAdapter } from "@/components/client/Editor/adapters/TiptapAdapter";
 import type {
-  IEditorAdapter,
-  EditorType,
-  TiptapInstance,
-  MonacoInstance,
-  EditorCommand,
-  CommandWithParams,
   AdapterConfig,
   AdapterManagerEvents,
+  CommandWithParams,
+  EditorCommand,
   EditorState,
-} from "./types";
+  EditorType,
+  IEditorAdapter,
+  MonacoInstance,
+  TiptapInstance,
+} from "@/components/client/Editor/adapters/types";
 
 /**
  * 适配器管理器类

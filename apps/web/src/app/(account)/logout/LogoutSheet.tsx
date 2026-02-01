@@ -1,9 +1,10 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+
 import { logout } from "@/actions/auth";
 import { useNavigateWithTransition } from "@/components/Link";
 import { AutoTransition } from "@/ui/AutoTransition";
-import { useEffect, useState, useRef } from "react";
 
 async function performLogout() {
   const result = await logout({});

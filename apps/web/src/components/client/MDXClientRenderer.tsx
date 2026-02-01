@@ -1,18 +1,19 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { hydrate } from "next-mdx-remote-client/csr";
-import { serialize } from "next-mdx-remote-client/serialize";
 import type { SerializeResult } from "next-mdx-remote-client/serialize";
-import { useBroadcastSender } from "@/hooks/use-broadcast";
-import type { MDXContentMessage } from "@/types/broadcast-messages";
+import { serialize } from "next-mdx-remote-client/serialize";
+
 import { useConfig } from "@/context/ConfigContext";
-import type { ConfigType } from "@/types/config";
+import { useBroadcastSender } from "@/hooks/use-broadcast";
 import {
   cleanMDXSource,
-  mdxSerializeOptions,
   createBaseMDXComponents,
+  mdxSerializeOptions,
 } from "@/lib/shared/mdx-config";
+import type { MDXContentMessage } from "@/types/broadcast-messages";
+import type { ConfigType } from "@/types/config";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 interface MDXClientRendererProps {

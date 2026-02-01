@@ -1,9 +1,10 @@
+import { cacheLife, cacheTag } from "next/cache";
+
+import GalleryClient from "@/app/(build-in)/gallery/GalleryClient";
 import MainLayout from "@/components/MainLayout";
+import { getGalleryPhotosData } from "@/lib/server/media";
 import { getRawPage } from "@/lib/server/page-cache";
 import { generateMetadata } from "@/lib/server/seo";
-import { cacheLife, cacheTag } from "next/cache";
-import GalleryClient from "./GalleryClient";
-import { getGalleryPhotosData } from "@/lib/server/media";
 
 const page = await getRawPage("/gallery");
 

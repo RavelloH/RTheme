@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { RiNotification3Line, RiCloseLine } from "@remixicon/react";
-import { useFooterStore } from "@/store/footer-store";
+import { RiCloseLine, RiNotification3Line } from "@remixicon/react";
+import { AnimatePresence, motion } from "framer-motion";
+
 import { markNoticesAsRead } from "@/actions/notice";
+import { useNavigateWithTransition } from "@/components/Link";
+import { useFooterStore } from "@/store/footer-store";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
-import { useNavigateWithTransition } from "./Link";
 import Clickable from "@/ui/Clickable";
 
 /**

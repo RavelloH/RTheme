@@ -1,8 +1,9 @@
+import { Suspense } from "react";
+
+import SettingsClient from "@/app/(account)/settings/SettingsClient";
 import { getConfig } from "@/lib/server/config-cache";
 import type { OAuthProvider } from "@/lib/server/oauth";
-import SettingsClient from "./SettingsClient";
 import { generateMetadata } from "@/lib/server/seo";
-import { Suspense } from "react";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 async function getEnabledSSOProviders(): Promise<OAuthProvider[]> {

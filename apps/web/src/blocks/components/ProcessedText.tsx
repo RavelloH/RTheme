@@ -1,10 +1,11 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import Link from "next/link";
-import { replacePlaceholders } from "../lib/shared";
+
+import { replacePlaceholders } from "@/blocks/lib/shared";
 import {
-  markdownRemarkPlugins,
   markdownRehypePlugins,
+  markdownRemarkPlugins,
 } from "@/lib/shared/mdx-config-shared";
 
 export interface ProcessedTextProps {

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Popover, PopoverTrigger, PopoverContent } from "@/ui/Popover";
-import { Input } from "@/ui/Input";
-import { Button } from "@/ui/Button";
-import { Toggle } from "@/ui/Toggle";
+import { useEffect, useState } from "react";
 import { RiLink, RiText } from "@remixicon/react";
+
+import { Button } from "@/ui/Button";
+import { Input } from "@/ui/Input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/ui/Popover";
+import { Toggle } from "@/ui/Toggle";
 
 interface LinkPopoverProps {
   open: boolean;

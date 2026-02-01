@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import type { Conversation } from "@repo/shared-types/api/message";
-import { Dialog } from "@/ui/Dialog";
-import { useNavigateWithTransition } from "@/components/Link";
+import { useRouter } from "next/navigation";
+
 import MessagesClient from "@/components/client/MessagesClient";
+import { useNavigateWithTransition } from "@/components/Link";
+import { Dialog } from "@/ui/Dialog";
 
 interface MessagesModalProps {
   initialConversations: Conversation[];

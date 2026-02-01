@@ -1,23 +1,24 @@
 "use server";
-import type { NextResponse } from "next/server";
+import type {
+  ApiResponse,
+  ApiResponseData,
+} from "@repo/shared-types/api/common";
 import type {
   GetSystemInfo,
   GetSystemInfoSuccessResponse,
 } from "@repo/shared-types/api/system";
 import { GetSystemInfoSchema } from "@repo/shared-types/api/system";
-import type {
-  ApiResponse,
-  ApiResponseData,
-} from "@repo/shared-types/api/common";
-import ResponseBuilder from "@/lib/server/response";
-import limitControl from "@/lib/server/rate-limit";
-import { headers } from "next/headers";
-import { validateData } from "@/lib/server/validator";
-import { authVerify } from "@/lib/server/auth-verify";
-import os from "os";
 import { exec } from "child_process";
-import { promisify } from "util";
+import { headers } from "next/headers";
+import type { NextResponse } from "next/server";
+import os from "os";
 import { performance } from "perf_hooks";
+import { promisify } from "util";
+
+import { authVerify } from "@/lib/server/auth-verify";
+import limitControl from "@/lib/server/rate-limit";
+import ResponseBuilder from "@/lib/server/response";
+import { validateData } from "@/lib/server/validator";
 
 const execAsync = promisify(exec);
 

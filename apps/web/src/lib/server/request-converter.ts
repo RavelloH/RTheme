@@ -1,9 +1,10 @@
 import "server-only";
 
-import type { z } from "zod";
 import type { NextResponse } from "next/server";
 import { connection } from "next/server";
-import { validateRequestData } from "./validator";
+import type { z } from "zod";
+
+import { validateRequestData } from "@/lib/server/validator";
 
 /**
  * 将GET请求转换为POST请求格式的工具函数

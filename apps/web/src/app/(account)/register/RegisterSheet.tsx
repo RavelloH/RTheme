@@ -1,6 +1,6 @@
 "use client";
 
-import { Input } from "@/ui/Input";
+import { useState } from "react";
 import {
   RiGithubFill,
   RiGoogleFill,
@@ -9,12 +9,13 @@ import {
   RiMicrosoftFill,
   RiUser3Line,
 } from "@remixicon/react";
-import { CaptchaButton } from "@/components/CaptchaButton";
-import { useState } from "react";
-import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+
 import { register as registerAction } from "@/actions/auth";
+import { CaptchaButton } from "@/components/CaptchaButton";
 import Link, { useNavigateWithTransition } from "@/components/Link";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import { Button } from "@/ui/Button";
+import { Input } from "@/ui/Input";
 
 export default function RegisterSheet({
   canRegister,

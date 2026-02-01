@@ -1,6 +1,7 @@
+import { connection } from "next/server";
+
 import { createChallenge } from "@/actions/captcha";
 import ResponseBuilder from "@/lib/server/response";
-import { connection } from "next/server";
 const response = new ResponseBuilder("serverless");
 
 /**

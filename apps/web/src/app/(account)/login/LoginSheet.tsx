@@ -1,27 +1,28 @@
 "use client";
 
-import { Input } from "@/ui/Input";
+import { Suspense, useEffect, useRef, useState } from "react";
 import {
-  RiMicrosoftFill,
   RiGithubFill,
   RiGoogleFill,
   RiLockPasswordLine,
+  RiMicrosoftFill,
   RiUser3Line,
 } from "@remixicon/react";
-import { CaptchaButton } from "@/components/CaptchaButton";
-import { useState, useEffect, useRef, Suspense } from "react";
-import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { useSearchParams } from "next/navigation";
+
 import { login as loginAction } from "@/actions/auth";
 import { verifyTotp } from "@/actions/totp";
-import { useSearchParams } from "next/navigation";
+import PasskeyLoginButton from "@/app/(account)/login/PasskeyLoginButton";
+import { CaptchaButton } from "@/components/CaptchaButton";
 import Link, { useNavigateWithTransition } from "@/components/Link";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import type { OAuthProvider } from "@/lib/server/oauth";
-import { Button } from "@/ui/Button";
-import { useToast } from "@/ui/Toast";
 import { AutoTransition } from "@/ui/AutoTransition";
-import PasskeyLoginButton from "./PasskeyLoginButton";
-import { OtpInput, BackupCodeInput } from "@/ui/OtpInput";
+import { Button } from "@/ui/Button";
 import Clickable from "@/ui/Clickable";
+import { Input } from "@/ui/Input";
+import { BackupCodeInput, OtpInput } from "@/ui/OtpInput";
+import { useToast } from "@/ui/Toast";
 
 interface LoginSheetProps {
   enabledSSOProviders: OAuthProvider[];

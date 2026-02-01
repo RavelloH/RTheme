@@ -1,8 +1,9 @@
 "use client";
 
-import type { ConfigType } from "@/types/config";
-import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { createContext, useContext, useEffect } from "react";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
+
+import type { ConfigType } from "@/types/config";
 
 type ThemeProviderProps = React.ComponentProps<typeof NextThemesProvider> & {
   mainColor: ConfigType<"site.color">;

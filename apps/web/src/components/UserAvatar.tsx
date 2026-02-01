@@ -1,11 +1,12 @@
 "use client";
 
-import Avatar from "boring-avatars";
 import { useEffect, useMemo, useState } from "react";
+import Avatar from "boring-avatars";
 import { md5 } from "js-md5";
-import { useMainColor } from "./ThemeProvider";
-import generateGradient from "@/lib/shared/gradient";
+
+import { useMainColor } from "@/components/ThemeProvider";
 import generateComplementary from "@/lib/shared/complementary";
+import generateGradient from "@/lib/shared/gradient";
 
 type AvatarShape = "circle" | "square";
 type BoringAvatarVariant =

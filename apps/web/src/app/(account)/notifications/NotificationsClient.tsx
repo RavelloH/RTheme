@@ -1,33 +1,34 @@
 "use client";
 
 import React, {
+  useCallback,
+  useEffect,
+  useRef,
   useState,
   useTransition,
-  useRef,
-  useEffect,
-  useCallback,
 } from "react";
+import { useInView } from "react-intersection-observer";
 import {
-  RiNotification3Line,
   RiCheckDoubleLine,
-  RiTimeLine,
-  RiZzzLine,
   RiMailLine,
   RiMailOpenLine,
+  RiNotification3Line,
+  RiTimeLine,
+  RiZzzLine,
 } from "@remixicon/react";
-import { useInView } from "react-intersection-observer";
-import { Button } from "@/ui/Button";
-import { useToast } from "@/ui/Toast";
+
 import {
-  markNoticesAsRead,
-  markAllNoticesAsRead,
   getReadNotices,
+  markAllNoticesAsRead,
+  markNoticesAsRead,
 } from "@/actions/notice";
 import { useNavigateWithTransition } from "@/components/Link";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 import { AutoResizer } from "@/ui/AutoResizer";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { Button } from "@/ui/Button";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { useToast } from "@/ui/Toast";
 import { Tooltip } from "@/ui/Tooltip";
 
 interface Notice {

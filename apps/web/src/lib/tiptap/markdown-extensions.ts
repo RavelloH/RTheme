@@ -11,8 +11,8 @@
  */
 
 import Highlight from "@tiptap/extension-highlight";
-import Superscript from "@tiptap/extension-superscript";
 import Subscript from "@tiptap/extension-subscript";
+import Superscript from "@tiptap/extension-superscript";
 import TextAlign from "@tiptap/extension-text-align";
 import type { JSONContent } from "@tiptap/react";
 

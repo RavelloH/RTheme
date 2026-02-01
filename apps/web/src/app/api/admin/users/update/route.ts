@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
-import { updateUsers } from "@/actions/user";
 import { connection } from "next/server";
+
+import { updateUsers } from "@/actions/user";
 
 /**
  * @openapi

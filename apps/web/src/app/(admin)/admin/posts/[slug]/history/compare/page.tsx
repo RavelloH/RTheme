@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
-import { getPostVersion } from "@/actions/post";
-import type { PostVersionDetail } from "@repo/shared-types/api/post";
 import { DiffEditor } from "@monaco-editor/react";
+import { RiArrowLeftSLine } from "@remixicon/react";
+import type { PostVersionDetail } from "@repo/shared-types/api/post";
+import { useParams, useSearchParams } from "next/navigation";
+
+import { getPostVersion } from "@/actions/post";
+import AdminSidebar from "@/components/AdminSidebar";
+import HorizontalScroll from "@/components/HorizontalScroll";
 import { useNavigateWithTransition } from "@/components/Link";
 import MainLayout from "@/components/MainLayout";
-import HorizontalScroll from "@/components/HorizontalScroll";
 import RowGrid, { GridItem } from "@/components/RowGrid";
-import AdminSidebar from "@/components/AdminSidebar";
 import Clickable from "@/ui/Clickable";
-import { RiArrowLeftSLine } from "@remixicon/react";
 
 export default function PostHistoryComparePage() {
   const params = useParams();

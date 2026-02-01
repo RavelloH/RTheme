@@ -1,13 +1,14 @@
-import { notFound } from "next/navigation";
-import type { Metadata } from "next";
-import prisma from "@/lib/server/prisma";
-import { generateSignedImageId } from "@/lib/server/image-crypto";
-import PhotoDetailClient from "./PhotoDetailClient";
 import { md5 } from "js-md5";
+import type { Metadata } from "next";
+import { cacheLife, cacheTag } from "next/cache";
+import { notFound } from "next/navigation";
+
+import PhotoDetailClient from "@/app/(build-in)/gallery/photo/[slug]/PhotoDetailClient";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import MainLayout from "@/components/MainLayout";
+import { generateSignedImageId } from "@/lib/server/image-crypto";
+import prisma from "@/lib/server/prisma";
 import { generateMetadata as generateSeoMetadata } from "@/lib/server/seo";
-import { cacheLife, cacheTag } from "next/cache";
 
 interface PhotoPageProps {
   params: Promise<{ slug: string }>;

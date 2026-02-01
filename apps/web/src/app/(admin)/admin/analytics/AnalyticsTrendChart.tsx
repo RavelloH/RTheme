@@ -1,14 +1,15 @@
 "use client";
 
-import { GridItem } from "@/components/RowGrid";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { useEffect, useState } from "react";
+
+import { getRealTimeStats } from "@/actions/analytics";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig,
 } from "@/components/AreaChart";
-import { useState, useEffect } from "react";
-import { getRealTimeStats } from "@/actions/analytics";
+import { GridItem } from "@/components/RowGrid";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 interface AnalyticsTrendChartProps {
   mainColor: string;

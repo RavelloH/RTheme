@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { getSearchLogStats } from "@/actions/search";
-import type { SearchLogStatsResult } from "@repo/shared-types/api/search";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { GridItem } from "@/components/RowGrid";
-import Clickable from "@/ui/Clickable";
+import React, { useCallback, useEffect, useState } from "react";
 import { RiRefreshLine } from "@remixicon/react";
+import type { SearchLogStatsResult } from "@repo/shared-types/api/search";
+
+import { getSearchLogStats } from "@/actions/search";
+import { GridItem } from "@/components/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { AutoTransition } from "@/ui/AutoTransition";
+import Clickable from "@/ui/Clickable";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 /**
  * 生成自然语言描述

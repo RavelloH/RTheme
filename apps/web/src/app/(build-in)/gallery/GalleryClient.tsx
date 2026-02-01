@@ -1,15 +1,16 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
-import GalleryGrid from "./GalleryGrid";
-import { generateLayout } from "@/lib/gallery-layout";
-import type { GalleryPhoto, LayoutState, Tile } from "@/lib/gallery-layout";
-import { generateSkeletonPhotos } from "@/lib/gallery-skeleton";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import { getGalleryPhotos } from "@/actions/media";
+import { useEffect, useMemo, useState } from "react";
 import { useInView } from "react-intersection-observer";
+
+import { getGalleryPhotos } from "@/actions/media";
+import GalleryGrid from "@/app/(build-in)/gallery/GalleryGrid";
+import GalleryListMobile from "@/app/(build-in)/gallery/GalleryListMobile";
+import HorizontalScroll from "@/components/HorizontalScroll";
 import { useMobile } from "@/hooks/use-mobile";
-import GalleryListMobile from "./GalleryListMobile";
+import type { GalleryPhoto, LayoutState, Tile } from "@/lib/gallery-layout";
+import { generateLayout } from "@/lib/gallery-layout";
+import { generateSkeletonPhotos } from "@/lib/gallery-skeleton";
 
 interface GalleryClientProps {
   initialPhotos: GalleryPhoto[];

@@ -2,12 +2,13 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import VisualPageEditor from "@/components/PageEditor/VisualPageEditor";
+
 import { updatePage } from "@/actions/page";
-import { useToast } from "@/ui/Toast";
 import type { BlockConfig } from "@/blocks/types";
+import VisualPageEditor from "@/components/PageEditor/VisualPageEditor";
 import runWithAuth from "@/lib/client/run-with-auth";
 import type { PageItem } from "@/lib/server/page-cache";
+import { useToast } from "@/ui/Toast";
 
 export default function LayoutEditorClientWrapper({
   page,

@@ -1,24 +1,25 @@
 "use client";
 
-import { GridItem } from "@/components/RowGrid";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { getAuditTrends } from "@/actions/audit";
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { AuditTrendItem } from "@repo/shared-types/api/audit";
-import StackedBarChart, {
-  type StackedBarChartDataPoint,
-  type SeriesConfig as StackedBarSeriesConfig,
-} from "@/components/StackedBarChart";
+
+import { getAuditTrends } from "@/actions/audit";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig as AreaSeriesConfig,
 } from "@/components/AreaChart";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { GridItem } from "@/components/RowGrid";
+import StackedBarChart, {
+  type SeriesConfig as StackedBarSeriesConfig,
+  type StackedBarChartDataPoint,
+} from "@/components/StackedBarChart";
+import { useMainColor } from "@/components/ThemeProvider";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
-import generateGradient from "@/lib/shared/gradient";
 import generateComplementary from "@/lib/shared/complementary";
-import { useMainColor } from "@/components/ThemeProvider";
+import generateGradient from "@/lib/shared/gradient";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 export default function AuditHistoryChart() {
   const mainColor = useMainColor().primary;

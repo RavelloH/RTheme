@@ -1,30 +1,31 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  verifyPasswordForReauth,
-  getCurrentUserForReauth,
-  verifyTotpForReauth,
-} from "@/actions/reauth";
-import type { OAuthProvider } from "@/lib/server/oauth";
-import { Button } from "@/ui/Button";
-import { Input } from "@/ui/Input";
-import { useToast } from "@/ui/Toast";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { AutoTransition } from "@/ui/AutoTransition";
-import {
-  RiGoogleFill,
   RiGithubFill,
+  RiGoogleFill,
   RiMicrosoftFill,
   RiShieldKeyholeLine,
 } from "@remixicon/react";
-import UnauthorizedPage from "../../unauthorized";
+import { useRouter, useSearchParams } from "next/navigation";
+
+import {
+  getCurrentUserForReauth,
+  verifyPasswordForReauth,
+  verifyTotpForReauth,
+} from "@/actions/reauth";
+import PasskeyReauthButton from "@/app/(account)/reauth/PasskeyReauthButton";
+import UnauthorizedPage from "@/app/unauthorized";
 import { CaptchaButton } from "@/components/CaptchaButton";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
-import PasskeyReauthButton from "./PasskeyReauthButton";
-import { OtpInput } from "@/ui/OtpInput";
+import type { OAuthProvider } from "@/lib/server/oauth";
 import { AutoResizer } from "@/ui/AutoResizer";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { Button } from "@/ui/Button";
+import { Input } from "@/ui/Input";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { OtpInput } from "@/ui/OtpInput";
+import { useToast } from "@/ui/Toast";
 
 interface ReauthClientProps {
   passkeyEnabled: boolean;

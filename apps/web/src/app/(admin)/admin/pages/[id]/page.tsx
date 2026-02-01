@@ -1,10 +1,10 @@
+import LayoutEditorClientWrapper from "@/app/(admin)/admin/pages/[id]/client";
+import AdminSidebar from "@/components/AdminSidebar";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import MainLayout from "@/components/MainLayout";
-import { generateMetadata } from "@/lib/server/seo";
-import AdminSidebar from "@/components/AdminSidebar";
-import { getRawPageById, getSystemPageConfig } from "@/lib/server/page-cache";
 import { resolveBlockData } from "@/lib/server/block-data-resolver";
-import LayoutEditorClientWrapper from "./client";
+import { getRawPageById, getSystemPageConfig } from "@/lib/server/page-cache";
+import { generateMetadata } from "@/lib/server/seo";
 
 export const metadata = await generateMetadata(
   {

@@ -1,8 +1,9 @@
+import { ResendEmailVerificationSchema } from "@repo/shared-types/api/auth";
+import { connection } from "next/server";
+
+import { resendEmailVerification } from "@/actions/auth";
 import ResponseBuilder from "@/lib/server/response";
 import { validateRequestJSON } from "@/lib/server/validator";
-import { ResendEmailVerificationSchema } from "@repo/shared-types/api/auth";
-import { resendEmailVerification } from "@/actions/auth";
-import { connection } from "next/server";
 
 const response = new ResponseBuilder("serverless");
 

@@ -1,12 +1,12 @@
 // script/update-db.ts
 // 数据库更新和迁移脚本
 
-import { config } from "dotenv";
-import Rlog from "rlog-js";
-import path from "path";
-import { pathToFileURL } from "url";
 import { execSync } from "child_process";
+import { config } from "dotenv";
 import fs from "fs";
+import path from "path";
+import Rlog from "rlog-js";
+import { pathToFileURL } from "url";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let prisma: any;

@@ -1,12 +1,13 @@
-import { generateMetadata } from "@/lib/server/seo";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import RowGrid, { GridItem } from "@/components/RowGrid";
-import MainLayout from "@/components/MainLayout";
-import Marquee from "react-fast-marquee";
-import LoginSheet from "./LoginSheet";
 import { Suspense } from "react";
+import Marquee from "react-fast-marquee";
+
+import LoginSheet from "@/app/(account)/login/LoginSheet";
+import HorizontalScroll from "@/components/HorizontalScroll";
+import MainLayout from "@/components/MainLayout";
+import RowGrid, { GridItem } from "@/components/RowGrid";
 import { getConfig } from "@/lib/server/config-cache";
 import type { OAuthProvider } from "@/lib/server/oauth";
+import { generateMetadata } from "@/lib/server/seo";
 
 export const metadata = await generateMetadata(
   {

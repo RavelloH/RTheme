@@ -1,8 +1,9 @@
+import { ChangePasswordSchema } from "@repo/shared-types/api/auth";
+import { connection } from "next/server";
+
+import { changePassword } from "@/actions/auth";
 import ResponseBuilder from "@/lib/server/response";
 import { validateRequestJSON } from "@/lib/server/validator";
-import { ChangePasswordSchema } from "@repo/shared-types/api/auth";
-import { changePassword } from "@/actions/auth";
-import { connection } from "next/server";
 const response = new ResponseBuilder("serverless");
 
 /**

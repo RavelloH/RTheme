@@ -1,11 +1,12 @@
+import { cookies } from "next/headers";
+import { notFound } from "next/navigation";
+
+import { getPostDetail } from "@/actions/post";
+import AdminSidebar from "@/components/AdminSidebar";
+import Editor from "@/components/client/Editor/Editor";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import MainLayout from "@/components/MainLayout";
 import { generateMetadata as generateSeoMetadata } from "@/lib/server/seo";
-import AdminSidebar from "@/components/AdminSidebar";
-import Editor from "@/components/client/Editor/Editor";
-import { getPostDetail } from "@/actions/post";
-import { cookies } from "next/headers";
-import { notFound } from "next/navigation";
 
 type Props = {
   params: Promise<{ slug: string }>;

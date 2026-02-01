@@ -1,10 +1,11 @@
-import { refresh } from "@/actions/auth";
+import type { RefreshToken } from "@repo/shared-types/api/auth";
 import type {
   ApiResponse,
   ApiResponseData,
 } from "@repo/shared-types/api/common";
-import type { RefreshToken } from "@repo/shared-types/api/auth";
 import type { NextResponse } from "next/server";
+
+import { refresh } from "@/actions/auth";
 
 type PossibleResult<T extends ApiResponseData> =
   | ApiResponse<T>

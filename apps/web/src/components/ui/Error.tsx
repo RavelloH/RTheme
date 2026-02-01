@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
+import { RiAlertLine, RiRefreshLine } from "@remixicon/react";
+
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
-import { RiAlertLine, RiRefreshLine } from "@remixicon/react";
-import { useState } from "react";
 
 export default function ErrorPage({
   reason,

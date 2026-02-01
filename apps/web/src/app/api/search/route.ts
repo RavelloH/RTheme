@@ -1,6 +1,7 @@
-import { searchPosts } from "@/actions/search";
 import { SearchPostsSchema } from "@repo/shared-types/api/search";
 import { connection } from "next/server";
+
+import { searchPosts } from "@/actions/search";
 
 /**
  * @openapi

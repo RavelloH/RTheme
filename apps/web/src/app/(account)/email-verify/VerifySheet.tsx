@@ -1,18 +1,19 @@
 "use client";
 
-import { Input } from "@/ui/Input";
-import { RiMailLine, RiShieldKeyholeLine } from "@remixicon/react";
-import { CaptchaButton } from "@/components/CaptchaButton";
 import { useState } from "react";
-import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
-import {
-  verifyEmail as verifyEmailAction,
-  resendEmailVerification as resendEmailAction,
-} from "@/actions/auth";
+import { RiMailLine, RiShieldKeyholeLine } from "@remixicon/react";
 import { useSearchParams } from "next/navigation";
+
+import {
+  resendEmailVerification as resendEmailAction,
+  verifyEmail as verifyEmailAction,
+} from "@/actions/auth";
+import { CaptchaButton } from "@/components/CaptchaButton";
 import Link, { useNavigateWithTransition } from "@/components/Link";
-import { Dialog } from "@/ui/Dialog";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import Clickable from "@/ui/Clickable";
+import { Dialog } from "@/ui/Dialog";
+import { Input } from "@/ui/Input";
 
 export default function VerifySheet() {
   const navigate = useNavigateWithTransition();

@@ -1,17 +1,18 @@
 "use client";
 
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { RiGhostLine } from "@remixicon/react";
+
 import { searchPosts } from "@/actions/search";
-import PostCard from "@/components/PostCard";
+import HighlightedText from "@/components/client/HighlightedText";
 import EmptyPostCard from "@/components/EmptyPostCard";
-import RowGrid, { GridItem } from "@/components/RowGrid";
 import PaginationNav from "@/components/PaginationNav";
+import PostCard from "@/components/PostCard";
+import RowGrid, { GridItem } from "@/components/RowGrid";
+import { useBroadcast } from "@/hooks/use-broadcast";
 import { createArray } from "@/lib/client/create-array";
-import HighlightedText from "./HighlightedText";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { useBroadcast } from "@/hooks/use-broadcast";
-import { RiGhostLine } from "@remixicon/react";
 
 export interface PostData {
   title: string;

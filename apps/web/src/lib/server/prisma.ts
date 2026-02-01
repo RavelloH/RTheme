@@ -1,7 +1,8 @@
 import "server-only";
 
-import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
+
 import type { Prisma } from ".prisma/client";
 import { PrismaClient } from ".prisma/client";
 

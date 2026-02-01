@@ -1,35 +1,36 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { useGalleryLightboxStore } from "@/store/gallery-lightbox-store";
+import { RiCloseLine, RiLoader4Line } from "@remixicon/react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+
+import ImageLightbox from "@/components/client/ImageLightbox";
 import CMSImage from "@/components/CMSImage";
+import Link from "@/components/Link";
 import UserAvatar from "@/components/UserAvatar";
+import { useMobile } from "@/hooks/use-mobile";
 import {
-  type ParsedExifData,
-  parseExifBuffer,
-  formatDateTime,
-  formatExposureTime,
   formatAperture,
+  formatColorSpace,
+  formatDateTime,
+  formatExposureBias,
+  formatExposureMode,
+  formatExposureProgram,
+  formatExposureTime,
+  formatFlash,
   formatFocalLength,
   formatGPS,
-  formatMeteringMode,
-  formatExposureProgram,
-  formatExposureMode,
-  formatWhiteBalance,
-  formatSceneCaptureType,
-  formatFlash,
-  formatColorSpace,
-  formatExposureBias,
   formatLensSpec,
+  formatMeteringMode,
+  formatSceneCaptureType,
   formatSensingMethod,
+  formatWhiteBalance,
+  type ParsedExifData,
+  parseExifBuffer,
 } from "@/lib/client/media-exif";
-import { RiCloseLine, RiLoader4Line } from "@remixicon/react";
-import ImageLightbox from "@/components/client/ImageLightbox";
-import Link from "@/components/Link";
-import { useMobile } from "@/hooks/use-mobile";
+import { useGalleryLightboxStore } from "@/store/gallery-lightbox-store";
 import { Drawer } from "@/ui/Drawer";
 
 // 格式化文件大小

@@ -1,8 +1,9 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
+import { RiArrowDownLine, RiArrowUpLine, RiListCheck } from "@remixicon/react";
 import type { Editor } from "@tiptap/react";
-import { useEffect, useState, useRef, useCallback } from "react";
-import { RiListCheck, RiArrowUpLine, RiArrowDownLine } from "@remixicon/react";
+
 import Clickable from "@/ui/Clickable";
 
 interface Heading {

@@ -1,8 +1,9 @@
 import "server-only";
 
 import fs from "fs";
-import path from "path";
 import { unstable_cache } from "next/cache";
+import path from "path";
+
 import type {
   CONFIG_DEFINITIONS,
   ConfigKeys,

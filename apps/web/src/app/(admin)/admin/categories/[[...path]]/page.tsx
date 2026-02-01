@@ -1,15 +1,15 @@
+import CategoriesDistributionChart from "@/app/(admin)/admin/categories/[[...path]]/CategoriesDistributionChart";
+import CategoriesReport from "@/app/(admin)/admin/categories/[[...path]]/CategoriesReport";
+import CategoriesTable from "@/app/(admin)/admin/categories/[[...path]]/CategoriesTable";
+import AdminSidebar from "@/components/AdminSidebar";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import MainLayout from "@/components/MainLayout";
 import RowGrid from "@/components/RowGrid";
-import { generateMetadata as generateSeoMetadata } from "@/lib/server/seo";
-import AdminSidebar from "@/components/AdminSidebar";
-import CategoriesReport from "./CategoriesReport";
-import CategoriesDistributionChart from "./CategoriesDistributionChart";
-import CategoriesTable from "./CategoriesTable";
 import {
   findCategoryByPath,
   getCategoryNamePath,
 } from "@/lib/server/category-utils";
+import { generateMetadata as generateSeoMetadata } from "@/lib/server/seo";
 
 type Props = {
   params: Promise<{

@@ -1,14 +1,15 @@
+import { Suspense } from "react";
+
+import MediaAdd from "@/app/(admin)/admin/media/MediaAdd";
+import MediaImport from "@/app/(admin)/admin/media/MediaImport";
+import MediaStats from "@/app/(admin)/admin/media/MediaStats";
+import MediaStatsChart from "@/app/(admin)/admin/media/MediaStatsChart";
+import MediaTable from "@/app/(admin)/admin/media/MediaTable";
+import AdminSidebar from "@/components/AdminSidebar";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import MainLayout from "@/components/MainLayout";
 import RowGrid from "@/components/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
-import AdminSidebar from "@/components/AdminSidebar";
-import MediaStats from "./MediaStats";
-import MediaStatsChart from "./MediaStatsChart";
-import MediaTable from "./MediaTable";
-import MediaAdd from "./MediaAdd";
-import MediaImport from "./MediaImport";
-import { Suspense } from "react";
 
 export const metadata = await generateMetadata(
   {

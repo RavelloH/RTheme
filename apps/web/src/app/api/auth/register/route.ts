@@ -1,8 +1,9 @@
+import { RegisterUserSchema } from "@repo/shared-types/api/auth";
+import { connection } from "next/server";
+
+import { register } from "@/actions/auth";
 import ResponseBuilder from "@/lib/server/response";
 import { validateRequestJSON } from "@/lib/server/validator";
-import { RegisterUserSchema } from "@repo/shared-types/api/auth";
-import { register } from "@/actions/auth";
-import { connection } from "next/server";
 const response = new ResponseBuilder("serverless");
 
 /**

@@ -1,11 +1,13 @@
 import "server-only";
+
 import { cookies } from "next/headers";
-import { authVerify } from "@/lib/server/auth-verify";
+
 import { getConversations } from "@/actions/message";
-import MessagesClient from "@/components/client/MessagesClient";
 import UnauthorizedPage from "@/app/unauthorized";
-import { generateMetadata } from "@/lib/server/seo";
+import MessagesClient from "@/components/client/MessagesClient";
 import ErrorPage from "@/components/ui/Error";
+import { authVerify } from "@/lib/server/auth-verify";
+import { generateMetadata } from "@/lib/server/seo";
 
 export const metadata = await generateMetadata(
   {

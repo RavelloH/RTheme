@@ -1,34 +1,35 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { RiDeleteBinLine, RiMoreLine } from "@remixicon/react";
 import type {
   Conversation,
   ConversationUser,
   Message,
 } from "@repo/shared-types/api/message";
-import { useOptimisticMessages } from "@/hooks/use-optimistic-messages";
-import { sendMessage, markConversationAsRead } from "@/actions/message";
-import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+
+import { markConversationAsRead, sendMessage } from "@/actions/message";
+import MessageInput from "@/components/client/MessageInput";
+import type { MessageListRef } from "@/components/client/MessageList";
+import MessageList from "@/components/client/MessageList";
+import NewMessageFloatingNotice from "@/components/client/NewMessageFloatingNotice";
+import Link from "@/components/Link";
 import type { ConnectionStatus } from "@/components/NotificationProvider";
 import UserAvatar from "@/components/UserAvatar";
-import MessageList from "./MessageList";
-import type { MessageListRef } from "./MessageList";
-import MessageInput from "./MessageInput";
-import NewMessageFloatingNotice from "./NewMessageFloatingNotice";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { useOptimisticMessages } from "@/hooks/use-optimistic-messages";
 import { AlertDialog } from "@/ui/AlertDialog";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { useToast } from "@/ui/Toast";
-import { RiMoreLine, RiDeleteBinLine } from "@remixicon/react";
-import {
-  Menu,
-  MenuItem,
-  MenuTrigger,
-  MenuContent,
-  MenuAction,
-} from "@/ui/Menu";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
-import Link from "../Link";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import {
+  Menu,
+  MenuAction,
+  MenuContent,
+  MenuItem,
+  MenuTrigger,
+} from "@/ui/Menu";
+import { useToast } from "@/ui/Toast";
 
 interface ChatWindowProps {
   conversation?: Conversation; // 可选，临时会话时为空

@@ -2,10 +2,11 @@
 
 import React from "react";
 import Markdown from "react-markdown";
+
 import { createMarkdownComponents } from "@/lib/shared/mdx-config";
 import {
-  markdownRemarkPlugins,
   markdownRehypePlugins,
+  markdownRemarkPlugins,
   type ShikiTheme,
 } from "@/lib/shared/mdx-config-shared";
 

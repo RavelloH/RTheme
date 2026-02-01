@@ -1,7 +1,8 @@
-import ReauthClient from "./ReauthClient";
+import { Suspense } from "react";
+
+import ReauthClient from "@/app/(account)/reauth/ReauthClient";
 import { getConfig } from "@/lib/server/config-cache";
 import { generateMetadata } from "@/lib/server/seo";
-import { Suspense } from "react";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 export const metadata = await generateMetadata(

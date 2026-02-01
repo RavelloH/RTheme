@@ -1,6 +1,7 @@
 import { Feed } from "feed";
-import { getFeedData } from "@/lib/server/feed-data";
 import { notFound } from "next/navigation";
+
+import { getFeedData } from "@/lib/server/feed-data";
 
 export async function GET() {
   const { posts, siteConfig, rssConfig } = await getFeedData();

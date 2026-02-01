@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useId, forwardRef } from "react";
+import React, { forwardRef, useId, useState } from "react";
 import { motion } from "framer-motion";
-import { AutoTransition } from "./AutoTransition";
+
+import { AutoTransition } from "@/ui/AutoTransition";
 
 export interface InputProps
   extends Omit<

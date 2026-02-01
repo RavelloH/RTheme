@@ -1,10 +1,11 @@
+import { cookies, headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { cookies, headers } from "next/headers";
-import { type OAuthProvider } from "@/lib/server/oauth";
-import { handleSSOCallback, handleSSOBind } from "@/actions/sso";
-import limitControl from "@/lib/server/rate-limit";
+
+import { handleSSOBind, handleSSOCallback } from "@/actions/sso";
 import { jwtTokenVerify } from "@/lib/server/jwt";
+import { type OAuthProvider } from "@/lib/server/oauth";
+import limitControl from "@/lib/server/rate-limit";
 
 export async function GET(
   request: NextRequest,

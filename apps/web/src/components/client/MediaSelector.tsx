@@ -1,36 +1,37 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useInView } from "react-intersection-observer";
-import { Dialog } from "@/ui/Dialog";
-import { Button } from "@/ui/Button";
-import { Input } from "@/ui/Input";
-import { Select } from "@/ui/Select";
-import { Tooltip } from "@/ui/Tooltip";
-import { useToast } from "@/ui/Toast";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { Checkbox } from "@/ui/Checkbox";
-import CMSImage from "@/components/CMSImage";
 import {
   RiAddLine,
-  RiEditLine,
-  RiCloseLine,
-  RiImageLine,
-  RiUploadLine,
   RiCheckFill,
-  RiLoader4Line,
-  RiFileDamageFill,
   RiCloseFill,
+  RiCloseLine,
+  RiEditLine,
+  RiFileDamageFill,
+  RiImageLine,
+  RiLoader4Line,
   RiRestartLine,
+  RiUploadLine,
 } from "@remixicon/react";
-import { getMediaList } from "@/actions/media";
 import { type MediaListItem } from "@repo/shared-types/api/media";
-import { getStorageList } from "@/actions/storage";
 import Image from "next/image";
+
+import { getMediaList } from "@/actions/media";
+import { getStorageList } from "@/actions/storage";
+import CMSImage from "@/components/CMSImage";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
-import { SegmentedControl } from "@/ui/SegmentedControl";
+import { Button } from "@/ui/Button";
+import { Checkbox } from "@/ui/Checkbox";
 import Clickable from "@/ui/Clickable";
+import { Dialog } from "@/ui/Dialog";
+import { Input } from "@/ui/Input";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { SegmentedControl } from "@/ui/SegmentedControl";
+import { Select } from "@/ui/Select";
+import { useToast } from "@/ui/Toast";
+import { Tooltip } from "@/ui/Tooltip";
 
 type ProcessMode = "lossy" | "lossless" | "original";
 
