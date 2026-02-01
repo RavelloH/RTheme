@@ -7,8 +7,12 @@ import { batchQueryMediaFiles } from "@/lib/server/image-query";
 import { processImageUrl } from "@/lib/shared/image-common";
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import type { BlockConfig } from "@/blocks/types";
+import { fetchBlockInterpolatedData } from "../lib/server";
 
-export async function postsFetcher(_config: BlockConfig) {
+export async function postsFetcher(config: BlockConfig) {
+  // 0. 启动插值数据获取
+  const interpolatedPromise = fetchBlockInterpolatedData(config.content);
+
   // 1. 并发执行数据库查询：文章列表和总数统计互不依赖，应当并行
   const [homePosts, totalPosts] = await Promise.all([
     prisma.post.findMany({
@@ -51,9 +55,11 @@ export async function postsFetcher(_config: BlockConfig) {
 
   // 如果没有文章，直接返回，减少后续不必要的计算
   if (homePosts.length === 0) {
+    const interpolatedData = await interpolatedPromise;
     return {
       displayPosts: Array(5).fill(null),
       totalPosts,
+      ...interpolatedData,
     };
   }
 
@@ -119,8 +125,11 @@ export async function postsFetcher(_config: BlockConfig) {
     ...Array(Math.max(0, 5 - processedPosts.length)).fill(null),
   ];
 
+  const interpolatedData = await interpolatedPromise;
+
   return {
     displayPosts,
     totalPosts,
+    ...interpolatedData,
   };
 }

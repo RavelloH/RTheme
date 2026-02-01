@@ -65,6 +65,11 @@ export default function VisualPageEditor({
   const [scaleRatio, setScaleRatio] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
+  // 存储拖动元素的实际尺寸（宽度和高度）
+  const [draggingBlockDimensions, setDraggingBlockDimensions] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -128,6 +133,18 @@ export default function VisualPageEditor({
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveDragId(event.active.id);
+
+    // 获取被拖动元素的实际渲染尺寸
+    const activeElement = document.querySelector(
+      `[data-draggable-id="${event.active.id}"]`,
+    ) as HTMLElement;
+    if (activeElement) {
+      const rect = activeElement.getBoundingClientRect();
+      setDraggingBlockDimensions({
+        width: rect.width,
+        height: rect.height,
+      });
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -141,6 +158,7 @@ export default function VisualPageEditor({
     // This prevents the "flicker" where the item reappears before the overlay lands
     setTimeout(() => {
       setActiveDragId(null);
+      setDraggingBlockDimensions(null);
     }, 250);
   };
 
@@ -219,11 +237,20 @@ export default function VisualPageEditor({
       setBlocks([...blocks, newBlock]);
       setIsLibraryOpen(false);
 
-      // Auto select new block
+      // 关闭对话框后，等待渲染完成，然后滚动到最后并选中新 block
       setTimeout(() => {
         const el = document.getElementById("editor-scroll-container");
-        if (el) el.scrollLeft = el.scrollWidth;
-        handleSelectBlock(newId);
+        if (el) {
+          // 使用平滑滚动到最右边
+          el.scrollTo({
+            left: el.scrollWidth,
+            behavior: "smooth",
+          });
+        }
+        // 再延迟一点确保滚动完成后选中
+        setTimeout(() => {
+          handleSelectBlock(newId);
+        }, 300);
       }, 100);
     } catch (error) {
       console.error("添加 Block 失败:", error);
@@ -367,15 +394,25 @@ export default function VisualPageEditor({
           {mounted &&
             createPortal(
               <DragOverlay style={{ pointerEvents: "none" }}>
-                {draggingBlock ? (
-                  // Apply the same scale to the drag overlay so it matches the editor visual size
+                {draggingBlock && draggingBlockDimensions ? (
+                  // 在 DragOverlay 中模拟相同的缩放环境
+                  // 外层容器使用已缩放的尺寸，然后应用 scale
+                  // 内层使用反向尺寸，让内容正确填充
                   <div
                     style={{
+                      width: draggingBlockDimensions.width,
+                      height: draggingBlockDimensions.height,
                       transform: `scale(${scaleRatio})`,
                       transformOrigin: "top left",
                     }}
                   >
-                    <div className="h-full border-2 border-primary shadow-2xl opacity-90 bg-background">
+                    <div
+                      style={{
+                        width: `${100 / scaleRatio}%`,
+                        height: `${100 / scaleRatio}%`,
+                      }}
+                      className="border-2 border-primary shadow-2xl opacity-90 bg-background overflow-hidden"
+                    >
                       <SingleBlockRenderer block={draggingBlock} />
                     </div>
                   </div>
