@@ -5,6 +5,7 @@ import MarqueeText from "./MarqueeText";
 import Image from "next/image";
 import Avatar from "@/../public/avatar.jpg";
 import { GridItem } from "@/components/RowGrid";
+import { ProcessedText } from "../../components";
 
 interface HomeTextSectionProps {
   title?: string;
@@ -64,7 +65,9 @@ export default function HomeTextSection({
         >
           {title && (
             <div data-parallax="-0.5" className="p-12 font-bold" data-fade-char>
-              <h1>{title}</h1>
+              <h1>
+                <ProcessedText text={title} inline />
+              </h1>
             </div>
           )}
         </GridItem>
@@ -89,7 +92,9 @@ export default function HomeTextSection({
             className="flex-1 flex items-center justify-end pr-12 text-8xl"
             data-fade
           >
-            <span data-parallax="0.5">{slogan}</span>
+            <span data-parallax="0.5">
+              <ProcessedText text={slogan} inline />
+            </span>
           </div>
         </GridItem>
       )}

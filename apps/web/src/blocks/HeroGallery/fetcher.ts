@@ -8,8 +8,12 @@ import {
 } from "@/lib/server/media-reference";
 import { MEDIA_SLOTS } from "@/types/media";
 import type { BlockConfig } from "@/blocks/types";
+import { fetchBlockInterpolatedData } from "../lib/server";
 
-export async function heroFetcher(_config: BlockConfig) {
+export async function heroFetcher(config: BlockConfig) {
+  // 0. 启动插值数据获取
+  const interpolatedPromise = fetchBlockInterpolatedData(config.content);
+
   // 1. 并发优化：将 Prisma 查询与 Config 获取合并到一个 Promise.all 中
   // 这样数据库查询和缓存读取是同时进行的
   const [siteConfig, galleryPosts] = await Promise.all([
@@ -60,9 +64,12 @@ export async function heroFetcher(_config: BlockConfig) {
     return acc;
   }, []);
 
+  const interpolatedData = await interpolatedPromise;
+
   return {
     siteTitle,
     siteSlogan,
     galleryImages,
+    ...interpolatedData,
   };
 }

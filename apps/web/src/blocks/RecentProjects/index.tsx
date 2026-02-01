@@ -2,6 +2,8 @@ import RowGrid, { GridItem } from "@/components/RowGrid";
 import ParallaxImageCarousel from "@/components/ParallaxImageCarousel";
 import Marquee from "react-fast-marquee";
 import LinkButton from "@/components/LinkButton";
+import { replacePlaceholders } from "../lib/shared";
+import { ProcessedText } from "../components";
 import type { ProjectsBlockConfig } from "./types";
 
 /**
@@ -13,6 +15,7 @@ export default function ProjectsBlock({
 }: {
   config: ProjectsBlockConfig;
 }) {
+  const data = (config.data as Record<string, unknown>) || {};
   const content = config.content || {};
   const { worksDescription, worksSummary } = content;
 
@@ -81,7 +84,14 @@ export default function ProjectsBlock({
         mobileIndex={2}
         className="flex items-center px-10 text-2xl bg-primary text-primary-foreground uppercase"
       >
-        <span data-fade-word>{worksDescription?.header ?? ""}</span>
+        <span data-fade-word>
+          <ProcessedText
+            text={worksDescription?.header}
+            data={data}
+            inline
+            disableMarkdown
+          />
+        </span>
       </GridItem>
 
       {/* 技术栈内容（静态内容） */}
@@ -92,7 +102,13 @@ export default function ProjectsBlock({
         className="flex items-center px-10 py-15"
       >
         <div className="text-2xl block">
-          <div data-fade-word>{worksDescription?.content ?? " "}</div>
+          <div data-fade-word>
+            <ProcessedText
+              text={worksDescription?.content}
+              data={data}
+              inline
+            />
+          </div>
         </div>
       </GridItem>
 
@@ -163,10 +179,18 @@ export default function ProjectsBlock({
         <div className="text-2xl block" data-line-reveal>
           {Array.isArray(worksSummary?.content) ? (
             worksSummary!.content.map((item: string, index: number) => (
-              <div key={`works-${index}`}>{item ?? " "}</div>
+              <div key={`works-${index}`}>
+                <ProcessedText text={item} data={data} inline />
+              </div>
             ))
           ) : (
-            <div>{(worksSummary?.content as unknown as string) ?? " "}</div>
+            <div>
+              <ProcessedText
+                text={worksSummary?.content as unknown as string}
+                data={data}
+                inline
+              />
+            </div>
           )}
         </div>
       </GridItem>
@@ -181,8 +205,14 @@ export default function ProjectsBlock({
       >
         <LinkButton
           mode="link"
-          href={worksSummary?.footer?.link ?? "/works"}
-          text={worksSummary?.footer?.text ?? "View more projects"}
+          href={replacePlaceholders(
+            worksSummary?.footer?.link ?? "/works",
+            data,
+          )}
+          text={replacePlaceholders(
+            worksSummary?.footer?.text ?? "View more projects",
+            data,
+          )}
         />
       </GridItem>
     </RowGrid>

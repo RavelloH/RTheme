@@ -1,5 +1,6 @@
 import RowGrid, { GridItem } from "@/components/RowGrid";
 import Link from "@/components/Link";
+import { ProcessedText } from "../components";
 import type { BlockConfig } from "@/blocks/types";
 
 interface TagsCategoriesData {
@@ -16,6 +17,7 @@ interface TagsCategoriesData {
     count: number;
     isPlaceholder?: boolean;
   }>;
+  [key: string]: unknown;
 }
 
 /**
@@ -40,7 +42,7 @@ export default function TagsCategoriesBlock({
         className="flex items-center justify-center px-10 text-2xl"
       >
         <div
-          className="flex flex-col gap-2 justify-center items-center"
+          className="flex-1 flex flex-col gap-2 justify-center items-center"
           data-line-reveal
         >
           {displayTags.map((tag) =>
@@ -48,8 +50,10 @@ export default function TagsCategoriesBlock({
               <div key={tag.slug}>---</div>
             ) : (
               <Link key={tag.slug} href={`/tags/${tag.slug}`}>
-                <div className=" hover:scale-110 transition-all">
-                  #{tag.name} x {tag.count}
+                <div className=" hover:scale-110 transition-all flex items-center gap-2">
+                  #
+                  <ProcessedText text={tag.name} data={data} inline /> x{" "}
+                  {tag.count}
                 </div>
               </Link>
             ),
@@ -68,7 +72,7 @@ export default function TagsCategoriesBlock({
         className="flex items-center justify-center px-10 text-2xl"
       >
         <div
-          className="flex flex-col gap-2 justify-center items-center"
+          className="flex-1 flex flex-col gap-2 justify-center items-center"
           data-line-reveal
         >
           {displayCategories.map((category) =>
@@ -76,8 +80,9 @@ export default function TagsCategoriesBlock({
               <div key={category.slug}>---</div>
             ) : (
               <Link key={category.slug} href={`/categories/${category.slug}`}>
-                <div className=" hover:scale-110 transition-all">
-                  {category.name} x {category.count}
+                <div className=" hover:scale-110 transition-all flex items-center gap-2">
+                  <ProcessedText text={category.name} data={data} inline /> x{" "}
+                  {category.count}
                 </div>
               </Link>
             ),
@@ -96,8 +101,12 @@ export default function TagsCategoriesBlock({
         className="flex items-center justify-center uppercase text-5xl bg-primary text-primary-foreground"
       >
         <div>
-          <div data-fade-char>Tags &</div>
-          <div data-fade-char>Categories</div>
+          <div data-fade-char>
+            <ProcessedText text="Tags &" data={data} inline />
+          </div>
+          <div data-fade-char>
+            <ProcessedText text="Categories" data={data} inline />
+          </div>
         </div>
       </GridItem>
     </RowGrid>

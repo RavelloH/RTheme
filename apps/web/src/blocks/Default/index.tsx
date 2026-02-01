@@ -1,5 +1,7 @@
 import RowGrid, { GridItem, type GridArea } from "@/components/RowGrid";
 import LinkButton from "@/components/LinkButton";
+import { replacePlaceholders } from "../lib/shared";
+import { ProcessedText } from "../components";
 import type { DefaultBlockConfig } from "./types";
 
 interface DefaultBlockData {
@@ -37,15 +39,6 @@ export default function DefaultBlock({
 
   const areas = getAreas();
 
-  // 替换占位符
-  const replacePlaceholders = (text: string): string => {
-    if (!text) return "";
-    return text.replace(/\{(\w+)\}/g, (match, key) => {
-      if (!data) return match;
-      return data[key] !== undefined ? String(data[key]) : match;
-    });
-  };
-
   return (
     <RowGrid>
       {/* Header */}
@@ -56,7 +49,7 @@ export default function DefaultBlock({
           height={0.1}
           className="bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl h-full"
         >
-          <span>{replacePlaceholders(content.header ?? "")}</span>
+          <ProcessedText text={content.header} data={data} inline />
         </GridItem>
       )}
 
@@ -69,12 +62,14 @@ export default function DefaultBlock({
       >
         <div>
           <div className="text-7xl" data-fade-char>
-            <p>{replacePlaceholders(content.title ?? "")}</p>
+            <p>
+              <ProcessedText text={content.title} data={data} inline />
+            </p>
           </div>
           <div className="block mt-4" data-line-reveal>
             {content.content?.top.map((line: string, index: number) => (
               <div key={`content-top-${index}`}>
-                {replacePlaceholders(line) ?? " "}
+                <ProcessedText text={line} data={data} inline />
               </div>
             ))}
           </div>
@@ -83,7 +78,7 @@ export default function DefaultBlock({
           <div className="mt-10">
             {content.content?.bottom.map((line: string, index: number) => (
               <div key={`content-bottom-${index}`} data-fade-char>
-                {replacePlaceholders(line) ?? " "}
+                <ProcessedText text={line} data={data} inline />
               </div>
             ))}
           </div>
@@ -100,8 +95,15 @@ export default function DefaultBlock({
         >
           <LinkButton
             mode="link"
-            href={replacePlaceholders(content.footer?.link ?? "")}
-            text={replacePlaceholders(content.footer?.text ?? "")}
+            href={replacePlaceholders(content.footer?.link ?? "", data)}
+            text={
+              <ProcessedText
+                text={content.footer?.text}
+                data={data}
+                inline
+                disableMarkdown
+              />
+            }
           />
         </GridItem>
       )}

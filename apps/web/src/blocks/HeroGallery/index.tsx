@@ -2,12 +2,14 @@ import RowGrid, { GridItem } from "@/components/RowGrid";
 import HomeImageGallery from "./client/HomeImageGallery";
 import GlobalMouseTracker from "./client/GlobalMouseTracker";
 import HomeTextSection from "./client/HomeTextSection";
+import { replacePlaceholders as replaceFn } from "../lib";
 import type { BlockConfig } from "@/blocks/types";
 
 interface HeroData {
   galleryImages: string[];
   siteTitle: string;
   siteSlogan: string;
+  [key: string]: unknown;
 }
 
 /**
@@ -17,6 +19,11 @@ interface HeroData {
 export default function HeroBlock({ config }: { config: BlockConfig }) {
   const data = (config.data as HeroData) || {};
   const { galleryImages, siteTitle, siteSlogan } = data;
+
+  // 替换占位符
+  const replacePlaceholders = (text: string): string => {
+    return replaceFn(text, data);
+  };
 
   return (
     <RowGrid>
@@ -32,7 +39,10 @@ export default function HeroBlock({ config }: { config: BlockConfig }) {
       </GridItem>
 
       {/* 标题和标语区域 - 由客户端组件根据设备类型渲染 */}
-      <HomeTextSection title={siteTitle} slogan={siteSlogan} />
+      <HomeTextSection
+        title={replacePlaceholders(siteTitle || "")}
+        slogan={replacePlaceholders(siteSlogan || "")}
+      />
     </RowGrid>
   );
 }

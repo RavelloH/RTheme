@@ -6,6 +6,7 @@ import PostCard from "@/components/PostCard";
 import EmptyPostCard from "@/components/EmptyPostCard";
 import { RiArrowRightSLine } from "@remixicon/react";
 import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
+import { replacePlaceholders as replaceFn } from "../lib";
 import type { BlockConfig } from "@/blocks/types";
 import type { ProcessedImageData } from "@/lib/shared/image-common";
 
@@ -21,11 +22,17 @@ interface PostsData {
     excerpt?: string;
   }>;
   totalPosts: number;
+  [key: string]: unknown;
 }
 
 export default function PostsBlock({ config }: { config: BlockConfig }) {
   const data = (config.data as PostsData) || {};
   const { displayPosts = [], totalPosts = 0 } = data;
+
+  // 替换占位符
+  const replacePlaceholders = (text: string): string => {
+    return replaceFn(text, data);
+  };
 
   return (
     <RowGrid>
@@ -36,7 +43,7 @@ export default function PostsBlock({ config }: { config: BlockConfig }) {
         className="flex items-center uppercase bg-primary text-primary-foreground"
       >
         <Marquee speed={40} autoFill={true} className="h-full text-7xl">
-          POSTS&nbsp;&nbsp;/&nbsp;&nbsp;
+          {replacePlaceholders("POSTS")}&nbsp;&nbsp;/&nbsp;&nbsp;
         </Marquee>
       </GridItem>
 
@@ -51,7 +58,7 @@ export default function PostsBlock({ config }: { config: BlockConfig }) {
           autoFill={true}
           className="h-full text-7xl"
         >
-          文章&nbsp;&nbsp;/&nbsp;&nbsp;
+          {replacePlaceholders("文章")}&nbsp;&nbsp;/&nbsp;&nbsp;
         </Marquee>
       </GridItem>
 

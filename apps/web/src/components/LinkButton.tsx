@@ -4,7 +4,7 @@ import Link from "@/components/Link";
 import { RiArrowRightUpLongLine } from "@remixicon/react";
 
 interface BackLinkButtonProps {
-  text?: string;
+  text?: React.ReactNode;
   mode?: "back" | "link" | "onClick";
   href?: string;
   onClick?: () => void;
