@@ -40,7 +40,22 @@ const CACHE_FILE_PATH = path.join(process.cwd(), ".cache", ".menu-cache.json");
  * - 否则使用 unstable_cache 从数据库读取（开发/生产环境）
  */
 export async function getMenus(): Promise<MenuItem[]> {
-  // 如果缓存文件存在，从缓存读取（构建阶段）
+  // 开发环境：跳过文件缓存，直接从数据库读取
+  if (process.env.NODE_ENV !== "production") {
+    const getCachedData = unstable_cache(
+      async () => {
+        return await getMenusFromDatabase();
+      },
+      ["menus"],
+      {
+        tags: ["menus"],
+        revalidate: false,
+      },
+    );
+    return await getCachedData();
+  }
+
+  // 生产环境：如果缓存文件存在，从缓存读取（构建阶段）
   if (fs.existsSync(CACHE_FILE_PATH)) {
     const menus = getMenusFromCache();
     if (menus.length > 0) {

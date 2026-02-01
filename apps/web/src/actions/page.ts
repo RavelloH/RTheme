@@ -472,7 +472,7 @@ export async function createPage(
     });
 
     // 刷新缓存标签
-    updateTag("pages");
+    // 只刷新当前页面的缓存，不刷新所有页面
     updateTag(`pages/${newPage.id}`);
 
     return response.created({ data: result });
@@ -648,7 +648,7 @@ export async function updatePage(
     }
 
     // 刷新缓存标签
-    updateTag("pages");
+    // 只刷新当前页面的缓存，不刷新所有页面
     updateTag(`pages/${originalPage.id}`);
 
     return response.ok({ data: result });

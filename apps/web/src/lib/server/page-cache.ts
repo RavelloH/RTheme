@@ -73,7 +73,27 @@ const CACHE_FILE_PATH = path.join(process.cwd(), ".cache", ".page-cache.json");
  * - 否则使用 unstable_cache 从数据库读取（开发/生产环境）
  */
 export async function getRawPage(slug: string): Promise<PageItem | null> {
-  // 如果缓存文件存在，从缓存读取（构建阶段）
+  // 开发环境：跳过文件缓存，直接从数据库读取
+  if (process.env.NODE_ENV !== "production") {
+    // 先从数据库读取页面，获取 id
+    const page = await getPageFromDatabase(slug);
+    if (!page) return null;
+
+    // 使用 id 作为缓存标签
+    const getCachedData = unstable_cache(
+      async () => {
+        return page; // 直接返回已读取的页面
+      },
+      [`page-${slug}`],
+      {
+        tags: ["pages", `pages/${page.id}`],
+        revalidate: false,
+      },
+    );
+    return await getCachedData();
+  }
+
+  // 生产环境：如果缓存文件存在，从缓存读取（构建阶段）
   if (fs.existsSync(CACHE_FILE_PATH)) {
     const page = getPageFromCache(slug);
     if (page) {
@@ -82,25 +102,43 @@ export async function getRawPage(slug: string): Promise<PageItem | null> {
   }
 
   // 缓存文件不存在或未找到页面，使用 unstable_cache 从数据库读取
+  const page = await getPageFromDatabase(slug);
+  if (!page) return null;
+
   const getCachedData = unstable_cache(
-    async (s: string) => {
-      return await getPageFromDatabase(s);
+    async () => {
+      return page;
     },
     [`page-${slug}`],
     {
-      tags: ["pages", `pages/${slug}`],
+      tags: ["pages", `pages/${page.id}`],
       revalidate: false,
     },
   );
 
-  return await getCachedData(slug);
+  return await getCachedData();
 }
 
 /**
  * 通过 ID 获取原始页面项
  */
 export async function getRawPageById(id: string): Promise<PageItem | null> {
-  // 如果缓存文件存在，从缓存读取（构建阶段）
+  // 开发环境：跳过文件缓存，直接从数据库读取
+  if (process.env.NODE_ENV !== "production") {
+    const getCachedData = unstable_cache(
+      async (pageId: string) => {
+        return await getPageByIdFromDatabase(pageId);
+      },
+      [`page-id-${id}`],
+      {
+        tags: ["pages", `pages/${id}`],
+        revalidate: false,
+      },
+    );
+    return await getCachedData(id);
+  }
+
+  // 生产环境：如果缓存文件存在，从缓存读取（构建阶段）
   if (fs.existsSync(CACHE_FILE_PATH)) {
     const page = getPageByIdFromCache(id);
     if (page) {
@@ -363,7 +401,23 @@ function getPageByIdFromCache(id: string): PageItem | null {
  * 只返回 ACTIVE 状态且未删除的页面
  */
 export async function getAllActivePages(): Promise<Record<string, PageItem>> {
-  // 如果缓存文件存在，从缓存读取（构建阶段）
+  // 开发环境：跳过文件缓存，直接从数据库读取
+  if (process.env.NODE_ENV !== "production") {
+    const getCachedData = unstable_cache(
+      async () => {
+        const allPages = await getAllPagesFromDatabase();
+        return filterActivePages(allPages);
+      },
+      ["all-active-pages"],
+      {
+        tags: ["pages"],
+        revalidate: false,
+      },
+    );
+    return await getCachedData();
+  }
+
+  // 生产环境：如果缓存文件存在，从缓存读取（构建阶段）
   if (fs.existsSync(CACHE_FILE_PATH)) {
     const allPages = getAllPagesFromCache();
     if (Object.keys(allPages).length > 0) {
@@ -516,7 +570,37 @@ function getAllPagesFromCache(): Record<string, PageItem> {
 export async function getPagesByStatus(
   status: "ACTIVE" | "SUSPENDED",
 ): Promise<Record<string, PageItem>> {
-  // 如果缓存文件存在，从缓存读取（构建阶段）
+  // 开发环境：跳过文件缓存，直接从数据库读取
+  if (process.env.NODE_ENV !== "production") {
+    const getCachedData = unstable_cache(
+      async (s: "ACTIVE" | "SUSPENDED") => {
+        const allPages = await getAllPagesFromDatabase();
+        const filteredPages: Record<string, PageItem> = {};
+
+        Object.entries(allPages).forEach(([slug, page]) => {
+          // 跳过已删除的页面
+          if (page.deletedAt) {
+            return;
+          }
+
+          // 只返回指定状态的页面
+          if (page.status === s) {
+            filteredPages[slug] = page;
+          }
+        });
+
+        return filteredPages;
+      },
+      [`pages-by-status-${status}`],
+      {
+        tags: ["pages"],
+        revalidate: false,
+      },
+    );
+    return await getCachedData(status);
+  }
+
+  // 生产环境：如果缓存文件存在，从缓存读取（构建阶段）
   if (fs.existsSync(CACHE_FILE_PATH)) {
     const allPages = getAllPagesFromCache();
     if (Object.keys(allPages).length > 0) {
@@ -572,7 +656,38 @@ export async function getPagesByStatus(
  * 获取系统页面
  */
 export async function getSystemPages(): Promise<Record<string, PageItem>> {
-  // 如果缓存文件存在，从缓存读取（构建阶段）
+  // 开发环境：跳过文件缓存，直接从数据库读取
+  if (process.env.NODE_ENV !== "production") {
+    const getCachedData = unstable_cache(
+      async () => {
+        const allPages = await getAllPagesFromDatabase();
+        const systemPages: Record<string, PageItem> = {};
+
+        Object.entries(allPages).forEach(([slug, page]) => {
+          // 跳过已删除、非活跃状态、非系统页面的页面
+          if (
+            page.deletedAt ||
+            page.status !== "ACTIVE" ||
+            !page.isSystemPage
+          ) {
+            return;
+          }
+
+          systemPages[slug] = page;
+        });
+
+        return systemPages;
+      },
+      ["system-pages"],
+      {
+        tags: ["pages"],
+        revalidate: false,
+      },
+    );
+    return await getCachedData();
+  }
+
+  // 生产环境：如果缓存文件存在，从缓存读取（构建阶段）
   if (fs.existsSync(CACHE_FILE_PATH)) {
     const allPages = getAllPagesFromCache();
     if (Object.keys(allPages).length > 0) {
@@ -624,7 +739,37 @@ export async function getSystemPages(): Promise<Record<string, PageItem>> {
 export async function getPagesByUser(
   userUid: number,
 ): Promise<Record<string, PageItem>> {
-  // 如果缓存文件存在，从缓存读取（构建阶段）
+  // 开发环境：跳过文件缓存，直接从数据库读取
+  if (process.env.NODE_ENV !== "production") {
+    const getCachedData = unstable_cache(
+      async (uid: number) => {
+        const allPages = await getAllPagesFromDatabase();
+        const userPages: Record<string, PageItem> = {};
+
+        Object.entries(allPages).forEach(([slug, page]) => {
+          // 跳过已删除的页面和系统页面
+          if (page.deletedAt || page.isSystemPage) {
+            return;
+          }
+
+          // 只返回指定用户的页面
+          if (page.userUid === uid) {
+            userPages[slug] = page;
+          }
+        });
+
+        return userPages;
+      },
+      [`pages-by-user-${userUid}`],
+      {
+        tags: ["pages"],
+        revalidate: false,
+      },
+    );
+    return await getCachedData(userUid);
+  }
+
+  // 生产环境：如果缓存文件存在，从缓存读取（构建阶段）
   if (fs.existsSync(CACHE_FILE_PATH)) {
     const allPages = getAllPagesFromCache();
     if (Object.keys(allPages).length > 0) {
