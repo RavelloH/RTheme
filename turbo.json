@@ -27,8 +27,12 @@
       ]
     },
     "lint": {
-      "dependsOn": ["^lint"],
+      "outputs": [],
       "env": ["NODE_ENV", "JWT_PRIVATE_KEY", "JWT_PUBLIC_KEY", "MASTER_SECRET"]
+    },
+    "format": {
+      "inputs": ["$TURBO_DEFAULT$", ".prettierrc", ".prettierignore"],
+      "outputs": []
     },
     "check-types": {
       "dependsOn": ["^check-types"],

@@ -43,7 +43,7 @@ export const useEvent = <T extends EventMap = EventMap>() =>
     ) => {
       const listeners = get().listeners[eventName] || [];
       await Promise.allSettled(
-        listeners.map(({ listener }) => listener(...args)),
+        listeners.map(({ listener }) => Promise.resolve(listener(...args))),
       );
     },
 

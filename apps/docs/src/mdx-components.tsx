@@ -10,12 +10,14 @@ import * as FilesComponents from "fumadocs-ui/components/files";
 export function getMDXComponents(components?: MDXComponents): MDXComponents {
   return {
     ...defaultMdxComponents,
-    pre: ({ ref: _ref, ...props }) => (
+    pre: (props) => (
       <CodeBlock {...props}>
         <Pre>{props.children}</Pre>
       </CodeBlock>
     ),
-    img: (props) => <ImageZoom {...(props as any)} />,
+    img: (props) => (
+      <ImageZoom {...(props as React.ComponentProps<typeof ImageZoom>)} />
+    ),
     ...TabsComponents,
     ...AccordionsComponents,
     ...FilesComponents,

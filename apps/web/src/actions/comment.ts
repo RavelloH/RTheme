@@ -12,7 +12,6 @@ import type {
   DeleteOwnComment,
   DeleteOwnCommentResponse,
   DirectChildrenResponse,
-  GetCommentContext,
   GetCommentHistory,
   GetCommentReplies,
   GetCommentsAdmin,
@@ -29,7 +28,6 @@ import {
   CreateCommentSchema,
   DeleteCommentsSchema,
   DeleteOwnCommentSchema,
-  GetCommentContextSchema,
   GetCommentHistorySchema,
   GetCommentRepliesSchema,
   GetCommentsAdminSchema,
@@ -708,99 +706,6 @@ export async function getPostComments(
 
   return response.ok({
     data: data as unknown as CommentListResponse["data"],
-    meta,
-  });
-}
-
-export async function getCommentContext(
-  params: GetCommentContext,
-  serverConfig?: ActionConfig,
-): Promise<ActionResult<CommentListResponse["data"] | null>> {
-  const response = new ResponseBuilder(
-    serverConfig?.environment || "serveraction",
-  );
-
-  if (!(await limitControl(await headers(), "getCommentContext"))) {
-    return response.tooManyRequests();
-  }
-
-  const validationError = validateData(params, GetCommentContextSchema);
-  if (validationError) return response.badRequest(validationError);
-
-  const { commentId } = params;
-  const authUser = await authVerify({ allowedRoles: COMMENT_ROLES });
-  const currentUid = authUser?.uid ?? null;
-
-  const target = await prisma.comment.findUnique({
-    where: { id: commentId, deletedAt: null },
-    select: { id: true, parentId: true, post: { select: { slug: true } } },
-  });
-  if (!target) return response.notFound({ message: "评论不存在" });
-
-  const chain: CommentItem[] = [];
-  let currentId: string | null = target.id;
-  let guard = 0;
-  const showLocation = await getConfig("comment.locate.enable");
-
-  // 收集所有评论ID用于批量查询点赞状态
-  const commentIds: string[] = [];
-  const tempComments: PublicComment[] = [];
-
-  // 第一遍：收集评论链
-  while (currentId && guard < 20) {
-    const comment: PublicComment | null = await prisma.comment.findUnique({
-      where: { id: currentId, deletedAt: null },
-      select: commentSelect,
-    });
-
-    if (!comment) break;
-
-    const visible =
-      comment.status === "APPROVED" ||
-      (currentUid !== null && comment.userUid === currentUid);
-    if (!visible) break;
-
-    tempComments.unshift(comment);
-    commentIds.unshift(comment.id);
-    currentId = comment.parentId;
-    guard += 1;
-  }
-
-  // 批量查询点赞状态
-  let likedCommentIds: Set<string> = new Set();
-  if (currentUid && commentIds.length > 0) {
-    const likes = await prisma.commentLike.findMany({
-      where: {
-        commentId: { in: commentIds },
-        userId: currentUid,
-      },
-      select: { commentId: true },
-    });
-    likedCommentIds = new Set(likes.map((like) => like.commentId));
-  }
-
-  // 第二遍：转换为 CommentItem
-  for (const comment of tempComments) {
-    chain.push(
-      await mapCommentToItem(
-        comment,
-        currentUid,
-        showLocation,
-        undefined,
-        likedCommentIds.has(comment.id),
-      ),
-    );
-  }
-
-  const meta = buildPaginationMeta({
-    page: 1,
-    pageSize: chain.length || 1,
-    total: chain.length,
-    hasNext: false,
-  });
-
-  return response.ok({
-    data: chain as unknown as CommentListResponse["data"],
     meta,
   });
 }

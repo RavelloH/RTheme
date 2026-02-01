@@ -25,16 +25,16 @@
   "dependencies": {
     "@repo/shared-types": "workspace:*",
     "chokidar": "^4.0.3",
-    "glob": "^11.0.3",
-    "rlog-js": "^1.5.2",
-    "typescript": "5.9.2",
+    "glob": "^11.1.0",
+    "rlog-js": "^1.6.1",
+    "typescript": "^5.9.3",
     "yaml": "^2.8.1",
     "zod": "^4.1.5",
     "zod-openapi": "^5.4.6"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "^24.3.1",
+    "@types/node": "^25.0.10",
     "tsx": "^4.20.5"
   }
 }

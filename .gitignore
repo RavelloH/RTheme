@@ -42,3 +42,5 @@ AGENTS.md
 GEMINI.md
 .claude
 apps/web/logs/init.log
+
+.tsbuildinfo
