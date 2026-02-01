@@ -933,3 +933,75 @@ export async function deletePages(
     return response.serverError({ message: "删除页面失败" });
   }
 }
+
+/*
+  getAllPlaceholders - 获取所有变量占位符
+*/
+export async function getAllPlaceholders(serverConfig: {
+  environment: "serverless";
+}): Promise<
+  NextResponse<
+    ApiResponse<{ name: string; description: string; value: string }[] | null>
+  >
+>;
+export async function getAllPlaceholders(
+  serverConfig?: ActionConfig,
+): Promise<
+  ApiResponse<{ name: string; description: string; value: string }[] | null>
+>;
+export async function getAllPlaceholders(
+  serverConfig?: ActionConfig,
+): Promise<
+  ActionResult<{ name: string; description: string; value: string }[] | null>
+> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  try {
+    const { interpolatorMap } = await import("@/blocks/core/placeholders");
+    const results: { name: string; description: string; value: string }[] = [];
+
+    const descriptions: Record<string, string> = {
+      posts: "显示当前总文章数",
+      projects: "显示当前总项目数",
+    };
+
+    for (const [key, loader] of Object.entries(interpolatorMap)) {
+      try {
+        // eslint-disable-next-line @next/next/no-assign-module-variable
+        const module = await loader();
+        const funcName = `${key}Interpolator`;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const func = (module as any)[funcName];
+
+        let value = "-";
+        if (typeof func === "function") {
+          const res = await func();
+          if (res && typeof res === "object") {
+            const vals = Object.values(res);
+            if (vals.length > 0) value = String(vals[0]);
+          }
+        }
+
+        results.push({
+          name: `{${key}}`,
+          description: descriptions[key] || "-",
+          value,
+        });
+      } catch (error) {
+        console.error(`Failed to load placeholder ${key}:`, error);
+        results.push({
+          name: `{${key}}`,
+          description: descriptions[key] || "加载失败",
+          value: "Error",
+        });
+      }
+    }
+
+    return response.ok({ data: results });
+  } catch (error) {
+    console.error("Get all placeholders error:", error);
+    return response.serverError();
+  }
+}

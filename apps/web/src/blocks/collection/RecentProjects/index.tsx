@@ -2,7 +2,10 @@ import Marquee from "react-fast-marquee";
 
 import type { ProjectsBlockConfig } from "@/blocks/collection/RecentProjects/types";
 import { ProcessedText } from "@/blocks/core/components";
-import { replacePlaceholders } from "@/blocks/core/lib/shared";
+import {
+  extractBlockText,
+  replacePlaceholders,
+} from "@/blocks/core/lib/shared";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import LinkButton from "@/components/ui/LinkButton";
 import ParallaxImageCarousel from "@/components/ui/ParallaxImageCarousel";
@@ -87,7 +90,7 @@ export default function ProjectsBlock({
       >
         <span data-fade-word>
           <ProcessedText
-            text={worksDescription?.header}
+            text={extractBlockText(worksDescription?.header)}
             data={data}
             inline
             disableMarkdown

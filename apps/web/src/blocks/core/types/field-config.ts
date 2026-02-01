@@ -62,6 +62,8 @@ export interface SelectFieldConfig extends BaseFieldConfig {
   options: SelectOption[];
   /** 占位符 */
   placeholder?: string;
+  /** 默认值（对应 options 中的 value） */
+  defaultValue?: string;
 }
 
 /**

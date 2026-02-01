@@ -36,7 +36,7 @@ export const PROJECTS_BLOCK_FORM_CONFIG: BlockFormConfig = {
   fields: [
     {
       label: "Works Description Header",
-      path: "worksDescription.header",
+      path: "worksDescription.header.value",
       type: "text",
       helperText: PROJECTS_BLOCK_SCHEMA.worksDescription.header,
       placeholder: "Enter header text",
@@ -74,7 +74,7 @@ export const PROJECTS_BLOCK_FORM_CONFIG: BlockFormConfig = {
     {
       title: "Works Description",
       description: PROJECTS_BLOCK_SCHEMA.worksDescription._description,
-      fields: ["worksDescription.header", "worksDescription.content"],
+      fields: ["worksDescription.header.value", "worksDescription.content"],
     },
     {
       title: "Works Summary",

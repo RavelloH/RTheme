@@ -515,69 +515,9 @@ export default function PagesTable() {
     if (!isConfigObject(configSource)) {
       return fields;
     }
-    const config = configSource as ConfigRecord;
 
     // 移除 blocks 列表渲染，使用独立编辑器
-
-    if (Array.isArray(config.components)) {
-      const components = config.components as Record<string, unknown>[];
-      fields.push(
-        <div key="components-section" className="space-y-4">
-          <div>
-            <h4 className="text-lg font-semibold text-foreground">
-              自定义组件 (Components)
-            </h4>
-          </div>
-          <div className="space-y-6">
-            {components.map((component, componentIndex) => {
-              const componentDescription =
-                typeof component.description === "string"
-                  ? component.description
-                  : "";
-              const componentKey = String(
-                component.id || `component-${componentIndex}`,
-              );
-              return (
-                <div key={componentKey} className="space-y-3">
-                  <div className="space-y-1">
-                    <span className="text-base font-semibold text-foreground">
-                      {String(component.id ?? componentIndex + 1)}
-                    </span>
-                    <p className="text-sm text-muted-foreground">
-                      {componentDescription || "无描述"}
-                    </p>
-                  </div>
-                  {isConfigObject(component.value) ? (
-                    <div className="space-y-4">
-                      {Object.entries(
-                        (component.value as Record<string, unknown>) || {},
-                      ).map(([valueKey, valueData]) => {
-                        const valuePath = [
-                          "components",
-                          componentIndex.toString(),
-                          "value",
-                          valueKey,
-                        ];
-                        return (
-                          <div key={`${componentKey}-value-${valueKey}`}>
-                            {renderConfigFieldInput(
-                              valuePath,
-                              valueData,
-                              `输入 ${valueKey} 内容`,
-                              valueKey,
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        </div>,
-      );
-    }
+    // 移除 components 渲染
 
     return fields;
   };
@@ -1334,15 +1274,10 @@ export default function PagesTable() {
                         }
                         const blocksValue = (summarySource as ConfigRecord)
                           .blocks as unknown;
-                        const componentsValue = (summarySource as ConfigRecord)
-                          .components as unknown;
                         const blocksCount = Array.isArray(blocksValue)
                           ? blocksValue.length
                           : 0;
-                        const componentsCount = Array.isArray(componentsValue)
-                          ? componentsValue.length
-                          : 0;
-                        return `${blocksCount} 个区块 · ${componentsCount} 个组件`;
+                        return `${blocksCount} 个区块`;
                       })()}
                     </span>
                   </div>

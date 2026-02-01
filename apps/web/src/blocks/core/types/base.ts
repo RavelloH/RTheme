@@ -1,12 +1,25 @@
 // 基础类型定义 - 简化版（移除 value/description 包装）
 
-export type BlockContentHeader = string;
+export type BlockAlign = "left" | "center" | "right";
 
-export type BlockContentTitle = string;
+export interface BlockContentHeader {
+  value: string;
+  align?: BlockAlign;
+}
+
+export interface BlockContentTitle {
+  value: string;
+  align?: BlockAlign;
+}
+
+export interface BlockContentSection {
+  value: string[];
+  align?: BlockAlign;
+}
 
 export interface BlockContentBody {
-  top: string[];
-  bottom: string[];
+  top: BlockContentSection;
+  bottom: BlockContentSection;
 }
 
 export interface BlockContentFooter {
