@@ -43,7 +43,22 @@ export async function getRawConfig(key: string): Promise<ConfigItem | null> {
     throw Error("无法获取敏感配置项");
   }
 
-  // 如果缓存文件存在，从缓存读取（构建阶段）
+  // 开发环境：跳过文件缓存，直接从数据库读取
+  if (process.env.NODE_ENV !== "production") {
+    const getCachedData = unstable_cache(
+      async (k: string) => {
+        return await getConfigFromDatabase(k);
+      },
+      [`raw-config-${key}`],
+      {
+        tags: ["config", `config/${key}`],
+        revalidate: false,
+      },
+    );
+    return await getCachedData(key);
+  }
+
+  // 生产环境：如果缓存文件存在，从缓存读取（构建阶段）
   if (fs.existsSync(CACHE_FILE_PATH)) {
     const config = getConfigFromCache(key);
     if (config) {
@@ -223,7 +238,23 @@ function getConfigFromCache(key: string): ConfigItem | null {
  * 过滤掉 secret 开头的敏感配置项和 description 字段
  */
 export async function getAllConfigs(): Promise<Record<string, ConfigItem>> {
-  // 如果缓存文件存在，从缓存读取（构建阶段）
+  // 开发环境：跳过文件缓存，直接从数据库读取
+  if (process.env.NODE_ENV !== "production") {
+    const getCachedData = unstable_cache(
+      async () => {
+        const allConfigs = await getAllConfigsFromDatabase();
+        return filterSensitiveConfigs(allConfigs);
+      },
+      ["all-configs"],
+      {
+        tags: ["config"],
+        revalidate: false,
+      },
+    );
+    return await getCachedData();
+  }
+
+  // 生产环境：如果缓存文件存在，从缓存读取（构建阶段）
   if (fs.existsSync(CACHE_FILE_PATH)) {
     const allConfigs = getAllConfigsFromCache();
     if (Object.keys(allConfigs).length > 0) {

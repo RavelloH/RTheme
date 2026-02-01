@@ -133,7 +133,6 @@ export default function DefaultBlock({
             className={`mt-10 ${getAlignClass(
               extractBlockSectionAndAlign(content.content?.bottom).align,
             )}`}
-            data-fade-char
           >
             {(() => {
               const { values: bottomValues } = extractBlockSectionAndAlign(
@@ -141,7 +140,7 @@ export default function DefaultBlock({
               );
               return Array.isArray(bottomValues)
                 ? bottomValues.map((item, index) => (
-                    <div key={`content-bottom-${index}`}>
+                    <div key={`content-bottom-${index}`} data-fade-char>
                       <ProcessedText text={item} data={data} inline />
                     </div>
                   ))
