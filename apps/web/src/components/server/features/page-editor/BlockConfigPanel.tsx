@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { RiDeleteBinLine, RiRefreshLine } from "@remixicon/react";
+import {
+  RiDeleteBinLine,
+  RiFileCopyLine,
+  RiQuestionLine,
+  RiRefreshLine,
+  RiShareForward2Line,
+} from "@remixicon/react";
+import { codeToHtml } from "shiki";
 
+import { getAllPlaceholders } from "@/actions/page";
 import { getBlockFormConfig } from "@/blocks/core/registry";
 import type { BlockConfig } from "@/blocks/core/types";
 import type {
@@ -9,13 +17,20 @@ import type {
 } from "@/blocks/core/types/field-config";
 import type { BlockFormConfig } from "@/blocks/core/types/field-config";
 import Link from "@/components/ui/Link";
+import { useConfig } from "@/context/ConfigContext";
+import type { ConfigType } from "@/data/default-configs";
 import { AlertDialog } from "@/ui/AlertDialog";
+import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
+import Clickable from "@/ui/Clickable";
+import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { Select } from "@/ui/Select";
 import { Switch } from "@/ui/Switch";
+import { Table, type TableColumn } from "@/ui/Table";
+import { useToast } from "@/ui/Toast";
 
 // Helper to safe access nested objects
 const get = (obj: unknown, path: string, def?: unknown) => {
@@ -48,12 +63,63 @@ const set = (obj: unknown, path: string, value: unknown) => {
   let current = newObj;
   for (let i = 0; i < keys.length - 1; i++) {
     const key = keys[i]!;
-    if (!current[key]) current[key] = {};
+    // 如果中间路径不存在或者是非对象值，创建新对象
+    if (
+      !current[key] ||
+      typeof current[key] !== "object" ||
+      Array.isArray(current[key])
+    ) {
+      current[key] = {};
+    }
     current = current[key];
   }
   current[keys[keys.length - 1]!] = value;
   return newObj;
 };
+
+/**
+ * JSON 代码高亮组件
+ */
+function JSONHighlight({
+  json,
+  shikiTheme,
+}: {
+  json: unknown;
+  shikiTheme: ConfigType<"site.shiki.theme">;
+}) {
+  const [html, setHtml] = useState("");
+
+  useEffect(() => {
+    const highlightCode = async () => {
+      try {
+        const jsonString = JSON.stringify(json, null, 2);
+        const highlighted = await codeToHtml(jsonString, {
+          lang: "json",
+          themes: {
+            light: shikiTheme.light,
+            dark: shikiTheme.dark,
+          },
+          defaultColor: "dark",
+        });
+        setHtml(highlighted);
+      } catch (err) {
+        console.error("Shiki error:", err);
+        const jsonString = JSON.stringify(json, null, 2);
+        setHtml(`${jsonString.replace(/</g, "&lt;").replace(/>/g, "&gt;")}`);
+      }
+    };
+    highlightCode();
+  }, [json, shikiTheme]);
+
+  return (
+    <div className="text-xs overflow-auto max-h-[50vh] rounded-sm bg-[#1E1E1E]">
+      <div
+        className="shiki p-4 min-h-full"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    </div>
+  );
+}
 
 /**
  * 字段渲染器组件
@@ -72,12 +138,19 @@ function FieldRenderer({
     onChange(newValue);
   };
 
+  // 对于 text/textarea/number 类型，转换为字符串显示
+  const getDisplayValue = (val: unknown): string => {
+    if (val === null || val === undefined) return "";
+    if (typeof val === "object") return "";
+    return String(val);
+  };
+
   switch (field.type) {
     case "textarea": {
       return (
         <Input
           label={field.label}
-          value={String(value ?? "")}
+          value={getDisplayValue(value)}
           onChange={(e) => handleChange(e.target.value)}
           rows={3}
           helperText={field.helperText}
@@ -94,7 +167,7 @@ function FieldRenderer({
       return (
         <Input
           label={field.label}
-          value={String(value ?? "")}
+          value={getDisplayValue(value)}
           onChange={(e) =>
             handleChange(
               field.type === "number"
@@ -117,14 +190,16 @@ function FieldRenderer({
 
     case "array": {
       // 数组类型：使用 textarea，每行一个元素
-      const strValue = Array.isArray(value)
-        ? value.join("\n")
-        : String(value ?? "");
+      const arrayValue: unknown[] = Array.isArray(value) ? value : [];
+      const strValue = arrayValue.join("\n");
       return (
         <Input
           label={field.label}
           value={strValue}
-          onChange={(e) => handleChange(e.target.value.split("\n"))}
+          onChange={(e) => {
+            const newArray = e.target.value.split("\n");
+            handleChange(newArray);
+          }}
           rows={4}
           helperText={
             field.helperText || field.separatorHint || "One item per line"
@@ -140,9 +215,7 @@ function FieldRenderer({
       const selectField = field as SelectFieldConfig;
       return (
         <div className="mt-6">
-          <label className="text-sm text-foreground mb-2 block">
-            {field.label}
-          </label>
+          <label className="text-foreground mb-2 block">{field.label}</label>
           <Select
             value={String(value ?? "")}
             onChange={(val) => handleChange(val)}
@@ -205,8 +278,48 @@ export default function BlockConfigPanel({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
+  // 变量占位符 Dialog 状态
+  const [showPlaceholderDialog, setShowPlaceholderDialog] = useState(false);
+  const [placeholders, setPlaceholders] = useState<
+    { name: string; description: string; value: string }[]
+  >([]);
+  const [loadingPlaceholders, setLoadingPlaceholders] = useState(false);
+
+  // 导出 Dialog 状态
+  const [showExportDialog, setShowExportDialog] = useState(false);
+
+  // 滚动遮罩状态
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const [showTopGradient, setShowTopGradient] = useState(false);
+  const [showBottomGradient, setShowBottomGradient] = useState(false);
+
   // 使用 ref 跟踪之前的 block 类型，避免不必要的重新加载
   const prevBlockTypeRef = React.useRef<string | null>(null);
+
+  const toast = useToast();
+  const shikiTheme = useConfig("site.shiki.theme");
+
+  // 检查滚动状态
+  const checkScroll = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = container;
+
+    // 顶部渐变：距离顶部超过 10px 时显示
+    setShowTopGradient(scrollTop > 10);
+
+    // 底部渐变：距离底部超过 10px 且内容确实溢出时显示
+    const isNearBottom = scrollTop >= scrollHeight - clientHeight - 10;
+    setShowBottomGradient(!isNearBottom && scrollHeight > clientHeight);
+  };
+
+  // 监听 block 和 formConfig 变化，更新滚动状态
+  useEffect(() => {
+    // 延迟执行以确保渲染完成
+    const timer = setTimeout(checkScroll, 100);
+    return () => clearTimeout(timer);
+  }, [block, formConfig]);
 
   // 异步加载表单配置
   useEffect(() => {
@@ -255,6 +368,42 @@ export default function BlockConfigPanel({
     setShowDeleteDialog(true);
   };
 
+  // 打开变量占位符面板
+  const handleOpenPlaceholders = async () => {
+    setShowPlaceholderDialog(true);
+    setLoadingPlaceholders(true);
+    try {
+      const response = await getAllPlaceholders();
+      if (response.success && response.data) {
+        setPlaceholders(response.data);
+      }
+    } catch (error) {
+      console.error("Failed to load placeholders:", error);
+    } finally {
+      setLoadingPlaceholders(false);
+    }
+  };
+
+  // 打开导出面板
+  const handleOpenExport = () => {
+    if (!block) return;
+    setShowExportDialog(true);
+  };
+
+  // 处理复制
+  const handleCopy = () => {
+    if (!block) return;
+    const jsonString = JSON.stringify({ ...block, data: undefined }, null, 2);
+    navigator.clipboard.writeText(jsonString).then(() => {
+      toast.success("JSON 已复制到剪贴板");
+    });
+  };
+
+  // 监听滚动事件更新渐变遮罩
+  const handleScroll = (_e: React.UIEvent<HTMLDivElement>) => {
+    checkScroll();
+  };
+
   const handleContentChange = (path: string, value: unknown) => {
     if (!block) return;
     const newContent = set(block.content, path, value);
@@ -266,8 +415,42 @@ export default function BlockConfigPanel({
     onUpdate({ [field]: value });
   };
 
+  // Placeholder Table Columns
+  const placeholderColumns: TableColumn<{
+    name: string;
+    description: string;
+    value: string;
+  }>[] = [
+    {
+      key: "name",
+      title: "占位符",
+      dataIndex: "name",
+      width: "30%",
+      mono: true,
+      render: (val) => (
+        <span className="text-primary font-medium">
+          {val as React.ReactNode}
+        </span>
+      ),
+    },
+    {
+      key: "description",
+      title: "描述",
+      dataIndex: "description",
+      width: "40%",
+    },
+    {
+      key: "value",
+      title: "当前值",
+      dataIndex: "value",
+      width: "30%",
+      align: "right",
+      mono: true,
+    },
+  ];
+
   return (
-    <div className="w-full flex flex-col h-full">
+    <div className="w-full h-full flex flex-col pr-1">
       <div className="space-y-4 pb-4">
         <div className="flex items-center justify-between py-4 border-b border-border">
           <h3 className="text-lg">编辑区块</h3>
@@ -297,7 +480,7 @@ export default function BlockConfigPanel({
         </div>
       </div>
 
-      <AutoTransition className="flex-1 overflow-y-auto custom-scrollbar">
+      <AutoTransition className="flex-1 h-full overflow-hidden">
         {!block ? (
           <div
             key="no-block"
@@ -323,190 +506,165 @@ export default function BlockConfigPanel({
             </p>
           </div>
         ) : (
-          <div key={block.id} className="space-y-4 pb-4">
-            {/* 区块信息 */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-                区块信息
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-muted-foreground">
-                    区块类型
-                  </label>
-                  <p className="text-sm font-mono">{formConfig.blockType}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">
-                    区块名称
-                  </label>
-                  <p className="text-sm font-mono">{formConfig.displayName}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">
-                    区块作者
-                  </label>
-                  <p className="text-sm font-mono">
-                    {formConfig.author ? (
-                      formConfig.author.url ? (
-                        <Link
-                          presets={["hover-underline"]}
-                          href={formConfig.author.url}
-                        >
-                          @{formConfig.author.name}
-                        </Link>
-                      ) : (
-                        "@" + formConfig.author.name
-                      )
-                    ) : (
-                      "未知"
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">
-                    区块所属主题
-                  </label>
-                  <p className="text-sm font-mono">
-                    {formConfig.theme ? (
-                      formConfig.theme.url ? (
-                        <Link
-                          presets={["hover-underline"]}
-                          href={formConfig.theme.url}
-                        >
-                          {formConfig.theme.name}
-                        </Link>
-                      ) : (
-                        formConfig.theme.name
-                      )
-                    ) : (
-                      "未知"
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">
-                    配置量
-                  </label>
-                  <p className="text-sm">
-                    {formConfig.fields.length}个配置项，
-                    {formConfig.groups?.length
-                      ? `${formConfig.groups.length}个分组`
-                      : "未分组"}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">
-                    性能影响
-                  </label>
-                  <p className="text-sm">
-                    {formConfig.actions?.db || 0} DB 查询，
-                    {formConfig.actions?.config || 0} 配置查询
-                  </p>
-                </div>
-              </div>
-              <div className="grid gap-4">
-                <div>
-                  <label className="text-sm text-muted-foreground">
-                    区块描述
-                  </label>
-                  <p className="text-sm font-mono whitespace-pre-wrap">
-                    {formConfig.description}
-                  </p>
-                </div>
-              </div>
-              <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 py-2">
-                区块配置
-              </h3>
-            </div>
+          <div key={block.id} className="relative h-full">
+            {/* 顶部渐变遮罩 */}
+            <div
+              className={`absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-background via-background/80 to-transparent pointer-events-none z-10 transition-opacity duration-300 ${
+                showTopGradient ? "opacity-100" : "opacity-0"
+              }`}
+            />
 
-            <div className="space-y-6">
-              {/* 通用元数据 */}
+            {/* 底部渐变遮罩 */}
+            <div
+              className={`absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none z-10 transition-opacity duration-300 ${
+                showBottomGradient ? "opacity-100" : "opacity-0"
+              }`}
+            />
+
+            <div
+              ref={scrollContainerRef}
+              onScroll={handleScroll}
+              className="h-full overflow-y-auto space-y-4 pb-4 scrollbar-hide"
+            >
+              {/* 区块信息 */}
               <div className="space-y-4">
-                <Input
-                  label="备注"
-                  value={block.description || ""}
-                  onChange={(e) =>
-                    handleMetaChange("description", e.target.value)
-                  }
-                  size="sm"
-                  helperText="用于在编辑器中标识此区块"
-                />
+                <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                  区块信息
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-muted-foreground">
+                      区块类型
+                    </label>
+                    <p className="text-sm font-mono">{formConfig.blockType}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">
+                      区块名称
+                    </label>
+                    <p className="text-sm font-mono">
+                      {formConfig.displayName}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">
+                      区块作者
+                    </label>
+                    <p className="text-sm font-mono">
+                      {formConfig.author ? (
+                        formConfig.author.url ? (
+                          <Link
+                            presets={["hover-underline"]}
+                            href={formConfig.author.url}
+                          >
+                            @{formConfig.author.name}
+                          </Link>
+                        ) : (
+                          "@" + formConfig.author.name
+                        )
+                      ) : (
+                        "未知"
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">
+                      区块所属主题
+                    </label>
+                    <p className="text-sm font-mono">
+                      {formConfig.theme ? (
+                        formConfig.theme.url ? (
+                          <Link
+                            presets={["hover-underline"]}
+                            href={formConfig.theme.url}
+                          >
+                            {formConfig.theme.name}
+                          </Link>
+                        ) : (
+                          formConfig.theme.name
+                        )
+                      ) : (
+                        "未知"
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">
+                      配置量
+                    </label>
+                    <p className="text-sm">
+                      {formConfig.fields.length}个配置项，
+                      {formConfig.groups?.length
+                        ? `${formConfig.groups.length}个分组`
+                        : "未分组"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">
+                      性能影响
+                    </label>
+                    <p className="text-sm">
+                      {formConfig.actions?.db || 0} DB 查询，
+                      {formConfig.actions?.config || 0} 配置查询
+                    </p>
+                  </div>
+                </div>
+                <div className="grid gap-4">
+                  <div>
+                    <label className="text-sm text-muted-foreground">
+                      区块描述
+                    </label>
+                    <p className="text-sm font-mono whitespace-pre-wrap">
+                      {formConfig.description}
+                    </p>
+                  </div>
+                </div>
+                <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 py-2">
+                  区块配置
+                </h3>
               </div>
 
-              <hr className="border-border" />
+              <div className="space-y-6">
+                {/* 通用元数据 */}
+                <div className="space-y-4">
+                  <Input
+                    label="备注"
+                    value={block.description || ""}
+                    onChange={(e) =>
+                      handleMetaChange("description", e.target.value)
+                    }
+                    size="sm"
+                    helperText="用于在编辑器中标识此区块"
+                  />
+                </div>
 
-              {/* 按分组渲染字段 */}
-              {formConfig.groups && formConfig.groups.length > 0 ? (
-                <>
-                  {formConfig.groups.map((group, groupIndex) => (
-                    <React.Fragment key={groupIndex}>
-                      <div className="space-y-4">
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium">
-                            {group.title}
-                          </label>
-                          {group.description && (
-                            <p className="text-xs text-muted-foreground">
-                              {group.description}
-                            </p>
-                          )}
-                        </div>
-                        {formConfig.fields
-                          .filter((field) => group.fields.includes(field.path))
-                          .map((field, fieldIndex) => {
-                            const value = get(block.content, field.path);
-                            return (
-                              <FieldRenderer
-                                key={`${groupIndex}-${fieldIndex}`}
-                                field={field}
-                                value={value}
-                                onChange={(newValue) =>
-                                  handleContentChange(field.path, newValue)
-                                }
-                              />
-                            );
-                          })}
-                      </div>
-                      {groupIndex < formConfig.groups!.length - 1 && (
-                        <hr className="border-border" />
-                      )}
-                    </React.Fragment>
-                  ))}
+                <hr className="border-border" />
 
-                  {/* 渲染未分组的字段 */}
-                  {(() => {
-                    // 收集所有分组中包含的字段路径
-                    const groupedFieldPaths = new Set<string>();
-                    formConfig.groups?.forEach((group) => {
-                      group.fields.forEach((fieldPath) => {
-                        groupedFieldPaths.add(fieldPath);
-                      });
-                    });
-
-                    // 找出未分组的字段
-                    const ungroupedFields = formConfig.fields.filter(
-                      (field) => !groupedFieldPaths.has(field.path),
-                    );
-
-                    if (ungroupedFields.length > 0) {
-                      return (
-                        <>
-                          <hr className="border-border" />
-                          <div className="space-y-4">
-                            <div className="space-y-1">
-                              <label className="text-sm font-medium">
-                                其他配置
-                              </label>
+                {/* 按分组渲染字段 */}
+                {formConfig.groups && formConfig.groups.length > 0 ? (
+                  <>
+                    {formConfig.groups.map((group, groupIndex) => (
+                      <React.Fragment key={groupIndex}>
+                        <div className="space-y-4">
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium">
+                              {group.title}
+                            </label>
+                            {group.description && (
                               <p className="text-xs text-muted-foreground">
-                                未分组的配置项
+                                {group.description}
                               </p>
-                            </div>
-                            {ungroupedFields.map((field, index) => {
+                            )}
+                          </div>
+                          {formConfig.fields
+                            .filter((field) =>
+                              group.fields.includes(field.path),
+                            )
+                            .map((field, fieldIndex) => {
                               const value = get(block.content, field.path);
                               return (
                                 <FieldRenderer
-                                  key={`ungrouped-${index}`}
+                                  key={`${groupIndex}-${fieldIndex}`}
                                   field={field}
                                   value={value}
                                   onChange={(newValue) =>
@@ -515,35 +673,101 @@ export default function BlockConfigPanel({
                                 />
                               );
                             })}
-                          </div>
-                        </>
+                        </div>
+                        {groupIndex < formConfig.groups!.length - 1 && (
+                          <hr className="border-border" />
+                        )}
+                      </React.Fragment>
+                    ))}
+
+                    {/* 渲染未分组的字段 */}
+                    {(() => {
+                      // 收集所有分组中包含的字段路径
+                      const groupedFieldPaths = new Set<string>();
+                      formConfig.groups?.forEach((group) => {
+                        group.fields.forEach((fieldPath) => {
+                          groupedFieldPaths.add(fieldPath);
+                        });
+                      });
+
+                      // 找出未分组的字段
+                      const ungroupedFields = formConfig.fields.filter(
+                        (field) => !groupedFieldPaths.has(field.path),
                       );
-                    }
-                    return null;
-                  })()}
-                </>
-              ) : (
-                /* 无分组时直接渲染所有字段 */
-                <div className="space-y-4">
-                  {formConfig.fields.map((field, index) => {
-                    const value = get(block.content, field.path);
-                    return (
-                      <FieldRenderer
-                        key={index}
-                        field={field}
-                        value={value}
-                        onChange={(newValue) =>
-                          handleContentChange(field.path, newValue)
-                        }
-                      />
-                    );
-                  })}
-                </div>
-              )}
+
+                      if (ungroupedFields.length > 0) {
+                        return (
+                          <>
+                            <hr className="border-border" />
+                            <div className="space-y-4">
+                              <div className="space-y-1">
+                                <label className="text-sm font-medium">
+                                  其他配置
+                                </label>
+                                <p className="text-xs text-muted-foreground">
+                                  未分组的配置项
+                                </p>
+                              </div>
+                              {ungroupedFields.map((field, index) => {
+                                const value = get(block.content, field.path);
+                                return (
+                                  <FieldRenderer
+                                    key={`ungrouped-${index}`}
+                                    field={field}
+                                    value={value}
+                                    onChange={(newValue) =>
+                                      handleContentChange(field.path, newValue)
+                                    }
+                                  />
+                                );
+                              })}
+                            </div>
+                          </>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </>
+                ) : (
+                  /* 无分组时直接渲染所有字段 */
+                  <div className="space-y-4">
+                    {formConfig.fields.map((field, index) => {
+                      const value = get(block.content, field.path);
+                      return (
+                        <FieldRenderer
+                          key={index}
+                          field={field}
+                          value={value}
+                          onChange={(newValue) =>
+                            handleContentChange(field.path, newValue)
+                          }
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
       </AutoTransition>
+
+      <div className="pt-4 mt-2 border-t border-border text-xs text-muted-foreground shrink-0 flex items-center justify-between">
+        <Clickable
+          onClick={handleOpenPlaceholders}
+          className="flex gap-1 items-center hover:text-foreground transition-colors"
+        >
+          <RiQuestionLine size="1em" />
+          变量占位符
+        </Clickable>
+        <Clickable
+          onClick={handleOpenExport}
+          className="flex gap-1 items-center text-primary hover:text-primary/80 transition-colors"
+          disabled={!block}
+        >
+          导出 <RiShareForward2Line size="1em" />
+        </Clickable>
+      </div>
 
       {/* 删除确认对话框 */}
       {block && onDelete && (
@@ -561,6 +785,75 @@ export default function BlockConfigPanel({
           variant="danger"
         />
       )}
+
+      {/* 变量占位符对话框 */}
+      <Dialog
+        open={showPlaceholderDialog}
+        onClose={() => setShowPlaceholderDialog(false)}
+        title="变量占位符"
+        size="md"
+      >
+        <div className="p-4">
+          <AutoResizer>
+            <AutoTransition>
+              {loadingPlaceholders ? (
+                <div className="py-20 flex justify-center" key="loading">
+                  <LoadingIndicator />
+                </div>
+              ) : (
+                <Table
+                  columns={placeholderColumns}
+                  data={placeholders}
+                  striped
+                  hoverable
+                  onRowClick={(e) => {
+                    navigator.clipboard.writeText(e.name as string);
+                    toast.success("已复制占位符到剪贴板");
+                  }}
+                  size="sm"
+                  bordered
+                  emptyText="暂无可用占位符"
+                />
+              )}
+            </AutoTransition>
+          </AutoResizer>
+          <div className="mt-4 text-xs text-muted-foreground">
+            <p>
+              提示：在文本内容中使用 {`{placeholder}`}{" "}
+              格式插入动态数据。输入新的占位符后，需点击“更新数据”才能生效。
+            </p>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* 导出数据对话框 */}
+      <Dialog
+        open={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+        title="导出区块数据"
+        size="md"
+        className="z-100"
+      >
+        <div className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              以下是当前区块的完整 JSON 数据，可用于备份或迁移。
+            </p>
+            <Button
+              size="sm"
+              icon={<RiFileCopyLine size="1em" />}
+              label={"复制 JSON"}
+              onClick={handleCopy}
+            />
+          </div>
+          {block && (
+            <JSONHighlight
+              json={{ ...block, data: undefined }}
+              shikiTheme={shikiTheme}
+            />
+          )}
+        </div>
+      </Dialog>
     </div>
   );
 }

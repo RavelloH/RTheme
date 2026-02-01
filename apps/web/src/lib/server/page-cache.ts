@@ -852,13 +852,14 @@ export class PageConfigBuilder {
 
   getBlockTitle(blockId: number | string, defaultValue: string = ""): string {
     return (
-      this.getBlockValue<string>(blockId, "title", defaultValue) ?? defaultValue
+      this.getBlockValue<string>(blockId, "title.value", defaultValue) ??
+      defaultValue
     );
   }
 
   getBlockHeader(blockId: number | string, defaultValue: string = ""): string {
     return (
-      this.getBlockValue<string>(blockId, "header", defaultValue) ??
+      this.getBlockValue<string>(blockId, "header.value", defaultValue) ??
       defaultValue
     );
   }
@@ -869,8 +870,11 @@ export class PageConfigBuilder {
     defaultValue: string[] = [],
   ): string[] {
     return (
-      this.getBlockValue<string[]>(blockId, `content.${field}`, defaultValue) ??
-      defaultValue
+      this.getBlockValue<string[]>(
+        blockId,
+        `content.${field}.value`,
+        defaultValue,
+      ) ?? defaultValue
     );
   }
 

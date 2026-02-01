@@ -44,3 +44,37 @@ export function replacePlaceholders(
     return data[key] !== undefined ? String(data[key]) : match;
   });
 }
+
+/**
+ * 从 BlockContent 类型的值中提取文本
+ */
+export function extractBlockText(
+  value: { value: string | string[]; align?: string } | undefined | null,
+): string {
+  if (!value) return "";
+  if (Array.isArray(value.value)) return value.value.join("\n");
+  return value.value ?? "";
+}
+
+/**
+ * 从 BlockContent 类型的值中提取文本数组和对齐信息
+ */
+export function extractBlockSectionAndAlign(
+  value: { value: string[]; align?: string } | undefined | null,
+): { values: string[]; align?: string } {
+  if (!value) return { values: [], align: undefined };
+  return { values: value.value ?? [], align: value.align };
+}
+
+/**
+ * 从 BlockContent 类型的值中提取文本和对齐信息
+ */
+export function extractBlockTextAndAlign(
+  value: { value: string | string[]; align?: string } | undefined | null,
+): { text: string; align?: string } {
+  if (!value) return { text: "", align: undefined };
+  const text = Array.isArray(value.value)
+    ? value.value.join("\n")
+    : (value.value ?? "");
+  return { text, align: value.align };
+}

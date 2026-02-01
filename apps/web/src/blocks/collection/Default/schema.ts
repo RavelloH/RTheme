@@ -22,36 +22,116 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
   fields: [
     {
       label: "顶部文本",
-      path: "header",
+      path: "header.value",
       type: "text",
       helperText: "顶部显示文本，自动大写、粗体",
     },
     {
+      label: "顶栏对齐方式",
+      path: "header.align",
+      type: "select",
+      options: [
+        {
+          label: "居中",
+          value: "center",
+        },
+        {
+          label: "左对齐",
+          value: "left",
+        },
+        {
+          label: "右对齐",
+          value: "right",
+        },
+      ],
+      defaultValue: "left",
+    },
+    {
       label: "标题",
-      path: "title",
+      path: "title.value",
       type: "text",
       helperText: "区块主标题",
     },
     {
+      label: "标题对齐方式",
+      path: "title.align",
+      type: "select",
+      options: [
+        {
+          label: "居中",
+          value: "center",
+        },
+        {
+          label: "左对齐",
+          value: "left",
+        },
+        {
+          label: "右对齐",
+          value: "right",
+        },
+      ],
+      defaultValue: "left",
+    },
+    {
       label: "正文（顶部）",
-      path: "content.top",
+      path: "content.top.value",
       type: "array",
-      helperText: "显示在正文区域，向上对齐。",
+      helperText: "显示在正文区域顶部。",
+    },
+    {
+      label: "正文（顶部）对齐方式",
+      path: "content.top.align",
+      type: "select",
+      options: [
+        {
+          label: "居中",
+          value: "center",
+        },
+        {
+          label: "左对齐",
+          value: "left",
+        },
+        {
+          label: "右对齐",
+          value: "right",
+        },
+      ],
+      defaultValue: "left",
     },
     {
       label: "正文（底部）",
-      path: "content.bottom",
+      path: "content.bottom.value",
       type: "array",
-      helperText: "显示在正文区域，向下对齐",
+      helperText: "显示在正文区域底部",
     },
     {
-      label: "底部文本",
+      label: "正文（底部）对齐方式",
+      path: "content.bottom.align",
+      type: "select",
+      options: [
+        {
+          label: "居中",
+          value: "center",
+        },
+        {
+          label: "左对齐",
+          value: "left",
+        },
+        {
+          label: "右对齐",
+          value: "right",
+        },
+      ],
+      defaultValue: "left",
+    },
+    {
+      label: "底部链接文本",
       path: "footer.text",
       type: "text",
-      helperText: "显示在底部，需要与底部文本链接配合使用",
+      helperText: "控制底部链接的文本，需要与底部文本链接配合使用",
     },
     {
-      label: "底部文本链接",
+      label: "底部链接",
       path: "footer.link",
       type: "text",
       helperText: "例如：/about",
@@ -62,12 +142,19 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
       title: "顶栏",
       description:
         "顶栏出现在区块的最上方，通常用于显示简短的提示信息。不填则不显示",
-      fields: ["header"],
+      fields: ["header.value", "header.align"],
     },
     {
       title: "正文",
       description: "正文文本，分别显示在正文顶部和底部，自动添加动画效果",
-      fields: ["title", "content.top", "content.bottom"],
+      fields: [
+        "title.value",
+        "title.align",
+        "content.top.value",
+        "content.top.align",
+        "content.bottom.value",
+        "content.bottom.align",
+      ],
     },
     {
       title: "底栏",
@@ -76,11 +163,17 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
     },
   ],
   previewData: {
-    header: "WELCOME",
-    title: "示例标题",
+    header: { value: "WELCOME", align: "center" },
+    title: { value: "示例标题", align: "left" },
     content: {
-      top: ["这是正文顶部的示例文本，", "用于展示预览效果。"],
-      bottom: ["正文底部的示例文本", "会在下方显示。"],
+      top: {
+        value: ["这是正文顶部的示例文本，", "用于展示预览效果。"],
+        align: "left",
+      },
+      bottom: {
+        value: ["正文底部的示例文本", "会在下方显示。"],
+        align: "left",
+      },
     },
     footer: {
       text: "了解更多",

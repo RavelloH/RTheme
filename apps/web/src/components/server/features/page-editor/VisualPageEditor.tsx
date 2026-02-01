@@ -504,14 +504,12 @@ export default function VisualPageEditor({
         showBackdrop={false}
       >
         <div className="h-full flex flex-col">
-          <div className="flex-1 overflow-y-auto py-4 pb-20">
-            <BlockConfigPanel
-              block={activeBlock}
-              onUpdate={handleUpdateBlock}
-              onRefreshData={handleRefreshBlockData}
-              onDelete={handleDeleteBlock}
-            />
-          </div>
+          <BlockConfigPanel
+            block={activeBlock}
+            onUpdate={handleUpdateBlock}
+            onRefreshData={handleRefreshBlockData}
+            onDelete={handleDeleteBlock}
+          />
         </div>
       </Drawer>
 

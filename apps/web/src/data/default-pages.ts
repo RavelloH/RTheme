@@ -1,10 +1,6 @@
 // apps/web/src/data/default-pages.ts
 // 默认页面数据定义
 
-import type {
-  DefaultBlockConfig,
-  DefaultBlockContent,
-} from "@/blocks/collection/Default/types";
 import type { BlockConfig } from "@/blocks/core/types";
 
 // Prisma Json 类型定义
@@ -15,7 +11,6 @@ type JsonArray = JsonValue[];
 // 页面配置接口
 export interface PageConfig {
   blocks?: BlockConfig[];
-  components?: unknown[]; // components 暂未重构类型，保持原样或定义为 unknown
   [key: string]: unknown;
 }
 
@@ -35,18 +30,6 @@ export interface DefaultPage {
   isSystemPage?: boolean;
 }
 
-// 定义 Block 模板，方便复用
-const createDefaultBlock = (
-  id: number,
-  description: string,
-  content: DefaultBlockContent,
-): DefaultBlockConfig => ({
-  id,
-  block: "default",
-  description,
-  content,
-});
-
 /**
  * 默认页面列表
  */
@@ -59,48 +42,51 @@ export const defaultPages: DefaultPage[] = [
     contentType: "MARKDOWN",
     config: {
       blocks: [
-        // Block 0: Hero
         {
           id: 100,
           block: "hero",
-          description: "首页顶部 Hero 区域",
+          description: "",
           content: {},
         },
-        // Block 1: Default (Introduction)
-        createDefaultBlock(
-          1,
-          "自定义块1，显示在Slogen与「作品」之间。正文下半部分可显示文章、作品计数。",
-          {
-            header: "Welcome. I'm...",
-            title: "NeutralPress | 中性色",
+        {
+          id: 1,
+          block: "default",
+          description: "",
+          content: {
+            header: { value: "Welcome. I'm...", align: "left" },
+            title: { value: "NeutralPress | 中性色", align: "left" },
             content: {
-              top: [
-                "专为博客而打造的CMS系统。",
-                "独特的横板滚动布局，",
-                "完整的后台管理功能，",
-                "便捷的可视化编辑器，",
-                "方便的媒体管理面板，",
-                "强大的内置访问统计，",
-                "经济的无服务器模式，",
-                "可靠的系统安全防御。",
-              ],
-              bottom: ["共有文章 {posts} 篇，", "收录作品 {projects} 件。"],
+              top: {
+                value: [
+                  "专为博客而打造的CMS系统。",
+                  "独特的横板滚动布局，",
+                  "完整的后台管理功能，",
+                  "便捷的可视化编辑器，",
+                  "方便的媒体管理面板，",
+                  "强大的内置访问统计，",
+                  "经济的无服务器模式，",
+                  "可靠的系统安全防御。",
+                ],
+                align: "left",
+              },
+              bottom: {
+                value: ["共有文章 {posts} 篇，", "收录作品 {projects} 件。"],
+                align: "left",
+              },
             },
             footer: {
               link: "/about",
               text: "Learn more about me",
             },
           },
-        ),
-        // Block 2: Projects
+        },
         {
           id: 101,
           block: "projects",
-          description: "作品展示区域",
+          description: "",
           content: {
-            // 将原 component 数据内联
             worksDescription: {
-              header: "My main tech stack includes",
+              header: { value: "My main tech stack includes", align: "left" },
               content:
                 "React / Next.js / TypeScript / JavaScript / TailwindCSS / Node.js / Express.js / Serverless / GraphQL / PostgreSQL / MySQL / Redis / Docker / Kubernetes / Webpack / Vite / C / C++ / C# / Jest / Cypress / Shell ...",
             },
@@ -120,104 +106,50 @@ export const defaultPages: DefaultPage[] = [
             },
           },
         },
-        // Block 3: Default (Between Projects & Posts)
-        createDefaultBlock(2, "自定义块2，显示在「作品」与「文章」之间", {
-          header: "",
-          title: "",
-          content: {
-            top: [],
-            bottom: [],
-          },
-          footer: {
-            link: "",
-            text: "",
-          },
-        }),
-        // Block 4: Posts
         {
           id: 102,
           block: "posts",
-          description: "文章列表区域",
+          description: "",
           content: {},
         },
-        // Block 5: Default (Between Posts & Tags)
-        createDefaultBlock(
-          3,
-          "自定义块3，显示在「文章」与「标签 & 分类」之间",
-          {
-            header: "",
-            title: "",
-            content: {
-              top: [],
-              bottom: [],
-            },
-            footer: {
-              link: "",
-              text: "",
-            },
-          },
-        ),
-        // Block 6: Tags & Categories
         {
           id: 103,
           block: "tags-categories",
-          description: "标签与分类区域",
+          description: "",
           content: {},
         },
-        // Block 7: Default (Footer)
-        createDefaultBlock(4, "自定义块4，显示在页面最后", {
-          header: "Want to...",
-          title: "Contact me / 联系我",
+        {
+          id: 4,
+          block: "default",
+          description: "",
           content: {
-            top: [
-              "学习交流?",
-              "洽谈合作?",
-              "交个朋友?",
-              "......",
-              "欢迎通过邮箱联系我：",
-              "xxx@example.com",
-            ],
-            bottom: [
-              "或者，不用那么正式，",
-              "直接使用下方的站内信系统和我聊聊。",
-            ],
-          },
-          footer: {
-            link: "/messages?uid=1",
-            text: "Start chatting with me",
-          },
-        }),
-      ],
-      // 保留 components 以防兼容性问题，虽然新逻辑不再依赖它们
-      components: [
-        {
-          id: "works-description",
-          value: {
-            header: "My main tech stack includes",
-            content:
-              "React / Next.js / TypeScript / JavaScript / TailwindCSS / Node.js / Express.js / Serverless / GraphQL / PostgreSQL / MySQL / Redis / Docker / Kubernetes / Webpack / Vite / C / C++ / C# / Jest / Cypress / Shell ...",
-          },
-          description:
-            "“作品”上的自定义组件，显示在作品中间，可自定义头部和正文（单行）。正文将会居中显示",
-        },
-        {
-          id: "works-summary",
-          value: {
-            content: [
-              "不止这些。",
-              "想要查看更多？",
-              "前往我的 Github 来查看我的所有项目，",
-              "或者在 Projects 页面看看相关描述。",
-              "",
-              "Github: [@xxx](https://github.com/RavelloH)",
-            ],
+            header: { value: "Want to...", align: "left" },
+            title: { value: "Contact me / 联系我", align: "left" },
+            content: {
+              top: {
+                value: [
+                  "学习交流?",
+                  "洽谈合作?",
+                  "交个朋友?",
+                  "......",
+                  "欢迎通过邮箱联系我：",
+                  "xxx@example.com",
+                ],
+                align: "left",
+              },
+              bottom: {
+                value: [
+                  "或者，不用那么正式，",
+                  "直接使用下方的站内信系统和我聊聊。",
+                ],
+                align: "left",
+              },
+            },
             footer: {
-              link: "/works",
-              description: "View more projects",
+              link: "/messages?uid=1",
+              text: "Start chatting with me",
             },
           },
-          description:
-            "“作品”上的自定义组件，显示在最后，可自定义正文（多行）和底部链接",
         },
       ],
     },
@@ -250,42 +182,54 @@ export const defaultPages: DefaultPage[] = [
     contentType: "MARKDOWN",
     config: {
       blocks: [
-        createDefaultBlock(
-          1,
-          "自定义块1，显示在页面开头。可显示文章统计信息。标题下方将显示搜索栏。",
-          {
-            header: "Thoughts. Notes. Stories.",
-            title: "Posts / 文章",
+        {
+          id: 1,
+          block: "default",
+          description: "",
+          content: {
+            header: { value: "Thoughts. Notes. Stories.", align: "left" },
+            title: { value: "Posts / 文章", align: "left" },
             content: {
-              top: [
-                "记录 & 索引所有文章。",
-                "",
-                "最近更新于 {lastPublishDays}。",
-                "自 {firstPublishAt} 以来，共索引 {posts} 篇文章。",
-              ],
-              bottom: [
-                "第 {page} 页，共 {totalPage} 页。",
-                "正在查看第 {firstPage} - {lastPage} 篇文章。",
-              ],
+              top: {
+                value: [
+                  "记录 & 索引所有文章。",
+                  "",
+                  "最近更新于 {lastPublishDays}。",
+                  "自 {firstPublishAt} 以来，共索引 {posts} 篇文章。",
+                ],
+                align: "left",
+              },
+              bottom: {
+                value: [
+                  "第 {page} 页，共 {totalPage} 页。",
+                  "正在查看第 {firstPage} - {lastPage} 篇文章。",
+                ],
+                align: "left",
+              },
             },
             footer: {
               link: "",
               text: "",
             },
           },
-        ),
-        createDefaultBlock(2, "自定义块2，显示在页面结尾。", {
-          header: "",
-          title: "",
+        },
+        {
+          id: 2,
+          block: "default",
+          description: "",
           content: {
-            top: [""],
-            bottom: [""],
+            header: { value: "", align: "left" },
+            title: { value: "", align: "left" },
+            content: {
+              top: { value: [], align: "left" },
+              bottom: { value: [], align: "left" },
+            },
+            footer: {
+              link: "",
+              text: "",
+            },
           },
-          footer: {
-            link: "",
-            text: "",
-          },
-        }),
+        },
       ],
     },
     status: "ACTIVE",
@@ -303,40 +247,52 @@ export const defaultPages: DefaultPage[] = [
     contentType: "MARKDOWN",
     config: {
       blocks: [
-        createDefaultBlock(
-          1,
-          "自定义块1，显示在页面开头。可显示分类统计信息。底部文本的最后一行将始终显示路径",
-          {
-            header: "Topics. Themes. Paths.",
-            title: "Categories / 分类",
+        {
+          id: 1,
+          block: "default",
+          description: "",
+          content: {
+            header: { value: "Topics. Themes. Paths.", align: "left" },
+            title: { value: "Categories / 分类", align: "left" },
             content: {
-              top: [
-                "整理 & 索引所有分类。",
-                "",
-                "最近更新于 {lastUpdatedDays}。",
-                "共索引 {categories} 个分类，",
-                "其中包含 {root} 个根分类，{child} 个子分类。",
-              ],
-              bottom: ["当前正在查看 {pageInfo}。"],
+              top: {
+                value: [
+                  "整理 & 索引所有分类。",
+                  "",
+                  "最近更新于 {lastUpdatedDays}。",
+                  "共索引 {categories} 个分类，",
+                  "其中包含 {root} 个根分类，{child} 个子分类。",
+                ],
+                align: "left",
+              },
+              bottom: {
+                value: ["当前正在查看 {pageInfo}。"],
+                align: "left",
+              },
             },
             footer: {
               link: "",
               text: "Random / 随便看看",
             },
           },
-        ),
-        createDefaultBlock(2, "自定义块2，显示在页面结尾。", {
-          header: "",
-          title: "",
+        },
+        {
+          id: 2,
+          block: "default",
+          description: "",
           content: {
-            top: [""],
-            bottom: [""],
+            header: { value: "", align: "left" },
+            title: { value: "", align: "left" },
+            content: {
+              top: { value: [], align: "left" },
+              bottom: { value: [], align: "left" },
+            },
+            footer: {
+              link: "",
+              text: "",
+            },
           },
-          footer: {
-            link: "",
-            text: "",
-          },
-        }),
+        },
       ],
     },
     status: "ACTIVE",
@@ -353,44 +309,56 @@ export const defaultPages: DefaultPage[] = [
     contentType: "MARKDOWN",
     config: {
       blocks: [
-        createDefaultBlock(
-          1,
-          "自定义块1，显示在页面开头。可显示分类统计信息。底部文本的最后一行将始终显示路径",
-          {
-            header: "Topics. Themes. Paths.",
-            title: "分类：{categoryName}",
+        {
+          id: 1,
+          block: "default",
+          description: "",
+          content: {
+            header: { value: "Topics. Themes. Paths.", align: "left" },
+            title: { value: "分类：{categoryName}", align: "left" },
             content: {
-              top: [
-                "整理 & 索引 {categoryName} 下的所有子分类及文章。",
-                "",
-                "最近更新于 {lastUpdatedDays}。",
-                "此分类共包含 {categories} 个子分类，",
-                "{posts} 篇文章。",
-              ],
-              bottom: [
-                "当前正在查看 {pageInfo}。",
-                "第 {page} 页，共 {totalPage} 页。",
-                "正在查看第 {firstPage} - {lastPage} 篇文章。",
-              ],
+              top: {
+                value: [
+                  "整理 & 索引 {categoryName} 下的所有子分类及文章。",
+                  "",
+                  "最近更新于 {lastUpdatedDays}。",
+                  "此分类共包含 {categories} 个子分类，",
+                  "{posts} 篇文章。",
+                ],
+                align: "left",
+              },
+              bottom: {
+                value: [
+                  "当前正在查看 {pageInfo}。",
+                  "第 {page} 页，共 {totalPage} 页。",
+                  "正在查看第 {firstPage} - {lastPage} 篇文章。",
+                ],
+                align: "left",
+              },
             },
             footer: {
               link: "",
               text: "Back / 返回上一级分类",
             },
           },
-        ),
-        createDefaultBlock(2, "自定义块2，显示在页面结尾。", {
-          header: "",
-          title: "",
+        },
+        {
+          id: 2,
+          block: "default",
+          description: "",
           content: {
-            top: [""],
-            bottom: [""],
+            header: { value: "", align: "left" },
+            title: { value: "", align: "left" },
+            content: {
+              top: { value: [], align: "left" },
+              bottom: { value: [], align: "left" },
+            },
+            footer: {
+              link: "",
+              text: "",
+            },
           },
-          footer: {
-            link: "",
-            text: "",
-          },
-        }),
+        },
       ],
     },
     status: "ACTIVE",
@@ -407,39 +375,51 @@ export const defaultPages: DefaultPage[] = [
     contentType: "MARKDOWN",
     config: {
       blocks: [
-        createDefaultBlock(
-          1,
-          "自定义块1，显示在页面开头。可显示标签统计信息。",
-          {
-            header: "Keywords. Connections. Traces.",
-            title: "Tags / 标签",
+        {
+          id: 1,
+          block: "default",
+          description: "",
+          content: {
+            header: { value: "Keywords. Connections. Traces.", align: "left" },
+            title: { value: "Tags / 标签", align: "left" },
             content: {
-              top: [
-                "整理 & 索引所有标签。",
-                "",
-                "最近更新于 {lastUpdatedDays}。",
-                "共索引 {tags} 个标签。",
-              ],
-              bottom: ["当前正在查看 {pageInfo}。"],
+              top: {
+                value: [
+                  "整理 & 索引所有标签。",
+                  "",
+                  "最近更新于 {lastUpdatedDays}。",
+                  "共索引 {tags} 个标签。",
+                ],
+                align: "left",
+              },
+              bottom: {
+                value: ["当前正在查看 {pageInfo}。"],
+                align: "left",
+              },
             },
             footer: {
               link: "",
               text: "Random / 随便看看",
             },
           },
-        ),
-        createDefaultBlock(2, "自定义块2，显示在页面结尾。", {
-          header: "",
-          title: "",
+        },
+        {
+          id: 2,
+          block: "default",
+          description: "",
           content: {
-            top: [""],
-            bottom: [""],
+            header: { value: "", align: "left" },
+            title: { value: "", align: "left" },
+            content: {
+              top: { value: [], align: "left" },
+              bottom: { value: [], align: "left" },
+            },
+            footer: {
+              link: "",
+              text: "",
+            },
           },
-          footer: {
-            link: "",
-            text: "",
-          },
-        }),
+        },
       ],
     },
     status: "ACTIVE",
@@ -456,42 +436,54 @@ export const defaultPages: DefaultPage[] = [
     contentType: "MARKDOWN",
     config: {
       blocks: [
-        createDefaultBlock(
-          1,
-          "自定义块1，显示在页面开头。可显示标签统计信息。",
-          {
-            header: "Keywords. Connections. Traces.",
-            title: "标签：{tagName}",
+        {
+          id: 1,
+          block: "default",
+          description: "",
+          content: {
+            header: { value: "Keywords. Connections. Traces.", align: "left" },
+            title: { value: "标签：{tagName}", align: "left" },
             content: {
-              top: [
-                "整理 & 索引 {tag} 下的所有文章。",
-                "",
-                "此标签共包含 {posts} 个文章。",
-              ],
-              bottom: [
-                "当前正在查看 {pageInfo}。",
-                "第 {page} 页，共 {totalPage} 页。",
-                "正在查看第 {firstPage} - {lastPage} 篇文章。",
-              ],
+              top: {
+                value: [
+                  "整理 & 索引 {tag} 下的所有文章。",
+                  "",
+                  "此标签共包含 {posts} 个文章。",
+                ],
+                align: "left",
+              },
+              bottom: {
+                value: [
+                  "当前正在查看 {pageInfo}。",
+                  "第 {page} 页，共 {totalPage} 页。",
+                  "正在查看第 {firstPage} - {lastPage} 篇文章。",
+                ],
+                align: "left",
+              },
             },
             footer: {
               link: "",
               text: "Back / 返回标签列表",
             },
           },
-        ),
-        createDefaultBlock(2, "自定义块2，显示在页面结尾。", {
-          header: "",
-          title: "",
+        },
+        {
+          id: 2,
+          block: "default",
+          description: "",
           content: {
-            top: [""],
-            bottom: [""],
+            header: { value: "", align: "left" },
+            title: { value: "", align: "left" },
+            content: {
+              top: { value: [], align: "left" },
+              bottom: { value: [], align: "left" },
+            },
+            footer: {
+              link: "",
+              text: "",
+            },
           },
-          footer: {
-            link: "",
-            text: "",
-          },
-        }),
+        },
       ],
     },
     status: "ACTIVE",

@@ -1,6 +1,10 @@
 import type { DefaultBlockConfig } from "@/blocks/collection/Default/types";
 import { ProcessedText } from "@/blocks/core/components";
-import { replacePlaceholders } from "@/blocks/core/lib/shared";
+import {
+  extractBlockSectionAndAlign,
+  extractBlockTextAndAlign,
+  replacePlaceholders,
+} from "@/blocks/core/lib/shared";
 import RowGrid, {
   type GridArea,
   GridItem,
@@ -42,19 +46,39 @@ export default function DefaultBlock({
 
   const areas = getAreas();
 
+  // 获取对齐类名
+  const getAlignClass = (align?: string) => {
+    switch (align) {
+      case "center":
+        return "justify-center text-center";
+      case "right":
+        return "justify-end text-right";
+      case "left":
+      default:
+        return "justify-start text-left";
+    }
+  };
+
   return (
     <RowGrid>
       {/* Header */}
-      {hasHeader && (
-        <GridItem
-          areas={[1]}
-          width={14}
-          height={0.1}
-          className="bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl h-full"
-        >
-          <ProcessedText text={content.header} data={data} inline />
-        </GridItem>
-      )}
+      {hasHeader &&
+        (() => {
+          const { text: headerText, align: headerAlign } =
+            extractBlockTextAndAlign(content.header);
+          return (
+            <GridItem
+              areas={[1]}
+              width={14}
+              height={0.1}
+              className={`bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl h-full ${getAlignClass(
+                headerAlign,
+              )}`}
+            >
+              <ProcessedText text={headerText} data={data} inline />
+            </GridItem>
+          );
+        })()}
 
       {/* Main Content */}
       <GridItem
@@ -64,26 +88,59 @@ export default function DefaultBlock({
         className="px-10 py-15 text-2xl flex flex-col justify-between"
       >
         <div>
-          <div className="text-7xl" data-fade-char>
-            <p>
-              <ProcessedText text={content.title} data={data} inline />
-            </p>
-          </div>
-          <div className="block mt-4" data-line-reveal>
-            {content.content?.top.map((line: string, index: number) => (
-              <div key={`content-top-${index}`}>
-                <ProcessedText text={line} data={data} inline />
+          {(() => {
+            const { text: titleText, align: titleAlign } =
+              extractBlockTextAndAlign(content.title);
+            return (
+              <div
+                className={`text-7xl ${getAlignClass(titleAlign)}`}
+                data-fade-char
+              >
+                <p>
+                  <ProcessedText text={titleText} data={data} inline />
+                </p>
               </div>
-            ))}
+            );
+          })()}
+          <div
+            className={`block mt-4 ${getAlignClass(
+              extractBlockSectionAndAlign(content.content?.top).align,
+            )}`}
+            data-line-reveal
+          >
+            {(() => {
+              const { values: topValues } = extractBlockSectionAndAlign(
+                content.content?.top,
+              );
+              return Array.isArray(topValues)
+                ? topValues.map((item, index) => (
+                    <div key={`content-top-${index}`}>
+                      <ProcessedText text={item} data={data} inline />
+                    </div>
+                  ))
+                : null;
+            })()}
           </div>
         </div>
         <div>
-          <div className="mt-10">
-            {content.content?.bottom.map((line: string, index: number) => (
-              <div key={`content-bottom-${index}`} data-fade-char>
-                <ProcessedText text={line} data={data} inline />
-              </div>
-            ))}
+          <div
+            className={`mt-10 ${getAlignClass(
+              extractBlockSectionAndAlign(content.content?.bottom).align,
+            )}`}
+            data-fade-char
+          >
+            {(() => {
+              const { values: bottomValues } = extractBlockSectionAndAlign(
+                content.content?.bottom,
+              );
+              return Array.isArray(bottomValues)
+                ? bottomValues.map((item, index) => (
+                    <div key={`content-bottom-${index}`}>
+                      <ProcessedText text={item} data={data} inline />
+                    </div>
+                  ))
+                : null;
+            })()}
           </div>
         </div>
       </GridItem>
