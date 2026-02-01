@@ -32,18 +32,19 @@ import limitControl from "@/lib/server/rate-limit";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
 import ResponseBuilder from "@/lib/server/response";
 import {
-  generateBackupCodes,
-  generateTotpSecret,
-  generateTotpUri,
-  isValidBackupCodeFormat,
-  verifyTotpCode,
-} from "@/lib/server/totp";
-import {
+  checkTotpFailCount,
   decryptBackupCode,
   decryptTotpSecret,
   encryptBackupCode,
   encryptTotpSecret,
-} from "@/lib/server/totp-crypto";
+  generateBackupCodes,
+  generateTotpSecret,
+  generateTotpUri,
+  incrementTotpFailCount,
+  isValidBackupCodeFormat,
+  resetTotpFailCount,
+  verifyTotpCode,
+} from "@/lib/server/totp";
 import { validateData } from "@/lib/server/validator";
 
 import type { Prisma } from ".prisma/client";
@@ -57,40 +58,6 @@ type ActionResult<T extends ApiResponseData> =
 // ============================================================================
 // 辅助函数
 // ============================================================================
-
-/**
- * 检查 TOTP 验证失败次数
- * @returns 是否超过限制（3次）
- */
-export async function checkTotpFailCount(uid: number): Promise<boolean> {
-  await ensureRedisConnection();
-  const key = generateCacheKey("auth", "totp", "fail", uid);
-  const count = await redis.get(key);
-  return count ? parseInt(count, 10) >= 3 : false;
-}
-
-/**
- * 增加 TOTP 验证失败次数
- */
-export async function incrementTotpFailCount(uid: number): Promise<void> {
-  await ensureRedisConnection();
-  const key = generateCacheKey("auth", "totp", "fail", uid);
-  const count = await redis.incr(key);
-
-  // 首次设置过期时间为 5 分钟
-  if (count === 1) {
-    await redis.expire(key, 300);
-  }
-}
-
-/**
- * 重置 TOTP 验证失败次数
- */
-export async function resetTotpFailCount(uid: number): Promise<void> {
-  await ensureRedisConnection();
-  const key = generateCacheKey("auth", "totp", "fail", uid);
-  await redis.del(key);
-}
 
 /**
  * 获取备份码剩余数量
