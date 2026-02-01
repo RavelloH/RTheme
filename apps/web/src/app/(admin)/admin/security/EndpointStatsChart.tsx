@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import type { EndpointStat } from "@repo/shared-types/api/security";
 
 import { getEndpointStats } from "@/actions/security";
-import { GridItem } from "@/components/RowGrid";
-import { useMainColor } from "@/components/ThemeProvider";
+import { GridItem } from "@/components/client/layout/RowGrid";
+import { useMainColor } from "@/components/client/layout/ThemeProvider";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import generateComplementary from "@/lib/shared/complementary";

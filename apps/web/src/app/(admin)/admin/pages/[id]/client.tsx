@@ -4,8 +4,8 @@ import React from "react";
 import { useRouter } from "next/navigation";
 
 import { updatePage } from "@/actions/page";
-import type { BlockConfig } from "@/blocks/types";
-import VisualPageEditor from "@/components/PageEditor/VisualPageEditor";
+import type { BlockConfig } from "@/blocks/core/types";
+import VisualPageEditor from "@/components/server/features/page-editor/VisualPageEditor";
 import runWithAuth from "@/lib/client/run-with-auth";
 import type { PageItem } from "@/lib/server/page-cache";
 import { useToast } from "@/ui/Toast";

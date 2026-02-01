@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 
 import type { TimeRangeValue } from "@/app/(admin)/admin/analytics/TimeRangeSelector";
 import TimeRangeSelector from "@/app/(admin)/admin/analytics/TimeRangeSelector";
-import { GridItem } from "@/components/RowGrid";
+import { GridItem } from "@/components/client/layout/RowGrid";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 

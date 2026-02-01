@@ -3,10 +3,10 @@ import SearchLogsTable from "@/app/(admin)/admin/search-insights/SearchLogsTable
 import SearchPerformanceChart from "@/app/(admin)/admin/search-insights/SearchPerformanceChart";
 import SearchTrendChart from "@/app/(admin)/admin/search-insights/SearchTrendChart";
 import SearchWordCloud from "@/app/(admin)/admin/search-insights/SearchWordCloud";
-import AdminSidebar from "@/components/AdminSidebar";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import MainLayout from "@/components/MainLayout";
-import RowGrid from "@/components/RowGrid";
+import AdminSidebar from "@/components/client/layout/AdminSidebar";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
+import RowGrid from "@/components/client/layout/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
 
 export const metadata = await generateMetadata(

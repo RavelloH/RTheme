@@ -4,7 +4,7 @@ import fs from "fs";
 import { unstable_cache } from "next/cache";
 import path from "path";
 
-import type { BlockConfig } from "@/blocks/types";
+import type { BlockConfig } from "@/blocks/core/types";
 
 // 自定义 JSON 类型定义（避免与 Prisma 的 JsonValue 冲突）
 type CustomJsonValue =

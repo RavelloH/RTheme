@@ -5,7 +5,7 @@ import { RiRefreshLine } from "@remixicon/react";
 import type { SecurityOverviewData } from "@repo/shared-types/api/security";
 
 import { getSecurityOverview } from "@/actions/security";
-import { GridItem } from "@/components/RowGrid";
+import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 import { AutoTransition } from "@/ui/AutoTransition";

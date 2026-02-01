@@ -10,8 +10,8 @@ import {
 import type { IPInfo } from "@repo/shared-types/api/security";
 
 import { banIP, clearRateLimit, getIPList, unbanIP } from "@/actions/security";
-import type { ActionButton, FilterConfig } from "@/components/GridTable";
-import GridTable from "@/components/GridTable";
+import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
+import GridTable from "@/components/ui/GridTable";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { Button } from "@/ui/Button";

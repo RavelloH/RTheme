@@ -4,7 +4,7 @@ import { Fragment, useCallback, useEffect, useState } from "react";
 import { RiRefreshLine } from "@remixicon/react";
 
 import { doctor } from "@/actions/doctor";
-import { GridItem } from "@/components/RowGrid";
+import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 import { AutoTransition } from "@/ui/AutoTransition";

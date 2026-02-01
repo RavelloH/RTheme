@@ -1,7 +1,7 @@
 import AnalyticsStats from "@/app/(admin)/admin/analytics/AnalyticsStats";
-import AdminSidebar from "@/components/AdminSidebar";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import MainLayout from "@/components/MainLayout";
+import AdminSidebar from "@/components/client/layout/AdminSidebar";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
 import { generateMetadata } from "@/lib/server/seo";
 
 export const metadata = await generateMetadata(

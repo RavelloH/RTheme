@@ -22,7 +22,7 @@ import {
   markAllNoticesAsRead,
   markNoticesAsRead,
 } from "@/actions/notice";
-import { useNavigateWithTransition } from "@/components/Link";
+import { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";

@@ -7,8 +7,8 @@ import type {
 } from "@repo/shared-types/api/user";
 import { useRouter } from "next/navigation";
 
-import UserProfileClient from "@/components/client/UserProfileClient";
-import { useNavigateWithTransition } from "@/components/Link";
+import UserProfileClient from "@/components/client/features/user/UserProfileClient";
+import { useNavigateWithTransition } from "@/components/ui/Link";
 import { Dialog } from "@/ui/Dialog";
 
 interface UserProfileModalProps {

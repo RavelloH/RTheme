@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 
 import { getUserPublicProfile } from "@/actions/user";
 import UserProfileModal from "@/app/@modal/(.)user/[uid]/UserProfileModal";
-import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
+import ViewCountBatchLoader from "@/components/client/logic/ViewCountBatchLoader";
 import { type AccessTokenPayload, jwtTokenVerify } from "@/lib/server/jwt";
 
 interface UserProfileModalPageProps {

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { RiDatabase2Line } from "@remixicon/react";
 
 import { indexPosts } from "@/actions/search";
-import { GridItem } from "@/components/RowGrid";
+import { GridItem } from "@/components/client/layout/RowGrid";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { useToast } from "@/ui/Toast";
 

@@ -9,8 +9,8 @@ import { getSearchLogStats } from "@/actions/search";
 import BarChart, {
   type BarChartDataPoint,
   type SeriesConfig,
-} from "@/components/BarChart";
-import { GridItem } from "@/components/RowGrid";
+} from "@/components/client/charts/BarChart";
+import { GridItem } from "@/components/client/layout/RowGrid";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";

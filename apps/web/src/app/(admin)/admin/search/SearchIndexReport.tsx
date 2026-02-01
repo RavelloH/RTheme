@@ -5,7 +5,7 @@ import { RiRefreshLine } from "@remixicon/react";
 import type { SearchIndexStatsResult } from "@repo/shared-types/api/search";
 
 import { getSearchIndexStats } from "@/actions/search";
-import { GridItem } from "@/components/RowGrid";
+import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import { AutoTransition } from "@/ui/AutoTransition";

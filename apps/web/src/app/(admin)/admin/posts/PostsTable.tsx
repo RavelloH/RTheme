@@ -23,13 +23,13 @@ import {
   updatePosts,
 } from "@/actions/post";
 import { createTag } from "@/actions/tag";
-import { CategoryInput } from "@/components/client/Category/CategoryInput";
-import MediaSelector from "@/components/client/MediaSelector";
-import type { SelectedTag } from "@/components/client/Tag/TagInput";
-import { TagInput } from "@/components/client/Tag/TagInput";
-import type { ActionButton, FilterConfig } from "@/components/GridTable";
-import GridTable from "@/components/GridTable";
-import Link, { useNavigateWithTransition } from "@/components/Link";
+import { CategoryInput } from "@/components/client/features/categories/CategoryInput";
+import MediaSelector from "@/components/client/features/media/MediaSelector";
+import type { SelectedTag } from "@/components/client/features/tags/TagInput";
+import { TagInput } from "@/components/client/features/tags/TagInput";
+import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
+import GridTable from "@/components/ui/GridTable";
+import Link, { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { Button } from "@/ui/Button";

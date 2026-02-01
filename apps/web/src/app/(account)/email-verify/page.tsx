@@ -2,9 +2,9 @@ import { Suspense } from "react";
 import Marquee from "react-fast-marquee";
 
 import VerifySheet from "@/app/(account)/email-verify/VerifySheet";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import MainLayout from "@/components/MainLayout";
-import RowGrid, { GridItem } from "@/components/RowGrid";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
+import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
 
 export const metadata = await generateMetadata(

@@ -7,8 +7,8 @@ import { getMediaTrends } from "@/actions/media";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig,
-} from "@/components/AreaChart";
-import { GridItem } from "@/components/RowGrid";
+} from "@/components/client/charts/AreaChart";
+import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { AutoTransition } from "@/ui/AutoTransition";

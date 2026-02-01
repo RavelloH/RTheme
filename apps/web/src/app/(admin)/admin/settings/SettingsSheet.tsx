@@ -5,7 +5,7 @@ import { RiRefreshLine, RiSaveLine } from "@remixicon/react";
 
 import { getSettings, updateSettings } from "@/actions/setting";
 import type { SettingSelectMessage } from "@/app/(admin)/admin/settings/SettingsSelect";
-import { GridItem } from "@/components/RowGrid";
+import { GridItem } from "@/components/client/layout/RowGrid";
 import {
   defaultConfigs,
   extractDefaultValue,

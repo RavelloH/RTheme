@@ -5,9 +5,9 @@ import { RiAddLine, RiArrowLeftSLine, RiRefreshLine } from "@remixicon/react";
 
 import { createCategory } from "@/actions/category";
 import { getCategoriesStats } from "@/actions/stat";
-import { useNavigateWithTransition } from "@/components/Link";
-import { GridItem } from "@/components/RowGrid";
+import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
+import { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";

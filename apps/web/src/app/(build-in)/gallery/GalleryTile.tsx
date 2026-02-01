@@ -3,7 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 
-import CMSImage from "@/components/CMSImage";
+import CMSImage from "@/components/ui/CMSImage";
 import type { Tile } from "@/lib/gallery-layout";
 import { useGalleryLightboxStore } from "@/store/gallery-lightbox-store";
 

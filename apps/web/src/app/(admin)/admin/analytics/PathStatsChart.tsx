@@ -2,7 +2,7 @@
 
 import type { PathStat } from "@repo/shared-types";
 
-import { GridItem } from "@/components/RowGrid";
+import { GridItem } from "@/components/client/layout/RowGrid";
 import generateComplementary from "@/lib/shared/complementary";
 import generateGradient from "@/lib/shared/gradient";
 import { AutoTransition } from "@/ui/AutoTransition";

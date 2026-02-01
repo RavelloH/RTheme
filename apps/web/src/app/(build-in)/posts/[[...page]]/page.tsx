@@ -3,13 +3,13 @@ import { cacheLife, cacheTag } from "next/cache";
 import { notFound } from "next/navigation";
 
 import DynamicReplace from "@/components/client/DynamicReplace";
-import SearchContent from "@/components/client/SearchContent";
-import SearchInput from "@/components/client/SearchInput";
-import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import LinkButton from "@/components/LinkButton";
-import MainLayout from "@/components/MainLayout";
-import RowGrid, { GridItem } from "@/components/RowGrid";
+import SearchContent from "@/components/client/features/posts/SearchContent";
+import SearchInput from "@/components/client/features/posts/SearchInput";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
+import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
+import ViewCountBatchLoader from "@/components/client/logic/ViewCountBatchLoader";
+import LinkButton from "@/components/ui/LinkButton";
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import { getFeaturedImageData } from "@/lib/server/media-reference";
 import {

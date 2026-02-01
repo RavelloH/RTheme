@@ -5,8 +5,8 @@ import { RiRefreshLine } from "@remixicon/react";
 import type { SearchIndexStatsResult } from "@repo/shared-types/api/search";
 
 import { getSearchIndexStats } from "@/actions/search";
-import Link from "@/components/Link";
 import ErrorPage from "@/components/ui/Error";
+import Link from "@/components/ui/Link";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";

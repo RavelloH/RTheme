@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 
 import { doctor } from "@/actions/doctor";
-import { useNavigateWithTransition } from "@/components/Link";
-import MainLayout from "@/components/MainLayout";
+import MainLayout from "@/components/client/layout/MainLayout";
+import { useNavigateWithTransition } from "@/components/ui/Link";
 import { useMobile } from "@/hooks/use-mobile";
 import { AutoTransition } from "@/ui/AutoTransition";
 

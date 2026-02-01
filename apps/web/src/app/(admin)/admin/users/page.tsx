@@ -1,10 +1,10 @@
 import UsersHistoryChart from "@/app/(admin)/admin/users/UsersHistoryChart";
 import UsersReport from "@/app/(admin)/admin/users/UsersReport";
 import UsersTable from "@/app/(admin)/admin/users/UsersTable";
-import AdminSidebar from "@/components/AdminSidebar";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import MainLayout from "@/components/MainLayout";
-import RowGrid from "@/components/RowGrid";
+import AdminSidebar from "@/components/client/layout/AdminSidebar";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
+import RowGrid from "@/components/client/layout/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
 
 export const metadata = await generateMetadata(

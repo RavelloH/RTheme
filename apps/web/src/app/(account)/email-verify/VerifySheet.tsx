@@ -8,8 +8,8 @@ import {
   resendEmailVerification as resendEmailAction,
   verifyEmail as verifyEmailAction,
 } from "@/actions/auth";
-import { CaptchaButton } from "@/components/CaptchaButton";
-import Link, { useNavigateWithTransition } from "@/components/Link";
+import { CaptchaButton } from "@/components/ui/CaptchaButton";
+import Link, { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import Clickable from "@/ui/Clickable";
 import { Dialog } from "@/ui/Dialog";

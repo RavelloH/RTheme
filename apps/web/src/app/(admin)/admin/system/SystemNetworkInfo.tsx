@@ -4,7 +4,7 @@ import { useState } from "react";
 import { RiGlobalLine, RiServerLine } from "@remixicon/react";
 
 import { useSystemInfo } from "@/app/(admin)/admin/system/use-system-info";
-import { GridItem } from "@/components/RowGrid";
+import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { AutoTransition } from "@/ui/AutoTransition";

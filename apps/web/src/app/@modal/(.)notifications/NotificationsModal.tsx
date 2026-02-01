@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import NotificationsClient from "@/app/(account)/notifications/NotificationsClient";
-import { useNavigateWithTransition } from "@/components/Link";
+import { useNavigateWithTransition } from "@/components/ui/Link";
 import { Dialog } from "@/ui/Dialog";
 
 interface NotificationsModalProps {

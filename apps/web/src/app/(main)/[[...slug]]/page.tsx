@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 
-import BlockRenderer from "@/components/BlockRenderer";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import MainLayout from "@/components/MainLayout";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
+import BlockRenderer from "@/components/server/renderer/BlockRenderer";
 import type { PageConfig } from "@/data/default-pages";
 import { resolveBlockData } from "@/lib/server/block-data-resolver";
 import { getRawPage, getSystemPageConfig } from "@/lib/server/page-cache";

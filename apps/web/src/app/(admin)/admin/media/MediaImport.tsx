@@ -13,7 +13,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { getStorageList } from "@/actions/storage";
-import { GridItem } from "@/components/RowGrid";
+import { GridItem } from "@/components/client/layout/RowGrid";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";

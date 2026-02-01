@@ -10,8 +10,8 @@ import {
   StorageConfigFields,
   storageConfigValuesToPayload,
 } from "@/app/(admin)/admin/storages/StorageConfigFields";
-import Link from "@/components/Link";
-import { GridItem } from "@/components/RowGrid";
+import { GridItem } from "@/components/client/layout/RowGrid";
+import Link from "@/components/ui/Link";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 import runWithAuth from "@/lib/client/run-with-auth";
 import type { StorageProviderType } from "@/template/storages";

@@ -1,4 +1,4 @@
-import type { BlockConfig, BlockFetcher } from "@/blocks/types";
+import type { BlockConfig, BlockFetcher } from "@/blocks/core/types";
 
 // 页面配置最小接口（只需要 blocks 属性）
 interface BlockPageConfig {
@@ -8,17 +8,26 @@ interface BlockPageConfig {
 
 // 保持映射表不变，但可以将类型定义简化
 const fetcherLoaders: Record<string, () => Promise<BlockFetcher>> = {
-  hero: () => import("@/blocks/HeroGallery/fetcher").then((m) => m.heroFetcher),
+  hero: () =>
+    import("@/blocks/collection/HeroGallery/fetcher").then(
+      (m) => m.heroFetcher,
+    ),
   posts: () =>
-    import("@/blocks/RecentPosts/fetcher").then((m) => m.postsFetcher),
+    import("@/blocks/collection/RecentPosts/fetcher").then(
+      (m) => m.postsFetcher,
+    ),
   projects: () =>
-    import("@/blocks/RecentProjects/fetcher").then((m) => m.projectsFetcher),
+    import("@/blocks/collection/RecentProjects/fetcher").then(
+      (m) => m.projectsFetcher,
+    ),
   "tags-categories": () =>
-    import("@/blocks/TagsCategories/fetcher").then(
+    import("@/blocks/collection/TagsCategories/fetcher").then(
       (m) => m.tagsCategoriesFetcher,
     ),
   default: () =>
-    import("@/blocks/Default/fetcher").then((m) => m.defaultBlockFetcher),
+    import("@/blocks/collection/Default/fetcher").then(
+      (m) => m.defaultBlockFetcher,
+    ),
 };
 
 /**

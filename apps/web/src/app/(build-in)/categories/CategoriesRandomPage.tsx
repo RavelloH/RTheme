@@ -1,6 +1,6 @@
 "use client";
 
-import LinkButton from "@/components/LinkButton";
+import LinkButton from "@/components/ui/LinkButton";
 
 export default function CategoriesRandomPage({
   options,

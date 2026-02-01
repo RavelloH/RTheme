@@ -4,11 +4,11 @@ import { cacheLife, cacheTag } from "next/cache";
 import CategoriesRandomPage from "@/app/(build-in)/categories/CategoriesRandomPage";
 import CategoryContainer from "@/app/(build-in)/categories/CategoryContainer";
 import DynamicReplace from "@/components/client/DynamicReplace";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import Link from "@/components/Link";
-import LinkButton from "@/components/LinkButton";
-import MainLayout from "@/components/MainLayout";
-import RowGrid, { GridItem } from "@/components/RowGrid";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
+import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
+import Link from "@/components/ui/Link";
+import LinkButton from "@/components/ui/LinkButton";
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import { getFeaturedImageData } from "@/lib/server/media-reference";
 import {

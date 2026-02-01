@@ -4,10 +4,10 @@ import SystemMemoryChart from "@/app/(admin)/admin/system/SystemMemoryChart";
 import SystemNetworkInfo from "@/app/(admin)/admin/system/SystemNetworkInfo";
 import SystemOverview from "@/app/(admin)/admin/system/SystemOverview";
 import SystemProcessInfo from "@/app/(admin)/admin/system/SystemProcessInfo";
-import AdminSidebar from "@/components/AdminSidebar";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import MainLayout from "@/components/MainLayout";
-import RowGrid from "@/components/RowGrid";
+import AdminSidebar from "@/components/client/layout/AdminSidebar";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
+import RowGrid from "@/components/client/layout/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
 
 export const metadata = await generateMetadata(

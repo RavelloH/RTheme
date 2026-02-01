@@ -7,12 +7,12 @@ import { useParams } from "next/navigation";
 
 import { getPostVersion } from "@/actions/post";
 import { getPostDetail } from "@/actions/post";
-import AdminSidebar from "@/components/AdminSidebar";
-import { LivePreview } from "@/components/client/Editor/LivePreview";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import { useNavigateWithTransition } from "@/components/Link";
-import MainLayout from "@/components/MainLayout";
-import RowGrid, { GridItem } from "@/components/RowGrid";
+import { LivePreview } from "@/components/client/features/editor/LivePreview";
+import AdminSidebar from "@/components/client/layout/AdminSidebar";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
+import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
+import { useNavigateWithTransition } from "@/components/ui/Link";
 import { Button } from "@/ui/Button";
 import Clickable from "@/ui/Clickable";
 

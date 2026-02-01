@@ -1,5 +1,5 @@
 import LogoutSheet from "@/app/(account)/logout/LogoutSheet";
-import MainLayout from "@/components/MainLayout";
+import MainLayout from "@/components/client/layout/MainLayout";
 import { generateMetadata } from "@/lib/server/seo";
 
 export const metadata = await generateMetadata(

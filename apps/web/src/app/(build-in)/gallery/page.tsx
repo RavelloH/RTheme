@@ -1,7 +1,7 @@
 import { cacheLife, cacheTag } from "next/cache";
 
 import GalleryClient from "@/app/(build-in)/gallery/GalleryClient";
-import MainLayout from "@/components/MainLayout";
+import MainLayout from "@/components/client/layout/MainLayout";
 import { getGalleryPhotosData } from "@/lib/server/media";
 import { getRawPage } from "@/lib/server/page-cache";
 import { generateMetadata } from "@/lib/server/seo";

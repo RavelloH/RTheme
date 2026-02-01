@@ -11,8 +11,8 @@ import PageViewTable from "@/app/(admin)/admin/analytics/PageViewTable";
 import PathStatsChart from "@/app/(admin)/admin/analytics/PathStatsChart";
 import type { TimeRangeValue } from "@/app/(admin)/admin/analytics/TimeRangeSelector";
 import PathTrendChart from "@/app/(admin)/admin/analytics/VisitTrendChart";
-import RowGrid from "@/components/RowGrid";
-import { useMainColor } from "@/components/ThemeProvider";
+import RowGrid from "@/components/client/layout/RowGrid";
+import { useMainColor } from "@/components/client/layout/ThemeProvider";
 import generateComplementary from "@/lib/shared/complementary";
 import generateGradient from "@/lib/shared/gradient";
 

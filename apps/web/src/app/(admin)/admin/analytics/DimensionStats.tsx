@@ -3,9 +3,9 @@
 import { useMemo } from "react";
 import type { StatItem } from "@repo/shared-types";
 
-import DimensionStatsChart from "@/components/DimensionStatsChart";
-import { GridItem } from "@/components/RowGrid";
-import { useMainColor } from "@/components/ThemeProvider";
+import DimensionStatsChart from "@/components/client/charts/DimensionStatsChart";
+import { GridItem } from "@/components/client/layout/RowGrid";
+import { useMainColor } from "@/components/client/layout/ThemeProvider";
 import generateComplementary from "@/lib/shared/complementary";
 import generateGradient from "@/lib/shared/gradient";
 import { AutoTransition } from "@/ui/AutoTransition";

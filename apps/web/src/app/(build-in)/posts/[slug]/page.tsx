@@ -12,16 +12,16 @@ import {
 import { cacheLife, cacheTag } from "next/cache";
 import { notFound } from "next/navigation";
 
-import AdjacentPostCard from "@/components/AdjacentPostCard";
-import CommentCount from "@/components/client/CommentCount";
-import CommentsSection from "@/components/client/CommentsSection";
-import ImageLightbox from "@/components/client/ImageLightbox";
-import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
-import CMSImage from "@/components/CMSImage";
-import Link from "@/components/Link";
-import MainLayout from "@/components/MainLayout";
-import PostToc from "@/components/PostToc";
-import UniversalRenderer from "@/components/server/UniversalRenderer";
+import CommentCount from "@/components/client/features/posts/CommentCount";
+import CommentsSection from "@/components/client/features/posts/CommentsSection";
+import PostToc from "@/components/client/features/posts/PostToc";
+import MainLayout from "@/components/client/layout/MainLayout";
+import ViewCountBatchLoader from "@/components/client/logic/ViewCountBatchLoader";
+import AdjacentPostCard from "@/components/server/features/posts/AdjacentPostCard";
+import UniversalRenderer from "@/components/server/renderer/UniversalRenderer";
+import CMSImage from "@/components/ui/CMSImage";
+import ImageLightbox from "@/components/ui/ImageLightbox";
+import Link from "@/components/ui/Link";
 import {
   getCategoryNamePath,
   getCategoryPath,

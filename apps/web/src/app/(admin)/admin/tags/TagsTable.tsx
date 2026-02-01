@@ -5,11 +5,11 @@ import { RiDeleteBinLine, RiEditLine, RiFileListLine } from "@remixicon/react";
 import type { TagListItem } from "@repo/shared-types/api/tag";
 
 import { deleteTags, getTagsList, updateTag } from "@/actions/tag";
-import MediaSelector from "@/components/client/MediaSelector";
-import type { ActionButton, FilterConfig } from "@/components/GridTable";
-import GridTable from "@/components/GridTable";
-import Link from "@/components/Link";
-import { useNavigateWithTransition } from "@/components/Link";
+import MediaSelector from "@/components/client/features/media/MediaSelector";
+import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
+import GridTable from "@/components/ui/GridTable";
+import Link from "@/components/ui/Link";
+import { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { Button } from "@/ui/Button";

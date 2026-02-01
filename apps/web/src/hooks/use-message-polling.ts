@@ -4,7 +4,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import useSWR from "swr";
 
 import { getConversationMessages, getConversations } from "@/actions/message";
-import type { ConnectionStatus } from "@/components/NotificationProvider";
+import type { ConnectionStatus } from "@/components/client/features/notice/NotificationProvider";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 
 interface UseMessagePollingOptions {

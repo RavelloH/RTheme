@@ -11,8 +11,8 @@ import React from "react";
 import type { Components } from "react-markdown";
 import { codeToHtml } from "shiki";
 
-import CMSImage from "@/components/CMSImage";
-import Link from "@/components/Link";
+import CMSImage from "@/components/ui/CMSImage";
+import Link from "@/components/ui/Link";
 import { type MediaFileInfo, processImageUrl } from "@/lib/shared/image-utils";
 import {
   createShikiConfig,

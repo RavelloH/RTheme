@@ -4,8 +4,10 @@ import { useState } from "react";
 import { RiHardDriveLine } from "@remixicon/react";
 
 import { useSystemInfo } from "@/app/(admin)/admin/system/use-system-info";
-import DonutChart, { type DonutChartDataPoint } from "@/components/DonutChart";
-import { GridItem } from "@/components/RowGrid";
+import DonutChart, {
+  type DonutChartDataPoint,
+} from "@/components/client/charts/DonutChart";
+import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { AutoTransition } from "@/ui/AutoTransition";
