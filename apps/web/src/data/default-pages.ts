@@ -4,8 +4,8 @@
 import type {
   DefaultBlockConfig,
   DefaultBlockContent,
-} from "@/blocks/Default/types";
-import type { BlockConfig } from "@/blocks/types";
+} from "@/blocks/collection/Default/types";
+import type { BlockConfig } from "@/blocks/core/types";
 
 // Prisma Json 类型定义
 type JsonValue = string | number | boolean | null | JsonObject | JsonArray;

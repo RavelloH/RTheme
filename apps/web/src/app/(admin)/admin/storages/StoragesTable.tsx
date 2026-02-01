@@ -27,8 +27,8 @@ import {
   StorageConfigFields,
   storageConfigValuesToPayload,
 } from "@/app/(admin)/admin/storages/StorageConfigFields";
-import type { ActionButton, FilterConfig } from "@/components/GridTable";
-import GridTable from "@/components/GridTable";
+import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
+import GridTable from "@/components/ui/GridTable";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import runWithAuth, { resolveApiResponse } from "@/lib/client/run-with-auth";
 import type { StorageProviderType } from "@/template/storages";

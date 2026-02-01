@@ -2,9 +2,9 @@ import Marquee from "react-fast-marquee";
 
 import RegisterIntro from "@/app/(account)/register/RegisterIntro";
 import RegisterSheet from "@/app/(account)/register/RegisterSheet";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import MainLayout from "@/components/MainLayout";
-import RowGrid, { GridItem } from "@/components/RowGrid";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
+import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import { getConfig } from "@/lib/server/config-cache";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import { generateMetadata } from "@/lib/server/seo";

@@ -20,9 +20,9 @@ import {
   getPostTokenDetails,
   indexPosts,
 } from "@/actions/search";
-import type { ActionButton, FilterConfig } from "@/components/GridTable";
-import GridTable from "@/components/GridTable";
-import Link from "@/components/Link";
+import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
+import GridTable from "@/components/ui/GridTable";
+import Link from "@/components/ui/Link";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoResizer } from "@/ui/AutoResizer";

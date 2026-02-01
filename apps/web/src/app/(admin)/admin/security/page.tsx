@@ -3,10 +3,10 @@ import IPTable from "@/app/(admin)/admin/security/IPTable";
 import MonthlyTrendsChart from "@/app/(admin)/admin/security/MonthlyTrendsChart";
 import RequestTrendsChart from "@/app/(admin)/admin/security/RequestTrendsChart";
 import SecurityOverview from "@/app/(admin)/admin/security/SecurityOverview";
-import AdminSidebar from "@/components/AdminSidebar";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import MainLayout from "@/components/MainLayout";
-import RowGrid from "@/components/RowGrid";
+import AdminSidebar from "@/components/client/layout/AdminSidebar";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
+import RowGrid from "@/components/client/layout/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
 
 export const metadata = await generateMetadata(

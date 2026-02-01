@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { RiLoader4Line } from "@remixicon/react";
 
-import ImageLightbox from "@/components/client/ImageLightbox";
-import CMSImage from "@/components/CMSImage";
-import RowGrid, { GridItem } from "@/components/RowGrid";
-import UserAvatar from "@/components/UserAvatar";
+import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
+import CMSImage from "@/components/ui/CMSImage";
+import ImageLightbox from "@/components/ui/ImageLightbox";
+import UserAvatar from "@/components/ui/UserAvatar";
 import {
   formatAperture,
   formatColorSpace,

@@ -16,7 +16,7 @@ import {
 } from "@/actions/reauth";
 import PasskeyReauthButton from "@/app/(account)/reauth/PasskeyReauthButton";
 import UnauthorizedPage from "@/app/unauthorized";
-import { CaptchaButton } from "@/components/CaptchaButton";
+import { CaptchaButton } from "@/components/ui/CaptchaButton";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import type { OAuthProvider } from "@/lib/server/oauth";
 import { AutoResizer } from "@/ui/AutoResizer";

@@ -6,15 +6,15 @@ import { cacheLife, cacheTag } from "next/cache";
 import { notFound } from "next/navigation";
 
 import DynamicReplace from "@/components/client/DynamicReplace";
-import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
-import EmptyPostCard from "@/components/EmptyPostCard";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import Link from "@/components/Link";
-import LinkButton from "@/components/LinkButton";
-import MainLayout from "@/components/MainLayout";
-import PaginationNav from "@/components/PaginationNav";
-import PostCard from "@/components/PostCard";
-import RowGrid, { GridItem } from "@/components/RowGrid";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
+import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
+import ViewCountBatchLoader from "@/components/client/logic/ViewCountBatchLoader";
+import EmptyPostCard from "@/components/server/features/posts/EmptyPostCard";
+import PostCard from "@/components/server/features/posts/PostCard";
+import Link from "@/components/ui/Link";
+import LinkButton from "@/components/ui/LinkButton";
+import PaginationNav from "@/components/ui/PaginationNav";
 import { createArray } from "@/lib/client/create-array";
 import { getFeaturedImageData } from "@/lib/server/media-reference";
 import {

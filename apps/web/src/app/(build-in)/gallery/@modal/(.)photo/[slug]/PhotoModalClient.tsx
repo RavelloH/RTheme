@@ -6,10 +6,10 @@ import { RiCloseLine, RiLoader4Line } from "@remixicon/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 
-import ImageLightbox from "@/components/client/ImageLightbox";
-import CMSImage from "@/components/CMSImage";
-import Link from "@/components/Link";
-import UserAvatar from "@/components/UserAvatar";
+import CMSImage from "@/components/ui/CMSImage";
+import ImageLightbox from "@/components/ui/ImageLightbox";
+import Link from "@/components/ui/Link";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { useMobile } from "@/hooks/use-mobile";
 import {
   formatAperture,

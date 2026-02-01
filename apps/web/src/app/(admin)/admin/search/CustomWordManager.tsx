@@ -11,7 +11,7 @@ import {
   getCustomWords,
   indexPosts,
 } from "@/actions/search";
-import { GridItem } from "@/components/RowGrid";
+import { GridItem } from "@/components/client/layout/RowGrid";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";

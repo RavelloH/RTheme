@@ -27,7 +27,7 @@ import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
-import type { BlockConfig } from "@/blocks/types";
+import type { BlockConfig } from "@/blocks/core/types";
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import prisma from "@/lib/server/prisma";

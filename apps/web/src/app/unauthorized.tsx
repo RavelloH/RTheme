@@ -1,10 +1,10 @@
 import { RiArrowGoBackLine, RiLoginBoxLine } from "@remixicon/react";
 
-import ClientDiagnostics from "@/components/ClientDiagnostics";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import LinkButton from "@/components/LinkButton";
-import MainLayout from "@/components/MainLayout";
-import RowGrid, { GridItem } from "@/components/RowGrid";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
+import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
+import ClientDiagnostics from "@/components/ui/ClientDiagnostics";
+import LinkButton from "@/components/ui/LinkButton";
 
 export default function UnauthorizedPage({ redirect }: { redirect?: string }) {
   return (

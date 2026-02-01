@@ -9,7 +9,7 @@ import {
   generatePasskeyAuthenticationOptions,
   verifyPasskeyAuthentication,
 } from "@/actions/passkey";
-import { useNavigateWithTransition } from "@/components/Link";
+import { useNavigateWithTransition } from "@/components/ui/Link";
 import { Button } from "@/ui/Button";
 import { useToast } from "@/ui/Toast";
 

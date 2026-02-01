@@ -6,7 +6,7 @@ import { useInView } from "react-intersection-observer";
 import { getGalleryPhotos } from "@/actions/media";
 import GalleryGrid from "@/app/(build-in)/gallery/GalleryGrid";
 import GalleryListMobile from "@/app/(build-in)/gallery/GalleryListMobile";
-import HorizontalScroll from "@/components/HorizontalScroll";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
 import { useMobile } from "@/hooks/use-mobile";
 import type { GalleryPhoto, LayoutState, Tile } from "@/lib/gallery-layout";
 import { generateLayout } from "@/lib/gallery-layout";

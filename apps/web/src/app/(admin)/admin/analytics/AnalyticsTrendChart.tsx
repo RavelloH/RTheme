@@ -6,8 +6,8 @@ import { getRealTimeStats } from "@/actions/analytics";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig,
-} from "@/components/AreaChart";
-import { GridItem } from "@/components/RowGrid";
+} from "@/components/client/charts/AreaChart";
+import { GridItem } from "@/components/client/layout/RowGrid";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 

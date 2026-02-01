@@ -4,8 +4,8 @@ import { useState } from "react";
 import type { Conversation } from "@repo/shared-types/api/message";
 import { useRouter } from "next/navigation";
 
-import MessagesClient from "@/components/client/MessagesClient";
-import { useNavigateWithTransition } from "@/components/Link";
+import MessagesClient from "@/components/client/features/chat/MessagesClient";
+import { useNavigateWithTransition } from "@/components/ui/Link";
 import { Dialog } from "@/ui/Dialog";
 
 interface MessagesModalProps {

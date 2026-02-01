@@ -17,9 +17,9 @@ import {
   updatePage,
   updatePages,
 } from "@/actions/page";
-import type { ActionButton, FilterConfig } from "@/components/GridTable";
-import GridTable from "@/components/GridTable";
-import { useNavigateWithTransition } from "@/components/Link";
+import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
+import GridTable from "@/components/ui/GridTable";
+import { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import runWithAuth from "@/lib/client/run-with-auth";
 import { AlertDialog } from "@/ui/AlertDialog";

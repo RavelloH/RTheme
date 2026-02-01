@@ -5,8 +5,8 @@ import { RiEyeLine } from "@remixicon/react";
 import type { SearchLogItem } from "@repo/shared-types/api/search";
 
 import { getSearchLogs } from "@/actions/search";
-import type { FilterConfig } from "@/components/GridTable";
-import GridTable from "@/components/GridTable";
+import type { FilterConfig } from "@/components/ui/GridTable";
+import GridTable from "@/components/ui/GridTable";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import Clickable from "@/ui/Clickable";
 import { Dialog } from "@/ui/Dialog";

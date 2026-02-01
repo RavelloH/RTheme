@@ -7,20 +7,20 @@ import { cacheLife, cacheTag } from "next/cache";
 import { Inter } from "next/font/google";
 import { IBM_Plex_Mono } from "next/font/google";
 
-import { AnalyticsTracker } from "@/components/client/AnalyticsTracker";
-import { LayoutContainer } from "@/components/LayoutContainer";
-import { LoadingAnimation } from "@/components/LoadingAnimation";
-import { MainContent } from "@/components/MainContent";
-import { MenuProvider } from "@/components/MenuProvider";
-import NotificationProvider from "@/components/NotificationProvider";
-import PageTransition from "@/components/PageTransition";
-import ResponsiveFontScale from "@/components/ResponsiveFontScale";
-import Footer from "@/components/server/Footer";
-// Server Componments
-import Header from "@/components/server/Header";
+import NotificationProvider from "@/components/client/features/notice/NotificationProvider";
+import { LayoutContainer } from "@/components/client/layout/LayoutContainer";
+import { LoadingAnimation } from "@/components/client/layout/LoadingAnimation";
+import { MainContent } from "@/components/client/layout/MainContent";
+import { MenuProvider } from "@/components/client/layout/MenuProvider";
+import PageTransition from "@/components/client/layout/PageTransition";
+import ResponsiveFontScale from "@/components/client/layout/ResponsiveFontScale";
 // Client Components
-import { ThemeProvider } from "@/components/ThemeProvider";
-import TokenManager from "@/components/TokenManager";
+import { ThemeProvider } from "@/components/client/layout/ThemeProvider";
+import { AnalyticsTracker } from "@/components/client/logic/AnalyticsTracker";
+import TokenManager from "@/components/client/logic/TokenManager";
+import Footer from "@/components/server/layout/Footer";
+// Server Componments
+import Header from "@/components/server/layout/Header";
 import { ConfigProvider } from "@/context/ConfigContext";
 import { getConfigs } from "@/lib/server/config-cache";
 // lib

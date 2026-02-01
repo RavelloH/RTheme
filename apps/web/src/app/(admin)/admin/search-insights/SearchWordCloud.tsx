@@ -7,7 +7,7 @@ import type {
 } from "@repo/shared-types/api/search";
 
 import { getSearchIndexStats, getSearchLogStats } from "@/actions/search";
-import { GridItem } from "@/components/RowGrid";
+import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { AutoTransition } from "@/ui/AutoTransition";

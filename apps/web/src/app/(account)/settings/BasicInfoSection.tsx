@@ -3,8 +3,8 @@
 import React from "react";
 
 import type { BasicInfoDialogsRef } from "@/app/(account)/settings/BasicInfoDialogs";
-import Link from "@/components/Link";
-import UserAvatar from "@/components/UserAvatar";
+import Link from "@/components/ui/Link";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { formatRelativeTime } from "@/lib/shared/relative-time";
 import { Button } from "@/ui/Button";
 

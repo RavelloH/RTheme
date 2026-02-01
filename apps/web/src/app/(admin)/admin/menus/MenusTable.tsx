@@ -16,8 +16,8 @@ import {
   updateMenu,
   updateMenus,
 } from "@/actions/menu";
-import type { ActionButton, FilterConfig } from "@/components/GridTable";
-import GridTable from "@/components/GridTable";
+import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
+import GridTable from "@/components/ui/GridTable";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import runWithAuth from "@/lib/client/run-with-auth";
 import { AlertDialog } from "@/ui/AlertDialog";

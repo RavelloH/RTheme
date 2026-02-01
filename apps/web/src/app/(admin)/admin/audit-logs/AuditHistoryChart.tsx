@@ -7,13 +7,13 @@ import { getAuditTrends } from "@/actions/audit";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig as AreaSeriesConfig,
-} from "@/components/AreaChart";
-import { GridItem } from "@/components/RowGrid";
+} from "@/components/client/charts/AreaChart";
 import StackedBarChart, {
   type SeriesConfig as StackedBarSeriesConfig,
   type StackedBarChartDataPoint,
-} from "@/components/StackedBarChart";
-import { useMainColor } from "@/components/ThemeProvider";
+} from "@/components/client/charts/StackedBarChart";
+import { GridItem } from "@/components/client/layout/RowGrid";
+import { useMainColor } from "@/components/client/layout/ThemeProvider";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import generateComplementary from "@/lib/shared/complementary";

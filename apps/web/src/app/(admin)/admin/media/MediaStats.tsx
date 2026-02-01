@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { RiRefreshLine } from "@remixicon/react";
 
 import { getMediaStats } from "@/actions/media";
-import { GridItem } from "@/components/RowGrid";
+import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import { AutoTransition } from "@/ui/AutoTransition";

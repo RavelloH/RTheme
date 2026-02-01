@@ -4,8 +4,8 @@ import { cacheLife, cacheTag } from "next/cache";
 import { notFound } from "next/navigation";
 
 import PhotoDetailClient from "@/app/(build-in)/gallery/photo/[slug]/PhotoDetailClient";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import MainLayout from "@/components/MainLayout";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
 import { generateSignedImageId } from "@/lib/server/image-crypto";
 import prisma from "@/lib/server/prisma";
 import { generateMetadata as generateSeoMetadata } from "@/lib/server/seo";

@@ -34,8 +34,8 @@ import type { Components } from "react-markdown";
 import type { MDXComponents } from "next-mdx-remote-client/csr";
 import { codeToHtml } from "shiki";
 
-import CMSImage from "@/components/CMSImage";
-import Link from "@/components/Link";
+import CMSImage from "@/components/ui/CMSImage";
+import Link from "@/components/ui/Link";
 import {
   cleanMDXSource as cleanMDXSourceShared,
   createShikiConfig,

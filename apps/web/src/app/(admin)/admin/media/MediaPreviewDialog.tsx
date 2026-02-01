@@ -16,9 +16,9 @@ import {
 } from "@remixicon/react";
 import type { MediaDetail, MediaListItem } from "@repo/shared-types/api/media";
 
-import ImageLightbox from "@/components/client/ImageLightbox";
-import CMSImage from "@/components/CMSImage";
-import Link from "@/components/Link";
+import CMSImage from "@/components/ui/CMSImage";
+import ImageLightbox from "@/components/ui/ImageLightbox";
+import Link from "@/components/ui/Link";
 import { type ParsedExifData, parseExifBuffer } from "@/lib/client/media-exif";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";

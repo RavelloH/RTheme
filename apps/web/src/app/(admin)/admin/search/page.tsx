@@ -4,10 +4,10 @@ import RebuildAllIndexButton from "@/app/(admin)/admin/search/RebuildAllIndexBut
 import SearchIndexReport from "@/app/(admin)/admin/search/SearchIndexReport";
 import TokenizeTest from "@/app/(admin)/admin/search/TokenizeTest";
 import WordCloudPanel from "@/app/(admin)/admin/search/WordCloudPanel";
-import AdminSidebar from "@/components/AdminSidebar";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import MainLayout from "@/components/MainLayout";
-import RowGrid from "@/components/RowGrid";
+import AdminSidebar from "@/components/client/layout/AdminSidebar";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
+import RowGrid from "@/components/client/layout/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
 
 export const metadata = await generateMetadata(

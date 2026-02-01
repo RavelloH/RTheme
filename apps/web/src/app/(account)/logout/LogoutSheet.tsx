@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { logout } from "@/actions/auth";
-import { useNavigateWithTransition } from "@/components/Link";
+import { useNavigateWithTransition } from "@/components/ui/Link";
 import { AutoTransition } from "@/ui/AutoTransition";
 
 async function performLogout() {

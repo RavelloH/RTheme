@@ -8,8 +8,8 @@ import {
   requestPasswordReset as requestPasswordResetAction,
   resetPassword as resetPasswordAction,
 } from "@/actions/auth";
-import { CaptchaButton } from "@/components/CaptchaButton";
-import Link, { useNavigateWithTransition } from "@/components/Link";
+import { CaptchaButton } from "@/components/ui/CaptchaButton";
+import Link, { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";

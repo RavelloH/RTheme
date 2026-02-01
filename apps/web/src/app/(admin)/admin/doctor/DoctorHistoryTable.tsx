@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import type { DoctorHistoryItem } from "@repo/shared-types/api/doctor";
 
 import { getDoctorHistory } from "@/actions/doctor";
-import type { FilterConfig } from "@/components/GridTable";
-import GridTable from "@/components/GridTable";
+import type { FilterConfig } from "@/components/ui/GridTable";
+import GridTable from "@/components/ui/GridTable";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import type { TableColumn } from "@/ui/Table";
 

@@ -22,8 +22,8 @@ import {
 import GridTable, {
   type ActionButton,
   type FilterConfig,
-} from "@/components/GridTable";
-import Link from "@/components/Link";
+} from "@/components/ui/GridTable";
+import Link from "@/components/ui/Link";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import runWithAuth, { resolveApiResponse } from "@/lib/client/run-with-auth";
 import { Dialog } from "@/ui/Dialog";

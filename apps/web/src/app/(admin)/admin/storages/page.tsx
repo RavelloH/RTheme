@@ -1,11 +1,11 @@
 import StoragesAdd from "@/app/(admin)/admin/storages/StoragesAdd";
 import StoragesInfo from "@/app/(admin)/admin/storages/StoragesInfo";
 import StoragesTable from "@/app/(admin)/admin/storages/StoragesTable";
-import AdminSidebar from "@/components/AdminSidebar";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import Link from "@/components/Link";
-import MainLayout from "@/components/MainLayout";
-import RowGrid, { GridItem } from "@/components/RowGrid";
+import AdminSidebar from "@/components/client/layout/AdminSidebar";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
+import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
+import Link from "@/components/ui/Link";
 import { generateMetadata } from "@/lib/server/seo";
 
 export const metadata = await generateMetadata(

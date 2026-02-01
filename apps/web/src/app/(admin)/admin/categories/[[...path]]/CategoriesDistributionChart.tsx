@@ -6,9 +6,9 @@ import type { CategoryDistributionItem } from "@repo/shared-types/api/category";
 import { getCategoriesDistribution } from "@/actions/category";
 import DimensionStatsChart, {
   type DimensionStatsItem,
-} from "@/components/DimensionStatsChart";
-import { GridItem } from "@/components/RowGrid";
-import { useMainColor } from "@/components/ThemeProvider";
+} from "@/components/client/charts/DimensionStatsChart";
+import { GridItem } from "@/components/client/layout/RowGrid";
+import { useMainColor } from "@/components/client/layout/ThemeProvider";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import generateComplementary from "@/lib/shared/complementary";

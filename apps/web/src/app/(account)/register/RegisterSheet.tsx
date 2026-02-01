@@ -11,8 +11,8 @@ import {
 } from "@remixicon/react";
 
 import { register as registerAction } from "@/actions/auth";
-import { CaptchaButton } from "@/components/CaptchaButton";
-import Link, { useNavigateWithTransition } from "@/components/Link";
+import { CaptchaButton } from "@/components/ui/CaptchaButton";
+import Link, { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";

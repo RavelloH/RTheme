@@ -1,5 +1,5 @@
-import Link from "@/components/Link";
-import { GridItem } from "@/components/RowGrid";
+import { GridItem } from "@/components/client/layout/RowGrid";
+import Link from "@/components/ui/Link";
 import { AutoTransition } from "@/ui/AutoTransition";
 
 export default function SettingsInfo() {

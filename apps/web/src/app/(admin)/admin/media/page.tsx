@@ -5,10 +5,10 @@ import MediaImport from "@/app/(admin)/admin/media/MediaImport";
 import MediaStats from "@/app/(admin)/admin/media/MediaStats";
 import MediaStatsChart from "@/app/(admin)/admin/media/MediaStatsChart";
 import MediaTable from "@/app/(admin)/admin/media/MediaTable";
-import AdminSidebar from "@/components/AdminSidebar";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import MainLayout from "@/components/MainLayout";
-import RowGrid from "@/components/RowGrid";
+import AdminSidebar from "@/components/client/layout/AdminSidebar";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
+import RowGrid from "@/components/client/layout/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
 
 export const metadata = await generateMetadata(

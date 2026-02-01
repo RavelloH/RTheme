@@ -29,11 +29,11 @@ import {
 } from "@/actions/media";
 import MediaEditDialog from "@/app/(admin)/admin/media/MediaEditDialog";
 import MediaPreviewDialog from "@/app/(admin)/admin/media/MediaPreviewDialog";
-import CMSImage from "@/components/CMSImage";
-import type { ActionButton, FilterConfig } from "@/components/GridTable";
-import GridTable from "@/components/GridTable";
-import Link from "@/components/Link";
-import { GridItem } from "@/components/RowGrid";
+import { GridItem } from "@/components/client/layout/RowGrid";
+import CMSImage from "@/components/ui/CMSImage";
+import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
+import GridTable from "@/components/ui/GridTable";
+import Link from "@/components/ui/Link";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { useMobile } from "@/hooks/use-mobile";
 import { createArray } from "@/lib/client/create-array";

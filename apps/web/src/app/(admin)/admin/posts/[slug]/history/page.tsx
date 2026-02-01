@@ -21,17 +21,17 @@ import {
   resetPostToVersion,
   squashPostToVersion,
 } from "@/actions/post";
-import AdminSidebar from "@/components/AdminSidebar";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig,
-} from "@/components/AreaChart";
-import type { ActionButton } from "@/components/GridTable";
-import GridTable from "@/components/GridTable";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import Link, { useNavigateWithTransition } from "@/components/Link";
-import MainLayout from "@/components/MainLayout";
-import RowGrid, { GridItem } from "@/components/RowGrid";
+} from "@/components/client/charts/AreaChart";
+import AdminSidebar from "@/components/client/layout/AdminSidebar";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
+import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
+import type { ActionButton } from "@/components/ui/GridTable";
+import GridTable from "@/components/ui/GridTable";
+import Link, { useNavigateWithTransition } from "@/components/ui/Link";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";

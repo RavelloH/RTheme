@@ -10,8 +10,8 @@ import {
 import type { GetPostsStatsSuccessResponse } from "@repo/shared-types/api/stats";
 
 import { getPostsStats } from "@/actions/stat";
-import Link from "@/components/Link";
 import ErrorPage from "@/components/ui/Error";
+import Link from "@/components/ui/Link";
 import { useMobile } from "@/hooks/use-mobile";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";

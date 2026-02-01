@@ -1,10 +1,10 @@
 import CategoriesDistributionChart from "@/app/(admin)/admin/categories/[[...path]]/CategoriesDistributionChart";
 import CategoriesReport from "@/app/(admin)/admin/categories/[[...path]]/CategoriesReport";
 import CategoriesTable from "@/app/(admin)/admin/categories/[[...path]]/CategoriesTable";
-import AdminSidebar from "@/components/AdminSidebar";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import MainLayout from "@/components/MainLayout";
-import RowGrid from "@/components/RowGrid";
+import AdminSidebar from "@/components/client/layout/AdminSidebar";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
+import RowGrid from "@/components/client/layout/RowGrid";
 import {
   findCategoryByPath,
   getCategoryNamePath,

@@ -4,11 +4,11 @@ import { cacheLife, cacheTag } from "next/cache";
 import TagContainer from "@/app/(build-in)/tags/TagContainer";
 import TagsRandomPage from "@/app/(build-in)/tags/TagsRandomPage";
 import DynamicReplace from "@/components/client/DynamicReplace";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import Link from "@/components/Link";
-import LinkButton from "@/components/LinkButton";
-import MainLayout from "@/components/MainLayout";
-import RowGrid, { GridItem } from "@/components/RowGrid";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
+import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
+import Link from "@/components/ui/Link";
+import LinkButton from "@/components/ui/LinkButton";
 import { getFeaturedImageData } from "@/lib/server/media-reference";
 import {
   getBlocksAreas,

@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 
 import { getConversations } from "@/actions/message";
 import UnauthorizedPage from "@/app/unauthorized";
-import MessagesClient from "@/components/client/MessagesClient";
+import MessagesClient from "@/components/client/features/chat/MessagesClient";
 import ErrorPage from "@/components/ui/Error";
 import { authVerify } from "@/lib/server/auth-verify";
 import { generateMetadata } from "@/lib/server/seo";

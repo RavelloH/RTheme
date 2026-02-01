@@ -11,10 +11,10 @@ import DashboardSecurityStats from "@/app/(admin)/admin/dashboard/DashboardSecur
 import DashboardTagsStats from "@/app/(admin)/admin/dashboard/DashboardTagsStats";
 import DashboardUsersStats from "@/app/(admin)/admin/dashboard/DashboardUsersStats";
 import DashboardVisitStats from "@/app/(admin)/admin/dashboard/DashboardVisitStats";
-import AdminSidebar from "@/components/AdminSidebar";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import MainLayout from "@/components/MainLayout";
-import RowGrid, { GridItem } from "@/components/RowGrid";
+import AdminSidebar from "@/components/client/layout/AdminSidebar";
+import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
+import MainLayout from "@/components/client/layout/MainLayout";
+import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
 
 export const metadata = await generateMetadata(

@@ -5,8 +5,8 @@ import { RiEyeLine } from "@remixicon/react";
 import type { PageViewItem } from "@repo/shared-types";
 
 import { getPageViews } from "@/actions/analytics";
-import type { FilterConfig } from "@/components/GridTable";
-import GridTable from "@/components/GridTable";
+import type { FilterConfig } from "@/components/ui/GridTable";
+import GridTable from "@/components/ui/GridTable";
 import Clickable from "@/ui/Clickable";
 import { Dialog } from "@/ui/Dialog";
 import type { TableColumn } from "@/ui/Table";

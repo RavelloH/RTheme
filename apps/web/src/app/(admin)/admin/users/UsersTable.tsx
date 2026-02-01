@@ -17,10 +17,10 @@ import {
   getUsersList,
   updateUsers,
 } from "@/actions/user";
-import type { ActionButton, FilterConfig } from "@/components/GridTable";
-import GridTable from "@/components/GridTable";
-import Link from "@/components/Link";
-import UserAvatar from "@/components/UserAvatar";
+import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
+import GridTable from "@/components/ui/GridTable";
+import Link from "@/components/ui/Link";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { Button } from "@/ui/Button";
