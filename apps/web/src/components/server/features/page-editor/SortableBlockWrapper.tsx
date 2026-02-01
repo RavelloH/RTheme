@@ -9,6 +9,7 @@ interface SortableBlockWrapperProps {
   isActive?: boolean;
   onSelect?: () => void;
   hideAnimation?: boolean; // 是否隐藏斜线动画，只保留背景色
+  scale?: number;
 }
 
 export default function SortableBlockWrapper({
@@ -17,6 +18,7 @@ export default function SortableBlockWrapper({
   isActive,
   onSelect,
   hideAnimation = false,
+  scale = 1,
 }: SortableBlockWrapperProps) {
   const {
     attributes,
@@ -27,8 +29,17 @@ export default function SortableBlockWrapper({
     isDragging,
   } = useSortable({ id });
 
+  // 修正 zoom 下的拖拽偏移
+  const adjustedTransform = transform
+    ? {
+        ...transform,
+        x: transform.x / scale,
+        y: transform.y / scale,
+      }
+    : null;
+
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Transform.toString(adjustedTransform),
     transition,
     opacity: isDragging ? 0.3 : 1,
   };

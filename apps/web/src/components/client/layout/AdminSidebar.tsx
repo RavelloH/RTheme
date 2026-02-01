@@ -30,7 +30,7 @@ import { usePathname } from "next/navigation";
 import Link from "@/components/ui/Link";
 import { useMobile } from "@/hooks/use-mobile";
 
-import "@/components/AdminSidebar.css";
+import "@/styles/AdminSidebar.css";
 
 const roles = {
   author: ["ADMIN", "EDITOR", "AUTHOR"],
