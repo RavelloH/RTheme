@@ -27,6 +27,12 @@ export default function DefaultBlock({
   const data = (config.data as DefaultBlockData) || {};
   const { content } = config;
 
+  // 获取布局配置
+  const layout =
+    (content.layout as { verticalCenter?: boolean; ratio?: number }) || {};
+  const verticalCenter = layout.verticalCenter ?? false;
+  const ratio = layout.ratio ?? 1;
+
   const hasHeader = !!content.header;
   const hasFooter = !!(content.footer?.link || content.footer?.text);
 
@@ -69,7 +75,7 @@ export default function DefaultBlock({
           return (
             <GridItem
               areas={[1]}
-              width={14}
+              width={14 * ratio}
               height={0.1}
               className={`bg-primary text-primary-foreground flex items-center px-10 uppercase text-2xl h-full ${getAlignClass(
                 headerAlign,
@@ -83,9 +89,9 @@ export default function DefaultBlock({
       {/* Main Content */}
       <GridItem
         areas={areas}
-        width={14 / areas.length}
+        width={(14 * ratio) / areas.length}
         height={1}
-        className="px-10 py-15 text-2xl flex flex-col justify-between"
+        className={`px-10 py-15 text-2xl flex flex-col ${verticalCenter ? "justify-center" : "justify-between"}`}
       >
         <div>
           {(() => {
@@ -149,7 +155,7 @@ export default function DefaultBlock({
       {hasFooter && (
         <GridItem
           areas={[12]}
-          width={14}
+          width={14 * ratio}
           height={0.1}
           className="flex items-center uppercase text-2xl"
         >

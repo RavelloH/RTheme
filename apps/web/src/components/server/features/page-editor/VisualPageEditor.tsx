@@ -265,7 +265,10 @@ export default function VisualPageEditor({
     setActiveBlockId(null);
   };
 
-  const handleAddBlock = async (type: string) => {
+  const handleAddBlock = async (
+    type: string,
+    initialData?: Partial<BlockConfig>,
+  ) => {
     setIsAddingBlock(true);
     try {
       const newId = Date.now();
@@ -274,6 +277,7 @@ export default function VisualPageEditor({
         block: type,
         description: `New ${type} block`,
         content: {},
+        ...initialData,
       } as BlockConfig;
 
       // 调用 Server Action 获取数据

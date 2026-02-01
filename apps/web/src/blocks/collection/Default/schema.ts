@@ -51,6 +51,7 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
       path: "title.value",
       type: "text",
       helperText: "区块主标题",
+      defaultValue: "",
     },
     {
       label: "标题对齐方式",
@@ -77,6 +78,7 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
       path: "content.top.value",
       type: "array",
       helperText: "显示在正文区域顶部。",
+      defaultValue: [],
     },
     {
       label: "正文（顶部）对齐方式",
@@ -103,6 +105,7 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
       path: "content.bottom.value",
       type: "array",
       helperText: "显示在正文区域底部",
+      defaultValue: [],
     },
     {
       label: "正文（底部）对齐方式",
@@ -129,12 +132,27 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
       path: "footer.text",
       type: "text",
       helperText: "控制底部链接的文本，需要与底部文本链接配合使用",
+      defaultValue: "",
     },
     {
       label: "底部链接",
       path: "footer.link",
       type: "text",
       helperText: "例如：/about",
+      defaultValue: "",
+    },
+    {
+      label: "竖直居中显示",
+      path: "layout.verticalCenter",
+      type: "toggle",
+      defaultValue: false,
+    },
+    {
+      label: "宽高比",
+      path: "layout.ratio",
+      type: "number",
+      defaultValue: 1,
+      helperText: "当高度为 1 时，宽度为高度的多少倍",
     },
   ],
   groups: [
@@ -161,9 +179,14 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
       description: "底栏出现在区块的最下方，通常用于显示操作链接。不填则不显示",
       fields: ["footer.text", "footer.link"],
     },
+    {
+      title: "布局",
+      description: "控制区块的布局方式",
+      fields: ["layout.verticalCenter", "layout.ratio"],
+    },
   ],
   previewData: {
-    header: { value: "WELCOME", align: "center" },
+    header: { value: "WELCOME", align: "left" },
     title: { value: "示例标题", align: "left" },
     content: {
       top: {

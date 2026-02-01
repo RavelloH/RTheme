@@ -138,6 +138,12 @@ function FieldRenderer({
     onChange(newValue);
   };
 
+  // 获取字段的默认值
+  const getFieldValue = (val: unknown, defaultValue?: unknown): unknown => {
+    if (val === null || val === undefined) return defaultValue;
+    return val;
+  };
+
   // 对于 text/textarea/number 类型，转换为字符串显示
   const getDisplayValue = (val: unknown): string => {
     if (val === null || val === undefined) return "";
@@ -147,50 +153,70 @@ function FieldRenderer({
 
   switch (field.type) {
     case "textarea": {
+      const currentValue = getFieldValue(value, field.defaultValue);
       return (
-        <Input
-          label={field.label}
-          value={getDisplayValue(value)}
-          onChange={(e) => handleChange(e.target.value)}
-          rows={3}
-          helperText={field.helperText}
-          placeholder={field.placeholder}
-          size="sm"
-          disabled={field.disabled}
-        />
+        <div className="mt-6">
+          <Input
+            label={field.label}
+            value={getDisplayValue(currentValue)}
+            onChange={(e) => handleChange(e.target.value)}
+            rows={3}
+            helperText={
+              field.placeholder ?? getDisplayValue(field.defaultValue)
+            }
+            size="sm"
+            disabled={field.disabled}
+          />
+          {field.helperText && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {field.helperText}
+            </p>
+          )}
+        </div>
       );
     }
 
     case "text":
     case "number":
     case "date": {
+      const currentValue = getFieldValue(value, field.defaultValue);
       return (
-        <Input
-          label={field.label}
-          value={getDisplayValue(value)}
-          onChange={(e) =>
-            handleChange(
-              field.type === "number"
-                ? parseFloat(e.target.value) || 0
-                : e.target.value,
-            )
-          }
-          type={
-            field.type === "number" || field.type === "date"
-              ? field.type
-              : "text"
-          }
-          helperText={field.helperText}
-          placeholder={field.placeholder}
-          size="sm"
-          disabled={field.disabled}
-        />
+        <div className="mt-6">
+          <Input
+            label={field.label}
+            value={getDisplayValue(currentValue)}
+            onChange={(e) =>
+              handleChange(
+                field.type === "number"
+                  ? parseFloat(e.target.value) || 0
+                  : e.target.value,
+              )
+            }
+            type={
+              field.type === "number" || field.type === "date"
+                ? field.type
+                : "text"
+            }
+            helperText={
+              field.placeholder ?? getDisplayValue(field.defaultValue)
+            }
+            size="sm"
+            disabled={field.disabled}
+          />
+          {field.helperText && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {field.helperText}
+            </p>
+          )}
+        </div>
       );
     }
 
     case "array": {
       // 数组类型：使用 textarea，每行一个元素
-      const arrayValue: unknown[] = Array.isArray(value) ? value : [];
+      const arrayValue: unknown[] = Array.isArray(value)
+        ? value
+        : ((field.defaultValue as unknown[]) ?? []);
       const strValue = arrayValue.join("\n");
       return (
         <Input
@@ -201,10 +227,7 @@ function FieldRenderer({
             handleChange(newArray);
           }}
           rows={4}
-          helperText={
-            field.helperText || field.separatorHint || "One item per line"
-          }
-          placeholder={field.placeholder}
+          helperText={field.placeholder}
           size="sm"
           disabled={field.disabled}
         />
@@ -213,11 +236,12 @@ function FieldRenderer({
 
     case "select": {
       const selectField = field as SelectFieldConfig;
+      const currentValue = getFieldValue(value, field.defaultValue) ?? "";
       return (
         <div className="mt-6">
           <label className="text-foreground mb-2 block">{field.label}</label>
           <Select
-            value={String(value ?? "")}
+            value={String(currentValue)}
             onChange={(val) => handleChange(val)}
             options={selectField.options}
             placeholder={field.placeholder || "请选择"}
@@ -235,11 +259,12 @@ function FieldRenderer({
     }
 
     case "toggle": {
+      const currentValue = value ?? field.defaultValue;
       return (
         <div className="mt-6 flex items-center gap-3">
           <Switch
             label={field.label}
-            checked={Boolean(value)}
+            checked={Boolean(currentValue)}
             onCheckedChange={handleChange}
             disabled={field.disabled}
             size="sm"
@@ -846,12 +871,14 @@ export default function BlockConfigPanel({
               onClick={handleCopy}
             />
           </div>
-          {block && (
-            <JSONHighlight
-              json={{ ...block, data: undefined }}
-              shikiTheme={shikiTheme}
-            />
-          )}
+          <AutoResizer>
+            {block && (
+              <JSONHighlight
+                json={{ ...block, data: undefined }}
+                shikiTheme={shikiTheme}
+              />
+            )}
+          </AutoResizer>
         </div>
       </Dialog>
     </div>
