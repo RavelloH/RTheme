@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useEffect } from "react";
-import { MonacoEditor } from "./MonacoEditor";
-import { LivePreview } from "./LivePreview";
+import { useEffect, useRef } from "react";
 import type { editor } from "monaco-editor";
+
+import { LivePreview } from "@/components/client/Editor/LivePreview";
+import { MonacoEditor } from "@/components/client/Editor/MonacoEditor";
 
 export interface LiveEditorProps {
   content: string;

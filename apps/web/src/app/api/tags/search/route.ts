@@ -1,6 +1,7 @@
-import { searchTags } from "@/actions/tag";
 import { SearchTagsSchema } from "@repo/shared-types/api/tag";
 import { connection } from "next/server";
+
+import { searchTags } from "@/actions/tag";
 
 /**
  * @openapi

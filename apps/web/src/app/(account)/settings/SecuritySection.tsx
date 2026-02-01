@@ -1,15 +1,22 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { Button } from "@/ui/Button";
-import type { OAuthProvider } from "@/lib/server/oauth";
-import { getProviderName, getProviderIcon } from "./settingsHelpers";
-import PasskeyManager from "./PasskeyManager";
+import React, { useEffect, useRef, useState } from "react";
+
 import { getTotpStatus } from "@/actions/totp";
-import { TotpDialogs, type TotpDialogsRef } from "./TotpDialogs";
-import type { PendingAction } from "./use-reauth";
-import { AutoTransition } from "@/ui/AutoTransition";
+import PasskeyManager from "@/app/(account)/settings/PasskeyManager";
+import {
+  getProviderIcon,
+  getProviderName,
+} from "@/app/(account)/settings/settingsHelpers";
+import {
+  TotpDialogs,
+  type TotpDialogsRef,
+} from "@/app/(account)/settings/TotpDialogs";
+import type { PendingAction } from "@/app/(account)/settings/use-reauth";
+import type { OAuthProvider } from "@/lib/server/oauth";
 import { AutoResizer } from "@/ui/AutoResizer";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { Button } from "@/ui/Button";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 interface LinkedAccount {

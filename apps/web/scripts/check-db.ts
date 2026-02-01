@@ -1,11 +1,11 @@
 // script/check-db.ts
 // 检查数据库连接，验证数据库健康状态
 
-import { config } from "dotenv";
-import Rlog from "rlog-js";
-import path from "path";
-import { pathToFileURL } from "url";
 import { execSync } from "child_process";
+import { config } from "dotenv";
+import path from "path";
+import Rlog from "rlog-js";
+import { pathToFileURL } from "url";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let prisma: any;

@@ -3,7 +3,8 @@
  * 使用 arctic 库处理 Google、GitHub、Microsoft 的 OAuth 2.0 流程
  */
 
-import { Google, GitHub, MicrosoftEntraId, generateCodeVerifier } from "arctic";
+import { generateCodeVerifier, GitHub, Google, MicrosoftEntraId } from "arctic";
+
 import { getConfig } from "@/lib/server/config-cache";
 
 export type OAuthProvider = "google" | "github" | "microsoft";

@@ -1,11 +1,12 @@
 "use client";
 
+import type { PathStat } from "@repo/shared-types";
+
 import { GridItem } from "@/components/RowGrid";
+import generateComplementary from "@/lib/shared/complementary";
+import generateGradient from "@/lib/shared/gradient";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import type { PathStat } from "@repo/shared-types";
-import generateGradient from "@/lib/shared/gradient";
-import generateComplementary from "@/lib/shared/complementary";
 
 interface PathStatsChartProps {
   paths: PathStat[] | null;

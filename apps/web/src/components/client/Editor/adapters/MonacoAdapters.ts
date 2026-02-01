@@ -4,8 +4,11 @@
  * 继承自 BaseMonacoAdapter，提供 Markdown 和 MDX 特定功能
  */
 
-import { BaseMonacoAdapter } from "./BaseMonacoAdapter";
-import type { MonacoInstance, AdapterConfig } from "./types";
+import { BaseMonacoAdapter } from "@/components/client/Editor/adapters/BaseMonacoAdapter";
+import type {
+  AdapterConfig,
+  MonacoInstance,
+} from "@/components/client/Editor/adapters/types";
 
 /**
  * Markdown 编辑器适配器

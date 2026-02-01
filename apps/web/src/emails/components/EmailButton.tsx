@@ -1,5 +1,5 @@
-import { Button } from "@react-email/components";
 import * as React from "react";
+import { Button } from "@react-email/components";
 
 /**
  * 邮件按钮组件属性

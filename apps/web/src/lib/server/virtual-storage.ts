@@ -3,7 +3,7 @@
  * 用于外部链接图片的存储提供商
  */
 
-import prisma from "./prisma";
+import prisma from "@/lib/server/prisma";
 
 const VIRTUAL_STORAGE_NAME = "external-url";
 const VIRTUAL_STORAGE_DISPLAY_NAME = "外部链接";

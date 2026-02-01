@@ -1,10 +1,10 @@
 // script/prebuild.ts
 // run before building the project
 
+import { config } from "dotenv";
 import fs from "fs";
 import path from "path";
 import Rlog from "rlog-js";
-import { config } from "dotenv";
 // 加载 .env 文件
 config({
   quiet: true,

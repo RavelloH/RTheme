@@ -1,5 +1,5 @@
 // @/hooks/useMobile.ts
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * React Hook for detecting if the current device is a mobile device

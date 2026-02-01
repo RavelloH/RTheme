@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { Dialog } from "@/ui/Dialog";
+import { useRouter } from "next/navigation";
+
+import { changePassword } from "@/actions/auth";
+import { setPassword } from "@/actions/sso";
 import { Button } from "@/ui/Button";
+import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import { useToast } from "@/ui/Toast";
-import { setPassword } from "@/actions/sso";
-import { changePassword } from "@/actions/auth";
-import { useRouter } from "next/navigation";
 
 interface PasswordDialogsProps {
   onPasswordSet: () => void;

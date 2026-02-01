@@ -1,11 +1,12 @@
 "use client";
 
 import React from "react";
-import { Button } from "@/ui/Button";
-import { formatRelativeTime } from "@/lib/shared/relative-time";
-import UserAvatar from "@/components/UserAvatar";
-import type { BasicInfoDialogsRef } from "./BasicInfoDialogs";
+
+import type { BasicInfoDialogsRef } from "@/app/(account)/settings/BasicInfoDialogs";
 import Link from "@/components/Link";
+import UserAvatar from "@/components/UserAvatar";
+import { formatRelativeTime } from "@/lib/shared/relative-time";
+import { Button } from "@/ui/Button";
 
 interface UserProfile {
   uid: number;

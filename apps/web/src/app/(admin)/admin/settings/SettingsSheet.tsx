@@ -1,23 +1,24 @@
 "use client";
 
-import { GridItem } from "@/components/RowGrid";
-import { useBroadcast } from "@/hooks/use-broadcast";
-import { useState, useEffect, useCallback } from "react";
-import type { SettingSelectMessage } from "./SettingsSelect";
-import { Input } from "@/ui/Input";
-import { Select, type SelectOption } from "@/ui/Select";
-import { Button } from "@/ui/Button";
-import { useToast } from "@/ui/Toast";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { RiSaveLine, RiRefreshLine } from "@remixicon/react";
+import { useCallback, useEffect, useState } from "react";
+import { RiRefreshLine, RiSaveLine } from "@remixicon/react";
+
 import { getSettings, updateSettings } from "@/actions/setting";
-import runWithAuth from "@/lib/client/run-with-auth";
+import type { SettingSelectMessage } from "@/app/(admin)/admin/settings/SettingsSelect";
+import { GridItem } from "@/components/RowGrid";
 import {
   defaultConfigs,
   extractDefaultValue,
   extractOptions,
 } from "@/data/default-configs";
+import { useBroadcast } from "@/hooks/use-broadcast";
+import runWithAuth from "@/lib/client/run-with-auth";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { Button } from "@/ui/Button";
+import { Input } from "@/ui/Input";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { Select, type SelectOption } from "@/ui/Select";
+import { useToast } from "@/ui/Toast";
 
 interface SettingConfig {
   key: string;

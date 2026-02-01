@@ -1,42 +1,43 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  RiArchiveLine,
+  RiArrowLeftSLine,
+  RiCodeSSlashLine,
+  RiEyeLine,
+  RiGitBranchLine,
+  RiGitCommitLine,
+  RiRefreshLine,
+} from "@remixicon/react";
+import type {
+  PostHistoryItem,
+  PostHistoryStats,
+} from "@repo/shared-types/api/post";
 import { useParams } from "next/navigation";
+
 import {
   getPostHistory,
   resetPostToVersion,
   squashPostToVersion,
 } from "@/actions/post";
-import type { ActionButton } from "@/components/GridTable";
-import GridTable from "@/components/GridTable";
-import type { TableColumn } from "@/ui/Table";
-import type {
-  PostHistoryItem,
-  PostHistoryStats,
-} from "@repo/shared-types/api/post";
-import {
-  RiRefreshLine,
-  RiGitBranchLine,
-  RiArchiveLine,
-  RiArrowLeftSLine,
-  RiEyeLine,
-  RiGitCommitLine,
-  RiCodeSSlashLine,
-} from "@remixicon/react";
-import { AlertDialog } from "@/ui/AlertDialog";
-import { useToast } from "@/ui/Toast";
-import Link, { useNavigateWithTransition } from "@/components/Link";
-import MainLayout from "@/components/MainLayout";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import RowGrid, { GridItem } from "@/components/RowGrid";
 import AdminSidebar from "@/components/AdminSidebar";
-import Clickable from "@/ui/Clickable";
-import { AutoTransition } from "@/ui/AutoTransition";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig,
 } from "@/components/AreaChart";
+import type { ActionButton } from "@/components/GridTable";
+import GridTable from "@/components/GridTable";
+import HorizontalScroll from "@/components/HorizontalScroll";
+import Link, { useNavigateWithTransition } from "@/components/Link";
+import MainLayout from "@/components/MainLayout";
+import RowGrid, { GridItem } from "@/components/RowGrid";
+import { AlertDialog } from "@/ui/AlertDialog";
+import { AutoTransition } from "@/ui/AutoTransition";
+import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import type { TableColumn } from "@/ui/Table";
+import { useToast } from "@/ui/Toast";
 
 export default function PostHistoryPage() {
   const params = useParams();

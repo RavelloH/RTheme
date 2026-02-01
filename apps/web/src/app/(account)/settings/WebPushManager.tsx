@@ -1,26 +1,27 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
-import type { ApiResponse } from "@repo/shared-types/api/common";
-import { useWebPush } from "@/hooks/use-webpush";
-import { useToast } from "@/ui/Toast";
-import { Button } from "@/ui/Button";
-import { Input } from "@/ui/Input";
-import { Dialog } from "@/ui/Dialog";
-import { AlertDialog } from "@/ui/AlertDialog";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { AutoResizer } from "@/ui/AutoResizer";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import Clickable from "@/ui/Clickable";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  RiDeleteBinLine,
-  RiPencilLine,
   RiAddLine,
   RiComputerLine,
-  RiSmartphoneLine,
+  RiDeleteBinLine,
   RiNotification3Line,
+  RiPencilLine,
+  RiSmartphoneLine,
 } from "@remixicon/react";
+import type { ApiResponse } from "@repo/shared-types/api/common";
+
+import { useWebPush } from "@/hooks/use-webpush";
 import { formatRelativeTime } from "@/lib/shared/relative-time";
+import { AlertDialog } from "@/ui/AlertDialog";
+import { AutoResizer } from "@/ui/AutoResizer";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { Button } from "@/ui/Button";
+import Clickable from "@/ui/Clickable";
+import { Dialog } from "@/ui/Dialog";
+import { Input } from "@/ui/Input";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { useToast } from "@/ui/Toast";
 
 export default function WebPushManager() {
   const toast = useToast();

@@ -1,12 +1,22 @@
 import React, { Suspense } from "react";
+import { cache } from "react";
+import { RiArrowLeftSLine } from "@remixicon/react";
+import type { Metadata } from "next";
+import { cacheLife, cacheTag } from "next/cache";
+import { notFound } from "next/navigation";
+
+import DynamicReplace from "@/components/client/DynamicReplace";
+import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
+import EmptyPostCard from "@/components/EmptyPostCard";
 import HorizontalScroll from "@/components/HorizontalScroll";
+import Link from "@/components/Link";
 import LinkButton from "@/components/LinkButton";
 import MainLayout from "@/components/MainLayout";
-import RowGrid, { GridItem } from "@/components/RowGrid";
-import PostCard from "@/components/PostCard";
-import EmptyPostCard from "@/components/EmptyPostCard";
 import PaginationNav from "@/components/PaginationNav";
+import PostCard from "@/components/PostCard";
+import RowGrid, { GridItem } from "@/components/RowGrid";
 import { createArray } from "@/lib/client/create-array";
+import { getFeaturedImageData } from "@/lib/server/media-reference";
 import {
   getBlocksAreas,
   getRawPage,
@@ -15,15 +25,6 @@ import {
 import { createPageConfigBuilder } from "@/lib/server/page-cache";
 import prisma from "@/lib/server/prisma";
 import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
-import Link from "@/components/Link";
-import DynamicReplace from "@/components/client/DynamicReplace";
-import { notFound } from "next/navigation";
-import type { Metadata } from "next";
-import { RiArrowLeftSLine } from "@remixicon/react";
-import { cache } from "react";
-import { getFeaturedImageData } from "@/lib/server/media-reference";
-import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
-import { cacheLife, cacheTag } from "next/cache";
 
 // 缓存函数：获取标签的基本信息
 const getTagBasicInfo = cache(async (slug: string) => {

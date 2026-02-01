@@ -1,16 +1,17 @@
 "use client";
 
-import { GridItem } from "@/components/RowGrid";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { getEndpointStats } from "@/actions/security";
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { EndpointStat } from "@repo/shared-types/api/security";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
+
+import { getEndpointStats } from "@/actions/security";
+import { GridItem } from "@/components/RowGrid";
+import { useMainColor } from "@/components/ThemeProvider";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
-import generateGradient from "@/lib/shared/gradient";
 import generateComplementary from "@/lib/shared/complementary";
-import { useMainColor } from "@/components/ThemeProvider";
+import generateGradient from "@/lib/shared/gradient";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 export default function EndpointStatsChart() {
   const mainColor = useMainColor().primary;

@@ -1,6 +1,6 @@
-import { generateMetadata } from "@/lib/server/seo";
+import LogoutSheet from "@/app/(account)/logout/LogoutSheet";
 import MainLayout from "@/components/MainLayout";
-import LogoutSheet from "./LogoutSheet";
+import { generateMetadata } from "@/lib/server/seo";
 
 export const metadata = await generateMetadata(
   {

@@ -1,8 +1,9 @@
-import { getUsersTrends } from "@/actions/user";
-import ResponseBuilder from "@/lib/server/response";
-import { validateGetRequest } from "@/lib/server/request-converter";
 import { GetUsersTrendsSchema } from "@repo/shared-types/api/user";
 import { connection } from "next/server";
+
+import { getUsersTrends } from "@/actions/user";
+import { validateGetRequest } from "@/lib/server/request-converter";
+import ResponseBuilder from "@/lib/server/response";
 
 const response = new ResponseBuilder("serverless");
 

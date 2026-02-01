@@ -1,47 +1,48 @@
 "use client";
 
-import {
-  getStorageList,
-  updateStorage,
-  deleteStorage,
-  toggleStorageStatus,
-  setDefaultStorage,
-  getStorageDetail,
-} from "@/actions/storage";
-import type { ActionButton, FilterConfig } from "@/components/GridTable";
-import GridTable from "@/components/GridTable";
-import runWithAuth, { resolveApiResponse } from "@/lib/client/run-with-auth";
-import type { TableColumn } from "@/ui/Table";
 import React, { useCallback, useEffect, useState } from "react";
-import type { StorageListItem } from "@repo/shared-types/api/storage";
-import { useBroadcast } from "@/hooks/use-broadcast";
 import {
   RiCheckLine,
   RiCloseLine,
-  RiEditLine,
   RiDeleteBinLine,
+  RiEditLine,
   RiEyeLine,
   RiEyeOffLine,
-  RiStarLine,
   RiStarFill,
+  RiStarLine,
 } from "@remixicon/react";
+import type { StorageListItem } from "@repo/shared-types/api/storage";
+
+import {
+  deleteStorage,
+  getStorageDetail,
+  getStorageList,
+  setDefaultStorage,
+  toggleStorageStatus,
+  updateStorage,
+} from "@/actions/storage";
+import type { StorageConfigValues } from "@/app/(admin)/admin/storages/StorageConfigFields";
+import {
+  createStorageConfigValues,
+  StorageConfigFields,
+  storageConfigValuesToPayload,
+} from "@/app/(admin)/admin/storages/StorageConfigFields";
+import type { ActionButton, FilterConfig } from "@/components/GridTable";
+import GridTable from "@/components/GridTable";
+import { useBroadcast } from "@/hooks/use-broadcast";
+import runWithAuth, { resolveApiResponse } from "@/lib/client/run-with-auth";
+import type { StorageProviderType } from "@/template/storages";
+import { AlertDialog } from "@/ui/AlertDialog";
+import { AutoResizer } from "@/ui/AutoResizer";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { Button } from "@/ui/Button";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
-import type { SelectOption } from "@/ui/Select";
-import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { AutoResizer } from "@/ui/AutoResizer";
+import type { SelectOption } from "@/ui/Select";
 import { Switch } from "@/ui/Switch";
-import { Button } from "@/ui/Button";
-import { AlertDialog } from "@/ui/AlertDialog";
+import type { TableColumn } from "@/ui/Table";
 import { useToast } from "@/ui/Toast";
-import type { StorageConfigValues } from "./StorageConfigFields";
-import {
-  StorageConfigFields,
-  createStorageConfigValues,
-  storageConfigValuesToPayload,
-} from "./StorageConfigFields";
-import type { StorageProviderType } from "@/template/storages";
 
 // 虚拟存储提供商的名称（与后端保持一致）
 const VIRTUAL_STORAGE_NAME = "external-url";

@@ -1,14 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence } from "framer-motion";
-import { useFooterStore } from "@/store/footer-store";
-import { NotificationCard, type NotificationItem } from "./NotificationToast";
+
 import {
   MessageNotificationCard,
   type MessageNotificationItem,
-} from "./MessageNotificationToast";
+} from "@/components/MessageNotificationToast";
+import {
+  NotificationCard,
+  type NotificationItem,
+} from "@/components/NotificationToast";
+import { useFooterStore } from "@/store/footer-store";
 
 interface UnifiedNotificationContainerProps {
   notifications: NotificationItem[];

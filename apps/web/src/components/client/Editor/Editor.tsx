@@ -1,87 +1,91 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { createArray } from "@/lib/client/create-array";
-import RowGrid, { GridItem } from "../../RowGrid";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  RiAlignCenter,
+  RiAlignLeft,
+  RiAlignRight,
   RiArrowGoBackLine,
   RiArrowGoForwardLine,
-  RiListOrdered,
-  RiListUnordered,
-  RiDoubleQuotesL,
-  RiCodeSSlashLine,
   RiBold,
-  RiItalic,
-  RiStrikethrough,
-  RiUnderline,
-  RiMarkPenLine,
-  RiSuperscript,
-  RiSubscript,
-  RiImageAddLine,
-  RiSeparator,
-  RiFullscreenLine,
+  RiCodeLine,
+  RiCodeSSlashLine,
+  RiDoubleQuotesL,
+  RiEyeLine,
+  RiEyeOffLine,
   RiFullscreenExitLine,
-  RiHeading,
+  RiFullscreenLine,
+  RiFunctions,
   RiH1,
   RiH2,
   RiH3,
   RiH4,
   RiH5,
   RiH6,
+  RiHeading,
+  RiImageAddLine,
+  RiItalic,
   RiListCheck2,
-  RiCodeLine,
-  RiTable2,
-  RiEyeLine,
-  RiEyeOffLine,
+  RiListOrdered,
+  RiListUnordered,
+  RiMarkPenLine,
   RiMenuLine,
-  RiAlignLeft,
-  RiAlignCenter,
-  RiAlignRight,
-  RiFunctions,
+  RiSeparator,
+  RiStrikethrough,
+  RiSubscript,
+  RiSuperscript,
+  RiTable2,
+  RiUnderline,
 } from "@remixicon/react";
-import { Toggle } from "@/ui/Toggle";
-import type { DropdownOption } from "@/ui/Dropdown";
-import { Dropdown } from "@/ui/Dropdown";
-import { useState, useCallback, useEffect, useRef } from "react";
-import { Tooltip } from "@/ui/Tooltip";
-import { Select } from "@/ui/Select";
-import { Button } from "@/ui/Button";
-import { Dialog } from "@/ui/Dialog";
-import { Input } from "@/ui/Input";
-import { Checkbox } from "@/ui/Checkbox";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import { TextSelection } from "@tiptap/pm/state";
+import type { Editor as TiptapEditorType } from "@tiptap/react";
+import type { editor } from "monaco-editor";
+
+import { createPost, updatePost } from "@/actions/post";
+import { CategoryInput } from "@/components/client/Category/CategoryInput";
+import {
+  type AdapterManager,
+  createAdapterManager,
+  type EditorState as AdapterEditorState,
+} from "@/components/client/Editor/adapters";
+import { CodeBlockToolbar } from "@/components/client/Editor/CodeBlockToolbar";
+import { ImageToolbar } from "@/components/client/Editor/ImageToolbar";
+import { LinkPopover } from "@/components/client/Editor/LinkPopover";
+import { LinkToolbar } from "@/components/client/Editor/LinkToolbar";
+import { ListToolbar } from "@/components/client/Editor/ListToolbar";
+import { LiveEditor } from "@/components/client/Editor/LiveEditor";
+import { MathDialog } from "@/components/client/Editor/MathDialog";
+import { TableSizePicker } from "@/components/client/Editor/TableSizePicker";
+import { TableToolbar } from "@/components/client/Editor/TableToolbar";
+import {
+  setEditorToast,
+  TiptapEditor,
+} from "@/components/client/Editor/TiptapEditor";
+import MediaSelector from "@/components/client/MediaSelector";
 import type { SelectedTag } from "@/components/client/Tag/TagInput";
 import { TagInput } from "@/components/client/Tag/TagInput";
-import { CategoryInput } from "@/components/client/Category/CategoryInput";
-import MediaSelector from "@/components/client/MediaSelector";
-import { TiptapEditor, setEditorToast } from "./TiptapEditor";
-import { LiveEditor } from "./LiveEditor";
-import { createPost, updatePost } from "@/actions/post";
 import { useNavigateWithTransition } from "@/components/Link";
-import { TableToolbar } from "./TableToolbar";
-import { TableSizePicker } from "./TableSizePicker";
-import { ListToolbar } from "./ListToolbar";
-import { LinkPopover } from "./LinkPopover";
-import { LinkToolbar } from "./LinkToolbar";
-import { ImageToolbar } from "./ImageToolbar";
-import { CodeBlockToolbar } from "./CodeBlockToolbar";
-import { MathDialog } from "./MathDialog";
-import { useToast } from "@/ui/Toast";
+import RowGrid, { GridItem } from "@/components/RowGrid";
+import { createArray } from "@/lib/client/create-array";
 import {
-  loadEditorContent,
   clearEditorContent,
+  loadEditorContent,
   saveEditorContent,
 } from "@/lib/client/editor-persistence";
-import type { Editor as TiptapEditorType } from "@tiptap/react";
-import { TextSelection } from "@tiptap/pm/state";
-import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
-import type { editor } from "monaco-editor";
-import {
-  createAdapterManager,
-  type AdapterManager,
-  type EditorState as AdapterEditorState,
-} from "./adapters";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
+import { Button } from "@/ui/Button";
+import { Checkbox } from "@/ui/Checkbox";
+import { Dialog } from "@/ui/Dialog";
+import type { DropdownOption } from "@/ui/Dropdown";
+import { Dropdown } from "@/ui/Dropdown";
+import { Input } from "@/ui/Input";
+import { Select } from "@/ui/Select";
+import { useToast } from "@/ui/Toast";
+import { Toggle } from "@/ui/Toggle";
+import { Tooltip } from "@/ui/Tooltip";
 
 export default function Editor({
   content,

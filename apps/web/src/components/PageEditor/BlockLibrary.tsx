@@ -1,19 +1,20 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   RiAddLine,
-  RiLoader4Line,
-  RiLayoutMasonryLine,
   RiLayoutGridLine,
+  RiLayoutMasonryLine,
+  RiLoader4Line,
   RiQuestionLine,
 } from "@remixicon/react";
-import { getAllBlockFormConfigs } from "@/blocks/registry";
-import type { BlockFormConfig } from "@/blocks/types/field-config";
-import type { BlockConfig } from "@/blocks/types";
-import { Button } from "@/ui/Button";
-import Link from "../Link";
-import { SingleBlockRenderer } from "./VisualBlockRenderer";
+
 import { fetchBlockData } from "@/actions/page";
+import { getAllBlockFormConfigs } from "@/blocks/registry";
+import type { BlockConfig } from "@/blocks/types";
+import type { BlockFormConfig } from "@/blocks/types/field-config";
+import Link from "@/components/Link";
+import { SingleBlockRenderer } from "@/components/PageEditor/VisualBlockRenderer";
 import runWithAuth from "@/lib/client/run-with-auth";
+import { Button } from "@/ui/Button";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 // 分类配置

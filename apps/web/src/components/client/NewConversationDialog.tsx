@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { RiSearchLine, RiUserSearchLine } from "@remixicon/react";
+import type { UserSearchResult } from "@repo/shared-types/api/message";
+
+import { searchUsers } from "@/actions/message";
+import UserSearchItem from "@/components/client/UserSearchItem";
+import { AutoResizer } from "@/ui/AutoResizer";
+import { AutoTransition } from "@/ui/AutoTransition";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import UserSearchItem from "./UserSearchItem";
-import { searchUsers } from "@/actions/message";
-import type { UserSearchResult } from "@repo/shared-types/api/message";
-import { RiSearchLine, RiUserSearchLine } from "@remixicon/react";
-import { AutoResizer } from "@/ui/AutoResizer";
-import { AutoTransition } from "@/ui/AutoTransition";
 
 interface NewConversationDialogProps {
   open: boolean;

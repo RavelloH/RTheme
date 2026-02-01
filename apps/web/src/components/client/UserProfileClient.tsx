@@ -4,23 +4,24 @@ import React from "react";
 import {
   RiArticleLine,
   RiChat3Line,
-  RiHeartLine,
+  RiGlobalLine,
   RiHeartFill,
+  RiHeartLine,
   RiMailLine,
   RiSettings4Line,
   RiTimeLine,
-  RiGlobalLine,
   RiUserSettingsLine,
 } from "@remixicon/react";
 import type {
-  UserProfile,
   UserActivityItem,
+  UserProfile,
 } from "@repo/shared-types/api/user";
-import { Button } from "@/ui/Button";
+
+import UserActivityTimeline from "@/components/client/UserActivityTimeline";
 import Link, { useNavigateWithTransition } from "@/components/Link";
 import UserAvatar from "@/components/UserAvatar";
-import UserActivityTimeline from "./UserActivityTimeline";
 import { formatRelativeTime } from "@/lib/shared/relative-time";
+import { Button } from "@/ui/Button";
 import { Tooltip } from "@/ui/Tooltip";
 
 interface UserProfileClientProps {

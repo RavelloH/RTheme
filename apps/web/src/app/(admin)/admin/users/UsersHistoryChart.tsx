@@ -1,17 +1,18 @@
 "use client";
 
-import { GridItem } from "@/components/RowGrid";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { getUsersTrends } from "@/actions/user";
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { UserTrendItem } from "@repo/shared-types/api/user";
+
+import { getUsersTrends } from "@/actions/user";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig,
 } from "@/components/AreaChart";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { GridItem } from "@/components/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 export default function UsersHistoryChart() {
   const [data, setData] = useState<UserTrendItem[]>([]);

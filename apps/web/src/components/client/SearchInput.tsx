@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { Input } from "@/ui/Input";
+import React, { useEffect, useRef, useState } from "react";
 import { RiSearch2Line } from "@remixicon/react";
+
 import { useBroadcastSender } from "@/hooks/use-broadcast";
+import { Input } from "@/ui/Input";
 
 interface SearchMessage {
   query: string;

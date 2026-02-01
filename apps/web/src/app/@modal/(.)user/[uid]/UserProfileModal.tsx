@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Dialog } from "@/ui/Dialog";
 import type {
-  UserProfile,
   UserActivityItem,
+  UserProfile,
 } from "@repo/shared-types/api/user";
+import { useRouter } from "next/navigation";
+
 import UserProfileClient from "@/components/client/UserProfileClient";
 import { useNavigateWithTransition } from "@/components/Link";
+import { Dialog } from "@/ui/Dialog";
 
 interface UserProfileModalProps {
   profile: UserProfile;

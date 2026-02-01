@@ -1,10 +1,11 @@
 import { useEffect, useRef } from "react";
+import type { Conversation, Message } from "@repo/shared-types/api/message";
 import { usePathname, useSearchParams } from "next/navigation";
 import useSWR from "swr";
-import { getConversations, getConversationMessages } from "@/actions/message";
-import type { Conversation, Message } from "@repo/shared-types/api/message";
-import { useBroadcastSender } from "@/hooks/use-broadcast";
+
+import { getConversationMessages, getConversations } from "@/actions/message";
 import type { ConnectionStatus } from "@/components/NotificationProvider";
+import { useBroadcastSender } from "@/hooks/use-broadcast";
 
 interface UseMessagePollingOptions {
   enabled: boolean;

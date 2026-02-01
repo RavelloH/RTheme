@@ -1,6 +1,7 @@
 "use client";
 
 import type { Conversation } from "@repo/shared-types/api/message";
+
 import UserAvatar from "@/components/UserAvatar";
 import { AutoTransition } from "@/ui/AutoTransition";
 

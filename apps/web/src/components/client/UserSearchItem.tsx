@@ -1,8 +1,9 @@
 "use client";
 
-import type { UserSearchResult } from "@repo/shared-types/api/message";
-import UserAvatar from "@/components/UserAvatar";
 import { RiChatNewLine } from "@remixicon/react";
+import type { UserSearchResult } from "@repo/shared-types/api/message";
+
+import UserAvatar from "@/components/UserAvatar";
 import Clickable from "@/ui/Clickable";
 
 interface UserSearchItemProps {

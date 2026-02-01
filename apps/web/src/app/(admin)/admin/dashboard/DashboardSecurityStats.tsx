@@ -1,14 +1,15 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { RiRefreshLine } from "@remixicon/react";
+import type { SecurityOverviewData } from "@repo/shared-types/api/security";
+
 import { getSecurityOverview } from "@/actions/security";
+import Link from "@/components/Link";
+import ErrorPage from "@/components/ui/Error";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { RiRefreshLine } from "@remixicon/react";
-import { useEffect, useState } from "react";
-import ErrorPage from "@/components/ui/Error";
-import type { SecurityOverviewData } from "@repo/shared-types/api/security";
-import Link from "@/components/Link";
 
 // 格式化数字
 const formatNumber = (num: number | undefined): string => {

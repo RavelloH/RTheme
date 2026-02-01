@@ -1,5 +1,5 @@
+import AdminRedirect from "@/app/(admin)/admin/Redirect";
 import { generateMetadata } from "@/lib/server/seo";
-import AdminRedirect from "./Redirect";
 
 export const metadata = await generateMetadata(
   {

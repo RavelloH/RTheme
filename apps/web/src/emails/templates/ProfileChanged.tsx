@@ -1,10 +1,11 @@
 import * as React from "react";
+
 import {
-  EmailLayout,
-  EmailHeading,
-  EmailParagraph,
   EmailAlert,
-} from "../components";
+  EmailHeading,
+  EmailLayout,
+  EmailParagraph,
+} from "@/emails/components";
 
 /**
  * 用户资料变更通知邮件模板属性

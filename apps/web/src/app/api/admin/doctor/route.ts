@@ -1,8 +1,9 @@
+import { DoctorSchema } from "@repo/shared-types/api/doctor";
+import { connection } from "next/server";
+
+import { doctor } from "@/actions/doctor";
 import ResponseBuilder from "@/lib/server/response";
 import { validateRequestJSON } from "@/lib/server/validator";
-import { connection } from "next/server";
-import { DoctorSchema } from "@repo/shared-types/api/doctor";
-import { doctor } from "@/actions/doctor";
 
 const response = new ResponseBuilder("serverless");
 

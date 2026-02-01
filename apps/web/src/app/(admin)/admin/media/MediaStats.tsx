@@ -1,14 +1,15 @@
 "use client";
 
-import { GridItem } from "@/components/RowGrid";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { getMediaStats } from "@/actions/media";
 import { useCallback, useEffect, useState } from "react";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { RiRefreshLine } from "@remixicon/react";
+
+import { getMediaStats } from "@/actions/media";
+import { GridItem } from "@/components/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
-import { RiRefreshLine } from "@remixicon/react";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 type StatsData = {
   updatedAt: string;

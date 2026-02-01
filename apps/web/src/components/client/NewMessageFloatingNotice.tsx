@@ -1,7 +1,8 @@
 "use client";
 
-import Clickable from "@/ui/Clickable";
 import { RiArrowDownLine } from "@remixicon/react";
+
+import Clickable from "@/ui/Clickable";
 
 interface NewMessageFloatingNoticeProps {
   onClick: () => void;

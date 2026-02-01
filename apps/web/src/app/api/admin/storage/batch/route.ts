@@ -1,8 +1,9 @@
-import { deleteStorage } from "@/actions/storage";
-import ResponseBuilder from "@/lib/server/response";
-import { validateDeleteRequest } from "@/lib/server/request-converter";
 import { DeleteStorageSchema } from "@repo/shared-types/api/storage";
 import { connection } from "next/server";
+
+import { deleteStorage } from "@/actions/storage";
+import { validateDeleteRequest } from "@/lib/server/request-converter";
+import ResponseBuilder from "@/lib/server/response";
 
 const response = new ResponseBuilder("serverless");
 

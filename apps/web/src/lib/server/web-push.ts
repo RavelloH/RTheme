@@ -1,7 +1,9 @@
 import "server-only";
+
 import webpush from "web-push";
-import prisma from "./prisma";
-import { getConfig } from "./config-cache";
+
+import { getConfig } from "@/lib/server/config-cache";
+import prisma from "@/lib/server/prisma";
 
 /**
  * 初始化 VAPID 配置

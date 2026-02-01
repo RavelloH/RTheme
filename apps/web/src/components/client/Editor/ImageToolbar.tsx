@@ -1,15 +1,16 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import type { Editor } from "@tiptap/react";
-import { motion, AnimatePresence } from "framer-motion";
-import { RiEdit2Line, RiDeleteBinLine } from "@remixicon/react";
-import { Toggle } from "@/ui/Toggle";
-import { Tooltip } from "@/ui/Tooltip";
 import { useState } from "react";
+import { RiDeleteBinLine, RiEdit2Line } from "@remixicon/react";
+import type { Editor } from "@tiptap/react";
+import { AnimatePresence, motion } from "framer-motion";
+
+import { Button } from "@/ui/Button";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
-import { Button } from "@/ui/Button";
+import { Toggle } from "@/ui/Toggle";
+import { Tooltip } from "@/ui/Tooltip";
 
 interface ImageToolbarProps {
   editor: Editor;

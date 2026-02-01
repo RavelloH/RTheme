@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { getPostVersion } from "@/actions/post";
-import type { PostVersionDetail } from "@repo/shared-types/api/post";
 import Editor from "@monaco-editor/react";
-import { Button } from "@/ui/Button";
+import { RiArrowLeftSLine } from "@remixicon/react";
+import type { PostVersionDetail } from "@repo/shared-types/api/post";
+import { useParams } from "next/navigation";
+
+import { getPostVersion } from "@/actions/post";
+import AdminSidebar from "@/components/AdminSidebar";
+import HorizontalScroll from "@/components/HorizontalScroll";
 import { useNavigateWithTransition } from "@/components/Link";
 import MainLayout from "@/components/MainLayout";
-import HorizontalScroll from "@/components/HorizontalScroll";
 import RowGrid, { GridItem } from "@/components/RowGrid";
-import AdminSidebar from "@/components/AdminSidebar";
-import { RiArrowLeftSLine } from "@remixicon/react";
+import { Button } from "@/ui/Button";
 import Clickable from "@/ui/Clickable";
 
 export default function PostVersionPage() {

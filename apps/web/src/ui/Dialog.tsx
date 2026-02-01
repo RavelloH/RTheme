@@ -2,9 +2,10 @@
 
 import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import { RiCloseLine } from "@remixicon/react";
-import Clickable from "./Clickable";
+import { AnimatePresence, motion } from "framer-motion";
+
+import Clickable from "@/ui/Clickable";
 
 export interface DialogProps {
   open: boolean;

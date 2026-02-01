@@ -2,8 +2,8 @@
 // 数据库默认值种子脚本
 
 import path from "path";
-import { pathToFileURL } from "url";
 import RLog from "rlog-js";
+import { pathToFileURL } from "url";
 
 const rlog = new RLog();
 
@@ -12,8 +12,8 @@ let pool: any;
 
 // 从数据文件导入默认配置
 import { defaultConfigs } from "../src/data/default-configs.js";
-import { defaultPages } from "../src/data/default-pages.js";
 import { defaultMenus } from "../src/data/default-menus.js";
+import { defaultPages } from "../src/data/default-pages.js";
 
 async function seedDefaults() {
   try {

@@ -1,8 +1,9 @@
+import { EmailVerificationSchema } from "@repo/shared-types/api/auth";
+import { connection } from "next/server";
+
+import { verifyEmail } from "@/actions/auth";
 import ResponseBuilder from "@/lib/server/response";
 import { validateRequestJSON } from "@/lib/server/validator";
-import { EmailVerificationSchema } from "@repo/shared-types/api/auth";
-import { verifyEmail } from "@/actions/auth";
-import { connection } from "next/server";
 
 const response = new ResponseBuilder("serverless");
 

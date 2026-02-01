@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { RiCalendarLine, RiArrowDownSLine } from "@remixicon/react";
-import Clickable from "@/ui/Clickable";
+import { useEffect, useRef, useState } from "react";
+import { RiArrowDownSLine, RiCalendarLine } from "@remixicon/react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Input } from "@/ui/Input";
+
 import { Button } from "@/ui/Button";
+import Clickable from "@/ui/Clickable";
+import { Input } from "@/ui/Input";
 
 export type TimeRangeValue =
   | { type: "preset"; days: number }

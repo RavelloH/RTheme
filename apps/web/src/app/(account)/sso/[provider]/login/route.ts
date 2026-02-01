@@ -1,18 +1,19 @@
+import { cookies, headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { cookies, headers } from "next/headers";
+
 import {
+  type AccessTokenPayload,
+  jwtTokenSign,
+  jwtTokenVerify,
+} from "@/lib/server/jwt";
+import {
+  generateState,
   getAuthorizationUrl,
   isOAuthEnabled,
-  generateState,
   type OAuthProvider,
 } from "@/lib/server/oauth";
 import limitControl from "@/lib/server/rate-limit";
-import {
-  jwtTokenVerify,
-  jwtTokenSign,
-  type AccessTokenPayload,
-} from "@/lib/server/jwt";
 
 export async function GET(
   request: NextRequest,

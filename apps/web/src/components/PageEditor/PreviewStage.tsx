@@ -1,8 +1,9 @@
 import React from "react";
-import HorizontalScroll from "@/components/HorizontalScroll";
-import BlockRenderer from "@/components/BlockRenderer";
-import type { BlockConfig } from "@/blocks/types";
 import { RiLoader4Line } from "@remixicon/react";
+
+import type { BlockConfig } from "@/blocks/types";
+import BlockRenderer from "@/components/BlockRenderer";
+import HorizontalScroll from "@/components/HorizontalScroll";
 
 interface PreviewStageProps {
   blocks: BlockConfig[];

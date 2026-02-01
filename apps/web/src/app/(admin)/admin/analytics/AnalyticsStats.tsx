@@ -1,19 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import RowGrid from "@/components/RowGrid";
-import AnalyticsOverview from "./AnalyticsOverview";
-import AnalyticsTrendChart from "./AnalyticsTrendChart";
-import PathStatsChart from "./PathStatsChart";
-import PathTrendChart from "./VisitTrendChart";
-import DimensionStats from "./DimensionStats";
-import PageViewTable from "./PageViewTable";
-import type { TimeRangeValue } from "./TimeRangeSelector";
-import { getAnalyticsStats } from "@/actions/analytics";
+import { useCallback, useEffect, useState } from "react";
 import type { AnalyticsStatsData } from "@repo/shared-types";
-import generateGradient from "@/lib/shared/gradient";
-import generateComplementary from "@/lib/shared/complementary";
+
+import { getAnalyticsStats } from "@/actions/analytics";
+import AnalyticsOverview from "@/app/(admin)/admin/analytics/AnalyticsOverview";
+import AnalyticsTrendChart from "@/app/(admin)/admin/analytics/AnalyticsTrendChart";
+import DimensionStats from "@/app/(admin)/admin/analytics/DimensionStats";
+import PageViewTable from "@/app/(admin)/admin/analytics/PageViewTable";
+import PathStatsChart from "@/app/(admin)/admin/analytics/PathStatsChart";
+import type { TimeRangeValue } from "@/app/(admin)/admin/analytics/TimeRangeSelector";
+import PathTrendChart from "@/app/(admin)/admin/analytics/VisitTrendChart";
+import RowGrid from "@/components/RowGrid";
 import { useMainColor } from "@/components/ThemeProvider";
+import generateComplementary from "@/lib/shared/complementary";
+import generateGradient from "@/lib/shared/gradient";
 
 export default function AnalyticsStats() {
   const [data, setData] = useState<AnalyticsStatsData | null>(null);

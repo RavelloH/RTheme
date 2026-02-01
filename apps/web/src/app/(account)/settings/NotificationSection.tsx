@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import WebPushManager from "./WebPushManager";
+
+import WebPushManager from "@/app/(account)/settings/WebPushManager";
 
 /**
  * 通知管理板块组件

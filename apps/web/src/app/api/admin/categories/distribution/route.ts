@@ -1,8 +1,9 @@
-import { getCategoriesDistribution } from "@/actions/category";
-import ResponseBuilder from "@/lib/server/response";
-import { connection } from "next/server";
-import { validateGetRequest } from "@/lib/server/request-converter";
 import { GetCategoriesDistributionSchema } from "@repo/shared-types/api/category";
+import { connection } from "next/server";
+
+import { getCategoriesDistribution } from "@/actions/category";
+import { validateGetRequest } from "@/lib/server/request-converter";
+import ResponseBuilder from "@/lib/server/response";
 
 const response = new ResponseBuilder("serverless");
 

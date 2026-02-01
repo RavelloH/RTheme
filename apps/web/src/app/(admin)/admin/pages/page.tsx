@@ -1,11 +1,11 @@
+import PagesReport from "@/app/(admin)/admin/pages/PagesReport";
+import PagesTable from "@/app/(admin)/admin/pages/PagesTable";
+import AdminSidebar from "@/components/AdminSidebar";
 import HorizontalScroll from "@/components/HorizontalScroll";
+import Link from "@/components/Link";
 import MainLayout from "@/components/MainLayout";
 import RowGrid, { GridItem } from "@/components/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
-import AdminSidebar from "@/components/AdminSidebar";
-import PagesReport from "./PagesReport";
-import PagesTable from "./PagesTable";
-import Link from "@/components/Link";
 
 export const metadata = await generateMetadata(
   {

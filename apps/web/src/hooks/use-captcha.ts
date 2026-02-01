@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
+
 import { createChallenge, verifyChallenge } from "@/actions/captcha";
 
 interface CaptchaCallbacks {

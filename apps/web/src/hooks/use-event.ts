@@ -1,6 +1,6 @@
 // @/store/useEvent.ts
-import { create } from "zustand";
 import { useEffect, useRef } from "react";
+import { create } from "zustand";
 
 interface EventMap {
   [eventName: string]: (...args: unknown[]) => void | Promise<void>;

@@ -1,14 +1,14 @@
+import CustomWordManager from "@/app/(admin)/admin/search/CustomWordManager";
+import PostIndexTable from "@/app/(admin)/admin/search/PostIndexTable";
+import RebuildAllIndexButton from "@/app/(admin)/admin/search/RebuildAllIndexButton";
+import SearchIndexReport from "@/app/(admin)/admin/search/SearchIndexReport";
+import TokenizeTest from "@/app/(admin)/admin/search/TokenizeTest";
+import WordCloudPanel from "@/app/(admin)/admin/search/WordCloudPanel";
+import AdminSidebar from "@/components/AdminSidebar";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import MainLayout from "@/components/MainLayout";
 import RowGrid from "@/components/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
-import AdminSidebar from "@/components/AdminSidebar";
-import TokenizeTest from "./TokenizeTest";
-import CustomWordManager from "./CustomWordManager";
-import PostIndexTable from "./PostIndexTable";
-import SearchIndexReport from "./SearchIndexReport";
-import WordCloudPanel from "./WordCloudPanel";
-import RebuildAllIndexButton from "./RebuildAllIndexButton";
 
 export const metadata = await generateMetadata(
   {

@@ -1,10 +1,12 @@
 import "server-only";
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import { authVerify } from "@/lib/server/auth-verify";
-import { getConversations } from "@/actions/message";
-import MessagesModal from "./MessagesModal";
+
 import { randomUUID } from "crypto";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
+import { getConversations } from "@/actions/message";
+import MessagesModal from "@/app/@modal/(.)messages/MessagesModal";
+import { authVerify } from "@/lib/server/auth-verify";
 
 export default async function MessagesInterceptPage() {
   // 检查登录状态

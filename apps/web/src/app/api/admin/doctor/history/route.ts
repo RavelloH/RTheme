@@ -1,8 +1,9 @@
-import { getDoctorHistory } from "@/actions/doctor";
-import ResponseBuilder from "@/lib/server/response";
-import { connection } from "next/server";
-import { validateGetRequest } from "@/lib/server/request-converter";
 import { GetDoctorHistorySchema } from "@repo/shared-types/api/doctor";
+import { connection } from "next/server";
+
+import { getDoctorHistory } from "@/actions/doctor";
+import { validateGetRequest } from "@/lib/server/request-converter";
+import ResponseBuilder from "@/lib/server/response";
 
 const response = new ResponseBuilder("serverless");
 

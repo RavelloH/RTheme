@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { connection } from "next/server";
+
 import { deleteCategories } from "@/actions/category";
 
 /**

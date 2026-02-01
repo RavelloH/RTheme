@@ -1,7 +1,9 @@
 import "server-only";
+
 import fs from "fs";
-import path from "path";
 import { unstable_cache } from "next/cache";
+import path from "path";
+
 import type { MenuItem as ClientMenuItem } from "@/types/menu";
 
 // 菜单项类型定义

@@ -5,8 +5,8 @@
 
 import fs from "fs";
 import path from "path";
-import { pathToFileURL } from "url";
 import RLog from "rlog-js";
+import { pathToFileURL } from "url";
 
 const rlog = new RLog();
 

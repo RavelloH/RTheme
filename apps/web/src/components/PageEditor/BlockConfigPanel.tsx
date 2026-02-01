@@ -1,20 +1,21 @@
 import React, { useEffect, useState } from "react";
+import { RiDeleteBinLine, RiRefreshLine } from "@remixicon/react";
+
+import { getBlockFormConfig } from "@/blocks/registry";
 import type { BlockConfig } from "@/blocks/types";
 import type {
   FieldConfig,
   SelectFieldConfig,
 } from "@/blocks/types/field-config";
-import { getBlockFormConfig } from "@/blocks/registry";
+import type { BlockFormConfig } from "@/blocks/types/field-config";
+import Link from "@/components/Link";
+import { AlertDialog } from "@/ui/AlertDialog";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { Select } from "@/ui/Select";
 import { Switch } from "@/ui/Switch";
-import { Button } from "@/ui/Button";
-import { AlertDialog } from "@/ui/AlertDialog";
-import { RiRefreshLine, RiDeleteBinLine } from "@remixicon/react";
-import type { BlockFormConfig } from "@/blocks/types/field-config";
-import Link from "../Link";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { AutoTransition } from "@/ui/AutoTransition";
 
 // Helper to safe access nested objects
 const get = (obj: unknown, path: string, def?: unknown) => {

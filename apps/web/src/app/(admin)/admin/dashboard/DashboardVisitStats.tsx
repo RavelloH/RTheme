@@ -1,14 +1,15 @@
 "use client";
 
-import Clickable from "@/ui/Clickable";
-import Link from "@/components/Link";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { RiRefreshLine } from "@remixicon/react";
 import { useEffect, useState } from "react";
-import { getVisitStats } from "@/actions/stat";
+import { RiRefreshLine } from "@remixicon/react";
 import type { GetVisitStatsSuccessResponse } from "@repo/shared-types/api/stats";
+
+import { getVisitStats } from "@/actions/stat";
+import Link from "@/components/Link";
 import ErrorPage from "@/components/ui/Error";
+import { AutoTransition } from "@/ui/AutoTransition";
+import Clickable from "@/ui/Clickable";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 type stats = GetVisitStatsSuccessResponse["data"] | null;
 

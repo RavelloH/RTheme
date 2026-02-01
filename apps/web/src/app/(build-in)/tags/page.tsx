@@ -1,7 +1,15 @@
+import { Suspense } from "react";
+import { cacheLife, cacheTag } from "next/cache";
+
+import TagContainer from "@/app/(build-in)/tags/TagContainer";
+import TagsRandomPage from "@/app/(build-in)/tags/TagsRandomPage";
+import DynamicReplace from "@/components/client/DynamicReplace";
 import HorizontalScroll from "@/components/HorizontalScroll";
+import Link from "@/components/Link";
 import LinkButton from "@/components/LinkButton";
 import MainLayout from "@/components/MainLayout";
 import RowGrid, { GridItem } from "@/components/RowGrid";
+import { getFeaturedImageData } from "@/lib/server/media-reference";
 import {
   getBlocksAreas,
   getRawPage,
@@ -10,13 +18,6 @@ import {
 import { createPageConfigBuilder } from "@/lib/server/page-cache";
 import prisma from "@/lib/server/prisma";
 import { generateMetadata } from "@/lib/server/seo";
-import Link from "@/components/Link";
-import TagsRandomPage from "./TagsRandomPage";
-import DynamicReplace from "@/components/client/DynamicReplace";
-import TagContainer from "./TagContainer";
-import { getFeaturedImageData } from "@/lib/server/media-reference";
-import { cacheLife, cacheTag } from "next/cache";
-import { Suspense } from "react";
 
 // 获取系统页面配置
 const page = await getRawPage("/tags");

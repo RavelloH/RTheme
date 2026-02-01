@@ -1,13 +1,18 @@
 import "server-only";
 
-import type { MenuItem } from "@/types/menu";
-import MenuWrapper from "../client/Menu/MenuWrapper";
-import { MenuFooter, MenuHeader, MenuLayout } from "../client/Menu/MenuMiscs";
-import { getConfigs } from "@/lib/server/config-cache";
 import Marquee from "react-fast-marquee";
-import Link from "../Link";
-import MenuItemWrapper from "../client/Menu/MenuItemLayout";
 import * as RemixIcon from "@remixicon/react";
+
+import MenuItemWrapper from "@/components/client/Menu/MenuItemLayout";
+import {
+  MenuFooter,
+  MenuHeader,
+  MenuLayout,
+} from "@/components/client/Menu/MenuMiscs";
+import MenuWrapper from "@/components/client/Menu/MenuWrapper";
+import Link from "@/components/Link";
+import { getConfigs } from "@/lib/server/config-cache";
+import type { MenuItem } from "@/types/menu";
 
 function getLinkHref(menu: MenuItem): string {
   return (

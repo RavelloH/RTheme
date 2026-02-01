@@ -1,19 +1,20 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { RiQuestionAnswerLine } from "@remixicon/react";
 import type {
   Conversation,
   ConversationUser,
   Message,
 } from "@repo/shared-types/api/message";
-import { useMessagePolling } from "@/hooks/use-message-polling";
+import { useSearchParams } from "next/navigation";
+
+import ChatWindow from "@/components/client/ChatWindow";
+import ConversationList from "@/components/client/ConversationList";
 import { useNotification } from "@/components/NotificationProvider";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
-import ConversationList from "./ConversationList";
-import ChatWindow from "./ChatWindow";
-import { RiQuestionAnswerLine } from "@remixicon/react";
+import { useMessagePolling } from "@/hooks/use-message-polling";
 import { AutoTransition } from "@/ui/AutoTransition";
 
 interface MessagesClientProps {

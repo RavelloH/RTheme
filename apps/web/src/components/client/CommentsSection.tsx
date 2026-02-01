@@ -7,54 +7,55 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { useInView } from "react-intersection-observer";
+import type { Components } from "react-markdown";
+import ReactMarkdown from "react-markdown";
+import {
+  RiArrowRightSLine,
+  RiArrowUpLine,
+  RiCloseLine,
+  RiDeleteBinLine,
+  RiHeartFill,
+  RiHeartLine,
+  RiMapPin2Line,
+  RiMarkdownLine,
+  RiQuillPenLine,
+  RiRefreshLine,
+  RiReplyLine,
+  RiSpyLine,
+} from "@remixicon/react";
+import type { CommentItem } from "@repo/shared-types/api/comment";
+import { AnimatePresence, motion } from "framer-motion";
+import rehypeKatex from "rehype-katex";
+import remarkBreaks from "remark-breaks";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+
 import {
   createComment,
+  deleteOwnComment,
   getDirectChildren,
   getPostComments,
   likeComment,
   unlikeComment,
-  deleteOwnComment,
 } from "@/actions/comment";
-import type { CommentItem } from "@repo/shared-types/api/comment";
-import { Input } from "@/ui/Input";
-import { Button } from "@/ui/Button";
 import { CaptchaButton } from "@/components/CaptchaButton";
+import { useNavigateWithTransition } from "@/components/Link";
+import UserAvatar from "@/components/UserAvatar";
+import { useConfig } from "@/context/ConfigContext";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import { resolveApiResponse } from "@/lib/client/run-with-auth";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { AutoResizer } from "@/ui/AutoResizer";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { Tooltip } from "@/ui/Tooltip";
-import { AlertDialog } from "@/ui/AlertDialog";
-import ReactMarkdown from "react-markdown";
-import type { Components } from "react-markdown";
-import UserAvatar from "@/components/UserAvatar";
-import remarkGfm from "remark-gfm";
-import remarkBreaks from "remark-breaks";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
 import { highlightCode } from "@/lib/shared/mdx-config";
-import { useToast } from "@/ui/Toast";
-import { useConfig } from "@/context/ConfigContext";
-import {
-  RiMapPin2Line,
-  RiReplyLine,
-  RiMarkdownLine,
-  RiRefreshLine,
-  RiArrowRightSLine,
-  RiArrowUpLine,
-  RiCloseLine,
-  RiHeartLine,
-  RiHeartFill,
-  RiQuillPenLine,
-  RiSpyLine,
-  RiDeleteBinLine,
-} from "@remixicon/react";
-import Clickable from "@/ui/Clickable";
-import { useNavigateWithTransition } from "../Link";
 import type { ConfigType } from "@/types/config";
+import { AlertDialog } from "@/ui/AlertDialog";
+import { AutoResizer } from "@/ui/AutoResizer";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { Button } from "@/ui/Button";
+import Clickable from "@/ui/Clickable";
+import { Input } from "@/ui/Input";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { useToast } from "@/ui/Toast";
+import { Tooltip } from "@/ui/Tooltip";
 // ============ 类型定义 ============
 interface CommentConfig {
   placeholder: string;

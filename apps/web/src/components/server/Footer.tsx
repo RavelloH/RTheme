@@ -1,10 +1,11 @@
 import "server-only";
 
+import { cacheLife, cacheTag } from "next/cache";
+
+import FooterDesktop from "@/components/client/Footer/FooterDesktop";
+import FooterMobile from "@/components/client/Footer/FooterMobile";
 import { getConfigs } from "@/lib/server/config-cache";
 import type { MenuItem } from "@/types/menu";
-import FooterMobile from "../client/Footer/FooterMobile";
-import FooterDesktop from "../client/Footer/FooterDesktop";
-import { cacheLife, cacheTag } from "next/cache";
 
 export default async function Footer({ menus }: { menus: MenuItem[] }) {
   "use cache";

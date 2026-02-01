@@ -1,7 +1,8 @@
 "use client";
 
-import { useMobile } from "@/hooks/use-mobile";
 import { motion } from "framer-motion";
+
+import { useMobile } from "@/hooks/use-mobile";
 
 export function MenuHeader({ children }: { children: React.ReactNode }) {
   const isMobile = useMobile();

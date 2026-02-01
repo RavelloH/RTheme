@@ -1,19 +1,20 @@
 "use client";
 
-import { GridItem } from "@/components/RowGrid";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { getCategoriesDistribution } from "@/actions/category";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CategoryDistributionItem } from "@repo/shared-types/api/category";
+
+import { getCategoriesDistribution } from "@/actions/category";
 import DimensionStatsChart, {
   type DimensionStatsItem,
 } from "@/components/DimensionStatsChart";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { GridItem } from "@/components/RowGrid";
+import { useMainColor } from "@/components/ThemeProvider";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
-import generateGradient from "@/lib/shared/gradient";
 import generateComplementary from "@/lib/shared/complementary";
-import { useMainColor } from "@/components/ThemeProvider";
+import generateGradient from "@/lib/shared/gradient";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 type Props = {
   parentId: number | null;

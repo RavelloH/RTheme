@@ -1,11 +1,11 @@
+import TagsDistributionChart from "@/app/(admin)/admin/tags/TagsDistributionChart";
+import TagsReport from "@/app/(admin)/admin/tags/TagsReport";
+import TagsTable from "@/app/(admin)/admin/tags/TagsTable";
+import AdminSidebar from "@/components/AdminSidebar";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import MainLayout from "@/components/MainLayout";
 import RowGrid from "@/components/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
-import AdminSidebar from "@/components/AdminSidebar";
-import TagsReport from "./TagsReport";
-import TagsDistributionChart from "./TagsDistributionChart";
-import TagsTable from "./TagsTable";
 
 export const metadata = await generateMetadata(
   {

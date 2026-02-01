@@ -1,11 +1,13 @@
 import "server-only";
-import { notFound } from "next/navigation";
-import { cookies } from "next/headers";
-import { getUserPublicProfile } from "@/actions/user";
-import { jwtTokenVerify, type AccessTokenPayload } from "@/lib/server/jwt";
-import UserProfileModal from "./UserProfileModal";
-import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
+
 import { randomUUID } from "crypto";
+import { cookies } from "next/headers";
+import { notFound } from "next/navigation";
+
+import { getUserPublicProfile } from "@/actions/user";
+import UserProfileModal from "@/app/@modal/(.)user/[uid]/UserProfileModal";
+import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
+import { type AccessTokenPayload, jwtTokenVerify } from "@/lib/server/jwt";
 
 interface UserProfileModalPageProps {
   params: Promise<{ uid: string }>;

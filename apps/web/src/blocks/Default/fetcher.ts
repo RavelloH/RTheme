@@ -1,5 +1,5 @@
+import { fetchBlockInterpolatedData } from "@/blocks/lib/server";
 import type { BlockConfig } from "@/blocks/types";
-import { fetchBlockInterpolatedData } from "../lib/server";
 
 /**
  * Default Block Fetcher

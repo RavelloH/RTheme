@@ -1,14 +1,15 @@
 "use client";
 
-import Clickable from "@/ui/Clickable";
-import Link from "@/components/Link";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { RiRefreshLine } from "@remixicon/react";
 import { useEffect, useState } from "react";
+import { RiRefreshLine } from "@remixicon/react";
+
 import { getPagesStats } from "@/actions/stat";
-import runWithAuth from "@/lib/client/run-with-auth";
+import Link from "@/components/Link";
 import ErrorPage from "@/components/ui/Error";
+import runWithAuth from "@/lib/client/run-with-auth";
+import { AutoTransition } from "@/ui/AutoTransition";
+import Clickable from "@/ui/Clickable";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 type StatsData = {
   updatedAt: string;

@@ -1,33 +1,34 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
-import { after } from "next/server";
-import prisma from "@/lib/server/prisma";
-import ResponseBuilder from "@/lib/server/response";
 import type { ApiResponse } from "@repo/shared-types/api/common";
-import limitControl from "@/lib/server/rate-limit";
-import { checkReauthToken } from "./reauth";
-import { getConfig, getConfigs } from "@/lib/server/config-cache";
-import redis, { ensureRedisConnection } from "@/lib/server/redis";
-import { authVerify } from "@/lib/server/auth-verify";
-import { logAuditEvent } from "@/lib/server/audit";
-import { getClientUserAgent } from "@/lib/server/get-client-info";
-import {
-  generateRegistrationOptions,
-  verifyRegistrationResponse,
-  generateAuthenticationOptions,
-  verifyAuthenticationResponse,
-} from "@simplewebauthn/server";
 import type {
+  AuthenticationResponseJSON,
   PublicKeyCredentialCreationOptionsJSON,
   PublicKeyCredentialRequestOptionsJSON,
-  VerifiedRegistrationResponse,
-  VerifiedAuthenticationResponse,
   RegistrationResponseJSON,
-  AuthenticationResponseJSON,
+  VerifiedAuthenticationResponse,
+  VerifiedRegistrationResponse,
 } from "@simplewebauthn/server";
-import { jwtTokenSign } from "@/lib/server/jwt";
+import {
+  generateAuthenticationOptions,
+  generateRegistrationOptions,
+  verifyAuthenticationResponse,
+  verifyRegistrationResponse,
+} from "@simplewebauthn/server";
+import { cookies, headers } from "next/headers";
+import { after } from "next/server";
 import { UAParser } from "ua-parser-js";
+
+import { checkReauthToken } from "@/actions/reauth";
+import { logAuditEvent } from "@/lib/server/audit";
+import { authVerify } from "@/lib/server/auth-verify";
+import { getConfig, getConfigs } from "@/lib/server/config-cache";
+import { getClientUserAgent } from "@/lib/server/get-client-info";
+import { jwtTokenSign } from "@/lib/server/jwt";
+import prisma from "@/lib/server/prisma";
+import limitControl from "@/lib/server/rate-limit";
+import redis, { ensureRedisConnection } from "@/lib/server/redis";
+import ResponseBuilder from "@/lib/server/response";
 
 // Redis keys
 const REG_CHALLENGE_KEY = (uid: number) => `passkey:challenge:reg:${uid}`;

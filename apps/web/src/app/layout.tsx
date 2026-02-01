@@ -1,38 +1,35 @@
 // Main Layout
 import "server-only";
 
+import { Suspense } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 // Fonts
 import { Inter } from "next/font/google";
 import { IBM_Plex_Mono } from "next/font/google";
 
-// Styles
-import "./globals.css";
-
-// Server Componments
-import Header from "@/components/server/Header";
-
-// Client Components
-import { ThemeProvider } from "@/components/ThemeProvider";
-import { MenuProvider } from "@/components/MenuProvider";
+import { AnalyticsTracker } from "@/components/client/AnalyticsTracker";
+import { LayoutContainer } from "@/components/LayoutContainer";
 import { LoadingAnimation } from "@/components/LoadingAnimation";
 import { MainContent } from "@/components/MainContent";
-import { LayoutContainer } from "@/components/LayoutContainer";
-import ResponsiveFontScale from "@/components/ResponsiveFontScale";
-import PageTransition from "@/components/PageTransition";
-import TokenManager from "@/components/TokenManager";
-import { AnalyticsTracker } from "@/components/client/AnalyticsTracker";
+import { MenuProvider } from "@/components/MenuProvider";
 import NotificationProvider from "@/components/NotificationProvider";
+import PageTransition from "@/components/PageTransition";
+import ResponsiveFontScale from "@/components/ResponsiveFontScale";
+import Footer from "@/components/server/Footer";
+// Server Componments
+import Header from "@/components/server/Header";
+// Client Components
+import { ThemeProvider } from "@/components/ThemeProvider";
+import TokenManager from "@/components/TokenManager";
 import { ConfigProvider } from "@/context/ConfigContext";
-
+import { getConfigs } from "@/lib/server/config-cache";
 // lib
 import { getActiveMenusForClient } from "@/lib/server/menu-cache";
-import { getConfigs } from "@/lib/server/config-cache";
-
 // Types
 import { ToastProvider } from "@/ui/Toast";
-import Footer from "@/components/server/Footer";
-import { Suspense } from "react";
-import { cacheLife, cacheTag } from "next/cache";
+
+// Styles
+import "@/app/globals.css";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 const ibmPlexMono = IBM_Plex_Mono({

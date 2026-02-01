@@ -7,13 +7,15 @@
  * 3. 中文分词层：使用 @node-rs/jieba 搜索引擎模式进行中文分词
  */
 import "server-only";
-import moo from "moo";
-import { kebabCase } from "lodash-es";
+
 import { Jieba } from "@node-rs/jieba";
 import { dict } from "@node-rs/jieba/dict";
-import prisma from "@/lib/server/prisma";
-import { unstable_cache } from "next/cache";
 import { createHash } from "crypto";
+import { kebabCase } from "lodash-es";
+import moo from "moo";
+import { unstable_cache } from "next/cache";
+
+import prisma from "@/lib/server/prisma";
 
 // ========== Token 类型定义 ==========
 

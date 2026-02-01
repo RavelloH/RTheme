@@ -1,13 +1,13 @@
-import prisma from "@/lib/server/prisma";
+import { fetchBlockInterpolatedData } from "@/blocks/lib/server";
+import type { BlockConfig } from "@/blocks/types";
+import { batchGetCategoryPaths } from "@/lib/server/category-utils";
+import { batchQueryMediaFiles } from "@/lib/server/image-query";
 import {
   getFeaturedImageUrl,
   mediaRefsInclude,
 } from "@/lib/server/media-reference";
-import { batchQueryMediaFiles } from "@/lib/server/image-query";
+import prisma from "@/lib/server/prisma";
 import { processImageUrl } from "@/lib/shared/image-common";
-import { batchGetCategoryPaths } from "@/lib/server/category-utils";
-import type { BlockConfig } from "@/blocks/types";
-import { fetchBlockInterpolatedData } from "../lib/server";
 
 export async function postsFetcher(config: BlockConfig) {
   // 0. 启动插值数据获取

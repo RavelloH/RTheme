@@ -1,7 +1,8 @@
 import React from "react";
 import dynamic from "next/dynamic";
-import type { BlockConfig, BlockComponentMap, BlockType } from "@/blocks/types";
-import SortableBlockWrapper from "./SortableBlockWrapper";
+
+import type { BlockComponentMap, BlockConfig, BlockType } from "@/blocks/types";
+import SortableBlockWrapper from "@/components/PageEditor/SortableBlockWrapper";
 
 // 类型安全的组件映射：使用动态导入，并为每个组件添加类型断言
 const BLOCK_COMPONENTS: BlockComponentMap = {

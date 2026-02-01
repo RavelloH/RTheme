@@ -1,45 +1,46 @@
 "use client";
 
-import type { Editor } from "@tiptap/react";
-import { useEditor, EditorContent, Extension } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Link from "@tiptap/extension-link";
-import Image from "@tiptap/extension-image";
-import TaskList from "@tiptap/extension-task-list";
-import TaskItem from "@tiptap/extension-task-item";
-import Placeholder from "@tiptap/extension-placeholder";
-import InvisibleCharacters from "@tiptap/extension-invisible-characters";
-import CharacterCount from "@tiptap/extension-character-count";
-import { Markdown } from "@tiptap/markdown";
-import { InlineMath, BlockMath } from "@tiptap/extension-mathematics";
 import { useEffect, useRef } from "react";
-import {
-  saveEditorContent,
-  type EditorConfig,
-} from "@/lib/client/editor-persistence";
-import CodeBlockShiki from "tiptap-extension-code-block-shiki";
+import type { JSONContent } from "@tiptap/core";
+import CharacterCount from "@tiptap/extension-character-count";
+import Image from "@tiptap/extension-image";
+import InvisibleCharacters from "@tiptap/extension-invisible-characters";
+import Link from "@tiptap/extension-link";
+import { BlockMath, InlineMath } from "@tiptap/extension-mathematics";
+import Placeholder from "@tiptap/extension-placeholder";
+import TaskItem from "@tiptap/extension-task-item";
+import TaskList from "@tiptap/extension-task-list";
+import { Markdown } from "@tiptap/markdown";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
+import type { Editor } from "@tiptap/react";
+import { EditorContent, Extension, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import type { BundledTheme } from "shiki";
+import CodeBlockShiki from "tiptap-extension-code-block-shiki";
+
+import { TableOfContents } from "@/components/client/Editor/TableOfContents";
+import { useConfig } from "@/context/ConfigContext";
+import {
+  type EditorConfig,
+  saveEditorContent,
+} from "@/lib/client/editor-persistence";
+import { CustomHeading } from "@/lib/tiptap/custom-heading";
+import { CustomParagraph } from "@/lib/tiptap/custom-paragraph";
 import {
   HighlightWithMarkdown,
-  SuperscriptWithMarkdown,
   SubscriptWithMarkdown,
+  SuperscriptWithMarkdown,
   TextAlignWithMarkdown,
   UnderlineWithMarkdown,
 } from "@/lib/tiptap/markdown-extensions";
-import { CustomParagraph } from "@/lib/tiptap/custom-paragraph";
-import { CustomHeading } from "@/lib/tiptap/custom-heading";
-import { TableOfContents } from "./TableOfContents";
 import {
-  TableWithMarkdown,
   TableCellWithMarkdown,
   TableHeaderWithMarkdown,
   TableRowWithMarkdown,
+  TableWithMarkdown,
 } from "@/lib/tiptap/table-with-markdown";
-import type { JSONContent } from "@tiptap/core";
-import { useConfig } from "@/context/ConfigContext";
 import type { ConfigType } from "@/types/config";
-import type { BundledTheme } from "shiki";
 
 // 解析 Markdown 表格中的对齐标记
 function parseTableAlignment(markdown: string): Map<number, string[]> {

@@ -1,63 +1,64 @@
 "use server";
 
-import { validateData } from "@/lib/server/validator";
-import limitControl from "@/lib/server/rate-limit";
+import type {
+  ChangePassword,
+  ChangePasswordSuccessResponse,
+  EmailVerification,
+  EmailVerifySuccessResponse,
+  GetSessionsSuccessResponse,
+  Login,
+  LoginSuccessResponse,
+  Logout,
+  PasswordResetRequestSuccessResponse,
+  RefreshToken,
+  Register,
+  RegisterSuccessResponse,
+  RequestPasswordReset,
+  ResendEmailVerification,
+  ResendEmailVerificationSuccessResponse,
+  ResetPassword,
+  ResetPasswordSuccessResponse,
+  RevokeSession,
+  RevokeSessionSuccessResponse,
+  Session,
+} from "@repo/shared-types/api/auth";
 import {
-  LoginSchema,
-  RegisterUserSchema,
-  RefreshTokenSchema,
-  EmailVerificationSchema,
-  ResendEmailVerificationSchema,
   ChangePasswordSchema,
-  RequestPasswordResetSchema,
-  ResetPasswordSchema,
+  EmailVerificationSchema,
+  LoginSchema,
   LogoutSchema,
+  RefreshTokenSchema,
+  RegisterUserSchema,
+  RequestPasswordResetSchema,
+  ResendEmailVerificationSchema,
+  ResetPasswordSchema,
   RevokeSessionSchema,
 } from "@repo/shared-types/api/auth";
-import prisma from "@/lib/server/prisma";
-import { verifyPassword } from "@/lib/server/password";
-import {
-  jwtTokenSign,
-  jwtTokenVerify,
-  type AccessTokenPayload,
-  type RefreshTokenPayload,
-} from "@/lib/server/jwt";
-import ResponseBuilder from "@/lib/server/response";
-import { cookies, headers } from "next/headers";
-import { hashPassword } from "@/lib/server/password";
-import emailUtils from "@/lib/server/email";
-import { after } from "next/server";
-import type { NextResponse } from "next/server";
 import type {
   ApiResponse,
   ApiResponseData,
 } from "@repo/shared-types/api/common";
-import type {
-  Login,
-  LoginSuccessResponse,
-  Register,
-  RegisterSuccessResponse,
-  Logout,
-  RefreshToken,
-  EmailVerification,
-  EmailVerifySuccessResponse,
-  ChangePassword,
-  ChangePasswordSuccessResponse,
-  RequestPasswordReset,
-  PasswordResetRequestSuccessResponse,
-  ResetPassword,
-  ResetPasswordSuccessResponse,
-  ResendEmailVerification,
-  ResendEmailVerificationSuccessResponse,
-  Session,
-  GetSessionsSuccessResponse,
-  RevokeSession,
-  RevokeSessionSuccessResponse,
-} from "@repo/shared-types/api/auth";
+import { cookies, headers } from "next/headers";
+import type { NextResponse } from "next/server";
+import { after } from "next/server";
+
+import { logAuditEvent } from "@/lib/server/audit";
 import { verifyToken } from "@/lib/server/captcha";
 import { getConfig, getConfigs } from "@/lib/server/config-cache";
-import { logAuditEvent } from "@/lib/server/audit";
+import emailUtils from "@/lib/server/email";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
+import {
+  type AccessTokenPayload,
+  jwtTokenSign,
+  jwtTokenVerify,
+  type RefreshTokenPayload,
+} from "@/lib/server/jwt";
+import { verifyPassword } from "@/lib/server/password";
+import { hashPassword } from "@/lib/server/password";
+import prisma from "@/lib/server/prisma";
+import limitControl from "@/lib/server/rate-limit";
+import ResponseBuilder from "@/lib/server/response";
+import { validateData } from "@/lib/server/validator";
 
 type AuthActionEnvironment = "serverless" | "serveraction";
 type AuthActionConfig = { environment?: AuthActionEnvironment };

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
-import { useBroadcast } from "@/hooks/use-broadcast";
-import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
-import { useFooterStore } from "@/store/footer-store";
+import { usePathname } from "next/navigation";
+
+import { useBroadcast } from "@/hooks/use-broadcast";
 import { useMobile } from "@/hooks/use-mobile";
+import { useFooterStore } from "@/store/footer-store";
 
 interface PageTransitionProps {
   children: React.ReactNode;

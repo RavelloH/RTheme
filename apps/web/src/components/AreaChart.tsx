@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { scaleTime, scaleLinear } from "@visx/scale";
-import { AreaClosed, LinePath } from "@visx/shape";
+import { useEffect, useRef, useState } from "react";
 import { curveMonotoneX } from "@visx/curve";
 import { LinearGradient } from "@visx/gradient";
 import { Group } from "@visx/group";
+import { scaleLinear, scaleTime } from "@visx/scale";
+import { AreaClosed, LinePath } from "@visx/shape";
 import { motion } from "framer-motion";
+
 import { AutoResizer } from "@/ui/AutoResizer";
 
 export interface AreaChartDataPoint {

@@ -1,8 +1,9 @@
+import { LogoutSchema } from "@repo/shared-types/api/auth";
+import { connection } from "next/server";
+
+import { logout } from "@/actions/auth";
 import ResponseBuilder from "@/lib/server/response";
 import { validateRequestJSON } from "@/lib/server/validator";
-import { LogoutSchema } from "@repo/shared-types/api/auth";
-import { logout } from "@/actions/auth";
-import { connection } from "next/server";
 const response = new ResponseBuilder("serverless");
 
 /**

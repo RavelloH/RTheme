@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { getSearchIndexStats } from "@/actions/search";
-import type { SearchIndexStatsResult } from "@repo/shared-types/api/search";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { GridItem } from "@/components/RowGrid";
-import Clickable from "@/ui/Clickable";
+import React, { useCallback, useEffect, useState } from "react";
 import { RiRefreshLine } from "@remixicon/react";
+import type { SearchIndexStatsResult } from "@repo/shared-types/api/search";
+
+import { getSearchIndexStats } from "@/actions/search";
+import { GridItem } from "@/components/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { AutoTransition } from "@/ui/AutoTransition";
+import Clickable from "@/ui/Clickable";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 /**
  * 格式化文件大小

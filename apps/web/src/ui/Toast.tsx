@@ -2,21 +2,22 @@
 
 import React, {
   createContext,
-  useContext,
-  useState,
   useCallback,
+  useContext,
   useEffect,
+  useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   RiCheckLine,
   RiCloseLine,
   RiErrorWarningLine,
   RiInformationLine,
 } from "@remixicon/react";
-import { Button } from "./Button";
-import { AutoTransition } from "./AutoTransition";
+import { AnimatePresence, motion } from "framer-motion";
+
+import { AutoTransition } from "@/ui/AutoTransition";
+import { Button } from "@/ui/Button";
 
 export type ToastType = "success" | "error" | "warning" | "info";
 

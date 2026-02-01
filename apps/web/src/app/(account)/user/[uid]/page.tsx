@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
+import { notFound } from "next/navigation";
+
 import { getUserPublicProfile } from "@/actions/user";
-import { jwtTokenVerify, type AccessTokenPayload } from "@/lib/server/jwt";
 import UserProfileClient from "@/components/client/UserProfileClient";
-import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
 import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
+import { type AccessTokenPayload, jwtTokenVerify } from "@/lib/server/jwt";
+import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
 
 interface UserProfilePageProps {
   params: Promise<{ uid: string }>;

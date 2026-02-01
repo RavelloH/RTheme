@@ -1,7 +1,8 @@
 "use client";
 
-import { refresh, logout } from "@/actions/auth";
-import { useEffect, useRef, useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
+
+import { logout, refresh } from "@/actions/auth";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 
 interface UserInfo {

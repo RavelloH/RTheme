@@ -1,11 +1,11 @@
+import CommentsHistoryChart from "@/app/(admin)/admin/comments/CommentsHistoryChart";
+import CommentsReport from "@/app/(admin)/admin/comments/CommentsReport";
+import CommentsTable from "@/app/(admin)/admin/comments/CommentsTable";
+import AdminSidebar from "@/components/AdminSidebar";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import MainLayout from "@/components/MainLayout";
 import RowGrid from "@/components/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
-import AdminSidebar from "@/components/AdminSidebar";
-import CommentsReport from "./CommentsReport";
-import CommentsHistoryChart from "./CommentsHistoryChart";
-import CommentsTable from "./CommentsTable";
 
 export const metadata = await generateMetadata(
   {

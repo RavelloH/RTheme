@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { Dialog } from "@/ui/Dialog";
+import { useRouter } from "next/navigation";
+
+import { updateUserProfile } from "@/actions/user";
 import { Button } from "@/ui/Button";
+import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import { useToast } from "@/ui/Toast";
-import { updateUserProfile } from "@/actions/user";
-import { useRouter } from "next/navigation";
 
 type EditableField = "nickname" | "username" | "email" | "website" | "bio";
 

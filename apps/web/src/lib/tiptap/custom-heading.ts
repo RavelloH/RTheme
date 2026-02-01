@@ -7,6 +7,7 @@
 
 import Heading from "@tiptap/extension-heading";
 import type { JSONContent } from "@tiptap/react";
+
 import { createHeadingProcessor } from "@/lib/shared/heading-utils";
 
 export const CustomHeading = Heading.extend({

@@ -28,11 +28,11 @@ export interface BaseBlockProps<T extends BaseBlockConfig = BaseBlockConfig> {
 }
 
 // Block 类型映射：将 type 字符串映射到对应的 Config 类型
-import type { DefaultBlockConfig } from "../Default/types";
-import type { HeroBlockConfig } from "../HeroGallery/types";
-import type { ProjectsBlockConfig } from "../RecentProjects/types";
-import type { PostsBlockConfig } from "../RecentPosts/types";
-import type { TagsCategoriesBlockConfig } from "../TagsCategories/types";
+import type { DefaultBlockConfig } from "@/blocks/Default/types";
+import type { HeroBlockConfig } from "@/blocks/HeroGallery/types";
+import type { PostsBlockConfig } from "@/blocks/RecentPosts/types";
+import type { ProjectsBlockConfig } from "@/blocks/RecentProjects/types";
+import type { TagsCategoriesBlockConfig } from "@/blocks/TagsCategories/types";
 
 export interface BlockTypeMap {
   default: DefaultBlockConfig;

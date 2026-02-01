@@ -1,18 +1,19 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { getSearchLogStats } from "@/actions/search";
+import React, { useEffect, useState } from "react";
+import { useMemo } from "react";
 import type { SearchLogStatsResult } from "@repo/shared-types/api/search";
-import { GridItem } from "@/components/RowGrid";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { AnimatePresence, motion } from "framer-motion";
+
+import { getSearchLogStats } from "@/actions/search";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig,
 } from "@/components/AreaChart";
-import { useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { GridItem } from "@/components/RowGrid";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 export default function SearchPerformanceChart() {
   const [stats, setStats] = useState<SearchLogStatsResult | null>(null);

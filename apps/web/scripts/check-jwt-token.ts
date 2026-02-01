@@ -1,13 +1,13 @@
 // script/check-jwt-token.ts
 // Check JWT key pair validity
 
-import { config } from "dotenv";
-import { pathToFileURL } from "url";
-import Rlog from "rlog-js";
 import type { KeyObject } from "crypto";
 import { createPrivateKey, createPublicKey, generateKeyPairSync } from "crypto";
+import { config } from "dotenv";
 import type { SignOptions, VerifyOptions } from "jsonwebtoken";
 import jwt from "jsonwebtoken";
+import Rlog from "rlog-js";
+import { pathToFileURL } from "url";
 
 // Load .env file
 config({

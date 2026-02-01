@@ -1,8 +1,9 @@
+import { CaptchaVerifyRequestSchema } from "@repo/shared-types/api/captcha";
+import { connection } from "next/server";
+
+import { verifyChallenge } from "@/actions/captcha";
 import ResponseBuilder from "@/lib/server/response";
 import { validateRequestJSON } from "@/lib/server/validator";
-import { CaptchaVerifyRequestSchema } from "@repo/shared-types/api/captcha";
-import { verifyChallenge } from "@/actions/captcha";
-import { connection } from "next/server";
 const response = new ResponseBuilder("serverless");
 
 /**

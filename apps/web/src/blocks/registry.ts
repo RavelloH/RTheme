@@ -5,7 +5,7 @@
  * 支持开发环境下的热重载
  */
 
-import type { BlockFormConfig } from "./types/field-config";
+import type { BlockFormConfig } from "@/blocks/types/field-config";
 
 /**
  * 动态导入所有 Block Schema

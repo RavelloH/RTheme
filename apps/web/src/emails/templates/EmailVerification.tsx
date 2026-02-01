@@ -1,11 +1,12 @@
 import * as React from "react";
+
 import {
-  EmailLayout,
-  EmailHeading,
-  EmailParagraph,
-  EmailCodeBlock,
   EmailAlert,
-} from "../components";
+  EmailCodeBlock,
+  EmailHeading,
+  EmailLayout,
+  EmailParagraph,
+} from "@/emails/components";
 
 /**
  * 邮箱验证邮件模板属性

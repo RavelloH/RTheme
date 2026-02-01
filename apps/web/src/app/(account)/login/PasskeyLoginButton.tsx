@@ -1,16 +1,17 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { RiKey2Line } from "@remixicon/react";
 import { startAuthentication } from "@simplewebauthn/browser";
+import { useSearchParams } from "next/navigation";
+
 import {
   generatePasskeyAuthenticationOptions,
   verifyPasskeyAuthentication,
 } from "@/actions/passkey";
-import { Button } from "@/ui/Button";
-import { RiKey2Line } from "@remixicon/react";
-import { useToast } from "@/ui/Toast";
-import { useSearchParams } from "next/navigation";
 import { useNavigateWithTransition } from "@/components/Link";
+import { Button } from "@/ui/Button";
+import { useToast } from "@/ui/Toast";
 
 export default function PasskeyLoginButton({
   disabled,

@@ -8,15 +8,16 @@
  */
 
 import React from "react";
-import { codeToHtml } from "shiki";
 import type { Components } from "react-markdown";
-import Link from "@/components/Link";
+import { codeToHtml } from "shiki";
+
 import CMSImage from "@/components/CMSImage";
+import Link from "@/components/Link";
+import { type MediaFileInfo, processImageUrl } from "@/lib/shared/image-utils";
 import {
   createShikiConfig,
   type ShikiTheme,
 } from "@/lib/shared/mdx-config-shared";
-import { processImageUrl, type MediaFileInfo } from "@/lib/shared/image-utils";
 
 // ============ 服务器端组件 ============
 

@@ -1,15 +1,16 @@
 "use client";
 
-import Image from "next/image";
-import Avatar from "@/../public/avatar.jpg";
-import { useState, useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { gsap } from "gsap";
-import { useMenuStore } from "@/store/menu-store";
-import { useConsoleStore } from "@/store/console-store";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+
+import Avatar from "@/../public/avatar.jpg";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { useMobile } from "@/hooks/use-mobile";
+import { useConsoleStore } from "@/store/console-store";
+import { useMenuStore } from "@/store/menu-store";
 
 // Type
 interface TransitionMessage {

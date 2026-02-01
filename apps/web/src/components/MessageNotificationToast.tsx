@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import { RiCloseLine } from "@remixicon/react";
+import { AnimatePresence, motion } from "framer-motion";
+
+import { useNavigateWithTransition } from "@/components/Link";
+import UserAvatar from "@/components/UserAvatar";
 import { useFooterStore } from "@/store/footer-store";
-import { useNavigateWithTransition } from "./Link";
-import Clickable from "@/ui/Clickable";
-import UserAvatar from "./UserAvatar";
 import { AutoResizer } from "@/ui/AutoResizer";
+import Clickable from "@/ui/Clickable";
 
 /**
  * 消息通知项数据接口

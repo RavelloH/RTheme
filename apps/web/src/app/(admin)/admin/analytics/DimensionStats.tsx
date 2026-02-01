@@ -1,14 +1,15 @@
 "use client";
 
 import { useMemo } from "react";
+import type { StatItem } from "@repo/shared-types";
+
+import DimensionStatsChart from "@/components/DimensionStatsChart";
 import { GridItem } from "@/components/RowGrid";
+import { useMainColor } from "@/components/ThemeProvider";
+import generateComplementary from "@/lib/shared/complementary";
+import generateGradient from "@/lib/shared/gradient";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import type { StatItem } from "@repo/shared-types";
-import DimensionStatsChart from "@/components/DimensionStatsChart";
-import generateGradient from "@/lib/shared/gradient";
-import generateComplementary from "@/lib/shared/complementary";
-import { useMainColor } from "@/components/ThemeProvider";
 
 interface DimensionStatsProps {
   title: string;

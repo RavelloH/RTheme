@@ -1,17 +1,18 @@
 "use client";
 
-import { GridItem } from "@/components/RowGrid";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { getMediaTrends } from "@/actions/media";
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { MediaTrendItem } from "@repo/shared-types/api/media";
+
+import { getMediaTrends } from "@/actions/media";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig,
 } from "@/components/AreaChart";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { GridItem } from "@/components/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 export default function MediaStatsChart() {
   const [data, setData] = useState<MediaTrendItem[]>([]);

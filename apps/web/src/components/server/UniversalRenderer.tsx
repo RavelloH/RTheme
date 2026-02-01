@@ -1,7 +1,8 @@
 import React from "react";
-import type { MediaFileInfo } from "@/lib/shared/image-utils";
+
 import MDXClientRenderer from "@/components/client/MDXClientRenderer";
 import MarkdownServerRenderer from "@/components/server/MarkdownServerRenderer";
+import type { MediaFileInfo } from "@/lib/shared/image-utils";
 import type { ShikiTheme } from "@/lib/shared/mdx-config-shared";
 
 interface UniversalRendererProps {

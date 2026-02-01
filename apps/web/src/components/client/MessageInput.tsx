@@ -1,10 +1,11 @@
 "use client";
 
 import type { KeyboardEvent } from "react";
-import { useState, useRef, useEffect } from "react";
-import { Button } from "@/ui/Button";
+import { useEffect, useRef, useState } from "react";
 import { RiSendPlane2Line } from "@remixicon/react";
+
 import { AutoResizer } from "@/ui/AutoResizer";
+import { Button } from "@/ui/Button";
 
 interface MessageInputProps {
   onSendMessage: (content: string) => Promise<void> | void;

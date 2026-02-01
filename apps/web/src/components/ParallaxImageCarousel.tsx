@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import CMSImage from "./CMSImage";
+
+import CMSImage from "@/components/CMSImage";
 
 interface ParallaxImageCarouselProps {
   /** 图片对象数组 */

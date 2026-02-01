@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
+
 import { useMobile } from "@/hooks/use-mobile";
 
 interface GSAPHorizontalScrollProps {

@@ -1,14 +1,15 @@
-import type { OAuthProvider } from "@/lib/server/oauth";
 import {
-  RiGoogleFill,
-  RiGithubFill,
-  RiMicrosoftFill,
-  RiWindowsFill,
-  RiAppleFill,
   RiAndroidFill,
-  RiTerminalBoxFill,
+  RiAppleFill,
   RiComputerLine,
+  RiGithubFill,
+  RiGoogleFill,
+  RiMicrosoftFill,
+  RiTerminalBoxFill,
+  RiWindowsFill,
 } from "@remixicon/react";
+
+import type { OAuthProvider } from "@/lib/server/oauth";
 
 /**
  * 获取设备图标

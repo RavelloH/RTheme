@@ -1,24 +1,25 @@
 import React, { Suspense } from "react";
+import { cacheLife, cacheTag } from "next/cache";
+import { notFound } from "next/navigation";
+
+import DynamicReplace from "@/components/client/DynamicReplace";
+import SearchContent from "@/components/client/SearchContent";
+import SearchInput from "@/components/client/SearchInput";
+import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import LinkButton from "@/components/LinkButton";
 import MainLayout from "@/components/MainLayout";
 import RowGrid, { GridItem } from "@/components/RowGrid";
+import { batchGetCategoryPaths } from "@/lib/server/category-utils";
+import { getFeaturedImageData } from "@/lib/server/media-reference";
 import {
   getBlocksAreas,
   getRawPage,
   getSystemPageConfig,
 } from "@/lib/server/page-cache";
 import { createPageConfigBuilder } from "@/lib/server/page-cache";
-import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import prisma from "@/lib/server/prisma";
 import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
-import SearchInput from "@/components/client/SearchInput";
-import SearchContent from "@/components/client/SearchContent";
-import DynamicReplace from "@/components/client/DynamicReplace";
-import { getFeaturedImageData } from "@/lib/server/media-reference";
-import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
-import { notFound } from "next/navigation";
-import { cacheLife, cacheTag } from "next/cache";
 
 // 获取系统页面配置
 const pageConfig = await getRawPage("/posts");

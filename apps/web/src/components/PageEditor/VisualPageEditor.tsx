@@ -1,36 +1,37 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  DndContext,
   closestCenter,
+  DndContext,
+  type DragEndEvent,
+  DragOverlay,
+  type DragStartEvent,
   KeyboardSensor,
+  MeasuringStrategy,
   PointerSensor,
   useSensor,
   useSensors,
-  DragOverlay,
-  type DragStartEvent,
-  type DragEndEvent,
-  MeasuringStrategy,
 } from "@dnd-kit/core";
 import {
   arrayMove,
+  horizontalListSortingStrategy,
   SortableContext,
   sortableKeyboardCoordinates,
-  horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { RiAddLine, RiArrowLeftLine, RiSave3Line } from "@remixicon/react";
+
+import { fetchBlockData } from "@/actions/page";
 import type { BlockConfig } from "@/blocks/types";
 import HorizontalScroll from "@/components/HorizontalScroll";
+import BlockConfigPanel from "@/components/PageEditor/BlockConfigPanel";
+import BlockLibrary from "@/components/PageEditor/BlockLibrary";
 import VisualBlockRenderer, {
   SingleBlockRenderer,
-} from "./VisualBlockRenderer";
-import BlockConfigPanel from "./BlockConfigPanel";
-import { Drawer } from "@/ui/Drawer";
-import { Button } from "@/ui/Button";
-import { RiAddLine, RiArrowLeftLine, RiSave3Line } from "@remixicon/react";
-import BlockLibrary from "./BlockLibrary";
-import { Dialog } from "@/ui/Dialog";
-import { fetchBlockData } from "@/actions/page";
+} from "@/components/PageEditor/VisualBlockRenderer";
 import runWithAuth from "@/lib/client/run-with-auth";
+import { Button } from "@/ui/Button";
+import { Dialog } from "@/ui/Dialog";
+import { Drawer } from "@/ui/Drawer";
 import { useToast } from "@/ui/Toast";
 
 interface VisualPageEditorProps {

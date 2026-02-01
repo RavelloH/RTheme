@@ -1,11 +1,12 @@
 import "server-only";
 
-import { getConfig, getConfigs } from "./config-cache";
+import { randomInt } from "crypto";
 import type { Transporter } from "nodemailer";
 import nodemailer from "nodemailer";
-import { Resend } from "resend";
 import type SMTPTransport from "nodemailer/lib/smtp-transport";
-import { randomInt } from "crypto";
+import { Resend } from "resend";
+
+import { getConfig, getConfigs } from "@/lib/server/config-cache";
 
 // 验证码相关常量
 const MAX_VERIFY_DURATION = 15 * 60 * 1000; // 15分钟

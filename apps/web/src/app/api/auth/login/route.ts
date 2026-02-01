@@ -1,8 +1,9 @@
+import { LoginSchema } from "@repo/shared-types/api/auth";
+import { connection } from "next/server";
+
+import { login } from "@/actions/auth";
 import ResponseBuilder from "@/lib/server/response";
 import { validateRequestJSON } from "@/lib/server/validator";
-import { LoginSchema } from "@repo/shared-types/api/auth";
-import { login } from "@/actions/auth";
-import { connection } from "next/server";
 // 测试文件监控 - 修改3
 const response = new ResponseBuilder("serverless");
 

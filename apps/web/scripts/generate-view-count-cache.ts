@@ -4,10 +4,10 @@
  * 用于应用启动时初始化 Redis 缓存
  */
 
-import path from "path";
-import { pathToFileURL } from "url";
-import RLog from "rlog-js";
 import { Redis } from "ioredis";
+import path from "path";
+import RLog from "rlog-js";
+import { pathToFileURL } from "url";
 
 const rlog = new RLog();
 const REDIS_VIEW_COUNT_KEY = "np:view_count:all";

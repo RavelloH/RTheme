@@ -1,19 +1,20 @@
 "use client";
 
 import {
-  useState,
-  useRef,
-  useEffect,
-  useLayoutEffect,
-  useCallback,
   forwardRef,
+  useCallback,
+  useEffect,
   useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
 } from "react";
 import type { Message } from "@repo/shared-types/api/message";
-import MessageItem from "./MessageItem";
-import DateDivider from "./DateDivider";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
+
+import DateDivider from "@/components/client/DateDivider";
+import MessageItem from "@/components/client/MessageItem";
 import { AutoTransition } from "@/ui/AutoTransition";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 interface MessageListProps {
   messages: Message[];

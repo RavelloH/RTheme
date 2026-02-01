@@ -1,6 +1,7 @@
-import prisma from "@/lib/server/prisma";
 import { notFound } from "next/navigation";
+
 import { getFeaturedImageUrl } from "@/lib/server/media-reference";
+import prisma from "@/lib/server/prisma";
 
 export interface PostData {
   id?: number;

@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
-import { moveCategories } from "@/actions/category";
 import { connection } from "next/server";
+
+import { moveCategories } from "@/actions/category";
 
 /**
  * @openapi

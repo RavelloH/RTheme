@@ -1,5 +1,5 @@
-import { render } from "@react-email/render";
 import type { ReactElement } from "react";
+import { render } from "@react-email/render";
 
 /**
  * 将 React Email 组件渲染为 HTML 和纯文本

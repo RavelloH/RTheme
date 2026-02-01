@@ -1,21 +1,22 @@
 "use client";
 
-import { getTagsList, updateTag, deleteTags } from "@/actions/tag";
+import { useEffect, useState } from "react";
+import { RiDeleteBinLine, RiEditLine, RiFileListLine } from "@remixicon/react";
+import type { TagListItem } from "@repo/shared-types/api/tag";
+
+import { deleteTags, getTagsList, updateTag } from "@/actions/tag";
+import MediaSelector from "@/components/client/MediaSelector";
 import type { ActionButton, FilterConfig } from "@/components/GridTable";
 import GridTable from "@/components/GridTable";
-import type { TableColumn } from "@/ui/Table";
-import { useEffect, useState } from "react";
-import type { TagListItem } from "@repo/shared-types/api/tag";
+import Link from "@/components/Link";
+import { useNavigateWithTransition } from "@/components/Link";
 import { useBroadcast } from "@/hooks/use-broadcast";
-import { RiEditLine, RiDeleteBinLine, RiFileListLine } from "@remixicon/react";
+import { AlertDialog } from "@/ui/AlertDialog";
+import { Button } from "@/ui/Button";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
-import { Button } from "@/ui/Button";
-import { AlertDialog } from "@/ui/AlertDialog";
+import type { TableColumn } from "@/ui/Table";
 import { useToast } from "@/ui/Toast";
-import Link from "@/components/Link";
-import { useNavigateWithTransition } from "../../../../components/Link";
-import MediaSelector from "@/components/client/MediaSelector";
 
 export default function TagsTable() {
   const toast = useToast();

@@ -1,5 +1,5 @@
+import { fetchBlockInterpolatedData } from "@/blocks/lib/server";
 import type { BlockConfig } from "@/blocks/types";
-import { fetchBlockInterpolatedData } from "../lib/server";
 
 export async function projectsFetcher(config: BlockConfig) {
   // 启动插值数据获取

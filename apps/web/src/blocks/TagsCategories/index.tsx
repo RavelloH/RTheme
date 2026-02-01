@@ -1,7 +1,7 @@
-import RowGrid, { GridItem } from "@/components/RowGrid";
-import Link from "@/components/Link";
-import { ProcessedText } from "../components";
+import { ProcessedText } from "@/blocks/components";
 import type { BlockConfig } from "@/blocks/types";
+import Link from "@/components/Link";
+import RowGrid, { GridItem } from "@/components/RowGrid";
 
 interface TagsCategoriesData {
   displayTags: Array<{

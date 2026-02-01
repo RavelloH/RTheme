@@ -1,7 +1,9 @@
 import "server-only";
+
 import Cap from "@cap.js/server";
-import redis, { ensureRedisConnection } from "@/lib/server/redis";
+
 import { generateCacheKey } from "@/lib/server/cache";
+import redis, { ensureRedisConnection } from "@/lib/server/redis";
 
 export const cap = new Cap({
   storage: {

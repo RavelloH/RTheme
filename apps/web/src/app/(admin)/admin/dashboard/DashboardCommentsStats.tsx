@@ -1,13 +1,14 @@
 "use client";
 
+import { Fragment, useEffect, useState } from "react";
+import { RiRefreshLine } from "@remixicon/react";
+
 import { getCommentStats } from "@/actions/comment";
+import Link from "@/components/Link";
+import ErrorPage from "@/components/ui/Error";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { RiRefreshLine } from "@remixicon/react";
-import { useEffect, useState, Fragment } from "react";
-import ErrorPage from "@/components/ui/Error";
-import Link from "@/components/Link";
 
 interface ReportData {
   updatedAt: string;

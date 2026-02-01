@@ -1,11 +1,11 @@
+import AuditHistoryChart from "@/app/(admin)/admin/audit-logs/AuditHistoryChart";
+import AuditLogInfo from "@/app/(admin)/admin/audit-logs/AuditLogInfo";
+import AuditLogTable from "@/app/(admin)/admin/audit-logs/AuditLogTable";
+import AdminSidebar from "@/components/AdminSidebar";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import MainLayout from "@/components/MainLayout";
 import RowGrid from "@/components/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
-import AdminSidebar from "@/components/AdminSidebar";
-import AuditHistoryChart from "./AuditHistoryChart";
-import AuditLogTable from "./AuditLogTable";
-import AuditLogInfo from "./AuditLogInfo";
 
 export const metadata = await generateMetadata(
   {

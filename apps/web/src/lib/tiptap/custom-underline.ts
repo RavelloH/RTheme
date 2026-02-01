@@ -4,8 +4,8 @@
  * 完全重写的下划线扩展，使用 <u> HTML 标签而不是 ++ 语法
  */
 
-import { Mark, mergeAttributes } from "@tiptap/react";
 import type { JSONContent } from "@tiptap/react";
+import { Mark, mergeAttributes } from "@tiptap/react";
 
 // Tiptap Markdown 类型定义
 interface MarkdownToken {

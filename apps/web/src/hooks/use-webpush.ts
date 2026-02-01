@@ -1,16 +1,17 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ApiResponse } from "@repo/shared-types/api/common";
-import { getBrowserName, getOSName } from "@/lib/shared/user-agent";
+
 import {
-  subscribeToWebPush,
-  getVapidPublicKey,
-  getUserPushSubscriptions,
   deleteWebPushSubscription,
-  updateWebPushSubscription,
+  getUserPushSubscriptions,
+  getVapidPublicKey,
   sendTestWebPush,
+  subscribeToWebPush,
+  updateWebPushSubscription,
 } from "@/actions/web-push";
+import { getBrowserName, getOSName } from "@/lib/shared/user-agent";
 
 /**
  * Web Push Hook

@@ -1,8 +1,9 @@
+import { RequestPasswordResetSchema } from "@repo/shared-types/api/auth";
+import { connection } from "next/server";
+
+import { requestPasswordReset } from "@/actions/auth";
 import ResponseBuilder from "@/lib/server/response";
 import { validateRequestJSON } from "@/lib/server/validator";
-import { RequestPasswordResetSchema } from "@repo/shared-types/api/auth";
-import { requestPasswordReset } from "@/actions/auth";
-import { connection } from "next/server";
 const response = new ResponseBuilder("serverless");
 
 /**

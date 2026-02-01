@@ -15,33 +15,34 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { codeToHtml } from "shiki";
-import type { MDXComponents } from "next-mdx-remote-client/csr";
-import type { Components } from "react-markdown";
-import Link from "@/components/Link";
-import CMSImage from "@/components/CMSImage";
+import { useEffect, useState } from "react";
 import {
-  createShikiConfig,
-  cleanMDXSource as cleanMDXSourceShared,
-  mdxRemarkPlugins,
-  mdxRehypePlugins,
-  type ShikiTheme,
-} from "@/lib/shared/mdx-config-shared";
-import {
-  useState as reactUseState,
-  useEffect as reactUseEffect,
-  useRef,
-  useMemo,
-  useCallback,
-  useContext,
-  useReducer,
-  useLayoutEffect,
-  useImperativeHandle,
   createContext,
   forwardRef,
   memo,
+  useCallback,
+  useContext,
+  useEffect as reactUseEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState as reactUseState,
 } from "react";
+import type { Components } from "react-markdown";
+import type { MDXComponents } from "next-mdx-remote-client/csr";
+import { codeToHtml } from "shiki";
+
+import CMSImage from "@/components/CMSImage";
+import Link from "@/components/Link";
+import {
+  cleanMDXSource as cleanMDXSourceShared,
+  createShikiConfig,
+  mdxRehypePlugins,
+  mdxRemarkPlugins,
+  type ShikiTheme,
+} from "@/lib/shared/mdx-config-shared";
 
 // ============ 导出共享配置 ============
 

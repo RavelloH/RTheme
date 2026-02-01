@@ -1,16 +1,17 @@
 "use client";
 
-import { useBroadcastSender } from "@/hooks/use-broadcast";
-import { useMenu } from "@/components/MenuProvider";
-import { default as NextLink } from "next/link";
-import { usePathname } from "next/navigation";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
 import {
   RiArrowRightDoubleLine,
   RiArrowRightUpLongLine,
 } from "@remixicon/react";
-import React, { useState, useEffect } from "react";
-import type { DynamicIcon as DynamicIconType } from "./client/DynamicIcon";
+import { default as NextLink } from "next/link";
+import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
+
+import type { DynamicIcon as DynamicIconType } from "@/components/client/DynamicIcon";
+import { useMenu } from "@/components/MenuProvider";
+import { useBroadcastSender } from "@/hooks/use-broadcast";
 
 type BroadcastFn = ReturnType<typeof useBroadcastSender<object>>["broadcast"];
 type GetLeftRightMenusFn = ReturnType<typeof useMenu>["getLeftRightMenus"];

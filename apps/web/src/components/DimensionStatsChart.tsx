@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import DonutChart, { type DonutChartDataPoint } from "./DonutChart";
+
+import DonutChart, { type DonutChartDataPoint } from "@/components/DonutChart";
 
 export interface DimensionStatsItem {
   name: string;

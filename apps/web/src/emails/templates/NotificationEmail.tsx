@@ -1,10 +1,11 @@
 import * as React from "react";
+
 import {
+  EmailAlert,
+  EmailButton,
   EmailLayout,
   EmailParagraph,
-  EmailButton,
-  EmailAlert,
-} from "../components";
+} from "@/emails/components";
 
 /**
  * 通知类型

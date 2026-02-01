@@ -1,12 +1,13 @@
 "use client";
 
-import type { Editor } from "@tiptap/react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
-  RiExternalLinkLine,
-  RiEdit2Line,
   RiDeleteBinLine,
+  RiEdit2Line,
+  RiExternalLinkLine,
 } from "@remixicon/react";
+import type { Editor } from "@tiptap/react";
+import { AnimatePresence, motion } from "framer-motion";
+
 import { Toggle } from "@/ui/Toggle";
 import { Tooltip } from "@/ui/Tooltip";
 

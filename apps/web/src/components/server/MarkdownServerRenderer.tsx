@@ -2,13 +2,14 @@ import "server-only";
 
 import React from "react";
 import Markdown from "react-markdown";
+
 import { createServerMarkdownComponents } from "@/lib/server/mdx-config-server";
+import type { MediaFileInfo } from "@/lib/shared/image-utils";
 import {
-  markdownRemarkPlugins,
   markdownRehypePlugins,
+  markdownRemarkPlugins,
   type ShikiTheme,
 } from "@/lib/shared/mdx-config-shared";
-import type { MediaFileInfo } from "@/lib/shared/image-utils";
 
 interface MarkdownServerRendererProps {
   source: string;

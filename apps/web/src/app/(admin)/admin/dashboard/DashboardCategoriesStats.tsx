@@ -1,13 +1,14 @@
 "use client";
 
-import Clickable from "@/ui/Clickable";
-import Link from "@/components/Link";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { RiRefreshLine } from "@remixicon/react";
 import { useEffect, useState } from "react";
+import { RiRefreshLine } from "@remixicon/react";
+
 import { getCategoriesStats } from "@/actions/stat";
+import Link from "@/components/Link";
 import ErrorPage from "@/components/ui/Error";
+import { AutoTransition } from "@/ui/AutoTransition";
+import Clickable from "@/ui/Clickable";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 type StatsData = {
   updatedAt: string;

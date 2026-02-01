@@ -1,6 +1,6 @@
-import prisma from "@/lib/server/prisma";
+import { fetchBlockInterpolatedData } from "@/blocks/lib/server";
 import type { BlockConfig } from "@/blocks/types";
-import { fetchBlockInterpolatedData } from "../lib/server";
+import prisma from "@/lib/server/prisma";
 
 // 定义通用返回类型，方便前端使用
 type DisplayItem = {

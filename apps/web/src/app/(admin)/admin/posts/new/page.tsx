@@ -1,8 +1,8 @@
+import AdminSidebar from "@/components/AdminSidebar";
+import Editor from "@/components/client/Editor/Editor";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import MainLayout from "@/components/MainLayout";
 import { generateMetadata } from "@/lib/server/seo";
-import AdminSidebar from "@/components/AdminSidebar";
-import Editor from "@/components/client/Editor/Editor";
 
 export const metadata = await generateMetadata(
   {

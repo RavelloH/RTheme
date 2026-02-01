@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useInView } from "react-intersection-observer";
-import { RiTimeLine, RiLockLine } from "@remixicon/react";
+import { RiLockLine, RiTimeLine } from "@remixicon/react";
 import type { UserActivityItem } from "@repo/shared-types/api/user";
+
 import { getUserActivity } from "@/actions/user";
-import ActivityCard from "./ActivityCard";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { AutoTransition } from "@/ui/AutoTransition";
+import ActivityCard from "@/components/client/ActivityCard";
 import { AutoResizer } from "@/ui/AutoResizer";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 interface UserActivityTimelineProps {
   uid: number;

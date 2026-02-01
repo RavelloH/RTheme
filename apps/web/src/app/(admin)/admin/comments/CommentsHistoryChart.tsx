@@ -1,25 +1,26 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { GridItem } from "@/components/RowGrid";
-import { AutoTransition } from "@/ui/AutoTransition";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import ErrorPage from "@/components/ui/Error";
+import type { CommentHistoryPoint } from "@repo/shared-types/api/comment";
+
+import { getCommentHistory } from "@/actions/comment";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig,
 } from "@/components/AreaChart";
+import { GridItem } from "@/components/RowGrid";
 import StackedBarChart, {
-  type StackedBarChartDataPoint,
   type SeriesConfig as StackedSeriesConfig,
+  type StackedBarChartDataPoint,
 } from "@/components/StackedBarChart";
-import { getCommentHistory } from "@/actions/comment";
-import runWithAuth from "@/lib/client/run-with-auth";
-import type { CommentHistoryPoint } from "@repo/shared-types/api/comment";
-import { useBroadcast } from "@/hooks/use-broadcast";
-import generateGradient from "@/lib/shared/gradient";
-import generateComplementary from "@/lib/shared/complementary";
 import { useMainColor } from "@/components/ThemeProvider";
+import ErrorPage from "@/components/ui/Error";
+import { useBroadcast } from "@/hooks/use-broadcast";
+import runWithAuth from "@/lib/client/run-with-auth";
+import generateComplementary from "@/lib/shared/complementary";
+import generateGradient from "@/lib/shared/gradient";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 export default function CommentsHistoryChart() {
   const mainColor = useMainColor().primary;

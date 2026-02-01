@@ -1,16 +1,17 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { getSearchLogStats, getSearchIndexStats } from "@/actions/search";
+import React, { useEffect, useRef, useState } from "react";
 import type {
-  SearchLogStatsResult,
   SearchIndexStatsResult,
+  SearchLogStatsResult,
 } from "@repo/shared-types/api/search";
+
+import { getSearchIndexStats, getSearchLogStats } from "@/actions/search";
+import { GridItem } from "@/components/RowGrid";
+import ErrorPage from "@/components/ui/Error";
+import { useBroadcast } from "@/hooks/use-broadcast";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { GridItem } from "@/components/RowGrid";
-import { useBroadcast } from "@/hooks/use-broadcast";
-import ErrorPage from "@/components/ui/Error";
 import { Tooltip } from "@/ui/Tooltip";
 
 export default function SearchWordCloud() {

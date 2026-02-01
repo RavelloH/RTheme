@@ -2,7 +2,8 @@
 
 import React, { memo } from "react";
 import { motion } from "framer-motion";
-import { AutoTransition } from "./AutoTransition";
+
+import { AutoTransition } from "@/ui/AutoTransition";
 
 export interface TableColumn<T> {
   key: string;

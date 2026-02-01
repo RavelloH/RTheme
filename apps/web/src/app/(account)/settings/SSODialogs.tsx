@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
+
+import { unlinkSSO } from "@/actions/sso";
+import { getProviderName } from "@/app/(account)/settings/settingsHelpers";
+import type { OAuthProvider } from "@/lib/server/oauth";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { useToast } from "@/ui/Toast";
-import { unlinkSSO } from "@/actions/sso";
-import type { OAuthProvider } from "@/lib/server/oauth";
-import { getProviderName } from "./settingsHelpers";
 
 interface SSODialogsProps {
   provider: OAuthProvider | null;

@@ -1,11 +1,12 @@
 "use client";
 
-import { doctor } from "@/actions/doctor";
-import MainLayout from "@/components/MainLayout";
-import { AutoTransition } from "@/ui/AutoTransition";
 import { useEffect, useState } from "react";
-import { useNavigateWithTransition } from "../../../components/Link";
-import { useMobile } from "../../../hooks/use-mobile";
+
+import { doctor } from "@/actions/doctor";
+import { useNavigateWithTransition } from "@/components/Link";
+import MainLayout from "@/components/MainLayout";
+import { useMobile } from "@/hooks/use-mobile";
+import { AutoTransition } from "@/ui/AutoTransition";
 
 export default function AdminRedirect() {
   const [title, setTitle] = useState("正在启动管理仪表盘...");

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getConfig } from "./config-cache";
+import { getConfig } from "@/lib/server/config-cache";
 
 /**
  * Ably 配置工具

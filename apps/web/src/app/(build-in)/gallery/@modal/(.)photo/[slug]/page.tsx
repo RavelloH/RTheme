@@ -1,8 +1,9 @@
-import { notFound } from "next/navigation";
-import prisma from "@/lib/server/prisma";
-import { generateSignedImageId } from "@/lib/server/image-crypto";
-import PhotoModalClient from "./PhotoModalClient";
 import { md5 } from "js-md5";
+import { notFound } from "next/navigation";
+
+import PhotoModalClient from "@/app/(build-in)/gallery/@modal/(.)photo/[slug]/PhotoModalClient";
+import { generateSignedImageId } from "@/lib/server/image-crypto";
+import prisma from "@/lib/server/prisma";
 
 interface PhotoModalProps {
   params: Promise<{ slug: string }>;

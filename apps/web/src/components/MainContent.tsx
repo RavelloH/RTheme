@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
+
 import { useMobile } from "@/hooks/use-mobile";
 
 interface MainContentProps {

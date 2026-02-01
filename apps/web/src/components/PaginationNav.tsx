@@ -1,16 +1,17 @@
 "use client";
 
 import {
-  RiArrowUpSLine,
   RiArrowDownSLine,
-  RiArrowRightSLine,
   RiArrowLeftSLine,
+  RiArrowRightSLine,
+  RiArrowUpSLine,
 } from "@remixicon/react";
-import RowGrid, { GridItem } from "./RowGrid";
-import Link from "./Link";
-import Clickable from "@/ui/Clickable";
-import { createArray } from "@/lib/client/create-array";
+
+import Link from "@/components/Link";
+import RowGrid, { GridItem } from "@/components/RowGrid";
 import { useMobile } from "@/hooks/use-mobile";
+import { createArray } from "@/lib/client/create-array";
+import Clickable from "@/ui/Clickable";
 
 interface PaginationNavProps {
   currentPage: number;

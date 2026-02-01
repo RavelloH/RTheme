@@ -1,10 +1,11 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { gsap } from "gsap";
-import { useEffect, useRef, useState } from "react";
-import { useConsoleStore } from "@/store/console-store";
+
 import { useMobile } from "@/hooks/use-mobile";
+import { useConsoleStore } from "@/store/console-store";
 
 function ControlCenterIcon({
   isConsoleOpen,

@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
-import { useMobile } from "@/hooks/use-mobile";
-import { useBroadcast } from "@/hooks/use-broadcast";
-import gsap from "gsap";
-import CMSImage from "@/components/CMSImage";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Marquee from "react-fast-marquee";
+import gsap from "gsap";
+
+import CMSImage from "@/components/CMSImage";
+import { useBroadcast } from "@/hooks/use-broadcast";
+import { useMobile } from "@/hooks/use-mobile";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 

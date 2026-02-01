@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Input } from "../../../ui/Input";
-import { TagChip } from "./TagChip";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { RiAddLine, RiPriceTag3Line } from "@remixicon/react";
-import { searchTags } from "@/actions/tag";
 import type { SearchTagItem } from "@repo/shared-types/api/tag";
-import { AutoTransition } from "@/ui/AutoTransition";
+import { AnimatePresence, motion } from "framer-motion";
+
+import { searchTags } from "@/actions/tag";
+import { TagChip } from "@/components/client/Tag/TagChip";
 import { AutoResizer } from "@/ui/AutoResizer";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { Input } from "@/ui/Input";
 
 export interface SelectedTag {
   name: string;

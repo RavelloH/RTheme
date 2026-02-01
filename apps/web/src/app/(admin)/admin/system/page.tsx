@@ -1,14 +1,14 @@
+import SystemCpuInfo from "@/app/(admin)/admin/system/SystemCpuInfo";
+import SystemDiskChart from "@/app/(admin)/admin/system/SystemDiskChart";
+import SystemMemoryChart from "@/app/(admin)/admin/system/SystemMemoryChart";
+import SystemNetworkInfo from "@/app/(admin)/admin/system/SystemNetworkInfo";
+import SystemOverview from "@/app/(admin)/admin/system/SystemOverview";
+import SystemProcessInfo from "@/app/(admin)/admin/system/SystemProcessInfo";
+import AdminSidebar from "@/components/AdminSidebar";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import MainLayout from "@/components/MainLayout";
 import RowGrid from "@/components/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
-import AdminSidebar from "@/components/AdminSidebar";
-import SystemOverview from "./SystemOverview";
-import SystemMemoryChart from "./SystemMemoryChart";
-import SystemCpuInfo from "./SystemCpuInfo";
-import SystemDiskChart from "./SystemDiskChart";
-import SystemProcessInfo from "./SystemProcessInfo";
-import SystemNetworkInfo from "./SystemNetworkInfo";
 
 export const metadata = await generateMetadata(
   {

@@ -1,31 +1,32 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { useNavigateWithTransition } from "@/components/Link";
+import { useEffect, useRef, useState } from "react";
+import {
+  RiLoginBoxLine,
+  RiLogoutBoxLine,
+  RiMailLine,
+  RiNotification3Line,
+  RiSettings3Line,
+  RiUserAddLine,
+  RiUserLine,
+} from "@remixicon/react";
+import { AnimatePresence, motion } from "framer-motion";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useConsoleStore } from "@/store/console-store";
-import UserAvatar from "./UserAvatar";
-import { useBroadcast } from "@/hooks/use-broadcast";
+
+import { useNavigateWithTransition } from "@/components/Link";
 import { useNotification } from "@/components/NotificationProvider";
+import UserAvatar from "@/components/UserAvatar";
+import { useBroadcast } from "@/hooks/use-broadcast";
+import { useConsoleStore } from "@/store/console-store";
 import { AutoTransition } from "@/ui/AutoTransition";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu,
-  MenuItem,
-  MenuTrigger,
-  MenuContent,
   MenuAction,
+  MenuContent,
+  MenuItem,
   MenuSeparator,
+  MenuTrigger,
 } from "@/ui/Menu";
-import {
-  RiUserLine,
-  RiNotification3Line,
-  RiMailLine,
-  RiSettings3Line,
-  RiLogoutBoxLine,
-  RiLoginBoxLine,
-  RiUserAddLine,
-} from "@remixicon/react";
 import { Tooltip } from "@/ui/Tooltip";
 
 interface UnreadNoticeUpdateMessage {

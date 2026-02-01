@@ -1,11 +1,12 @@
-import { generateMetadata as getBaseMetadata } from "@/lib/server/seo";
-import { getSystemPageConfig, getRawPage } from "@/lib/server/page-cache";
-import { resolveBlockData } from "@/lib/server/block-data-resolver";
 import { notFound } from "next/navigation";
-import MainLayout from "@/components/MainLayout";
-import HorizontalScroll from "@/components/HorizontalScroll";
+
 import BlockRenderer from "@/components/BlockRenderer";
+import HorizontalScroll from "@/components/HorizontalScroll";
+import MainLayout from "@/components/MainLayout";
 import type { PageConfig } from "@/data/default-pages";
+import { resolveBlockData } from "@/lib/server/block-data-resolver";
+import { getRawPage, getSystemPageConfig } from "@/lib/server/page-cache";
+import { generateMetadata as getBaseMetadata } from "@/lib/server/seo";
 
 // TODO: Static Params
 

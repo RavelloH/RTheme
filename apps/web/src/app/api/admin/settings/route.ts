@@ -1,8 +1,9 @@
-import { getSettings } from "@/actions/setting";
-import ResponseBuilder from "@/lib/server/response";
-import { validateGetRequest } from "@/lib/server/request-converter";
 import { GetSettingsSchema } from "@repo/shared-types/api/setting";
 import { connection } from "next/server";
+
+import { getSettings } from "@/actions/setting";
+import { validateGetRequest } from "@/lib/server/request-converter";
+import ResponseBuilder from "@/lib/server/response";
 
 const response = new ResponseBuilder("serverless");
 

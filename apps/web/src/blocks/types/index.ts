@@ -1,9 +1,9 @@
 import type {
   AllBlockConfigs,
-  BlockType,
   BaseBlockProps,
   BlockConfigForType,
-} from "./base";
+  BlockType,
+} from "@/blocks/types/base";
 
 export type * from "./base";
 

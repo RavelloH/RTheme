@@ -1,13 +1,14 @@
-import RowGrid, { GridItem } from "@/components/RowGrid";
-import type { GridArea } from "@/components/RowGrid";
 import Marquee from "react-fast-marquee";
+import { RiArrowRightSLine } from "@remixicon/react";
+
+import { replacePlaceholders as replaceFn } from "@/blocks/lib";
+import type { BlockConfig } from "@/blocks/types";
+import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
+import EmptyPostCard from "@/components/EmptyPostCard";
 import Link from "@/components/Link";
 import PostCard from "@/components/PostCard";
-import EmptyPostCard from "@/components/EmptyPostCard";
-import { RiArrowRightSLine } from "@remixicon/react";
-import ViewCountBatchLoader from "@/components/client/ViewCountBatchLoader";
-import { replacePlaceholders as replaceFn } from "../lib";
-import type { BlockConfig } from "@/blocks/types";
+import type { GridArea } from "@/components/RowGrid";
+import RowGrid, { GridItem } from "@/components/RowGrid";
 import type { ProcessedImageData } from "@/lib/shared/image-common";
 
 interface PostsData {

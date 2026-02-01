@@ -1,11 +1,11 @@
+import PostsHistoryChart from "@/app/(admin)/admin/posts/PostsHistoryChart";
+import PostsReport from "@/app/(admin)/admin/posts/PostsReport";
+import PostsTable from "@/app/(admin)/admin/posts/PostsTable";
+import AdminSidebar from "@/components/AdminSidebar";
 import HorizontalScroll from "@/components/HorizontalScroll";
 import MainLayout from "@/components/MainLayout";
 import RowGrid from "@/components/RowGrid";
 import { generateMetadata } from "@/lib/server/seo";
-import AdminSidebar from "@/components/AdminSidebar";
-import PostsReport from "./PostsReport";
-import PostsHistoryChart from "./PostsHistoryChart";
-import PostsTable from "./PostsTable";
 
 export const metadata = await generateMetadata(
   {

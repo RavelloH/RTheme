@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { motion } from "framer-motion";
 import { RiCloseLine } from "@remixicon/react";
+import { motion } from "framer-motion";
 
 export interface TagChipProps {
   name: string;

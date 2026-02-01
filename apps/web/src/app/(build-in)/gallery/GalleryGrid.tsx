@@ -1,9 +1,10 @@
 "use client";
 
-import { useGalleryLightboxStore } from "@/store/gallery-lightbox-store";
 import { useCallback, useRef } from "react";
+
+import { GalleryTile } from "@/app/(build-in)/gallery/GalleryTile";
 import type { Tile } from "@/lib/gallery-layout";
-import { GalleryTile } from "./GalleryTile";
+import { useGalleryLightboxStore } from "@/store/gallery-lightbox-store";
 
 interface GalleryGridProps {
   tiles: Tile[];

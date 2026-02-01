@@ -1,10 +1,11 @@
 import * as React from "react";
+
 import {
-  EmailLayout,
-  EmailHeading,
-  EmailParagraph,
   EmailAlert,
-} from "../components";
+  EmailHeading,
+  EmailLayout,
+  EmailParagraph,
+} from "@/emails/components";
 
 /**
  * SSO 账户绑定通知邮件模板属性

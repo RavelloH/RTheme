@@ -1,8 +1,8 @@
 import type {
   BaseBlockConfig,
-  BlockContentHeader,
   BlockContentFooter,
-} from "../types/base";
+  BlockContentHeader,
+} from "@/blocks/types/base";
 
 export interface ProjectsBlockContent {
   worksDescription?: {

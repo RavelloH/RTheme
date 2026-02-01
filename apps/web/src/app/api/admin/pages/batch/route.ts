@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
-import { updatePages, deletePages } from "@/actions/page";
 import { connection } from "next/server";
+
+import { deletePages, updatePages } from "@/actions/page";
 
 /**
  * @openapi

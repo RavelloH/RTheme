@@ -1,8 +1,9 @@
+import { UpdateSettingsSchema } from "@repo/shared-types/api/setting";
+import { connection } from "next/server";
+
 import { updateSettings } from "@/actions/setting";
 import ResponseBuilder from "@/lib/server/response";
 import { validateJSON } from "@/lib/server/validator";
-import { UpdateSettingsSchema } from "@repo/shared-types/api/setting";
-import { connection } from "next/server";
 
 const response = new ResponseBuilder("serverless");
 

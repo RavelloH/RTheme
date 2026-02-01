@@ -1,24 +1,25 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  RiListCheck,
-  RiArrowUpLine,
   RiArrowDownLine,
+  RiArrowUpLine,
   RiLinkM,
+  RiListCheck,
   RiSuperscript2,
 } from "@remixicon/react";
-import { motion, AnimatePresence } from "framer-motion";
-import Link from "./Link";
-import Clickable from "@/ui/Clickable";
-import { Tooltip } from "@/ui/Tooltip";
+import { AnimatePresence, motion } from "framer-motion";
+
+import Link from "@/components/Link";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import type {
+  MDXContentMessage,
+  ScrollProgressMessage,
+} from "@/types/broadcast-messages";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
-import { useBroadcastSender, useBroadcast } from "@/hooks/use-broadcast";
-import type {
-  ScrollProgressMessage,
-  MDXContentMessage,
-} from "@/types/broadcast-messages";
+import Clickable from "@/ui/Clickable";
+import { Tooltip } from "@/ui/Tooltip";
 
 interface TocItem {
   id: string;

@@ -1,8 +1,8 @@
-import RowGrid, { GridItem, type GridArea } from "@/components/RowGrid";
+import { ProcessedText } from "@/blocks/components";
+import type { DefaultBlockConfig } from "@/blocks/Default/types";
+import { replacePlaceholders } from "@/blocks/lib/shared";
 import LinkButton from "@/components/LinkButton";
-import { replacePlaceholders } from "../lib/shared";
-import { ProcessedText } from "../components";
-import type { DefaultBlockConfig } from "./types";
+import RowGrid, { type GridArea, GridItem } from "@/components/RowGrid";
 
 interface DefaultBlockData {
   [key: string]: unknown;

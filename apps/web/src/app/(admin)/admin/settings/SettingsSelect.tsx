@@ -1,9 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import { GridItem } from "@/components/RowGrid";
-import { AutoTransition } from "@/ui/AutoTransition";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
-import { useState, useEffect } from "react";
+import { AutoTransition } from "@/ui/AutoTransition";
 
 const settings = [
   {

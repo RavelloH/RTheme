@@ -1,30 +1,31 @@
 "use client";
 
-import { Dialog } from "@/ui/Dialog";
-import { Button } from "@/ui/Button";
-import Clickable from "@/ui/Clickable";
-import { useToast } from "@/ui/Toast";
-import type { MediaDetail, MediaListItem } from "@repo/shared-types/api/media";
+import { useEffect, useState } from "react";
 import {
-  RiImageLine,
-  RiVideoLine,
-  RiMusicLine,
   RiFileLine,
-  RiServerLine,
+  RiImageLine,
   RiLoader4Line,
+  RiMusicLine,
+  RiServerLine,
+  RiVideoLine,
 } from "@remixicon/react";
 import {
+  RiDownloadLine,
   RiExternalLinkLine,
   RiFileCopyLine,
-  RiDownloadLine,
 } from "@remixicon/react";
+import type { MediaDetail, MediaListItem } from "@repo/shared-types/api/media";
+
+import ImageLightbox from "@/components/client/ImageLightbox";
 import CMSImage from "@/components/CMSImage";
 import Link from "@/components/Link";
+import { type ParsedExifData, parseExifBuffer } from "@/lib/client/media-exif";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
-import { useState, useEffect } from "react";
-import { type ParsedExifData, parseExifBuffer } from "@/lib/client/media-exif";
-import ImageLightbox from "@/components/client/ImageLightbox";
+import { Button } from "@/ui/Button";
+import Clickable from "@/ui/Clickable";
+import { Dialog } from "@/ui/Dialog";
+import { useToast } from "@/ui/Toast";
 
 interface MediaPreviewDialogProps {
   open: boolean;

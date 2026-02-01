@@ -1,13 +1,14 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { RiRefreshLine } from "@remixicon/react";
+
+import { useSystemInfo } from "@/app/(admin)/admin/system/use-system-info";
 import { GridItem } from "@/components/RowGrid";
+import ErrorPage from "@/components/ui/Error";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { RiRefreshLine } from "@remixicon/react";
-import ErrorPage from "@/components/ui/Error";
-import { useSystemInfo } from "./use-system-info";
-import { useState, useEffect } from "react";
 
 // 自动刷新间隔（秒）
 const AUTO_REFRESH_INTERVAL = 15;

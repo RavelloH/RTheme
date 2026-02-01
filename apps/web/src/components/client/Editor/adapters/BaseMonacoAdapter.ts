@@ -5,16 +5,16 @@
  */
 
 import type {
-  IEditorAdapter,
-  EditorState,
-  EditorCommand,
-  CommandWithParams,
-  MonacoInstance,
-  EditorType,
   AdapterConfig,
-} from "./types";
-import { defaultEditorState } from "./types";
-import * as monacoHelpers from "../MonacoHelpers";
+  CommandWithParams,
+  EditorCommand,
+  EditorState,
+  EditorType,
+  IEditorAdapter,
+  MonacoInstance,
+} from "@/components/client/Editor/adapters/types";
+import { defaultEditorState } from "@/components/client/Editor/adapters/types";
+import * as monacoHelpers from "@/components/client/Editor/MonacoHelpers";
 
 /**
  * Monaco 编辑器基础适配器类
