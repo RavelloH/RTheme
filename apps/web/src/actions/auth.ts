@@ -58,6 +58,7 @@ import { hashPassword } from "@/lib/server/password";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
+import { resetTotpFailCount } from "@/lib/server/totp";
 import { validateData } from "@/lib/server/validator";
 
 type AuthActionEnvironment = "serverless" | "serveraction";
@@ -273,7 +274,6 @@ export async function login(
       }
 
       // 重置 TOTP 验证失败次数
-      const { resetTotpFailCount } = await import("./totp");
       await resetTotpFailCount(user.uid);
 
       // 返回需要 TOTP 验证的响应

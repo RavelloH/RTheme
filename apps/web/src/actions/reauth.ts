@@ -14,6 +14,15 @@ import { verifyPassword } from "@/lib/server/password";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
+import {
+  checkTotpFailCount,
+  decryptBackupCode,
+  decryptTotpSecret,
+  incrementTotpFailCount,
+  isValidBackupCodeFormat,
+  resetTotpFailCount,
+  verifyTotpCode,
+} from "@/lib/server/totp";
 
 const REAUTH_TOKEN_EXPIRY = 600; // 10 分钟
 
@@ -247,7 +256,6 @@ export async function verifyPasswordForReauth({
       });
 
       // 重置 TOTP 验证失败次数
-      const { resetTotpFailCount } = await import("./totp");
       await resetTotpFailCount(user.uid);
 
       // 返回需要 TOTP 验证的响应
@@ -344,8 +352,6 @@ export async function verifyTotpForReauth({
     const { uid } = decoded;
 
     // 检查是否超过失败次数限制
-    const { checkTotpFailCount, incrementTotpFailCount, resetTotpFailCount } =
-      await import("./totp");
     if (await checkTotpFailCount(uid)) {
       // 清除 TOTP Token
       cookieStore.delete("TOTP_TOKEN");
@@ -379,9 +385,6 @@ export async function verifyTotpForReauth({
     }
 
     // 解密 TOTP secret
-    const { decryptTotpSecret, decryptBackupCode } = await import(
-      "@/lib/server/totp-crypto"
-    );
     const secret = decryptTotpSecret(user.totpSecret);
     if (!secret) {
       return response.serverError({
@@ -393,13 +396,10 @@ export async function verifyTotpForReauth({
 
     // 验证 TOTP 码
     if (totp_code) {
-      const { verifyTotpCode } = await import("@/lib/server/totp");
       verified = verifyTotpCode(secret, totp_code);
     }
     // 验证备份码
     else if (backup_code && user.totpBackupCodes) {
-      const { isValidBackupCodeFormat } = await import("@/lib/server/totp");
-
       if (!isValidBackupCodeFormat(backup_code)) {
         await incrementTotpFailCount(uid);
         return response.badRequest({

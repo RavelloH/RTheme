@@ -9,7 +9,7 @@
     "build:pre": "tsx scripts/prebuild.ts",
     "build:post": "tsx scripts/postbuild.ts",
     "start": "next start",
-    "lint": "eslint --max-warnings 0 .",
+    "lint": "eslint --max-warnings 0 . --fix",
     "check-types": "tsc --noEmit",
     "gen-prisma": "prisma generate",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,css,md}\" --log-level warn",
