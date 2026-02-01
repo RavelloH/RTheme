@@ -1,9 +1,12 @@
 import chokidar, { type FSWatcher } from "chokidar";
 import { spawn, ChildProcess } from "child_process";
 import { join } from "path";
-import Rlog from "rlog-js";
+import { createRequire } from "module";
 
-const rlog = new Rlog();
+// 使用 require 来导入 CommonJS 模块
+const require = createRequire(import.meta.url);
+const { default: RlogClass } = require("rlog-js");
+const rlog = new RlogClass();
 
 class DevWatcher {
   private tscProcess: ChildProcess | null = null;

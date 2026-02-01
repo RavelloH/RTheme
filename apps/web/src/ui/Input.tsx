@@ -100,7 +100,7 @@ export const Input = forwardRef<
   };
 
   const handleInput = (
-    e: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>,
+    e: React.InputEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     // 只在非受控模式下更新内部状态
     if (!isControlled) {
@@ -108,7 +108,7 @@ export const Input = forwardRef<
         !!(e.target as HTMLInputElement | HTMLTextAreaElement).value,
       );
     }
-    onInput?.(e as React.FormEvent<HTMLInputElement>);
+    onInput?.(e as React.InputEvent<HTMLInputElement>);
   };
 
   const showLabel = shouldLabelFloat || isFocused || hasValue || !!placeholder;

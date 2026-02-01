@@ -133,9 +133,16 @@ export function ProcessedText({
   const components = {
     ...SERVER_BASE_COMPONENTS,
     // 如果是 inline 模式，使用 Fragment 替换 p 标签
-    p: inline ? React.Fragment : undefined,
+    // 使用类型断言来处理 Fragment 与 ExtraProps 的类型不兼容问题
+    ...(inline
+      ? {
+          p: React.Fragment as React.ComponentType<{
+            children?: React.ReactNode;
+          }>,
+        }
+      : {}),
     ...customComponents,
-  };
+  } as React.ComponentProps<typeof ReactMarkdown>["components"];
 
   return (
     <Wrapper className={`processed-text ${className || ""}`.trim()}>

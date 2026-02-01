@@ -2,8 +2,12 @@
 
 import { generateOpenAPISpec, saveOpenAPISpec } from "./generator.js";
 import { resolve } from "path";
-import Rlog from "rlog-js";
-const rlog = new Rlog();
+import { createRequire } from "module";
+
+// 使用 require 来导入 CommonJS 模块
+const require = createRequire(import.meta.url);
+const { default: RlogClass } = require("rlog-js");
+const rlog = new RlogClass();
 
 async function main() {
   rlog.log("正在生成 OpenAPI 规范...");

@@ -9,8 +9,12 @@ import {
 } from "fs";
 import { dirname, join, extname } from "path";
 import YAML from "yaml";
-import Rlog from "rlog-js";
-const rlog = new Rlog();
+import { createRequire } from "module";
+
+// 使用 require 来导入 CommonJS 模块
+const require = createRequire(import.meta.url);
+const { default: RlogClass } = require("rlog-js");
+const rlog = new RlogClass();
 
 // 动态导入 shared-types 以避免模块缓存问题
 async function getSharedTypesSchemas() {

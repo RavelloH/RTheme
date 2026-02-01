@@ -32,7 +32,7 @@ export const useBroadcastStore = create<BroadcastState>((set, get) => ({
   broadcast: async (message: unknown) => {
     const callbacks = get().callbacks;
     await Promise.allSettled(
-      callbacks.map(({ callback }) => callback(message)),
+      callbacks.map(({ callback }) => Promise.resolve(callback(message))),
     );
   },
 
