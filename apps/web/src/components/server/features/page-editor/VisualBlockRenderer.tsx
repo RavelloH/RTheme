@@ -50,6 +50,7 @@ interface VisualBlockRendererProps {
   activeBlockId: string | number | null;
   onSelectBlock: (id: string | number) => void;
   hideAnimationBlockIds: Set<string | number>;
+  scale?: number;
 }
 
 export default function VisualBlockRenderer({
@@ -57,6 +58,7 @@ export default function VisualBlockRenderer({
   activeBlockId,
   onSelectBlock,
   hideAnimationBlockIds,
+  scale = 1,
 }: VisualBlockRendererProps) {
   return (
     <>
@@ -68,6 +70,7 @@ export default function VisualBlockRenderer({
             isActive={block.id === activeBlockId}
             onSelect={() => onSelectBlock(block.id)}
             hideAnimation={hideAnimationBlockIds.has(block.id)}
+            scale={scale}
           >
             <SingleBlockRenderer block={block} />
           </SortableBlockWrapper>

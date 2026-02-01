@@ -18,7 +18,13 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
-import { RiAddLine, RiArrowLeftLine, RiSave3Line } from "@remixicon/react";
+import {
+  RiAddLine,
+  RiArrowLeftLine,
+  RiExpandUpDownLine,
+  RiSave3Line,
+} from "@remixicon/react";
+import { useMotionValue, useMotionValueEvent, useSpring } from "framer-motion";
 
 import { fetchBlockData } from "@/actions/page";
 import type { BlockConfig } from "@/blocks/core/types";
@@ -33,6 +39,7 @@ import { Button } from "@/ui/Button";
 import { Dialog } from "@/ui/Dialog";
 import { Drawer } from "@/ui/Drawer";
 import { useToast } from "@/ui/Toast";
+import { Tooltip } from "@/ui/Tooltip";
 
 interface VisualPageEditorProps {
   initialBlocks: BlockConfig[];
@@ -63,12 +70,115 @@ export default function VisualPageEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [isAddingBlock, setIsAddingBlock] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  // Base scale: 100% 容器高度对应的缩放比例 (仅在窗口大小改变时计算)
+  const [baseScale, setBaseScale] = useState(1);
+  // Current ratio: 用户当前的缩放倍率 (用于渲染)
+  const [currentRatio, setCurrentRatio] = useState(1);
+
+  // Motion values for smooth animation
+  const userRatio = useMotionValue(1);
+  const smoothRatio = useSpring(userRatio, {
+    stiffness: 300,
+    damping: 30,
+    mass: 0.8,
+  });
+
   const containerRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Sync spring value to React state for rendering
+  useMotionValueEvent(smoothRatio, "change", (latest) => {
+    setCurrentRatio(latest);
+  });
+
+  // Calculate BASE scale (Container 100% Height vs Target Height)
+  useEffect(() => {
+    const updateBaseScale = () => {
+      if (!containerRef.current) return;
+
+      const remSize =
+        parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const targetHeight = window.innerHeight - 10 * remSize;
+
+      if (targetHeight <= 0) return;
+
+      // 这里使用的是 containerRef (外层容器) 的高度，它应该是充满屏幕剩余空间的
+      // 不受内部元素缩放的影响
+      const containerHeight = containerRef.current.offsetHeight;
+
+      // 计算基准缩放比例
+      const newBaseScale = containerHeight / targetHeight;
+      setBaseScale(newBaseScale);
+    };
+
+    updateBaseScale();
+
+    // 只监听外层容器大小变化和窗口变化
+    const observer = new ResizeObserver(updateBaseScale);
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+    window.addEventListener("resize", updateBaseScale);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateBaseScale);
+    };
+  }, []); // Empty deps: internal logic ensures correctness
+
+  // Derived final scale
+  const finalScale = Math.min(Math.max(baseScale * currentRatio, 0.1), 1.5);
+
+  // Auto-scroll to center the active block (Only for the last block)
+  useEffect(() => {
+    if (!activeBlockId) return;
+
+    // Check if the active block is the last one
+    const lastBlock = blocks[blocks.length - 1];
+    const isLastBlock = lastBlock && lastBlock.id === activeBlockId;
+    if (!isLastBlock) return;
+
+    // Wait for layout updates (especially Spacer expansion)
+    const timer = setTimeout(() => {
+      const scrollContainer = document.getElementById(
+        "editor-scroll-container",
+      )?.parentElement;
+      const targetEl = document.querySelector(
+        `[data-draggable-id="${activeBlockId}"]`,
+      );
+
+      if (scrollContainer && targetEl) {
+        const targetRect = targetEl.getBoundingClientRect();
+
+        // Estimate Drawer width (40% of screen based on Drawer config) if open
+        const drawerWidth = isDrawerOpen ? window.innerWidth * 0.4 : 0;
+
+        // Center of the available area
+        const availableCenter = (window.innerWidth - drawerWidth) / 2;
+
+        // Current center of the target element
+        const elementCenter = targetRect.left + targetRect.width / 2;
+
+        // Calculate delta to scroll
+        const deltaX = elementCenter - availableCenter;
+
+        // Only scroll if the delta is significant to avoid jitter
+        if (Math.abs(deltaX) > 10) {
+          scrollContainer.scrollBy({
+            left: deltaX,
+            behavior: "smooth",
+          });
+        }
+      }
+    }, 300); // Delay needs to match or exceed transition durations for accurate rects
+
+    return () => clearTimeout(timer);
+  }, [activeBlockId, isDrawerOpen, blocks]);
 
   // Sync initial blocks if they change (e.g. from server)
   useEffect(() => {
@@ -181,18 +291,22 @@ export default function VisualPageEditor({
 
       // 关闭对话框后，等待渲染完成，然后滚动到最后并选中新 block
       setTimeout(() => {
-        const el = document.getElementById("editor-scroll-container");
-        if (el) {
+        const contentEl = document.getElementById("editor-scroll-container");
+        // 滚动容器通常是内容的父元素
+        const scrollContainer = contentEl?.parentElement;
+
+        if (scrollContainer) {
           // 使用平滑滚动到最右边
-          el.scrollTo({
-            left: el.scrollWidth,
+          scrollContainer.scrollTo({
+            left: scrollContainer.scrollWidth,
             behavior: "smooth",
           });
         }
+
         // 再延迟一点确保滚动完成后选中
         setTimeout(() => {
           handleSelectBlock(newId);
-        }, 300);
+        }, 500); // 稍微增加延迟以等待平滑滚动完成
       }, 100);
     } catch (error) {
       console.error("添加 Block 失败:", error);
@@ -246,6 +360,28 @@ export default function VisualPageEditor({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Zoom Control */}
+          <Tooltip content="滚动鼠标滚轮调整视图大小">
+            <div
+              className="group flex items-center gap-1 px-2 py-1.5 rounded-md hover:bg-muted cursor-ns-resize select-none transition-colors border border-transparent hover:border-border/50"
+              onWheel={(e) => {
+                // Smooth continuous scroll
+                const delta = e.deltaY * -0.001;
+                const current = userRatio.get();
+                const newValue = Math.min(Math.max(current + delta, 0.2), 1);
+                userRatio.set(newValue);
+              }}
+            >
+              <RiExpandUpDownLine
+                size={16}
+                className="text-muted-foreground group-hover:text-foreground transition-colors"
+              />
+              <span className="text-xs font-mono text-muted-foreground group-hover:text-foreground w-8 text-center tabular-nums">
+                {Math.round(currentRatio * 100)}%
+              </span>
+            </div>{" "}
+          </Tooltip>
+
           <Button
             variant="secondary"
             size="sm"
@@ -268,7 +404,7 @@ export default function VisualPageEditor({
       {/* Main Canvas */}
       <div
         ref={containerRef}
-        className="flex-1 bg-muted/10 overflow-hidden relative"
+        className="flex-1 bg-muted/10 overflow-hidden relative flex flex-col justify-center"
       >
         <DndContext
           sensors={sensors}
@@ -288,7 +424,8 @@ export default function VisualPageEditor({
             acceleration: 5, // smoothness
           }}
         >
-          <div className="h-full">
+          {/* 使用 motion.div 或者普通的 div 配合 state 更新来实现高度变化 */}
+          <div className="w-full" style={{ height: `${currentRatio * 100}%` }}>
             <HorizontalScroll
               className="h-full"
               forceNativeScroll={true} // Enable native scroll for DnD compatibility
@@ -296,6 +433,9 @@ export default function VisualPageEditor({
               <div
                 id="editor-scroll-container"
                 className="h-full flex flex-nowrap px-10 gap-4 items-center"
+                style={{
+                  zoom: finalScale,
+                }}
               >
                 <SortableContext
                   items={blocks.map((b) => b.id)}
@@ -306,6 +446,7 @@ export default function VisualPageEditor({
                     activeBlockId={activeBlockId}
                     onSelectBlock={handleSelectBlock}
                     hideAnimationBlockIds={hideAnimationBlockIds}
+                    scale={finalScale}
                   />
                 </SortableContext>
 
@@ -321,6 +462,16 @@ export default function VisualPageEditor({
                     />
                   </div>
                 )}
+
+                {/* Spacer to prevent Drawer from covering the last item */}
+                {/* 宽度除以 finalScale 是为了抵消容器 zoom 的影响，确保在屏幕上始终占据约 45% 的物理宽度 */}
+                <div
+                  aria-hidden="true"
+                  className="shrink-0 transition-all duration-300 ease-in-out h-px"
+                  style={{
+                    width: isDrawerOpen ? `calc(30vw / ${finalScale})` : "0px",
+                  }}
+                />
               </div>
             </HorizontalScroll>
           </div>
@@ -329,7 +480,12 @@ export default function VisualPageEditor({
             createPortal(
               <DragOverlay style={{ pointerEvents: "none" }}>
                 {draggingBlock ? (
-                  <div className="h-full border-2 border-primary shadow-2xl opacity-90 bg-background">
+                  <div
+                    className="h-full border-2 border-primary shadow-2xl opacity-90 bg-background"
+                    style={{
+                      zoom: finalScale,
+                    }}
+                  >
                     <SingleBlockRenderer block={draggingBlock} />
                   </div>
                 ) : null}
