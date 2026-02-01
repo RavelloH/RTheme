@@ -62,57 +62,11 @@ export default function VisualPageEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [isAddingBlock, setIsAddingBlock] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [scaleRatio, setScaleRatio] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
-  // 存储拖动元素的实际尺寸（宽度和高度）
-  const [draggingBlockDimensions, setDraggingBlockDimensions] = useState<{
-    width: number;
-    height: number;
-  } | null>(null);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
-
-  // Update scale ratio based on container height vs window height
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const updateRatio = () => {
-      if (!containerRef.current) return;
-      const height = containerRef.current.offsetHeight;
-      if (height <= 0) return;
-
-      const SCALE_FACTOR = 0.02;
-
-      // Get the ACTUAL current global font size from the DOM
-      // This ensures we are scaling relative to what's currently rendered,
-      // and allows SCALE_FACTOR adjustments here to actually affect the ratio.
-      const computedStyle = getComputedStyle(document.documentElement);
-      const globalFontSize = parseFloat(computedStyle.fontSize) || 16;
-
-      // Target font size for this container height
-      // We explicitly calculate what the font size WOULD be if the window had this height.
-      const targetFontSize = Math.max(4, height * SCALE_FACTOR);
-
-      setScaleRatio(targetFontSize / globalFontSize);
-    };
-
-    // Initial update
-    updateRatio();
-
-    // Use ResizeObserver to detect container size changes
-    const resizeObserver = new ResizeObserver(updateRatio);
-    resizeObserver.observe(containerRef.current);
-
-    // Listen to window resize (which changes globalFontSize)
-    window.addEventListener("resize", updateRatio);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", updateRatio);
-    };
   }, []);
 
   // Sync initial blocks if they change (e.g. from server)
@@ -133,18 +87,6 @@ export default function VisualPageEditor({
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveDragId(event.active.id);
-
-    // 获取被拖动元素的实际渲染尺寸
-    const activeElement = document.querySelector(
-      `[data-draggable-id="${event.active.id}"]`,
-    ) as HTMLElement;
-    if (activeElement) {
-      const rect = activeElement.getBoundingClientRect();
-      setDraggingBlockDimensions({
-        width: rect.width,
-        height: rect.height,
-      });
-    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -158,7 +100,6 @@ export default function VisualPageEditor({
     // This prevents the "flicker" where the item reappears before the overlay lands
     setTimeout(() => {
       setActiveDragId(null);
-      setDraggingBlockDimensions(null);
     }, 250);
   };
 
@@ -346,15 +287,7 @@ export default function VisualPageEditor({
             acceleration: 5, // smoothness
           }}
         >
-          <div
-            style={{
-              width: `${100 / scaleRatio}%`,
-              height: `${100 / scaleRatio}%`,
-              transform: `scale(${scaleRatio})`,
-              transformOrigin: "top left",
-            }}
-            className="h-full"
-          >
+          <div className="h-full">
             <HorizontalScroll
               className="h-full"
               forceNativeScroll={true} // Enable native scroll for DnD compatibility
@@ -394,27 +327,9 @@ export default function VisualPageEditor({
           {mounted &&
             createPortal(
               <DragOverlay style={{ pointerEvents: "none" }}>
-                {draggingBlock && draggingBlockDimensions ? (
-                  // 在 DragOverlay 中模拟相同的缩放环境
-                  // 外层容器使用已缩放的尺寸，然后应用 scale
-                  // 内层使用反向尺寸，让内容正确填充
-                  <div
-                    style={{
-                      width: draggingBlockDimensions.width,
-                      height: draggingBlockDimensions.height,
-                      transform: `scale(${scaleRatio})`,
-                      transformOrigin: "top left",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: `${100 / scaleRatio}%`,
-                        height: `${100 / scaleRatio}%`,
-                      }}
-                      className="border-2 border-primary shadow-2xl opacity-90 bg-background overflow-hidden"
-                    >
-                      <SingleBlockRenderer block={draggingBlock} />
-                    </div>
+                {draggingBlock ? (
+                  <div className="h-full border-2 border-primary shadow-2xl opacity-90 bg-background">
+                    <SingleBlockRenderer block={draggingBlock} />
                   </div>
                 ) : null}
               </DragOverlay>,
