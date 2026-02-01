@@ -16,7 +16,10 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
       </CodeBlock>
     ),
     img: (props) => (
-      <ImageZoom {...(props as React.ComponentProps<typeof ImageZoom>)} />
+      <ImageZoom
+        {...(props as React.ComponentProps<typeof ImageZoom>)}
+        className="border-2 rounded"
+      />
     ),
     ...TabsComponents,
     ...AccordionsComponents,
