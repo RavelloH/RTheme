@@ -5,24 +5,17 @@ import MainLayout from "@/components/client/layout/MainLayout";
 import BlockRenderer from "@/components/server/renderer/BlockRenderer";
 import type { PageConfig } from "@/data/default-pages";
 import { resolveBlockData } from "@/lib/server/block-data-resolver";
-import { getRawPage, getSystemPageConfig } from "@/lib/server/page-cache";
+import { getMatchingPage, getSystemPageConfig } from "@/lib/server/page-cache";
 import { generateMetadata as getBaseMetadata } from "@/lib/server/seo";
 
 // TODO: Static Params
 
-async function loadPageData(paramsPromise: Promise<{ slug?: string[] }>) {
-  const path = (await paramsPromise).slug?.join("/") ?? "/";
-  const page = await getRawPage(path);
-  return page?.status === "ACTIVE" && !page.deletedAt ? { page, path } : null;
-}
-
 export const generateMetadata = async ({
   params,
 }: PageProps<"/[[...slug]]">) => {
-  const data = await loadPageData(params);
-  if (!data) return {};
-
-  const { page, path } = data;
+  const match = await getMatchingPage((await params).slug);
+  if (!match) return notFound();
+  const { page, params: resolvedParams } = match;
   return getBaseMetadata(
     {
       title: page.title,
@@ -30,15 +23,20 @@ export const generateMetadata = async ({
       keywords: page.metaKeywords,
       robots: { index: page.robotsIndex },
     },
-    { pathname: path },
+    { pathname: resolvedParams.url },
   );
 };
 
 export default async function Page({ params }: PageProps<"/[[...slug]]">) {
-  const data = await loadPageData(params);
-  if (!data) return notFound();
-  const config = getSystemPageConfig(data.page);
-  const { blocks = [] } = (await resolveBlockData(config as PageConfig)) || {};
+  const match = await getMatchingPage((await params).slug);
+  if (!match) return notFound();
+  const { page, params: resolvedParams } = match;
+  const config = getSystemPageConfig(page) as PageConfig;
+  if (config) {
+    if (!config.data) config.data = {};
+    Object.assign(config.data as Record<string, unknown>, resolvedParams);
+  }
+  const { blocks = [] } = (await resolveBlockData(config)) || {};
 
   // cacheLife("max");
   // TODO: Cache Tag

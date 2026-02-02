@@ -64,6 +64,10 @@ export async function resolveBlockData(
   if (!pageConfig?.blocks?.length) {
     return pageConfig;
   }
+
+  // 获取页面级全局数据（包含路由参数，如 page, slug, url）
+  const pageContextData = (pageConfig.data as Record<string, unknown>) || {};
+
   // 2. 并行处理所有 block
   const resolvedBlocks = await Promise.all(
     pageConfig.blocks.map(async (block) => {
@@ -71,10 +75,40 @@ export async function resolveBlockData(
       const loadFetcher = fetcherLoaders[block.block || "default"];
       if (!loadFetcher) return block;
       try {
+        // 构造带有上下文数据的 Block 配置
+        // 这样 Fetcher 就可以通过 config.data 访问到 page, slug 等参数了
+        const blockWithContext = {
+          ...block,
+          data: {
+            ...(block.data as Record<string, unknown>),
+            ...pageContextData,
+          },
+        };
+
         // 并行流：动态导入模块 -> 执行 Fetch -> 返回新对象
+
         const fetcher = await loadFetcher();
-        const data = await fetcher(block);
-        return { ...block, data };
+
+        const fetchedData = await fetcher(blockWithContext);
+
+        // 确保 fetchedData 是一个对象，否则默认为空对象
+
+        const safeFetchedData =
+          typeof fetchedData === "object" && fetchedData !== null
+            ? (fetchedData as Record<string, unknown>)
+            : {};
+
+        // 合并 fetcher 返回的数据，保留上下文数据以便前端也能使用（如果需要）
+
+        return {
+          ...block,
+
+          data: {
+            ...pageContextData, // 保留上下文
+
+            ...safeFetchedData, // Fetcher 返回的数据优先级更高（覆盖）
+          },
+        };
       } catch (error) {
         console.error(
           `[Data Fetch Error] Block: ${block.block}, ID: ${block.id}`,

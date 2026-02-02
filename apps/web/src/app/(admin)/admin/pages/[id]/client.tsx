@@ -51,6 +51,7 @@ export default function LayoutEditorClientWrapper({
 
   return (
     <VisualPageEditor
+      pageId={page.id}
       initialBlocks={initialBlocks}
       onSave={handleSave}
       onBack={() => router.back()} // 或者 router.push('/admin/pages')
