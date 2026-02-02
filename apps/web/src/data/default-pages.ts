@@ -405,33 +405,50 @@ export const defaultPages: DefaultPage[] = [
         {
           id: 1,
           block: "default",
-          description: "",
           content: {
-            header: { value: "Keywords. Connections. Traces.", align: "left" },
-            title: { value: "Tags / 标签", align: "left" },
+            title: {
+              align: "left",
+              value: "Tags / 标签",
+            },
+            footer: {
+              link: "",
+              text: "Random / 随便看看",
+              type: "random",
+              randomSource: "tags",
+            },
+            header: {
+              align: "left",
+              value: "Keywords. Connections. Traces.",
+            },
             content: {
               top: {
+                align: "left",
                 value: [
                   "整理 & 索引所有标签。",
                   "",
                   "最近更新于 {lastUpdatedDays}。",
                   "共索引 {tags} 个标签。",
                 ],
-                align: "left",
               },
               bottom: {
-                value: ["当前正在查看 {pageInfo}。"],
                 align: "left",
+                value: ["当前正在查看 {pageInfo}。"],
               },
             },
-            footer: {
-              link: "",
-              text: "Random / 随便看看",
+            layout: {
+              verticalCenter: false,
             },
           },
+          description: "",
         },
         {
           id: 2,
+          block: "accordion",
+          content: {},
+          description: "",
+        },
+        {
+          id: 3,
           block: "default",
           description: "",
           content: {

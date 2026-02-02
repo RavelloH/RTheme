@@ -32,7 +32,7 @@ export function extractPlaceholdersFromValue(value: unknown): string[] {
 }
 
 /**
- * 替换文本中的占位符
+ * 替换文本中的占位符（纯文本版本）
  */
 export function replacePlaceholders(
   text: string,
@@ -43,6 +43,44 @@ export function replacePlaceholders(
     if (!data) return match;
     return data[key] !== undefined ? String(data[key]) : match;
   });
+}
+
+/**
+ * 替换文本中的占位符（支持 ReactNode 版本）
+ * 用于处理包含客户端组件的占位符
+ */
+export function replacePlaceholdersWithReact(
+  text: string,
+  data: Record<string, unknown>,
+): (string | React.ReactElement)[] {
+  if (!text) return [];
+
+  // 按占位符分割文本
+  const parts = text.split(/\{(\w+)\}/g);
+
+  return parts.map((part, index) => {
+    // 偶数索引是普通文本
+    if (index % 2 === 0) return part;
+
+    // 奇数索引是占位符名
+    const value = data?.[part];
+
+    // 如果是 ReactElement，直接返回
+    if (ReactIsValidElement(value)) return value;
+
+    // 否则转换为字符串
+    return value !== undefined ? String(value) : `{${part}}`;
+  });
+}
+
+// 简单的 React.isValidElement 检查（避免导入 React）
+function ReactIsValidElement(value: unknown): value is React.ReactElement {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "$$typeof" in (value as Record<string, unknown>) &&
+    "type" in (value as Record<string, unknown>)
+  );
 }
 
 /**

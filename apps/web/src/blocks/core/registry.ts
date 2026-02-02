@@ -32,6 +32,10 @@ const SCHEMA_IMPORTERS: Record<string, () => Promise<BlockFormConfig>> = {
     import("../collection/TagsCategories/schema").then(
       (m) => m.TAGS_CATEGORIES_BLOCK_FORM_CONFIG,
     ),
+  accordion: () =>
+    import("../collection/Accordion/schema").then(
+      (m) => m.ACCORDION_BLOCK_FORM_CONFIG,
+    ),
 };
 
 /**

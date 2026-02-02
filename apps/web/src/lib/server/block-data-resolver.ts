@@ -28,6 +28,10 @@ const fetcherLoaders: Record<string, () => Promise<BlockFetcher>> = {
     import("@/blocks/collection/Default/fetcher").then(
       (m) => m.defaultBlockFetcher,
     ),
+  accordion: () =>
+    import("@/blocks/collection/Accordion/fetcher").then(
+      (m) => m.accordionFetcher,
+    ),
 };
 
 /**
