@@ -1,3 +1,4 @@
+import type { PostsBlockContent } from "@/blocks/collection/RecentPosts/types";
 import { fetchBlockInterpolatedData } from "@/blocks/core/lib/server";
 import type { BlockConfig } from "@/blocks/core/types";
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
@@ -8,86 +9,120 @@ import {
 } from "@/lib/server/media-reference";
 import prisma from "@/lib/server/prisma";
 import { processImageUrl } from "@/lib/shared/image-common";
+import { MEDIA_SLOTS } from "@/types/media";
 
 export async function postsFetcher(config: BlockConfig) {
+  const content = (config.content || {}) as PostsBlockContent;
+
   // 0. 启动插值数据获取
   const interpolatedPromise = fetchBlockInterpolatedData(config.content);
 
-  // 1. 并发执行数据库查询：文章列表和总数统计互不依赖，应当并行
-  const [homePosts, totalPosts] = await Promise.all([
-    prisma.post.findMany({
-      where: {
-        status: "PUBLISHED",
-        deletedAt: null,
-      },
-      select: {
-        title: true,
-        slug: true,
-        excerpt: true,
-        isPinned: true,
-        publishedAt: true,
-        categories: {
-          select: {
-            id: true,
-            // 只需要 ID 即可进行后续的路径查找，除非前端直接需要原始分类名
-            name: true,
-            slug: true,
-          },
-        },
-        tags: {
-          select: {
-            name: true,
-            slug: true,
-          },
-        },
-        ...mediaRefsInclude,
-      },
-      orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
-      take: 5,
-    }),
-    prisma.post.count({
-      where: {
-        status: "PUBLISHED",
-        deletedAt: null,
-      },
-    }),
-  ]);
+  // 1. 解析配置
+  const columns = content.layout?.columns || "2";
+  const sort = content.posts?.sort || "publishedAt_desc";
+  const onlyWithCover = content.posts?.onlyWithCover || false;
+  const showPinned = content.posts?.showPinned ?? true;
 
-  // 如果没有文章，直接返回，减少后续不必要的计算
+  // 计算需要获取的文章数量
+  // 1列=1篇, 2列=5篇, 3列=9篇, 4列=13篇
+  const takeMap: Record<string, number> = {
+    "1": 1,
+    "2": 5,
+    "3": 9,
+    "4": 13,
+  };
+  const take = takeMap[columns] || 5;
+
+  // 构建查询条件
+  const where: Record<string, unknown> = {
+    status: "PUBLISHED",
+    deletedAt: null,
+  };
+
+  if (onlyWithCover) {
+    where.mediaRefs = {
+      some: { slot: MEDIA_SLOTS.POST_FEATURED_IMAGE },
+    };
+  }
+
+  // 构建排序条件
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orderBy: any[] = [];
+  if (showPinned) {
+    orderBy.push({ isPinned: "desc" });
+  }
+
+  if (sort === "publishedAt_asc") {
+    orderBy.push({ publishedAt: "asc" });
+  } else if (sort === "viewCount_desc") {
+    orderBy.push({ viewCount: { cachedCount: "desc" } });
+  } else {
+    // 默认按发布时间倒序
+    orderBy.push({ publishedAt: "desc" });
+  }
+
+  // 2. 执行数据库查询
+  const homePosts = await prisma.post.findMany({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    where: where as any,
+    select: {
+      title: true,
+      slug: true,
+      excerpt: true,
+      isPinned: true,
+      publishedAt: true,
+      categories: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      },
+      tags: {
+        select: {
+          name: true,
+          slug: true,
+        },
+      },
+      ...mediaRefsInclude,
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    orderBy: orderBy as any,
+    take,
+  });
+
+  // 如果没有文章，直接返回
   if (homePosts.length === 0) {
     const interpolatedData = await interpolatedPromise;
     return {
-      displayPosts: Array(5).fill(null),
-      totalPosts,
+      displayPosts: [],
       ...interpolatedData,
     };
   }
 
-  // 2. 准备批量查询所需的数据 (ID 和 URLs)
+  // 3. 准备批量查询所需的数据 (ID 和 URLs)
   const allCategoryIds = new Set<number>();
   const homePostImageUrls: string[] = [];
 
   for (const post of homePosts) {
-    // 收集 Category ID
     for (const cat of post.categories) {
       allCategoryIds.add(cat.id);
     }
-    // 收集图片 URL
     const url = getFeaturedImageUrl(post.mediaRefs);
     if (url) homePostImageUrls.push(url);
   }
 
-  // 3. 并发执行外部资源/辅助数据查询
+  // 4. 并发执行外部资源/辅助数据查询
   const [homePageMediaFileMap, categoryPathsMap] = await Promise.all([
     batchQueryMediaFiles(homePostImageUrls),
     batchGetCategoryPaths(Array.from(allCategoryIds)),
   ]);
 
-  // 4. 数据组装与转换
-  const processedPosts = homePosts.map((post) => {
-    // 4.1 处理分类展开与去重
+  // 5. 数据组装与转换
+  const displayPosts = homePosts.map((post) => {
+    // 5.1 处理分类展开与去重
     const expandedCategories: { name: string; slug: string }[] = [];
-    const seenSlugs = new Set<string>(); // 使用 Set 进行 O(1) 查重
+    const seenSlugs = new Set<string>();
 
     for (const category of post.categories) {
       const fullPath = categoryPathsMap.get(category.id);
@@ -104,7 +139,7 @@ export async function postsFetcher(config: BlockConfig) {
       }
     }
 
-    // 4.2 处理封面图
+    // 5.2 处理封面图
     const coverUrl = getFeaturedImageUrl(post.mediaRefs);
     const processedCover = coverUrl
       ? processImageUrl(coverUrl, homePageMediaFileMap)
@@ -117,19 +152,10 @@ export async function postsFetcher(config: BlockConfig) {
     };
   });
 
-  // 5. 填充空位 (Padding)
-  // 如果前端严格需要数组长度为 5，保留此逻辑；
-  // 建议将填充逻辑移至前端，但在 Server Component 中这样做也没问题。
-  const displayPosts = [
-    ...processedPosts,
-    ...Array(Math.max(0, 5 - processedPosts.length)).fill(null),
-  ];
-
   const interpolatedData = await interpolatedPromise;
 
   return {
     displayPosts,
-    totalPosts,
     ...interpolatedData,
   };
 }

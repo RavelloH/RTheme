@@ -115,7 +115,25 @@ export const defaultPages: DefaultPage[] = [
           id: 102,
           block: "posts",
           description: "",
-          content: {},
+          content: {
+            footer: {
+              description: "共 {posts} 篇文章",
+              title: "查看全部文章",
+              link: "/posts",
+            },
+            title: {
+              line1: "POSTS",
+              line2: "文章 ",
+            },
+            layout: {
+              columns: "2",
+            },
+            posts: {
+              sort: "publishedAt_desc",
+              onlyWithCover: false,
+              showPinned: true,
+            },
+          },
         },
         {
           id: 103,
