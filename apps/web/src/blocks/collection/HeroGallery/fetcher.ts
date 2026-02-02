@@ -15,156 +15,50 @@ import type { ProcessedImageData } from "@/lib/shared/image-common";
 import { processImageUrl } from "@/lib/shared/image-common";
 import { MEDIA_SLOTS } from "@/types/media";
 
+type HeroBlockContent = {
+  logoImage?: string;
+  galleryImages?: string[];
+  galleryImagesOrigin?: "latestPosts" | "latestGallery" | "custom";
+} & Record<string, unknown>;
+
 export async function heroFetcher(config: BlockConfig) {
-  // 0. 启动插值数据获取
+  const content = (config.content || {}) as HeroBlockContent;
+
+  // =========================================================
+  // 1. 定义并发任务
+  // =========================================================
+
+  // 任务 A: 获取插值数据
   const interpolatedPromise = fetchBlockInterpolatedData(config.content);
 
-  // 从 content 中获取用户配置
-  const content = config.content as Record<string, unknown> | undefined;
-  const customLogoImage = content?.logoImage as string | undefined;
-  const customGalleryImages = content?.galleryImages as string[] | undefined;
-  const galleryImagesOrigin = content?.galleryImagesOrigin as
-    | "latestPosts"
-    | "latestGallery"
-    | "custom"
-    | undefined;
+  // 任务 B: 获取站点配置
+  const siteConfigPromise = getConfigs(["site.title", "site.slogan.primary"]);
 
-  // 1. 并发优化：将 Prisma 查询与 Config 获取合并到一个 Promise.all 中
-  // 这样数据库查询和缓存读取是同时进行的
-  const [siteConfig, data] = await Promise.all([
-    // 获取站点配置
-    getConfigs(["site.title", "site.slogan.primary"]),
+  // 任务 C: 获取并处理 Logo 图片 (独立异步，不阻塞其他查询)
+  const logoPromise = (async () => {
+    if (!content.logoImage) return undefined;
+    const mediaFileMap = await batchQueryMediaFiles([content.logoImage]);
+    const processed = processImageUrl(content.logoImage, mediaFileMap);
+    return processed?.[0];
+  })();
 
-    // 根据来源获取数据
-    (async () => {
-      // 如果是自定义图片，不查询数据库
-      if (
-        galleryImagesOrigin === "custom" ||
-        (customGalleryImages && customGalleryImages.length > 0)
-      ) {
-        return { posts: [], photos: [] };
-      }
+  // 任务 D: 获取并处理图集数据 (核心逻辑封装在辅助函数中)
+  const galleryPromise = fetchGalleryData(content);
 
-      // 如果是最新文章图片，查询 Post
-      if (galleryImagesOrigin === "latestPosts" || !galleryImagesOrigin) {
-        const posts = await prisma.post.findMany({
-          where: {
-            status: "PUBLISHED",
-            deletedAt: null,
-            mediaRefs: {
-              some: {
-                slot: MEDIA_SLOTS.POST_FEATURED_IMAGE,
-              },
-            },
-          },
-          select: {
-            ...mediaRefsInclude,
-          },
-          orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
-          take: 9,
-        });
-        return { posts, photos: [] };
-      }
+  // =========================================================
+  // 2. 并行执行所有任务
+  // =========================================================
+  const [interpolatedData, [siteTitle, siteSlogan], logoImage, galleryImages] =
+    await Promise.all([
+      interpolatedPromise,
+      siteConfigPromise,
+      logoPromise,
+      galleryPromise,
+    ]);
 
-      // 如果是最新照片墙图片，查询 Photo
-      if (galleryImagesOrigin === "latestGallery") {
-        const photos = await prisma.photo.findMany({
-          where: {
-            media: {
-              mediaType: "IMAGE",
-            },
-          },
-          include: {
-            media: {
-              select: {
-                shortHash: true,
-                width: true,
-                height: true,
-                blur: true,
-              },
-            },
-          },
-          orderBy: [{ sortTime: "desc" }, { id: "desc" }],
-          take: 9,
-        });
-        return { posts: [], photos };
-      }
-
-      // 默认返回最新文章图片
-      const posts = await prisma.post.findMany({
-        where: {
-          status: "PUBLISHED",
-          deletedAt: null,
-          mediaRefs: {
-            some: {
-              slot: MEDIA_SLOTS.POST_FEATURED_IMAGE,
-            },
-          },
-        },
-        select: {
-          ...mediaRefsInclude,
-        },
-        orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
-        take: 9,
-      });
-      return { posts, photos: [] };
-    })(),
-  ]);
-
-  const [siteTitle, siteSlogan] = siteConfig;
-  const { posts: galleryPosts, photos } = data;
-
-  // 2. 处理图集图片 - 返回 ProcessedImageData[] 格式
-  let galleryImages: ProcessedImageData[] = [];
-
-  if (customGalleryImages && customGalleryImages.length > 0) {
-    // 优先使用自定义图片
-    galleryImages = await processImageArrayField(customGalleryImages);
-  } else if (photos && photos.length > 0) {
-    // 使用照片墙图片
-    galleryImages = photos.map((photo) => {
-      const imageId = generateSignedImageId(photo.media.shortHash);
-      return {
-        url: `/p/${imageId}`,
-        width: photo.media.width ?? undefined,
-        height: photo.media.height ?? undefined,
-        blur: photo.media.blur ?? undefined,
-      };
-    });
-  } else if (galleryPosts && galleryPosts.length > 0) {
-    // 使用文章特色图片
-    const rawImageUrls = galleryPosts
-      .map((post: (typeof galleryPosts)[number]) =>
-        getFeaturedImageUrl(post.mediaRefs),
-      )
-      .filter((url): url is string => !!url);
-
-    if (rawImageUrls.length > 0) {
-      const homePageMediaFileMap = await batchQueryMediaFiles(rawImageUrls);
-
-      galleryImages = rawImageUrls.reduce<ProcessedImageData[]>(
-        (acc: ProcessedImageData[], rawUrl: string) => {
-          const processed = processImageUrl(rawUrl, homePageMediaFileMap);
-          if (processed && processed.length > 0) {
-            acc.push(...processed);
-          }
-          return acc;
-        },
-        [],
-      );
-    }
-  }
-
-  // 3. 处理 logo 图片（如果用户自定义）- 返回 ProcessedImageData 格式
-  let logoImage: ProcessedImageData | undefined;
-  if (customLogoImage) {
-    const mediaFileMap = await batchQueryMediaFiles([customLogoImage]);
-    const processed = processImageUrl(customLogoImage, mediaFileMap);
-    logoImage = processed?.[0];
-  }
-
-  const interpolatedData = await interpolatedPromise;
-
+  // =========================================================
+  // 3. 返回结果
+  // =========================================================
   return {
     siteTitle,
     siteSlogan,
@@ -172,4 +66,77 @@ export async function heroFetcher(config: BlockConfig) {
     logoImage,
     ...interpolatedData,
   };
+}
+
+/**
+ * 辅助函数：根据配置来源获取并处理图集图片
+ */
+async function fetchGalleryData(
+  content: HeroBlockContent,
+): Promise<ProcessedImageData[]> {
+  const { galleryImagesOrigin, galleryImages: customImages } = content;
+
+  // 场景 1: 自定义图片 (Custom)
+  if (
+    galleryImagesOrigin === "custom" ||
+    (customImages && customImages.length > 0)
+  ) {
+    return processImageArrayField(customImages);
+  }
+
+  // 场景 2: 最新照片墙 (Latest Gallery)
+  if (galleryImagesOrigin === "latestGallery") {
+    const photos = await prisma.photo.findMany({
+      where: {
+        media: { mediaType: "IMAGE" },
+      },
+      include: {
+        media: {
+          select: { shortHash: true, width: true, height: true, blur: true },
+        },
+      },
+      orderBy: [{ sortTime: "desc" }, { id: "desc" }],
+      take: 9,
+    });
+
+    return photos.map((photo) => ({
+      url: `/p/${generateSignedImageId(photo.media.shortHash)}`,
+      width: photo.media.width ?? undefined,
+      height: photo.media.height ?? undefined,
+      blur: photo.media.blur ?? undefined,
+    }));
+  }
+
+  // 场景 3 (默认): 最新文章特色图 (Latest Posts)
+  // 此时 origin 为 "latestPosts" 或 undefined
+  const posts = await prisma.post.findMany({
+    where: {
+      status: "PUBLISHED",
+      deletedAt: null,
+      mediaRefs: {
+        some: { slot: MEDIA_SLOTS.POST_FEATURED_IMAGE },
+      },
+    },
+    select: { ...mediaRefsInclude },
+    orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
+    take: 9,
+  });
+
+  // 提取原始 URL
+  const rawImageUrls = posts
+    .map((post) => getFeaturedImageUrl(post.mediaRefs))
+    .filter((url): url is string => !!url);
+
+  if (rawImageUrls.length === 0) return [];
+
+  // 批量查询图片元数据并处理
+  const homePageMediaFileMap = await batchQueryMediaFiles(rawImageUrls);
+
+  return rawImageUrls.reduce<ProcessedImageData[]>((acc, rawUrl) => {
+    const processed = processImageUrl(rawUrl, homePageMediaFileMap);
+    if (processed && processed.length > 0) {
+      acc.push(...processed);
+    }
+    return acc;
+  }, []);
 }
