@@ -204,7 +204,7 @@ export const defaultPages: DefaultPage[] = [
   {
     id: "posts-page",
     title: "文章",
-    slug: "/posts",
+    slug: "/posts/page/:page",
     content: "",
     contentType: "MARKDOWN",
     config: {
@@ -331,7 +331,7 @@ export const defaultPages: DefaultPage[] = [
   {
     id: "child-categories-page",
     title: "子分类",
-    slug: "/categories/[slug]",
+    slug: "/categories/:slug/page/:page",
     content: "",
     contentType: "MARKDOWN",
     config: {
@@ -458,7 +458,7 @@ export const defaultPages: DefaultPage[] = [
   {
     id: "child-tags-page",
     title: "标签",
-    slug: "/tags/[slug]",
+    slug: "/tags/:slug/page/:page",
     content: "",
     contentType: "MARKDOWN",
     config: {

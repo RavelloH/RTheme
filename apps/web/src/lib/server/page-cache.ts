@@ -64,8 +64,159 @@ export interface PageItem {
   userUid: number | null;
 }
 
+// 页面匹配结果类型定义
+export interface PageMatch {
+  page: PageItem;
+  params: {
+    url: string;
+    page?: number;
+    slug?: string;
+  };
+}
+
 // 缓存文件路径
 const CACHE_FILE_PATH = path.join(process.cwd(), ".cache", ".page-cache.json");
+
+/**
+ * 核心路由匹配逻辑
+ * 根据 URL slug 并行查询多种可能的路径模式
+ */
+export async function getMatchingPage(
+  slugSegments: string[] = [],
+): Promise<PageMatch | null> {
+  const currentPath =
+    slugSegments.length > 0 ? "/" + slugSegments.join("/") : "/";
+
+  // 1. 预处理：识别分页参数和基路径
+  let pageVal = 1;
+  let isExplicitPage = false;
+  let basePathSegments = slugSegments;
+
+  // 检查是否以 /page/N 结尾
+  if (
+    slugSegments.length >= 2 &&
+    slugSegments[slugSegments.length - 2] === "page"
+  ) {
+    const lastSegment = slugSegments[slugSegments.length - 1];
+    if (lastSegment) {
+      const p = parseInt(lastSegment, 10);
+      if (!isNaN(p)) {
+        pageVal = p;
+        isExplicitPage = true;
+        basePathSegments = slugSegments.slice(0, -2);
+      }
+    }
+  }
+
+  const basePath =
+    basePathSegments.length > 0 ? "/" + basePathSegments.join("/") : "";
+
+  // 2. 构建候选匹配模式
+  const candidates: {
+    type: string;
+    path: string;
+    getParams: () => { page?: number; slug?: string };
+  }[] = [];
+
+  // Priority 1: 精确匹配 (Exact)
+  candidates.push({
+    type: "exact",
+    path: currentPath,
+    getParams: () => ({}),
+  });
+
+  // Priority 2: 固定基路径 + 分页 (Fixed Base + Page)
+  // 覆盖显式 (/page/2) 和 隐式 (/) 分页
+  // Example: /categories/design -> /categories/design/page/:page (page=1)
+  const fixedPagePath = (basePath === "" ? "" : basePath) + "/page/:page";
+  candidates.push({
+    type: "fixed_page",
+    path: fixedPagePath,
+    getParams: () => ({ page: pageVal }),
+  });
+
+  // Priority 3: 通配符基路径 + 分页 (Variable Slug + Page)
+  // Example: /categories/design -> /categories/:slug/page/:page (slug=design, page=1)
+  if (basePathSegments.length > 0) {
+    const parentSegments = basePathSegments.slice(0, -1);
+    const slugValue = basePathSegments[basePathSegments.length - 1];
+    const parentPath =
+      parentSegments.length > 0 ? "/" + parentSegments.join("/") : "";
+
+    const variablePagePath = parentPath + "/:slug/page/:page";
+
+    candidates.push({
+      type: "variable_slug_page",
+      path: variablePagePath,
+      getParams: () => ({ page: pageVal, slug: slugValue }),
+    });
+  }
+
+  // Priority 4: 纯通配符 (Variable Slug)
+  // Example: /posts/hello-world -> /posts/:slug (slug=hello-world)
+  // 仅在非显式分页时尝试，避免 /page/2 被误认为 slug
+  if (!isExplicitPage && slugSegments.length > 0) {
+    const parentSegments = slugSegments.slice(0, -1);
+    const slugValue = slugSegments[slugSegments.length - 1];
+    const parentPath =
+      parentSegments.length > 0 ? "/" + parentSegments.join("/") : "";
+
+    const variableSlugPath = parentPath + "/:slug";
+
+    candidates.push({
+      type: "variable_slug",
+      path: variableSlugPath,
+      getParams: () => ({ slug: slugValue }),
+    });
+  }
+
+  // 3. 并行查询 (利用 getRawPage 的缓存)
+  // 提取所有可能的 path
+  const distinctPaths = Array.from(new Set(candidates.map((c) => c.path)));
+
+  // 并行调用 getRawPage
+  const pageResults = await Promise.all(
+    distinctPaths.map(async (path) => {
+      try {
+        const page = await getRawPage(path);
+        // 确保页面存在且状态为 ACTIVE 且未删除
+        if (page && page.status === "ACTIVE" && !page.deletedAt) {
+          return page;
+        }
+        return null;
+      } catch (error) {
+        console.error(`Failed to fetch page for path ${path}:`, error);
+        return null;
+      }
+    }),
+  );
+
+  // 构建 Map (slug -> PageItem)
+  const pageMap = new Map<string, PageItem>();
+  pageResults.forEach((page) => {
+    if (page) {
+      pageMap.set(page.slug, page);
+    }
+  });
+
+  // 4. 按优先级匹配
+  // 这里的顺序很重要，必须与 candidates 的 push 顺序一致
+  // 因为 candidates 数组本身是有序的，所以直接遍历查找即可
+  for (const candidate of candidates) {
+    const page = pageMap.get(candidate.path);
+    if (page) {
+      return {
+        page,
+        params: {
+          url: currentPath,
+          ...candidate.getParams(),
+        },
+      };
+    }
+  }
+
+  return null;
+}
 
 /**
  * 获取原始页面项
