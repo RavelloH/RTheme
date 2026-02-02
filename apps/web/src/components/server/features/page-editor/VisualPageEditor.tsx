@@ -41,11 +41,75 @@ import { Drawer } from "@/ui/Drawer";
 import { useToast } from "@/ui/Toast";
 import { Tooltip } from "@/ui/Tooltip";
 
+// -----------------------------------------------------------------------------
+// 草稿存储工具函数
+// -----------------------------------------------------------------------------
+const STORAGE_KEY = "page_editor";
+
+interface PageDraft {
+  blocks: BlockConfig[];
+  updatedAt: string;
+}
+
+interface AllDrafts {
+  [pageId: string]: PageDraft;
+}
+
+function getDraft(pageId: string): PageDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const all = JSON.parse(raw) as AllDrafts;
+    return all[pageId] || null;
+  } catch (e) {
+    console.error("Failed to load draft", e);
+    return null;
+  }
+}
+
+function saveDraft(pageId: string, blocks: BlockConfig[]) {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const all: AllDrafts = raw ? JSON.parse(raw) : {};
+
+    // 剔除 data 字段，只保留配置
+    const cleanBlocks = blocks.map(
+      ({ data: _data, ...rest }) => rest,
+    ) as BlockConfig[];
+
+    all[pageId] = {
+      blocks: cleanBlocks,
+      updatedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+  } catch (e) {
+    console.error("Failed to save draft", e);
+  }
+}
+
+function removeDraft(pageId: string) {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const all = JSON.parse(raw) as AllDrafts;
+    if (all[pageId]) {
+      delete all[pageId];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    }
+  } catch (e) {
+    console.error("Failed to remove draft", e);
+  }
+}
+
 interface VisualPageEditorProps {
   initialBlocks: BlockConfig[];
   onSave: (blocks: BlockConfig[]) => Promise<void>;
   onBack: () => void;
   pageTitle: string;
+  pageId: string; // 新增 pageId 用于区分草稿
 }
 
 export default function VisualPageEditor({
@@ -53,6 +117,7 @@ export default function VisualPageEditor({
   onSave,
   onBack,
   pageTitle,
+  pageId,
 }: VisualPageEditorProps) {
   const [blocks, setBlocks] = useState<BlockConfig[]>(initialBlocks);
   const [activeBlockId, setActiveBlockId] = useState<string | number | null>(
@@ -89,7 +154,66 @@ export default function VisualPageEditor({
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+
+    if (draftLoadedRef.current) return;
+
+    // 加载草稿逻辑
+    const draft = getDraft(pageId);
+    if (draft) {
+      draftLoadedRef.current = true;
+      // 恢复草稿数据
+      // 恢复草稿后，遍历所有 block 重新 fetch data。
+
+      const hydrateDraft = async () => {
+        const hydratedBlocks = await Promise.all(
+          draft.blocks.map(async (block) => {
+            try {
+              const res = await runWithAuth(fetchBlockData, {
+                access_token: undefined,
+                block,
+              } as never);
+              if (res && "data" in res && res.data) {
+                return { ...block, data: res.data.data };
+              }
+              return block;
+            } catch (e) {
+              console.error("Failed to hydrate block", block.id, e);
+              return block;
+            }
+          }),
+        );
+        setBlocks(hydratedBlocks);
+
+        toast.info(
+          "已加载草稿",
+          `上次保存于 ${new Date(draft.updatedAt).toLocaleString()}`,
+          10000,
+          {
+            label: "撤销",
+            onClick: () => {
+              removeDraft(pageId);
+              setBlocks(initialBlocks);
+              toast.success("已撤销", "草稿已删除，恢复初始状态");
+            },
+          },
+        );
+      };
+
+      hydrateDraft();
+    }
+  }, [pageId, initialBlocks, toast]); // Initial load only
+
+  // 自动保存草稿
+  useEffect(() => {
+    if (!mounted) return;
+    // 只有当 blocks 与 initialBlocks 不同时，或者已经有变更时才保存
+    // 这里简单处理：只要 blocks 变化就保存
+    // 简单的防抖
+    const timer = setTimeout(() => {
+      saveDraft(pageId, blocks);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [blocks, pageId, mounted]);
 
   // Sync spring value to React state for rendering
   useMotionValueEvent(smoothRatio, "change", (latest) => {
@@ -180,9 +304,12 @@ export default function VisualPageEditor({
     return () => clearTimeout(timer);
   }, [activeBlockId, isDrawerOpen, blocks]);
 
-  // Sync initial blocks if they change (e.g. from server)
+  const draftLoadedRef = useRef(false);
+
   useEffect(() => {
-    setBlocks(initialBlocks);
+    if (!draftLoadedRef.current) {
+      setBlocks(initialBlocks);
+    }
   }, [initialBlocks]);
 
   const sensors = useSensors(
@@ -323,6 +450,8 @@ export default function VisualPageEditor({
     setIsSaving(true);
     try {
       await onSave(blocks);
+      // 保存成功后清除草稿
+      removeDraft(pageId);
     } finally {
       setIsSaving(false);
     }

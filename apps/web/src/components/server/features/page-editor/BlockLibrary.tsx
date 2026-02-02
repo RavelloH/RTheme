@@ -4,7 +4,6 @@ import {
   RiCodeBoxLine,
   RiLayoutGridLine,
   RiLayoutMasonryLine,
-  RiLoader4Line,
   RiQuestionLine,
 } from "@remixicon/react";
 
@@ -60,13 +59,17 @@ export default function BlockLibrary({
   const [previewBlock, setPreviewBlock] = useState<BlockConfig | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewScale, setPreviewScale] = useState(1);
-  const [previewContentSize, setPreviewContentSize] = useState({
-    width: 2560,
+  const [previewContentSize, setPreviewContentSize] = useState<{
+    width: number | string;
+    height: number | string;
+  }>({
+    width: "max-content",
     height: 800,
   });
   const [previewVisible, setPreviewVisible] = useState(false);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const previewContentRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
 
   // 加载配置
   useEffect(() => {
@@ -145,7 +148,7 @@ export default function BlockLibrary({
 
   // 计算预览区域的缩放比例
   useEffect(() => {
-    if (!previewContainerRef.current || !previewContentRef.current) return;
+    if (!previewContainerRef.current || !measureRef.current) return;
 
     let rafId: number | null = null;
 
@@ -155,10 +158,10 @@ export default function BlockLibrary({
       }
 
       rafId = requestAnimationFrame(() => {
-        if (!previewContainerRef.current || !previewContentRef.current) return;
+        if (!previewContainerRef.current || !measureRef.current) return;
 
         const container = previewContainerRef.current;
-        const contentWrapper = previewContentRef.current;
+        const contentWrapper = measureRef.current;
         const containerWidth = container.offsetWidth;
         const containerHeight = container.offsetHeight;
 
@@ -334,9 +337,8 @@ export default function BlockLibrary({
   };
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center text-muted-foreground bg-background">
-        <RiLoader4Line className="animate-spin mr-2" />
-        加载 Block 库...
+      <div className="flex h-[700px] items-center justify-center text-muted-foreground bg-background">
+        <LoadingIndicator />
       </div>
     );
   }
@@ -450,7 +452,7 @@ export default function BlockLibrary({
               <div className="bg-muted/30">
                 <div
                   ref={previewContainerRef}
-                  className="relative overflow-hidden children:bg-background mx-10"
+                  className="relative overflow-hidden mx-10"
                   style={{ height: "600px" }}
                 >
                   {previewLoading ? (
@@ -462,16 +464,24 @@ export default function BlockLibrary({
                       <div
                         ref={previewContentRef}
                         style={{
-                          width: `${previewContentSize.width}px`,
-                          height: `${previewContentSize.height}px`,
+                          width:
+                            typeof previewContentSize.width === "number"
+                              ? `${previewContentSize.width}px`
+                              : previewContentSize.width,
+                          height:
+                            typeof previewContentSize.height === "number"
+                              ? `${previewContentSize.height}px`
+                              : previewContentSize.height,
                           transform: `scale(${previewScale})`,
                           transformOrigin: "center center",
                           opacity: previewVisible ? 1 : 0,
                           transition: "opacity 300ms ease-in-out",
                         }}
-                        className="bg-background"
+                        className="bg-background inline-block"
                       >
-                        <SingleBlockRenderer block={previewBlock} />
+                        <div ref={measureRef} className="w-fit h-full">
+                          <SingleBlockRenderer block={previewBlock} />
+                        </div>
                       </div>
                     </div>
                   ) : (
