@@ -7,18 +7,139 @@ import gsap from "gsap";
 import CMSImage from "@/components/ui/CMSImage";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { useMobile } from "@/hooks/use-mobile";
+import type { ProcessedImageData } from "@/lib/shared/image-common";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
+type GalleryFilter =
+  | "none"
+  | "mix-blend-hue"
+  | "dark"
+  | "gray"
+  | "warm"
+  | "cool"
+  | "vintage"
+  | "contrast"
+  | "sepia"
+  | "saturate"
+  | "film"
+  | "dramatic"
+  | "soft"
+  | "fade"
+  | "cinematic"
+  | "noire"
+  | "bloom"
+  | "inverted"
+  | "duotone";
+
+// 获取滤镜配置
+const getFilterConfig = (filter: GalleryFilter) => {
+  const configs: Record<
+    GalleryFilter,
+    {
+      defaultFilter: string;
+      overlayClass?: string;
+      overlayOpacity?: number;
+      blendMode?: string;
+    }
+  > = {
+    none: {
+      defaultFilter: "brightness(1) drop-shadow(0 15px 30px rgba(0,0,0,0.3))",
+    },
+    "mix-blend-hue": {
+      defaultFilter:
+        "grayscale(70%) brightness(0.8) drop-shadow(0 15px 30px rgba(0,0,0,0.3))",
+      overlayClass: "bg-primary",
+      overlayOpacity: 1,
+      blendMode: "hue",
+    },
+    dark: {
+      defaultFilter:
+        "brightness(0.6) contrast(1.1) drop-shadow(0 15px 30px rgba(0,0,0,0.5))",
+    },
+    gray: {
+      defaultFilter:
+        "grayscale(100%) brightness(0.9) drop-shadow(0 15px 30px rgba(0,0,0,0.3))",
+    },
+    warm: {
+      defaultFilter:
+        "sepia(30%) saturate(140%) brightness(0.95) drop-shadow(0 15px 30px rgba(0,0,0,0.3))",
+    },
+    cool: {
+      defaultFilter:
+        "saturate(80%) hue-rotate(30deg) brightness(0.9) drop-shadow(0 15px 30px rgba(0,0,0,0.3))",
+    },
+    vintage: {
+      defaultFilter:
+        "sepia(50%) contrast(1.2) brightness(0.85) saturate(120%) drop-shadow(0 15px 30px rgba(0,0,0,0.4))",
+    },
+    contrast: {
+      defaultFilter:
+        "contrast(1.4) brightness(0.95) saturate(110%) drop-shadow(0 15px 30px rgba(0,0,0,0.3))",
+    },
+    sepia: {
+      defaultFilter:
+        "sepia(80%) brightness(0.9) contrast(1.1) drop-shadow(0 15px 30px rgba(0,0,0,0.3))",
+    },
+    saturate: {
+      defaultFilter:
+        "saturate(200%) brightness(1) drop-shadow(0 15px 30px rgba(0,0,0,0.3))",
+    },
+    film: {
+      defaultFilter:
+        "sepia(15%) contrast(1.1) saturate(90%) brightness(0.9) drop-shadow(0 15px 30px rgba(0,0,0,0.3))",
+    },
+    dramatic: {
+      defaultFilter:
+        "contrast(1.5) brightness(0.7) saturate(120%) drop-shadow(0 15px 30px rgba(0,0,0,0.5))",
+    },
+    soft: {
+      defaultFilter:
+        "contrast(0.9) brightness(1.05) saturate(90%) drop-shadow(0 10px 20px rgba(0,0,0,0.2))",
+    },
+    fade: {
+      defaultFilter:
+        "saturate(60%) brightness(1.1) contrast(0.9) drop-shadow(0 15px 30px rgba(0,0,0,0.3))",
+    },
+    cinematic: {
+      defaultFilter:
+        "contrast(1.2) saturate(110%) brightness(0.85) hue-rotate(10deg) drop-shadow(0 15px 30px rgba(0,0,0,0.4))",
+    },
+    noire: {
+      defaultFilter:
+        "grayscale(100%) contrast(1.6) brightness(0.7) drop-shadow(0 15px 30px rgba(0,0,0,0.6))",
+    },
+    bloom: {
+      defaultFilter:
+        "brightness(1.1) saturate(130%) contrast(1.1) drop-shadow(0 20px 40px rgba(0,0,0,0.2))",
+    },
+    inverted: {
+      defaultFilter:
+        "invert(100%) hue-rotate(180deg) drop-shadow(0 15px 30px rgba(0,0,0,0.3))",
+    },
+    duotone: {
+      defaultFilter:
+        "grayscale(100%) sepia(100%) hue-rotate(190deg) saturate(500%) brightness(0.9) contrast(1.1) drop-shadow(0 15px 30px rgba(0,0,0,0.3))",
+    },
+  };
+
+  return configs[filter] || configs["mix-blend-hue"];
+};
+
 export default function HomeImageGallery({
   images = [],
+  filter = "mix-blend-hue",
 }: {
-  images?: string[];
+  images?: ProcessedImageData[];
+  filter?: GalleryFilter;
 }) {
   const displayImages = [...images].slice(0, 9);
   const containerRef = useRef<HTMLDivElement>(null);
   const imagesRef = useRef<(HTMLDivElement | null)[]>([]);
   const animationRef = useRef<gsap.core.Tween | null>(null);
+
+  // 获取当前滤镜配置
+  const filterConfig = getFilterConfig(filter);
   const isMobile = useMobile();
   const [activeIndex, setActiveIndex] = useState(0);
   const [loadedCount, setLoadedCount] = useState(0);
@@ -157,17 +278,16 @@ export default function HomeImageGallery({
           left: `${baseX}%`,
           xPercent: xPercent,
           x: 0, // 恢复到基础位置
-          filter:
-            "grayscale(60%) brightness(0.8) drop-shadow(0 15px 30px rgba(0,0,0,0.3))",
+          filter: filterConfig.defaultFilter,
           duration: 0.8,
           ease: "power2.out",
         });
 
         // 恢复叠加层透明度
         const overlay = img.querySelector(".theme-overlay") as HTMLElement;
-        if (overlay) {
+        if (overlay && filterConfig.overlayOpacity !== undefined) {
           gsap.to(overlay, {
-            opacity: 1,
+            opacity: filterConfig.overlayOpacity,
             duration: 0.8,
             ease: "power2.out",
           });
@@ -214,22 +334,121 @@ export default function HomeImageGallery({
 
         const depthX = influence * 60; // 横向视差强度（只保留水平移动）
 
-        // 只使用 grayscale 和 brightness，不使用色相旋转
-        const grayscale = (1 - colorInfluence) * 60; // 灰度：0-60%
-        const brightness = 0.8 + colorInfluence * 0.2; // 亮度：0.8-1.0
+        // 根据滤镜类型计算动态效果
+        // colorInfluence: 0 = 鼠标最远（完整滤镜效果），1 = 鼠标最近（接近原图）
+        let dynamicFilter: string;
+
+        if (filter === "none") {
+          // 无滤镜：只调整亮度
+          const brightness = 0.9 + colorInfluence * 0.1;
+          dynamicFilter = `brightness(${brightness}) drop-shadow(0 15px 30px rgba(0,0,0,0.3))`;
+        } else if (filter === "mix-blend-hue") {
+          // 主色调色相滤镜：灰度降低、亮度提升（恢复原图）
+          const grayscale = (1 - colorInfluence) * 60; // 60% → 0%
+          const brightness = 0.8 + colorInfluence * 0.2; // 0.8 → 1.0
+          dynamicFilter = `grayscale(${grayscale}%) brightness(${brightness}) drop-shadow(0 15px 30px rgba(0,0,0,0.3))`;
+        } else if (filter === "dark") {
+          // 暗色滤镜：亮度增加（恢复原图）
+          const brightness = 0.6 + colorInfluence * 0.4; // 0.6 → 1.0
+          const contrast = 1.1 - colorInfluence * 0.1; // 1.1 → 1.0
+          dynamicFilter = `brightness(${brightness}) contrast(${contrast}) drop-shadow(0 15px 30px rgba(0,0,0,0.5))`;
+        } else if (filter === "gray") {
+          // 灰度滤镜：灰度减少（恢复原图）
+          const grayscale = (1 - colorInfluence) * 100; // 100% → 0%
+          dynamicFilter = `grayscale(${grayscale}%) brightness(0.9) drop-shadow(0 15px 30px rgba(0,0,0,0.3))`;
+        } else if (filter === "warm") {
+          // 暖色调滤镜：减少 sepia 和饱和度（恢复原图）
+          const sepia = 30 * (1 - colorInfluence); // 30% → 0%
+          const saturate = 140 - colorInfluence * 40; // 140% → 100%
+          dynamicFilter = `sepia(${sepia}%) saturate(${saturate}%) brightness(0.95) drop-shadow(0 15px 30px rgba(0,0,0,0.3))`;
+        } else if (filter === "cool") {
+          // 冷色调滤镜：减少色相旋转和饱和度（恢复原图）
+          const hueRotate = 30 * (1 - colorInfluence); // 30deg → 0deg
+          const saturate = 80 + colorInfluence * 20; // 80% → 100%
+          dynamicFilter = `saturate(${saturate}%) hue-rotate(${hueRotate}deg) brightness(0.9) drop-shadow(0 15px 30px rgba(0,0,0,0.3))`;
+        } else if (filter === "vintage") {
+          // 复古风：减少 sepia、对比度、饱和度（恢复原图）
+          const sepia = 50 * (1 - colorInfluence); // 50% → 0%
+          const contrast = 1.2 - colorInfluence * 0.2; // 1.2 → 1.0
+          const saturate = 120 - colorInfluence * 20; // 120% → 100%
+          dynamicFilter = `sepia(${sepia}%) contrast(${contrast}) brightness(${0.85 + colorInfluence * 0.15}) saturate(${saturate}%) drop-shadow(0 15px 30px rgba(0,0,0,0.4))`;
+        } else if (filter === "contrast") {
+          // 高对比度：对比度降低（恢复原图）
+          const contrast = 1.4 - colorInfluence * 0.4; // 1.4 → 1.0
+          dynamicFilter = `contrast(${contrast}) brightness(0.95) saturate(110%) drop-shadow(0 15px 30px rgba(0,0,0,0.3))`;
+        } else if (filter === "sepia") {
+          // 怀旧褐色：sepia 大幅减少（恢复原图）
+          const sepia = 80 * (1 - colorInfluence); // 80% → 0%
+          dynamicFilter = `sepia(${sepia}%) brightness(0.9) contrast(1.1) drop-shadow(0 15px 30px rgba(0,0,0,0.3))`;
+        } else if (filter === "saturate") {
+          // 高饱和度：饱和度大幅降低（恢复原图）
+          const saturate = 200 - colorInfluence * 100; // 200% → 100%
+          dynamicFilter = `saturate(${saturate}%) brightness(1) drop-shadow(0 15px 30px rgba(0,0,0,0.3))`;
+        } else if (filter === "film") {
+          // 胶片感：减少 sepia 和对比度（恢复原图）
+          const sepia = 15 * (1 - colorInfluence); // 15% → 0%
+          const contrast = 1.1 - colorInfluence * 0.1; // 1.1 → 1.0
+          const saturate = 90 + colorInfluence * 10; // 90% → 100%
+          dynamicFilter = `sepia(${sepia}%) contrast(${contrast}) saturate(${saturate}%) brightness(${0.9 + colorInfluence * 0.1}) drop-shadow(0 15px 30px rgba(0,0,0,0.3))`;
+        } else if (filter === "dramatic") {
+          // 戏剧性：对比度降低、亮度大幅提升（恢复原图）
+          const contrast = 1.5 - colorInfluence * 0.5; // 1.5 → 1.0
+          const brightness = 0.7 + colorInfluence * 0.3; // 0.7 → 1.0
+          const saturate = 120 - colorInfluence * 20; // 120% → 100%
+          dynamicFilter = `contrast(${contrast}) brightness(${brightness}) saturate(${saturate}%) drop-shadow(0 15px 30px rgba(0,0,0,0.5))`;
+        } else if (filter === "soft") {
+          // 柔和：对比度增加趋向正常
+          const contrast = 0.9 + colorInfluence * 0.1; // 0.9 → 1.0
+          const brightness = 1.05 - colorInfluence * 0.05; // 1.05 → 1.0
+          dynamicFilter = `contrast(${contrast}) brightness(${brightness}) saturate(90%) drop-shadow(0 10px 20px rgba(0,0,0,0.2))`;
+        } else if (filter === "fade") {
+          // 褪色：饱和度和对比度增加（恢复原图）
+          const saturate = 60 + colorInfluence * 40; // 60% → 100%
+          const contrast = 0.9 + colorInfluence * 0.1; // 0.9 → 1.0
+          const brightness = 1.1 - colorInfluence * 0.1; // 1.1 → 1.0
+          dynamicFilter = `saturate(${saturate}%) brightness(${brightness}) contrast(${contrast}) drop-shadow(0 15px 30px rgba(0,0,0,0.3))`;
+        } else if (filter === "cinematic") {
+          // 电影感：亮度提升、色相旋转减少（恢复原图）
+          const brightness = 0.85 + colorInfluence * 0.15; // 0.85 → 1.0
+          const hueRotate = 10 * (1 - colorInfluence); // 10deg → 0deg
+          const contrast = 1.2 - colorInfluence * 0.2; // 1.2 → 1.0
+          dynamicFilter = `contrast(${contrast}) saturate(110%) brightness(${brightness}) hue-rotate(${hueRotate}deg) drop-shadow(0 15px 30px rgba(0,0,0,0.4))`;
+        } else if (filter === "noire") {
+          // 黑色电影：亮度大幅提升、对比度降低（恢复原图）
+          const brightness = 0.7 + colorInfluence * 0.3; // 0.7 → 1.0
+          const contrast = 1.6 - colorInfluence * 0.6; // 1.6 → 1.0
+          dynamicFilter = `grayscale(100%) contrast(${contrast}) brightness(${brightness}) drop-shadow(0 15px 30px rgba(0,0,0,0.6))`;
+        } else if (filter === "bloom") {
+          // 泛光：亮度和饱和度降低（恢复原图）
+          const brightness = 1.1 - colorInfluence * 0.1; // 1.1 → 1.0
+          const saturate = 130 - colorInfluence * 30; // 130% → 100%
+          dynamicFilter = `brightness(${brightness}) saturate(${saturate}%) contrast(1.1) drop-shadow(0 20px 40px rgba(0,0,0,0.2))`;
+        } else if (filter === "inverted") {
+          // 反色：这个保持特殊性，只微调色相
+          const hueRotate = 180 + colorInfluence * 20; // 180deg → 200deg
+          dynamicFilter = `invert(100%) hue-rotate(${hueRotate}deg) drop-shadow(0 15px 30px rgba(0,0,0,0.3))`;
+        } else if (filter === "duotone") {
+          // 双色调：饱和度大幅降低（接近原图）
+          const saturate = 500 - colorInfluence * 400; // 500% → 100%
+          dynamicFilter = `grayscale(100%) sepia(100%) hue-rotate(190deg) saturate(${saturate}%) brightness(0.9) contrast(1.1) drop-shadow(0 15px 30px rgba(0,0,0,0.3))`;
+        } else {
+          // 默认
+          const brightness = 0.9 + colorInfluence * 0.1;
+          dynamicFilter = `brightness(${brightness}) drop-shadow(0 15px 30px rgba(0,0,0,0.3))`;
+        }
 
         gsap.to(img, {
           left: `${baseX}%`,
           xPercent: xPercent,
           x: offsetX * depthX,
-          filter: `grayscale(${grayscale}%) brightness(${brightness}) drop-shadow(0 15px 30px rgba(0,0,0,0.3))`,
+          filter: dynamicFilter,
           duration: 0.5,
           ease: "power2.out",
         });
 
-        // 控制叠加层的透明度
+        // 控制叠加层的透明度（仅对 mix-blend-hue 有效）
         const overlay = img.querySelector(".theme-overlay") as HTMLElement;
-        if (overlay) {
+        if (overlay && filter === "mix-blend-hue") {
           gsap.to(overlay, {
             opacity: 1 - colorInfluence, // 鼠标靠近时透明度降低
             duration: 0.5,
@@ -273,8 +492,7 @@ export default function HomeImageGallery({
           x: -2000, // 加载完成前在屏幕左侧外（-2000px 确保完全不可见）
           y: 0,
           rotation: 0, // 始终水平，不旋转
-          filter:
-            "grayscale(70%) brightness(0.8) drop-shadow(0 15px 30px rgba(0,0,0,0.3))", // 默认灰度 + 稍暗 + 阴影
+          filter: filterConfig.defaultFilter,
           zIndex: totalImages - index, // 反向 z-index，后面的图片在上层
           scale: 1,
           opacity: 0, // 加载完成前隐藏
@@ -284,12 +502,12 @@ export default function HomeImageGallery({
         const overlay = img.querySelector(".theme-overlay") as HTMLElement;
         if (overlay) {
           gsap.set(overlay, {
-            opacity: 1, // 默认完全显示主题色叠加
+            opacity: filterConfig.overlayOpacity ?? 0,
           });
         }
       });
     }
-  }, [isMobile, displayImages.length, isAllLoaded]);
+  }, [isMobile, displayImages.length, isAllLoaded, filterConfig]);
 
   return (
     <div
@@ -330,15 +548,18 @@ export default function HomeImageGallery({
       {isMobile ? (
         // 移动端简单轮播
         <div className="relative w-full h-full flex items-center justify-center">
-          {displayImages.map((src, index) => (
+          {displayImages.map((image, index) => (
             <div
-              key={src}
+              key={image.url}
               className={`absolute inset-0 transition-opacity duration-500 ${
                 index === activeIndex ? "opacity-100" : "opacity-0"
               }`}
             >
               <CMSImage
-                src={src}
+                src={image.url}
+                width={image.width}
+                height={image.height}
+                blur={image.blur}
                 alt={`Gallery ${index + 1}`}
                 fill
                 className="object-cover"
@@ -352,27 +573,36 @@ export default function HomeImageGallery({
         // 桌面端交互式横向排列 - 100%宽度
         <div className="relative w-full h-full flex items-center justify-center overflow-visible">
           <div className="relative h-full w-full">
-            {displayImages.map((src, index) => (
+            {displayImages.map((image, index) => (
               <div
-                key={src}
+                key={image.url}
                 ref={(el) => {
                   imagesRef.current[index] = el;
                 }}
                 className="absolute top-0 h-full aspect-[3/4] shadow-2xl overflow-hidden"
               >
                 <CMSImage
-                  src={src}
+                  src={image.url}
+                  width={image.width}
+                  height={image.height}
+                  blur={image.blur}
                   alt={`Gallery ${index + 1}`}
                   fill
                   className="object-cover"
                   optimized={true}
                   onLoad={handleImageLoad}
                 />
-                {/* 主题色叠加层 */}
-                <div
-                  className="theme-overlay absolute inset-0 bg-primary pointer-events-none mix-blend-hue"
-                  style={{ opacity: 1 }}
-                />
+                {/* 主题色叠加层（仅对 mix-blend-hue 滤镜有效） */}
+                {filterConfig.overlayClass && (
+                  <div
+                    className={`theme-overlay absolute inset-0 pointer-events-none ${filterConfig.overlayClass}`}
+                    style={{
+                      opacity: filterConfig.overlayOpacity ?? 0,
+                      mixBlendMode:
+                        filterConfig.blendMode as React.CSSProperties["mixBlendMode"],
+                    }}
+                  />
+                )}
               </div>
             ))}
           </div>

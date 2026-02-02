@@ -46,7 +46,12 @@ export const defaultPages: DefaultPage[] = [
           id: 100,
           block: "hero",
           description: "",
-          content: {},
+          content: {
+            logoImage: "",
+            galleryImages: "",
+            galleryImageFilter: "dark",
+            galleryImagesOrigin: "latestPosts",
+          },
         },
         {
           id: 1,

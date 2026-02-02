@@ -361,6 +361,7 @@ model Photo {
 
   // 索引优化
   @@index([sortTime(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
 }
 
 // 媒体引用关系表 - 统一管理所有图片引用

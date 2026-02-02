@@ -30,6 +30,8 @@ import type { NextResponse } from "next/server";
 import type { BlockConfig } from "@/blocks/core/types";
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
+import { normalizeBlockIds } from "@/lib/server/block-normalize";
+import { updatePageMediaReferences } from "@/lib/server/page-image-tracking";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
@@ -418,6 +420,11 @@ export async function createPage(
       return response.conflict({ message: "Slug 已存在" });
     }
 
+    // 规范化 block ID：按照显示顺序重新分配递增的 ID
+    const normalizedConfig = normalizeBlockIds(
+      config as Record<string, unknown> | null,
+    );
+
     // 创建页面
     const newPage = await prisma.page.create({
       data: {
@@ -425,7 +432,7 @@ export async function createPage(
         slug,
         content: content || "",
         contentType,
-        config,
+        config: normalizedConfig as typeof config,
         status,
         metaDescription,
         metaKeywords,
@@ -434,6 +441,30 @@ export async function createPage(
         userUid: authResult.uid,
       },
     });
+
+    // 图片追踪：如果页面包含 blocks，更新 mediaRefs
+    if (config && typeof config === "object") {
+      try {
+        const configObj = config as Record<string, unknown> | null;
+        if (
+          configObj &&
+          "blocks" in configObj &&
+          Array.isArray(configObj.blocks)
+        ) {
+          await updatePageMediaReferences(
+            newPage.id,
+            configObj.blocks as Array<{
+              block: string;
+              content?: unknown;
+              data?: unknown;
+            }>,
+          );
+        }
+      } catch (error) {
+        // 图片追踪失败不应该影响页面创建，只记录错误
+        console.error("Failed to create page media references:", error);
+      }
+    }
 
     const result: CreatePageResult = {
       id: newPage.id,
@@ -571,6 +602,13 @@ export async function updatePage(
       }
     });
 
+    // 规范化 block ID：如果更新了 config，按照显示顺序重新分配递增的 ID
+    if (updateData.config && typeof updateData.config === "object") {
+      updateData.config = normalizeBlockIds(
+        updateData.config as Record<string, unknown> | null,
+      ) as typeof updateData.config;
+    }
+
     // 更新页面
     const updatedPage = await prisma.page.update({
       where: {
@@ -578,6 +616,26 @@ export async function updatePage(
       },
       data: updateData,
     });
+
+    // 图片追踪：如果 config 更新了，更新 mediaRefs
+    if (updateData.config && typeof updateData.config === "object") {
+      try {
+        const config = updatedPage.config as Record<string, unknown> | null;
+        if (config && "blocks" in config && Array.isArray(config.blocks)) {
+          await updatePageMediaReferences(
+            updatedPage.id,
+            config.blocks as Array<{
+              block: string;
+              content?: unknown;
+              data?: unknown;
+            }>,
+          );
+        }
+      } catch (error) {
+        // 图片追踪失败不应该影响页面更新，只记录错误
+        console.error("Failed to update page media references:", error);
+      }
+    }
 
     const result: UpdatePageResult = {
       id: updatedPage.id,

@@ -30,7 +30,7 @@ interface CMSImageProps
  * @returns 是否是 CMS 内置图片
  */
 function isCMSImage(url: string): boolean {
-  return url.startsWith("/p/");
+  return typeof url === "string" && url.startsWith("/p/");
 }
 
 export default function CMSImage({
