@@ -139,7 +139,11 @@ export const defaultPages: DefaultPage[] = [
           id: 103,
           block: "tags-categories",
           description: "",
-          content: {},
+          content: {
+            footer: {
+              text: ["Tags &", "CATEGORIES"],
+            },
+          },
         },
         {
           id: 4,

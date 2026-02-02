@@ -101,16 +101,20 @@ export async function postsFetcher(config: BlockConfig) {
   }
 
   // 3. 准备批量查询所需的数据 (ID 和 URLs)
+  // 性能优化：在单次循环中同时完成数据收集和结果缓存
   const allCategoryIds = new Set<number>();
   const homePostImageUrls: string[] = [];
+  const postCoverUrlCache = new Map<number, string | null>(); // 缓存每篇文章的封面 URL
 
-  for (const post of homePosts) {
-    for (const cat of post.categories) {
-      allCategoryIds.add(cat.id);
-    }
+  homePosts.forEach((post, index) => {
+    // 收集分类 ID
+    post.categories.forEach((cat) => allCategoryIds.add(cat.id));
+
+    // 获取并缓存封面 URL，避免后续重复调用
     const url = getFeaturedImageUrl(post.mediaRefs);
+    postCoverUrlCache.set(index, url);
     if (url) homePostImageUrls.push(url);
-  }
+  });
 
   // 4. 并发执行外部资源/辅助数据查询
   const [homePageMediaFileMap, categoryPathsMap] = await Promise.all([
@@ -119,7 +123,8 @@ export async function postsFetcher(config: BlockConfig) {
   ]);
 
   // 5. 数据组装与转换
-  const displayPosts = homePosts.map((post) => {
+  // 性能优化：使用索引直接访问缓存的封面 URL，避免重复计算
+  const displayPosts = homePosts.map((post, index) => {
     // 5.1 处理分类展开与去重
     const expandedCategories: { name: string; slug: string }[] = [];
     const seenSlugs = new Set<string>();
@@ -139,8 +144,8 @@ export async function postsFetcher(config: BlockConfig) {
       }
     }
 
-    // 5.2 处理封面图
-    const coverUrl = getFeaturedImageUrl(post.mediaRefs);
+    // 5.2 处理封面图 - 直接使用缓存的 URL
+    const coverUrl = postCoverUrlCache.get(index);
     const processedCover = coverUrl
       ? processImageUrl(coverUrl, homePageMediaFileMap)
       : [];

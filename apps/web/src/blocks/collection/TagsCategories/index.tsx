@@ -1,3 +1,4 @@
+import type { TagsCategoriesBlockContent } from "@/blocks/collection/TagsCategories/types";
 import { ProcessedText } from "@/blocks/core/components";
 import type { BlockConfig } from "@/blocks/core/types";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
@@ -30,7 +31,10 @@ export default function TagsCategoriesBlock({
   config: BlockConfig;
 }) {
   const data = (config.data as TagsCategoriesData) || {};
+  const content = (config.content as TagsCategoriesBlockContent) || {};
   const { displayTags = [], displayCategories = [] } = data;
+
+  const footerText = content.footer?.text || ["Tags &", "Categories"];
 
   return (
     <RowGrid>
@@ -101,12 +105,11 @@ export default function TagsCategoriesBlock({
         className="flex items-center justify-center uppercase text-5xl bg-primary text-primary-foreground"
       >
         <div>
-          <div data-fade-char>
-            <ProcessedText text="Tags &" data={data} inline />
-          </div>
-          <div data-fade-char>
-            <ProcessedText text="Categories" data={data} inline />
-          </div>
+          {footerText.map((text, index) => (
+            <div key={index} data-fade-char>
+              <ProcessedText text={text} data={data} inline />
+            </div>
+          ))}
         </div>
       </GridItem>
     </RowGrid>

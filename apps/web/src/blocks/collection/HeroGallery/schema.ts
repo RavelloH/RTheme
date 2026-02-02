@@ -122,5 +122,10 @@ export const HERO_BLOCK_FORM_CONFIG: BlockFormConfig = {
     db: 1,
     config: 2,
   },
-  previewData: {},
+  previewData: {
+    logoImage: "",
+    galleryImages: "",
+    galleryImageFilter: "dark",
+    galleryImagesOrigin: "latestPosts",
+  },
 };
