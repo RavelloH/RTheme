@@ -6,6 +6,7 @@ import { ImageZoom } from "fumadocs-ui/components/image-zoom";
 import * as TabsComponents from "fumadocs-ui/components/tabs";
 import * as AccordionsComponents from "fumadocs-ui/components/accordion";
 import * as FilesComponents from "fumadocs-ui/components/files";
+import { ConfigForm } from "@/components/config-form";
 
 export function getMDXComponents(components?: MDXComponents): MDXComponents {
   return {
@@ -21,6 +22,7 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
         className="border-2 rounded"
       />
     ),
+    ConfigForm,
     ...TabsComponents,
     ...AccordionsComponents,
     ...FilesComponents,
