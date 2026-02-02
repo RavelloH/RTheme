@@ -6,11 +6,16 @@ import Avatar from "@/../public/avatar.jpg";
 import MarqueeText from "@/blocks/collection/HeroGallery/client/MarqueeText";
 import { ProcessedText } from "@/blocks/core/components";
 import { GridItem } from "@/components/client/layout/RowGrid";
+import CMSImage from "@/components/ui/CMSImage";
 import { useMobile } from "@/hooks/use-mobile";
+import type { ProcessedImageData } from "@/lib/shared/image-common";
 
 interface HomeTextSectionProps {
   title?: string;
   slogan?: string;
+  titleBold?: boolean;
+  sloganBold?: boolean;
+  logoImage?: ProcessedImageData;
 }
 
 /**
@@ -20,6 +25,9 @@ interface HomeTextSectionProps {
 export default function HomeTextSection({
   title,
   slogan,
+  titleBold = true,
+  sloganBold = false,
+  logoImage,
 }: HomeTextSectionProps) {
   const isMobile = useMobile();
 
@@ -41,7 +49,7 @@ export default function HomeTextSection({
               <MarqueeText
                 text={title}
                 direction="right"
-                className="font-bold"
+                className={titleBold ? "font-bold" : ""}
               />
             </GridItem>
           )}
@@ -52,7 +60,11 @@ export default function HomeTextSection({
               height={0.3}
               className="flex items-center text-8xl overflow-hidden"
             >
-              <MarqueeText text={slogan} direction="left" />
+              <MarqueeText
+                text={slogan}
+                direction="left"
+                className={sloganBold ? "font-bold" : ""}
+              />
             </GridItem>
           )}
         </>
@@ -65,7 +77,11 @@ export default function HomeTextSection({
           className="flex items-center text-8xl overflow-hidden"
         >
           {title && (
-            <div data-parallax="-0.5" className="p-12 font-bold" data-fade-char>
+            <div
+              data-parallax="-0.5"
+              className={`p-12 ${titleBold ? "font-bold" : ""}`}
+              data-fade-char
+            >
               <h1>
                 <ProcessedText text={title} inline />
               </h1>
@@ -83,17 +99,29 @@ export default function HomeTextSection({
           className="flex items-center justify-start text-8xl"
         >
           <div className="h-full aspect-square mr-4 relative">
-            <Image
-              src={Avatar}
-              alt="logo"
-              className="h-full w-auto object-cover"
-            />
+            {logoImage ? (
+              <CMSImage
+                src={logoImage.url}
+                width={logoImage.width}
+                height={logoImage.height}
+                blur={logoImage.blur}
+                alt="logo"
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <Image
+                src={Avatar}
+                alt="logo"
+                className="h-full w-auto object-cover"
+              />
+            )}
           </div>
           <div
             className="flex-1 flex items-center justify-end pr-12 text-8xl"
             data-fade
           >
-            <span data-parallax="0.5">
+            <span data-parallax="0.5" className={sloganBold ? "font-bold" : ""}>
               <ProcessedText text={slogan} inline />
             </span>
           </div>

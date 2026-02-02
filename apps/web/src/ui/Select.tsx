@@ -42,6 +42,8 @@ export function Select({
   }>({ top: 0, left: 0, width: 0 });
   const [isMounted, setIsMounted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollInitializedRef = useRef(false);
 
   const selectedOption = options.find((opt) => opt.value === value);
 
@@ -127,6 +129,13 @@ export function Select({
     setIsOpen(false);
   };
 
+  // 重置滚动初始化标记
+  useEffect(() => {
+    if (!isOpen) {
+      scrollInitializedRef.current = false;
+    }
+  }, [isOpen]);
+
   // 渲染下拉菜单
   const renderDropdown = () => {
     if (!isMounted) return null;
@@ -159,9 +168,33 @@ export function Select({
               width: `${dropdownPosition.width}px`,
               zIndex: 9999,
             }}
+            data-select-dropdown={value}
             className="bg-background/90 border-border border-1 backdrop-blur-sm shadow-lg rounded overflow-hidden"
           >
-            <div className="max-h-[240px] overflow-y-auto overflow-x-hidden">
+            <div
+              ref={(el) => {
+                scrollContainerRef.current = el;
+                // 在元素创建时立即设置滚动位置
+                if (el && isOpen && !scrollInitializedRef.current) {
+                  scrollInitializedRef.current = true;
+                  // 使用 requestAnimationFrame 确保在下一帧设置滚动
+                  requestAnimationFrame(() => {
+                    const selectedIndex = options.findIndex(
+                      (opt) => opt.value === value,
+                    );
+                    if (selectedIndex >= 0) {
+                      const optionElement = el.children[
+                        selectedIndex
+                      ] as HTMLElement;
+                      if (optionElement) {
+                        el.scrollTop = optionElement.offsetTop;
+                      }
+                    }
+                  });
+                }
+              }}
+              className="max-h-[240px] overflow-y-auto overflow-x-hidden"
+            >
               {options.length === 0 && (
                 <div className="px-4 py-2 text-muted-foreground text-sm">
                   暂无选项

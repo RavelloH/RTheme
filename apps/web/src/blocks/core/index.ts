@@ -45,3 +45,11 @@ export interface BlockProps {
 export type BlockComponentMap = {
   [K in BlockType]: React.ComponentType<BaseBlockProps<BlockConfigForType<K>>>;
 };
+
+// 导出服务端工具函数
+export {
+  fetchBlockInterpolatedData,
+  processImageField,
+  processImageArrayField,
+  processImageFields,
+} from "./lib/server";

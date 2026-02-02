@@ -15,7 +15,36 @@ export type FieldType =
   | "date"
   | "select"
   | "toggle"
-  | "array";
+  | "array"
+  | "image"
+  | "imageArray";
+
+/**
+ * 字段条件配置
+ */
+export interface FieldCondition {
+  /** AND 条件：所有条件都满足时显示 */
+  and?: Array<{
+    /** 字段路径 */
+    field: string;
+    /** 期望值 */
+    value: unknown;
+  }>;
+  /** OR 条件：任一条件满足时显示（可选） */
+  or?: Array<{
+    /** 字段路径 */
+    field: string;
+    /** 期望值 */
+    value: unknown;
+  }>;
+  /** NOT 条件：不满足条件时显示（可选） */
+  not?: Array<{
+    /** 字段路径 */
+    field: string;
+    /** 期望值 */
+    value: unknown;
+  }>;
+}
 
 /**
  * 基础字段配置接口
@@ -35,6 +64,8 @@ export interface BaseFieldConfig {
   required?: boolean;
   /** 字段禁用状态 */
   disabled?: boolean;
+  /** 显示条件（可选） */
+  condition?: FieldCondition;
 }
 
 /**
@@ -80,13 +111,35 @@ export interface ToggleFieldConfig extends BaseFieldConfig {
 }
 
 /**
+ * 图片类型字段配置（单选）
+ */
+export interface ImageFieldConfig extends BaseFieldConfig {
+  type: "image";
+  /** 默认值（图片 URL，如 /p/abc123） */
+  defaultValue?: string;
+}
+
+/**
+ * 图片数组类型字段配置（多选）
+ */
+export interface ImageArrayFieldConfig extends BaseFieldConfig {
+  type: "imageArray";
+  /** 默认值（图片 URL 数组） */
+  defaultValue?: string[];
+  /** 最大选择数量 */
+  maxCount?: number;
+}
+
+/**
  * 字段配置联合类型
  */
 export type FieldConfig =
   | TextFieldConfig
   | ArrayFieldConfig
   | SelectFieldConfig
-  | ToggleFieldConfig;
+  | ToggleFieldConfig
+  | ImageFieldConfig
+  | ImageArrayFieldConfig;
 
 /**
  * 区块表单配置

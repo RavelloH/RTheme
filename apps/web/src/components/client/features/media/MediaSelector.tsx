@@ -53,7 +53,7 @@ interface UserInfo {
 }
 
 interface MediaSelectorProps {
-  value?: string;
+  value?: string | string[];
   onChange: (url: string | string[]) => void;
   multiple?: boolean;
   label?: string;
@@ -66,6 +66,8 @@ interface MediaSelectorProps {
   onOpenChange?: (open: boolean) => void;
   /** 是否隐藏触发按钮（用于外部控制打开） */
   hideTrigger?: boolean;
+  /** 最大选择数量（仅多选模式） */
+  maxCount?: number;
 }
 
 // 圆形进度条组件
@@ -133,6 +135,7 @@ export default function MediaSelector({
   open,
   onOpenChange,
   hideTrigger = false,
+  maxCount,
 }: MediaSelectorProps) {
   // 支持受控和非受控模式
   const isControlled = open !== undefined;
@@ -214,6 +217,20 @@ export default function MediaSelector({
     }>
   >([]);
   const [importing, setImporting] = useState(false);
+
+  // 多选模式预览轮播状态
+  const [previewActiveIndex, setPreviewActiveIndex] = useState(0);
+
+  // 多选模式自动轮播
+  useEffect(() => {
+    if (multiple && Array.isArray(value) && value.length > 1) {
+      const interval = setInterval(() => {
+        setPreviewActiveIndex((prev) => (prev + 1) % value.length);
+      }, 3000);
+
+      return () => clearInterval(interval);
+    }
+  }, [multiple, value]);
 
   // 从 localStorage 获取用户角色
   useEffect(() => {
@@ -721,10 +738,13 @@ export default function MediaSelector({
   // 打开对话框
   const openDialog = useCallback(() => {
     setDialogOpen(true);
-    if (value && value.startsWith("/p/")) {
+    // 多选模式或无值，使用默认标签页
+    if (multiple || !value) {
+      setActiveTab(defaultTab);
+    } else if (typeof value === "string" && value.startsWith("/p/")) {
       // CMS 内部图片，切换到选择标签页
       setActiveTab("select");
-    } else if (value) {
+    } else if (typeof value === "string") {
       // 外部 URL，切换到 URL 标签页并填充
       setActiveTab("url");
       setUrlInput(value);
@@ -732,7 +752,7 @@ export default function MediaSelector({
       // 无值，使用默认标签页
       setActiveTab(defaultTab);
     }
-  }, [value, defaultTab, setDialogOpen]);
+  }, [value, defaultTab, setDialogOpen, multiple]);
 
   // 关闭对话框
   const closeDialog = useCallback(() => {
@@ -751,16 +771,19 @@ export default function MediaSelector({
   // 受控模式下，当对话框打开时初始化状态
   useEffect(() => {
     if (isControlled && open) {
-      if (value && value.startsWith("/p/")) {
+      // 多选模式或无值，使用默认标签页
+      if (multiple || !value) {
+        setActiveTab(defaultTab);
+      } else if (typeof value === "string" && value.startsWith("/p/")) {
         setActiveTab("select");
-      } else if (value) {
+      } else if (typeof value === "string") {
         setActiveTab("url");
         setUrlInput(value);
       } else {
         setActiveTab(defaultTab);
       }
     }
-  }, [isControlled, open, value, defaultTab]);
+  }, [isControlled, open, value, defaultTab, multiple]);
 
   // 加载媒体列表
   const loadMediaList = useCallback(
@@ -818,9 +841,54 @@ export default function MediaSelector({
       setHasMore(true);
       pageRef.current = 1;
       hasMoreRef.current = true;
+      setSelectedImageIds(new Set()); // 重置选中状态
+      selectedIdsInitializedRef.current = false; // 重置初始化标记
       loadMediaList(1, false);
     }
   }, [activeTab, dialogOpen, loadMediaList]);
+
+  // 使用 ref 追踪是否已初始化选中状态
+  const selectedIdsInitializedRef = useRef(false);
+
+  // 初始化已选中的图片 ID（仅首次加载时执行）
+  useEffect(() => {
+    if (
+      activeTab === "select" &&
+      mediaList.length > 0 &&
+      !selectedIdsInitializedRef.current
+    ) {
+      selectedIdsInitializedRef.current = true;
+
+      if (multiple && value) {
+        // 多选模式：从 value 中提取已选中的图片 ID
+        const selectedUrls = Array.isArray(value) ? value : [value];
+        const selectedIds = new Set<number>();
+
+        selectedUrls.forEach((url) => {
+          const match = String(url).match(/\/p\/(\w+)/);
+          if (match) {
+            const imageId = match[1];
+            const item = mediaList.find((m) => m.imageId === imageId);
+            if (item) {
+              selectedIds.add(item.id);
+            }
+          }
+        });
+
+        setSelectedImageIds(selectedIds);
+      } else if (!multiple && value) {
+        // 单选模式：从 value 中提取已选中的图片 ID
+        const match = String(value).match(/\/p\/(\w+)/);
+        if (match) {
+          const imageId = match[1];
+          const item = mediaList.find((m) => m.imageId === imageId);
+          if (item) {
+            setSelectedImageIds(new Set([item.id]));
+          }
+        }
+      }
+    }
+  }, [mediaList, value, multiple, activeTab]);
 
   // Intersection Observer 触发加载更多
   useEffect(() => {
@@ -848,8 +916,14 @@ export default function MediaSelector({
         setSelectedImageIds((prev) => {
           const newSet = new Set(prev);
           if (newSet.has(item.id)) {
+            // 已选中，取消选中
             newSet.delete(item.id);
           } else {
+            // 未选中，检查数量限制
+            if (maxCount && newSet.size >= maxCount) {
+              toast.error(`最多只能选择 ${maxCount} 张图片`);
+              return prev;
+            }
             newSet.add(item.id);
           }
           return newSet;
@@ -859,7 +933,7 @@ export default function MediaSelector({
         setSelectedImageIds(new Set([item.id]));
       }
     },
-    [multiple],
+    [multiple, maxCount, toast],
   );
 
   // 确认选择
@@ -1269,18 +1343,48 @@ export default function MediaSelector({
       {/* 图片预览或添加按钮 - 仅在非隐藏模式下显示 */}
       {!hideTrigger && (
         <div className="relative">
-          {value ? (
+          {(multiple ? Array.isArray(value) && value.length > 0 : value) ? (
             <div className="relative group">
-              <div className="aspect-video w-full bg-muted rounded-lg overflow-hidden max-h-[20em]">
-                <CMSImage
-                  src={value}
-                  alt={label}
-                  fill
-                  className="object-cover"
-                />
+              <div className="aspect-video w-full bg-muted overflow-hidden max-h-[20em] rounded-md relative">
+                {multiple && Array.isArray(value) ? (
+                  // 多选模式：轮播显示所有图片
+                  <>
+                    {value.map((url, index) => (
+                      <div
+                        key={url}
+                        className={`absolute inset-0 transition-opacity duration-500 ${
+                          index === previewActiveIndex
+                            ? "opacity-100"
+                            : "opacity-0"
+                        }`}
+                      >
+                        <CMSImage
+                          src={url}
+                          alt={`${label} ${index + 1}`}
+                          fill
+                          className="object-cover rounded-md"
+                        />
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  // 单选模式
+                  <CMSImage
+                    src={String(value || "")}
+                    alt={label}
+                    fill
+                    className="object-cover rounded-md"
+                  />
+                )}
               </div>
+              {/* 多选模式下的数量和当前索引提示 */}
+              {multiple && Array.isArray(value) && value.length > 1 && (
+                <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-1 text-xs font-medium rounded-sm">
+                  {previewActiveIndex + 1} / {value.length}
+                </div>
+              )}
               {/* 悬浮操作栏 */}
-              <div className="absolute inset-0 bg-background/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 rounded-lg">
+              <div className="absolute inset-0 bg-background/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                 <Tooltip content="编辑">
                   <Clickable onClick={openDialog} hoverScale={1.1}>
                     <div className="p-3 bg-foreground/10 hover:bg-foreground/50 rounded-lg text-white transition-all">
@@ -1300,11 +1404,13 @@ export default function MediaSelector({
           ) : (
             <button
               onClick={openDialog}
-              className="max-h-[20em] aspect-video w-full bg-muted/80 rounded-lg flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground transition-all cursor-pointer border-2 border-dashed border-border hover:border-muted-foreground"
+              className="max-h-[20em] aspect-video w-full bg-muted/30 rounded-lg flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground transition-all cursor-pointer border-2 border-dashed border-border hover:border-muted-foreground"
               type="button"
             >
-              <RiAddLine size="2em" />
-              <span className="text-sm">选择图片</span>
+              <RiAddLine size="1.5em" />
+              <span className="text-sm">
+                {multiple ? "选择图片（可多选）" : "选择图片"}
+              </span>
             </button>
           )}
         </div>
@@ -1638,7 +1744,7 @@ export default function MediaSelector({
                             >
                               {/* 预览图 */}
                               <div className="flex-shrink-0">
-                                <div className="w-14 h-14 rounded-md overflow-hidden bg-muted flex items-center justify-center">
+                                <div className="w-14 h-14 overflow-hidden bg-muted flex items-center justify-center">
                                   {uploadFile.previewUrl &&
                                   !uploadFile.imageLoadError ? (
                                     <Image

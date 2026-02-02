@@ -13,9 +13,11 @@ import { getBlockFormConfig } from "@/blocks/core/registry";
 import type { BlockConfig } from "@/blocks/core/types";
 import type {
   FieldConfig,
+  ImageArrayFieldConfig,
   SelectFieldConfig,
 } from "@/blocks/core/types/field-config";
 import type { BlockFormConfig } from "@/blocks/core/types/field-config";
+import MediaSelector from "@/components/client/features/media/MediaSelector";
 import Link from "@/components/ui/Link";
 import { useConfig } from "@/context/ConfigContext";
 import type { ConfigType } from "@/data/default-configs";
@@ -276,6 +278,39 @@ function FieldRenderer({
       );
     }
 
+    case "image": {
+      const currentValue = value ?? field.defaultValue ?? "";
+      return (
+        <div className="mt-6">
+          <MediaSelector
+            label={field.label}
+            value={String(currentValue)}
+            onChange={handleChange}
+            helperText={field.helperText}
+          />
+        </div>
+      );
+    }
+
+    case "imageArray": {
+      const arrayField = field as ImageArrayFieldConfig;
+      const arrayValue: string[] = Array.isArray(value)
+        ? value
+        : ((arrayField.defaultValue as string[]) ?? []);
+      return (
+        <div className="mt-6">
+          <MediaSelector
+            label={field.label}
+            value={arrayValue}
+            onChange={handleChange}
+            multiple
+            helperText={field.helperText}
+            maxCount={arrayField.maxCount}
+          />
+        </div>
+      );
+    }
+
     default: {
       const _exhaustiveCheck: never = field;
       return (
@@ -302,6 +337,7 @@ export default function BlockConfigPanel({
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // 变量占位符 Dialog 状态
   const [showPlaceholderDialog, setShowPlaceholderDialog] = useState(false);
@@ -383,6 +419,7 @@ export default function BlockConfigPanel({
     setIsRefreshing(true);
     try {
       await onRefreshData();
+      setHasUnsavedChanges(false);
     } finally {
       setIsRefreshing(false);
     }
@@ -432,12 +469,50 @@ export default function BlockConfigPanel({
   const handleContentChange = (path: string, value: unknown) => {
     if (!block) return;
     const newContent = set(block.content, path, value);
+    setHasUnsavedChanges(true);
     onUpdate({ content: newContent });
   };
 
   const handleMetaChange = (field: string, value: string) => {
     if (!block) return;
     onUpdate({ [field]: value });
+  };
+
+  // 检查字段是否满足显示条件
+  const checkFieldCondition = (field: FieldConfig): boolean => {
+    if (!field.condition || !block?.content) return true;
+
+    const { condition } = field;
+    const content = block.content as Record<string, unknown>;
+
+    // 检查 AND 条件：所有条件都必须满足
+    if (condition.and && condition.and.length > 0) {
+      const andMet = condition.and.every((cond) => {
+        const fieldValue = get(content, cond.field);
+        return fieldValue === cond.value;
+      });
+      if (!andMet) return false;
+    }
+
+    // 检查 OR 条件：任一条件满足即可
+    if (condition.or && condition.or.length > 0) {
+      const orMet = condition.or.some((cond) => {
+        const fieldValue = get(content, cond.field);
+        return fieldValue === cond.value;
+      });
+      if (!orMet) return false;
+    }
+
+    // 检查 NOT 条件：所有条件都必须不满足
+    if (condition.not && condition.not.length > 0) {
+      const notMet = condition.not.every((cond) => {
+        const fieldValue = get(content, cond.field);
+        return fieldValue !== cond.value;
+      });
+      if (!notMet) return false;
+    }
+
+    return true;
   };
 
   // Placeholder Table Columns
@@ -482,7 +557,7 @@ export default function BlockConfigPanel({
           <div className="flex items-center gap-2">
             {block && onRefreshData && (
               <Button
-                variant="ghost"
+                variant={hasUnsavedChanges ? "primary" : "ghost"}
                 size="sm"
                 icon={<RiRefreshLine size={16} />}
                 label="更新数据"
@@ -682,8 +757,10 @@ export default function BlockConfigPanel({
                             )}
                           </div>
                           {formConfig.fields
-                            .filter((field) =>
-                              group.fields.includes(field.path),
+                            .filter(
+                              (field) =>
+                                group.fields.includes(field.path) &&
+                                checkFieldCondition(field),
                             )
                             .map((field, fieldIndex) => {
                               const value = get(block.content, field.path);
@@ -717,7 +794,9 @@ export default function BlockConfigPanel({
 
                       // 找出未分组的字段
                       const ungroupedFields = formConfig.fields.filter(
-                        (field) => !groupedFieldPaths.has(field.path),
+                        (field) =>
+                          !groupedFieldPaths.has(field.path) &&
+                          checkFieldCondition(field),
                       );
 
                       if (ungroupedFields.length > 0) {
@@ -756,19 +835,21 @@ export default function BlockConfigPanel({
                 ) : (
                   /* 无分组时直接渲染所有字段 */
                   <div className="space-y-4">
-                    {formConfig.fields.map((field, index) => {
-                      const value = get(block.content, field.path);
-                      return (
-                        <FieldRenderer
-                          key={index}
-                          field={field}
-                          value={value}
-                          onChange={(newValue) =>
-                            handleContentChange(field.path, newValue)
-                          }
-                        />
-                      );
-                    })}
+                    {formConfig.fields
+                      .filter(checkFieldCondition)
+                      .map((field, index) => {
+                        const value = get(block.content, field.path);
+                        return (
+                          <FieldRenderer
+                            key={index}
+                            field={field}
+                            value={value}
+                            onChange={(newValue) =>
+                              handleContentChange(field.path, newValue)
+                            }
+                          />
+                        );
+                      })}
                   </div>
                 )}
               </div>

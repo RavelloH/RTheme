@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useId } from "react";
-import { motion, type MotionStyle } from "framer-motion";
+import { AnimatePresence, motion, type MotionStyle } from "framer-motion";
 
 import { AutoTransition } from "@/ui/AutoTransition";
 
@@ -163,9 +163,16 @@ export function Button({
         </motion.div>
       )}
 
-      <AutoTransition duration={0.3}>
-        {shouldShowSpinner ? (
-          <div className="flex items-center justify-center" key="spinner">
+      <AnimatePresence>
+        {shouldShowSpinner && (
+          <motion.div
+            key="spinner"
+            className="absolute inset-0 flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
             <svg
               className={`animate-spin ${getSpinnerSize()}`}
               xmlns="http://www.w3.org/2000/svg"
@@ -186,8 +193,16 @@ export function Button({
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
               ></path>
             </svg>
-          </div>
-        ) : (
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div
+        className={`transition-opacity duration-200 ${
+          shouldShowSpinner ? "opacity-0" : "opacity-100"
+        }`}
+      >
+        <AutoTransition duration={0.3}>
           <div
             className="flex items-center gap-2"
             key={displayText || "display-content"}
@@ -216,8 +231,8 @@ export function Button({
               </motion.span>
             )}
           </div>
-        )}
-      </AutoTransition>
+        </AutoTransition>
+      </div>
     </motion.button>
   );
 }
