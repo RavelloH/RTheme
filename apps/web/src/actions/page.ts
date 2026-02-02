@@ -1017,14 +1017,14 @@ export async function getAllPlaceholders(
   );
 
   try {
-    const { interpolatorMap } = await import("@/blocks/core/placeholders");
-    const results: { name: string; description: string; value: string }[] = [];
+    const { interpolatorMap, PLACEHOLDER_REGISTRY } = await import(
+      "@/blocks/core/placeholders"
+    );
 
-    const descriptions: Record<string, string> = {
-      posts: "显示当前总文章数",
-      projects: "显示当前总项目数",
-    };
+    // 缓存每个插值器的返回数据
+    const interpolatorDataCache: Record<string, Record<string, unknown>> = {};
 
+    // 调用所有插值器并缓存结果
     for (const [key, loader] of Object.entries(interpolatorMap)) {
       try {
         // eslint-disable-next-line @next/next/no-assign-module-variable
@@ -1033,28 +1033,45 @@ export async function getAllPlaceholders(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const func = (module as any)[funcName];
 
-        let value = "-";
         if (typeof func === "function") {
           const res = await func();
           if (res && typeof res === "object") {
-            const vals = Object.values(res);
-            if (vals.length > 0) value = String(vals[0]);
+            interpolatorDataCache[key] = res as Record<string, unknown>;
           }
         }
-
-        results.push({
-          name: `{${key}}`,
-          description: descriptions[key] || "-",
-          value,
-        });
       } catch (error) {
-        console.error(`Failed to load placeholder ${key}:`, error);
-        results.push({
-          name: `{${key}}`,
-          description: descriptions[key] || "加载失败",
-          value: "Error",
-        });
+        console.error(`Failed to load interpolator ${key}:`, error);
       }
+    }
+
+    // 根据注册表生成占位符列表
+    const results: { name: string; description: string; value: string }[] = [];
+
+    for (const placeholder of PLACEHOLDER_REGISTRY) {
+      const { name, description, interpolator } = placeholder;
+
+      // 获取对应插值器的数据
+      const data = interpolatorDataCache[interpolator];
+
+      let value = "-";
+      if (data && name in data) {
+        const val = data[name];
+        if (Array.isArray(val)) {
+          value = `[Array(${val.length})]`;
+        } else if (val === null || val === undefined) {
+          value = "-";
+        } else if (typeof val === "object") {
+          value = "[Object]";
+        } else {
+          value = String(val);
+        }
+      }
+
+      results.push({
+        name: `{${name}}`,
+        description,
+        value,
+      });
     }
 
     return response.ok({ data: results });

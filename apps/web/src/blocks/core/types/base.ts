@@ -23,8 +23,10 @@ export interface BlockContentBody {
 }
 
 export interface BlockContentFooter {
-  link: string;
-  text: string; // 原 description，现更名为 text 表示链接文本
+  type?: "normal" | "random"; // Footer 类型：常规链接或随机链接
+  randomSource?: "tags" | "categories"; // 随机链接的数据来源
+  link?: string;
+  text?: string; // 原 description，现更名为 text 表示链接文本
 }
 
 // 通用基础 Config 接口
@@ -41,6 +43,7 @@ export interface BaseBlockProps<T extends BaseBlockConfig = BaseBlockConfig> {
 }
 
 // Block 类型映射：将 type 字符串映射到对应的 Config 类型
+import type { AccordionBlockConfig } from "@/blocks/collection/Accordion/types";
 import type { DefaultBlockConfig } from "@/blocks/collection/Default/types";
 import type { HeroBlockConfig } from "@/blocks/collection/HeroGallery/types";
 import type { PostsBlockConfig } from "@/blocks/collection/RecentPosts/types";
@@ -53,6 +56,7 @@ export interface BlockTypeMap {
   projects: ProjectsBlockConfig;
   posts: PostsBlockConfig;
   "tags-categories": TagsCategoriesBlockConfig;
+  accordion: AccordionBlockConfig;
 }
 
 // 提取所有 block type

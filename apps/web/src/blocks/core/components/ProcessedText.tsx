@@ -2,7 +2,8 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import Link from "next/link";
 
-import { replacePlaceholders } from "@/blocks/core/lib/shared";
+import { ClientPlaceholder } from "@/blocks/core/components/ClientPlaceholder";
+import { replacePlaceholdersWithReact } from "@/blocks/core/lib/shared";
 import {
   markdownRehypePlugins,
   markdownRemarkPlugins,
@@ -116,10 +117,40 @@ export function ProcessedText({
 }: ProcessedTextProps) {
   if (!text) return null;
 
-  // 1. 插值
-  const content = replacePlaceholders(text, data || {});
+  // 预处理数据：为特殊占位符创建客户端渲染组件
+  const enhancedData: Record<string, unknown> = {
+    ...(data || {}),
+  };
+
+  // 检测 {lastUpdatedDate} 并创建客户端渲染组件
+  if (data?.lastUpdatedDate) {
+    enhancedData.lastUpdatedDays = React.createElement(ClientPlaceholder, {
+      type: "relative-time",
+      data: data.lastUpdatedDate as string,
+    });
+  }
+
+  // 1. 插值（检查是否包含 ReactNode）
+  const parts = replacePlaceholdersWithReact(text, enhancedData);
+
+  // 检查是否包含 ReactNode
+  const hasReactNode = parts.some((part) => {
+    return (
+      typeof part === "object" &&
+      part !== null &&
+      "key" in part &&
+      "type" in part &&
+      "props" in part
+    );
+  });
+
+  // 如果包含 ReactNode，直接渲染为 span
+  if (hasReactNode) {
+    return <span className={className}>{parts}</span>;
+  }
 
   // 2. 纯文本模式
+  const content = parts.join("");
   if (disableMarkdown) {
     // 如果是 inline 模式，且没有指定 tag，默认 span
     const Tag = inline ? "span" : "div";

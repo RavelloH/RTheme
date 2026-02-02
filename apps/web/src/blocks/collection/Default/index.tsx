@@ -1,3 +1,4 @@
+import RandomLinkFooter from "@/blocks/collection/Default/client/RandomLinkFooter";
 import type { DefaultBlockConfig } from "@/blocks/collection/Default/types";
 import { ProcessedText } from "@/blocks/core/components";
 import {
@@ -151,27 +152,56 @@ export default function DefaultBlock({
       </GridItem>
 
       {/* Footer */}
-      {hasFooter && (
-        <GridItem
-          areas={[12]}
-          width={14 * ratio}
-          height={0.1}
-          className="flex items-center uppercase text-2xl"
-        >
-          <LinkButton
-            mode="link"
-            href={replacePlaceholders(content.footer?.link ?? "", data)}
-            text={
-              <ProcessedText
-                text={content.footer?.text}
-                data={data}
-                inline
-                disableMarkdown
-              />
+      {hasFooter &&
+        (() => {
+          const footerType = content.footer?.type || "normal";
+          const randomSource = content.footer?.randomSource || "tags";
+
+          // 随机链接
+          if (footerType === "random") {
+            const linkList = (data as Record<string, unknown>)[
+              `${randomSource}List`
+            ] as string[] | undefined;
+            if (linkList && linkList.length > 0) {
+              return (
+                <GridItem
+                  areas={[12]}
+                  width={14 * ratio}
+                  height={0.1}
+                  className="flex items-center uppercase text-2xl"
+                >
+                  <RandomLinkFooter
+                    options={linkList}
+                    text={replacePlaceholders(content.footer?.text ?? "", data)}
+                  />
+                </GridItem>
+              );
             }
-          />
-        </GridItem>
-      )}
+          }
+
+          // 常规链接
+          return (
+            <GridItem
+              areas={[12]}
+              width={14 * ratio}
+              height={0.1}
+              className="flex items-center uppercase text-2xl"
+            >
+              <LinkButton
+                mode="link"
+                href={replacePlaceholders(content.footer?.link ?? "", data)}
+                text={
+                  <ProcessedText
+                    text={content.footer?.text}
+                    data={data}
+                    inline
+                    disableMarkdown
+                  />
+                }
+              />
+            </GridItem>
+          );
+        })()}
     </RowGrid>
   );
 }

@@ -24,6 +24,9 @@ const BLOCK_COMPONENTS: BlockComponentMap = {
   "tags-categories": dynamic(
     () => import("@/blocks/collection/TagsCategories"),
   ) as BlockComponentMap["tags-categories"],
+  accordion: dynamic(
+    () => import("@/blocks/collection/Accordion"),
+  ) as BlockComponentMap["accordion"],
 };
 
 // 获取组件的类型安全辅助函数

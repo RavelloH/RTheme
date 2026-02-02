@@ -128,6 +128,48 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
       defaultValue: "left",
     },
     {
+      label: "Footer 类型",
+      path: "footer.type",
+      type: "select",
+      helperText: "选择底部链接的类型",
+      options: [
+        {
+          label: "常规链接",
+          value: "normal",
+        },
+        {
+          label: "随机链接",
+          value: "random",
+        },
+      ],
+      defaultValue: "normal",
+    },
+    {
+      label: "随机链接来源",
+      path: "footer.randomSource",
+      type: "select",
+      helperText: "选择随机链接的数据来源",
+      options: [
+        {
+          label: "标签",
+          value: "tags",
+        },
+        {
+          label: "分类",
+          value: "categories",
+        },
+      ],
+      defaultValue: "tags",
+      condition: {
+        and: [
+          {
+            field: "footer.type",
+            value: "random",
+          },
+        ],
+      },
+    },
+    {
       label: "底部链接文本",
       path: "footer.text",
       type: "text",
@@ -140,6 +182,14 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
       type: "text",
       helperText: "例如：/about",
       defaultValue: "",
+      condition: {
+        and: [
+          {
+            field: "footer.type",
+            value: "normal",
+          },
+        ],
+      },
     },
     {
       label: "竖直居中显示",
@@ -177,7 +227,12 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
     {
       title: "底栏",
       description: "底栏出现在区块的最下方，通常用于显示操作链接。不填则不显示",
-      fields: ["footer.text", "footer.link"],
+      fields: [
+        "footer.type",
+        "footer.randomSource",
+        "footer.text",
+        "footer.link",
+      ],
     },
     {
       title: "布局",
