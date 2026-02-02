@@ -116,7 +116,7 @@ GRANT ALL PRIVILEGES ON DATABASE neutralpress TO neutralpress; // 授予新用�
 postgresql://neutralpress:neutralpress@localhost:5432/neutralpress
 ```
 
-将其填入下方的配置输入框中，最后即可自动为你生成环境变量。此操作均在你的浏览器本地完成，无需担心隐私泄露问题。
+<ConfigForm label="DATABASE_URL" />
 
 </div>
 <div className="fd-step">
@@ -186,7 +186,7 @@ cd redis-windows
 redis://localhost:6379
 ```
 
-将其填入下方的配置输入框中，最后即可自动为你生成环境变量。此操作均在你的浏览器本地完成，无需担心隐私泄露问题。
+<ConfigForm label="REDIS_URL" />
 
 </div>
 <div className="fd-step">
@@ -253,6 +253,8 @@ yarn install
 </Files>
 
 填写下面的表单以生成 `.env.local` 文件所需的环境变量。你在上面的步骤中，应该已经填写了 PostgreSQL 和 Redis 的连接字符串。其余字段不填则自动生成。
+
+<ConfigForm />
 
 然后，在 `apps/web` 目录下创建 `.env.local` 文件，并将生成的环境变量内容复制进去。
 
