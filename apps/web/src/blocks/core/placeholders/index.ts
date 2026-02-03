@@ -3,6 +3,7 @@
  * 导出所有可用的插值器
  */
 
+export { categoriesInterpolator } from "./categories";
 export { postsInterpolator } from "./posts";
 export { projectsInterpolator } from "./projects";
 export { tagPostsInterpolator } from "./tag-posts";
@@ -28,6 +29,7 @@ export type InterpolatorLoader = () => Promise<{ [key: string]: Interpolator }>;
  * value: 返回该数据的插值器函数加载器
  */
 export const interpolatorMap: Record<string, InterpolatorLoader> = {
+  categories: () => import("./categories"),
   posts: () => import("./posts"),
   projects: () => import("./projects"),
   tagPosts: () => import("./tag-posts"),
@@ -64,6 +66,42 @@ export interface PlaceholderMeta {
  * 统一注册所有可用的占位符及其描述
  */
 export const PLACEHOLDER_REGISTRY: PlaceholderMeta[] = [
+  // Categories 插值器占位符
+  {
+    name: "categories",
+    description: "显示当前总分类数",
+    interpolator: "categories",
+  },
+  {
+    name: "rootCategories",
+    description: "显示根分类数",
+    interpolator: "categories",
+    isSubField: true,
+  },
+  {
+    name: "childCategories",
+    description: "显示子分类数",
+    interpolator: "categories",
+    isSubField: true,
+  },
+  {
+    name: "lastUpdatedDays",
+    description: "显示最近更新于几天前",
+    interpolator: "categories",
+    isSubField: true,
+  },
+  {
+    name: "pageInfo",
+    description: "显示当前页面信息",
+    interpolator: "categories",
+    isSubField: true,
+  },
+  {
+    name: "categoriesList",
+    description: "分类链接列表（用于随机跳转）",
+    interpolator: "categories",
+    isSubField: true,
+  },
   // Posts 插值器占位符
   {
     name: "posts",

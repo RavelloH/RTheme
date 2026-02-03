@@ -1,7 +1,6 @@
 import { RiArrowGoBackLine } from "@remixicon/react";
 
 import RandomLinkFooter from "@/blocks/collection/Default/client/RandomLinkFooter";
-import SearchBarWrapper from "@/blocks/collection/Default/client/SearchBarWrapper";
 import type { DefaultBlockConfig } from "@/blocks/collection/Default/types";
 import { ProcessedText } from "@/blocks/core/components";
 import {
@@ -9,6 +8,7 @@ import {
   extractBlockTextAndAlign,
   replacePlaceholders,
 } from "@/blocks/core/lib/shared";
+import SearchInput from "@/components/client/features/posts/SearchInput";
 import RowGrid, {
   type GridArea,
   GridItem,
@@ -112,10 +112,7 @@ export default function DefaultBlock({
               </div>
             );
           })()}
-          {/* 搜索栏 */}
-          <SearchBarWrapper
-            show={(content.showSearchBar as boolean) || false}
-          />
+          {content.showSearchBar ? <SearchInput /> : null}
           <div
             className={`block mt-4 ${getAlignClass(
               extractBlockSectionAndAlign(content.content?.top).align,

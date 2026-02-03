@@ -5,6 +5,10 @@ import type {
 } from "@/blocks/collection/Accordion/types";
 import { fetchBlockInterpolatedData } from "@/blocks/core/lib/server";
 import type { BlockConfig } from "@/blocks/core/types";
+import {
+  batchGetCategoryPaths,
+  countCategoryPosts,
+} from "@/lib/server/category-utils";
 import { batchQueryMediaFiles } from "@/lib/server/image-query";
 import { getFeaturedImageUrl } from "@/lib/server/media-reference";
 import prisma from "@/lib/server/prisma";
@@ -135,11 +139,82 @@ async function fetchTags(
  * 获取分类列表
  */
 async function fetchCategories(
-  _sortBy: string,
+  sortBy: string,
   _limit: number,
 ): Promise<AccordionItem[]> {
-  // TODO: 实现分类获取逻辑
-  return [];
+  // 获取所有根分类（带媒体引用）
+  const rootCategories = await prisma.category.findMany({
+    where: { parentId: null },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      description: true,
+      updatedAt: true,
+      mediaRefs: {
+        include: {
+          media: {
+            select: {
+              shortHash: true,
+              width: true,
+              height: true,
+              blur: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: { order: "asc" },
+  });
+
+  if (rootCategories.length === 0) return [];
+
+  const categoryIds = rootCategories.map((c) => c.id);
+
+  // 并发获取：路径映射 + 每个分类的文章数（使用物化路径递归统计）
+  const [_pathMap, ...postCounts] = await Promise.all([
+    batchGetCategoryPaths(categoryIds),
+    ...rootCategories.map((cat) => countCategoryPosts(cat.id)),
+  ]);
+
+  // 批量处理封面图
+  const coverUrls: string[] = [];
+  const coverCache = new Map<number, string | null>();
+
+  rootCategories.forEach((cat) => {
+    const url = getFeaturedImageUrl(cat.mediaRefs);
+    coverCache.set(cat.id, url);
+    if (url) coverUrls.push(url);
+  });
+
+  const mediaFileMap = await batchQueryMediaFiles(coverUrls);
+
+  // 组装结果
+  const items: AccordionItem[] = rootCategories.map((cat, idx) => {
+    const coverUrl = coverCache.get(cat.id);
+    const processedCover = coverUrl
+      ? processImageUrl(coverUrl, mediaFileMap)
+      : null;
+
+    return {
+      slug: cat.slug,
+      name: cat.name,
+      description: cat.description,
+      featuredImage: processedCover,
+      postCount: postCounts[idx] ?? 0,
+    };
+  });
+
+  // 排序：uncategorized 最后，其他按文章数降序
+  if (sortBy === "count") {
+    return items.sort((a, b) => {
+      if (a.slug === "uncategorized") return 1;
+      if (b.slug === "uncategorized") return -1;
+      return b.postCount - a.postCount;
+    });
+  }
+
+  return items;
 }
 
 /**

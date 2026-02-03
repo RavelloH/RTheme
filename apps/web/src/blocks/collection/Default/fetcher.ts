@@ -6,8 +6,7 @@ import prisma from "@/lib/server/prisma";
 /**
  * Default Block Fetcher
  * 分析配置中的占位符，动态加载对应的插值器，并发获取数据
- * 自动检测并调用 tagPosts 插值器（当内容包含 tag 相关占位符时）
- * 自动检测并调用随机链接所需的插值器
+ * 根据 dataSource 字段决定调用哪个插值器
  */
 export async function defaultBlockFetcher(
   config: BlockConfig,
@@ -18,32 +17,71 @@ export async function defaultBlockFetcher(
   // 基础插值数据
   let interpolatedData = await fetchBlockInterpolatedData(content, contextData);
 
+  // 获取 dataSource 配置
+  const dataSource = (content as Record<string, unknown>).dataSource as
+    | string
+    | undefined;
+
   // 检测 footer 是否需要随机链接数据
   const footer = (content as Record<string, unknown>).footer as
     | Record<string, unknown>
     | undefined;
   const footerType = footer?.type;
-  const randomSource = footer?.randomSource;
 
   // 收集需要强制调用的插值器
   const requiredInterpolators: string[] = [];
 
-  // 1. 检测 tagPosts 相关占位符
-  if (containsTagPlaceholders(content)) {
-    requiredInterpolators.push("tagPosts");
-  }
+  // 1. 根据 dataSource 决定主插值器
+  let inferredRandomSource: string | undefined;
 
-  // 2. 检测 postsList 相关占位符
-  if (containsPostsListPlaceholders(content)) {
-    requiredInterpolators.push("postsList");
+  if (dataSource) {
+    switch (dataSource) {
+      case "normal":
+        // 常规页面，不需要额外插值器
+        break;
+      case "posts-index":
+        // 文章索引页
+        requiredInterpolators.push("postsList");
+        inferredRandomSource = "posts";
+        break;
+      case "categories-index":
+        // 分类索引页
+        requiredInterpolators.push("categories");
+        inferredRandomSource = "categories";
+        break;
+      case "category-detail":
+        // 分类详情页（需要实现 categoryPosts 插值器）
+        // 暂时使用 categories，后续需要创建 categoryPosts 插值器
+        requiredInterpolators.push("categories");
+        inferredRandomSource = "categories";
+        break;
+      case "tags-index":
+        // 标签索引页
+        requiredInterpolators.push("tags");
+        inferredRandomSource = "tags";
+        break;
+      case "tag-detail":
+        // 标签详情页
+        requiredInterpolators.push("tagPosts");
+        inferredRandomSource = "tags";
+        break;
+    }
+  } else {
+    // 兼容旧逻辑：如果没有 dataSource，通过占位符检测
+    // TODO: 未来移除此兼容逻辑
+    if (containsTagDetailPlaceholders(content)) {
+      requiredInterpolators.push("tagPosts");
+      inferredRandomSource = "tags";
+    } else if (containsPostsListPlaceholders(content)) {
+      requiredInterpolators.push("postsList");
+      inferredRandomSource = "posts";
+    }
   }
 
   // 2. 检测随机链接需求
-  if (footerType === "random" && randomSource) {
-    // 如果随机链接来源是 tags 或 posts，确保调用对应插值器
-    if (randomSource === "tags" || randomSource === "posts") {
-      requiredInterpolators.push(randomSource);
-    }
+  if (footerType === "random" && inferredRandomSource) {
+    // 根据 dataSource 推断出的随机链接来源，确保调用对应插值器
+    requiredInterpolators.push(inferredRandomSource);
   }
 
   // 去重
@@ -113,33 +151,32 @@ export async function defaultBlockFetcher(
 }
 
 /**
- * 检测内容是否包含标签相关占位符
+ * 检测内容是否包含标签详情相关占位符（仅用于兼容旧配置）
+ * 标签详情页特有占位符：{tag}, {tagName}, {tagDescription}
  */
-function containsTagPlaceholders(content: unknown): boolean {
+function containsTagDetailPlaceholders(content: unknown): boolean {
   if (!content) return false;
   if (typeof content === "string") {
-    return /{tag(Name|Description)?|posts|pageInfo|totalPage|firstPage|lastPage}/.test(
-      content,
-    );
+    return /{tag(Name|Description)?}/.test(content);
   }
   if (Array.isArray(content)) {
-    return content.some((item) => containsTagPlaceholders(item));
+    return content.some((item) => containsTagDetailPlaceholders(item));
   }
   if (typeof content === "object" && content !== null) {
-    return Object.values(content).some((item) => containsTagPlaceholders(item));
+    return Object.values(content).some((item) =>
+      containsTagDetailPlaceholders(item),
+    );
   }
   return false;
 }
 
 /**
- * 检测内容是否包含文章列表相关占位符
+ * 检测内容是否包含文章列表相关占位符（仅用于兼容旧配置）
  */
 function containsPostsListPlaceholders(content: unknown): boolean {
   if (!content) return false;
   if (typeof content === "string") {
-    return /{firstPublishAt|lastPublishDays|posts|page|totalPage|firstPage|lastPage}/.test(
-      content,
-    );
+    return /{firstPublishAt|lastPublishDays}/.test(content);
   }
   if (Array.isArray(content)) {
     return content.some((item) => containsPostsListPlaceholders(item));
