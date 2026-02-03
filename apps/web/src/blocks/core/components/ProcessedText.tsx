@@ -122,8 +122,28 @@ export function ProcessedText({
     ...(data || {}),
   };
 
-  // 检测 {lastUpdatedDate} 并创建客户端渲染组件
-  if (data?.lastUpdatedDate) {
+  // 检测包含日期的字段并创建客户端渲染组件
+  // 支持的字段：lastUpdatedDate, lastPublishDays, firstPublishAt
+  const dateFields = ["lastUpdatedDate", "lastPublishDays", "firstPublishAt"];
+
+  for (const field of dateFields) {
+    if (data?.[field] && typeof data[field] === "string") {
+      // 检查是否为 ISO 日期字符串
+      const dateValue = data[field] as string;
+      if (dateValue.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+        // 为 lastPublishDays 和 firstPublishAt 创建相对时间组件
+        if (field === "lastPublishDays" || field === "firstPublishAt") {
+          enhancedData[field] = React.createElement(ClientPlaceholder, {
+            type: "relative-time",
+            data: dateValue,
+          });
+        }
+      }
+    }
+  }
+
+  // 兼容旧的 lastUpdatedDays 字段（如果数据中有 lastUpdatedDate，则将其转换为 lastUpdatedDays）
+  if (data?.lastUpdatedDate && !data?.lastPublishDays) {
     enhancedData.lastUpdatedDays = React.createElement(ClientPlaceholder, {
       type: "relative-time",
       data: data.lastUpdatedDate as string,

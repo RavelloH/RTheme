@@ -342,7 +342,7 @@ export default function BlockConfigPanel({
   // 变量占位符 Dialog 状态
   const [showPlaceholderDialog, setShowPlaceholderDialog] = useState(false);
   const [placeholders, setPlaceholders] = useState<
-    { name: string; description: string; value: string }[]
+    { name: string; description: string; value: string; params?: string }[]
   >([]);
   const [loadingPlaceholders, setLoadingPlaceholders] = useState(false);
 
@@ -520,12 +520,13 @@ export default function BlockConfigPanel({
     name: string;
     description: string;
     value: string;
+    params?: string;
   }>[] = [
     {
       key: "name",
       title: "占位符",
       dataIndex: "name",
-      width: "30%",
+      width: "25%",
       mono: true,
       render: (val) => (
         <span className="text-primary font-medium">
@@ -537,17 +538,133 @@ export default function BlockConfigPanel({
       key: "description",
       title: "描述",
       dataIndex: "description",
-      width: "40%",
+      width: "20%",
+    },
+    {
+      key: "params",
+      title: "参数",
+      dataIndex: "params",
+      width: "5%",
+      render: (val) =>
+        val ? (
+          <span className="text-xs text-muted-foreground">
+            {val as React.ReactNode}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground/50">-</span>
+        ),
     },
     {
       key: "value",
       title: "当前值",
       dataIndex: "value",
-      width: "30%",
+      width: "25%",
       align: "right",
       mono: true,
     },
   ];
+
+  // 占位符分组定义
+  type PlaceholderGroup = {
+    title: string;
+    description: string;
+    placeholders: typeof placeholders;
+  };
+
+  // 根据占位符名称推断分组（不依赖 PLACEHOLDER_REGISTRY）
+  const getPlaceholderGroups = (): PlaceholderGroup[] => {
+    // 定义分组
+    const groups: PlaceholderGroup[] = [
+      {
+        title: "全局统计",
+        description: "无需特定上下文，可在任何页面使用。显示全局统计数据。",
+        placeholders: [],
+      },
+      {
+        title: "分类相关",
+        description:
+          "与分类相关的占位符。`{categories}` 显示全局分类总数；`{category*}` 系列会自动从当前页面 URL 获取 slug，也可显式指定参数如 `{category|slug=tech}`。",
+        placeholders: [],
+      },
+      {
+        title: "标签相关",
+        description:
+          "与标签相关的占位符。`{tags}` 显示全局标签总数；`{tag*}` 系列会自动从当前页面 URL 获取 slug，也可显式指定参数如 `{tag|slug=javascript}`。",
+        placeholders: [],
+      },
+      {
+        title: "文章列表相关",
+        description:
+          "文章列表页专用的占位符。包括文章链接列表、首次发布日期，以及文章列表页的分页信息（`{postsList*}` 系列）。",
+        placeholders: [],
+      },
+      {
+        title: "页面信息",
+        description:
+          "需要显式指定参数的占位符。例如：`{pageInfo|page=category-index}` 显示「分类列表」。支持的 page 值：category-index, category-detail, tag-index, tag-detail, posts-index, normal。",
+        placeholders: [],
+      },
+    ];
+
+    // 将占位符分配到对应分组
+    for (const placeholder of placeholders) {
+      // 提取占位符名称（去掉花括号）
+      const placeholderName = placeholder.name.replace(/[{}]/g, "");
+
+      // 根据占位符名称判断分组
+      let assigned = false;
+
+      // 全局统计占位符
+      if (
+        placeholderName === "posts" ||
+        placeholderName === "projects" ||
+        placeholderName === "lastPublishDays"
+      ) {
+        groups[0]?.placeholders.push(placeholder);
+        assigned = true;
+      }
+      // 分类相关占位符（包括 category 前缀的所有字段）
+      else if (
+        placeholderName === "categories" ||
+        placeholderName === "rootCategories" ||
+        placeholderName === "childCategories" ||
+        placeholderName === "categoriesList" ||
+        placeholderName.startsWith("category")
+      ) {
+        groups[1]?.placeholders.push(placeholder);
+        assigned = true;
+      }
+      // 标签相关占位符（包括 tag 前缀的所有字段）
+      else if (
+        placeholderName === "tags" ||
+        placeholderName === "tagsList" ||
+        placeholderName.startsWith("tag")
+      ) {
+        groups[2]?.placeholders.push(placeholder);
+        assigned = true;
+      }
+      // 分页信息占位符（postsList* 和 firstPublishAt）
+      else if (
+        placeholderName === "firstPublishAt" ||
+        placeholderName.startsWith("postsList")
+      ) {
+        groups[3]?.placeholders.push(placeholder);
+        assigned = true;
+      }
+      // 页面信息占位符
+      else if (placeholderName === "pageInfo") {
+        groups[4]?.placeholders.push(placeholder);
+        assigned = true;
+      }
+
+      // 如果仍未分配，放入全局统计分组
+      if (!assigned) {
+        groups[0]?.placeholders.push(placeholder);
+      }
+    }
+
+    return groups;
+  };
 
   return (
     <div className="w-full h-full flex flex-col pr-1">
@@ -897,7 +1014,7 @@ export default function BlockConfigPanel({
         open={showPlaceholderDialog}
         onClose={() => setShowPlaceholderDialog(false)}
         title="变量占位符"
-        size="md"
+        size="lg"
       >
         <div className="p-4">
           <AutoResizer>
@@ -907,27 +1024,51 @@ export default function BlockConfigPanel({
                   <LoadingIndicator />
                 </div>
               ) : (
-                <Table
-                  columns={placeholderColumns}
-                  data={placeholders}
-                  striped
-                  hoverable
-                  onRowClick={(e) => {
-                    navigator.clipboard.writeText(e.name as string);
-                    toast.success("已复制占位符到剪贴板");
-                  }}
-                  size="sm"
-                  bordered
-                  emptyText="暂无可用占位符"
-                />
+                <div className="space-y-6" key="placeholders">
+                  {getPlaceholderGroups().map((group, groupIndex) => (
+                    <div key={groupIndex} className="space-y-3">
+                      {/* 分组标题 */}
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-medium text-foreground">
+                          {group.title}
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          {group.description}
+                        </p>
+                      </div>
+
+                      {/* 分组表格 */}
+                      {group.placeholders.length > 0 ? (
+                        <Table
+                          columns={placeholderColumns}
+                          data={group.placeholders}
+                          striped
+                          hoverable
+                          onRowClick={(e) => {
+                            navigator.clipboard.writeText(e.name as string);
+                            toast.success("已复制占位符到剪贴板");
+                          }}
+                          size="sm"
+                          bordered
+                          emptyText="暂无可用占位符"
+                        />
+                      ) : (
+                        <div className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded">
+                          该分类暂无可用占位符
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </AutoTransition>
           </AutoResizer>
-          <div className="mt-4 text-xs text-muted-foreground">
+          <div className="mt-4 text-xs text-muted-foreground space-y-1">
             <p>
-              提示：在文本内容中使用 {`{placeholder}`}{" "}
-              格式插入动态数据。输入新的占位符后，需点击“更新数据”才能生效。
+              在文本内容中使用 {`{placeholder}`}{" "}
+              格式插入动态数据。不同页面的占位符可用性不同。
             </p>
+            <p>输入新的占位符后，需点击&quot;更新数据&quot;才能生效。</p>
           </div>
         </div>
       </Dialog>

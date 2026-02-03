@@ -10,6 +10,8 @@ export { projectsInterpolator } from "./projects";
 export { tagPostsInterpolator } from "./tag-posts";
 export { tagsInterpolator } from "./tags";
 export { postsListInterpolator } from "./posts-list";
+export { lastPublishDaysInterpolator } from "./last-publish-days";
+export { pageInfoInterpolator } from "./page-info";
 
 /**
  * 插值器类型定义
@@ -37,6 +39,8 @@ export const interpolatorMap: Record<string, InterpolatorLoader> = {
   tagPosts: () => import("./tag-posts"),
   tags: () => import("./tags"),
   postsList: () => import("./posts-list"),
+  lastPublishDays: () => import("./last-publish-days"),
+  pageInfo: () => import("./page-info"),
 };
 
 /**
@@ -66,9 +70,47 @@ export interface PlaceholderMeta {
 /**
  * 占位符注册表
  * 统一注册所有可用的占位符及其描述
+ * 规范：
+ * 1. 每个插值器只负责一个字段或高度关联的字段组
+ * 2. 相同名称的占位符只注册一次，避免重复
+ * 3. 需要参数的占位符必须显式声明所有可选参数
+ * 4. 占位符命名遵循统一风格：全局统计用简洁名称，上下文相关添加前缀
  */
 export const PLACEHOLDER_REGISTRY: PlaceholderMeta[] = [
-  // Categories 插值器占位符
+  // === 全局统计（无需上下文） ===
+  {
+    name: "lastPublishDays",
+    description: "最近更新日期（全局统一，显示最后一篇更新文章的时间）",
+    interpolator: "lastPublishDays",
+  },
+  {
+    name: "pageInfo",
+    description: "页面信息（需要 page 参数）",
+    interpolator: "pageInfo",
+    params: [
+      {
+        name: "page",
+        description:
+          "页面类型：category-index, category-detail, tag-index, tag-detail, posts-index, normal",
+      },
+      {
+        name: "slug",
+        description: "分类或标签的 slug（用于详情页）",
+      },
+    ],
+  },
+  {
+    name: "posts",
+    description: "显示当前总文章数",
+    interpolator: "posts",
+  },
+  {
+    name: "projects",
+    description: "显示当前总项目数",
+    interpolator: "projects",
+  },
+
+  // === 分类相关（categories 插值器） ===
   {
     name: "categories",
     description: "显示当前总分类数",
@@ -87,49 +129,13 @@ export const PLACEHOLDER_REGISTRY: PlaceholderMeta[] = [
     isSubField: true,
   },
   {
-    name: "lastUpdatedDays",
-    description: "显示最近更新于几天前",
-    interpolator: "categories",
-    isSubField: true,
-  },
-  {
-    name: "pageInfo",
-    description: "显示当前页面信息",
-    interpolator: "categories",
-    isSubField: true,
-  },
-  {
     name: "categoriesList",
     description: "分类链接列表（用于随机跳转）",
     interpolator: "categories",
     isSubField: true,
   },
-  // Posts 插值器占位符
-  {
-    name: "posts",
-    description: "显示当前总文章数",
-    interpolator: "posts",
-  },
-  // Projects 插值器占位符
-  {
-    name: "projects",
-    description: "显示当前总项目数",
-    interpolator: "projects",
-  },
-  // PostsList 插值器占位符（用于文章列表页）
-  {
-    name: "firstPublishAt",
-    description: "首次发布日期",
-    interpolator: "postsList",
-    isSubField: true,
-  },
-  {
-    name: "lastPublishDays",
-    description: "最近更新日期",
-    interpolator: "postsList",
-    isSubField: true,
-  },
-  // CategoryPosts 插值器占位符
+
+  // === 分类相关（categoryPosts 插值器） ===
   {
     name: "category",
     description: "分类名称",
@@ -149,41 +155,102 @@ export const PLACEHOLDER_REGISTRY: PlaceholderMeta[] = [
     isSubField: true,
   },
   {
-    name: "page",
-    description: "当前页码",
+    name: "categorySubcategoryCount",
+    description: "当前分类的子分类数",
     interpolator: "categoryPosts",
     isSubField: true,
   },
   {
-    name: "totalPage",
-    description: "总页数",
+    name: "categoryPostCount",
+    description: "当前分类下的文章数",
     interpolator: "categoryPosts",
     isSubField: true,
   },
   {
-    name: "firstPage",
-    description: "当前页第一篇文章序号",
+    name: "categoryPage",
+    description: "分类详情页当前页码",
     interpolator: "categoryPosts",
     isSubField: true,
   },
   {
-    name: "lastPage",
-    description: "当前页最后一篇文章序号",
+    name: "categoryTotalPage",
+    description: "分类详情页总页数",
     interpolator: "categoryPosts",
     isSubField: true,
   },
-  // TagPosts 插值器占位符（参数化）
-  // {
-  //   name: "tagPosts",
-  //   description: "显示单个标签的详细信息（参数：slug, page）",
-  //   interpolator: "tagPosts",
-  //   params: [
-  //     { name: "slug", description: "标签 slug" },
-  //     { name: "page", description: "页码（默认 1）" },
-  //   ],
-  // },
+  {
+    name: "categoryFirstPage",
+    description: "分类详情页当前页第一篇文章序号",
+    interpolator: "categoryPosts",
+    isSubField: true,
+  },
+  {
+    name: "categoryLastPage",
+    description: "分类详情页当前页最后一篇文章序号",
+    interpolator: "categoryPosts",
+    isSubField: true,
+  },
+
+  // === 文章列表相关（postsList 插值器） ===
+  {
+    name: "postsList",
+    description: "文章链接列表（用于随机跳转）",
+    interpolator: "postsList",
+    isSubField: true,
+  },
+  {
+    name: "firstPublishAt",
+    description: "首次发布日期",
+    interpolator: "postsList",
+    isSubField: true,
+  },
+  {
+    name: "postsListPage",
+    description: "文章列表页当前页码",
+    interpolator: "postsList",
+    isSubField: true,
+  },
+  {
+    name: "postsListTotalPage",
+    description: "文章列表页总页数",
+    interpolator: "postsList",
+    isSubField: true,
+  },
+  {
+    name: "postsListFirstPage",
+    description: "文章列表页当前页第一篇文章序号",
+    interpolator: "postsList",
+    isSubField: true,
+  },
+  {
+    name: "postsListLastPage",
+    description: "文章列表页当前页最后一篇文章序号",
+    interpolator: "postsList",
+    isSubField: true,
+  },
+
+  // === 标签相关（tags 插值器） ===
+  {
+    name: "tags",
+    description: "显示当前总标签数",
+    interpolator: "tags",
+  },
+  {
+    name: "tagsList",
+    description: "标签链接列表（用于随机跳转）",
+    interpolator: "tags",
+    isSubField: true,
+  },
+
+  // === 标签相关（tagPosts 插值器） ===
   {
     name: "tag",
+    description: "标签名称",
+    interpolator: "tagPosts",
+    isSubField: true,
+  },
+  {
+    name: "tagName",
     description: "标签名称",
     interpolator: "tagPosts",
     isSubField: true,
@@ -195,45 +262,33 @@ export const PLACEHOLDER_REGISTRY: PlaceholderMeta[] = [
     isSubField: true,
   },
   {
-    name: "page",
-    description: "当前页码",
+    name: "tagPostCount",
+    description: "当前标签下的文章数",
     interpolator: "tagPosts",
     isSubField: true,
   },
   {
-    name: "totalPage",
-    description: "总页数",
+    name: "tagPage",
+    description: "标签详情页当前页码",
     interpolator: "tagPosts",
     isSubField: true,
   },
   {
-    name: "firstPage",
-    description: "当前页第一篇文章序号",
+    name: "tagTotalPage",
+    description: "标签详情页总页数",
     interpolator: "tagPosts",
     isSubField: true,
   },
   {
-    name: "lastPage",
-    description: "当前页最后一篇文章序号",
+    name: "tagFirstPage",
+    description: "标签详情页当前页第一篇文章序号",
     interpolator: "tagPosts",
     isSubField: true,
   },
-  // Tags 插值器占位符
   {
-    name: "tags",
-    description: "显示当前总标签数",
-    interpolator: "tags",
-  },
-  {
-    name: "lastUpdatedDays",
-    description: "显示最近更新于几天前",
-    interpolator: "tags",
-    isSubField: true,
-  },
-  {
-    name: "pageInfo",
-    description: "显示当前页面信息",
-    interpolator: "tags",
+    name: "tagLastPage",
+    description: "标签详情页当前页最后一篇文章序号",
+    interpolator: "tagPosts",
     isSubField: true,
   },
 ];

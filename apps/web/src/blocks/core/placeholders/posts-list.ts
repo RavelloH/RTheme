@@ -16,7 +16,7 @@ export async function postsListInterpolator(
   const pageSize = parseInt(params?.pageSize || "20", 10);
 
   // 并发获取统计数据
-  const [totalPosts, firstPost, lastPost] = await Promise.all([
+  const [totalPosts, firstPost, _lastPost] = await Promise.all([
     // 统计已发布文章数
     prisma.post.count({
       where: {
@@ -37,7 +37,7 @@ export async function postsListInterpolator(
         publishedAt: true,
       },
     }),
-    // 获取最后一篇更新的文章
+    // 获取最后一篇更新的文章（已被 lastPublishDays 全局插值器替代）
     prisma.post.findFirst({
       where: {
         status: "PUBLISHED",
@@ -83,44 +83,12 @@ export async function postsListInterpolator(
         .replace(/日/, " 日")
     : "未知日期";
 
-  // lastPublishDays: 相对日期，如 "3天前"
-  let lastPublishDaysFormatted = "未知";
-  if (lastPost?.updatedAt) {
-    const now = new Date();
-    const updated = new Date(lastPost.updatedAt);
-    const diffMs = now.getTime() - updated.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) {
-      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-      if (diffHours === 0) {
-        const diffMinutes = Math.floor(diffMs / (1000 * 60));
-        lastPublishDaysFormatted = `${diffMinutes} 分钟前`;
-      } else {
-        lastPublishDaysFormatted = `${diffHours} 小时前`;
-      }
-    } else if (diffDays < 7) {
-      lastPublishDaysFormatted = `${diffDays} 天前`;
-    } else if (diffDays < 30) {
-      const weeks = Math.floor(diffDays / 7);
-      lastPublishDaysFormatted = `${weeks} 周前`;
-    } else if (diffDays < 365) {
-      const months = Math.floor(diffDays / 30);
-      lastPublishDaysFormatted = `${months} 个月前`;
-    } else {
-      const years = Math.floor(diffDays / 365);
-      lastPublishDaysFormatted = `${years} 年前`;
-    }
-  }
-
   return {
-    posts: totalPosts,
     postsList, // 用于随机链接
-    page,
-    totalPage: totalPages,
-    firstPage: firstPostNum,
-    lastPage: lastPostNum,
+    postsListPage: page,
+    postsListTotalPage: totalPages,
+    postsListFirstPage: firstPostNum,
+    postsListLastPage: lastPostNum,
     firstPublishAt: firstPublishAtFormatted,
-    lastPublishDays: lastPublishDaysFormatted,
   };
 }
