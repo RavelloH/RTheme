@@ -239,8 +239,8 @@ export const defaultPages: DefaultPage[] = [
               bottom: {
                 align: "left",
                 value: [
-                  "第 {page} 页，共 {totalPage} 页。",
-                  "正在查看第 {firstPage} - {lastPage} 篇文章。",
+                  "第 {postsListPage} 页，共 {postsListTotalPage} 页。",
+                  "正在查看第 {postsListFirstPage} - {postsListLastPage} 篇文章。",
                 ],
               },
             },
@@ -258,7 +258,7 @@ export const defaultPages: DefaultPage[] = [
             sortBy: "isPinned_desc",
             pageSize: 20,
           },
-          description: "New paged-posts block",
+          description: "",
         },
         {
           id: 3,
@@ -306,14 +306,14 @@ export const defaultPages: DefaultPage[] = [
                 value: [
                   "整理 & 索引所有分类。",
                   "",
-                  "最近更新于 {lastUpdatedDays}。",
+                  "最近更新于 {lastPublishDays}。",
                   "共索引 {categories} 个分类，",
                   "其中包含 {rootCategories} 个根分类，{childCategories} 个子分类。",
                 ],
               },
               bottom: {
                 align: "left",
-                value: ["当前正在查看 {pageInfo}。"],
+                value: ["当前正在查看 {pageInfo|page=category-index}。"],
               },
             },
             dataSource: "categories-index",
@@ -374,17 +374,17 @@ export const defaultPages: DefaultPage[] = [
                 value: [
                   "整理 & 索引 {category} 下的所有子分类及文章。",
                   "",
-                  "最近更新于 {lastUpdatedDays}。",
-                  "此分类共包含 {categories} 个子分类，",
-                  "{posts} 篇文章。",
+                  "最近更新于 {lastPublishDays}。",
+                  "此分类共包含 {categorySubcategoryCount} 个子分类，",
+                  "{categoryPostCount} 篇文章。",
                 ],
               },
               bottom: {
                 align: "left",
                 value: [
-                  "当前正在查看 {pageInfo}。",
-                  "第 {page} 页，共 {totalPage} 页。",
-                  "正在查看第 {firstPage} - {lastPage} 篇文章。",
+                  "当前正在查看 {pageInfo|page=category-detail}。",
+                  "第 {categoryPage} 页，共 {categoryTotalPage} 页。",
+                  "正在查看第 {categoryFirstPage} - {categoryLastPage} 篇文章。",
                 ],
               },
             },
@@ -401,12 +401,12 @@ export const defaultPages: DefaultPage[] = [
           description: "",
         },
         {
-          id: 2,
-          block: "accordion",
+          id: 3,
+          block: "paged-posts",
+          description: "",
           content: {
-            source: "child-categories",
+            filterBy: "category",
           },
-          description: "New accordion block",
         },
         {
           id: 4,
@@ -414,7 +414,7 @@ export const defaultPages: DefaultPage[] = [
           content: {
             filterBy: "category",
           },
-          description: "New pagination block",
+          description: "",
         },
       ],
     },
@@ -457,13 +457,13 @@ export const defaultPages: DefaultPage[] = [
                 value: [
                   "整理 & 索引所有标签。",
                   "",
-                  "最近更新于 {lastUpdatedDays}。",
+                  "最近更新于 {lastPublishDays}。",
                   "共索引 {tags} 个标签。",
                 ],
               },
               bottom: {
                 align: "left",
-                value: ["当前正在查看 {pageInfo}。"],
+                value: ["当前正在查看 {pageInfo|page=tag-index}。"],
               },
             },
             dataSource: "tags-index",
@@ -522,15 +522,15 @@ export const defaultPages: DefaultPage[] = [
                 value: [
                   "{tagDescription}",
                   "整理 & 索引 {tag} 下的所有文章。",
-                  "此标签共包含 {posts} 个文章。",
+                  "此标签共包含 {tagPostCount} 个文章。",
                 ],
               },
               bottom: {
                 align: "left",
                 value: [
-                  "当前正在查看 {pageInfo}。",
-                  "第 {page} 页，共 {totalPage} 页。",
-                  "正在查看第 {firstPage} - {lastPage} 篇文章。",
+                  "当前正在查看 {pageInfo|page=tag-detail}。",
+                  "第 {tagPage} 页，共 {tagTotalPage} 页。",
+                  "正在查看第 {tagFirstPage} - {tagLastPage} 篇文章。",
                 ],
               },
             },

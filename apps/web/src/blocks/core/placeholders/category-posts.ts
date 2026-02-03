@@ -35,9 +35,6 @@ export async function categoryPostsInterpolator(
       categoryDescription: "",
       categories: 0,
       posts: 0,
-      pageInfo: "",
-      lastUpdatedDate: new Date().toISOString(),
-      lastUpdatedDays: new Date().toISOString(),
       page: 1,
       totalPage: 1,
       firstPage: 0,
@@ -61,14 +58,11 @@ export async function categoryPostsInterpolator(
     category: category.name,
     categoryName: category.name,
     categoryDescription: category.description || "",
-    categories: childCategoryCount,
-    posts: totalPosts,
-    pageInfo: `分类：${category.name}`,
-    lastUpdatedDate: category.updatedAt.toISOString(), // ISO 字符串，供客户端组件转换为相对时间
-    lastUpdatedDays: category.updatedAt.toISOString(), // 用于 ProcessedText 的相对时间显示
-    page,
-    totalPage: totalPages,
-    firstPage: firstPost,
-    lastPage: lastPost,
+    categorySubcategoryCount: childCategoryCount,
+    categoryPostCount: totalPosts,
+    categoryPage: page,
+    categoryTotalPage: totalPages,
+    categoryFirstPage: firstPost,
+    categoryLastPage: lastPost,
   };
 }

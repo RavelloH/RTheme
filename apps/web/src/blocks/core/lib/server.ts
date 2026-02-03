@@ -9,14 +9,77 @@ import type { ProcessedImageData } from "@/lib/shared/image-common";
 import { processImageUrl } from "@/lib/shared/image-common";
 
 /**
+ * 上下文数据类型
+ */
+interface ContextData {
+  slug?: string;
+  page?: number;
+  url?: string;
+  pageSize?: number;
+  [key: string]: unknown;
+}
+
+/**
+ * 为占位符自动附加上下文参数
+ *
+ * @param placeholders - 解析后的占位符数组
+ * @param contextData - 上下文数据
+ * @returns 附加了上下文参数后的占位符映射
+ */
+function enrichPlaceholdersWithContext(
+  placeholders: Array<{ name: string; params: Record<string, string> }>,
+  contextData: ContextData,
+): Map<string, Record<string, string>> {
+  const enrichedMap = new Map<string, Record<string, string>>();
+
+  for (const placeholder of placeholders) {
+    const { name, params } = placeholder;
+
+    // 默认附加的上下文参数（如果用户没有指定）
+    const enrichedParams: Record<string, string> = { ...params };
+
+    // 附加 slug（如果存在且未指定）
+    if (contextData.slug && !enrichedParams.slug) {
+      enrichedParams.slug = contextData.slug;
+    }
+
+    // 附加 page（如果存在且未指定）
+    if (contextData.page !== undefined && !enrichedParams.page) {
+      enrichedParams.page = String(contextData.page);
+    }
+
+    // 附加 pageSize（如果存在且未指定）
+    if (contextData.pageSize !== undefined && !enrichedParams.pageSize) {
+      enrichedParams.pageSize = String(contextData.pageSize);
+    }
+
+    // 附加 url（如果存在且未指定）
+    if (contextData.url && !enrichedParams.url) {
+      enrichedParams.url = contextData.url;
+    }
+
+    // 合并相同名称的占位符参数
+    if (enrichedMap.has(name)) {
+      const existing = enrichedMap.get(name)!;
+      enrichedMap.set(name, { ...existing, ...enrichedParams });
+    } else {
+      enrichedMap.set(name, enrichedParams);
+    }
+  }
+
+  return enrichedMap;
+}
+
+/**
  * 通用 Block Fetcher 逻辑
  * 分析内容中的占位符，动态加载对应的插值器，并发获取数据
  * 支持参数化占位符：{name|key=value&key2=value2}
+ * 自动附加上下文参数：{name} 会自动变成 {name|slug=xxx&page=xxx&url=xxx}
  * 参数值支持占位符替换：{name|slug={slug}} 会从 contextData 中读取 slug
  */
 export async function fetchBlockInterpolatedData(
   content: unknown,
-  contextData?: Record<string, unknown>,
+  contextData?: ContextData,
 ): Promise<Record<string, unknown>> {
   if (!content) return {};
 
@@ -58,8 +121,17 @@ export async function fetchBlockInterpolatedData(
     return {};
   }
 
-  const interpolatorPromises = Array.from(interpolatorGroups.entries()).map(
-    async ([name, paramsSet]) => {
+  // 自动附加上下文参数
+  const enrichedPlaceholders = enrichPlaceholdersWithContext(
+    Array.from(interpolatorGroups.entries()).map(([name, paramsSet]) => ({
+      name,
+      params: Array.from(paramsSet)[0] || {}, // 取第一个参数集，可能为空
+    })),
+    contextData || {},
+  );
+
+  const interpolatorPromises = Array.from(enrichedPlaceholders.entries()).map(
+    async ([name, params]) => {
       const interpolatorLoader = interpolatorMap[name];
       if (!interpolatorLoader) return {};
 
@@ -72,10 +144,7 @@ export async function fetchBlockInterpolatedData(
 
         if (typeof interpolator !== "function") return {};
 
-        // 获取参数（取第一个参数集）
-        const params = Array.from(paramsSet)[0];
-
-        // 调用插值器，传递参数
+        // 调用插值器，传递参数（已包含上下文参数）
         return await interpolator(params);
       } catch (error) {
         console.error(`[Interpolator Error] Placeholder: {${name}}`, error);

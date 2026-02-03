@@ -999,18 +999,27 @@ export async function getAllPlaceholders(serverConfig: {
   environment: "serverless";
 }): Promise<
   NextResponse<
-    ApiResponse<{ name: string; description: string; value: string }[] | null>
+    ApiResponse<
+      | { name: string; description: string; value: string; params?: string }[]
+      | null
+    >
   >
 >;
 export async function getAllPlaceholders(
   serverConfig?: ActionConfig,
 ): Promise<
-  ApiResponse<{ name: string; description: string; value: string }[] | null>
+  ApiResponse<
+    | { name: string; description: string; value: string; params?: string }[]
+    | null
+  >
 >;
 export async function getAllPlaceholders(
   serverConfig?: ActionConfig,
 ): Promise<
-  ActionResult<{ name: string; description: string; value: string }[] | null>
+  ActionResult<
+    | { name: string; description: string; value: string; params?: string }[]
+    | null
+  >
 > {
   const response = new ResponseBuilder(
     serverConfig?.environment || "serveraction",
@@ -1045,10 +1054,15 @@ export async function getAllPlaceholders(
     }
 
     // 根据注册表生成占位符列表
-    const results: { name: string; description: string; value: string }[] = [];
+    const results: {
+      name: string;
+      description: string;
+      value: string;
+      params?: string;
+    }[] = [];
 
     for (const placeholder of PLACEHOLDER_REGISTRY) {
-      const { name, description, interpolator } = placeholder;
+      const { name, description, interpolator, params } = placeholder;
 
       // 获取对应插值器的数据
       const data = interpolatorDataCache[interpolator];
@@ -1067,10 +1081,17 @@ export async function getAllPlaceholders(
         }
       }
 
+      // 格式化参数列表
+      const paramsStr =
+        params && params.length > 0
+          ? params.map((p) => p.name).join(", ")
+          : undefined;
+
       results.push({
         name: `{${name}}`,
         description,
         value,
+        params: paramsStr,
       });
     }
 
