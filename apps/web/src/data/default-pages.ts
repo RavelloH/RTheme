@@ -343,22 +343,34 @@ export const defaultPages: DefaultPage[] = [
   {
     id: "system-child-categories",
     title: "分类：{category} - 第 {page} 页",
-    slug: "/categories/:slug/page/:page",
+    slug: "/categories/:slug.../page/:page",
     content: "",
     contentType: "MARKDOWN",
     metaDescription:
       "浏览分类 {category} 下的文章，第 {page} 页，共 {totalPage} 页",
     config: {
+      pageSize: 20,
       blocks: [
         {
           id: 1,
           block: "default",
-          description: "",
           content: {
-            header: { value: "Topics. Themes. Paths.", align: "left" },
-            title: { value: "分类：{category}", align: "left" },
+            title: {
+              align: "left",
+              value: "分类：{category}",
+            },
+            footer: {
+              link: "",
+              text: "Back / 返回上一级分类",
+              type: "back",
+            },
+            header: {
+              align: "left",
+              value: "Topics. Themes. Paths.",
+            },
             content: {
               top: {
+                align: "left",
                 value: [
                   "整理 & 索引 {category} 下的所有子分类及文章。",
                   "",
@@ -366,39 +378,43 @@ export const defaultPages: DefaultPage[] = [
                   "此分类共包含 {categories} 个子分类，",
                   "{posts} 篇文章。",
                 ],
-                align: "left",
               },
               bottom: {
+                align: "left",
                 value: [
                   "当前正在查看 {pageInfo}。",
                   "第 {page} 页，共 {totalPage} 页。",
                   "正在查看第 {firstPage} - {lastPage} 篇文章。",
                 ],
-                align: "left",
               },
             },
-            footer: {
-              link: "",
-              text: "Back / 返回上一级分类",
-            },
+            dataSource: "category-detail",
           },
+          description: "",
         },
         {
           id: 2,
-          block: "default",
-          description: "",
+          block: "accordion",
           content: {
-            header: { value: "", align: "left" },
-            title: { value: "", align: "left" },
-            content: {
-              top: { value: [], align: "left" },
-              bottom: { value: [], align: "left" },
-            },
-            footer: {
-              link: "",
-              text: "",
-            },
+            source: "child-categories",
           },
+          description: "",
+        },
+        {
+          id: 2,
+          block: "accordion",
+          content: {
+            source: "child-categories",
+          },
+          description: "New accordion block",
+        },
+        {
+          id: 4,
+          block: "pagination",
+          content: {
+            filterBy: "category",
+          },
+          description: "New pagination block",
         },
       ],
     },

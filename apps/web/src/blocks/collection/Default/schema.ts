@@ -256,7 +256,7 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
     {
       title: "布局",
       description: "控制区块的布局方式",
-      fields: ["layout.verticalCenter", "layout.ratio"],
+      fields: ["layout.verticalCenter", "showSearchBar", "layout.ratio"],
     },
   ],
   previewData: {

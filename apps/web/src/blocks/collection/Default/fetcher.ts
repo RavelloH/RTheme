@@ -50,9 +50,8 @@ export async function defaultBlockFetcher(
         inferredRandomSource = "categories";
         break;
       case "category-detail":
-        // 分类详情页（需要实现 categoryPosts 插值器）
-        // 暂时使用 categories，后续需要创建 categoryPosts 插值器
-        requiredInterpolators.push("categories");
+        // 分类详情页
+        requiredInterpolators.push("categoryPosts");
         inferredRandomSource = "categories";
         break;
       case "tags-index":
@@ -108,6 +107,25 @@ export async function defaultBlockFetcher(
         // 如果没有 slug（编辑器环境），自动获取文章最多的标签
         if (!slug) {
           slug = await getMostPopularTagSlug();
+        }
+
+        if (slug) {
+          const params: Record<string, string> = {
+            slug,
+            page: String(contextData.page || 1),
+          };
+          return await interpolator(params);
+        }
+        return {};
+      }
+
+      // categoryPosts 需要特殊处理（需要 slug 参数）
+      if (name === "categoryPosts") {
+        let slug = contextData.slug as string | undefined;
+
+        // 如果没有 slug（编辑器环境），自动获取文章最多的分类
+        if (!slug) {
+          slug = await getMostPopularCategorySlug();
         }
 
         if (slug) {
@@ -217,6 +235,40 @@ async function getMostPopularTagSlug(): Promise<string | undefined> {
   } catch (error) {
     console.error(
       "[Default Block Fetcher] Failed to get most popular tag slug:",
+      error,
+    );
+    return undefined;
+  }
+}
+
+/**
+ * 获取文章数量最多的分类的 slug
+ * 用于编辑器预览时自动选择默认值
+ */
+async function getMostPopularCategorySlug(): Promise<string | undefined> {
+  try {
+    const category = await prisma.category.findFirst({
+      select: {
+        slug: true,
+      },
+      where: {
+        posts: {
+          some: {
+            status: "PUBLISHED",
+            deletedAt: null,
+          },
+        },
+      },
+      orderBy: {
+        posts: {
+          _count: "desc",
+        },
+      },
+    });
+    return category?.slug || undefined;
+  } catch (error) {
+    console.error(
+      "[Default Block Fetcher] Failed to get most popular category slug:",
       error,
     );
     return undefined;

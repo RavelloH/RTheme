@@ -27,7 +27,8 @@ export const ACCORDION_BLOCK_FORM_CONFIG: BlockFormConfig = {
       helperText: "选择要展示的数据类型",
       options: [
         { value: "tags", label: "标签" },
-        { value: "categories", label: "分类" },
+        { value: "categories", label: "分类（根分类）" },
+        { value: "child-categories", label: "子分类（当前分类的子项）" },
         { value: "posts", label: "文章" },
       ],
       defaultValue: "tags",
