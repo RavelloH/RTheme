@@ -202,7 +202,7 @@ export const defaultPages: DefaultPage[] = [
   },
   {
     id: "system-posts-page",
-    title: "文章",
+    title: "文章 - 第 {page} 页",
     slug: "/posts/page/:page",
     content: "",
     contentType: "MARKDOWN",

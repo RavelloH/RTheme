@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import dynamic from "next/dynamic";
 
+import SearchContent from "@/blocks/collection/PagedPosts/client/SearchContent";
 import type {
   PagedPostsBlockConfig,
   PagedPostsData,
@@ -11,17 +11,6 @@ import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import EmptyPostCard from "@/components/server/features/posts/EmptyPostCard";
 import PostCard from "@/components/server/features/posts/PostCard";
 import { createArray } from "@/lib/client/create-array";
-
-// 动态导入 SearchContent（客户端组件）
-const SearchContent = dynamic(
-  () =>
-    import("@/blocks/collection/PagedPosts/client/SearchContent").then(
-      (mod) => mod.default,
-    ),
-  {
-    ssr: false,
-  },
-);
 
 /**
  * PagedPostsBlock - 分页文章列表组件
