@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback } from "react";
-import { useRouter } from "next/navigation";
 
+import { useNavigateWithTransition } from "@/components/ui/Link";
 import LinkButton from "@/components/ui/LinkButton";
 
 /**
@@ -17,16 +17,16 @@ export default function RandomLinkFooter({
   options: string[];
   text: string;
 }) {
-  const router = useRouter();
+  const navigate = useNavigateWithTransition();
 
   const handleClick = useCallback(() => {
     if (options.length === 0) return;
     const randomIndex = Math.floor(Math.random() * options.length);
     const randomHref = options[randomIndex];
     if (randomHref) {
-      router.push(randomHref);
+      navigate(randomHref);
     }
-  }, [options, router]);
+  }, [options, navigate]);
 
   return (
     <LinkButton
