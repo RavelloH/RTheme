@@ -13,6 +13,8 @@ import { useMenu } from "@/components/client/layout/MenuProvider";
 import type { DynamicIcon as DynamicIconType } from "@/components/ui/DynamicIcon";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 
+const HISTORY_STACK_KEY = "neutral-press-history-stack";
+
 type BroadcastFn = ReturnType<typeof useBroadcastSender<object>>["broadcast"];
 type GetLeftRightMenusFn = ReturnType<typeof useMenu>["getLeftRightMenus"];
 type RouterInstance = ReturnType<typeof useRouter>;
@@ -357,6 +359,7 @@ export function jumpTransition(
   router: RouterInstance,
   broadcast: BroadcastFn,
   getLeftRightMenus: GetLeftRightMenusFn,
+  isBack: boolean = false,
 ) {
   let cleanedPath = newPath;
 
@@ -404,6 +407,23 @@ export function jumpTransition(
     return;
   }
 
+  // 如果不是返回操作，则记录当前路径到历史栈
+  if (!isBack && typeof sessionStorage !== "undefined") {
+    try {
+      const stack = JSON.parse(
+        sessionStorage.getItem(HISTORY_STACK_KEY) || "[]",
+      );
+      // 避免重复连续入栈（虽然业务逻辑上可能允许 A->B->A，但防止快速点击导致重复记录）
+      // 这里我们只记录有效的跳转
+      stack.push(oldPath);
+      // 限制栈大小，防止无限增长
+      if (stack.length > 50) stack.shift();
+      sessionStorage.setItem(HISTORY_STACK_KEY, JSON.stringify(stack));
+    } catch (e) {
+      console.error("Failed to save history stack", e);
+    }
+  }
+
   // 处理垂直导航
   const oldDepth = oldPath.split("/").length;
   const newDepth = normalizedPath.split("/").length;
@@ -430,7 +450,7 @@ export function jumpTransition(
 
 /**
  * Hook to get a navigation function with transition effects
- * @returns A function that takes only the target path and handles navigation with transitions
+ * @returns A function that takes the target path and optional options
  * @example
  * const navigate = useNavigateWithTransition();
  * navigate('/about'); // Navigate to /about with transition
@@ -441,9 +461,48 @@ export function useNavigateWithTransition() {
   const { broadcast } = useBroadcastSender<object>();
   const { getLeftRightMenus } = useMenu();
 
-  return (targetPath: string) => {
-    jumpTransition(pathname, targetPath, router, broadcast, getLeftRightMenus);
+  return (targetPath: string, options?: { isBack?: boolean }) => {
+    jumpTransition(
+      pathname,
+      targetPath,
+      router,
+      broadcast,
+      getLeftRightMenus,
+      options?.isBack,
+    );
   };
+}
+
+/**
+ * Hook to navigate back to the previous page in the internal history stack
+ */
+export function useBackNavigation() {
+  const navigate = useNavigateWithTransition();
+
+  const back = () => {
+    if (typeof window === "undefined") return;
+    try {
+      const stack = JSON.parse(
+        sessionStorage.getItem(HISTORY_STACK_KEY) || "[]",
+      );
+      const prev = stack.pop();
+
+      if (prev) {
+        // 更新栈
+        sessionStorage.setItem(HISTORY_STACK_KEY, JSON.stringify(stack));
+        // 执行返回导航，标记 isBack 为 true 以防止将当前页再次压入栈（避免死循环）
+        navigate(prev, { isBack: true });
+      } else {
+        // 如果栈为空，回退到首页
+        navigate("/", { isBack: true });
+      }
+    } catch (e) {
+      console.error("Failed to perform back navigation", e);
+      navigate("/", { isBack: true });
+    }
+  };
+
+  return back;
 }
 
 export default React.forwardRef<HTMLAnchorElement, CustomLinkProps>(

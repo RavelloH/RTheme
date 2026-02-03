@@ -7,6 +7,7 @@ import type {
   BlockType,
 } from "@/blocks/core/types";
 import SortableBlockWrapper from "@/components/server/features/page-editor/SortableBlockWrapper";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 // 类型安全的组件映射：使用动态导入，并为每个组件添加类型断言
 const BLOCK_COMPONENTS: BlockComponentMap = {
@@ -28,6 +29,12 @@ const BLOCK_COMPONENTS: BlockComponentMap = {
   accordion: dynamic(
     () => import("@/blocks/collection/Accordion"),
   ) as BlockComponentMap["accordion"],
+  "paged-posts": dynamic(
+    () => import("@/blocks/collection/PagedPosts"),
+  ) as BlockComponentMap["paged-posts"],
+  pagination: dynamic(
+    () => import("@/blocks/collection/Pagination"),
+  ) as BlockComponentMap["pagination"],
 };
 
 // 获取组件的类型安全辅助函数
@@ -43,7 +50,9 @@ export function SingleBlockRenderer({ block }: { block: BlockConfig }) {
 
   return (
     <div className="h-full">
-      <Component config={block as never} />
+      <React.Suspense fallback={<LoadingIndicator className="px-20" />}>
+        <Component config={block as never} />
+      </React.Suspense>
     </div>
   );
 }

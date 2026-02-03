@@ -141,6 +141,10 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
           label: "随机链接",
           value: "random",
         },
+        {
+          label: "返回链接",
+          value: "back",
+        },
       ],
       defaultValue: "normal",
     },
@@ -155,8 +159,8 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
           value: "tags",
         },
         {
-          label: "分类",
-          value: "categories",
+          label: "文章",
+          value: "posts",
         },
       ],
       defaultValue: "tags",

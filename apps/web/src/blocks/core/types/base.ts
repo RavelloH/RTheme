@@ -23,7 +23,7 @@ export interface BlockContentBody {
 }
 
 export interface BlockContentFooter {
-  type?: "normal" | "random"; // Footer 类型：常规链接或随机链接
+  type?: "normal" | "random" | "back"; // Footer 类型：常规链接或随机链接
   randomSource?: "tags" | "categories"; // 随机链接的数据来源
   link?: string;
   text?: string; // 原 description，现更名为 text 表示链接文本
@@ -46,6 +46,8 @@ export interface BaseBlockProps<T extends BaseBlockConfig = BaseBlockConfig> {
 import type { AccordionBlockConfig } from "@/blocks/collection/Accordion/types";
 import type { DefaultBlockConfig } from "@/blocks/collection/Default/types";
 import type { HeroBlockConfig } from "@/blocks/collection/HeroGallery/types";
+import type { PagedPostsBlockConfig } from "@/blocks/collection/PagedPosts/types";
+import type { PaginationBlockConfig } from "@/blocks/collection/Pagination/types";
 import type { PostsBlockConfig } from "@/blocks/collection/RecentPosts/types";
 import type { ProjectsBlockConfig } from "@/blocks/collection/RecentProjects/types";
 import type { TagsCategoriesBlockConfig } from "@/blocks/collection/TagsCategories/types";
@@ -57,6 +59,8 @@ export interface BlockTypeMap {
   posts: PostsBlockConfig;
   "tags-categories": TagsCategoriesBlockConfig;
   accordion: AccordionBlockConfig;
+  "paged-posts": PagedPostsBlockConfig;
+  pagination: PaginationBlockConfig;
 }
 
 // 提取所有 block type

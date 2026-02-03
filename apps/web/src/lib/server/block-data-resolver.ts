@@ -32,6 +32,14 @@ const fetcherLoaders: Record<string, () => Promise<BlockFetcher>> = {
     import("@/blocks/collection/Accordion/fetcher").then(
       (m) => m.accordionFetcher,
     ),
+  "paged-posts": () =>
+    import("@/blocks/collection/PagedPosts/fetcher").then(
+      (m) => m.pagedPostsFetcher,
+    ),
+  pagination: () =>
+    import("@/blocks/collection/Pagination/fetcher").then(
+      (m) => m.paginationFetcher,
+    ),
 };
 
 /**

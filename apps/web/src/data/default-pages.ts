@@ -420,6 +420,9 @@ export const defaultPages: DefaultPage[] = [
               align: "left",
               value: "Keywords. Connections. Traces.",
             },
+            layout: {
+              verticalCenter: false,
+            },
             content: {
               top: {
                 align: "left",
@@ -435,34 +438,20 @@ export const defaultPages: DefaultPage[] = [
                 value: ["当前正在查看 {pageInfo}。"],
               },
             },
-            layout: {
-              verticalCenter: false,
-            },
           },
           description: "",
         },
         {
           id: 2,
           block: "accordion",
-          content: {},
-          description: "",
-        },
-        {
-          id: 3,
-          block: "default",
-          description: "",
           content: {
-            header: { value: "", align: "left" },
-            title: { value: "", align: "left" },
-            content: {
-              top: { value: [], align: "left" },
-              bottom: { value: [], align: "left" },
+            source: "tags",
+            layout: {
+              sortBy: "count",
             },
-            footer: {
-              link: "",
-              text: "",
-            },
+            limit: 0,
           },
+          description: "",
         },
       ],
     },
@@ -483,50 +472,63 @@ export const defaultPages: DefaultPage[] = [
         {
           id: 1,
           block: "default",
-          description: "",
           content: {
-            header: { value: "Keywords. Connections. Traces.", align: "left" },
-            title: { value: "标签：{tagName}", align: "left" },
+            title: {
+              align: "left",
+              value: "标签：{tag}",
+            },
+            footer: {
+              link: "",
+              text: "Back / 返回标签列表",
+              type: "back",
+              randomSource: "tags",
+            },
+            header: {
+              align: "left",
+              value: "Keywords. Connections. Traces.",
+            },
             content: {
               top: {
+                align: "left",
                 value: [
+                  "{tagDescription}",
                   "整理 & 索引 {tag} 下的所有文章。",
-                  "",
                   "此标签共包含 {posts} 个文章。",
                 ],
-                align: "left",
               },
               bottom: {
+                align: "left",
                 value: [
                   "当前正在查看 {pageInfo}。",
                   "第 {page} 页，共 {totalPage} 页。",
                   "正在查看第 {firstPage} - {lastPage} 篇文章。",
                 ],
-                align: "left",
               },
             },
-            footer: {
-              link: "",
-              text: "Back / 返回标签列表",
+            layout: {
+              verticalCenter: false,
+              ratio: 1,
             },
           },
+          description: "",
         },
         {
           id: 2,
-          block: "default",
-          description: "",
+          block: "paged-posts",
           content: {
-            header: { value: "", align: "left" },
-            title: { value: "", align: "left" },
-            content: {
-              top: { value: [], align: "left" },
-              bottom: { value: [], align: "left" },
-            },
-            footer: {
-              link: "",
-              text: "",
-            },
+            filterBy: "tag",
+            sortBy: "isPinned_desc",
+            pageSize: 20,
           },
+          description: "",
+        },
+        {
+          id: 3,
+          block: "pagination",
+          content: {
+            filterBy: "tag",
+          },
+          description: "",
         },
       ],
     },
