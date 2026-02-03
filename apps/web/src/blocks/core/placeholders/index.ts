@@ -7,6 +7,7 @@ export { postsInterpolator } from "./posts";
 export { projectsInterpolator } from "./projects";
 export { tagPostsInterpolator } from "./tag-posts";
 export { tagsInterpolator } from "./tags";
+export { postsListInterpolator } from "./posts-list";
 
 /**
  * 插值器类型定义
@@ -31,6 +32,7 @@ export const interpolatorMap: Record<string, InterpolatorLoader> = {
   projects: () => import("./projects"),
   tagPosts: () => import("./tag-posts"),
   tags: () => import("./tags"),
+  postsList: () => import("./posts-list"),
 };
 
 /**
@@ -73,6 +75,19 @@ export const PLACEHOLDER_REGISTRY: PlaceholderMeta[] = [
     name: "projects",
     description: "显示当前总项目数",
     interpolator: "projects",
+  },
+  // PostsList 插值器占位符（用于文章列表页）
+  {
+    name: "firstPublishAt",
+    description: "首次发布日期",
+    interpolator: "postsList",
+    isSubField: true,
+  },
+  {
+    name: "lastPublishDays",
+    description: "最近更新日期",
+    interpolator: "postsList",
+    isSubField: true,
   },
   // TagPosts 插值器占位符（参数化）
   // {

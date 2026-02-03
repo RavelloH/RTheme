@@ -24,7 +24,7 @@ export interface BlockContentBody {
 
 export interface BlockContentFooter {
   type?: "normal" | "random" | "back"; // Footer 类型：常规链接或随机链接
-  randomSource?: "tags" | "categories"; // 随机链接的数据来源
+  randomSource?: "tags" | "categories" | "posts"; // 随机链接的数据来源
   link?: string;
   text?: string; // 原 description，现更名为 text 表示链接文本
 }

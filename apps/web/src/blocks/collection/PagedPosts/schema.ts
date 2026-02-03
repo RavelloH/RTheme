@@ -54,12 +54,19 @@ export const PAGED_POSTS_BLOCK_FORM_CONFIG: BlockFormConfig = {
       helperText: "每页显示的文章数量",
       defaultValue: 20,
     },
+    {
+      label: "启用搜索",
+      path: "searchable",
+      type: "toggle",
+      defaultValue: false,
+      helperText: "是否启用文章搜索功能",
+    },
   ],
   groups: [
     {
       title: "数据源",
       description: "配置筛选条件和显示方式",
-      fields: ["filterBy", "sortBy", "pageSize"],
+      fields: ["filterBy", "sortBy", "pageSize", "searchable"],
     },
   ],
   previewData: {

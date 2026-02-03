@@ -21,7 +21,7 @@ export async function postsInterpolator(
     }),
   ]);
 
-  const postsList = allPosts.map((p) => `/${p.slug}`);
+  const postsList = allPosts.map((p) => `/posts/${p.slug}`);
 
   return {
     posts: totalPosts,

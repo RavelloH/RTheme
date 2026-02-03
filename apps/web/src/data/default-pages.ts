@@ -208,54 +208,66 @@ export const defaultPages: DefaultPage[] = [
     content: "",
     contentType: "MARKDOWN",
     config: {
+      pageSize: 20,
       blocks: [
         {
           id: 1,
           block: "default",
-          description: "",
           content: {
-            header: { value: "Thoughts. Notes. Stories.", align: "left" },
-            title: { value: "Posts / 文章", align: "left" },
+            title: {
+              align: "left",
+              value: "Posts / 文章",
+            },
+            footer: {
+              link: "",
+              text: "随便看看 / RANDOM",
+              type: "random",
+              randomSource: "posts",
+            },
+            header: {
+              align: "left",
+              value: "Thoughts. Notes. Stories.",
+            },
             content: {
               top: {
+                align: "left",
                 value: [
                   "记录 & 索引所有文章。",
                   "",
                   "最近更新于 {lastPublishDays}。",
                   "自 {firstPublishAt} 以来，共索引 {posts} 篇文章。",
                 ],
-                align: "left",
               },
               bottom: {
+                align: "left",
                 value: [
                   "第 {page} 页，共 {totalPage} 页。",
                   "正在查看第 {firstPage} - {lastPage} 篇文章。",
                 ],
-                align: "left",
               },
             },
-            footer: {
-              link: "",
-              text: "",
-            },
+            showSearchBar: true,
           },
+          description: "",
         },
         {
           id: 2,
-          block: "default",
-          description: "",
+          block: "paged-posts",
           content: {
-            header: { value: "", align: "left" },
-            title: { value: "", align: "left" },
-            content: {
-              top: { value: [], align: "left" },
-              bottom: { value: [], align: "left" },
-            },
-            footer: {
-              link: "",
-              text: "",
-            },
+            searchable: true,
+            filterBy: "all",
+            sortBy: "isPinned_desc",
+            pageSize: 20,
           },
+          description: "New paged-posts block",
+        },
+        {
+          id: 3,
+          block: "pagination",
+          content: {
+            filterBy: "all",
+          },
+          description: "",
         },
       ],
     },
