@@ -117,7 +117,8 @@ async function fetchPostsByFilter(
   } else {
     // 对于分类，查找所有子孙分类
     const pathSlugs = slug.split("/").filter(Boolean);
-    const parentCategory = pathSlugs.length > 0 ? await findCategoryByPath(pathSlugs) : null;
+    const parentCategory =
+      pathSlugs.length > 0 ? await findCategoryByPath(pathSlugs) : null;
 
     if (parentCategory) {
       // 获取所有子孙分类 ID

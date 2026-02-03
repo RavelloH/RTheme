@@ -512,7 +512,8 @@ async function fetchCategoryData(
   try {
     // 解析路径并查找分类（支持嵌套路径如 "xue-shu/shu-xue"）
     const pathSlugs = slug.split("/").filter(Boolean);
-    const category = pathSlugs.length > 0 ? await findCategoryByPath(pathSlugs) : null;
+    const category =
+      pathSlugs.length > 0 ? await findCategoryByPath(pathSlugs) : null;
 
     if (!category) return {};
 
@@ -571,14 +572,17 @@ async function calculateTotalPage(
     } else if (isCategoryPage) {
       // 查询分类下的文章数（支持嵌套路径）
       const pathSlugs = slug.split("/").filter(Boolean);
-      const category = pathSlugs.length > 0 ? await findCategoryByPath(pathSlugs) : null;
+      const category =
+        pathSlugs.length > 0 ? await findCategoryByPath(pathSlugs) : null;
 
       if (!category) {
         return 0;
       }
 
       // 查询分类及其所有子孙分类的文章数
-      const { getAllDescendantIds } = await import("@/lib/server/category-utils");
+      const { getAllDescendantIds } = await import(
+        "@/lib/server/category-utils"
+      );
       const descendantIds = await getAllDescendantIds(category.id);
       const allIds = [category.id, ...descendantIds];
 

@@ -861,6 +861,7 @@ export async function createCategory(
       parentId: number | null;
       path: string;
       depth: number;
+      fullSlug: string;
     } = {
       slug: finalSlug,
       name,
@@ -868,17 +869,22 @@ export async function createCategory(
       parentId: resolvedParentId ?? null,
       path: "",
       depth: 0,
+      fullSlug: finalSlug,
     };
 
-    // 计算路径和深度
+    // 计算路径、深度和 fullSlug
     if (resolvedParentId) {
       const parent = await prisma.category.findUnique({
         where: { id: resolvedParentId },
-        select: { path: true, depth: true, id: true },
+        select: { path: true, depth: true, id: true, fullSlug: true },
       });
       if (parent) {
         categoryData.path = `${parent.path}${parent.id}/`;
         categoryData.depth = parent.depth + 1;
+        // 构建 fullSlug：父分类的 fullSlug + "/" + 当前 slug
+        categoryData.fullSlug = parent.fullSlug
+          ? `${parent.fullSlug}/${finalSlug}`
+          : finalSlug;
       }
     }
 
@@ -1128,6 +1134,7 @@ export async function updateCategory(
       parentId?: number | null;
       path?: string;
       depth?: number;
+      fullSlug?: string;
     } = {};
 
     // 处理 slug 更新
@@ -1161,6 +1168,23 @@ export async function updateCategory(
       }
 
       updateData.slug = sanitizedSlug;
+
+      // 重新计算 fullSlug
+      if (category.parentId) {
+        const parent = await prisma.category.findUnique({
+          where: { id: category.parentId },
+          select: { fullSlug: true },
+        });
+        if (parent) {
+          updateData.fullSlug = parent.fullSlug
+            ? `${parent.fullSlug}/${sanitizedSlug}`
+            : sanitizedSlug;
+        } else {
+          updateData.fullSlug = sanitizedSlug;
+        }
+      } else {
+        updateData.fullSlug = sanitizedSlug;
+      }
     }
 
     // 处理名称更新
@@ -1192,6 +1216,8 @@ export async function updateCategory(
     let updateDescendants = false;
     let newPathPrefix = "";
     let oldPathPrefix = "";
+    let oldFullSlugPrefix = "";
+    let newFullSlugPrefix = "";
     let depthChange = 0;
 
     if (
@@ -1210,17 +1236,20 @@ export async function updateCategory(
       // 准备更新子孙分类的路径
       updateDescendants = true;
       oldPathPrefix = `${category.path}${category.id}/`;
+      oldFullSlugPrefix = `${category.fullSlug}${category.slug}/`;
 
       if (resolvedParentId === null) {
         // 移动到根
         newPathPrefix = "";
+        newFullSlugPrefix = "";
         updateData.path = "";
         updateData.depth = 0;
+        updateData.fullSlug = category.slug;
       } else {
         // 移动到新父级
         const newParent = await prisma.category.findUnique({
           where: { id: resolvedParentId },
-          select: { path: true, depth: true, id: true },
+          select: { path: true, depth: true, id: true, fullSlug: true },
         });
 
         if (!newParent) {
@@ -1230,6 +1259,10 @@ export async function updateCategory(
         updateData.path = `${newParent.path}${newParent.id}/`;
         updateData.depth = newParent.depth + 1;
         newPathPrefix = `${updateData.path}${category.id}/`;
+        updateData.fullSlug = newParent.fullSlug
+          ? `${newParent.fullSlug}/${category.slug}`
+          : category.slug;
+        newFullSlugPrefix = `${updateData.fullSlug}/`;
       }
 
       depthChange = updateData.depth - category.depth;
@@ -1250,21 +1283,58 @@ export async function updateCategory(
           where: {
             path: { startsWith: oldPathPrefix },
           },
-          select: { id: true, path: true, depth: true },
+          select: {
+            id: true,
+            path: true,
+            depth: true,
+            fullSlug: true,
+            slug: true,
+          },
         });
 
         for (const desc of descendants) {
-          // 替换前缀
+          // 替换 path 前缀
           const newPath =
             newPathPrefix + desc.path.substring(oldPathPrefix.length);
           const newDepth = desc.depth + depthChange;
+          // 替换 fullSlug 前缀
+          const newFullSlug = desc.fullSlug.startsWith(oldFullSlugPrefix)
+            ? newFullSlugPrefix +
+              desc.fullSlug.substring(oldFullSlugPrefix.length)
+            : desc.fullSlug;
 
           await tx.category.update({
             where: { id: desc.id },
             data: {
               path: newPath,
               depth: newDepth,
+              fullSlug: newFullSlug,
             },
+          });
+        }
+      }
+
+      // 3. 如果 slug 改变但路径未变，更新所有子孙的 fullSlug
+      if (newSlug && !updateDescendants) {
+        const oldFullSlugPrefix = `${category.fullSlug}/`;
+        const newFullSlugPrefix = `${updateData.fullSlug}/`;
+
+        const allDescendants = await tx.category.findMany({
+          where: {
+            path: { startsWith: `${category.path}${category.id}/` },
+          },
+          select: { id: true, fullSlug: true },
+        });
+
+        for (const desc of allDescendants) {
+          const newFullSlug = desc.fullSlug.startsWith(oldFullSlugPrefix)
+            ? newFullSlugPrefix +
+              desc.fullSlug.substring(oldFullSlugPrefix.length)
+            : desc.fullSlug;
+
+          await tx.category.update({
+            where: { id: desc.id },
+            data: { fullSlug: newFullSlug },
           });
         }
       }
@@ -1482,6 +1552,7 @@ export async function deleteCategories(
           description: "自动分配给未指定分类的文章",
           path: "",
           depth: 0,
+          fullSlug: "uncategorized",
         },
         select: { id: true },
       });

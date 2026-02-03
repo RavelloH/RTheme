@@ -172,7 +172,11 @@ export default function GridTable<T extends Record<string, unknown>>({
 
   // 从 URL 读取初始筛选参数
   useEffect(() => {
-    if (typeof window === "undefined" || !filterConfig || initializedRef.current)
+    if (
+      typeof window === "undefined" ||
+      !filterConfig ||
+      initializedRef.current
+    )
       return;
 
     const urlParams = new URLSearchParams(window.location.search);

@@ -420,7 +420,7 @@ interface CategoryBasicInfo {
 }
 
 /**
- * 根据 slug 路径查找分类
+ * 根据 slug 路径查找分类（优化版：使用 fullSlug 字段）
  * @param pathSlugs slug 数组路径，例如 ["tech", "web", "frontend"]
  * @returns 分类对象，如果不存在返回 null
  */
@@ -431,26 +431,24 @@ export async function findCategoryByPath(
     return null;
   }
 
-  let currentParentId: number | null = null;
-  let finalCategory: CategoryBasicInfo | null = null;
+  // 构建 fullSlug：用 "/" 连接所有 slug
+  const fullSlug = pathSlugs.join("/");
 
-  for (const slug of pathSlugs) {
-    const category: CategoryBasicInfo | null = await prisma.category.findFirst({
-      where: {
-        slug,
-        parentId: currentParentId,
-      },
-    });
+  // 单次查询，利用 fullSlug 索引
+  const category = await prisma.category.findUnique({
+    where: { fullSlug },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      description: true,
+      parentId: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
 
-    if (!category) {
-      return null;
-    }
-
-    currentParentId = category.id;
-    finalCategory = category;
-  }
-
-  return finalCategory;
+  return category;
 }
 
 /**
