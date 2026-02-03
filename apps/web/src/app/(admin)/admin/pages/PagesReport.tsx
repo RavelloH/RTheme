@@ -269,16 +269,6 @@ export default function PagesReport() {
             </div>
             <div className="space-y-4">
               <Input
-                label="标题"
-                value={newPageForm.title}
-                onChange={(e) =>
-                  setNewPageForm({ ...newPageForm, title: e.target.value })
-                }
-                required
-                size="sm"
-                helperText="页面标题"
-              />
-              <Input
                 label="路径"
                 value={newPageForm.slug}
                 onChange={(e) =>
@@ -289,7 +279,7 @@ export default function PagesReport() {
                 helperText='页面路径，如 "/about" 或 "about"'
               />
               <p className="text-sm text-muted-foreground font-mono py-2">
-                <strong>路由解析规则（按优先级排序）：</strong>
+                路由解析规则（按优先级排序）：
                 <br />
                 1. 精确匹配：/about → 匹配 /about 页面
                 <br />
@@ -303,13 +293,23 @@ export default function PagesReport() {
                 参数
                 <br />
                 <br />
-                <strong>通配符说明：</strong>
+                通配符说明：
                 <br />• 使用 &quot;:slug&quot; 匹配任意路径段（如
                 &quot;/posts/:slug&quot; 可匹配 &quot;/posts/hello-world&quot;）
                 <br />• 使用 &quot;/page/:page&quot; 创建分页路由（如
                 &quot;/posts/page/:page&quot; 可匹配 &quot;/posts/page/1&quot;）
                 <br />• 可组合使用：&quot;/:slug/page/:page&quot;
               </p>
+              <Input
+                label="标题"
+                value={newPageForm.title}
+                onChange={(e) =>
+                  setNewPageForm({ ...newPageForm, title: e.target.value })
+                }
+                required
+                size="sm"
+                helperText="页面标题"
+              />
               <Input
                 label="SEO 描述"
                 value={newPageForm.metaDescription}
@@ -323,6 +323,23 @@ export default function PagesReport() {
                 size="sm"
                 helperText="用于搜索引擎结果展示"
               />
+              <p className="text-muted-foreground text-sm">
+                标题与SEO描述中支持的变量：
+                <br />
+                {`• {slug} - 路由参数`}
+                <br />
+                {`• {page} - 当前页码`}
+                <br />
+                {`• {totalPage} - 总页数（通过数据库计数计算）`}
+                <br />
+                {`• {tag} - 标签名称`}
+                <br />
+                {`• {tagDescription} - 标签描述`}
+                <br />
+                {`• {category} - 分类名称（原 {categoryName} 改名）`}
+                <br />
+                {`• {categoryDescription} - 分类描述`}
+              </p>
               <Input
                 label="SEO 关键词"
                 value={newPageForm.metaKeywords}

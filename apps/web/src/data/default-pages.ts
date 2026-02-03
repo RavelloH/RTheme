@@ -35,7 +35,7 @@ export interface DefaultPage {
  */
 export const defaultPages: DefaultPage[] = [
   {
-    id: "home-page",
+    id: "system-home",
     title: "首页",
     slug: "/",
     content: "",
@@ -188,7 +188,7 @@ export const defaultPages: DefaultPage[] = [
     robotsIndex: true,
   },
   {
-    id: "projects-page",
+    id: "system-projects-page",
     title: "作品",
     slug: "/projects",
     content: "",
@@ -196,13 +196,12 @@ export const defaultPages: DefaultPage[] = [
     config: {},
     status: "ACTIVE",
     isSystemPage: true,
-    metaDescription:
-      "展示个人和团队的项目作品集，包含开源项目、商业案例和技术实践",
-    metaKeywords: "作品集, 项目, 开源, 技术实践, 案例展示, 个人项目",
+    metaDescription: "展示个人和团队的项目作品集，包含项目、商业案例和技术实践",
+    metaKeywords: "作品集, 项目, 技术实践, 案例展示, 个人项目",
     robotsIndex: true,
   },
   {
-    id: "posts-page",
+    id: "system-posts-page",
     title: "文章",
     slug: "/posts/page/:page",
     content: "",
@@ -273,13 +272,12 @@ export const defaultPages: DefaultPage[] = [
     },
     status: "ACTIVE",
     isSystemPage: true,
-    metaDescription:
-      "分享技术见解、开发经验和行业思考的博客文章，涵盖前端、后端、系统设计等多个领域",
-    metaKeywords: "博客, 技术文章, 开发经验, 前端, 后端, 系统设计, 技术分享",
+    metaDescription: "分享技术见解、开发经验和行业思考的博客文章",
+    metaKeywords: "博客, 技术文章, 开发经验, 系统设计, 技术分享",
     robotsIndex: true,
   },
   {
-    id: "categories-page",
+    id: "system-categories-index",
     title: "分类",
     slug: "/categories",
     content: "",
@@ -341,11 +339,13 @@ export const defaultPages: DefaultPage[] = [
     robotsIndex: true,
   },
   {
-    id: "child-categories-page",
-    title: "子分类",
+    id: "system-child-categories",
+    title: "分类：{category} - 第 {page} 页",
     slug: "/categories/:slug/page/:page",
     content: "",
     contentType: "MARKDOWN",
+    metaDescription:
+      "浏览分类 {category} 下的文章，第 {page} 页，共 {totalPage} 页",
     config: {
       blocks: [
         {
@@ -354,11 +354,11 @@ export const defaultPages: DefaultPage[] = [
           description: "",
           content: {
             header: { value: "Topics. Themes. Paths.", align: "left" },
-            title: { value: "分类：{categoryName}", align: "left" },
+            title: { value: "分类：{category}", align: "left" },
             content: {
               top: {
                 value: [
-                  "整理 & 索引 {categoryName} 下的所有子分类及文章。",
+                  "整理 & 索引 {category} 下的所有子分类及文章。",
                   "",
                   "最近更新于 {lastUpdatedDays}。",
                   "此分类共包含 {categories} 个子分类，",
@@ -402,12 +402,11 @@ export const defaultPages: DefaultPage[] = [
     },
     status: "ACTIVE",
     isSystemPage: true,
-    metaDescription: "按主题和领域分类整理的文章列表，方便快速找到感兴趣的内容",
     metaKeywords: "文章分类, 内容分类, 主题导航, 文章目录",
     robotsIndex: true,
   },
   {
-    id: "tags-page",
+    id: "system-tags-index",
     title: "标签",
     slug: "/tags",
     content: "",
@@ -474,11 +473,12 @@ export const defaultPages: DefaultPage[] = [
     robotsIndex: true,
   },
   {
-    id: "child-tags-page",
-    title: "标签",
+    id: "system-child-tags",
+    title: "标签：{tag} - 第 {page} 页",
     slug: "/tags/:slug/page/:page",
     content: "",
     contentType: "MARKDOWN",
+    metaDescription: "浏览标签 {tag} 下的文章，第 {page} 页，共 {totalPage} 页",
     config: {
       blocks: [
         {
@@ -546,12 +546,11 @@ export const defaultPages: DefaultPage[] = [
     },
     status: "ACTIVE",
     isSystemPage: true,
-    metaDescription: "通过标签快速发现相关文章，标签云展示内容的分布和热点话题",
     metaKeywords: "标签, 标签云, 关键词, 文章标签, 内容索引",
     robotsIndex: true,
   },
   {
-    id: "friends-page",
+    id: "system-friends-page",
     title: "友链",
     slug: "/friends",
     content: "",
@@ -565,7 +564,7 @@ export const defaultPages: DefaultPage[] = [
     robotsIndex: true,
   },
   {
-    id: "about-page",
+    id: "system-about-page",
     title: "关于",
     slug: "/about",
     content: "",
@@ -579,7 +578,7 @@ export const defaultPages: DefaultPage[] = [
     robotsIndex: true,
   },
   {
-    id: "gallery-page",
+    id: "system-gallery-page",
     title: "照片墙",
     slug: "/gallery",
     content: "",

@@ -1244,14 +1244,6 @@ export default function PagesTable() {
                 helperText="页面唯一标识（只读）"
                 disabled
               />
-              <Input
-                label="标题"
-                value={formData.title}
-                onChange={(e) => handleFieldChange("title", e.target.value)}
-                required
-                size="sm"
-                helperText="页面标题，也用于SEO标题"
-              />
               <div className="space-y-2">
                 <Input
                   label="路径"
@@ -1267,7 +1259,7 @@ export default function PagesTable() {
                   </p>
                 )}
                 <p className="text-sm text-muted-foreground font-mono py-2">
-                  <strong>路由解析规则（按优先级排序）：</strong>
+                  路由解析规则（按优先级排序）：
                   <br />
                   1. 精确匹配：/about → 匹配 /about 页面
                   <br />
@@ -1281,7 +1273,7 @@ export default function PagesTable() {
                   参数
                   <br />
                   <br />
-                  <strong>通配符说明：</strong>
+                  通配符说明：
                   <br />• 使用 &quot;:slug&quot; 匹配任意路径段（如
                   &quot;/posts/:slug&quot; 可匹配
                   &quot;/posts/hello-world&quot;）
@@ -1292,6 +1284,14 @@ export default function PagesTable() {
                 </p>
               </div>
               <Input
+                label="标题"
+                value={formData.title}
+                onChange={(e) => handleFieldChange("title", e.target.value)}
+                required
+                size="sm"
+                helperText="页面标题，也用于SEO标题"
+              />
+              <Input
                 label="SEO 描述"
                 value={formData.metaDescription}
                 onChange={(e) =>
@@ -1301,6 +1301,23 @@ export default function PagesTable() {
                 size="sm"
                 helperText="用于搜索引擎结果展示，也作为页面摘要"
               />
+              <p className="text-muted-foreground text-sm">
+                标题与SEO描述中支持的变量：
+                <br />
+                {`• {slug} - 路由参数`}
+                <br />
+                {`• {page} - 当前页码`}
+                <br />
+                {`• {totalPage} - 总页数（通过数据库计数计算）`}
+                <br />
+                {`• {tag} - 标签名称`}
+                <br />
+                {`• {tagDescription} - 标签描述`}
+                <br />
+                {`• {category} - 分类名称（原 {categoryName} 改名）`}
+                <br />
+                {`• {categoryDescription} - 分类描述`}
+              </p>
               <Input
                 label="SEO 关键词"
                 value={formData.metaKeywords}
@@ -1340,9 +1357,6 @@ export default function PagesTable() {
                 <h3 className="text-lg font-semibold text-foreground">
                   页面配置
                 </h3>
-                <p className="text-sm text-muted-foreground">
-                  配置分页数等选项，或使用布局编辑器进行完整配置。
-                </p>
               </div>
               {isConfigObject(formData.config) &&
               Object.keys(formData.config).length > 0 ? (
@@ -1359,7 +1373,7 @@ export default function PagesTable() {
               ) : (
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    该系统页面暂未提供可快速编辑的配置。
+                    该系统页面暂未提供可快速编辑的配置。启动布局编辑器以进行自定义。
                   </p>
                   <Button
                     label="打开布局编辑器"

@@ -2,6 +2,7 @@
 import type { Metadata } from "next";
 
 import { getRawConfig } from "@/lib/server/config-cache";
+import prisma from "@/lib/server/prisma";
 
 // 基础静态配置（不依赖数据库的固定值）
 const STATIC_METADATA = {
@@ -197,7 +198,7 @@ interface ExtendedMetadata extends Metadata {
 // 生成动态SEO配置的异步函数
 export async function generateMetadata(
   overrides: Partial<ExtendedMetadata> = {},
-  options?: { pathname?: string },
+  options?: { pathname?: string; seoParams?: SeoTemplateParams },
 ): Promise<Metadata> {
   // 批量获取所有需要的配置
   const configKeys = Object.values(seoConfigMap);
@@ -313,6 +314,28 @@ export async function generateMetadata(
   // 处理页面级别的标题覆盖
   const processedOverrides = { ...overrides };
 
+  // SEO 插值处理：如果提供了 seoParams，自动对 title 和 description 进行插值
+  if (options?.seoParams) {
+    // 检查 title 是否包含占位符
+    if (typeof overrides.title === "string" && overrides.title.includes("{")) {
+      processedOverrides.title = await interpolateSeoTemplate(
+        overrides.title,
+        options.seoParams,
+      );
+    }
+
+    // 检查 description 是否包含占位符
+    if (
+      typeof overrides.description === "string" &&
+      overrides.description.includes("{")
+    ) {
+      processedOverrides.description = await interpolateSeoTemplate(
+        overrides.description,
+        options.seoParams,
+      );
+    }
+  }
+
   // 如果提供了分页信息，添加到 other 中以生成正确的 link 标签
   if (overrides.pagination) {
     const { pagination, ...overridesWithoutPagination } = overrides;
@@ -335,25 +358,26 @@ export async function generateMetadata(
   }
 
   // 如果覆盖参数中包含标题，确保使用模板格式
-  if (overrides.title) {
-    if (typeof overrides.title === "string") {
-      // 如果是字符串标题，使用模板解析
+  // 注意：这里使用 processedOverrides.title，因为可能已经经过了 SEO 插值
+  if (processedOverrides.title) {
+    // 如果是对象格式，保持原样（允许页面完全控制标题）
+    if (typeof processedOverrides.title === "object") {
+      // 已经是最终格式，不需要处理
+    } else if (typeof processedOverrides.title === "string") {
+      // 如果是字符串标题，应用站点标题模板
       if (titleTemplate) {
         processedOverrides.title = parseTitleTemplate(
           titleTemplate,
           title || "NeutralPress",
           subtitle,
-          overrides.title,
+          processedOverrides.title,
         );
       } else {
         // 没有模板时使用简单拼接
         const siteTitle = title || "NeutralPress";
         const fullTitle = subtitle ? `${siteTitle} - ${subtitle}` : siteTitle;
-        processedOverrides.title = `${overrides.title} | ${fullTitle}`;
+        processedOverrides.title = `${processedOverrides.title} | ${fullTitle}`;
       }
-    } else if (overrides.title && typeof overrides.title === "object") {
-      // 如果是对象格式，保持原样（允许页面完全控制标题）
-      processedOverrides.title = overrides.title;
     }
   }
 
@@ -361,4 +385,276 @@ export async function generateMetadata(
     ...dynamicMetadata,
     ...processedOverrides,
   };
+}
+
+/**
+ * 插值页面模板
+ * 支持使用插值器数据（如 {tagName}, {page}, {totalPage} 等）来动态生成标题和描述
+ *
+ * @param template 模板字符串，如 "标签：{tagName} - 第{page}页"
+ * @param data 插值器数据对象
+ * @returns 插值后的字符串
+ */
+export function interpolatePageTemplate(
+  template: string,
+  data: Record<string, unknown>,
+): string {
+  let result = template;
+
+  // 替换所有占位符
+  for (const [key, value] of Object.entries(data)) {
+    const placeholder = `{${key}}`;
+    if (result.includes(placeholder)) {
+      const valueStr =
+        value === null || value === undefined ? "" : String(value);
+      result = result.split(placeholder).join(valueStr);
+    }
+  }
+
+  return result;
+}
+
+// ========== SEO 专用插值体系 ==========
+
+/**
+ * SEO 插值参数
+ */
+export interface SeoTemplateParams {
+  slug?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+/**
+ * 检测模板中使用的占位符
+ * 只返回模板中实际存在的占位符，避免不必要的数据库查询
+ */
+function detectPlaceholders(
+  template: string,
+): Set<keyof SeoTemplateData | string> {
+  const placeholderRegex = /\{([^}]+)\}/g;
+  const placeholders = new Set<string>();
+
+  let match;
+  while ((match = placeholderRegex.exec(template)) !== null) {
+    if (match[1]) {
+      placeholders.add(match[1]);
+    }
+  }
+
+  return placeholders;
+}
+
+/**
+ * SEO 插值数据
+ */
+interface SeoTemplateData {
+  slug?: string;
+  page?: number;
+  totalPage?: number;
+  tag?: string;
+  tagDescription?: string;
+  category?: string;
+  categoryDescription?: string;
+}
+
+/**
+ * 获取标签信息（按需查询）
+ */
+async function fetchTagData(
+  slug: string | undefined,
+  placeholders: Set<string>,
+): Promise<{ tag?: string; tagDescription?: string }> {
+  if (!slug) return {};
+
+  // 只有当模板中包含 {tag} 或 {tagDescription} 时才查询
+  const needsTag = placeholders.has("tag");
+  const needsDescription = placeholders.has("tagDescription");
+
+  if (!needsTag && !needsDescription) return {};
+
+  try {
+    const tag = await prisma.tag.findUnique({
+      where: { slug },
+      select: { name: true, description: true },
+    });
+
+    if (!tag) return {};
+
+    return {
+      tag: needsTag ? tag.name : undefined,
+      tagDescription: needsDescription
+        ? tag.description || undefined
+        : undefined,
+    };
+  } catch (error) {
+    console.error("[SEO] Failed to fetch tag data:", error);
+    return {};
+  }
+}
+
+/**
+ * 获取分类信息（按需查询）
+ */
+async function fetchCategoryData(
+  slug: string | undefined,
+  placeholders: Set<string>,
+): Promise<{ category?: string; categoryDescription?: string }> {
+  if (!slug) return {};
+
+  // 只有当模板中包含 {category} 或 {categoryDescription} 时才查询
+  const needsCategory = placeholders.has("category");
+  const needsDescription = placeholders.has("categoryDescription");
+
+  if (!needsCategory && !needsDescription) return {};
+
+  try {
+    const category = await prisma.category.findFirst({
+      where: { slug },
+      select: { name: true, description: true },
+    });
+
+    if (!category) return {};
+
+    return {
+      category: needsCategory ? category.name : undefined,
+      categoryDescription: needsDescription
+        ? category.description || undefined
+        : undefined,
+    };
+  } catch (error) {
+    console.error("[SEO] Failed to fetch category data:", error);
+    return {};
+  }
+}
+
+/**
+ * 计算总页数（按需计算）
+ */
+async function calculateTotalPage(
+  slug: string | undefined,
+  pageSize: number = 20,
+  placeholders: Set<string>,
+): Promise<number | undefined> {
+  // 只有当模板中包含 {totalPage} 时才计算
+  if (!placeholders.has("totalPage")) return undefined;
+
+  if (!slug) return undefined;
+
+  try {
+    let totalCount = 0;
+
+    // 根据占位符自动判断页面类型
+    const isTagPage =
+      placeholders.has("tag") || placeholders.has("tagDescription");
+    const isCategoryPage =
+      placeholders.has("category") || placeholders.has("categoryDescription");
+
+    if (isTagPage) {
+      // 查询标签下的文章数
+      const tag = await prisma.tag.findUnique({
+        where: { slug },
+        select: {
+          _count: {
+            select: {
+              posts: {
+                where: {
+                  status: "PUBLISHED",
+                  deletedAt: null,
+                },
+              },
+            },
+          },
+        },
+      });
+      totalCount = tag?._count.posts || 0;
+    } else if (isCategoryPage) {
+      // 查询分类下的文章数
+      const category = await prisma.category.findFirst({
+        where: { slug },
+        select: {
+          _count: {
+            select: {
+              posts: {
+                where: {
+                  status: "PUBLISHED",
+                  deletedAt: null,
+                },
+              },
+            },
+          },
+        },
+      });
+      totalCount = category?._count.posts || 0;
+    }
+
+    if (totalCount === 0) return 0;
+
+    // 计算总页数
+    return Math.ceil(totalCount / pageSize);
+  } catch (error) {
+    console.error("[SEO] Failed to calculate total page:", error);
+    return undefined;
+  }
+}
+
+/**
+ * SEO 专用模板插值函数
+ *
+ * 支持的变量：
+ * - {slug} - 路由参数中的 slug
+ * - {page} - 当前页码
+ * - {totalPage} - 总页数（通过数据库计数计算）
+ * - {tag} - 标签名称（仅当模板包含此占位符时查询）
+ * - {tagDescription} - 标签描述（仅当模板包含此占位符时查询）
+ * - {category} - 分类名称（仅当模板包含此占位符时查询）
+ * - {categoryDescription} - 分类描述（仅当模板包含此占位符时查询）
+ *
+ * @param template 模板字符串
+ * @param params SEO 插值参数
+ * @returns 插值后的字符串
+ */
+export async function interpolateSeoTemplate(
+  template: string,
+  params: SeoTemplateParams,
+): Promise<string> {
+  if (!template) return "";
+
+  // 检测模板中使用的占位符
+  const placeholders = detectPlaceholders(template);
+
+  // 如果没有任何占位符，直接返回原模板
+  if (placeholders.size === 0) return template;
+
+  // 准备基础数据
+  const data: SeoTemplateData = {
+    slug: params.slug,
+    page: params.page,
+  };
+
+  // 并行执行所有需要的数据查询（按需）
+  const [tagData, categoryData, totalPage] = await Promise.all([
+    fetchTagData(params.slug, placeholders),
+    fetchCategoryData(params.slug, placeholders),
+    calculateTotalPage(params.slug, params.pageSize, placeholders),
+  ]);
+
+  // 合并数据
+  Object.assign(data, tagData, categoryData);
+  if (totalPage !== undefined) {
+    data.totalPage = totalPage;
+  }
+
+  // 执行插值
+  let result = template;
+  for (const [key, value] of Object.entries(data)) {
+    if (value === undefined || value === null) continue;
+
+    const placeholder = `{${key}}`;
+    if (result.includes(placeholder)) {
+      result = result.split(placeholder).join(String(value));
+    }
+  }
+
+  return result;
 }
