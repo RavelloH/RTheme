@@ -245,6 +245,7 @@ export const defaultPages: DefaultPage[] = [
               },
             },
             showSearchBar: true,
+            dataSource: "posts-index",
           },
           description: "",
         },

@@ -159,7 +159,31 @@ export default function DefaultBlock({
       {hasFooter &&
         (() => {
           const footerType = content.footer?.type || "normal";
-          const randomSource = content.footer?.randomSource || "tags";
+
+          // 从 content.dataSource 推断 randomSource，如果没有则使用默认值 "tags"
+          const dataSource = (content as Record<string, unknown>).dataSource as
+            | string
+            | undefined;
+          let randomSource = "tags"; // 默认值
+
+          if (dataSource) {
+            if (
+              dataSource === "posts-index" ||
+              dataSource === "category-detail"
+            ) {
+              randomSource = "posts";
+            } else if (
+              dataSource === "categories-index" ||
+              dataSource === "category-detail"
+            ) {
+              randomSource = "categories";
+            } else if (
+              dataSource === "tags-index" ||
+              dataSource === "tag-detail"
+            ) {
+              randomSource = "tags";
+            }
+          }
 
           // 随机链接
           if (footerType === "random") {

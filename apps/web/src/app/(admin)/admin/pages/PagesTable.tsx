@@ -587,7 +587,7 @@ export default function PagesTable() {
         ?.pageSize as number;
       const hasChanges =
         formData.title !== editingPage.title ||
-        (!editingPage.isSystemPage && formData.slug !== editingPage.slug) ||
+        formData.slug !== editingPage.slug ||
         formData.status !== editingPage.status ||
         formData.contentType !== editingPage.contentType ||
         formData.metaDescription !== (editingPage.metaDescription || "") ||
@@ -608,10 +608,7 @@ export default function PagesTable() {
         slug: editingPage.slug,
         title:
           formData.title !== editingPage.title ? formData.title : undefined,
-        newSlug:
-          !editingPage.isSystemPage && formData.slug !== editingPage.slug
-            ? formData.slug
-            : undefined,
+        newSlug: formData.slug !== editingPage.slug ? formData.slug : undefined,
         status:
           formData.status !== editingPage.status
             ? (formData.status as "ACTIVE" | "SUSPENDED")
@@ -1272,15 +1269,21 @@ export default function PagesTable() {
                   4. 纯通配符：/posts/:slug → 匹配 /posts/:slug 页面，提供 slug
                   参数
                   <br />
+                  5. 捕获所有 (Catch-all)：/categories/:slug.../page/:page →
+                  匹配 /categories/a/b/c 及其分页，slug 将包含所有路径段
+                  <br />
                   <br />
                   通配符说明：
                   <br />• 使用 &quot;:slug&quot; 匹配任意路径段（如
                   &quot;/posts/:slug&quot; 可匹配
                   &quot;/posts/hello-world&quot;）
+                  <br />• 使用 &quot;:slug...&quot; 匹配多个路径段（如
+                  &quot;/categories/:slug...&quot; 可匹配
+                  &quot;/categories/a/b/c&quot;）
                   <br />• 使用 &quot;/page/:page&quot; 创建分页路由（如
                   &quot;/posts/page/:page&quot; 可匹配
                   &quot;/posts/page/1&quot;）
-                  <br />• 可组合使用：&quot;/:slug/page/:page&quot;
+                  <br />• 可组合使用：&quot;/:slug.../page/:page&quot;
                 </p>
               </div>
               <Input
