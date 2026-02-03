@@ -1,6 +1,7 @@
 // SEO 相关库
 import type { Metadata } from "next";
 
+import { findCategoryByPath } from "@/lib/server/category-utils";
 import { getRawConfig } from "@/lib/server/config-cache";
 import prisma from "@/lib/server/prisma";
 
@@ -509,10 +510,9 @@ async function fetchCategoryData(
   if (!needsCategory && !needsDescription) return {};
 
   try {
-    const category = await prisma.category.findFirst({
-      where: { slug },
-      select: { name: true, description: true },
-    });
+    // 解析路径并查找分类（支持嵌套路径如 "xue-shu/shu-xue"）
+    const pathSlugs = slug.split("/").filter(Boolean);
+    const category = pathSlugs.length > 0 ? await findCategoryByPath(pathSlugs) : null;
 
     if (!category) return {};
 
@@ -569,23 +569,31 @@ async function calculateTotalPage(
       });
       totalCount = tag?._count.posts || 0;
     } else if (isCategoryPage) {
-      // 查询分类下的文章数
-      const category = await prisma.category.findFirst({
-        where: { slug },
-        select: {
-          _count: {
-            select: {
-              posts: {
-                where: {
-                  status: "PUBLISHED",
-                  deletedAt: null,
-                },
-              },
+      // 查询分类下的文章数（支持嵌套路径）
+      const pathSlugs = slug.split("/").filter(Boolean);
+      const category = pathSlugs.length > 0 ? await findCategoryByPath(pathSlugs) : null;
+
+      if (!category) {
+        return 0;
+      }
+
+      // 查询分类及其所有子孙分类的文章数
+      const { getAllDescendantIds } = await import("@/lib/server/category-utils");
+      const descendantIds = await getAllDescendantIds(category.id);
+      const allIds = [category.id, ...descendantIds];
+
+      // 统计文章数
+      totalCount = await prisma.post.count({
+        where: {
+          categories: {
+            some: {
+              id: { in: allIds },
             },
           },
+          status: "PUBLISHED",
+          deletedAt: null,
         },
       });
-      totalCount = category?._count.posts || 0;
     }
 
     if (totalCount === 0) return 0;

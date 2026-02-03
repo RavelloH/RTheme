@@ -32,19 +32,25 @@ export default function AccordionBlock({
 
   return (
     <RowGrid>
-      {displayItems.map((item) => (
-        <GridItem
-          key={item.slug}
-          areas={createArray(1, 12)}
-          width={itemWidth}
-          height={itemWidth}
-          fixedHeight
-          className="overflow-hidden block relative group"
-        >
-          <Link
-            href={`/${data.source === "tags" ? "tags" : data.source}/${item.slug}`}
-            className="h-full block relative"
-          >
+      {displayItems.map((item) => {
+        // 占位符项（slug 为空）不渲染链接
+        const isPlaceholder = !item.slug;
+
+        // 根据数据源生成链接
+        const getHref = () => {
+          if (data.source === "tags") {
+            return `/tags/${item.slug}`;
+          } else if (data.source === "child-categories") {
+            // 子分类使用相对路径
+            return `./${item.slug}`;
+          } else {
+            // 根分类使用绝对路径
+            return `/categories/${item.slug}`;
+          }
+        };
+
+        const content = (
+          <>
             <ParallaxImageCarousel
               images={item.featuredImage || []}
               alt={`${item.name} 展示`}
@@ -99,9 +105,33 @@ export default function AccordionBlock({
                 </>
               )}
             </div>
-          </Link>
-        </GridItem>
-      ))}
+          </>
+        );
+
+        return (
+          <GridItem
+            key={item.slug || item.name}
+            areas={createArray(1, 12)}
+            width={itemWidth}
+            height={itemWidth}
+            fixedHeight
+            className="overflow-hidden block relative group"
+          >
+            {isPlaceholder ? (
+              <div className="h-full block relative cursor-not-allowed opacity-60">
+                {content}
+              </div>
+            ) : (
+              <Link
+                href={getHref()}
+                className="h-full block relative"
+              >
+                {content}
+              </Link>
+            )}
+          </GridItem>
+        );
+      })}
     </RowGrid>
   );
 }

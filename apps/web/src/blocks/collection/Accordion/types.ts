@@ -3,7 +3,7 @@ import type { ProcessedImageData } from "@/lib/shared/image-common";
 
 export interface AccordionBlockContent {
   title?: { value?: string };
-  source?: "tags" | "categories" | "posts"; // 数据来源
+  source?: "tags" | "categories" | "child-categories" | "posts"; // 数据来源
   layout?: {
     sortBy?: "name" | "count" | "recent";
   };
@@ -25,5 +25,5 @@ export interface AccordionItem {
 
 export interface AccordionData {
   items: AccordionItem[];
-  source: "tags" | "categories" | "posts";
+  source: "tags" | "categories" | "child-categories" | "posts";
 }

@@ -4,6 +4,7 @@
  */
 
 export { categoriesInterpolator } from "./categories";
+export { categoryPostsInterpolator } from "./category-posts";
 export { postsInterpolator } from "./posts";
 export { projectsInterpolator } from "./projects";
 export { tagPostsInterpolator } from "./tag-posts";
@@ -30,6 +31,7 @@ export type InterpolatorLoader = () => Promise<{ [key: string]: Interpolator }>;
  */
 export const interpolatorMap: Record<string, InterpolatorLoader> = {
   categories: () => import("./categories"),
+  categoryPosts: () => import("./category-posts"),
   posts: () => import("./posts"),
   projects: () => import("./projects"),
   tagPosts: () => import("./tag-posts"),
@@ -125,6 +127,49 @@ export const PLACEHOLDER_REGISTRY: PlaceholderMeta[] = [
     name: "lastPublishDays",
     description: "最近更新日期",
     interpolator: "postsList",
+    isSubField: true,
+  },
+  // CategoryPosts 插值器占位符
+  {
+    name: "category",
+    description: "分类名称",
+    interpolator: "categoryPosts",
+    isSubField: true,
+  },
+  {
+    name: "categoryName",
+    description: "分类名称",
+    interpolator: "categoryPosts",
+    isSubField: true,
+  },
+  {
+    name: "categoryDescription",
+    description: "分类描述",
+    interpolator: "categoryPosts",
+    isSubField: true,
+  },
+  {
+    name: "page",
+    description: "当前页码",
+    interpolator: "categoryPosts",
+    isSubField: true,
+  },
+  {
+    name: "totalPage",
+    description: "总页数",
+    interpolator: "categoryPosts",
+    isSubField: true,
+  },
+  {
+    name: "firstPage",
+    description: "当前页第一篇文章序号",
+    interpolator: "categoryPosts",
+    isSubField: true,
+  },
+  {
+    name: "lastPage",
+    description: "当前页最后一篇文章序号",
+    interpolator: "categoryPosts",
     isSubField: true,
   },
   // TagPosts 插值器占位符（参数化）

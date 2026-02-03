@@ -167,9 +167,13 @@ export default function GridTable<T extends Record<string, unknown>>({
     Record<string, string | string[] | { start?: string; end?: string }>
   >({});
 
+  // 标记是否已从 URL 初始化
+  const initializedRef = useRef(false);
+
   // 从 URL 读取初始筛选参数
   useEffect(() => {
-    if (typeof window === "undefined" || !filterConfig) return;
+    if (typeof window === "undefined" || !filterConfig || initializedRef.current)
+      return;
 
     const urlParams = new URLSearchParams(window.location.search);
     const initialFilters: Record<
@@ -209,7 +213,9 @@ export default function GridTable<T extends Record<string, unknown>>({
       // 通知父组件初始筛选条件
       onFilterChange?.(initialFilters);
     }
-  }, [columns, filterConfig, onFilterChange]);
+
+    initializedRef.current = true;
+  }, [filterConfig, onFilterChange]);
 
   // 判断是否有激活的筛选
   const hasActiveFilters = useMemo(() => {

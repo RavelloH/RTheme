@@ -4,7 +4,11 @@ import type {
   PostItem,
 } from "@/blocks/collection/PagedPosts/types";
 import type { BlockConfig } from "@/blocks/core/types";
-import { batchGetCategoryPaths } from "@/lib/server/category-utils";
+import {
+  batchGetCategoryPaths,
+  findCategoryByPath,
+  getAllDescendantIds,
+} from "@/lib/server/category-utils";
 import { batchQueryMediaFiles } from "@/lib/server/image-query";
 import { getFeaturedImageData } from "@/lib/server/media-reference";
 import prisma from "@/lib/server/prisma";
@@ -96,13 +100,40 @@ async function fetchPostsByFilter(
   sortOrder: "asc" | "desc",
 ): Promise<{ posts: PostItem[]; totalPosts: number }> {
   // 构建查询条件
-  const where = {
-    status: "PUBLISHED" as const,
-    deletedAt: null,
-    ...(filterBy === "tag"
-      ? { tags: { some: { slug } } }
-      : { categories: { some: { slug } } }),
+  // 对于分类，需要包含所有子孙分类的文章
+  let where: {
+    status: "PUBLISHED";
+    deletedAt: null;
+    tags?: { some: { slug: string } };
+    categories?: { some: { id: { in: number[] } } };
   };
+
+  if (filterBy === "tag") {
+    where = {
+      status: "PUBLISHED",
+      deletedAt: null,
+      tags: { some: { slug } },
+    };
+  } else {
+    // 对于分类，查找所有子孙分类
+    const pathSlugs = slug.split("/").filter(Boolean);
+    const parentCategory = pathSlugs.length > 0 ? await findCategoryByPath(pathSlugs) : null;
+
+    if (parentCategory) {
+      // 获取所有子孙分类 ID
+      const descendantIds = await getAllDescendantIds(parentCategory.id);
+      const allIds = [parentCategory.id, ...descendantIds];
+
+      where = {
+        status: "PUBLISHED",
+        deletedAt: null,
+        categories: { some: { id: { in: allIds } } },
+      };
+    } else {
+      // 分类不存在，返回空结果
+      return { posts: [], totalPosts: 0 };
+    }
+  }
 
   // 构建排序条件
   const orderBy: Record<string, "asc" | "desc"> = {};
@@ -114,96 +145,150 @@ async function fetchPostsByFilter(
 
   // 并发查询文章列表和总数
   const [posts, totalPosts] = await Promise.all([
-    // 如果是按置顶+发布时间排序，需要分别查询置顶和普通文章
+    // 如果是按置顶+发布时间排序，需要分别处理置顶和普通文章
     sortField === "isPinned"
       ? (async () => {
-          const pinnedPostCount = await prisma.post.count({
-            where: { ...where, isPinned: true },
-          });
-          const pinnedPosts = await prisma.post.findMany({
-            where: { ...where, isPinned: true },
-            select: {
-              title: true,
-              slug: true,
-              excerpt: true,
-              isPinned: true,
-              publishedAt: true,
-              mediaRefs: {
-                include: {
-                  media: {
-                    select: {
-                      shortHash: true,
-                      width: true,
-                      height: true,
-                      blur: true,
+          // 第一页：显示置顶文章 + 普通文章
+          if (currentPage === 1) {
+            // 获取所有置顶文章（按发布时间倒序）
+            const pinnedPosts = await prisma.post.findMany({
+              where: { ...where, isPinned: true },
+              select: {
+                title: true,
+                slug: true,
+                excerpt: true,
+                isPinned: true,
+                publishedAt: true,
+                mediaRefs: {
+                  include: {
+                    media: {
+                      select: {
+                        shortHash: true,
+                        width: true,
+                        height: true,
+                        blur: true,
+                      },
                     },
                   },
                 },
-              },
-              categories: {
-                select: {
-                  id: true,
-                  name: true,
-                  slug: true,
+                categories: {
+                  select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                  },
+                },
+                tags: {
+                  select: {
+                    name: true,
+                    slug: true,
+                  },
                 },
               },
-              tags: {
-                select: {
-                  name: true,
-                  slug: true,
-                },
-              },
-            },
-            orderBy: { publishedAt: "desc" },
-            take: pageSize,
-          });
+              orderBy: { publishedAt: "desc" },
+            });
 
-          // 如果置顶文章已够一页，直接返回
-          if (pinnedPosts.length >= pageSize) {
-            return pinnedPosts;
+            // 如果置顶文章已够一页，返回前 pageSize 条
+            if (pinnedPosts.length >= pageSize) {
+              return pinnedPosts.slice(0, pageSize);
+            }
+
+            // 否则补充普通文章
+            const regularPosts = await prisma.post.findMany({
+              where: { ...where, isPinned: false },
+              select: {
+                title: true,
+                slug: true,
+                excerpt: true,
+                isPinned: true,
+                publishedAt: true,
+                mediaRefs: {
+                  include: {
+                    media: {
+                      select: {
+                        shortHash: true,
+                        width: true,
+                        height: true,
+                        blur: true,
+                      },
+                    },
+                  },
+                },
+                categories: {
+                  select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                  },
+                },
+                tags: {
+                  select: {
+                    name: true,
+                    slug: true,
+                  },
+                },
+              },
+              orderBy: { publishedAt: "desc" },
+              take: pageSize - pinnedPosts.length,
+            });
+
+            return [...pinnedPosts, ...regularPosts];
+          } else {
+            // 第二页及以后：只显示普通文章
+            // 需要先获取置顶文章总数，用于计算 skip
+            const pinnedPostCount = await prisma.post.count({
+              where: { ...where, isPinned: true },
+            });
+
+            // 计算需要跳过的普通文章数
+            const skip = (currentPage - 1) * pageSize - pinnedPostCount;
+
+            // 如果 skip 为负数或零，说明还在第一页范围内，不应该发生
+            if (skip <= 0) {
+              return [];
+            }
+
+            const regularPosts = await prisma.post.findMany({
+              where: { ...where, isPinned: false },
+              select: {
+                title: true,
+                slug: true,
+                excerpt: true,
+                isPinned: true,
+                publishedAt: true,
+                mediaRefs: {
+                  include: {
+                    media: {
+                      select: {
+                        shortHash: true,
+                        width: true,
+                        height: true,
+                        blur: true,
+                      },
+                    },
+                  },
+                },
+                categories: {
+                  select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                  },
+                },
+                tags: {
+                  select: {
+                    name: true,
+                    slug: true,
+                  },
+                },
+              },
+              orderBy: { publishedAt: "desc" },
+              skip,
+              take: pageSize,
+            });
+
+            return regularPosts;
           }
-
-          // 否则补充普通文章
-          const regularPosts = await prisma.post.findMany({
-            where: { ...where, isPinned: false },
-            select: {
-              title: true,
-              slug: true,
-              excerpt: true,
-              isPinned: true,
-              publishedAt: true,
-              mediaRefs: {
-                include: {
-                  media: {
-                    select: {
-                      shortHash: true,
-                      width: true,
-                      height: true,
-                      blur: true,
-                    },
-                  },
-                },
-              },
-              categories: {
-                select: {
-                  id: true,
-                  name: true,
-                  slug: true,
-                },
-              },
-              tags: {
-                select: {
-                  name: true,
-                  slug: true,
-                },
-              },
-            },
-            orderBy: { publishedAt: "desc" },
-            skip: Math.max(0, (currentPage - 1) * pageSize - pinnedPostCount),
-            take: pageSize - pinnedPosts.length,
-          });
-
-          return [...pinnedPosts, ...regularPosts];
         })()
       : prisma.post.findMany({
           where,
@@ -325,96 +410,150 @@ async function fetchAllPosts(
 
   // 并发查询文章列表和总数
   const [posts, totalPosts] = await Promise.all([
-    // 如果是按置顶+发布时间排序，需要分别查询置顶和普通文章
+    // 如果是按置顶+发布时间排序，需要分别处理置顶和普通文章
     sortField === "isPinned"
       ? (async () => {
-          const pinnedPostCount = await prisma.post.count({
-            where: { ...where, isPinned: true },
-          });
-          const pinnedPosts = await prisma.post.findMany({
-            where: { ...where, isPinned: true },
-            select: {
-              title: true,
-              slug: true,
-              excerpt: true,
-              isPinned: true,
-              publishedAt: true,
-              mediaRefs: {
-                include: {
-                  media: {
-                    select: {
-                      shortHash: true,
-                      width: true,
-                      height: true,
-                      blur: true,
+          // 第一页：显示置顶文章 + 普通文章
+          if (currentPage === 1) {
+            // 获取所有置顶文章（按发布时间倒序）
+            const pinnedPosts = await prisma.post.findMany({
+              where: { ...where, isPinned: true },
+              select: {
+                title: true,
+                slug: true,
+                excerpt: true,
+                isPinned: true,
+                publishedAt: true,
+                mediaRefs: {
+                  include: {
+                    media: {
+                      select: {
+                        shortHash: true,
+                        width: true,
+                        height: true,
+                        blur: true,
+                      },
                     },
                   },
                 },
-              },
-              categories: {
-                select: {
-                  id: true,
-                  name: true,
-                  slug: true,
+                categories: {
+                  select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                  },
+                },
+                tags: {
+                  select: {
+                    name: true,
+                    slug: true,
+                  },
                 },
               },
-              tags: {
-                select: {
-                  name: true,
-                  slug: true,
-                },
-              },
-            },
-            orderBy: { publishedAt: "desc" },
-            take: pageSize,
-          });
+              orderBy: { publishedAt: "desc" },
+            });
 
-          // 如果置顶文章已够一页，直接返回
-          if (pinnedPosts.length >= pageSize) {
-            return pinnedPosts;
+            // 如果置顶文章已够一页，返回前 pageSize 条
+            if (pinnedPosts.length >= pageSize) {
+              return pinnedPosts.slice(0, pageSize);
+            }
+
+            // 否则补充普通文章
+            const regularPosts = await prisma.post.findMany({
+              where: { ...where, isPinned: false },
+              select: {
+                title: true,
+                slug: true,
+                excerpt: true,
+                isPinned: true,
+                publishedAt: true,
+                mediaRefs: {
+                  include: {
+                    media: {
+                      select: {
+                        shortHash: true,
+                        width: true,
+                        height: true,
+                        blur: true,
+                      },
+                    },
+                  },
+                },
+                categories: {
+                  select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                  },
+                },
+                tags: {
+                  select: {
+                    name: true,
+                    slug: true,
+                  },
+                },
+              },
+              orderBy: { publishedAt: "desc" },
+              take: pageSize - pinnedPosts.length,
+            });
+
+            return [...pinnedPosts, ...regularPosts];
+          } else {
+            // 第二页及以后：只显示普通文章
+            // 需要先获取置顶文章总数，用于计算 skip
+            const pinnedPostCount = await prisma.post.count({
+              where: { ...where, isPinned: true },
+            });
+
+            // 计算需要跳过的普通文章数
+            const skip = (currentPage - 1) * pageSize - pinnedPostCount;
+
+            // 如果 skip 为负数或零，说明还在第一页范围内，不应该发生
+            if (skip <= 0) {
+              return [];
+            }
+
+            const regularPosts = await prisma.post.findMany({
+              where: { ...where, isPinned: false },
+              select: {
+                title: true,
+                slug: true,
+                excerpt: true,
+                isPinned: true,
+                publishedAt: true,
+                mediaRefs: {
+                  include: {
+                    media: {
+                      select: {
+                        shortHash: true,
+                        width: true,
+                        height: true,
+                        blur: true,
+                      },
+                    },
+                  },
+                },
+                categories: {
+                  select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                  },
+                },
+                tags: {
+                  select: {
+                    name: true,
+                    slug: true,
+                  },
+                },
+              },
+              orderBy: { publishedAt: "desc" },
+              skip,
+              take: pageSize,
+            });
+
+            return regularPosts;
           }
-
-          // 否则补充普通文章
-          const regularPosts = await prisma.post.findMany({
-            where: { ...where, isPinned: false },
-            select: {
-              title: true,
-              slug: true,
-              excerpt: true,
-              isPinned: true,
-              publishedAt: true,
-              mediaRefs: {
-                include: {
-                  media: {
-                    select: {
-                      shortHash: true,
-                      width: true,
-                      height: true,
-                      blur: true,
-                    },
-                  },
-                },
-              },
-              categories: {
-                select: {
-                  id: true,
-                  name: true,
-                  slug: true,
-                },
-              },
-              tags: {
-                select: {
-                  name: true,
-                  slug: true,
-                },
-              },
-            },
-            orderBy: { publishedAt: "desc" },
-            skip: Math.max(0, (currentPage - 1) * pageSize - pinnedPostCount),
-            take: pageSize - pinnedPosts.length,
-          });
-
-          return [...pinnedPosts, ...regularPosts];
         })()
       : prisma.post.findMany({
           where,
