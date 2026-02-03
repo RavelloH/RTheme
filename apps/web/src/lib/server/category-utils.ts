@@ -5,72 +5,135 @@
 
 import prisma from "@/lib/server/prisma";
 
+const PATH_SEPARATOR = "/";
+
+interface CategoryTreeNode {
+  id: number;
+  slug: string;
+  name: string;
+  description: string | null;
+  parentId: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+  postCount: number;
+  children: CategoryTreeNode[];
+}
+
 /**
  * 构建分类树形结构
  * @param parentId 父分类 ID，null 表示从根开始
  * @param maxDepth 最大层级深度，undefined 表示无限制
- * @param currentDepth 当前深度（内部使用）
  */
 export async function buildCategoryTree(
   parentId: number | null = null,
   maxDepth?: number,
-  currentDepth: number = 0,
-): Promise<
-  Array<{
-    id: number;
-    slug: string;
-    name: string;
-    description: string | null;
-    parentId: number | null;
-    createdAt: Date;
-    updatedAt: Date;
-    postCount: number;
-    children: unknown[];
-  }>
-> {
-  // 如果达到最大深度，返回空数组
-  if (maxDepth !== undefined && currentDepth >= maxDepth) {
-    return [];
-  }
+): Promise<CategoryTreeNode[]> {
+  // 优化：使用一次查询获取所有相关分类，然后在内存中组装
+  // 如果是从根开始，获取所有分类；如果指定 parentId，获取该子树
+  let categories;
 
-  // 查询指定父分类下的所有子分类
-  const categories = await prisma.category.findMany({
-    where: {
-      parentId: parentId,
-    },
-    include: {
-      _count: {
-        select: {
-          posts: {
-            where: {
-              deletedAt: null,
-            },
+  if (parentId === null) {
+    // 获取所有分类
+    categories = await prisma.category.findMany({
+      include: {
+        _count: {
+          select: {
+            posts: { where: { deletedAt: null } },
           },
         },
       },
-    },
-    orderBy: {
-      name: "asc",
-    },
+      orderBy: [
+        { depth: "asc" }, // 按深度排序，确保父级先被处理
+        { order: "asc" },
+        { name: "asc" },
+      ],
+    });
+  } else {
+    // 获取指定子树
+    const parent = await prisma.category.findUnique({
+      where: { id: parentId },
+      select: { path: true },
+    });
+
+    if (!parent) return [];
+
+    const prefix = `${parent.path}${parentId}${PATH_SEPARATOR}`;
+
+    categories = await prisma.category.findMany({
+      where: {
+        OR: [
+          { parentId: parentId }, // 直接子级
+          { path: { startsWith: prefix } }, // 所有后代
+        ],
+      },
+      include: {
+        _count: {
+          select: {
+            posts: { where: { deletedAt: null } },
+          },
+        },
+      },
+      orderBy: [{ depth: "asc" }, { order: "asc" }, { name: "asc" }],
+    });
+  }
+
+  // 内存构建树
+  const categoryMap = new Map<number, CategoryTreeNode>();
+  const roots: CategoryTreeNode[] = [];
+
+  // 初始化映射
+  categories.forEach((cat) => {
+    categoryMap.set(cat.id, {
+      id: cat.id,
+      slug: cat.slug,
+      name: cat.name,
+      description: cat.description,
+      parentId: cat.parentId,
+      createdAt: cat.createdAt,
+      updatedAt: cat.updatedAt,
+      postCount: cat._count.posts,
+      children: [],
+    });
   });
 
-  // 递归构建树形结构
-  const tree = await Promise.all(
-    categories.map(async (category) => {
-      const children = await buildCategoryTree(
-        category.id,
-        maxDepth,
-        currentDepth + 1,
-      );
-      return {
-        ...category,
-        postCount: category._count.posts,
-        children,
-      };
-    }),
-  );
+  // 组装树
+  categories.forEach((cat) => {
+    const node = categoryMap.get(cat.id);
+    if (!node) return;
 
-  return tree;
+    // 如果我们要构建整个树（parentId=null），则 parentId=null 的是根
+    // 如果我们要构建子树，则 parentId=targetParentId 的是根
+    if (
+      cat.parentId === null ||
+      (parentId !== null && cat.parentId === parentId) ||
+      !categoryMap.has(cat.parentId)
+    ) {
+      roots.push(node);
+    } else {
+      const parentNode = categoryMap.get(cat.parentId);
+      if (parentNode) {
+        parentNode.children.push(node);
+      }
+    }
+  });
+
+  // 过滤深度（如果提供了 maxDepth）
+  // 注意：这里的 maxDepth 是相对当前查询根节点的深度
+  if (maxDepth !== undefined) {
+    const filterDepth = (
+      nodes: CategoryTreeNode[],
+      depth: number,
+    ): CategoryTreeNode[] => {
+      if (depth >= maxDepth) return [];
+      return nodes.map((node) => ({
+        ...node,
+        children: filterDepth(node.children, depth + 1),
+      }));
+    };
+    return filterDepth(roots, 0);
+  }
+
+  return roots;
 }
 
 /**
@@ -93,30 +156,22 @@ export async function validateCategoryMove(
     return true;
   }
 
-  // 检查新父分类是否是当前分类的子孙分类
-  let currentId: number | null = newParentId;
+  // 优化：直接查询新父级的 path
+  const newParent = await prisma.category.findUnique({
+    where: { id: newParentId },
+    select: { path: true },
+  });
 
-  while (currentId !== null) {
-    if (currentId === categoryId) {
-      // 新父分类是当前分类的子孙，会造成循环
-      return true;
-    }
+  if (!newParent) return false; // 父级不存在，虽然后续会报错，但这里不算循环引用
 
-    // 查找当前分类的父分类
-    const category: { parentId: number | null } | null =
-      await prisma.category.findUnique({
-        where: { id: currentId },
-        select: { parentId: true },
-      });
+  // 检查路径中是否包含当前 ID
+  // 路径格式如 "/1/5/12/"
+  const pathIds = newParent.path
+    .split(PATH_SEPARATOR)
+    .filter((p) => p)
+    .map(Number);
 
-    if (!category) {
-      break;
-    }
-
-    currentId = category.parentId;
-  }
-
-  return false;
+  return pathIds.includes(categoryId);
 }
 
 /**
@@ -129,7 +184,7 @@ export async function getCategoryPath(categoryId: number): Promise<string[]> {
     where: { id: categoryId },
     select: {
       slug: true,
-      parentId: true,
+      path: true,
     },
   });
 
@@ -137,14 +192,29 @@ export async function getCategoryPath(categoryId: number): Promise<string[]> {
     return [];
   }
 
-  // 如果没有父分类，返回当前分类的 slug
-  if (category.parentId === null) {
+  // 解析 path 中的 ID
+  const ancestorIds = category.path
+    .split(PATH_SEPARATOR)
+    .filter((p) => p)
+    .map(Number);
+
+  if (ancestorIds.length === 0) {
     return [category.slug];
   }
 
-  // 递归获取父分类的路径
-  const parentPath = await getCategoryPath(category.parentId);
-  return [...parentPath, category.slug];
+  // 批量查询祖先 slug
+  const ancestors = await prisma.category.findMany({
+    where: { id: { in: ancestorIds } },
+    select: { id: true, slug: true },
+  });
+
+  // 按路径顺序排序
+  const ancestorMap = new Map(ancestors.map((a) => [a.id, a.slug]));
+  const pathSlugs = ancestorIds
+    .map((id) => ancestorMap.get(id))
+    .filter((s): s is string => s !== undefined);
+
+  return [...pathSlugs, category.slug];
 }
 
 /**
@@ -159,7 +229,7 @@ export async function getCategoryNamePath(
     where: { id: categoryId },
     select: {
       name: true,
-      parentId: true,
+      path: true,
     },
   });
 
@@ -167,14 +237,26 @@ export async function getCategoryNamePath(
     return [];
   }
 
-  // 如果没有父分类，返回当前分类的名称
-  if (category.parentId === null) {
+  const ancestorIds = category.path
+    .split(PATH_SEPARATOR)
+    .filter((p) => p)
+    .map(Number);
+
+  if (ancestorIds.length === 0) {
     return [category.name];
   }
 
-  // 递归获取父分类的路径
-  const parentPath = await getCategoryNamePath(category.parentId);
-  return [...parentPath, category.name];
+  const ancestors = await prisma.category.findMany({
+    where: { id: { in: ancestorIds } },
+    select: { id: true, name: true },
+  });
+
+  const ancestorMap = new Map(ancestors.map((a) => [a.id, a.name]));
+  const pathNames = ancestorIds
+    .map((id) => ancestorMap.get(id))
+    .filter((n): n is string => n !== undefined);
+
+  return [...pathNames, category.name];
 }
 
 /**
@@ -185,29 +267,24 @@ export async function getCategoryNamePath(
 export async function getAllDescendantIds(
   categoryId: number,
 ): Promise<number[]> {
-  const children = await prisma.category.findMany({
-    where: {
-      parentId: categoryId,
-    },
-    select: {
-      id: true,
-    },
+  const category = await prisma.category.findUnique({
+    where: { id: categoryId },
+    select: { path: true },
   });
 
-  if (children.length === 0) {
-    return [];
-  }
+  if (!category) return [];
 
-  // 递归获取每个子分类的子孙
-  const descendants = await Promise.all(
-    children.map((child) => getAllDescendantIds(child.id)),
-  );
+  // 使用 path 前缀匹配（高性能）
+  const prefix = `${category.path}${categoryId}${PATH_SEPARATOR}`;
 
-  // 合并所有子分类的 ID 和它们的子孙 ID
-  const childIds = children.map((child) => child.id);
-  const descendantIds = descendants.flat();
+  const descendants = await prisma.category.findMany({
+    where: {
+      path: { startsWith: prefix },
+    },
+    select: { id: true },
+  });
 
-  return [...childIds, ...descendantIds];
+  return descendants.map((d) => d.id);
 }
 
 /**
@@ -220,20 +297,10 @@ export async function calculateCategoryDepth(
 ): Promise<number> {
   const category = await prisma.category.findUnique({
     where: { id: categoryId },
-    select: { parentId: true },
+    select: { depth: true },
   });
 
-  if (!category) {
-    return 0;
-  }
-
-  if (category.parentId === null) {
-    return 0;
-  }
-
-  // 递归计算父分类的深度
-  const parentDepth = await calculateCategoryDepth(category.parentId);
-  return parentDepth + 1;
+  return category?.depth ?? 0;
 }
 
 /**
@@ -242,39 +309,25 @@ export async function calculateCategoryDepth(
  * @returns 文章总数
  */
 export async function countCategoryPosts(categoryId: number): Promise<number> {
-  // 统计直属文章数
-  const directPostCount = await prisma.post.count({
+  // 1. 获取所有子孙 ID
+  const descendantIds = await getAllDescendantIds(categoryId);
+  const allIds = [categoryId, ...descendantIds];
+
+  // 2. 统计文章数（使用 distinct 避免一篇文章属于多个子分类被重复统计）
+  // 注意：Prisma 的 count 不支持 distinct，所以如果文章属于多个分类，这里原本的逻辑可能会有重复。
+  // 但业务逻辑上，"分类下的文章数"通常指属于该分类或子分类的文章总数去重。
+  const count = await prisma.post.count({
     where: {
       categories: {
         some: {
-          id: categoryId,
+          id: { in: allIds },
         },
       },
       deletedAt: null,
     },
   });
 
-  // 获取所有子分类
-  const children = await prisma.category.findMany({
-    where: {
-      parentId: categoryId,
-    },
-    select: {
-      id: true,
-    },
-  });
-
-  // 递归统计子分类的文章数
-  const childPostCounts = await Promise.all(
-    children.map((child) => countCategoryPosts(child.id)),
-  );
-
-  const totalChildPostCount = childPostCounts.reduce(
-    (sum, count) => sum + count,
-    0,
-  );
-
-  return directPostCount + totalChildPostCount;
+  return count;
 }
 
 /**
@@ -328,24 +381,35 @@ export async function getCategoryParentNamePath(
   const category = await prisma.category.findUnique({
     where: { id: categoryId },
     select: {
+      id: true,
+      path: true,
       parentId: true,
     },
   });
 
-  if (!category || category.parentId === null) {
+  if (!category || !category.path) {
     return [];
   }
 
-  // 递归获取父分类的完整路径
-  return getCategoryNamePath(category.parentId);
+  const ancestorIds = category.path
+    .split(PATH_SEPARATOR)
+    .filter((p) => p)
+    .map(Number);
+
+  if (ancestorIds.length === 0) return [];
+
+  const ancestors = await prisma.category.findMany({
+    where: { id: { in: ancestorIds } },
+    select: { id: true, name: true },
+  });
+
+  const ancestorMap = new Map(ancestors.map((a) => [a.id, a.name]));
+  return ancestorIds
+    .map((id) => ancestorMap.get(id))
+    .filter((n): n is string => n !== undefined);
 }
 
-/**
- * 根据 slug 路径查找分类
- * @param pathSlugs slug 数组路径，例如 ["tech", "web", "frontend"]
- * @returns 分类对象，如果不存在返回 null
- */
-export async function findCategoryByPath(pathSlugs: string[]): Promise<{
+interface CategoryBasicInfo {
   id: number;
   slug: string;
   name: string;
@@ -353,24 +417,25 @@ export async function findCategoryByPath(pathSlugs: string[]): Promise<{
   parentId: number | null;
   createdAt: Date;
   updatedAt: Date;
-} | null> {
+}
+
+/**
+ * 根据 slug 路径查找分类
+ * @param pathSlugs slug 数组路径，例如 ["tech", "web", "frontend"]
+ * @returns 分类对象，如果不存在返回 null
+ */
+export async function findCategoryByPath(
+  pathSlugs: string[],
+): Promise<CategoryBasicInfo | null> {
   if (pathSlugs.length === 0) {
     return null;
   }
 
-  // 从根开始逐级查找
   let currentParentId: number | null = null;
+  let finalCategory: CategoryBasicInfo | null = null;
 
   for (const slug of pathSlugs) {
-    const category: {
-      id: number;
-      slug: string;
-      name: string;
-      description: string | null;
-      parentId: number | null;
-      createdAt: Date;
-      updatedAt: Date;
-    } | null = await prisma.category.findFirst({
+    const category: CategoryBasicInfo | null = await prisma.category.findFirst({
       where: {
         slug,
         parentId: currentParentId,
@@ -382,24 +447,8 @@ export async function findCategoryByPath(pathSlugs: string[]): Promise<{
     }
 
     currentParentId = category.id;
+    finalCategory = category;
   }
-
-  // 返回最后一个分类
-  const finalCategory = await prisma.category.findFirst({
-    where: {
-      slug: pathSlugs[pathSlugs.length - 1],
-      parentId:
-        pathSlugs.length > 1
-          ? (
-              await prisma.category.findFirst({
-                where: {
-                  slug: pathSlugs[pathSlugs.length - 2],
-                },
-              })
-            )?.id || null
-          : null,
-    },
-  });
 
   return finalCategory;
 }
@@ -438,60 +487,55 @@ export async function batchGetCategoryPaths(
   if (categoryIds.length === 0) {
     return new Map();
   }
-  const allCategories = await prisma.category.findMany({
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      parentId: true,
-    },
-    orderBy: {
-      id: "asc",
-    },
+
+  // 1. 获取目标分类及其当前 path 信息
+  const targets = await prisma.category.findMany({
+    where: { id: { in: categoryIds } },
+    select: { id: true, path: true, name: true, slug: true, parentId: true },
   });
 
-  // 构建ID到分类的映射
-  const categoryMap = new Map(
-    allCategories.map((cat) => [
-      cat.id,
-      { name: cat.name, slug: cat.slug, parentId: cat.parentId },
-    ]),
-  );
+  // 2. 收集所有需要的祖先 ID
+  const allAncestorIds = new Set<number>();
+  targets.forEach((t) => {
+    t.path.split(PATH_SEPARATOR).forEach((p) => {
+      if (p) allAncestorIds.add(Number(p));
+    });
+  });
 
-  // 为每个请求的分类计算路径
-  const pathMap = new Map<number, { name: string; slug: string }[]>();
+  // 3. 批量获取祖先信息
+  const ancestors = await prisma.category.findMany({
+    where: { id: { in: Array.from(allAncestorIds) } },
+    select: { id: true, name: true, slug: true },
+  });
 
-  for (const categoryId of categoryIds) {
-    const path = buildPathFromCache(categoryId, categoryMap);
-    pathMap.set(categoryId, path);
-  }
+  const ancestorMap = new Map(ancestors.map((a) => [a.id, a]));
+  const resultMap = new Map<number, { name: string; slug: string }[]>();
 
-  return pathMap;
-}
+  targets.forEach((t) => {
+    const pathIds = t.path
+      .split(PATH_SEPARATOR)
+      .filter((p) => p)
+      .map(Number);
 
-/**
- * 从缓存构建路径
- */
-function buildPathFromCache(
-  categoryId: number,
-  categoryMap: Map<
-    number,
-    { name: string; slug: string; parentId: number | null }
-  >,
-): { name: string; slug: string }[] {
-  const path: { name: string; slug: string }[] = [];
-  let currentId: number | null = categoryId;
-  let iterationCount = 0;
-  const maxIterations = 100; // 防止循环引用的安全措施
+    const path: { name: string; slug: string }[] = [];
+    let currentSlugPath = "";
 
-  while (currentId !== null && iterationCount < maxIterations) {
-    const category = categoryMap.get(currentId);
-    if (!category) break;
+    pathIds.forEach((id) => {
+      const ancestor = ancestorMap.get(id);
+      if (ancestor) {
+        currentSlugPath = currentSlugPath
+          ? `${currentSlugPath}/${ancestor.slug}`
+          : ancestor.slug;
+        path.push({ name: ancestor.name, slug: currentSlugPath });
+      }
+    });
 
-    path.unshift({ name: category.name, slug: category.slug });
-    currentId = category.parentId;
-    iterationCount++;
-  }
+    // 加上自己
+    currentSlugPath = currentSlugPath ? `${currentSlugPath}/${t.slug}` : t.slug;
+    path.push({ name: t.name, slug: currentSlugPath });
 
-  return path;
+    resultMap.set(t.id, path);
+  });
+
+  return resultMap;
 }

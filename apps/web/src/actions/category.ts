@@ -46,7 +46,6 @@ import {
   countDirectChildren,
   findCategoryByPath,
   getAllDescendantIds,
-  getCategoryParentNamePath,
   getCategoryPath,
   validateCategoryMove,
 } from "@/lib/server/category-utils";
@@ -860,12 +859,28 @@ export async function createCategory(
       name: string;
       description: string | null;
       parentId: number | null;
+      path: string;
+      depth: number;
     } = {
       slug: finalSlug,
       name,
       description: description ?? null,
       parentId: resolvedParentId ?? null,
+      path: "",
+      depth: 0,
     };
+
+    // 计算路径和深度
+    if (resolvedParentId) {
+      const parent = await prisma.category.findUnique({
+        where: { id: resolvedParentId },
+        select: { path: true, depth: true, id: true },
+      });
+      if (parent) {
+        categoryData.path = `${parent.path}${parent.id}/`;
+        categoryData.depth = parent.depth + 1;
+      }
+    }
 
     // 如果提供了 featuredImage URL，查找对应的 mediaId
     let featuredImageMediaId: number | null = null;
@@ -1111,6 +1126,8 @@ export async function updateCategory(
       name?: string;
       description?: string | null;
       parentId?: number | null;
+      path?: string;
+      depth?: number;
     } = {};
 
     // 处理 slug 更新
@@ -1172,20 +1189,87 @@ export async function updateCategory(
     }
 
     // 处理父分类更新
-    if (resolvedParentId !== undefined) {
+    let updateDescendants = false;
+    let newPathPrefix = "";
+    let oldPathPrefix = "";
+    let depthChange = 0;
+
+    if (
+      resolvedParentId !== undefined &&
+      resolvedParentId !== category.parentId
+    ) {
       // 检查是否为"未分类"分类，禁止设置父分类
       if (category.slug === "uncategorized" && resolvedParentId !== null) {
         return response.badRequest({
           message: "不允许移动系统分类到其他分类下",
         });
       }
+
       updateData.parentId = resolvedParentId;
+
+      // 准备更新子孙分类的路径
+      updateDescendants = true;
+      oldPathPrefix = `${category.path}${category.id}/`;
+
+      if (resolvedParentId === null) {
+        // 移动到根
+        newPathPrefix = "";
+        updateData.path = "";
+        updateData.depth = 0;
+      } else {
+        // 移动到新父级
+        const newParent = await prisma.category.findUnique({
+          where: { id: resolvedParentId },
+          select: { path: true, depth: true, id: true },
+        });
+
+        if (!newParent) {
+          return response.badRequest({ message: "新父分类不存在" });
+        }
+
+        updateData.path = `${newParent.path}${newParent.id}/`;
+        updateData.depth = newParent.depth + 1;
+        newPathPrefix = `${updateData.path}${category.id}/`;
+      }
+
+      depthChange = updateData.depth - category.depth;
     }
 
-    // 执行更新
-    const updatedCategory = await prisma.category.update({
-      where: { id: category.id },
-      data: updateData,
+    // 执行更新（事务处理，确保原子性）
+    const updatedCategory = await prisma.$transaction(async (tx) => {
+      // 1. 更新当前分类
+      const updated = await tx.category.update({
+        where: { id: category.id },
+        data: updateData,
+      });
+
+      // 2. 如果路径改变，更新所有子孙分类
+      if (updateDescendants) {
+        // 查找所有受影响的子孙
+        const descendants = await tx.category.findMany({
+          where: {
+            path: { startsWith: oldPathPrefix },
+          },
+          select: { id: true, path: true, depth: true },
+        });
+
+        for (const desc of descendants) {
+          // 替换前缀
+          const newPath =
+            newPathPrefix + desc.path.substring(oldPathPrefix.length);
+          const newDepth = desc.depth + depthChange;
+
+          await tx.category.update({
+            where: { id: desc.id },
+            data: {
+              path: newPath,
+              depth: newDepth,
+            },
+          });
+        }
+      }
+
+      return updated;
     });
 
     // 处理特色图片更新
@@ -1364,20 +1448,86 @@ export async function deleteCategories(
       });
     }
 
-    // 统计将要级联删除的子分类数量
-    let cascadeDeleted = 0;
+    // 统计将要级联删除的所有分类 ID（包含自己和子孙）
+    const allIdsToDelete = new Set<number>();
     for (const id of ids) {
-      const descendantIds = await getAllDescendantIds(id);
-      cascadeDeleted += descendantIds.length;
+      allIdsToDelete.add(id);
+      const descendants = await getAllDescendantIds(id);
+      descendants.forEach((dId) => allIdsToDelete.add(dId));
     }
+    const cascadeDeleted = allIdsToDelete.size - ids.length;
 
-    // 删除分类（Prisma 会自动级联删除子分类）
-    const deleteResult = await prisma.category.deleteMany({
+    // 获取受影响的文章 ID
+    const affectedPosts = await prisma.post.findMany({
       where: {
-        id: {
-          in: ids,
+        categories: {
+          some: { id: { in: Array.from(allIdsToDelete) } },
         },
       },
+      select: { id: true },
+    });
+    const affectedPostIds = affectedPosts.map((p) => p.id);
+
+    // 获取或创建"未分类"分类
+    let uncategorized = await prisma.category.findFirst({
+      where: { slug: "uncategorized" },
+      select: { id: true },
+    });
+
+    if (!uncategorized) {
+      uncategorized = await prisma.category.create({
+        data: {
+          name: "未分类",
+          slug: "uncategorized",
+          description: "自动分配给未指定分类的文章",
+          path: "",
+          depth: 0,
+        },
+        select: { id: true },
+      });
+    }
+
+    const uncategorizedId = uncategorized.id;
+
+    // 执行删除和重新分配（事务）
+    const deleteResult = await prisma.$transaction(async (tx) => {
+      // 1. 删除分类
+      const result = await tx.category.deleteMany({
+        where: { id: { in: ids } },
+      });
+
+      // 2. 检查受影响的文章，如果已无分类，关联到"未分类"
+      if (affectedPostIds.length > 0) {
+        // 查找现在没有分类的文章
+        const orphanedPosts = await tx.post.findMany({
+          where: {
+            id: { in: affectedPostIds },
+            categories: { none: {} },
+          },
+          select: { id: true },
+        });
+
+        const orphanedPostIds = orphanedPosts.map((p) => p.id);
+
+        if (orphanedPostIds.length > 0) {
+          // 批量关联到未分类
+          // Prisma 不支持直接对 findMany 结果进行多对多 connect
+          // 需要循环或者使用 updateMany（但 updateMany 不支持关系操作）
+          // 这里使用循环更新
+          for (const postId of orphanedPostIds) {
+            await tx.post.update({
+              where: { id: postId },
+              data: {
+                categories: {
+                  connect: { id: uncategorizedId },
+                },
+              },
+            });
+          }
+        }
+      }
+
+      return result;
     });
 
     // 审计日志
@@ -1558,24 +1708,78 @@ export async function moveCategories(
     // 获取移动前的 parentId 信息用于审计日志
     const oldCategories = await prisma.category.findMany({
       where: { id: { in: ids } },
-      select: { id: true, parentId: true },
+      select: { id: true, parentId: true, path: true, depth: true, slug: true },
     });
+
     const oldParentIds = oldCategories.map((c) => ({
       id: c.id,
       parentId: c.parentId,
     }));
 
-    // 批量更新
-    const updateResult = await prisma.category.updateMany({
-      where: {
-        id: {
-          in: ids,
-        },
-      },
-      data: {
-        parentId: resolvedTargetParentId,
-      },
+    // 准备目标父级信息
+    let targetPath = "";
+    let targetDepth = -1; // 根级深度为-1，这样+1后为0
+
+    if (resolvedTargetParentId !== null) {
+      const targetParent = await prisma.category.findUnique({
+        where: { id: resolvedTargetParentId },
+        select: { path: true, depth: true, id: true },
+      });
+      if (targetParent) {
+        targetPath = `${targetParent.path}${targetParent.id}/`;
+        targetDepth = targetParent.depth;
+      }
+    }
+
+    // 批量更新（事务）
+    await prisma.$transaction(async (tx) => {
+      for (const cat of oldCategories) {
+        // 1. 计算新信息
+        const newPath = targetPath;
+        const newDepth = targetDepth + 1;
+
+        // 2. 更新当前分类
+        await tx.category.update({
+          where: { id: cat.id },
+          data: {
+            parentId: resolvedTargetParentId,
+            path: newPath,
+            depth: newDepth,
+          },
+        });
+
+        // 3. 更新子孙分类
+        const oldPathPrefix = `${cat.path}${cat.id}/`;
+        const newPathPrefix = `${newPath}${cat.id}/`;
+        const depthChange = newDepth - cat.depth;
+
+        // 查找所有子孙
+        const descendants = await tx.category.findMany({
+          where: {
+            path: { startsWith: oldPathPrefix },
+          },
+          select: { id: true, path: true, depth: true },
+        });
+
+        for (const desc of descendants) {
+          const descNewPath =
+            newPathPrefix + desc.path.substring(oldPathPrefix.length);
+          const descNewDepth = desc.depth + depthChange;
+
+          await tx.category.update({
+            where: { id: desc.id },
+            data: {
+              path: descNewPath,
+              depth: descNewDepth,
+            },
+          });
+        }
+      }
     });
+
+    // 批量更新（由于已经在事务中逐个更新，这里只需要返回结果）
+    // 为了保持返回值一致，我们构造一个结果对象
+    const updateResult = { count: ids.length };
 
     // 审计日志
     const { after } = await import("next/server");
@@ -1661,292 +1865,180 @@ export async function searchCategories(
 
   try {
     const trimmedQuery = query.trim();
-    const searchResults = new Map<number, SearchCategoryItem>();
+    // 定义中间结果类型（包含需要用于构建最终结果的字段）
+    type IntermediateCategory = {
+      id: number;
+      slug: string;
+      name: string;
+      parentId: number | null;
+      _count: { posts: number };
+    };
+    const searchResultsMap = new Map<number, IntermediateCategory>();
 
-    // 检查是否是路径搜索（包含 / 或 中文斜杠）
+    // 检查是否是路径搜索
     const isPathSearch = /[/／]/.test(trimmedQuery);
 
+    // 构建基础查询
+    const baseWhere: { parentId?: number | null } = {
+      ...(parentId !== undefined && { parentId }),
+    };
+
     if (isPathSearch) {
-      // 路径搜索：支持 "xx/xx" 格式
       const pathParts = trimmedQuery
         .split(/[/／]/)
         .map((part) => part.trim())
-        .filter((part) => part.length > 0);
+        .filter(Boolean);
 
       if (pathParts.length > 0) {
-        // 搜索每个路径部分匹配的分类
-        for (let i = 0; i < pathParts.length; i++) {
-          const searchPart = pathParts[i];
-          const categories = await prisma.category.findMany({
-            where: {
-              OR: [
-                {
-                  name: {
-                    contains: searchPart,
-                    mode: "insensitive" as const,
-                  },
-                },
-                {
-                  slug: {
-                    contains: searchPart,
-                    mode: "insensitive" as const,
-                  },
-                },
-              ],
-              ...(parentId !== undefined && { parentId }),
-            },
-            select: {
-              id: true,
-              slug: true,
-              name: true,
-              parentId: true,
-              _count: {
-                select: {
-                  posts: {
-                    where: {
-                      deletedAt: null,
-                    },
-                  },
-                },
-              },
-            },
-          });
-
-          // 将匹配的分类和它们的子分类都加入结果
-          for (const category of categories) {
-            // 添加匹配的分类
-            if (!searchResults.has(category.id)) {
-              const path = await getCategoryParentNamePath(category.id);
-              searchResults.set(category.id, {
-                id: category.id,
-                slug: category.slug,
-                name: category.name,
-                parentId: category.parentId,
-                postCount: category._count.posts,
-                path,
-              });
-            }
-
-            // 如果是路径的最后一部分，或者下一部分也匹配，添加子分类
-            if (i === pathParts.length - 1 || i < pathParts.length - 1) {
-              const children = await prisma.category.findMany({
-                where: {
-                  parentId: category.id,
-                  ...(i < pathParts.length - 1 && {
-                    OR: [
-                      {
-                        name: {
-                          contains: pathParts[i + 1],
-                          mode: "insensitive" as const,
-                        },
-                      },
-                      {
-                        slug: {
-                          contains: pathParts[i + 1],
-                          mode: "insensitive" as const,
-                        },
-                      },
-                    ],
-                  }),
-                },
-                select: {
-                  id: true,
-                  slug: true,
-                  name: true,
-                  parentId: true,
-                  _count: {
-                    select: {
-                      posts: {
-                        where: {
-                          deletedAt: null,
-                        },
-                      },
-                    },
-                  },
-                },
-              });
-
-              for (const child of children) {
-                if (!searchResults.has(child.id)) {
-                  const childPath = await getCategoryParentNamePath(child.id);
-                  searchResults.set(child.id, {
-                    id: child.id,
-                    slug: child.slug,
-                    name: child.name,
-                    parentId: child.parentId,
-                    postCount: child._count.posts,
-                    path: childPath,
-                  });
-                }
-              }
-            }
-          }
-        }
-      }
-    } else {
-      // 普通搜索：按名称或 slug 搜索
-      const where: {
-        OR: Array<{
-          name?: { contains: string; mode: "insensitive" };
-          slug?: { contains: string; mode: "insensitive" };
-        }>;
-        parentId?: number | null;
-      } = {
-        OR: [
-          {
-            name: {
-              contains: trimmedQuery,
-              mode: "insensitive" as const,
-            },
-          },
-          {
-            slug: {
-              contains: trimmedQuery,
-              mode: "insensitive" as const,
-            },
-          },
-        ],
-      };
-
-      // 限制在指定父分类下搜索
-      if (parentId !== undefined) {
-        where.parentId = parentId;
-      }
-
-      const categories = await prisma.category.findMany({
-        where,
-        select: {
-          id: true,
-          slug: true,
-          name: true,
-          parentId: true,
-          _count: {
-            select: {
-              posts: {
-                where: {
-                  deletedAt: null,
-                },
-              },
-            },
-          },
-        },
-      });
-
-      // 添加匹配的分类
-      for (const category of categories) {
-        const path = await getCategoryParentNamePath(category.id);
-        searchResults.set(category.id, {
-          id: category.id,
-          slug: category.slug,
-          name: category.name,
-          parentId: category.parentId,
-          postCount: category._count.posts,
-          path,
-        });
-      }
-
-      // 添加匹配分类的所有直接子分类
-      for (const category of categories) {
-        const children = await prisma.category.findMany({
+        // 搜索最后一个部分
+        const lastPart = pathParts[pathParts.length - 1];
+        const categories = await prisma.category.findMany({
           where: {
-            parentId: category.id,
+            ...baseWhere,
+            OR: [
+              { name: { contains: lastPart, mode: "insensitive" } },
+              { slug: { contains: lastPart, mode: "insensitive" } },
+            ],
           },
           select: {
             id: true,
             slug: true,
             name: true,
             parentId: true,
-            _count: {
-              select: {
-                posts: {
-                  where: {
-                    deletedAt: null,
-                  },
-                },
-              },
-            },
+            _count: { select: { posts: { where: { deletedAt: null } } } },
           },
+          take: limit * 2,
         });
+        categories.forEach((c) => searchResultsMap.set(c.id, c));
+      }
+    } else {
+      const categories = await prisma.category.findMany({
+        where: {
+          ...baseWhere,
+          OR: [
+            { name: { contains: trimmedQuery, mode: "insensitive" } },
+            { slug: { contains: trimmedQuery, mode: "insensitive" } },
+          ],
+        },
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          parentId: true,
+          _count: { select: { posts: { where: { deletedAt: null } } } },
+        },
+        take: limit * 2,
+      });
+      categories.forEach((c) => searchResultsMap.set(c.id, c));
 
-        for (const child of children) {
-          if (!searchResults.has(child.id)) {
-            const childPath = await getCategoryParentNamePath(child.id);
-            searchResults.set(child.id, {
-              id: child.id,
-              slug: child.slug,
-              name: child.name,
-              parentId: child.parentId,
-              postCount: child._count.posts,
-              path: childPath,
-            });
-          }
-        }
+      // 自动带出子分类（可选增强）
+      if (categories.length > 0) {
+        const children = await prisma.category.findMany({
+          where: { parentId: { in: categories.map((c) => c.id) } },
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            parentId: true,
+            _count: { select: { posts: { where: { deletedAt: null } } } },
+          },
+          take: limit,
+        });
+        children.forEach((c) => searchResultsMap.set(c.id, c));
       }
     }
 
-    // 转换为数组并排序
-    const finalResults = Array.from(searchResults.values())
-      .sort((a, b) => {
-        // 构建完整路径用于比较
-        const aFullPath =
-          a.path.length > 0 ? `${a.path.join(" / ")} / ${a.name}` : a.name;
-        const bFullPath =
-          b.path.length > 0 ? `${b.path.join(" / ")} / ${b.name}` : b.name;
+    const allFoundCategories = Array.from(searchResultsMap.values());
+    if (allFoundCategories.length === 0) return response.ok({ data: [] });
 
-        // 格式化搜索查询（统一为 "A / B" 格式）
-        const normalizedQuery = trimmedQuery
-          .split(/[/／]/)
-          .map((p) => p.trim())
-          .filter(Boolean)
-          .join(" / ")
-          .toLowerCase();
+    // 批量获取路径（核心优化）
+    const categoryPathsMap = await batchGetCategoryPaths(
+      allFoundCategories.map((c) => c.id),
+    );
 
-        const aFullPathLower = aFullPath.toLowerCase();
-        const bFullPathLower = bFullPath.toLowerCase();
-        const aNameLower = a.name.toLowerCase();
-        const bNameLower = b.name.toLowerCase();
+    const finalResults: SearchCategoryItem[] = allFoundCategories.map(
+      (category) => {
+        const fullPathObjects = categoryPathsMap.get(category.id) || [];
+        // 这里的 path 数组应该只包含祖先名字
+        const parentNamePath = fullPathObjects
+          .slice(0, -1) // 排除自己
+          .map((p) => p.name);
 
-        // 1. 优先显示完整路径完全匹配的
-        const aPathMatch = aFullPathLower === normalizedQuery;
-        const bPathMatch = bFullPathLower === normalizedQuery;
-        if (aPathMatch && !bPathMatch) return -1;
-        if (!aPathMatch && bPathMatch) return 1;
+        return {
+          id: category.id,
+          slug: category.slug,
+          name: category.name,
+          parentId: category.parentId,
+          postCount: category._count.posts,
+          path: parentNamePath,
+        };
+      },
+    );
 
-        // 2. 优先显示名称完全匹配的
-        const aNameMatch = aNameLower === trimmedQuery.toLowerCase();
-        const bNameMatch = bNameLower === trimmedQuery.toLowerCase();
-        if (aNameMatch && !bNameMatch) return -1;
-        if (!aNameMatch && bNameMatch) return 1;
+    // 排序
+    finalResults.sort((a, b) => {
+      // 构建完整路径用于比较
+      const aFullPath =
+        a.path.length > 0 ? `${a.path.join(" / ")} / ${a.name}` : a.name;
+      const bFullPath =
+        b.path.length > 0 ? `${b.path.join(" / ")} / ${b.name}` : b.name;
 
-        // 3. 完整路径以搜索词开头的优先
-        const aPathStartsWith = aFullPathLower.startsWith(normalizedQuery);
-        const bPathStartsWith = bFullPathLower.startsWith(normalizedQuery);
-        if (aPathStartsWith && !bPathStartsWith) return -1;
-        if (!aPathStartsWith && bPathStartsWith) return 1;
+      // 格式化搜索查询（统一为 "A / B" 格式）
+      const normalizedQuery = trimmedQuery
+        .split(/[/／]/)
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .join(" / ")
+        .toLowerCase();
 
-        // 4. 名称以搜索词开头的优先
-        const aStartsWith = aNameLower.startsWith(trimmedQuery.toLowerCase());
-        const bStartsWith = bNameLower.startsWith(trimmedQuery.toLowerCase());
-        if (aStartsWith && !bStartsWith) return -1;
-        if (!aStartsWith && bStartsWith) return 1;
+      const aFullPathLower = aFullPath.toLowerCase();
+      const bFullPathLower = bFullPath.toLowerCase();
+      const aNameLower = a.name.toLowerCase();
+      const bNameLower = b.name.toLowerCase();
 
-        // 5. 路径层级少的优先（更简洁的分类）
-        const aDepth = a.path.length;
-        const bDepth = b.path.length;
-        if (aDepth !== bDepth) return aDepth - bDepth;
+      // 1. 优先显示完整路径完全匹配的
+      const aPathMatch = aFullPathLower === normalizedQuery;
+      const bPathMatch = bFullPathLower === normalizedQuery;
+      if (aPathMatch && !bPathMatch) return -1;
+      if (!aPathMatch && bPathMatch) return 1;
 
-        // 6. 文章数量多的优先
-        if (a.postCount !== b.postCount) {
-          return b.postCount - a.postCount;
-        }
+      // 2. 优先显示名称完全匹配的
+      const aNameMatch = aNameLower === trimmedQuery.toLowerCase();
+      const bNameMatch = bNameLower === trimmedQuery.toLowerCase();
+      if (aNameMatch && !bNameMatch) return -1;
+      if (!aNameMatch && bNameMatch) return 1;
 
-        // 7. 最后按名称排序
-        return a.name.localeCompare(b.name);
-      })
-      .slice(0, limit);
+      // 3. 完整路径以搜索词开头的优先
+      const aPathStartsWith = aFullPathLower.startsWith(normalizedQuery);
+      const bPathStartsWith = bFullPathLower.startsWith(normalizedQuery);
+      if (aPathStartsWith && !bPathStartsWith) return -1;
+      if (!aPathStartsWith && bPathStartsWith) return 1;
+
+      // 4. 名称以搜索词开头的优先
+      const aStartsWith = aNameLower.startsWith(trimmedQuery.toLowerCase());
+      const bStartsWith = bNameLower.startsWith(trimmedQuery.toLowerCase());
+      if (aStartsWith && !bStartsWith) return -1;
+      if (!aStartsWith && bStartsWith) return 1;
+
+      // 5. 路径层级少的优先（更简洁的分类）
+      const aDepth = a.path.length;
+      const bDepth = b.path.length;
+      if (aDepth !== bDepth) return aDepth - bDepth;
+
+      // 6. 文章数量多的优先
+      if (a.postCount !== b.postCount) {
+        return b.postCount - a.postCount;
+      }
+
+      // 7. 最后按名称排序
+      return a.name.localeCompare(b.name);
+    });
+
+    // 截取 limit 数量
+    const limitedResults = finalResults.slice(0, limit);
 
     return response.ok({
-      data: finalResults,
+      data: limitedResults,
     });
   } catch (error) {
     console.error("SearchCategories error:", error);

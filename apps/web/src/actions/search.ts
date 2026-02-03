@@ -1306,10 +1306,37 @@ export async function searchPosts(
     // 关键修正：必须遍历 rawPosts (有序) 而不是 posts (无序)，以保持搜索排名
     const postsMap = new Map(posts.map((p) => [p.id, p]));
 
+    // 收集所有分类 ID 批量获取路径
+    const allCategoryIds = new Set<number>();
+    posts.forEach((p) => {
+      p.categories.forEach((cat) => allCategoryIds.add(cat.id));
+    });
+
+    const { batchGetCategoryPaths } = await import(
+      "@/lib/server/category-utils"
+    );
+    const categoryPathsMap = await batchGetCategoryPaths(
+      Array.from(allCategoryIds),
+    );
+
     const result = rawPosts
       .map((rawPost) => {
         const post = postsMap.get(rawPost.id);
         if (!post) return null;
+
+        // 展开分类并去重
+        const expandedCategories: { name: string; slug: string }[] = [];
+        const seenSlugs = new Set<string>();
+
+        post.categories.forEach((cat) => {
+          const fullPath = categoryPathsMap.get(cat.id) || [];
+          fullPath.forEach((pathItem) => {
+            if (!seenSlugs.has(pathItem.slug)) {
+              seenSlugs.add(pathItem.slug);
+              expandedCategories.push(pathItem);
+            }
+          });
+        });
 
         const author = userMap.get(post.userUid) || {
           uid: post.userUid,
@@ -1345,7 +1372,7 @@ export async function searchPosts(
           author,
           rank: postMeta.rank,
           isPinned: post.isPinned,
-          categories: post.categories,
+          categories: expandedCategories,
           tags: post.tags,
           coverData,
           titleHighlight: postMeta.titleHighlight,
