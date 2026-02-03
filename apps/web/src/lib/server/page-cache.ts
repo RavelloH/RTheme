@@ -170,6 +170,44 @@ export async function getMatchingPage(
     });
   }
 
+  // Priority 5: 捕获所有 (Catch-all)
+  // Example: /categories/a/b/c -> /categories/:slug... (slug=a/b/c)
+  // 支持 /:slug... 和 /:slug.../page/:page
+  // 从最长匹配开始尝试，以保证优先级 (Specific > Generic)
+  // 优化: 限制最大查找深度为 3 层 (即只检查根路径长度为 0, 1, 2 的情况)
+  // 防止恶意长路径导致大量数据库查询 (DoS 风险)
+  const maxCatchAllDepth = 2; // 0, 1, 2 共三层
+  const startDepth = Math.min(basePathSegments.length - 1, maxCatchAllDepth);
+
+  for (let i = startDepth; i >= 0; i--) {
+    const rootSegments = basePathSegments.slice(0, i);
+    const catchAllSegments = basePathSegments.slice(i);
+    const slugValue = catchAllSegments.join("/");
+
+    const rootPath =
+      rootSegments.length > 0 ? "/" + rootSegments.join("/") : "";
+
+    // 5.1: Catch-all + Page
+    // Example: /categories/:slug.../page/:page
+    const catchAllPagePath = rootPath + "/:slug.../page/:page";
+    candidates.push({
+      type: "catch_all_page",
+      path: catchAllPagePath,
+      getParams: () => ({ page: pageVal, slug: slugValue }),
+    });
+
+    // 5.2: Catch-all (仅在非显式分页时尝试)
+    // Example: /categories/:slug...
+    if (!isExplicitPage) {
+      const catchAllPath = rootPath + "/:slug...";
+      candidates.push({
+        type: "catch_all",
+        path: catchAllPath,
+        getParams: () => ({ slug: slugValue }),
+      });
+    }
+  }
+
   // 3. 并行查询 (利用 getRawPage 的缓存)
   // 提取所有可能的 path
   const distinctPaths = Array.from(new Set(candidates.map((c) => c.path)));
