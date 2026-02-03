@@ -258,14 +258,13 @@ async function fetchChildCategories(
           select: { slug: true },
         });
         if (rootCategory) {
-          const previewItems = await fetchChildCategories(
-            sortBy,
-            _limit,
-            {
-              ...config,
-              data: { ...(config.data as Record<string, unknown>), slug: rootCategory.slug },
+          const previewItems = await fetchChildCategories(sortBy, _limit, {
+            ...config,
+            data: {
+              ...(config.data as Record<string, unknown>),
+              slug: rootCategory.slug,
             },
-          );
+          });
           if (previewItems.length > 0) {
             return previewItems;
           }
@@ -274,18 +273,21 @@ async function fetchChildCategories(
     }
 
     // 如果所有根分类都没有子分类，返回占位符（仅编辑器环境）
-    return [{
-      slug: "",
-      name: "（无子分类）",
-      description: "当前分类没有子分类，或者还没有创建任何分类",
-      featuredImage: null,
-      postCount: 0,
-    }];
+    return [
+      {
+        slug: "",
+        name: "（无子分类）",
+        description: "当前分类没有子分类，或者还没有创建任何分类",
+        featuredImage: null,
+        postCount: 0,
+      },
+    ];
   }
 
   // 解析 slug 路径并查找分类
   const pathSlugs = slugPath.split("/").filter(Boolean);
-  const parentCategory = pathSlugs.length > 0 ? await findCategoryByPath(pathSlugs) : null;
+  const parentCategory =
+    pathSlugs.length > 0 ? await findCategoryByPath(pathSlugs) : null;
 
   if (!parentCategory) {
     // 分类不存在（实际页面），返回空数组

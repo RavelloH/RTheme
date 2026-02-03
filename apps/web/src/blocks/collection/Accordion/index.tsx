@@ -122,10 +122,7 @@ export default function AccordionBlock({
                 {content}
               </div>
             ) : (
-              <Link
-                href={getHref()}
-                className="h-full block relative"
-              >
+              <Link href={getHref()} className="h-full block relative">
                 {content}
               </Link>
             )}

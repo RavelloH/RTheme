@@ -24,7 +24,8 @@ export async function categoryPostsInterpolator(
   const pathSlugs = slugPath.split("/").filter(Boolean);
 
   // 根据路径查找分类
-  const category = pathSlugs.length > 0 ? await findCategoryByPath(pathSlugs) : null;
+  const category =
+    pathSlugs.length > 0 ? await findCategoryByPath(pathSlugs) : null;
 
   if (!category) {
     // 分类不存在，返回默认值

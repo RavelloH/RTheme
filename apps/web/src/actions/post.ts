@@ -177,18 +177,21 @@ async function findOrCreateCategoryByPath(path: string): Promise<number> {
     if (!category) {
       const slug = await slugify(name);
 
-      // 计算路径和深度
+      // 计算路径、深度和 fullSlug
       let path = "";
       let depth = 0;
+      let fullSlug = slug;
 
       if (currentParentId) {
         const parent = await prisma.category.findUnique({
           where: { id: currentParentId },
-          select: { path: true, depth: true, id: true },
+          select: { path: true, depth: true, id: true, fullSlug: true },
         });
         if (parent) {
           path = `${parent.path}${parent.id}/`;
           depth = parent.depth + 1;
+          // 构建 fullSlug：父分类的 fullSlug + "/" + 当前 slug
+          fullSlug = parent.fullSlug ? `${parent.fullSlug}/${slug}` : slug;
         }
       }
 
@@ -199,6 +202,7 @@ async function findOrCreateCategoryByPath(path: string): Promise<number> {
           parentId: currentParentId,
           path,
           depth,
+          fullSlug,
         },
       });
     }
@@ -241,6 +245,7 @@ async function getOrCreateUncategorizedCategory(): Promise<number> {
         parentId: null,
         path: "",
         depth: 0,
+        fullSlug: uncategorizedSlug,
       },
     });
   }
