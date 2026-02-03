@@ -5,6 +5,7 @@ export interface PagedPostsBlockContent {
   filterBy: "all" | "tag" | "category"; // 筛选类型，"all" 表示不筛选
   sortBy?: string; // 排序方式
   pageSize?: number; // 每页数量
+  searchable?: boolean; // 是否启用搜索功能
 }
 
 export interface PagedPostsBlockConfig extends BaseBlockConfig {

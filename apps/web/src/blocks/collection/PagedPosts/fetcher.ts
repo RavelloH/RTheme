@@ -23,7 +23,8 @@ export async function pagedPostsFetcher(
   let slug: string | null = (data.slug as string) || null;
   const currentPage = (data.page as number) || 1;
   const filterBy = content.filterBy || "all";
-  const pageSize = content.pageSize || 20;
+  // 优先使用 config.data 中的 pageSize（页面级配置），否则使用 content 中的配置
+  const pageSize = (data.pageSize as number) || content.pageSize || 20;
   const sortBy = content.sortBy || "isPinned_desc";
 
   // 解析排序参数

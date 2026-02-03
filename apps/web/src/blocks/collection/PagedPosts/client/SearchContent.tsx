@@ -8,7 +8,6 @@ import HighlightedText from "@/components/client/HighlightedText";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import EmptyPostCard from "@/components/server/features/posts/EmptyPostCard";
 import PostCard from "@/components/server/features/posts/PostCard";
-import PaginationNav from "@/components/ui/PaginationNav";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { createArray } from "@/lib/client/create-array";
 import { AutoTransition } from "@/ui/AutoTransition";
@@ -35,10 +34,12 @@ export interface PostData {
 interface SearchContentProps {
   initialPosts: PostData[];
   searchQuery: string;
+  onSearchStateChange?: (isSearching: boolean) => void;
+  // currentPage, totalPages, basePath 保留用于未来扩展
+  // 目前分页由独立的 PaginationBlock 处理
   currentPage?: number;
   totalPages?: number;
   basePath?: string;
-  onSearchStateChange?: (isSearching: boolean) => void;
 }
 
 interface SearchMessage {
@@ -48,10 +49,10 @@ interface SearchMessage {
 export default function SearchContent({
   initialPosts,
   searchQuery,
-  currentPage = 1,
-  totalPages = 1,
-  basePath = "/posts",
   onSearchStateChange,
+  currentPage: _currentPage,
+  totalPages: _totalPages,
+  basePath: _basePath,
 }: SearchContentProps) {
   const [posts, setPosts] = useState<PostData[]>(initialPosts);
   const [isSearching, setIsSearching] = useState(false);
@@ -353,7 +354,7 @@ export default function SearchContent({
 
   return (
     <>
-      <AutoTransition type="fade">
+      <AutoTransition type="fade" className="h-full">
         {isSearching ? (
           <RowGrid key="searching">
             <GridItem
@@ -443,17 +444,6 @@ export default function SearchContent({
                 </React.Fragment>
               ))}
           </RowGrid>
-        )}
-      </AutoTransition>
-
-      {/* 分页器 - 只在非搜索状态时显示 */}
-      <AutoTransition type="fade">
-        {!currentSearchQuery.trim() && (
-          <PaginationNav
-            currentPage={currentPage}
-            totalPages={totalPages}
-            basePath={basePath}
-          />
         )}
       </AutoTransition>
     </>

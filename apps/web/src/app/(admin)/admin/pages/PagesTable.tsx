@@ -74,12 +74,14 @@ const setValueAtPath = (
 };
 
 interface PageFormState {
+  id: string;
   title: string;
   slug: string;
   status: PageListItem["status"];
   contentType: PageListItem["contentType"];
   content: string;
   config: ConfigRecord | null;
+  pageSize?: number;
   metaDescription: string;
   metaKeywords: string;
   robotsIndex: boolean;
@@ -190,16 +192,19 @@ export default function PagesTable() {
   const [batchStatusDialogOpen, setBatchStatusDialogOpen] = useState(false);
   const [batchNewStatus, setBatchNewStatus] = useState("ACTIVE");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [navigateDialogOpen, setNavigateDialogOpen] = useState(false);
   const navigate = useNavigateWithTransition();
 
   // 编辑页面状态
   const [formData, setFormData] = useState<PageFormState>({
+    id: "",
     title: "",
     slug: "",
     status: "ACTIVE",
     contentType: "MARKDOWN",
     content: "",
     config: null,
+    pageSize: 20,
     metaDescription: "",
     metaKeywords: "",
     robotsIndex: true,
@@ -516,6 +521,7 @@ export default function PagesTable() {
       return fields;
     }
 
+    // pageSize 已在基本信息部分显示，这里不再渲染
     // 移除 blocks 列表渲染，使用独立编辑器
     // 移除 components 渲染
 
@@ -531,15 +537,18 @@ export default function PagesTable() {
   // 打开编辑对话框
   const openEditDialog = (pageItem: PageListItem) => {
     setEditingPage(pageItem);
+    const config = isConfigObject(pageItem.config)
+      ? (pageItem.config as ConfigRecord)
+      : null;
     setFormData({
+      id: pageItem.id,
       title: pageItem.title,
       slug: pageItem.slug,
       status: pageItem.status,
       contentType: pageItem.contentType,
       content: "",
-      config: isConfigObject(pageItem.config)
-        ? (pageItem.config as ConfigRecord)
-        : null,
+      config,
+      pageSize: (config?.pageSize as number) || 20,
       metaDescription: pageItem.metaDescription || "",
       metaKeywords: pageItem.metaKeywords || "",
       robotsIndex: pageItem.robotsIndex,
@@ -561,9 +570,21 @@ export default function PagesTable() {
 
     setIsSubmitting(true);
     try {
-      // 检查是否有变化
-      const finalConfig = collectConfigInputValues();
+      // 确保 config 存在并包含 pageSize
+      let finalConfig = collectConfigInputValues();
 
+      // 如果没有 config，创建一个空的 config
+      if (!finalConfig) {
+        finalConfig = {};
+      }
+
+      // 如果 formData 有 pageSize，确保它在 config 中
+      if (formData.pageSize !== undefined) {
+        (finalConfig as ConfigRecord).pageSize = formData.pageSize;
+      }
+
+      const currentConfigPageSize = (editingPage.config as ConfigRecord)
+        ?.pageSize as number;
       const hasChanges =
         formData.title !== editingPage.title ||
         (!editingPage.isSystemPage && formData.slug !== editingPage.slug) ||
@@ -573,6 +594,7 @@ export default function PagesTable() {
         formData.metaKeywords !== (editingPage.metaKeywords || "") ||
         formData.robotsIndex !== editingPage.robotsIndex ||
         formData.content !== "" ||
+        formData.pageSize !== currentConfigPageSize ||
         JSON.stringify(finalConfig ?? {}) !==
           JSON.stringify(editingPage.config || {});
 
@@ -754,6 +776,18 @@ export default function PagesTable() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // 处理跳转到布局编辑器
+  const handleNavigateToEditor = () => {
+    setNavigateDialogOpen(false);
+    closeEditDialog();
+    navigate(`/admin/pages/${editingPage?.id}`);
+  };
+
+  // 打开跳转确认对话框
+  const openNavigateDialog = () => {
+    setNavigateDialogOpen(true);
   };
 
   // 批量操作按钮
@@ -1204,6 +1238,13 @@ export default function PagesTable() {
             </div>
             <div className="space-y-4">
               <Input
+                label="页面 ID"
+                value={formData.id}
+                size="sm"
+                helperText="页面唯一标识（只读）"
+                disabled
+              />
+              <Input
                 label="标题"
                 value={formData.title}
                 onChange={(e) => handleFieldChange("title", e.target.value)}
@@ -1211,6 +1252,45 @@ export default function PagesTable() {
                 size="sm"
                 helperText="页面标题，也用于SEO标题"
               />
+              <div className="space-y-2">
+                <Input
+                  label="路径"
+                  value={formData.slug}
+                  onChange={(e) => handleFieldChange("slug", e.target.value)}
+                  required
+                  size="sm"
+                  helperText="页面路径，如 /about"
+                />
+                {!editingPage?.isSystemPage && (
+                  <p className="text-xs text-muted-foreground">
+                    更改路径可能会影响搜索引擎收录和已有的外部链接，请谨慎修改。
+                  </p>
+                )}
+                <p className="text-sm text-muted-foreground font-mono py-2">
+                  <strong>路由解析规则（按优先级排序）：</strong>
+                  <br />
+                  1. 精确匹配：/about → 匹配 /about 页面
+                  <br />
+                  2. 固定路径 + 分页：/posts/page/:page → 匹配 /posts 和
+                  /posts/page/123 页面，提供 page 参数
+                  <br />
+                  3. 通配符路径 + 分页：/tags/:slug/page/:page → 匹配
+                  /tags/:slug/page/:page 页面，提供 slug 和 page 参数
+                  <br />
+                  4. 纯通配符：/posts/:slug → 匹配 /posts/:slug 页面，提供 slug
+                  参数
+                  <br />
+                  <br />
+                  <strong>通配符说明：</strong>
+                  <br />• 使用 &quot;:slug&quot; 匹配任意路径段（如
+                  &quot;/posts/:slug&quot; 可匹配
+                  &quot;/posts/hello-world&quot;）
+                  <br />• 使用 &quot;/page/:page&quot; 创建分页路由（如
+                  &quot;/posts/page/:page&quot; 可匹配
+                  &quot;/posts/page/1&quot;）
+                  <br />• 可组合使用：&quot;/:slug/page/:page&quot;
+                </p>
+              </div>
               <Input
                 label="SEO 描述"
                 value={formData.metaDescription}
@@ -1237,20 +1317,20 @@ export default function PagesTable() {
                   handleFieldChange("robotsIndex", e.target.checked)
                 }
               />
-              {!editingPage?.isSystemPage && (
-                <div className="space-y-2">
-                  <Input
-                    label="路径"
-                    value={formData.slug}
-                    onChange={(e) => handleFieldChange("slug", e.target.value)}
-                    required
-                    size="sm"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    更改路径可能会影响搜索引擎收录和已有的外部链接，请谨慎修改。
-                  </p>
-                </div>
-              )}
+              <Input
+                label="每页数量"
+                type="number"
+                value={formData.pageSize?.toString() || "20"}
+                onChange={(e) =>
+                  handleFieldChange("pageSize", parseInt(e.target.value) || 20)
+                }
+                size="sm"
+                min={1}
+                max={100}
+              />
+              <p className="text-sm text-muted-foreground">
+                每页显示的文章数量（仅对支持分页的页面有效）
+              </p>
             </div>
           </section>
 
@@ -1260,32 +1340,35 @@ export default function PagesTable() {
                 <h3 className="text-lg font-semibold text-foreground">
                   页面配置
                 </h3>
+                <p className="text-sm text-muted-foreground">
+                  配置分页数等选项，或使用布局编辑器进行完整配置。
+                </p>
               </div>
               {isConfigObject(formData.config) &&
               Object.keys(formData.config).length > 0 ? (
                 <>
                   <div className="space-y-6">{renderPageConfigFields()}</div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>
-                      {(() => {
-                        const summarySource = formData.config;
-                        if (!summarySource) {
-                          return "暂无可编辑配置";
-                        }
-                        const blocksValue = (summarySource as ConfigRecord)
-                          .blocks as unknown;
-                        const blocksCount = Array.isArray(blocksValue)
-                          ? blocksValue.length
-                          : 0;
-                        return `${blocksCount} 个区块`;
-                      })()}
-                    </span>
-                  </div>
+                  <Button
+                    label="打开布局编辑器"
+                    variant="primary"
+                    onClick={openNavigateDialog}
+                    size="md"
+                    className="w-full"
+                  />
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  该系统页面暂未提供可快速编辑的配置。
-                </p>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    该系统页面暂未提供可快速编辑的配置。
+                  </p>
+                  <Button
+                    label="打开布局编辑器"
+                    variant="primary"
+                    onClick={openNavigateDialog}
+                    size="md"
+                    className="w-full"
+                  />
+                </div>
               )}
             </section>
           ) : (
@@ -1447,6 +1530,18 @@ export default function PagesTable() {
         cancelText="取消"
         variant="danger"
         loading={isSubmitting}
+      />
+
+      {/* 跳转到布局编辑器确认对话框 */}
+      <AlertDialog
+        open={navigateDialogOpen}
+        onClose={() => setNavigateDialogOpen(false)}
+        onConfirm={handleNavigateToEditor}
+        title="确认跳转"
+        description="跳转到布局编辑器后，当前编辑对话框将关闭。如果您有未保存的修改，请先保存。是否继续？"
+        confirmText="继续"
+        cancelText="取消"
+        variant="warning"
       />
     </>
   );

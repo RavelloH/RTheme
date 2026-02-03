@@ -208,6 +208,13 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
       defaultValue: 1,
       helperText: "当高度为 1 时，宽度为高度的多少倍",
     },
+    {
+      label: "显示搜索栏",
+      path: "showSearchBar",
+      type: "toggle",
+      defaultValue: false,
+      helperText: "是否在标题下方显示搜索栏",
+    },
   ],
   groups: [
     {

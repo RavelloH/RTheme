@@ -3,15 +3,22 @@
 import { useCallback, useEffect, useState } from "react";
 import { RiFileAddLine, RiRefreshLine } from "@remixicon/react";
 
+import { createPage } from "@/actions/page";
 import { getPagesStats } from "@/actions/stat";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
-import Link from "@/components/ui/Link";
+import { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 import runWithAuth from "@/lib/client/run-with-auth";
 import { AutoTransition } from "@/ui/AutoTransition";
+import { Button } from "@/ui/Button";
+import { Checkbox } from "@/ui/Checkbox";
 import Clickable from "@/ui/Clickable";
+import { Dialog } from "@/ui/Dialog";
+import { Input } from "@/ui/Input";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { Select } from "@/ui/Select";
+import { useToast } from "@/ui/Toast";
 
 type StatsData = {
   updatedAt: string;
@@ -26,10 +33,25 @@ type StatsData = {
 };
 
 export default function PagesReport() {
+  const toast = useToast();
+  const navigate = useNavigateWithTransition();
   const [result, setResult] = useState<StatsData | null>(null);
   const [refreshTime, setRefreshTime] = useState<Date | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const { broadcast } = useBroadcastSender<{ type: "pages-refresh" }>();
+
+  // 新建页面表单状态
+  const [newPageForm, setNewPageForm] = useState({
+    title: "",
+    slug: "",
+    status: "ACTIVE" as "ACTIVE" | "SUSPENDED",
+    contentType: "MARKDOWN" as "MARKDOWN" | "HTML" | "MDX",
+    metaDescription: "",
+    metaKeywords: "",
+    robotsIndex: true,
+  });
 
   const fetchData = useCallback(
     async (forceRefresh: boolean = false) => {
@@ -56,6 +78,64 @@ export default function PagesReport() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // 打开新建页面对话框
+  const openCreateDialog = () => {
+    setNewPageForm({
+      title: "",
+      slug: "",
+      status: "ACTIVE",
+      contentType: "MARKDOWN",
+      metaDescription: "",
+      metaKeywords: "",
+      robotsIndex: true,
+    });
+    setCreateDialogOpen(true);
+  };
+
+  // 处理创建页面
+  const handleCreatePage = async () => {
+    if (!newPageForm.title.trim()) {
+      toast.error("请输入页面标题");
+      return;
+    }
+    if (!newPageForm.slug.trim()) {
+      toast.error("请输入页面路径");
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const result = await runWithAuth(createPage, {
+        title: newPageForm.title,
+        slug: newPageForm.slug.startsWith("/")
+          ? newPageForm.slug
+          : `/${newPageForm.slug}`,
+        status: newPageForm.status,
+        contentType: newPageForm.contentType,
+        metaDescription: newPageForm.metaDescription || undefined,
+        metaKeywords: newPageForm.metaKeywords || undefined,
+        robotsIndex: newPageForm.robotsIndex,
+        isSystemPage: false,
+      });
+
+      if (result && "data" in result && result.data) {
+        toast.success(`页面 "${newPageForm.title}" 已创建`);
+        setCreateDialogOpen(false);
+        // 刷新统计数据
+        await fetchData(true);
+        // 跳转到布局编辑器
+        navigate(`/admin/pages/${result.data.id}`);
+      } else {
+        toast.error("创建失败");
+      }
+    } catch (error) {
+      console.error("创建页面失败:", error);
+      toast.error("请稍后重试");
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   return (
     <>
@@ -161,14 +241,187 @@ export default function PagesReport() {
       </GridItem>
       <GridItem areas={[7, 8]} width={6} height={0.2}>
         <AutoTransition type="scale" className="h-full">
-          <Link
-            href="/admin/pages/new"
-            className="h-full flex gap-2 items-center justify-center text-2xl hover:bg-primary hover:text-primary-foreground transition-all"
+          <button
+            onClick={openCreateDialog}
+            className="h-full w-full flex gap-2 items-center justify-center text-2xl hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
           >
             <RiFileAddLine size="1.1em" /> 新建页面
-          </Link>
+          </button>
         </AutoTransition>
       </GridItem>
+
+      {/* 新建页面对话框 */}
+      <Dialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        title="新建页面"
+        size="lg"
+      >
+        <div className="px-6 py-6 space-y-8">
+          <section className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                基本信息
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                填写页面的基本信息，创建后将进入布局编辑器。
+              </p>
+            </div>
+            <div className="space-y-4">
+              <Input
+                label="标题"
+                value={newPageForm.title}
+                onChange={(e) =>
+                  setNewPageForm({ ...newPageForm, title: e.target.value })
+                }
+                required
+                size="sm"
+                helperText="页面标题"
+              />
+              <Input
+                label="路径"
+                value={newPageForm.slug}
+                onChange={(e) =>
+                  setNewPageForm({ ...newPageForm, slug: e.target.value })
+                }
+                required
+                size="sm"
+                helperText='页面路径，如 "/about" 或 "about"'
+              />
+              <p className="text-sm text-muted-foreground font-mono py-2">
+                <strong>路由解析规则（按优先级排序）：</strong>
+                <br />
+                1. 精确匹配：/about → 匹配 /about 页面
+                <br />
+                2. 固定路径 + 分页：/posts/page/:page → 匹配 /posts 和
+                /posts/page/123 页面，提供 page 参数
+                <br />
+                3. 通配符路径 + 分页：/tags/:slug/page/:page → 匹配
+                /tags/:slug/page/:page 页面，提供 slug 和 page 参数
+                <br />
+                4. 纯通配符：/posts/:slug → 匹配 /posts/:slug 页面，提供 slug
+                参数
+                <br />
+                <br />
+                <strong>通配符说明：</strong>
+                <br />• 使用 &quot;:slug&quot; 匹配任意路径段（如
+                &quot;/posts/:slug&quot; 可匹配 &quot;/posts/hello-world&quot;）
+                <br />• 使用 &quot;/page/:page&quot; 创建分页路由（如
+                &quot;/posts/page/:page&quot; 可匹配 &quot;/posts/page/1&quot;）
+                <br />• 可组合使用：&quot;/:slug/page/:page&quot;
+              </p>
+              <Input
+                label="SEO 描述"
+                value={newPageForm.metaDescription}
+                onChange={(e) =>
+                  setNewPageForm({
+                    ...newPageForm,
+                    metaDescription: e.target.value,
+                  })
+                }
+                rows={2}
+                size="sm"
+                helperText="用于搜索引擎结果展示"
+              />
+              <Input
+                label="SEO 关键词"
+                value={newPageForm.metaKeywords}
+                onChange={(e) =>
+                  setNewPageForm({
+                    ...newPageForm,
+                    metaKeywords: e.target.value,
+                  })
+                }
+                size="sm"
+                helperText="多个关键词用逗号分隔"
+              />
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                页面设置
+              </h3>
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="block text-sm text-foreground">
+                  内容类型
+                </label>
+                <Select
+                  value={newPageForm.contentType}
+                  onChange={(value) =>
+                    setNewPageForm({
+                      ...newPageForm,
+                      contentType: value as "MARKDOWN" | "HTML" | "MDX",
+                    })
+                  }
+                  options={[
+                    { value: "MARKDOWN", label: "Markdown" },
+                    { value: "HTML", label: "HTML" },
+                    { value: "MDX", label: "MDX" },
+                  ]}
+                  size="sm"
+                />
+              </div>
+              <Checkbox
+                label="允许搜索引擎索引"
+                checked={newPageForm.robotsIndex}
+                onChange={(e) =>
+                  setNewPageForm({
+                    ...newPageForm,
+                    robotsIndex: e.target.checked,
+                  })
+                }
+              />
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                发布设置
+              </h3>
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm text-foreground">状态</label>
+              <Select
+                value={newPageForm.status}
+                onChange={(value) =>
+                  setNewPageForm({
+                    ...newPageForm,
+                    status: value as "ACTIVE" | "SUSPENDED",
+                  })
+                }
+                options={[
+                  { value: "ACTIVE", label: "激活" },
+                  { value: "SUSPENDED", label: "暂停" },
+                ]}
+                size="sm"
+              />
+            </div>
+          </section>
+
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end sm:gap-4">
+            <Button
+              label="取消"
+              variant="ghost"
+              onClick={() => setCreateDialogOpen(false)}
+              size="sm"
+              disabled={isCreating}
+            />
+            <Button
+              label="创建并进入编辑器"
+              variant="primary"
+              onClick={handleCreatePage}
+              size="sm"
+              loading={isCreating}
+              loadingText="创建中..."
+            />
+          </div>
+        </div>
+      </Dialog>
     </>
   );
 }

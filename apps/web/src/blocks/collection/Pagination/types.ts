@@ -1,7 +1,7 @@
 import type { BaseBlockConfig } from "@/blocks/core/types/base";
 
 export interface PaginationBlockContent {
-  filterBy?: "tag" | "category"; // 筛选类型（用于计算 basePath）
+  filterBy?: "all" | "tag" | "category"; // 筛选类型（用于计算 basePath）
 }
 
 export interface PaginationBlockConfig extends BaseBlockConfig {

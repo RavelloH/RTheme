@@ -33,6 +33,11 @@ export async function defaultBlockFetcher(
     requiredInterpolators.push("tagPosts");
   }
 
+  // 2. 检测 postsList 相关占位符
+  if (containsPostsListPlaceholders(content)) {
+    requiredInterpolators.push("postsList");
+  }
+
   // 2. 检测随机链接需求
   if (footerType === "random" && randomSource) {
     // 如果随机链接来源是 tags 或 posts，确保调用对应插值器
@@ -77,6 +82,15 @@ export async function defaultBlockFetcher(
         return {};
       }
 
+      // postsList 需要传递 page 和 pageSize 参数
+      if (name === "postsList") {
+        const params: Record<string, string> = {
+          page: String(contextData.page || 1),
+          pageSize: String(contextData.pageSize || 20),
+        };
+        return await interpolator(params);
+      }
+
       // 其他插值器（posts, tags, projects）不需要参数
       return await interpolator();
     } catch (error) {
@@ -113,6 +127,27 @@ function containsTagPlaceholders(content: unknown): boolean {
   }
   if (typeof content === "object" && content !== null) {
     return Object.values(content).some((item) => containsTagPlaceholders(item));
+  }
+  return false;
+}
+
+/**
+ * 检测内容是否包含文章列表相关占位符
+ */
+function containsPostsListPlaceholders(content: unknown): boolean {
+  if (!content) return false;
+  if (typeof content === "string") {
+    return /{firstPublishAt|lastPublishDays|posts|page|totalPage|firstPage|lastPage}/.test(
+      content,
+    );
+  }
+  if (Array.isArray(content)) {
+    return content.some((item) => containsPostsListPlaceholders(item));
+  }
+  if (typeof content === "object" && content !== null) {
+    return Object.values(content).some((item) =>
+      containsPostsListPlaceholders(item),
+    );
   }
   return false;
 }

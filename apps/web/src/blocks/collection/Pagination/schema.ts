@@ -26,10 +26,11 @@ export const PAGINATION_BLOCK_FORM_CONFIG: BlockFormConfig = {
       type: "select",
       helperText: "选择筛选条件类型（用于生成分页链接）",
       options: [
+        { value: "all", label: "不筛选" },
         { value: "tag", label: "标签" },
         { value: "category", label: "分类" },
       ],
-      defaultValue: "tag",
+      defaultValue: "all",
     },
   ],
   groups: [
