@@ -6,6 +6,7 @@ import { RiGhostLine } from "@remixicon/react";
 import { searchPosts } from "@/actions/search";
 import HighlightedText from "@/components/client/HighlightedText";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
+import ViewCountBatchLoader from "@/components/client/logic/ViewCountBatchLoader";
 import EmptyPostCard from "@/components/server/features/posts/EmptyPostCard";
 import PostCard from "@/components/server/features/posts/PostCard";
 import { useBroadcast } from "@/hooks/use-broadcast";
@@ -207,61 +208,6 @@ export default function SearchContent({
       if (slugs.size === 0) return;
 
       // 动态导入 batchGetViewCounts
-      import("@/actions/analytics").then(({ batchGetViewCounts }) => {
-        const paths = Array.from(slugs).map((slug) => `/posts/${slug}`);
-
-        // 批量获取（最多20个一组）
-        const allResults: Array<{ path: string; count: number }> = [];
-
-        (async () => {
-          for (let i = 0; i < paths.length; i += 20) {
-            const batch = paths.slice(i, i + 20);
-            const results = await batchGetViewCounts(batch);
-            allResults.push(...results);
-          }
-
-          // 创建 slug -> count 的映射
-          const countMap = new Map<string, number>();
-          allResults.forEach((result) => {
-            const slug = result.path.replace("/posts/", "");
-            countMap.set(slug, result.count);
-          });
-
-          // 更新所有访问量元素
-          viewCountElements.forEach((element) => {
-            const slug = element.getAttribute("data-viewcount-slug");
-            if (!slug) return;
-
-            const count = countMap.get(slug);
-            if (count === undefined) return;
-
-            // 格式化数字
-            const formattedCount = count.toLocaleString("zh-CN");
-
-            // 查找内部的 span 元素并更新内容
-            const countSpan = element.querySelector("span:last-child");
-            if (countSpan) {
-              countSpan.textContent = formattedCount;
-            }
-
-            // 移除 opacity-0 类，使其可见
-            element.classList.remove("opacity-0");
-            element.style.transition = "opacity 0.3s ease-in-out";
-            element.style.opacity = "1";
-          });
-
-          // 显示访问量分隔符
-          const viewCountSeparators = document.querySelectorAll<HTMLElement>(
-            "[data-viewcount-separator]",
-          );
-
-          viewCountSeparators.forEach((element) => {
-            element.classList.remove("opacity-0");
-            element.style.transition = "opacity 0.3s ease-in-out";
-            element.style.opacity = "1";
-          });
-        })();
-      });
     }, 100); // 初始加载延迟更短
 
     return () => clearTimeout(timer);
@@ -445,6 +391,7 @@ export default function SearchContent({
               ))}
           </RowGrid>
         )}
+        <ViewCountBatchLoader />
       </AutoTransition>
     </>
   );
