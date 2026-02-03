@@ -1,8 +1,9 @@
+"use client";
+
 import { cloneElement } from "react";
 import { RiArrowRightUpLongLine } from "@remixicon/react";
 
-import BackLink from "@/components/ui/BackLink";
-import Link from "@/components/ui/Link";
+import Link, { useBackNavigation } from "@/components/ui/Link";
 
 interface BackLinkButtonProps {
   text?: React.ReactNode;
@@ -21,6 +22,8 @@ export default function LinkButton({
   icon,
   href,
 }: BackLinkButtonProps) {
+  const back = useBackNavigation();
+
   const content = (
     <>
       <div className="pl-10 relative">
@@ -49,13 +52,17 @@ export default function LinkButton({
 
   if (mode === "back") {
     return (
-      <BackLink
+      <div
         className={
-          "flex items-center justify-between w-full h-full group " + className
+          "flex items-center justify-between w-full h-full group cursor-pointer " +
+          className
         }
+        onClick={() => {
+          back();
+        }}
       >
         {content}
-      </BackLink>
+      </div>
     );
   } else if (mode === "onClick") {
     return (

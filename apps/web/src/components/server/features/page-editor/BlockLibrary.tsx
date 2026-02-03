@@ -205,6 +205,9 @@ export default function BlockLibrary({
       updateScale();
     });
     resizeObserver.observe(previewContainerRef.current);
+    if (measureRef.current) {
+      resizeObserver.observe(measureRef.current);
+    }
 
     // 监听窗口大小变化
     window.addEventListener("resize", updateScale);
@@ -452,8 +455,7 @@ export default function BlockLibrary({
               <div className="bg-muted/30">
                 <div
                   ref={previewContainerRef}
-                  className="relative overflow-hidden mx-10"
-                  style={{ height: "600px" }}
+                  className="relative overflow-hidden mx-10 h-[37.5em]"
                 >
                   {previewLoading ? (
                     <div className="flex items-center justify-center h-full">

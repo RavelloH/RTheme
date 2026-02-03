@@ -27,6 +27,12 @@ const BLOCK_COMPONENTS: BlockComponentMap = {
   accordion: dynamic(
     () => import("@/blocks/collection/Accordion"),
   ) as BlockComponentMap["accordion"],
+  "paged-posts": dynamic(
+    () => import("@/blocks/collection/PagedPosts"),
+  ) as BlockComponentMap["paged-posts"],
+  pagination: dynamic(
+    () => import("@/blocks/collection/Pagination"),
+  ) as BlockComponentMap["pagination"],
 };
 
 // 获取组件的类型安全辅助函数

@@ -36,6 +36,14 @@ const SCHEMA_IMPORTERS: Record<string, () => Promise<BlockFormConfig>> = {
     import("../collection/Accordion/schema").then(
       (m) => m.ACCORDION_BLOCK_FORM_CONFIG,
     ),
+  "paged-posts": () =>
+    import("../collection/PagedPosts/schema").then(
+      (m) => m.PAGED_POSTS_BLOCK_FORM_CONFIG,
+    ),
+  pagination: () =>
+    import("../collection/Pagination/schema").then(
+      (m) => m.PAGINATION_BLOCK_FORM_CONFIG,
+    ),
 };
 
 /**

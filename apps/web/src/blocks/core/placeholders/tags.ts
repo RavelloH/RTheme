@@ -4,7 +4,9 @@ import prisma from "@/lib/server/prisma";
  * 插值器：处理 {tags} 占位符
  * 返回标签总数、最后更新时间、页面信息和标签列表（用于随机链接）
  */
-export async function tagsInterpolator(): Promise<Record<string, unknown>> {
+export async function tagsInterpolator(
+  _params?: Record<string, string>,
+): Promise<Record<string, unknown>> {
   // 并发获取所有统计数据
   const [totalTags, lastPost, allTags] = await Promise.all([
     // 统计有文章的标签数

@@ -1,4 +1,4 @@
-import { extractPlaceholdersFromValue } from "@/blocks/core/lib/shared";
+import { extractParsedPlaceholdersFromValue } from "@/blocks/core/lib/shared";
 import { interpolatorMap } from "@/blocks/core/placeholders";
 import type {
   ImageArrayFieldConfig,
@@ -11,40 +11,74 @@ import { processImageUrl } from "@/lib/shared/image-common";
 /**
  * 通用 Block Fetcher 逻辑
  * 分析内容中的占位符，动态加载对应的插值器，并发获取数据
+ * 支持参数化占位符：{name|key=value&key2=value2}
+ * 参数值支持占位符替换：{name|slug={slug}} 会从 contextData 中读取 slug
  */
 export async function fetchBlockInterpolatedData(
   content: unknown,
+  contextData?: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   if (!content) return {};
 
-  const allPlaceholders = extractPlaceholdersFromValue(content);
-  const supportedPlaceholders = allPlaceholders.filter(
-    (placeholder) => placeholder in interpolatorMap,
-  );
+  const allParsedPlaceholders = extractParsedPlaceholdersFromValue(content);
 
-  if (supportedPlaceholders.length === 0) {
+  // 按插值器分组：相同名称的占位符合并参数
+  const interpolatorGroups = new Map<string, Set<Record<string, string>>>();
+
+  for (const parsed of allParsedPlaceholders) {
+    if (!(parsed.name in interpolatorMap)) continue;
+
+    if (!interpolatorGroups.has(parsed.name)) {
+      interpolatorGroups.set(parsed.name, new Set());
+    }
+
+    // 处理参数：替换参数值中的占位符
+    const resolvedParams: Record<string, string> = {};
+    for (const [key, value] of Object.entries(parsed.params)) {
+      // 如果参数值是占位符格式，从 contextData 中获取实际值
+      if (value.startsWith("{") && value.endsWith("}")) {
+        const placeholderKey = value.slice(1, -1);
+        const actualValue = contextData?.[placeholderKey];
+        if (actualValue !== undefined) {
+          resolvedParams[key] = String(actualValue);
+        }
+      } else {
+        resolvedParams[key] = value;
+      }
+    }
+
+    // 将参数对象添加到集合中
+    if (Object.keys(resolvedParams).length > 0) {
+      const group = interpolatorGroups.get(parsed.name)!;
+      group.add(resolvedParams);
+    }
+  }
+
+  if (interpolatorGroups.size === 0) {
     return {};
   }
 
-  const interpolatorPromises = supportedPlaceholders.map(
-    async (placeholder) => {
-      const interpolatorLoader = interpolatorMap[placeholder];
+  const interpolatorPromises = Array.from(interpolatorGroups.entries()).map(
+    async ([name, paramsSet]) => {
+      const interpolatorLoader = interpolatorMap[name];
       if (!interpolatorLoader) return {};
 
       try {
         const interpolatorModule = await interpolatorLoader();
         // 获取模块中的第一个导出函数（插值器）
-        const interpolator = Object.values(
-          interpolatorModule,
-        )[0] as () => Promise<Record<string, unknown>>;
+        const interpolator = Object.values(interpolatorModule)[0] as (
+          params?: Record<string, string>,
+        ) => Promise<Record<string, unknown>>;
 
         if (typeof interpolator !== "function") return {};
-        return await interpolator();
+
+        // 获取参数（取第一个参数集）
+        const params = Array.from(paramsSet)[0];
+
+        // 调用插值器，传递参数
+        return await interpolator(params);
       } catch (error) {
-        console.error(
-          `[Interpolator Error] Placeholder: {${placeholder}}`,
-          error,
-        );
+        console.error(`[Interpolator Error] Placeholder: {${name}}`, error);
         return {};
       }
     },

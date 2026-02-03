@@ -4,7 +4,9 @@
  *
  * TODO: 当项目系统实现后，从数据库查询实际数量
  */
-export async function projectsInterpolator(): Promise<Record<string, unknown>> {
+export async function projectsInterpolator(
+  _params?: Record<string, string>,
+): Promise<Record<string, unknown>> {
   // 目前返回固定值，待项目系统实现后更新
   return {
     projects: 5,

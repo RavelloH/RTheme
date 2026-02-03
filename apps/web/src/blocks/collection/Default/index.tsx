@@ -1,3 +1,5 @@
+import { RiArrowGoBackLine } from "@remixicon/react";
+
 import RandomLinkFooter from "@/blocks/collection/Default/client/RandomLinkFooter";
 import type { DefaultBlockConfig } from "@/blocks/collection/Default/types";
 import { ProcessedText } from "@/blocks/core/components";
@@ -188,8 +190,13 @@ export default function DefaultBlock({
               className="flex items-center uppercase text-2xl"
             >
               <LinkButton
-                mode="link"
-                href={replacePlaceholders(content.footer?.link ?? "", data)}
+                mode={footerType === "back" ? "back" : "link"}
+                href={
+                  footerType === "normal"
+                    ? replacePlaceholders(content.footer?.link ?? "", data)
+                    : undefined
+                }
+                icon={footerType === "back" ? <RiArrowGoBackLine /> : undefined}
                 text={
                   <ProcessedText
                     text={content.footer?.text}
