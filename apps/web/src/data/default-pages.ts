@@ -221,7 +221,6 @@ export const defaultPages: DefaultPage[] = [
               link: "",
               text: "随便看看 / RANDOM",
               type: "random",
-              randomSource: "posts",
             },
             header: {
               align: "left",
@@ -287,47 +286,49 @@ export const defaultPages: DefaultPage[] = [
         {
           id: 1,
           block: "default",
-          description: "",
           content: {
-            header: { value: "Topics. Themes. Paths.", align: "left" },
-            title: { value: "Categories / 分类", align: "left" },
+            title: {
+              align: "left",
+              value: "Categories / 分类",
+            },
+            footer: {
+              text: "Random / 随便看看",
+              type: "random",
+            },
+            header: {
+              align: "left",
+              value: "Topics. Themes. Paths.",
+            },
             content: {
               top: {
+                align: "left",
                 value: [
                   "整理 & 索引所有分类。",
                   "",
                   "最近更新于 {lastUpdatedDays}。",
                   "共索引 {categories} 个分类，",
-                  "其中包含 {root} 个根分类，{child} 个子分类。",
+                  "其中包含 {rootCategories} 个根分类，{childCategories} 个子分类。",
                 ],
-                align: "left",
               },
               bottom: {
-                value: ["当前正在查看 {pageInfo}。"],
                 align: "left",
+                value: ["当前正在查看 {pageInfo}。"],
               },
             },
-            footer: {
-              link: "",
-              text: "Random / 随便看看",
-            },
+            dataSource: "categories-index",
           },
+          description: "",
         },
         {
           id: 2,
-          block: "default",
+          block: "accordion",
           description: "",
           content: {
-            header: { value: "", align: "left" },
-            title: { value: "", align: "left" },
-            content: {
-              top: { value: [], align: "left" },
-              bottom: { value: [], align: "left" },
+            source: "categories",
+            layout: {
+              sortBy: "count",
             },
-            footer: {
-              link: "",
-              text: "",
-            },
+            limit: 0,
           },
         },
       ],
@@ -425,7 +426,6 @@ export const defaultPages: DefaultPage[] = [
               link: "",
               text: "Random / 随便看看",
               type: "random",
-              randomSource: "tags",
             },
             header: {
               align: "left",
@@ -449,6 +449,7 @@ export const defaultPages: DefaultPage[] = [
                 value: ["当前正在查看 {pageInfo}。"],
               },
             },
+            dataSource: "tags-index",
           },
           description: "",
         },
@@ -493,7 +494,6 @@ export const defaultPages: DefaultPage[] = [
               link: "",
               text: "Back / 返回标签列表",
               type: "back",
-              randomSource: "tags",
             },
             header: {
               align: "left",
@@ -521,6 +521,7 @@ export const defaultPages: DefaultPage[] = [
               verticalCenter: false,
               ratio: 1,
             },
+            dataSource: "tag-detail",
           },
           description: "",
         },

@@ -128,10 +128,43 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
       defaultValue: "left",
     },
     {
+      label: "数据源",
+      path: "dataSource",
+      type: "select",
+      helperText: "选择页面类型，用于决定占位符的数据来源",
+      options: [
+        {
+          label: "常规",
+          value: "normal",
+        },
+        {
+          label: "文章索引",
+          value: "posts-index",
+        },
+        {
+          label: "分类索引",
+          value: "categories-index",
+        },
+        {
+          label: "分类详情",
+          value: "category-detail",
+        },
+        {
+          label: "标签索引",
+          value: "tags-index",
+        },
+        {
+          label: "标签详情",
+          value: "tag-detail",
+        },
+      ],
+      defaultValue: "normal",
+    },
+    {
       label: "Footer 类型",
       path: "footer.type",
       type: "select",
-      helperText: "选择底部链接的类型",
+      helperText: "选择底部链接的类型（随机链接会根据数据源自动选择）",
       options: [
         {
           label: "常规链接",
@@ -147,31 +180,6 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
         },
       ],
       defaultValue: "normal",
-    },
-    {
-      label: "随机链接来源",
-      path: "footer.randomSource",
-      type: "select",
-      helperText: "选择随机链接的数据来源",
-      options: [
-        {
-          label: "标签",
-          value: "tags",
-        },
-        {
-          label: "文章",
-          value: "posts",
-        },
-      ],
-      defaultValue: "tags",
-      condition: {
-        and: [
-          {
-            field: "footer.type",
-            value: "random",
-          },
-        ],
-      },
     },
     {
       label: "底部链接文本",
@@ -218,6 +226,11 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
   ],
   groups: [
     {
+      title: "数据模式",
+      description: "选择区块所使用的数据源类型",
+      fields: ["dataSource"],
+    },
+    {
       title: "顶栏",
       description:
         "顶栏出现在区块的最上方，通常用于显示简短的提示信息。不填则不显示",
@@ -238,12 +251,7 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
     {
       title: "底栏",
       description: "底栏出现在区块的最下方，通常用于显示操作链接。不填则不显示",
-      fields: [
-        "footer.type",
-        "footer.randomSource",
-        "footer.text",
-        "footer.link",
-      ],
+      fields: ["footer.type", "footer.text", "footer.link"],
     },
     {
       title: "布局",
