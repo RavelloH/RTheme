@@ -176,11 +176,29 @@ async function findOrCreateCategoryByPath(path: string): Promise<number> {
     // 如果不存在则创建
     if (!category) {
       const slug = await slugify(name);
+
+      // 计算路径和深度
+      let path = "";
+      let depth = 0;
+
+      if (currentParentId) {
+        const parent = await prisma.category.findUnique({
+          where: { id: currentParentId },
+          select: { path: true, depth: true, id: true },
+        });
+        if (parent) {
+          path = `${parent.path}${parent.id}/`;
+          depth = parent.depth + 1;
+        }
+      }
+
       category = await prisma.category.create({
         data: {
           name,
           slug,
           parentId: currentParentId,
+          path,
+          depth,
         },
       });
     }
@@ -221,6 +239,8 @@ async function getOrCreateUncategorizedCategory(): Promise<number> {
         slug: uncategorizedSlug,
         description: "自动分配给未指定分类的文章",
         parentId: null,
+        path: "",
+        depth: 0,
       },
     });
   }

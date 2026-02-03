@@ -4,6 +4,7 @@ import type {
   PostItem,
 } from "@/blocks/collection/PagedPosts/types";
 import type { BlockConfig } from "@/blocks/core/types";
+import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import { batchQueryMediaFiles } from "@/lib/server/image-query";
 import { getFeaturedImageData } from "@/lib/server/media-reference";
 import prisma from "@/lib/server/prisma";
@@ -141,6 +142,7 @@ async function fetchPostsByFilter(
               },
               categories: {
                 select: {
+                  id: true,
                   name: true,
                   slug: true,
                 },
@@ -184,6 +186,7 @@ async function fetchPostsByFilter(
               },
               categories: {
                 select: {
+                  id: true,
                   name: true,
                   slug: true,
                 },
@@ -224,6 +227,7 @@ async function fetchPostsByFilter(
             },
             categories: {
               select: {
+                id: true,
                 name: true,
                 slug: true,
               },
@@ -242,18 +246,23 @@ async function fetchPostsByFilter(
     prisma.post.count({ where }),
   ]);
 
-  // 批量处理封面图
+  // 批量处理封面图和分类路径
   const coverUrls: string[] = [];
   const coverCache = new Map<string, string | null>();
+  const categoryIds = new Set<number>();
 
   posts.forEach((post) => {
     const featuredImage = getFeaturedImageData(post.mediaRefs);
     const url = featuredImage?.url || null;
     coverCache.set(post.slug, url);
     if (url) coverUrls.push(url);
+    post.categories.forEach((cat) => categoryIds.add(cat.id));
   });
 
-  const mediaFileMap = await batchQueryMediaFiles(coverUrls);
+  const [mediaFileMap, categoryPathsMap] = await Promise.all([
+    batchQueryMediaFiles(coverUrls),
+    batchGetCategoryPaths(Array.from(categoryIds)),
+  ]);
 
   // 处理文章数据
   const processedPosts: PostItem[] = posts.map((post) => {
@@ -262,13 +271,27 @@ async function fetchPostsByFilter(
       ? processImageUrl(coverUrl, mediaFileMap)
       : undefined;
 
+    // 展开分类并去重
+    const expandedCategories: { name: string; slug: string }[] = [];
+    const seenSlugs = new Set<string>();
+
+    post.categories.forEach((cat) => {
+      const fullPath = categoryPathsMap.get(cat.id) || [];
+      fullPath.forEach((pathItem) => {
+        if (!seenSlugs.has(pathItem.slug)) {
+          seenSlugs.add(pathItem.slug);
+          expandedCategories.push(pathItem);
+        }
+      });
+    });
+
     return {
       title: post.title,
       slug: post.slug,
       excerpt: post.excerpt,
       isPinned: post.isPinned,
       publishedAt: post.publishedAt,
-      categories: post.categories,
+      categories: expandedCategories,
       tags: post.tags,
       coverData,
     };
@@ -330,6 +353,7 @@ async function fetchAllPosts(
               },
               categories: {
                 select: {
+                  id: true,
                   name: true,
                   slug: true,
                 },
@@ -373,6 +397,7 @@ async function fetchAllPosts(
               },
               categories: {
                 select: {
+                  id: true,
                   name: true,
                   slug: true,
                 },
@@ -413,6 +438,7 @@ async function fetchAllPosts(
             },
             categories: {
               select: {
+                id: true,
                 name: true,
                 slug: true,
               },
@@ -431,18 +457,23 @@ async function fetchAllPosts(
     prisma.post.count({ where }),
   ]);
 
-  // 批量处理封面图
+  // 批量处理封面图和分类路径
   const coverUrls: string[] = [];
   const coverCache = new Map<string, string | null>();
+  const categoryIds = new Set<number>();
 
   posts.forEach((post) => {
     const featuredImage = getFeaturedImageData(post.mediaRefs);
     const url = featuredImage?.url || null;
     coverCache.set(post.slug, url);
     if (url) coverUrls.push(url);
+    post.categories.forEach((cat) => categoryIds.add(cat.id));
   });
 
-  const mediaFileMap = await batchQueryMediaFiles(coverUrls);
+  const [mediaFileMap, categoryPathsMap] = await Promise.all([
+    batchQueryMediaFiles(coverUrls),
+    batchGetCategoryPaths(Array.from(categoryIds)),
+  ]);
 
   // 处理文章数据
   const processedPosts: PostItem[] = posts.map((post) => {
@@ -451,13 +482,27 @@ async function fetchAllPosts(
       ? processImageUrl(coverUrl, mediaFileMap)
       : undefined;
 
+    // 展开分类并去重
+    const expandedCategories: { name: string; slug: string }[] = [];
+    const seenSlugs = new Set<string>();
+
+    post.categories.forEach((cat) => {
+      const fullPath = categoryPathsMap.get(cat.id) || [];
+      fullPath.forEach((pathItem) => {
+        if (!seenSlugs.has(pathItem.slug)) {
+          seenSlugs.add(pathItem.slug);
+          expandedCategories.push(pathItem);
+        }
+      });
+    });
+
     return {
       title: post.title,
       slug: post.slug,
       excerpt: post.excerpt,
       isPinned: post.isPinned,
       publishedAt: post.publishedAt,
-      categories: post.categories,
+      categories: expandedCategories,
       tags: post.tags,
       coverData,
     };

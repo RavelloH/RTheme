@@ -217,6 +217,11 @@ model Category {
   parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children Category[] @relation("CategoryHierarchy")
 
+  // 优化字段：物化路径与排序
+  path  String @default("") @db.VarChar(2048)
+  depth Int    @default(0)
+  order Int    @default(0)
+
   posts Post[]
 
   // 唯一约束：同一父分类下 slug 和 name 唯一
@@ -226,6 +231,8 @@ model Category {
   @@index([parentId])
   @@index([slug])
   @@index([createdAt])
+  @@index([path])
+  @@index([depth])
 }
 
 // 评论模型

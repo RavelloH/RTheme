@@ -189,11 +189,17 @@ export function TagInput({
       }
     }
 
-    // 清空输入和搜索结果
-    setInputValue("");
-    setSearchResults([]);
+    // 清除防抖定时器，避免后续执行干扰
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+
+    // 清空输入和搜索结果（注意顺序：先关闭下拉框，避免防抖冲突）
     setIsDropdownOpen(false);
+    setSearchResults([]);
     setSelectedIndex(0);
+    setInputValue("");
 
     // 重新聚焦输入框
     inputRef.current?.focus();
