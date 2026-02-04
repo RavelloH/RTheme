@@ -45,6 +45,8 @@ import ResponseBuilder from "@/lib/server/response";
 import { slugify } from "@/lib/server/slugify";
 import { validateData } from "@/lib/server/validator";
 
+import type { Prisma } from ".prisma/client";
+
 type ActionEnvironment = "serverless" | "serveraction";
 // ... (rest of the type definitions)
 
@@ -241,9 +243,36 @@ export async function getMediaList(
       isPublicFolder = true;
     }
 
-    // AUTHOR 只能查看自己的文件（仅在私有空间）
-    if (user.role === "AUTHOR" && !isPublicFolder) {
-      conditions.push({ userUid: user.uid });
+    // 权限控制：根据角色和搜索模式决定可见范围
+    if (user.role === "AUTHOR") {
+      if (folderId === null || folderId === undefined) {
+        // 搜索模式（不传 folderId）：AUTHOR 只能看到公共空间的文件或自己的文件
+        const publicRoot = await prisma.virtualFolder.findFirst({
+          where: { systemType: "ROOT_PUBLIC" },
+          select: { id: true },
+        });
+
+        const folderConditions: Prisma.MediaWhereInput[] = [
+          { folderId: null }, // 无文件夹的文件（根目录）
+          { userUid: user.uid }, // 自己上传的文件
+        ];
+
+        if (publicRoot) {
+          folderConditions.push({
+            folder: {
+              OR: [
+                { systemType: "ROOT_PUBLIC" },
+                { path: { startsWith: `/${publicRoot.id}/` } },
+              ],
+            },
+          });
+        }
+
+        conditions.push({ OR: folderConditions });
+      } else if (!isPublicFolder) {
+        // 在私有空间中，AUTHOR 只能看到自己的文件
+        conditions.push({ userUid: user.uid });
+      }
     } else if (userUid) {
       // EDITOR 和 ADMIN 可以筛选指定用户的文件
       conditions.push({ userUid });

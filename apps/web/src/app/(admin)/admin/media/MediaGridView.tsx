@@ -402,13 +402,6 @@ const FolderGridItem = memo<FolderGridItemProps>(
             {folder.fileCount}
           </div>
         )}
-
-        {/* 悬停时显示的操作栏 */}
-        <div className="absolute bottom-0 left-0 right-0 z-10 bg-background/80 backdrop-blur-sm transform transition-transform duration-200 ease-out translate-y-full group-hover:translate-y-0">
-          <div className="flex items-center justify-center px-2 py-2">
-            <span className="text-sm text-muted-foreground">点击进入</span>
-          </div>
-        </div>
       </div>
     );
   },
