@@ -42,11 +42,9 @@ export default function MediaAdminPage() {
           {/* 媒体内容趋势统计图表 */}
           <MediaStatsChart />
         </RowGrid>
-        <RowGrid>
-          {/* 管理媒体内容表 */}
 
-          <MediaTable />
-        </RowGrid>
+        {/* 管理媒体内容表 */}
+        <MediaTable />
       </HorizontalScroll>
     </MainLayout>
   );

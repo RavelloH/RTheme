@@ -649,7 +649,7 @@ export async function getPostComments(
     const likes = await prisma.commentLike.findMany({
       where: {
         commentId: { in: allCommentIds },
-        userId: currentUid,
+        userUid: currentUid,
       },
       select: { commentId: true },
     });
@@ -770,7 +770,7 @@ export async function getCommentReplies(
     const likes = await prisma.commentLike.findMany({
       where: {
         commentId: { in: commentIds },
-        userId: currentUid,
+        userUid: currentUid,
       },
       select: { commentId: true },
     });
@@ -977,7 +977,7 @@ export async function getDirectChildren(
     const likes = await prisma.commentLike.findMany({
       where: {
         commentId: { in: allCommentIds },
-        userId: currentUid,
+        userUid: currentUid,
       },
       select: { commentId: true },
     });
@@ -1720,7 +1720,7 @@ export async function getCommentsAdmin(
     const likes = await prisma.commentLike.findMany({
       where: {
         commentId: { in: commentIds },
-        userId: authUser.uid,
+        userUid: authUser.uid,
       },
       select: { commentId: true },
     });
@@ -2054,9 +2054,9 @@ export async function likeComment(
       // 检查是否已点赞
       const existingLike = await tx.commentLike.findUnique({
         where: {
-          commentId_userId: {
+          commentId_userUid: {
             commentId,
-            userId: authUser.uid,
+            userUid: authUser.uid,
           },
         },
       });
@@ -2077,7 +2077,7 @@ export async function likeComment(
       await tx.commentLike.create({
         data: {
           commentId,
-          userId: authUser.uid,
+          userUid: authUser.uid,
         },
       });
 
@@ -2138,9 +2138,9 @@ export async function unlikeComment(
       // 检查是否已点赞
       const existingLike = await tx.commentLike.findUnique({
         where: {
-          commentId_userId: {
+          commentId_userUid: {
             commentId,
-            userId: authUser.uid,
+            userUid: authUser.uid,
           },
         },
       });
@@ -2160,9 +2160,9 @@ export async function unlikeComment(
       // 删除点赞记录并更新点赞数
       await tx.commentLike.delete({
         where: {
-          commentId_userId: {
+          commentId_userUid: {
             commentId,
-            userId: authUser.uid,
+            userUid: authUser.uid,
           },
         },
       });
