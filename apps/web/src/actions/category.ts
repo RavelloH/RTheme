@@ -872,14 +872,17 @@ export async function createCategory(
       fullSlug: finalSlug,
     };
 
-    // 计算路径、深度和 fullSlug
+    // 保存父分类信息，用于创建后更新 path
+    let parentInfo: { path: string | null; depth: number; fullSlug: string | null } | null = null;
+
+    // 计算深度和 fullSlug（path 稍后更新）
     if (resolvedParentId) {
       const parent = await prisma.category.findUnique({
         where: { id: resolvedParentId },
         select: { path: true, depth: true, id: true, fullSlug: true },
       });
       if (parent) {
-        categoryData.path = `${parent.path}${parent.id}/`;
+        parentInfo = parent;
         categoryData.depth = parent.depth + 1;
         // 构建 fullSlug：父分类的 fullSlug + "/" + 当前 slug
         categoryData.fullSlug = parent.fullSlug
@@ -894,6 +897,7 @@ export async function createCategory(
       featuredImageMediaId = await findMediaIdByUrl(prisma, featuredImage);
     }
 
+    // 创建分类（path 稍后更新）
     const category = await prisma.category.create({
       data: categoryData,
       include: {
@@ -908,6 +912,23 @@ export async function createCategory(
         },
       },
     });
+
+    // 更新 path（现在知道了新分类的 ID）
+    if (parentInfo) {
+      const correctPath = parentInfo.path
+        ? `${parentInfo.path}/${category.id}`
+        : `${category.id}`;
+      await prisma.category.update({
+        where: { id: category.id },
+        data: { path: correctPath },
+      });
+    } else {
+      // 根分类
+      await prisma.category.update({
+        where: { id: category.id },
+        data: { path: `${category.id}` },
+      });
+    }
 
     // 如果有 featuredImage，创建关联
     if (featuredImageMediaId !== null) {
@@ -1234,15 +1255,17 @@ export async function updateCategory(
       updateData.parentId = resolvedParentId;
 
       // 准备更新子孙分类的路径
+      // path 格式：包含自己的 ID，格式如 "5/10/15"（与 Comment 一致）
       updateDescendants = true;
-      oldPathPrefix = `${category.path}${category.id}/`;
-      oldFullSlugPrefix = `${category.fullSlug}${category.slug}/`;
+      oldPathPrefix = `${category.path}/`;
+      // fullSlug 已经包含了当前分类的 slug，不需要重复添加
+      oldFullSlugPrefix = `${category.fullSlug}/`;
 
       if (resolvedParentId === null) {
         // 移动到根
-        newPathPrefix = "";
+        newPathPrefix = `${category.id}/`;
         newFullSlugPrefix = "";
-        updateData.path = "";
+        updateData.path = `${category.id}`;
         updateData.depth = 0;
         updateData.fullSlug = category.slug;
       } else {
@@ -1256,9 +1279,12 @@ export async function updateCategory(
           return response.badRequest({ message: "新父分类不存在" });
         }
 
-        updateData.path = `${newParent.path}${newParent.id}/`;
+        // path 格式：包含自己的 ID，格式如 "5/10/15"（与 Comment 一致）
+        updateData.path = newParent.path
+          ? `${newParent.path}/${category.id}`
+          : `${category.id}`;
         updateData.depth = newParent.depth + 1;
-        newPathPrefix = `${updateData.path}${category.id}/`;
+        newPathPrefix = `${updateData.path}/`;
         updateData.fullSlug = newParent.fullSlug
           ? `${newParent.fullSlug}/${category.slug}`
           : category.slug;
@@ -1319,9 +1345,11 @@ export async function updateCategory(
         const oldFullSlugPrefix = `${category.fullSlug}/`;
         const newFullSlugPrefix = `${updateData.fullSlug}/`;
 
+        // path 格式：包含自己的 ID，格式如 "5/10/15"（与 Comment 一致）
+        // category.path 已经包含了自己的 ID，直接添加 "/" 即可
         const allDescendants = await tx.category.findMany({
           where: {
-            path: { startsWith: `${category.path}${category.id}/` },
+            path: { startsWith: `${category.path}/` },
           },
           select: { id: true, fullSlug: true },
         });
@@ -1779,7 +1807,7 @@ export async function moveCategories(
     // 获取移动前的 parentId 信息用于审计日志
     const oldCategories = await prisma.category.findMany({
       where: { id: { in: ids } },
-      select: { id: true, parentId: true, path: true, depth: true, slug: true },
+      select: { id: true, parentId: true, path: true, depth: true, slug: true, fullSlug: true },
     });
 
     const oldParentIds = oldCategories.map((c) => ({
@@ -1789,15 +1817,19 @@ export async function moveCategories(
 
     // 准备目标父级信息
     let targetPath = "";
+    let targetFullSlug = ""; // 添加目标父级的 fullSlug
     let targetDepth = -1; // 根级深度为-1，这样+1后为0
 
     if (resolvedTargetParentId !== null) {
       const targetParent = await prisma.category.findUnique({
         where: { id: resolvedTargetParentId },
-        select: { path: true, depth: true, id: true },
+        select: { path: true, depth: true, id: true, fullSlug: true },
       });
       if (targetParent) {
-        targetPath = `${targetParent.path}${targetParent.id}/`;
+        // path 格式：包含自己的 ID，格式如 "5/10/15"（与 Comment 一致）
+        // targetPath 就是目标父级的完整 path（已经包含父级自己的 ID）
+        targetPath = targetParent.path;
+        targetFullSlug = targetParent.fullSlug || "";
         targetDepth = targetParent.depth;
       }
     }
@@ -1806,7 +1838,11 @@ export async function moveCategories(
     await prisma.$transaction(async (tx) => {
       for (const cat of oldCategories) {
         // 1. 计算新信息
-        const newPath = targetPath;
+        const newPath = targetPath ? `${targetPath}/${cat.id}` : `${cat.id}`;
+        // fullSlug = 目标父级的 fullSlug + 当前分类的 slug
+        const newFullSlug = targetFullSlug
+          ? `${targetFullSlug}/${cat.slug}`
+          : cat.slug;
         const newDepth = targetDepth + 1;
 
         // 2. 更新当前分类
@@ -1815,13 +1851,17 @@ export async function moveCategories(
           data: {
             parentId: resolvedTargetParentId,
             path: newPath,
+            fullSlug: newFullSlug, // 更新 fullSlug
             depth: newDepth,
           },
         });
 
         // 3. 更新子孙分类
-        const oldPathPrefix = `${cat.path}${cat.id}/`;
-        const newPathPrefix = `${newPath}${cat.id}/`;
+        // path 格式：包含自己的 ID，格式如 "5/10/15"（与 Comment 一致）
+        const oldPathPrefix = `${cat.path}/`;
+        const newPathPrefix = `${newPath}/`;
+        const oldFullSlugPrefix = `${cat.fullSlug}/`;
+        const newFullSlugPrefix = `${newFullSlug}/`;
         const depthChange = newDepth - cat.depth;
 
         // 查找所有子孙
@@ -1829,19 +1869,25 @@ export async function moveCategories(
           where: {
             path: { startsWith: oldPathPrefix },
           },
-          select: { id: true, path: true, depth: true },
+          select: { id: true, path: true, depth: true, fullSlug: true },
         });
 
         for (const desc of descendants) {
           const descNewPath =
             newPathPrefix + desc.path.substring(oldPathPrefix.length);
           const descNewDepth = desc.depth + depthChange;
+          // 更新 fullSlug
+          const descNewFullSlug = desc.fullSlug.startsWith(oldFullSlugPrefix)
+            ? newFullSlugPrefix +
+              desc.fullSlug.substring(oldFullSlugPrefix.length)
+            : desc.fullSlug;
 
           await tx.category.update({
             where: { id: desc.id },
             data: {
               path: descNewPath,
               depth: descNewDepth,
+              fullSlug: descNewFullSlug,
             },
           });
         }
