@@ -33,7 +33,7 @@ export default function CommentsHistoryChart() {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await runWithAuth(getCommentHistory, { days: 60 } as never);
+      const res = await runWithAuth(getCommentHistory, { days: 365 } as never);
       if (!res || !("data" in res) || !res.data) {
         throw new Error("获取评论趋势失败");
       }

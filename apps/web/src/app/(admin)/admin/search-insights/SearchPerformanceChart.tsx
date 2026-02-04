@@ -33,7 +33,7 @@ export default function SearchPerformanceChart() {
     setError(null);
 
     try {
-      const result = await getSearchLogStats({ days: 30 });
+      const result = await getSearchLogStats({ days: 365 });
 
       if (result.success && result.data) {
         setStats(result.data);
@@ -58,8 +58,24 @@ export default function SearchPerformanceChart() {
       return { chartData: null, series: [] };
     }
 
+    // 智能过滤
+    let firstNonZeroIndex = -1;
+    for (let i = 0; i < stats.dailyTrend.length; i++) {
+      const item = stats.dailyTrend[i];
+      if (item && (item.avgDuration > 0 || item.zeroResultCount > 0)) {
+        firstNonZeroIndex = i;
+        break;
+      }
+    }
+
+    const startIndex =
+      firstNonZeroIndex > 0 ? firstNonZeroIndex - 1 : firstNonZeroIndex;
+
+    const filteredTrend =
+      startIndex >= 0 ? stats.dailyTrend.slice(startIndex) : [];
+
     // 转换数据格式
-    const chartData: AreaChartDataPoint[] = stats.dailyTrend.map(
+    const chartData: AreaChartDataPoint[] = filteredTrend.map(
       (item: {
         date: string;
         avgDuration: number;

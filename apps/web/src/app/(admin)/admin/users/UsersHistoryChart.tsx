@@ -24,7 +24,7 @@ export default function UsersHistoryChart() {
     try {
       setIsLoading(true);
       setError(null);
-      const res = await getUsersTrends({ days: 30, count: 30 });
+      const res = await getUsersTrends({ days: 365, count: 30 });
       if (!res.success) {
         setError(new Error(res.message || "获取趋势数据失败"));
         return;
@@ -50,13 +50,37 @@ export default function UsersHistoryChart() {
     fetchData();
   }, [refreshTrigger, fetchData]);
 
-  // 转换数据格式
-  const chartData: AreaChartDataPoint[] = data.map((item) => ({
-    time: item.time,
-    total: item.data.total,
-    new: item.data.new,
-    active: item.data.active,
-  }));
+  // 转换数据格式，智能过滤：
+  // 1. 找到第一个非零点
+  // 2. 保留该点之前的最后一个零点（如果存在）作为基线
+  // 3. 保留从该零点开始的所有后续数据
+  let firstNonZeroIndex = -1;
+  for (let i = 0; i < data.length; i++) {
+    const item = data[i];
+    if (
+      item &&
+      (item.data.total > 0 || item.data.new > 0 || item.data.active > 0)
+    ) {
+      firstNonZeroIndex = i;
+      break;
+    }
+  }
+
+  // 计算起始索引：第一个非零点之前的最后一个零点
+  // 如果第一个非零点是索引 0，则从 0 开始
+  // 如果没有非零点，返回空数组
+  const startIndex =
+    firstNonZeroIndex > 0 ? firstNonZeroIndex - 1 : firstNonZeroIndex;
+
+  const chartData: AreaChartDataPoint[] =
+    startIndex >= 0
+      ? data.slice(startIndex).map((item) => ({
+          time: item.time,
+          total: item.data.total,
+          new: item.data.new,
+          active: item.data.active,
+        }))
+      : [];
 
   // 配置系列
   const series: SeriesConfig[] = [
