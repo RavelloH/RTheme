@@ -873,7 +873,11 @@ export async function createCategory(
     };
 
     // 保存父分类信息，用于创建后更新 path
-    let parentInfo: { path: string | null; depth: number; fullSlug: string | null } | null = null;
+    let parentInfo: {
+      path: string | null;
+      depth: number;
+      fullSlug: string | null;
+    } | null = null;
 
     // 计算深度和 fullSlug（path 稍后更新）
     if (resolvedParentId) {
@@ -1807,7 +1811,14 @@ export async function moveCategories(
     // 获取移动前的 parentId 信息用于审计日志
     const oldCategories = await prisma.category.findMany({
       where: { id: { in: ids } },
-      select: { id: true, parentId: true, path: true, depth: true, slug: true, fullSlug: true },
+      select: {
+        id: true,
+        parentId: true,
+        path: true,
+        depth: true,
+        slug: true,
+        fullSlug: true,
+      },
     });
 
     const oldParentIds = oldCategories.map((c) => ({

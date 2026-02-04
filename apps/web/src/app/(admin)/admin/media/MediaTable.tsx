@@ -452,6 +452,47 @@ export default function MediaTable() {
     setSelectedItems({ mediaIds: new Set(), folderIds: new Set() });
   }, []);
 
+  // 批量选择回调（用于框选）
+  const handleBatchSelect = useCallback(
+    (mediaIds: number[], folderIds: number[], append: boolean) => {
+      if (append) {
+        setSelectedItems((prev) => ({
+          mediaIds: new Set([...prev.mediaIds, ...mediaIds]),
+          folderIds: new Set([...prev.folderIds, ...folderIds]),
+        }));
+      } else {
+        setSelectedItems({
+          mediaIds: new Set(mediaIds),
+          folderIds: new Set(folderIds),
+        });
+      }
+    },
+    [],
+  );
+
+  // 拖拽移动回调
+  const handleDragMoveItems = useCallback(
+    async (mediaIds: number[], folderIds: number[], targetFolderId: number) => {
+      const result = await moveItems({
+        access_token: accessToken,
+        mediaIds: mediaIds.length > 0 ? mediaIds : undefined,
+        folderIds: folderIds.length > 0 ? folderIds : undefined,
+        targetFolderId,
+      });
+      if (result.success) {
+        const total =
+          (result.data?.movedMedia || 0) + (result.data?.movedFolders || 0);
+        toast.success(`已移动 ${total} 个项目`);
+        clearSelection();
+        setRefreshTrigger((prev) => prev + 1);
+        await loadFolders();
+      } else {
+        toast.error(result.message || "移动失败");
+      }
+    },
+    [accessToken, toast, clearSelection, loadFolders],
+  );
+
   // ===== 排序处理 =====
   const handleSortChange = useCallback(
     (key: string, order: "asc" | "desc" | null) => {
@@ -1069,6 +1110,9 @@ export default function MediaTable() {
               onGoBack={goBack}
               onCreateFolder={handleCreateFolder}
               createFolderLoading={createFolderLoading}
+              onMoveItems={handleDragMoveItems}
+              onBatchSelect={handleBatchSelect}
+              onClearSelection={clearSelection}
             />
           </RowGrid>
         )}

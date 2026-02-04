@@ -90,6 +90,23 @@ export interface MediaGridViewProps extends MediaViewProps {
   // 新建文件夹
   onCreateFolder: (name: string) => Promise<boolean>;
   createFolderLoading: boolean;
+
+  // 拖拽移动回调
+  onMoveItems: (
+    mediaIds: number[],
+    folderIds: number[],
+    targetFolderId: number,
+  ) => Promise<void>;
+
+  // 批量选择（用于框选）
+  onBatchSelect: (
+    mediaIds: number[],
+    folderIds: number[],
+    append: boolean,
+  ) => void;
+
+  // 清空选择
+  onClearSelection: () => void;
 }
 
 // 表格视图额外 Props

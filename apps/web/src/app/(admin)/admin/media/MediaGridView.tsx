@@ -1,6 +1,20 @@
 "use client";
 
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+  DndContext,
+  type DragEndEvent,
+  type DragOverEvent,
+  DragOverlay,
+  type DragStartEvent,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import {
   RiArrowLeftSLine,
   RiArrowRightSLine,
@@ -8,6 +22,7 @@ import {
   RiDeleteBinLine,
   RiEditLine,
   RiEyeLine,
+  RiFileLine,
   RiFilter3Line,
   RiFolderAddLine,
   RiFolderLine,
@@ -23,6 +38,10 @@ import type {
 } from "@/app/(admin)/admin/media/MediaTable.types";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import CMSImage from "@/components/ui/CMSImage";
+import {
+  type MarqueeHit,
+  useMarqueeSelection,
+} from "@/hooks/use-marquee-selection";
 import { createArray } from "@/lib/client/create-array";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
@@ -31,10 +50,26 @@ import Clickable from "@/ui/Clickable";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { useToast } from "@/ui/Toast";
 import { Tooltip } from "@/ui/Tooltip";
 
+// MediaGridItem 的 Props 类型
+interface MediaGridItemProps {
+  item: MediaListItem;
+  isSelected: boolean;
+  onSelect: (id: string | number, checked: boolean) => void;
+  onPreview: (item: MediaListItem) => void;
+  formatFileSize: (bytes: number) => string;
+  getFileTypeIcon: (type: string) => React.ReactNode;
+  actions: RowAction[];
+  index: number;
+  isDragDisabled?: boolean;
+  isDragging?: boolean;
+}
+
 // 提取图片卡片为独立组件并使用 memo
-const MediaGridItem = memo(
+/* eslint-disable react/prop-types */
+const MediaGridItem = memo<MediaGridItemProps>(
   ({
     item,
     isSelected,
@@ -44,16 +79,21 @@ const MediaGridItem = memo(
     getFileTypeIcon,
     actions,
     index,
-  }: {
-    item: MediaListItem;
-    isSelected: boolean;
-    onSelect: (id: string | number, checked: boolean) => void;
-    onPreview: (item: MediaListItem) => void;
-    formatFileSize: (bytes: number) => string;
-    getFileTypeIcon: (type: string) => React.ReactNode;
-    actions: RowAction[];
-    index: number;
+    isDragDisabled,
+    isDragging: isDraggingProp,
   }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      isDragging: isDraggingLocal,
+    } = useDraggable({
+      id: `media-${item.id}`,
+      disabled: isDragDisabled,
+    });
+
+    const isDragging = isDraggingProp || isDraggingLocal;
+
     // 前 24 张图片使用 eager 加载，其余懒加载
     const loadingStrategy = index < 24 ? "eager" : "lazy";
 
@@ -86,6 +126,12 @@ const MediaGridItem = memo(
     return (
       <Tooltip content={renderTooltipContent()} placement="top" delay={300}>
         <div
+          ref={setNodeRef}
+          {...attributes}
+          {...listeners}
+          data-grid-item
+          data-item-type="media"
+          data-item-id={item.id}
           className={`
             relative aspect-square cursor-pointer overflow-hidden bg-muted/30
             group transition-all duration-150
@@ -95,7 +141,10 @@ const MediaGridItem = memo(
                 : "border-2 border-transparent hover:border-foreground/30"
             }
           `}
-          style={{ transform: "translateZ(0)" }}
+          style={{
+            transform: "translateZ(0)",
+            opacity: isDragging ? 0.5 : 1,
+          }}
           onClick={(e) => {
             const target = e.target as HTMLElement;
             const isCheckboxClick = target.closest('[data-checkbox="true"]');
@@ -195,15 +244,32 @@ const MediaGridItem = memo(
     return (
       prevProps.item.id === nextProps.item.id &&
       prevProps.isSelected === nextProps.isSelected &&
-      prevProps.item.imageId === nextProps.item.imageId
+      prevProps.item.imageId === nextProps.item.imageId &&
+      (prevProps.isDragDisabled ?? false) ===
+        (nextProps.isDragDisabled ?? false) &&
+      (prevProps.isDragging ?? false) === (nextProps.isDragging ?? false)
     );
   },
 );
+/* eslint-enable react/prop-types */
 
 MediaGridItem.displayName = "MediaGridItem";
 
-// 文件夹卡片组件
-const FolderGridItem = memo(
+// FolderGridItem 的 Props 类型
+interface FolderGridItemProps {
+  folder: FolderItem;
+  isSelected: boolean;
+  isSelectable: boolean;
+  onSelect: (id: number, checked: boolean) => void;
+  onEnter: (folderId: number) => void;
+  currentUserId: number;
+  isDragDisabled?: boolean;
+  isDropTarget?: boolean;
+}
+
+// 文件夹卡片组件（同时可拖拽和可放置）
+/* eslint-disable react/prop-types */
+const FolderGridItem = memo<FolderGridItemProps>(
   ({
     folder,
     isSelected,
@@ -211,14 +277,26 @@ const FolderGridItem = memo(
     onSelect,
     onEnter,
     currentUserId,
-  }: {
-    folder: FolderItem;
-    isSelected: boolean;
-    isSelectable: boolean;
-    onSelect: (id: number, checked: boolean) => void;
-    onEnter: (folderId: number) => void;
-    currentUserId: number;
+    isDragDisabled,
+    isDropTarget,
   }) => {
+    // 可拖拽
+    const {
+      attributes,
+      listeners,
+      setNodeRef: setDragRef,
+      isDragging,
+    } = useDraggable({
+      id: `folder-${folder.id}`,
+      disabled: isDragDisabled || folder.systemType !== "NORMAL",
+    });
+
+    // 可放置
+    const { setNodeRef: setDropRef, isOver } = useDroppable({
+      id: `drop-folder-${folder.id}`,
+      disabled: folder.systemType === "ROOT_USERS", // 用户目录不可作为放置目标
+    });
+
     const formatFolderName = useCallback(() => {
       switch (folder.systemType) {
         case "ROOT_PUBLIC":
@@ -232,18 +310,38 @@ const FolderGridItem = memo(
       }
     }, [folder, currentUserId]);
 
+    // 合并两个 ref
+    const setRef = useCallback(
+      (node: HTMLDivElement | null) => {
+        setDragRef(node);
+        setDropRef(node);
+      },
+      [setDragRef, setDropRef],
+    );
+
     return (
       <div
+        ref={setRef}
+        {...attributes}
+        {...listeners}
+        data-grid-item
+        data-item-type="folder"
+        data-item-id={folder.id}
         className={`
           relative aspect-square cursor-pointer overflow-hidden
           bg-muted/30 group transition-all duration-150
           ${
             isSelected
               ? "border-2 border-primary"
-              : "border-2 border-transparent hover:border-foreground/30"
+              : isOver || isDropTarget
+                ? "border-2 border-primary ring-2 ring-primary/30"
+                : "border-2 border-transparent hover:border-foreground/30"
           }
         `}
-        style={{ transform: "translateZ(0)" }}
+        style={{
+          transform: "translateZ(0)",
+          opacity: isDragging ? 0.5 : 1,
+        }}
         onClick={(e) => {
           const target = e.target as HTMLElement;
           const isCheckboxClick = target.closest('[data-checkbox="true"]');
@@ -309,16 +407,20 @@ const FolderGridItem = memo(
       prevProps.folder.id === nextProps.folder.id &&
       prevProps.folder.fileCount === nextProps.folder.fileCount &&
       prevProps.isSelected === nextProps.isSelected &&
-      prevProps.isSelectable === nextProps.isSelectable
+      prevProps.isSelectable === nextProps.isSelectable &&
+      (prevProps.isDragDisabled ?? false) ===
+        (nextProps.isDragDisabled ?? false) &&
+      (prevProps.isDropTarget ?? false) === (nextProps.isDropTarget ?? false)
     );
   },
 );
+/* eslint-enable react/prop-types */
 
 FolderGridItem.displayName = "FolderGridItem";
 
 /**
  * 媒体网格视图组件
- * 负责渲染网格布局的媒体列表，支持无限滚动加载
+ * 负责渲染网格布局的媒体列表，支持无限滚动加载、框选和拖拽移动
  */
 export default function MediaGridView({
   // 数据
@@ -371,16 +473,255 @@ export default function MediaGridView({
   // 新建文件夹
   onCreateFolder,
   createFolderLoading,
+
+  // 拖拽移动
+  onMoveItems,
+  onBatchSelect,
+
+  onClearSelection: _onClearSelection,
 }: MediaGridViewProps) {
+  const toast = useToast();
+
   // 新建文件夹对话框状态
   const [createFolderDialogOpen, setCreateFolderDialogOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [newFolderError, setNewFolderError] = useState("");
 
+  // 拖拽状态
+  const [isDragging, setIsDragging] = useState(false);
+  const [activeDragData, setActiveDragData] = useState<{
+    type: "media" | "folder";
+    id: number;
+    count: number;
+    // 预览图信息（最多4张）
+    previewItems: Array<{
+      type: "media" | "folder";
+      imageId?: string;
+      rotation: number;
+    }>;
+  } | null>(null);
+  const [overFolderId, setOverFolderId] = useState<number | null>(null);
+
+  // Shift 键状态
+  const [isShiftHeld, setIsShiftHeld] = useState(false);
+
   // 无限滚动：监听容器
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const isLoadingMoreRef = useRef(false);
+
+  // DnD 传感器配置
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 }, // 区分点击和拖拽
+    }),
+  );
+
+  // 监听 Shift 键和 Ctrl+A 全选
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Shift") setIsShiftHeld(true);
+
+      // Ctrl+A 全选
+      if ((e.ctrlKey || e.metaKey) && e.key === "a") {
+        // 检查焦点是否在输入框内
+        const activeElement = document.activeElement;
+        if (
+          activeElement instanceof HTMLInputElement ||
+          activeElement instanceof HTMLTextAreaElement ||
+          activeElement?.getAttribute("contenteditable") === "true"
+        ) {
+          return; // 不阻止输入框内的全选
+        }
+
+        e.preventDefault();
+
+        // 全选当前视图中的所有媒体文件和可选择的文件夹
+        const allMediaIds = data.map((item) => item.id);
+        const selectableFolderIds = folders
+          .filter((f) => f.systemType === "NORMAL")
+          .map((f) => f.id);
+
+        onBatchSelect(allMediaIds, selectableFolderIds, false);
+      }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Shift") setIsShiftHeld(false);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [data, folders, onBatchSelect]);
+
+  // 框选功能
+  const handleMarqueeSelectionChange = useCallback(
+    (hits: MarqueeHit[]) => {
+      const mediaIds = hits.filter((h) => h.type === "media").map((h) => h.id);
+      const folderIds = hits
+        .filter((h) => h.type === "folder")
+        .map((h) => h.id)
+        .filter((id) => {
+          const folder = folders.find((f) => f.id === id);
+          return folder?.systemType === "NORMAL";
+        });
+      onBatchSelect(mediaIds, folderIds, isShiftHeld);
+    },
+    [folders, onBatchSelect, isShiftHeld],
+  );
+
+  const { isSelecting, selectionRect } = useMarqueeSelection({
+    containerRef: scrollContainerRef,
+    enabled: !isMobile && !isDragging,
+    onSelectionChange: handleMarqueeSelectionChange,
+    isShiftHeld,
+  });
+
+  // 拖拽开始
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const { active } = event;
+      const idStr = String(active.id);
+      const [type, idPart] = idStr.split("-");
+      const id = Number(idPart);
+
+      setIsDragging(true);
+
+      // 如果拖拽的项目已选中，拖拽所有选中项
+      // 如果未选中，只拖拽当前项
+      const isSelected =
+        type === "media"
+          ? selectedItems.mediaIds.has(id)
+          : selectedItems.folderIds.has(id);
+
+      const count = isSelected
+        ? selectedItems.mediaIds.size + selectedItems.folderIds.size
+        : 1;
+
+      // 收集预览图信息（最多4张）
+      const previewItems: Array<{
+        type: "media" | "folder";
+        imageId?: string;
+        rotation: number;
+      }> = [];
+
+      if (isSelected) {
+        // 先添加媒体文件
+        const selectedMediaItems = data.filter((item) =>
+          selectedItems.mediaIds.has(item.id),
+        );
+        for (const item of selectedMediaItems.slice(0, 4)) {
+          previewItems.push({
+            type: "media",
+            imageId: item.mediaType === "IMAGE" ? item.imageId : undefined,
+            rotation: Math.random() * 48 - 24, // -6 到 6 度随机旋转
+          });
+        }
+        // 如果媒体文件不足4张，添加文件夹
+        if (previewItems.length < 4) {
+          const remainingSlots = 4 - previewItems.length;
+          for (let i = 0; i < remainingSlots; i++) {
+            if (selectedItems.folderIds.size > i) {
+              previewItems.push({
+                type: "folder",
+                rotation: Math.random() * 12 - 6,
+              });
+            }
+          }
+        }
+      } else {
+        // 只拖拽当前项
+        if (type === "media") {
+          const item = data.find((m) => m.id === id);
+          previewItems.push({
+            type: "media",
+            imageId: item?.mediaType === "IMAGE" ? item.imageId : undefined,
+            rotation: 0,
+          });
+        } else {
+          previewItems.push({
+            type: "folder",
+            rotation: 0,
+          });
+        }
+      }
+
+      setActiveDragData({
+        type: type as "media" | "folder",
+        id,
+        count,
+        previewItems,
+      });
+    },
+    [selectedItems, data],
+  );
+
+  // 拖拽悬停
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { over } = event;
+    if (over && String(over.id).startsWith("drop-folder-")) {
+      const folderId = Number(String(over.id).replace("drop-folder-", ""));
+      setOverFolderId(folderId);
+    } else {
+      setOverFolderId(null);
+    }
+  }, []);
+
+  // 拖拽结束
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+      setIsDragging(false);
+      setActiveDragData(null);
+      setOverFolderId(null);
+
+      if (!over || !String(over.id).startsWith("drop-folder-")) return;
+
+      const targetFolderId = Number(
+        String(over.id).replace("drop-folder-", ""),
+      );
+      const idStr = String(active.id);
+      const [type, idPart] = idStr.split("-");
+      const draggedId = Number(idPart);
+
+      // 收集要移动的项目
+      const isSelected =
+        type === "media"
+          ? selectedItems.mediaIds.has(draggedId)
+          : selectedItems.folderIds.has(draggedId);
+
+      let mediaIds: number[] = [];
+      let folderIds: number[] = [];
+
+      if (isSelected) {
+        mediaIds = Array.from(selectedItems.mediaIds);
+        folderIds = Array.from(selectedItems.folderIds);
+      } else {
+        if (type === "media") mediaIds = [draggedId];
+        else folderIds = [draggedId];
+      }
+
+      // 验证：不能将文件夹拖入自身
+      if (folderIds.includes(targetFolderId)) {
+        toast.error("不能将文件夹移动到自身");
+        return;
+      }
+
+      await onMoveItems(mediaIds, folderIds, targetFolderId);
+    },
+    [selectedItems, onMoveItems, toast],
+  );
+
+  // 拖拽取消
+  const handleDragCancel = useCallback(() => {
+    setIsDragging(false);
+    setActiveDragData(null);
+    setOverFolderId(null);
+  }, []);
 
   // 无限滚动：IntersectionObserver
   useEffect(() => {
@@ -704,105 +1045,193 @@ export default function MediaGridView({
           </AnimatePresence>
 
           {/* 网格内容 */}
-          <div
-            ref={scrollContainerRef}
-            className="flex-1 min-h-0 overflow-auto px-10 py-6 scroll-smooth"
+          <DndContext
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
           >
-            <AutoTransition type="slideDown" duration={0.3}>
-              {loading && data.length === 0 ? (
-                <div className="h-full py-70" key="loading">
-                  <LoadingIndicator />
-                </div>
-              ) : data.length === 0 && folders.length === 0 ? (
-                <div
-                  className="flex items-center justify-center h-full"
-                  key="empty"
-                >
-                  <div className="text-muted-foreground">暂无媒体文件</div>
-                </div>
-              ) : (
-                <div key={currentFolderId || "root"}>
-                  <div
-                    className="grid gap-4"
-                    style={{
-                      gridTemplateColumns: isMobile
-                        ? "repeat(auto-fill, minmax(8em, 1fr))"
-                        : "repeat(auto-fill, minmax(10em, 1fr))",
-                      contentVisibility: "auto",
-                    }}
-                  >
-                    {/* 文件夹卡片 */}
-                    {folders.map((folder) => {
-                      // 判断文件夹是否可选择（系统文件夹不可选）
-                      const isSelectable =
-                        folder.systemType === "NORMAL" ||
-                        (folder.systemType !== "ROOT_PUBLIC" &&
-                          folder.systemType !== "ROOT_USERS" &&
-                          folder.systemType !== "USER_HOME");
-
-                      return (
-                        <FolderGridItem
-                          key={folder.id}
-                          folder={folder}
-                          isSelected={selectedItems.folderIds.has(folder.id)}
-                          isSelectable={isSelectable}
-                          onSelect={onSelectFolder}
-                          onEnter={onEnterFolder}
-                          currentUserId={currentUserId}
-                        />
-                      );
-                    })}
-
-                    {/* 媒体文件卡片 */}
-                    {data.map((item, index) => (
-                      <MediaGridItem
-                        key={item.id}
-                        item={item}
-                        isSelected={selectedItems.mediaIds.has(item.id)}
-                        onSelect={(id, checked) =>
-                          onSelectMedia(Number(id), checked)
-                        }
-                        onPreview={onPreview}
-                        formatFileSize={formatFileSize}
-                        getFileTypeIcon={getFileTypeIcon}
-                        actions={getRowActions(item)}
-                        index={index + folders.length}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </AutoTransition>
-
-            {/* 无限滚动加载指示器*/}
             <div
-              ref={loadMoreRef}
-              className={`flex items-center justify-center pt-6 transition-opacity ${loading && data.length === 0 ? "opacity-0" : ""}`}
+              ref={scrollContainerRef}
+              className={`flex-1 min-h-0 overflow-auto px-10 py-6 scroll-smooth relative ${
+                isSelecting ? "select-none" : ""
+              }`}
             >
-              <AutoTransition>
-                {loading && (data.length > 0 || folders.length > 0) && (
-                  <div
-                    className="flex items-center gap-2 text-muted-foreground"
-                    key="loading-more"
-                  >
+              {/* 框选覆盖层 */}
+              {selectionRect && (
+                <div
+                  className="absolute border border-primary/50 bg-primary/10 pointer-events-none z-20"
+                  style={{
+                    left: selectionRect.x,
+                    top: selectionRect.y,
+                    width: selectionRect.width,
+                    height: selectionRect.height,
+                  }}
+                />
+              )}
+
+              <AutoTransition type="slideDown" duration={0.3}>
+                {loading && data.length === 0 ? (
+                  <div className="h-full py-70" key="loading">
                     <LoadingIndicator />
                   </div>
-                )}
-                {!loading &&
-                  !hasMore &&
-                  (data.length > 0 || folders.length > 0) && (
+                ) : data.length === 0 && folders.length === 0 ? (
+                  <div
+                    className="flex items-center justify-center h-full"
+                    key="empty"
+                  >
+                    <div className="text-muted-foreground">暂无媒体文件</div>
+                  </div>
+                ) : (
+                  <div key={currentFolderId || "root"}>
                     <div
-                      className="text-muted-foreground text-sm"
-                      key="no-more"
+                      className="grid gap-4"
+                      style={{
+                        gridTemplateColumns: isMobile
+                          ? "repeat(auto-fill, minmax(8em, 1fr))"
+                          : "repeat(auto-fill, minmax(10em, 1fr))",
+                        contentVisibility: "auto",
+                      }}
                     >
-                      {data.length > 0
-                        ? `已加载全部 ${data.length} 个文件`
-                        : "当前文件夹没有文件"}
+                      {/* 文件夹卡片 */}
+                      {folders.map((folder) => {
+                        // 判断文件夹是否可选择（系统文件夹不可选）
+                        const isSelectable =
+                          folder.systemType === "NORMAL" ||
+                          (folder.systemType !== "ROOT_PUBLIC" &&
+                            folder.systemType !== "ROOT_USERS" &&
+                            folder.systemType !== "USER_HOME");
+
+                        return (
+                          <FolderGridItem
+                            key={folder.id}
+                            folder={folder}
+                            isSelected={selectedItems.folderIds.has(folder.id)}
+                            isSelectable={isSelectable}
+                            onSelect={onSelectFolder}
+                            onEnter={onEnterFolder}
+                            currentUserId={currentUserId}
+                            isDragDisabled={isMobile}
+                            isDropTarget={overFolderId === folder.id}
+                          />
+                        );
+                      })}
+
+                      {/* 媒体文件卡片 */}
+                      {data.map((item, index) => (
+                        <MediaGridItem
+                          key={item.id}
+                          item={item}
+                          isSelected={selectedItems.mediaIds.has(item.id)}
+                          onSelect={(id, checked) =>
+                            onSelectMedia(Number(id), checked)
+                          }
+                          onPreview={onPreview}
+                          formatFileSize={formatFileSize}
+                          getFileTypeIcon={getFileTypeIcon}
+                          actions={getRowActions(item)}
+                          index={index + folders.length}
+                          isDragDisabled={isMobile}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </AutoTransition>
+
+              {/* 无限滚动加载指示器*/}
+              <div
+                ref={loadMoreRef}
+                className={`flex items-center justify-center pt-6 transition-opacity ${loading && data.length === 0 ? "opacity-0" : ""}`}
+              >
+                <AutoTransition>
+                  {loading && (data.length > 0 || folders.length > 0) && (
+                    <div
+                      className="flex items-center gap-2 text-muted-foreground"
+                      key="loading-more"
+                    >
+                      <LoadingIndicator />
                     </div>
                   )}
-              </AutoTransition>
+                  {!loading &&
+                    !hasMore &&
+                    (data.length > 0 || folders.length > 0) && (
+                      <div
+                        className="text-muted-foreground text-sm"
+                        key="no-more"
+                      >
+                        {data.length > 0
+                          ? `已加载全部 ${data.length} 个文件`
+                          : "当前文件夹没有文件"}
+                      </div>
+                    )}
+                </AutoTransition>
+              </div>
             </div>
-          </div>
+
+            {/* 拖拽覆盖层 */}
+            {typeof document !== "undefined" &&
+              createPortal(
+                <DragOverlay
+                  dropAnimation={null}
+                  modifiers={[snapCenterToCursor]}
+                >
+                  {activeDragData && (
+                    <div
+                      className="relative"
+                      style={{
+                        width: 80,
+                        height: 80,
+                      }}
+                    >
+                      {/* 堆叠的预览卡片 */}
+                      {activeDragData.previewItems.map((preview, index) => (
+                        <div
+                          key={index}
+                          className="absolute inset-0 rounded-lg overflow-hidden border-2 border-primary shadow-lg bg-muted"
+                          style={{
+                            transform: `rotate(${preview.rotation}deg)`,
+                            zIndex: activeDragData.previewItems.length - index,
+                          }}
+                        >
+                          {preview.type === "media" && preview.imageId ? (
+                            <CMSImage
+                              src={`/p/${preview.imageId}`}
+                              alt=""
+                              width={80}
+                              height={80}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : preview.type === "folder" ? (
+                            <div className="w-full h-full flex items-center justify-center bg-muted">
+                              <RiFolderLine
+                                size="2em"
+                                className="text-muted-foreground"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-muted">
+                              <RiFileLine
+                                size="2em"
+                                className="text-muted-foreground"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {/* 数量徽章 */}
+                      {activeDragData.count > 1 && (
+                        <div className="absolute -top-2 -right-2 z-50 bg-primary text-background text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow">
+                          {activeDragData.count}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </DragOverlay>,
+                document.body,
+              )}
+          </DndContext>
         </div>
       </GridItem>
 
