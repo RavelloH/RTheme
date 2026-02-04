@@ -60,6 +60,7 @@ model User {
   commentLikes      CommentLike[]
   pushSubscriptions PushSubscription[]
   virtualFolders    VirtualFolder[]
+  projects          Project[]
 
   // 索引优化
   @@index([role])
@@ -202,6 +203,7 @@ model Tag {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   posts       Post[]
+  project     Project[]
 }
 
 model Category {
@@ -219,12 +221,13 @@ model Category {
   children Category[] @relation("CategoryHierarchy")
 
   // 优化字段：物化路径与排序
-  path      String @default("") @db.VarChar(2048) // 祖先分类的 ID 路径，如 "/1/5/10/"
-  depth     Int    @default(0)
-  order     Int    @default(0)
-  fullSlug  String @default("") @db.VarChar(2048) // 完整的 slug 路径，如 "tech/web/frontend"
+  path     String @default("") @db.VarChar(2048) // 祖先分类的 ID 路径，如 "/1/5/10/"
+  depth    Int    @default(0)
+  order    Int    @default(0)
+  fullSlug String @default("") @db.VarChar(2048) // 完整的 slug 路径，如 "tech/web/frontend"
 
-  posts Post[]
+  posts   Post[]
+  project Project[]
 
   // 唯一约束：同一父分类下 slug 和 name 唯一
   @@unique([parentId, slug])
@@ -320,9 +323,9 @@ model VirtualFolder {
   children VirtualFolder[] @relation("FolderHierarchy")
 
   // 优化字段：物化路径与排序
-  path   String @default("") @db.VarChar(2048) // 祖先文件夹的 ID 路径，如 "/1/5/10/"
-  depth  Int    @default(0) // 层级深度 (0=顶级文件夹)
-  order  Int    @default(0) // 同级排序
+  path  String @default("") @db.VarChar(2048) // 祖先文件夹的 ID 路径，如 "/1/5/10/"
+  depth Int    @default(0) // 层级深度 (0=顶级文件夹)
+  order Int    @default(0) // 同级排序
 
   // 描述
   description String? @db.VarChar(255)
@@ -449,6 +452,10 @@ model MediaReference {
   // 分类相关
   categoryId Int?
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  // 项目相关
+  projectId Int?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   // 时间戳
   createdAt DateTime @default(now())
@@ -837,6 +844,53 @@ model PushSubscription {
   @@index([lastUsedAt])
 }
 
+model Project {
+  id          Int     @id @default(autoincrement())
+  title       String  @db.VarChar(200)
+  slug        String  @unique @db.VarChar(200)
+  description String  @db.Text
+  content     String? @db.Text
+
+  demoUrl   String? @db.VarChar(500)
+  repoUrl   String? @db.VarChar(500)
+  techStack Json?
+
+  // GitHub 相关字段
+  repoPath         String? @db.VarChar(100) // 如 "username/repo"
+  stats            Int     @default(0)
+  forks            Int     @default(0)
+  languages        Json?
+  license          String? @db.VarChar(100)
+  enableGithubSync Boolean @default(true)
+  enableConentSync Boolean @default(true)
+
+  status ProjectStatus @default(PUBLISHED)
+
+  userUid Int
+  author  User @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+
+  tags       Tag[]
+  categories Category[]
+
+  mediaRefs MediaReference[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  publishedAt DateTime?
+  startedAt   DateTime?
+
+  @@index([status])
+  @@index([slug])
+  @@index([createdAt])
+}
+
+enum ProjectStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  Developing
+}
+
 enum Role {
   USER
   ADMIN
@@ -925,8 +979,8 @@ enum GallerySize {
 }
 
 enum SystemFolderType {
-  NORMAL        // 普通文件夹 (默认)
-  ROOT_PUBLIC   // 公共根目录 (对应 /Public，所有用户可见)
-  ROOT_USERS    // 用户总目录 (对应 /Users，仅管理员可见)
-  USER_HOME     // 用户家目录 (对应 /Users/{username}，仅该用户和管理员可见)
+  NORMAL // 普通文件夹 (默认)
+  ROOT_PUBLIC // 公共根目录 (对应 /Public，所有用户可见)
+  ROOT_USERS // 用户总目录 (对应 /Users，仅管理员可见)
+  USER_HOME // 用户家目录 (对应 /Users/{username}，仅该用户和管理员可见)
 }

@@ -89,7 +89,7 @@ export function formatFolderName(
     case "ROOT_USERS":
       return "用户目录";
     case "USER_HOME":
-      return folder.userUid === currentUserId ? "我的空间" : folder.name;
+      return folder.userUid === currentUserId ? "我的文件夹" : folder.name;
     default:
       return folder.name;
   }

@@ -247,6 +247,15 @@ export const CONFIG_DEFINITIONS = {
     description:
       "RSS订阅中自动文章摘要的最大长度，单位为字符。如果 content.rss.showFullContent 为 true 则此配置无效。需与 content.rss.autoGenerateExcerpt 配合使用",
   },
+  "content.githubAutoSync.enabled": {
+    default: true,
+    description: "是否启用GitHub内容自动同步功能，用于更新作品信息",
+  },
+  "content.githubAutoSync.personalKey": {
+    default: "",
+    description:
+      "[可选] GitHub个人访问令牌（Personal Access Token）。建议填写以避免API速率限制，详见文档",
+  },
 
   // =====================================
   // 媒体相关配置

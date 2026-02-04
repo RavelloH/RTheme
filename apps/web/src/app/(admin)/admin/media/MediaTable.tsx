@@ -212,7 +212,8 @@ export default function MediaTable() {
       } = {
         page,
         pageSize: currentPageSize,
-        folderId: mediaFolderId,
+        // 搜索时不传 folderId，让后端返回所有匹配结果（会自动过滤权限）
+        folderId: searchQuery?.trim() ? undefined : mediaFolderId,
       };
 
       // 排序参数
