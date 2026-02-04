@@ -65,6 +65,7 @@ interface MediaGridItemProps {
   index: number;
   isDragDisabled?: boolean;
   isDragging?: boolean;
+  isShiftHeld?: boolean;
 }
 
 // 提取图片卡片为独立组件并使用 memo
@@ -81,6 +82,7 @@ const MediaGridItem = memo<MediaGridItemProps>(
     index,
     isDragDisabled,
     isDragging: isDraggingProp,
+    isShiftHeld,
   }) => {
     const {
       attributes,
@@ -149,6 +151,13 @@ const MediaGridItem = memo<MediaGridItemProps>(
             const target = e.target as HTMLElement;
             const isCheckboxClick = target.closest('[data-checkbox="true"]');
             const isActionClick = target.closest('[data-action="true"]');
+
+            // 按住 Shift 时，点击任何位置（除了操作按钮）都切换选中状态
+            if (isShiftHeld && !isActionClick) {
+              onSelect(item.id, !isSelected);
+              return;
+            }
+
             if (!isCheckboxClick && !isActionClick) {
               onPreview(item);
             }
@@ -247,7 +256,8 @@ const MediaGridItem = memo<MediaGridItemProps>(
       prevProps.item.imageId === nextProps.item.imageId &&
       (prevProps.isDragDisabled ?? false) ===
         (nextProps.isDragDisabled ?? false) &&
-      (prevProps.isDragging ?? false) === (nextProps.isDragging ?? false)
+      (prevProps.isDragging ?? false) === (nextProps.isDragging ?? false) &&
+      (prevProps.isShiftHeld ?? false) === (nextProps.isShiftHeld ?? false)
     );
   },
 );
@@ -1133,6 +1143,7 @@ export default function MediaGridView({
                           actions={getRowActions(item)}
                           index={index + folders.length}
                           isDragDisabled={isMobile}
+                          isShiftHeld={isShiftHeld}
                         />
                       ))}
                     </div>
