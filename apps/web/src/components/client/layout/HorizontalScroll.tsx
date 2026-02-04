@@ -1217,7 +1217,7 @@ export default function HorizontalScroll({
     <div ref={containerRef} className={"overflow-hidden " + className}>
       <div
         ref={contentRef}
-        className={`${isMobile || forceNativeScroll ? "flex overflow-x-auto" : "flex"} h-full will-change-transform`}
+        className={`${isMobile ? "block" : forceNativeScroll ? "flex overflow-x-auto" : "flex"} h-full will-change-transform`}
       >
         {children}
       </div>
