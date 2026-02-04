@@ -57,6 +57,9 @@ async function seedDefaults() {
     // 种子化默认配置
     await seedDefaultConfigs(prisma);
 
+    // 种子化系统文件夹
+    await seedSystemFolders(prisma);
+
     // 生成 VAPID 密钥（如果需要）
     await generateVapidKeysIfNeeded(prisma);
 
@@ -359,6 +362,83 @@ async function seedDefaultPagesAndMenus(prisma: any) {
 
   rlog.success(
     `✓ Pages and menus check completed: added ${pagesAddedCount} pages, ${menusAddedCount} menus, skipped ${pagesSkippedCount} pages, ${menusSkippedCount} menus`,
+  );
+}
+
+// 种子化系统文件夹
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function seedSystemFolders(prisma: any) {
+  rlog.log("> Checking system folders...");
+
+  let addedCount = 0;
+  let skippedCount = 0;
+
+  // 获取现有系统文件夹
+  const existingFolders = await prisma.virtualFolder.findMany({
+    where: {
+      systemType: {
+        in: ["ROOT_PUBLIC", "ROOT_USERS"],
+      },
+    },
+    select: { id: true, systemType: true },
+  });
+
+  const existingSystemTypes = new Set(
+    existingFolders.map((f: { systemType: string }) => f.systemType),
+  );
+
+  // 创建 Public 根文件夹
+  if (!existingSystemTypes.has("ROOT_PUBLIC")) {
+    try {
+      await prisma.virtualFolder.create({
+        data: {
+          id: 1,
+          name: "Public",
+          systemType: "ROOT_PUBLIC",
+          parentId: null,
+          userUid: null,
+          path: "", // 根节点没有祖先，path 为空
+          depth: 0,
+          order: 0,
+        },
+      });
+      rlog.info("  | Added system folder: Public (ROOT_PUBLIC)");
+      addedCount++;
+    } catch (error) {
+      rlog.error("  | Failed to add Public folder:", error);
+    }
+  } else {
+    skippedCount++;
+    rlog.info("  | System folder already exists: Public (ROOT_PUBLIC)");
+  }
+
+  // 创建 Users 根文件夹
+  if (!existingSystemTypes.has("ROOT_USERS")) {
+    try {
+      await prisma.virtualFolder.create({
+        data: {
+          id: 2,
+          name: "Users",
+          systemType: "ROOT_USERS",
+          parentId: null,
+          userUid: null,
+          path: "", // 根节点没有祖先，path 为空
+          depth: 0,
+          order: 1,
+        },
+      });
+      rlog.info("  | Added system folder: Users (ROOT_USERS)");
+      addedCount++;
+    } catch (error) {
+      rlog.error("  | Failed to add Users folder:", error);
+    }
+  } else {
+    skippedCount++;
+    rlog.info("  | System folder already exists: Users (ROOT_USERS)");
+  }
+
+  rlog.success(
+    `✓ System folders check completed: added ${addedCount} items, skipped ${skippedCount} items`,
   );
 }
 

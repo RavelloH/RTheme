@@ -1,42 +1,45 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
-  RiArrowLeftSLine,
-  RiArrowRightSLine,
-  RiCheckLine,
   RiCloseLine,
   RiDeleteBinLine,
-  RiEditLine,
-  RiEyeLine,
+  RiDragMoveLine,
   RiFileLine,
-  RiFilter3Line,
   RiGridLine,
   RiImageLine,
   RiListUnordered,
   RiMusicLine,
-  RiSearchLine,
   RiVideoLine,
 } from "@remixicon/react";
 import type { MediaDetail, MediaListItem } from "@repo/shared-types/api/media";
-import { AnimatePresence, motion } from "framer-motion";
 
 import {
   batchUpdateMedia,
+  createFolder,
+  deleteFolders,
   deleteMedia,
   getMediaDetail,
   getMediaList,
+  moveItems,
 } from "@/actions/media";
 import MediaEditDialog from "@/app/(admin)/admin/media/MediaEditDialog";
+import MediaGridView from "@/app/(admin)/admin/media/MediaGridView";
 import MediaPreviewDialog from "@/app/(admin)/admin/media/MediaPreviewDialog";
-import { GridItem } from "@/components/client/layout/RowGrid";
-import CMSImage from "@/components/ui/CMSImage";
-import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
-import GridTable from "@/components/ui/GridTable";
-import Link from "@/components/ui/Link";
+import type { SelectedItems } from "@/app/(admin)/admin/media/MediaTable.types";
+import MediaTableView from "@/app/(admin)/admin/media/MediaTableView";
+import MoveDialog from "@/app/(admin)/admin/media/MoveDialog";
+import { useFolderNavigation } from "@/components/client/features/media/FolderNavigation";
+import RowGrid from "@/components/client/layout/RowGrid";
+import type { FilterConfig } from "@/components/ui/GridTable";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { useMobile } from "@/hooks/use-mobile";
-import { createArray } from "@/lib/client/create-array";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
@@ -44,223 +47,121 @@ import { Checkbox } from "@/ui/Checkbox";
 import Clickable from "@/ui/Clickable";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
-import { Select } from "@/ui/Select";
-import type { TableColumn } from "@/ui/Table";
 import { useToast } from "@/ui/Toast";
 import { Tooltip } from "@/ui/Tooltip";
 
-// 提取图片卡片为独立组件并使用 memo
-const MediaGridItem = memo(
-  ({
-    item,
-    isSelected,
-    onSelect,
-    onPreview,
-    formatFileSize,
-    getFileTypeIcon,
-    actions,
-    index,
-  }: {
-    item: MediaListItem;
-    isSelected: boolean;
-    onSelect: (id: string | number, checked: boolean) => void;
-    onPreview: (item: MediaListItem) => void;
-    formatFileSize: (bytes: number) => string;
-    getFileTypeIcon: (type: string) => React.ReactNode;
-    actions: Array<{
-      label: string;
-      icon: React.ReactNode;
-      onClick: () => void;
-      variant?: "primary" | "danger" | "ghost" | "outline";
-    }>;
-    index: number;
-  }) => {
-    // 前 24 张图片使用 eager 加载，其余懒加载
-    const loadingStrategy = index < 24 ? "eager" : "lazy";
-
-    const renderTooltipContent = () => {
-      return (
-        <div className="space-y-1 min-w-[200px]">
-          <div className="font-medium truncate">{item.originalName}</div>
-          <div className="text-xs text-muted-foreground">
-            {item.width && item.height && (
-              <div>
-                尺寸: {item.width} × {item.height}
-              </div>
-            )}
-            <div>大小: {formatFileSize(item.size)}</div>
-            <div>
-              上传:{" "}
-              {new Date(item.createdAt).toLocaleString("zh-CN", {
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </div>
-          </div>
-        </div>
-      );
-    };
-
-    return (
-      <Tooltip content={renderTooltipContent()} placement="top" delay={300}>
-        <div
-          className={`
-            relative aspect-square cursor-pointer overflow-hidden bg-muted/30
-            group transition-all duration-150
-            ${
-              isSelected
-                ? "border-2 border-primary"
-                : "border-2 border-transparent hover:border-foreground/30"
-            }
-          `}
-          style={{ transform: "translateZ(0)" }}
-          onClick={(e) => {
-            const target = e.target as HTMLElement;
-            const isCheckboxClick = target.closest('[data-checkbox="true"]');
-            const isActionClick = target.closest('[data-action="true"]');
-            if (!isCheckboxClick && !isActionClick) {
-              onPreview(item);
-            }
-          }}
-        >
-          {/* 图片 */}
-          {item.mediaType === "IMAGE" && item.width && item.height ? (
-            <CMSImage
-              src={`/p/${item.imageId}`}
-              alt={item.altText || item.originalName}
-              fill
-              blur={item.blur}
-              className="object-cover"
-              sizes="(max-width: 768px) 8rem, 10rem"
-              loading={loadingStrategy}
-              priority={index < 12}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-              {getFileTypeIcon(item.mediaType)}
-            </div>
-          )}
-
-          {/* 复选框 */}
-          <div
-            className={`
-              absolute top-2 right-2 z-10
-              transition-opacity duration-150
-              ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}
-            `}
-            data-checkbox="true"
-            onClick={(e) => {
-              e.stopPropagation();
-            }}
-          >
-            <div className="rounded p-1">
-              <Checkbox
-                checked={isSelected}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  onSelect(item.id, e.target.checked);
-                }}
-                size="lg"
-              />
-            </div>
-          </div>
-
-          {/* 底部操作栏 */}
-          <div
-            className={`
-              absolute bottom-0 left-0 right-0 z-10
-              bg-background/80 backdrop-blur-sm
-              transform transition-transform duration-200 ease-out
-              ${isSelected ? "translate-y-0" : "translate-y-full group-hover:translate-y-0"}
-            `}
-            data-action="true"
-          >
-            <div className="flex items-center justify-center gap-2 px-2 py-2">
-              {actions.map((action) => (
-                <Tooltip
-                  key={action.label}
-                  content={action.label}
-                  placement="top"
-                >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      action.onClick();
-                    }}
-                    className={`
-                      p-2 rounded transition-colors
-                      ${
-                        action.variant === "danger"
-                          ? "hover:bg-red-500/20 hover:text-red-500"
-                          : "hover:bg-muted"
-                      }
-                    `}
-                    aria-label={action.label}
-                  >
-                    {action.icon}
-                  </button>
-                </Tooltip>
-              ))}
-            </div>
-          </div>
-        </div>
-      </Tooltip>
-    );
-  },
-  (prevProps, nextProps) => {
-    // 自定义比较函数：返回 true 表示 props 相等（不重新渲染）
-    // 只比较数据相关的 props，不比较函数 props（函数引用可能变化但功能相同）
-    return (
-      prevProps.item.id === nextProps.item.id &&
-      prevProps.isSelected === nextProps.isSelected &&
-      prevProps.item.imageId === nextProps.item.imageId
-    );
-  },
-);
-
-MediaGridItem.displayName = "MediaGridItem";
+// 每次加载的数量
+const PAGE_SIZE = 50;
 
 export default function MediaTable() {
   const toast = useToast();
-  const isMobile = useMobile(); // 检测是否为移动设备
+  const isMobile = useMobile();
+
+  // 数据状态
   const [data, setData] = useState<MediaListItem[]>([]);
-  const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalRecords, setTotalRecords] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [pageSize, setPageSize] = useState(100); // 默认 100
-  const [viewMode, setViewMode] = useState<"grid" | "table">("grid"); // 新增视图模式
+  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPageSize, setCurrentPageSize] = useState(PAGE_SIZE);
+  const pageRef = useRef(1); // 使用 ref 避免多次触发（用于无限滚动）
+
+  // 视图模式
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+
+  // 排序状态
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // 搜索和筛选状态
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchValue, setSearchValue] = useState("");
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSearchValueRef = useRef<string>("");
   const [filterValues, setFilterValues] = useState<
     Record<string, string | string[] | { start?: string; end?: string }>
   >({});
-  const [selectedMedia, setSelectedMedia] = useState<Set<string | number>>(
-    new Set(),
-  ); // 改为 Set
+
+  // 选中状态
+  const [selectedItems, setSelectedItems] = useState<SelectedItems>({
+    mediaIds: new Set(),
+    folderIds: new Set(),
+  });
+
+  // 对话框状态
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false);
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+
+  // 媒体详情状态
   const [selectedMediaItem, setSelectedMediaItem] =
     useState<MediaListItem | null>(null);
   const [mediaDetail, setMediaDetail] = useState<MediaDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false);
+
+  // 提交状态
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [searchValue, setSearchValue] = useState(""); // 搜索输入框的值
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastSearchValueRef = useRef<string>("");
-  const [searchDialogOpen, setSearchDialogOpen] = useState(false); // 搜索对话框（移动端）
-  const [filterDialogOpen, setFilterDialogOpen] = useState(false); // 筛选对话框
+
+  // 刷新触发器
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // 创建文件夹状态
+  const [createFolderLoading, setCreateFolderLoading] = useState(false);
+
+  // 筛选临时值
   const [tempFilterValues, setTempFilterValues] = useState<
     Record<string, string | string[] | { start?: string; end?: string }>
-  >({}); // 临时筛选值
+  >({});
+
+  // 用户信息和文件夹导航
+  const [userRole, setUserRole] = useState<string>("");
+  const [userUid, setUserUid] = useState<number>(0);
+  const [accessToken, setAccessToken] = useState<string>("");
+
+  const {
+    currentFolderId,
+    folders,
+    breadcrumbItems,
+    enterFolder,
+    goBack,
+    navigateToBreadcrumb,
+    loadFolders,
+    mediaFolderId,
+  } = useFolderNavigation({
+    accessToken,
+    userRole,
+    userUid,
+  });
+
+  // 从 localStorage 获取用户信息
+  useEffect(() => {
+    try {
+      const userInfoStr = localStorage.getItem("user_info");
+      if (userInfoStr) {
+        const userInfo = JSON.parse(userInfoStr);
+        setUserRole(userInfo.role);
+        setUserUid(userInfo.uid);
+        const accessTokenStr = localStorage.getItem("access_token");
+        if (accessTokenStr) {
+          setAccessToken(accessTokenStr);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to parse user info:", error);
+    }
+  }, []);
+
+  // 重置数据（搜索/筛选/排序变化时调用）
+  const resetData = useCallback(() => {
+    setData([]);
+    pageRef.current = 1;
+    setHasMore(true);
+  }, []);
 
   // 搜索输入变化处理（防抖）
   useEffect(() => {
@@ -272,7 +173,8 @@ export default function MediaTable() {
       if (searchValue !== lastSearchValueRef.current) {
         lastSearchValueRef.current = searchValue;
         setSearchQuery(searchValue);
-        setPage(1);
+        // 重置数据
+        resetData();
       }
     }, 1000);
 
@@ -281,39 +183,295 @@ export default function MediaTable() {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchValue]);
+  }, [searchValue, resetData]);
 
-  // 处理选中状态变化
+  // 构建请求参数
+  const buildRequestParams = useCallback(
+    (page: number) => {
+      const params: {
+        page: number;
+        pageSize: number;
+        sortBy?:
+          | "id"
+          | "createdAt"
+          | "size"
+          | "originalName"
+          | "referencesCount";
+        sortOrder?: "asc" | "desc";
+        search?: string;
+        mediaType?: "IMAGE" | "VIDEO" | "AUDIO" | "FILE";
+        userUid?: number;
+        sizeMin?: number;
+        sizeMax?: number;
+        inGallery?: boolean;
+        isOptimized?: boolean;
+        hasReferences?: boolean;
+        createdAtStart?: string;
+        createdAtEnd?: string;
+        folderId?: number | null;
+      } = {
+        page,
+        pageSize: currentPageSize,
+        folderId: mediaFolderId,
+      };
+
+      // 排序参数
+      if (sortKey && sortOrder) {
+        const mappedSortKey =
+          sortKey === "postsCount" ? "referencesCount" : sortKey;
+        params.sortBy = mappedSortKey as
+          | "id"
+          | "createdAt"
+          | "size"
+          | "originalName"
+          | "referencesCount";
+        params.sortOrder = sortOrder;
+      }
+
+      // 搜索参数
+      if (searchQuery && searchQuery.trim()) {
+        params.search = searchQuery.trim();
+      }
+
+      // 筛选参数
+      if (filterValues.mediaType) {
+        if (typeof filterValues.mediaType === "string") {
+          params.mediaType = filterValues.mediaType as
+            | "IMAGE"
+            | "VIDEO"
+            | "AUDIO"
+            | "FILE";
+        } else if (
+          Array.isArray(filterValues.mediaType) &&
+          filterValues.mediaType.length > 0
+        ) {
+          params.mediaType = filterValues.mediaType[0] as
+            | "IMAGE"
+            | "VIDEO"
+            | "AUDIO"
+            | "FILE";
+        }
+      }
+
+      if (filterValues.userUid && typeof filterValues.userUid === "string") {
+        params.userUid = parseInt(filterValues.userUid, 10);
+      }
+
+      if (filterValues.size && typeof filterValues.size === "object") {
+        const sizeRange = filterValues.size as { start?: string; end?: string };
+        if (sizeRange.start) params.sizeMin = parseInt(sizeRange.start, 10);
+        if (sizeRange.end) params.sizeMax = parseInt(sizeRange.end, 10);
+      }
+
+      if (filterValues.inGallery) {
+        if (typeof filterValues.inGallery === "string") {
+          params.inGallery = filterValues.inGallery === "true";
+        } else if (
+          Array.isArray(filterValues.inGallery) &&
+          filterValues.inGallery.length > 0
+        ) {
+          params.inGallery = filterValues.inGallery[0] === "true";
+        }
+      }
+
+      if (filterValues.isOptimized) {
+        if (typeof filterValues.isOptimized === "string") {
+          params.isOptimized = filterValues.isOptimized === "true";
+        } else if (
+          Array.isArray(filterValues.isOptimized) &&
+          filterValues.isOptimized.length > 0
+        ) {
+          params.isOptimized = filterValues.isOptimized[0] === "true";
+        }
+      }
+
+      if (
+        filterValues.createdAt &&
+        typeof filterValues.createdAt === "object"
+      ) {
+        const dateRange = filterValues.createdAt as {
+          start?: string;
+          end?: string;
+        };
+        if (dateRange.start) params.createdAtStart = dateRange.start;
+        if (dateRange.end) params.createdAtEnd = dateRange.end;
+      }
+
+      if (filterValues.hasReferences) {
+        if (typeof filterValues.hasReferences === "string") {
+          params.hasReferences = filterValues.hasReferences === "true";
+        } else if (
+          Array.isArray(filterValues.hasReferences) &&
+          filterValues.hasReferences.length > 0
+        ) {
+          params.hasReferences = filterValues.hasReferences[0] === "true";
+        }
+      }
+
+      return params;
+    },
+    [
+      sortKey,
+      sortOrder,
+      searchQuery,
+      filterValues,
+      mediaFolderId,
+      currentPageSize,
+    ],
+  );
+
+  // 获取数据
+  const fetchData = useCallback(
+    async (page: number, append: boolean = false) => {
+      setLoading(true);
+      try {
+        const params = buildRequestParams(page);
+        const result = await getMediaList({
+          page: params.page,
+          pageSize: params.pageSize,
+          sortBy: params.sortBy || "createdAt",
+          sortOrder: params.sortOrder || "desc",
+          search: params.search,
+          mediaType: params.mediaType,
+          userUid: params.userUid,
+          sizeMin: params.sizeMin,
+          sizeMax: params.sizeMax,
+          inGallery: params.inGallery,
+          isOptimized: params.isOptimized,
+          hasReferences: params.hasReferences,
+          createdAtStart: params.createdAtStart,
+          createdAtEnd: params.createdAtEnd,
+          folderId: params.folderId,
+        });
+
+        if (result.success && result.data) {
+          if (append) {
+            setData((prev) => [...prev, ...result.data!]);
+          } else {
+            setData(result.data);
+          }
+          setTotalRecords(result.meta?.total || 0);
+          // 判断是否还有更多
+          const pages = result.meta?.totalPages || 1;
+          setTotalPages(pages);
+          setHasMore(page < pages);
+        }
+      } catch (error) {
+        console.error("Failed to fetch media list:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [buildRequestParams],
+  );
+
+  // 初始加载和参数变化时重新获取
+  useEffect(() => {
+    resetData();
+    fetchData(1, false);
+  }, [
+    sortKey,
+    sortOrder,
+    searchQuery,
+    filterValues,
+    refreshTrigger,
+    mediaFolderId,
+    resetData,
+    fetchData,
+  ]);
+
+  // 加载更多（用于网格视图的无限滚动）
+  const handleLoadMore = useCallback(() => {
+    if (loading || !hasMore) return;
+    const nextPage = pageRef.current + 1;
+    pageRef.current = nextPage;
+    fetchData(nextPage, true);
+  }, [loading, hasMore, fetchData]);
+
+  // 表格分页处理（用于表格视图）
+  const handleTablePageChange = useCallback(
+    (page: number) => {
+      setCurrentPage(page);
+      fetchData(page, false);
+    },
+    [fetchData],
+  );
+
+  const handleTablePageSizeChange = useCallback(
+    (size: number) => {
+      setCurrentPageSize(size);
+      setCurrentPage(1);
+      fetchData(1, false);
+    },
+    [fetchData],
+  );
+
+  // 监听广播刷新消息
+  useBroadcast<{ type: string }>((message) => {
+    if (message.type === "media-refresh") {
+      setRefreshTrigger((prev) => prev + 1);
+    }
+  });
+
+  // ===== 选中处理 =====
+  const handleSelectMedia = useCallback((id: number, checked: boolean) => {
+    setSelectedItems((prev) => {
+      const newMediaIds = new Set(prev.mediaIds);
+      if (checked) {
+        newMediaIds.add(id);
+      } else {
+        newMediaIds.delete(id);
+      }
+      return { ...prev, mediaIds: newMediaIds };
+    });
+  }, []);
+
+  const handleSelectFolder = useCallback((id: number, checked: boolean) => {
+    setSelectedItems((prev) => {
+      const newFolderIds = new Set(prev.folderIds);
+      if (checked) {
+        newFolderIds.add(id);
+      } else {
+        newFolderIds.delete(id);
+      }
+      return { ...prev, folderIds: newFolderIds };
+    });
+  }, []);
+
   const handleSelectionChange = useCallback(
     (selectedKeys: (string | number)[]) => {
-      setSelectedMedia(new Set(selectedKeys));
+      setSelectedItems((prev) => ({
+        ...prev,
+        mediaIds: new Set(selectedKeys.map((k) => Number(k))),
+      }));
     },
     [],
   );
 
-  // 处理排序变化
+  const clearSelection = useCallback(() => {
+    setSelectedItems({ mediaIds: new Set(), folderIds: new Set() });
+  }, []);
+
+  // ===== 排序处理 =====
   const handleSortChange = useCallback(
     (key: string, order: "asc" | "desc" | null) => {
       setSortKey(order ? key : null);
       setSortOrder(order);
-      setPage(1); // 排序变化时重置到第一页
     },
     [],
   );
 
-  // 处理搜索变化
+  // ===== 搜索处理 =====
   const handleSearchChange = useCallback((search: string) => {
-    // 只有当搜索内容真正变化时才更新状态和重置页码
     setSearchQuery((prev) => {
       if (search !== prev) {
-        setPage(1); // 搜索变化时重置到第一页
         return search;
       }
       return prev;
     });
   }, []);
 
-  // 处理筛选变化
+  // ===== 筛选处理 =====
   const handleFilterChange = useCallback(
     (
       filters: Record<
@@ -322,23 +480,19 @@ export default function MediaTable() {
       >,
     ) => {
       setFilterValues(filters);
-      setPage(1); // 筛选变化时重置到第一页
     },
     [],
   );
 
-  // 打开筛选对话框
   const openFilterDialog = useCallback(() => {
     setTempFilterValues({ ...filterValues });
     setFilterDialogOpen(true);
   }, [filterValues]);
 
-  // 关闭筛选对话框
   const closeFilterDialog = useCallback(() => {
     setFilterDialogOpen(false);
   }, []);
 
-  // 更新临时筛选值
   const updateTempFilterValue = useCallback(
     (
       key: string,
@@ -352,14 +506,12 @@ export default function MediaTable() {
     [],
   );
 
-  // 切换 checkbox 选项
   const toggleCheckboxOption = useCallback((key: string, option: string) => {
     setTempFilterValues((prev) => {
       const currentValue = prev[key];
       const currentArray = Array.isArray(currentValue) ? currentValue : [];
 
       if (currentArray.includes(option)) {
-        // 移除该选项
         const newArray = currentArray.filter((v) => v !== option);
         if (newArray.length === 0) {
           const { [key]: _, ...rest } = prev;
@@ -367,36 +519,26 @@ export default function MediaTable() {
         }
         return { ...prev, [key]: newArray };
       } else {
-        // 添加该选项
         return { ...prev, [key]: [...currentArray, option] };
       }
     });
   }, []);
 
-  // 应用筛选
   const applyFilters = useCallback(() => {
-    // 移除空值
     const cleanedFilters: Record<
       string,
       string | string[] | { start?: string; end?: string }
     > = {};
     Object.entries(tempFilterValues).forEach(([key, value]) => {
       if (Array.isArray(value)) {
-        // checkboxGroup: 只保留非空数组
-        if (value.length > 0) {
-          cleanedFilters[key] = value;
-        }
+        if (value.length > 0) cleanedFilters[key] = value;
       } else if (
         typeof value === "object" &&
         value !== null &&
         "start" in value
       ) {
-        // dateRange/range: 至少有一个值才保留
-        if (value.start || value.end) {
-          cleanedFilters[key] = value;
-        }
+        if (value.start || value.end) cleanedFilters[key] = value;
       } else if (value !== "" && value !== undefined && value !== null) {
-        // input: 非空字符串
         cleanedFilters[key] = value as string;
       }
     });
@@ -405,14 +547,12 @@ export default function MediaTable() {
     closeFilterDialog();
   }, [tempFilterValues, handleFilterChange, closeFilterDialog]);
 
-  // 重置筛选
   const resetFilters = useCallback(() => {
     setTempFilterValues({});
     handleFilterChange({});
     closeFilterDialog();
   }, [handleFilterChange, closeFilterDialog]);
 
-  // 判断是否有激活的筛选
   const hasActiveFilters = useMemo(() => {
     return Object.keys(filterValues).length > 0;
   }, [filterValues]);
@@ -484,7 +624,7 @@ export default function MediaTable() {
     [],
   );
 
-  // 打开详情对话框
+  // ===== 对话框处理 =====
   const openDetailDialog = useCallback(
     async (media: MediaListItem) => {
       setSelectedMediaItem(media);
@@ -508,56 +648,48 @@ export default function MediaTable() {
     [toast],
   );
 
-  // 关闭详情对话框
   const closeDetailDialog = useCallback(() => {
     setDetailDialogOpen(false);
     setSelectedMediaItem(null);
     setMediaDetail(null);
   }, []);
 
-  // 打开编辑对话框
   const openEditDialog = useCallback((media: MediaListItem) => {
     setSelectedMediaItem(media);
     setEditDialogOpen(true);
   }, []);
 
-  // 关闭编辑对话框
   const closeEditDialog = useCallback(() => {
     setEditDialogOpen(false);
     setSelectedMediaItem(null);
   }, []);
 
-  // 处理编辑更新
   const handleEditUpdate = useCallback(() => {
     setRefreshTrigger((prev) => prev + 1);
   }, []);
 
-  // 打开删除对话框
   const openDeleteDialog = useCallback((media: MediaListItem) => {
     setSelectedMediaItem(media);
     setDeleteDialogOpen(true);
   }, []);
 
-  // 关闭删除对话框
   const closeDeleteDialog = useCallback(() => {
     setDeleteDialogOpen(false);
     setSelectedMediaItem(null);
   }, []);
 
-  // 处理单个删除
+  // ===== 删除处理 =====
   const handleDelete = useCallback(async () => {
     if (!selectedMediaItem) return;
 
     setIsSubmitting(true);
     try {
-      const result = await deleteMedia({
-        ids: [selectedMediaItem.id],
-      });
+      const result = await deleteMedia({ ids: [selectedMediaItem.id] });
 
       if (result.success) {
         toast.success(`文件 "${selectedMediaItem.originalName}" 已删除`);
         closeDeleteDialog();
-        setRefreshTrigger((prev) => prev + 1); // 触发刷新
+        setRefreshTrigger((prev) => prev + 1);
       } else {
         toast.error(result.message || "删除失败");
       }
@@ -569,18 +701,20 @@ export default function MediaTable() {
     }
   }, [selectedMediaItem, toast, closeDeleteDialog]);
 
-  // 批量加入图库
+  // ===== 批量操作 =====
   const handleBatchAddToGallery = useCallback(async () => {
+    if (selectedItems.mediaIds.size === 0) return;
+
     setIsSubmitting(true);
     try {
       const result = await batchUpdateMedia({
-        ids: Array.from(selectedMedia).map((id) => Number(id)),
+        ids: Array.from(selectedItems.mediaIds),
         inGallery: true,
       });
 
       if (result.success) {
         toast.success(`已将 ${result.data?.updated || 0} 个文件加入图库`);
-        setSelectedMedia(new Set());
+        clearSelection();
         setRefreshTrigger((prev) => prev + 1);
       } else {
         toast.error(result.message || "操作失败");
@@ -591,20 +725,21 @@ export default function MediaTable() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedMedia, toast]);
+  }, [selectedItems.mediaIds, toast, clearSelection]);
 
-  // 批量移出图库
   const handleBatchRemoveFromGallery = useCallback(async () => {
+    if (selectedItems.mediaIds.size === 0) return;
+
     setIsSubmitting(true);
     try {
       const result = await batchUpdateMedia({
-        ids: Array.from(selectedMedia).map((id) => Number(id)),
+        ids: Array.from(selectedItems.mediaIds),
         inGallery: false,
       });
 
       if (result.success) {
         toast.success(`已将 ${result.data?.updated || 0} 个文件移出图库`);
-        setSelectedMedia(new Set());
+        clearSelection();
         setRefreshTrigger((prev) => prev + 1);
       } else {
         toast.error(result.message || "操作失败");
@@ -615,234 +750,168 @@ export default function MediaTable() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedMedia, toast]);
+  }, [selectedItems.mediaIds, toast, clearSelection]);
 
-  // 打开批量删除对话框
   const openBatchDeleteDialog = useCallback(() => {
     setBatchDeleteDialogOpen(true);
   }, []);
 
-  // 关闭批量删除对话框
   const closeBatchDeleteDialog = useCallback(() => {
     setBatchDeleteDialogOpen(false);
   }, []);
 
-  // 确认批量删除
   const handleConfirmBatchDelete = useCallback(async () => {
     setIsSubmitting(true);
     try {
-      const result = await deleteMedia({
-        ids: Array.from(selectedMedia).map((id) =>
-          typeof id === "number" ? id : Number(id),
-        ),
-      });
+      let deletedFiles = 0;
+      let deletedFolders = 0;
 
-      if (result.success) {
-        toast.success(`已删除 ${result.data?.deleted || 0} 个文件`);
-        setSelectedMedia(new Set());
+      // 删除媒体文件
+      if (selectedItems.mediaIds.size > 0) {
+        const mediaResult = await deleteMedia({
+          ids: Array.from(selectedItems.mediaIds),
+        });
+        if (mediaResult.success) {
+          deletedFiles = mediaResult.data?.deleted || 0;
+        } else {
+          toast.error(mediaResult.message || "删除文件失败");
+        }
+      }
+
+      // 删除文件夹
+      if (selectedItems.folderIds.size > 0) {
+        const folderResult = await deleteFolders({
+          access_token: accessToken,
+          ids: Array.from(selectedItems.folderIds),
+        });
+        if (folderResult.success) {
+          deletedFolders = folderResult.data?.deleted || 0;
+          if (folderResult.data?.deletedMediaCount) {
+            toast.info(
+              `${folderResult.data.deletedMediaCount} 个文件已移至公共空间`,
+            );
+          }
+        } else {
+          toast.error(folderResult.message || "删除文件夹失败");
+        }
+      }
+
+      if (deletedFiles > 0 || deletedFolders > 0) {
+        const messages: string[] = [];
+        if (deletedFiles > 0) messages.push(`${deletedFiles} 个文件`);
+        if (deletedFolders > 0) messages.push(`${deletedFolders} 个文件夹`);
+        toast.success(`已删除 ${messages.join("、")}`);
+        clearSelection();
         closeBatchDeleteDialog();
         setRefreshTrigger((prev) => prev + 1);
-      } else {
-        toast.error(result.message || "删除失败");
+        // 刷新文件夹列表
+        await loadFolders();
       }
     } catch (error) {
-      console.error("Batch delete media error:", error);
+      console.error("Batch delete error:", error);
       toast.error("删除失败，请稍后重试");
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedMedia, toast, closeBatchDeleteDialog]);
-
-  // 监听广播刷新消息
-  useBroadcast<{ type: string }>((message) => {
-    if (message.type === "media-refresh") {
-      setRefreshTrigger((prev) => prev + 1); // 触发刷新
-    }
-  });
-
-  useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      try {
-        // 构建请求参数
-        const params: {
-          page: number;
-          pageSize: number;
-          sortBy?:
-            | "id"
-            | "createdAt"
-            | "size"
-            | "originalName"
-            | "referencesCount";
-          sortOrder?: "asc" | "desc";
-          search?: string;
-          mediaType?: "IMAGE" | "VIDEO" | "AUDIO" | "FILE";
-          userUid?: number;
-          sizeMin?: number;
-          sizeMax?: number;
-          inGallery?: boolean;
-          isOptimized?: boolean;
-          hasReferences?: boolean;
-          createdAtStart?: string;
-          createdAtEnd?: string;
-        } = {
-          page,
-          pageSize,
-        };
-
-        // 只在有有效的排序参数时才添加
-        if (sortKey && sortOrder) {
-          // 将 postsCount 映射为 referencesCount
-          const mappedSortKey =
-            sortKey === "postsCount" ? "referencesCount" : sortKey;
-          params.sortBy = mappedSortKey as
-            | "id"
-            | "createdAt"
-            | "size"
-            | "originalName"
-            | "referencesCount";
-          params.sortOrder = sortOrder;
-        }
-
-        // 添加搜索参数（全局搜索）
-        if (searchQuery && searchQuery.trim()) {
-          params.search = searchQuery.trim();
-        }
-
-        // 添加筛选参数
-        if (filterValues.mediaType) {
-          if (typeof filterValues.mediaType === "string") {
-            params.mediaType = filterValues.mediaType as
-              | "IMAGE"
-              | "VIDEO"
-              | "AUDIO"
-              | "FILE";
-          } else if (
-            Array.isArray(filterValues.mediaType) &&
-            filterValues.mediaType.length > 0
-          ) {
-            // 如果是数组，取第一个值（后续可以在后端支持多选）
-            params.mediaType = filterValues.mediaType[0] as
-              | "IMAGE"
-              | "VIDEO"
-              | "AUDIO"
-              | "FILE";
-          }
-        }
-
-        if (filterValues.userUid && typeof filterValues.userUid === "string") {
-          params.userUid = parseInt(filterValues.userUid, 10);
-        }
-
-        if (filterValues.size && typeof filterValues.size === "object") {
-          const sizeRange = filterValues.size as {
-            start?: string;
-            end?: string;
-          };
-          if (sizeRange.start) {
-            params.sizeMin = parseInt(sizeRange.start, 10);
-          }
-          if (sizeRange.end) {
-            params.sizeMax = parseInt(sizeRange.end, 10);
-          }
-        }
-
-        if (filterValues.inGallery) {
-          if (typeof filterValues.inGallery === "string") {
-            params.inGallery = filterValues.inGallery === "true";
-          } else if (
-            Array.isArray(filterValues.inGallery) &&
-            filterValues.inGallery.length > 0
-          ) {
-            // 如果是数组，根据第一个值设置布尔值
-            params.inGallery = filterValues.inGallery[0] === "true";
-          }
-        }
-
-        if (filterValues.isOptimized) {
-          if (typeof filterValues.isOptimized === "string") {
-            params.isOptimized = filterValues.isOptimized === "true";
-          } else if (
-            Array.isArray(filterValues.isOptimized) &&
-            filterValues.isOptimized.length > 0
-          ) {
-            // 如果是数组，根据第一个值设置布尔值
-            params.isOptimized = filterValues.isOptimized[0] === "true";
-          }
-        }
-
-        if (
-          filterValues.createdAt &&
-          typeof filterValues.createdAt === "object"
-        ) {
-          const dateRange = filterValues.createdAt as {
-            start?: string;
-            end?: string;
-          };
-          if (dateRange.start) {
-            params.createdAtStart = dateRange.start;
-          }
-          if (dateRange.end) {
-            params.createdAtEnd = dateRange.end;
-          }
-        }
-
-        // 引用状态筛选
-        if (filterValues.hasReferences) {
-          if (typeof filterValues.hasReferences === "string") {
-            params.hasReferences = filterValues.hasReferences === "true";
-          } else if (
-            Array.isArray(filterValues.hasReferences) &&
-            filterValues.hasReferences.length > 0
-          ) {
-            // 如果是数组，根据第一个值设置布尔值
-            params.hasReferences = filterValues.hasReferences[0] === "true";
-          }
-        }
-
-        const result = await getMediaList({
-          page: params.page,
-          pageSize: params.pageSize,
-          sortBy: params.sortBy || "createdAt",
-          sortOrder: params.sortOrder || "desc",
-          search: params.search,
-          mediaType: params.mediaType,
-          userUid: params.userUid,
-          sizeMin: params.sizeMin,
-          sizeMax: params.sizeMax,
-          inGallery: params.inGallery,
-          isOptimized: params.isOptimized,
-          hasReferences: params.hasReferences,
-          createdAtStart: params.createdAtStart,
-          createdAtEnd: params.createdAtEnd,
-        });
-
-        if (result.success && result.data) {
-          setData(result.data);
-          setTotalRecords(result.meta?.total || 0);
-          if (result.meta) {
-            setTotalPages(result.meta.totalPages);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch media list:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
   }, [
-    page,
-    pageSize,
-    sortKey,
-    sortOrder,
-    searchQuery,
-    filterValues,
-    refreshTrigger,
+    selectedItems,
+    accessToken,
+    toast,
+    clearSelection,
+    closeBatchDeleteDialog,
+    loadFolders,
   ]);
 
-  // 格式化文件大小
+  // ===== 移动操作 =====
+  const openMoveDialog = useCallback(() => {
+    setMoveDialogOpen(true);
+  }, []);
+
+  const closeMoveDialog = useCallback(() => {
+    setMoveDialogOpen(false);
+  }, []);
+
+  const handleMove = useCallback(
+    async (targetFolderId: number | null) => {
+      setIsSubmitting(true);
+      try {
+        const result = await moveItems({
+          access_token: accessToken,
+          mediaIds:
+            selectedItems.mediaIds.size > 0
+              ? Array.from(selectedItems.mediaIds)
+              : undefined,
+          folderIds:
+            selectedItems.folderIds.size > 0
+              ? Array.from(selectedItems.folderIds)
+              : undefined,
+          targetFolderId,
+        });
+
+        if (result.success) {
+          const messages: string[] = [];
+          if (result.data?.movedMedia)
+            messages.push(`${result.data.movedMedia} 个文件`);
+          if (result.data?.movedFolders)
+            messages.push(`${result.data.movedFolders} 个文件夹`);
+          toast.success(`已移动 ${messages.join("、")}`);
+          clearSelection();
+          closeMoveDialog();
+          setRefreshTrigger((prev) => prev + 1);
+          // 刷新文件夹列表
+          await loadFolders();
+        } else {
+          toast.error(result.message || "移动失败");
+        }
+      } catch (error) {
+        console.error("Move error:", error);
+        toast.error("移动失败，请稍后重试");
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [
+      accessToken,
+      selectedItems,
+      toast,
+      clearSelection,
+      closeMoveDialog,
+      loadFolders,
+    ],
+  );
+
+  // ===== 创建文件夹 =====
+  const handleCreateFolder = useCallback(
+    async (name: string): Promise<boolean> => {
+      setCreateFolderLoading(true);
+      try {
+        const result = await createFolder({
+          access_token: accessToken,
+          name,
+          parentId: currentFolderId,
+        });
+
+        if (result.success) {
+          toast.success(`文件夹 "${name}" 创建成功`);
+          // 刷新文件夹列表
+          await loadFolders();
+          return true;
+        } else {
+          toast.error(result.message || "创建文件夹失败");
+          return false;
+        }
+      } catch (error) {
+        console.error("Create folder error:", error);
+        toast.error("创建文件夹失败，请稍后重试");
+        return false;
+      } finally {
+        setCreateFolderLoading(false);
+      }
+    },
+    [accessToken, currentFolderId, toast, loadFolders],
+  );
+
+  // ===== 工具函数 =====
   const formatFileSize = useCallback((bytes: number) => {
     if (bytes === 0) return "0 B";
     const k = 1024;
@@ -851,7 +920,6 @@ export default function MediaTable() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   }, []);
 
-  // 获取文件类型图标
   const getFileTypeIcon = useCallback((type: string) => {
     switch (type) {
       case "IMAGE":
@@ -867,238 +935,43 @@ export default function MediaTable() {
     }
   }, []);
 
-  const columns: TableColumn<MediaListItem>[] = useMemo(
-    () => [
-      {
-        key: "id",
-        title: "ID",
-        dataIndex: "id",
-        align: "left",
-        sortable: true,
-        mono: true,
-      },
-      {
-        key: "preview",
-        title: "预览",
-        dataIndex: "mediaType",
-        align: "left",
-        render: (value: unknown, record: MediaListItem) => {
-          if (record.mediaType === "IMAGE" && record.width && record.height) {
-            return (
-              <div className="w-12 h-12 bg-muted rounded-lg overflow-hidden flex items-center justify-center">
-                <CMSImage
-                  src={`/p/${record.imageId}`}
-                  alt={record.originalName}
-                  width={96}
-                  height={96}
-                  blur={record.blur}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            );
-          }
-          return (
-            <div className="w-12 h-12 bg-muted rounded-lg overflow-hidden flex items-center justify-center">
-              {getFileTypeIcon(record.mediaType)}
-            </div>
-          );
-        },
-      },
-      {
-        key: "originalName",
-        title: "显示名称",
-        dataIndex: "originalName",
-        align: "left",
-        sortable: true,
-        render: (value: unknown, record: MediaListItem) => {
-          const name = String(value);
-          return (
-            <div className="max-w-[200px]">
-              <div className="truncate" title={name}>
-                {name}
-              </div>
-              <div
-                className="text-xs text-muted-foreground truncate"
-                title={record.fileName}
-              >
-                {record.fileName}
-              </div>
-            </div>
-          );
-        },
-      },
-      {
-        key: "size",
-        title: "大小",
-        dataIndex: "size",
-        align: "right",
-        sortable: true,
-        mono: true,
-        render: (value: unknown) => {
-          return formatFileSize(Number(value));
-        },
-      },
-      {
-        key: "dimensions",
-        title: "尺寸",
-        dataIndex: "width",
-        mono: true,
-        align: "center",
-        render: (value: unknown, record: MediaListItem) => {
-          if (record.width && record.height) {
-            return `${record.width} × ${record.height}`;
-          }
-          return "-";
-        },
-      },
-      {
-        key: "user",
-        title: "上传者",
-        dataIndex: "user",
-        align: "center",
-        render: (value: unknown, record: MediaListItem) => {
-          const user = record.user;
-          if (!user) {
-            return <span className="text-muted-foreground">-</span>;
-          }
-          return (
-            <Link
-              href={`/admin/users?uid=${user.uid}`}
-              presets={["hover-underline"]}
-              title={`@${user.username}`}
-            >
-              {user.nickname || `@${user.username}`}
-            </Link>
-          );
-        },
-      },
-      {
-        key: "inGallery",
-        title: "图库",
-        dataIndex: "inGallery",
-        align: "center",
-        sortable: true,
-        render: (value: unknown) => {
-          return value ? (
-            <span className="text-success flex items-center justify-center">
-              <RiCheckLine size="1.5em" />
-            </span>
-          ) : (
-            <span className="text-muted-foreground flex items-center justify-center">
-              <RiCloseLine size="1.5em" />
-            </span>
-          );
-        },
-      },
-      {
-        key: "createdAt",
-        title: "上传时间",
-        dataIndex: "createdAt",
-        align: "center",
-        sortable: true,
-        mono: true,
-        render: (value: unknown) => {
-          if (typeof value === "string") {
-            return new Date(value).toLocaleString("zh-CN", {
-              year: "numeric",
-              month: "2-digit",
-              day: "2-digit",
-              hour: "2-digit",
-              minute: "2-digit",
-            });
-          }
-          return "-";
-        },
-      },
-      {
-        key: "postsCount",
-        title: "引用次数",
-        dataIndex: "postsCount",
-        align: "center",
-        sortable: true,
-        render: (value: unknown) => {
-          const count = Number(value) || 0;
-          return (
-            <span
-              className={count > 0 ? "text-primary" : "text-muted-foreground"}
-            >
-              {count}
-            </span>
-          );
-        },
-      },
-    ],
-    [formatFileSize, getFileTypeIcon],
-  );
-
   // 批量操作按钮
-  const batchActions: ActionButton[] = useMemo(
+  const batchActions = useMemo(
     () => [
+      {
+        label: "移动",
+        onClick: openMoveDialog,
+        icon: <RiDragMoveLine size="1em" />,
+        variant: "ghost" as const,
+      },
       {
         label: "加入图库",
         onClick: handleBatchAddToGallery,
         icon: <RiImageLine size="1em" />,
-        variant: "ghost",
+        variant: "ghost" as const,
+        disabled: selectedItems.mediaIds.size === 0, // 只有选中文件时才可用
       },
       {
         label: "移出图库",
         onClick: handleBatchRemoveFromGallery,
         icon: <RiCloseLine size="1em" />,
-        variant: "ghost",
+        variant: "ghost" as const,
+        disabled: selectedItems.mediaIds.size === 0, // 只有选中文件时才可用
       },
       {
         label: "删除",
         onClick: openBatchDeleteDialog,
         icon: <RiDeleteBinLine size="1em" />,
-        variant: "danger",
-      },
-    ],
-    [
-      openBatchDeleteDialog,
-      handleBatchAddToGallery,
-      handleBatchRemoveFromGallery,
-    ],
-  );
-
-  // 行操作按钮
-  const rowActions = useCallback(
-    (record: MediaListItem) => [
-      {
-        label: "查看详情",
-        icon: <RiEyeLine size="1.1em" />,
-        onClick: () => {
-          void openDetailDialog(record);
-        },
-      },
-      {
-        label: "编辑",
-        icon: <RiEditLine size="1.1em" />,
-        onClick: () => openEditDialog(record),
-      },
-      {
-        label: "删除",
-        icon: <RiDeleteBinLine size="1.1em" />,
-        onClick: () => openDeleteDialog(record),
         variant: "danger" as const,
       },
     ],
-    [openDetailDialog, openEditDialog, openDeleteDialog],
-  );
-
-  // 单选
-  const handleSelectItem = useCallback(
-    (id: string | number, checked: boolean) => {
-      setSelectedMedia((prev) => {
-        const newSelectedMedia = new Set(prev);
-        if (checked) {
-          newSelectedMedia.add(id);
-        } else {
-          newSelectedMedia.delete(id);
-        }
-        return newSelectedMedia;
-      });
-    },
-    [], // 不依赖 selectedMedia，使用函数式更新
+    [
+      openMoveDialog,
+      handleBatchAddToGallery,
+      handleBatchRemoveFromGallery,
+      openBatchDeleteDialog,
+      selectedItems.mediaIds.size,
+    ],
   );
 
   // 视图切换器组件
@@ -1138,305 +1011,66 @@ export default function MediaTable() {
 
   return (
     <>
-      <AutoTransition
-        key={viewMode}
-        type="fade"
-        duration={0.3}
-        className="contents"
-      >
+      <AutoTransition type="fade" duration={0.3}>
         {viewMode === "table" ? (
-          <GridTable
-            title={
-              <div className="flex items-center gap-4">
-                <span>媒体文件管理</span>
-                {/* 视图切换 */}
-                {viewModeToggle}
-              </div>
-            }
-            columns={columns}
-            data={data}
-            loading={loading}
-            rowKey="id"
-            page={page}
-            totalPages={totalPages}
-            totalRecords={totalRecords}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
-            onSortChange={handleSortChange}
-            onSearchChange={handleSearchChange}
-            onRowClick={(record) => openDetailDialog(record)}
-            searchPlaceholder="搜索显示名称、原始文件名或替代文本..."
-            filterConfig={filterConfig}
-            onFilterChange={handleFilterChange}
-            striped
-            hoverable
-            bordered={false}
-            size="sm"
-            emptyText="暂无媒体文件"
-            stickyHeader
-            maxHeight="100%"
-            padding={2.5}
-            enableActions={true}
-            batchActions={batchActions}
-            rowActions={rowActions}
-            onSelectionChange={handleSelectionChange}
-          />
+          <RowGrid key="media-table-view">
+            <MediaTableView
+              data={data}
+              loading={loading}
+              page={currentPage}
+              totalPages={totalPages}
+              totalRecords={totalRecords}
+              pageSize={currentPageSize}
+              onPageChange={handleTablePageChange}
+              onPageSizeChange={handleTablePageSizeChange}
+              onPreview={openDetailDialog}
+              onEdit={openEditDialog}
+              onDelete={openDeleteDialog}
+              formatFileSize={formatFileSize}
+              getFileTypeIcon={getFileTypeIcon}
+              viewModeToggle={viewModeToggle}
+              onSortChange={handleSortChange}
+              onSearchChange={handleSearchChange}
+              filterConfig={filterConfig}
+              onFilterChange={handleFilterChange}
+              batchActions={batchActions}
+              onSelectionChange={handleSelectionChange}
+            />
+          </RowGrid>
         ) : (
-          <>
-            {/* 表头 */}
-            <GridItem
-              areas={[1]}
-              width={24}
-              height={0.1}
-              className="flex items-center justify-between text-2xl px-10"
-            >
-              <div className="flex items-center gap-4">
-                <span>媒体文件管理</span>
-                {/* 视图切换 */}
-                {viewModeToggle}
-              </div>
-              <div className="flex items-center gap-4">
-                {/* 搜索框 */}
-                {isMobile ? (
-                  // 移动端：显示搜索图标
-                  <Tooltip content="搜索" placement="bottom">
-                    <Clickable
-                      onClick={() => setSearchDialogOpen(true)}
-                      className="p-2 rounded transition-colors hover:bg-muted inline-flex"
-                      hoverScale={1.1}
-                    >
-                      <RiSearchLine size="1em" />
-                    </Clickable>
-                  </Tooltip>
-                ) : (
-                  // 桌面端：显示搜索输入框
-                  <div className="relative w-[15em]">
-                    <input
-                      title="search"
-                      type="text"
-                      value={searchValue}
-                      onChange={(e) => setSearchValue(e.target.value)}
-                      className="
-                      relative w-full bg-transparent border-0
-                      px-0 py-2 text-base text-white
-                      focus:outline-none
-                    "
-                    />
-                    <motion.div
-                      className="absolute bottom-0 left-0 h-0.5 w-full"
-                      initial={{ backgroundColor: "#ffffff" }}
-                      animate={{
-                        backgroundColor:
-                          searchValue.length > 0
-                            ? "var(--color-primary)"
-                            : "#ffffff",
-                      }}
-                      transition={{ duration: 0.3 }}
-                    />
-                    <motion.label
-                      className="absolute top-2 left-0 pointer-events-none whitespace-nowrap flex items-center text-base text-white"
-                      animate={{
-                        opacity: searchValue.length > 0 ? 0 : 1,
-                      }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <RiSearchLine size="1em" className="inline mr-1" />
-                      搜索显示名称、原始文件名或替代文本...
-                    </motion.label>
-                    <AnimatePresence>
-                      {searchValue.length > 0 && (
-                        <motion.button
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -10 }}
-                          transition={{
-                            duration: 0.3,
-                            ease: [0.68, -0.55, 0.265, 1.55],
-                          }}
-                          onClick={() => setSearchValue("")}
-                          className="absolute right-0 top-2 text-primary hover:text-white transition-colors cursor-pointer flex items-center"
-                          type="button"
-                        >
-                          <RiCloseLine size="1em" />
-                        </motion.button>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                )}
-
-                {/* 筛选按钮 */}
-                <Tooltip
-                  content={hasActiveFilters ? "筛选（已激活）" : "筛选条件"}
-                  placement="bottom"
-                >
-                  <Clickable
-                    onClick={openFilterDialog}
-                    className={`p-2 rounded transition-colors ${
-                      hasActiveFilters
-                        ? "bg-foreground text-background"
-                        : "bg-muted/30 hover:bg-muted"
-                    }`}
-                    hoverScale={1.05}
-                  >
-                    <RiFilter3Line size="1em" />
-                  </Clickable>
-                </Tooltip>
-              </div>
-            </GridItem>
-
-            {/* 内容区 */}
-            <GridItem areas={createArray(2, 11)} width={24 / 10} height={2}>
-              <div className="flex flex-col h-full">
-                {/* 批量操作栏 */}
-                <AnimatePresence>
-                  {selectedMedia.size > 0 && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{
-                        height: { duration: 0.3, ease: "easeInOut" },
-                        opacity: { duration: 0.2, ease: "easeInOut" },
-                      }}
-                      className="overflow-hidden"
-                    >
-                      <div className="flex items-center justify-between px-10 py-2 border-b border-muted">
-                        <div className="flex items-center gap-4">
-                          <AutoTransition key={selectedMedia.size}>
-                            <span className="text-primary">
-                              已选中 {selectedMedia.size} 项
-                            </span>
-                          </AutoTransition>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {batchActions.map((action) => (
-                            <Button
-                              key={action.label}
-                              label={action.label || "操作"}
-                              variant={action.variant || "outline"}
-                              size="sm"
-                              icon={action.icon}
-                              onClick={action.onClick}
-                              disabled={
-                                action.disabled || selectedMedia.size === 0
-                              }
-                              loading={action.loading}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* 网格内容 */}
-                <div className="flex-1 overflow-auto px-10 py-6 scroll-smooth">
-                  {loading ? (
-                    <div className="h-full">
-                      <LoadingIndicator />
-                    </div>
-                  ) : data.length === 0 ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-muted-foreground">暂无媒体文件</div>
-                    </div>
-                  ) : (
-                    <div
-                      className="grid gap-4"
-                      style={{
-                        gridTemplateColumns: isMobile
-                          ? "repeat(auto-fill, minmax(8em, 1fr))"
-                          : "repeat(auto-fill, minmax(10em, 1fr))",
-                        contentVisibility: "auto",
-                      }}
-                    >
-                      {data.map((item, index) => (
-                        <MediaGridItem
-                          key={item.id}
-                          item={item}
-                          isSelected={selectedMedia.has(item.id)}
-                          onSelect={handleSelectItem}
-                          onPreview={openDetailDialog}
-                          formatFileSize={formatFileSize}
-                          getFileTypeIcon={getFileTypeIcon}
-                          actions={rowActions(item)}
-                          index={index}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </GridItem>
-
-            {/* 表尾分页 */}
-            <GridItem
-              areas={[12]}
-              width={24}
-              height={0.1}
-              className="flex justify-between pl-10 pr-6"
-            >
-              <div className="flex items-center gap-2">
-                <AutoTransition key={totalRecords} type="fade">
-                  共 {totalRecords} 条
-                </AutoTransition>
-                <span>/</span>
-                <AutoTransition key={page + "" + totalRecords} type="fade">
-                  第 {(page - 1) * pageSize + 1}
-                  {" - "}
-                  {Math.min(page * pageSize, totalRecords)} 条
-                </AutoTransition>
-                <span>/</span>
-                <div className="flex items-center gap-2">
-                  <Select
-                    value={pageSize}
-                    onChange={(value) => {
-                      setPageSize(Number(value));
-                      setPage(1);
-                    }}
-                    options={[
-                      { value: 10, label: "10 条/页" },
-                      { value: 25, label: "25 条/页" },
-                      { value: 50, label: "50 条/页" },
-                      { value: 100, label: "100 条/页" },
-                      { value: 250, label: "250 条/页" },
-                      { value: 500, label: "500 条/页" },
-                    ]}
-                    size="sm"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center">
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2">
-                    <Clickable
-                      onClick={() => setPage(Math.max(1, page - 1))}
-                      disabled={page === 1}
-                      className="px-4 py-2 rounded transition-colors hover:bg-muted"
-                      enableHoverScale={false}
-                    >
-                      <RiArrowLeftSLine />
-                    </Clickable>
-
-                    <span>
-                      <AutoTransition key={page} type="fade">
-                        第 {page} / {totalPages} 页
-                      </AutoTransition>
-                    </span>
-
-                    <Clickable
-                      onClick={() => setPage(Math.min(totalPages, page + 1))}
-                      disabled={page === totalPages}
-                      className="px-4 py-2 rounded transition-colors hover:bg-muted"
-                      enableHoverScale={false}
-                    >
-                      <RiArrowRightSLine />
-                    </Clickable>
-                  </div>
-                )}
-              </div>
-            </GridItem>
-          </>
+          <RowGrid key="media-grid-view">
+            <MediaGridView
+              data={data}
+              folders={folders}
+              loading={loading}
+              hasMore={hasMore}
+              selectedItems={selectedItems}
+              onSelectMedia={handleSelectMedia}
+              onSelectFolder={handleSelectFolder}
+              onPreview={openDetailDialog}
+              onEdit={openEditDialog}
+              onDelete={openDeleteDialog}
+              onEnterFolder={enterFolder}
+              onLoadMore={handleLoadMore}
+              formatFileSize={formatFileSize}
+              getFileTypeIcon={getFileTypeIcon}
+              currentUserId={userUid}
+              isMobile={isMobile}
+              viewModeToggle={viewModeToggle}
+              searchValue={searchValue}
+              onSearchValueChange={setSearchValue}
+              onOpenSearchDialog={() => setSearchDialogOpen(true)}
+              hasActiveFilters={hasActiveFilters}
+              onOpenFilterDialog={openFilterDialog}
+              batchActions={batchActions}
+              currentFolderId={currentFolderId}
+              breadcrumbItems={breadcrumbItems}
+              onNavigateToBreadcrumb={navigateToBreadcrumb}
+              onGoBack={goBack}
+              onCreateFolder={handleCreateFolder}
+              createFolderLoading={createFolderLoading}
+            />
+          </RowGrid>
         )}
       </AutoTransition>
 
@@ -1478,11 +1112,22 @@ export default function MediaTable() {
         open={batchDeleteDialogOpen}
         onClose={closeBatchDeleteDialog}
         title="确认批量删除"
-        description={`确定要删除选中的 ${selectedMedia.size} 个文件吗？此操作不可撤销。`}
+        description={`确定要删除选中的${selectedItems.mediaIds.size > 0 ? ` ${selectedItems.mediaIds.size} 个文件` : ""}${selectedItems.mediaIds.size > 0 && selectedItems.folderIds.size > 0 ? "和" : ""}${selectedItems.folderIds.size > 0 ? ` ${selectedItems.folderIds.size} 个文件夹` : ""}吗？此操作不可撤销。${selectedItems.folderIds.size > 0 ? "文件夹中的文件将被移至公共空间。" : ""}`}
         confirmText="删除"
         cancelText="取消"
         onConfirm={handleConfirmBatchDelete}
         variant="danger"
+        loading={isSubmitting}
+      />
+
+      {/* 移动对话框 */}
+      <MoveDialog
+        open={moveDialogOpen}
+        onClose={closeMoveDialog}
+        onConfirm={handleMove}
+        userRole={userRole}
+        userUid={userUid}
+        selectedFolderIds={Array.from(selectedItems.folderIds)}
         loading={isSubmitting}
       />
 
@@ -1546,10 +1191,7 @@ export default function MediaTable() {
                         value={
                           ((
                             tempFilterValues[config.key] as
-                              | {
-                                  start?: string;
-                                  end?: string;
-                                }
+                              | { start?: string; end?: string }
                               | undefined
                           )?.start || "") as string
                         }
@@ -1572,10 +1214,7 @@ export default function MediaTable() {
                         value={
                           ((
                             tempFilterValues[config.key] as
-                              | {
-                                  start?: string;
-                                  end?: string;
-                                }
+                              | { start?: string; end?: string }
                               | undefined
                           )?.end || "") as string
                         }
@@ -1602,10 +1241,7 @@ export default function MediaTable() {
                         value={
                           ((
                             tempFilterValues[config.key] as
-                              | {
-                                  start?: string;
-                                  end?: string;
-                                }
+                              | { start?: string; end?: string }
                               | undefined
                           )?.start || "") as string
                         }
@@ -1628,10 +1264,7 @@ export default function MediaTable() {
                         value={
                           ((
                             tempFilterValues[config.key] as
-                              | {
-                                  start?: string;
-                                  end?: string;
-                                }
+                              | { start?: string; end?: string }
                               | undefined
                           )?.end || "") as string
                         }

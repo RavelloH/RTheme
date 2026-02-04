@@ -63,6 +63,7 @@ export const GetMediaListSchema = z.object({
   createdAtStart: z.string().optional(),
   createdAtEnd: z.string().optional(),
   hasReferences: z.boolean().optional(), // 新增：筛选是否有引用
+  folderId: z.number().int().positive().nullable().optional(), // 新增：文件夹筛选
 });
 
 export type GetMediaList = z.infer<typeof GetMediaListSchema>;

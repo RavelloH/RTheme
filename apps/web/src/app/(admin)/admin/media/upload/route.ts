@@ -88,7 +88,37 @@ export async function POST(request: NextRequest): Promise<Response> {
     const storageProviderId = formData.get("storageProviderId") as
       | string
       | null;
+    const folderIdStr = formData.get("folderId") as string | null;
+    let folderId = folderIdStr ? parseInt(folderIdStr, 10) : null;
     const file = formData.get("file") as File | null;
+
+    // 如果没有指定文件夹，默认使用公共空间根目录
+    if (folderId === null) {
+      const publicRoot = await prisma.virtualFolder.findFirst({
+        where: { systemType: "ROOT_PUBLIC" },
+        select: { id: true },
+      });
+      if (publicRoot) {
+        folderId = publicRoot.id;
+      }
+    }
+
+    // 验证目标文件夹：不能上传到 ROOT_USERS
+    if (folderId !== null) {
+      const targetFolder = await prisma.virtualFolder.findUnique({
+        where: { id: folderId },
+        select: { systemType: true },
+      });
+      if (targetFolder?.systemType === "ROOT_USERS") {
+        return response.badRequest({
+          message: "不能上传到用户目录",
+          error: {
+            code: "INVALID_FOLDER",
+            message: "请选择公共空间或我的文件夹",
+          },
+        }) as Response;
+      }
+    }
 
     // 检查是否为外部图片导入
     const externalUrl = formData.get("externalUrl") as string | null;
@@ -239,6 +269,7 @@ export async function POST(request: NextRequest): Promise<Response> {
             storageUrl: externalUrl, // 直接存储外部 URL
             storageProviderId: virtualStorage.id, // 使用虚拟存储提供商
             userUid: user.uid,
+            folderId: folderId || undefined,
           },
         });
 
@@ -485,6 +516,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         storageUrl: uploadResult.url,
         storageProviderId: storageProvider.id,
         userUid: user.uid,
+        folderId: folderId || undefined,
       },
     });
 

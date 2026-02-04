@@ -5,6 +5,7 @@ import {
   RiCheckFill,
   RiCloseFill,
   RiFileDamageFill,
+  RiFolderLine,
   RiImageAddFill,
   RiLoader4Line,
   RiRestartLine,
@@ -14,11 +15,14 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { getStorageList } from "@/actions/storage";
+import FolderPickerDialog from "@/app/(admin)/admin/media/FolderPickerDialog";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
+import { getAccessibleFolders } from "@/lib/client/folder-utils";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
+import Clickable from "@/ui/Clickable";
 import { Dialog } from "@/ui/Dialog";
 import { SegmentedControl } from "@/ui/SegmentedControl";
 import { Select } from "@/ui/Select";
@@ -117,6 +121,11 @@ function MediaAddInner() {
   const [selectedStorageId, setSelectedStorageId] = useState<string>("");
   const [loadingProviders, setLoadingProviders] = useState(false);
   const [userRole, setUserRole] = useState<string>("");
+  const [userUid, setUserUid] = useState<number>(0);
+  const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
+  const [selectedFolderName, setSelectedFolderName] =
+    useState<string>("公共空间");
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { success: toastSuccess, error: toastError } = useToast();
   const { broadcast } = useBroadcastSender<{ type: "media-refresh" }>();
@@ -134,13 +143,14 @@ function MediaAddInner() {
     }
   }, [searchParams, router]);
 
-  // 从 localStorage 获取用户角色
+  // 从 localStorage 获取用户角色和 UID
   useEffect(() => {
     try {
       const userInfoStr = localStorage.getItem("user_info");
       if (userInfoStr) {
         const userInfo: UserInfo = JSON.parse(userInfoStr);
         setUserRole(userInfo.role);
+        setUserUid(userInfo.uid);
       }
     } catch (error) {
       console.error("Failed to parse user info:", error);
@@ -181,6 +191,30 @@ function MediaAddInner() {
     }
   }, [userRole]);
 
+  // 加载默认文件夹（公共空间）
+  useEffect(() => {
+    if (userRole && userUid > 0) {
+      getAccessibleFolders(userRole, userUid, "", null)
+        .then(({ publicRootId }) => {
+          // 自动选择公共空间
+          if (publicRootId !== null) {
+            setSelectedFolderId(publicRootId);
+            setSelectedFolderName("公共空间");
+          }
+        })
+        .catch((err) => console.error("Failed to fetch folders:", err));
+    }
+  }, [userRole, userUid]);
+
+  // 处理文件夹选择
+  const handleFolderSelect = useCallback(
+    (folderId: number | null, folderName: string) => {
+      setSelectedFolderId(folderId);
+      setSelectedFolderName(folderName);
+    },
+    [],
+  );
+
   const openDialog = () => {
     setFiles([]);
     setMode("lossy");
@@ -189,19 +223,30 @@ function MediaAddInner() {
 
   const closeDialog = () => {
     if (uploading) return;
+    // 清理所有预览 URL
+    files.forEach((file) => {
+      if (file.previewUrl) {
+        URL.revokeObjectURL(file.previewUrl);
+        previewUrlsRef.current.delete(file.previewUrl);
+      }
+    });
     setDialogOpen(false);
     setFiles([]);
   };
 
   // 处理选择文件
   const handleFileSelect = useCallback((selectedFiles: FileList) => {
-    const newFiles = Array.from(selectedFiles).map((file) => ({
-      id: Math.random().toString(36).substring(2, 11),
-      file,
-      status: "pending" as const,
-      originalSize: file.size,
-      previewUrl: URL.createObjectURL(file),
-    }));
+    const newFiles = Array.from(selectedFiles).map((file) => {
+      const previewUrl = URL.createObjectURL(file);
+      previewUrlsRef.current.add(previewUrl);
+      return {
+        id: Math.random().toString(36).substring(2, 11),
+        file,
+        status: "pending" as const,
+        originalSize: file.size,
+        previewUrl,
+      };
+    });
 
     setFiles((prev) => [...prev, ...newFiles]);
   }, []);
@@ -252,16 +297,19 @@ function MediaAddInner() {
     }
   }, [dialogOpen, handlePaste]);
 
+  // 保存预览 URL 的引用，用于组件卸载时清理
+  const previewUrlsRef = useRef<Set<string>>(new Set());
+
   // 组件卸载时清理所有预览 URL
   useEffect(() => {
+    const urlsToClean = previewUrlsRef.current;
     return () => {
-      files.forEach((file) => {
-        if (file.previewUrl) {
-          URL.revokeObjectURL(file.previewUrl);
-        }
+      urlsToClean.forEach((url) => {
+        URL.revokeObjectURL(url);
       });
+      urlsToClean.clear();
     };
-  }, [files]);
+  }, []);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -288,6 +336,7 @@ function MediaAddInner() {
       const fileToRemove = prev.find((f) => f.id === id);
       if (fileToRemove?.previewUrl) {
         URL.revokeObjectURL(fileToRemove.previewUrl);
+        previewUrlsRef.current.delete(fileToRemove.previewUrl);
       }
       return prev.filter((f) => f.id !== id);
     });
@@ -345,6 +394,11 @@ function MediaAddInner() {
       // 如果选择了存储提供商，添加到 FormData
       if (selectedStorageId) {
         formData.append("storageProviderId", selectedStorageId);
+      }
+
+      // 如果选择了文件夹，添加到 FormData
+      if (selectedFolderId) {
+        formData.append("folderId", String(selectedFolderId));
       }
 
       // 使用 XMLHttpRequest 以支持进度追踪
@@ -686,6 +740,26 @@ function MediaAddInner() {
             </div>
           )}
 
+          {/* 文件夹选择 */}
+          <div className="space-y-2 flex flex-col gap-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              目标文件夹
+            </label>
+
+            <Clickable
+              onClick={() => !uploading && setFolderPickerOpen(true)}
+              hoverScale={1}
+              className={`flex items-center gap-2 px-3 py-2 border border-border rounded-md text-sm transition-colors ${
+                uploading
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:bg-muted/50"
+              }`}
+            >
+              <RiFolderLine className="text-muted-foreground" />
+              <span className="flex-1 text-left">{selectedFolderName}</span>
+            </Clickable>
+          </div>
+
           {/* 文件选择区域 */}
           <div
             onDragEnter={handleDrag}
@@ -920,6 +994,16 @@ function MediaAddInner() {
           </div>
         </div>
       </Dialog>
+
+      {/* 文件夹选择对话框 */}
+      <FolderPickerDialog
+        open={folderPickerOpen}
+        onClose={() => setFolderPickerOpen(false)}
+        onSelect={handleFolderSelect}
+        userRole={userRole}
+        userUid={userUid}
+        title="选择目标文件夹"
+      />
     </>
   );
 }

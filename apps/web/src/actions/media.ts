@@ -2,6 +2,7 @@
 import type {
   ApiResponse,
   ApiResponseData,
+  PaginationMeta,
 } from "@repo/shared-types/api/common";
 import type {
   BatchUpdateMedia,
@@ -153,6 +154,7 @@ export async function getMediaList(
     createdAtStart,
     createdAtEnd,
     hasReferences,
+    folderId,
   }: GetMediaList,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<MediaListItem[] | null>> {
@@ -181,6 +183,7 @@ export async function getMediaList(
       createdAtStart,
       createdAtEnd,
       hasReferences,
+      folderId,
     },
     GetMediaListSchema,
   );
@@ -206,8 +209,40 @@ export async function getMediaList(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const conditions: Record<string, any>[] = [];
 
-    // AUTHOR 只能查看自己的文件
-    if (user.role === "AUTHOR") {
+    // 权限控制逻辑：
+    // - 公共空间（ROOT_PUBLIC 及其子文件夹）：所有用户可查看
+    // - 私有空间（USER_HOME 及其子文件夹）：仅所有者和管理员可查看
+    // - 根目录（folderId 为 null）：显示公共空间的文件
+    let isPublicFolder = false;
+
+    if (folderId !== undefined && folderId !== null) {
+      // 检查当前文件夹是否属于公共空间
+      const currentFolder = await prisma.virtualFolder.findUnique({
+        where: { id: folderId },
+        select: { path: true, systemType: true },
+      });
+
+      if (currentFolder) {
+        // 获取 ROOT_PUBLIC 的 id
+        const publicRoot = await prisma.virtualFolder.findFirst({
+          where: { systemType: "ROOT_PUBLIC" },
+          select: { id: true },
+        });
+
+        if (publicRoot) {
+          // 如果当前文件夹是 ROOT_PUBLIC 或其子文件夹（path 包含 ROOT_PUBLIC 的 id）
+          isPublicFolder =
+            currentFolder.systemType === "ROOT_PUBLIC" ||
+            currentFolder.path.includes(`/${publicRoot.id}/`);
+        }
+      }
+    } else {
+      // folderId 为 null 时，在根目录显示公共空间的文件，属于公共区域
+      isPublicFolder = true;
+    }
+
+    // AUTHOR 只能查看自己的文件（仅在私有空间）
+    if (user.role === "AUTHOR" && !isPublicFolder) {
       conditions.push({ userUid: user.uid });
     } else if (userUid) {
       // EDITOR 和 ADMIN 可以筛选指定用户的文件
@@ -303,6 +338,11 @@ export async function getMediaList(
           },
         });
       }
+    }
+
+    // 文件夹筛选
+    if (folderId !== undefined && folderId !== null) {
+      conditions.push({ folderId });
     }
 
     if (conditions.length > 0) {
@@ -1568,4 +1608,1184 @@ export interface UploadMediaResult {
   width: number | null;
   /** 高度 */
   height: number | null;
+}
+
+// ============================================================================
+// 文件夹相关类型定义
+// ============================================================================
+
+export interface FolderItem {
+  id: number;
+  name: string;
+  systemType: "NORMAL" | "ROOT_PUBLIC" | "ROOT_USERS" | "USER_HOME";
+  userUid?: number | null;
+  parentId?: number | null;
+  path: string;
+  depth: number;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+  fileCount?: number;
+}
+
+export interface BreadcrumbItem {
+  id: number | null;
+  name: string;
+  systemType?: string;
+  userUid?: number | null;
+}
+
+export interface GetAccessibleFoldersParams {
+  access_token: string;
+  userRole: string;
+  userUid: number;
+  parentId?: number | null; // 获取指定父文件夹下的子文件夹
+}
+
+export interface GetFolderBreadcrumbParams {
+  access_token: string;
+  folderId: number | null;
+}
+
+export interface EnsureUserHomeFolderParams {
+  access_token: string;
+  userUid: number;
+  username: string;
+}
+
+// ============================================================================
+// 文件夹相关 Server Actions
+// ============================================================================
+
+/**
+ * 批量查询文件夹的文件计数（包括子孙文件夹中的文件）
+ * 使用物化路径实现高效查询
+ */
+async function batchGetFolderFileCounts(
+  folderIds: number[],
+): Promise<Map<number, number>> {
+  if (folderIds.length === 0) return new Map();
+
+  // 注意：根节点的 path 为空字符串 ""，子节点的 path 以 "/" 开头（如 "/2/"）
+  // 所以需要处理根节点的特殊情况：当 path 为空时，子节点的 path 应该匹配 "/{id}/%"
+  const counts = (await prisma.$queryRaw`
+    WITH folder_descendants AS (
+      SELECT fi.id as root_id, df.id as descendant_id
+      FROM "VirtualFolder" fi
+      JOIN "VirtualFolder" df ON (
+        df."path" LIKE
+          CASE WHEN fi."path" = '' THEN '/' ELSE fi."path" END
+          || CAST(fi.id AS TEXT) || '/%'
+        OR df.id = fi.id
+      )
+      WHERE fi.id = ANY(${folderIds}::int[])
+    )
+    SELECT fd.root_id as "folderId", COUNT(m.id)::int as "fileCount"
+    FROM folder_descendants fd
+    LEFT JOIN "Media" m ON m."folderId" = fd.descendant_id
+    GROUP BY fd.root_id
+  `) as Array<{ folderId: number; fileCount: number }>;
+
+  const map = new Map<number, number>();
+  for (const row of counts) {
+    map.set(row.folderId, row.fileCount);
+  }
+  return map;
+}
+
+/*
+  getAccessibleFolders - 获取用户可访问的文件夹列表
+*/
+export async function getAccessibleFolders(
+  params: GetAccessibleFoldersParams,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<FolderItem[] | null>>>;
+export async function getAccessibleFolders(
+  params: GetAccessibleFoldersParams,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<FolderItem[] | null>>;
+export async function getAccessibleFolders(
+  { access_token, userRole, userUid, parentId }: GetAccessibleFoldersParams,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<FolderItem[] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "getAccessibleFolders"))) {
+    return response.tooManyRequests();
+  }
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 构建查询条件
+    const where: Record<string, unknown> = {};
+
+    // 如果指定了 parentId，获取该文件夹下的子文件夹
+    if (parentId !== undefined && parentId !== null) {
+      where.parentId = parentId;
+
+      const folders = await prisma.virtualFolder.findMany({
+        where,
+        orderBy: [{ order: "asc" }, { id: "asc" }],
+        select: {
+          id: true,
+          name: true,
+          systemType: true,
+          userUid: true,
+          parentId: true,
+          path: true,
+          depth: true,
+          order: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      // 批量获取文件计数
+      const folderIds = folders.map((f) => f.id);
+      const fileCountMap = await batchGetFolderFileCounts(folderIds);
+
+      // 转换为响应格式
+      const folderList: FolderItem[] = folders.map((folder) => ({
+        id: folder.id,
+        name: folder.name,
+        systemType: folder.systemType as
+          | "NORMAL"
+          | "ROOT_PUBLIC"
+          | "ROOT_USERS"
+          | "USER_HOME",
+        userUid: folder.userUid,
+        parentId: folder.parentId,
+        path: folder.path,
+        depth: folder.depth,
+        order: folder.order,
+        createdAt: folder.createdAt.toISOString(),
+        updatedAt: folder.updatedAt.toISOString(),
+        fileCount: fileCountMap.get(folder.id) ?? 0,
+      }));
+
+      return response.ok({
+        data: folderList,
+      });
+    }
+
+    // 根目录的特殊处理：
+    // 1. 显示"我的文件夹"（USER_HOME）
+    // 2. 显示"用户目录"（ROOT_USERS）- 仅管理员/编辑
+    // 3. 显示"公共空间"（ROOT_PUBLIC）
+    // 4. 显示公共空间的直接子文件夹（用于 MediaGridView 展开显示）
+
+    // 先查找 ROOT_PUBLIC 的 id
+    const publicRoot = await prisma.virtualFolder.findFirst({
+      where: { systemType: "ROOT_PUBLIC" },
+      select: { id: true },
+    });
+
+    const publicRootId = publicRoot?.id || null;
+
+    // 构建根目录的查询条件
+    const conditions: Array<Record<string, unknown>> = [];
+
+    // 1. 用户的 USER_HOME
+    conditions.push({
+      systemType: "USER_HOME",
+      userUid: userUid,
+    });
+
+    // 2. ROOT_USERS - 仅管理员/编辑可见
+    if (userRole === "ADMIN" || userRole === "EDITOR") {
+      conditions.push({
+        systemType: "ROOT_USERS",
+      });
+    }
+
+    // 3. 公共空间本身（ROOT_PUBLIC）
+    conditions.push({
+      systemType: "ROOT_PUBLIC",
+    });
+
+    // 4. 公共空间的直接子文件夹
+    if (publicRootId) {
+      conditions.push({
+        parentId: publicRootId,
+      });
+    }
+
+    where.OR = conditions;
+
+    const folders = await prisma.virtualFolder.findMany({
+      where,
+      orderBy: [{ order: "asc" }, { id: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        systemType: true,
+        userUid: true,
+        parentId: true,
+        path: true,
+        depth: true,
+        order: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    // 批量获取文件计数
+    const rootFolderIds = folders.map((f) => f.id);
+    const rootFileCountMap = await batchGetFolderFileCounts(rootFolderIds);
+
+    // 转换为响应格式
+    const folderList: FolderItem[] = folders.map((folder) => ({
+      id: folder.id,
+      name: folder.name,
+      systemType: folder.systemType as
+        | "NORMAL"
+        | "ROOT_PUBLIC"
+        | "ROOT_USERS"
+        | "USER_HOME",
+      userUid: folder.userUid,
+      parentId: folder.parentId,
+      path: folder.path,
+      depth: folder.depth,
+      order: folder.order,
+      createdAt: folder.createdAt.toISOString(),
+      updatedAt: folder.updatedAt.toISOString(),
+      fileCount: rootFileCountMap.get(folder.id) ?? 0,
+    }));
+
+    // 返回结果，在 meta 中包含 publicRootId
+    return response.ok({
+      data: folderList,
+      meta: {
+        publicRootId,
+      } as unknown as PaginationMeta,
+    });
+  } catch (error) {
+    console.error("GetAccessibleFolders error:", error);
+    return response.serverError();
+  }
+}
+
+/*
+  getFolderBreadcrumb - 获取文件夹的面包屑导航
+*/
+export async function getFolderBreadcrumb(
+  params: GetFolderBreadcrumbParams,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<BreadcrumbItem[] | null>>>;
+export async function getFolderBreadcrumb(
+  params: GetFolderBreadcrumbParams,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<BreadcrumbItem[] | null>>;
+export async function getFolderBreadcrumb(
+  { access_token, folderId }: GetFolderBreadcrumbParams,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<BreadcrumbItem[] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "getFolderBreadcrumb"))) {
+    return response.tooManyRequests();
+  }
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 如果没有指定文件夹，返回根节点
+    if (!folderId) {
+      return response.ok({
+        data: [{ id: null, name: "全部" }],
+      });
+    }
+
+    // 查找当前文件夹
+    const folder = await prisma.virtualFolder.findUnique({
+      where: { id: folderId },
+      select: {
+        id: true,
+        name: true,
+        systemType: true,
+        userUid: true,
+        path: true,
+      },
+    });
+
+    if (!folder) {
+      return response.notFound({ message: "文件夹不存在" });
+    }
+
+    // 解析路径获取所有祖先文件夹 ID
+    // path 格式: "/1/5/10/"（祖先ID路径，不包括自身）
+    // 根节点的 path 为空字符串 ""
+    const pathIds =
+      folder.path === ""
+        ? []
+        : folder.path
+            .split("/")
+            .filter((id) => id !== "")
+            .map(Number)
+            .filter((id) => id !== folderId); // 排除当前文件夹 ID（以防数据异常）
+
+    // 获取所有祖先文件夹（排除当前文件夹）
+    const ancestors = await prisma.virtualFolder.findMany({
+      where: {
+        id: { in: pathIds },
+      },
+      orderBy: { depth: "asc" },
+      select: {
+        id: true,
+        name: true,
+        systemType: true,
+        userUid: true,
+      },
+    });
+
+    // 构建面包屑（包括当前文件夹本身）
+    const breadcrumb: BreadcrumbItem[] = [
+      { id: null, name: "全部" },
+      ...ancestors.map((item) => ({
+        id: item.id,
+        name: item.name,
+        systemType: item.systemType,
+        userUid: item.userUid,
+      })),
+      // 添加当前文件夹
+      {
+        id: folder.id,
+        name: folder.name,
+        systemType: folder.systemType,
+        userUid: folder.userUid,
+      },
+    ];
+
+    return response.ok({
+      data: breadcrumb,
+    });
+  } catch (error) {
+    console.error("GetFolderBreadcrumb error:", error);
+    return response.serverError();
+  }
+}
+
+/*
+  createFolder - 创建新文件夹
+*/
+export interface CreateFolderParams {
+  access_token: string;
+  name: string;
+  parentId: number | null; // 父文件夹 ID，null 表示创建在公共空间根目录
+  description?: string;
+}
+
+export async function createFolder(
+  params: CreateFolderParams,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<FolderItem | null>>>;
+export async function createFolder(
+  params: CreateFolderParams,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<FolderItem | null>>;
+export async function createFolder(
+  { access_token, name, parentId, description }: CreateFolderParams,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<FolderItem | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "createFolder"))) {
+    return response.tooManyRequests();
+  }
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  // 验证文件夹名称
+  if (!name || name.trim().length === 0) {
+    return response.badRequest({ message: "文件夹名称不能为空" });
+  }
+
+  if (name.length > 100) {
+    return response.badRequest({ message: "文件夹名称不能超过 100 个字符" });
+  }
+
+  // 检查名称是否包含非法字符
+  const invalidChars = /[/\\:*?"<>|]/;
+  if (invalidChars.test(name)) {
+    return response.badRequest({
+      message: '文件夹名称不能包含以下字符: / \\ : * ? " < > |',
+    });
+  }
+
+  try {
+    let actualParentId: number | null = parentId;
+    let parentFolder: {
+      id: number;
+      path: string;
+      depth: number;
+      systemType: string;
+      userUid: number | null;
+    } | null = null;
+
+    // 如果 parentId 为 null，需要确定实际的父文件夹
+    if (parentId === null) {
+      // 默认创建在公共空间根目录
+      const publicRoot = await prisma.virtualFolder.findFirst({
+        where: { systemType: "ROOT_PUBLIC" },
+        select: {
+          id: true,
+          path: true,
+          depth: true,
+          systemType: true,
+          userUid: true,
+        },
+      });
+
+      if (!publicRoot) {
+        return response.serverError({ message: "公共空间不存在" });
+      }
+
+      parentFolder = publicRoot;
+      actualParentId = publicRoot.id;
+    } else {
+      // 获取父文件夹信息
+      parentFolder = await prisma.virtualFolder.findUnique({
+        where: { id: parentId },
+        select: {
+          id: true,
+          path: true,
+          depth: true,
+          systemType: true,
+          userUid: true,
+        },
+      });
+
+      if (!parentFolder) {
+        return response.notFound({ message: "父文件夹不存在" });
+      }
+    }
+
+    // 权限检查
+    // ROOT_USERS 只有管理员可以在其下创建文件夹（用于创建用户目录）
+    if (parentFolder.systemType === "ROOT_USERS" && user.role !== "ADMIN") {
+      return response.forbidden({ message: "无权限在用户目录下创建文件夹" });
+    }
+
+    // USER_HOME 文件夹只有所有者或管理员可以在其下创建
+    if (parentFolder.systemType === "USER_HOME") {
+      if (parentFolder.userUid !== user.uid && user.role !== "ADMIN") {
+        return response.forbidden({
+          message: "无权限在其他用户的文件夹中创建子文件夹",
+        });
+      }
+    }
+
+    // AUTHOR 只能在自己的 USER_HOME 或其子文件夹下创建
+    if (user.role === "AUTHOR") {
+      // 检查父文件夹是否属于当前用户
+      const isOwnFolder = parentFolder.userUid === user.uid;
+      const isPublicRoot = parentFolder.systemType === "ROOT_PUBLIC";
+
+      if (!isOwnFolder && !isPublicRoot) {
+        return response.forbidden({
+          message: "无权限在此文件夹下创建子文件夹",
+        });
+      }
+    }
+
+    // 检查同级文件夹是否存在同名文件夹
+    const existingFolder = await prisma.virtualFolder.findFirst({
+      where: {
+        parentId: actualParentId,
+        name: name.trim(),
+      },
+    });
+
+    if (existingFolder) {
+      return response.badRequest({ message: "同级目录下已存在同名文件夹" });
+    }
+
+    // 计算新文件夹的路径和深度
+    // path 格式：祖先文件夹的 ID 路径（不包括自身）
+    // 根节点的 path 为空字符串
+    const newPath =
+      parentFolder.path === ""
+        ? `/${actualParentId}/`
+        : `${parentFolder.path}${actualParentId}/`;
+    const newDepth = parentFolder.depth + 1;
+
+    // 获取同级文件夹的最大 order
+    const maxOrder = await prisma.virtualFolder.aggregate({
+      where: { parentId: actualParentId },
+      _max: { order: true },
+    });
+
+    const newOrder = (maxOrder._max.order || 0) + 1;
+
+    // 创建文件夹
+    const newFolder = await prisma.virtualFolder.create({
+      data: {
+        name: name.trim(),
+        systemType: "NORMAL",
+        parentId: actualParentId,
+        path: newPath,
+        depth: newDepth,
+        order: newOrder,
+        description: description || null,
+        userUid: user.uid, // 文件夹所有者
+      },
+    });
+
+    // 记录审计日志
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(user.uid),
+        },
+        details: {
+          action: "CREATE_FOLDER",
+          resourceType: "VirtualFolder",
+          resourceId: String(newFolder.id),
+          value: {
+            old: null,
+            new: {
+              id: newFolder.id,
+              name: newFolder.name,
+              parentId: actualParentId,
+              path: newPath,
+            },
+          },
+          description: `创建文件夹: ${newFolder.name}`,
+        },
+      });
+    });
+
+    return response.ok({
+      data: {
+        id: newFolder.id,
+        name: newFolder.name,
+        systemType: newFolder.systemType as
+          | "NORMAL"
+          | "ROOT_PUBLIC"
+          | "ROOT_USERS"
+          | "USER_HOME",
+        userUid: newFolder.userUid,
+        parentId: newFolder.parentId,
+        path: newFolder.path,
+        depth: newFolder.depth,
+        order: newFolder.order,
+        createdAt: newFolder.createdAt.toISOString(),
+        updatedAt: newFolder.updatedAt.toISOString(),
+      },
+      message: "文件夹创建成功",
+    });
+  } catch (error) {
+    console.error("CreateFolder error:", error);
+    return response.serverError();
+  }
+}
+
+/*
+  ensureUserHomeFolder - 确保用户主文件夹存在（不存在则创建）
+*/
+export async function ensureUserHomeFolder(
+  params: EnsureUserHomeFolderParams,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<FolderItem | null>>>;
+export async function ensureUserHomeFolder(
+  params: EnsureUserHomeFolderParams,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<FolderItem | null>>;
+export async function ensureUserHomeFolder(
+  { access_token, userUid, username }: EnsureUserHomeFolderParams,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<FolderItem | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "ensureUserHomeFolder"))) {
+    return response.tooManyRequests();
+  }
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  // 只能为当前用户创建主文件夹
+  if (user.uid !== userUid && user.role !== "ADMIN") {
+    return response.forbidden({ message: "无权限为其他用户创建主文件夹" });
+  }
+
+  try {
+    // 检查用户主文件夹是否已存在
+    const existingFolder = await prisma.virtualFolder.findFirst({
+      where: {
+        systemType: "USER_HOME",
+        userUid: userUid,
+      },
+    });
+
+    if (existingFolder) {
+      // 已存在，直接返回
+      return response.ok({
+        data: {
+          id: existingFolder.id,
+          name: existingFolder.name,
+          systemType: existingFolder.systemType as
+            | "NORMAL"
+            | "ROOT_PUBLIC"
+            | "ROOT_USERS"
+            | "USER_HOME",
+          userUid: existingFolder.userUid,
+          parentId: existingFolder.parentId,
+          path: existingFolder.path,
+          depth: existingFolder.depth,
+          order: existingFolder.order,
+          createdAt: existingFolder.createdAt.toISOString(),
+          updatedAt: existingFolder.updatedAt.toISOString(),
+        },
+      });
+    }
+
+    // 查找用户目录（ROOT_USERS）
+    const usersFolder = await prisma.virtualFolder.findFirst({
+      where: {
+        systemType: "ROOT_USERS",
+      },
+      select: { id: true, path: true },
+    });
+
+    if (!usersFolder) {
+      return response.serverError({ message: "用户目录不存在" });
+    }
+
+    // 创建用户主文件夹
+    // path 格式：祖先文件夹的 ID 路径（不包括自身）
+    const userHomePath =
+      usersFolder.path === ""
+        ? `/${usersFolder.id}/`
+        : `${usersFolder.path}${usersFolder.id}/`;
+    const newFolder = await prisma.virtualFolder.create({
+      data: {
+        name: username,
+        systemType: "USER_HOME",
+        parentId: usersFolder.id,
+        userUid: userUid,
+        path: userHomePath,
+        depth: 1,
+        order: 0,
+      },
+    });
+
+    return response.ok({
+      data: {
+        id: newFolder.id,
+        name: newFolder.name,
+        systemType: newFolder.systemType,
+        userUid: newFolder.userUid,
+        parentId: newFolder.parentId,
+        path: newFolder.path,
+        depth: newFolder.depth,
+        order: newFolder.order,
+        createdAt: newFolder.createdAt.toISOString(),
+        updatedAt: newFolder.updatedAt.toISOString(),
+      },
+      message: "用户主文件夹创建成功",
+    });
+  } catch (error) {
+    console.error("EnsureUserHomeFolder error:", error);
+    return response.serverError();
+  }
+}
+
+// ============================================================================
+// 移动文件/文件夹
+// ============================================================================
+
+export interface MoveItemsParams {
+  access_token: string;
+  mediaIds?: number[]; // 要移动的媒体文件 ID
+  folderIds?: number[]; // 要移动的文件夹 ID
+  targetFolderId: number | null; // 目标文件夹 ID，null 表示移动到公共空间根目录
+}
+
+export interface MoveItemsResult {
+  movedMedia: number;
+  movedFolders: number;
+}
+
+export async function moveItems(
+  params: MoveItemsParams,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<MoveItemsResult | null>>>;
+export async function moveItems(
+  params: MoveItemsParams,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<MoveItemsResult | null>>;
+export async function moveItems(
+  { access_token, mediaIds, folderIds, targetFolderId }: MoveItemsParams,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<MoveItemsResult | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "moveItems"))) {
+    return response.tooManyRequests();
+  }
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  // 验证输入
+  if (
+    (!mediaIds || mediaIds.length === 0) &&
+    (!folderIds || folderIds.length === 0)
+  ) {
+    return response.badRequest({ message: "请选择要移动的文件或文件夹" });
+  }
+
+  try {
+    // 获取目标文件夹信息
+    let targetFolder: {
+      id: number;
+      path: string;
+      depth: number;
+      systemType: string;
+      userUid: number | null;
+    } | null = null;
+
+    if (targetFolderId !== null) {
+      targetFolder = await prisma.virtualFolder.findUnique({
+        where: { id: targetFolderId },
+        select: {
+          id: true,
+          path: true,
+          depth: true,
+          systemType: true,
+          userUid: true,
+        },
+      });
+
+      if (!targetFolder) {
+        return response.notFound({ message: "目标文件夹不存在" });
+      }
+
+      // 禁止移动到 ROOT_USERS 文件夹
+      if (targetFolder.systemType === "ROOT_USERS") {
+        return response.badRequest({
+          message: "不能将文件移动到用户目录，请选择具体的用户文件夹",
+        });
+      }
+    } else {
+      // 目标是公共空间根目录
+      const publicRoot = await prisma.virtualFolder.findFirst({
+        where: { systemType: "ROOT_PUBLIC" },
+        select: {
+          id: true,
+          path: true,
+          depth: true,
+          systemType: true,
+          userUid: true,
+        },
+      });
+
+      if (!publicRoot) {
+        return response.serverError({ message: "公共空间不存在" });
+      }
+
+      targetFolder = publicRoot;
+    }
+
+    // 权限检查：AUTHOR 只能移动到自己的文件夹或公共空间
+    if (user.role === "AUTHOR") {
+      const isPublicTarget =
+        targetFolder.systemType === "ROOT_PUBLIC" ||
+        targetFolder.path.includes(`/${targetFolder.id}/`);
+      const isOwnFolder = targetFolder.userUid === user.uid;
+
+      if (!isPublicTarget && !isOwnFolder) {
+        return response.forbidden({
+          message: "无权限移动到此文件夹",
+        });
+      }
+    }
+
+    let movedMedia = 0;
+    let movedFolders = 0;
+
+    await prisma.$transaction(async (tx) => {
+      // 移动媒体文件
+      if (mediaIds && mediaIds.length > 0) {
+        // 检查权限：AUTHOR 只能移动自己的文件
+        if (user.role === "AUTHOR") {
+          const ownedMedia = await tx.media.findMany({
+            where: { id: { in: mediaIds }, userUid: user.uid },
+            select: { id: true },
+          });
+          const ownedIds = ownedMedia.map((m) => m.id);
+
+          if (ownedIds.length > 0) {
+            const result = await tx.media.updateMany({
+              where: { id: { in: ownedIds } },
+              data: { folderId: targetFolder!.id },
+            });
+            movedMedia = result.count;
+          }
+        } else {
+          const result = await tx.media.updateMany({
+            where: { id: { in: mediaIds } },
+            data: { folderId: targetFolder!.id },
+          });
+          movedMedia = result.count;
+        }
+      }
+
+      // 移动文件夹
+      if (folderIds && folderIds.length > 0) {
+        // 获取要移动的文件夹信息
+        const foldersToMove = await tx.virtualFolder.findMany({
+          where: { id: { in: folderIds } },
+          select: {
+            id: true,
+            name: true,
+            path: true,
+            depth: true,
+            systemType: true,
+            userUid: true,
+          },
+        });
+
+        for (const folder of foldersToMove) {
+          // 不允许移动系统文件夹
+          if (
+            folder.systemType === "ROOT_PUBLIC" ||
+            folder.systemType === "ROOT_USERS" ||
+            folder.systemType === "USER_HOME"
+          ) {
+            continue;
+          }
+
+          // AUTHOR 只能移动自己的文件夹
+          if (user.role === "AUTHOR" && folder.userUid !== user.uid) {
+            continue;
+          }
+
+          // 不能移动到自身或其子文件夹
+          if (
+            folder.id === targetFolder!.id ||
+            targetFolder!.path.includes(`/${folder.id}/`)
+          ) {
+            continue;
+          }
+
+          // 检查目标文件夹下是否存在同名文件夹
+          const existing = await tx.virtualFolder.findFirst({
+            where: {
+              parentId: targetFolder!.id,
+              name: folder.name,
+            },
+          });
+
+          if (existing) {
+            continue; // 跳过同名文件夹
+          }
+
+          // 计算新路径
+          // path 格式：祖先文件夹的 ID 路径（不包括自身）
+          const newPath =
+            targetFolder!.path === ""
+              ? `/${targetFolder!.id}/`
+              : `${targetFolder!.path}${targetFolder!.id}/`;
+          const newDepth = targetFolder!.depth + 1;
+          const oldPathPrefix = `${folder.path}${folder.id}/`;
+          const depthDiff = newDepth - folder.depth;
+
+          // 更新文件夹本身
+          await tx.virtualFolder.update({
+            where: { id: folder.id },
+            data: {
+              parentId: targetFolder!.id,
+              path: newPath,
+              depth: newDepth,
+            },
+          });
+
+          // 更新所有子文件夹的路径
+          // 找到所有以旧路径开头的子文件夹
+          const descendants = await tx.virtualFolder.findMany({
+            where: {
+              path: { startsWith: oldPathPrefix },
+            },
+            select: { id: true, path: true, depth: true },
+          });
+
+          for (const desc of descendants) {
+            // 提取子文件夹相对于被移动文件夹的路径部分
+            // 例如：desc.path="/2/3/4/5/", folder.path="/2/3/"
+            // relativePart="4/5/"
+            const relativePart = desc.path.substring(oldPathPrefix.length - 1);
+            // 拼接新路径：newPath + relativePart
+            // 例如：newPath="/1/", relativePart="/4/5/"
+            // newDescPath="/1/4/5/"
+            const newDescPath = newPath + relativePart.slice(1); // 去掉开头的 /
+            await tx.virtualFolder.update({
+              where: { id: desc.id },
+              data: {
+                path: newDescPath,
+                depth: desc.depth + depthDiff,
+              },
+            });
+          }
+
+          movedFolders++;
+        }
+      }
+    });
+
+    // 记录审计日志
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: { uid: String(user.uid) },
+        details: {
+          action: "MOVE_ITEMS",
+          resourceType: "Media/VirtualFolder",
+          resourceId: `media:${mediaIds?.join(",") || ""};folders:${folderIds?.join(",") || ""}`,
+          value: {
+            old: null,
+            new: {
+              targetFolderId,
+              movedMedia,
+              movedFolders,
+            },
+          },
+          description: `移动 ${movedMedia} 个文件和 ${movedFolders} 个文件夹`,
+        },
+      });
+    });
+
+    return response.ok({
+      data: { movedMedia, movedFolders },
+      message: `成功移动 ${movedMedia} 个文件和 ${movedFolders} 个文件夹`,
+    });
+  } catch (error) {
+    console.error("MoveItems error:", error);
+    return response.serverError();
+  }
+}
+
+// ============================================================================
+// 删除文件夹
+// ============================================================================
+
+export interface DeleteFoldersParams {
+  access_token: string;
+  ids: number[];
+}
+
+export interface DeleteFoldersResult {
+  deleted: number;
+  deletedMediaCount: number;
+}
+
+export async function deleteFolders(
+  params: DeleteFoldersParams,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<DeleteFoldersResult | null>>>;
+export async function deleteFolders(
+  params: DeleteFoldersParams,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<DeleteFoldersResult | null>>;
+export async function deleteFolders(
+  { access_token, ids }: DeleteFoldersParams,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<DeleteFoldersResult | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "deleteFolders"))) {
+    return response.tooManyRequests();
+  }
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  if (!ids || ids.length === 0) {
+    return response.badRequest({ message: "请选择要删除的文件夹" });
+  }
+
+  try {
+    // 获取要删除的文件夹信息
+    const foldersToDelete = await prisma.virtualFolder.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        name: true,
+        path: true,
+        systemType: true,
+        userUid: true,
+      },
+    });
+
+    if (foldersToDelete.length === 0) {
+      return response.notFound({ message: "没有找到要删除的文件夹" });
+    }
+
+    // 过滤掉系统文件夹和无权限的文件夹
+    const deletableFolder = foldersToDelete.filter((folder) => {
+      // 不允许删除系统文件夹
+      if (
+        folder.systemType === "ROOT_PUBLIC" ||
+        folder.systemType === "ROOT_USERS" ||
+        folder.systemType === "USER_HOME"
+      ) {
+        return false;
+      }
+
+      // AUTHOR 只能删除自己的文件夹
+      if (user.role === "AUTHOR" && folder.userUid !== user.uid) {
+        return false;
+      }
+
+      return true;
+    });
+
+    if (deletableFolder.length === 0) {
+      return response.forbidden({
+        message: "没有权限删除选中的文件夹，或文件夹为系统文件夹",
+      });
+    }
+
+    let deleted = 0;
+    let deletedMediaCount = 0;
+
+    // 执行删除
+    await prisma.$transaction(async (tx) => {
+      for (const folder of deletableFolder) {
+        // 获取此文件夹及其所有子文件夹
+        const folderPath = `${folder.path}${folder.id}/`;
+        const descendantFolders = await tx.virtualFolder.findMany({
+          where: {
+            OR: [{ id: folder.id }, { path: { startsWith: folderPath } }],
+          },
+          select: { id: true },
+        });
+
+        const folderIdsToDelete = descendantFolders.map((f) => f.id);
+
+        // 先将这些文件夹中的媒体文件的 folderId 设为 null（移到根目录）
+        // 或者直接删除媒体文件（根据业务需求）
+        // 这里选择将媒体文件移到公共空间根目录
+        const publicRoot = await tx.virtualFolder.findFirst({
+          where: { systemType: "ROOT_PUBLIC" },
+          select: { id: true },
+        });
+
+        if (publicRoot) {
+          // 统计被影响的媒体文件数量
+          const affectedMedia = await tx.media.count({
+            where: { folderId: { in: folderIdsToDelete } },
+          });
+          deletedMediaCount += affectedMedia;
+
+          // 将媒体文件移到公共空间
+          await tx.media.updateMany({
+            where: { folderId: { in: folderIdsToDelete } },
+            data: { folderId: publicRoot.id },
+          });
+        }
+
+        // 删除文件夹（级联删除会自动删除子文件夹）
+        await tx.virtualFolder.delete({
+          where: { id: folder.id },
+        });
+
+        deleted++;
+      }
+    });
+
+    // 记录审计日志
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: { uid: String(user.uid) },
+        details: {
+          action: "DELETE_FOLDERS",
+          resourceType: "VirtualFolder",
+          resourceId: deletableFolder.map((f) => f.id).join(","),
+          value: {
+            old: {
+              folders: deletableFolder.map((f) => ({
+                id: f.id,
+                name: f.name,
+              })),
+            },
+            new: null,
+          },
+          description: `删除 ${deleted} 个文件夹，${deletedMediaCount} 个文件被移至公共空间`,
+        },
+      });
+    });
+
+    return response.ok({
+      data: { deleted, deletedMediaCount },
+      message:
+        deletedMediaCount > 0
+          ? `成功删除 ${deleted} 个文件夹，${deletedMediaCount} 个文件已移至公共空间`
+          : `成功删除 ${deleted} 个文件夹`,
+    });
+  } catch (error) {
+    console.error("DeleteFolders error:", error);
+    return response.serverError();
+  }
 }

@@ -59,6 +59,7 @@ model User {
   passkeys          Passkey[]
   commentLikes      CommentLike[]
   pushSubscriptions PushSubscription[]
+  virtualFolders    VirtualFolder[]
 
   // 索引优化
   @@index([role])
@@ -293,15 +294,58 @@ model Comment {
 model CommentLike {
   id        String   @id @default(uuid())
   commentId String
-  userId    Int
+  userUid   Int
   createdAt DateTime @default(now())
 
   comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [uid], onDelete: Cascade)
+  user    User    @relation(fields: [userUid], references: [uid], onDelete: Cascade)
 
-  @@unique([commentId, userId]) // 防止重复点赞
+  @@unique([commentId, userUid]) // 防止重复点赞
   @@index([commentId])
-  @@index([userId])
+  @@index([userUid])
+  @@index([createdAt])
+}
+
+// 虚拟文件夹模型 - 用于媒体文件的组织管理
+model VirtualFolder {
+  id   Int    @id @default(autoincrement())
+  name String @db.VarChar(100)
+
+  // 系统文件夹类型
+  systemType SystemFolderType @default(NORMAL)
+
+  // 层级关系
+  parentId Int?
+  parent   VirtualFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children VirtualFolder[] @relation("FolderHierarchy")
+
+  // 优化字段：物化路径与排序
+  path   String @default("") @db.VarChar(2048) // 祖先文件夹的 ID 路径，如 "/1/5/10/"
+  depth  Int    @default(0) // 层级深度 (0=顶级文件夹)
+  order  Int    @default(0) // 同级排序
+
+  // 描述
+  description String? @db.VarChar(255)
+
+  // 所属用户（USER_HOME 和 NORMAL 文件夹必需，ROOT_* 可选）
+  userUid Int?
+  user    User? @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+
+  // 关联的媒体文件
+  media Media[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 唯一约束：同一父文件夹下名称唯一
+  @@unique([parentId, name])
+  // 索引优化
+  @@index([parentId])
+  @@index([systemType])
+  @@index([userUid])
+  @@index([path])
+  @@index([depth])
+  @@index([order])
   @@index([createdAt])
 }
 
@@ -334,8 +378,13 @@ model Media {
   galleryPhoto Photo?
 
   // 上传者
-  userUid         Int
-  user            User            @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+  userUid Int
+  user    User @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+
+  // 虚拟文件夹关联
+  folderId Int?
+  folder   VirtualFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
   StorageProvider StorageProvider @relation(fields: [storageProviderId], references: [id], onDelete: Restrict)
 
   // 引用关系
@@ -344,6 +393,7 @@ model Media {
   @@unique([shortHash])
   // 索引优化
   @@index([userUid])
+  @@index([folderId])
   @@index([createdAt])
   @@index([fileName])
 }
@@ -404,6 +454,11 @@ model MediaReference {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // 唯一约束：同一实体的同一插槽不能重复引用同一媒体
+  @@unique([mediaId, postId, slot])
+  @@unique([mediaId, pageId, slot])
+  @@unique([mediaId, tagSlug, slot])
+  @@unique([mediaId, categoryId, slot])
   @@index([mediaId])
   @@index([postId, slot])
   @@index([pageId, slot])
@@ -867,4 +922,11 @@ enum GallerySize {
   WIDE
   LARGE
   AUTO
+}
+
+enum SystemFolderType {
+  NORMAL        // 普通文件夹 (默认)
+  ROOT_PUBLIC   // 公共根目录 (对应 /Public，所有用户可见)
+  ROOT_USERS    // 用户总目录 (对应 /Users，仅管理员可见)
+  USER_HOME     // 用户家目录 (对应 /Users/{username}，仅该用户和管理员可见)
 }

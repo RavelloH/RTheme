@@ -1743,7 +1743,7 @@ export async function getUserActivity(
       // 查询点赞
       prisma.commentLike.findMany({
         where: {
-          userId: uid,
+          userUid: uid,
         },
         select: {
           id: true,

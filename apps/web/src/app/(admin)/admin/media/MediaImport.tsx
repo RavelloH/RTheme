@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   RiCheckFill,
   RiCloseFill,
   RiFileDamageFill,
+  RiFolderLine,
   RiLinksFill,
   RiLoader4Line,
   RiRestartLine,
@@ -13,11 +14,14 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { getStorageList } from "@/actions/storage";
+import FolderPickerDialog from "@/app/(admin)/admin/media/FolderPickerDialog";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
+import { getAccessibleFolders } from "@/lib/client/folder-utils";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
+import Clickable from "@/ui/Clickable";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import { SegmentedControl } from "@/ui/SegmentedControl";
@@ -82,6 +86,11 @@ function MediaImportInner() {
   const [selectedStorageId, setSelectedStorageId] = useState<string>("");
   const [loadingProviders, setLoadingProviders] = useState(false);
   const [userRole, setUserRole] = useState<string>("");
+  const [userUid, setUserUid] = useState<number>(0);
+  const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
+  const [selectedFolderName, setSelectedFolderName] =
+    useState<string>("公共空间");
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false);
   const { success: toastSuccess, error: toastError } = useToast();
   const { broadcast } = useBroadcastSender<{ type: "media-refresh" }>();
   const searchParams = useSearchParams();
@@ -98,13 +107,14 @@ function MediaImportInner() {
     }
   }, [searchParams, router]);
 
-  // 从 localStorage 获取用户角色
+  // 从 localStorage 获取用户角色和 UID
   useEffect(() => {
     try {
       const userInfoStr = localStorage.getItem("user_info");
       if (userInfoStr) {
         const userInfo: UserInfo = JSON.parse(userInfoStr);
         setUserRole(userInfo.role);
+        setUserUid(userInfo.uid);
       }
     } catch (error) {
       console.error("Failed to parse user info:", error);
@@ -148,6 +158,30 @@ function MediaImportInner() {
         .finally(() => setLoadingProviders(false));
     }
   }, [importMode, userRole]);
+
+  // 加载初始文件夹信息（获取公共空间根目录 ID）
+  useEffect(() => {
+    if (userRole && userUid > 0) {
+      getAccessibleFolders(userRole, userUid, "", null)
+        .then(({ publicRootId }) => {
+          // 自动选择公共空间
+          if (publicRootId !== null) {
+            setSelectedFolderId(publicRootId);
+            setSelectedFolderName("公共空间");
+          }
+        })
+        .catch((err) => console.error("Failed to fetch folders:", err));
+    }
+  }, [userRole, userUid]);
+
+  // 处理文件夹选择
+  const handleFolderSelect = useCallback(
+    (folderId: number | null, folderName: string) => {
+      setSelectedFolderId(folderId);
+      setSelectedFolderName(folderName);
+    },
+    [],
+  );
 
   const openDialog = () => {
     setItems([]);
@@ -353,6 +387,11 @@ function MediaImportInner() {
         if (selectedStorageId) {
           formData.append("storageProviderId", selectedStorageId);
         }
+      }
+
+      // 如果选择了文件夹，添加到 FormData
+      if (selectedFolderId) {
+        formData.append("folderId", String(selectedFolderId));
       }
 
       // 使用 fetch 发送请求
@@ -666,13 +705,33 @@ function MediaImportInner() {
                   className="text-sm text-muted-foreground"
                   key="record-mode-info"
                 >
-                  将图片的元信息，例如文件大小、图片尺寸、模糊占位符等解析后保存到数据库，并为其启用站点的b图片优化。
+                  将图片的元信息，例如文件大小、图片尺寸、模糊占位符等解析后保存到数据库，并为其启用站点的图片优化。
                   其性能与常规上传的图片相同，并可在全站所有功能中使用。图片仍然托管在原始的外部
                   URL 上，不会上传到存储服务。
                 </p>
               )}
             </AutoTransition>
           </AutoResizer>
+
+          {/* 文件夹选择 */}
+          <div className="space-y-2 flex flex-col gap-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              目标文件夹
+            </label>
+
+            <Clickable
+              onClick={() => !importing && setFolderPickerOpen(true)}
+              hoverScale={1}
+              className={`flex items-center gap-2 px-3 py-2 border border-border rounded-md text-sm transition-colors ${
+                importing
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:bg-muted/50"
+              }`}
+            >
+              <RiFolderLine className="text-muted-foreground" />
+              <span className="flex-1 text-left">{selectedFolderName}</span>
+            </Clickable>
+          </div>
 
           {/* URL 输入区域 */}
           <div className="space-y-2">
@@ -868,6 +927,16 @@ function MediaImportInner() {
           </div>
         </div>
       </Dialog>
+
+      {/* 文件夹选择对话框 */}
+      <FolderPickerDialog
+        open={folderPickerOpen}
+        onClose={() => setFolderPickerOpen(false)}
+        onSelect={handleFolderSelect}
+        userRole={userRole}
+        userUid={userUid}
+        title="选择目标文件夹"
+      />
     </>
   );
 }

@@ -7736,8 +7736,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "type": "number",
-              "minimum": 0
+              "$ref": "#/components/schemas/CaptchaVerifyRequest"
             }
           }
         },
@@ -8378,19 +8377,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "key": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "value": {}
-              },
-              "required": [
-                "key",
-                "value"
-              ],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/UpdateSettings"
             }
           }
         },
@@ -9977,10 +9964,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "type": "integer",
-              "exclusiveMinimum": true,
-              "maximum": 9007199254740991,
-              "minimum": 0
+              "$ref": "#/components/schemas/UpdateUsers"
             }
           },
           "role": {
@@ -10104,10 +10088,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "type": "integer",
-              "exclusiveMinimum": true,
-              "maximum": 9007199254740991,
-              "minimum": 0
+              "$ref": "#/components/schemas/DeleteUsers"
             }
           }
         },
@@ -11394,10 +11375,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "type": "integer",
-              "exclusiveMinimum": true,
-              "maximum": 9007199254740991,
-              "minimum": 0
+              "$ref": "#/components/schemas/UpdatePosts"
             }
           },
           "status": {
@@ -11772,10 +11750,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "type": "integer",
-              "exclusiveMinimum": true,
-              "maximum": 9007199254740991,
-              "minimum": 0
+              "$ref": "#/components/schemas/DeletePosts"
             }
           }
         },
@@ -12761,7 +12736,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/DeleteTags"
             }
           }
         },
@@ -13769,10 +13744,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "type": "integer",
-              "exclusiveMinimum": true,
-              "maximum": 9007199254740991,
-              "minimum": 0
+              "$ref": "#/components/schemas/DeleteCategories"
             }
           }
         },
@@ -13846,10 +13818,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "type": "integer",
-              "exclusiveMinimum": true,
-              "maximum": 9007199254740991,
-              "minimum": 0
+              "$ref": "#/components/schemas/MoveCategories"
             }
           },
           "targetParentId": {
@@ -15486,9 +15455,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "type": "string",
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              "$ref": "#/components/schemas/UpdateCommentStatus"
             }
           },
           "status": {
@@ -15517,9 +15484,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "type": "string",
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              "$ref": "#/components/schemas/DeleteComments"
             }
           }
         },
@@ -17586,8 +17551,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/UpdatePages"
             }
           },
           "status": {
@@ -17886,8 +17850,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/DeletePages"
             }
           }
         },
@@ -18676,9 +18639,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "type": "string",
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              "$ref": "#/components/schemas/DeleteStorage"
             }
           }
         },
@@ -19355,10 +19316,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "type": "integer",
-              "exclusiveMinimum": true,
-              "maximum": 9007199254740991,
-              "minimum": 0
+              "$ref": "#/components/schemas/BatchUpdateMedia"
             }
           },
           "inGallery": {
@@ -19383,10 +19341,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "type": "integer",
-              "exclusiveMinimum": true,
-              "maximum": 9007199254740991,
-              "minimum": 0
+              "$ref": "#/components/schemas/DeleteMedia"
             }
           }
         },
@@ -20797,8 +20752,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/UpdateMenus"
             }
           },
           "status": {
@@ -20925,8 +20879,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/DeleteMenus"
             }
           }
         },
@@ -21080,7 +21033,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/MarkNoticesAsRead"
             }
           }
         },

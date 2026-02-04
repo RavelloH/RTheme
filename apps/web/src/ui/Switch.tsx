@@ -19,33 +19,37 @@ export interface SwitchProps
 
 type SwitchSize = "sm" | "md" | "lg";
 type SizeTokens = {
-  trackWidth: number;
-  trackHeight: number;
-  thumbSize: number;
-  padding: number;
+  trackWidth: string;
+  trackHeight: string;
+  thumbSize: string;
+  padding: string;
+  thumbTranslate: string;
   text: string;
 };
 
 const SIZE_MAP: Record<SwitchSize, SizeTokens> = {
   sm: {
-    trackWidth: 36,
-    trackHeight: 20,
-    thumbSize: 16,
-    padding: 2,
+    trackWidth: "2.25em", // 36px
+    trackHeight: "1.25em", // 20px
+    thumbSize: "1em", // 16px
+    padding: "0.125em", // 2px
+    thumbTranslate: "1em", // trackWidth - thumbSize - padding * 2 = 36 - 16 - 4 = 16px
     text: "text-sm",
   },
   md: {
-    trackWidth: 46,
-    trackHeight: 26,
-    thumbSize: 20,
-    padding: 2,
+    trackWidth: "2.875em", // 46px
+    trackHeight: "1.625em", // 26px
+    thumbSize: "1.25em", // 20px
+    padding: "0.125em", // 2px
+    thumbTranslate: "1.375em", // trackWidth - thumbSize - padding * 2 = 46 - 20 - 4 = 22px
     text: "text-base",
   },
   lg: {
-    trackWidth: 60,
-    trackHeight: 32,
-    thumbSize: 26,
-    padding: 3,
+    trackWidth: "3.75em", // 60px
+    trackHeight: "2em", // 32px
+    thumbSize: "1.625em", // 26px
+    padding: "0.1875em", // 3px
+    thumbTranslate: "1.75em", // trackWidth - thumbSize - padding * 2 = 60 - 26 - 6 = 28px
     text: "text-lg",
   },
 };
@@ -69,8 +73,6 @@ export function Switch({
   const labelId = label ? `${switchId}-label` : undefined;
 
   const sizeTokens = SIZE_MAP[(size ?? "md") as SwitchSize] ?? SIZE_MAP.md;
-  const thumbTranslate =
-    sizeTokens.trackWidth - sizeTokens.thumbSize - sizeTokens.padding * 2;
 
   const isControlled = checked !== undefined;
   const [internalChecked, setInternalChecked] = useState(
@@ -151,7 +153,7 @@ export function Switch({
         }}
       >
         <span
-          className={`absolute inset-0 rounded-sm transition-[opacity,colors] duration-500  ${
+          className={`absolute inset-0 rounded-sm transition-[opacity,colors,background] duration-500  ${
             isChecked
               ? "bg-primary"
               : "bg-foreground/30 dark:bg-muted-foreground/40"
@@ -163,7 +165,7 @@ export function Switch({
             width: sizeTokens.thumbSize,
             height: sizeTokens.thumbSize,
           }}
-          animate={{ x: isChecked ? thumbTranslate : 0 }}
+          animate={{ x: isChecked ? sizeTokens.thumbTranslate : 0 }}
           transition={{
             type: "spring",
             stiffness: 500,
