@@ -397,7 +397,7 @@ async function seedSystemFolders(prisma: any) {
           systemType: "ROOT_PUBLIC",
           parentId: null,
           userUid: null,
-          path: "", // 根节点没有祖先，path 为空
+          path: "1", // 根节点的 path 为自己的 ID（格式：包含自己的ID，如 Comment）
           depth: 0,
           order: 0,
         },
@@ -422,7 +422,7 @@ async function seedSystemFolders(prisma: any) {
           systemType: "ROOT_USERS",
           parentId: null,
           userUid: null,
-          path: "", // 根节点没有祖先，path 为空
+          path: "2", // 根节点的 path 为自己的 ID（格式：包含自己的ID，如 Comment）
           depth: 0,
           order: 1,
         },

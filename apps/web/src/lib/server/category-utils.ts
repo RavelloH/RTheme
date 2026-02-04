@@ -57,7 +57,8 @@ export async function buildCategoryTree(
 
     if (!parent) return [];
 
-    const prefix = `${parent.path}${parentId}${PATH_SEPARATOR}`;
+    // path 格式：包含自己的 ID，格式如 "5/10/15"（与 Comment 一致）
+    const prefix = `${parent.path}${PATH_SEPARATOR}`;
 
     categories = await prisma.category.findMany({
       where: {
@@ -165,7 +166,7 @@ export async function validateCategoryMove(
   if (!newParent) return false; // 父级不存在，虽然后续会报错，但这里不算循环引用
 
   // 检查路径中是否包含当前 ID
-  // 路径格式如 "/1/5/12/"
+  // path 格式：包含自己的 ID，格式如 "5/10/15"（与 Comment 一致）
   const pathIds = newParent.path
     .split(PATH_SEPARATOR)
     .filter((p) => p)
@@ -193,10 +194,13 @@ export async function getCategoryPath(categoryId: number): Promise<string[]> {
   }
 
   // 解析 path 中的 ID
+  // path 格式：包含自己的 ID，格式如 "5/10/15"（与 Comment 一致）
+  // 需要排除最后一个（自己的 ID）
   const ancestorIds = category.path
     .split(PATH_SEPARATOR)
     .filter((p) => p)
-    .map(Number);
+    .map(Number)
+    .slice(0, -1);
 
   if (ancestorIds.length === 0) {
     return [category.slug];
@@ -237,10 +241,13 @@ export async function getCategoryNamePath(
     return [];
   }
 
+  // path 格式：包含自己的 ID，格式如 "5/10/15"（与 Comment 一致）
+  // 需要排除最后一个（自己的 ID）
   const ancestorIds = category.path
     .split(PATH_SEPARATOR)
     .filter((p) => p)
-    .map(Number);
+    .map(Number)
+    .slice(0, -1);
 
   if (ancestorIds.length === 0) {
     return [category.name];
@@ -275,7 +282,8 @@ export async function getAllDescendantIds(
   if (!category) return [];
 
   // 使用 path 前缀匹配（高性能）
-  const prefix = `${category.path}${categoryId}${PATH_SEPARATOR}`;
+  // path 格式：包含自己的 ID，格式如 "5/10/15"（与 Comment 一致）
+  const prefix = `${category.path}${PATH_SEPARATOR}`;
 
   const descendants = await prisma.category.findMany({
     where: {
@@ -391,10 +399,13 @@ export async function getCategoryParentNamePath(
     return [];
   }
 
+  // path 格式：包含自己的 ID，格式如 "5/10/15"（与 Comment 一致）
+  // 需要排除最后一个（自己的 ID）
   const ancestorIds = category.path
     .split(PATH_SEPARATOR)
     .filter((p) => p)
-    .map(Number);
+    .map(Number)
+    .slice(0, -1);
 
   if (ancestorIds.length === 0) return [];
 
@@ -493,6 +504,7 @@ export async function batchGetCategoryPaths(
   });
 
   // 2. 收集所有需要的祖先 ID
+  // path 格式：包含自己的 ID，格式如 "5/10/15"（与 Comment 一致）
   const allAncestorIds = new Set<number>();
   targets.forEach((t) => {
     t.path.split(PATH_SEPARATOR).forEach((p) => {
@@ -510,10 +522,12 @@ export async function batchGetCategoryPaths(
   const resultMap = new Map<number, { name: string; slug: string }[]>();
 
   targets.forEach((t) => {
+    // 需要排除最后一个（自己的 ID）
     const pathIds = t.path
       .split(PATH_SEPARATOR)
       .filter((p) => p)
-      .map(Number);
+      .map(Number)
+      .slice(0, -1);
 
     const path: { name: string; slug: string }[] = [];
     let currentSlugPath = "";

@@ -1666,16 +1666,14 @@ async function batchGetFolderFileCounts(
 ): Promise<Map<number, number>> {
   if (folderIds.length === 0) return new Map();
 
-  // 注意：根节点的 path 为空字符串 ""，子节点的 path 以 "/" 开头（如 "/2/"）
-  // 所以需要处理根节点的特殊情况：当 path 为空时，子节点的 path 应该匹配 "/{id}/%"
+  // path 格式：包含自己的 ID，格式如 "2/3/4"（与 Comment 一致）
+  // 查找子孙节点：df.path LIKE fi.path || '/%'
   const counts = (await prisma.$queryRaw`
     WITH folder_descendants AS (
       SELECT fi.id as root_id, df.id as descendant_id
       FROM "VirtualFolder" fi
       JOIN "VirtualFolder" df ON (
-        df."path" LIKE
-          CASE WHEN fi."path" = '' THEN '/' ELSE fi."path" END
-          || CAST(fi.id AS TEXT) || '/%'
+        df."path" LIKE fi."path" || '/' || '%'
         OR df.id = fi.id
       )
       WHERE fi.id = ANY(${folderIds}::int[])
@@ -1934,16 +1932,15 @@ export async function getFolderBreadcrumb(
     }
 
     // 解析路径获取所有祖先文件夹 ID
-    // path 格式: "/1/5/10/"（祖先ID路径，不包括自身）
-    // 根节点的 path 为空字符串 ""
-    const pathIds =
-      folder.path === ""
-        ? []
-        : folder.path
-            .split("/")
-            .filter((id) => id !== "")
-            .map(Number)
-            .filter((id) => id !== folderId); // 排除当前文件夹 ID（以防数据异常）
+    // path 格式: "2/3/4"（包含自己的 ID，与 Comment 一致）
+    // 需要排除最后一个（自己的 ID）
+    const pathIds = folder.path
+      ? folder.path
+          .split("/")
+          .filter((id) => id !== "")
+          .map(Number)
+          .slice(0, -1) // 排除最后一个（自己的 ID）
+      : [];
 
     // 获取所有祖先文件夹（排除当前文件夹）
     const ancestors = await prisma.virtualFolder.findMany({
@@ -2131,15 +2128,6 @@ export async function createFolder(
       return response.badRequest({ message: "同级目录下已存在同名文件夹" });
     }
 
-    // 计算新文件夹的路径和深度
-    // path 格式：祖先文件夹的 ID 路径（不包括自身）
-    // 根节点的 path 为空字符串
-    const newPath =
-      parentFolder.path === ""
-        ? `/${actualParentId}/`
-        : `${parentFolder.path}${actualParentId}/`;
-    const newDepth = parentFolder.depth + 1;
-
     // 获取同级文件夹的最大 order
     const maxOrder = await prisma.virtualFolder.aggregate({
       where: { parentId: actualParentId },
@@ -2147,19 +2135,32 @@ export async function createFolder(
     });
 
     const newOrder = (maxOrder._max.order || 0) + 1;
+    const newDepth = parentFolder.depth + 1;
 
-    // 创建文件夹
+    // 创建文件夹（先使用临时 path）
+    // path 格式：包含自己的 ID，格式如 "2/3/4"（与 Comment 一致）
+    // 但创建时还不知道自己的 ID，所以先设为空，创建后更新
     const newFolder = await prisma.virtualFolder.create({
       data: {
         name: name.trim(),
         systemType: "NORMAL",
         parentId: actualParentId,
-        path: newPath,
+        path: "", // 临时空值，稍后更新
         depth: newDepth,
         order: newOrder,
         description: description || null,
         userUid: user.uid, // 文件夹所有者
       },
+    });
+
+    // 更新 path（现在知道了新文件夹的 ID）
+    const correctPath = parentFolder.path
+      ? `${parentFolder.path}/${newFolder.id}`
+      : `${newFolder.id}`;
+
+    await prisma.virtualFolder.update({
+      where: { id: newFolder.id },
+      data: { path: correctPath },
     });
 
     // 记录审计日志
@@ -2179,7 +2180,7 @@ export async function createFolder(
               id: newFolder.id,
               name: newFolder.name,
               parentId: actualParentId,
-              path: newPath,
+              path: correctPath,
             },
           },
           description: `创建文件夹: ${newFolder.name}`,
@@ -2198,7 +2199,7 @@ export async function createFolder(
           | "USER_HOME",
         userUid: newFolder.userUid,
         parentId: newFolder.parentId,
-        path: newFolder.path,
+        path: correctPath,
         depth: newFolder.depth,
         order: newFolder.order,
         createdAt: newFolder.createdAt.toISOString(),
@@ -2294,11 +2295,10 @@ export async function ensureUserHomeFolder(
     }
 
     // 创建用户主文件夹
-    // path 格式：祖先文件夹的 ID 路径（不包括自身）
-    const userHomePath =
-      usersFolder.path === ""
-        ? `/${usersFolder.id}/`
-        : `${usersFolder.path}${usersFolder.id}/`;
+    // path 格式：包含自己的 ID，格式如 "2/3"（与 Comment 一致）
+    const userHomePath = usersFolder.path
+      ? `${usersFolder.path}/${usersFolder.id}`
+      : `${usersFolder.id}`;
     const newFolder = await prisma.virtualFolder.create({
       data: {
         name: username,
@@ -2533,13 +2533,12 @@ export async function moveItems(
           }
 
           // 计算新路径
-          // path 格式：祖先文件夹的 ID 路径（不包括自身）
-          const newPath =
-            targetFolder!.path === ""
-              ? `/${targetFolder!.id}/`
-              : `${targetFolder!.path}${targetFolder!.id}/`;
+          // path 格式：包含自己的 ID，格式如 "2/3/4"（与 Comment 一致）
+          const newPath = targetFolder!.path
+            ? `${targetFolder!.path}/${folder.id}`
+            : `${folder.id}`;
           const newDepth = targetFolder!.depth + 1;
-          const oldPathPrefix = `${folder.path}${folder.id}/`;
+          const oldPathPrefix = `${folder.path}/`;
           const depthDiff = newDepth - folder.depth;
 
           // 更新文件夹本身
@@ -2563,13 +2562,16 @@ export async function moveItems(
 
           for (const desc of descendants) {
             // 提取子文件夹相对于被移动文件夹的路径部分
-            // 例如：desc.path="/2/3/4/5/", folder.path="/2/3/"
-            // relativePart="4/5/"
-            const relativePart = desc.path.substring(oldPathPrefix.length - 1);
-            // 拼接新路径：newPath + relativePart
-            // 例如：newPath="/1/", relativePart="/4/5/"
-            // newDescPath="/1/4/5/"
-            const newDescPath = newPath + relativePart.slice(1); // 去掉开头的 /
+            // 例如：desc.path="2/3/4/5/6", folder.path="2/3/4"
+            // oldPathPrefix="2/3/4/"
+            // relativePart="5/6"
+            const relativePart = desc.path.substring(oldPathPrefix.length);
+            // 拼接新路径：newPath + "/" + relativePart
+            // 例如：newPath="1/9/4", relativePart="5/6"
+            // newDescPath="1/9/4/5/6"
+            const newDescPath = relativePart
+              ? `${newPath}/${relativePart}`
+              : newPath;
             await tx.virtualFolder.update({
               where: { id: desc.id },
               data: {
@@ -2713,7 +2715,8 @@ export async function deleteFolders(
     await prisma.$transaction(async (tx) => {
       for (const folder of deletableFolder) {
         // 获取此文件夹及其所有子文件夹
-        const folderPath = `${folder.path}${folder.id}/`;
+        // path 格式：包含自己的 ID，格式如 "2/3/4"（与 Comment 一致）
+        const folderPath = `${folder.path}/`;
         const descendantFolders = await tx.virtualFolder.findMany({
           where: {
             OR: [{ id: folder.id }, { path: { startsWith: folderPath } }],
