@@ -135,3 +135,136 @@ export interface EditorInitialData {
   enableConentSync?: boolean;
   featuredImages?: string[];
 }
+
+// ============================================================================
+// 新架构类型定义 - 用于 EditorCore 纯 UI 组件
+// ============================================================================
+
+/**
+ * 对话框字段类型
+ */
+export interface DialogField {
+  name: string;
+  label: string;
+  type:
+    | "text"
+    | "textarea"
+    | "select"
+    | "checkbox"
+    | "category"
+    | "tags"
+    | "media"
+    | "date";
+  required?: boolean;
+  options?: { value: string; label: string }[];
+  helperText?: string;
+  multiple?: boolean;
+  placeholder?: string;
+  rows?: number;
+}
+
+/**
+ * 对话框操作按钮
+ */
+export interface DialogAction {
+  id: string;
+  label: string;
+  variant: "primary" | "ghost" | "danger" | "secondary" | "outline";
+  onClick: (data: Record<string, unknown>) => void | Promise<void>;
+  loading?: boolean;
+  loadingText?: string;
+  disabled?: boolean;
+  disabledText?: string;
+}
+
+/**
+ * 对话框配置
+ */
+export interface DialogConfig {
+  id: string;
+  type: "details" | "confirm" | "custom";
+  title: string;
+  size?: "sm" | "md" | "lg" | "xl";
+
+  // 字段配置（用于详情对话框）
+  fieldGroups?: DialogFieldGroup[];
+
+  // 自定义内容渲染函数（用于自定义对话框）
+  renderContent?: (props: {
+    formData: Record<string, unknown>;
+    onFieldChange: (field: string, value: unknown) => void;
+    onClose: () => void;
+  }) => React.ReactNode;
+
+  // 对话框操作按钮
+  actions?: DialogAction[];
+
+  // 对话框是否显示
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+/**
+ * 对话框字段分组
+ */
+export interface DialogFieldGroup {
+  title?: string;
+  fields: DialogField[];
+}
+
+/**
+ * 状态栏操作按钮配置
+ */
+export interface StatusBarActionConfig {
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  variant: "primary" | "ghost" | "danger" | "secondary" | "outline";
+  onClick: () => void | Promise<void>;
+  loading?: boolean;
+  loadingText?: string;
+  disabled?: boolean;
+  disabledText?: string;
+  showWhen?: (formData: Record<string, unknown>) => boolean;
+}
+
+/**
+ * 工具栏按钮配置
+ */
+export interface ToolbarButtonConfig {
+  id: string;
+  icon: React.ReactNode;
+  label: string;
+  action: () => void;
+  isActive?: boolean;
+  disabled?: boolean;
+  tooltip?: string;
+  divider?: boolean; // 是否在按钮前添加分隔线
+}
+
+/**
+ * EditorCore Props - 纯 UI 编辑器组件的属性
+ */
+export interface EditorCoreProps {
+  // 基础配置
+  content: string;
+  storageKey: string;
+  availableModes?: EditorMode[];
+  defaultMode?: EditorMode;
+
+  // 对话框配置
+  dialogs?: DialogConfig[];
+
+  // 状态栏额外操作按钮
+  statusBarActions?: StatusBarActionConfig[];
+
+  // 事件回调
+  onChange?: (content: string) => void;
+  onSave?: (formData: Record<string, unknown>) => void | Promise<void>;
+  onPublish?: (formData: Record<string, unknown>) => void | Promise<void>;
+  onModeChange?: (mode: EditorMode) => void;
+  onExtraAction?: (
+    actionId: string,
+    formData: Record<string, unknown>,
+  ) => void | Promise<void>;
+}

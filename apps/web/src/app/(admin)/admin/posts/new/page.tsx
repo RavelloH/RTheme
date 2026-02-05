@@ -1,4 +1,4 @@
-import Editor from "@/components/client/features/editor/Editor";
+import { PostEditorWrapper } from "@/components/client/features/editor/PostEditorWrapper";
 import AdminSidebar from "@/components/client/layout/AdminSidebar";
 import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
 import MainLayout from "@/components/client/layout/MainLayout";
@@ -25,9 +25,12 @@ export default async function NewPostPage() {
         snapToElements={false}
       >
         <AdminSidebar />
-        {/* // TODO: 实现类似Grid的平分效果 */}
         <div className="w-full overflow-y-auto">
-          <Editor content="# 未命名文章" />
+          <PostEditorWrapper
+            content="# 未命名文章"
+            storageKey="new"
+            isEditMode={false}
+          />
         </div>
       </HorizontalScroll>
     </MainLayout>

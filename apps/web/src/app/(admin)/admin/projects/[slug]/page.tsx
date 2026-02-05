@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { getProjectDetail } from "@/actions/project";
-import ProjectEditorWrapper from "@/app/(admin)/admin/projects/[slug]/ProjectEditorWrapper";
+import { ProjectEditorWrapper } from "@/components/client/features/editor/ProjectEditorWrapper";
 import AdminSidebar from "@/components/client/layout/AdminSidebar";
 import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
 import MainLayout from "@/components/client/layout/MainLayout";
@@ -55,7 +55,33 @@ export default async function EditProjectPage(props: Props) {
       >
         <AdminSidebar />
         <div className="w-full overflow-y-auto">
-          <ProjectEditorWrapper project={project} access_token={access_token!} />
+          <ProjectEditorWrapper
+            content={project.content || ""}
+            storageKey={project.slug}
+            isEditMode={true}
+            initialData={{
+              title: project.title,
+              slug: project.slug,
+              description: project.description,
+              status: project.status,
+              demoUrl: project.demoUrl || "",
+              repoUrl: project.repoUrl || "",
+              techStack: project.techStack || [],
+              repoPath: project.repoPath || "",
+              license: project.license || "",
+              enableGithubSync: project.enableGithubSync,
+              enableConentSync: project.enableConentSync,
+              featuredImages: project.featuredImages || [],
+              startedAt: project.startedAt
+                ? new Date(project.startedAt).toISOString().split("T")[0]
+                : "",
+              categories: project.categories,
+              tags: project.tags,
+            }}
+            projectId={project.id}
+            accessToken={access_token!}
+            enableGithubSyncAction={true}
+          />
         </div>
       </HorizontalScroll>
     </MainLayout>

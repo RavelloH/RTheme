@@ -21,6 +21,9 @@
   "engines": {
     "node": ">=18"
   },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,css,md}": "prettier --write"
+  },
   "pnpm": {
     "overrides": {
       "glob": "^11.1.0",

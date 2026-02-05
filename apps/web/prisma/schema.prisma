@@ -61,6 +61,8 @@ model User {
   pushSubscriptions PushSubscription[]
   virtualFolders    VirtualFolder[]
   projects          Project[]
+  ownedLinks        FriendLink[]              @relation("LinkOwner")
+  auditedLinks      FriendLink[]              @relation("LinkAuditor")
 
   // 索引优化
   @@index([role])
@@ -882,6 +884,62 @@ model Project {
   @@index([status])
   @@index([slug])
   @@index([createdAt])
+}
+
+model FriendLink {
+  id Int @id @default(autoincrement())
+
+  // 基本信息
+  name   String  @db.VarChar(100)
+  url    String  @db.VarChar(500)
+  avatar String? @db.VarChar(500)
+  slogan String? @db.VarChar(255)
+
+  // 回链检测
+  friendLinkUrl  String? @db.VarChar(500)
+  ignoreBacklink Boolean @default(false)
+
+  // 展示配置
+  group String? @db.VarChar(50)
+  order Int     @default(0) // 同组内排序
+
+  // 状态
+  status FriendLinkStatus @default(PENDING)
+
+  // 健康检查统计
+  checkSuccessCount Int       @default(0)
+  checkFailureCount Int       @default(0)
+  lastCheckedAt     DateTime?
+
+  // 最近30次检查结果（JSON 数组）
+  checkHistory    Json? // [{ time, responseTime, hasBacklink }]
+  avgResponseTime Int?
+
+  // 申请相关
+  ownerId   Int?    @map("owner_uid")
+  owner     User?   @relation("LinkOwner", fields: [ownerId], references: [uid], onDelete: SetNull)
+  applyNote String? @db.VarChar(1000) // 申请备注
+
+  // 审核相关
+  auditorId Int?  @map("auditor_uid")
+  auditor   User? @relation("LinkAuditor", fields: [auditorId], references: [uid], onDelete: SetNull)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  publishedAt DateTime?
+
+  @@index([status])
+  @@index([group, order])
+  @@index([lastCheckedAt])
+}
+
+enum FriendLinkStatus {
+  PENDING // 待审核
+  PUBLISHED // 正常显示
+  REJECTED // 已拒绝
+  DISCONNECT // 无法访问
+  NO_BACKLINK // 无回链
+  BLOCKED // 已拉黑
 }
 
 enum ProjectStatus {
