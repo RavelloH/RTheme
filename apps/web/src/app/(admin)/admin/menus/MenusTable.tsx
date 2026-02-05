@@ -893,7 +893,6 @@ export default function MenusTable() {
               onClick={handleSaveMenu}
               size="sm"
               loading={isSubmitting}
-              loadingText="保存中..."
             />
           </div>
         </div>
@@ -936,7 +935,6 @@ export default function MenusTable() {
               onClick={handleConfirmBatchStatus}
               size="sm"
               loading={isSubmitting}
-              loadingText="更新中..."
             />
           </div>
         </div>
@@ -980,7 +978,6 @@ export default function MenusTable() {
               onClick={handleConfirmBatchCategory}
               size="sm"
               loading={isSubmitting}
-              loadingText="更新中..."
             />
           </div>
         </div>

@@ -238,7 +238,6 @@ export const PasswordDialogs = React.forwardRef<
               variant="secondary"
               onClick={handleChangePassword}
               loading={passwordLoading}
-              loadingText="修改中..."
               size="sm"
             />
           </div>
@@ -303,7 +302,6 @@ export const PasswordDialogs = React.forwardRef<
               variant="secondary"
               onClick={handleSetPassword}
               loading={passwordLoading}
-              loadingText="设置中..."
               size="sm"
             />
           </div>

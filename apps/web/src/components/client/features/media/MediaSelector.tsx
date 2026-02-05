@@ -1352,7 +1352,6 @@ export default function MediaSelector({
                       onClick={handleUploadAndSelect}
                       size="sm"
                       loading={uploading}
-                      loadingText="上传中..."
                       disabled={uploadFiles.length === 0}
                     />
                   </div>
@@ -1563,7 +1562,6 @@ export default function MediaSelector({
                       onClick={handleImportAndSelect}
                       size="sm"
                       loading={importing}
-                      loadingText="导入中..."
                       disabled={importItems.length === 0}
                     />
                   </div>

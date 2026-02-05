@@ -248,7 +248,6 @@ export default function CustomWordManager() {
               variant="primary"
               onClick={handleAdd}
               loading={isLoading}
-              loadingText="添加中..."
               disabled={!word.trim()}
               size="sm"
             />

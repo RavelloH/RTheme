@@ -635,7 +635,6 @@ export default function TagsTable() {
               onClick={handleSaveTag}
               size="sm"
               loading={isSubmitting}
-              loadingText="保存中..."
             />
           </div>
         </div>

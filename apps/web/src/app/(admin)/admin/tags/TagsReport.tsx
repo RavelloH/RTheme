@@ -283,7 +283,6 @@ export default function TagsReport() {
               onClick={handleCreateTag}
               size="sm"
               loading={isSubmitting}
-              loadingText="创建中..."
             />
           </div>
         </div>

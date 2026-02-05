@@ -1105,7 +1105,6 @@ export default function UsersTable() {
                 onClick={handleSaveUser}
                 size="sm"
                 loading={isSubmitting}
-                loadingText="保存中..."
               />
             </div>
           </div>
@@ -1152,7 +1151,6 @@ export default function UsersTable() {
               onClick={handleConfirmBatchStatus}
               size="sm"
               loading={isSubmitting}
-              loadingText="更新中..."
             />
           </div>
         </div>
@@ -1199,7 +1197,6 @@ export default function UsersTable() {
               onClick={handleConfirmBatchRole}
               size="sm"
               loading={isSubmitting}
-              loadingText="更新中..."
             />
           </div>
         </div>

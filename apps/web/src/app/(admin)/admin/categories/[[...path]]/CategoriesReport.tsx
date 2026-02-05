@@ -345,7 +345,6 @@ export default function CategoriesReport({
               onClick={handleCreateCategory}
               size="sm"
               loading={isSubmitting}
-              loadingText="创建中..."
             />
           </div>
         </div>

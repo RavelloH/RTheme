@@ -300,7 +300,6 @@ export const BasicInfoDialogs = React.forwardRef<
             variant="secondary"
             onClick={handleSubmit}
             loading={loading}
-            loadingText="修改中..."
             size="sm"
           />
         </div>

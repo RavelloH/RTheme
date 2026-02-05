@@ -73,7 +73,7 @@ export function Button({
   const getSizeStyles = () => {
     switch (size) {
       case "sm":
-        return "px-4 py-1 text-md";
+        return "px-4 py-1.5 text-md";
       case "md":
         return "px-6 py-2 text-xl";
       case "lg":

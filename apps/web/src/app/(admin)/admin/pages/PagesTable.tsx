@@ -1471,7 +1471,6 @@ export default function PagesTable() {
               onClick={handleSavePage}
               size="sm"
               loading={isSubmitting}
-              loadingText="保存中..."
             />
           </div>
         </div>
@@ -1515,7 +1514,6 @@ export default function PagesTable() {
               onClick={handleConfirmBatchStatus}
               size="sm"
               loading={isSubmitting}
-              loadingText="更新中..."
             />
           </div>
         </div>
