@@ -94,17 +94,26 @@ export default function ProjectsReport() {
     title: "",
     slug: "",
     description: "",
-    status: "DRAFT" as "DRAFT" | "PUBLISHED" | "ARCHIVED" | "Developing",
+    status: "DRAFT" as "DRAFT" | "PUBLISHED" | "ARCHIVED" | "DEVELOPING",
     demoUrl: "",
     repoUrl: "",
+    urls: "",
+    techStack: [] as string[],
     repoPath: "",
+    license: "",
     enableGithubSync: false,
     enableConentSync: false,
     syncImmediately: false,
     startedAt: "",
+    completedAt: "",
     category: null as string | null,
     tags: [] as SelectedTag[],
     featuredImages: [] as string[],
+    isFeatured: false,
+    sortOrder: 0,
+    metaDescription: "",
+    metaKeywords: "",
+    robotsIndex: true,
   });
 
   const fetchData = useCallback(
@@ -142,14 +151,23 @@ export default function ProjectsReport() {
       status: "DRAFT",
       demoUrl: "",
       repoUrl: "",
+      urls: "",
+      techStack: [],
       repoPath: "",
+      license: "",
       enableGithubSync: false,
       enableConentSync: false,
       syncImmediately: false,
       startedAt: "",
+      completedAt: "",
       category: null,
       tags: [],
       featuredImages: [],
+      isFeatured: false,
+      sortOrder: 0,
+      metaDescription: "",
+      metaKeywords: "",
+      robotsIndex: true,
     });
     setCreateDialogOpen(true);
   }, []);
@@ -180,11 +198,23 @@ export default function ProjectsReport() {
         status: newProjectForm.status,
         demoUrl: newProjectForm.demoUrl || undefined,
         repoUrl: newProjectForm.repoUrl || undefined,
+        urls: newProjectForm.urls
+          ? newProjectForm.urls
+              .split("\n")
+              .map((url) => url.trim())
+              .filter(Boolean)
+          : undefined,
+        techStack:
+          newProjectForm.techStack.length > 0
+            ? newProjectForm.techStack
+            : undefined,
         repoPath: newProjectForm.repoPath || undefined,
+        license: newProjectForm.license || undefined,
         enableGithubSync: newProjectForm.enableGithubSync,
         enableConentSync: newProjectForm.enableConentSync,
         syncImmediately: newProjectForm.syncImmediately,
         startedAt: newProjectForm.startedAt || undefined,
+        completedAt: newProjectForm.completedAt || undefined,
         categories: newProjectForm.category
           ? [newProjectForm.category]
           : undefined,
@@ -196,6 +226,11 @@ export default function ProjectsReport() {
           newProjectForm.featuredImages.length > 0
             ? newProjectForm.featuredImages
             : undefined,
+        isFeatured: newProjectForm.isFeatured,
+        sortOrder: newProjectForm.sortOrder,
+        metaDescription: newProjectForm.metaDescription || undefined,
+        metaKeywords: newProjectForm.metaKeywords || undefined,
+        robotsIndex: newProjectForm.robotsIndex,
       });
 
       if (result && "data" in result && result.data) {
@@ -392,7 +427,7 @@ export default function ProjectsReport() {
       >
         <div className="px-6 py-6 space-y-8">
           {/* 基本信息 */}
-          <section className="space-y-4">
+          <section>
             <div>
               <h3 className="text-lg font-semibold text-foreground">
                 基本信息
@@ -403,31 +438,33 @@ export default function ProjectsReport() {
               </p>
             </div>
             <div className="space-y-4">
-              <Input
-                label="项目标题"
-                value={newProjectForm.title}
-                onChange={(e) =>
-                  setNewProjectForm({
-                    ...newProjectForm,
-                    title: e.target.value,
-                  })
-                }
-                required
-                size="sm"
-                helperText="项目的显示名称"
-              />
-              <Input
-                label="Slug"
-                value={newProjectForm.slug}
-                onChange={(e) =>
-                  setNewProjectForm({
-                    ...newProjectForm,
-                    slug: e.target.value,
-                  })
-                }
-                size="sm"
-                helperText="URL 路径，留空将从标题自动生成"
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="项目标题"
+                  value={newProjectForm.title}
+                  onChange={(e) =>
+                    setNewProjectForm({
+                      ...newProjectForm,
+                      title: e.target.value,
+                    })
+                  }
+                  required
+                  size="sm"
+                  helperText="项目的显示名称"
+                />
+                <Input
+                  label="Slug"
+                  value={newProjectForm.slug}
+                  onChange={(e) =>
+                    setNewProjectForm({
+                      ...newProjectForm,
+                      slug: e.target.value,
+                    })
+                  }
+                  size="sm"
+                  helperText="URL 路径，留空将从标题自动生成"
+                />
+              </div>
               <Input
                 label="项目描述"
                 value={newProjectForm.description}
@@ -442,54 +479,239 @@ export default function ProjectsReport() {
                 helperText="可选，若有 GitHub 仓库路径会自动获取"
               />
               <Input
-                label="开始时间"
-                type="date"
-                value={newProjectForm.startedAt}
+                label="技术栈"
+                value={newProjectForm.techStack.join(", ")}
                 onChange={(e) =>
                   setNewProjectForm({
                     ...newProjectForm,
-                    startedAt: e.target.value,
+                    techStack: e.target.value
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean),
                   })
                 }
                 size="sm"
+                helperText="多个技术栈用英文逗号分隔，如：React, TypeScript, Tailwind CSS"
               />
-              <p className="text-sm text-muted-foreground">
-                可选，若有 GitHub 仓库路径会使用仓库创建时间
-              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Input
+                    label="开始时间"
+                    type="date"
+                    value={newProjectForm.startedAt}
+                    onChange={(e) =>
+                      setNewProjectForm({
+                        ...newProjectForm,
+                        startedAt: e.target.value,
+                      })
+                    }
+                    size="sm"
+                  />
+                  <p className="text-muted-foreground text-sm">
+                    可选，若有 GitHub 仓库路径会使用仓库创建时间
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Input
+                    label="完成时间"
+                    type="date"
+                    value={newProjectForm.completedAt}
+                    onChange={(e) =>
+                      setNewProjectForm({
+                        ...newProjectForm,
+                        completedAt: e.target.value,
+                      })
+                    }
+                    size="sm"
+                  />
+                  <p className="text-muted-foreground text-sm">可选</p>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <TagInput
+                label="标签"
+                value={newProjectForm.tags}
+                onChange={(tags) =>
+                  setNewProjectForm({ ...newProjectForm, tags })
+                }
+                helperText="输入关键词搜索现有标签，或直接创建新标签"
+                size="sm"
+              />
+              <CategoryInput
+                label="分类"
+                value={newProjectForm.category}
+                onChange={(category) =>
+                  setNewProjectForm({ ...newProjectForm, category })
+                }
+                size="sm"
+              />
             </div>
           </section>
 
           {/* 链接信息 */}
-          <section className="space-y-4">
+          <section>
             <div>
               <h3 className="text-lg font-semibold text-foreground">
                 链接信息
               </h3>
+              <p className="text-sm text-muted-foreground">
+                用于在项目页面展示相关链接。
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Demo URL"
+                  value={newProjectForm.demoUrl}
+                  onChange={(e) =>
+                    setNewProjectForm({
+                      ...newProjectForm,
+                      demoUrl: e.target.value,
+                    })
+                  }
+                  size="sm"
+                  helperText="项目演示地址"
+                />
+                <Input
+                  label="仓库 URL"
+                  value={newProjectForm.repoUrl}
+                  onChange={(e) =>
+                    setNewProjectForm({
+                      ...newProjectForm,
+                      repoUrl: e.target.value,
+                    })
+                  }
+                  size="sm"
+                  helperText="GitHub/GitLab 等仓库地址"
+                />
+              </div>
+              <Input
+                label="其他链接 (Urls)"
+                value={newProjectForm.urls}
+                onChange={(e) =>
+                  setNewProjectForm({
+                    ...newProjectForm,
+                    urls: e.target.value,
+                  })
+                }
+                rows={3}
+                size="sm"
+                helperText="每行一个链接"
+              />
+            </div>
+          </section>
+
+          {/* 展示设置 */}
+          <section className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                展示设置
+              </h3>
+            </div>
+            <div className="space-y-4 grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-foreground">状态</label>
+                <Select
+                  value={newProjectForm.status}
+                  onChange={(value) =>
+                    setNewProjectForm({
+                      ...newProjectForm,
+                      status: value as
+                        | "DRAFT"
+                        | "PUBLISHED"
+                        | "ARCHIVED"
+                        | "DEVELOPING",
+                    })
+                  }
+                  options={[
+                    { value: "DRAFT", label: "草稿" },
+                    { value: "PUBLISHED", label: "已发布" },
+                    { value: "DEVELOPING", label: "开发中" },
+                    { value: "ARCHIVED", label: "已归档" },
+                  ]}
+                  size="sm"
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-foreground">
+                  置顶状态
+                </label>
+                <Select
+                  value={newProjectForm.isFeatured ? "true" : "false"}
+                  onChange={(value) =>
+                    setNewProjectForm({
+                      ...newProjectForm,
+                      isFeatured: value === "true",
+                    })
+                  }
+                  options={[
+                    { value: "false", label: "常规" },
+                    { value: "true", label: "置顶" },
+                  ]}
+                  size="sm"
+                  className="w-full"
+                />
+              </div>
+            </div>
+            <Input
+              label="排序权重"
+              value={String(newProjectForm.sortOrder)}
+              onChange={(e) =>
+                setNewProjectForm({
+                  ...newProjectForm,
+                  sortOrder: parseInt(e.target.value) || 0,
+                })
+              }
+              type="number"
+              size="sm"
+              helperText="数字越大排序越靠前"
+            />
+          </section>
+
+          {/* SEO 设置 */}
+          <section className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                SEO 设置
+              </h3>
             </div>
             <div className="space-y-4">
               <Input
-                label="Demo URL"
-                value={newProjectForm.demoUrl}
+                label="Meta Description"
+                value={newProjectForm.metaDescription}
                 onChange={(e) =>
                   setNewProjectForm({
                     ...newProjectForm,
-                    demoUrl: e.target.value,
+                    metaDescription: e.target.value,
                   })
                 }
+                rows={2}
                 size="sm"
-                helperText="项目演示地址"
+                helperText="SEO 描述，建议 160 字以内，留空则使用项目描述内容"
               />
               <Input
-                label="仓库 URL"
-                value={newProjectForm.repoUrl}
+                label="Meta Keywords"
+                value={newProjectForm.metaKeywords}
                 onChange={(e) =>
                   setNewProjectForm({
                     ...newProjectForm,
-                    repoUrl: e.target.value,
+                    metaKeywords: e.target.value,
                   })
                 }
                 size="sm"
-                helperText="GitHub/GitLab 等仓库地址"
+                helperText="SEO 关键词，用英文逗号分隔"
+              />
+              <Checkbox
+                label="允许搜索引擎索引 (Robots Index)"
+                checked={newProjectForm.robotsIndex}
+                onChange={(e) =>
+                  setNewProjectForm({
+                    ...newProjectForm,
+                    robotsIndex: e.target.checked,
+                  })
+                }
               />
             </div>
           </section>
@@ -517,6 +739,23 @@ export default function ProjectsReport() {
                   }
                   size="sm"
                   helperText='格式：owner/repo，如 "RavelloH/NeutralPress"'
+                />
+                <Input
+                  label="开源许可证"
+                  value={newProjectForm.license}
+                  onChange={(e) =>
+                    setNewProjectForm({
+                      ...newProjectForm,
+                      license: e.target.value,
+                    })
+                  }
+                  size="sm"
+                  disabled={newProjectForm.enableGithubSync}
+                  helperText={
+                    newProjectForm.enableGithubSync
+                      ? "已启用 GitHub 同步，许可证将从仓库自动获取"
+                      : "项目的开源许可证类型，如：MIT、Apache-2.0"
+                  }
                 />
                 <Checkbox
                   label="启用 GitHub 同步"
@@ -558,34 +797,6 @@ export default function ProjectsReport() {
             </AutoResizer>
           </section>
 
-          {/* 分类和标签 */}
-          <section className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold text-foreground">
-                分类与标签
-              </h3>
-            </div>
-            <div className="space-y-4">
-              <CategoryInput
-                label="分类"
-                value={newProjectForm.category}
-                onChange={(category) =>
-                  setNewProjectForm({ ...newProjectForm, category })
-                }
-                size="sm"
-              />
-              <TagInput
-                label="标签"
-                value={newProjectForm.tags}
-                onChange={(tags) =>
-                  setNewProjectForm({ ...newProjectForm, tags })
-                }
-                helperText="输入关键词搜索现有标签，或直接创建新标签"
-                size="sm"
-              />
-            </div>
-          </section>
-
           {/* 特色图片 */}
           <section className="space-y-4">
             <div>
@@ -614,38 +825,6 @@ export default function ProjectsReport() {
             />
           </section>
 
-          {/* 发布设置 */}
-          <section className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold text-foreground">
-                发布设置
-              </h3>
-            </div>
-            <div className="space-y-2">
-              <label className="block text-sm text-foreground">状态</label>
-              <Select
-                value={newProjectForm.status}
-                onChange={(value) =>
-                  setNewProjectForm({
-                    ...newProjectForm,
-                    status: value as
-                      | "DRAFT"
-                      | "PUBLISHED"
-                      | "ARCHIVED"
-                      | "Developing",
-                  })
-                }
-                options={[
-                  { value: "DRAFT", label: "草稿" },
-                  { value: "PUBLISHED", label: "已发布" },
-                  { value: "Developing", label: "开发中" },
-                  { value: "ARCHIVED", label: "已归档" },
-                ]}
-                size="sm"
-              />
-            </div>
-          </section>
-
           <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end sm:gap-4">
             <Button
               label="取消"
@@ -660,7 +839,6 @@ export default function ProjectsReport() {
               onClick={handleCreateProject}
               size="sm"
               loading={isCreating}
-              loadingText="创建中..."
             />
           </div>
         </div>

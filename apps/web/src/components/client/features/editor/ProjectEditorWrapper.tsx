@@ -41,15 +41,21 @@ interface ProjectFormData {
   status: string;
   demoUrl: string;
   repoUrl: string;
+  urls: string;
   techStack: string[];
   repoPath: string;
   license: string;
   enableGithubSync: boolean;
-  enableConentSync: boolean;
   featuredImages: string[];
   startedAt: string;
+  completedAt: string;
   category: string | null;
   tags: SelectedTag[];
+  isFeatured: boolean;
+  sortOrder: number;
+  metaDescription: string;
+  metaKeywords: string;
+  robotsIndex: boolean;
 }
 
 /**
@@ -86,15 +92,21 @@ function createDefaultProjectFormData(): ProjectFormData {
     status: "DRAFT",
     demoUrl: "",
     repoUrl: "",
+    urls: "",
     techStack: [],
     repoPath: "",
     license: "",
     enableGithubSync: false,
-    enableConentSync: false,
     featuredImages: [],
     startedAt: "",
+    completedAt: "",
     category: null,
     tags: [],
+    isFeatured: false,
+    sortOrder: 0,
+    metaDescription: "",
+    metaKeywords: "",
+    robotsIndex: true,
   };
 }
 
@@ -116,13 +128,14 @@ function initializeFormData(initialData?: EditorInitialData): ProjectFormData {
     status: initialData.status || "DRAFT",
     demoUrl: initialData.demoUrl || "",
     repoUrl: initialData.repoUrl || "",
+    urls: initialData.urls ? initialData.urls.join("\n") : "",
     techStack: initialData.techStack || [],
     repoPath: initialData.repoPath || "",
     license: initialData.license || "",
     enableGithubSync: initialData.enableGithubSync ?? false,
-    enableConentSync: initialData.enableConentSync ?? false,
     featuredImages: initialData.featuredImages || [],
     startedAt: initialData.startedAt || "",
+    completedAt: initialData.completedAt || "",
     category: initialData.categories?.[0] || null,
     tags: initialData.tags
       ? initialData.tags.map((name) => ({
@@ -131,6 +144,11 @@ function initializeFormData(initialData?: EditorInitialData): ProjectFormData {
           isNew: false,
         }))
       : [],
+    isFeatured: initialData.isFeatured ?? false,
+    sortOrder: initialData.sortOrder ?? 0,
+    metaDescription: initialData.metaDescription || "",
+    metaKeywords: initialData.metaKeywords || "",
+    robotsIndex: initialData.robotsIndex ?? true,
   };
 }
 
@@ -180,18 +198,9 @@ export function ProjectEditorWrapper({
   const handleFieldChange = useCallback(
     (
       field: keyof ProjectFormData,
-      value: string | boolean | string[] | SelectedTag[] | null,
+      value: string | boolean | string[] | SelectedTag[] | number | null,
     ) => {
-      setFormData((prev) => {
-        const newData = { ...prev, [field]: value };
-
-        // 如果禁用 GitHub 同步，同时禁用内容同步
-        if (field === "enableGithubSync" && value === false) {
-          newData.enableConentSync = false;
-        }
-
-        return newData;
-      });
+      setFormData((prev) => ({ ...prev, [field]: value }));
     },
     [],
   );
@@ -303,6 +312,12 @@ export function ProjectEditorWrapper({
 
       // 构建保存数据
       const tagNames = formData.tags.map((tag) => tag.name);
+      const urls = formData.urls
+        ? formData.urls
+            .split("\n")
+            .map((url) => url.trim())
+            .filter(Boolean)
+        : undefined;
 
       let result;
       if (isEditMode) {
@@ -317,16 +332,23 @@ export function ProjectEditorWrapper({
           description: formData.description,
           demoUrl: formData.demoUrl || undefined,
           repoUrl: formData.repoUrl || undefined,
+          urls: urls,
+          techStack: formData.techStack,
           repoPath: formData.repoPath || undefined,
           license: formData.license || undefined,
           enableGithubSync: formData.enableGithubSync,
-          enableConentSync: formData.enableConentSync,
+          enableConentSync: false, // 内容编辑器中始终关闭 README 同步
           featuredImages:
             formData.featuredImages.length > 0
               ? formData.featuredImages
               : undefined,
           startedAt: formData.startedAt || undefined,
-          techStack: formData.techStack,
+          completedAt: formData.completedAt || undefined,
+          isFeatured: formData.isFeatured,
+          sortOrder: formData.sortOrder,
+          metaDescription: formData.metaDescription || undefined,
+          metaKeywords: formData.metaKeywords || undefined,
+          robotsIndex: formData.robotsIndex,
         };
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -342,16 +364,23 @@ export function ProjectEditorWrapper({
           description: formData.description,
           demoUrl: formData.demoUrl || undefined,
           repoUrl: formData.repoUrl || undefined,
+          urls: urls,
+          techStack: formData.techStack,
           repoPath: formData.repoPath || undefined,
           license: formData.license || undefined,
           enableGithubSync: formData.enableGithubSync,
-          enableConentSync: formData.enableConentSync,
+          enableConentSync: false, // 内容编辑器中始终关闭 README 同步
           featuredImages:
             formData.featuredImages.length > 0
               ? formData.featuredImages
               : undefined,
           startedAt: formData.startedAt || undefined,
-          techStack: formData.techStack,
+          completedAt: formData.completedAt || undefined,
+          isFeatured: formData.isFeatured,
+          sortOrder: formData.sortOrder,
+          metaDescription: formData.metaDescription || undefined,
+          metaKeywords: formData.metaKeywords || undefined,
+          robotsIndex: formData.robotsIndex,
         };
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -465,34 +494,37 @@ export function ProjectEditorWrapper({
 
   // ==================== 渲染详细信息对话框内容 ====================
   const renderDetailsDialogContent = () => (
-    <div className="px-6 py-6 space-y-6">
+    <div className="px-6 py-6 space-y-8">
       {/* 基本信息 */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-          基本信息
-        </h3>
-        <div className="grid grid-cols-2 gap-6">
+      <section>
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">基本信息</h3>
+          <p className="text-sm text-muted-foreground">填写项目的基本信息。</p>
+        </div>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="项目标题"
+              value={formData.title}
+              onChange={(e) => handleFieldChange("title", e.target.value)}
+              required
+              size="sm"
+              helperText="项目的显示名称"
+            />
+            <Input
+              label="Slug"
+              value={formData.slug}
+              onChange={(e) => handleFieldChange("slug", e.target.value)}
+              size="sm"
+              helperText="URL 路径"
+            />
+          </div>
           <Input
-            label="标题"
-            value={formData.title}
-            onChange={(e) => handleFieldChange("title", e.target.value)}
-            required
-            size="sm"
-          />
-          <Input
-            label="Slug"
-            value={formData.slug}
-            onChange={(e) => handleFieldChange("slug", e.target.value)}
-            size="sm"
-            helperText="URL 路径，例如：my-awesome-project。留空将从标题自动生成"
-          />
-          <Input
-            label="描述"
+            label="项目描述"
             value={formData.description}
             onChange={(e) => handleFieldChange("description", e.target.value)}
-            rows={3}
+            rows={2}
             size="sm"
-            className="col-span-2"
             required
           />
           <Input
@@ -507,25 +539,33 @@ export function ProjectEditorWrapper({
                   .filter(Boolean),
               )
             }
-            helperText="多个技术栈用逗号分隔"
-            className="col-span-2"
             size="sm"
+            helperText="多个技术栈用逗号分隔，如：React, TypeScript, Tailwind CSS"
           />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Input
+                label="开始时间"
+                type="date"
+                value={formData.startedAt}
+                onChange={(e) => handleFieldChange("startedAt", e.target.value)}
+                size="sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Input
+                label="完成时间"
+                type="date"
+                value={formData.completedAt}
+                onChange={(e) =>
+                  handleFieldChange("completedAt", e.target.value)
+                }
+                size="sm"
+              />
+            </div>
+          </div>
         </div>
-      </div>
-
-      {/* 分类与标签 */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-          分类与标签
-        </h3>
-        <div className="grid grid-cols-1 gap-6">
-          <CategoryInput
-            label="分类"
-            value={formData.category}
-            onChange={(category) => handleFieldChange("category", category)}
-            size="sm"
-          />
+        <div className="space-y-4">
           <TagInput
             label="标签"
             value={formData.tags}
@@ -533,118 +573,172 @@ export function ProjectEditorWrapper({
             helperText="输入关键词搜索现有标签，或直接创建新标签"
             size="sm"
           />
+          <CategoryInput
+            label="分类"
+            value={formData.category}
+            onChange={(category) => handleFieldChange("category", category)}
+            size="sm"
+          />
         </div>
-      </div>
+      </section>
 
       {/* 链接信息 */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-          链接信息
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <section>
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">链接信息</h3>
+          <p className="text-sm text-muted-foreground">
+            用于在项目页面展示相关链接。
+          </p>
+        </div>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Demo URL"
+              value={formData.demoUrl}
+              onChange={(e) => handleFieldChange("demoUrl", e.target.value)}
+              size="sm"
+              helperText="项目演示地址"
+            />
+            <Input
+              label="仓库 URL"
+              value={formData.repoUrl}
+              onChange={(e) => handleFieldChange("repoUrl", e.target.value)}
+              size="sm"
+              helperText="GitHub/GitLab 等仓库地址"
+            />
+          </div>
           <Input
-            label="Demo URL"
-            value={formData.demoUrl}
-            onChange={(e) => handleFieldChange("demoUrl", e.target.value)}
+            label="其他链接 (Urls)"
+            value={formData.urls}
+            onChange={(e) => handleFieldChange("urls", e.target.value)}
+            rows={3}
             size="sm"
-            helperText="https://example.com"
-          />
-          <Input
-            label="仓库 URL"
-            value={formData.repoUrl}
-            onChange={(e) => handleFieldChange("repoUrl", e.target.value)}
-            size="sm"
-            helperText="https://github.com/user/repo"
+            helperText="每行一个链接"
           />
         </div>
-      </div>
+      </section>
 
-      {/* 发布设置 */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-          发布设置
-        </h3>
-        <div className="space-y-3">
-          {isEditMode && (
-            <div>
-              <label className="block text-sm font-medium text-foreground/80 mb-2">
-                项目状态
-              </label>
-              <Select
-                value={formData.status}
-                onChange={(value) => handleFieldChange("status", String(value))}
-                options={[
-                  { value: "DRAFT", label: "草稿" },
-                  { value: "PUBLISHED", label: "已发布" },
-                  { value: "ARCHIVED", label: "已归档" },
-                  { value: "Developing", label: "开发中" },
-                ]}
-                size="sm"
-              />
-            </div>
-          )}
+      {/* 展示设置 */}
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">展示设置</h3>
+        </div>
+        <div className="space-y-4 grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-foreground">状态</label>
+            <Select
+              value={formData.status}
+              onChange={(value) => handleFieldChange("status", String(value))}
+              options={[
+                { value: "DRAFT", label: "草稿" },
+                { value: "PUBLISHED", label: "已发布" },
+                { value: "DEVELOPING", label: "开发中" },
+                { value: "ARCHIVED", label: "已归档" },
+              ]}
+              size="sm"
+              className="w-full"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-foreground">置顶状态</label>
+            <Select
+              value={formData.isFeatured ? "true" : "false"}
+              onChange={(value) =>
+                handleFieldChange("isFeatured", value === "true")
+              }
+              options={[
+                { value: "false", label: "常规" },
+                { value: "true", label: "置顶" },
+              ]}
+              size="sm"
+              className="w-full"
+            />
+          </div>
+        </div>
+        <Input
+          label="排序权重"
+          value={String(formData.sortOrder)}
+          onChange={(e) =>
+            handleFieldChange("sortOrder", parseInt(e.target.value) || 0)
+          }
+          type="number"
+          size="sm"
+          helperText="数字越大排序越靠前"
+        />
+      </section>
+
+      {/* SEO 设置 */}
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">SEO 设置</h3>
+        </div>
+        <div className="space-y-4">
           <Input
-            label="开始时间"
-            type="date"
-            value={formData.startedAt}
-            onChange={(e) => handleFieldChange("startedAt", e.target.value)}
+            label="Meta Description"
+            value={formData.metaDescription}
+            onChange={(e) =>
+              handleFieldChange("metaDescription", e.target.value)
+            }
+            rows={2}
             size="sm"
+            helperText="SEO 描述，建议 160 字以内"
+          />
+          <Input
+            label="Meta Keywords"
+            value={formData.metaKeywords}
+            onChange={(e) => handleFieldChange("metaKeywords", e.target.value)}
+            size="sm"
+            helperText="SEO 关键词，用逗号分隔"
+          />
+          <Checkbox
+            label="允许搜索引擎索引 (Robots Index)"
+            checked={formData.robotsIndex}
+            onChange={(e) => handleFieldChange("robotsIndex", e.target.checked)}
           />
         </div>
-      </div>
+      </section>
 
-      {/* GitHub 设置 */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2 flex items-center gap-2">
-          <RiGithubFill size="1.2em" /> GitHub 同步
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          启用内容同步后，手动编辑的内容将被 GitHub README 覆盖
-        </p>
-        <div className="grid grid-cols-1 gap-6">
+      {/* GitHub 同步设置 */}
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">GitHub 同步</h3>
+          <p className="text-sm text-muted-foreground">
+            启用后将自动同步仓库的 Stars、Forks、语言等信息。
+          </p>
+        </div>
+        <div className="space-y-4">
           <Input
-            label="仓库路径"
+            label="GitHub 仓库路径"
             value={formData.repoPath}
             onChange={(e) => handleFieldChange("repoPath", e.target.value)}
             size="sm"
-            helperText="用于 GitHub API 同步，例如：RavelloH/NeutralPress"
+            helperText='格式：owner/repo，如 "RavelloH/NeutralPress"'
           />
           <Input
             label="开源许可证"
             value={formData.license}
             onChange={(e) => handleFieldChange("license", e.target.value)}
             size="sm"
-            helperText="项目的开源许可证类型，例如：MIT"
+            helperText="项目的开源许可证类型，如：MIT、Apache-2.0"
           />
-          <div className="flex flex-col gap-4">
-            <Checkbox
-              label="启用 GitHub 同步"
-              checked={formData.enableGithubSync}
-              onChange={(e) => {
-                handleFieldChange("enableGithubSync", e.target.checked);
-                if (!e.target.checked) {
-                  handleFieldChange("enableConentSync", false);
-                }
-              }}
-            />
-            {formData.enableGithubSync && (
-              <Checkbox
-                label="同步 README 到内容"
-                checked={formData.enableConentSync}
-                onChange={(e) =>
-                  handleFieldChange("enableConentSync", e.target.checked)
-                }
-              />
-            )}
-          </div>
+          <Checkbox
+            label="启用 GitHub 同步"
+            checked={formData.enableGithubSync}
+            onChange={(e) =>
+              handleFieldChange("enableGithubSync", e.target.checked)
+            }
+          />
         </div>
-      </div>
+      </section>
 
       {/* 特色图片 */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-          特色图片
-        </h3>
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">特色图片</h3>
+          <p className="text-sm text-muted-foreground">
+            可以选择多张图片作为项目展示图。
+          </p>
+        </div>
         <MediaSelector
           label="特色图片"
           value={formData.featuredImages}
@@ -657,10 +751,9 @@ export function ProjectEditorWrapper({
           multiple
           helperText="选择或上传项目的特色图片"
         />
-      </div>
+      </section>
 
-      {/* 操作按钮 */}
-      <div className="flex justify-end gap-4 pt-4 border-t border-foreground/10">
+      <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end sm:gap-4">
         <Button
           label="取消"
           variant="ghost"
@@ -674,7 +767,6 @@ export function ProjectEditorWrapper({
           onClick={handleSaveDetails}
           size="sm"
           loading={isSubmitting}
-          loadingText="保存中..."
           disabled={!formData.title.trim()}
         />
       </div>

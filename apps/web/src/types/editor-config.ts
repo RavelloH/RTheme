@@ -127,8 +127,12 @@ export interface EditorInitialData {
   description?: string;
   demoUrl?: string;
   repoUrl?: string;
+  urls?: string[];
   techStack?: string[];
   startedAt?: string;
+  completedAt?: string;
+  isFeatured?: boolean;
+  sortOrder?: number;
   repoPath?: string;
   license?: string;
   enableGithubSync?: boolean;

@@ -853,8 +853,18 @@ model Project {
   description String  @db.Text
   content     String? @db.Text
 
+  // seo
+  metaDescription String? @db.VarChar(160)
+  metaKeywords    String? @db.VarChar(255)
+  robotsIndex     Boolean @default(true)
+
+  // 展示控制
+  isFeatured Boolean @default(false)
+  sortOrder  Int     @default(0)
+
   demoUrl   String?  @db.VarChar(500)
   repoUrl   String?  @db.VarChar(500)
+  urls      String[]
   techStack String[]
 
   // GitHub 相关字段
@@ -880,6 +890,7 @@ model Project {
   updatedAt   DateTime  @updatedAt
   publishedAt DateTime?
   startedAt   DateTime?
+  completedAt DateTime?
 
   @@index([status])
   @@index([slug])
@@ -946,7 +957,7 @@ enum ProjectStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
-  Developing
+  DEVELOPING
 }
 
 enum Role {
