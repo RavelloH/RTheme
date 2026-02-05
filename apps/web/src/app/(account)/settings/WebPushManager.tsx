@@ -411,7 +411,6 @@ export default function WebPushManager() {
               variant="secondary"
               onClick={handleSubscribe}
               loading={actionLoading}
-              loadingText="订阅中..."
               size="sm"
               disabled={permission === "denied"}
             />
@@ -467,7 +466,6 @@ export default function WebPushManager() {
                 renameTarget && handleRename(renameTarget, newName)
               }
               loading={actionLoading}
-              loadingText="重命名中..."
               size="sm"
               disabled={!newName.trim() || actionLoading}
             />

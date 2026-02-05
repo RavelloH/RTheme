@@ -440,7 +440,6 @@ export default function PagesReport() {
               onClick={handleCreatePage}
               size="sm"
               loading={isCreating}
-              loadingText="创建中..."
             />
           </div>
         </div>

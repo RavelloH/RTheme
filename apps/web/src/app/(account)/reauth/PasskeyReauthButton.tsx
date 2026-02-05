@@ -105,7 +105,6 @@ export default function PasskeyReauthButton({
         fullWidth
         disabled={loading || disabled}
         loading={loading}
-        loadingText="验证中..."
       />
     </div>
   );

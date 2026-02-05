@@ -382,7 +382,6 @@ function MediaImportInner() {
               onClick={handleImport}
               size="sm"
               loading={importing}
-              loadingText="导入中..."
               disabled={items.length === 0}
             />
           </div>

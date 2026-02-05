@@ -373,7 +373,6 @@ function MediaAddInner() {
               onClick={handleUpload}
               size="sm"
               loading={uploading}
-              loadingText="上传中..."
               disabled={files.length === 0}
             />
           </div>

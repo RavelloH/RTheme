@@ -286,7 +286,6 @@ export const TotpDialogs = React.forwardRef<TotpDialogsRef, TotpDialogsProps>(
                 variant="secondary"
                 onClick={handleConfirmTotp}
                 loading={totpLoading}
-                loadingText="验证中..."
                 size="sm"
               />
             </div>

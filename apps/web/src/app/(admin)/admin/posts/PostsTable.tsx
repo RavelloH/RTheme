@@ -1234,7 +1234,6 @@ export default function PostsTable() {
               onClick={handleSavePost}
               size="sm"
               loading={isSubmitting}
-              loadingText="保存中..."
             />
           </div>
         </div>
@@ -1280,7 +1279,6 @@ export default function PostsTable() {
               onClick={handleConfirmBatchStatus}
               size="sm"
               loading={isSubmitting}
-              loadingText="更新中..."
             />
           </div>
         </div>
@@ -1358,7 +1356,6 @@ export default function PostsTable() {
               onClick={handleConfirmBatchComments}
               size="sm"
               loading={isSubmitting}
-              loadingText="更新中..."
             />
           </div>
         </div>
@@ -1408,7 +1405,6 @@ export default function PostsTable() {
               onClick={handleConfirmBatchPinned}
               size="sm"
               loading={isSubmitting}
-              loadingText="更新中..."
             />
           </div>
         </div>

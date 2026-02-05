@@ -301,7 +301,6 @@ export default function StoragesAdd() {
               onClick={handleCreateStorage}
               size="sm"
               loading={submitting}
-              loadingText="创建中..."
             />
           </div>
         </div>

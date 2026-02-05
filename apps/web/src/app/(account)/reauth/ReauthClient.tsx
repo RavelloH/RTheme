@@ -376,7 +376,6 @@ export default function ReauthClient({ passkeyEnabled }: ReauthClientProps) {
                           label="下一步"
                           onClick={handlePasswordVerify}
                           loading={verifying}
-                          loadingText="验证中..."
                           verificationText="正在执行安全验证"
                           variant="secondary"
                           size="lg"

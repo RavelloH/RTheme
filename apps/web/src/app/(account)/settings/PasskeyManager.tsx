@@ -418,7 +418,6 @@ export default function PasskeyManager() {
               variant="secondary"
               onClick={() => createPasskey()}
               loading={actionLoading}
-              loadingText="正在创建..."
               size="sm"
             />
           </div>
@@ -477,7 +476,6 @@ export default function PasskeyManager() {
                 renameTarget && handleRename(renameTarget, newName)
               }
               loading={actionLoading}
-              loadingText="重命名中..."
               size="sm"
               disabled={!newName.trim() || actionLoading}
             />

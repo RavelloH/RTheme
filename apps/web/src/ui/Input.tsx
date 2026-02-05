@@ -151,9 +151,10 @@ export const Input = forwardRef<
 
   const inputClassName = `
     relative w-full bg-transparent border-0
-    px-0 ${sizeStyles.input} text-white
+    px-0 ${sizeStyles.input} text-foreground
     focus:outline-none
-    disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-500
+    disabled:opacity-50 disabled:cursor-not-allowed
+    transition-all duration-300 ease-in-out
     ${isTextarea ? "resize-y whitespace-pre-wrap wrap" : ""}
   `;
 
@@ -202,39 +203,38 @@ export const Input = forwardRef<
         />
       )}
       {/* 横向颜色变化效果 */}
-      <motion.div
-        className="absolute bottom-0 left-0 h-0.5 w-full"
-        initial={{ opacity: 1, backgroundColor: "#ffffff" }}
-        animate={{
-          opacity: 1,
+      <div
+        className="absolute bottom-0 left-0 h-0.5 w-full transition-colors duration-300 ease-in-out"
+        style={{
           backgroundColor: showBottomLine
             ? error
               ? "var(--theme-red)"
               : "var(--color-primary)"
-            : "#ffffff",
-        }}
-        transition={{
-          duration: 0.3,
+            : "var(--color-foreground)",
         }}
       />
       <label
         htmlFor={inputId}
-        className={`absolute ${sizeStyles.labelTop} left-0 pointer-events-none whitespace-nowrap flex items-center`}
+        className={`absolute ${sizeStyles.labelTop} left-0 pointer-events-none whitespace-nowrap flex items-center transition-opacity duration-500`}
+        style={{
+          opacity: disabled ? 0.5 : 1,
+        }}
       >
         {icon && (
           <motion.span
-            className={`inline-block ${sizeStyles.labelIcon} min-w-2 text-white pr-1`}
+            className={`inline-block ${sizeStyles.labelIcon} min-w-2 pr-1 transition-colors duration-300 ease-in-out`}
+            style={{
+              color: showLabelHighlight
+                ? "var(--color-primary)"
+                : "var(--color-foreground)",
+            }}
             initial={
-              shouldLabelFloat
-                ? { color: "#ffffff", y: sizeStyles.labelShift }
-                : undefined
+              shouldLabelFloat ? { y: sizeStyles.labelShift } : undefined
             }
             animate={{
-              color: showLabelHighlight ? "var(--color-primary)" : "#ffffff",
               y: showLabel ? sizeStyles.labelShift : 0,
             }}
             transition={{
-              color: { duration: 0.3 },
               y: {
                 duration: shouldLabelFloat ? 0 : 0.3,
                 ease: [0.68, -0.55, 0.265, 1.55],
@@ -247,19 +247,25 @@ export const Input = forwardRef<
         {label.split("").map((char, index) => (
           <motion.span
             key={index}
-            className={`inline-block ${sizeStyles.labelText} text-white`}
+            className={`inline-block ${sizeStyles.labelText} transition-colors duration-300 ease-in-out`}
+            style={{
+              color: showLabelHighlight
+                ? "var(--color-primary)"
+                : "var(--color-foreground)",
+            }}
             initial={
               shouldLabelFloat
-                ? { color: "#ffffff", y: sizeStyles.labelShift, opacity: 1 }
+                ? {
+                    y: sizeStyles.labelShift,
+                    opacity: 1,
+                  }
                 : undefined
             }
             animate={{
-              color: showLabelHighlight ? "var(--color-primary)" : "#ffffff",
               y: showLabel ? sizeStyles.labelShift : 0,
               opacity: 1,
             }}
             transition={{
-              color: { duration: 0.3 },
               opacity: { duration: 0.3 },
               y: {
                 duration: shouldLabelFloat ? 0 : 0.3,
@@ -272,19 +278,25 @@ export const Input = forwardRef<
           </motion.span>
         ))}
         <motion.span
-          className={`inline-block ${sizeStyles.labelText} text-white px-2`}
+          className={`inline-block ${sizeStyles.labelText} px-2 transition-colors duration-300 ease-in-out`}
+          style={{
+            color: showLabelHighlight
+              ? "var(--color-primary)"
+              : "var(--color-foreground)",
+          }}
           initial={
             shouldLabelFloat
-              ? { color: "#ffffff", y: sizeStyles.labelShift, opacity: 1 }
+              ? {
+                  y: sizeStyles.labelShift,
+                  opacity: 1,
+                }
               : undefined
           }
           animate={{
-            color: showLabelHighlight ? "var(--color-primary)" : "#ffffff",
             y: showLabel ? sizeStyles.labelShift : 0,
             opacity: 1,
           }}
           transition={{
-            color: { duration: 0.3 },
             opacity: { duration: 0.3 },
             y: {
               duration: shouldLabelFloat ? 0 : 0.3,

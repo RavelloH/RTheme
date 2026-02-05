@@ -715,7 +715,6 @@ export default function StoragesTable() {
                 onClick={handleFormSubmit}
                 size="sm"
                 loading={submitting}
-                loadingText="保存中..."
               />
             </div>
           </div>

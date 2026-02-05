@@ -186,7 +186,6 @@ export function AlertDialog({
                       onClick={onConfirm}
                       size="sm"
                       loading={loading}
-                      loadingText="处理中..."
                     />
                   </div>
                 </div>

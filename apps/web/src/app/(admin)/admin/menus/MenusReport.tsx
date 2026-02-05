@@ -454,7 +454,6 @@ export default function MenusReport() {
               onClick={handleCreateMenu}
               size="sm"
               loading={isSubmitting}
-              loadingText="创建中..."
             />
           </div>
         </div>

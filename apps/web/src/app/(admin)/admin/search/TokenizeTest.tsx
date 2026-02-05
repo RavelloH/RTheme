@@ -104,7 +104,6 @@ export default function TokenizeTest() {
               variant="primary"
               onClick={handleTest}
               loading={isLoading}
-              loadingText="分词中..."
               disabled={!text.trim()}
               size="md"
               fullWidth

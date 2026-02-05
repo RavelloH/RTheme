@@ -546,7 +546,6 @@ export function PostEditorWrapper({
           onClick={handleSaveDetails}
           size="sm"
           loading={isSubmitting}
-          loadingText="保存中..."
           disabled={!formData.title.trim()}
         />
       </div>

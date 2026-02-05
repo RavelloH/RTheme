@@ -1006,7 +1006,6 @@ export default function CategoriesTable({
               onClick={handleSaveCategory}
               size="sm"
               loading={isSubmitting}
-              loadingText="保存中..."
             />
           </div>
         </div>
@@ -1046,7 +1045,6 @@ export default function CategoriesTable({
               onClick={handleConfirmMove}
               size="sm"
               loading={isSubmitting}
-              loadingText="移动中..."
             />
           </div>
         </div>
@@ -1089,7 +1087,6 @@ export default function CategoriesTable({
               onClick={handleConfirmBatchMove}
               size="sm"
               loading={isSubmitting}
-              loadingText="移动中..."
             />
           </div>
         </div>
