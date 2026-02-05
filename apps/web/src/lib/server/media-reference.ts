@@ -46,7 +46,8 @@ export function getFeaturedImageUrl(
       ref.slot === MEDIA_SLOTS.POST_FEATURED_IMAGE ||
       ref.slot === MEDIA_SLOTS.TAG_FEATURED_IMAGE ||
       ref.slot === MEDIA_SLOTS.CATEGORY_FEATURED_IMAGE ||
-      ref.slot === MEDIA_SLOTS.PAGE_FEATURED_IMAGE,
+      ref.slot === MEDIA_SLOTS.PAGE_FEATURED_IMAGE ||
+      ref.slot === MEDIA_SLOTS.PROJECT_FEATURED_IMAGE,
   );
 
   if (!ref) return null;
@@ -54,6 +55,34 @@ export function getFeaturedImageUrl(
   const { shortHash } = ref.media;
   const signature = generateSignature(shortHash);
   return `/p/${shortHash}${signature}`;
+}
+
+/**
+ * 从 mediaRefs 中提取所有特色图片短链接
+ * 返回格式：["/p/{shortHash}{signature}", ...]
+ */
+export function getAllFeaturedImageUrls(
+  mediaRefs?: Array<{
+    slot: string;
+    media: { shortHash: string };
+  }>,
+): string[] {
+  return (
+    mediaRefs
+      ?.filter(
+        (ref) =>
+          ref.slot === MEDIA_SLOTS.POST_FEATURED_IMAGE ||
+          ref.slot === MEDIA_SLOTS.TAG_FEATURED_IMAGE ||
+          ref.slot === MEDIA_SLOTS.CATEGORY_FEATURED_IMAGE ||
+          ref.slot === MEDIA_SLOTS.PAGE_FEATURED_IMAGE ||
+          ref.slot === MEDIA_SLOTS.PROJECT_FEATURED_IMAGE,
+      )
+      .map((ref) => {
+        const { shortHash } = ref.media;
+        const signature = generateSignature(shortHash);
+        return `/p/${shortHash}${signature}`;
+      }) ?? []
+  );
 }
 
 /**
@@ -76,7 +105,8 @@ export function getFeaturedImageData(
       ref.slot === MEDIA_SLOTS.POST_FEATURED_IMAGE ||
       ref.slot === MEDIA_SLOTS.TAG_FEATURED_IMAGE ||
       ref.slot === MEDIA_SLOTS.CATEGORY_FEATURED_IMAGE ||
-      ref.slot === MEDIA_SLOTS.PAGE_FEATURED_IMAGE,
+      ref.slot === MEDIA_SLOTS.PAGE_FEATURED_IMAGE ||
+      ref.slot === MEDIA_SLOTS.PROJECT_FEATURED_IMAGE,
   );
 
   if (!ref) return null;

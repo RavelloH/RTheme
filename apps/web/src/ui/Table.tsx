@@ -24,6 +24,16 @@ export interface TableColumn<T> {
   mono?: boolean;
 }
 
+// 自定义行组件的 Props
+export interface RowComponentProps {
+  record: Record<string, unknown>;
+  index: number;
+  cells: React.ReactNode;
+  className: string;
+  onClick?: (e: React.MouseEvent) => void;
+  rowKey: string | number;
+}
+
 export interface TableProps<T = Record<string, unknown>> {
   columns: TableColumn<T>[];
   data: T[];
@@ -93,6 +103,11 @@ export interface TableProps<T = Record<string, unknown>> {
    * @default 0
    */
   padding?: number;
+  /**
+   * 自定义行渲染组件，替代默认的 MemoTableRow
+   * 用于注入拖拽等自定义行为
+   */
+  rowComponent?: React.ComponentType<RowComponentProps>;
 }
 
 interface SortState {
@@ -286,6 +301,7 @@ export function Table<T extends Record<string, unknown>>({
   maxHeight,
   onSortChange,
   padding = 0,
+  rowComponent: RowComponent,
 }: TableProps<T>) {
   const [sortState, setSortState] = React.useState<SortState>({
     key: null,
@@ -476,45 +492,130 @@ export function Table<T extends Record<string, unknown>>({
               </td>
             </tr>
           ) : (
-            data.map((record, index) => (
-              <MemoTableRow
-                key={getRowKey(record, index)}
-                record={record as Record<string, unknown>}
-                index={index}
-                columns={
-                  columns as unknown as TableColumn<Record<string, unknown>>[]
-                }
-                striped={striped}
-                hoverable={hoverable}
-                onRowClick={
-                  onRowClick as
-                    | ((
-                        record: Record<string, unknown>,
-                        index: number,
-                        event: React.MouseEvent,
-                      ) => void)
-                    | undefined
-                }
-                rowClassName={getRowClassName(record, index)}
-                animateRows={animateRows}
-                getPaddingStyles={getPaddingStyles}
-                getAlignClass={getAlignClass}
-                renderCellContent={
-                  renderCellContent as (
-                    column: TableColumn<Record<string, unknown>>,
-                    record: Record<string, unknown>,
-                    index: number,
-                  ) => React.ReactNode
-                }
-                padding={padding}
-                getRowKey={
-                  getRowKey as (
-                    record: Record<string, unknown>,
-                    index: number,
-                  ) => string | number
-                }
-              />
-            ))
+            data.map((record, index) => {
+              const rowKey = getRowKey(record, index);
+              const rowClassNameStr = getRowClassName(record, index);
+              const baseClassName = `
+                ${striped && index % 2 === 1 ? "bg-muted/25" : ""}
+                ${hoverable ? "hover:bg-muted transition-colors duration-200 ease-out" : ""}
+                ${onRowClick ? "cursor-pointer" : ""}
+                ${rowClassNameStr}
+              `;
+
+              // 处理行点击事件，排除特定元素
+              const handleRowClick = onRowClick
+                ? (e: React.MouseEvent) => {
+                    const target = e.target as HTMLElement;
+                    const isClickable =
+                      target.tagName === "A" ||
+                      target.tagName === "BUTTON" ||
+                      target.tagName === "INPUT" ||
+                      target.tagName === "SELECT" ||
+                      target.tagName === "TEXTAREA" ||
+                      target.closest("a") ||
+                      target.closest("button") ||
+                      target.closest("input") ||
+                      target.closest("select") ||
+                      target.closest("textarea") ||
+                      target.closest('[role="button"]') ||
+                      target.closest('[data-action-cell="true"]');
+                    if (!isClickable) {
+                      onRowClick(record, index, e);
+                    }
+                  }
+                : undefined;
+
+              // 渲染单元格
+              const cells = columns.map((column, columnIndex) => (
+                <td
+                  key={column.key}
+                  className={`
+                    ${getPaddingStyles()}
+                    ${getAlignClass(column.align)}
+                    ${column.mono ? "font-mono" : ""}
+                    ${!striped ? "border-t border-border" : ""}
+                  `}
+                  style={column.width ? { width: column.width } : undefined}
+                >
+                  <div
+                    {...(padding > 0 && {
+                      style: {
+                        ...(columnIndex === 0 && {
+                          paddingLeft: `${padding}em`,
+                        }),
+                        ...(columnIndex === columns.length - 1 && {
+                          paddingRight: `${padding}em`,
+                        }),
+                      },
+                    })}
+                  >
+                    {
+                      renderCellContent(
+                        column,
+                        record,
+                        index,
+                      ) as React.ReactNode
+                    }
+                  </div>
+                </td>
+              ));
+
+              // 如果提供了自定义 RowComponent，使用它
+              if (RowComponent) {
+                return (
+                  <RowComponent
+                    key={rowKey}
+                    record={record as Record<string, unknown>}
+                    index={index}
+                    cells={cells}
+                    className={baseClassName}
+                    onClick={handleRowClick}
+                    rowKey={rowKey}
+                  />
+                );
+              }
+
+              // 使用默认的 MemoTableRow
+              return (
+                <MemoTableRow
+                  key={rowKey}
+                  record={record as Record<string, unknown>}
+                  index={index}
+                  columns={
+                    columns as unknown as TableColumn<Record<string, unknown>>[]
+                  }
+                  striped={striped}
+                  hoverable={hoverable}
+                  onRowClick={
+                    onRowClick as
+                      | ((
+                          record: Record<string, unknown>,
+                          index: number,
+                          event: React.MouseEvent,
+                        ) => void)
+                      | undefined
+                  }
+                  rowClassName={rowClassNameStr}
+                  animateRows={animateRows}
+                  getPaddingStyles={getPaddingStyles}
+                  getAlignClass={getAlignClass}
+                  renderCellContent={
+                    renderCellContent as (
+                      column: TableColumn<Record<string, unknown>>,
+                      record: Record<string, unknown>,
+                      index: number,
+                    ) => React.ReactNode
+                  }
+                  padding={padding}
+                  getRowKey={
+                    getRowKey as (
+                      record: Record<string, unknown>,
+                      index: number,
+                    ) => string | number
+                  }
+                />
+              );
+            })
           )}
         </tbody>
       </table>

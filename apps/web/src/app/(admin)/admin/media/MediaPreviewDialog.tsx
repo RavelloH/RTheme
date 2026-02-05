@@ -585,6 +585,47 @@ export default function MediaPreviewDialog({
                 <label className="text-sm text-muted-foreground">短哈希</label>
                 <p className="text-sm font-mono">{media.shortHash}</p>
               </div>
+              <div className="md:col-span-2">
+                <label className="text-sm text-muted-foreground">
+                  虚拟文件夹
+                </label>
+                <div className="flex items-center gap-1 mt-1 flex-wrap">
+                  {(() => {
+                    const folder = media.folder;
+                    if (
+                      folder &&
+                      "pathNodes" in folder &&
+                      Array.isArray(folder.pathNodes) &&
+                      folder.pathNodes.length > 0
+                    ) {
+                      return folder.pathNodes.map((node, index) => (
+                        <div key={node.id} className="flex items-center gap-1">
+                          {index > 0 && (
+                            <span className="text-muted-foreground">/</span>
+                          )}
+                          <span
+                            className={`text-sm ${
+                              index === folder.pathNodes!.length - 1
+                                ? "font-medium"
+                                : "text-muted-foreground"
+                            }`}
+                          >
+                            {node.name}
+                          </span>
+                        </div>
+                      ));
+                    }
+                    if (folder) {
+                      return <span className="text-sm">{folder.name}</span>;
+                    }
+                    return (
+                      <span className="text-sm text-muted-foreground italic">
+                        根目录 (无文件夹)
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
             </div>
           </div>
 

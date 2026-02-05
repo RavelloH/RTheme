@@ -10,11 +10,11 @@ import {
 
 import type { FolderItem } from "@/actions/media";
 import { createFolder } from "@/actions/media";
-import type { BreadcrumbItem } from "@/app/(admin)/admin/media/MediaTable.types";
 import {
   getAccessibleFolders,
   getFolderBreadcrumb,
 } from "@/lib/client/folder-utils";
+import type { BreadcrumbItem } from "@/types/media-table";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
 import Clickable from "@/ui/Clickable";

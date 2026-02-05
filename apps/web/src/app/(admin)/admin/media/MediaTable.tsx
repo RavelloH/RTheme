@@ -32,7 +32,6 @@ import {
 import MediaEditDialog from "@/app/(admin)/admin/media/MediaEditDialog";
 import MediaGridView from "@/app/(admin)/admin/media/MediaGridView";
 import MediaPreviewDialog from "@/app/(admin)/admin/media/MediaPreviewDialog";
-import type { SelectedItems } from "@/app/(admin)/admin/media/MediaTable.types";
 import MediaTableView from "@/app/(admin)/admin/media/MediaTableView";
 import MoveDialog from "@/app/(admin)/admin/media/MoveDialog";
 import { useFolderNavigation } from "@/components/client/features/media/FolderNavigation";
@@ -40,6 +39,7 @@ import RowGrid from "@/components/client/layout/RowGrid";
 import type { FilterConfig } from "@/components/ui/GridTable";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { useMobile } from "@/hooks/use-mobile";
+import type { SelectedItems } from "@/types/media-table";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
@@ -439,7 +439,7 @@ export default function MediaTable() {
     });
   }, []);
 
-  const handleSelectionChange = useCallback(
+  const _handleSelectionChange = useCallback(
     (selectedKeys: (string | number)[]) => {
       setSelectedItems((prev) => ({
         ...prev,
@@ -1058,6 +1058,7 @@ export default function MediaTable() {
           <RowGrid key="media-table-view">
             <MediaTableView
               data={data}
+              folders={folders}
               loading={loading}
               page={currentPage}
               totalPages={totalPages}
@@ -1068,6 +1069,7 @@ export default function MediaTable() {
               onPreview={openDetailDialog}
               onEdit={openEditDialog}
               onDelete={openDeleteDialog}
+              onEnterFolder={enterFolder}
               formatFileSize={formatFileSize}
               getFileTypeIcon={getFileTypeIcon}
               viewModeToggle={viewModeToggle}
@@ -1076,7 +1078,20 @@ export default function MediaTable() {
               filterConfig={filterConfig}
               onFilterChange={handleFilterChange}
               batchActions={batchActions}
-              onSelectionChange={handleSelectionChange}
+              selectedItems={selectedItems}
+              onSelectMedia={handleSelectMedia}
+              onSelectFolder={handleSelectFolder}
+              onBatchSelect={handleBatchSelect}
+              onClearSelection={clearSelection}
+              currentFolderId={currentFolderId}
+              breadcrumbItems={breadcrumbItems}
+              onNavigateToBreadcrumb={navigateToBreadcrumb}
+              onGoBack={goBack}
+              onCreateFolder={handleCreateFolder}
+              createFolderLoading={createFolderLoading}
+              onMoveItems={handleDragMoveItems}
+              currentUserId={userUid}
+              isMobile={isMobile}
             />
           </RowGrid>
         ) : (
