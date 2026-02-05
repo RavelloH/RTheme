@@ -6,6 +6,7 @@ import Editor from "@/components/client/features/editor/Editor";
 import AdminSidebar from "@/components/client/layout/AdminSidebar";
 import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
 import MainLayout from "@/components/client/layout/MainLayout";
+import { POST_EDITOR_CONFIG } from "@/config/editor-presets";
 import { generateMetadata as generateSeoMetadata } from "@/lib/server/seo";
 
 type Props = {
@@ -60,6 +61,7 @@ export default async function EditPostPage(props: Props) {
             content={post.content}
             storageKey={slug}
             isEditMode={true}
+            config={POST_EDITOR_CONFIG}
             initialData={{
               title: post.title,
               slug: post.slug,

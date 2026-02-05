@@ -15,6 +15,8 @@ import type {
   GetCategoriesStatsSuccessResponse,
   GetPostsStats,
   GetPostsStatsSuccessResponse,
+  GetProjectsStats,
+  GetProjectsStatsSuccessResponse,
   GetTagsStats,
   GetTagsStatsSuccessResponse,
   GetUsersStats,
@@ -26,6 +28,7 @@ import {
   GetAuditStatsSchema,
   GetCategoriesStatsSchema,
   GetPostsStatsSchema,
+  GetProjectsStatsSchema,
   GetTagsStatsSchema,
   GetUsersStatsSchema,
   GetVisitStatsSchema,
@@ -1564,5 +1567,182 @@ export async function getVisitStats(
   } catch (error) {
     console.error("GetVisitStats error:", error);
     return response.serverError({ message: "获取访问统计失败" });
+  }
+}
+
+export async function getProjectsStats(
+  params: GetProjectsStats,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<GetProjectsStatsSuccessResponse["data"]>>>;
+export async function getProjectsStats(
+  params: GetProjectsStats,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<GetProjectsStatsSuccessResponse["data"]>>;
+export async function getProjectsStats(
+  { access_token, force }: GetProjectsStats,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<GetProjectsStatsSuccessResponse["data"] | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "getProjectsStats"))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      force,
+    },
+    GetProjectsStatsSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    const CACHE_KEY = generateCacheKey("stat", "projects");
+    const CACHE_TTL = 60 * 60; // 1小时
+
+    // 如果不是强制刷新，尝试从缓存获取
+    if (!force) {
+      const cachedData = await getCache<
+        GetProjectsStatsSuccessResponse["data"]
+      >(CACHE_KEY, {
+        ttl: CACHE_TTL,
+      });
+
+      if (cachedData) {
+        return response.ok({
+          data: cachedData,
+        });
+      }
+    }
+
+    // 计算时间边界
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+
+    // 使用原生 SQL 查询获取所有统计数据
+    const stats = await prisma.$queryRaw<
+      Array<{
+        status: string;
+        total_count: bigint;
+        new_7d: bigint;
+        new_30d: bigint;
+        new_1y: bigint;
+      }>
+    >`
+      SELECT
+        status,
+        COUNT(*) as total_count,
+        COUNT(CASE WHEN "createdAt" >= ${sevenDaysAgo} THEN 1 END) as new_7d,
+        COUNT(CASE WHEN "createdAt" >= ${thirtyDaysAgo} THEN 1 END) as new_30d,
+        COUNT(CASE WHEN "createdAt" >= ${oneYearAgo} THEN 1 END) as new_1y
+      FROM "Project"
+      GROUP BY status
+    `;
+
+    // 初始化统计数据
+    const total = {
+      total: 0,
+      published: 0,
+      draft: 0,
+      archived: 0,
+      developing: 0,
+    };
+
+    let newLast7Days = 0;
+    let newLast30Days = 0;
+    let newLastYear = 0;
+
+    // 聚合统计结果
+    stats.forEach((stat) => {
+      const count = Number(stat.total_count);
+      total.total += count;
+
+      // 按状态分类
+      switch (stat.status) {
+        case "PUBLISHED":
+          total.published = count;
+          break;
+        case "DRAFT":
+          total.draft = count;
+          break;
+        case "ARCHIVED":
+          total.archived = count;
+          break;
+        case "Developing":
+          total.developing = count;
+          break;
+      }
+
+      // 累加新增项目数
+      newLast7Days += Number(stat.new_7d);
+      newLast30Days += Number(stat.new_30d);
+      newLastYear += Number(stat.new_1y);
+    });
+
+    // 获取 GitHub 相关统计
+    const githubStats = await prisma.$queryRaw<
+      Array<{
+        sync_enabled: bigint;
+        total_stars: bigint;
+        total_forks: bigint;
+      }>
+    >`
+      SELECT
+        COUNT(CASE WHEN "enableGithubSync" = true THEN 1 END) as sync_enabled,
+        COALESCE(SUM(stars), 0) as total_stars,
+        COALESCE(SUM(forks), 0) as total_forks
+      FROM "Project"
+    `;
+
+    const githubData = githubStats[0];
+
+    // 构建响应数据
+    const data: GetProjectsStatsSuccessResponse["data"] = {
+      updatedAt: now.toISOString(),
+      cache: false,
+      total,
+      github: {
+        syncEnabled: Number(githubData?.sync_enabled || 0),
+        totalStars: Number(githubData?.total_stars || 0),
+        totalForks: Number(githubData?.total_forks || 0),
+      },
+      new: {
+        last7Days: newLast7Days,
+        last30Days: newLast30Days,
+        lastYear: newLastYear,
+      },
+    };
+
+    // 保存到缓存（缓存1小时）
+    const cacheData = { ...data, cache: true };
+    const { after } = await import("next/server");
+    after(async () => {
+      await setCache(CACHE_KEY, cacheData, {
+        ttl: CACHE_TTL,
+      });
+    });
+
+    return response.ok({
+      data,
+    });
+  } catch (error) {
+    console.error("GetProjectsStats error:", error);
+    return response.serverError({ message: "获取项目统计失败" });
   }
 }

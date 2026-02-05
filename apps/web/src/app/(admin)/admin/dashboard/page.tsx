@@ -5,6 +5,7 @@ import DashboardDoctor from "@/app/(admin)/admin/dashboard/DashboardDoctor";
 import DashboardMediaStats from "@/app/(admin)/admin/dashboard/DashboardMediaStats";
 import DashboardPagesStats from "@/app/(admin)/admin/dashboard/DashboardPagesStats";
 import DashboardPostsStats from "@/app/(admin)/admin/dashboard/DashboardPostsStats";
+import DashboardProjectsStats from "@/app/(admin)/admin/dashboard/DashboardProjectsStats";
 import DashboardSearchIndexStats from "@/app/(admin)/admin/dashboard/DashboardSearchIndexStats";
 import DashboardSearchInsightStats from "@/app/(admin)/admin/dashboard/DashboardSearchInsightStats";
 import DashboardSecurityStats from "@/app/(admin)/admin/dashboard/DashboardSecurityStats";
@@ -64,9 +65,7 @@ export default function AdminDashboard() {
             <DashboardCategoriesStats />
           </GridItem>
           <GridItem areas={[9, 10, 11, 12]} width={3} height={0.5}>
-            <div className="flex items-center justify-center h-full">
-              作品信息图表
-            </div>
+            <DashboardProjectsStats />
           </GridItem>
           <GridItem areas={[1, 2, 3, 4]} width={3} height={0.5}>
             <div className="flex items-center justify-center h-full">

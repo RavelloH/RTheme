@@ -786,12 +786,7 @@ export default function MediaTableView({
   // 自定义行组件（注入拖拽功能）
   const CustomRowComponent = useCallback(
     (props: RowComponentProps) => {
-      return (
-        <DraggableTableRow
-          {...props}
-          isDragDisabled={isMobile}
-        />
-      );
+      return <DraggableTableRow {...props} isDragDisabled={isMobile} />;
     },
     [isMobile],
   );

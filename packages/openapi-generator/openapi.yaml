@@ -6098,6 +6098,120 @@ components:
         - requestId
         - data
       additionalProperties: false
+    GetProjectsStats:
+      type: object
+      properties:
+        access_token:
+          type: string
+        force:
+          default: false
+          type: boolean
+      required:
+        - force
+      additionalProperties: false
+    GetProjectsStatsSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+        timestamp:
+          type: string
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            updatedAt:
+              type: string
+            cache:
+              type: boolean
+            total:
+              type: object
+              properties:
+                total:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                published:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                draft:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                archived:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                developing:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+              required:
+                - total
+                - published
+                - draft
+                - archived
+                - developing
+              additionalProperties: false
+            github:
+              type: object
+              properties:
+                syncEnabled:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                totalStars:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                totalForks:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+              required:
+                - syncEnabled
+                - totalStars
+                - totalForks
+              additionalProperties: false
+            new:
+              type: object
+              properties:
+                last7Days:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                last30Days:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                lastYear:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+              required:
+                - last7Days
+                - last30Days
+                - lastYear
+              additionalProperties: false
+          required:
+            - updatedAt
+            - cache
+            - total
+            - github
+            - new
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
     GetSystemInfo:
       type: object
       properties:
@@ -13023,6 +13137,13 @@ components:
           type: string
         hasReferences:
           type: boolean
+        folderId:
+          anyOf:
+            - type: integer
+              exclusiveMinimum: true
+              maximum: 9007199254740991
+              minimum: 0
+            - type: "null"
       required:
         - page
         - pageSize
@@ -13197,6 +13318,26 @@ components:
           type: string
         postsCount:
           type: number
+        folderId:
+          anyOf:
+            - type: integer
+              exclusiveMinimum: true
+              maximum: 9007199254740991
+              minimum: 0
+            - type: "null"
+        folder:
+          anyOf:
+            - type: object
+              properties:
+                id:
+                  type: number
+                name:
+                  type: string
+              required:
+                - id
+                - name
+              additionalProperties: false
+            - type: "null"
         user:
           anyOf:
             - type: object
@@ -13351,6 +13492,42 @@ components:
           type: string
         storageProviderId:
           type: string
+        folderId:
+          anyOf:
+            - type: integer
+              exclusiveMinimum: true
+              maximum: 9007199254740991
+              minimum: 0
+            - type: "null"
+        folder:
+          anyOf:
+            - type: object
+              properties:
+                id:
+                  type: number
+                name:
+                  type: string
+                path:
+                  type: string
+                pathNodes:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: number
+                      name:
+                        type: string
+                    required:
+                      - id
+                      - name
+                    additionalProperties: false
+              required:
+                - id
+                - name
+                - path
+              additionalProperties: false
+            - type: "null"
         user:
           anyOf:
             - type: object
@@ -15259,6 +15436,879 @@ components:
         - requestId
         - data
         - error
+      additionalProperties: false
+    GetProjectsTrends:
+      type: object
+      properties:
+        access_token:
+          type: string
+        days:
+          default: 365
+          type: integer
+          exclusiveMinimum: true
+          maximum: 9007199254740991
+          minimum: 0
+        count:
+          default: 30
+          type: integer
+          exclusiveMinimum: true
+          maximum: 9007199254740991
+          minimum: 0
+      required:
+        - days
+        - count
+      additionalProperties: false
+    GetProjectsTrendsSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+        timestamp:
+          type: string
+        requestId:
+          type: string
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              time:
+                type: string
+              data:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    minimum: 0
+                    maximum: 9007199254740991
+                  new:
+                    type: integer
+                    minimum: 0
+                    maximum: 9007199254740991
+                  personal:
+                    type: integer
+                    minimum: 0
+                    maximum: 9007199254740991
+                required:
+                  - total
+                  - new
+                  - personal
+                additionalProperties: false
+            required:
+              - time
+              - data
+            additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    GetProjectsList:
+      type: object
+      properties:
+        access_token:
+          type: string
+        page:
+          default: 1
+          type: integer
+          exclusiveMinimum: true
+          maximum: 9007199254740991
+          minimum: 0
+        pageSize:
+          default: 25
+          type: integer
+          exclusiveMinimum: true
+          maximum: 9007199254740991
+          minimum: 0
+        sortBy:
+          default: id
+          type: string
+          enum:
+            - id
+            - title
+            - publishedAt
+            - updatedAt
+            - createdAt
+            - stars
+            - forks
+        sortOrder:
+          default: desc
+          type: string
+          enum:
+            - asc
+            - desc
+        status:
+          type: array
+          items:
+            type: string
+            enum:
+              - DRAFT
+              - PUBLISHED
+              - ARCHIVED
+              - Developing
+        search:
+          type: string
+        id:
+          type: integer
+          minimum: -9007199254740991
+          maximum: 9007199254740991
+        authorUid:
+          type: integer
+          minimum: -9007199254740991
+          maximum: 9007199254740991
+        enableGithubSync:
+          type: array
+          items:
+            type: boolean
+        publishedAtStart:
+          type: string
+        publishedAtEnd:
+          type: string
+        updatedAtStart:
+          type: string
+        updatedAtEnd:
+          type: string
+        createdAtStart:
+          type: string
+        createdAtEnd:
+          type: string
+      required:
+        - page
+        - pageSize
+        - sortBy
+        - sortOrder
+      additionalProperties: false
+    GetProjectsListSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+        timestamp:
+          type: string
+        requestId:
+          type: string
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                minimum: -9007199254740991
+                maximum: 9007199254740991
+              title:
+                type: string
+              slug:
+                type: string
+              description:
+                type: string
+              status:
+                type: string
+                enum:
+                  - DRAFT
+                  - PUBLISHED
+                  - ARCHIVED
+                  - Developing
+              demoUrl:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              repoUrl:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              techStack:
+                anyOf:
+                  - type: array
+                    items:
+                      type: string
+                  - type: "null"
+              repoPath:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              stars:
+                type: integer
+                minimum: -9007199254740991
+                maximum: 9007199254740991
+              forks:
+                type: integer
+                minimum: -9007199254740991
+                maximum: 9007199254740991
+              languages:
+                anyOf:
+                  - type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      type: number
+                  - type: "null"
+              license:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              enableGithubSync:
+                type: boolean
+              enableConentSync:
+                type: boolean
+              publishedAt:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              createdAt:
+                type: string
+              updatedAt:
+                type: string
+              startedAt:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              author:
+                type: object
+                properties:
+                  uid:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  username:
+                    type: string
+                  nickname:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                required:
+                  - uid
+                  - username
+                  - nickname
+                additionalProperties: false
+              categories:
+                type: array
+                items:
+                  type: string
+              tags:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    slug:
+                      type: string
+                  required:
+                    - name
+                    - slug
+                  additionalProperties: false
+              featuredImage:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              featuredImages:
+                type: array
+                items:
+                  type: string
+            required:
+              - id
+              - title
+              - slug
+              - description
+              - status
+              - demoUrl
+              - repoUrl
+              - techStack
+              - repoPath
+              - stars
+              - forks
+              - languages
+              - license
+              - enableGithubSync
+              - enableConentSync
+              - publishedAt
+              - createdAt
+              - updatedAt
+              - startedAt
+              - author
+              - categories
+              - tags
+              - featuredImage
+            additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    GetProjectDetail:
+      type: object
+      properties:
+        access_token:
+          type: string
+        slug:
+          type: string
+          minLength: 1
+      required:
+        - slug
+      additionalProperties: false
+    GetProjectDetailSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+        timestamp:
+          type: string
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            id:
+              type: integer
+              minimum: -9007199254740991
+              maximum: 9007199254740991
+            title:
+              type: string
+            slug:
+              type: string
+            description:
+              type: string
+            content:
+              anyOf:
+                - type: string
+                - type: "null"
+            status:
+              type: string
+              enum:
+                - DRAFT
+                - PUBLISHED
+                - ARCHIVED
+                - Developing
+            demoUrl:
+              anyOf:
+                - type: string
+                - type: "null"
+            repoUrl:
+              anyOf:
+                - type: string
+                - type: "null"
+            techStack:
+              anyOf:
+                - type: array
+                  items:
+                    type: string
+                - type: "null"
+            repoPath:
+              anyOf:
+                - type: string
+                - type: "null"
+            stars:
+              type: integer
+              minimum: -9007199254740991
+              maximum: 9007199254740991
+            forks:
+              type: integer
+              minimum: -9007199254740991
+              maximum: 9007199254740991
+            languages:
+              anyOf:
+                - type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties:
+                    type: number
+                - type: "null"
+            license:
+              anyOf:
+                - type: string
+                - type: "null"
+            enableGithubSync:
+              type: boolean
+            enableConentSync:
+              type: boolean
+            publishedAt:
+              anyOf:
+                - type: string
+                - type: "null"
+            createdAt:
+              type: string
+            updatedAt:
+              type: string
+            startedAt:
+              anyOf:
+                - type: string
+                - type: "null"
+            author:
+              type: object
+              properties:
+                uid:
+                  type: integer
+                  minimum: -9007199254740991
+                  maximum: 9007199254740991
+                username:
+                  type: string
+                nickname:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+              required:
+                - uid
+                - username
+                - nickname
+              additionalProperties: false
+            categories:
+              type: array
+              items:
+                type: string
+            tags:
+              type: array
+              items:
+                type: string
+            featuredImage:
+              anyOf:
+                - type: string
+                - type: "null"
+            featuredImages:
+              type: array
+              items:
+                type: string
+          required:
+            - id
+            - title
+            - slug
+            - description
+            - content
+            - status
+            - demoUrl
+            - repoUrl
+            - techStack
+            - repoPath
+            - stars
+            - forks
+            - languages
+            - license
+            - enableGithubSync
+            - enableConentSync
+            - publishedAt
+            - createdAt
+            - updatedAt
+            - startedAt
+            - author
+            - categories
+            - tags
+            - featuredImage
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    CreateProject:
+      type: object
+      properties:
+        access_token:
+          type: string
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        slug:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        content:
+          type: string
+        demoUrl:
+          type: string
+          maxLength: 500
+        repoUrl:
+          type: string
+          maxLength: 500
+        techStack:
+          type: array
+          items:
+            type: string
+        repoPath:
+          type: string
+          maxLength: 100
+          pattern: ^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+$
+        enableGithubSync:
+          default: false
+          type: boolean
+        enableConentSync:
+          default: false
+          type: boolean
+        syncImmediately:
+          default: false
+          type: boolean
+        status:
+          default: DRAFT
+          type: string
+          enum:
+            - DRAFT
+            - PUBLISHED
+            - ARCHIVED
+            - Developing
+        categories:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+        featuredImages:
+          type: array
+          items:
+            type: string
+            maxLength: 500
+        featuredImage:
+          type: string
+          maxLength: 500
+        publishedAt:
+          type: string
+        startedAt:
+          type: string
+      required:
+        - title
+        - enableGithubSync
+        - enableConentSync
+        - syncImmediately
+        - status
+      additionalProperties: false
+    CreateProjectSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+        timestamp:
+          type: string
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            id:
+              type: integer
+              minimum: -9007199254740991
+              maximum: 9007199254740991
+            slug:
+              type: string
+            syncResult:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                error:
+                  type: string
+                stats:
+                  type: integer
+                  minimum: -9007199254740991
+                  maximum: 9007199254740991
+                forks:
+                  type: integer
+                  minimum: -9007199254740991
+                  maximum: 9007199254740991
+              required:
+                - success
+              additionalProperties: false
+          required:
+            - id
+            - slug
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    UpdateProject:
+      type: object
+      properties:
+        access_token:
+          type: string
+        slug:
+          type: string
+          minLength: 1
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        newSlug:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        content:
+          type: string
+        demoUrl:
+          type: string
+          maxLength: 500
+        repoUrl:
+          type: string
+          maxLength: 500
+        techStack:
+          type: array
+          items:
+            type: string
+        repoPath:
+          anyOf:
+            - type: string
+              maxLength: 100
+              pattern: ^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+$
+            - type: "null"
+        enableGithubSync:
+          type: boolean
+        enableConentSync:
+          type: boolean
+        status:
+          type: string
+          enum:
+            - DRAFT
+            - PUBLISHED
+            - ARCHIVED
+            - Developing
+        categories:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+        featuredImages:
+          type: array
+          items:
+            type: string
+            maxLength: 500
+        featuredImage:
+          type: string
+          maxLength: 500
+        publishedAt:
+          type: string
+        startedAt:
+          type: string
+      required:
+        - slug
+      additionalProperties: false
+    UpdateProjectSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+        timestamp:
+          type: string
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            id:
+              type: integer
+              minimum: -9007199254740991
+              maximum: 9007199254740991
+            slug:
+              type: string
+          required:
+            - id
+            - slug
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    UpdateProjects:
+      type: object
+      properties:
+        access_token:
+          type: string
+        ids:
+          minItems: 1
+          type: array
+          items:
+            $ref: "#/components/schemas/UpdateProjects"
+        status:
+          type: string
+          enum:
+            - DRAFT
+            - PUBLISHED
+            - ARCHIVED
+            - Developing
+        enableGithubSync:
+          type: boolean
+        enableConentSync:
+          type: boolean
+      required:
+        - ids
+      additionalProperties: false
+    UpdateProjectsSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+        timestamp:
+          type: string
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            updated:
+              type: integer
+              minimum: 0
+              maximum: 9007199254740991
+          required:
+            - updated
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    DeleteProjects:
+      type: object
+      properties:
+        access_token:
+          type: string
+        ids:
+          minItems: 1
+          type: array
+          items:
+            $ref: "#/components/schemas/DeleteProjects"
+      required:
+        - ids
+      additionalProperties: false
+    DeleteProjectsSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+        timestamp:
+          type: string
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            deleted:
+              type: integer
+              minimum: 0
+              maximum: 9007199254740991
+          required:
+            - deleted
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
+      additionalProperties: false
+    SyncProjectsGithub:
+      type: object
+      properties:
+        access_token:
+          type: string
+        ids:
+          type: array
+          items:
+            type: integer
+            exclusiveMinimum: true
+            maximum: 9007199254740991
+            minimum: 0
+      additionalProperties: false
+    SyncProjectsGithubSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+        timestamp:
+          type: string
+        requestId:
+          type: string
+        data:
+          type: object
+          properties:
+            synced:
+              type: integer
+              minimum: 0
+              maximum: 9007199254740991
+            failed:
+              type: integer
+              minimum: 0
+              maximum: 9007199254740991
+            results:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  slug:
+                    type: string
+                  success:
+                    type: boolean
+                  error:
+                    type: string
+                  stats:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  forks:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                required:
+                  - id
+                  - slug
+                  - success
+                additionalProperties: false
+          required:
+            - synced
+            - failed
+            - results
+          additionalProperties: false
+      required:
+        - success
+        - message
+        - timestamp
+        - requestId
+        - data
       additionalProperties: false
   securitySchemes:
     BearerAuth:

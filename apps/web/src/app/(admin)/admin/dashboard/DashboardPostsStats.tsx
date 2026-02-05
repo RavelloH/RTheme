@@ -177,7 +177,7 @@ export default function DashboardPostsStats() {
                   <RiStickyNoteAddFill size="1.1em" /> 新建文章
                 </Link>
                 <Link
-                  href="/admin/projects/new"
+                  href="/admin/projects?action=new"
                   className="flex-1 flex gap-2 items-center justify-center border-border border-b hover:bg-primary hover:text-primary-foreground transition-all"
                 >
                   <RiFolderAddFill size="1.1em" /> 新建项目
