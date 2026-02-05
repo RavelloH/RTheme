@@ -32,10 +32,6 @@ import type { MediaListItem } from "@repo/shared-types/api/media";
 import { AnimatePresence, motion } from "framer-motion";
 
 import type { FolderItem } from "@/actions/media";
-import type {
-  MediaGridViewProps,
-  RowAction,
-} from "@/app/(admin)/admin/media/MediaTable.types";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import CMSImage from "@/components/ui/CMSImage";
 import {
@@ -43,6 +39,7 @@ import {
   useMarqueeSelection,
 } from "@/hooks/use-marquee-selection";
 import { createArray } from "@/lib/client/create-array";
+import type { MediaGridViewProps, RowAction } from "@/types/media-table";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
 import { Checkbox } from "@/ui/Checkbox";

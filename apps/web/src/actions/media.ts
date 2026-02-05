@@ -408,6 +408,12 @@ export async function getMediaList(
             nickname: true,
           },
         },
+        folder: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         _count: {
           select: {
             references: true,
@@ -437,6 +443,13 @@ export async function getMediaList(
       inGallery: item.galleryPhoto !== null, // 根据 galleryPhoto 是否存在判断
       createdAt: item.createdAt.toISOString(),
       postsCount: item._count.references, // 使用 references 计数
+      folderId: item.folder?.id || null,
+      folder: item.folder
+        ? {
+            id: item.folder.id,
+            name: item.folder.name,
+          }
+        : null,
       user: item.user,
     }));
 
@@ -520,6 +533,13 @@ export async function getMediaDetail(
             id: true,
             name: true,
             displayName: true,
+          },
+        },
+        folder: {
+          select: {
+            id: true,
+            name: true,
+            path: true,
           },
         },
         references: {
@@ -608,6 +628,40 @@ export async function getMediaDetail(
         slot: ref.slot,
       }));
 
+    // 解析完整的文件夹路径节点
+    let pathNodes: { id: number; name: string }[] | undefined = undefined;
+    if (media.folder && media.folder.path) {
+      const pathIds = media.folder.path
+        .split("/")
+        .filter((id) => id !== "")
+        .map(Number);
+
+      if (pathIds.length > 0) {
+        const ancestors = await prisma.virtualFolder.findMany({
+          where: {
+            id: { in: pathIds },
+          },
+          select: {
+            id: true,
+            name: true,
+            path: true,
+          },
+        });
+
+        // 按路径深度排序，确保顺序正确
+        ancestors.sort(
+          (a, b) =>
+            a.path.split("/").filter(Boolean).length -
+            b.path.split("/").filter(Boolean).length,
+        );
+
+        pathNodes = ancestors.map((a) => ({
+          id: a.id,
+          name: a.name,
+        }));
+      }
+    }
+
     const mediaDetail: MediaDetail = {
       id: media.id,
       fileName: media.fileName,
@@ -638,6 +692,15 @@ export async function getMediaDetail(
       storageUrl: media.storageUrl,
       createdAt: media.createdAt.toISOString(),
       storageProviderId: media.storageProviderId,
+      folderId: media.folderId,
+      folder: media.folder
+        ? {
+            id: media.folder.id,
+            name: media.folder.name,
+            path: media.folder.path,
+            pathNodes,
+          }
+        : null,
       user: media.user
         ? {
             uid: media.user.uid,

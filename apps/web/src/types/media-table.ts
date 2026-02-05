@@ -6,6 +6,11 @@ import type { MediaDetail, MediaListItem } from "@repo/shared-types/api/media";
 import type { FolderItem } from "@/actions/media";
 import type { FilterConfig } from "@/components/ui/GridTable";
 
+// 表格行项目联合类型（文件夹 + 媒体）
+export type TableRowItem =
+  | { type: "folder"; data: FolderItem }
+  | { type: "media"; data: MediaListItem };
+
 // 行操作按钮类型
 export interface RowAction {
   label: string;
@@ -110,10 +115,11 @@ export interface MediaGridViewProps extends MediaViewProps {
 }
 
 // 表格视图额外 Props
-// 表格视图使用 GridTable 的内置选择和分页系统
+// 扩展为与 GridView 功能对等，支持文件夹显示、拖拽和高级选中
 export interface MediaTableViewProps {
   // 数据
   data: MediaListItem[];
+  folders: FolderItem[];
   loading: boolean;
 
   // 分页
@@ -128,6 +134,7 @@ export interface MediaTableViewProps {
   onPreview: (media: MediaListItem) => void;
   onEdit: (media: MediaListItem) => void;
   onDelete: (media: MediaListItem) => void;
+  onEnterFolder: (folderId: number) => void;
 
   // 工具函数
   formatFileSize: (bytes: number) => string;
@@ -161,8 +168,37 @@ export interface MediaTableViewProps {
     loading?: boolean;
   }>;
 
-  // 选中
-  onSelectionChange: (selectedKeys: (string | number)[]) => void;
+  // 选中状态
+  selectedItems: SelectedItems;
+  onSelectMedia: (id: number, checked: boolean) => void;
+  onSelectFolder: (id: number, checked: boolean) => void;
+  onBatchSelect: (
+    mediaIds: number[],
+    folderIds: number[],
+    append: boolean,
+  ) => void;
+  onClearSelection: () => void;
+
+  // 面包屑导航
+  currentFolderId: number | null;
+  breadcrumbItems: BreadcrumbItem[];
+  onNavigateToBreadcrumb: (index: number) => void;
+  onGoBack: () => void;
+
+  // 新建文件夹
+  onCreateFolder: (name: string) => Promise<boolean>;
+  createFolderLoading: boolean;
+
+  // 拖拽移动回调
+  onMoveItems: (
+    mediaIds: number[],
+    folderIds: number[],
+    targetFolderId: number,
+  ) => Promise<void>;
+
+  // 用户信息
+  currentUserId: number;
+  isMobile: boolean;
 }
 
 // 对话框状态类型

@@ -30,7 +30,7 @@ import { Input } from "@/ui/Input";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import type { SelectOption } from "@/ui/Select";
 import { Select } from "@/ui/Select";
-import type { TableColumn } from "@/ui/Table";
+import type { RowComponentProps, TableColumn } from "@/ui/Table";
 import { Table } from "@/ui/Table";
 import { Tooltip } from "@/ui/Tooltip";
 
@@ -98,6 +98,10 @@ export interface GridTableProps<T extends Record<string, unknown>> {
   batchActions?: ActionButton[];
   rowActions?: (record: T) => ActionButton[];
   onSelectionChange?: (selectedKeys: (string | number)[]) => void;
+  // 受控选中模式（可选，向后兼容）
+  controlledSelectedKeys?: Set<string | number>;
+  // Shift 范围选择回调（可选）
+  onRangeSelect?: (startIndex: number, endIndex: number) => void;
   // 行点击事件
   onRowClick?: (record: T, index: number, event: React.MouseEvent) => void;
   // GridItem 配置
@@ -106,6 +110,10 @@ export interface GridTableProps<T extends Record<string, unknown>> {
   contentWidth?: number;
   contentHeight?: number;
   footerHeight?: number;
+  // 内容区域顶部自定义内容（如面包屑导航）
+  contentHeader?: React.ReactNode;
+  // 自定义行渲染组件（用于拖拽等功能）
+  rowComponent?: React.ComponentType<RowComponentProps>;
 }
 
 export default function GridTable<T extends Record<string, unknown>>({
@@ -137,20 +145,38 @@ export default function GridTable<T extends Record<string, unknown>>({
   batchActions = [],
   rowActions,
   onSelectionChange,
+  controlledSelectedKeys,
+  onRangeSelect,
   onRowClick,
   headerHeight = 0.1,
   contentAreas = createArray(2, 11),
   contentWidth = 24 / 10,
   contentHeight = 2,
   footerHeight = 0.1,
+  contentHeader,
+  rowComponent,
 }: GridTableProps<T>) {
   // 检测是否为移动设备
   const isMobile = useMobile();
 
-  // 选中状态管理
-  const [selectedKeys, setSelectedKeys] = useState<Set<string | number>>(
-    new Set(),
+  // 选中状态管理（支持受控/非受控模式）
+  const [internalSelectedKeys, setInternalSelectedKeys] = useState<
+    Set<string | number>
+  >(new Set());
+  const selectedKeys = controlledSelectedKeys ?? internalSelectedKeys;
+  const setSelectedKeys = useCallback(
+    (newKeys: Set<string | number>) => {
+      if (!controlledSelectedKeys) {
+        setInternalSelectedKeys(newKeys);
+      }
+      onSelectionChange?.(Array.from(newKeys));
+    },
+    [controlledSelectedKeys, onSelectionChange],
   );
+
+  // Shift 范围选择状态
+  const lastClickedIndexRef = useRef<number>(-1);
+  const isShiftHeldRef = useRef(false);
 
   // 搜索状态管理
   const [searchValue, setSearchValue] = useState("");
@@ -261,11 +287,10 @@ export default function GridTable<T extends Record<string, unknown>>({
     if (prevPageRef.current !== page) {
       if (selectedKeys.size > 0) {
         setSelectedKeys(new Set());
-        onSelectionChange?.([]);
       }
       prevPageRef.current = page;
     }
-  }, [page, selectedKeys.size, onSelectionChange]);
+  }, [page, selectedKeys.size, setSelectedKeys]);
 
   // 获取行的唯一键
   const getRowKey = useCallback(
@@ -283,29 +308,101 @@ export default function GridTable<T extends Record<string, unknown>>({
       if (checked) {
         const allKeys = new Set(data.map(getRowKey));
         setSelectedKeys(allKeys);
-        onSelectionChange?.(Array.from(allKeys));
       } else {
         setSelectedKeys(new Set());
-        onSelectionChange?.([]);
       }
     },
-    [data, getRowKey, onSelectionChange],
+    [data, getRowKey, setSelectedKeys],
   );
 
-  // 单选
+  // 单选 / Shift 范围选择
   const handleSelectRow = useCallback(
-    (key: string | number, checked: boolean) => {
-      const newSelectedKeys = new Set(selectedKeys);
-      if (checked) {
-        newSelectedKeys.add(key);
+    (key: string | number, checked: boolean, index?: number) => {
+      // Shift 范围选择
+      if (
+        isShiftHeldRef.current &&
+        index !== undefined &&
+        lastClickedIndexRef.current !== -1 &&
+        lastClickedIndexRef.current !== index
+      ) {
+        const start = Math.min(lastClickedIndexRef.current, index);
+        const end = Math.max(lastClickedIndexRef.current, index);
+
+        // 通知父组件范围选择（如果提供了回调）
+        if (onRangeSelect) {
+          onRangeSelect(start, end);
+        } else {
+          // 默认行为：选中范围内的所有行
+          const newSelectedKeys = new Set(selectedKeys);
+          for (let i = start; i <= end; i++) {
+            const item = data[i];
+            if (!item) continue;
+            const rowKeyValue = getRowKey(item);
+            if (checked) {
+              newSelectedKeys.add(rowKeyValue);
+            } else {
+              newSelectedKeys.delete(rowKeyValue);
+            }
+          }
+          setSelectedKeys(newSelectedKeys);
+        }
       } else {
-        newSelectedKeys.delete(key);
+        // 普通单选
+        const newSelectedKeys = new Set(selectedKeys);
+        if (checked) {
+          newSelectedKeys.add(key);
+        } else {
+          newSelectedKeys.delete(key);
+        }
+        setSelectedKeys(newSelectedKeys);
       }
-      setSelectedKeys(newSelectedKeys);
-      onSelectionChange?.(Array.from(newSelectedKeys));
+
+      // 记录最后点击的行索引
+      if (index !== undefined) {
+        lastClickedIndexRef.current = index;
+      }
     },
-    [selectedKeys, onSelectionChange],
+    [selectedKeys, setSelectedKeys, data, getRowKey, onRangeSelect],
   );
+
+  // 监听 Shift 键和 Ctrl+A 全选
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Shift") {
+        isShiftHeldRef.current = true;
+      }
+
+      // Ctrl+A 全选
+      if ((e.ctrlKey || e.metaKey) && e.key === "a") {
+        // 检查焦点是否在输入框内
+        const activeElement = document.activeElement;
+        if (
+          activeElement instanceof HTMLInputElement ||
+          activeElement instanceof HTMLTextAreaElement ||
+          activeElement?.getAttribute("contenteditable") === "true"
+        ) {
+          return; // 不阻止输入框内的全选
+        }
+
+        e.preventDefault();
+        handleSelectAll(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Shift") {
+        isShiftHeldRef.current = false;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [handleSelectAll]);
 
   // 打开筛选对话框
   const openFilterDialog = useCallback(() => {
@@ -499,7 +596,7 @@ export default function GridTable<T extends Record<string, unknown>>({
           />
         </div>
       ),
-      render: (_, record) => {
+      render: (_, record, index) => {
         const key = getRowKey(record);
         return (
           <div
@@ -508,7 +605,7 @@ export default function GridTable<T extends Record<string, unknown>>({
           >
             <Checkbox
               checked={selectedKeys.has(key)}
-              onChange={(e) => handleSelectRow(key, e.target.checked)}
+              onChange={(e) => handleSelectRow(key, e.target.checked, index)}
               size={size}
             />
           </div>
@@ -725,6 +822,9 @@ export default function GridTable<T extends Record<string, unknown>>({
               )}
           </AnimatePresence>
 
+          {/* 自定义内容区域头部（如面包屑导航） */}
+          {contentHeader}
+
           <AutoTransition type="fade" className="flex-1 overflow-hidden">
             {loading ? (
               <div className="h-full" key="loading">
@@ -747,6 +847,7 @@ export default function GridTable<T extends Record<string, unknown>>({
                     padding={padding}
                     onSortChange={onSortChange}
                     onRowClick={onRowClick}
+                    rowComponent={rowComponent}
                   />
                 </div>
               </div>

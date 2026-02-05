@@ -84,6 +84,14 @@ export const MediaListItemSchema = z.object({
   inGallery: z.boolean(),
   createdAt: z.string(),
   postsCount: z.number(), // 关联文章数量
+  folderId: z.number().int().positive().nullable().optional(),
+  folder: z
+    .object({
+      id: z.number(),
+      name: z.string(),
+    })
+    .nullable()
+    .optional(),
   user: z
     .object({
       uid: z.number(),
@@ -128,6 +136,23 @@ export const MediaDetailSchema = z.object({
   storageUrl: z.string(),
   createdAt: z.string(),
   storageProviderId: z.string(),
+  folderId: z.number().int().positive().nullable().optional(),
+  folder: z
+    .object({
+      id: z.number(),
+      name: z.string(),
+      path: z.string(),
+      pathNodes: z
+        .array(
+          z.object({
+            id: z.number(),
+            name: z.string(),
+          }),
+        )
+        .optional(),
+    })
+    .nullable()
+    .optional(),
   user: z
     .object({
       uid: z.number(),
