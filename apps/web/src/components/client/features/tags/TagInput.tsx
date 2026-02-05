@@ -162,17 +162,19 @@ export function TagInput({
   ) => {
     if ("type" in tag && tag.type === "create") {
       // 创建新标签
+      // 客户端 slug 仅用于本地去重，服务器会自动生成真正的 slug
       const newTag: SelectedTag = {
         name: tag.name,
-        slug: tag.name
-          .toLowerCase()
-          .replace(/\s+/g, "-")
-          .replace(/[^\w-]/g, ""),
+        slug: tag.name.toLowerCase().trim(), // 简单处理，仅用于本地标识
         isNew: true,
       };
 
-      // 检查是否已存在
-      if (!value.some((t) => t.slug === newTag.slug)) {
+      // 检查是否已存在（基于名称去重，不区分大小写）
+      const alreadyExists = value.some(
+        (t) => t.name.toLowerCase() === newTag.name.toLowerCase(),
+      );
+
+      if (!alreadyExists) {
         onChange([...value, newTag]);
       }
     } else {
