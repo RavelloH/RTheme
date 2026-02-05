@@ -851,13 +851,13 @@ model Project {
   description String  @db.Text
   content     String? @db.Text
 
-  demoUrl   String? @db.VarChar(500)
-  repoUrl   String? @db.VarChar(500)
-  techStack Json?
+  demoUrl   String?  @db.VarChar(500)
+  repoUrl   String?  @db.VarChar(500)
+  techStack String[]
 
   // GitHub 相关字段
   repoPath         String? @db.VarChar(100) // 如 "username/repo"
-  stats            Int     @default(0)
+  stars            Int     @default(0)
   forks            Int     @default(0)
   languages        Json?
   license          String? @db.VarChar(100)

@@ -234,3 +234,46 @@ registerSchema(
   "GetVisitStatsSuccessResponse",
   GetVisitStatsSuccessResponseSchema,
 );
+
+/*
+    getProjectsStats() Schema
+*/
+export const GetProjectsStatsSchema = z.object({
+  access_token: z.string().optional(),
+  force: z.boolean().default(false),
+});
+export type GetProjectsStats = z.infer<typeof GetProjectsStatsSchema>;
+registerSchema("GetProjectsStats", GetProjectsStatsSchema);
+
+export const GetProjectsStatsSuccessResponseSchema =
+  createSuccessResponseSchema(
+    z.object({
+      updatedAt: z.string(),
+      cache: z.boolean(),
+      total: z.object({
+        total: z.number().int().nonnegative(),
+        published: z.number().int().nonnegative(),
+        draft: z.number().int().nonnegative(),
+        archived: z.number().int().nonnegative(),
+        developing: z.number().int().nonnegative(),
+      }),
+      github: z.object({
+        syncEnabled: z.number().int().nonnegative(),
+        totalStars: z.number().int().nonnegative(),
+        totalForks: z.number().int().nonnegative(),
+      }),
+      new: z.object({
+        last7Days: z.number().int().nonnegative(),
+        last30Days: z.number().int().nonnegative(),
+        lastYear: z.number().int().nonnegative(),
+      }),
+    }),
+  );
+
+export type GetProjectsStatsSuccessResponse = z.infer<
+  typeof GetProjectsStatsSuccessResponseSchema
+>;
+registerSchema(
+  "GetProjectsStatsSuccessResponse",
+  GetProjectsStatsSuccessResponseSchema,
+);

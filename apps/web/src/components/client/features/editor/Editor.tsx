@@ -17,6 +17,7 @@ import {
   RiFullscreenExitLine,
   RiFullscreenLine,
   RiFunctions,
+  RiGithubFill,
   RiH1,
   RiH2,
   RiH3,
@@ -74,6 +75,7 @@ import {
   loadEditorContent,
   saveEditorContent,
 } from "@/lib/client/editor-persistence";
+import type { EditorConfig, EditorInitialData } from "@/types/editor-config";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
@@ -92,25 +94,18 @@ export default function Editor({
   storageKey = "new",
   initialData,
   isEditMode = false,
+  config,
+  onExtraAction,
 }: {
   content?: string;
   storageKey?: string;
-  initialData?: {
-    title?: string;
-    slug?: string;
-    excerpt?: string;
-    status?: string;
-    isPinned?: boolean;
-    allowComments?: boolean;
-    robotsIndex?: boolean;
-    metaDescription?: string;
-    metaKeywords?: string;
-    featuredImage?: string;
-    categories?: string[];
-    tags?: string[];
-    postMode?: "MARKDOWN" | "MDX";
-  };
+  initialData?: EditorInitialData;
   isEditMode?: boolean;
+  config?: EditorConfig;
+  onExtraAction?: (
+    actionId: string,
+    formData: Record<string, unknown>,
+  ) => void | Promise<void>;
 }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [editor, setEditor] = useState<TiptapEditorType | null>(null);
@@ -212,6 +207,17 @@ export default function Editor({
     featuredImage: "",
     category: null as string | null, // 单个分类
     tags: [] as SelectedTag[], // 使用 SelectedTag 类型
+    // Project 特有字段
+    description: "",
+    demoUrl: "",
+    repoUrl: "",
+    techStack: [] as string[],
+    repoPath: "",
+    license: "",
+    enableGithubSync: false,
+    enableConentSync: false,
+    featuredImages: [] as string[],
+    startedAt: "" as string | undefined,
   });
 
   // 编辑器类型切换时重置加载标记
@@ -224,7 +230,16 @@ export default function Editor({
     if (initialData) {
       setDetailsForm((prev) => ({
         ...prev,
-        ...initialData,
+        title: initialData.title || prev.title,
+        slug: initialData.slug || prev.slug,
+        excerpt: initialData.excerpt || prev.excerpt,
+        status: initialData.status || prev.status,
+        isPinned: initialData.isPinned ?? prev.isPinned,
+        allowComments: initialData.allowComments ?? prev.allowComments,
+        robotsIndex: initialData.robotsIndex ?? prev.robotsIndex,
+        metaDescription: initialData.metaDescription || prev.metaDescription,
+        metaKeywords: initialData.metaKeywords || prev.metaKeywords,
+        featuredImage: initialData.featuredImage || prev.featuredImage,
         // 将 string[] categories 转换为 string | null
         category: initialData.categories?.[0] || null,
         // 将 string[] tags 转换为 SelectedTag[]
@@ -234,7 +249,18 @@ export default function Editor({
               slug: name.toLowerCase().replace(/\s+/g, "-"),
               isNew: false,
             }))
-          : [],
+          : prev.tags,
+        // Project 特有字段
+        description: initialData.description || prev.description,
+        demoUrl: initialData.demoUrl || prev.demoUrl,
+        repoUrl: initialData.repoUrl || prev.repoUrl,
+        techStack: initialData.techStack || prev.techStack,
+        repoPath: initialData.repoPath || prev.repoPath,
+        license: initialData.license || prev.license,
+        enableGithubSync: initialData.enableGithubSync ?? prev.enableGithubSync,
+        enableConentSync: initialData.enableConentSync ?? prev.enableConentSync,
+        featuredImages: initialData.featuredImages || prev.featuredImages,
+        startedAt: initialData.startedAt || prev.startedAt,
       }));
     }
   }, [initialData]);
@@ -268,9 +294,14 @@ export default function Editor({
   // 初始化适配器管理器
   useEffect(() => {
     if (!adapterManagerRef.current) {
+      // 使用带前缀的键
+      const actualStorageKey = config?.storageKey
+        ? `${config.storageKey}:${storageKey}`
+        : storageKey;
+
       adapterManagerRef.current = createAdapterManager(
         {
-          storageKey,
+          storageKey: actualStorageKey,
           enablePersistence: true,
         },
         {
@@ -298,15 +329,20 @@ export default function Editor({
       adapterManagerRef.current?.destroy();
       adapterManagerRef.current = null;
     };
-  }, [storageKey]);
+  }, [storageKey, config]);
 
   // 在组件挂载时检查localStorage中是否有保存的内容（只执行一次）
   useEffect(() => {
+    // 使用带前缀的键
+    const actualStorageKey = config?.storageKey
+      ? `${config.storageKey}:${storageKey}`
+      : storageKey;
+
     // 如果是Markdown或MDX编辑器模式
     if (editorType === "markdown" || editorType === "mdx") {
       if (hasLoadedFromStorage.current) return;
 
-      const savedData = loadEditorContent(storageKey);
+      const savedData = loadEditorContent(actualStorageKey);
 
       if (savedData?.content) {
         setMarkdownContent(savedData.content);
@@ -329,7 +365,7 @@ export default function Editor({
           toast.info("已加载草稿", `上次保存于 ${lastUpdated}`, 10000, {
             label: "撤销",
             onClick: () => {
-              clearEditorContent(storageKey);
+              clearEditorContent(actualStorageKey);
               setMarkdownContent(content || "");
               toast.success("已撤销", "草稿已删除");
             },
@@ -349,7 +385,7 @@ export default function Editor({
     // 如果已经加载过，直接返回
     if (hasLoadedFromStorage.current) return;
 
-    const savedData = loadEditorContent(storageKey);
+    const savedData = loadEditorContent(actualStorageKey);
 
     console.log("检查localStorage:", savedData);
 
@@ -383,7 +419,7 @@ export default function Editor({
         toast.info("已加载草稿", `上次保存于 ${lastUpdated}`, 10000, {
           label: "撤销",
           onClick: () => {
-            clearEditorContent(storageKey);
+            clearEditorContent(actualStorageKey);
             setInitialContent(content);
 
             // 清空编辑器内容，使用原始content
@@ -401,7 +437,7 @@ export default function Editor({
       console.log("没有草稿，使用默认内容");
       setInitialContent(content);
     }
-  }, [editor, editorType, content, storageKey, toast]); // 依赖editor和editorType，确保编辑器准备好后加载内容
+  }, [editor, editorType, content, storageKey, toast, config]); // 依赖editor和editorType，确保编辑器准备好后加载内容
 
   // 监控 markdownContent 变化并同步到 Monaco
   useEffect(() => {
@@ -887,7 +923,7 @@ export default function Editor({
   // 处理表单字段变化
   const handleDetailsFieldChange = (
     field: string,
-    value: string | boolean | number[] | SelectedTag[] | string | null,
+    value: string | boolean | number[] | SelectedTag[] | string[] | null,
   ) => {
     setDetailsForm((prev) => ({
       ...prev,
@@ -913,12 +949,17 @@ export default function Editor({
       // 获取当前编辑器内容（通过适配器）
       const currentContent = adapterManagerRef.current?.getContent() || "";
 
+      // 使用带前缀的键
+      const actualStorageKey = config?.storageKey
+        ? `${config.storageKey}:${storageKey}`
+        : storageKey;
+
       // 保存到 localStorage
       saveEditorContent(
         currentContent,
         { ...detailsForm, editorType }, // 保存编辑器类型
         editorType !== "visual",
-        storageKey,
+        actualStorageKey,
       );
 
       toast.success("详细信息已保存");
@@ -1004,9 +1045,13 @@ export default function Editor({
 
           // 如果适配器没有内容，尝试从 localStorage 读取
           if (!currentContent) {
+            const actualStorageKey = config?.storageKey
+              ? `${config.storageKey}:${storageKey}`
+              : storageKey;
             currentContent =
-              JSON.parse(localStorage.getItem("editor") || "{}")[storageKey]
-                ?.content || "";
+              JSON.parse(localStorage.getItem("editor") || "{}")[
+                actualStorageKey
+              ]?.content || "";
           }
         } catch (error) {
           console.error("Failed to get editor content:", error);
@@ -1024,54 +1069,92 @@ export default function Editor({
       // 将 SelectedTag[] 转换为 string[]（只传递名称）
       const tagNames = detailsForm.tags.map((tag) => tag.name);
 
+      // 使用配置中的 action
+      const createAction = config?.saveConfig.createAction || createPost;
+      const updateAction = config?.saveConfig.updateAction || updatePost;
+
       if (isEditMode) {
         // 编辑模式：使用详细信息中设置的状态
-        const status = detailsForm.status as "DRAFT" | "PUBLISHED" | "ARCHIVED";
-
-        const updateData = {
-          slug: storageKey, // 使用 storageKey 作为当前文章的 slug
+        const updateData: Record<string, unknown> = {
+          slug: storageKey, // 使用 storageKey 作为当前内容的 slug
           title: detailsForm.title,
           newSlug:
             detailsForm.slug !== storageKey ? detailsForm.slug : undefined,
           content: currentContent,
-          excerpt: detailsForm.excerpt || undefined,
-          featuredImage: detailsForm.featuredImage || undefined,
-          status,
-          isPinned: detailsForm.isPinned,
-          allowComments: detailsForm.allowComments,
-          metaDescription: detailsForm.metaDescription || undefined,
-          metaKeywords: detailsForm.metaKeywords || undefined,
-          robotsIndex: detailsForm.robotsIndex,
+          status: detailsForm.status,
           categories: detailsForm.category ? [detailsForm.category] : undefined,
           tags: tagNames.length > 0 ? tagNames : undefined,
           commitMessage: commitMessage || undefined,
-          postMode,
         };
 
-        result = await updatePost(updateData);
+        // 根据实体类型添加特定字段
+        if (config?.entityType === "post") {
+          updateData.excerpt = detailsForm.excerpt || undefined;
+          updateData.featuredImage = detailsForm.featuredImage || undefined;
+          updateData.isPinned = detailsForm.isPinned;
+          updateData.allowComments = detailsForm.allowComments;
+          updateData.metaDescription = detailsForm.metaDescription || undefined;
+          updateData.metaKeywords = detailsForm.metaKeywords || undefined;
+          updateData.robotsIndex = detailsForm.robotsIndex;
+          updateData.postMode = postMode;
+        } else if (config?.entityType === "project") {
+          updateData.description = detailsForm.description;
+          updateData.demoUrl = detailsForm.demoUrl || undefined;
+          updateData.repoUrl = detailsForm.repoUrl || undefined;
+          updateData.repoPath = detailsForm.repoPath || undefined;
+          updateData.license = detailsForm.license || undefined;
+          updateData.enableGithubSync = detailsForm.enableGithubSync;
+          updateData.enableConentSync = detailsForm.enableConentSync;
+          updateData.featuredImages =
+            detailsForm.featuredImages?.length > 0
+              ? detailsForm.featuredImages
+              : undefined;
+          updateData.startedAt = detailsForm.startedAt || undefined;
+          updateData.techStack = detailsForm.techStack;
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        result = await updateAction(updateData as any, {});
       } else {
         // 新建模式：根据按钮类型决定状态
-        const status = confirmAction === "publish" ? "PUBLISHED" : "DRAFT";
-
-        const postData = {
+        const createData: Record<string, unknown> = {
           title: detailsForm.title,
           slug: detailsForm.slug,
           content: currentContent,
-          excerpt: detailsForm.excerpt || undefined,
-          featuredImage: detailsForm.featuredImage || undefined,
-          status: status as "DRAFT" | "PUBLISHED",
-          isPinned: detailsForm.isPinned,
-          allowComments: detailsForm.allowComments,
-          metaDescription: detailsForm.metaDescription || undefined,
-          metaKeywords: detailsForm.metaKeywords || undefined,
-          robotsIndex: detailsForm.robotsIndex,
+          status: confirmAction === "publish" ? "PUBLISHED" : "DRAFT",
           categories: detailsForm.category ? [detailsForm.category] : undefined,
           tags: tagNames.length > 0 ? tagNames : undefined,
           commitMessage: commitMessage || undefined,
-          postMode,
         };
 
-        result = await createPost(postData);
+        // 根据实体类型添加特定字段
+        if (config?.entityType === "post") {
+          createData.excerpt = detailsForm.excerpt || undefined;
+          createData.featuredImage = detailsForm.featuredImage || undefined;
+          createData.isPinned = detailsForm.isPinned;
+          createData.allowComments = detailsForm.allowComments;
+          createData.metaDescription = detailsForm.metaDescription || undefined;
+          createData.metaKeywords = detailsForm.metaKeywords || undefined;
+          createData.robotsIndex = detailsForm.robotsIndex;
+          createData.postMode = postMode;
+        } else if (config?.entityType === "project") {
+          createData.description = detailsForm.description;
+          createData.demoUrl = detailsForm.demoUrl || undefined;
+          createData.repoUrl = detailsForm.repoUrl || undefined;
+          createData.repoPath = detailsForm.repoPath || undefined;
+          createData.license = detailsForm.license || undefined;
+          createData.enableGithubSync = detailsForm.enableGithubSync;
+          createData.enableConentSync = detailsForm.enableConentSync;
+          createData.featuredImages =
+            detailsForm.featuredImages?.length > 0
+              ? detailsForm.featuredImages
+              : undefined;
+          createData.startedAt = detailsForm.startedAt || undefined;
+          createData.techStack = detailsForm.techStack;
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        result = await createAction(createData as any, {});
       }
 
       // 检查是否是 NextResponse
@@ -1084,6 +1167,8 @@ export default function Editor({
 
       // 处理结果
       if (response.success) {
+        const entityTypeName = config?.entityType === "post" ? "文章" : "项目";
+
         if (isEditMode) {
           // 编辑模式：根据状态显示不同提示
           const statusText =
@@ -1093,25 +1178,30 @@ export default function Editor({
                 ? "已归档"
                 : "草稿";
           toast.success(
-            `文章已保存为${statusText}`,
+            `${entityTypeName}已保存为${statusText}`,
             commitMessage ? `提交信息：${commitMessage}` : undefined,
           );
         } else {
           // 新建模式：根据按钮类型显示不同提示
           toast.success(
-            confirmAction === "publish" ? "文章已发布" : "草稿已保存",
+            confirmAction === "publish"
+              ? `${entityTypeName}已发布`
+              : "草稿已保存",
             commitMessage ? `提交信息：${commitMessage}` : undefined,
           );
         }
 
         // 清除 localStorage 中的草稿
-        clearEditorContent(storageKey);
+        const actualStorageKey = config?.storageKey
+          ? `${config.storageKey}:${storageKey}`
+          : storageKey;
+        clearEditorContent(actualStorageKey);
 
         closeConfirmDialog();
 
         // 延迟导航，让用户看到成功提示
         setTimeout(() => {
-          navigate("/admin/posts");
+          navigate(config?.saveConfig.successRedirectPath || "/admin");
         }, 1000);
       } else {
         toast.error(response.message || "操作失败，请稍后重试");
@@ -1699,6 +1789,9 @@ export default function Editor({
               }
 
               // 保存到localStorage (Markdown模式,直接保存不转换)
+              const actualStorageKey = config?.storageKey
+                ? `${config.storageKey}:${storageKey}`
+                : storageKey;
               saveEditorContent(
                 content,
                 {
@@ -1708,7 +1801,7 @@ export default function Editor({
                   showTableOfContents,
                 },
                 true, // isMarkdown = true,直接保存Markdown
-                storageKey,
+                actualStorageKey,
               );
             }}
             mode={editorType === "mdx" ? "mdx" : "markdown"}
@@ -1766,11 +1859,21 @@ export default function Editor({
           <Select
             value={editorType}
             onChange={setEditorType}
-            options={[
-              { value: "visual", label: "可视化编辑器" },
-              { value: "markdown", label: "Markdown" },
-              { value: "mdx", label: "MDX (Beta)" },
-            ]}
+            options={
+              config?.availableModes?.map((mode) => ({
+                value: mode,
+                label:
+                  mode === "visual"
+                    ? "可视化编辑器"
+                    : mode === "markdown"
+                      ? "Markdown"
+                      : "MDX (Beta)",
+              })) || [
+                { value: "visual", label: "可视化编辑器" },
+                { value: "markdown", label: "Markdown" },
+                { value: "mdx", label: "MDX (Beta)" },
+              ]
+            }
             size="sm"
           />
           <div className="text-sm text-foreground/60">
@@ -1804,13 +1907,41 @@ export default function Editor({
         />
 
         {/* 右侧：操作按钮 */}
+
         <div className="flex gap-2">
+          {/* 额外功能按钮 */}
+          {config?.extraActions?.map((action) => {
+            const shouldShow = action.showWhen
+              ? action.showWhen(detailsForm)
+              : true;
+            if (!shouldShow) return null;
+
+            return (
+              <Button
+                key={action.id}
+                label={action.label}
+                variant={action.variant}
+                size="sm"
+                onClick={() => onExtraAction?.(action.id, detailsForm)}
+                loading={action.loading}
+                loadingText={action.loadingText}
+                icon={
+                  action.id === "github-sync" ? (
+                    <RiGithubFill size="1em" />
+                  ) : (
+                    action.icon
+                  )
+                }
+              />
+            );
+          })}
           <Button
             label={isEditMode ? "更改详细信息" : "设置详细信息"}
             variant="ghost"
             size="sm"
             onClick={openDetailsDialog}
           />
+
           {isEditMode ? (
             <Button
               label="保存"
@@ -1841,7 +1972,9 @@ export default function Editor({
       <Dialog
         open={detailsDialogOpen}
         onClose={closeDetailsDialog}
-        title="文章详细信息"
+        title={
+          config?.entityType === "project" ? "项目详细信息" : "文章详细信息"
+        }
         size="lg"
       >
         <div className="px-6 py-6 space-y-6">
@@ -1867,133 +2000,343 @@ export default function Editor({
                   handleDetailsFieldChange("slug", e.target.value)
                 }
                 size="sm"
-                helperText="URL 路径，例如：my-first-post。留空将从标题自动生成"
-              />
-              <Input
-                label="摘要"
-                value={detailsForm.excerpt}
-                onChange={(e) =>
-                  handleDetailsFieldChange("excerpt", e.target.value)
+                helperText={
+                  config?.entityType === "post"
+                    ? "URL 路径，例如：my-first-post。留空将从标题自动生成"
+                    : "URL 路径，例如：my-awesome-project。留空将从标题自动生成"
                 }
-                rows={3}
-                size="sm"
               />
-              <CategoryInput
-                label="分类"
-                value={detailsForm.category}
-                onChange={(category) =>
-                  handleDetailsFieldChange("category", category)
-                }
-                size="sm"
-              />
-              <TagInput
-                label="标签"
-                value={detailsForm.tags}
-                onChange={(tags) => handleDetailsFieldChange("tags", tags)}
-                helperText="输入关键词搜索现有标签，或直接创建新标签"
-                size="sm"
-              />
+
+              {/* Post 特有：摘要 */}
+              {config?.fieldConfig?.basic?.excerpt && (
+                <Input
+                  label="摘要"
+                  value={detailsForm.excerpt}
+                  onChange={(e) =>
+                    handleDetailsFieldChange("excerpt", e.target.value)
+                  }
+                  rows={3}
+                  size="sm"
+                />
+              )}
+
+              {/* Project 特有：描述和技术栈 */}
+              {config?.fieldConfig?.basic?.description && (
+                <Input
+                  label="描述"
+                  value={detailsForm.description}
+                  onChange={(e) =>
+                    handleDetailsFieldChange("description", e.target.value)
+                  }
+                  rows={3}
+                  size="sm"
+                  required
+                />
+              )}
+
+              {config?.fieldConfig?.project?.techStack && (
+                <Input
+                  label="技术栈"
+                  value={(detailsForm.techStack || []).join(", ")}
+                  onChange={(e) =>
+                    handleDetailsFieldChange(
+                      "techStack",
+                      e.target.value
+                        .split(",")
+                        .map((s) => s.trim())
+                        .filter(Boolean),
+                    )
+                  }
+                  helperText="多个技术栈用逗号分隔"
+                  size="sm"
+                />
+              )}
+
+              {config?.fieldConfig?.taxonomy?.category && (
+                <CategoryInput
+                  label="分类"
+                  value={detailsForm.category}
+                  onChange={(category) =>
+                    handleDetailsFieldChange("category", category)
+                  }
+                  size="sm"
+                />
+              )}
+
+              {config?.fieldConfig?.taxonomy?.tags && (
+                <TagInput
+                  label="标签"
+                  value={detailsForm.tags}
+                  onChange={(tags) => handleDetailsFieldChange("tags", tags)}
+                  helperText="输入关键词搜索现有标签，或直接创建新标签"
+                  size="sm"
+                />
+              )}
             </div>
           </div>
+
+          {/* Project 特有：链接信息 */}
+          {config?.fieldConfig?.project &&
+            (config.fieldConfig.project.demoUrl ||
+              config.fieldConfig.project.repoUrl) && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                  链接信息
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {config.fieldConfig.project.demoUrl && (
+                    <Input
+                      label="Demo URL"
+                      value={detailsForm.demoUrl || ""}
+                      onChange={(e) =>
+                        handleDetailsFieldChange("demoUrl", e.target.value)
+                      }
+                      size="sm"
+                      helperText="https://example.com"
+                    />
+                  )}
+
+                  {config.fieldConfig.project.repoUrl && (
+                    <Input
+                      label="仓库 URL"
+                      value={detailsForm.repoUrl || ""}
+                      onChange={(e) =>
+                        handleDetailsFieldChange("repoUrl", e.target.value)
+                      }
+                      size="sm"
+                      helperText="https://github.com/user/repo"
+                    />
+                  )}
+                </div>
+              </div>
+            )}
 
           {/* 发布设置 */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-              发布设置
-            </h3>
-            <div className="space-y-3">
-              {isEditMode && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground/80 mb-2">
-                      文章状态
-                    </label>
-                    <Select
-                      value={detailsForm.status}
-                      onChange={(value) =>
-                        handleDetailsFieldChange("status", String(value))
+          {config?.fieldConfig?.publish &&
+            (config.fieldConfig.publish.status ||
+              config.fieldConfig.publish.isPinned ||
+              config.fieldConfig.publish.allowComments ||
+              config.fieldConfig.project?.startedAt) && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                  发布设置
+                </h3>
+                <div className="space-y-3">
+                  {isEditMode && config.fieldConfig.publish.status && (
+                    <div>
+                      <label className="block text-sm font-medium text-foreground/80 mb-2">
+                        {config.entityType === "post" ? "文章状态" : "项目状态"}
+                      </label>
+                      <Select
+                        value={detailsForm.status}
+                        onChange={(value) =>
+                          handleDetailsFieldChange("status", String(value))
+                        }
+                        options={
+                          config.entityType === "post"
+                            ? [
+                                { value: "DRAFT", label: "草稿" },
+                                { value: "PUBLISHED", label: "已发布" },
+                                { value: "ARCHIVED", label: "已归档" },
+                              ]
+                            : [
+                                { value: "DRAFT", label: "草稿" },
+                                { value: "PUBLISHED", label: "已发布" },
+                                { value: "ARCHIVED", label: "已归档" },
+                                { value: "Developing", label: "开发中" },
+                              ]
+                        }
+                        size="sm"
+                      />
+                    </div>
+                  )}
+
+                  {config.fieldConfig.publish.isPinned && (
+                    <>
+                      <Checkbox
+                        label="置顶文章"
+                        checked={detailsForm.isPinned}
+                        onChange={(e) =>
+                          handleDetailsFieldChange("isPinned", e.target.checked)
+                        }
+                      />
+                      <br />
+                    </>
+                  )}
+
+                  {config.fieldConfig.publish.allowComments && (
+                    <>
+                      <Checkbox
+                        label="允许评论"
+                        checked={detailsForm.allowComments}
+                        onChange={(e) =>
+                          handleDetailsFieldChange(
+                            "allowComments",
+                            e.target.checked,
+                          )
+                        }
+                      />
+                      <br />
+                    </>
+                  )}
+
+                  {config.fieldConfig.project?.startedAt && (
+                    <Input
+                      label="开始时间"
+                      type="date"
+                      value={detailsForm.startedAt || ""}
+                      onChange={(e) =>
+                        handleDetailsFieldChange("startedAt", e.target.value)
                       }
-                      options={[
-                        { value: "DRAFT", label: "草稿" },
-                        { value: "PUBLISHED", label: "已发布" },
-                        { value: "ARCHIVED", label: "已归档" },
-                      ]}
                       size="sm"
                     />
-                  </div>
-                  <br />
-                </>
-              )}
-              <Checkbox
-                label="置顶文章"
-                checked={detailsForm.isPinned}
-                onChange={(e) =>
-                  handleDetailsFieldChange("isPinned", e.target.checked)
-                }
-              />
-              <br />
-              <Checkbox
-                label="允许评论"
-                checked={detailsForm.allowComments}
-                onChange={(e) =>
-                  handleDetailsFieldChange("allowComments", e.target.checked)
-                }
-              />
-            </div>
-          </div>
+                  )}
+                </div>
+              </div>
+            )}
 
-          {/* SEO 设置 */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-              SEO 设置
-            </h3>
-            <div className="grid grid-cols-1 gap-6">
-              <Input
-                label="SEO 描述"
-                value={detailsForm.metaDescription}
-                onChange={(e) =>
-                  handleDetailsFieldChange("metaDescription", e.target.value)
-                }
-                rows={2}
-                size="sm"
-                helperText="留空则使用文章摘要"
-              />
-              <Input
-                label="SEO 关键词"
-                value={detailsForm.metaKeywords}
-                onChange={(e) =>
-                  handleDetailsFieldChange("metaKeywords", e.target.value)
-                }
-                size="sm"
-                helperText="多个关键词用逗号分隔"
-              />
-              <Checkbox
-                label="允许搜索引擎索引"
-                checked={detailsForm.robotsIndex}
-                onChange={(e) =>
-                  handleDetailsFieldChange("robotsIndex", e.target.checked)
-                }
-              />
+          {/* Post 特有：SEO 设置 */}
+          {config?.fieldConfig?.seo && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                SEO 设置
+              </h3>
+              <div className="grid grid-cols-1 gap-6">
+                {config.fieldConfig.seo.metaDescription && (
+                  <Input
+                    label="SEO 描述"
+                    value={detailsForm.metaDescription}
+                    onChange={(e) =>
+                      handleDetailsFieldChange(
+                        "metaDescription",
+                        e.target.value,
+                      )
+                    }
+                    rows={2}
+                    size="sm"
+                    helperText="留空则使用文章摘要"
+                  />
+                )}
+
+                {config.fieldConfig.seo.metaKeywords && (
+                  <Input
+                    label="SEO 关键词"
+                    value={detailsForm.metaKeywords}
+                    onChange={(e) =>
+                      handleDetailsFieldChange("metaKeywords", e.target.value)
+                    }
+                    size="sm"
+                    helperText="多个关键词用逗号分隔"
+                  />
+                )}
+
+                {config.fieldConfig.seo.robotsIndex && (
+                  <Checkbox
+                    label="允许搜索引擎索引"
+                    checked={detailsForm.robotsIndex}
+                    onChange={(e) =>
+                      handleDetailsFieldChange("robotsIndex", e.target.checked)
+                    }
+                  />
+                )}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Project 特有：GitHub 设置 */}
+          {config?.fieldConfig?.project?.githubSettings && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2 flex items-center gap-2">
+                <RiGithubFill size="1.2em" /> GitHub 同步
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                启用内容同步后，手动编辑的内容将被 GitHub README 覆盖
+              </p>
+              <div className="grid grid-cols-1 gap-6">
+                <Input
+                  label="仓库路径"
+                  value={detailsForm.repoPath || ""}
+                  onChange={(e) =>
+                    handleDetailsFieldChange("repoPath", e.target.value)
+                  }
+                  size="sm"
+                  helperText="用于 GitHub API 同步，例如：RavelloH/NeutralPress"
+                />
+
+                {config.fieldConfig.project.license && (
+                  <Input
+                    label="开源许可证"
+                    value={detailsForm.license || ""}
+                    onChange={(e) =>
+                      handleDetailsFieldChange("license", e.target.value)
+                    }
+                    size="sm"
+                    helperText="项目的开源许可证类型，例如：MIT"
+                  />
+                )}
+
+                <div className="flex flex-col gap-4">
+                  <Checkbox
+                    label="启用 GitHub 同步"
+                    checked={detailsForm.enableGithubSync}
+                    onChange={(e) => {
+                      handleDetailsFieldChange(
+                        "enableGithubSync",
+                        e.target.checked,
+                      );
+                      if (!e.target.checked) {
+                        handleDetailsFieldChange("enableConentSync", false);
+                      }
+                    }}
+                  />
+
+                  {detailsForm.enableGithubSync && (
+                    <Checkbox
+                      label="同步 README 到内容"
+                      checked={detailsForm.enableConentSync}
+                      onChange={(e) =>
+                        handleDetailsFieldChange(
+                          "enableConentSync",
+                          e.target.checked,
+                        )
+                      }
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 特色图片 */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-              特色图片
-            </h3>
-            <MediaSelector
-              label="特色图片"
-              value={detailsForm.featuredImage}
-              onChange={(url) =>
-                handleDetailsFieldChange(
-                  "featuredImage",
-                  Array.isArray(url) ? url[0] || "" : url,
-                )
-              }
-              helperText="选择或上传文章的特色图片，将显示在文章列表和详情页顶部"
-            />
-          </div>
+          {config?.fieldConfig?.featuredImage?.enabled && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                特色图片
+              </h3>
+              <MediaSelector
+                label="特色图片"
+                value={
+                  config.fieldConfig.featuredImage.multiple
+                    ? detailsForm.featuredImages || []
+                    : detailsForm.featuredImage || ""
+                }
+                onChange={(urls) =>
+                  handleDetailsFieldChange(
+                    config.fieldConfig.featuredImage.multiple
+                      ? "featuredImages"
+                      : "featuredImage",
+                    Array.isArray(urls) ? urls : urls ? [urls] : [],
+                  )
+                }
+                multiple={config.fieldConfig.featuredImage.multiple}
+                helperText={
+                  config.fieldConfig.featuredImage.multiple
+                    ? "选择或上传项目的特色图片"
+                    : "选择或上传特色图片"
+                }
+              />
+            </div>
+          )}
 
           {/* 操作按钮 */}
           <div className="flex justify-end gap-4 pt-4 border-t border-foreground/10">
