@@ -2,11 +2,10 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { getPostDetail } from "@/actions/post";
-import Editor from "@/components/client/features/editor/Editor";
+import { PostEditorWrapper } from "@/components/client/features/editor/PostEditorWrapper";
 import AdminSidebar from "@/components/client/layout/AdminSidebar";
 import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
 import MainLayout from "@/components/client/layout/MainLayout";
-import { POST_EDITOR_CONFIG } from "@/config/editor-presets";
 import { generateMetadata as generateSeoMetadata } from "@/lib/server/seo";
 
 type Props = {
@@ -55,13 +54,11 @@ export default async function EditPostPage(props: Props) {
         snapToElements={false}
       >
         <AdminSidebar />
-        {/* // TODO: 实现类似Grid的平分效果 */}
         <div className="w-full overflow-y-auto">
-          <Editor
+          <PostEditorWrapper
             content={post.content}
             storageKey={slug}
             isEditMode={true}
-            config={POST_EDITOR_CONFIG}
             initialData={{
               title: post.title,
               slug: post.slug,
