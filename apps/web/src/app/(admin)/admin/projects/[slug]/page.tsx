@@ -66,6 +66,7 @@ export default async function EditProjectPage(props: Props) {
               status: project.status,
               demoUrl: project.demoUrl || "",
               repoUrl: project.repoUrl || "",
+              urls: project.urls || [],
               techStack: project.techStack || [],
               repoPath: project.repoPath || "",
               license: project.license || "",
@@ -75,6 +76,14 @@ export default async function EditProjectPage(props: Props) {
               startedAt: project.startedAt
                 ? new Date(project.startedAt).toISOString().split("T")[0]
                 : "",
+              completedAt: project.completedAt
+                ? new Date(project.completedAt).toISOString().split("T")[0]
+                : "",
+              isFeatured: project.isFeatured,
+              sortOrder: project.sortOrder,
+              metaDescription: project.metaDescription || "",
+              metaKeywords: project.metaKeywords || "",
+              robotsIndex: project.robotsIndex,
               categories: project.categories,
               tags: project.tags,
             }}

@@ -528,6 +528,7 @@ export async function getProjectsList(
     id,
     authorUid,
     enableGithubSync,
+    isFeatured,
     publishedAtStart,
     publishedAtEnd,
     updatedAtStart,
@@ -557,6 +558,7 @@ export async function getProjectsList(
       id,
       authorUid,
       enableGithubSync,
+      isFeatured,
       publishedAtStart,
       publishedAtEnd,
       updatedAtStart,
@@ -603,6 +605,10 @@ export async function getProjectsList(
       where.enableGithubSync = enableGithubSync[0];
     }
 
+    if (isFeatured !== undefined) {
+      where.isFeatured = isFeatured;
+    }
+
     if (publishedAtStart || publishedAtEnd) {
       where.publishedAt = {};
       if (publishedAtStart) where.publishedAt.gte = new Date(publishedAtStart);
@@ -646,6 +652,7 @@ export async function getProjectsList(
         status: true,
         demoUrl: true,
         repoUrl: true,
+        urls: true,
         techStack: true,
         repoPath: true,
         stars: true,
@@ -654,10 +661,13 @@ export async function getProjectsList(
         license: true,
         enableGithubSync: true,
         enableConentSync: true,
+        isFeatured: true,
+        sortOrder: true,
         publishedAt: true,
         createdAt: true,
         updatedAt: true,
         startedAt: true,
+        completedAt: true,
         author: {
           select: {
             uid: true,
@@ -696,6 +706,7 @@ export async function getProjectsList(
       status: project.status,
       demoUrl: project.demoUrl,
       repoUrl: project.repoUrl,
+      urls: project.urls,
       techStack: project.techStack as string[] | null,
       repoPath: project.repoPath,
       stars: project.stars,
@@ -704,10 +715,13 @@ export async function getProjectsList(
       license: project.license,
       enableGithubSync: project.enableGithubSync,
       enableConentSync: project.enableConentSync,
+      isFeatured: project.isFeatured,
+      sortOrder: project.sortOrder,
       publishedAt: project.publishedAt?.toISOString() || null,
       createdAt: project.createdAt.toISOString(),
       updatedAt: project.updatedAt.toISOString(),
       startedAt: project.startedAt?.toISOString() || null,
+      completedAt: project.completedAt?.toISOString() || null,
       featuredImage: getFeaturedImageUrl(project.mediaRefs),
       featuredImages: getAllFeaturedImageUrls(project.mediaRefs),
       author: {
@@ -795,6 +809,7 @@ export async function getProjectDetail(
         status: true,
         demoUrl: true,
         repoUrl: true,
+        urls: true,
         techStack: true,
         repoPath: true,
         stars: true,
@@ -803,10 +818,16 @@ export async function getProjectDetail(
         license: true,
         enableGithubSync: true,
         enableConentSync: true,
+        isFeatured: true,
+        sortOrder: true,
+        metaDescription: true,
+        metaKeywords: true,
+        robotsIndex: true,
         publishedAt: true,
         createdAt: true,
         updatedAt: true,
         startedAt: true,
+        completedAt: true,
         userUid: true,
         author: {
           select: {
@@ -855,6 +876,7 @@ export async function getProjectDetail(
       status: project.status,
       demoUrl: project.demoUrl,
       repoUrl: project.repoUrl,
+      urls: project.urls,
       techStack: project.techStack as string[] | null,
       repoPath: project.repoPath,
       stars: project.stars,
@@ -863,10 +885,16 @@ export async function getProjectDetail(
       license: project.license,
       enableGithubSync: project.enableGithubSync,
       enableConentSync: project.enableConentSync,
+      isFeatured: project.isFeatured,
+      sortOrder: project.sortOrder,
+      metaDescription: project.metaDescription,
+      metaKeywords: project.metaKeywords,
+      robotsIndex: project.robotsIndex,
       publishedAt: project.publishedAt?.toISOString() || null,
       createdAt: project.createdAt.toISOString(),
       updatedAt: project.updatedAt.toISOString(),
       startedAt: project.startedAt?.toISOString() || null,
+      completedAt: project.completedAt?.toISOString() || null,
       featuredImage: getFeaturedImageUrl(project.mediaRefs),
       featuredImages: getAllFeaturedImageUrls(project.mediaRefs),
       author: {
@@ -905,18 +933,26 @@ export async function createProject(
     content,
     demoUrl,
     repoUrl,
+    urls,
     techStack,
     repoPath,
+    license,
     enableGithubSync = false,
     enableConentSync = false,
     syncImmediately = false,
     status = "DRAFT",
+    isFeatured = false,
+    sortOrder = 0,
+    metaDescription,
+    metaKeywords,
+    robotsIndex = true,
     categories,
     tags,
     featuredImage,
     featuredImages,
     publishedAt,
     startedAt,
+    completedAt,
   }: CreateProject,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<CreateProjectResult | null>> {
@@ -937,18 +973,26 @@ export async function createProject(
       content,
       demoUrl,
       repoUrl,
+      urls,
       techStack,
       repoPath,
+      license,
       enableGithubSync,
       enableConentSync,
       syncImmediately,
       status,
+      isFeatured,
+      sortOrder,
+      metaDescription,
+      metaKeywords,
+      robotsIndex,
       categories,
       tags,
       featuredImage,
       featuredImages,
       publishedAt,
       startedAt,
+      completedAt,
     },
     CreateProjectSchema,
   );
@@ -1064,17 +1108,25 @@ export async function createProject(
         content: processedContent || null,
         demoUrl: demoUrl || null,
         repoUrl: repoUrl || null,
+        urls: urls || [],
         techStack: techStack && techStack.length > 0 ? techStack : undefined,
         repoPath: repoPath || null,
+        license: license || null,
         enableGithubSync,
         enableConentSync,
         status,
+        isFeatured,
+        sortOrder,
+        metaDescription: metaDescription || null,
+        metaKeywords: metaKeywords || null,
+        robotsIndex,
         publishedAt: publishedAt
           ? new Date(publishedAt)
           : status === "PUBLISHED"
             ? new Date()
             : null,
         startedAt: finalStartedAt ? new Date(finalStartedAt) : null,
+        completedAt: completedAt ? new Date(completedAt) : null,
         userUid: user.uid,
         categories: categoryConnections,
         tags: tagConnections,
@@ -1202,18 +1254,25 @@ export async function updateProject(
     content,
     demoUrl,
     repoUrl,
+    urls,
     techStack,
     repoPath,
     license,
     enableGithubSync,
     enableConentSync,
     status,
+    isFeatured,
+    sortOrder,
+    metaDescription,
+    metaKeywords,
+    robotsIndex,
     categories,
     tags,
     featuredImage,
     featuredImages,
     publishedAt,
     startedAt,
+    completedAt,
   }: UpdateProject,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<UpdateProjectResult | null>> {
@@ -1235,18 +1294,25 @@ export async function updateProject(
       content,
       demoUrl,
       repoUrl,
+      urls,
       techStack,
       repoPath,
       license,
       enableGithubSync,
       enableConentSync,
       status,
+      isFeatured,
+      sortOrder,
+      metaDescription,
+      metaKeywords,
+      robotsIndex,
       categories,
       tags,
       featuredImage,
       featuredImages,
       publishedAt,
       startedAt,
+      completedAt,
     },
     UpdateProjectSchema,
   );
@@ -1313,6 +1379,7 @@ export async function updateProject(
     if (description !== undefined) updateData.description = description;
     if (demoUrl !== undefined) updateData.demoUrl = demoUrl || null;
     if (repoUrl !== undefined) updateData.repoUrl = repoUrl || null;
+    if (urls !== undefined) updateData.urls = urls || [];
     if (techStack !== undefined) updateData.techStack = techStack;
     if (repoPath !== undefined) updateData.repoPath = repoPath;
     if (license !== undefined) updateData.license = license || null;
@@ -1320,8 +1387,17 @@ export async function updateProject(
       updateData.enableGithubSync = enableGithubSync;
     if (enableConentSync !== undefined)
       updateData.enableConentSync = enableConentSync;
+    if (isFeatured !== undefined) updateData.isFeatured = isFeatured;
+    if (sortOrder !== undefined) updateData.sortOrder = sortOrder;
+    if (metaDescription !== undefined)
+      updateData.metaDescription = metaDescription || null;
+    if (metaKeywords !== undefined)
+      updateData.metaKeywords = metaKeywords || null;
+    if (robotsIndex !== undefined) updateData.robotsIndex = robotsIndex;
     if (startedAt !== undefined)
       updateData.startedAt = startedAt ? new Date(startedAt) : null;
+    if (completedAt !== undefined)
+      updateData.completedAt = completedAt ? new Date(completedAt) : null;
 
     // 处理状态和发布时间
     if (status !== undefined) {

@@ -11,6 +11,7 @@ import {
   RiFileEditLine,
   RiGithubFill,
   RiRefreshLine,
+  RiStarFill,
   RiStarLine,
 } from "@remixicon/react";
 import type { ProjectListItem } from "@repo/shared-types/api/project";
@@ -75,6 +76,11 @@ export default function ProjectsTable() {
     useState(false);
   const [batchNewGithubSync, setBatchNewGithubSync] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [contentSyncWarningDialogOpen, setContentSyncWarningDialogOpen] =
+    useState(false);
+  const [projectToEdit, setProjectToEdit] = useState<ProjectListItem | null>(
+    null,
+  );
   const navigate = useNavigateWithTransition();
   const [userRole, setUserRole] = useState<string | null>(null);
 
@@ -99,6 +105,7 @@ export default function ProjectsTable() {
     status: "PUBLISHED",
     demoUrl: "",
     repoUrl: "",
+    urls: "",
     techStack: [] as string[],
     repoPath: "",
     license: "",
@@ -106,6 +113,12 @@ export default function ProjectsTable() {
     enableConentSync: false,
     featuredImages: [] as string[],
     startedAt: "" as string | undefined,
+    completedAt: "" as string | undefined,
+    isFeatured: false,
+    sortOrder: 0,
+    metaDescription: "",
+    metaKeywords: "",
+    robotsIndex: true,
     tags: [] as SelectedTag[],
     category: null as string | null,
   });
@@ -118,6 +131,12 @@ export default function ProjectsTable() {
   // 打开编辑对话框
   const openEditDialog = (project: ProjectListItem) => {
     setEditingProject(project);
+    // 定义扩展类型以访问 SEO 字段
+    const projectWithSEO = project as ProjectListItem & {
+      metaDescription?: string | null;
+      metaKeywords?: string | null;
+      robotsIndex?: boolean;
+    };
     setFormData({
       title: project.title,
       slug: project.slug,
@@ -125,6 +144,7 @@ export default function ProjectsTable() {
       status: project.status,
       demoUrl: project.demoUrl || "",
       repoUrl: project.repoUrl || "",
+      urls: project.urls ? project.urls.join("\n") : "",
       techStack: project.techStack || [],
       repoPath: project.repoPath || "",
       license: project.license || "",
@@ -134,6 +154,14 @@ export default function ProjectsTable() {
       startedAt: project.startedAt
         ? new Date(project.startedAt).toISOString().split("T")[0]
         : "",
+      completedAt: project.completedAt
+        ? new Date(project.completedAt).toISOString().split("T")[0]
+        : "",
+      isFeatured: project.isFeatured,
+      sortOrder: project.sortOrder,
+      metaDescription: projectWithSEO.metaDescription || "",
+      metaKeywords: projectWithSEO.metaKeywords || "",
+      robotsIndex: projectWithSEO.robotsIndex ?? true,
       tags: project.tags
         ? project.tags.map((tag) => ({
             name: tag.name,
@@ -152,10 +180,52 @@ export default function ProjectsTable() {
     setEditingProject(null);
   };
 
+  // 处理编辑内容按钮点击
+  const handleEditContentClick = (project: ProjectListItem) => {
+    // 如果启用了 README 同步，显示警告对话框
+    if (project.enableGithubSync && project.enableConentSync) {
+      setProjectToEdit(project);
+      setContentSyncWarningDialogOpen(true);
+    } else {
+      // 直接导航到编辑页面
+      navigate(`/admin/projects/${project.slug}`);
+    }
+  };
+
+  // 处理关闭 README 同步
+  const handleDisableContentSync = async () => {
+    if (!projectToEdit) return;
+
+    setIsSubmitting(true);
+    try {
+      const accessToken = localStorage.getItem("access_token");
+      const result = await updateProjects({
+        access_token: accessToken || undefined,
+        ids: [projectToEdit.id],
+        enableConentSync: false,
+      });
+
+      if (result.success) {
+        toast.success("已关闭 README 同步，可以安全编辑内容");
+        setContentSyncWarningDialogOpen(false);
+        // 导航到编辑页面
+        navigate(`/admin/projects/${projectToEdit.slug}`);
+        setRefreshTrigger((prev) => prev + 1);
+      } else {
+        toast.error(result.message || "操作失败");
+      }
+    } catch (error) {
+      console.error("关闭 README 同步失败:", error);
+      toast.error("操作失败，请稍后重试");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // 处理表单字段变化
   const handleFieldChange = (
     field: string,
-    value: string | boolean | SelectedTag[] | string[] | null,
+    value: string | boolean | number | SelectedTag[] | string[] | null,
   ) => {
     setFormData((prev) => ({
       ...prev,
@@ -203,34 +273,26 @@ export default function ProjectsTable() {
         (currentCategories.length === 0 && newCategory !== null) ||
         (currentCategories.length > 0 && newCategory !== currentCategories[0]);
 
+      // 检查 urls 是否有变化
+      const currentUrls = editingProject.urls || [];
+      const newUrls = formData.urls
+        ? formData.urls
+            .split("\n")
+            .map((u) => u.trim())
+            .filter(Boolean)
+        : [];
+      const urlsChanged =
+        JSON.stringify(currentUrls.sort()) !== JSON.stringify(newUrls.sort());
+
       // 检查其他字段是否有变化
-      const hasChanges =
-        formData.title !== editingProject.title ||
-        formData.slug !== editingProject.slug ||
-        formData.description !== editingProject.description ||
-        formData.status !== editingProject.status ||
-        formData.demoUrl !== (editingProject.demoUrl || "") ||
-        formData.repoUrl !== (editingProject.repoUrl || "") ||
-        formData.repoPath !== (editingProject.repoPath || "") ||
-        formData.license !== (editingProject.license || "") ||
-        formData.enableGithubSync !== editingProject.enableGithubSync ||
-        formData.enableConentSync !== editingProject.enableConentSync ||
-        JSON.stringify(formData.techStack) !==
-          JSON.stringify(editingProject.techStack || []) ||
-        JSON.stringify(formData.featuredImages) !==
-          JSON.stringify(editingProject.featuredImages || []) ||
-        formData.startedAt !==
-          (editingProject.startedAt?.split("T")[0] || "") ||
-        tagsChanged ||
-        categoriesChanged;
-
-      if (!hasChanges) {
-        toast.info("没有字段被修改");
-        setIsSubmitting(false);
-        return;
-      }
-
       const accessToken = localStorage.getItem("access_token");
+
+      // 定义扩展类型以访问 SEO 字段
+      const editingProjectWithSEO = editingProject as ProjectListItem & {
+        metaDescription?: string | null;
+        metaKeywords?: string | null;
+        robotsIndex?: boolean;
+      };
 
       const result = await updateProject({
         access_token: accessToken || undefined,
@@ -249,7 +311,7 @@ export default function ProjectsTable() {
                 | "DRAFT"
                 | "PUBLISHED"
                 | "ARCHIVED"
-                | "Developing")
+                | "DEVELOPING")
             : undefined,
         demoUrl:
           formData.demoUrl !== (editingProject.demoUrl || "")
@@ -259,6 +321,7 @@ export default function ProjectsTable() {
           formData.repoUrl !== (editingProject.repoUrl || "")
             ? formData.repoUrl
             : undefined,
+        urls: urlsChanged ? newUrls : undefined,
         techStack:
           JSON.stringify(formData.techStack) !==
           JSON.stringify(editingProject.techStack || [])
@@ -280,17 +343,45 @@ export default function ProjectsTable() {
           formData.enableConentSync !== editingProject.enableConentSync
             ? formData.enableConentSync
             : undefined,
+        isFeatured:
+          formData.isFeatured !== editingProject.isFeatured
+            ? formData.isFeatured
+            : undefined,
+        sortOrder:
+          formData.sortOrder !== editingProject.sortOrder
+            ? formData.sortOrder
+            : undefined,
+        metaDescription:
+          formData.metaDescription !==
+          (editingProjectWithSEO.metaDescription || "")
+            ? formData.metaDescription || null
+            : undefined,
+        metaKeywords:
+          formData.metaKeywords !== (editingProjectWithSEO.metaKeywords || "")
+            ? formData.metaKeywords || null
+            : undefined,
+        robotsIndex:
+          formData.robotsIndex !== (editingProjectWithSEO.robotsIndex ?? true)
+            ? formData.robotsIndex
+            : undefined,
         featuredImages:
           JSON.stringify(formData.featuredImages) !==
           JSON.stringify(editingProject.featuredImages || [])
             ? formData.featuredImages
             : undefined,
         startedAt:
-          formData.startedAt !==
+          formData.startedAt !=
           (editingProject.startedAt
             ? new Date(editingProject.startedAt).toISOString().split("T")[0]
             : "")
             ? formData.startedAt || undefined
+            : undefined,
+        completedAt:
+          formData.completedAt !=
+          (editingProject.completedAt
+            ? new Date(editingProject.completedAt).toISOString().split("T")[0]
+            : "")
+            ? formData.completedAt || undefined
             : undefined,
         tags: tagsChanged ? tagNames : undefined,
         categories: categoriesChanged
@@ -406,7 +497,7 @@ export default function ProjectsTable() {
           | "DRAFT"
           | "PUBLISHED"
           | "ARCHIVED"
-          | "Developing",
+          | "DEVELOPING",
       });
 
       if (result.success) {
@@ -572,7 +663,7 @@ export default function ProjectsTable() {
     },
     {
       label: "编辑内容",
-      onClick: () => navigate("/admin/projects/" + record.slug),
+      onClick: () => handleEditContentClick(record),
       icon: <RiFileEditLine size="1em" />,
       variant: "ghost",
     },
@@ -648,7 +739,16 @@ export default function ProjectsTable() {
         { value: "PUBLISHED", label: "已发布" },
         { value: "DRAFT", label: "草稿" },
         { value: "ARCHIVED", label: "已归档" },
-        { value: "Developing", label: "开发中" },
+        { value: "DEVELOPING", label: "开发中" },
+      ],
+    },
+    {
+      key: "isFeatured",
+      label: "精选",
+      type: "checkboxGroup",
+      options: [
+        { value: "true", label: "是" },
+        { value: "false", label: "否" },
       ],
     },
     {
@@ -701,13 +801,15 @@ export default function ProjectsTable() {
             | "updatedAt"
             | "createdAt"
             | "stars"
-            | "forks";
+            | "forks"
+            | "sortOrder";
           sortOrder?: "asc" | "desc";
           search?: string;
           id?: number;
           authorUid?: number;
-          status?: ("DRAFT" | "PUBLISHED" | "ARCHIVED" | "Developing")[];
+          status?: ("DRAFT" | "PUBLISHED" | "ARCHIVED" | "DEVELOPING")[];
           enableGithubSync?: boolean[];
+          isFeatured?: boolean;
           publishedAtStart?: string;
           publishedAtEnd?: string;
           updatedAtStart?: string;
@@ -727,7 +829,8 @@ export default function ProjectsTable() {
             | "updatedAt"
             | "createdAt"
             | "stars"
-            | "forks";
+            | "forks"
+            | "sortOrder";
           params.sortOrder = sortOrder;
         }
 
@@ -752,7 +855,7 @@ export default function ProjectsTable() {
             | "DRAFT"
             | "PUBLISHED"
             | "ARCHIVED"
-            | "Developing"
+            | "DEVELOPING"
           )[];
         }
 
@@ -763,6 +866,10 @@ export default function ProjectsTable() {
           params.enableGithubSync = filterValues.enableGithubSync.map((v) =>
             typeof v === "string" ? v === "true" : Boolean(v),
           );
+        }
+
+        if (filterValues.isFeatured && Array.isArray(filterValues.isFeatured)) {
+          params.isFeatured = filterValues.isFeatured[0] === "true";
         }
 
         if (
@@ -813,8 +920,11 @@ export default function ProjectsTable() {
           }
         }
 
+        const accessToken = localStorage.getItem("access_token");
+
         const result = await getProjectsList({
           ...params,
+          access_token: accessToken || undefined,
           sortBy: params.sortBy || "id",
           sortOrder: params.sortOrder || "desc",
         });
@@ -861,15 +971,20 @@ export default function ProjectsTable() {
       sortable: true,
       render: (value: unknown, record: ProjectListItem) => {
         return (
-          <Link
-            href={`/projects/${record.slug}`}
-            className="truncate max-w-xs block"
-            presets={["hover-underline"]}
-            title={String(value)}
-            target="_blank"
-          >
-            {String(value)}
-          </Link>
+          <div className="flex items-center gap-1">
+            <Link
+              href={`/projects/${record.slug}`}
+              className="truncate max-w-xs block"
+              presets={["hover-underline"]}
+              title={String(value)}
+              target="_blank"
+            >
+              {String(value)}
+            </Link>
+            {record.isFeatured && (
+              <RiStarFill size="1em" className="text-yellow-500 shrink-0" />
+            )}
+          </div>
         );
       },
     },
@@ -935,7 +1050,7 @@ export default function ProjectsTable() {
             ? "bg-success/20 text-success"
             : status === "DRAFT"
               ? "bg-warning/20 text-warning"
-              : status === "Developing"
+              : status === "DEVELOPING"
                 ? "bg-info/20 text-info"
                 : "bg-muted/20 text-muted-foreground";
         const statusText =
@@ -943,7 +1058,7 @@ export default function ProjectsTable() {
             ? "已发布"
             : status === "DRAFT"
               ? "草稿"
-              : status === "Developing"
+              : status === "DEVELOPING"
                 ? "开发中"
                 : "已归档";
         return (
@@ -972,19 +1087,12 @@ export default function ProjectsTable() {
       },
     },
     {
-      key: "forks",
-      title: "Forks",
-      dataIndex: "forks",
+      key: "sortOrder",
+      title: "权重",
+      dataIndex: "sortOrder",
       align: "center",
       sortable: true,
       mono: true,
-      render: (value: unknown) => {
-        return (
-          <span className="text-sm">
-            {typeof value === "number" ? value.toLocaleString() : 0}
-          </span>
-        );
-      },
     },
     {
       key: "enableGithubSync",
@@ -1067,7 +1175,7 @@ export default function ProjectsTable() {
     { value: "PUBLISHED", label: "已发布" },
     { value: "DRAFT", label: "草稿" },
     { value: "ARCHIVED", label: "已归档" },
-    { value: "Developing", label: "开发中" },
+    { value: "DEVELOPING", label: "开发中" },
   ];
 
   return (
@@ -1111,34 +1219,42 @@ export default function ProjectsTable() {
         title={`快速编辑 - ${editingProject?.title || ""}`}
         size="lg"
       >
-        <div className="px-6 py-6 space-y-6">
+        <div className="px-6 py-6 space-y-8">
           {/* 基本信息 */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-              基本信息
-            </h3>
-            <div className="grid grid-cols-1 gap-6">
+          <section>
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                基本信息
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                填写项目的基本信息。
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="项目标题"
+                  value={formData.title}
+                  onChange={(e) => handleFieldChange("title", e.target.value)}
+                  required
+                  size="sm"
+                  helperText="项目的显示名称"
+                />
+                <Input
+                  label="Slug"
+                  value={formData.slug}
+                  onChange={(e) => handleFieldChange("slug", e.target.value)}
+                  size="sm"
+                  helperText="URL 路径"
+                />
+              </div>
               <Input
-                label="标题"
-                value={formData.title}
-                onChange={(e) => handleFieldChange("title", e.target.value)}
-                required
-                size="sm"
-              />
-              <Input
-                label="Slug"
-                value={formData.slug}
-                onChange={(e) => handleFieldChange("slug", e.target.value)}
-                required
-                size="sm"
-              />
-              <Input
-                label="描述"
+                label="项目描述"
                 value={formData.description}
                 onChange={(e) =>
                   handleFieldChange("description", e.target.value)
                 }
-                rows={3}
+                rows={2}
                 size="sm"
               />
               <Input
@@ -1153,9 +1269,35 @@ export default function ProjectsTable() {
                       .filter(Boolean),
                   )
                 }
-                helperText="多个技术栈用逗号分隔"
                 size="sm"
+                helperText="多个技术栈用逗号分隔，如：React, TypeScript, Tailwind CSS"
               />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Input
+                    label="开始时间"
+                    type="date"
+                    value={formData.startedAt}
+                    onChange={(e) =>
+                      handleFieldChange("startedAt", e.target.value)
+                    }
+                    size="sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Input
+                    label="完成时间"
+                    type="date"
+                    value={formData.completedAt}
+                    onChange={(e) =>
+                      handleFieldChange("completedAt", e.target.value)
+                    }
+                    size="sm"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="space-y-4">
               <TagInput
                 label="标签"
                 value={formData.tags}
@@ -1170,55 +1312,166 @@ export default function ProjectsTable() {
                 size="sm"
               />
             </div>
-          </div>
+          </section>
 
           {/* 链接信息 */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-              链接信息
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <section>
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                链接信息
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                用于在项目页面展示相关链接。
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Demo URL"
+                  value={formData.demoUrl}
+                  onChange={(e) => handleFieldChange("demoUrl", e.target.value)}
+                  size="sm"
+                  helperText="项目演示地址"
+                />
+                <Input
+                  label="仓库 URL"
+                  value={formData.repoUrl}
+                  onChange={(e) => handleFieldChange("repoUrl", e.target.value)}
+                  size="sm"
+                  helperText="GitHub/GitLab 等仓库地址"
+                />
+              </div>
               <Input
-                label="Demo URL"
-                value={formData.demoUrl}
-                onChange={(e) => handleFieldChange("demoUrl", e.target.value)}
+                label="其他链接 (Urls)"
+                value={formData.urls}
+                onChange={(e) => handleFieldChange("urls", e.target.value)}
+                rows={3}
                 size="sm"
-                helperText="https://example.com"
-              />
-              <Input
-                label="仓库 URL"
-                value={formData.repoUrl}
-                onChange={(e) => handleFieldChange("repoUrl", e.target.value)}
-                size="sm"
-                helperText="https://github.com/user/repo"
+                helperText="每行一个链接"
               />
             </div>
-          </div>
+          </section>
 
-          {/* GitHub 设置 */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-              GitHub 同步
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              启用内容同步后，手动编辑的内容将被 GitHub README 覆盖
-            </p>
-            <div className="grid grid-cols-1 gap-6">
+          {/* 展示设置 */}
+          <section className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                展示设置
+              </h3>
+            </div>
+            <div className="space-y-4 grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-foreground">状态</label>
+                <Select
+                  value={formData.status}
+                  onChange={(value) =>
+                    handleFieldChange("status", value as string)
+                  }
+                  options={[
+                    { value: "DRAFT", label: "草稿" },
+                    { value: "PUBLISHED", label: "已发布" },
+                    { value: "DEVELOPING", label: "开发中" },
+                    { value: "ARCHIVED", label: "已归档" },
+                  ]}
+                  size="sm"
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-foreground">
+                  置顶状态
+                </label>
+                <Select
+                  value={formData.isFeatured ? "true" : "false"}
+                  onChange={(value) =>
+                    handleFieldChange("isFeatured", value === "true")
+                  }
+                  options={[
+                    { value: "false", label: "常规" },
+                    { value: "true", label: "置顶" },
+                  ]}
+                  size="sm"
+                  className="w-full"
+                />
+              </div>
+            </div>
+            <Input
+              label="排序权重"
+              value={String(formData.sortOrder)}
+              onChange={(e) =>
+                handleFieldChange("sortOrder", parseInt(e.target.value) || 0)
+              }
+              type="number"
+              size="sm"
+              helperText="数字越大排序越靠前"
+            />
+          </section>
+
+          {/* SEO 设置 */}
+          <section className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                SEO 设置
+              </h3>
+            </div>
+            <div className="space-y-4">
               <Input
-                label="仓库路径"
-                value={formData.repoPath}
-                onChange={(e) => handleFieldChange("repoPath", e.target.value)}
+                label="Meta Description"
+                value={formData.metaDescription}
+                onChange={(e) =>
+                  handleFieldChange("metaDescription", e.target.value)
+                }
+                rows={2}
                 size="sm"
-                helperText="用于 GitHub API 同步，例如：RavelloH/NeutralPress"
+                helperText="SEO 描述，建议 160 字以内，留空则使用项目描述内容"
               />
               <Input
-                label="开源许可证"
-                value={formData.license}
-                onChange={(e) => handleFieldChange("license", e.target.value)}
+                label="Meta Keywords"
+                value={formData.metaKeywords}
+                onChange={(e) =>
+                  handleFieldChange("metaKeywords", e.target.value)
+                }
                 size="sm"
-                helperText="项目的开源许可证类型，例如：MIT"
+                helperText="SEO 关键词，用逗号分隔"
               />
-              <div className="flex flex-col gap-4">
+              <Checkbox
+                label="允许搜索引擎索引 (Robots Index)"
+                checked={formData.robotsIndex}
+                onChange={(e) =>
+                  handleFieldChange("robotsIndex", e.target.checked)
+                }
+              />
+            </div>
+          </section>
+
+          {/* GitHub 同步设置 */}
+          <section className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                GitHub 同步
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                启用后将自动同步仓库的 Stars、Forks、语言等信息。
+              </p>
+            </div>
+            <AutoResizer>
+              <div className="space-y-4 flex flex-col">
+                <Input
+                  label="GitHub 仓库路径"
+                  value={formData.repoPath}
+                  onChange={(e) =>
+                    handleFieldChange("repoPath", e.target.value)
+                  }
+                  size="sm"
+                  helperText='格式：owner/repo，如 "RavelloH/NeutralPress"'
+                />
+                <Input
+                  label="开源许可证"
+                  value={formData.license}
+                  onChange={(e) => handleFieldChange("license", e.target.value)}
+                  size="sm"
+                  helperText="项目的开源许可证类型，如：MIT、Apache-2.0"
+                />
                 <Checkbox
                   label="启用 GitHub 同步"
                   checked={formData.enableGithubSync}
@@ -1229,77 +1482,46 @@ export default function ProjectsTable() {
                     }
                   }}
                 />
-                <AutoResizer>
-                  <AutoTransition>
-                    {formData.enableGithubSync && (
-                      <Checkbox
-                        label="同步 README 到内容"
-                        checked={formData.enableConentSync}
-                        onChange={(e) =>
-                          handleFieldChange(
-                            "enableConentSync",
-                            e.target.checked,
-                          )
-                        }
-                      />
-                    )}
-                  </AutoTransition>
-                </AutoResizer>
+                <AutoTransition className="flex flex-col space-y-4">
+                  {formData.enableGithubSync && (
+                    <Checkbox
+                      label="同步 README 内容"
+                      checked={formData.enableConentSync}
+                      onChange={(e) =>
+                        handleFieldChange("enableConentSync", e.target.checked)
+                      }
+                    />
+                  )}
+                </AutoTransition>
               </div>
-            </div>
-          </div>
-
-          {/* 发布设置 */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-              发布设置
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input
-                label="项目开始时间"
-                type="date"
-                value={formData.startedAt}
-                onChange={(e) => handleFieldChange("startedAt", e.target.value)}
-                size="sm"
-              />
-              <div>
-                <label className="block text-sm text-foreground mb-2">
-                  状态
-                </label>
-                <Select
-                  value={formData.status}
-                  onChange={(value) =>
-                    handleFieldChange("status", value as string)
-                  }
-                  options={statusOptions}
-                  size="sm"
-                  className="w-full"
-                />
-              </div>
-            </div>
-          </div>
+            </AutoResizer>
+          </section>
 
           {/* 特色图片 */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-              特色图片
-            </h3>
+          <section className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                特色图片
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                可以选择多张图片作为项目展示图。
+              </p>
+            </div>
             <MediaSelector
               label="特色图片"
               value={formData.featuredImages}
               onChange={(urls) =>
                 handleFieldChange(
                   "featuredImages",
-                  Array.isArray(urls) ? urls : [],
+                  Array.isArray(urls) ? urls : urls ? [urls] : [],
                 )
               }
               multiple
               helperText="选择或上传项目的特色图片"
             />
-          </div>
+          </section>
 
-          {/* 操作按钮 */}
-          <div className="flex justify-end gap-4 pt-4 border-t border-foreground/10">
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end sm:gap-4">
             <Button
               label="取消"
               variant="ghost"
@@ -1313,7 +1535,6 @@ export default function ProjectsTable() {
               onClick={handleSaveProject}
               size="sm"
               loading={isSubmitting}
-              loadingText="保存中..."
             />
           </div>
         </div>
@@ -1354,7 +1575,6 @@ export default function ProjectsTable() {
               onClick={handleConfirmBatchStatus}
               size="sm"
               loading={isSubmitting}
-              loadingText="更新中..."
             />
           </div>
         </div>
@@ -1400,7 +1620,6 @@ export default function ProjectsTable() {
               onClick={handleConfirmBatchGithubSync}
               size="sm"
               loading={isSubmitting}
-              loadingText="更新中..."
             />
           </div>
         </div>
@@ -1433,6 +1652,26 @@ export default function ProjectsTable() {
         confirmText="删除"
         cancelText="取消"
         variant="danger"
+        loading={isSubmitting}
+      />
+
+      {/* README 同步警告对话框 */}
+      <AlertDialog
+        open={contentSyncWarningDialogOpen}
+        onClose={() => {
+          setContentSyncWarningDialogOpen(false);
+          setProjectToEdit(null);
+        }}
+        onConfirm={handleDisableContentSync}
+        title="警告：项目内容正在自动同步"
+        description={
+          projectToEdit
+            ? `项目 "${projectToEdit.title}" 已启用 GitHub README 同步，内容将自动从 GitHub 覆盖。\n是否关闭同步以解锁编辑？`
+            : ""
+        }
+        confirmText="关闭同步并编辑"
+        cancelText="取消"
+        variant="warning"
         loading={isSubmitting}
       />
     </>

@@ -15536,6 +15536,7 @@ components:
             - createdAt
             - stars
             - forks
+            - sortOrder
         sortOrder:
           default: desc
           type: string
@@ -15550,7 +15551,7 @@ components:
               - DRAFT
               - PUBLISHED
               - ARCHIVED
-              - Developing
+              - DEVELOPING
         search:
           type: string
         id:
@@ -15565,6 +15566,8 @@ components:
           type: array
           items:
             type: boolean
+        isFeatured:
+          type: boolean
         publishedAtStart:
           type: string
         publishedAtEnd:
@@ -15616,7 +15619,7 @@ components:
                   - DRAFT
                   - PUBLISHED
                   - ARCHIVED
-                  - Developing
+                  - DEVELOPING
               demoUrl:
                 anyOf:
                   - type: string
@@ -15625,6 +15628,10 @@ components:
                 anyOf:
                   - type: string
                   - type: "null"
+              urls:
+                type: array
+                items:
+                  type: string
               techStack:
                 anyOf:
                   - type: array
@@ -15659,6 +15666,12 @@ components:
                 type: boolean
               enableConentSync:
                 type: boolean
+              isFeatured:
+                type: boolean
+              sortOrder:
+                type: integer
+                minimum: -9007199254740991
+                maximum: 9007199254740991
               publishedAt:
                 anyOf:
                   - type: string
@@ -15668,6 +15681,10 @@ components:
               updatedAt:
                 type: string
               startedAt:
+                anyOf:
+                  - type: string
+                  - type: "null"
+              completedAt:
                 anyOf:
                   - type: string
                   - type: "null"
@@ -15730,10 +15747,13 @@ components:
               - license
               - enableGithubSync
               - enableConentSync
+              - isFeatured
+              - sortOrder
               - publishedAt
               - createdAt
               - updatedAt
               - startedAt
+              - completedAt
               - author
               - categories
               - tags
@@ -15792,7 +15812,7 @@ components:
                 - DRAFT
                 - PUBLISHED
                 - ARCHIVED
-                - Developing
+                - DEVELOPING
             demoUrl:
               anyOf:
                 - type: string
@@ -15801,6 +15821,10 @@ components:
               anyOf:
                 - type: string
                 - type: "null"
+            urls:
+              type: array
+              items:
+                type: string
             techStack:
               anyOf:
                 - type: array
@@ -15835,6 +15859,22 @@ components:
               type: boolean
             enableConentSync:
               type: boolean
+            isFeatured:
+              type: boolean
+            sortOrder:
+              type: integer
+              minimum: -9007199254740991
+              maximum: 9007199254740991
+            metaDescription:
+              anyOf:
+                - type: string
+                - type: "null"
+            metaKeywords:
+              anyOf:
+                - type: string
+                - type: "null"
+            robotsIndex:
+              type: boolean
             publishedAt:
               anyOf:
                 - type: string
@@ -15844,6 +15884,10 @@ components:
             updatedAt:
               type: string
             startedAt:
+              anyOf:
+                - type: string
+                - type: "null"
+            completedAt:
               anyOf:
                 - type: string
                 - type: "null"
@@ -15898,10 +15942,16 @@ components:
             - license
             - enableGithubSync
             - enableConentSync
+            - isFeatured
+            - sortOrder
+            - metaDescription
+            - metaKeywords
+            - robotsIndex
             - publishedAt
             - createdAt
             - updatedAt
             - startedAt
+            - completedAt
             - author
             - categories
             - tags
@@ -15936,6 +15986,11 @@ components:
         repoUrl:
           type: string
           maxLength: 500
+        urls:
+          type: array
+          items:
+            type: string
+            maxLength: 500
         techStack:
           type: array
           items:
@@ -15944,6 +15999,9 @@ components:
           type: string
           maxLength: 100
           pattern: ^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+$
+        license:
+          type: string
+          maxLength: 100
         enableGithubSync:
           default: false
           type: boolean
@@ -15960,7 +16018,24 @@ components:
             - DRAFT
             - PUBLISHED
             - ARCHIVED
-            - Developing
+            - DEVELOPING
+        isFeatured:
+          default: false
+          type: boolean
+        sortOrder:
+          default: 0
+          type: integer
+          minimum: -9007199254740991
+          maximum: 9007199254740991
+        metaDescription:
+          type: string
+          maxLength: 160
+        metaKeywords:
+          type: string
+          maxLength: 255
+        robotsIndex:
+          default: true
+          type: boolean
         categories:
           type: array
           items:
@@ -15981,12 +16056,17 @@ components:
           type: string
         startedAt:
           type: string
+        completedAt:
+          type: string
       required:
         - title
         - enableGithubSync
         - enableConentSync
         - syncImmediately
         - status
+        - isFeatured
+        - sortOrder
+        - robotsIndex
       additionalProperties: false
     CreateProjectSuccessResponse:
       type: object
@@ -16016,7 +16096,7 @@ components:
                   type: boolean
                 error:
                   type: string
-                stats:
+                stars:
                   type: integer
                   minimum: -9007199254740991
                   maximum: 9007199254740991
@@ -16063,6 +16143,11 @@ components:
         repoUrl:
           type: string
           maxLength: 500
+        urls:
+          type: array
+          items:
+            type: string
+            maxLength: 500
         techStack:
           type: array
           items:
@@ -16072,6 +16157,11 @@ components:
             - type: string
               maxLength: 100
               pattern: ^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+$
+            - type: "null"
+        license:
+          anyOf:
+            - type: string
+              maxLength: 100
             - type: "null"
         enableGithubSync:
           type: boolean
@@ -16083,7 +16173,25 @@ components:
             - DRAFT
             - PUBLISHED
             - ARCHIVED
-            - Developing
+            - DEVELOPING
+        isFeatured:
+          type: boolean
+        sortOrder:
+          type: integer
+          minimum: -9007199254740991
+          maximum: 9007199254740991
+        metaDescription:
+          anyOf:
+            - type: string
+              maxLength: 160
+            - type: "null"
+        metaKeywords:
+          anyOf:
+            - type: string
+              maxLength: 255
+            - type: "null"
+        robotsIndex:
+          type: boolean
         categories:
           type: array
           items:
@@ -16103,6 +16211,8 @@ components:
         publishedAt:
           type: string
         startedAt:
+          type: string
+        completedAt:
           type: string
       required:
         - slug
@@ -16155,7 +16265,7 @@ components:
             - DRAFT
             - PUBLISHED
             - ARCHIVED
-            - Developing
+            - DEVELOPING
         enableGithubSync:
           type: boolean
         enableConentSync:
@@ -16285,7 +16395,7 @@ components:
                     type: boolean
                   error:
                     type: string
-                  stats:
+                  stars:
                     type: integer
                     minimum: -9007199254740991
                     maximum: 9007199254740991

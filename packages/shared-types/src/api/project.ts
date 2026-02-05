@@ -48,18 +48,20 @@ export const GetProjectsListSchema = z.object({
       "createdAt",
       "stars",
       "forks",
+      "sortOrder",
     ])
     .optional()
     .default("id"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
   status: z
-    .array(z.enum(["DRAFT", "PUBLISHED", "ARCHIVED", "Developing"]))
+    .array(z.enum(["DRAFT", "PUBLISHED", "ARCHIVED", "DEVELOPING"]))
     .optional(),
   search: z.string().optional(),
   // 筛选参数
   id: z.number().int().optional(),
   authorUid: z.number().int().optional(),
   enableGithubSync: z.array(z.boolean()).optional(),
+  isFeatured: z.boolean().optional(),
   publishedAtStart: z.string().optional(),
   publishedAtEnd: z.string().optional(),
   updatedAtStart: z.string().optional(),
@@ -75,9 +77,10 @@ export const ProjectListItemSchema = z.object({
   title: z.string(),
   slug: z.string(),
   description: z.string(),
-  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED", "Developing"]),
+  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED", "DEVELOPING"]),
   demoUrl: z.string().nullable(),
   repoUrl: z.string().nullable(),
+  urls: z.array(z.string()).optional(),
   techStack: z.array(z.string()).nullable(),
   repoPath: z.string().nullable(),
   stars: z.number().int(),
@@ -86,10 +89,13 @@ export const ProjectListItemSchema = z.object({
   license: z.string().nullable(),
   enableGithubSync: z.boolean(),
   enableConentSync: z.boolean(),
+  isFeatured: z.boolean(),
+  sortOrder: z.number().int(),
   publishedAt: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
   startedAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
   author: z.object({
     uid: z.number().int(),
     username: z.string(),
@@ -134,9 +140,10 @@ export const ProjectDetailSchema = z.object({
   slug: z.string(),
   description: z.string(),
   content: z.string().nullable(),
-  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED", "Developing"]),
+  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED", "DEVELOPING"]),
   demoUrl: z.string().nullable(),
   repoUrl: z.string().nullable(),
+  urls: z.array(z.string()).optional(),
   techStack: z.array(z.string()).nullable(),
   repoPath: z.string().nullable(),
   stars: z.number().int(),
@@ -145,10 +152,16 @@ export const ProjectDetailSchema = z.object({
   license: z.string().nullable(),
   enableGithubSync: z.boolean(),
   enableConentSync: z.boolean(),
+  isFeatured: z.boolean(),
+  sortOrder: z.number().int(),
+  metaDescription: z.string().nullable(),
+  metaKeywords: z.string().nullable(),
+  robotsIndex: z.boolean(),
   publishedAt: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
   startedAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
   author: z.object({
     uid: z.number().int(),
     username: z.string(),
@@ -182,24 +195,32 @@ export const CreateProjectSchema = z.object({
   content: z.string().optional(),
   demoUrl: z.string().max(500, "Demo URL 过长").optional(),
   repoUrl: z.string().max(500, "仓库 URL 过长").optional(),
+  urls: z.array(z.string().max(500, "URL 过长")).optional(),
   techStack: z.array(z.string()).optional(),
   repoPath: z
     .string()
     .max(100, "仓库路径过长")
     .regex(/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+$/, "仓库路径格式不正确")
     .optional(),
+  license: z.string().max(100, "License 过长").optional(),
   enableGithubSync: z.boolean().default(false),
   enableConentSync: z.boolean().default(false),
   syncImmediately: z.boolean().default(false), // 创建后立即执行 GitHub 同步
   status: z
-    .enum(["DRAFT", "PUBLISHED", "ARCHIVED", "Developing"])
+    .enum(["DRAFT", "PUBLISHED", "ARCHIVED", "DEVELOPING"])
     .default("DRAFT"),
+  isFeatured: z.boolean().default(false),
+  sortOrder: z.number().int().default(0),
+  metaDescription: z.string().max(160).optional(),
+  metaKeywords: z.string().max(255).optional(),
+  robotsIndex: z.boolean().default(true),
   categories: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
   featuredImages: z.array(z.string().max(500, "图片 URL 过长")).optional(), // 支持多张特色图片
   featuredImage: z.string().max(500, "图片 URL 过长").optional(), // 保留单张兼容
   publishedAt: z.string().optional(),
   startedAt: z.string().optional(), // 可选，如果有 repoPath 则自动从 GitHub 获取
+  completedAt: z.string().optional(),
 });
 export type CreateProject = z.infer<typeof CreateProjectSchema>;
 registerSchema("CreateProject", CreateProjectSchema);
@@ -241,6 +262,7 @@ export const UpdateProjectSchema = z.object({
   content: z.string().optional(),
   demoUrl: z.string().max(500, "Demo URL 过长").optional(),
   repoUrl: z.string().max(500, "仓库 URL 过长").optional(),
+  urls: z.array(z.string().max(500, "URL 过长")).optional(),
   techStack: z.array(z.string()).optional(),
   repoPath: z
     .string()
@@ -251,13 +273,19 @@ export const UpdateProjectSchema = z.object({
   license: z.string().max(100, "License 过长").optional().nullable(),
   enableGithubSync: z.boolean().optional(),
   enableConentSync: z.boolean().optional(),
-  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED", "Developing"]).optional(),
+  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED", "DEVELOPING"]).optional(),
+  isFeatured: z.boolean().optional(),
+  sortOrder: z.number().int().optional(),
+  metaDescription: z.string().max(160).optional().nullable(),
+  metaKeywords: z.string().max(255).optional().nullable(),
+  robotsIndex: z.boolean().optional(),
   categories: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
   featuredImages: z.array(z.string().max(500, "图片 URL 过长")).optional(), // 支持多张特色图片
   featuredImage: z.string().max(500, "图片 URL 过长").optional(), // 保留单张兼容
   publishedAt: z.string().optional(),
   startedAt: z.string().optional(),
+  completedAt: z.string().optional(),
 });
 export type UpdateProject = z.infer<typeof UpdateProjectSchema>;
 registerSchema("UpdateProject", UpdateProjectSchema);
@@ -285,7 +313,7 @@ registerSchema(
 export const UpdateProjectsSchema = z.object({
   access_token: z.string().optional(),
   ids: z.array(z.number().int().positive()).min(1, "必须提供至少一个项目 ID"),
-  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED", "Developing"]).optional(),
+  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED", "DEVELOPING"]).optional(),
   enableGithubSync: z.boolean().optional(),
   enableConentSync: z.boolean().optional(),
 });
