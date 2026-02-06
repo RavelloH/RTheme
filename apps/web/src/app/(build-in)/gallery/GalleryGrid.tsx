@@ -8,9 +8,11 @@ import { useGalleryLightboxStore } from "@/store/gallery-lightbox-store";
 
 interface GalleryGridProps {
   tiles: Tile[];
+  /** 静态模式：禁用链接、遮罩、放大等所有交互效果 */
+  staticMode?: boolean;
 }
 
-export default function GalleryGrid({ tiles }: GalleryGridProps) {
+export default function GalleryGrid({ tiles, staticMode }: GalleryGridProps) {
   const setSourceRect = useGalleryLightboxStore((s) => s.setSourceRect);
   // 存储每个图片容器的 ref
   const containerRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -56,6 +58,7 @@ export default function GalleryGrid({ tiles }: GalleryGridProps) {
               if (el) containerRefs.current.set(tile.id, el);
               else containerRefs.current.delete(tile.id);
             }}
+            staticMode={staticMode}
             style={{
               gridColumn: `span ${colSpan} / span ${colSpan}`,
               gridRow: `span ${rowSpan} / span ${rowSpan}`,

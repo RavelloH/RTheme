@@ -15,6 +15,8 @@ interface GalleryTileProps {
   style?: React.CSSProperties;
   className?: string;
   priority?: boolean;
+  /** 静态模式：禁用链接、遮罩、放大等所有交互效果 */
+  staticMode?: boolean;
 }
 
 function GalleryTileComponent({
@@ -24,6 +26,7 @@ function GalleryTileComponent({
   style,
   className,
   priority = false,
+  staticMode = false,
 }: GalleryTileProps) {
   const openedPhotoId = useGalleryLightboxStore((s) => s.openedPhotoId);
 
@@ -41,44 +44,78 @@ function GalleryTileComponent({
 
   const isOpened = openedPhotoId === tile.id;
 
+  // 静态模式：纯展示，无交互
+  if (staticMode) {
+    return (
+      <div
+        className={`relative flex h-full w-full items-center justify-center overflow-hidden ${
+          className || ""
+        }`}
+        style={style}
+      >
+        <div
+          ref={onRef}
+          data-gallery-image={tile.id}
+          className="relative h-full w-full overflow-hidden"
+        >
+          <CMSImage
+            src={tile.imageUrl}
+            blur={tile.blur}
+            sizes="(max-width: 768px) 50vw, 25vw"
+            alt={tile.alt || ""}
+            fill
+            priority={priority}
+            className="object-cover"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  const imageContent = (
+    <div
+      ref={onRef}
+      data-gallery-image={tile.id}
+      className="relative h-full w-full overflow-hidden transition-opacity duration-200"
+    >
+      <CMSImage
+        src={tile.imageUrl}
+        blur={tile.blur}
+        sizes="(max-width: 768px) 50vw, 25vw"
+        alt={tile.alt || ""}
+        fill
+        priority={priority}
+        className={`object-cover transition-transform duration-300 ${
+          isOpened ? "scale-100" : "group-hover:scale-110"
+        }`}
+      />
+      {/* Hover 遮罩层 */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      {/* 图片信息 */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+        <p className="text-sm font-medium line-clamp-2">{tile.alt}</p>
+        {tile.width && tile.height && (
+          <p className="mt-1 text-xs text-white/80">
+            {tile.width} × {tile.height}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+
+  const containerClassName = `group relative flex h-full w-full items-center justify-center overflow-hidden shadow-sm ${
+    className || ""
+  }`;
+
   return (
     <Link
       href={`/gallery/photo/${tile.slug}`}
       scroll={false}
       onClick={() => onClick(tile.id, tile.imageUrl)}
-      className={`group relative flex h-full w-full items-center justify-center overflow-hidden shadow-sm ${
-        className || ""
-      }`}
+      className={containerClassName}
       style={style}
     >
-      <div
-        ref={onRef}
-        data-gallery-image={tile.id}
-        className="relative h-full w-full overflow-hidden transition-opacity duration-200"
-      >
-        <CMSImage
-          src={tile.imageUrl}
-          blur={tile.blur}
-          sizes="(max-width: 768px) 50vw, 25vw"
-          alt={tile.alt || ""}
-          fill
-          priority={priority}
-          className={`object-cover transition-transform duration-300 ${
-            isOpened ? "scale-100" : "group-hover:scale-110"
-          }`}
-        />
-        {/* Hover 遮罩层 */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-        {/* 图片信息 */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-          <p className="text-sm font-medium line-clamp-2">{tile.alt}</p>
-          {tile.width && tile.height && (
-            <p className="mt-1 text-xs text-white/80">
-              {tile.width} × {tile.height}
-            </p>
-          )}
-        </div>
-      </div>
+      {imageContent}
     </Link>
   );
 }
