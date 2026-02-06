@@ -278,7 +278,7 @@ export function Drawer({
         border-l border-border
         shadow-[-8px_0_30px_rgba(0,0,0,0.12)]
         pointer-events-auto
-        z-[51]
+        z-[101]
         ${className}
       `}
     >
@@ -299,7 +299,7 @@ export function Drawer({
     <AnimatePresence>
       {open && (
         <div
-          className="fixed inset-0 z-[51] overflow-hidden"
+          className="fixed inset-0 z-[101] overflow-hidden"
           ref={constraintsRef}
           style={{ pointerEvents: "none" }}
         >
