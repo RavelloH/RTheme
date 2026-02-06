@@ -66,7 +66,7 @@ export default function SocialLinksMarquee({
           gradient={true}
           gradientWidth={50}
           gradientColor="var(--color-background)"
-          className=""
+          className="overflow-hidden"
         >
           {rowLinks.map((link, linkIndex) => (
             <a
@@ -74,7 +74,7 @@ export default function SocialLinksMarquee({
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex items-center gap-3 mx-6 px-4 py-2 rounded-sm transition-all duration-300 hover:border-primary hover:bg-primary/5 hover:scale-105"
+              className="group flex items-center gap-3 mx-6 px-4 py-2 rounded-sm transition-all duration-300 hover:text-primary hover:bg-primary/5 hover:scale-105"
             >
               {style !== "text-only" && (
                 <span className="w-6 h-6 flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
