@@ -57,9 +57,9 @@ export default function CallToActionBlock({
     switch (style) {
       case "bold":
       case "gradient":
-        return "bg-primary-foreground text-primary hover:bg-primary-foreground/90";
+        return "bg-primary-foreground text-primary hover:bg-primary-foreground/70";
       default:
-        return "bg-primary text-primary-foreground hover:bg-primary/90";
+        return "bg-primary text-primary-foreground hover:bg-primary/70";
     }
   };
 
