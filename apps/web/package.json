@@ -33,7 +33,7 @@
     "@react-email/components": "^1.0.1",
     "@react-email/render": "^2.0.0",
     "@react-email/tailwind": "^2.0.1",
-    "@remixicon/react": "^4.7.0",
+    "@remixicon/react": "^4.9.0",
     "@repo/shared-types": "workspace:*",
     "@simplewebauthn/browser": "^13.2.2",
     "@simplewebauthn/server": "^13.2.2",
