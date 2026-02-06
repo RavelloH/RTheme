@@ -116,7 +116,7 @@ export function Dialog({
   const dialogContent = (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[51] overflow-hidden">
+        <div className="fixed inset-0 z-[151] overflow-hidden">
           {/* 背景遮罩 */}
           <motion.div
             initial={{ opacity: 0 }}
