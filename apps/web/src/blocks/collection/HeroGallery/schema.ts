@@ -123,9 +123,18 @@ export const HERO_BLOCK_FORM_CONFIG: BlockFormConfig = {
     config: 2,
   },
   previewData: {
-    logoImage: "",
-    galleryImages: "",
+    galleryImages: [
+      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=600&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=600&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=600&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=600&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=600&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=600&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=600&h=400&fit=crop",
+    ],
     galleryImageFilter: "dark",
-    galleryImagesOrigin: "latestPosts",
+    galleryImagesOrigin: "custom",
   },
 };

@@ -8,9 +8,14 @@ import { useGalleryLightboxStore } from "@/store/gallery-lightbox-store";
 
 interface GalleryListMobileProps {
   tiles: Tile[];
+  /** 静态模式：禁用链接、遮罩、放大等所有交互效果 */
+  staticMode?: boolean;
 }
 
-export default function GalleryListMobile({ tiles }: GalleryListMobileProps) {
+export default function GalleryListMobile({
+  tiles,
+  staticMode,
+}: GalleryListMobileProps) {
   const setSourceRect = useGalleryLightboxStore((s) => s.setSourceRect);
   const containerRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
@@ -39,7 +44,7 @@ export default function GalleryListMobile({ tiles }: GalleryListMobileProps) {
   );
 
   return (
-    <div className="grid grid-cols-2 grid-flow-dense gap-1 p-1 pb-20">
+    <div className="grid grid-cols-2 grid-flow-dense gap-1 p-1">
       {tiles.map((tile) => {
         let className = "relative overflow-hidden";
         const style: React.CSSProperties = {};
@@ -74,6 +79,7 @@ export default function GalleryListMobile({ tiles }: GalleryListMobileProps) {
               if (el) containerRefs.current.set(tile.id, el);
               else containerRefs.current.delete(tile.id);
             }}
+            staticMode={staticMode}
             className={className}
             style={style}
           />

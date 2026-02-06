@@ -563,7 +563,6 @@ export default function HomeImageGallery({
                 alt={`Gallery ${index + 1}`}
                 fill
                 className="object-cover"
-                optimized={true}
                 onLoad={handleImageLoad}
               />
             </div>
@@ -589,7 +588,6 @@ export default function HomeImageGallery({
                   alt={`Gallery ${index + 1}`}
                   fill
                   className="object-cover"
-                  optimized={true}
                   onLoad={handleImageLoad}
                 />
                 {/* 主题色叠加层（仅对 mix-blend-hue 滤镜有效） */}

@@ -110,7 +110,7 @@ export default function MediaSelector({
   const [mediaList, setMediaList] = useState<MediaListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [selectedImageIds, setSelectedImageIds] = useState<Set<number>>(
+  const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(
     new Set(),
   );
 
@@ -208,7 +208,6 @@ export default function MediaSelector({
   const loadingRef = useRef(false);
   const pageRef = useRef(1);
   const hasMoreRef = useRef(true);
-  const selectedIdsInitializedRef = useRef(false);
 
   // 多选模式预览轮播状态
   const [previewActiveIndex, setPreviewActiveIndex] = useState(0);
@@ -356,14 +355,33 @@ export default function MediaSelector({
       setHasMore(true);
       pageRef.current = 1;
       hasMoreRef.current = true;
-      setSelectedImageIds(new Set());
+
+      // Initialize selected IDs from value directly
+      const initialSelectedIds = new Set<string>();
+      if (value) {
+        const selectedUrls = Array.isArray(value) ? value : [value];
+        selectedUrls.forEach((url) => {
+          const match = String(url).match(/\/p\/([\w-]+)/);
+          if (match && match[1]) {
+            initialSelectedIds.add(match[1]);
+          }
+        });
+      }
+      setSelectedImageIds(initialSelectedIds);
       setSelectedFolderIds(new Set());
-      selectedIdsInitializedRef.current = false;
+
       loadMediaList(1, false);
       loadFolders();
       loadBreadcrumb();
     }
-  }, [activeTab, dialogOpen, loadMediaList, loadFolders, loadBreadcrumb]);
+  }, [
+    activeTab,
+    dialogOpen,
+    loadMediaList,
+    loadFolders,
+    loadBreadcrumb,
+    value,
+  ]);
 
   // 当文件夹或搜索变化时重新加载
   useEffect(() => {
@@ -385,44 +403,6 @@ export default function MediaSelector({
     loadFolders,
     loadBreadcrumb,
   ]);
-
-  // 初始化已选中的图片 ID
-  useEffect(() => {
-    if (
-      activeTab === "select" &&
-      mediaList.length > 0 &&
-      !selectedIdsInitializedRef.current
-    ) {
-      selectedIdsInitializedRef.current = true;
-
-      if (multiple && value) {
-        const selectedUrls = Array.isArray(value) ? value : [value];
-        const selectedIds = new Set<number>();
-
-        selectedUrls.forEach((url) => {
-          const match = String(url).match(/\/p\/(\w+)/);
-          if (match) {
-            const imageId = match[1];
-            const item = mediaList.find((m) => m.imageId === imageId);
-            if (item) {
-              selectedIds.add(item.id);
-            }
-          }
-        });
-
-        setSelectedImageIds(selectedIds);
-      } else if (!multiple && value) {
-        const match = String(value).match(/\/p\/(\w+)/);
-        if (match) {
-          const imageId = match[1];
-          const item = mediaList.find((m) => m.imageId === imageId);
-          if (item) {
-            setSelectedImageIds(new Set([item.id]));
-          }
-        }
-      }
-    }
-  }, [mediaList, value, multiple, activeTab]);
 
   // Intersection Observer 触发加载更多
   useEffect(() => {
@@ -447,7 +427,15 @@ export default function MediaSelector({
     containerRef: gridContainerRef,
     enabled: activeTab === "select" && dialogOpen,
     onSelectionChange: (hits: MarqueeHit[]) => {
-      const mediaIds = hits.filter((h) => h.type === "media").map((h) => h.id);
+      const mediaIds = hits
+        .filter((h) => h.type === "media")
+        .map((h) => {
+          // Find the item in mediaList to get its imageId
+          const item = mediaList.find((m) => m.id === Number(h.id));
+          return item ? item.imageId : null;
+        })
+        .filter((id): id is string => id !== null);
+
       const folderIds = hits
         .filter((h) => h.type === "folder")
         .map((h) => h.id);
@@ -480,19 +468,19 @@ export default function MediaSelector({
       if (multiple) {
         setSelectedImageIds((prev) => {
           const newSet = new Set(prev);
-          if (newSet.has(item.id)) {
-            newSet.delete(item.id);
+          if (newSet.has(item.imageId)) {
+            newSet.delete(item.imageId);
           } else {
             if (maxCount && newSet.size >= maxCount) {
               toast.error(`最多只能选择 ${maxCount} 张图片`);
               return prev;
             }
-            newSet.add(item.id);
+            newSet.add(item.imageId);
           }
           return newSet;
         });
       } else {
-        setSelectedImageIds(new Set([item.id]));
+        setSelectedImageIds(new Set([item.imageId]));
       }
     },
     [multiple, maxCount, toast],
@@ -538,21 +526,19 @@ export default function MediaSelector({
 
   // 确认选择
   const handleConfirmSelect = useCallback(() => {
-    const selectedItems = mediaList.filter((item) =>
-      selectedImageIds.has(item.id),
-    );
-    if (selectedItems.length > 0) {
+    if (selectedImageIds.size > 0) {
       if (multiple) {
-        const urls = selectedItems.map((item) => `/p/${item.imageId}`);
+        const urls = Array.from(selectedImageIds).map((id) => `/p/${id}`);
         onChange(urls);
         toast.success(`已选择 ${urls.length} 张图片`);
       } else {
-        onChange(`/p/${selectedItems[0]!.imageId}`);
+        const firstId = Array.from(selectedImageIds)[0];
+        onChange(`/p/${firstId}`);
         toast.success("图片已选择");
       }
       closeDialog();
     }
-  }, [selectedImageIds, mediaList, onChange, toast, multiple, closeDialog]);
+  }, [selectedImageIds, onChange, toast, multiple, closeDialog]);
 
   // 打开对话框
   const openDialog = useCallback(() => {
@@ -1023,7 +1009,9 @@ export default function MediaSelector({
 
                           {/* 图片 */}
                           {mediaList.map((item, index) => {
-                            const isSelected = selectedImageIds.has(item.id);
+                            const isSelected = selectedImageIds.has(
+                              item.imageId,
+                            );
                             const loadingStrategy =
                               index < 12 ? "eager" : "lazy";
 
