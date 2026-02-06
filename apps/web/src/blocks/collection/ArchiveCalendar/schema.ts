@@ -73,6 +73,6 @@ export const ARCHIVE_CALENDAR_BLOCK_FORM_CONFIG: BlockFormConfig = {
   previewData: {
     dataSource: "posts",
     years: 3,
-    layout: { style: "calendar", showStats: true, ratio: 0.6 },
+    layout: { style: "heatmap", showStats: true, ratio: 0.6 },
   },
 };
