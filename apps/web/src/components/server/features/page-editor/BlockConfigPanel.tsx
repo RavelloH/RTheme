@@ -127,6 +127,105 @@ function JSONHighlight({
  * 字段渲染器组件
  * 根据字段配置动态渲染对应的输入控件
  */
+// 获取字段的默认值
+const getFieldValue = (val: unknown, defaultValue?: unknown): unknown => {
+  if (val === null || val === undefined) return defaultValue;
+  return val;
+};
+
+// 对于 text/textarea/number 类型，转换为字符串显示
+const getDisplayValue = (val: unknown): string => {
+  if (val === null || val === undefined) return "";
+  if (typeof val === "object") return "";
+  return String(val);
+};
+
+function StatefulInput({
+  field,
+  value,
+  onChange,
+}: {
+  field: FieldConfig;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const currentValue = getFieldValue(value, field.defaultValue);
+  const isNumberField = field.type === "number";
+  const [inputValue, setInputValue] = React.useState(
+    getDisplayValue(currentValue),
+  );
+
+  // 同步外部 value 变化到本地状态
+  React.useEffect(() => {
+    setInputValue(getDisplayValue(currentValue));
+  }, [currentValue]);
+
+  return (
+    <div className="mt-6">
+      <Input
+        label={field.label}
+        value={inputValue}
+        onChange={(e) => {
+          const newValue = e.target.value;
+          setInputValue(newValue);
+
+          if (isNumberField) {
+            // 实时处理数字输入
+            if (newValue === "" || newValue === "-") {
+              // 空值或只有负号时，使用默认值或 0
+              onChange(field.defaultValue ?? 0);
+            } else {
+              const num = parseFloat(newValue);
+              // parseFloat 能正确处理 "0." (返回 0)，"0.01" (返回 0.01)
+              // 只有 NaN 时才不更新（无效输入）
+              if (!isNaN(num)) {
+                onChange(num);
+              }
+            }
+          } else {
+            // 非 number 类型，直接提交
+            onChange(newValue);
+          }
+        }}
+        onBlur={() => {
+          // 失焦时格式化显示
+          if (isNumberField) {
+            const trimmed = inputValue.trim();
+            if (trimmed === "" || trimmed === "-") {
+              setInputValue(String(field.defaultValue ?? 0));
+              onChange(field.defaultValue ?? 0);
+            } else {
+              const num = parseFloat(trimmed);
+              if (!isNaN(num)) {
+                // 格式化显示：去除不必要的尾随零
+                setInputValue(String(num));
+                onChange(num);
+              } else {
+                // 无效输入，恢复原值
+                setInputValue(getDisplayValue(currentValue));
+              }
+            }
+          }
+        }}
+        type={
+          field.type === "number" || field.type === "date" ? field.type : "text"
+        }
+        step={field.type === "number" ? "any" : undefined}
+        helperText={field.placeholder ?? getDisplayValue(field.defaultValue)}
+        size="sm"
+        disabled={field.disabled}
+      />
+      {field.helperText && (
+        <p className="text-xs text-muted-foreground mt-1">{field.helperText}</p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 字段渲染器组件
+ * 根据字段配置动态渲染对应的输入控件
+ */
 function FieldRenderer({
   field,
   value,
@@ -138,19 +237,6 @@ function FieldRenderer({
 }) {
   const handleChange = (newValue: unknown) => {
     onChange(newValue);
-  };
-
-  // 获取字段的默认值
-  const getFieldValue = (val: unknown, defaultValue?: unknown): unknown => {
-    if (val === null || val === undefined) return defaultValue;
-    return val;
-  };
-
-  // 对于 text/textarea/number 类型，转换为字符串显示
-  const getDisplayValue = (val: unknown): string => {
-    if (val === null || val === undefined) return "";
-    if (typeof val === "object") return "";
-    return String(val);
   };
 
   switch (field.type) {
@@ -181,36 +267,8 @@ function FieldRenderer({
     case "text":
     case "number":
     case "date": {
-      const currentValue = getFieldValue(value, field.defaultValue);
       return (
-        <div className="mt-6">
-          <Input
-            label={field.label}
-            value={getDisplayValue(currentValue)}
-            onChange={(e) =>
-              handleChange(
-                field.type === "number"
-                  ? parseFloat(e.target.value) || 0
-                  : e.target.value,
-              )
-            }
-            type={
-              field.type === "number" || field.type === "date"
-                ? field.type
-                : "text"
-            }
-            helperText={
-              field.placeholder ?? getDisplayValue(field.defaultValue)
-            }
-            size="sm"
-            disabled={field.disabled}
-          />
-          {field.helperText && (
-            <p className="text-xs text-muted-foreground mt-1">
-              {field.helperText}
-            </p>
-          )}
-        </div>
+        <StatefulInput field={field} value={value} onChange={handleChange} />
       );
     }
 

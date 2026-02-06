@@ -402,7 +402,7 @@ export default function VisualPageEditor({
       const newBlock: BlockConfig = {
         id: newId,
         block: type,
-        description: `New ${type} block`,
+        description: "",
         content: {},
         ...initialData,
       } as BlockConfig;
