@@ -81,7 +81,23 @@ export default function GalleryBlock({
   }, [style, images]);
 
   if (images.length === 0) {
-    return null;
+    return (
+      <RowGrid>
+        <GridItem
+          areas={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}
+          width={containerWidth}
+          height={containerWidth}
+          fixedHeight
+        >
+          <div className="flex h-full items-center justify-center border-muted border bg-muted/30 text-muted-foreground">
+            <div className="text-center">
+              <p className="text-sm">暂无图片</p>
+              <p className="text-xs opacity-60">请在配置中添加图片</p>
+            </div>
+          </div>
+        </GridItem>
+      </RowGrid>
+    );
   }
 
   const filterClass = FILTER_CLASSES[filter] || "";
