@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { createPortal } from "react-dom";
@@ -14,7 +15,12 @@ import {
   RiErrorWarningLine,
   RiInformationLine,
 } from "@remixicon/react";
-import { AnimatePresence, motion } from "framer-motion";
+import {
+  animate,
+  AnimatePresence,
+  motion,
+  useMotionValue,
+} from "framer-motion";
 
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
@@ -43,39 +49,40 @@ interface ToastContextType {
     message?: string,
     duration?: number,
     action?: ToastAction,
-  ) => string; // 返回 toast ID
+  ) => string;
   success: (
     title: string,
     message?: string,
     duration?: number,
     action?: ToastAction,
-  ) => string; // 返回 toast ID
+  ) => string;
   error: (
     title: string,
     message?: string,
     duration?: number,
     action?: ToastAction,
-  ) => string; // 返回 toast ID
+  ) => string;
   warning: (
     title: string,
     message?: string,
     duration?: number,
     action?: ToastAction,
-  ) => string; // 返回 toast ID
+  ) => string;
   info: (
     title: string,
     message?: string,
     duration?: number,
     action?: ToastAction,
-  ) => string; // 返回 toast ID
-  dismiss: (id: string) => void; // 手动关闭 toast
+  ) => string;
+  dismiss: (id: string) => void;
+  persist: (id: string) => void;
   update: (
     id: string,
     title: string,
     message?: string,
     type?: ToastType,
     progress?: number,
-  ) => void; // 更新 toast 内容
+  ) => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -95,9 +102,21 @@ interface ToastProviderProps {
 
 export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const timers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    if (timers.current.has(id)) {
+      clearTimeout(timers.current.get(id)!);
+      timers.current.delete(id);
+    }
+  }, []);
+
+  const persist = useCallback((id: string) => {
+    if (timers.current.has(id)) {
+      clearTimeout(timers.current.get(id)!);
+      timers.current.delete(id);
+    }
   }, []);
 
   const showToast = useCallback(
@@ -120,21 +139,20 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
 
       setToasts((prev) => {
         const updated = [...prev, newToast];
-        // 限制最大 toast 数量
         if (updated.length > maxToasts) {
           return updated.slice(-maxToasts);
         }
         return updated;
       });
 
-      // 自动移除
       if (duration > 0) {
-        setTimeout(() => {
+        const timer = setTimeout(() => {
           removeToast(id);
         }, duration);
+        timers.current.set(id, timer);
       }
 
-      return id; // 返回 toast ID
+      return id;
     },
     [maxToasts, removeToast],
   );
@@ -187,7 +205,6 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
     [showToast],
   );
 
-  // 手动关闭 toast
   const dismiss = useCallback(
     (id: string) => {
       removeToast(id);
@@ -195,7 +212,6 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
     [removeToast],
   );
 
-  // 更新 toast 内容
   const update = useCallback(
     (
       id: string,
@@ -212,7 +228,6 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
                 title,
                 message,
                 ...(type && { type }),
-                // 始终更新 progress，即使是 undefined（用于清除进度）
                 progress,
               }
             : toast,
@@ -224,7 +239,16 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
 
   return (
     <ToastContext.Provider
-      value={{ showToast, success, error, warning, info, dismiss, update }}
+      value={{
+        showToast,
+        success,
+        error,
+        warning,
+        info,
+        dismiss,
+        persist,
+        update,
+      }}
     >
       {children}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
@@ -249,9 +273,9 @@ function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
     return null;
   }
 
-  const toastContent = (
-    <div className="fixed bottom-0 shadow-md left-1/2 -translate-x-1/2 z-[100] flex max-h-screen w-full max-w-[420px] flex-col-reverse gap-2 p-3 pointer-events-none">
-      <AnimatePresence initial={false}>
+  const content = (
+    <div className="fixed inset-0 z-[100] flex flex-col justify-end items-center gap-2 p-3 pointer-events-none">
+      <AnimatePresence initial={false} mode="popLayout">
         {toasts.map((toast) => (
           <Toast key={toast.id} toast={toast} onRemove={onRemove} />
         ))}
@@ -259,7 +283,7 @@ function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
     </div>
   );
 
-  return createPortal(toastContent, document.body);
+  return createPortal(content, document.body);
 }
 
 interface ToastProps {
@@ -268,7 +292,6 @@ interface ToastProps {
   canClose?: boolean;
 }
 
-// 圆形进度条组件
 function CircularProgress({ progress }: { progress: number }) {
   const radius = 10;
   const circumference = 2 * Math.PI * radius;
@@ -276,7 +299,6 @@ function CircularProgress({ progress }: { progress: number }) {
 
   return (
     <svg width="24" height="24" className="transform -rotate-90">
-      {/* 背景圆 */}
       <circle
         cx="12"
         cy="12"
@@ -286,7 +308,6 @@ function CircularProgress({ progress }: { progress: number }) {
         fill="none"
         className="text-border"
       />
-      {/* 进度圆 */}
       <circle
         cx="12"
         cy="12"
@@ -304,8 +325,25 @@ function CircularProgress({ progress }: { progress: number }) {
 }
 
 function Toast({ toast, onRemove, canClose }: ToastProps) {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const dragOpacity = useMotionValue(1);
+  const [isDragging, setIsDragging] = useState(false);
+  const [exitCustom, setExitCustom] = useState<{
+    x?: number;
+    y?: number;
+    opacity?: number;
+    scale?: number;
+  } | null>(null);
+
+  const updateDragOpacity = useCallback(() => {
+    const threshold = 100;
+    const xProgress = Math.min(Math.abs(x.get()) / threshold, 1);
+    const yProgress = Math.min(Math.abs(y.get()) / threshold, 1);
+    dragOpacity.set(1 - Math.max(xProgress, yProgress));
+  }, [x, y, dragOpacity]);
+
   const getIcon = () => {
-    // 如果有进度，显示进度条
     if (toast.progress !== undefined) {
       return (
         <div
@@ -317,7 +355,6 @@ function Toast({ toast, onRemove, canClose }: ToastProps) {
       );
     }
 
-    // 否则显示状态图标
     switch (toast.type) {
       case "success":
         return (
@@ -360,18 +397,82 @@ function Toast({ toast, onRemove, canClose }: ToastProps) {
 
   return (
     <motion.div
-      layout
+      layout="position"
       initial={{ opacity: 0, y: 50, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{
-        opacity: 0,
-        y: 20,
-        scale: 0.95,
-        transition: { duration: 0.2 },
+      animate={{
+        opacity: isDragging ? dragOpacity.get() : 1,
+        y: 0,
+        scale: 1,
+      }}
+      exit={
+        exitCustom || {
+          opacity: 0,
+          y: 20,
+          scale: 0.95,
+        }
+      }
+      style={{
+        x,
+        y,
+        minWidth: "356px",
+        maxWidth: "420px",
+      }}
+      drag
+      dragDirectionLock
+      dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+      dragElastic={0.7}
+      onDragStart={() => setIsDragging(true)}
+      onDrag={() => {
+        updateDragOpacity();
+      }}
+      onDragEnd={(event, info) => {
+        setIsDragging(false);
+        const { offset } = info;
+        const swipeThreshold = 100;
+
+        // Horizontal Dismiss (Left/Right)
+        if (Math.abs(offset.x) > swipeThreshold) {
+          setExitCustom({
+            x: offset.x > 0 ? 500 : -500,
+            opacity: 0,
+          });
+          setTimeout(() => onRemove(toast.id), 0);
+          return;
+        }
+
+        // Vertical Dismiss (Up)
+        if (offset.y < -swipeThreshold) {
+          setExitCustom({
+            y: -500,
+            opacity: 0,
+          });
+          setTimeout(() => onRemove(toast.id), 0);
+          return;
+        }
+
+        // Vertical Dismiss (Down)
+        if (offset.y > swipeThreshold) {
+          setExitCustom({
+            y: 500,
+            opacity: 0,
+          });
+          setTimeout(() => onRemove(toast.id), 0);
+          return;
+        }
+
+        // 复位透明度和位置
+        animate(x, 0, { type: "spring", stiffness: 300, damping: 30 });
+        animate(y, 0, { type: "spring", stiffness: 300, damping: 30 });
+        animate(dragOpacity, 1, {
+          type: "spring",
+          stiffness: 300,
+          damping: 30,
+        });
       }}
       transition={{
-        duration: 0.2,
-        ease: [0.4, 0, 0.2, 1],
+        type: "spring",
+        stiffness: 400,
+        damping: 30,
       }}
       className="
         pointer-events-auto
@@ -391,11 +492,8 @@ function Toast({ toast, onRemove, canClose }: ToastProps) {
         pr-6
         shadow-lg
         hover:shadow-xl
+        touch-none
       "
-      style={{
-        minWidth: "356px",
-        maxWidth: "420px",
-      }}
     >
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <AutoTransition className="flex-shrink-0">{getIcon()}</AutoTransition>
