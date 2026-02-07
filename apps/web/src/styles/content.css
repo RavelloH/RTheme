@@ -7,6 +7,12 @@
   overflow-wrap: break-word;
 }
 
+/* Block 文字样式（不含布局样式，如 margin/padding/line-height） */
+.processed-text-content {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
 /* 移除 ProseMirror 聚焦时的默认边框 */
 .ProseMirror-focused {
   outline: none !important;
@@ -501,4 +507,138 @@ html.dark .md-content .shiki span {
   background-color: var(--color-primary);
   pointer-events: none;
   z-index: 1;
+}
+
+/* ========== Block Text-Only Styles ========== */
+/* 仅文字样式，不含布局样式（margin/padding/line-height 等） */
+
+/* 标题 - 只有字体大小和颜色，没有间距 */
+.processed-text-content h1,
+.processed-text-content h2,
+.processed-text-content h3,
+.processed-text-content h4,
+.processed-text-content h5,
+.processed-text-content h6 {
+  @apply font-bold text-foreground;
+}
+
+.processed-text-content h1 {
+  @apply text-6xl md:text-4xl;
+}
+.processed-text-content h2 {
+  @apply text-5xl md:text-3xl;
+}
+.processed-text-content h3 {
+  @apply text-4xl md:text-2xl;
+}
+.processed-text-content h4 {
+  @apply text-3xl md:text-xl;
+}
+.processed-text-content h5 {
+  @apply text-2xl md:text-lg;
+}
+.processed-text-content h6 {
+  @apply text-xl md:text-base;
+}
+
+/* 粗体 */
+.processed-text-content strong {
+  @apply font-bold text-foreground;
+}
+
+/* 斜体（通过 em 标签） */
+.processed-text-content em {
+  @apply italic;
+}
+
+/* 代码 - 行内代码样式 */
+.processed-text-content :not(pre) > code {
+  @apply bg-foreground/10 text-foreground px-1 py-0.5 rounded-xs font-mono text-lg md:text-sm;
+}
+
+/* 代码块基础样式 */
+.processed-text-content pre {
+  @apply rounded-lg overflow-hidden max-w-full overflow-x-auto;
+}
+
+.processed-text-content pre code {
+  @apply font-mono text-lg md:text-sm;
+}
+
+.processed-text-content pre:not(.shiki) {
+  @apply bg-foreground/10 text-foreground p-4;
+}
+
+.processed-text-content pre:not(.shiki) code {
+  @apply bg-transparent p-0;
+}
+
+/* 链接 */
+.processed-text-content a {
+  @apply text-primary cursor-pointer;
+}
+
+/* 列表 - 只保留列表符号样式，不保留 padding */
+.processed-text-content ul {
+  list-style-type: disc;
+}
+.processed-text-content :is(ul) :is(ul) {
+  list-style-type: circle;
+}
+.processed-text-content :is(ul) :is(ul) :is(ul) {
+  list-style-type: square;
+}
+.processed-text-content ol {
+  @apply list-decimal;
+}
+
+/* 列表项内的段落无额外样式 */
+.processed-text-content li > p {
+  @apply m-0;
+}
+
+/* 高亮 */
+.processed-text-content mark {
+  @apply bg-primary font-semibold text-primary-foreground rounded-[2px] px-1;
+}
+
+/* 删除线 */
+.processed-text-content s,
+.processed-text-content del {
+  @apply line-through text-muted-foreground;
+}
+
+/* 下划线 */
+.processed-text-content u {
+  @apply underline;
+}
+
+/* 上下标 */
+.processed-text-content sub {
+  @apply text-xs align-sub;
+}
+.processed-text-content sup {
+  @apply text-xs align-super;
+}
+
+/* 表格 - 只保留基础样式，间距由外层控制 */
+.processed-text-content table {
+  @apply border-collapse w-full border border-border text-base;
+}
+.processed-text-content thead {
+  @apply border-b-2 border-muted bg-foreground/5;
+}
+.processed-text-content th {
+  @apply px-4 py-3 font-semibold text-muted-foreground text-left border-r border-border last:border-r-0;
+}
+.processed-text-content td {
+  @apply px-4 py-3 text-left border-t border-border border-r last:border-r-0;
+}
+.processed-text-content tbody tr {
+  @apply hover:bg-muted/50 transition-colors duration-200 ease-out;
+}
+
+/* 引用 - 只保留基础样式 */
+.processed-text-content blockquote {
+  @apply border-l-4 border-foreground pl-4 opacity-80 bg-muted/50 my-2 py-2;
 }
