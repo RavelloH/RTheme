@@ -90,24 +90,35 @@ export const defaultPages: DefaultPage[] = [
           block: "projects",
           description: "",
           content: {
-            worksDescription: {
-              header: { value: "My main tech stack includes", align: "left" },
-              content:
-                "React / Next.js / TypeScript / JavaScript / TailwindCSS / Node.js / Express.js / Serverless / GraphQL / PostgreSQL / MySQL / Redis / Docker / Kubernetes / Webpack / Vite / C / C++ / C# / Jest / Cypress / Shell ...",
-            },
             worksSummary: {
+              footer: {
+                link: "/projects",
+                text: "View more projects",
+              },
               content: [
                 "不止这些。",
                 "想要查看更多？",
                 "前往我的 Github 来查看我的所有项目，",
                 "或者在 Projects 页面看看相关描述。",
                 "",
-                "Github: [@xxx](https://github.com/RavelloH)",
+                "Github: [@xxx](https://github.com/username)",
               ],
-              footer: {
-                link: "/works",
-                text: "View more projects",
+            },
+            worksDescription: {
+              header: {
+                align: "left",
+                value: "My main tech stack includes",
               },
+              content:
+                "React / Next.js / TypeScript / JavaScript / TailwindCSS / Node.js / Express.js / Serverless / GraphQL / PostgreSQL / MySQL / Redis / Docker / Kubernetes / Webpack / Vite / C / C++ / C# / Jest / Cypress / Shell ...",
+            },
+            title: {
+              line1: "PROJECTS",
+              line2: "作品",
+            },
+            projects: {
+              sort: "publishedAt_desc",
+              onlyWithCover: false,
             },
           },
         },
