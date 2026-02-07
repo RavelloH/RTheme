@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   closestCenter,
@@ -123,6 +123,15 @@ export default function VisualPageEditor({
   const [activeBlockId, setActiveBlockId] = useState<string | number | null>(
     null,
   );
+
+  // 历史记录状态
+  const [history, setHistory] = useState<{
+    past: BlockConfig[][];
+    future: BlockConfig[][];
+  }>({
+    past: [],
+    future: [],
+  });
   // 跟踪应该隐藏动画的 block IDs（编辑内容后隐藏，关闭面板后重置）
   const [hideAnimationBlockIds, setHideAnimationBlockIds] = useState<
     Set<string | number>
@@ -150,7 +159,81 @@ export default function VisualPageEditor({
   });
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const isUndoRedoRef = useRef(false); // 标记是否正在执行撤销/重做操作
   const toast = useToast();
+
+  // 深度克隆 blocks（去除无法序列化的数据）
+  const cloneBlocks = useCallback((blocksToClone: BlockConfig[]) => {
+    return blocksToClone.map((block) => {
+      const { data: _data, ...rest } = block;
+      return rest as BlockConfig;
+    });
+  }, []);
+
+  // 保存当前状态到历史记录
+  const pushHistory = useCallback(
+    (currentBlocks: BlockConfig[]) => {
+      if (isUndoRedoRef.current) return; // 撤销/重做操作不记录历史
+      setHistory((prev) => ({
+        past: [...prev.past, cloneBlocks(currentBlocks)],
+        future: [], // 新操作清空 future
+      }));
+    },
+    [cloneBlocks],
+  );
+
+  // 撤销
+  const undo = useCallback(() => {
+    setHistory((prev) => {
+      if (prev.past.length === 0) return prev;
+      const previous = prev.past[prev.past.length - 1]!;
+      const newPast = prev.past.slice(0, -1);
+      isUndoRedoRef.current = true;
+      setBlocks(previous);
+      setTimeout(() => {
+        isUndoRedoRef.current = false;
+      }, 0);
+      return {
+        past: newPast,
+        future: [cloneBlocks(blocks), ...prev.future],
+      };
+    });
+  }, [blocks, cloneBlocks]);
+
+  // 重做
+  const redo = useCallback(() => {
+    setHistory((prev) => {
+      if (prev.future.length === 0) return prev;
+      const next = prev.future[0]!;
+      const newFuture = prev.future.slice(1);
+      isUndoRedoRef.current = true;
+      setBlocks(next);
+      setTimeout(() => {
+        isUndoRedoRef.current = false;
+      }, 0);
+      return {
+        past: [...prev.past, cloneBlocks(blocks)],
+        future: newFuture,
+      };
+    });
+  }, [blocks, cloneBlocks]);
+
+  // 带历史记录的 setBlocks 包装器
+  const setBlocksWithHistory = useCallback(
+    (newBlocks: BlockConfig[] | ((prev: BlockConfig[]) => BlockConfig[])) => {
+      setBlocks((prev) => {
+        const updated =
+          typeof newBlocks === "function" ? newBlocks(prev) : newBlocks;
+        // 检查是否真的有变化
+        if (JSON.stringify(prev) === JSON.stringify(updated)) {
+          return prev;
+        }
+        pushHistory(prev);
+        return updated;
+      });
+    },
+    [pushHistory],
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -332,7 +415,7 @@ export default function VisualPageEditor({
     if (over && active.id !== over.id) {
       const oldIndex = blocks.findIndex((item) => item.id === active.id);
       const newIndex = blocks.findIndex((item) => item.id === over.id);
-      setBlocks(arrayMove(blocks, oldIndex, newIndex));
+      setBlocksWithHistory(arrayMove(blocks, oldIndex, newIndex));
     }
     // Delay clearing activeDragId to allow drop animation to finish
     // This prevents the "flicker" where the item reappears before the overlay lands
@@ -341,16 +424,16 @@ export default function VisualPageEditor({
     }, 250);
   };
 
-  const handleSelectBlock = (id: string | number) => {
+  const handleSelectBlock = useCallback((id: string | number) => {
     setActiveBlockId(id);
     setIsDrawerOpen(true);
-  };
+  }, []);
 
   const handleUpdateBlock = (updates: Partial<BlockConfig>) => {
     if (!activeBlockId) return;
     // 标记该 block 应该隐藏动画
     setHideAnimationBlockIds((prev) => new Set(prev).add(activeBlockId));
-    setBlocks(
+    setBlocksWithHistory(
       blocks.map((item) =>
         item.id === activeBlockId
           ? ({ ...item, ...updates } as BlockConfig)
@@ -385,66 +468,66 @@ export default function VisualPageEditor({
   };
 
   // 删除当前 Block
-  const handleDeleteBlock = () => {
+  const handleDeleteBlock = useCallback(() => {
     if (!activeBlockId) return;
-    setBlocks(blocks.filter((b) => b.id !== activeBlockId));
+    setBlocksWithHistory((prev) => prev.filter((b) => b.id !== activeBlockId));
     setIsDrawerOpen(false);
     setActiveBlockId(null);
-  };
+  }, [activeBlockId, setBlocksWithHistory]);
 
-  const handleAddBlock = async (
-    type: string,
-    initialData?: Partial<BlockConfig>,
-  ) => {
-    setIsAddingBlock(true);
-    try {
-      const newId = Date.now();
-      const newBlock: BlockConfig = {
-        id: newId,
-        block: type,
-        description: "",
-        content: {},
-        ...initialData,
-      } as BlockConfig;
+  const handleAddBlock = useCallback(
+    async (type: string, initialData?: Partial<BlockConfig>) => {
+      setIsAddingBlock(true);
+      try {
+        const newId = Date.now();
+        const newBlock: BlockConfig = {
+          id: newId,
+          block: type,
+          description: "",
+          content: {},
+          ...initialData,
+        } as BlockConfig;
 
-      // 调用 Server Action 获取数据
-      const result = await runWithAuth(fetchBlockData, {
-        access_token: undefined, // 使用 cookie 中的 token
-        block: newBlock,
-      } as never);
+        // 调用 Server Action 获取数据
+        const result = await runWithAuth(fetchBlockData, {
+          access_token: undefined, // 使用 cookie 中的 token
+          block: newBlock,
+        } as never);
 
-      if (result && "data" in result && result.data) {
-        newBlock.data = result.data.data;
-      }
-
-      setBlocks([...blocks, newBlock]);
-      setIsLibraryOpen(false);
-
-      // 关闭对话框后，等待渲染完成，然后滚动到最后并选中新 block
-      setTimeout(() => {
-        const contentEl = document.getElementById("editor-scroll-container");
-        // 滚动容器通常是内容的父元素
-        const scrollContainer = contentEl?.parentElement;
-
-        if (scrollContainer) {
-          // 使用平滑滚动到最右边
-          scrollContainer.scrollTo({
-            left: scrollContainer.scrollWidth,
-            behavior: "smooth",
-          });
+        if (result && "data" in result && result.data) {
+          newBlock.data = result.data.data;
         }
 
-        // 再延迟一点确保滚动完成后选中
+        setBlocksWithHistory((prev) => [...prev, newBlock]);
+        setIsLibraryOpen(false);
+
+        // 关闭对话框后，等待渲染完成，然后滚动到最后并选中新 block
         setTimeout(() => {
-          handleSelectBlock(newId);
-        }, 500); // 稍微增加延迟以等待平滑滚动完成
-      }, 100);
-    } catch (error) {
-      console.error("添加 Block 失败:", error);
-    } finally {
-      setIsAddingBlock(false);
-    }
-  };
+          const contentEl = document.getElementById("editor-scroll-container");
+          // 滚动容器通常是内容的父元素
+          const scrollContainer = contentEl?.parentElement;
+
+          if (scrollContainer) {
+            // 使用平滑滚动到最右边
+            scrollContainer.scrollTo({
+              left: scrollContainer.scrollWidth,
+              behavior: "smooth",
+            });
+          }
+
+          // 再延迟一点确保滚动完成后选中
+          setTimeout(() => {
+            handleSelectBlock(newId);
+          }, 500); // 稍微增加延迟以等待平滑滚动完成
+        }, 100);
+      } catch (error) {
+        console.error("添加 Block 失败:", error);
+      } finally {
+        setIsAddingBlock(false);
+      }
+    },
+    [handleSelectBlock, setBlocksWithHistory],
+  );
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -473,6 +556,133 @@ export default function VisualPageEditor({
 
   const activeBlock = blocks.find((b) => b.id === activeBlockId) || null;
   const draggingBlock = blocks.find((b) => b.id === activeDragId);
+
+  // 键盘快捷键：Ctrl+C 复制区块，Ctrl+V 粘贴区块，Delete/Backspace/Ctrl+D 删除区块
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      // 检查是否在输入框/文本域中，如果是则不触发快捷键
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      // Ctrl+C 或 Cmd+C：复制当前选中的区块
+      if ((e.ctrlKey || e.metaKey) && e.key === "c" && activeBlock) {
+        e.preventDefault();
+        const { data: _data, ...blockToCopy } = activeBlock;
+        const jsonString = JSON.stringify(blockToCopy, null, 2);
+        navigator.clipboard.writeText(jsonString).then(() => {
+          toast.success("区块 JSON 已复制到剪贴板");
+        });
+        return;
+      }
+
+      // Ctrl+Z 或 Cmd+Z：撤销
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        if (history.past.length > 0) {
+          undo();
+          toast.success("已撤销");
+        } else {
+          toast.info("没有可撤销的操作");
+        }
+        return;
+      }
+
+      // Ctrl+Shift+Z 或 Cmd+Shift+Z（以及 Ctrl+Y）：重做
+      if (
+        ((e.ctrlKey || e.metaKey) && e.key === "z" && e.shiftKey) ||
+        ((e.ctrlKey || e.metaKey) && e.key === "y")
+      ) {
+        e.preventDefault();
+        if (history.future.length > 0) {
+          redo();
+          toast.success("已重做");
+        } else {
+          toast.info("没有可重做的操作");
+        }
+        return;
+      }
+
+      // Ctrl+V 或 Cmd+V：粘贴区块
+      if ((e.ctrlKey || e.metaKey) && e.key === "v") {
+        e.preventDefault();
+        navigator.clipboard
+          .readText()
+          .then((text) => {
+            try {
+              const parsed = JSON.parse(text);
+              // 验证是否是有效的 BlockConfig
+              if (
+                parsed &&
+                typeof parsed === "object" &&
+                typeof parsed.block === "string"
+              ) {
+                // 去掉 id，让 handleAddBlock 生成新的 id
+                const { id: _id, data: _data, ...blockData } = parsed;
+                handleAddBlock(parsed.block, blockData);
+              } else {
+                toast.error("剪贴板内容不是有效的区块 JSON");
+              }
+            } catch {
+              toast.error("剪贴板内容不是有效的 JSON");
+            }
+          })
+          .catch(() => {
+            toast.error("无法读取剪贴板内容");
+          });
+        return;
+      }
+
+      // Ctrl+D 或 Cmd+D：删除当前选中的区块（比 Delete 更方便）
+      if ((e.ctrlKey || e.metaKey) && e.key === "d" && activeBlockId) {
+        e.preventDefault();
+        setBlocksWithHistory((prev) =>
+          prev.filter((b) => b.id !== activeBlockId),
+        );
+        setIsDrawerOpen(false);
+        setActiveBlockId(null);
+        return;
+      }
+
+      // Delete 或 Backspace：删除当前选中的区块（仅在面板打开时）
+      if (
+        (e.key === "Delete" || e.key === "Backspace") &&
+        activeBlockId &&
+        isDrawerOpen
+      ) {
+        e.preventDefault();
+        setBlocksWithHistory((prev) =>
+          prev.filter((b) => b.id !== activeBlockId),
+        );
+        setIsDrawerOpen(false);
+        setActiveBlockId(null);
+        return;
+      }
+    },
+    [
+      activeBlock,
+      activeBlockId,
+      isDrawerOpen,
+      toast,
+      handleAddBlock,
+      history,
+      undo,
+      redo,
+      setBlocksWithHistory,
+    ],
+  );
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleKeyDown]);
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">

@@ -44,6 +44,48 @@ const SCHEMA_IMPORTERS: Record<string, () => Promise<BlockFormConfig>> = {
     import("../collection/Pagination/schema").then(
       (m) => m.PAGINATION_BLOCK_FORM_CONFIG,
     ),
+  quote: () =>
+    import("../collection/Quote/schema").then((m) => m.QUOTE_BLOCK_FORM_CONFIG),
+  divider: () =>
+    import("../collection/Divider/schema").then(
+      (m) => m.DIVIDER_BLOCK_FORM_CONFIG,
+    ),
+  cards: () =>
+    import("../collection/Cards/schema").then((m) => m.CARDS_BLOCK_FORM_CONFIG),
+  cta: () =>
+    import("../collection/CallToAction/schema").then(
+      (m) => m.CTA_BLOCK_FORM_CONFIG,
+    ),
+  author: () =>
+    import("../collection/Author/schema").then(
+      (m) => m.AUTHOR_BLOCK_FORM_CONFIG,
+    ),
+  "social-links": () =>
+    import("../collection/SocialLinks/schema").then(
+      (m) => m.SOCIAL_LINKS_BLOCK_FORM_CONFIG,
+    ),
+  testimonial: () =>
+    import("../collection/Testimonials/schema").then(
+      (m) => m.TESTIMONIAL_BLOCK_FORM_CONFIG,
+    ),
+  tabs: () =>
+    import("../collection/Tabs/schema").then((m) => m.TABS_BLOCK_FORM_CONFIG),
+  gallery: () =>
+    import("../collection/Gallery/schema").then(
+      (m) => m.GALLERY_BLOCK_FORM_CONFIG,
+    ),
+  "multi-row-layout": () =>
+    import("../collection/MultiRowLayout/schema").then(
+      (m) => m.MULTI_ROW_LAYOUT_FORM_CONFIG,
+    ),
+  "timeline-item": () =>
+    import("../collection/Timeline/schema").then(
+      (m) => m.TIMELINE_ITEM_BLOCK_FORM_CONFIG,
+    ),
+  "archive-calendar": () =>
+    import("../collection/ArchiveCalendar/schema").then(
+      (m) => m.ARCHIVE_CALENDAR_BLOCK_FORM_CONFIG,
+    ),
 };
 
 /**

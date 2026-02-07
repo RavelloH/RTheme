@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef } from "react";
 
 import { useMobile } from "@/hooks/use-mobile";
@@ -120,6 +120,7 @@ interface RowGridProps {
   className?: string;
   full?: boolean;
   id?: string;
+  style?: CSSProperties;
 }
 
 export function GridItem({
@@ -158,8 +159,13 @@ export function GridItem({
         const calculatedHeight = Math.round(containerWidth * mobileHeight);
 
         element.style.width = "100%";
-        if (fixedHeight) element.style.height = `${calculatedHeight}px`;
-        else element.style.minHeight = `${calculatedHeight}px`;
+        if (fixedHeight) {
+          element.style.height = `${calculatedHeight}px`;
+          element.style.minHeight = "";
+        } else {
+          element.style.minHeight = `${calculatedHeight}px`;
+          element.style.height = "";
+        }
       } else {
         const totalHeight = gridContainer.offsetHeight;
         const singleRowHeight = totalHeight / 12;
@@ -235,6 +241,7 @@ export default function RowGrid({
   className = "",
   full = false,
   id,
+  style,
 }: RowGridProps) {
   const isMobile = useMobile();
 
@@ -251,6 +258,7 @@ export default function RowGrid({
       key={`row-grid-${isMobile ? "mobile" : "desktop"}`}
       id={id}
       className={combinedClassName}
+      style={style}
     >
       {children}
     </div>

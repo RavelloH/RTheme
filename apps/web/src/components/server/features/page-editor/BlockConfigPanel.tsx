@@ -543,10 +543,13 @@ export default function BlockConfigPanel({
     const { condition } = field;
     const content = block.content as Record<string, unknown>;
 
+    // 用于标识字段不存在的特殊值（用于条件检查）
+    const MISSING_FIELD = "@@_MISSING_FIELD_@@";
+
     // 检查 AND 条件：所有条件都必须满足
     if (condition.and && condition.and.length > 0) {
       const andMet = condition.and.every((cond) => {
-        const fieldValue = get(content, cond.field);
+        const fieldValue = get(content, cond.field, MISSING_FIELD);
         return fieldValue === cond.value;
       });
       if (!andMet) return false;
@@ -555,16 +558,26 @@ export default function BlockConfigPanel({
     // 检查 OR 条件：任一条件满足即可
     if (condition.or && condition.or.length > 0) {
       const orMet = condition.or.some((cond) => {
-        const fieldValue = get(content, cond.field);
+        const fieldValue = get(content, cond.field, MISSING_FIELD);
         return fieldValue === cond.value;
       });
       if (!orMet) return false;
     }
 
     // 检查 NOT 条件：所有条件都必须不满足
+    // 特殊处理：如果使用特殊值 @@_MISSING_FIELD_@@，则要求字段必须存在（不为 undefined/null）
     if (condition.not && condition.not.length > 0) {
       const notMet = condition.not.every((cond) => {
-        const fieldValue = get(content, cond.field);
+        const fieldValue = get(content, cond.field, MISSING_FIELD);
+        // 如果条件值是特殊占位符，则要求字段必须存在且有非空值
+        if (cond.value === MISSING_FIELD) {
+          return (
+            fieldValue !== MISSING_FIELD &&
+            fieldValue !== "" &&
+            fieldValue !== null &&
+            fieldValue !== undefined
+          );
+        }
         return fieldValue !== cond.value;
       });
       if (!notMet) return false;

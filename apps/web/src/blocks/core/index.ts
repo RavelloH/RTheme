@@ -28,6 +28,10 @@ export type {
   TagsCategoriesBlockConfig,
   TagsCategoriesBlockContent,
 } from "../collection/TagsCategories/types";
+export type {
+  MultiRowLayoutBlockConfig,
+  MultiRowLayoutBlockContent,
+} from "../collection/MultiRowLayout/types";
 
 // 使用 AllBlockConfigs 作为 BlockConfig（向后兼容）
 export type BlockConfig = AllBlockConfigs;
