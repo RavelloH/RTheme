@@ -111,7 +111,10 @@ export default function PostCard({
       {/* 内容区域 */}
       <div className="relative z-20 pl-10 pr-12 h-full flex flex-col justify-center pointer-events-none">
         <div className="text-3xl text-white group-hover:text-white transition-colors duration-300 relative">
-          <span className="relative inline box-decoration-clone bg-[linear-gradient(white,white)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]">
+          <span
+            className="relative inline box-decoration-clone bg-[linear-gradient(white,white)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]"
+            data-fade-char
+          >
             {title}
           </span>
         </div>
@@ -233,7 +236,7 @@ export default function PostCard({
                     <Link
                       href={`/tags/${tag.slug}`}
                       className="hover:text-primary transition-colors text-white pointer-events-auto relative z-30"
-                      data-fade-word
+                      data-fade
                     >
                       #{tag.name}
                     </Link>
@@ -245,7 +248,9 @@ export default function PostCard({
           )}
           {summary && (
             <div className="text-lg text-white/90 pt-2">
-              <div className="line-clamp-1">{summary}</div>
+              <div className="line-clamp-1" data-fade>
+                {summary}
+              </div>
             </div>
           )}
         </div>
@@ -268,7 +273,7 @@ export default function PostCard({
                       <Link
                         href={`/tags/${tag.slug}`}
                         className="hover:text-primary transition-colors text-white pointer-events-auto relative z-30"
-                        data-fade-word
+                        data-fade
                       >
                         #{tag.name}
                       </Link>
@@ -284,7 +289,9 @@ export default function PostCard({
                     : "opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0"
                 }`}
               >
-                <div className="line-clamp-1">{summary}</div>
+                <div className="line-clamp-1" data-fade>
+                  {summary}
+                </div>
               </div>
             </>
           ) : !summary && tags?.length !== 0 ? (
@@ -296,7 +303,7 @@ export default function PostCard({
                     <Link
                       href={`/tags/${tag.slug}`}
                       className="hover:text-primary transition-colors text-white pointer-events-auto relative z-30"
-                      data-fade-word
+                      data-fade
                     >
                       #{tag.name}
                     </Link>
@@ -307,7 +314,9 @@ export default function PostCard({
             </div>
           ) : summary && !tags?.length ? (
             <div className="text-xl text-white/90">
-              <div className="line-clamp-1">{summary}</div>
+              <div className="line-clamp-1" data-fade>
+                {summary}
+              </div>
             </div>
           ) : null}
         </div>

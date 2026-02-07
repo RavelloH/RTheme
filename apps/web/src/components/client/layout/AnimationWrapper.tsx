@@ -118,13 +118,31 @@ export default function HorizontalScrollAnimationWrapper({
           wrapper.querySelectorAll("[data-fade]").forEach((el) => {
             void gsap.set(el, {
               opacity: 0,
-              clearProps: "transform,opacity",
               force3D: true,
             });
           });
 
           wrapper.querySelectorAll("[data-fade-word]").forEach((element) => {
-            if (element.hasAttribute("data-processed")) return;
+            if (element.hasAttribute("data-processed")) {
+              Array.from(element.children).forEach((child) => {
+                const span = child as HTMLSpanElement;
+                const isSpace = SPACE_REGEX.test(span.textContent || "");
+                if (isSpace) {
+                  gsap.set(span, {
+                    opacity: 0,
+                    transformOrigin: "50% 100%",
+                  });
+                } else {
+                  gsap.set(span, {
+                    opacity: 0,
+                    y: 10,
+                    scale: 0.8,
+                    transformOrigin: "50% 100%",
+                  });
+                }
+              });
+              return;
+            }
             const originalText = element.textContent || "";
             const words = originalText
               .split(/(\s+)/)
@@ -154,7 +172,18 @@ export default function HorizontalScrollAnimationWrapper({
           });
 
           wrapper.querySelectorAll("[data-fade-char]").forEach((element) => {
-            if (element.hasAttribute("data-processed")) return;
+            if (element.hasAttribute("data-processed")) {
+              Array.from(element.children).forEach((child) => {
+                const span = child as HTMLSpanElement;
+                gsap.set(span, {
+                  opacity: 0,
+                  y: 15,
+                  rotationY: 90,
+                  transformOrigin: "50% 50%",
+                });
+              });
+              return;
+            }
             const originalText = element.textContent || "";
             const chars = originalText.split("");
             element.innerHTML = "";
@@ -177,7 +206,17 @@ export default function HorizontalScrollAnimationWrapper({
 
         if (enableLineReveal) {
           wrapper.querySelectorAll("[data-line-reveal]").forEach((element) => {
-            if (element.hasAttribute("data-processed")) return;
+            if (element.hasAttribute("data-processed")) {
+              Array.from(element.children).forEach((line) => {
+                gsap.set(line, {
+                  opacity: 0,
+                  y: 20,
+                  rotationX: -90,
+                  transformOrigin: "50% 100%",
+                });
+              });
+              return;
+            }
             if (element.children.length === 0) {
               const text = element.textContent || "";
               const textLines = text
@@ -510,7 +549,10 @@ export default function HorizontalScrollAnimationWrapper({
             else progress = (animationStartX - center) / totalDistance;
 
             const nextOpacity = Math.max(0, Math.min(1, progress));
-            if (Math.abs(nextOpacity - item.lastOpacity) > 0.01) {
+            if (
+              Number.isNaN(item.lastOpacity) ||
+              Math.abs(nextOpacity - item.lastOpacity) > 0.01
+            ) {
               gsap.set(item.el, { opacity: nextOpacity });
               item.lastOpacity = nextOpacity;
             }
@@ -840,13 +882,23 @@ export default function HorizontalScrollAnimationWrapper({
             wrapper.querySelectorAll("[data-fade]").forEach((el) => {
               void gsap.set(el, {
                 opacity: 0,
-                clearProps: "transform,opacity",
                 force3D: true,
               });
             });
 
             wrapper.querySelectorAll("[data-fade-word]").forEach((element) => {
-              if (element.hasAttribute("data-processed")) return;
+              if (element.hasAttribute("data-processed")) {
+                Array.from(element.children).forEach((child) => {
+                  const span = child as HTMLSpanElement;
+                  const isSpace = SPACE_REGEX.test(span.textContent || "");
+                  if (isSpace) {
+                    gsap.set(span, { opacity: 0 });
+                  } else {
+                    gsap.set(span, { opacity: 0, y: 10, scale: 0.8 });
+                  }
+                });
+                return;
+              }
               const originalText = element.textContent || "";
               const words = originalText
                 .split(/(\s+)/)
@@ -868,7 +920,13 @@ export default function HorizontalScrollAnimationWrapper({
             });
 
             wrapper.querySelectorAll("[data-fade-char]").forEach((element) => {
-              if (element.hasAttribute("data-processed")) return;
+              if (element.hasAttribute("data-processed")) {
+                Array.from(element.children).forEach((child) => {
+                  const span = child as HTMLSpanElement;
+                  gsap.set(span, { opacity: 0, y: 15, rotationY: 90 });
+                });
+                return;
+              }
               const chars = (element.textContent || "").split("");
               element.innerHTML = "";
               chars.forEach((char) => {
@@ -887,7 +945,12 @@ export default function HorizontalScrollAnimationWrapper({
             wrapper
               .querySelectorAll("[data-line-reveal]")
               .forEach((element) => {
-                if (element.hasAttribute("data-processed")) return;
+                if (element.hasAttribute("data-processed")) {
+                  Array.from(element.children).forEach((c) => {
+                    void gsap.set(c, { opacity: 0, y: 20, rotationX: -90 });
+                  });
+                  return;
+                }
                 if (element.children.length === 0) {
                   const lines = (element.textContent || "")
                     .split("\n")
@@ -1139,7 +1202,10 @@ export default function HorizontalScrollAnimationWrapper({
                 totalDist,
               );
               const nextOpacity = Math.max(0, Math.min(1, progress));
-              if (Math.abs(nextOpacity - item.lastOpacity) > 0.01) {
+              if (
+                Number.isNaN(item.lastOpacity) ||
+                Math.abs(nextOpacity - item.lastOpacity) > 0.01
+              ) {
                 gsap.to(item.el, {
                   opacity: nextOpacity,
                   duration: 0.3,
