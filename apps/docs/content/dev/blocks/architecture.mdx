@@ -1,0 +1,117 @@
+---
+title: 架构与数据流
+description: 区块从页面配置到最终渲染的完整链路
+---
+
+## 1. 关键模块
+
+### 区块声明与注册
+
+1. `apps/web/src/blocks/collection/*/definition.ts`：单区块声明。
+2. `apps/web/src/blocks/core/generated/block-definitions.ts`：自动生成的区块列表。
+3. `apps/web/src/blocks/core/catalog.ts`：读取 definition、schema、component 的统一入口。
+
+### 运行时解析
+
+1. `apps/web/src/lib/server/block-data-resolver.ts`：页面级解析入口。
+2. `apps/web/src/blocks/core/runtime/pipeline.ts`：单区块流水线。
+3. `apps/web/src/blocks/core/generated/business-fetcher-catalog.ts`：自动生成的服务端 fetcher 映射。
+4. `apps/web/src/blocks/core/catalog-server.ts`：服务端 fetcher 目录入口（只做 re-export）。
+
+### 渲染
+
+1. 前台：`apps/web/src/components/server/renderer/BlockRenderer.tsx`
+2. 编辑器：`apps/web/src/components/server/features/page-editor/VisualBlockRenderer.tsx`
+
+两者都通过 `catalog.ts -> component loader` 加载组件。
+
+## 2. 关键类型
+
+见：`apps/web/src/blocks/core/definition.ts`
+
+1. `RuntimeBlockInput`：原始配置输入（`id/block/content/data`）。
+2. `ResolvedBlock`：解析后的区块（`id/block/content/runtime`）。
+3. `BlockRuntimeEnvelope`：运行时数据容器。
+4. `BlockComponentProps`：组件统一入参 `{ block, mode }`。
+
+## 3. 运行时数据容器结构
+
+```ts
+interface BlockRuntimeEnvelope<TBusiness = unknown> {
+  context: Record<string, unknown>;
+  placeholders: Record<string, unknown>;
+  media: Record<string, unknown>;
+  business: TBusiness;
+  meta: {
+    status: "ok" | "error";
+    errors?: Array<{ code: string; message: string; stage?: string }>;
+  };
+}
+```
+
+用于：
+
+1. 区分“配置内容”和“运行时数据”。
+2. 统一错误上报和降级策略。
+3. 支持跨区块共享上下文注入规则。
+
+## 4. 单区块流水线顺序
+
+`pipeline.ts` 中，处理顺序固定：
+
+1. 根据 `block.block` 读取 definition。
+2. 处理 `content`（统一标准化为空对象兜底）。
+3. placeholders 解析（由 capabilities 控制）。
+4. media 处理（由 capabilities 控制）。
+5. business fetch（通过 server catalog）。
+6. 组装 `runtime`，返回 `ResolvedBlock`。
+
+这意味着：
+
+1. 组件不会直接发业务请求。
+2. `fetcher.ts` 不负责媒体与占位符基础逻辑。
+3. 前台和编辑器天然一致。
+
+## 5. 上下文来源
+
+页面层会把 `slug/page/url/pageSize` 等传入 resolver。  
+resolver 再传给 pipeline。  
+pipeline 是否注入到区块由 `capabilities.context` 决定。
+
+### `context: "inherit"`
+
+区块可读取上下文（通过 `config.data` in fetcher / `runtime.context` in component）。
+
+### `context: "none"`
+
+区块强制忽略页面上下文，适合纯静态块。
+
+## 6. 开发与生产错误策略
+
+在 `pipeline.ts`：
+
+1. 开发环境：默认抛错，方便立即定位。
+2. 生产环境：单区块降级，不中断整页渲染，并把错误写入 `runtime.meta.errors`。
+
+## 7. 为什么要分客户端 catalog 与服务端 catalog
+
+原因是 Next.js 的边界要求：
+
+1. `fetcher.ts` 通常会依赖 `server-only` 资源（DB、缓存、文件系统）。
+2. `definition.ts` 和组件 loader 需要在编辑器客户端链路被引用。
+3. 如果在客户端链路直接引入 `fetcher.ts`，会触发 `server-only` 错误。
+
+因此：
+
+1. 客户端只看 `block-definitions`。
+2. 服务端 pipeline 才看 `business-fetcher-catalog`。
+
+## 8. 组件布局约定
+
+区块组件层的布局编排，统一使用 `RowGrid + GridItem`：
+
+1. `RowGrid`：`apps/web/src/components/client/layout/RowGrid.tsx`
+2. 12 分区模型：桌面按 `rows`，移动按 `cols`。
+3. 用 `areas/mobileAreas/mobileIndex` 保证跨端布局一致。
+
+详细用法见：[UI 布局与 RowGrid](./ui-rowgrid)

@@ -1,0 +1,54 @@
+---
+title: FAQ
+description: 区块开发常见问题
+---
+
+## Q1：我是不是只要写一个 React 组件就行？
+
+不是。  
+最少需要：
+
+1. `definition.ts`
+2. `schema.ts`
+3. `fetcher.ts`（动态块需要）
+4. `index.tsx`
+5. `types.ts`
+
+## Q2：写完区块后，直接丢进 `collection` 就全局可用吗？
+
+当前流程是：
+
+1. 放入 `collection/<YourBlock>/` 且文件结构完整。
+2. 运行 `pnpm --filter web build:pre` 生成 catalog。（在 pnpm build 时会自动执行）
+
+满足以上条件后，区块会在前台与编辑器链路都可用。
+
+## Q3：能不能不写 fetcher？
+
+可以。  
+纯静态块可以不依赖业务数据，只渲染 `content`。  
+但若你需要数据库/API/上下文驱动数据，必须写 `fetcher.ts`。
+
+## Q4：为什么组件里不直接发请求？
+
+在这里写了，编辑器里就没法实时预览了。因为此时不能将其视为客户端组件，而编辑器是客户端组件，因此无法在编辑器中运行服务端请求逻辑。
+
+目前的设计是渲染与数据获取分离，组件只负责渲染 `content + runtime`，数据获取由 `fetcher` 负责。
+
+这样，在编辑器里可以靠 本地数据 + Server Action 请求 fetcher 来实现与前台一致的预览效果的同时，仍能动态修改区块内容。
+
+## Q5：`runtime` 和 `content` 有什么区别？
+
+1. `content`：用户配置，来自编辑器。
+2. `runtime`：系统解析后得到的数据，包含上下文、媒体、业务结果和错误信息。
+
+## Q6：`definition.ts` 里要不要写业务请求逻辑？
+
+不要。  
+`definition.ts` 只负责声明元信息（type/schema/component/capabilities），  
+业务请求放在 `fetcher.ts`，由服务端 catalog 自动接入 pipeline。
+
+## Q7：我可以手改 `core/generated/*` 吗？
+
+不建议。  
+这是自动生成文件，手改会被下次生成覆盖。

@@ -1,0 +1,59 @@
+---
+title: 故障排查
+description: 常见报错与定位路径
+---
+
+## 1. `server-only` 报错
+
+典型错误：
+
+`You're importing a component that needs "server-only"...`
+
+### 原因
+
+客户端链路间接引入了服务端模块（通常是 `fetcher.ts`）。
+
+### 检查顺序
+
+1. 检查 `definition.ts` 是否导入了 `fetcher.ts`（不允许）。
+2. 检查 `core/catalog.ts` 是否只依赖 definition，不依赖 fetcher。
+3. 检查 `pipeline.ts` 是否通过 `catalog-server.ts` 读取 fetcher。
+
+## 2. 编辑器能看见区块，前台不显示
+
+### 常见原因
+
+1. `capabilities.context` 设置错误，fetcher 依赖的上下文字段为空。
+2. fetcher 返回结构和组件读取字段不一致。
+3. 组件没用 `getBlockRuntimeData`，直接读取错误路径。
+
+## 3. 新增区块后在库里找不到
+
+### 检查顺序
+
+1. `schema.blockType` 是否和 `definition.type` 一致。
+2. 是否执行过 `pnpm --filter web build:pre`。
+3. 生成文件是否含该区块：
+   - `core/generated/block-definitions.ts`
+   - `core/generated/business-fetcher-catalog.ts`
+
+## 4. 预览正常但发布页异常
+
+### 常见原因
+
+1. 预览上下文和页面上下文不同。
+2. fetcher 对空 slug/page 的处理不完整。
+3. 某些逻辑只在 `mode=editor` 下生效（应避免）。
+
+## 5. Lint / Type 报错排查建议
+
+1. 先跑 `pnpm check-types`，修类型。
+2. 再跑 `pnpm lint`，修风格和潜在问题。
+3. 最后重新执行生成脚本，确认产物没过期。
+
+## 6. 生成脚本失败排查
+
+1. 看错误指向哪个文件路径。
+2. 确认该文件是否满足命名/导出约定。
+3. 对照自动发现规则修正后重试。
+

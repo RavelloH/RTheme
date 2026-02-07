@@ -1,0 +1,105 @@
+---
+title: 运行时与渲染链路
+description: 从 resolve 到 BlockRenderer 的全过程
+---
+
+本文讲区块是怎么显示出来的。
+
+## 1. 页面级入口
+
+页面拿到 pageConfig 后会调用：
+
+1. `resolveBlockData(pageConfig, pageContext)`
+2. 内部转到 `resolveBlocks`（批量）或 `resolveSingleBlock`（单个）
+
+核心文件：`apps/web/src/lib/server/block-data-resolver.ts`
+
+## 2. 单区块解析流程
+
+核心文件：`apps/web/src/blocks/core/runtime/pipeline.ts`
+
+单区块流程：
+
+1. 读取 definition。
+2. 处理 content（统一标准化）。
+3. 处理 placeholders。
+4. 处理 media。
+5. 调用业务 fetcher。
+6. 组装 `ResolvedBlock`。
+
+## 3. `ResolvedBlock` 长什么样
+
+```ts
+interface ResolvedBlock<TContent = unknown, TBusiness = unknown> {
+  id: number | string;
+  block: string;
+  description?: string;
+  content: TContent;
+  runtime: {
+    context: Record<string, unknown>;
+    placeholders: Record<string, unknown>;
+    media: Record<string, unknown>;
+    business: TBusiness;
+    meta: {
+      status: "ok" | "error";
+      errors?: Array<{ code: string; message: string }>;
+    };
+  };
+}
+```
+
+## 4. 组件层如何读取运行时数据
+
+所有区块组件都使用：
+
+```ts
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
+```
+
+该方法会把 `context + placeholders + media + business` 合并成一个对象，  
+方便统一读取多来源运行时数据。
+
+示例：
+
+```tsx
+const data = getBlockRuntimeData<{ posts?: Array<{ title: string }> }>(
+  block.runtime,
+);
+const posts = data.posts || [];
+```
+
+## 5. 渲染器职责边界
+
+渲染器只做两件事：
+
+1. 根据 `block.block` 加载组件。
+2. 传递 `{ block, mode }`。
+
+不做：
+
+1. 业务数据请求。
+2. placeholder/media 解析。
+3. 手工拼接 `config.data`。
+
+## 6. 编辑器与前台为什么一致
+
+因为两条链路都走同一个 resolver/pipeline，  
+解析逻辑、能力开关、业务 fetcher 都完全一致。  
+渲染时仅通过组件入参 `mode` 区分页面态与编辑态，因此能接近“所见即所得”。
+
+## 7. 单块预览接口
+
+编辑器 BlockLibrary 预览会调用 `fetchBlockData`（Server Action），内部同样走 `resolveSingleBlockData`。  
+所以你新增区块后，只要链路接通，预览和前台都能拿到同一套 runtime 结果。
+
+## 8. 错误与降级
+
+pipeline 里有统一错误阶段标记：
+
+1. `definition`
+2. `content`
+3. `placeholders`
+4. `media`
+5. `business`
+
+开发环境便于直接暴露错误定位，生产环境会尽量单块降级，避免整页中断。

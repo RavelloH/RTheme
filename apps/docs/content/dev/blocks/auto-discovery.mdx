@@ -1,0 +1,112 @@
+---
+title: 自动发现与生成脚本
+description: 如何用脚本自动生成区块注册信息
+---
+
+为了减少手工维护，当前区块系统使用两类自动生成文件。
+
+## 1. 生成目标
+
+### 1) Definition 列表（客户端安全）
+
+文件：
+
+`apps/web/src/blocks/core/generated/block-definitions.ts`
+
+来源脚本：
+
+`apps/web/scripts/generate-block-definition-catalog.ts`
+
+用途：
+
+1. 供 `core/catalog.ts` 统一读取区块 definition。
+2. 被前台与编辑器共享。
+3. 不触碰任何 `server-only` 依赖。
+
+### 2) Business Fetcher 映射（仅服务端）
+
+文件：
+
+`apps/web/src/blocks/core/generated/business-fetcher-catalog.ts`
+
+来源脚本：
+
+`apps/web/scripts/generate-block-business-catalog.ts`
+
+用途：
+
+1. 供 `pipeline.ts` 在服务端加载业务 fetcher。
+2. 隔离客户端链路，避免 `server-only` 报错。
+
+## 2. build:pre 集成
+
+`apps/web/scripts/prebuild.ts` 已接入：
+
+1. `generateBlockBusinessCatalog()`
+2. `generateBlockDefinitionCatalog()`
+
+因此执行：
+
+```bash
+pnpm --filter web build:pre
+```
+
+会自动刷新两份生成文件。
+
+或者，你可以单独运行:
+
+```bash
+pnpm --filter web generate:blocks
+```
+
+## 3. 自动发现规则
+
+### Definition 发现规则
+
+扫描 `collection/*/definition.ts`：
+
+1. 必须有且只有一个 `createBlockDefinition` 主导出。
+2. 必须能解析 `type: "..."`。
+
+### Fetcher 发现规则
+
+扫描 `collection/*/fetcher.ts`：
+
+1. 必须有且只有一个 `*Fetcher` 主导出。
+2. 导出名必须以 `Fetcher` 结尾。
+
+## 4. 失败时会发生什么
+
+脚本会直接报错并中断（prebuild 失败），常见场景：
+
+1. `fetcher.ts` 没有 `*Fetcher` 导出。
+2. `fetcher.ts` 有多个 `*Fetcher` 导出。
+3. `definition.ts` 没有 `createBlockDefinition` 主导出。
+4. `definition.ts` 缺失 `type`。
+
+## 5. 新增区块后的最低操作
+
+你新增完区块目录后，至少执行一次：
+
+```bash
+pnpm --filter web build:pre
+```
+
+建议再执行：
+
+```bash
+pnpm check-types
+pnpm lint
+```
+
+## 6. 为什么仍然建议保持固定文件命名
+
+自动发现依赖约定，不建议自由命名：
+
+1. `definition.ts`
+2. `fetcher.ts`
+3. `index.tsx`
+4. `schema.ts`
+5. `types.ts`
+
+命名稳定，脚本才能稳定，团队协作成本最低。
