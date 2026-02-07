@@ -4,6 +4,17 @@ import type { BlockFormConfig } from "@/blocks/core/types/field-config";
  * 作品区块的说明文字（用于 UI 显示）
  */
 export const PROJECTS_BLOCK_SCHEMA = {
+  marquee: {
+    line1: "Marquee Line 1",
+    line2: "Marquee Line 2",
+    _description: "区块顶部双行跑马灯，可自定义文案",
+  },
+  projects: {
+    sort: "Sort",
+    onlyWithCover: "Only With Cover",
+    showFeatured: "Show Featured First",
+    _description: "控制最近项目的数据查询方式（排序、封面过滤、置顶优先）",
+  },
   worksDescription: {
     header: "Header",
     content: "Content",
@@ -23,8 +34,8 @@ export const PROJECTS_BLOCK_SCHEMA = {
  */
 export const PROJECTS_BLOCK_FORM_CONFIG: BlockFormConfig = {
   blockType: "projects",
-  displayName: "Recent Projects Block",
-  description: "作品展示区块",
+  displayName: "最近作品区块",
+  description: "显示最近的三个作品，可自定义排序方式。",
   author: {
     name: "RavelloH",
     url: "https://ravelloh.com",
@@ -34,6 +45,47 @@ export const PROJECTS_BLOCK_FORM_CONFIG: BlockFormConfig = {
     url: "https://docs.ravelloh.com",
   },
   fields: [
+    {
+      label: "Marquee 标题（第一行）",
+      path: "title.line1",
+      type: "text",
+      helperText: PROJECTS_BLOCK_SCHEMA.marquee.line1,
+      defaultValue: "PROJECTS",
+    },
+    {
+      label: "Marquee 标题（第二行）",
+      path: "title.line2",
+      type: "text",
+      helperText: PROJECTS_BLOCK_SCHEMA.marquee.line2,
+      defaultValue: "作品",
+    },
+    {
+      label: "项目排序方式",
+      path: "projects.sort",
+      type: "select",
+      options: [
+        { label: "最新发布", value: "publishedAt_desc" },
+        { label: "最早发布", value: "publishedAt_asc" },
+        { label: "最近更新", value: "updatedAt_desc" },
+        { label: "最新创建", value: "createdAt_desc" },
+        { label: "自定义排序", value: "sortOrder_asc" },
+        { label: "Stars 数最多", value: "stars_desc" },
+        { label: "Forks 数最多", value: "forks_desc" },
+      ],
+      defaultValue: "publishedAt_desc",
+    },
+    {
+      label: "仅显示有封面的项目",
+      path: "projects.onlyWithCover",
+      type: "toggle",
+      defaultValue: false,
+    },
+    {
+      label: "显示置顶项目",
+      path: "projects.showFeatured",
+      type: "toggle",
+      defaultValue: true,
+    },
     {
       label: "Works Description Header",
       path: "worksDescription.header.value",
@@ -72,6 +124,20 @@ export const PROJECTS_BLOCK_FORM_CONFIG: BlockFormConfig = {
   ],
   groups: [
     {
+      title: "Marquee",
+      description: PROJECTS_BLOCK_SCHEMA.marquee._description,
+      fields: ["title.line1", "title.line2"],
+    },
+    {
+      title: "Projects Data",
+      description: PROJECTS_BLOCK_SCHEMA.projects._description,
+      fields: [
+        "projects.sort",
+        "projects.onlyWithCover",
+        "projects.showFeatured",
+      ],
+    },
+    {
       title: "Works Description",
       description: PROJECTS_BLOCK_SCHEMA.worksDescription._description,
       fields: ["worksDescription.header.value", "worksDescription.content"],
@@ -86,9 +152,25 @@ export const PROJECTS_BLOCK_FORM_CONFIG: BlockFormConfig = {
       ],
     },
   ],
+  actions: {
+    db: 1,
+    config: 0,
+  },
   previewData: {
+    title: {
+      line1: "PROJECTS",
+      line2: "作品",
+    },
+    projects: {
+      sort: "publishedAt_desc",
+      onlyWithCover: false,
+      showFeatured: true,
+    },
     worksDescription: {
-      header: "Header",
+      header: {
+        value: "Header",
+        align: "left",
+      },
       content:
         "A / B / C / D / E / F / G / H / I / J / K / L / M / N / O / P / Q / R / S / T / U / V / W / X / Y / Z",
     },
@@ -100,7 +182,7 @@ export const PROJECTS_BLOCK_FORM_CONFIG: BlockFormConfig = {
       ],
       footer: {
         text: "Footer",
-        link: "/works",
+        link: "/projects",
       },
     },
   },
