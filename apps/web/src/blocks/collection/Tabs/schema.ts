@@ -150,19 +150,24 @@ export const TABS_BLOCK_FORM_CONFIG: BlockFormConfig = {
     },
     no2: {
       label: "特性",
-      content: ["特性一：简洁高效", "特性二：功能强大"],
+      content: ["特性一：简洁高效", "特性二：功能强大", "特性三：易于使用"],
     },
     no3: {
       label: "更多",
-      content: ["更多内容可以在这里展示。"],
+      content: [
+        "更多内容可以在这里展示。",
+        "添加更多选项卡以丰富信息。",
+        "最多支持 10 个选项卡。",
+        "使用 **Markdown** 来格式化文本或添加[链接](https://ravelloh.com)。",
+      ],
     },
     layout: {
       tabPosition: "top",
       style: "underline",
       ratio: 1,
-      tabsCentered: false,
-      contentAlign: "left",
-      contentVerticalAlign: "top",
+      tabsCentered: true,
+      contentAlign: "center",
+      contentVerticalAlign: "center",
     },
   },
 };
