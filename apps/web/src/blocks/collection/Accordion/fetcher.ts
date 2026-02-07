@@ -3,7 +3,7 @@ import type {
   AccordionData,
   AccordionItem,
 } from "@/blocks/collection/Accordion/types";
-import type { BlockConfig } from "@/blocks/core/types";
+import type { RuntimeBlockInput } from "@/blocks/core/definition";
 import {
   countCategoryPosts,
   findCategoryByPath,
@@ -18,7 +18,7 @@ import { processImageUrl } from "@/lib/shared/image-common";
  * 根据配置的数据来源获取标签、分类或文章列表
  */
 export async function accordionFetcher(
-  config: BlockConfig,
+  config: RuntimeBlockInput,
 ): Promise<AccordionData> {
   const content = (config.content || {}) as AccordionBlockConfig["content"];
   const source = content.source || "tags";
@@ -228,7 +228,7 @@ async function fetchPosts(
 async function fetchChildCategories(
   sortBy: string,
   _limit: number,
-  config: BlockConfig,
+  config: RuntimeBlockInput,
 ): Promise<AccordionItem[]> {
   const contextData = (config.data as Record<string, unknown>) || {};
   const slugPath = contextData.slug as string | undefined;

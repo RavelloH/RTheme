@@ -8,6 +8,8 @@ import type {
   GalleryBlockConfig,
   GalleryData,
 } from "@/blocks/collection/Gallery/types";
+import type { BlockComponentProps } from "@/blocks/core/definition";
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import ParallaxImageCarousel from "@/components/ui/ParallaxImageCarousel";
 import { useMobile } from "@/hooks/use-mobile";
@@ -47,13 +49,9 @@ function toGalleryPhoto(
  * GalleryBlock - 客户端组件
  * 图片画廊，静态展示模式
  */
-export default function GalleryBlock({
-  config,
-}: {
-  config: GalleryBlockConfig;
-}) {
-  const { content } = config;
-  const data = (config.data as GalleryData) || {};
+export default function GalleryBlock({ block }: BlockComponentProps) {
+  const content = block.content as GalleryBlockConfig["content"];
+  const data = getBlockRuntimeData<GalleryData>(block.runtime);
   const isMobile = useMobile();
 
   // 优先使用处理后的图片数据

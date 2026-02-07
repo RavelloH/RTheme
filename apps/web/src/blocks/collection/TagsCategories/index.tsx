@@ -1,6 +1,7 @@
 import type { TagsCategoriesBlockContent } from "@/blocks/collection/TagsCategories/types";
 import { ProcessedText } from "@/blocks/core/components";
-import type { BlockConfig } from "@/blocks/core/types";
+import type { BlockComponentProps } from "@/blocks/core/definition";
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import Link from "@/components/ui/Link";
 
@@ -25,13 +26,9 @@ interface TagsCategoriesData {
  * TagsCategoriesBlock - 服务端组件
  * 直接使用客户端组件处理布局和导航
  */
-export default function TagsCategoriesBlock({
-  config,
-}: {
-  config: BlockConfig;
-}) {
-  const data = (config.data as TagsCategoriesData) || {};
-  const content = (config.content as TagsCategoriesBlockContent) || {};
+export default function TagsCategoriesBlock({ block }: BlockComponentProps) {
+  const data = getBlockRuntimeData<TagsCategoriesData>(block.runtime);
+  const content = (block.content as TagsCategoriesBlockContent) || {};
   const { displayTags = [], displayCategories = [] } = data;
 
   const footerText = content.footer?.text || ["Tags &", "Categories"];

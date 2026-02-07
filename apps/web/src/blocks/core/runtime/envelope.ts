@@ -39,9 +39,9 @@ export function createEmptyRuntimeEnvelope<TBusiness = Record<string, never>>(
   };
 }
 
-export function getBlockRuntimeData<
-  TData extends Record<string, unknown> = Record<string, unknown>,
->(runtime: BlockRuntimeEnvelope<unknown> | undefined): TData {
+export function getBlockRuntimeData<TData = Record<string, unknown>>(
+  runtime: BlockRuntimeEnvelope<unknown> | undefined,
+): TData {
   if (!runtime) {
     return {} as TData;
   }

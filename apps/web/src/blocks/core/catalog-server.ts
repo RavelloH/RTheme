@@ -2,9 +2,12 @@ import "server-only";
 
 import type { RuntimeBlockInput } from "@/blocks/core/definition";
 
-type LegacyBusinessFetcher = (block: RuntimeBlockInput) => Promise<unknown>;
+type BlockBusinessFetcher = (block: RuntimeBlockInput) => Promise<unknown>;
 
-const businessFetcherLoaders: Record<string, () => Promise<unknown>> = {
+const businessFetcherLoaders: Record<
+  string,
+  () => Promise<BlockBusinessFetcher>
+> = {
   default: () =>
     import("@/blocks/collection/Default/fetcher").then(
       (fetcherModule) => fetcherModule.defaultBlockFetcher,
@@ -89,11 +92,11 @@ const businessFetcherLoaders: Record<string, () => Promise<unknown>> = {
 
 export async function loadBlockBusinessFetcher(
   type: string,
-): Promise<LegacyBusinessFetcher | null> {
+): Promise<BlockBusinessFetcher | null> {
   const loader = businessFetcherLoaders[type];
   if (!loader) {
     return null;
   }
 
-  return (await loader()) as LegacyBusinessFetcher;
+  return loader();
 }

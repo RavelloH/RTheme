@@ -4,6 +4,8 @@ import type {
   AccordionBlockConfig,
   AccordionData,
 } from "@/blocks/collection/Accordion/types";
+import type { BlockComponentProps } from "@/blocks/core/definition";
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import Link from "@/components/ui/Link";
 import ParallaxImageCarousel from "@/components/ui/ParallaxImageCarousel";
@@ -14,17 +16,14 @@ import { createArray } from "@/lib/client/create-array";
  * AccordionBlock - 手风琴列表组件
  * 用于展示标签、分类等内容的网格布局
  */
-export default function AccordionBlock({
-  config,
-}: {
-  config: AccordionBlockConfig;
-}) {
-  const data = (config.data as AccordionData) || {};
+export default function AccordionBlock({ block }: BlockComponentProps) {
+  const data = getBlockRuntimeData<AccordionData>(block.runtime);
+  const content = block.content as AccordionBlockConfig["content"];
   const { items = [] } = data;
   const isMobile = useMobile();
 
   // 根据 limit 限制显示数量
-  const limit = config.content.limit ?? 0;
+  const limit = content.limit ?? 0;
   const displayItems = limit > 0 ? items.slice(0, limit) : items;
 
   // 固定使用 3/12 宽度，与 categories 页面一致

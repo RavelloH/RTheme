@@ -1,4 +1,4 @@
-import type { BlockConfig } from "@/blocks/core/types";
+import type { RuntimeBlockInput } from "@/blocks/core/definition";
 import { getConfigs } from "@/lib/server/config-cache";
 import { generateSignedImageId } from "@/lib/server/image-crypto";
 import { batchQueryMediaFiles } from "@/lib/server/image-query";
@@ -17,7 +17,7 @@ type HeroBlockContent = {
   galleryImagesOrigin?: "latestPosts" | "latestGallery" | "custom";
 } & Record<string, unknown>;
 
-export async function heroFetcher(config: BlockConfig) {
+export async function heroFetcher(config: RuntimeBlockInput) {
   const content = (config.content || {}) as HeroBlockContent;
 
   // =========================================================

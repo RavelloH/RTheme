@@ -5,6 +5,8 @@ import type {
   CardsData,
 } from "@/blocks/collection/Cards/types";
 import { ProcessedText } from "@/blocks/core/components";
+import type { BlockComponentProps } from "@/blocks/core/definition";
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import CMSImage from "@/components/ui/CMSImage";
 import Link from "@/components/ui/Link";
@@ -149,9 +151,9 @@ const BG_COLOR_CLASSES = {
 /**
  * CardsBlock - 服务端组件
  */
-export default function CardsBlock({ config }: { config: CardsBlockConfig }) {
-  const { content } = config;
-  const data = (config.data as CardsData) || {};
+export default function CardsBlock({ block }: BlockComponentProps) {
+  const content = block.content as CardsBlockConfig["content"];
+  const data = getBlockRuntimeData<CardsData>(block.runtime);
 
   // 内容
   const title = content.title;

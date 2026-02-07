@@ -2,10 +2,12 @@ import Marquee from "react-fast-marquee";
 
 import type { ProjectsBlockConfig } from "@/blocks/collection/RecentProjects/types";
 import { ProcessedText } from "@/blocks/core/components";
+import type { BlockComponentProps } from "@/blocks/core/definition";
 import {
   extractBlockText,
   replacePlaceholders,
 } from "@/blocks/core/lib/shared";
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import LinkButton from "@/components/ui/LinkButton";
 import ParallaxImageCarousel from "@/components/ui/ParallaxImageCarousel";
@@ -14,13 +16,9 @@ import ParallaxImageCarousel from "@/components/ui/ParallaxImageCarousel";
  * ProjectsBlock - 服务端组件
  * 布局和静态内容在服务端渲染，直接使用客户端组件处理交互功能
  */
-export default function ProjectsBlock({
-  config,
-}: {
-  config: ProjectsBlockConfig;
-}) {
-  const data = (config.data as Record<string, unknown>) || {};
-  const content = config.content || {};
+export default function ProjectsBlock({ block }: BlockComponentProps) {
+  const data = getBlockRuntimeData(block.runtime);
+  const content = (block.content as ProjectsBlockConfig["content"]) || {};
   const { worksDescription, worksSummary } = content;
 
   return (

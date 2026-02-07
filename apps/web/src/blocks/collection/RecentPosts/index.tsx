@@ -5,8 +5,9 @@ import type {
   PostsBlockContent,
   PostsData,
 } from "@/blocks/collection/RecentPosts/types";
+import type { BlockComponentProps } from "@/blocks/core/definition";
 import { replacePlaceholders as replaceFn } from "@/blocks/core/lib";
-import type { BlockConfig } from "@/blocks/core/types";
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import type { GridArea } from "@/components/client/layout/RowGrid";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import ViewCountBatchLoader from "@/components/client/logic/ViewCountBatchLoader";
@@ -21,9 +22,9 @@ const AREA_SLOTS: GridArea[][] = [
   [10, 11, 12],
 ];
 
-export default function PostsBlock({ config }: { config: BlockConfig }) {
-  const data = (config.data as PostsData) || { displayPosts: [] };
-  const content = (config.content as PostsBlockContent) || {};
+export default function PostsBlock({ block }: BlockComponentProps) {
+  const data = getBlockRuntimeData<PostsData>(block.runtime);
+  const content = (block.content as PostsBlockContent) || {};
   const { displayPosts = [] } = data;
 
   // 提取配置

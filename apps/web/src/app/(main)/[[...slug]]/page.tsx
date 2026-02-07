@@ -51,11 +51,8 @@ export default async function Page({ params }: PageProps<"/[[...slug]]">) {
   if (!match) return notFound();
   const { page, params: resolvedParams } = match;
   const config = getSystemPageConfig(page) as PageConfig;
-  if (config) {
-    if (!config.data) config.data = {};
-    Object.assign(config.data as Record<string, unknown>, resolvedParams);
-  }
-  const { blocks = [] } = (await resolveBlockData(config, "page")) || {};
+  const { blocks = [] } =
+    (await resolveBlockData(config, "page", resolvedParams)) || {};
 
   // cacheLife("max");
   // TODO: Cache Tag

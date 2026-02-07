@@ -4,11 +4,13 @@ import RandomLinkFooter from "@/blocks/collection/Default/client/RandomLinkFoote
 import { inferRandomSource } from "@/blocks/collection/Default/helpers";
 import type { DefaultBlockConfig } from "@/blocks/collection/Default/types";
 import { ProcessedText } from "@/blocks/core/components";
+import type { BlockComponentProps } from "@/blocks/core/definition";
 import {
   extractBlockSectionAndAlign,
   extractBlockTextAndAlign,
   replacePlaceholders,
 } from "@/blocks/core/lib/shared";
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import SearchInput from "@/components/client/features/posts/SearchInput";
 import RowGrid, {
   type GridArea,
@@ -24,13 +26,9 @@ interface DefaultBlockData {
  * DefaultBlock - 服务端组件
  * 显示可配置的内容块，支持占位符插值
  */
-export default function DefaultBlock({
-  config,
-}: {
-  config: DefaultBlockConfig;
-}) {
-  const data = (config.data as DefaultBlockData) || {};
-  const { content } = config;
+export default function DefaultBlock({ block }: BlockComponentProps) {
+  const data = getBlockRuntimeData<DefaultBlockData>(block.runtime);
+  const content = block.content as DefaultBlockConfig["content"];
 
   // 获取布局配置
   const layout =

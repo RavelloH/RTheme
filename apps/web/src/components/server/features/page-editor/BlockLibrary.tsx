@@ -595,12 +595,7 @@ export default function BlockLibrary({
                       fullWidth
                       onClick={() => {
                         if (selectedTheme === "import" && previewBlock) {
-                          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                          const {
-                            id,
-                            runtime: _runtime,
-                            ...rest
-                          } = previewBlock;
+                          const { runtime: _runtime, ...rest } = previewBlock;
                           onAdd(selectedBlock.blockType, rest);
                         } else {
                           onAdd(selectedBlock.blockType);

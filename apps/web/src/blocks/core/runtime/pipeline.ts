@@ -178,12 +178,12 @@ export async function resolveSingleBlockV2(
         });
       }
 
-      const legacyFetcher = await loadBlockBusinessFetcher(blockType);
-      if (!legacyFetcher) {
+      const fetchBusiness = await loadBlockBusinessFetcher(blockType);
+      if (!fetchBusiness) {
         return {};
       }
 
-      return legacyFetcher({
+      return fetchBusiness({
         ...block,
         content: normalizedContent,
         data: context,

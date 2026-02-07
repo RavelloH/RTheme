@@ -8,6 +8,8 @@ import type {
   DayData,
   YearData,
 } from "@/blocks/collection/ArchiveCalendar/types";
+import type { BlockComponentProps } from "@/blocks/core/definition";
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import Link from "@/components/ui/Link";
 import { useMobile } from "@/hooks/use-mobile";
@@ -469,13 +471,9 @@ function DesktopHeatmap({
  * ArchiveCalendarBlock - 客户端组件（需要检测设备类型）
  * 展示文章归档日历
  */
-export default function ArchiveCalendarBlock({
-  config,
-}: {
-  config: ArchiveCalendarBlockConfig;
-}) {
-  const { content } = config;
-  const data = (config.data as ArchiveCalendarData) || {};
+export default function ArchiveCalendarBlock({ block }: BlockComponentProps) {
+  const content = block.content as ArchiveCalendarBlockConfig["content"];
+  const data = getBlockRuntimeData<ArchiveCalendarData>(block.runtime);
   const isMobile = useMobile();
 
   const archiveData: YearData[] = data.archiveData || [];

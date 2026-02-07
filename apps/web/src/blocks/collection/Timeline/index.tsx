@@ -5,6 +5,8 @@ import type {
   TimelineItemData,
 } from "@/blocks/collection/Timeline/types";
 import { ProcessedText } from "@/blocks/core/components";
+import type { BlockComponentProps } from "@/blocks/core/definition";
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import CMSImage from "@/components/ui/CMSImage";
 import Link from "@/components/ui/Link";
 
@@ -12,13 +14,9 @@ import Link from "@/components/ui/Link";
  * TimelineItemBlock - 服务端组件
  * 展示单个时间线节点
  */
-export default function TimelineItemBlock({
-  config,
-}: {
-  config: TimelineItemBlockConfig;
-}) {
-  const { content } = config;
-  const data = (config.data as TimelineItemData) || {};
+export default function TimelineItemBlock({ block }: BlockComponentProps) {
+  const content = block.content as TimelineItemBlockConfig["content"];
+  const data = getBlockRuntimeData<TimelineItemData>(block.runtime);
 
   const year = content.year || "";
   const monthDay = content.monthDay || "";

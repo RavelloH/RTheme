@@ -4,15 +4,17 @@ import type {
   TabsBlockConfig,
   TabsData,
 } from "@/blocks/collection/Tabs/types";
+import type { BlockComponentProps } from "@/blocks/core/definition";
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 
 /**
  * TabsBlock - 服务端组件
  * 选项卡面板
  */
-export default function TabsBlock({ config }: { config: TabsBlockConfig }) {
-  const { content } = config;
-  const data = (config.data as TabsData) || {};
+export default function TabsBlock({ block }: BlockComponentProps) {
+  const content = block.content as TabsBlockConfig["content"];
+  const data = getBlockRuntimeData<TabsData>(block.runtime);
 
   // 从显式字段构建选项卡数组（最多 10 个）
   const tabs: TabItem[] = [];

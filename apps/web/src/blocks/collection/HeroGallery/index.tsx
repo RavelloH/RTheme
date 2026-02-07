@@ -2,8 +2,9 @@ import GlobalMouseTracker from "@/blocks/collection/HeroGallery/client/GlobalMou
 import HomeImageGallery from "@/blocks/collection/HeroGallery/client/HomeImageGallery";
 import HomeTextSection from "@/blocks/collection/HeroGallery/client/HomeTextSection";
 import type { HeroData } from "@/blocks/collection/HeroGallery/types";
+import type { BlockComponentProps } from "@/blocks/core/definition";
 import { replacePlaceholders as replaceFn } from "@/blocks/core/lib";
-import type { BlockConfig } from "@/blocks/core/types";
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 
 interface HeroContent {
@@ -17,9 +18,9 @@ interface HeroContent {
  * HeroBlock - 服务端组件
  * 布局结构，文本内容由客户端组件根据设备类型动态渲染
  */
-export default function HeroBlock({ config }: { config: BlockConfig }) {
-  const data = (config.data as HeroData) || {};
-  const content = (config.content as HeroContent) || {};
+export default function HeroBlock({ block }: BlockComponentProps) {
+  const data = getBlockRuntimeData<HeroData>(block.runtime);
+  const content = (block.content as HeroContent) || {};
   const { galleryImages, siteTitle, siteSlogan, logoImage } = data;
   const { line1, line2, galleryImageFilter } = content;
 

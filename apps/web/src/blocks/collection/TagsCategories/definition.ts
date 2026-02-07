@@ -1,7 +1,4 @@
-import {
-  createBlockDefinition,
-  createLegacyComponentLoader,
-} from "@/blocks/core/definition";
+import { createBlockDefinition } from "@/blocks/core/definition";
 
 export const tagsCategoriesBlockDefinition = createBlockDefinition({
   type: "tags-categories",
@@ -10,7 +7,8 @@ export const tagsCategoriesBlockDefinition = createBlockDefinition({
     import("./schema").then(
       (schemaModule) => schemaModule.TAGS_CATEGORIES_BLOCK_FORM_CONFIG,
     ),
-  component: createLegacyComponentLoader(() => import("./index")),
+  component: () =>
+    import("./index").then((componentModule) => componentModule.default),
   capabilities: {
     context: "inherit",
     placeholders: {

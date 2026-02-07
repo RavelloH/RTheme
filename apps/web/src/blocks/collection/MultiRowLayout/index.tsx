@@ -7,6 +7,8 @@ import type {
   RowConfig,
 } from "@/blocks/collection/MultiRowLayout/types";
 import { ProcessedText } from "@/blocks/core/components";
+import type { BlockComponentProps } from "@/blocks/core/definition";
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import RowGrid, {
   type GridArea,
   GridItem,
@@ -321,13 +323,9 @@ function renderRowContent(
   }
 }
 
-export default function MultiRowLayoutBlock({
-  config,
-}: {
-  config: MultiRowLayoutBlockConfig;
-}) {
-  const { content } = config;
-  const data = (config.data as MultiRowLayoutData) || {};
+export default function MultiRowLayoutBlock({ block }: BlockComponentProps) {
+  const content = block.content as MultiRowLayoutBlockConfig["content"];
+  const data = getBlockRuntimeData<MultiRowLayoutData>(block.runtime);
 
   const rowCount = parseRowCount(content.rowCount);
   const rowLayout = ROW_LAYOUTS[rowCount];

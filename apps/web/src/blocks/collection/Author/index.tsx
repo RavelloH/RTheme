@@ -3,6 +3,8 @@ import type {
   AuthorData,
 } from "@/blocks/collection/Author/types";
 import { ProcessedText } from "@/blocks/core/components";
+import type { BlockComponentProps } from "@/blocks/core/definition";
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import CMSImage from "@/components/ui/CMSImage";
 
@@ -10,9 +12,9 @@ import CMSImage from "@/components/ui/CMSImage";
  * AuthorBlock - 服务端组件
  * 展示作者/个人信息卡片
  */
-export default function AuthorBlock({ config }: { config: AuthorBlockConfig }) {
-  const { content } = config;
-  const data = (config.data as AuthorData) || {};
+export default function AuthorBlock({ block }: BlockComponentProps) {
+  const content = block.content as AuthorBlockConfig["content"];
+  const data = getBlockRuntimeData<AuthorData>(block.runtime);
 
   const name = content.name || "";
   const title = content.title || "";
