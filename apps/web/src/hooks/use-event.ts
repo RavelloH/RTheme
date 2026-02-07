@@ -1,10 +1,14 @@
 // @/store/useEvent.ts
 import { useEffect, useRef } from "react";
-import { create } from "zustand";
+import { create, type StoreApi, type UseBoundStore } from "zustand";
 
 interface EventMap {
   [eventName: string]: (...args: unknown[]) => void | Promise<void>;
 }
+
+type EventStore<T extends EventMap = EventMap> = UseBoundStore<
+  StoreApi<EventState<T>>
+>;
 
 interface EventState<T extends EventMap = EventMap> {
   listeners: Record<keyof T, Array<{ id: symbol; listener: T[keyof T] }>>;
@@ -18,54 +22,64 @@ interface EventState<T extends EventMap = EventMap> {
   getEventNames: () => (keyof T)[];
 }
 
-export const useEvent = <T extends EventMap = EventMap>() =>
-  create<EventState<T>>((set, get) => ({
-    listeners: {} as Record<
-      keyof T,
-      Array<{ id: symbol; listener: T[keyof T] }>
-    >,
+/**
+ * 全局事件总线 store（单例）
+ */
+const useEventStore = create<EventState<EventMap>>((set, get) => ({
+  listeners: {} as Record<
+    keyof EventMap,
+    Array<{ id: symbol; listener: EventMap[keyof EventMap] }>
+  >,
 
-    on: <K extends keyof T>(eventName: K, id: symbol, listener: T[K]) => {
-      set((state) => ({
-        listeners: {
-          ...state.listeners,
-          [eventName]: [
-            ...(state.listeners[eventName] || []),
-            { id, listener },
-          ],
-        },
-      }));
-    },
+  on: <K extends keyof EventMap>(
+    eventName: K,
+    id: symbol,
+    listener: EventMap[K],
+  ) => {
+    set((state) => ({
+      listeners: {
+        ...state.listeners,
+        [eventName]: [...(state.listeners[eventName] || []), { id, listener }],
+      },
+    }));
+  },
 
-    emit: async <K extends keyof T>(
-      eventName: K,
-      ...args: Parameters<T[K]>
-    ) => {
-      const listeners = get().listeners[eventName] || [];
-      await Promise.allSettled(
-        listeners.map(({ listener }) => Promise.resolve(listener(...args))),
-      );
-    },
+  emit: async <K extends keyof EventMap>(
+    eventName: K,
+    ...args: Parameters<EventMap[K]>
+  ) => {
+    const listeners = get().listeners[eventName] || [];
+    await Promise.allSettled(
+      listeners.map(({ listener }) => Promise.resolve(listener(...args))),
+    );
+  },
 
-    off: <K extends keyof T>(eventName: K, id: symbol) => {
-      set((state) => ({
-        listeners: {
-          ...state.listeners,
-          [eventName]: (state.listeners[eventName] || []).filter(
-            (l) => l.id !== id,
-          ),
-        },
-      }));
-    },
+  off: <K extends keyof EventMap>(eventName: K, id: symbol) => {
+    set((state) => ({
+      listeners: {
+        ...state.listeners,
+        [eventName]: (state.listeners[eventName] || []).filter(
+          (l) => l.id !== id,
+        ),
+      },
+    }));
+  },
 
-    getListenerCount: <K extends keyof T>(eventName: K) => {
-      return get().listeners[eventName]?.length || 0;
-    },
+  getListenerCount: <K extends keyof EventMap>(eventName: K) => {
+    return get().listeners[eventName]?.length || 0;
+  },
 
-    getEventNames: () => {
-      return Object.keys(get().listeners) as (keyof T)[];
-    },
-  }));
+  getEventNames: () => {
+    return Object.keys(get().listeners) as (keyof EventMap)[];
+  },
+}));
+
+/**
+ * 事件总线访问器（返回同一个单例 store）
+ */
+export const useEvent = <T extends EventMap = EventMap>(): EventStore<T> => {
+  return useEventStore as unknown as EventStore<T>;
+};
 
 /**
  * React Hook for using events with automatic cleanup
@@ -75,7 +89,7 @@ export const useEvent = <T extends EventMap = EventMap>() =>
  * @returns void
  */
 export function useEventListener<T extends EventMap, K extends keyof T>(
-  eventStore: ReturnType<typeof useEvent<T>>,
+  eventStore: EventStore<T>,
   eventName: K,
   listener: T[K],
 ): void {
