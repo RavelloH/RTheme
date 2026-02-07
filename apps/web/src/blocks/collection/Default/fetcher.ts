@@ -1,6 +1,6 @@
 import { inferRandomSource } from "@/blocks/collection/Default/helpers";
+import type { RuntimeBlockInput } from "@/blocks/core/definition";
 import { interpolatorMap } from "@/blocks/core/placeholders";
-import type { BlockConfig } from "@/blocks/core/types";
 import prisma from "@/lib/server/prisma";
 
 /**
@@ -10,7 +10,7 @@ import prisma from "@/lib/server/prisma";
  * 2. 处理 random footer 所需的数据源
  */
 export async function defaultBlockFetcher(
-  config: BlockConfig,
+  config: RuntimeBlockInput,
 ): Promise<Record<string, unknown>> {
   const contextData = (config.data as Record<string, unknown>) || {};
   const content = config.content as Record<string, unknown>;

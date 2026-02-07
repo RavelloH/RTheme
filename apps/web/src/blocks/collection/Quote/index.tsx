@@ -2,15 +2,17 @@ import { RiDoubleQuotesL, RiDoubleQuotesR } from "@remixicon/react";
 
 import type { QuoteBlockConfig } from "@/blocks/collection/Quote/types";
 import { ProcessedText } from "@/blocks/core/components";
+import type { BlockComponentProps } from "@/blocks/core/definition";
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 
 /**
  * QuoteBlock - 服务端组件
  * 展示引用文本，支持多种样式
  */
-export default function QuoteBlock({ config }: { config: QuoteBlockConfig }) {
-  const { content } = config;
-  const data = (config.data as Record<string, unknown>) || {};
+export default function QuoteBlock({ block }: BlockComponentProps) {
+  const content = block.content as QuoteBlockConfig["content"];
+  const data = getBlockRuntimeData(block.runtime);
 
   const quote = content.quote || "";
   const author = content.author || "";

@@ -5,6 +5,8 @@ import type {
   TestimonialData,
 } from "@/blocks/collection/Testimonials/types";
 import { ProcessedText } from "@/blocks/core/components";
+import type { BlockComponentProps } from "@/blocks/core/definition";
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import CMSImage from "@/components/ui/CMSImage";
 import { createArray } from "@/lib/client/create-array";
@@ -13,13 +15,9 @@ import { createArray } from "@/lib/client/create-array";
  * TestimonialBlock - 服务端组件
  * 展示单个用户评价，支持双行显示模式
  */
-export default function TestimonialBlock({
-  config,
-}: {
-  config: TestimonialBlockConfig;
-}) {
-  const { content } = config;
-  const data = (config.data as TestimonialData) || {};
+export default function TestimonialBlock({ block }: BlockComponentProps) {
+  const content = block.content as TestimonialBlockConfig["content"];
+  const data = getBlockRuntimeData<TestimonialData>(block.runtime);
 
   // 第一行评价数据
   const quote = content.quote || "";

@@ -80,6 +80,8 @@ import SocialLinksMarquee, {
 } from "@/blocks/collection/SocialLinks/client/SocialLinksMarquee";
 import type { SocialLinksBlockConfig } from "@/blocks/collection/SocialLinks/types";
 import { ProcessedText } from "@/blocks/core/components";
+import type { BlockComponentProps } from "@/blocks/core/definition";
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 
 /**
@@ -299,13 +301,9 @@ const PLATFORM_KEYS = [
  * SocialLinksBlock - 服务端组件
  * 展示社交媒体链接（多行 Marquee 滚动）
  */
-export default function SocialLinksBlock({
-  config,
-}: {
-  config: SocialLinksBlockConfig;
-}) {
-  const { content } = config;
-  const data = (config.data as Record<string, unknown>) || {};
+export default function SocialLinksBlock({ block }: BlockComponentProps) {
+  const content = block.content as SocialLinksBlockConfig["content"];
+  const data = getBlockRuntimeData(block.runtime);
 
   const header = content.header || "";
   const footer = content.footer || "";

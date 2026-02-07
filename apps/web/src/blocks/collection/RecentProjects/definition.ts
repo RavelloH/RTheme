@@ -1,7 +1,4 @@
-import {
-  createBlockDefinition,
-  createLegacyComponentLoader,
-} from "@/blocks/core/definition";
+import { createBlockDefinition } from "@/blocks/core/definition";
 
 export const projectsBlockDefinition = createBlockDefinition({
   type: "projects",
@@ -10,7 +7,8 @@ export const projectsBlockDefinition = createBlockDefinition({
     import("./schema").then(
       (schemaModule) => schemaModule.PROJECTS_BLOCK_FORM_CONFIG,
     ),
-  component: createLegacyComponentLoader(() => import("./index")),
+  component: () =>
+    import("./index").then((componentModule) => componentModule.default),
   capabilities: {
     context: "inherit",
     placeholders: {

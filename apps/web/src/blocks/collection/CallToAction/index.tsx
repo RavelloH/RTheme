@@ -5,6 +5,8 @@ import type {
   CallToActionData,
 } from "@/blocks/collection/CallToAction/types";
 import { ProcessedText } from "@/blocks/core/components";
+import type { BlockComponentProps } from "@/blocks/core/definition";
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import CMSImage from "@/components/ui/CMSImage";
 import Link from "@/components/ui/Link";
@@ -13,13 +15,9 @@ import Link from "@/components/ui/Link";
  * CallToActionBlock - 服务端组件
  * 行动号召区块，引导用户采取行动
  */
-export default function CallToActionBlock({
-  config,
-}: {
-  config: CallToActionBlockConfig;
-}) {
-  const { content } = config;
-  const data = (config.data as CallToActionData) || {};
+export default function CallToActionBlock({ block }: BlockComponentProps) {
+  const content = block.content as CallToActionBlockConfig["content"];
+  const data = getBlockRuntimeData<CallToActionData>(block.runtime);
 
   const title = content.title || "";
   const subtitle = content.subtitle || "";

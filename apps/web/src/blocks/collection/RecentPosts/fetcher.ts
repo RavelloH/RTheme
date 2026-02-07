@@ -1,5 +1,5 @@
 import type { PostsBlockContent } from "@/blocks/collection/RecentPosts/types";
-import type { BlockConfig } from "@/blocks/core/types";
+import type { RuntimeBlockInput } from "@/blocks/core/definition";
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import { batchQueryMediaFiles } from "@/lib/server/image-query";
 import {
@@ -10,7 +10,7 @@ import prisma from "@/lib/server/prisma";
 import { processImageUrl } from "@/lib/shared/image-common";
 import { MEDIA_SLOTS } from "@/types/media";
 
-export async function postsFetcher(config: BlockConfig) {
+export async function postsFetcher(config: RuntimeBlockInput) {
   const content = (config.content || {}) as PostsBlockContent;
 
   // 1. 解析配置

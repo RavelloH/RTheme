@@ -3,7 +3,7 @@ import type {
   PagedPostsData,
   PostItem,
 } from "@/blocks/collection/PagedPosts/types";
-import type { BlockConfig } from "@/blocks/core/types";
+import type { RuntimeBlockInput } from "@/blocks/core/definition";
 import {
   batchGetCategoryPaths,
   findCategoryByPath,
@@ -19,7 +19,7 @@ import { processImageUrl } from "@/lib/shared/image-common";
  * 根据路由参数（slug 和 page）获取标签或分类下的文章列表
  */
 export async function pagedPostsFetcher(
-  config: BlockConfig,
+  config: RuntimeBlockInput,
 ): Promise<PagedPostsData> {
   const content = (config.content || {}) as PagedPostsBlockConfig["content"];
   const data = (config.data || {}) as Record<string, unknown>;

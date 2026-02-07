@@ -7,6 +7,8 @@ import type {
   PagedPostsBlockConfig,
   PagedPostsData,
 } from "@/blocks/collection/PagedPosts/types";
+import type { BlockComponentProps } from "@/blocks/core/definition";
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import EmptyPostCard from "@/components/server/features/posts/EmptyPostCard";
 import PostCard from "@/components/server/features/posts/PostCard";
@@ -18,14 +20,10 @@ import { createArray } from "@/lib/client/create-array";
  * 固定每行 4 个文章，自动补位 EmptyPostCard
  * 支持搜索功能包裹
  */
-export default function PagedPostsBlock({
-  config,
-}: {
-  config: PagedPostsBlockConfig;
-}) {
-  const data = (config.data as PagedPostsData) || {};
+export default function PagedPostsBlock({ block }: BlockComponentProps) {
+  const data = getBlockRuntimeData<PagedPostsData>(block.runtime);
   const { posts = [], currentPage = 1, totalPages = 1, basePath = "" } = data;
-  const content = config.content || {};
+  const content = (block.content as PagedPostsBlockConfig["content"]) || {};
   const searchable = (content.searchable as boolean) || false;
 
   // 文章网格组件

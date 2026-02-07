@@ -9,6 +9,8 @@ import {
 
 import type { DividerBlockConfig } from "@/blocks/collection/Divider/types";
 import { ProcessedText } from "@/blocks/core/components";
+import type { BlockComponentProps } from "@/blocks/core/definition";
+import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import { useMobile } from "@/hooks/use-mobile";
 
@@ -16,13 +18,9 @@ import { useMobile } from "@/hooks/use-mobile";
  * DividerBlock - 服务端组件
  * 装饰性分隔线区块
  */
-export default function DividerBlockWrapper({
-  config,
-}: {
-  config: DividerBlockConfig;
-}) {
-  const { content } = config;
-  const data = (config.data as Record<string, unknown>) || {};
+export default function DividerBlockWrapper({ block }: BlockComponentProps) {
+  const content = block.content as DividerBlockConfig["content"];
+  const data = getBlockRuntimeData(block.runtime);
 
   const style = content.style || "line";
   const text = content.text || "";

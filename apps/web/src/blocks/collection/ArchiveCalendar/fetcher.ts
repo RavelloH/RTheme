@@ -3,7 +3,7 @@ import type {
   DayData,
   YearData,
 } from "@/blocks/collection/ArchiveCalendar/types";
-import type { BlockConfig } from "@/blocks/core/types";
+import type { RuntimeBlockInput } from "@/blocks/core/definition";
 import prisma from "@/lib/server/prisma";
 
 /**
@@ -29,7 +29,7 @@ function generateYearDays(year: number): string[] {
  * 从数据库获取文章归档数据
  */
 export async function archiveCalendarBlockFetcher(
-  config: BlockConfig,
+  config: RuntimeBlockInput,
 ): Promise<Record<string, unknown>> {
   const content = config.content as ArchiveCalendarBlockConfig["content"];
   const dataSource = content.dataSource || "posts";

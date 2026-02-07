@@ -36,12 +36,13 @@ export async function resolveSingleBlockData(
 export async function resolveBlockData(
   pageConfig: BlockPageConfig | null,
   mode: BlockMode = "page",
+  pageContext?: Record<string, unknown>,
 ): Promise<ResolvedBlockPageConfig | null> {
   if (!pageConfig?.blocks?.length) {
     return pageConfig as ResolvedBlockPageConfig | null;
   }
 
-  const pageContextData = pageConfig.data || {};
+  const pageContextData = pageContext ?? pageConfig.data ?? {};
   const resolvedBlocks = await resolveBlocksV2(
     pageConfig.blocks,
     pageContextData,

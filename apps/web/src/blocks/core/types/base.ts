@@ -36,12 +36,6 @@ export interface BaseBlockConfig {
   data?: unknown;
 }
 
-// 通用 Props 接口
-export interface BaseBlockProps<T extends BaseBlockConfig = BaseBlockConfig> {
-  config: T;
-  data?: Record<string, unknown>;
-}
-
 // Block 类型映射：将 type 字符串映射到对应的 Config 类型
 import type { AccordionBlockConfig } from "@/blocks/collection/Accordion/types";
 import type { ArchiveCalendarBlockConfig } from "@/blocks/collection/ArchiveCalendar/types";

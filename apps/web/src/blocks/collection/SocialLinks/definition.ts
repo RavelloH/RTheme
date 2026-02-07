@@ -1,7 +1,4 @@
-import {
-  createBlockDefinition,
-  createLegacyComponentLoader,
-} from "@/blocks/core/definition";
+import { createBlockDefinition } from "@/blocks/core/definition";
 
 export const socialLinksBlockDefinition = createBlockDefinition({
   type: "social-links",
@@ -10,7 +7,8 @@ export const socialLinksBlockDefinition = createBlockDefinition({
     import("./schema").then(
       (schemaModule) => schemaModule.SOCIAL_LINKS_BLOCK_FORM_CONFIG,
     ),
-  component: createLegacyComponentLoader(() => import("./index")),
+  component: () =>
+    import("./index").then((componentModule) => componentModule.default),
   capabilities: {
     context: "inherit",
     placeholders: {

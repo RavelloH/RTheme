@@ -1,14 +1,14 @@
 import type { PaginationData } from "@/blocks/collection/Pagination/types";
+import type { RuntimeBlockInput } from "@/blocks/core/definition";
 import { interpolatorMap } from "@/blocks/core/placeholders";
-import type { BlockConfig, BlockFetcher } from "@/blocks/core/types";
 
 /**
  * PaginationBlock Fetcher
  * 从 config.data 中获取分页信息并计算 basePath
  * 对于 "all" 筛选类型，调用 postsList 插值器获取分页数据
  */
-export const paginationFetcher: BlockFetcher = async function (
-  config: BlockConfig,
+export const paginationFetcher = async function (
+  config: RuntimeBlockInput,
 ): Promise<PaginationData> {
   const data = (config.data || {}) as Record<string, unknown>;
   const content = config.content as

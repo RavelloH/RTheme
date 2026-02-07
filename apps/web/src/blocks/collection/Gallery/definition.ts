@@ -1,7 +1,4 @@
-import {
-  createBlockDefinition,
-  createLegacyComponentLoader,
-} from "@/blocks/core/definition";
+import { createBlockDefinition } from "@/blocks/core/definition";
 
 export const galleryBlockDefinition = createBlockDefinition({
   type: "gallery",
@@ -10,7 +7,8 @@ export const galleryBlockDefinition = createBlockDefinition({
     import("./schema").then(
       (schemaModule) => schemaModule.GALLERY_BLOCK_FORM_CONFIG,
     ),
-  component: createLegacyComponentLoader(() => import("./index")),
+  component: () =>
+    import("./index").then((componentModule) => componentModule.default),
   capabilities: {
     context: "inherit",
     placeholders: {

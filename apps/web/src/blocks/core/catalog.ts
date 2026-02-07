@@ -57,7 +57,7 @@ for (const definition of BLOCK_DEFINITIONS) {
     throw new Error(`[BlockCatalog] 重复注册的 block type: ${definition.type}`);
   }
 
-  blockCatalog.set(definition.type, definition);
+  blockCatalog.set(definition.type, definition as BlockDefinition);
 }
 
 export function getBlockDefinition(type: string): BlockDefinition | null {
