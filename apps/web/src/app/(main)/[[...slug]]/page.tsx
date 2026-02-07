@@ -59,13 +59,15 @@ export default async function Page({ params }: PageProps<"/[[...slug]]">) {
 
   return (
     <MainLayout type="horizontal">
-      <HorizontalScroll
-        className="h-full"
-        enableParallax
-        enableFadeElements
-        enableLineReveal
-      >
-        <BlockRenderer blocks={blocks} />
+      <HorizontalScroll className="h-full" disableContentAnimation>
+        <BlockRenderer
+          blocks={blocks}
+          horizontalAnimation={{
+            enableParallax: true,
+            enableFadeElements: true,
+            enableLineReveal: true,
+          }}
+        />
       </HorizontalScroll>
     </MainLayout>
   );

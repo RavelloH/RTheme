@@ -6,6 +6,9 @@ import type {
   BlockComponentProps,
   ResolvedBlock,
 } from "@/blocks/core/definition";
+import HorizontalScrollAnimationWrapper, {
+  type HorizontalScrollAnimationFeatureProps,
+} from "@/components/client/layout/AnimationWrapper";
 
 const componentCache = new Map<
   string,
@@ -34,9 +37,13 @@ function getBlockComponent(
 
 interface BlockRendererProps {
   blocks?: ResolvedBlock[];
+  horizontalAnimation?: HorizontalScrollAnimationFeatureProps;
 }
 
-export default function BlockRenderer({ blocks = [] }: BlockRendererProps) {
+export default function BlockRenderer({
+  blocks = [],
+  horizontalAnimation,
+}: BlockRendererProps) {
   if (!blocks.length) return null;
 
   return (
@@ -52,7 +59,24 @@ export default function BlockRenderer({ blocks = [] }: BlockRendererProps) {
           return null;
         }
 
-        return <Component key={block.id ?? index} block={block} mode="page" />;
+        const key = block.id ?? index;
+
+        if (!horizontalAnimation) {
+          return <Component key={key} block={block} mode="page" />;
+        }
+
+        const renderedBlock = <Component block={block} mode="page" />;
+
+        return (
+          <HorizontalScrollAnimationWrapper
+            key={key}
+            enableParallax={horizontalAnimation.enableParallax}
+            enableFadeElements={horizontalAnimation.enableFadeElements}
+            enableLineReveal={horizontalAnimation.enableLineReveal}
+          >
+            {renderedBlock}
+          </HorizontalScrollAnimationWrapper>
+        );
       })}
     </>
   );

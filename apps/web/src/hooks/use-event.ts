@@ -17,6 +17,10 @@ interface EventState<T extends EventMap = EventMap> {
     eventName: K,
     ...args: Parameters<T[K]>
   ) => Promise<void>;
+  emitSync: <K extends keyof T>(
+    eventName: K,
+    ...args: Parameters<T[K]>
+  ) => void;
   off: <K extends keyof T>(eventName: K, id: symbol) => void;
   getListenerCount: <K extends keyof T>(eventName: K) => number;
   getEventNames: () => (keyof T)[];
@@ -52,6 +56,22 @@ const useEventStore = create<EventState<EventMap>>((set, get) => ({
     await Promise.allSettled(
       listeners.map(({ listener }) => Promise.resolve(listener(...args))),
     );
+  },
+
+  emitSync: <K extends keyof EventMap>(
+    eventName: K,
+    ...args: Parameters<EventMap[K]>
+  ) => {
+    const listeners = get().listeners[eventName] || [];
+    listeners.forEach(({ listener }) => {
+      try {
+        void listener(...args);
+      } catch (error) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("[useEvent.emitSync] listener error:", error);
+        }
+      }
+    });
   },
 
   off: <K extends keyof EventMap>(eventName: K, id: symbol) => {

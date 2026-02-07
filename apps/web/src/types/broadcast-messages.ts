@@ -19,6 +19,21 @@ export interface ScrollProgressMessage {
 }
 
 /**
+ * 水平滚动进度相关消息
+ */
+export interface HorizontalScrollProgressMessage {
+  type: "horizontal-scroll-progress";
+  progress: number;
+  currentX: number;
+  maxScroll: number;
+  containerWidth: number;
+  contentWidth: number;
+}
+
+/**
  * 所有广播消息的联合类型
  */
-export type BroadcastMessage = MDXContentMessage | ScrollProgressMessage;
+export type BroadcastMessage =
+  | MDXContentMessage
+  | ScrollProgressMessage
+  | HorizontalScrollProgressMessage;
