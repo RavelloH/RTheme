@@ -463,25 +463,30 @@ export default function HorizontalScrollAnimationWrapper({
           const viewportPreparationZone = containerWidth;
           cache.parallax.forEach((item) => {
             const currentLeft = baseX + item.leftOffset;
-            const currentRight = currentLeft + item.width;
+            const projectedParallaxX = item.hasEntered
+              ? item.initialX + (currentX - item.entryScrollX) * item.speed
+              : item.lastAppliedX;
+            const currentVisualLeft = currentLeft + projectedParallaxX;
+            const currentVisualRight = currentVisualLeft + item.width;
 
             const isInViewportArea =
-              currentLeft < viewportPreparationZone && currentRight > 0;
+              currentVisualLeft < viewportPreparationZone &&
+              currentVisualRight > 0;
 
             if (isInViewportArea) {
+              let parallaxX = projectedParallaxX;
               if (!item.hasEntered) {
                 item.hasEntered = true;
                 item.entryScrollX = currentX;
                 item.initialX = (gsap.getProperty(item.el, "x") as number) || 0;
+                parallaxX = item.initialX;
               }
 
-              const relativeMovement = currentX - item.entryScrollX;
-              const parallaxX = item.initialX + relativeMovement * item.speed;
               if (Math.abs(parallaxX - item.lastAppliedX) > EPSILON) {
                 gsap.set(item.el, { x: parallaxX });
                 item.lastAppliedX = parallaxX;
               }
-            } else if (currentLeft >= viewportPreparationZone) {
+            } else if (currentVisualLeft >= viewportPreparationZone) {
               if (item.hasEntered) {
                 item.hasEntered = false;
                 item.entryScrollX = 0;
