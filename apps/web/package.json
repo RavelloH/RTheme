@@ -8,6 +8,7 @@
     "build": "tsx scripts/prebuild.ts && next build --webpack && tsx scripts/postbuild.ts",
     "build:pre": "tsx scripts/prebuild.ts",
     "build:post": "tsx scripts/postbuild.ts",
+    "generate:blocks": "tsx scripts/generate-block-business-catalog.ts && tsx scripts/generate-block-definition-catalog.ts",
     "start": "next start",
     "lint": "eslint --max-warnings 0 . --fix",
     "check-types": "tsc --noEmit",

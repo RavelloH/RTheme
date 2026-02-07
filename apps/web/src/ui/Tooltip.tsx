@@ -227,7 +227,7 @@ export function Tooltip({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.15 }}
-                className="fixed z-[100]"
+                className="fixed z-[200]"
                 style={{
                   left: `${position.x}px`,
                   top: `${position.y}px`,

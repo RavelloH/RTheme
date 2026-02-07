@@ -4,7 +4,7 @@ import fs from "fs";
 import { unstable_cache } from "next/cache";
 import path from "path";
 
-import type { BlockConfig } from "@/blocks/core/types";
+import type { AllBlockConfigs } from "@/blocks/core/types/base";
 
 // 自定义 JSON 类型定义（避免与 Prisma 的 JsonValue 冲突）
 type CustomJsonValue =
@@ -38,7 +38,7 @@ export interface PageComponent {
 
 // 系统页面配置类型定义
 export interface SystemPageConfig {
-  blocks?: BlockConfig[];
+  blocks?: AllBlockConfigs[];
   components?: PageComponent[];
 }
 
@@ -414,7 +414,7 @@ export function getSystemPageConfig(
 
   if (config.blocks || config.components) {
     return {
-      blocks: config.blocks as BlockConfig[] | undefined,
+      blocks: config.blocks as AllBlockConfigs[] | undefined,
       components: config.components as PageComponent[] | undefined,
     };
   }
@@ -1022,7 +1022,6 @@ export async function getPagesByUser(
  * @returns areas 数组
  */
 export function getBlocksAreas(
-  _: number, // @deprecated 保留参数以兼容旧接口
   hasHeader: boolean,
   hasFooter: boolean,
 ): (1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12)[] {
@@ -1047,7 +1046,7 @@ export function getBlocksAreas(
 export function getPageBlock(
   config: SystemPageConfig | null,
   blockId: number | string,
-): BlockConfig | null {
+): AllBlockConfigs | null {
   if (!config?.blocks) {
     return null;
   }
@@ -1230,16 +1229,6 @@ export class PageConfigBuilder {
       this.getBlockValue<string>(blockId, "footer.text", defaultValue) ??
       defaultValue
     );
-  }
-
-  /**
-   * 快捷获取 block 的底部描述 (别名，兼容旧代码)
-   */
-  getBlockFooterDesc(
-    blockId: number | string,
-    defaultValue: string = "",
-  ): string {
-    return this.getBlockFooterText(blockId, defaultValue);
   }
 
   /**

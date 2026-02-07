@@ -142,14 +142,6 @@ export function ProcessedText({
     }
   }
 
-  // 兼容旧的 lastUpdatedDays 字段（如果数据中有 lastUpdatedDate，则将其转换为 lastUpdatedDays）
-  if (data?.lastUpdatedDate && !data?.lastPublishDays) {
-    enhancedData.lastUpdatedDays = React.createElement(ClientPlaceholder, {
-      type: "relative-time",
-      data: data.lastUpdatedDate as string,
-    });
-  }
-
   // 1. 插值（检查是否包含 ReactNode）
   const parts = replacePlaceholdersWithReact(text, enhancedData);
 

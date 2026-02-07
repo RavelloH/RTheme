@@ -874,7 +874,7 @@ export async function fetchBlockData(
     const { resolveSingleBlockData } = await import(
       "@/lib/server/block-data-resolver"
     );
-    const block = await resolveSingleBlockData(params.block, {}, "editor");
+    const block = await resolveSingleBlockData(params.block, {});
 
     return response.ok({ data: { block } });
   } catch (error) {

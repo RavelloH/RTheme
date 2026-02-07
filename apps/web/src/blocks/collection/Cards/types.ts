@@ -105,13 +105,3 @@ export interface CardsData {
   image?: ProcessedImageData;
   [key: string]: unknown;
 }
-
-// 保留旧类型名以兼容导出
-export interface CardItem {
-  title?: string;
-  description?: string;
-  image?: string;
-  icon?: string;
-  link?: string;
-  tags?: string[];
-}

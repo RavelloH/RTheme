@@ -52,13 +52,6 @@ export interface BlockComponentProps<TContent = unknown, TBusiness = unknown> {
   mode: BlockMode;
 }
 
-export interface BlockExecutionContext<TContent = unknown> {
-  block: RuntimeBlockInput<TContent>;
-  content: TContent;
-  context: BlockRuntimeContext;
-  mode: BlockMode;
-}
-
 export interface BlockMediaCapability {
   path: string;
   kind: "image" | "imageArray";
@@ -67,7 +60,6 @@ export interface BlockMediaCapability {
 
 export interface BlockDefinition<TContent = unknown, TBusiness = unknown> {
   type: BlockType;
-  version: 2;
   schema: () => Promise<BlockFormConfig>;
   component: () => Promise<
     ComponentType<BlockComponentProps<TContent, TBusiness>>
@@ -81,8 +73,6 @@ export interface BlockDefinition<TContent = unknown, TBusiness = unknown> {
     };
     media?: BlockMediaCapability[];
   };
-  normalizeContent?: (content: unknown) => TContent;
-  fetchBusiness?: (ctx: BlockExecutionContext<TContent>) => Promise<TBusiness>;
 }
 
 export function createBlockDefinition<TContent = unknown, TBusiness = unknown>(

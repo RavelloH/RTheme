@@ -2,7 +2,6 @@ import { createBlockDefinition } from "@/blocks/core/definition";
 
 export const multiRowLayoutBlockDefinition = createBlockDefinition({
   type: "multi-row-layout",
-  version: 2,
   schema: () =>
     import("./schema").then(
       (schemaModule) => schemaModule.MULTI_ROW_LAYOUT_FORM_CONFIG,

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { updatePage } from "@/actions/page";
 import type { ResolvedBlock } from "@/blocks/core/definition";
-import type { BlockConfig } from "@/blocks/core/types";
+import type { AllBlockConfigs } from "@/blocks/core/types/base";
 import VisualPageEditor from "@/components/server/features/page-editor/VisualPageEditor";
 import runWithAuth from "@/lib/client/run-with-auth";
 import type { PageItem } from "@/lib/server/page-cache";
@@ -19,7 +19,7 @@ export default function LayoutEditorClientWrapper({
   const router = useRouter();
   const toast = useToast();
 
-  const handleSave = async (blocks: BlockConfig[]) => {
+  const handleSave = async (blocks: AllBlockConfigs[]) => {
     try {
       // 构造更新 payload
       // 注意：这里只更新 config.blocks，保留 components 和其他 config 字段

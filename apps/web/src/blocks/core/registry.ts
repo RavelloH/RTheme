@@ -1,5 +1,5 @@
 /**
- * Block 配置注册表（V2）
+ * Block 配置注册表
  * schema 来源统一切换到 blockCatalog
  */
 
@@ -45,15 +45,3 @@ export async function getAllBlockFormConfigs(): Promise<BlockFormConfig[]> {
 }
 
 export { getRegisteredBlockTypes };
-
-export function registerBlockFormConfig(config: BlockFormConfig): void {
-  configCache.set(config.blockType, config);
-}
-
-export function clearBlockConfigCache(): void {
-  configCache.clear();
-}
-
-export async function preloadBlockConfigs(): Promise<void> {
-  await getAllBlockFormConfigs();
-}

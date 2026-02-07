@@ -1,11 +1,10 @@
 import type {
-  BlockMode,
   ResolvedBlock,
   RuntimeBlockInput,
 } from "@/blocks/core/definition";
 import {
-  resolveBlocksV2,
-  resolveSingleBlockV2,
+  resolveBlocks,
+  resolveSingleBlock,
 } from "@/blocks/core/runtime/pipeline";
 
 interface BlockPageConfig {
@@ -25,17 +24,15 @@ export interface ResolvedBlockPageConfig
 export async function resolveSingleBlockData(
   block: RuntimeBlockInput,
   pageContext?: Record<string, unknown>,
-  mode: BlockMode = "editor",
 ): Promise<ResolvedBlock> {
-  return resolveSingleBlockV2(block, pageContext, mode);
+  return resolveSingleBlock(block, pageContext);
 }
 
 /**
- * 页面数据解析器（V2）
+ * 页面数据解析器
  */
 export async function resolveBlockData(
   pageConfig: BlockPageConfig | null,
-  mode: BlockMode = "page",
   pageContext?: Record<string, unknown>,
 ): Promise<ResolvedBlockPageConfig | null> {
   if (!pageConfig?.blocks?.length) {
@@ -43,10 +40,9 @@ export async function resolveBlockData(
   }
 
   const pageContextData = pageContext ?? pageConfig.data ?? {};
-  const resolvedBlocks = await resolveBlocksV2(
+  const resolvedBlocks = await resolveBlocks(
     pageConfig.blocks,
     pageContextData,
-    mode,
   );
 
   return {

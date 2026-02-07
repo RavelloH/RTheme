@@ -1,5 +1,3 @@
-import type { AllBlockConfigs } from "@/blocks/core/types/base";
-
 export type * from "./base";
 
 // 导出所有子类型，方便直接引用
@@ -34,7 +32,6 @@ export type {
 export type {
   CardsBlockConfig,
   CardsBlockContent,
-  CardItem,
 } from "../../collection/Cards/types";
 export type {
   CallToActionBlockConfig,
@@ -90,9 +87,3 @@ export type {
   PaginationBlockConfig,
   PaginationBlockContent,
 } from "../../collection/Pagination/types";
-
-// 使用 AllBlockConfigs 作为 BlockConfig（向后兼容）
-export type BlockConfig = AllBlockConfigs;
-
-// Fetcher 类型定义
-export type BlockFetcher<T = unknown> = (config: BlockConfig) => Promise<T>;

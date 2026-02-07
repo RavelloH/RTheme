@@ -1,7 +1,7 @@
 // apps/web/src/data/default-pages.ts
 // 默认页面数据定义
 
-import type { BlockConfig } from "@/blocks/core/types";
+import type { AllBlockConfigs } from "@/blocks/core/types/base";
 
 // Prisma Json 类型定义
 type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
@@ -10,7 +10,7 @@ type JsonArray = JsonValue[];
 
 // 页面配置接口
 export interface PageConfig {
-  blocks?: BlockConfig[];
+  blocks?: AllBlockConfigs[];
   [key: string]: unknown;
 }
 
