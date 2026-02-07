@@ -196,7 +196,7 @@ export function ProcessedText({
   } as React.ComponentProps<typeof ReactMarkdown>["components"];
 
   return (
-    <Wrapper className={`processed-text ${className || ""}`.trim()}>
+    <Wrapper className={`processed-text-content ${className || ""}`.trim()}>
       <ReactMarkdown
         remarkPlugins={markdownRemarkPlugins}
         rehypePlugins={markdownRehypePlugins}

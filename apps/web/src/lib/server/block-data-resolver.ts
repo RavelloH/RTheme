@@ -40,6 +40,52 @@ const fetcherLoaders: Record<string, () => Promise<BlockFetcher>> = {
     import("@/blocks/collection/Pagination/fetcher").then(
       (m) => m.paginationFetcher,
     ),
+  cards: () =>
+    import("@/blocks/collection/Cards/fetcher").then(
+      (m) => m.cardsBlockFetcher,
+    ),
+  quote: () =>
+    import("@/blocks/collection/Quote/fetcher").then(
+      (m) => m.quoteBlockFetcher,
+    ),
+  divider: () =>
+    import("@/blocks/collection/Divider/fetcher").then(
+      (m) => m.dividerBlockFetcher,
+    ),
+  author: () =>
+    import("@/blocks/collection/Author/fetcher").then(
+      (m) => m.authorBlockFetcher,
+    ),
+  cta: () =>
+    import("@/blocks/collection/CallToAction/fetcher").then(
+      (m) => m.ctaBlockFetcher,
+    ),
+  gallery: () =>
+    import("@/blocks/collection/Gallery/fetcher").then(
+      (m) => m.galleryBlockFetcher,
+    ),
+  "timeline-item": () =>
+    import("@/blocks/collection/Timeline/fetcher").then(
+      (m) => m.timelineItemBlockFetcher,
+    ),
+  testimonial: () =>
+    import("@/blocks/collection/Testimonials/fetcher").then(
+      (m) => m.testimonialBlockFetcher,
+    ),
+  "social-links": () =>
+    import("@/blocks/collection/SocialLinks/fetcher").then(
+      (m) => m.socialLinksBlockFetcher,
+    ),
+  tabs: () =>
+    import("@/blocks/collection/Tabs/fetcher").then((m) => m.tabsBlockFetcher),
+  "multi-row-layout": () =>
+    import("@/blocks/collection/MultiRowLayout/fetcher").then(
+      (m) => m.multiRowLayoutFetcher,
+    ),
+  "archive-calendar": () =>
+    import("@/blocks/collection/ArchiveCalendar/fetcher").then(
+      (m) => m.archiveCalendarBlockFetcher,
+    ),
 };
 
 /**

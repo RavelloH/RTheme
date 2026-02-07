@@ -33,6 +33,42 @@ const BLOCK_COMPONENTS: BlockComponentMap = {
   pagination: dynamic(
     () => import("@/blocks/collection/Pagination"),
   ) as BlockComponentMap["pagination"],
+  quote: dynamic(
+    () => import("@/blocks/collection/Quote"),
+  ) as BlockComponentMap["quote"],
+  divider: dynamic(
+    () => import("@/blocks/collection/Divider"),
+  ) as BlockComponentMap["divider"],
+  cards: dynamic(
+    () => import("@/blocks/collection/Cards"),
+  ) as BlockComponentMap["cards"],
+  cta: dynamic(
+    () => import("@/blocks/collection/CallToAction"),
+  ) as BlockComponentMap["cta"],
+  author: dynamic(
+    () => import("@/blocks/collection/Author"),
+  ) as BlockComponentMap["author"],
+  "social-links": dynamic(
+    () => import("@/blocks/collection/SocialLinks"),
+  ) as BlockComponentMap["social-links"],
+  testimonial: dynamic(
+    () => import("@/blocks/collection/Testimonials"),
+  ) as BlockComponentMap["testimonial"],
+  tabs: dynamic(
+    () => import("@/blocks/collection/Tabs"),
+  ) as BlockComponentMap["tabs"],
+  gallery: dynamic(
+    () => import("@/blocks/collection/Gallery"),
+  ) as BlockComponentMap["gallery"],
+  "multi-row-layout": dynamic(
+    () => import("@/blocks/collection/MultiRowLayout"),
+  ) as BlockComponentMap["multi-row-layout"],
+  "timeline-item": dynamic(
+    () => import("@/blocks/collection/Timeline"),
+  ) as BlockComponentMap["timeline-item"],
+  "archive-calendar": dynamic(
+    () => import("@/blocks/collection/ArchiveCalendar"),
+  ) as BlockComponentMap["archive-calendar"],
 };
 
 // 获取组件的类型安全辅助函数

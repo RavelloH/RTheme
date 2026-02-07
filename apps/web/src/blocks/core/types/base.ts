@@ -44,13 +44,25 @@ export interface BaseBlockProps<T extends BaseBlockConfig = BaseBlockConfig> {
 
 // Block 类型映射：将 type 字符串映射到对应的 Config 类型
 import type { AccordionBlockConfig } from "@/blocks/collection/Accordion/types";
+import type { ArchiveCalendarBlockConfig } from "@/blocks/collection/ArchiveCalendar/types";
+import type { AuthorBlockConfig } from "@/blocks/collection/Author/types";
+import type { CallToActionBlockConfig } from "@/blocks/collection/CallToAction/types";
+import type { CardsBlockConfig } from "@/blocks/collection/Cards/types";
 import type { DefaultBlockConfig } from "@/blocks/collection/Default/types";
+import type { DividerBlockConfig } from "@/blocks/collection/Divider/types";
+import type { GalleryBlockConfig } from "@/blocks/collection/Gallery/types";
 import type { HeroBlockConfig } from "@/blocks/collection/HeroGallery/types";
+import type { MultiRowLayoutBlockConfig } from "@/blocks/collection/MultiRowLayout/types";
 import type { PagedPostsBlockConfig } from "@/blocks/collection/PagedPosts/types";
 import type { PaginationBlockConfig } from "@/blocks/collection/Pagination/types";
+import type { QuoteBlockConfig } from "@/blocks/collection/Quote/types";
 import type { PostsBlockConfig } from "@/blocks/collection/RecentPosts/types";
 import type { ProjectsBlockConfig } from "@/blocks/collection/RecentProjects/types";
+import type { SocialLinksBlockConfig } from "@/blocks/collection/SocialLinks/types";
+import type { TabsBlockConfig } from "@/blocks/collection/Tabs/types";
 import type { TagsCategoriesBlockConfig } from "@/blocks/collection/TagsCategories/types";
+import type { TestimonialBlockConfig } from "@/blocks/collection/Testimonials/types";
+import type { TimelineItemBlockConfig } from "@/blocks/collection/Timeline/types";
 
 export interface BlockTypeMap {
   default: DefaultBlockConfig;
@@ -61,6 +73,18 @@ export interface BlockTypeMap {
   accordion: AccordionBlockConfig;
   "paged-posts": PagedPostsBlockConfig;
   pagination: PaginationBlockConfig;
+  quote: QuoteBlockConfig;
+  divider: DividerBlockConfig;
+  cards: CardsBlockConfig;
+  cta: CallToActionBlockConfig;
+  author: AuthorBlockConfig;
+  "social-links": SocialLinksBlockConfig;
+  testimonial: TestimonialBlockConfig;
+  tabs: TabsBlockConfig;
+  gallery: GalleryBlockConfig;
+  "multi-row-layout": MultiRowLayoutBlockConfig;
+  "timeline-item": TimelineItemBlockConfig;
+  "archive-calendar": ArchiveCalendarBlockConfig;
 }
 
 // 提取所有 block type

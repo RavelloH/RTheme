@@ -28,6 +28,73 @@ export type {
   TagsCategoriesBlockConfig,
   TagsCategoriesBlockContent,
 } from "../../collection/TagsCategories/types";
+export type {
+  QuoteBlockConfig,
+  QuoteBlockContent,
+} from "../../collection/Quote/types";
+export type {
+  DividerBlockConfig,
+  DividerBlockContent,
+} from "../../collection/Divider/types";
+export type {
+  CardsBlockConfig,
+  CardsBlockContent,
+  CardItem,
+} from "../../collection/Cards/types";
+export type {
+  CallToActionBlockConfig,
+  CallToActionBlockContent,
+} from "../../collection/CallToAction/types";
+export type {
+  AuthorBlockConfig,
+  AuthorBlockContent,
+} from "../../collection/Author/types";
+export type {
+  SocialLinksBlockConfig,
+  SocialLinksBlockContent,
+  SocialPlatformLinks,
+} from "../../collection/SocialLinks/types";
+export type {
+  TestimonialBlockConfig,
+  TestimonialBlockContent,
+} from "../../collection/Testimonials/types";
+export type {
+  TabsBlockConfig,
+  TabsBlockContent,
+  TabItem,
+} from "../../collection/Tabs/types";
+export type {
+  GalleryBlockConfig,
+  GalleryBlockContent,
+  GalleryData,
+} from "../../collection/Gallery/types";
+export type {
+  MultiRowLayoutBlockConfig,
+  MultiRowLayoutBlockContent,
+} from "../../collection/MultiRowLayout/types";
+export type {
+  TimelineItemBlockConfig,
+  TimelineItemBlockContent,
+} from "../../collection/Timeline/types";
+export type {
+  ArchiveCalendarBlockConfig,
+  ArchiveCalendarBlockContent,
+  ArchiveCalendarData,
+  YearData,
+  MonthData,
+} from "../../collection/ArchiveCalendar/types";
+export type {
+  AccordionBlockConfig,
+  AccordionBlockContent,
+} from "../../collection/Accordion/types";
+export type {
+  PagedPostsBlockConfig,
+  PagedPostsBlockContent,
+} from "../../collection/PagedPosts/types";
+export type {
+  PaginationBlockConfig,
+  PaginationBlockContent,
+} from "../../collection/Pagination/types";
 
 // 使用 AllBlockConfigs 作为 BlockConfig（向后兼容）
 export type BlockConfig = AllBlockConfigs;
