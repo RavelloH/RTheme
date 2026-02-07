@@ -1,0 +1,125 @@
+---
+title: Definition API
+description: definition.ts 的字段语义、写法与约束
+---
+
+`definition.ts` 是区块声明入口。  
+它定义区块类型、schema 加载方式、组件加载方式、运行能力。
+
+## 1. 类型定义
+
+见：`apps/web/src/blocks/core/definition.ts`
+
+```ts
+export interface BlockDefinition<TContent = unknown, TBusiness = unknown> {
+  type: string;
+  schema: () => Promise<BlockFormConfig>;
+  component: () => Promise<
+    ComponentType<BlockComponentProps<TContent, TBusiness>>
+  >;
+  capabilities: {
+    context: "inherit" | "none";
+    placeholders?: {
+      enabled: boolean;
+      source: "content";
+      withContext: boolean;
+    };
+    media?: Array<{
+      path: string;
+      kind: "image" | "imageArray";
+      output?: string;
+    }>;
+  };
+}
+```
+
+## 2. 字段说明
+
+### `type`
+
+1. 区块唯一标识。
+2. 必须与 `schema.blockType` 一致。
+3. 建议使用短横线风格，例如 `multi-row-layout`。
+
+### `schema`
+
+返回该区块的表单配置。  
+推荐懒加载写法：
+
+```ts
+schema: () =>
+  import("./schema").then((m) => m.FEATURE_BLOCK_FORM_CONFIG),
+```
+
+### `component`
+
+返回区块组件。  
+推荐懒加载写法：
+
+```ts
+component: () =>
+  import("./index").then((m) => m.default),
+```
+
+### `capabilities.context`
+
+1. `inherit`：可接收页面上下文（slug/page/url/pageSize）。
+2. `none`：不接收上下文。
+
+其中，url 在每个页面都可用，slug / page 仅在当前页面有url参数（`:slug`、`:page`）时可用。
+
+例如，如果当前页面是 `/posts/my-first-post`，页面url模式是 `/posts/:slug`，则 slug 为 `my-first-post`。
+
+### `capabilities.placeholders`
+
+1. `enabled`：是否启用占位符解析。
+2. `source`：当前固定 `"content"`。
+3. `withContext`：占位符解析时是否可读上下文。
+
+### `capabilities.media`
+
+告诉 pipeline 哪些字段需要统一做媒体解析。
+
+媒体解析用于将区块中的 url（例如 `/p/xxxxxxxxxxxx`）转换为数据库中具有完整元信息的媒体对象，包括尺寸、模糊数据等，便于 CMSImage 等组件使用。
+
+```ts
+media: [
+  { path: "logoImage", kind: "image", output: "logoImage" },
+  { path: "galleryImages", kind: "imageArray", output: "galleryImages" },
+];
+```
+
+## 3. 推荐模板
+
+```ts
+import { createBlockDefinition } from "@/blocks/core/definition";
+
+export const featureBlockDefinition = createBlockDefinition({
+  type: "feature",
+  schema: () => import("./schema").then((m) => m.FEATURE_BLOCK_FORM_CONFIG),
+  component: () => import("./index").then((m) => m.default),
+  capabilities: {
+    context: "inherit",
+    placeholders: {
+      enabled: true,
+      source: "content",
+      withContext: true,
+    },
+    media: [],
+  },
+});
+```
+
+## 4. 约束与反模式
+
+### 必须做
+
+1. `type` 唯一。
+2. `schema` 与 `component` 都使用懒加载。
+3. 对能力进行最小声明（只开启你真的需要的能力）。
+
+### 禁止做
+
+1. 在 `definition.ts` 中直接 `import "./fetcher"`。
+2. 在 `component` loader 里混入业务请求逻辑。
+3. 让 `type` 与 `schema.blockType` 不一致。

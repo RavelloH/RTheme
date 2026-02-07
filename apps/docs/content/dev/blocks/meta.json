@@ -1,0 +1,15 @@
+{
+  "pages": [
+    "quickstart",
+    "architecture",
+    "definition-api",
+    "schema-api",
+    "fetcher-api",
+    "ui-rowgrid",
+    "runtime-and-render",
+    "auto-discovery",
+    "api-reference",
+    "troubleshooting",
+    "faq"
+  ]
+}

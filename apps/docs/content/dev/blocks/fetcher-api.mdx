@@ -1,0 +1,135 @@
+---
+title: Fetcher API
+description: fetcher.ts 的输入、输出、约束与最佳实践
+---
+
+`fetcher.ts` 的职责是：  
+根据 `content + context` 产出业务数据，写入 `runtime.business`。
+
+## 1. 签名规范
+
+推荐签名：
+
+```ts
+import type { RuntimeBlockInput } from "@/blocks/core/definition";
+
+export async function xxxFetcher(
+  config: RuntimeBlockInput,
+): Promise<Record<string, unknown>> {
+  // ...
+}
+```
+
+## 2. 入参 `RuntimeBlockInput`
+
+```ts
+interface RuntimeBlockInput<TContent = unknown> {
+  id: number | string;
+  block: string;
+  description?: string;
+  content: TContent;
+  data?: unknown; // pipeline 注入的上下文（slug/page/url/pageSize...）
+}
+```
+
+你通常会这么用：
+
+```ts
+const content = (config.content || {}) as FeatureContent;
+const context = (config.data || {}) as Record<string, unknown>;
+const slug = (context.slug as string) || "";
+```
+
+## 3. 输出规范
+
+fetcher 返回值会落在 `runtime.business`。  
+组件端通过 `getBlockRuntimeData` 可以拿到合并后的数据。
+
+建议：
+
+1. 返回结构稳定、可预测。
+2. 字段名语义清晰，例如 `posts`, `totalPages`, `basePath`。
+3. 避免把超大对象塞入 runtime（影响序列化与性能）。
+
+## 4. 自动发现约束（重要）
+
+自动生成脚本会扫描 `fetcher.ts`，要求：
+
+1. 必须存在且仅存在一个主 `*Fetcher` 导出。
+2. 导出名以 `Fetcher` 结尾。
+
+示例（推荐）：
+
+```ts
+export async function featureBlockFetcher(config: RuntimeBlockInput) {
+  // ...
+}
+```
+
+示例（也可）：
+
+```ts
+export const featureFetcher = async (config: RuntimeBlockInput) => {
+  // ...
+};
+```
+
+错误示例：
+
+1. 一个文件导出 `aFetcher` 和 `bFetcher` 两个主入口。
+2. 主入口不以 `Fetcher` 结尾。
+
+## 5. fetcher 与其他层的边界
+
+### fetcher 该做什么
+
+1. 查询数据库/API。
+2. 根据 context 计算分页、筛选、路径。
+3. 返回组件需要的业务结果。
+
+### fetcher 不该做什么
+
+1. 直接操作 React 渲染。
+2. 手写客户端交互逻辑。
+3. 在这里加载区块组件。
+
+## 6. 示例：分页块
+
+```ts
+import type { RuntimeBlockInput } from "@/blocks/core/definition";
+
+interface PaginationData {
+  currentPage: number;
+  totalPages: number;
+  basePath: string;
+}
+
+export async function paginationFetcher(
+  config: RuntimeBlockInput,
+): Promise<PaginationData> {
+  const data = (config.data || {}) as Record<string, unknown>;
+  const currentPage = Number(data.page || 1);
+  const totalPages = Number(data.totalPage || 1);
+  const basePath = String(data.url || "/");
+
+  return {
+    currentPage,
+    totalPages,
+    basePath,
+  };
+}
+```
+
+## 7. 错误处理建议
+
+1. 可恢复错误：返回兜底空结构（例如 `posts: []`）。
+2. 不可恢复错误：抛出异常交给 pipeline 统一处理。
+3. 不要吞错且无日志，至少带 block 上下文打印。
+
+## 8. 性能建议
+
+1. 并发请求用 `Promise.all`。
+2. 对相同查询做去重或缓存。
+3. 避免循环内 N+1 查询。
+4. 仅查询组件需要的字段。
+

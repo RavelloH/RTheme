@@ -1,0 +1,171 @@
+---
+title: Schema API
+description: schema.ts 字段配置、条件显示和预览数据
+---
+
+`schema.ts` 决定编辑器能配置什么。  
+编辑器读取的是 `BlockFormConfig`。
+
+## 1. 主类型 `BlockFormConfig`
+
+定义在：`apps/web/src/blocks/core/types/field-config.ts`
+
+```ts
+interface BlockFormConfig {
+  blockType: string;
+  displayName: string;
+  description?: string;
+  fields: FieldConfig[];
+  groups?: FormGroup[];
+  actions?: { db: number; config: number };
+  author?: { name: string; url?: string };
+  theme?: { name: string; url?: string };
+  previewData?: Record<string, unknown>;
+}
+```
+
+## 2. 字段类型 `FieldType`
+
+支持：
+
+1. `text`
+2. `textarea`
+3. `number`
+4. `date`
+5. `select`
+6. `toggle`
+7. `array`
+8. `image`
+9. `imageArray`
+
+## 3. 通用字段属性
+
+每个字段至少要有：
+
+1. `label`：编辑器显示名
+2. `path`：写入 `content` 的路径（支持点路径，比如 `footer.text`）
+3. `type`：字段类型
+
+常见可选项：
+
+1. `helperText`
+2. `placeholder`
+3. `required`
+4. `disabled`
+5. `condition`
+
+## 4. 条件显示 `condition`
+
+支持 `and / or / not`：
+
+```ts
+{
+  label: "跳转链接",
+  path: "footer.link",
+  type: "text",
+  condition: {
+    and: [{ field: "footer.type", value: "normal" }]
+  }
+}
+```
+
+语义：
+
+1. `and`：全部满足才显示。
+2. `or`：任一满足即显示。
+3. `not`：不满足时显示。
+
+可以组合使用，例如：
+
+```ts
+condition: {
+  or:  [...],
+  not: [...],
+  and: [...],
+}
+```
+
+## 5. `path` 语法
+
+`path` 是写入 `content` 的路径。
+
+### 简单字段
+
+```ts
+{ path: "title", type: "text" }
+```
+
+最终 `content.title = "..."`。
+
+### 嵌套字段
+
+```ts
+{ path: "layout.ratio", type: "number" }
+```
+
+最终 `content.layout.ratio = ...`。
+
+## 6. `previewData` 的作用
+
+`previewData` 不是最终存库数据，它用于：
+
+1. BlockLibrary 的预览样例。
+2. 让用户在无真实数据时也能看到合理效果。
+
+建议：
+
+1. 尽量提供完整示例结构。
+2. 避免过大 JSON，保证编辑器性能。
+
+## 7. 推荐 schema 模板
+
+```ts
+import type { BlockFormConfig } from "@/blocks/core/types/field-config";
+
+export const FEATURE_BLOCK_FORM_CONFIG: BlockFormConfig = {
+  blockType: "feature",
+  displayName: "Feature Links",
+  description: "展示一组功能链接",
+  fields: [
+    { label: "标题", path: "title", type: "text" },
+    { label: "显示数量", path: "limit", type: "number", defaultValue: 6 },
+    {
+      label: "样式",
+      path: "layout.style",
+      type: "select",
+      options: [
+        { label: "简单", value: "simple" },
+        { label: "卡片", value: "card" },
+      ],
+      defaultValue: "simple",
+    },
+    {
+      label: "链接列表",
+      path: "links",
+      type: "array",
+      helperText: "JSON 数组",
+    },
+  ],
+  groups: [
+    { title: "基础", fields: ["title", "limit"] },
+    { title: "布局", fields: ["layout.style"] },
+    { title: "数据", fields: ["links"] },
+  ],
+  previewData: {
+    title: "Quick Links",
+    limit: 6,
+    layout: { style: "simple" },
+    links: [
+      { label: "Docs", href: "/docs" },
+      { label: "GitHub", href: "https://github.com" },
+    ],
+  },
+};
+```
+
+## 8. 常见错误
+
+1. `blockType` 和 `definition.type` 不一致，导致编辑器找不到配置。
+2. `path` 写错导致字段值写不进 `content`。
+3. `select.defaultValue` 不在 `options` 里，造成初始值异常。
+4. `previewData` 结构与组件预期不一致，导致预览异常。

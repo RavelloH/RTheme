@@ -1,0 +1,140 @@
+---
+title: API 参考
+description: 区块系统核心类型速查
+---
+
+本页用于快速查阅关键类型，字段定义以源码为准：
+
+1. `apps/web/src/blocks/core/definition.ts`
+2. `apps/web/src/blocks/core/types/field-config.ts`
+
+## 1. `BlockComponentProps`
+
+```ts
+interface BlockComponentProps<TContent = unknown, TBusiness = unknown> {
+  block: ResolvedBlock<TContent, TBusiness>;
+  mode: "page" | "editor";
+}
+```
+
+组件开发中你会高频使用它。
+
+## 2. `ResolvedBlock`
+
+```ts
+interface ResolvedBlock<TContent = unknown, TBusiness = unknown> {
+  id: number | string;
+  block: string;
+  description?: string;
+  content: TContent;
+  runtime: BlockRuntimeEnvelope<TBusiness>;
+}
+```
+
+## 3. `BlockRuntimeEnvelope`
+
+```ts
+interface BlockRuntimeEnvelope<TBusiness = unknown> {
+  context: {
+    slug?: string;
+    page?: number;
+    url?: string;
+    pageSize?: number;
+    [k: string]: unknown;
+  };
+  placeholders: Record<string, unknown>;
+  media: Record<string, unknown>;
+  business: TBusiness;
+  meta: {
+    status: "ok" | "error";
+    errors?: Array<{ code: string; message: string; stage?: string }>;
+  };
+}
+```
+
+## 4. `RuntimeBlockInput`
+
+```ts
+interface RuntimeBlockInput<TContent = unknown> {
+  id: number | string;
+  block: string;
+  description?: string;
+  content: TContent;
+  data?: unknown;
+}
+```
+
+`data` 是 pipeline 注入的上下文。
+
+## 5. `BlockDefinition`
+
+```ts
+interface BlockDefinition<TContent = unknown, TBusiness = unknown> {
+  type: string;
+  schema: () => Promise<BlockFormConfig>;
+  component: () => Promise<ComponentType<BlockComponentProps<TContent, TBusiness>>>;
+  capabilities: {
+    context: "inherit" | "none";
+    placeholders?: {
+      enabled: boolean;
+      source: "content";
+      withContext: boolean;
+    };
+    media?: Array<{
+      path: string;
+      kind: "image" | "imageArray";
+      output?: string;
+    }>;
+  };
+}
+```
+
+## 6. `BlockFormConfig`
+
+```ts
+interface BlockFormConfig {
+  blockType: string;
+  displayName: string;
+  description?: string;
+  fields: FieldConfig[];
+  groups?: FormGroup[];
+  actions?: {
+    db: number;
+    config: number;
+  };
+  author?: {
+    name: string;
+    url?: string;
+  };
+  theme?: {
+    name: string;
+    url?: string;
+  };
+  previewData?: Record<string, unknown>;
+}
+```
+
+## 7. `FieldConfig` 联合类型
+
+`FieldConfig` 由以下字段构成：
+
+1. `TextFieldConfig` (`text|textarea|number|date`)
+2. `ArrayFieldConfig` (`array`)
+3. `SelectFieldConfig` (`select`)
+4. `ToggleFieldConfig` (`toggle`)
+5. `ImageFieldConfig` (`image`)
+6. `ImageArrayFieldConfig` (`imageArray`)
+
+## 8. 工具函数速查
+
+1. `getBlockRuntimeData(runtime)`  
+   位置：`apps/web/src/blocks/core/runtime/envelope.ts`  
+   作用：合并 `context/placeholders/media/business`。
+
+2. `resolveBlockData(pageConfig, pageContext)`  
+   位置：`apps/web/src/lib/server/block-data-resolver.ts`  
+   作用：页面级批量解析区块。
+
+3. `resolveSingleBlockData(block, pageContext)`  
+   位置：`apps/web/src/lib/server/block-data-resolver.ts`  
+   作用：单块预览解析（编辑器常用）。

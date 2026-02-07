@@ -1,0 +1,47 @@
+---
+title: 区块开发指南
+---
+
+为了便于用户自行调整布局，NeutralPress 提供了丰富的区块（Block）机制，允许开发者创建可复用、可配置的页面片段，用户可以在布局编辑器中来使用。
+
+以下文档面对区块开发者，详细介绍了区块的架构设计、核心 API 以及最佳实践。
+
+## 文档内容
+
+1. 区块在系统中的完整运行过程（配置 -> 解析 -> 渲染）。
+2. 一个区块必须包含哪些文件（目录结构），以及每个文件负责什么。
+3. `definition / schema / fetcher / 组件` 四个核心 API 的写法和边界。
+4. 如何使用 `RowGrid` 做区块布局编排。
+5. 如何使用自动发现机制来加载组件。
+6. 常见错误（尤其是 `server-only`）的定位方法。
+
+## 推荐阅读顺序
+
+1. [快速上手](/docs/dev/blocks/quickstart)
+2. [架构与数据流](/docs/dev/blocks/architecture)
+3. [Definition API](/docs/dev/blocks/definition-api)
+4. [Schema API](/docs/dev/blocks/schema-api)
+5. [Fetcher API](/docs/dev/blocks/fetcher-api)
+6. [UI 布局与 RowGrid](/docs/dev/blocks/ui-rowgrid)
+7. [运行时与渲染链路](/docs/dev/blocks/runtime-and-render)
+8. [自动发现与生成脚本](/docs/dev/blocks/auto-discovery)
+9. [API 参考](/docs/dev/blocks/api-reference)
+10. [故障排查](/docs/dev/blocks/troubleshooting)
+11. [FAQ](/docs/dev/blocks/faq)
+
+## 理解区块
+
+区块就是可配置的页面片段，它由三部分组成：
+编辑器写 `content`，服务端在运行时补齐 `runtime`，组件只负责渲染 `block.content + block.runtime`。
+
+## 区块结构
+
+每个区块都放在 `apps/web/src/blocks/collections` 目录下的独立文件夹中。一个完整的区块必须包含以下五个文件：
+
+1. `definition.ts` 决定这个区块是什么能力、如何加载。
+2. `schema.ts` 决定用户可以在编辑器中设置哪些字段。
+3. `fetcher.ts` 在运行时负责数据获取。例如，查数据库、执行 fetch 请求等。
+4. `index.tsx` 决定最终怎么渲染 UI，必须是一个服务器端组件。
+5. `types.ts` 定义区块的 TypeScript 类型。
+
+不过，如果有客户端交互需求，可以在 `index.tsx` 中引入客户端组件。建议客户端组件放在 `client` 目录下。
