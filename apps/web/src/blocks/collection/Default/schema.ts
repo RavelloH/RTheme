@@ -264,7 +264,11 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
     title: { value: "示例标题", align: "left" },
     content: {
       top: {
-        value: ["这是正文顶部的示例文本，", "用于展示预览效果。"],
+        value: [
+          "这是正文顶部的示例文本，",
+          "用于展示预览效果。",
+          "使用 **Markdown** 来格式化文本或添加[链接](https://ravelloh.com)。",
+        ],
         align: "left",
       },
       bottom: {

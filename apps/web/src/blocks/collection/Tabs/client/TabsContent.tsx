@@ -51,29 +51,47 @@ export default function TabsContent({
   }, [tabs.length]);
 
   // 更新下划线位置
+  // 使用 offsetLeft/offsetTop 而非 getBoundingClientRect，以避免 transform scale 的影响
   const updateIndicatorPosition = useCallback((index: number) => {
-    const tab = tabRefs.current[index];
-    const container = tabsContainerRef.current;
-    if (!tab || !container) return;
+    // 使用 requestAnimationFrame 确保 DOM 渲染完成
+    requestAnimationFrame(() => {
+      const tab = tabRefs.current[index];
+      const container = tabsContainerRef.current;
+      if (!tab || !container) return;
 
-    const tabRect = tab.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
+      // 使用 offsetLeft/offsetTop 计算相对位置，不受 transform scale 影响
+      const left = tab.offsetLeft;
+      const top = tab.offsetTop;
+      const width = tab.offsetWidth;
+      const height = tab.offsetHeight;
 
-    setIndicatorPosition({
-      left: tabRect.left - containerRect.left,
-      top: tabRect.top - containerRect.top,
-      width: tabRect.width,
-      height: tabRect.height,
+      setIndicatorPosition({
+        left,
+        top,
+        width,
+        height,
+      });
+      setIndicatorReady(true);
     });
-    setIndicatorReady(true);
   }, []);
 
-  // 初始化和窗口调整时更新下划线
+  // 初始化和激活索引变化时更新下划线
   useEffect(() => {
     if (style === "underline") {
       updateIndicatorPosition(activeIndex);
     }
   }, [activeIndex, style, updateIndicatorPosition]);
+
+  // 布局方向改变时（桌面版 ↔ 移动版）重新计算位置
+  useEffect(() => {
+    if (style === "underline") {
+      // 延迟更新，确保布局变化完成
+      const timer = setTimeout(() => {
+        updateIndicatorPosition(activeIndex);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isMobile, tabPosition, style, activeIndex, updateIndicatorPosition]);
 
   // 窗口大小改变时更新位置
   useEffect(() => {
@@ -86,6 +104,19 @@ export default function TabsContent({
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [activeIndex, style, updateIndicatorPosition]);
+
+  // 使用 ResizeObserver 监听容器尺寸变化
+  useEffect(() => {
+    if (style !== "underline" || !tabsContainerRef.current) return;
+
+    const container = tabsContainerRef.current;
+    const observer = new ResizeObserver(() => {
+      updateIndicatorPosition(activeIndex);
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [style, activeIndex, updateIndicatorPosition]);
 
   const handleTabChange = (index: number) => {
     if (index === activeIndex || isAnimating) return;
