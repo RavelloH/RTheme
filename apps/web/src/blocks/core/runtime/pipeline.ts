@@ -1,7 +1,6 @@
 import { getBlockDefinition } from "@/blocks/core/catalog";
 import { loadBlockBusinessFetcher } from "@/blocks/core/catalog-server";
 import {
-  type BlockMode,
   type BlockRuntimeErrorItem,
   type ResolvedBlock,
   type RuntimeBlockInput,
@@ -62,10 +61,9 @@ async function runStage<T>(params: {
   }
 }
 
-export async function resolveSingleBlockV2(
+export async function resolveSingleBlock(
   block: RuntimeBlockInput,
   pageContext?: Record<string, unknown>,
-  mode: BlockMode = "page",
 ): Promise<ResolvedBlock> {
   const blockType = block.block || "default";
   const definition = getBlockDefinition(blockType);
@@ -113,13 +111,7 @@ export async function resolveSingleBlockV2(
     blockId: block.id,
     errors: runtimeErrors,
     fallback: toSafeContent(block.content),
-    task: async () => {
-      if (definition.normalizeContent) {
-        return definition.normalizeContent(block.content);
-      }
-
-      return toSafeContent(block.content);
-    },
+    task: async () => toSafeContent(block.content),
   });
 
   runtime.placeholders = await runStage({
@@ -166,18 +158,6 @@ export async function resolveSingleBlockV2(
     errors: runtimeErrors,
     fallback: {},
     task: async () => {
-      if (definition.fetchBusiness) {
-        return definition.fetchBusiness({
-          block: {
-            ...block,
-            content: normalizedContent,
-          },
-          content: normalizedContent,
-          context,
-          mode,
-        });
-      }
-
       const fetchBusiness = await loadBlockBusinessFetcher(blockType);
       if (!fetchBusiness) {
         return {};
@@ -205,16 +185,15 @@ export async function resolveSingleBlockV2(
   };
 }
 
-export async function resolveBlocksV2(
+export async function resolveBlocks(
   blocks: RuntimeBlockInput[],
   pageContext?: Record<string, unknown>,
-  mode: BlockMode = "page",
 ): Promise<ResolvedBlock[]> {
   if (!blocks.length) {
     return [];
   }
 
   return Promise.all(
-    blocks.map((block) => resolveSingleBlockV2(block, pageContext, mode)),
+    blocks.map((block) => resolveSingleBlock(block, pageContext)),
   );
 }

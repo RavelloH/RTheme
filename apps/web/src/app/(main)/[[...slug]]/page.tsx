@@ -52,7 +52,7 @@ export default async function Page({ params }: PageProps<"/[[...slug]]">) {
   const { page, params: resolvedParams } = match;
   const config = getSystemPageConfig(page) as PageConfig;
   const { blocks = [] } =
-    (await resolveBlockData(config, "page", resolvedParams)) || {};
+    (await resolveBlockData(config, resolvedParams)) || {};
 
   // cacheLife("max");
   // TODO: Cache Tag

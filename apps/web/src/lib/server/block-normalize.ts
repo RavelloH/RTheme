@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { BlockConfig } from "@/blocks/core/types";
+import type { AllBlockConfigs } from "@/blocks/core/types/base";
 
 /**
  * 规范化 blocks 的 ID，按照显示顺序重新分配递增的 ID，并移除 data 字段
@@ -43,7 +43,7 @@ export function normalizeBlockIds(
   }
 
   // 重新分配 block ID 并移除 data 字段（data 应由 fetcher 在运行时获取，不应存入数据库）
-  normalizedConfig.blocks = (normalizedConfig.blocks as BlockConfig[]).map(
+  normalizedConfig.blocks = (normalizedConfig.blocks as AllBlockConfigs[]).map(
     (block, index) => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { data, ...rest } = block;

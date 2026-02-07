@@ -46,22 +46,6 @@ export function parsePlaceholder(placeholder: string): ParsedPlaceholder {
 }
 
 /**
- * 提取文本中的所有占位符名称（用于向后兼容）
- * @deprecated 使用 extractParsedPlaceholders 代替
- */
-export function extractPlaceholders(text: string): string[] {
-  if (!text) return [];
-  // 匹配 {name} 或 {name|...} 格式
-  const placeholderRegex = /\{([^{}|]+)(?:\|[^{}]*)?\}/g;
-  const placeholders = new Set<string>();
-  let match;
-  while ((match = placeholderRegex.exec(text)) !== null) {
-    if (match[1]) placeholders.add(match[1]);
-  }
-  return Array.from(placeholders);
-}
-
-/**
  * 提取文本中的所有占位符（完整解析）
  */
 export function extractParsedPlaceholders(text: string): ParsedPlaceholder[] {
@@ -76,25 +60,6 @@ export function extractParsedPlaceholders(text: string): ParsedPlaceholder[] {
     }
   }
   return placeholders;
-}
-
-/**
- * 递归提取对象中所有字符串值的占位符（仅名称，向后兼容）
- */
-export function extractPlaceholdersFromValue(value: unknown): string[] {
-  const placeholders = new Set<string>();
-  if (typeof value === "string") {
-    extractPlaceholders(value).forEach((p) => placeholders.add(p));
-  } else if (Array.isArray(value)) {
-    value.forEach((item) => {
-      extractPlaceholdersFromValue(item).forEach((p) => placeholders.add(p));
-    });
-  } else if (typeof value === "object" && value !== null) {
-    Object.values(value).forEach((item) => {
-      extractPlaceholdersFromValue(item).forEach((p) => placeholders.add(p));
-    });
-  }
-  return Array.from(placeholders);
 }
 
 /**

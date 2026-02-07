@@ -20,7 +20,7 @@ export async function defaultBlockFetcher(
   const footerType = footer?.type;
 
   const requiredInterpolators: string[] = [];
-  let inferredRandomSource = inferRandomSource(dataSource);
+  const inferredRandomSource = inferRandomSource(dataSource);
 
   if (dataSource) {
     switch (dataSource) {
@@ -41,15 +41,6 @@ export async function defaultBlockFetcher(
         break;
       default:
         break;
-    }
-  } else {
-    // 兼容旧逻辑：如果没有 dataSource，通过占位符检测
-    if (containsTagDetailPlaceholders(content)) {
-      requiredInterpolators.push("tagPosts");
-      inferredRandomSource = "tags";
-    } else if (containsPostsListPlaceholders(content)) {
-      requiredInterpolators.push("postsList");
-      inferredRandomSource = "posts";
     }
   }
 
@@ -123,38 +114,6 @@ export async function defaultBlockFetcher(
 
   const results = await Promise.all(interpolatorPromises);
   return Object.assign({}, ...results);
-}
-
-function containsTagDetailPlaceholders(content: unknown): boolean {
-  if (!content) return false;
-  if (typeof content === "string") {
-    return /{tag(Name|Description)?}/.test(content);
-  }
-  if (Array.isArray(content)) {
-    return content.some((item) => containsTagDetailPlaceholders(item));
-  }
-  if (typeof content === "object" && content !== null) {
-    return Object.values(content).some((item) =>
-      containsTagDetailPlaceholders(item),
-    );
-  }
-  return false;
-}
-
-function containsPostsListPlaceholders(content: unknown): boolean {
-  if (!content) return false;
-  if (typeof content === "string") {
-    return /{firstPublishAt|lastPublishDays}/.test(content);
-  }
-  if (Array.isArray(content)) {
-    return content.some((item) => containsPostsListPlaceholders(item));
-  }
-  if (typeof content === "object" && content !== null) {
-    return Object.values(content).some((item) =>
-      containsPostsListPlaceholders(item),
-    );
-  }
-  return false;
 }
 
 async function getMostPopularTagSlug(): Promise<string | undefined> {

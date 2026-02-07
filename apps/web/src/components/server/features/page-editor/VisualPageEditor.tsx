@@ -31,7 +31,7 @@ import type {
   ResolvedBlock,
   RuntimeBlockInput,
 } from "@/blocks/core/definition";
-import type { BlockConfig } from "@/blocks/core/types";
+import type { AllBlockConfigs } from "@/blocks/core/types/base";
 import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
 import BlockConfigPanel from "@/components/server/features/page-editor/BlockConfigPanel";
 import BlockLibrary from "@/components/server/features/page-editor/BlockLibrary";
@@ -110,7 +110,7 @@ function removeDraft(pageId: string) {
 
 interface VisualPageEditorProps {
   initialBlocks: ResolvedBlock[];
-  onSave: (blocks: BlockConfig[]) => Promise<void>;
+  onSave: (blocks: AllBlockConfigs[]) => Promise<void>;
   onBack: () => void;
   pageTitle: string;
   pageId: string; // 新增 pageId 用于区分草稿
@@ -567,7 +567,7 @@ export default function VisualPageEditor({
       const blocksForSave = blocks.map(
         ({ runtime: _runtime, ...rest }) => rest,
       );
-      await onSave(blocksForSave as BlockConfig[]);
+      await onSave(blocksForSave as AllBlockConfigs[]);
       // 保存成功后清除草稿
       removeDraft(pageId);
     } finally {
@@ -651,7 +651,7 @@ export default function VisualPageEditor({
           .then((text) => {
             try {
               const parsed = JSON.parse(text);
-              // 验证是否是有效的 BlockConfig
+              // 验证是否是有效的区块配置
               if (
                 parsed &&
                 typeof parsed === "object" &&

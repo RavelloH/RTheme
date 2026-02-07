@@ -80,6 +80,19 @@ try {
   await generateViewCountCache();
   rlog.log();
 
+  rlog.log("Starting block business catalog generation...");
+  const { generateBlockBusinessCatalog } = await import(
+    "./generate-block-business-catalog.js"
+  );
+  generateBlockBusinessCatalog();
+  rlog.log();
+
+  rlog.log("Starting block definition catalog generation...");
+  const { generateBlockDefinitionCatalog } = await import(
+    "./generate-block-definition-catalog.js"
+  );
+  generateBlockDefinitionCatalog();
+
   // 完成 PreBuild
   const endTime = Date.now();
 
