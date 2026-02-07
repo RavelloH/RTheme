@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { usePathname } from "next/navigation";
 
@@ -20,7 +20,9 @@ interface TransitionMessage {
 type TransitionState = "idle" | "exiting" | "waiting" | "entering";
 
 export default function PageTransition({ children }: PageTransitionProps) {
+  const pathname = usePathname();
   const [currentChildren, setCurrentChildren] = useState(children);
+  const [currentPathKey, setCurrentPathKey] = useState(pathname);
   const [transitionState, setTransitionState] =
     useState<TransitionState>("idle");
   const [transitionDirection, setTransitionDirection] = useState<string>("");
@@ -32,8 +34,6 @@ export default function PageTransition({ children }: PageTransitionProps) {
   const lastScrollTop = useRef<number>(0);
   const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
   const isMobile = useMobile();
-
-  const pathname = usePathname();
   const setFooterVisible = useFooterStore((state) => state.setFooterVisible);
 
   // 监听首次加载完成事件
@@ -150,6 +150,7 @@ export default function PageTransition({ children }: PageTransitionProps) {
     ) {
       // pathname 变化，更新内容
       setCurrentChildren(children);
+      setCurrentPathKey(pathname);
 
       // 延迟10ms后开始进入动画，确保DOM稳定
       const delayTimer = setTimeout(() => {
@@ -159,6 +160,13 @@ export default function PageTransition({ children }: PageTransitionProps) {
       return () => clearTimeout(delayTimer);
     }
   }, [pathname, transitionState, children, startEnterAnimation]);
+
+  // 兜底同步：当未进入转场流程但 pathname 已变化时，仍确保页面子树按路由重建
+  useEffect(() => {
+    if (transitionState !== "idle") return;
+    setCurrentChildren(children);
+    setCurrentPathKey(pathname);
+  }, [children, pathname, transitionState]);
 
   // 获取屏幕外位置属性
   const getScreenProps = (direction: string) => {
@@ -310,7 +318,7 @@ export default function PageTransition({ children }: PageTransitionProps) {
         id="scroll-container"
         style={{ paddingBottom: isMobile ? 0 : "5em" }}
       >
-        {currentChildren}
+        <Fragment key={currentPathKey}>{currentChildren}</Fragment>
       </div>
     </div>
   );
