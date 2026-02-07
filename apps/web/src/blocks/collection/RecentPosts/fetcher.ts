@@ -1,5 +1,4 @@
 import type { PostsBlockContent } from "@/blocks/collection/RecentPosts/types";
-import { fetchBlockInterpolatedData } from "@/blocks/core/lib/server";
 import type { BlockConfig } from "@/blocks/core/types";
 import { batchGetCategoryPaths } from "@/lib/server/category-utils";
 import { batchQueryMediaFiles } from "@/lib/server/image-query";
@@ -13,9 +12,6 @@ import { MEDIA_SLOTS } from "@/types/media";
 
 export async function postsFetcher(config: BlockConfig) {
   const content = (config.content || {}) as PostsBlockContent;
-
-  // 0. 启动插值数据获取
-  const interpolatedPromise = fetchBlockInterpolatedData(config.content);
 
   // 1. 解析配置
   const columns = content.layout?.columns || "2";
@@ -93,10 +89,8 @@ export async function postsFetcher(config: BlockConfig) {
 
   // 如果没有文章，直接返回
   if (homePosts.length === 0) {
-    const interpolatedData = await interpolatedPromise;
     return {
       displayPosts: [],
-      ...interpolatedData,
     };
   }
 
@@ -157,10 +151,7 @@ export async function postsFetcher(config: BlockConfig) {
     };
   });
 
-  const interpolatedData = await interpolatedPromise;
-
   return {
     displayPosts,
-    ...interpolatedData,
   };
 }

@@ -1,7 +1,3 @@
-import {
-  fetchBlockInterpolatedData,
-  processImageArrayField,
-} from "@/blocks/core/lib/server";
 import type { BlockConfig } from "@/blocks/core/types";
 import { getConfigs } from "@/lib/server/config-cache";
 import { generateSignedImageId } from "@/lib/server/image-crypto";
@@ -28,33 +24,19 @@ export async function heroFetcher(config: BlockConfig) {
   // 1. 定义并发任务
   // =========================================================
 
-  // 任务 A: 获取插值数据
-  const interpolatedPromise = fetchBlockInterpolatedData(config.content);
-
-  // 任务 B: 获取站点配置
+  // 任务 A: 获取站点配置
   const siteConfigPromise = getConfigs(["site.title", "site.slogan.primary"]);
 
-  // 任务 C: 获取并处理 Logo 图片 (独立异步，不阻塞其他查询)
-  const logoPromise = (async () => {
-    if (!content.logoImage) return undefined;
-    const mediaFileMap = await batchQueryMediaFiles([content.logoImage]);
-    const processed = processImageUrl(content.logoImage, mediaFileMap);
-    return processed?.[0];
-  })();
-
-  // 任务 D: 获取并处理图集数据 (核心逻辑封装在辅助函数中)
+  // 任务 B: 获取并处理图集数据 (核心逻辑封装在辅助函数中)
   const galleryPromise = fetchGalleryData(content);
 
   // =========================================================
   // 2. 并行执行所有任务
   // =========================================================
-  const [interpolatedData, [siteTitle, siteSlogan], logoImage, galleryImages] =
-    await Promise.all([
-      interpolatedPromise,
-      siteConfigPromise,
-      logoPromise,
-      galleryPromise,
-    ]);
+  const [[siteTitle, siteSlogan], galleryImages] = await Promise.all([
+    siteConfigPromise,
+    galleryPromise,
+  ]);
 
   // =========================================================
   // 3. 返回结果
@@ -62,9 +44,7 @@ export async function heroFetcher(config: BlockConfig) {
   return {
     siteTitle,
     siteSlogan,
-    galleryImages,
-    logoImage,
-    ...interpolatedData,
+    ...(galleryImages.length > 0 ? { galleryImages } : {}),
   };
 }
 
@@ -77,11 +57,12 @@ async function fetchGalleryData(
   const { galleryImagesOrigin, galleryImages: customImages } = content;
 
   // 场景 1: 自定义图片 (Custom)
+  // 交由 runtime media pipeline 统一处理，业务 fetcher 不重复处理。
   if (
     galleryImagesOrigin === "custom" ||
     (customImages && customImages.length > 0)
   ) {
-    return processImageArrayField(customImages);
+    return [];
   }
 
   // 场景 2: 最新照片墙 (Latest Gallery)

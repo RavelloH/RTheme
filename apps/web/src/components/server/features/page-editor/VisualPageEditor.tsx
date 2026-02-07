@@ -27,6 +27,10 @@ import {
 import { useMotionValue, useMotionValueEvent, useSpring } from "framer-motion";
 
 import { fetchBlockData } from "@/actions/page";
+import type {
+  ResolvedBlock,
+  RuntimeBlockInput,
+} from "@/blocks/core/definition";
 import type { BlockConfig } from "@/blocks/core/types";
 import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
 import BlockConfigPanel from "@/components/server/features/page-editor/BlockConfigPanel";
@@ -47,7 +51,7 @@ import { Tooltip } from "@/ui/Tooltip";
 const STORAGE_KEY = "page_editor";
 
 interface PageDraft {
-  blocks: BlockConfig[];
+  blocks: RuntimeBlockInput[];
   updatedAt: string;
 }
 
@@ -68,16 +72,16 @@ function getDraft(pageId: string): PageDraft | null {
   }
 }
 
-function saveDraft(pageId: string, blocks: BlockConfig[]) {
+function saveDraft(pageId: string, blocks: ResolvedBlock[]) {
   if (typeof window === "undefined") return;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const all: AllDrafts = raw ? JSON.parse(raw) : {};
 
-    // 剔除 data 字段，只保留配置
+    // 剔除 runtime 字段，只保留可持久化配置
     const cleanBlocks = blocks.map(
-      ({ data: _data, ...rest }) => rest,
-    ) as BlockConfig[];
+      ({ runtime: _runtime, ...rest }) => rest,
+    ) as RuntimeBlockInput[];
 
     all[pageId] = {
       blocks: cleanBlocks,
@@ -105,7 +109,7 @@ function removeDraft(pageId: string) {
 }
 
 interface VisualPageEditorProps {
-  initialBlocks: BlockConfig[];
+  initialBlocks: ResolvedBlock[];
   onSave: (blocks: BlockConfig[]) => Promise<void>;
   onBack: () => void;
   pageTitle: string;
@@ -119,15 +123,15 @@ export default function VisualPageEditor({
   pageTitle,
   pageId,
 }: VisualPageEditorProps) {
-  const [blocks, setBlocks] = useState<BlockConfig[]>(initialBlocks);
+  const [blocks, setBlocks] = useState<ResolvedBlock[]>(initialBlocks);
   const [activeBlockId, setActiveBlockId] = useState<string | number | null>(
     null,
   );
 
   // 历史记录状态
   const [history, setHistory] = useState<{
-    past: BlockConfig[][];
-    future: BlockConfig[][];
+    past: ResolvedBlock[][];
+    future: ResolvedBlock[][];
   }>({
     past: [],
     future: [],
@@ -162,17 +166,14 @@ export default function VisualPageEditor({
   const isUndoRedoRef = useRef(false); // 标记是否正在执行撤销/重做操作
   const toast = useToast();
 
-  // 深度克隆 blocks（去除无法序列化的数据）
-  const cloneBlocks = useCallback((blocksToClone: BlockConfig[]) => {
-    return blocksToClone.map((block) => {
-      const { data: _data, ...rest } = block;
-      return rest as BlockConfig;
-    });
+  // 克隆 blocks 用于历史记录快照
+  const cloneBlocks = useCallback((blocksToClone: ResolvedBlock[]) => {
+    return blocksToClone.map((block) => ({ ...block }));
   }, []);
 
   // 保存当前状态到历史记录
   const pushHistory = useCallback(
-    (currentBlocks: BlockConfig[]) => {
+    (currentBlocks: ResolvedBlock[]) => {
       if (isUndoRedoRef.current) return; // 撤销/重做操作不记录历史
       setHistory((prev) => ({
         past: [...prev.past, cloneBlocks(currentBlocks)],
@@ -220,7 +221,9 @@ export default function VisualPageEditor({
 
   // 带历史记录的 setBlocks 包装器
   const setBlocksWithHistory = useCallback(
-    (newBlocks: BlockConfig[] | ((prev: BlockConfig[]) => BlockConfig[])) => {
+    (
+      newBlocks: ResolvedBlock[] | ((prev: ResolvedBlock[]) => ResolvedBlock[]),
+    ) => {
       setBlocks((prev) => {
         const updated =
           typeof newBlocks === "function" ? newBlocks(prev) : newBlocks;
@@ -255,13 +258,31 @@ export default function VisualPageEditor({
                 access_token: undefined,
                 block,
               } as never);
-              if (res && "data" in res && res.data) {
-                return { ...block, data: res.data.data };
+              if (res && "data" in res && res.data?.block) {
+                return res.data.block;
               }
-              return block;
+              return {
+                ...block,
+                runtime: {
+                  context: {},
+                  placeholders: {},
+                  media: {},
+                  business: {},
+                  meta: { status: "ok" as const },
+                },
+              } as ResolvedBlock;
             } catch (e) {
               console.error("Failed to hydrate block", block.id, e);
-              return block;
+              return {
+                ...block,
+                runtime: {
+                  context: {},
+                  placeholders: {},
+                  media: {},
+                  business: {},
+                  meta: { status: "error" as const },
+                },
+              } as ResolvedBlock;
             }
           }),
         );
@@ -429,14 +450,14 @@ export default function VisualPageEditor({
     setIsDrawerOpen(true);
   }, []);
 
-  const handleUpdateBlock = (updates: Partial<BlockConfig>) => {
+  const handleUpdateBlock = (updates: Partial<ResolvedBlock>) => {
     if (!activeBlockId) return;
     // 标记该 block 应该隐藏动画
     setHideAnimationBlockIds((prev) => new Set(prev).add(activeBlockId));
     setBlocksWithHistory(
       blocks.map((item) =>
         item.id === activeBlockId
-          ? ({ ...item, ...updates } as BlockConfig)
+          ? ({ ...item, ...updates } as ResolvedBlock)
           : item,
       ),
     );
@@ -450,13 +471,14 @@ export default function VisualPageEditor({
     if (!activeBlock) return;
 
     try {
+      const { runtime: _runtime, ...blockForFetch } = activeBlock;
       const result = await runWithAuth(fetchBlockData, {
         access_token: undefined,
-        block: activeBlock,
+        block: blockForFetch,
       } as never);
 
-      if (result && "data" in result && result.data) {
-        handleUpdateBlock({ data: result.data.data });
+      if (result && "data" in result && result.data?.block) {
+        handleUpdateBlock({ runtime: result.data.block.runtime });
         toast.success("数据已更新");
       } else {
         toast.error("更新失败");
@@ -476,17 +498,17 @@ export default function VisualPageEditor({
   }, [activeBlockId, setBlocksWithHistory]);
 
   const handleAddBlock = useCallback(
-    async (type: string, initialData?: Partial<BlockConfig>) => {
+    async (type: string, initialData?: Partial<RuntimeBlockInput>) => {
       setIsAddingBlock(true);
       try {
         const newId = Date.now();
-        const newBlock: BlockConfig = {
+        const newBlock: RuntimeBlockInput = {
           id: newId,
           block: type,
           description: "",
           content: {},
           ...initialData,
-        } as BlockConfig;
+        } as RuntimeBlockInput;
 
         // 调用 Server Action 获取数据
         const result = await runWithAuth(fetchBlockData, {
@@ -494,11 +516,21 @@ export default function VisualPageEditor({
           block: newBlock,
         } as never);
 
-        if (result && "data" in result && result.data) {
-          newBlock.data = result.data.data;
-        }
+        const blockForInsert =
+          result && "data" in result && result.data?.block
+            ? result.data.block
+            : ({
+                ...newBlock,
+                runtime: {
+                  context: {},
+                  placeholders: {},
+                  media: {},
+                  business: {},
+                  meta: { status: "ok" as const },
+                },
+              } as ResolvedBlock);
 
-        setBlocksWithHistory((prev) => [...prev, newBlock]);
+        setBlocksWithHistory((prev) => [...prev, blockForInsert]);
         setIsLibraryOpen(false);
 
         // 关闭对话框后，等待渲染完成，然后滚动到最后并选中新 block
@@ -532,7 +564,10 @@ export default function VisualPageEditor({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await onSave(blocks);
+      const blocksForSave = blocks.map(
+        ({ runtime: _runtime, ...rest }) => rest,
+      );
+      await onSave(blocksForSave as BlockConfig[]);
       // 保存成功后清除草稿
       removeDraft(pageId);
     } finally {
@@ -573,7 +608,7 @@ export default function VisualPageEditor({
       // Ctrl+C 或 Cmd+C：复制当前选中的区块
       if ((e.ctrlKey || e.metaKey) && e.key === "c" && activeBlock) {
         e.preventDefault();
-        const { data: _data, ...blockToCopy } = activeBlock;
+        const { runtime: _runtime, ...blockToCopy } = activeBlock;
         const jsonString = JSON.stringify(blockToCopy, null, 2);
         navigator.clipboard.writeText(jsonString).then(() => {
           toast.success("区块 JSON 已复制到剪贴板");
@@ -623,7 +658,7 @@ export default function VisualPageEditor({
                 typeof parsed.block === "string"
               ) {
                 // 去掉 id，让 handleAddBlock 生成新的 id
-                const { id: _id, data: _data, ...blockData } = parsed;
+                const { id: _id, runtime: _runtime, ...blockData } = parsed;
                 handleAddBlock(parsed.block, blockData);
               } else {
                 toast.error("剪贴板内容不是有效的区块 JSON");

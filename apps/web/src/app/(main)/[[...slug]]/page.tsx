@@ -55,7 +55,7 @@ export default async function Page({ params }: PageProps<"/[[...slug]]">) {
     if (!config.data) config.data = {};
     Object.assign(config.data as Record<string, unknown>, resolvedParams);
   }
-  const { blocks = [] } = (await resolveBlockData(config)) || {};
+  const { blocks = [] } = (await resolveBlockData(config, "page")) || {};
 
   // cacheLife("max");
   // TODO: Cache Tag
@@ -68,7 +68,7 @@ export default async function Page({ params }: PageProps<"/[[...slug]]">) {
         enableFadeElements
         enableLineReveal
       >
-        <BlockRenderer config={blocks} />
+        <BlockRenderer blocks={blocks} />
       </HorizontalScroll>
     </MainLayout>
   );

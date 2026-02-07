@@ -1,4 +1,3 @@
-import { fetchBlockInterpolatedData } from "@/blocks/core/lib/server";
 import type { BlockConfig } from "@/blocks/core/types";
 import prisma from "@/lib/server/prisma";
 
@@ -11,10 +10,7 @@ type DisplayItem = {
   isPlaceholder?: boolean;
 };
 
-export async function tagsCategoriesFetcher(config: BlockConfig) {
-  // 0. 启动插值数据获取
-  const interpolatedPromise = fetchBlockInterpolatedData(config.content);
-
+export async function tagsCategoriesFetcher(_config: BlockConfig) {
   // 统一过滤条件：只统计未删除且已发布文章
   // 注意：上一段代码中你用了 status: "PUBLISHED"，这里建议保持一致
   const postFilter = {
@@ -126,12 +122,9 @@ export async function tagsCategoriesFetcher(config: BlockConfig) {
 
   fillPlaceholders(displayCategories, 6, "category");
 
-  const interpolatedData = await interpolatedPromise;
-
   return {
     displayTags,
     displayCategories,
-    ...interpolatedData,
   };
 }
 

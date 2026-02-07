@@ -37,7 +37,10 @@ export default async function LayoutEditorPage({
   // 解析 Block 数据，实现编辑器中的"所见即所得"
   const config = getSystemPageConfig(page);
   const resolvedConfig = config
-    ? await resolveBlockData(config as Parameters<typeof resolveBlockData>[0])
+    ? await resolveBlockData(
+        config as Parameters<typeof resolveBlockData>[0],
+        "editor",
+      )
     : config;
   const resolvedPage = {
     ...page,

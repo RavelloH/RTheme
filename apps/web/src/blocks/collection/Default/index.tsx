@@ -1,6 +1,7 @@
 import { RiArrowGoBackLine } from "@remixicon/react";
 
 import RandomLinkFooter from "@/blocks/collection/Default/client/RandomLinkFooter";
+import { inferRandomSource } from "@/blocks/collection/Default/helpers";
 import type { DefaultBlockConfig } from "@/blocks/collection/Default/types";
 import { ProcessedText } from "@/blocks/core/components";
 import {
@@ -160,30 +161,11 @@ export default function DefaultBlock({
         (() => {
           const footerType = content.footer?.type || "normal";
 
-          // 从 content.dataSource 推断 randomSource，如果没有则使用默认值 "tags"
+          // 从 content.dataSource 推断 randomSource
           const dataSource = (content as Record<string, unknown>).dataSource as
             | string
             | undefined;
-          let randomSource = "tags"; // 默认值
-
-          if (dataSource) {
-            if (
-              dataSource === "posts-index" ||
-              dataSource === "category-detail"
-            ) {
-              randomSource = "posts";
-            } else if (
-              dataSource === "categories-index" ||
-              dataSource === "category-detail"
-            ) {
-              randomSource = "categories";
-            } else if (
-              dataSource === "tags-index" ||
-              dataSource === "tag-detail"
-            ) {
-              randomSource = "tags";
-            }
-          }
+          const randomSource = inferRandomSource(dataSource);
 
           // 随机链接
           if (footerType === "random") {
