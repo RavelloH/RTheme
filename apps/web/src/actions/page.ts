@@ -27,7 +27,10 @@ import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
-import type { BlockConfig } from "@/blocks/core/types";
+import type {
+  ResolvedBlock,
+  RuntimeBlockInput,
+} from "@/blocks/core/definition";
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import { normalizeBlockIds } from "@/lib/server/block-normalize";
@@ -838,17 +841,17 @@ export async function updatePages(
     fetchBlockData() - 获取单个 Block 的数据
 */
 export async function fetchBlockData(
-  params: { access_token: string; block: BlockConfig },
+  params: { access_token: string; block: RuntimeBlockInput },
   serverConfig: { environment: "serverless" },
-): Promise<NextResponse<ApiResponse<{ data: Record<string, unknown> } | null>>>;
+): Promise<NextResponse<ApiResponse<{ block: ResolvedBlock } | null>>>;
 export async function fetchBlockData(
-  params: { access_token: string; block: BlockConfig },
+  params: { access_token: string; block: RuntimeBlockInput },
   serverConfig?: ActionConfig,
-): Promise<ApiResponse<{ data: Record<string, unknown> } | null>>;
+): Promise<ApiResponse<{ block: ResolvedBlock } | null>>;
 export async function fetchBlockData(
-  params: { access_token: string; block: BlockConfig },
+  params: { access_token: string; block: RuntimeBlockInput },
   serverConfig?: ActionConfig,
-): Promise<ActionResult<{ data: Record<string, unknown> } | null>> {
+): Promise<ActionResult<{ block: ResolvedBlock } | null>> {
   const response = new ResponseBuilder(
     serverConfig?.environment || "serveraction",
   );
@@ -871,9 +874,9 @@ export async function fetchBlockData(
     const { resolveSingleBlockData } = await import(
       "@/lib/server/block-data-resolver"
     );
-    const data = await resolveSingleBlockData(params.block);
+    const block = await resolveSingleBlockData(params.block, {}, "editor");
 
-    return response.ok({ data: { data } });
+    return response.ok({ data: { block } });
   } catch (error) {
     console.error("获取 Block 数据失败:", error);
     return response.serverError({ message: "获取 Block 数据失败" });

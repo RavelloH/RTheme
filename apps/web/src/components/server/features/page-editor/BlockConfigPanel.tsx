@@ -9,8 +9,8 @@ import {
 import { codeToHtml } from "shiki";
 
 import { getAllPlaceholders } from "@/actions/page";
+import type { ResolvedBlock } from "@/blocks/core/definition";
 import { getBlockFormConfig } from "@/blocks/core/registry";
-import type { BlockConfig } from "@/blocks/core/types";
 import type {
   FieldConfig,
   ImageArrayFieldConfig,
@@ -386,8 +386,8 @@ export default function BlockConfigPanel({
   onRefreshData,
   onDelete,
 }: {
-  block: BlockConfig | null;
-  onUpdate: (updates: Partial<BlockConfig>) => void;
+  block: ResolvedBlock | null;
+  onUpdate: (updates: Partial<ResolvedBlock>) => void;
   onRefreshData?: () => Promise<void>;
   onDelete?: () => void;
 }) {
@@ -513,7 +513,11 @@ export default function BlockConfigPanel({
   // 处理复制
   const handleCopy = () => {
     if (!block) return;
-    const jsonString = JSON.stringify({ ...block, data: undefined }, null, 2);
+    const jsonString = JSON.stringify(
+      { ...block, runtime: undefined },
+      null,
+      2,
+    );
     navigator.clipboard.writeText(jsonString).then(() => {
       toast.success("JSON 已复制到剪贴板");
     });
@@ -533,7 +537,7 @@ export default function BlockConfigPanel({
 
   const handleMetaChange = (field: string, value: string) => {
     if (!block) return;
-    onUpdate({ [field]: value });
+    onUpdate({ [field]: value } as Partial<ResolvedBlock>);
   };
 
   // 检查字段是否满足显示条件
@@ -1167,7 +1171,7 @@ export default function BlockConfigPanel({
           <AutoResizer>
             {block && (
               <JSONHighlight
-                json={{ ...block, data: undefined }}
+                json={{ ...block, runtime: undefined }}
                 shikiTheme={shikiTheme}
               />
             )}

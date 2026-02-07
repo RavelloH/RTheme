@@ -1,29 +1,11 @@
-import {
-  fetchBlockInterpolatedData,
-  processImageField,
-} from "@/blocks/core/lib/server";
 import type { BlockConfig } from "@/blocks/core/types";
 
 /**
  * Timeline Item Block Fetcher
- * 1. 处理图片元数据
- * 2. 解析占位符
+ * V2 中占位符和媒体处理由 runtime pipeline 统一执行。
  */
 export async function timelineItemBlockFetcher(
-  config: BlockConfig,
+  _config: BlockConfig,
 ): Promise<Record<string, unknown>> {
-  const content = (config.content || {}) as Record<string, unknown>;
-  const contextData = (config.data as Record<string, unknown>) || {};
-  const imageUrl = (content.image as string) || "";
-
-  const [imageData, interpolatedData] = await Promise.all([
-    imageUrl ? processImageField(imageUrl) : Promise.resolve(undefined),
-    fetchBlockInterpolatedData(content, contextData),
-  ]);
-
-  return {
-    ...contextData,
-    ...interpolatedData,
-    imageData,
-  };
+  return {};
 }

@@ -8,8 +8,11 @@ import {
 } from "@remixicon/react";
 
 import { fetchBlockData } from "@/actions/page";
+import type {
+  ResolvedBlock,
+  RuntimeBlockInput,
+} from "@/blocks/core/definition";
 import { getAllBlockFormConfigs } from "@/blocks/core/registry";
-import type { BlockConfig } from "@/blocks/core/types";
 import type { BlockFormConfig } from "@/blocks/core/types/field-config";
 import { SingleBlockRenderer } from "@/components/server/features/page-editor/VisualBlockRenderer";
 import Link from "@/components/ui/Link";
@@ -43,7 +46,7 @@ export default function BlockLibrary({
   onAdd,
   isLoading: isAdding,
 }: {
-  onAdd: (type: string, data?: Partial<BlockConfig>) => Promise<void>;
+  onAdd: (type: string, data?: Partial<RuntimeBlockInput>) => Promise<void>;
   isLoading?: boolean;
 }) {
   const [configs, setConfigs] = useState<BlockFormConfig[]>([]);
@@ -56,7 +59,7 @@ export default function BlockLibrary({
   const [importJson, setImportJson] = useState("");
 
   // 预览相关状态
-  const [previewBlock, setPreviewBlock] = useState<BlockConfig | null>(null);
+  const [previewBlock, setPreviewBlock] = useState<ResolvedBlock | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewScale, setPreviewScale] = useState(1);
   const [previewContentSize, setPreviewContentSize] = useState<{
@@ -105,13 +108,13 @@ export default function BlockLibrary({
         // 使用 schema 中定义的 previewData 作为 content
         const previewContent = selectedBlock.previewData || {};
 
-        // 创建临时的 BlockConfig 用于预览
-        const tempBlock: BlockConfig = {
+        // 创建临时 block 用于预览
+        const tempBlock: RuntimeBlockInput = {
           id: "preview",
           block: selectedBlock.blockType,
           description: selectedBlock.displayName,
           content: previewContent,
-        } as BlockConfig;
+        };
 
         // 调用 Server Action 获取动态数据
         const result = await runWithAuth(fetchBlockData, {
@@ -119,21 +122,14 @@ export default function BlockLibrary({
           block: tempBlock,
         } as never);
 
-        if (result && "data" in result && result.data) {
-          setPreviewBlock({ ...tempBlock, data: result.data.data });
+        if (result && "data" in result && result.data?.block) {
+          setPreviewBlock(result.data.block);
         } else {
-          setPreviewBlock(tempBlock);
+          setPreviewBlock(null);
         }
       } catch (error) {
         console.error("加载预览数据失败:", error);
-        // 出错时也使用 previewData
-        const previewContent = selectedBlock.previewData || {};
-        setPreviewBlock({
-          id: "preview",
-          block: selectedBlock.blockType,
-          description: selectedBlock.displayName,
-          content: previewContent,
-        } as BlockConfig);
+        setPreviewBlock(null);
       } finally {
         setPreviewLoading(false);
         // 延迟 300ms 后显示内容，避免跳变
@@ -290,20 +286,17 @@ export default function BlockLibrary({
               // 调用 Server Action 获取动态数据
               const result = await runWithAuth(fetchBlockData, {
                 access_token: undefined,
-                block: parsed as BlockConfig,
+                block: parsed as RuntimeBlockInput,
               } as never);
 
-              if (result && "data" in result && result.data) {
-                setPreviewBlock({
-                  ...(parsed as BlockConfig),
-                  data: result.data.data,
-                });
+              if (result && "data" in result && result.data?.block) {
+                setPreviewBlock(result.data.block);
               } else {
-                setPreviewBlock(parsed as BlockConfig);
+                setPreviewBlock(null);
               }
             } catch (error) {
               console.error("加载预览数据失败:", error);
-              setPreviewBlock(parsed as BlockConfig);
+              setPreviewBlock(null);
             } finally {
               setPreviewLoading(false);
               setTimeout(() => {
@@ -603,7 +596,11 @@ export default function BlockLibrary({
                       onClick={() => {
                         if (selectedTheme === "import" && previewBlock) {
                           // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                          const { id, ...rest } = previewBlock;
+                          const {
+                            id,
+                            runtime: _runtime,
+                            ...rest
+                          } = previewBlock;
                           onAdd(selectedBlock.blockType, rest);
                         } else {
                           onAdd(selectedBlock.blockType);

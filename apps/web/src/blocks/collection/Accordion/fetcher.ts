@@ -3,7 +3,6 @@ import type {
   AccordionData,
   AccordionItem,
 } from "@/blocks/collection/Accordion/types";
-import { fetchBlockInterpolatedData } from "@/blocks/core/lib/server";
 import type { BlockConfig } from "@/blocks/core/types";
 import {
   countCategoryPosts,
@@ -26,9 +25,6 @@ export async function accordionFetcher(
   const sortBy = content.layout?.sortBy || "count";
   const limit = content.limit ?? 0;
 
-  // 并发获取插值数据
-  const interpolatedData = await fetchBlockInterpolatedData(config.content);
-
   let items: AccordionItem[] = [];
 
   if (source === "tags") {
@@ -44,7 +40,6 @@ export async function accordionFetcher(
   return {
     items,
     source,
-    ...interpolatedData,
   };
 }
 

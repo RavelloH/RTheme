@@ -4,6 +4,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 
 import { updatePage } from "@/actions/page";
+import type { ResolvedBlock } from "@/blocks/core/definition";
 import type { BlockConfig } from "@/blocks/core/types";
 import VisualPageEditor from "@/components/server/features/page-editor/VisualPageEditor";
 import runWithAuth from "@/lib/client/run-with-auth";
@@ -46,8 +47,8 @@ export default function LayoutEditorClientWrapper({
   };
 
   const initialBlocks =
-    ((page.config as { blocks?: BlockConfig[] })?.blocks as BlockConfig[]) ||
-    [];
+    ((page.config as { blocks?: ResolvedBlock[] })
+      ?.blocks as ResolvedBlock[]) || [];
 
   return (
     <VisualPageEditor

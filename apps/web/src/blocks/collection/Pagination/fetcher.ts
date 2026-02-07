@@ -43,7 +43,7 @@ export const paginationFetcher: BlockFetcher = async function (
             pageSize: String(data.pageSize || 20),
           };
           const result = await interpolator(params);
-          totalPages = (result.totalPage as number) || 1;
+          totalPages = (result.postsListTotalPage as number) || 1;
         }
       }
     } catch (error) {
@@ -53,8 +53,13 @@ export const paginationFetcher: BlockFetcher = async function (
       );
     }
   } else {
-    // 对于 tag 和 category，使用 config.data 中的 totalPage
-    totalPages = (data.totalPage as number) || 1;
+    if (filterBy === "tag") {
+      totalPages =
+        (data.tagTotalPage as number) || (data.totalPage as number) || 1;
+    } else {
+      totalPages =
+        (data.categoryTotalPage as number) || (data.totalPage as number) || 1;
+    }
   }
 
   return {
