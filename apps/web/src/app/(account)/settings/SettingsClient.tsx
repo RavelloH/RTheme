@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  RiDatabase2Line,
   RiDeviceLine,
   RiNotification3Line,
   RiShieldKeyholeLine,
@@ -15,6 +16,7 @@ import {
   type BasicInfoDialogsRef,
 } from "@/app/(account)/settings/BasicInfoDialogs";
 import { BasicInfoSection } from "@/app/(account)/settings/BasicInfoSection";
+import { LocalStorageSection } from "@/app/(account)/settings/LocalStorageSection";
 import { NotificationSection } from "@/app/(account)/settings/NotificationSection";
 import {
   PasswordDialogs,
@@ -113,6 +115,7 @@ export default function SettingsClient({
     () => [
       { id: "basic", label: "基本信息", icon: RiUserLine },
       { id: "notifications", label: "通知管理", icon: RiNotification3Line },
+      { id: "local-storage", label: "本地存储", icon: RiDatabase2Line },
       { id: "sessions", label: "会话管理", icon: RiDeviceLine },
       { id: "security", label: "安全设置", icon: RiShieldKeyholeLine },
     ],
@@ -355,6 +358,7 @@ export default function SettingsClient({
                 />
               )}
               {activeSection === "notifications" && <NotificationSection />}
+              {activeSection === "local-storage" && <LocalStorageSection />}
               {activeSection === "sessions" && (
                 <SessionSection onRevokeSession={handleRevokeSession} />
               )}

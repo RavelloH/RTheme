@@ -320,7 +320,7 @@ export default function WebPushManager() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex gap-3 flex-shrink-0">
+                      <div className="flex gap-3 flex-shrink-0 pr-5">
                         <Clickable
                           onClick={() => {
                             setRenameTarget(item.endpoint);
