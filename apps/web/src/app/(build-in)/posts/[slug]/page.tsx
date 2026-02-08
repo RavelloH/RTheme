@@ -199,6 +199,8 @@ export default async function PostPage({ params }: PageProps) {
     `users/${post.author.uid}`,
   );
   cacheLife("max");
+  const horizontalPaddingClassName = "px-6 md:px-10";
+  const featuredHeroHeightClassName = "h-[42.1em]";
 
   return (
     <MainLayout type="vertical" nopadding>
@@ -208,7 +210,9 @@ export default async function PostPage({ params }: PageProps) {
       <ImageLightbox />
       <div className="h-full w-full">
         {/* 文章头部信息 */}
-        <div className="py-10 px-6 md:px-10 text-xl flex flex-wrap gap-2 bg-primary text-primary-foreground">
+        <div
+          className={`py-10 ${horizontalPaddingClassName} text-xl flex flex-wrap gap-2 bg-primary text-primary-foreground`}
+        >
           <span className="flex items-center gap-1">
             <RiCalendarLine size={"1em"} />
             <span>{formatDate(post.publishedAt || post.createdAt)}</span>
@@ -262,8 +266,10 @@ export default async function PostPage({ params }: PageProps) {
           <CommentCount />
         </div>
 
-        {/* 文章标题和元信息 - 封面图作为背景，上方留空显示封面 */}
-        <div className={`relative ${post.featuredImage ? "pt-[25em]" : ""}`}>
+        {/* 文章标题和元信息 - 封面图作为背景，内容放在固定高度区域内 */}
+        <div
+          className={`relative ${post.featuredImage ? featuredHeroHeightClassName : ""}`}
+        >
           {post.featuredImage && (
             <div className="absolute inset-0 z-0">
               {(() => {
@@ -303,7 +309,7 @@ export default async function PostPage({ params }: PageProps) {
 
           {/* 文章标题和标签内容 */}
           <div
-            className={`relative z-10 py-10 px-6 md:px-10 border-border border-b ${post.featuredImage ? "" : "pt-12"}`}
+            className={`relative z-10 ${horizontalPaddingClassName} border-border border-b ${post.featuredImage ? "h-full flex flex-col justify-end py-10" : "py-10 pt-12"}`}
           >
             <h1 className="text-5xl md:text-7xl mb-2">{post.title}</h1>
             <div className="text-xl md:text-2xl font-mono pt-3 text-muted-foreground">
@@ -311,33 +317,27 @@ export default async function PostPage({ params }: PageProps) {
             </div>
 
             {/* 标签 */}
-            {post.tags.length > 0 ? (
+            {post.tags.length > 0 && (
               <div className="text-lg pt-3 mt-4 flex flex-wrap gap-2">
                 {post.tags.map((tag) => (
                   <Link
                     key={tag.slug}
                     href={"/tags/" + tag.slug}
-                    className="bg-muted text-muted-foreground transition-all px-3 py-2 rounded-sm inline-flex gap-1 items-center hover:bg-primary/5 hover:text-primary"
+                    className="bg-muted text-muted-foreground px-3 py-2 rounded-sm inline-flex gap-1 items-center hover:bg-primary/5 hover:text-primary transition-colors duration-500"
                   >
                     <RiHashtag size={"1em"} />
                     {tag.name}
                   </Link>
                 ))}
               </div>
-            ) : post.featuredImage ? (
-              // 只在有背景图时创建占位，保持布局稳定
-              <div className="text-lg pt-3 mt-4 flex flex-wrap gap-2 invisible">
-                <span className="bg-muted text-muted-foreground px-3 py-2 rounded-sm inline-flex gap-1 items-center">
-                  <RiHashtag size={"1em"} />
-                  占位标签
-                </span>
-              </div>
-            ) : null}
+            )}
           </div>
         </div>
 
         {/* 文章内容 */}
-        <div className="px-6 md:px-10 max-w-7xl mx-auto pt-10 flex gap-6 relative h-full">
+        <div
+          className={`${horizontalPaddingClassName} max-w-7xl mx-auto pt-10 flex gap-6 relative h-full`}
+        >
           <div className="flex-[8] h-full min-w-0">
             {/* 摘要 */}
             {post.excerpt && (

@@ -212,7 +212,7 @@ function renderProjectCard(project: FeaturedProjectItem, index: number) {
           </div>
 
           {languagesText && (
-            <div className="mt-2 text-xs md:text-sm flex gap-1 items-center">
+            <div className="mt-4 text-xs md:text-sm flex gap-1 items-center">
               <RiCodeLine size="1.2em" />{" "}
               <span data-fade-word className="w-full">
                 {languagesText}

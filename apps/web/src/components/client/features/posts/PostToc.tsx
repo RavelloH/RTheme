@@ -50,11 +50,13 @@ interface PostTocProps {
    */
   contentSelector?: string;
   isMobile?: boolean;
+  transparent?: boolean;
 }
 
 export default function PostToc({
   contentSelector = ".md-content, .max-w-4xl",
   isMobile = false,
+  transparent = false,
 }: PostTocProps) {
   const [tocItems, setTocItems] = useState<TocItem[]>([]);
   const [activeId, setActiveId] = useState<string>("");
@@ -386,11 +388,14 @@ export default function PostToc({
         progress: Math.min(100, Math.max(0, progress)),
       });
 
-      // 更新活动标题 - 使用 id 直接匹配，因为标题元素现在有了正确的 id
-      const headings = document.querySelectorAll(
+      // 更新活动标题 - 只在当前内容容器内查找，避免背景页面/其他区域标题干扰
+      const headingRoot = contentContainer || document;
+      const headings = headingRoot.querySelectorAll(
         "h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]",
       );
-      const activeThreshold = emToPx(16);
+      const activeThreshold = scrollContainer
+        ? scrollContainer.getBoundingClientRect().top + emToPx(16)
+        : emToPx(16);
 
       let currentActiveId = "";
 
@@ -656,8 +661,9 @@ export default function PostToc({
         progress: normalizedProgress,
       });
 
-      // 更新活动标题
-      const headings = document.querySelectorAll(
+      // 更新活动标题（仅在当前内容容器中查找）
+      const headingRoot = contentContainer || document;
+      const headings = headingRoot.querySelectorAll(
         "h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]",
       );
       const activeThreshold = emToPx(16);
@@ -779,7 +785,7 @@ export default function PostToc({
   );
 
   const renderTocBody = (closeMobileDrawer = false) => (
-    <div className="p-4 bg-background">
+    <div className={`p-4 ${transparent ? "bg-transparent" : "bg-background"}`}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center justify-between w-full">
           <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -819,18 +825,22 @@ export default function PostToc({
 
       <div className="relative">
         {/* 顶部渐变遮罩 */}
-        <div
-          className={`absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-background via-background/80 to-transparent pointer-events-none z-20 transition-opacity duration-300 ${
-            showTopGradient ? "opacity-100" : "opacity-0"
-          }`}
-        />
+        {transparent ? null : (
+          <div
+            className={`absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-background via-background/80 to-transparent pointer-events-none z-20 transition-opacity duration-300 ${
+              showTopGradient ? "opacity-100" : "opacity-0"
+            }`}
+          />
+        )}
 
         {/* 底部渐变遮罩 */}
-        <div
-          className={`absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none z-20 transition-opacity duration-300 ${
-            showBottomGradient ? "opacity-100" : "opacity-0"
-          }`}
-        />
+        {transparent ? null : (
+          <div
+            className={`absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none z-20 transition-opacity duration-300 ${
+              showBottomGradient ? "opacity-100" : "opacity-0"
+            }`}
+          />
+        )}
 
         <nav
           ref={navRef}
