@@ -25,12 +25,17 @@ import {
 import { createTag } from "@/actions/tag";
 import { CategoryInput } from "@/components/client/features/categories/CategoryInput";
 import MediaSelector from "@/components/client/features/media/MediaSelector";
+import PostLicensePicker from "@/components/client/features/posts/PostLicensePicker";
 import type { SelectedTag } from "@/components/client/features/tags/TagInput";
 import { TagInput } from "@/components/client/features/tags/TagInput";
 import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import Link, { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcast } from "@/hooks/use-broadcast";
+import {
+  fromStoredPostLicense,
+  type PostLicenseSelection,
+} from "@/lib/shared/post-license";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { Button } from "@/ui/Button";
 import { Checkbox } from "@/ui/Checkbox";
@@ -97,6 +102,7 @@ export default function PostsTable() {
     metaDescription: "",
     metaKeywords: "",
     featuredImage: "",
+    license: "default" as PostLicenseSelection,
     postMode: "MARKDOWN" as "MARKDOWN" | "MDX",
     tags: [] as SelectedTag[],
     category: null as string | null, // 单个分类
@@ -122,6 +128,7 @@ export default function PostsTable() {
       metaDescription: post.metaDescription || "",
       metaKeywords: post.metaKeywords || "",
       featuredImage: post.featuredImage || "",
+      license: fromStoredPostLicense(post.license),
       postMode: post.postMode,
       tags: post.tags
         ? post.tags.map((tag) => ({
@@ -205,6 +212,7 @@ export default function PostsTable() {
         formData.metaDescription !== (editingPost.metaDescription || "") ||
         formData.metaKeywords !== (editingPost.metaKeywords || "") ||
         formData.robotsIndex !== editingPost.robotsIndex ||
+        formData.license !== fromStoredPostLicense(editingPost.license) ||
         formData.postMode !== editingPost.postMode ||
         tagsChanged ||
         categoriesChanged;
@@ -255,6 +263,10 @@ export default function PostsTable() {
         robotsIndex:
           formData.robotsIndex !== editingPost.robotsIndex
             ? formData.robotsIndex
+            : undefined,
+        license:
+          formData.license !== fromStoredPostLicense(editingPost.license)
+            ? formData.license
             : undefined,
         postMode:
           formData.postMode !== editingPost.postMode
@@ -1164,6 +1176,18 @@ export default function PostsTable() {
                 />
               </div>
             </div>
+          </div>
+
+          {/* 版权许可 */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+              版权许可
+            </h3>
+            <PostLicensePicker
+              value={formData.license}
+              onChange={(license) => handleFieldChange("license", license)}
+              disabled={isSubmitting}
+            />
           </div>
 
           {/* SEO 设置 */}

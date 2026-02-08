@@ -40,6 +40,11 @@ import {
   extractInternalHashes,
   processImageUrl,
 } from "@/lib/shared/image-utils";
+import {
+  formatPostLicenseStatementSegments,
+  renderPostLicenseIcon,
+  resolvePostLicense,
+} from "@/lib/shared/post-license";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -106,6 +111,8 @@ export default async function PostPage({ params }: PageProps) {
     locateEnabled,
     siteURL,
     shikiTheme,
+    defaultLicense,
+    licenseTextTemplate,
   ] = await getConfigs([
     "comment.enable",
     "comment.placeholder",
@@ -117,6 +124,8 @@ export default async function PostPage({ params }: PageProps) {
     "comment.locate.enable",
     "site.url",
     "site.shiki.theme",
+    "content.license.default",
+    "content.license.textTemplate",
   ]);
 
   try {
@@ -185,6 +194,12 @@ export default async function PostPage({ params }: PageProps) {
       minute: "2-digit",
     });
   };
+
+  const effectiveLicense = resolvePostLicense(post.license, defaultLicense);
+  const licenseStatementSegments = formatPostLicenseStatementSegments(
+    licenseTextTemplate,
+    effectiveLicense,
+  );
 
   // 生成分类链接路径
   const generateCategoryLink = (slugArray: string[], index: number) => {
@@ -361,12 +376,12 @@ export default async function PostPage({ params }: PageProps) {
               <div className="text-sm text-muted-foreground space-y-2">
                 <div className="flex flex-wrap gap-4 ">
                   <span className="flex gap-1 items-center">
-                    <RiCalendarLine size={"1em"} />
+                    <RiCalendarLine size="1.1em" />
                     发布于 {formatDate(post.publishedAt!)}
                   </span>
                   <span>{"/"}</span>
                   <span className="flex gap-1 items-center">
-                    <RiEditLine size="1em" />
+                    <RiEditLine size="1.1em" />
                     编辑于 {formatDate(post.updatedAt)}
                   </span>
                   <span>{"/"}</span>
@@ -374,7 +389,7 @@ export default async function PostPage({ params }: PageProps) {
                 </div>
                 <div className="flex flex-wrap gap-4 ">
                   <span className="flex gap-1 items-center">
-                    <RiUserLine size={"1em"} />
+                    <RiUserLine size="1.1em" />
                     {post.author.nickname
                       ? `${post.author.nickname} (@${post.author.username})`
                       : `@${post.author.username}`}
@@ -382,14 +397,30 @@ export default async function PostPage({ params }: PageProps) {
                   <span>{"/"}</span>
                   <span>{siteURL + "/posts/" + slug}</span>
                 </div>
-                <div className="flex flex-wrap gap-1 items-center">
-                  <RiInformationLine size="1em" />
-                  原创内容使用
-                  <span className="px-1">
-                    知识共享 署名-非商业性使用-相同方式共享 4.0 (CC BY-NC-ND
-                    4.0)
+                <div className="flex flex-wrap items-center gap-1 leading-relaxed">
+                  <span className="inline-flex items-center gap-1">
+                    <RiInformationLine size="1.1em" />
+                    {renderPostLicenseIcon(effectiveLicense)}
                   </span>
-                  协议授权。转载请注明出处。
+                  <span>
+                    {licenseStatementSegments.map((segment, index) =>
+                      segment.href ? (
+                        <Link
+                          key={`${segment.href}-${index}`}
+                          href={segment.href}
+                          target="_blank"
+                          rel="noreferrer"
+                          presets={["hover-color", "arrow-out"]}
+                        >
+                          {segment.text}
+                        </Link>
+                      ) : (
+                        <React.Fragment key={`plain-${index}`}>
+                          {segment.text}
+                        </React.Fragment>
+                      ),
+                    )}
+                  </span>
                 </div>
               </div>
             </div>

@@ -1,6 +1,26 @@
 import { z } from "zod";
 import { createSuccessResponseSchema, registerSchema } from "./common.js";
 
+export const PostLicenseSchema = z.enum([
+  "cc-0",
+  "cc-by",
+  "cc-by-sa",
+  "cc-by-nd",
+  "cc-by-nc",
+  "cc-by-nc-sa",
+  "cc-by-nc-nd",
+  "all-rights-reserved",
+]);
+export type PostLicense = z.infer<typeof PostLicenseSchema>;
+registerSchema("PostLicense", PostLicenseSchema);
+
+export const PostLicenseSelectionSchema = z.union([
+  PostLicenseSchema,
+  z.literal("default"),
+]);
+export type PostLicenseSelection = z.infer<typeof PostLicenseSelectionSchema>;
+registerSchema("PostLicenseSelection", PostLicenseSelectionSchema);
+
 /*
     getPostsTrends() Schema
 */
@@ -88,6 +108,7 @@ export const PostListItemSchema = z.object({
   ),
   // SEO 和其他字段
   featuredImage: z.string().nullable(),
+  license: PostLicenseSchema.nullable(),
   metaDescription: z.string().nullable(),
   metaKeywords: z.string().nullable(),
   robotsIndex: z.boolean(),
@@ -138,6 +159,7 @@ export const PostDetailSchema = z.object({
   categories: z.array(z.string()),
   tags: z.array(z.string()),
   featuredImage: z.string().nullable(),
+  license: PostLicenseSchema.nullable(),
   metaDescription: z.string().nullable(),
   metaKeywords: z.string().nullable(),
   robotsIndex: z.boolean(),
@@ -201,6 +223,7 @@ export const CreatePostSchema = z.object({
   content: z.string().min(1, "内容不能为空"),
   excerpt: z.string().max(500, "摘要过长").optional(),
   featuredImage: z.string().max(255, "图片 URL 过长").optional(),
+  license: PostLicenseSelectionSchema.optional(),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).default("DRAFT"),
   isPinned: z.boolean().default(false),
   allowComments: z.boolean().default(true),
@@ -241,6 +264,7 @@ export const UpdatePostSchema = z.object({
   content: z.string().min(1, "内容不能为空").optional(),
   excerpt: z.string().max(500, "摘要过长").optional(),
   featuredImage: z.string().max(255, "图片 URL 过长").optional(),
+  license: PostLicenseSelectionSchema.optional(),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
   isPinned: z.boolean().optional(),
   allowComments: z.boolean().optional(),

@@ -16,6 +16,7 @@ export interface PostData {
   createdAt?: Date;
   updatedAt?: Date;
   featuredImage?: string | null;
+  license?: string | null;
   metaDescription?: string | null;
   metaKeywords?: string | null;
   robotsIndex?: boolean;
@@ -97,6 +98,7 @@ export async function getPublishedPost(slug: string): Promise<FullPostData> {
       metaKeywords: true,
       robotsIndex: true,
       postMode: true,
+      license: true,
       author: {
         select: {
           uid: true,

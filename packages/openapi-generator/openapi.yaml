@@ -7280,6 +7280,31 @@ components:
         - requestId
         - data
       additionalProperties: false
+    PostLicense:
+      type: string
+      enum:
+        - cc-0
+        - cc-by
+        - cc-by-sa
+        - cc-by-nd
+        - cc-by-nc
+        - cc-by-nc-sa
+        - cc-by-nc-nd
+        - all-rights-reserved
+    PostLicenseSelection:
+      anyOf:
+        - type: string
+          enum:
+            - cc-0
+            - cc-by
+            - cc-by-sa
+            - cc-by-nd
+            - cc-by-nc
+            - cc-by-nc-sa
+            - cc-by-nc-nd
+            - all-rights-reserved
+        - type: string
+          const: default
     GetPostsTrends:
       type: object
       properties:
@@ -7518,6 +7543,19 @@ components:
                 anyOf:
                   - type: string
                   - type: "null"
+              license:
+                anyOf:
+                  - type: string
+                    enum:
+                      - cc-0
+                      - cc-by
+                      - cc-by-sa
+                      - cc-by-nd
+                      - cc-by-nc
+                      - cc-by-nc-sa
+                      - cc-by-nc-nd
+                      - all-rights-reserved
+                  - type: "null"
               metaDescription:
                 anyOf:
                   - type: string
@@ -7553,6 +7591,7 @@ components:
               - categories
               - tags
               - featuredImage
+              - license
               - metaDescription
               - metaKeywords
               - robotsIndex
@@ -7654,6 +7693,19 @@ components:
               anyOf:
                 - type: string
                 - type: "null"
+            license:
+              anyOf:
+                - type: string
+                  enum:
+                    - cc-0
+                    - cc-by
+                    - cc-by-sa
+                    - cc-by-nd
+                    - cc-by-nc
+                    - cc-by-nc-sa
+                    - cc-by-nc-nd
+                    - all-rights-reserved
+                - type: "null"
             metaDescription:
               anyOf:
                 - type: string
@@ -7685,6 +7737,7 @@ components:
             - categories
             - tags
             - featuredImage
+            - license
             - metaDescription
             - metaKeywords
             - robotsIndex
@@ -7793,6 +7846,20 @@ components:
         featuredImage:
           type: string
           maxLength: 255
+        license:
+          anyOf:
+            - type: string
+              enum:
+                - cc-0
+                - cc-by
+                - cc-by-sa
+                - cc-by-nd
+                - cc-by-nc
+                - cc-by-nc-sa
+                - cc-by-nc-nd
+                - all-rights-reserved
+            - type: string
+              const: default
         status:
           default: DRAFT
           type: string
@@ -7899,6 +7966,20 @@ components:
         featuredImage:
           type: string
           maxLength: 255
+        license:
+          anyOf:
+            - type: string
+              enum:
+                - cc-0
+                - cc-by
+                - cc-by-sa
+                - cc-by-nd
+                - cc-by-nc
+                - cc-by-nc-sa
+                - cc-by-nc-nd
+                - all-rights-reserved
+            - type: string
+              const: default
         status:
           type: string
           enum:
