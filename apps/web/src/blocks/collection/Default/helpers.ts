@@ -4,9 +4,10 @@ export type DefaultDataSource =
   | "categories-index"
   | "category-detail"
   | "tags-index"
-  | "tag-detail";
+  | "tag-detail"
+  | "projects-index";
 
-export type RandomSource = "posts" | "categories" | "tags";
+export type RandomSource = "posts" | "categories" | "tags" | "projects";
 
 export function inferRandomSource(
   dataSource: string | undefined,
@@ -20,6 +21,8 @@ export function inferRandomSource(
     case "tags-index":
     case "tag-detail":
       return "tags";
+    case "projects-index":
+      return "projects";
     case "normal":
     default:
       return "tags";

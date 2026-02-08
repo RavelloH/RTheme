@@ -75,7 +75,7 @@ export const defaultPages: DefaultPage[] = [
                 align: "left",
               },
               bottom: {
-                value: ["共有文章 {posts} 篇，", "收录作品 {projects} 件。"],
+                value: ["共有文章 {posts} 篇，", "收录项目 {projects} 件。"],
                 align: "left",
               },
             },
@@ -114,7 +114,7 @@ export const defaultPages: DefaultPage[] = [
             },
             title: {
               line1: "PROJECTS",
-              line2: "作品",
+              line2: "项目",
             },
             projects: {
               sort: "publishedAt_desc",
@@ -200,15 +200,87 @@ export const defaultPages: DefaultPage[] = [
   },
   {
     id: "system-projects-page",
-    title: "作品",
+    title: "项目",
     slug: "/projects",
     content: "",
     contentType: "MARKDOWN",
-    config: {},
+    config: {
+      blocks: [
+        {
+          id: 1,
+          block: "default",
+          description: "",
+          content: {
+            title: {
+              value: "Projects / 项目",
+            },
+            footer: {
+              text: "随便看看",
+              type: "random",
+            },
+            header: {
+              value: "Works. Crafts. Labs.",
+            },
+            content: {
+              top: {
+                value: [
+                  "记录 & 索引所有项目。",
+                  "",
+                  "共收录 {projects} 个项目。",
+                  "更多项目，请前往我的 [Github 主页](https://github.com/username) 查看。 ",
+                ],
+              },
+              bottom: {
+                value: ["当前正在查看 项目列表。"],
+              },
+            },
+            layout: {
+              verticalCenter: false,
+            },
+            showSearchBar: false,
+            dataSource: "projects-index",
+          },
+        },
+        {
+          id: 2,
+          block: "featured-projects",
+          description: "",
+          content: {
+            projects: {
+              count: 3,
+              onlyFeatured: true,
+            },
+          },
+        },
+        {
+          id: 3,
+          block: "divider",
+          description: "",
+          content: {
+            text: "\\- explore more -",
+            color: "accent",
+            style: "text",
+            backgroundColor: "background",
+          },
+        },
+        {
+          id: 4,
+          block: "projects-list",
+          description: "",
+          content: {
+            projects: {
+              sort: "publishedAt_desc",
+              limit: 0,
+              showFeatured: false,
+            },
+          },
+        },
+      ],
+    },
     status: "ACTIVE",
     isSystemPage: true,
-    metaDescription: "展示个人和团队的项目作品集，包含项目、商业案例和技术实践",
-    metaKeywords: "作品集, 项目, 技术实践, 案例展示, 个人项目",
+    metaDescription: "展示个人和团队的项目项目集，包含项目、商业案例和技术实践",
+    metaKeywords: "项目集, 项目, 技术实践, 案例展示, 个人项目",
     robotsIndex: true,
   },
   {
@@ -588,7 +660,7 @@ export const defaultPages: DefaultPage[] = [
     status: "ACTIVE",
     isSystemPage: true,
     metaDescription:
-      "推荐的优秀网站、技术博客和合作伙伴，包含高质量的技术资源和创意作品",
+      "推荐的优秀网站、技术博客和合作伙伴，包含高质量的技术资源和创意项目",
     metaKeywords: "友情链接, 推荐网站, 技术博客, 合作伙伴, 网站导航",
     robotsIndex: true,
   },
@@ -615,8 +687,8 @@ export const defaultPages: DefaultPage[] = [
     config: {},
     status: "ACTIVE",
     isSystemPage: true,
-    metaDescription: "展示个人和团队的摄影作品，捕捉生活中的精彩瞬间与美好回忆",
-    metaKeywords: "照片墙, 摄影作品, 生活瞬间, 作品展示, 视觉故事",
+    metaDescription: "展示个人和团队的摄影项目，捕捉生活中的精彩瞬间与美好回忆",
+    metaKeywords: "照片墙, 摄影项目, 生活瞬间, 项目展示, 视觉故事",
     robotsIndex: true,
   },
 ];

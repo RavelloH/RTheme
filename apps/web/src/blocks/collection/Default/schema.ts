@@ -157,6 +157,10 @@ export const DEFAULT_BLOCK_FORM_CONFIG: BlockFormConfig = {
           label: "标签详情",
           value: "tag-detail",
         },
+        {
+          label: "项目索引",
+          value: "projects-index",
+        },
       ],
       defaultValue: "normal",
     },

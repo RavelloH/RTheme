@@ -39,6 +39,9 @@ export async function defaultBlockFetcher(
       case "tag-detail":
         requiredInterpolators.push("tagPosts");
         break;
+      case "projects-index":
+        requiredInterpolators.push("projects");
+        break;
       default:
         break;
     }
