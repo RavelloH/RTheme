@@ -46,7 +46,7 @@ function normalizeDescription(description: string): string {
     return "暂无项目描述。";
   }
 
-  const maxLength = 56;
+  const maxLength = 50;
   if (compact.length <= maxLength) {
     return compact;
   }

@@ -23,6 +23,8 @@ interface HorizontalScrollAnimationWrapperProps
 
 const SPACE_REGEX = /^\s+$/;
 const EPSILON = 0.001;
+const ACTIVE_RANGE_MARGIN_MIN = 120;
+const ACTIVE_RANGE_MARGIN_FACTOR = 1.5;
 const WORD_TOKEN_FALLBACK_REGEX =
   /(\s+|[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\u3040-\u30FF\uAC00-\uD7AF]|[^\s\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\u3040-\u30FF\uAC00-\uD7AF]+)/g;
 const WORD_SEGMENTER =
@@ -40,9 +42,160 @@ const NON_AUTO_LINE_REVEAL_SELECTOR =
 
 type RevealPhase = "before" | "partial" | "after";
 type LineRevealMode = "auto" | "manual";
+type HorizontalMetricItem = { leftOffset: number; width: number };
+type VerticalMetricItem = { topOffset: number; height: number };
 
 const lineRevealModeMap = new WeakMap<Element, LineRevealMode>();
 const lineRevealSourceTextMap = new WeakMap<Element, string>();
+
+function findFirstHorizontalOffsetIndex<T extends HorizontalMetricItem>(
+  items: T[],
+  minLeftOffset: number,
+): number {
+  let low = 0;
+  let high = items.length;
+
+  while (low < high) {
+    const mid = (low + high) >> 1;
+    const item = items[mid];
+    if (item && item.leftOffset < minLeftOffset) {
+      low = mid + 1;
+      continue;
+    }
+    high = mid;
+  }
+
+  return low;
+}
+
+function findFirstVerticalOffsetIndex<T extends VerticalMetricItem>(
+  items: T[],
+  minTopOffset: number,
+): number {
+  let low = 0;
+  let high = items.length;
+
+  while (low < high) {
+    const mid = (low + high) >> 1;
+    const item = items[mid];
+    if (item && item.topOffset < minTopOffset) {
+      low = mid + 1;
+      continue;
+    }
+    high = mid;
+  }
+
+  return low;
+}
+
+function getMaxHorizontalItemSize<T extends HorizontalMetricItem>(
+  items: T[],
+): number {
+  let maxSize = 0;
+  for (let i = 0; i < items.length; i += 1) {
+    const item = items[i];
+    if (!item) continue;
+    if (item.width > maxSize) {
+      maxSize = item.width;
+    }
+  }
+  return maxSize;
+}
+
+function getMaxVerticalItemSize<T extends VerticalMetricItem>(
+  items: T[],
+): number {
+  let maxSize = 0;
+  for (let i = 0; i < items.length; i += 1) {
+    const item = items[i];
+    if (!item) continue;
+    if (item.height > maxSize) {
+      maxSize = item.height;
+    }
+  }
+  return maxSize;
+}
+
+function forEachHorizontalActiveItem<T extends HorizontalMetricItem>(
+  items: T[],
+  baseX: number,
+  containerWidth: number,
+  maxItemWidth: number,
+  forceAll: boolean,
+  callback: (item: T) => void,
+): void {
+  if (items.length === 0) return;
+
+  if (forceAll) {
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      if (!item) continue;
+      callback(item);
+    }
+    return;
+  }
+
+  const margin = Math.max(
+    ACTIVE_RANGE_MARGIN_MIN,
+    containerWidth * ACTIVE_RANGE_MARGIN_FACTOR,
+  );
+  const activeLeft = -margin;
+  const activeRight = containerWidth + margin;
+  const minLeftOffset = activeLeft - baseX - maxItemWidth;
+  const maxLeftOffset = activeRight - baseX;
+  let index = findFirstHorizontalOffsetIndex(items, minLeftOffset);
+
+  while (index < items.length) {
+    const item = items[index];
+    if (!item) {
+      index += 1;
+      continue;
+    }
+    if (item.leftOffset > maxLeftOffset) break;
+
+    const currentLeft = baseX + item.leftOffset;
+    const currentRight = currentLeft + item.width;
+    if (currentRight >= activeLeft && currentLeft <= activeRight) {
+      callback(item);
+    }
+    index += 1;
+  }
+}
+
+function forEachVerticalActiveItem<T extends VerticalMetricItem>(
+  items: T[],
+  scrollTop: number,
+  windowHeight: number,
+  maxItemHeight: number,
+  callback: (item: T) => void,
+): void {
+  if (items.length === 0) return;
+
+  const margin = Math.max(
+    ACTIVE_RANGE_MARGIN_MIN,
+    windowHeight * ACTIVE_RANGE_MARGIN_FACTOR,
+  );
+  const activeTop = scrollTop - margin;
+  const activeBottom = scrollTop + windowHeight + margin;
+  const minTopOffset = activeTop - maxItemHeight;
+  const maxTopOffset = activeBottom;
+  let index = findFirstVerticalOffsetIndex(items, minTopOffset);
+
+  while (index < items.length) {
+    const item = items[index];
+    if (!item) {
+      index += 1;
+      continue;
+    }
+    if (item.topOffset > maxTopOffset) break;
+
+    const itemBottom = item.topOffset + item.height;
+    if (itemBottom >= activeTop && item.topOffset <= activeBottom) {
+      callback(item);
+    }
+    index += 1;
+  }
+}
 
 function splitTextForWordFade(text: string): string[] {
   if (!text) return [];
@@ -291,6 +444,11 @@ export default function HorizontalScrollAnimationWrapper({
         containerWidth: 0,
         wrapperOffset: 0,
         wrapperWidth: 0,
+        parallaxMaxWidth: 0,
+        fadeMaxWidth: 0,
+        wordFadeMaxWidth: 0,
+        charFadeMaxWidth: 0,
+        lineRevealMaxWidth: 0,
         parallax: [] as {
           el: Element;
           speed: number;
@@ -471,6 +629,8 @@ export default function HorizontalScrollAnimationWrapper({
               lastAppliedX: (gsap.getProperty(element, "x") as number) || 0,
             });
           });
+          cache.parallax.sort((a, b) => a.leftOffset - b.leftOffset);
+          cache.parallaxMaxWidth = getMaxHorizontalItemSize(cache.parallax);
         }
 
         if (enableFadeElements) {
@@ -484,6 +644,8 @@ export default function HorizontalScrollAnimationWrapper({
               lastOpacity: Number.NaN,
             });
           });
+          cache.fade.sort((a, b) => a.leftOffset - b.leftOffset);
+          cache.fadeMaxWidth = getMaxHorizontalItemSize(cache.fade);
 
           cache.wordFade = [];
           wrapper.querySelectorAll("[data-fade-word]").forEach((element) => {
@@ -498,6 +660,8 @@ export default function HorizontalScrollAnimationWrapper({
               lastVisibleCount: 0,
             });
           });
+          cache.wordFade.sort((a, b) => a.leftOffset - b.leftOffset);
+          cache.wordFadeMaxWidth = getMaxHorizontalItemSize(cache.wordFade);
 
           cache.charFade = [];
           wrapper.querySelectorAll("[data-fade-char]").forEach((element) => {
@@ -512,6 +676,8 @@ export default function HorizontalScrollAnimationWrapper({
               lastVisibleCount: 0,
             });
           });
+          cache.charFade.sort((a, b) => a.leftOffset - b.leftOffset);
+          cache.charFadeMaxWidth = getMaxHorizontalItemSize(cache.charFade);
         }
 
         if (enableLineReveal) {
@@ -528,6 +694,8 @@ export default function HorizontalScrollAnimationWrapper({
               lastVisibleCount: 0,
             });
           });
+          cache.lineReveal.sort((a, b) => a.leftOffset - b.leftOffset);
+          cache.lineRevealMaxWidth = getMaxHorizontalItemSize(cache.lineReveal);
         }
       };
 
@@ -685,38 +853,46 @@ export default function HorizontalScrollAnimationWrapper({
 
         if (enableParallax) {
           const viewportPreparationZone = containerWidth;
-          cache.parallax.forEach((item) => {
-            const currentLeft = baseX + item.leftOffset;
-            const projectedParallaxX = item.hasEntered
-              ? item.initialX + (currentX - item.entryScrollX) * item.speed
-              : item.lastAppliedX;
-            const currentVisualLeft = currentLeft + projectedParallaxX;
-            const currentVisualRight = currentVisualLeft + item.width;
+          forEachHorizontalActiveItem(
+            cache.parallax,
+            baseX,
+            containerWidth,
+            cache.parallaxMaxWidth,
+            forceUpdateWhenOffscreen,
+            (item) => {
+              const currentLeft = baseX + item.leftOffset;
+              const projectedParallaxX = item.hasEntered
+                ? item.initialX + (currentX - item.entryScrollX) * item.speed
+                : item.lastAppliedX;
+              const currentVisualLeft = currentLeft + projectedParallaxX;
+              const currentVisualRight = currentVisualLeft + item.width;
 
-            const isInViewportArea =
-              currentVisualLeft < viewportPreparationZone &&
-              currentVisualRight > 0;
+              const isInViewportArea =
+                currentVisualLeft < viewportPreparationZone &&
+                currentVisualRight > 0;
 
-            if (isInViewportArea) {
-              let parallaxX = projectedParallaxX;
-              if (!item.hasEntered) {
-                item.hasEntered = true;
-                item.entryScrollX = currentX;
-                item.initialX = (gsap.getProperty(item.el, "x") as number) || 0;
-                parallaxX = item.initialX;
-              }
+              if (isInViewportArea) {
+                let parallaxX = projectedParallaxX;
+                if (!item.hasEntered) {
+                  item.hasEntered = true;
+                  item.entryScrollX = currentX;
+                  item.initialX =
+                    (gsap.getProperty(item.el, "x") as number) || 0;
+                  parallaxX = item.initialX;
+                }
 
-              if (Math.abs(parallaxX - item.lastAppliedX) > EPSILON) {
-                gsap.set(item.el, { x: parallaxX });
-                item.lastAppliedX = parallaxX;
+                if (Math.abs(parallaxX - item.lastAppliedX) > EPSILON) {
+                  gsap.set(item.el, { x: parallaxX });
+                  item.lastAppliedX = parallaxX;
+                }
+              } else if (currentVisualLeft >= viewportPreparationZone) {
+                if (item.hasEntered) {
+                  item.hasEntered = false;
+                  item.entryScrollX = 0;
+                }
               }
-            } else if (currentVisualLeft >= viewportPreparationZone) {
-              if (item.hasEntered) {
-                item.hasEntered = false;
-                item.entryScrollX = 0;
-              }
-            }
-          });
+            },
+          );
         }
 
         if (enableFadeElements) {
@@ -724,197 +900,225 @@ export default function HorizontalScrollAnimationWrapper({
           const animationEndX = containerWidth * 0.8;
           const totalDistance = animationStartX - animationEndX;
 
-          cache.fade.forEach((item) => {
-            const currentLeft = baseX + item.leftOffset;
-            const center = currentLeft + item.width / 2;
-            let progress = 0;
+          forEachHorizontalActiveItem(
+            cache.fade,
+            baseX,
+            containerWidth,
+            cache.fadeMaxWidth,
+            forceUpdateWhenOffscreen,
+            (item) => {
+              const currentLeft = baseX + item.leftOffset;
+              const center = currentLeft + item.width / 2;
+              let progress = 0;
 
-            if (center <= animationEndX) progress = 1;
-            else if (center >= animationStartX) progress = 0;
-            else progress = (animationStartX - center) / totalDistance;
+              if (center <= animationEndX) progress = 1;
+              else if (center >= animationStartX) progress = 0;
+              else progress = (animationStartX - center) / totalDistance;
 
-            const nextOpacity = Math.max(0, Math.min(1, progress));
-            if (
-              Number.isNaN(item.lastOpacity) ||
-              Math.abs(nextOpacity - item.lastOpacity) > 0.01
-            ) {
-              gsap.set(item.el, { opacity: nextOpacity });
-              item.lastOpacity = nextOpacity;
-            }
-          });
+              const nextOpacity = Math.max(0, Math.min(1, progress));
+              if (
+                Number.isNaN(item.lastOpacity) ||
+                Math.abs(nextOpacity - item.lastOpacity) > 0.01
+              ) {
+                gsap.set(item.el, { opacity: nextOpacity });
+                item.lastOpacity = nextOpacity;
+              }
+            },
+          );
 
           const wordTriggerPoint = containerWidth * 0.8;
-          cache.wordFade.forEach((item) => {
-            const currentLeft = baseX + item.leftOffset;
-            const currentRight = currentLeft + item.width;
-            const maxCount = item.spans.length;
-            const nextPhase: RevealPhase =
-              currentRight <= wordTriggerPoint
-                ? "after"
-                : currentLeft <= containerWidth
-                  ? "partial"
-                  : "before";
+          forEachHorizontalActiveItem(
+            cache.wordFade,
+            baseX,
+            containerWidth,
+            cache.wordFadeMaxWidth,
+            forceUpdateWhenOffscreen,
+            (item) => {
+              const currentLeft = baseX + item.leftOffset;
+              const currentRight = currentLeft + item.width;
+              const maxCount = item.spans.length;
+              const nextPhase: RevealPhase =
+                currentRight <= wordTriggerPoint
+                  ? "after"
+                  : currentLeft <= containerWidth
+                    ? "partial"
+                    : "before";
 
-            if (nextPhase === "after") {
-              if (item.lastPhase !== "after") {
-                item.isFullyRevealed = true;
-                item.lastPhase = "after";
-                item.lastVisibleCount = maxCount;
-                item.spans.forEach((span, i) => {
-                  revealWordSpan(span, i * 0.05);
-                });
-              }
-              return;
-            }
-
-            item.isFullyRevealed = false;
-            if (nextPhase === "before") {
-              if (item.lastPhase !== "before") {
-                if (item.lastPhase === "partial") {
-                  applyWordDelta(item.spans, item.lastVisibleCount, 0);
-                } else if (item.lastPhase === "after") {
-                  item.spans.forEach((span) => hideWordSpan(span));
+              if (nextPhase === "after") {
+                if (item.lastPhase !== "after") {
+                  item.isFullyRevealed = true;
+                  item.lastPhase = "after";
+                  item.lastVisibleCount = maxCount;
+                  item.spans.forEach((span, i) => {
+                    revealWordSpan(span, i * 0.05);
+                  });
                 }
-                item.lastPhase = "before";
-                item.lastVisibleCount = 0;
+                return;
               }
-              return;
-            }
 
-            const visibleProgress = Math.max(
-              0,
-              Math.min(1, (containerWidth - currentLeft) / item.width),
-            );
-            const nextCount = Math.floor(visibleProgress * maxCount);
-            const prevCount =
-              item.lastPhase === "partial"
-                ? item.lastVisibleCount
-                : item.lastPhase === "after"
-                  ? maxCount
-                  : 0;
+              item.isFullyRevealed = false;
+              if (nextPhase === "before") {
+                if (item.lastPhase !== "before") {
+                  if (item.lastPhase === "partial") {
+                    applyWordDelta(item.spans, item.lastVisibleCount, 0);
+                  } else if (item.lastPhase === "after") {
+                    item.spans.forEach((span) => hideWordSpan(span));
+                  }
+                  item.lastPhase = "before";
+                  item.lastVisibleCount = 0;
+                }
+                return;
+              }
 
-            if (prevCount !== nextCount || item.lastPhase !== "partial") {
-              applyWordDelta(item.spans, prevCount, nextCount);
-              item.lastVisibleCount = nextCount;
-              item.lastPhase = "partial";
-            }
-          });
+              const visibleProgress = Math.max(
+                0,
+                Math.min(1, (containerWidth - currentLeft) / item.width),
+              );
+              const nextCount = Math.floor(visibleProgress * maxCount);
+              const prevCount =
+                item.lastPhase === "partial"
+                  ? item.lastVisibleCount
+                  : item.lastPhase === "after"
+                    ? maxCount
+                    : 0;
+
+              if (prevCount !== nextCount || item.lastPhase !== "partial") {
+                applyWordDelta(item.spans, prevCount, nextCount);
+                item.lastVisibleCount = nextCount;
+                item.lastPhase = "partial";
+              }
+            },
+          );
 
           const charTriggerPoint = containerWidth * 0.75;
-          cache.charFade.forEach((item) => {
-            const currentLeft = baseX + item.leftOffset;
-            const currentRight = currentLeft + item.width;
-            const maxCount = item.spans.length;
-            const nextPhase: RevealPhase =
-              currentRight <= charTriggerPoint
-                ? "after"
-                : currentLeft <= containerWidth
-                  ? "partial"
-                  : "before";
+          forEachHorizontalActiveItem(
+            cache.charFade,
+            baseX,
+            containerWidth,
+            cache.charFadeMaxWidth,
+            forceUpdateWhenOffscreen,
+            (item) => {
+              const currentLeft = baseX + item.leftOffset;
+              const currentRight = currentLeft + item.width;
+              const maxCount = item.spans.length;
+              const nextPhase: RevealPhase =
+                currentRight <= charTriggerPoint
+                  ? "after"
+                  : currentLeft <= containerWidth
+                    ? "partial"
+                    : "before";
 
-            if (nextPhase === "after") {
-              if (item.lastPhase !== "after") {
-                item.isFullyRevealed = true;
-                item.lastPhase = "after";
-                item.lastVisibleCount = maxCount;
-                item.spans.forEach((span, i) => {
-                  revealCharSpan(span, i * 0.02);
-                });
-              }
-              return;
-            }
-
-            item.isFullyRevealed = false;
-            if (nextPhase === "before") {
-              if (item.lastPhase !== "before") {
-                if (item.lastPhase === "partial") {
-                  applyCharDelta(item.spans, item.lastVisibleCount, 0);
-                } else if (item.lastPhase === "after") {
-                  item.spans.forEach((span) => hideCharSpan(span));
+              if (nextPhase === "after") {
+                if (item.lastPhase !== "after") {
+                  item.isFullyRevealed = true;
+                  item.lastPhase = "after";
+                  item.lastVisibleCount = maxCount;
+                  item.spans.forEach((span, i) => {
+                    revealCharSpan(span, i * 0.02);
+                  });
                 }
-                item.lastPhase = "before";
-                item.lastVisibleCount = 0;
+                return;
               }
-              return;
-            }
 
-            const visibleProgress = Math.max(
-              0,
-              Math.min(1, (containerWidth - currentLeft) / item.width),
-            );
-            const nextCount = Math.floor(visibleProgress * maxCount);
-            const prevCount =
-              item.lastPhase === "partial"
-                ? item.lastVisibleCount
-                : item.lastPhase === "after"
-                  ? maxCount
-                  : 0;
+              item.isFullyRevealed = false;
+              if (nextPhase === "before") {
+                if (item.lastPhase !== "before") {
+                  if (item.lastPhase === "partial") {
+                    applyCharDelta(item.spans, item.lastVisibleCount, 0);
+                  } else if (item.lastPhase === "after") {
+                    item.spans.forEach((span) => hideCharSpan(span));
+                  }
+                  item.lastPhase = "before";
+                  item.lastVisibleCount = 0;
+                }
+                return;
+              }
 
-            if (prevCount !== nextCount || item.lastPhase !== "partial") {
-              applyCharDelta(item.spans, prevCount, nextCount);
-              item.lastVisibleCount = nextCount;
-              item.lastPhase = "partial";
-            }
-          });
+              const visibleProgress = Math.max(
+                0,
+                Math.min(1, (containerWidth - currentLeft) / item.width),
+              );
+              const nextCount = Math.floor(visibleProgress * maxCount);
+              const prevCount =
+                item.lastPhase === "partial"
+                  ? item.lastVisibleCount
+                  : item.lastPhase === "after"
+                    ? maxCount
+                    : 0;
+
+              if (prevCount !== nextCount || item.lastPhase !== "partial") {
+                applyCharDelta(item.spans, prevCount, nextCount);
+                item.lastVisibleCount = nextCount;
+                item.lastPhase = "partial";
+              }
+            },
+          );
         }
 
         if (enableLineReveal) {
           const lineTriggerPoint = containerWidth * 0.8;
-          cache.lineReveal.forEach((item) => {
-            const currentLeft = baseX + item.leftOffset;
-            const currentRight = currentLeft + item.width;
-            const maxCount = item.lines.length;
-            const nextPhase: RevealPhase =
-              currentRight <= lineTriggerPoint
-                ? "after"
-                : currentLeft <= containerWidth
-                  ? "partial"
-                  : "before";
+          forEachHorizontalActiveItem(
+            cache.lineReveal,
+            baseX,
+            containerWidth,
+            cache.lineRevealMaxWidth,
+            forceUpdateWhenOffscreen,
+            (item) => {
+              const currentLeft = baseX + item.leftOffset;
+              const currentRight = currentLeft + item.width;
+              const maxCount = item.lines.length;
+              const nextPhase: RevealPhase =
+                currentRight <= lineTriggerPoint
+                  ? "after"
+                  : currentLeft <= containerWidth
+                    ? "partial"
+                    : "before";
 
-            if (nextPhase === "after") {
-              if (item.lastPhase !== "after") {
-                item.isFullyRevealed = true;
-                item.lastPhase = "after";
-                item.lastVisibleCount = maxCount;
-                item.lines.forEach((line, i) => {
-                  revealLine(line, i * 0.1);
-                });
-              }
-              return;
-            }
-
-            item.isFullyRevealed = false;
-            if (nextPhase === "before") {
-              if (item.lastPhase !== "before") {
-                if (item.lastPhase === "partial") {
-                  applyLineDelta(item.lines, item.lastVisibleCount, 0);
-                } else if (item.lastPhase === "after") {
-                  item.lines.forEach((line) => hideLine(line));
+              if (nextPhase === "after") {
+                if (item.lastPhase !== "after") {
+                  item.isFullyRevealed = true;
+                  item.lastPhase = "after";
+                  item.lastVisibleCount = maxCount;
+                  item.lines.forEach((line, i) => {
+                    revealLine(line, i * 0.1);
+                  });
                 }
-                item.lastPhase = "before";
-                item.lastVisibleCount = 0;
+                return;
               }
-              return;
-            }
 
-            const visibleProgress = Math.max(
-              0,
-              Math.min(1, (containerWidth - currentLeft) / item.width),
-            );
-            const nextCount = Math.floor(visibleProgress * maxCount);
-            const prevCount =
-              item.lastPhase === "partial"
-                ? item.lastVisibleCount
-                : item.lastPhase === "after"
-                  ? maxCount
-                  : 0;
+              item.isFullyRevealed = false;
+              if (nextPhase === "before") {
+                if (item.lastPhase !== "before") {
+                  if (item.lastPhase === "partial") {
+                    applyLineDelta(item.lines, item.lastVisibleCount, 0);
+                  } else if (item.lastPhase === "after") {
+                    item.lines.forEach((line) => hideLine(line));
+                  }
+                  item.lastPhase = "before";
+                  item.lastVisibleCount = 0;
+                }
+                return;
+              }
 
-            if (prevCount !== nextCount || item.lastPhase !== "partial") {
-              applyLineDelta(item.lines, prevCount, nextCount);
-              item.lastVisibleCount = nextCount;
-              item.lastPhase = "partial";
-            }
-          });
+              const visibleProgress = Math.max(
+                0,
+                Math.min(1, (containerWidth - currentLeft) / item.width),
+              );
+              const nextCount = Math.floor(visibleProgress * maxCount);
+              const prevCount =
+                item.lastPhase === "partial"
+                  ? item.lastVisibleCount
+                  : item.lastPhase === "after"
+                    ? maxCount
+                    : 0;
+
+              if (prevCount !== nextCount || item.lastPhase !== "partial") {
+                applyLineDelta(item.lines, prevCount, nextCount);
+                item.lastVisibleCount = nextCount;
+                item.lastPhase = "partial";
+              }
+            },
+          );
         }
       };
 
@@ -993,10 +1197,14 @@ export default function HorizontalScrollAnimationWrapper({
       syncSubscriptionByVisibility();
 
       const handleResize = () => {
-        if (enableLineReveal) {
-          setupDesktopLineReveal(true);
-        }
+        const prevWrapperWidth = cache.wrapperWidth;
         measure();
+        const hasWrapperWidthChanged =
+          Math.abs(cache.wrapperWidth - prevWrapperWidth) > 0.5;
+        if (enableLineReveal && hasWrapperWidthChanged) {
+          setupDesktopLineReveal(true);
+          measure();
+        }
         lastX = Number.NaN;
         const currentX =
           ((gsap.getProperty(content, "x") as number) || 0) -
@@ -1038,6 +1246,11 @@ export default function HorizontalScrollAnimationWrapper({
     const initTimeout = setTimeout(() => {
       const ctx = gsap.context(() => {
         const cache = {
+          wrapperWidth: 0,
+          fadeMaxHeight: 0,
+          wordFadeMaxHeight: 0,
+          charFadeMaxHeight: 0,
+          lineRevealMaxHeight: 0,
           fade: [] as {
             el: Element;
             topOffset: number;
@@ -1151,6 +1364,7 @@ export default function HorizontalScrollAnimationWrapper({
         const measure = () => {
           const scrollTop =
             window.pageYOffset || document.documentElement.scrollTop;
+          cache.wrapperWidth = wrapper.getBoundingClientRect().width;
 
           if (enableFadeElements) {
             cache.fade = [];
@@ -1163,6 +1377,8 @@ export default function HorizontalScrollAnimationWrapper({
                 lastOpacity: Number.NaN,
               });
             });
+            cache.fade.sort((a, b) => a.topOffset - b.topOffset);
+            cache.fadeMaxHeight = getMaxVerticalItemSize(cache.fade);
 
             cache.wordFade = [];
             wrapper.querySelectorAll("[data-fade-word]").forEach((el) => {
@@ -1176,6 +1392,8 @@ export default function HorizontalScrollAnimationWrapper({
                 lastVisibleCount: 0,
               });
             });
+            cache.wordFade.sort((a, b) => a.topOffset - b.topOffset);
+            cache.wordFadeMaxHeight = getMaxVerticalItemSize(cache.wordFade);
 
             cache.charFade = [];
             wrapper.querySelectorAll("[data-fade-char]").forEach((el) => {
@@ -1189,6 +1407,8 @@ export default function HorizontalScrollAnimationWrapper({
                 lastVisibleCount: 0,
               });
             });
+            cache.charFade.sort((a, b) => a.topOffset - b.topOffset);
+            cache.charFadeMaxHeight = getMaxVerticalItemSize(cache.charFade);
           }
           if (enableLineReveal) {
             cache.lineReveal = [];
@@ -1203,6 +1423,10 @@ export default function HorizontalScrollAnimationWrapper({
                 lastVisibleCount: 0,
               });
             });
+            cache.lineReveal.sort((a, b) => a.topOffset - b.topOffset);
+            cache.lineRevealMaxHeight = getMaxVerticalItemSize(
+              cache.lineReveal,
+            );
           }
         };
         measure();
@@ -1368,213 +1592,232 @@ export default function HorizontalScrollAnimationWrapper({
           const totalDist = animStart - animEnd;
 
           if (enableFadeElements) {
-            cache.fade.forEach((item) => {
-              const center = item.topOffset + item.height / 2;
-              const progress = getProgressForCenter(
-                center,
-                animStart,
-                animEnd,
-                totalDist,
-              );
-              const nextOpacity = Math.max(0, Math.min(1, progress));
-              if (
-                Number.isNaN(item.lastOpacity) ||
-                Math.abs(nextOpacity - item.lastOpacity) > 0.01
-              ) {
-                gsap.to(item.el, {
-                  opacity: nextOpacity,
-                  duration: 0.3,
-                  ease: "power2.out",
-                  overwrite: true,
-                });
-                item.lastOpacity = nextOpacity;
-              }
-            });
-
-            cache.wordFade.forEach((item) => {
-              const center = item.topOffset + item.height / 2;
-              const maxCount = item.spans.length;
-              const nextPhase: RevealPhase =
-                center <= animEnd
-                  ? "after"
-                  : center >= animStart
-                    ? "before"
-                    : "partial";
-
-              if (nextPhase === "after") {
-                if (item.lastPhase !== "after") {
-                  const prevCount =
-                    item.lastPhase === "partial"
-                      ? item.lastVisibleCount
-                      : item.lastPhase === "before"
-                        ? 0
-                        : maxCount;
-                  applyWordDelta(item.spans, prevCount, maxCount);
-                  item.lastPhase = "after";
-                  item.lastVisibleCount = maxCount;
+            forEachVerticalActiveItem(
+              cache.fade,
+              scrollTop,
+              windowHeight,
+              cache.fadeMaxHeight,
+              (item) => {
+                const center = item.topOffset + item.height / 2;
+                const progress = getProgressForCenter(
+                  center,
+                  animStart,
+                  animEnd,
+                  totalDist,
+                );
+                const nextOpacity = Math.max(0, Math.min(1, progress));
+                if (
+                  Number.isNaN(item.lastOpacity) ||
+                  Math.abs(nextOpacity - item.lastOpacity) > 0.01
+                ) {
+                  gsap.set(item.el, { opacity: nextOpacity });
+                  item.lastOpacity = nextOpacity;
                 }
-                return;
-              }
+              },
+            );
 
-              if (nextPhase === "before") {
-                if (item.lastPhase !== "before") {
-                  const prevCount =
-                    item.lastPhase === "partial"
-                      ? item.lastVisibleCount
-                      : item.lastPhase === "after"
-                        ? maxCount
-                        : 0;
-                  applyWordDelta(item.spans, prevCount, 0);
-                  item.lastPhase = "before";
-                  item.lastVisibleCount = 0;
+            forEachVerticalActiveItem(
+              cache.wordFade,
+              scrollTop,
+              windowHeight,
+              cache.wordFadeMaxHeight,
+              (item) => {
+                const center = item.topOffset + item.height / 2;
+                const maxCount = item.spans.length;
+                const nextPhase: RevealPhase =
+                  center <= animEnd
+                    ? "after"
+                    : center >= animStart
+                      ? "before"
+                      : "partial";
+
+                if (nextPhase === "after") {
+                  if (item.lastPhase !== "after") {
+                    const prevCount =
+                      item.lastPhase === "partial"
+                        ? item.lastVisibleCount
+                        : item.lastPhase === "before"
+                          ? 0
+                          : maxCount;
+                    applyWordDelta(item.spans, prevCount, maxCount);
+                    item.lastPhase = "after";
+                    item.lastVisibleCount = maxCount;
+                  }
+                  return;
                 }
-                return;
-              }
 
-              const progress = getProgressForCenter(
-                center,
-                animStart,
-                animEnd,
-                totalDist,
-              );
-              const nextCount = Math.floor(progress * maxCount);
-              const prevCount =
-                item.lastPhase === "partial"
-                  ? item.lastVisibleCount
-                  : item.lastPhase === "after"
-                    ? maxCount
-                    : 0;
-
-              if (prevCount !== nextCount || item.lastPhase !== "partial") {
-                applyWordDelta(item.spans, prevCount, nextCount);
-                item.lastPhase = "partial";
-                item.lastVisibleCount = nextCount;
-              }
-            });
-
-            cache.charFade.forEach((item) => {
-              const center = item.topOffset + item.height / 2;
-              const maxCount = item.spans.length;
-              const nextPhase: RevealPhase =
-                center <= animEnd
-                  ? "after"
-                  : center >= animStart
-                    ? "before"
-                    : "partial";
-
-              if (nextPhase === "after") {
-                if (item.lastPhase !== "after") {
-                  const prevCount =
-                    item.lastPhase === "partial"
-                      ? item.lastVisibleCount
-                      : item.lastPhase === "before"
-                        ? 0
-                        : maxCount;
-                  applyCharDelta(item.spans, prevCount, maxCount);
-                  item.lastPhase = "after";
-                  item.lastVisibleCount = maxCount;
+                if (nextPhase === "before") {
+                  if (item.lastPhase !== "before") {
+                    const prevCount =
+                      item.lastPhase === "partial"
+                        ? item.lastVisibleCount
+                        : item.lastPhase === "after"
+                          ? maxCount
+                          : 0;
+                    applyWordDelta(item.spans, prevCount, 0);
+                    item.lastPhase = "before";
+                    item.lastVisibleCount = 0;
+                  }
+                  return;
                 }
-                return;
-              }
 
-              if (nextPhase === "before") {
-                if (item.lastPhase !== "before") {
-                  const prevCount =
-                    item.lastPhase === "partial"
-                      ? item.lastVisibleCount
-                      : item.lastPhase === "after"
-                        ? maxCount
-                        : 0;
-                  applyCharDelta(item.spans, prevCount, 0);
-                  item.lastPhase = "before";
-                  item.lastVisibleCount = 0;
+                const progress = getProgressForCenter(
+                  center,
+                  animStart,
+                  animEnd,
+                  totalDist,
+                );
+                const nextCount = Math.floor(progress * maxCount);
+                const prevCount =
+                  item.lastPhase === "partial"
+                    ? item.lastVisibleCount
+                    : item.lastPhase === "after"
+                      ? maxCount
+                      : 0;
+
+                if (prevCount !== nextCount || item.lastPhase !== "partial") {
+                  applyWordDelta(item.spans, prevCount, nextCount);
+                  item.lastPhase = "partial";
+                  item.lastVisibleCount = nextCount;
                 }
-                return;
-              }
+              },
+            );
 
-              const progress = getProgressForCenter(
-                center,
-                animStart,
-                animEnd,
-                totalDist,
-              );
-              const nextCount = Math.floor(progress * maxCount);
-              const prevCount =
-                item.lastPhase === "partial"
-                  ? item.lastVisibleCount
-                  : item.lastPhase === "after"
-                    ? maxCount
-                    : 0;
+            forEachVerticalActiveItem(
+              cache.charFade,
+              scrollTop,
+              windowHeight,
+              cache.charFadeMaxHeight,
+              (item) => {
+                const center = item.topOffset + item.height / 2;
+                const maxCount = item.spans.length;
+                const nextPhase: RevealPhase =
+                  center <= animEnd
+                    ? "after"
+                    : center >= animStart
+                      ? "before"
+                      : "partial";
 
-              if (prevCount !== nextCount || item.lastPhase !== "partial") {
-                applyCharDelta(item.spans, prevCount, nextCount);
-                item.lastPhase = "partial";
-                item.lastVisibleCount = nextCount;
-              }
-            });
+                if (nextPhase === "after") {
+                  if (item.lastPhase !== "after") {
+                    const prevCount =
+                      item.lastPhase === "partial"
+                        ? item.lastVisibleCount
+                        : item.lastPhase === "before"
+                          ? 0
+                          : maxCount;
+                    applyCharDelta(item.spans, prevCount, maxCount);
+                    item.lastPhase = "after";
+                    item.lastVisibleCount = maxCount;
+                  }
+                  return;
+                }
+
+                if (nextPhase === "before") {
+                  if (item.lastPhase !== "before") {
+                    const prevCount =
+                      item.lastPhase === "partial"
+                        ? item.lastVisibleCount
+                        : item.lastPhase === "after"
+                          ? maxCount
+                          : 0;
+                    applyCharDelta(item.spans, prevCount, 0);
+                    item.lastPhase = "before";
+                    item.lastVisibleCount = 0;
+                  }
+                  return;
+                }
+
+                const progress = getProgressForCenter(
+                  center,
+                  animStart,
+                  animEnd,
+                  totalDist,
+                );
+                const nextCount = Math.floor(progress * maxCount);
+                const prevCount =
+                  item.lastPhase === "partial"
+                    ? item.lastVisibleCount
+                    : item.lastPhase === "after"
+                      ? maxCount
+                      : 0;
+
+                if (prevCount !== nextCount || item.lastPhase !== "partial") {
+                  applyCharDelta(item.spans, prevCount, nextCount);
+                  item.lastPhase = "partial";
+                  item.lastVisibleCount = nextCount;
+                }
+              },
+            );
           }
 
           if (enableLineReveal) {
-            cache.lineReveal.forEach((item) => {
-              const center = item.topOffset + item.height / 2;
-              const maxCount = item.lines.length;
-              const nextPhase: RevealPhase =
-                center <= animEnd
-                  ? "after"
-                  : center >= animStart
-                    ? "before"
-                    : "partial";
+            forEachVerticalActiveItem(
+              cache.lineReveal,
+              scrollTop,
+              windowHeight,
+              cache.lineRevealMaxHeight,
+              (item) => {
+                const center = item.topOffset + item.height / 2;
+                const maxCount = item.lines.length;
+                const nextPhase: RevealPhase =
+                  center <= animEnd
+                    ? "after"
+                    : center >= animStart
+                      ? "before"
+                      : "partial";
 
-              if (nextPhase === "after") {
-                if (item.lastPhase !== "after") {
-                  const prevCount =
-                    item.lastPhase === "partial"
-                      ? item.lastVisibleCount
-                      : item.lastPhase === "before"
-                        ? 0
-                        : maxCount;
-                  applyLineDelta(item.lines, prevCount, maxCount);
-                  item.lastPhase = "after";
-                  item.lastVisibleCount = maxCount;
+                if (nextPhase === "after") {
+                  if (item.lastPhase !== "after") {
+                    const prevCount =
+                      item.lastPhase === "partial"
+                        ? item.lastVisibleCount
+                        : item.lastPhase === "before"
+                          ? 0
+                          : maxCount;
+                    applyLineDelta(item.lines, prevCount, maxCount);
+                    item.lastPhase = "after";
+                    item.lastVisibleCount = maxCount;
+                  }
+                  return;
                 }
-                return;
-              }
 
-              if (nextPhase === "before") {
-                if (item.lastPhase !== "before") {
-                  const prevCount =
-                    item.lastPhase === "partial"
-                      ? item.lastVisibleCount
-                      : item.lastPhase === "after"
-                        ? maxCount
-                        : 0;
-                  applyLineDelta(item.lines, prevCount, 0);
-                  item.lastPhase = "before";
-                  item.lastVisibleCount = 0;
+                if (nextPhase === "before") {
+                  if (item.lastPhase !== "before") {
+                    const prevCount =
+                      item.lastPhase === "partial"
+                        ? item.lastVisibleCount
+                        : item.lastPhase === "after"
+                          ? maxCount
+                          : 0;
+                    applyLineDelta(item.lines, prevCount, 0);
+                    item.lastPhase = "before";
+                    item.lastVisibleCount = 0;
+                  }
+                  return;
                 }
-                return;
-              }
 
-              const progress = getProgressForCenter(
-                center,
-                animStart,
-                animEnd,
-                totalDist,
-              );
-              const nextCount = Math.floor(progress * maxCount);
-              const prevCount =
-                item.lastPhase === "partial"
-                  ? item.lastVisibleCount
-                  : item.lastPhase === "after"
-                    ? maxCount
-                    : 0;
+                const progress = getProgressForCenter(
+                  center,
+                  animStart,
+                  animEnd,
+                  totalDist,
+                );
+                const nextCount = Math.floor(progress * maxCount);
+                const prevCount =
+                  item.lastPhase === "partial"
+                    ? item.lastVisibleCount
+                    : item.lastPhase === "after"
+                      ? maxCount
+                      : 0;
 
-              if (prevCount !== nextCount || item.lastPhase !== "partial") {
-                applyLineDelta(item.lines, prevCount, nextCount);
-                item.lastPhase = "partial";
-                item.lastVisibleCount = nextCount;
-              }
-            });
+                if (prevCount !== nextCount || item.lastPhase !== "partial") {
+                  applyLineDelta(item.lines, prevCount, nextCount);
+                  item.lastPhase = "partial";
+                  item.lastVisibleCount = nextCount;
+                }
+              },
+            );
           }
         };
 
@@ -1639,10 +1882,14 @@ export default function HorizontalScrollAnimationWrapper({
         observer.observe(wrapper);
 
         const handleResize = () => {
-          if (enableLineReveal) {
-            setupMobileLineReveal(true);
-          }
+          const prevWrapperWidth = cache.wrapperWidth;
           measure();
+          const hasWrapperWidthChanged =
+            Math.abs(cache.wrapperWidth - prevWrapperWidth) > 0.5;
+          if (enableLineReveal && hasWrapperWidthChanged) {
+            setupMobileLineReveal(true);
+            measure();
+          }
           syncSubscriptionByVisibility();
           scheduleOnScroll();
         };
