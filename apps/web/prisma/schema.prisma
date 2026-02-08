@@ -168,6 +168,7 @@ model Post {
   tokenizedAt         DateTime?
   deletedAt           DateTime?
   postMode            PostMode                 @default(MARKDOWN)
+  license             String?                  @db.VarChar(32) // 版权许可代码，null 表示跟随默认配置
 
   userUid Int
 

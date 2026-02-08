@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   RiAddLine,
   RiCodeBoxLine,
@@ -17,7 +17,9 @@ import type { BlockFormConfig } from "@/blocks/core/types/field-config";
 import { SingleBlockRenderer } from "@/components/server/features/page-editor/VisualBlockRenderer";
 import Link from "@/components/ui/Link";
 import runWithAuth from "@/lib/client/run-with-auth";
+import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
+import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { Tooltip } from "@/ui/Tooltip";
 
@@ -353,10 +355,10 @@ export default function BlockLibrary({
           const isActive = selectedTheme === cat;
           return (
             <Tooltip content={config?.label || cat} key={cat} placement="left">
-              <button
+              <Clickable
+                hoverScale={1}
                 onClick={() => handleCategoryClick(cat)}
                 className="relative group w-12 h-12 flex items-center justify-center transition-all duration-200"
-                title={config?.label || cat}
               >
                 <div
                   className={`
@@ -369,9 +371,9 @@ export default function BlockLibrary({
                     isActive ? "text-primary" : "text-muted-foreground"
                   }
                 >
-                  <Icon size={20} />
+                  <Icon size="1.25em" />
                 </div>
-              </button>
+              </Clickable>
             </Tooltip>
           );
         })}
@@ -385,22 +387,23 @@ export default function BlockLibrary({
             : "BLOCKS"}
         </div>
         <div className="flex-1 overflow-y-auto">
-          {selectedTheme === "import" ? (
-            <div className="h-full overflow-hidden">
-              <textarea
-                className="w-full h-full p-2 bg-background border border-border font-mono text-xs resize-none focus:outline-none focus:ring-1 text-secondary-foreground focus:ring-primary"
-                placeholder="在此粘贴 Block JSON..."
-                value={importJson}
-                onChange={handleImportChange}
-              />
-            </div>
-          ) : (
-            <>
-              {currentCategoryBlocks.map((block) => (
-                <button
-                  key={block.blockType}
-                  onClick={() => setSelectedBlock(block)}
-                  className={`
+          <AutoTransition className="h-full">
+            {selectedTheme === "import" ? (
+              <div className="h-full overflow-hidden" key="import-blocks">
+                <textarea
+                  className="w-full h-full p-2 bg-background border border-border font-mono text-xs resize-none focus:outline-none focus:ring-1 text-secondary-foreground focus:ring-primary"
+                  placeholder="在此粘贴 Block JSON..."
+                  value={importJson}
+                  onChange={handleImportChange}
+                />
+              </div>
+            ) : (
+              <Fragment key="category-blocks">
+                {currentCategoryBlocks.map((block) => (
+                  <button
+                    key={block.blockType}
+                    onClick={() => setSelectedBlock(block)}
+                    className={`
                 w-full text-left px-4 py-3 border-b border-border/50 transition-all duration-200 flex flex-col gap-1
                 ${
                   selectedBlock?.blockType === block.blockType
@@ -408,26 +411,27 @@ export default function BlockLibrary({
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 }
               `}
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`font-semibold text-sm truncate ${selectedBlock?.blockType === block.blockType ? "text-primary" : "text-foreground"}`}
-                    >
-                      {block.displayName}
-                    </span>
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`font-semibold text-sm truncate ${selectedBlock?.blockType === block.blockType ? "text-primary" : "text-foreground"}`}
+                      >
+                        {block.displayName}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                      {block.description || "暂无描述"}
+                    </div>
+                  </button>
+                ))}
+                {currentCategoryBlocks.length === 0 && (
+                  <div className="p-8 text-xs text-muted-foreground text-center">
+                    该分类下暂无 Block
                   </div>
-                  <div className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                    {block.description || "暂无描述"}
-                  </div>
-                </button>
-              ))}
-              {currentCategoryBlocks.length === 0 && (
-                <div className="p-8 text-xs text-muted-foreground text-center">
-                  该分类下暂无 Block
-                </div>
-              )}
-            </>
-          )}
+                )}
+              </Fragment>
+            )}
+          </AutoTransition>
         </div>
       </div>
 

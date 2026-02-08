@@ -7,6 +7,7 @@ import { createPost, updatePost } from "@/actions/post";
 import { CategoryInput } from "@/components/client/features/categories/CategoryInput";
 import { EditorCore } from "@/components/client/features/editor/EditorCore";
 import MediaSelector from "@/components/client/features/media/MediaSelector";
+import PostLicensePicker from "@/components/client/features/posts/PostLicensePicker";
 import type { SelectedTag } from "@/components/client/features/tags/TagInput";
 import { TagInput } from "@/components/client/features/tags/TagInput";
 import {
@@ -14,6 +15,11 @@ import {
   loadEditorContent,
   saveEditorContent,
 } from "@/lib/client/editor-persistence";
+import {
+  fromStoredPostLicense,
+  getPostLicenseSelectionLabel,
+  type PostLicenseSelection,
+} from "@/lib/shared/post-license";
 import type {
   EditorInitialData,
   EditorMode,
@@ -40,6 +46,7 @@ interface PostFormData {
   metaDescription: string;
   metaKeywords: string;
   featuredImage: string;
+  license: PostLicenseSelection;
   category: string | null;
   tags: SelectedTag[];
 }
@@ -77,6 +84,7 @@ function createDefaultPostFormData(): PostFormData {
     metaDescription: "",
     metaKeywords: "",
     featuredImage: "",
+    license: "default",
     category: null,
     tags: [],
   };
@@ -104,6 +112,7 @@ function initializeFormData(initialData?: EditorInitialData): PostFormData {
     metaDescription: initialData.metaDescription || "",
     metaKeywords: initialData.metaKeywords || "",
     featuredImage: initialData.featuredImage || "",
+    license: fromStoredPostLicense(initialData.license),
     category: initialData.categories?.[0] || null,
     tags: initialData.tags
       ? initialData.tags.map((name) => ({
@@ -262,6 +271,7 @@ export function PostEditorWrapper({
           tags: tagNames.length > 0 ? tagNames : undefined,
           excerpt: formData.excerpt || undefined,
           featuredImage: formData.featuredImage || undefined,
+          license: formData.license,
           isPinned: formData.isPinned,
           allowComments: formData.allowComments,
           metaDescription: formData.metaDescription || undefined,
@@ -283,6 +293,7 @@ export function PostEditorWrapper({
           tags: tagNames.length > 0 ? tagNames : undefined,
           excerpt: formData.excerpt || undefined,
           featuredImage: formData.featuredImage || undefined,
+          license: formData.license,
           isPinned: formData.isPinned,
           allowComments: formData.allowComments,
           metaDescription: formData.metaDescription || undefined,
@@ -482,6 +493,18 @@ export function PostEditorWrapper({
         </div>
       </div>
 
+      {/* 版权许可 */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+          版权许可
+        </h3>
+        <PostLicensePicker
+          value={formData.license}
+          onChange={(license) => handleFieldChange("license", license)}
+          disabled={isSubmitting}
+        />
+      </div>
+
       {/* SEO 设置 */}
       <div className="space-y-4">
         <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
@@ -644,6 +667,14 @@ export function PostEditorWrapper({
             </label>
             <p className="text-sm text-foreground/80">
               {formData.robotsIndex ? "允许" : "禁止"}
+            </p>
+          </div>
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-foreground mb-1">
+              版权许可
+            </label>
+            <p className="text-sm text-foreground/80">
+              {getPostLicenseSelectionLabel(formData.license)}
             </p>
           </div>
         </div>

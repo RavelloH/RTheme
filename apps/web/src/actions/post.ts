@@ -60,6 +60,10 @@ import { markdownToPlainText } from "@/lib/server/search";
 import { slugify } from "@/lib/server/slugify";
 import { analyzeText } from "@/lib/server/tokenizer";
 import { validateData } from "@/lib/server/validator";
+import {
+  isPostLicenseValue,
+  toStoredPostLicense,
+} from "@/lib/shared/post-license";
 import { MEDIA_SLOTS } from "@/types/media";
 
 /*
@@ -731,6 +735,7 @@ export async function getPostsList(
         metaKeywords: true,
         robotsIndex: true,
         postMode: true,
+        license: true,
         author: {
           select: {
             uid: true,
@@ -779,6 +784,7 @@ export async function getPostsList(
       createdAt: post.createdAt.toISOString(),
       updatedAt: post.updatedAt.toISOString(),
       featuredImage: getFeaturedImageUrl(post.mediaRefs),
+      license: isPostLicenseValue(post.license) ? post.license : null,
       metaDescription: post.metaDescription,
       metaKeywords: post.metaKeywords,
       robotsIndex: post.robotsIndex,
@@ -894,6 +900,7 @@ export async function getPostDetail(
         metaKeywords: true,
         robotsIndex: true,
         postMode: true,
+        license: true,
         userUid: true, // 需要获取作者 uid 以进行权限检查
         author: {
           select: {
@@ -950,6 +957,7 @@ export async function getPostDetail(
       createdAt: post.createdAt.toISOString(),
       updatedAt: post.updatedAt.toISOString(),
       featuredImage: getFeaturedImageUrl(post.mediaRefs),
+      license: isPostLicenseValue(post.license) ? post.license : null,
       metaDescription: post.metaDescription,
       metaKeywords: post.metaKeywords,
       robotsIndex: post.robotsIndex,
@@ -989,6 +997,7 @@ export async function createPost(
     content,
     excerpt,
     featuredImage,
+    license,
     status = "DRAFT",
     isPinned = false,
     allowComments = true,
@@ -1019,6 +1028,7 @@ export async function createPost(
       content,
       excerpt,
       featuredImage,
+      license,
       status,
       isPinned,
       allowComments,
@@ -1129,6 +1139,8 @@ export async function createPost(
     }
 
     // 创建文章
+    const storedLicense = toStoredPostLicense(license || "default");
+
     const post = await prisma.post.create({
       data: {
         title,
@@ -1136,6 +1148,7 @@ export async function createPost(
         content: snapshot, // 最新内容
         versionMetadata: metadata, // 版本历史元数据
         excerpt: excerpt || null,
+        license: storedLicense,
         status,
         isPinned,
         allowComments,
@@ -1188,6 +1201,7 @@ export async function createPost(
               slug: finalSlug,
               excerpt,
               featuredImage,
+              license: storedLicense,
               status,
               isPinned,
               allowComments,
@@ -1257,6 +1271,7 @@ export async function updatePost(
     content,
     excerpt,
     featuredImage,
+    license,
     status,
     isPinned,
     allowComments,
@@ -1288,6 +1303,7 @@ export async function updatePost(
       content,
       excerpt,
       featuredImage,
+      license,
       status,
       isPinned,
       allowComments,
@@ -1334,6 +1350,7 @@ export async function updatePost(
         metaKeywords: true,
         robotsIndex: true,
         postMode: true,
+        license: true,
         userUid: true, // 需要获取作者 uid 以进行权限检查
         categories: { select: { name: true } },
         tags: { select: { name: true } },
@@ -1485,6 +1502,7 @@ export async function updatePost(
       metaKeywords?: string | null;
       robotsIndex?: boolean;
       postMode?: "MARKDOWN" | "MDX";
+      license?: string | null;
     } = {};
 
     if (title !== undefined) updateData.title = title;
@@ -1533,6 +1551,9 @@ export async function updatePost(
     if (metaKeywords !== undefined)
       updateData.metaKeywords = metaKeywords || null;
     if (robotsIndex !== undefined) updateData.robotsIndex = robotsIndex;
+    if (license !== undefined) {
+      updateData.license = toStoredPostLicense(license);
+    }
 
     // 处理分类更新
     let categoryUpdateData:
@@ -1701,6 +1722,13 @@ export async function updatePost(
     if (postMode !== undefined && postMode !== existingPost.postMode) {
       auditOldValue.postMode = existingPost.postMode;
       auditNewValue.postMode = postMode;
+    }
+    if (license !== undefined) {
+      const nextLicense = toStoredPostLicense(license);
+      if (nextLicense !== existingPost.license) {
+        auditOldValue.license = existingPost.license;
+        auditNewValue.license = nextLicense;
+      }
     }
     if (categories !== undefined) {
       const oldCategories = existingPost.categories.map((c) => c.name);

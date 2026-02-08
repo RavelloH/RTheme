@@ -70,6 +70,7 @@ export default async function EditPostPage(props: Props) {
               metaDescription: post.metaDescription || "",
               metaKeywords: post.metaKeywords || "",
               featuredImage: post.featuredImage || "",
+              license: post.license,
               categories: post.categories,
               tags: post.tags,
               postMode: post.postMode,

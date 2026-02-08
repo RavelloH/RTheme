@@ -211,6 +211,57 @@ export const CONFIG_DEFINITIONS = {
   // =====================================
   // 内容相关配置
   // =====================================
+  "content.license.default": {
+    default: "all-rights-reserved" as
+      | "all-rights-reserved"
+      | "cc-0"
+      | "cc-by"
+      | "cc-by-sa"
+      | "cc-by-nd"
+      | "cc-by-nc"
+      | "cc-by-nc-sa"
+      | "cc-by-nc-nd",
+    options: [
+      {
+        value: "all-rights-reserved",
+        label: "All Rights Reserved - 保留所有权利 - 未经授权禁止转载或使用",
+      },
+      {
+        value: "cc-0",
+        label: "CC0",
+      },
+      {
+        value: "cc-by",
+        label: "CC BY - 署名",
+      },
+      {
+        value: "cc-by-sa",
+        label: "CC BY-SA - 署名 - 以相同方式分享",
+      },
+      {
+        value: "cc-by-nd",
+        label: "CC BY-ND - 署名 - 不可改作",
+      },
+      {
+        value: "cc-by-nc",
+        label: "CC BY-NC - 署名 - 不可商用",
+      },
+      {
+        value: "cc-by-nc-sa",
+        label: "CC BY-NC-SA - 署名 - 不可商用 - 以相同方式分享",
+      },
+      {
+        value: "cc-by-nc-nd",
+        label: "CC BY-NC-ND - 署名 - 不可商用 - 禁止改作",
+      },
+    ],
+    description: "文章默认版权声明许可证，详情参考文章编辑器中的版权声明选项",
+  },
+  "content.license.textTemplate": {
+    default: "本文原创内容使用 {LICENSE}。",
+    description:
+      "文章版权声明文本模板。{LICENSE} 将被替换为具体的许可证描述文本",
+  },
   "content.menu.enabled": {
     default: true,
     description: "是否启用文章目录",

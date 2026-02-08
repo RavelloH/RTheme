@@ -134,7 +134,7 @@ export interface EditorInitialData {
   isFeatured?: boolean;
   sortOrder?: number;
   repoPath?: string;
-  license?: string;
+  license?: string | null;
   enableGithubSync?: boolean;
   enableConentSync?: boolean;
   featuredImages?: string[];

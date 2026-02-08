@@ -9826,6 +9826,40 @@
         "required": ["success", "message", "timestamp", "requestId", "data"],
         "additionalProperties": false
       },
+      "PostLicense": {
+        "type": "string",
+        "enum": [
+          "cc-0",
+          "cc-by",
+          "cc-by-sa",
+          "cc-by-nd",
+          "cc-by-nc",
+          "cc-by-nc-sa",
+          "cc-by-nc-nd",
+          "all-rights-reserved"
+        ]
+      },
+      "PostLicenseSelection": {
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "cc-0",
+              "cc-by",
+              "cc-by-sa",
+              "cc-by-nd",
+              "cc-by-nc",
+              "cc-by-nc-sa",
+              "cc-by-nc-nd",
+              "all-rights-reserved"
+            ]
+          },
+          {
+            "type": "string",
+            "const": "default"
+          }
+        ]
+      },
       "GetPostsTrends": {
         "type": "object",
         "properties": {
@@ -10127,6 +10161,26 @@
                     }
                   ]
                 },
+                "license": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "cc-0",
+                        "cc-by",
+                        "cc-by-sa",
+                        "cc-by-nd",
+                        "cc-by-nc",
+                        "cc-by-nc-sa",
+                        "cc-by-nc-nd",
+                        "all-rights-reserved"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
                 "metaDescription": {
                   "anyOf": [
                     {
@@ -10176,6 +10230,7 @@
                 "categories",
                 "tags",
                 "featuredImage",
+                "license",
                 "metaDescription",
                 "metaKeywords",
                 "robotsIndex",
@@ -10319,6 +10374,26 @@
                   }
                 ]
               },
+              "license": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "cc-0",
+                      "cc-by",
+                      "cc-by-sa",
+                      "cc-by-nd",
+                      "cc-by-nc",
+                      "cc-by-nc-sa",
+                      "cc-by-nc-nd",
+                      "all-rights-reserved"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "metaDescription": {
                 "anyOf": [
                   {
@@ -10363,6 +10438,7 @@
               "categories",
               "tags",
               "featuredImage",
+              "license",
               "metaDescription",
               "metaKeywords",
               "robotsIndex",
@@ -10488,6 +10564,27 @@
           "featuredImage": {
             "type": "string",
             "maxLength": 255
+          },
+          "license": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "cc-0",
+                  "cc-by",
+                  "cc-by-sa",
+                  "cc-by-nd",
+                  "cc-by-nc",
+                  "cc-by-nc-sa",
+                  "cc-by-nc-nd",
+                  "all-rights-reserved"
+                ]
+              },
+              {
+                "type": "string",
+                "const": "default"
+              }
+            ]
           },
           "status": {
             "default": "DRAFT",
@@ -10615,6 +10712,27 @@
           "featuredImage": {
             "type": "string",
             "maxLength": 255
+          },
+          "license": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "cc-0",
+                  "cc-by",
+                  "cc-by-sa",
+                  "cc-by-nd",
+                  "cc-by-nc",
+                  "cc-by-nc-sa",
+                  "cc-by-nc-nd",
+                  "all-rights-reserved"
+                ]
+              },
+              {
+                "type": "string",
+                "const": "default"
+              }
+            ]
           },
           "status": {
             "type": "string",
