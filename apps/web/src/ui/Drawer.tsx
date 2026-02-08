@@ -29,6 +29,11 @@ export interface DrawerProps {
    * @default true
    */
   showBackdrop?: boolean;
+  /**
+   * 移动端打开时是否默认展开
+   * @default false
+   */
+  defaultExpanded?: boolean;
 }
 
 export function Drawer({
@@ -38,9 +43,10 @@ export function Drawer({
   className = "",
   initialSize = 0.4,
   showBackdrop = true,
+  defaultExpanded = false,
 }: DrawerProps) {
   const [mounted, setMounted] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
 
   const isMobile = useMobile();
@@ -103,6 +109,7 @@ export function Drawer({
   // 当 open 改变时的动画逻辑
   useEffect(() => {
     if (open) {
+      setIsExpanded(defaultExpanded);
       // 开启时：重置宽度并执行入场动画
       if (typeof window !== "undefined") {
         const initialW = Math.max(
@@ -115,10 +122,10 @@ export function Drawer({
       }
     } else {
       // 关闭时：重置状态（AnimatePresence 会处理 exit 动画）
-      setIsExpanded(false);
+      setIsExpanded(defaultExpanded);
       y.set(0);
     }
-  }, [open, effectiveInitialSize, desktopX, desktopWidth, y]);
+  }, [open, effectiveInitialSize, desktopX, desktopWidth, y, defaultExpanded]);
 
   if (!mounted) {
     return null;

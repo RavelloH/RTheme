@@ -317,7 +317,7 @@ export default async function PostPage({ params }: PageProps) {
                   <Link
                     key={tag.slug}
                     href={"/tags/" + tag.slug}
-                    className="bg-muted text-muted-foreground transition-all px-3 py-2 rounded-sm inline-flex gap-1 items-center hover:bg-muted/70 hover:text-foreground"
+                    className="bg-muted text-muted-foreground transition-all px-3 py-2 rounded-sm inline-flex gap-1 items-center hover:bg-primary/5 hover:text-primary"
                   >
                     <RiHashtag size={"1em"} />
                     {tag.name}
@@ -336,25 +336,19 @@ export default async function PostPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* 摘要 */}
-        {post.excerpt && (
-          <div className="flex">
-            <div className="text-lg p-10 border border-border flex-[7]">
-              <h2 className="text-2xl font-bold mb-4">文章摘要</h2>
-              <p className="leading-relaxed">{post.excerpt}</p>
-            </div>
-            <div className="flex-[3] border border-border flex items-center justify-center bg-muted/20">
-              <div className="text-center p-6">
-                <RiText size={"2em"} className="mx-auto mb-2 opacity-50" />
-                <p className="text-sm text-muted-foreground">摘要 / Summary</p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* 文章内容 */}
         <div className="px-6 md:px-10 max-w-7xl mx-auto pt-10 flex gap-6 relative h-full">
           <div className="flex-[8] h-full min-w-0">
+            {/* 摘要 */}
+            {post.excerpt && (
+              <div className="pb-12 max-w-4xl mx-auto ">
+                <div className="border-l-[3px] border-primary/60 pl-4 py-1">
+                  <p className="leading-loose text-muted-foreground text-sm">
+                    {post.excerpt}
+                  </p>
+                </div>
+              </div>
+            )}
             <UniversalRenderer
               source={renderedContent.content}
               mode={renderedContent.mode}
@@ -483,7 +477,7 @@ export default async function PostPage({ params }: PageProps) {
           </div>
 
           {/* 移动端目录按钮 */}
-          <div className="lg:hidden fixed bottom-6 right-6 z-40">
+          <div className="lg:hidden">
             <PostToc isMobile={true} />
           </div>
         </div>
