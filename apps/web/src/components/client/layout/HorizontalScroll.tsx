@@ -134,7 +134,10 @@ export default function HorizontalScroll({
       maxScrollLeft: Math.max(0, content.scrollWidth - content.clientWidth),
     };
 
-    const syncSizeCache = () => {
+    const clampScrollLeft = (value: number) =>
+      Math.max(0, Math.min(sizeCache.maxScrollLeft, value));
+
+    const syncSizeCache = (syncStateWithDom = false) => {
       sizeCache.containerWidth = content.clientWidth;
       sizeCache.contentWidth = content.scrollWidth;
       sizeCache.maxScrollLeft = Math.max(
@@ -142,21 +145,24 @@ export default function HorizontalScroll({
         sizeCache.contentWidth - sizeCache.containerWidth,
       );
 
-      smoothScrollState.targetScrollLeft = Math.max(
-        0,
-        Math.min(sizeCache.maxScrollLeft, smoothScrollState.targetScrollLeft),
+      if (syncStateWithDom && !smoothScrollState.isAnimating) {
+        const domScrollLeft = clampScrollLeft(content.scrollLeft);
+        smoothScrollState.targetScrollLeft = domScrollLeft;
+        smoothScrollState.currentScrollLeft = domScrollLeft;
+        return;
+      }
+
+      smoothScrollState.targetScrollLeft = clampScrollLeft(
+        smoothScrollState.targetScrollLeft,
       );
-      smoothScrollState.currentScrollLeft = Math.max(
-        0,
-        Math.min(sizeCache.maxScrollLeft, smoothScrollState.currentScrollLeft),
+      smoothScrollState.currentScrollLeft = clampScrollLeft(
+        smoothScrollState.currentScrollLeft,
       );
     };
 
     const emitNativeProgress = () => {
-      const currentScrollLeft = Math.max(
-        0,
-        Math.min(sizeCache.maxScrollLeft, content.scrollLeft),
-      );
+      syncSizeCache(true);
+      const currentScrollLeft = clampScrollLeft(content.scrollLeft);
       emitHorizontalProgress(
         -currentScrollLeft,
         sizeCache.maxScrollLeft,
@@ -193,6 +199,7 @@ export default function HorizontalScroll({
 
     let animationFrameId: number | null = null;
     const animateScroll = () => {
+      syncSizeCache();
       const diff =
         smoothScrollState.targetScrollLeft -
         smoothScrollState.currentScrollLeft;
@@ -217,18 +224,19 @@ export default function HorizontalScroll({
       if (shouldIgnoreScroll(e.target as HTMLElement, e.deltaY)) return;
 
       e.preventDefault();
+      syncSizeCache(true);
 
       if (
         Math.abs(content.scrollLeft - smoothScrollState.currentScrollLeft) > 1
       ) {
-        smoothScrollState.targetScrollLeft = content.scrollLeft;
-        smoothScrollState.currentScrollLeft = content.scrollLeft;
+        const domScrollLeft = clampScrollLeft(content.scrollLeft);
+        smoothScrollState.targetScrollLeft = domScrollLeft;
+        smoothScrollState.currentScrollLeft = domScrollLeft;
       }
 
       smoothScrollState.targetScrollLeft += e.deltaY * scrollSpeed;
-      smoothScrollState.targetScrollLeft = Math.max(
-        0,
-        Math.min(sizeCache.maxScrollLeft, smoothScrollState.targetScrollLeft),
+      smoothScrollState.targetScrollLeft = clampScrollLeft(
+        smoothScrollState.targetScrollLeft,
       );
 
       if (!smoothScrollState.isAnimating) {
@@ -237,19 +245,15 @@ export default function HorizontalScroll({
       }
     };
 
-    syncSizeCache();
-
     let resizeObserver: ResizeObserver | null = null;
     let resizeHandler: (() => void) | null = null;
     if (typeof ResizeObserver !== "undefined") {
       resizeObserver = new ResizeObserver(() => {
-        syncSizeCache();
         emitNativeProgress();
       });
       resizeObserver.observe(content);
     } else {
       resizeHandler = () => {
-        syncSizeCache();
         emitNativeProgress();
       };
       window.addEventListener("resize", resizeHandler);

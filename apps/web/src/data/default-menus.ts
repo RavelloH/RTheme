@@ -37,7 +37,7 @@ export const defaultMenus: DefaultMenu[] = [
   },
   {
     id: "menu-projects",
-    name: "作品",
+    name: "项目",
     status: "ACTIVE",
     icon: "dashboard-fill",
     order: 2,

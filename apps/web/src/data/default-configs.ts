@@ -249,7 +249,7 @@ export const CONFIG_DEFINITIONS = {
   },
   "content.githubAutoSync.enabled": {
     default: true,
-    description: "是否启用GitHub内容自动同步功能，用于更新作品信息",
+    description: "是否启用GitHub内容自动同步功能，用于更新项目信息",
   },
   "content.githubAutoSync.personalKey": {
     default: "",

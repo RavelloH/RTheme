@@ -1,7 +1,7 @@
 import type { BlockFormConfig } from "@/blocks/core/types/field-config";
 
 /**
- * 作品区块的说明文字（用于 UI 显示）
+ * 项目区块的说明文字（用于 UI 显示）
  */
 export const PROJECTS_BLOCK_SCHEMA = {
   marquee: {
@@ -19,23 +19,23 @@ export const PROJECTS_BLOCK_SCHEMA = {
     header: "Header",
     content: "Content",
     _description:
-      "作品上的自定义组件，显示在作品中间，可自定义头部和正文（单行）。正文将会居中显示",
+      "项目上的自定义组件，显示在项目中间，可自定义头部和正文（单行）。正文将会居中显示",
   },
   worksSummary: {
     content: "Summary Content",
     footer: "Footer",
     _description:
-      "作品上的自定义组件，显示在最后，可自定义正文（多行）和底部链接",
+      "项目上的自定义组件，显示在最后，可自定义正文（多行）和底部链接",
   },
 } as const;
 
 /**
- * 作品区块的表单配置
+ * 项目区块的表单配置
  */
 export const PROJECTS_BLOCK_FORM_CONFIG: BlockFormConfig = {
   blockType: "projects",
-  displayName: "最近作品区块",
-  description: "显示最近的三个作品，可自定义排序方式。",
+  displayName: "最近项目区块",
+  description: "显示最近的三个项目，可自定义排序方式。",
   author: {
     name: "RavelloH",
     url: "https://ravelloh.com",
@@ -57,7 +57,7 @@ export const PROJECTS_BLOCK_FORM_CONFIG: BlockFormConfig = {
       path: "title.line2",
       type: "text",
       helperText: PROJECTS_BLOCK_SCHEMA.marquee.line2,
-      defaultValue: "作品",
+      defaultValue: "项目",
     },
     {
       label: "项目排序方式",
@@ -159,7 +159,7 @@ export const PROJECTS_BLOCK_FORM_CONFIG: BlockFormConfig = {
   previewData: {
     title: {
       line1: "PROJECTS",
-      line2: "作品",
+      line2: "项目",
     },
     projects: {
       sort: "publishedAt_desc",

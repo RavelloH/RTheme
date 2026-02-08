@@ -42,7 +42,7 @@ export default function ProjectsBlock({ block }: BlockComponentProps) {
   const { worksDescription, worksSummary } = content;
 
   const marqueeLine1 = content.title?.line1 || "PROJECTS";
-  const marqueeLine2 = content.title?.line2 || "作品";
+  const marqueeLine2 = content.title?.line2 || "项目";
 
   const projectSlots: Array<ProjectDisplayItem | null> = Array.from(
     { length: 3 },
@@ -58,7 +58,7 @@ export default function ProjectsBlock({ block }: BlockComponentProps) {
     areas: GridArea[],
     mobileIndex: number,
   ) => {
-    const fallbackDescription = "暂无项目数据，等待新的作品发布。";
+    const fallbackDescription = "暂无项目数据，等待新的项目发布。";
 
     return (
       <GridItem
@@ -115,7 +115,7 @@ export default function ProjectsBlock({ block }: BlockComponentProps) {
         </Marquee>
       </GridItem>
 
-      {/* 标题 Marquee（作品） */}
+      {/* 标题 Marquee（项目） */}
       <GridItem
         areas={[10, 11, 12]}
         width={4}
@@ -182,7 +182,7 @@ export default function ProjectsBlock({ block }: BlockComponentProps) {
         PROJECT_CARD_LAYOUTS[2]!.mobileIndex,
       )}
 
-      {/* 作品总结（静态内容） */}
+      {/* 项目总结（静态内容） */}
       <GridItem
         areas={[7, 8, 9, 10, 11]}
         width={12 / 5}
