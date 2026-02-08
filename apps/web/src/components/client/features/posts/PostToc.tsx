@@ -19,6 +19,7 @@ import type {
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
+import { Drawer } from "@/ui/Drawer";
 import { Tooltip } from "@/ui/Tooltip";
 
 interface TocItem {
@@ -57,7 +58,8 @@ export default function PostToc({
 }: PostTocProps) {
   const [tocItems, setTocItems] = useState<TocItem[]>([]);
   const [activeId, setActiveId] = useState<string>("");
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const isCollapsed = false;
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null); // 包裹容器
   const tocRef = useRef<HTMLDivElement>(null); // 目录元素
   const [highlightStyle, setHighlightStyle] = useState({
@@ -65,6 +67,7 @@ export default function PostToc({
     height: 0,
     opacity: 0,
   });
+  const [isMobileButtonVisible, setIsMobileButtonVisible] = useState(true);
   const navRef = useRef<HTMLElement>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
   const scrollContainerRef = useRef<HTMLElement | null>(null);
@@ -72,6 +75,8 @@ export default function PostToc({
   const [showBottomGradient, setShowBottomGradient] = useState(false);
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const mobileLastScrollTopRef = useRef(0);
+  const mobileScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isUserClickRef = useRef(false);
   const clickedTargetIdRef = useRef<string | null>(null); // 记录点击的目标ID
 
@@ -426,13 +431,12 @@ export default function PostToc({
 
   // 更新高亮指示器位置
   useEffect(() => {
-    if (
-      isMobile ||
-      isCollapsed ||
-      !activeId ||
-      !navRef.current ||
-      !tocRef.current
-    ) {
+    if (isMobile && !isMobileDrawerOpen) {
+      setHighlightStyle((prev) => ({ ...prev, opacity: 0 }));
+      return;
+    }
+
+    if (isCollapsed || !activeId || !navRef.current || !tocRef.current) {
       setHighlightStyle((prev) => ({ ...prev, opacity: 0 }));
       return;
     }
@@ -555,11 +559,11 @@ export default function PostToc({
     } else {
       setHighlightStyle((prev) => ({ ...prev, opacity: 0 }));
     }
-  }, [activeId, isCollapsed, isMobile, tocItems]);
+  }, [activeId, isCollapsed, tocItems, isMobile, isMobileDrawerOpen]);
 
   // 监听目录滚动，更新渐变遮罩显示状态
   useEffect(() => {
-    if (isMobile || isCollapsed || !navRef.current) {
+    if ((isMobile && !isMobileDrawerOpen) || isCollapsed || !navRef.current) {
       setShowTopGradient(false);
       setShowBottomGradient(false);
       return;
@@ -605,7 +609,7 @@ export default function PostToc({
         cancelAnimationFrame(rafId);
       }
     };
-  }, [isMobile, isCollapsed, tocItems]);
+  }, [isCollapsed, tocItems, isMobile, isMobileDrawerOpen]);
 
   // 移动端滚动进度监听
   useEffect(() => {
@@ -643,16 +647,73 @@ export default function PostToc({
         }
       }
 
-      setScrollProgress(Math.min(100, Math.max(0, progress)));
+      const normalizedProgress = Math.min(100, Math.max(0, progress));
+      setScrollProgress(normalizedProgress);
+
+      // 广播滚动进度
+      broadcast({
+        type: "scroll-progress",
+        progress: normalizedProgress,
+      });
+
+      // 更新活动标题
+      const headings = document.querySelectorAll(
+        "h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]",
+      );
+      const activeThreshold = emToPx(16);
+      let currentActiveId = "";
+
+      headings.forEach((heading) => {
+        const rect = heading.getBoundingClientRect();
+        if (rect.top <= activeThreshold) {
+          currentActiveId = heading.id;
+        }
+      });
+
+      setActiveId(currentActiveId);
+      scanViewportContent();
+
+      // 与 Footer 一致的移动端按钮显隐逻辑
+      const currentScrollTop =
+        window.scrollY || document.documentElement.scrollTop;
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = window.innerHeight;
+      const scrollBottom = scrollHeight - clientHeight - currentScrollTop;
+
+      if (mobileScrollTimeoutRef.current) {
+        clearTimeout(mobileScrollTimeoutRef.current);
+      }
+
+      const isScrollingDown = currentScrollTop > mobileLastScrollTopRef.current;
+      const isScrollingUp = currentScrollTop < mobileLastScrollTopRef.current;
+      const isNearBottom = scrollBottom < 50;
+
+      if (isScrollingDown && !isNearBottom) {
+        setIsMobileButtonVisible(false);
+      } else if (isScrollingUp || isNearBottom) {
+        setIsMobileButtonVisible(true);
+      }
+
+      mobileLastScrollTopRef.current = currentScrollTop;
+
+      mobileScrollTimeoutRef.current = setTimeout(() => {
+        if (currentScrollTop < 10) {
+          setIsMobileButtonVisible(true);
+        }
+      }, 150);
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll(); // 初始化
+    const initialTimer = setTimeout(handleScroll, 100); // 初始化
 
     return () => {
+      clearTimeout(initialTimer);
       window.removeEventListener("scroll", handleScroll);
+      if (mobileScrollTimeoutRef.current) {
+        clearTimeout(mobileScrollTimeoutRef.current);
+      }
     };
-  }, [isMobile, contentSelector]);
+  }, [isMobile, contentSelector, scanViewportContent, broadcast]);
 
   // 回到顶部
   const scrollToTop = () => {
@@ -692,120 +753,292 @@ export default function PostToc({
     }
   };
 
-  if (isMobile) {
-    // 移动端悬浮按钮实现
-    return (
-      <div className="relative">
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors"
-          title="目录"
-        >
-          <RiListCheck size="1.2em" />
-        </button>
+  const handleTocItemClick = (targetId: string, closeMobileDrawer = false) => {
+    isUserClickRef.current = true;
+    clickedTargetIdRef.current = targetId;
 
-        {isCollapsed && tocItems.length > 0 && (
-          <div className="absolute bottom-16 right-0 w-80 bg-background border border-border rounded-lg shadow-xl p-4 max-h-96 overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <RiListCheck size="1.2em" />
-                目录
-              </h3>
-            </div>
+    if (closeMobileDrawer) {
+      setIsMobileDrawerOpen(false);
+    }
 
-            <nav className="space-y-1">
-              {tocItems.map((item) => {
-                const isActive = activeId === item.id;
-                const marginLeft = (item.level - 1) * 12;
+    // 延迟重置标记，确保页面滚动完成
+    setTimeout(() => {
+      isUserClickRef.current = false;
+      clickedTargetIdRef.current = null;
+    }, 1000);
+  };
 
-                return (
-                  <a
-                    key={item.id}
-                    href={`#${item.id}`}
-                    onClick={() => {
-                      isUserClickRef.current = true;
-                      clickedTargetIdRef.current = item.id; // 记录点击的目标
-                      setIsCollapsed(false);
-                      // 延迟重置标记，确保页面滚动完成
-                      setTimeout(() => {
-                        isUserClickRef.current = false;
-                        clickedTargetIdRef.current = null;
-                      }, 1000);
-                    }}
-                    className={`block w-full text-left px-2 py-1 rounded text-sm transition-colors ${
-                      isActive
-                        ? "bg-primary text-primary-foreground font-medium"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                    }`}
-                    style={{ marginLeft: `${marginLeft}px` }}
-                  >
-                    {item.text}
-                  </a>
-                );
-              })}
-            </nav>
+  const renderEmptyState = () => (
+    <div className="p-4 border-l-2 border-border">
+      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+        <RiListCheck size="1.2em" />
+        目录
+      </h3>
+      <p className="text-sm text-muted-foreground">暂无目录</p>
+    </div>
+  );
 
-            {/* 滚动进度和导航按钮 */}
-            <div className="mt-4 pt-4 space-y-3 relative">
-              {/* 进度条分隔线 */}
-              <div className="absolute top-0 left-0 right-0 h-0.5 bg-border">
-                <div
-                  className="h-full bg-primary transition-all duration-300 ease-out"
-                  style={{ width: `${scrollProgress}%` }}
-                />
+  const renderTocBody = (closeMobileDrawer = false) => (
+    <div className="p-4 bg-background">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between w-full">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <RiListCheck size="1.2em" />
+            目录
+          </h3>
+          <div className="flex gap-2">
+            <Clickable
+              onClick={() => {
+                scrollToTop();
+                if (closeMobileDrawer) {
+                  setIsMobileDrawerOpen(false);
+                }
+              }}
+              hoverScale={1.2}
+            >
+              <div className="text-xs text-secondary-foreground hover:text-foreground">
+                <RiArrowUpLine size="2em" />
               </div>
-
-              {/* 进度百分比 */}
-              <div className="text-xs text-muted-foreground font-medium font-mono">
-                {scrollProgress.toFixed(0)} %
+            </Clickable>
+            <Clickable
+              onClick={() => {
+                scrollToComments();
+                if (closeMobileDrawer) {
+                  setIsMobileDrawerOpen(false);
+                }
+              }}
+              hoverScale={1.2}
+            >
+              <div className="text-xs text-secondary-foreground hover:text-foreground">
+                <RiArrowDownLine size="2em" />
               </div>
-
-              {/* 导航按钮 */}
-              <div className="flex gap-2">
-                <Clickable
-                  onClick={() => {
-                    scrollToTop();
-                    setIsCollapsed(false);
-                  }}
-                  className="flex-1"
-                  hoverScale={1.05}
-                >
-                  <div className="w-full px-3 py-2 text-xs bg-muted text-foreground rounded transition-colors flex items-center justify-center gap-1">
-                    <RiArrowUpLine size="1em" />
-                    <span>顶部</span>
-                  </div>
-                </Clickable>
-                <Clickable
-                  onClick={() => {
-                    scrollToComments();
-                    setIsCollapsed(false);
-                  }}
-                  className="flex-1"
-                  hoverScale={1.05}
-                >
-                  <div className="w-full px-3 py-2 text-xs bg-muted text-foreground rounded transition-colors flex items-center justify-center gap-1">
-                    <RiArrowDownLine size="1em" />
-                    <span>评论</span>
-                  </div>
-                </Clickable>
-              </div>
-            </div>
+            </Clickable>
           </div>
-        )}
+        </div>
       </div>
+
+      <div className="relative">
+        {/* 顶部渐变遮罩 */}
+        <div
+          className={`absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-background via-background/80 to-transparent pointer-events-none z-20 transition-opacity duration-300 ${
+            showTopGradient ? "opacity-100" : "opacity-0"
+          }`}
+        />
+
+        {/* 底部渐变遮罩 */}
+        <div
+          className={`absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none z-20 transition-opacity duration-300 ${
+            showBottomGradient ? "opacity-100" : "opacity-0"
+          }`}
+        />
+
+        <nav
+          ref={navRef}
+          className="space-y-1 relative max-h-[40vh] overflow-y-auto overflow-x-hidden scrollbar-hide"
+        >
+          {tocItems.map((item) => {
+            const isActive = activeId === item.id;
+            const marginLeft = (item.level - 1) * 12;
+
+            return (
+              <Link
+                key={item.id}
+                href={`#${item.id}`}
+                onClick={() => {
+                  handleTocItemClick(item.id, closeMobileDrawer);
+                }}
+                className={`block w-full text-left px-2 py-1 rounded text-sm transition-colors truncate ${
+                  isActive
+                    ? "text-foreground font-bold"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                style={{ marginLeft: `${marginLeft}px` }}
+                title={item.text}
+              >
+                {item.text}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* 滚动进度和导航按钮 */}
+      <div className="mt-6 pt-4 space-y-3 relative">
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-border">
+          <div
+            className="h-full bg-primary transition-all duration-300 ease-out"
+            style={{ width: `${scrollProgress}%` }}
+          />
+        </div>
+        <div className="text-xs text-muted-foreground font-medium font-mono">
+          {scrollProgress.toFixed(0)} %
+        </div>
+      </div>
+      <AutoResizer>
+        <AutoTransition>
+          {/* 视口内容卡片 */}
+          {viewportItems.length > 0 && (
+            <div className="space-y-1 max-h-[30vh] overflow-y-auto scrollbar-hide scroll-smooth pt-4 border-t border-border mt-4 pb-4">
+              <AnimatePresence mode="popLayout">
+                {viewportItems.slice(0, 5).map((item) => {
+                  const commonProps = {
+                    initial: { opacity: 0, y: -8 },
+                    animate: { opacity: 1, y: 0 },
+                    exit: { opacity: 0, y: 8 },
+                    transition: {
+                      duration: 0.2,
+                      ease: [0.25, 0.1, 0.25, 1] as const,
+                    },
+                    layout: true,
+                  };
+
+                  switch (item.type) {
+                    case "link":
+                      return (
+                        <Tooltip
+                          key={item.id}
+                          content={
+                            <div className="text-sm break-all">
+                              <div className="font-medium mb-1">
+                                {item.text}
+                              </div>
+                              <div className="text-muted-foreground">
+                                {item.href}
+                              </div>
+                            </div>
+                          }
+                          placement="left"
+                          maxWidth="300px"
+                        >
+                          <motion.div
+                            {...commonProps}
+                            className="group flex items-center gap-2 text-xs p-1.5 rounded hover:bg-muted/50 transition-colors overflow-hidden"
+                          >
+                            <RiLinkM
+                              size="0.9em"
+                              className="text-muted-foreground shrink-0"
+                            />
+                            <span className="truncate text-muted-foreground">
+                              {item.text}
+                            </span>
+                          </motion.div>
+                        </Tooltip>
+                      );
+
+                    case "footnote":
+                      return (
+                        <Tooltip
+                          key={item.id}
+                          content={
+                            <div className="text-sm">
+                              {item.footnoteContent}
+                            </div>
+                          }
+                          placement="left"
+                          maxWidth="300px"
+                        >
+                          <motion.div
+                            {...commonProps}
+                            className="group text-xs p-1.5 rounded hover:bg-muted/50 transition-colors overflow-hidden"
+                          >
+                            <div className="flex items-center gap-2">
+                              <RiSuperscript2
+                                size="0.9em"
+                                className="text-muted-foreground shrink-0"
+                              />
+                              <span className="shrink-0 font-mono">
+                                {item.text || "?"}
+                              </span>
+                              <span className="text-muted-foreground truncate">
+                                {item.footnoteContent}
+                              </span>
+                            </div>
+                          </motion.div>
+                        </Tooltip>
+                      );
+
+                    default:
+                      return null;
+                  }
+                })}
+              </AnimatePresence>
+              <AutoTransition>
+                {viewportItems.length > 5 && (
+                  <div
+                    className="text-xs text-muted-foreground pl-1.5 pt-1"
+                    key={viewportItems.length}
+                  >
+                    +{viewportItems.length - 5} 项
+                  </div>
+                )}
+              </AutoTransition>
+            </div>
+          )}
+        </AutoTransition>
+      </AutoResizer>
+    </div>
+  );
+
+  const renderDesktopStylePanel = (closeMobileDrawer = false) => {
+    if (tocItems.length === 0) {
+      return renderEmptyState();
+    }
+
+    return (
+      <div ref={tocRef} className="w-full overflow-hidden relative">
+        {/* 左侧边框 - 使用绝对定位 */}
+        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-border" />
+
+        {/* 动态高亮指示器 */}
+        <div
+          className="absolute left-0 bg-primary transition-all duration-300 ease-out pointer-events-none z-10"
+          style={{
+            top: `${highlightStyle.top}px`,
+            height: `${highlightStyle.height}px`,
+            width: "2px",
+            opacity: highlightStyle.opacity,
+          }}
+        />
+
+        {renderTocBody(closeMobileDrawer)}
+      </div>
+    );
+  };
+
+  if (isMobile) {
+    return (
+      <>
+        <div
+          className={`fixed right-4 [bottom:calc(env(safe-area-inset-bottom)+1rem)] z-[90] transition-all duration-300 ${
+            isMobileButtonVisible
+              ? "translate-y-0 opacity-100 pointer-events-auto"
+              : "translate-y-8 opacity-0 pointer-events-none"
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => setIsMobileDrawerOpen(true)}
+            className="flex items-center gap-2 rounded-xl border border-border/60 bg-background/50 px-4 py-4 text-foreground shadow-[0_8px_24px_rgba(0,0,0,0.16)] backdrop-blur-md transition-colors hover:bg-background/60"
+            title="目录"
+            aria-label="打开目录"
+          >
+            <RiListCheck size="1em" className="shrink-0" />
+          </button>
+        </div>
+
+        <Drawer
+          open={isMobileDrawerOpen}
+          onClose={() => setIsMobileDrawerOpen(false)}
+          initialSize={0.6}
+        >
+          {renderDesktopStylePanel(true)}
+        </Drawer>
+      </>
     );
   }
 
   if (tocItems.length === 0) {
-    return (
-      <div className="p-4 border-l-2 border-border">
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <RiListCheck size="1.2em" />
-          目录
-        </h3>
-        <p className="text-sm text-muted-foreground">暂无目录</p>
-      </div>
-    );
+    return renderEmptyState();
   }
 
   return (
@@ -814,221 +1047,10 @@ export default function PostToc({
       className={`transition-all duration-300 h-full ${isCollapsed ? "w-12" : "w-64"}`}
     >
       <div
-        ref={tocRef}
-        className={`${isCollapsed ? "w-12" : "w-64"} overflow-hidden relative`}
+        className={`${isCollapsed ? "w-12" : "w-64"}`}
         style={{ maxHeight: "calc(100vh - 180px)" }}
       >
-        {/* 左侧边框 - 使用绝对定位 */}
-        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-border" />
-
-        {/* 动态高亮指示器 */}
-        {!isCollapsed && (
-          <div
-            className="absolute left-0 bg-primary transition-all duration-300 ease-out pointer-events-none z-10"
-            style={{
-              top: `${highlightStyle.top}px`,
-              height: `${highlightStyle.height}px`,
-              width: "2px",
-              opacity: highlightStyle.opacity,
-            }}
-          />
-        )}
-
-        <div className="p-4 bg-background">
-          <div className="flex items-center justify-between mb-4">
-            {!isCollapsed && (
-              <div className="flex items-center justify-between w-full">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <RiListCheck size="1.2em" />
-                  目录
-                </h3>
-                <div className="flex gap-2">
-                  <Clickable onClick={scrollToTop} hoverScale={1.2}>
-                    <div className="text-xs text-secondary-foreground hover:text-foreground">
-                      <RiArrowUpLine size="2em" />
-                    </div>
-                  </Clickable>
-                  <Clickable onClick={scrollToComments} hoverScale={1.2}>
-                    <div className="text-xs  text-secondary-foreground hover:text-foreground">
-                      <RiArrowDownLine size="2em" />
-                    </div>
-                  </Clickable>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {!isCollapsed && (
-            <div className="relative">
-              {/* 顶部渐变遮罩 */}
-              <div
-                className={`absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-background via-background/80 to-transparent pointer-events-none z-20 transition-opacity duration-300 ${
-                  showTopGradient ? "opacity-100" : "opacity-0"
-                }`}
-              />
-
-              {/* 底部渐变遮罩 */}
-              <div
-                className={`absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none z-20 transition-opacity duration-300 ${
-                  showBottomGradient ? "opacity-100" : "opacity-0"
-                }`}
-              />
-
-              <nav
-                ref={navRef}
-                className="space-y-1 relative max-h-[40vh] overflow-y-auto overflow-x-hidden scrollbar-hide"
-              >
-                {tocItems.map((item) => {
-                  const isActive = activeId === item.id;
-                  const marginLeft = (item.level - 1) * 12;
-
-                  return (
-                    <Link
-                      key={item.id}
-                      href={`#${item.id}`}
-                      onClick={() => {
-                        isUserClickRef.current = true;
-                        clickedTargetIdRef.current = item.id; // 记录点击的目标
-                        // 延迟重置标记，确保页面滚动完成
-                        setTimeout(() => {
-                          isUserClickRef.current = false;
-                          clickedTargetIdRef.current = null;
-                        }, 1000);
-                      }}
-                      className={`block w-full text-left px-2 py-1 rounded text-sm transition-colors truncate ${
-                        isActive
-                          ? "text-foreground font-bold"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                      style={{ marginLeft: `${marginLeft}px` }}
-                      title={item.text}
-                    >
-                      {item.text}
-                    </Link>
-                  );
-                })}
-              </nav>
-            </div>
-          )}
-
-          {/* 滚动进度和导航按钮 */}
-          {!isCollapsed && (
-            <div className="mt-6 pt-4 space-y-3 relative">
-              <div className="absolute top-0 left-0 right-0 h-0.5 bg-border">
-                <div
-                  className="h-full bg-primary transition-all duration-300 ease-out"
-                  style={{ width: `${scrollProgress}%` }}
-                />
-              </div>
-              <div className="text-xs text-muted-foreground font-medium font-mono">
-                {scrollProgress.toFixed(0)} %
-              </div>
-            </div>
-          )}
-          <AutoResizer>
-            <AutoTransition>
-              {/* 视口内容卡片 */}
-              {!isCollapsed && viewportItems.length > 0 && (
-                <div className="space-y-1 max-h-[30vh] overflow-y-auto scrollbar-hide scroll-smooth pt-4 border-t border-border mt-4 pb-4">
-                  <AnimatePresence mode="popLayout">
-                    {viewportItems.slice(0, 5).map((item) => {
-                      const commonProps = {
-                        initial: { opacity: 0, y: -8 },
-                        animate: { opacity: 1, y: 0 },
-                        exit: { opacity: 0, y: 8 },
-                        transition: {
-                          duration: 0.2,
-                          ease: [0.25, 0.1, 0.25, 1] as const,
-                        },
-                        layout: true,
-                      };
-
-                      switch (item.type) {
-                        case "link":
-                          return (
-                            <Tooltip
-                              key={item.id}
-                              content={
-                                <div className="text-sm break-all">
-                                  <div className="font-medium mb-1">
-                                    {item.text}
-                                  </div>
-                                  <div className="text-muted-foreground">
-                                    {item.href}
-                                  </div>
-                                </div>
-                              }
-                              placement="left"
-                              maxWidth="300px"
-                            >
-                              <motion.div
-                                {...commonProps}
-                                className="group flex items-center gap-2 text-xs p-1.5 rounded hover:bg-muted/50 transition-colors overflow-hidden"
-                              >
-                                <RiLinkM
-                                  size="0.9em"
-                                  className="text-muted-foreground shrink-0"
-                                />
-                                <span className="truncate text-muted-foreground">
-                                  {item.text}
-                                </span>
-                              </motion.div>
-                            </Tooltip>
-                          );
-
-                        case "footnote": {
-                          return (
-                            <Tooltip
-                              key={item.id}
-                              content={
-                                <div className="text-sm">
-                                  {item.footnoteContent}
-                                </div>
-                              }
-                              placement="left"
-                              maxWidth="300px"
-                            >
-                              <motion.div
-                                {...commonProps}
-                                className="group text-xs p-1.5 rounded hover:bg-muted/50 transition-colors overflow-hidden"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <RiSuperscript2
-                                    size="0.9em"
-                                    className="text-muted-foreground shrink-0"
-                                  />
-                                  <span className="shrink-0 font-mono">
-                                    {item.text || "?"}
-                                  </span>
-                                  <span className="text-muted-foreground truncate">
-                                    {item.footnoteContent}
-                                  </span>
-                                </div>
-                              </motion.div>
-                            </Tooltip>
-                          );
-                        }
-
-                        default:
-                          return null;
-                      }
-                    })}
-                  </AnimatePresence>
-                  <AutoTransition>
-                    {viewportItems.length > 5 && (
-                      <div
-                        className="text-xs text-muted-foreground pl-1.5 pt-1"
-                        key={viewportItems.length}
-                      >
-                        +{viewportItems.length - 5} 项
-                      </div>
-                    )}
-                  </AutoTransition>
-                </div>
-              )}
-            </AutoTransition>
-          </AutoResizer>
-        </div>
+        {renderDesktopStylePanel()}
       </div>
     </div>
   );
