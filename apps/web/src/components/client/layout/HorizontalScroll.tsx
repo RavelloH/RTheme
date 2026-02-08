@@ -32,6 +32,51 @@ interface LastBroadcastState {
 
 const POSITION_EPSILON = 0.5;
 const PROGRESS_EPSILON = 0.0005;
+const VERTICAL_SCROLLABLE_OVERFLOW_VALUES = new Set([
+  "auto",
+  "scroll",
+  "overlay",
+]);
+
+function isElementVerticallyScrollable(
+  element: HTMLElement,
+  cache: WeakMap<HTMLElement, boolean>,
+): boolean {
+  const cached = cache.get(element);
+  if (cached !== undefined) return cached;
+
+  const style = window.getComputedStyle(element);
+  const hasVerticalScroll =
+    VERTICAL_SCROLLABLE_OVERFLOW_VALUES.has(style.overflowY) &&
+    element.scrollHeight > element.clientHeight;
+  cache.set(element, hasVerticalScroll);
+  return hasVerticalScroll;
+}
+
+function shouldIgnoreHorizontalWheelByNestedScroll(
+  target: HTMLElement,
+  boundary: HTMLElement,
+  deltaY: number,
+  cache: WeakMap<HTMLElement, boolean>,
+): boolean {
+  let element: HTMLElement | null = target;
+
+  while (element && element !== boundary) {
+    if (isElementVerticallyScrollable(element, cache)) {
+      const isScrollingDown = deltaY > 0;
+      const isScrollingUp = deltaY < 0;
+      const isAtTop = element.scrollTop === 0;
+      const isAtBottom =
+        element.scrollTop + element.clientHeight >= element.scrollHeight - 1;
+      if ((isScrollingDown && !isAtBottom) || (isScrollingUp && !isAtTop)) {
+        return true;
+      }
+    }
+    element = element.parentElement;
+  }
+
+  return false;
+}
 
 export default function HorizontalScroll({
   children,
@@ -133,6 +178,7 @@ export default function HorizontalScroll({
       contentWidth: content.scrollWidth,
       maxScrollLeft: Math.max(0, content.scrollWidth - content.clientWidth),
     };
+    let nestedScrollabilityCache = new WeakMap<HTMLElement, boolean>();
 
     const clampScrollLeft = (value: number) =>
       Math.max(0, Math.min(sizeCache.maxScrollLeft, value));
@@ -161,7 +207,6 @@ export default function HorizontalScroll({
     };
 
     const emitNativeProgress = () => {
-      syncSizeCache(true);
       const currentScrollLeft = clampScrollLeft(content.scrollLeft);
       emitHorizontalProgress(
         -currentScrollLeft,
@@ -171,35 +216,21 @@ export default function HorizontalScroll({
       );
     };
 
-    const shouldIgnoreScroll = (
-      target: HTMLElement,
-      deltaY: number,
-    ): boolean => {
-      let element: HTMLElement | null = target;
-      while (element && element !== content) {
-        const style = window.getComputedStyle(element);
-        const hasVerticalScroll =
-          (style.overflowY === "auto" || style.overflowY === "scroll") &&
-          element.scrollHeight > element.clientHeight;
-        if (hasVerticalScroll) {
-          const isScrollingDown = deltaY > 0;
-          const isScrollingUp = deltaY < 0;
-          const isAtTop = element.scrollTop === 0;
-          const isAtBottom =
-            element.scrollTop + element.clientHeight >=
-            element.scrollHeight - 1;
-          if ((isScrollingDown && !isAtBottom) || (isScrollingUp && !isAtTop)) {
-            return true;
-          }
-        }
-        element = element.parentElement;
-      }
-      return false;
+    const syncAndEmitNativeProgress = () => {
+      syncSizeCache(true);
+      emitNativeProgress();
     };
+
+    const shouldIgnoreScroll = (target: HTMLElement, deltaY: number): boolean =>
+      shouldIgnoreHorizontalWheelByNestedScroll(
+        target,
+        content,
+        deltaY,
+        nestedScrollabilityCache,
+      );
 
     let animationFrameId: number | null = null;
     const animateScroll = () => {
-      syncSizeCache();
       const diff =
         smoothScrollState.targetScrollLeft -
         smoothScrollState.currentScrollLeft;
@@ -215,7 +246,6 @@ export default function HorizontalScroll({
 
       smoothScrollState.currentScrollLeft += diff * 0.1;
       content.scrollLeft = smoothScrollState.currentScrollLeft;
-      emitNativeProgress();
       animationFrameId = requestAnimationFrame(animateScroll);
     };
 
@@ -249,19 +279,21 @@ export default function HorizontalScroll({
     let resizeHandler: (() => void) | null = null;
     if (typeof ResizeObserver !== "undefined") {
       resizeObserver = new ResizeObserver(() => {
-        emitNativeProgress();
+        nestedScrollabilityCache = new WeakMap<HTMLElement, boolean>();
+        syncAndEmitNativeProgress();
       });
       resizeObserver.observe(content);
     } else {
       resizeHandler = () => {
-        emitNativeProgress();
+        nestedScrollabilityCache = new WeakMap<HTMLElement, boolean>();
+        syncAndEmitNativeProgress();
       };
       window.addEventListener("resize", resizeHandler);
     }
 
     content.addEventListener("wheel", handleWheel, { passive: false });
     content.addEventListener("scroll", emitNativeProgress, { passive: true });
-    emitNativeProgress();
+    syncAndEmitNativeProgress();
 
     return () => {
       content.removeEventListener("wheel", handleWheel);
@@ -294,6 +326,7 @@ export default function HorizontalScroll({
         contentWidth: content.scrollWidth,
         maxScrollLeft: Math.max(0, content.scrollWidth - container.offsetWidth),
       };
+      let nestedScrollabilityCache = new WeakMap<HTMLElement, boolean>();
 
       const clampTargetX = (value: number) => {
         const minTargetX = -sizeCache.maxScrollLeft;
@@ -389,27 +422,15 @@ export default function HorizontalScroll({
 
       const handleWheel = (e: WheelEvent) => {
         const target = e.target as HTMLElement;
-        let element: HTMLElement | null = target;
-        while (element && element !== container) {
-          const style = window.getComputedStyle(element);
-          const hasVerticalScroll =
-            (style.overflowY === "auto" || style.overflowY === "scroll") &&
-            element.scrollHeight > element.clientHeight;
-          if (hasVerticalScroll) {
-            const isScrollingDown = e.deltaY > 0;
-            const isScrollingUp = e.deltaY < 0;
-            const isAtTop = element.scrollTop === 0;
-            const isAtBottom =
-              element.scrollTop + element.clientHeight >=
-              element.scrollHeight - 1;
-            if (
-              (isScrollingDown && !isAtBottom) ||
-              (isScrollingUp && !isAtTop)
-            ) {
-              return;
-            }
-          }
-          element = element.parentElement;
+        if (
+          shouldIgnoreHorizontalWheelByNestedScroll(
+            target,
+            container,
+            e.deltaY,
+            nestedScrollabilityCache,
+          )
+        ) {
+          return;
         }
 
         e.preventDefault();
@@ -528,12 +549,20 @@ export default function HorizontalScroll({
       let resizeObserver: ResizeObserver | null = null;
       if (typeof ResizeObserver !== "undefined") {
         resizeObserver = new ResizeObserver(() => {
+          nestedScrollabilityCache = new WeakMap<HTMLElement, boolean>();
           syncSizeCache();
         });
         resizeObserver.observe(container);
         resizeObserver.observe(content);
       } else {
-        window.addEventListener("resize", syncSizeCache);
+        const handleWindowResize = () => {
+          nestedScrollabilityCache = new WeakMap<HTMLElement, boolean>();
+          syncSizeCache();
+        };
+        window.addEventListener("resize", handleWindowResize);
+        cleanupFunctions.push(() =>
+          window.removeEventListener("resize", handleWindowResize),
+        );
       }
 
       container.addEventListener("wheel", handleWheel, { passive: false });
@@ -566,8 +595,6 @@ export default function HorizontalScroll({
       cleanupFunctions.push(() => {
         if (resizeObserver) {
           resizeObserver.disconnect();
-        } else {
-          window.removeEventListener("resize", syncSizeCache);
         }
       });
       cleanupFunctions.push(() => {

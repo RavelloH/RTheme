@@ -14,6 +14,7 @@ import {
 import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import type { GridArea } from "@/components/client/layout/RowGrid";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
+import Link from "@/components/ui/Link";
 import LinkButton from "@/components/ui/LinkButton";
 import ParallaxImageCarousel from "@/components/ui/ParallaxImageCarousel";
 
@@ -59,6 +60,8 @@ export default function ProjectsBlock({ block }: BlockComponentProps) {
     mobileIndex: number,
   ) => {
     const fallbackDescription = "暂无项目数据，等待新的项目发布。";
+    const title = project?.title || getProjectFallbackTitle(index);
+    const detailHref = project ? `/projects/${project.slug}` : "/projects";
 
     return (
       <GridItem
@@ -66,9 +69,13 @@ export default function ProjectsBlock({ block }: BlockComponentProps) {
         areas={areas}
         width={2}
         mobileIndex={mobileIndex}
-        className="overflow-hidden block relative"
+        className="overflow-hidden block relative group"
         fixedHeight={true}
       >
+        <Link href={detailHref} className="absolute inset-0 z-20">
+          <span className="sr-only">{title}</span>
+        </Link>
+
         {project?.images?.length ? (
           <ParallaxImageCarousel
             images={project.images}
@@ -79,10 +86,15 @@ export default function ProjectsBlock({ block }: BlockComponentProps) {
         )}
 
         <div className="p-15 absolute inset-0 z-10 flex flex-col justify-end">
-          <div className="text-5xl text-white" data-fade-char>
-            {project?.title || getProjectFallbackTitle(index)}
+          <div className="text-5xl text-white">
+            <span
+              className="relative inline bg-[linear-gradient(white,white)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]"
+              data-fade-char
+            >
+              {title}
+            </span>
           </div>
-          <div className="text-2xl text-white" data-fade-char>
+          <div className="text-2xl text-white line-clamp-1 pt-2" data-fade>
             {project?.description || fallbackDescription}
           </div>
         </div>
