@@ -662,11 +662,11 @@ export default function HorizontalScroll({
       <div
         ref={contentRef}
         data-horizontal-scroll-content
-        className={`${isMobile ? "block" : forceNativeScroll ? "flex overflow-x-auto" : "flex"} h-full will-change-transform`}
+        className={`${isMobile ? "block" : forceNativeScroll ? "flex overflow-x-auto" : "flex"} h-full w-full min-w-0 will-change-transform`}
       >
         {shouldWrapWithAnimation ? (
           <HorizontalScrollAnimationWrapper
-            className={`${isMobile ? "block" : "flex"} h-full`}
+            className={`${isMobile ? "block" : "flex"} h-full w-full min-w-0`}
             enableParallax={enableParallax}
             enableFadeElements={enableFadeElements}
             enableLineReveal={enableLineReveal}
