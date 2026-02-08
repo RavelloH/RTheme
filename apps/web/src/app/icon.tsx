@@ -87,9 +87,11 @@ export function generateImageMetadata(): IconMetadata[] {
 export default async function Icon({
   id,
 }: {
-  id: string;
+  id: string | Promise<string>;
   params?: { __metadata_id__: string };
 }) {
+  const metadataId = await id;
+
   // 读取本地的 icon.png 文件
   const iconPath = join(process.cwd(), "public", "icon.png");
   const iconBuffer = await readFile(iconPath);
@@ -97,7 +99,7 @@ export default async function Icon({
 
   // 从 metadata 中查找匹配的尺寸
   const metadata = generateImageMetadata();
-  const metadataItem = metadata.find((item) => item.id === id);
+  const metadataItem = metadata.find((item) => item.id === metadataId);
   const size = metadataItem?.size.width || 192; // 默认 192
 
   return new ImageResponse(
