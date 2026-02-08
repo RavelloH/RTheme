@@ -15,7 +15,7 @@ const nextConfig = () => {
           search: "",
         },
       ],
-      deviceSizes: [640, 1920, 3840],
+      deviceSizes: [640, 750, 828, 1080, 1200, 1920, 3840],
       imageSizes: [32, 48, 64, 96, 128, 256, 384],
       qualities: [85],
       formats: ["image/avif", "image/webp"],

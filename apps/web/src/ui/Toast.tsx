@@ -274,7 +274,7 @@ function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
   }
 
   const content = (
-    <div className="fixed inset-0 z-[100] flex flex-col justify-end items-center gap-2 p-3 pointer-events-none">
+    <div className="fixed inset-0 z-[1000] flex flex-col justify-end items-center gap-2 p-3 pointer-events-none">
       <AnimatePresence initial={false} mode="popLayout">
         {toasts.map((toast) => (
           <Toast key={toast.id} toast={toast} onRemove={onRemove} />
