@@ -45,6 +45,7 @@ import {
 } from "@/lib/shared/mdx-config-shared";
 
 // ============ 导出共享配置 ============
+const MARKDOWN_IMAGE_SIZES = "(max-width: 56rem) 100vw, 56rem";
 
 /**
  * 统一的代码高亮函数
@@ -191,7 +192,8 @@ export function ImageComponent({
         alt={imgAlt}
         width={imgWidth}
         height={imgHeight}
-        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        sizes={MARKDOWN_IMAGE_SIZES}
+        style={{ width: `min(100%, ${imgWidth}px)`, height: "auto" }}
         data-lightbox="true"
       />
       {imgAlt && (
