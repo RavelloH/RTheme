@@ -23,7 +23,230 @@ interface HorizontalScrollAnimationWrapperProps
 
 const SPACE_REGEX = /^\s+$/;
 const EPSILON = 0.001;
+const WORD_TOKEN_FALLBACK_REGEX =
+  /(\s+|[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\u3040-\u30FF\uAC00-\uD7AF]|[^\s\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\u3040-\u30FF\uAC00-\uD7AF]+)/g;
+const WORD_SEGMENTER =
+  typeof Intl !== "undefined" && "Segmenter" in Intl
+    ? new Intl.Segmenter(undefined, { granularity: "word" })
+    : null;
+const GRAPHEME_SEGMENTER =
+  typeof Intl !== "undefined" && "Segmenter" in Intl
+    ? new Intl.Segmenter(undefined, { granularity: "grapheme" })
+    : null;
+const LINE_TOP_EPSILON = 1;
+const INLINE_DISPLAY_VALUES = new Set(["inline", "inline-block", "contents"]);
+const NON_AUTO_LINE_REVEAL_SELECTOR =
+  "a,button,input,textarea,select,option,label,video,audio,iframe,canvas,svg,table,pre,code";
+
 type RevealPhase = "before" | "partial" | "after";
+type LineRevealMode = "auto" | "manual";
+
+const lineRevealModeMap = new WeakMap<Element, LineRevealMode>();
+const lineRevealSourceTextMap = new WeakMap<Element, string>();
+
+function splitTextForWordFade(text: string): string[] {
+  if (!text) return [];
+
+  if (WORD_SEGMENTER) {
+    const segments = Array.from(
+      WORD_SEGMENTER.segment(text),
+      ({ segment }) => segment,
+    ).filter((segment) => segment.length > 0);
+    if (segments.length > 0) return segments;
+  }
+
+  const fallbackTokens = text.match(WORD_TOKEN_FALLBACK_REGEX);
+  return fallbackTokens
+    ? fallbackTokens.filter((segment) => segment.length > 0)
+    : [];
+}
+
+function splitTextToGraphemes(text: string): string[] {
+  if (!text) return [];
+
+  if (GRAPHEME_SEGMENTER) {
+    const graphemes = Array.from(
+      GRAPHEME_SEGMENTER.segment(text),
+      ({ segment }) => segment,
+    );
+    if (graphemes.length > 0) return graphemes;
+  }
+
+  return Array.from(text);
+}
+
+function shouldAutoSplitLineRevealElement(element: Element): boolean {
+  if (element.hasAttribute("data-line-reveal-manual")) return false;
+  if (element.hasAttribute("data-line-reveal-auto")) return true;
+  if (element.querySelector(NON_AUTO_LINE_REVEAL_SELECTOR)) return false;
+
+  const children = Array.from(element.children) as HTMLElement[];
+  if (children.length === 0) return true;
+
+  return children.every((child) => {
+    const display = window.getComputedStyle(child).display;
+    return INLINE_DISPLAY_VALUES.has(display);
+  });
+}
+
+function resolveLineRevealMode(element: Element): LineRevealMode {
+  const cachedMode = lineRevealModeMap.get(element);
+  if (cachedMode) return cachedMode;
+
+  const mode = shouldAutoSplitLineRevealElement(element) ? "auto" : "manual";
+  lineRevealModeMap.set(element, mode);
+  return mode;
+}
+
+function normalizeManualLineRevealChildren(element: HTMLElement): void {
+  if (element.children.length === 0) {
+    const lines = (element.textContent || "").split(/\r?\n/);
+    element.innerHTML = "";
+    lines.forEach((lineText) => {
+      const span = document.createElement("span");
+      span.style.display = "block";
+      if (lineText.length === 0) {
+        span.innerHTML = "&nbsp;";
+        span.style.height = "1em";
+      } else {
+        span.textContent = lineText;
+      }
+      element.appendChild(span);
+    });
+    return;
+  }
+
+  Array.from(element.children).forEach((child) => {
+    const line = child as HTMLElement;
+    if (!line.textContent?.trim()) {
+      line.innerHTML = "&nbsp;";
+      line.style.display = "block";
+      line.style.height = "1em";
+      return;
+    }
+    line.style.display = "block";
+  });
+}
+
+function splitElementIntoVisualLines(element: HTMLElement): void {
+  const sourceText =
+    lineRevealSourceTextMap.get(element) ?? (element.textContent || "");
+  lineRevealSourceTextMap.set(element, sourceText);
+
+  const graphemes = splitTextToGraphemes(sourceText);
+  element.innerHTML = "";
+
+  if (graphemes.length === 0) {
+    const emptyLine = document.createElement("span");
+    emptyLine.innerHTML = "&nbsp;";
+    emptyLine.style.display = "block";
+    emptyLine.style.height = "1em";
+    element.appendChild(emptyLine);
+    return;
+  }
+
+  const markers: Array<
+    | { kind: "line-break" }
+    | { kind: "token"; text: string; span: HTMLSpanElement }
+  > = [];
+
+  graphemes.forEach((grapheme) => {
+    if (grapheme === "\r") return;
+    if (grapheme === "\n") {
+      const lineBreak = document.createElement("br");
+      element.appendChild(lineBreak);
+      markers.push({ kind: "line-break" });
+      return;
+    }
+
+    const span = document.createElement("span");
+    span.textContent = grapheme;
+    span.style.whiteSpace = "pre";
+    element.appendChild(span);
+    markers.push({ kind: "token", text: grapheme, span });
+  });
+
+  const lines: string[] = [];
+  let currentLine = "";
+  let currentTop: number | null = null;
+  let endedWithLineBreak = false;
+
+  markers.forEach((marker) => {
+    if (marker.kind === "line-break") {
+      lines.push(currentLine);
+      currentLine = "";
+      currentTop = null;
+      endedWithLineBreak = true;
+      return;
+    }
+
+    const tokenTop = marker.span.getBoundingClientRect().top;
+    if (currentTop === null) {
+      currentTop = tokenTop;
+      currentLine += marker.text;
+      endedWithLineBreak = false;
+      return;
+    }
+
+    if (Math.abs(tokenTop - currentTop) > LINE_TOP_EPSILON) {
+      lines.push(currentLine);
+      currentLine = marker.text;
+      currentTop = tokenTop;
+      endedWithLineBreak = false;
+      return;
+    }
+
+    currentLine += marker.text;
+    endedWithLineBreak = false;
+  });
+
+  if (currentLine.length > 0 || lines.length === 0 || endedWithLineBreak) {
+    lines.push(currentLine);
+  }
+
+  element.innerHTML = "";
+  const fragment = document.createDocumentFragment();
+  lines.forEach((lineText) => {
+    const line = document.createElement("span");
+    line.style.display = "block";
+    line.style.whiteSpace = "pre";
+    if (lineText.length === 0) {
+      line.innerHTML = "&nbsp;";
+      line.style.height = "1em";
+    } else {
+      line.textContent = lineText;
+    }
+    fragment.appendChild(line);
+  });
+
+  element.appendChild(fragment);
+}
+
+function prepareLineRevealElement(
+  element: Element,
+  forceAutoRebuild = false,
+): void {
+  const target = element as HTMLElement;
+  const mode = resolveLineRevealMode(target);
+  const isProcessed = target.hasAttribute("data-processed");
+
+  if (mode === "auto") {
+    if (!isProcessed) {
+      lineRevealSourceTextMap.set(target, target.textContent || "");
+      splitElementIntoVisualLines(target);
+      return;
+    }
+
+    if (forceAutoRebuild) {
+      splitElementIntoVisualLines(target);
+    }
+    return;
+  }
+
+  if (!isProcessed) {
+    normalizeManualLineRevealChildren(target);
+  }
+}
 
 function isHorizontalScrollProgressMessage(
   message: unknown,
@@ -113,6 +336,21 @@ export default function HorizontalScrollAnimationWrapper({
         }[],
       };
 
+      const setupDesktopLineReveal = (forceAutoRebuild = false) => {
+        wrapper.querySelectorAll("[data-line-reveal]").forEach((element) => {
+          prepareLineRevealElement(element, forceAutoRebuild);
+          Array.from(element.children).forEach((line) => {
+            gsap.set(line, {
+              opacity: 0,
+              y: 20,
+              rotationX: -90,
+              transformOrigin: "50% 100%",
+            });
+          });
+          element.setAttribute("data-processed", "true");
+        });
+      };
+
       const initDOM = () => {
         if (enableFadeElements) {
           wrapper.querySelectorAll("[data-fade]").forEach((el) => {
@@ -144,9 +382,7 @@ export default function HorizontalScrollAnimationWrapper({
               return;
             }
             const originalText = element.textContent || "";
-            const words = originalText
-              .split(/(\s+)/)
-              .filter((word) => word.length > 0);
+            const words = splitTextForWordFade(originalText);
             element.innerHTML = "";
             words.forEach((word) => {
               const span = document.createElement("span");
@@ -205,58 +441,7 @@ export default function HorizontalScrollAnimationWrapper({
         }
 
         if (enableLineReveal) {
-          wrapper.querySelectorAll("[data-line-reveal]").forEach((element) => {
-            if (element.hasAttribute("data-processed")) {
-              Array.from(element.children).forEach((line) => {
-                gsap.set(line, {
-                  opacity: 0,
-                  y: 20,
-                  rotationX: -90,
-                  transformOrigin: "50% 100%",
-                });
-              });
-              return;
-            }
-            if (element.children.length === 0) {
-              const text = element.textContent || "";
-              const textLines = text
-                .split("\n")
-                .filter((line) => line.trim().length > 0);
-              element.innerHTML = "";
-              textLines.forEach((lineText, index) => {
-                const span = document.createElement("span");
-                span.textContent = lineText;
-                span.style.display = "block";
-                element.appendChild(span);
-                if (index < textLines.length - 1) {
-                  const empty = document.createElement("span");
-                  empty.innerHTML = "&nbsp;";
-                  empty.style.display = "block";
-                  empty.style.height = "0.1em";
-                  element.appendChild(empty);
-                }
-              });
-            } else {
-              Array.from(element.children).forEach((child) => {
-                const c = child as HTMLElement;
-                if (!c.textContent?.trim()) {
-                  c.innerHTML = "&nbsp;";
-                  c.style.display = "block";
-                  c.style.height = "1em";
-                }
-              });
-            }
-
-            Array.from(element.children).forEach((line) => {
-              gsap.set(line, {
-                opacity: 0,
-                y: 20,
-                rotationX: -90,
-                transformOrigin: "50% 100%",
-              });
-            });
-            element.setAttribute("data-processed", "true");
-          });
+          setupDesktopLineReveal();
         }
       };
       initDOM();
@@ -808,7 +993,15 @@ export default function HorizontalScrollAnimationWrapper({
       syncSubscriptionByVisibility();
 
       const handleResize = () => {
+        if (enableLineReveal) {
+          setupDesktopLineReveal(true);
+        }
         measure();
+        lastX = Number.NaN;
+        const currentX =
+          ((gsap.getProperty(content, "x") as number) || 0) -
+          content.scrollLeft;
+        updateLoop(currentX, true);
         syncSubscriptionByVisibility();
       };
 
@@ -877,6 +1070,16 @@ export default function HorizontalScrollAnimationWrapper({
           }[],
         };
 
+        const setupMobileLineReveal = (forceAutoRebuild = false) => {
+          wrapper.querySelectorAll("[data-line-reveal]").forEach((element) => {
+            prepareLineRevealElement(element, forceAutoRebuild);
+            Array.from(element.children).forEach((line) => {
+              void gsap.set(line, { opacity: 0, y: 20, rotationX: -90 });
+            });
+            element.setAttribute("data-processed", "true");
+          });
+        };
+
         const initDOM = () => {
           if (enableFadeElements) {
             wrapper.querySelectorAll("[data-fade]").forEach((el) => {
@@ -900,9 +1103,7 @@ export default function HorizontalScrollAnimationWrapper({
                 return;
               }
               const originalText = element.textContent || "";
-              const words = originalText
-                .split(/(\s+)/)
-                .filter((word) => word.length > 0);
+              const words = splitTextForWordFade(originalText);
               element.innerHTML = "";
               words.forEach((word) => {
                 const span = document.createElement("span");
@@ -942,33 +1143,7 @@ export default function HorizontalScrollAnimationWrapper({
           }
 
           if (enableLineReveal) {
-            wrapper
-              .querySelectorAll("[data-line-reveal]")
-              .forEach((element) => {
-                if (element.hasAttribute("data-processed")) {
-                  Array.from(element.children).forEach((c) => {
-                    void gsap.set(c, { opacity: 0, y: 20, rotationX: -90 });
-                  });
-                  return;
-                }
-                if (element.children.length === 0) {
-                  const lines = (element.textContent || "")
-                    .split("\n")
-                    .filter((l) => l.trim().length > 0);
-                  element.innerHTML = "";
-                  lines.forEach((l) => {
-                    const s = document.createElement("span");
-                    s.textContent = l;
-                    s.style.display = "block";
-                    element.appendChild(s);
-                  });
-                }
-
-                Array.from(element.children).forEach((c) => {
-                  void gsap.set(c, { opacity: 0, y: 20, rotationX: -90 });
-                });
-                element.setAttribute("data-processed", "true");
-              });
+            setupMobileLineReveal();
           }
         };
         initDOM();
@@ -1464,8 +1639,12 @@ export default function HorizontalScrollAnimationWrapper({
         observer.observe(wrapper);
 
         const handleResize = () => {
+          if (enableLineReveal) {
+            setupMobileLineReveal(true);
+          }
           measure();
           syncSubscriptionByVisibility();
+          scheduleOnScroll();
         };
 
         window.addEventListener("resize", handleResize);
