@@ -277,6 +277,7 @@ export default function HorizontalScroll({
 
     let resizeObserver: ResizeObserver | null = null;
     let resizeHandler: (() => void) | null = null;
+    let mutationObserver: MutationObserver | null = null;
     if (typeof ResizeObserver !== "undefined") {
       resizeObserver = new ResizeObserver(() => {
         nestedScrollabilityCache = new WeakMap<HTMLElement, boolean>();
@@ -291,6 +292,17 @@ export default function HorizontalScroll({
       window.addEventListener("resize", resizeHandler);
     }
 
+    if (typeof MutationObserver !== "undefined") {
+      mutationObserver = new MutationObserver(() => {
+        nestedScrollabilityCache = new WeakMap<HTMLElement, boolean>();
+        syncAndEmitNativeProgress();
+      });
+      mutationObserver.observe(content, {
+        childList: true,
+        subtree: true,
+      });
+    }
+
     content.addEventListener("wheel", handleWheel, { passive: false });
     content.addEventListener("scroll", emitNativeProgress, { passive: true });
     syncAndEmitNativeProgress();
@@ -302,6 +314,9 @@ export default function HorizontalScroll({
         resizeObserver.disconnect();
       } else if (resizeHandler) {
         window.removeEventListener("resize", resizeHandler);
+      }
+      if (mutationObserver) {
+        mutationObserver.disconnect();
       }
       if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
@@ -434,6 +449,7 @@ export default function HorizontalScroll({
         }
 
         e.preventDefault();
+        syncSizeCache();
         const deltaX = e.deltaY * scrollSpeed;
         const newTargetX = targetXRef.current - deltaX;
         targetXRef.current = clampTargetX(newTargetX);
@@ -444,6 +460,7 @@ export default function HorizontalScroll({
         if (e.touches.length === 0) return;
         const touch = e.touches[0];
         if (!touch) return;
+        syncSizeCache();
         touchStateRef.current = {
           isStarted: true,
           startX: touch.clientX,
@@ -474,6 +491,7 @@ export default function HorizontalScroll({
 
         if (horizontalDistance > 10 && horizontalDistance > verticalDistance) {
           e.preventDefault();
+          syncSizeCache();
           touchStateRef.current.isDragging = true;
           startProgressTicker();
           touchStateRef.current.velocity =
@@ -538,6 +556,7 @@ export default function HorizontalScroll({
         }
 
         if (scrollDelta !== 0) {
+          syncSizeCache();
           const newTargetX = targetXRef.current + scrollDelta * scrollSpeed;
           targetXRef.current = clampTargetX(newTargetX);
           animateToTarget();
@@ -547,6 +566,7 @@ export default function HorizontalScroll({
       syncSizeCache();
 
       let resizeObserver: ResizeObserver | null = null;
+      let mutationObserver: MutationObserver | null = null;
       if (typeof ResizeObserver !== "undefined") {
         resizeObserver = new ResizeObserver(() => {
           nestedScrollabilityCache = new WeakMap<HTMLElement, boolean>();
@@ -563,6 +583,17 @@ export default function HorizontalScroll({
         cleanupFunctions.push(() =>
           window.removeEventListener("resize", handleWindowResize),
         );
+      }
+
+      if (typeof MutationObserver !== "undefined") {
+        mutationObserver = new MutationObserver(() => {
+          nestedScrollabilityCache = new WeakMap<HTMLElement, boolean>();
+          syncSizeCache();
+        });
+        mutationObserver.observe(content, {
+          childList: true,
+          subtree: true,
+        });
       }
 
       container.addEventListener("wheel", handleWheel, { passive: false });
@@ -595,6 +626,11 @@ export default function HorizontalScroll({
       cleanupFunctions.push(() => {
         if (resizeObserver) {
           resizeObserver.disconnect();
+        }
+      });
+      cleanupFunctions.push(() => {
+        if (mutationObserver) {
+          mutationObserver.disconnect();
         }
       });
       cleanupFunctions.push(() => {

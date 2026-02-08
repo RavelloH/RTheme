@@ -236,7 +236,7 @@
 /* Images */
 .tiptap img,
 .md-content img {
-  @apply block max-w-full max-h-[80vh] w-full h-auto rounded-lg mx-auto mt-4 mb-1;
+  @apply block max-w-full max-h-[80vh] w-auto h-auto rounded-lg mx-auto mt-4 mb-1;
   object-fit: contain;
 }
 

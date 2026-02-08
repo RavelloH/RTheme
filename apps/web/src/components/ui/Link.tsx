@@ -101,6 +101,15 @@ const presetStyles = {
   },
 };
 
+function isPlainTextChildren(children: React.ReactNode): boolean {
+  const childArray = React.Children.toArray(children);
+  if (childArray.length === 0) return false;
+
+  return childArray.every(
+    (child) => typeof child === "string" || typeof child === "number",
+  );
+}
+
 // 应用预设样式
 function applyPresets(
   presets: string[] = [],
@@ -113,6 +122,7 @@ function applyPresets(
   }> | null,
 ) {
   if (presets.length === 0) return children;
+  const shouldShowIndicators = isPlainTextChildren(children);
 
   // 获取除了特殊预设外的其他预设的 className
   const otherPresets = presets.filter(
@@ -151,7 +161,7 @@ function applyPresets(
   }
 
   // 处理 arrow 预设（只在行内显示）
-  if (presets.includes("arrow")) {
+  if (shouldShowIndicators && presets.includes("arrow")) {
     content = (
       <>
         {content}
@@ -161,7 +171,7 @@ function applyPresets(
   }
 
   // 处理 arrow-out 预设（只在行内显示）
-  if (presets.includes("arrow-out")) {
+  if (shouldShowIndicators && presets.includes("arrow-out")) {
     content = (
       <>
         {content}
@@ -173,7 +183,12 @@ function applyPresets(
   // 处理 hover-underline 预设
   if (presets.includes("hover-underline")) {
     // 如果同时有动态图标，图标应该在下划线外面
-    if (presets.includes("dynamic-icon") && DynamicIconComponent && href) {
+    if (
+      shouldShowIndicators &&
+      presets.includes("dynamic-icon") &&
+      DynamicIconComponent &&
+      href
+    ) {
       return (
         <span className={className}>
           <DynamicIconComponent
@@ -198,7 +213,12 @@ function applyPresets(
   }
 
   // 处理动态图标预设（只在没有 hover-underline 时才在这里处理）
-  if (presets.includes("dynamic-icon") && DynamicIconComponent && href) {
+  if (
+    shouldShowIndicators &&
+    presets.includes("dynamic-icon") &&
+    DynamicIconComponent &&
+    href
+  ) {
     content = (
       <>
         <DynamicIconComponent
@@ -233,6 +253,7 @@ const NO_TRANSITION_PATHS = [
   "/notifications",
   "/messages",
   "/gallery/photo/",
+  "/projects/",
 ];
 
 // 检查路径是否应该跳过过渡效果
