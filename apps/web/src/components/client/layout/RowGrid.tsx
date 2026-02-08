@@ -248,8 +248,8 @@ export default function RowGrid({
   const baseClass = isMobile
     ? "grid grid-cols-12 auto-rows-max grid-flow-row w-full pb-8"
     : full
-      ? "grid grid-rows-12 grid-flow-col gap-0 h-full w-full"
-      : "grid grid-rows-12 auto-cols-max grid-flow-col gap-0 h-full min-w-max";
+      ? "grid grid-rows-12 grid-flow-col-dense gap-0 h-full w-full"
+      : "grid grid-rows-12 auto-cols-max grid-flow-col-dense gap-0 h-full min-w-max";
 
   const combinedClassName = className ? `${baseClass} ${className}` : baseClass;
 
