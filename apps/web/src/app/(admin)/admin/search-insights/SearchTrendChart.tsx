@@ -62,7 +62,12 @@ export default function SearchTrendChart() {
     let firstNonZeroIndex = -1;
     for (let i = 0; i < stats.dailyTrend.length; i++) {
       const item = stats.dailyTrend[i];
-      if (item && (item.searchCount > 0 || item.uniqueVisitors > 0)) {
+      if (
+        item &&
+        (item.searchCount > 0 ||
+          item.uniqueVisitors > 0 ||
+          item.zeroResultCount > 0)
+      ) {
         firstNonZeroIndex = i;
         break;
       }
@@ -80,10 +85,12 @@ export default function SearchTrendChart() {
         date: string;
         searchCount: number;
         uniqueVisitors: number;
+        zeroResultCount: number;
       }) => ({
         time: item.date,
         searchCount: item.searchCount,
         uniqueVisitors: item.uniqueVisitors,
+        zeroResultCount: item.zeroResultCount,
       }),
     );
 
@@ -98,6 +105,11 @@ export default function SearchTrendChart() {
         key: "searchCount",
         label: "搜索次数",
         color: "color-mix(in srgb, var(--color-primary) 40%, transparent)",
+      },
+      {
+        key: "zeroResultCount",
+        label: "无结果次数",
+        color: "var(--color-warning)",
       },
     ];
 
