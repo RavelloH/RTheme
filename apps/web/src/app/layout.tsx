@@ -112,7 +112,7 @@ export default async function RootLayout({
                     </Suspense>
                   </ResponsiveFontScale>
                 </MenuProvider>
-                {modal}
+                <Suspense fallback={null}>{modal}</Suspense>
               </NotificationProvider>
             </ConfigProvider>
           </ThemeProvider>
