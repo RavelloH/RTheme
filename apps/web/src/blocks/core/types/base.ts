@@ -45,8 +45,10 @@ import type { CardsBlockConfig } from "@/blocks/collection/Cards/types";
 import type { DefaultBlockConfig } from "@/blocks/collection/Default/types";
 import type { DividerBlockConfig } from "@/blocks/collection/Divider/types";
 import type { FeaturedProjectsBlockConfig } from "@/blocks/collection/FeaturedProjects/types";
+import type { FriendLinksBlockConfig } from "@/blocks/collection/FriendLinks/types";
 import type { GalleryBlockConfig } from "@/blocks/collection/Gallery/types";
 import type { HeroBlockConfig } from "@/blocks/collection/HeroGallery/types";
+import type { InvalidFriendLinksBlockConfig } from "@/blocks/collection/InvalidFriendLinks/types";
 import type { MultiRowLayoutBlockConfig } from "@/blocks/collection/MultiRowLayout/types";
 import type { PagedPostsBlockConfig } from "@/blocks/collection/PagedPosts/types";
 import type { PaginationBlockConfig } from "@/blocks/collection/Pagination/types";
@@ -75,6 +77,7 @@ export interface BlockTypeMap {
   cta: CallToActionBlockConfig;
   author: AuthorBlockConfig;
   "social-links": SocialLinksBlockConfig;
+  "invalid-friend-links": InvalidFriendLinksBlockConfig;
   testimonial: TestimonialBlockConfig;
   tabs: TabsBlockConfig;
   gallery: GalleryBlockConfig;
@@ -82,6 +85,7 @@ export interface BlockTypeMap {
   "timeline-item": TimelineItemBlockConfig;
   "archive-calendar": ArchiveCalendarBlockConfig;
   "featured-projects": FeaturedProjectsBlockConfig;
+  "friend-links": FriendLinksBlockConfig;
   "projects-list": ProjectsListBlockConfig;
 }
 

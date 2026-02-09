@@ -11,6 +11,7 @@ export { tagPostsInterpolator } from "./tag-posts";
 export { tagsInterpolator } from "./tags";
 export { postsListInterpolator } from "./posts-list";
 export { lastPublishDaysInterpolator } from "./last-publish-days";
+export { friendsInterpolator } from "./friends";
 export { pageInfoInterpolator } from "./page-info";
 
 /**
@@ -41,6 +42,7 @@ export const interpolatorMap: Record<string, InterpolatorLoader> = {
   postsList: () => import("./posts-list"),
   lastPublishDays: () => import("./last-publish-days"),
   pageInfo: () => import("./page-info"),
+  friends: () => import("./friends"),
 };
 
 /**
@@ -289,6 +291,19 @@ export const PLACEHOLDER_REGISTRY: PlaceholderMeta[] = [
     name: "tagLastPage",
     description: "标签详情页当前页最后一篇文章序号",
     interpolator: "tagPosts",
+    isSubField: true,
+  },
+
+  // === 友链相关（friends 插值器） ===
+  {
+    name: "friends",
+    description: "显示当前友链总数",
+    interpolator: "friends",
+  },
+  {
+    name: "friendsList",
+    description: "友链 URL 列表（用于随机跳转）",
+    interpolator: "friends",
     isSubField: true,
   },
 ];

@@ -140,6 +140,39 @@ const getDisplayValue = (val: unknown): string => {
   return String(val);
 };
 
+// number 字段失焦后的兜底值：优先使用合法默认值，否则回退 0
+const getNumberFallback = (defaultValue: unknown): number => {
+  if (
+    typeof defaultValue === "number" &&
+    Number.isFinite(defaultValue) &&
+    defaultValue >= 0
+  ) {
+    return defaultValue;
+  }
+
+  if (typeof defaultValue === "string" && defaultValue.trim() !== "") {
+    const parsed = Number(defaultValue);
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      return parsed;
+    }
+  }
+
+  return 0;
+};
+
+// 仅接受非负且有限数字；空字符串交给上层逻辑处理
+const parseNonNegativeNumber = (rawValue: string): number | null => {
+  const trimmed = rawValue.trim();
+  if (trimmed === "") return null;
+
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return null;
+  }
+
+  return parsed;
+};
+
 function StatefulInput({
   field,
   value,
@@ -151,14 +184,28 @@ function StatefulInput({
 }) {
   const currentValue = getFieldValue(value, field.defaultValue);
   const isNumberField = field.type === "number";
+  const numberFallback = isNumberField
+    ? getNumberFallback(field.defaultValue)
+    : 0;
+  const [keepNumberEmptyDisplay, setKeepNumberEmptyDisplay] =
+    React.useState(false);
   const [inputValue, setInputValue] = React.useState(
     getDisplayValue(currentValue),
   );
 
   // 同步外部 value 变化到本地状态
   React.useEffect(() => {
+    if (isNumberField && keepNumberEmptyDisplay) {
+      const currentNum = parseNonNegativeNumber(getDisplayValue(currentValue));
+      if (currentNum !== null && currentNum === numberFallback) {
+        return;
+      }
+    }
     setInputValue(getDisplayValue(currentValue));
-  }, [currentValue]);
+    if (keepNumberEmptyDisplay) {
+      setKeepNumberEmptyDisplay(false);
+    }
+  }, [currentValue, isNumberField, keepNumberEmptyDisplay, numberFallback]);
 
   return (
     <div className="mt-6">
@@ -170,47 +217,57 @@ function StatefulInput({
           setInputValue(newValue);
 
           if (isNumberField) {
-            // 实时处理数字输入
-            if (newValue === "" || newValue === "-") {
-              // 空值或只有负号时，使用默认值或 0
-              onChange(field.defaultValue ?? 0);
-            } else {
-              const num = parseFloat(newValue);
-              // parseFloat 能正确处理 "0." (返回 0)，"0.01" (返回 0.01)
-              // 只有 NaN 时才不更新（无效输入）
-              if (!isNaN(num)) {
-                onChange(num);
-              }
+            const trimmed = newValue.trim();
+            if (trimmed === "") {
+              // 清空时允许保持空白显示，同时数据按默认值/0 应用
+              setKeepNumberEmptyDisplay(true);
+              onChange(numberFallback);
+              return;
             }
-          } else {
-            // 非 number 类型，直接提交
-            onChange(newValue);
+
+            // 输入中只实时应用合法的非负数字
+            const num = parseNonNegativeNumber(trimmed);
+            if (num !== null) {
+              setKeepNumberEmptyDisplay(false);
+              onChange(num);
+            }
+            return;
           }
+
+          // 非 number 类型，直接提交
+          onChange(newValue);
         }}
         onBlur={() => {
           // 失焦时格式化显示
           if (isNumberField) {
             const trimmed = inputValue.trim();
-            if (trimmed === "" || trimmed === "-") {
-              setInputValue(String(field.defaultValue ?? 0));
-              onChange(field.defaultValue ?? 0);
-            } else {
-              const num = parseFloat(trimmed);
-              if (!isNaN(num)) {
-                // 格式化显示：去除不必要的尾随零
-                setInputValue(String(num));
-                onChange(num);
-              } else {
-                // 无效输入，恢复原值
-                setInputValue(getDisplayValue(currentValue));
-              }
+            if (trimmed === "") {
+              // 空值是合法状态：显示保持为空，值按默认值/0 处理
+              setKeepNumberEmptyDisplay(true);
+              onChange(numberFallback);
+              return;
             }
+
+            const num = parseNonNegativeNumber(trimmed);
+            if (num === null) {
+              // 非法值重置到默认值或 0
+              setKeepNumberEmptyDisplay(false);
+              setInputValue(String(numberFallback));
+              onChange(numberFallback);
+              return;
+            }
+
+            // 合法值统一格式化显示
+            setKeepNumberEmptyDisplay(false);
+            setInputValue(String(num));
+            onChange(num);
           }
         }}
         type={
           field.type === "number" || field.type === "date" ? field.type : "text"
         }
         step={field.type === "number" ? "any" : undefined}
+        min={field.type === "number" ? 0 : undefined}
         helperText={field.placeholder ?? getDisplayValue(field.defaultValue)}
         size="sm"
         disabled={field.disabled}
