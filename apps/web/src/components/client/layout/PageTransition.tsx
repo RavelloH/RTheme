@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { usePathname, useSelectedLayoutSegments } from "next/navigation";
 
@@ -24,7 +24,6 @@ export default function PageTransition({ children }: PageTransitionProps) {
   const selectedSegments = useSelectedLayoutSegments();
   const primaryRouteKey = selectedSegments.join("/") || "__root__";
   const [currentChildren, setCurrentChildren] = useState(children);
-  const [currentPathKey, setCurrentPathKey] = useState(primaryRouteKey);
   const [transitionState, setTransitionState] =
     useState<TransitionState>("idle");
   const [transitionDirection, setTransitionDirection] = useState<string>("");
@@ -152,7 +151,6 @@ export default function PageTransition({ children }: PageTransitionProps) {
     ) {
       // pathname 变化，更新内容
       setCurrentChildren(children);
-      setCurrentPathKey(primaryRouteKey);
 
       // 延迟10ms后开始进入动画，确保DOM稳定
       const delayTimer = setTimeout(() => {
@@ -173,7 +171,6 @@ export default function PageTransition({ children }: PageTransitionProps) {
   useEffect(() => {
     if (transitionState !== "idle") return;
     setCurrentChildren(children);
-    setCurrentPathKey(primaryRouteKey);
   }, [children, primaryRouteKey, transitionState]);
 
   // 获取屏幕外位置属性
@@ -326,7 +323,7 @@ export default function PageTransition({ children }: PageTransitionProps) {
         id="scroll-container"
         style={{ paddingBottom: isMobile ? 0 : "5em" }}
       >
-        <Fragment key={currentPathKey}>{currentChildren}</Fragment>
+        {currentChildren}
       </div>
     </div>
   );
