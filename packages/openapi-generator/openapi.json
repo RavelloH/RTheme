@@ -21803,6 +21803,2002 @@
         },
         "required": ["success", "message", "timestamp", "requestId", "data"],
         "additionalProperties": false
+      },
+      "GetFriendLinksStats": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "force": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": ["force"],
+        "additionalProperties": false
+      },
+      "GetFriendLinksStatsSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "updatedAt": {
+                "type": "string"
+              },
+              "cache": {
+                "type": "boolean"
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "pending": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "published": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "whitelist": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "rejected": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "blocked": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "disconnect": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "noBacklink": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "withOwner": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "problematic": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "updatedAt",
+              "cache",
+              "total",
+              "pending",
+              "published",
+              "whitelist",
+              "rejected",
+              "blocked",
+              "disconnect",
+              "noBacklink",
+              "withOwner",
+              "problematic"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "GetFriendLinksTrends": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "days": {
+            "default": 30,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "count": {
+            "default": 30,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          }
+        },
+        "required": ["days", "count"],
+        "additionalProperties": false
+      },
+      "GetFriendLinksTrendsSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "time": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "new": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "published": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": ["total", "new", "published"],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["time", "data"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "GetFriendLinksList": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "page": {
+            "default": 1,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "pageSize": {
+            "default": 25,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "sortBy": {
+            "default": "updatedAt",
+            "type": "string",
+            "enum": [
+              "id",
+              "name",
+              "status",
+              "createdAt",
+              "updatedAt",
+              "publishedAt",
+              "lastCheckedAt",
+              "avgResponseTime",
+              "checkFailureCount",
+              "checkSuccessCount"
+            ]
+          },
+          "sortOrder": {
+            "default": "desc",
+            "type": "string",
+            "enum": ["asc", "desc"]
+          },
+          "search": {
+            "type": "string"
+          },
+          "status": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "PUBLISHED",
+                "WHITELIST",
+                "REJECTED",
+                "DISCONNECT",
+                "NO_BACKLINK",
+                "BLOCKED"
+              ]
+            }
+          },
+          "ownerUid": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "ignoreBacklink": {
+            "type": "boolean"
+          },
+          "hasIssue": {
+            "type": "boolean"
+          },
+          "createdAtStart": {
+            "type": "string"
+          },
+          "createdAtEnd": {
+            "type": "string"
+          },
+          "updatedAtStart": {
+            "type": "string"
+          },
+          "updatedAtEnd": {
+            "type": "string"
+          },
+          "publishedAtStart": {
+            "type": "string"
+          },
+          "publishedAtEnd": {
+            "type": "string"
+          }
+        },
+        "required": ["page", "pageSize", "sortBy", "sortOrder"],
+        "additionalProperties": false
+      },
+      "GetFriendLinksListSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "name": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                },
+                "avatar": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "slogan": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "friendLinkUrl": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "ignoreBacklink": {
+                  "type": "boolean"
+                },
+                "group": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "order": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "PENDING",
+                    "PUBLISHED",
+                    "WHITELIST",
+                    "REJECTED",
+                    "DISCONNECT",
+                    "NO_BACKLINK",
+                    "BLOCKED"
+                  ]
+                },
+                "checkSuccessCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "checkFailureCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "recentSuccessRate": {
+                  "default": null,
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "recentSampleCount": {
+                  "default": 0,
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "lastCheckedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "avgResponseTime": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "applyNote": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                },
+                "publishedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "owner": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/GetFriendLinksListSuccessResponse"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "auditor": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/GetFriendLinksListSuccessResponse"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "checkHistory": {
+                  "default": [],
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "time": {
+                        "type": "string"
+                      },
+                      "checkType": {
+                        "type": "string",
+                        "enum": ["url", "backlink"]
+                      },
+                      "targetUrl": {
+                        "type": "string"
+                      },
+                      "responseTime": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "statusCode": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "ok": {
+                        "type": "boolean"
+                      },
+                      "hasBacklink": {
+                        "type": "boolean"
+                      },
+                      "issueType": {
+                        "default": "NONE",
+                        "type": "string",
+                        "enum": ["NONE", "DISCONNECT", "NO_BACKLINK"]
+                      },
+                      "note": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "time",
+                      "checkType",
+                      "targetUrl",
+                      "responseTime",
+                      "ok",
+                      "issueType"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "url",
+                "avatar",
+                "slogan",
+                "friendLinkUrl",
+                "ignoreBacklink",
+                "group",
+                "order",
+                "status",
+                "checkSuccessCount",
+                "checkFailureCount",
+                "recentSuccessRate",
+                "recentSampleCount",
+                "lastCheckedAt",
+                "avgResponseTime",
+                "applyNote",
+                "createdAt",
+                "updatedAt",
+                "publishedAt",
+                "owner",
+                "auditor",
+                "checkHistory"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "number",
+                "minimum": 1
+              },
+              "pageSize": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 500
+              },
+              "total": {
+                "type": "number",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "number",
+                "minimum": 0
+              },
+              "hasNext": {
+                "type": "boolean"
+              },
+              "hasPrev": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "page",
+              "pageSize",
+              "total",
+              "totalPages",
+              "hasNext",
+              "hasPrev"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp",
+          "requestId",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "SubmitFriendLinkApplication": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "captcha_token": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 500,
+            "format": "uri"
+          },
+          "avatar": {
+            "type": "string",
+            "maxLength": 500,
+            "format": "uri"
+          },
+          "slogan": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "friendLinkUrl": {
+            "type": "string",
+            "maxLength": 500,
+            "format": "uri"
+          },
+          "applyNote": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "captcha_token",
+          "name",
+          "url",
+          "avatar",
+          "slogan",
+          "friendLinkUrl"
+        ],
+        "additionalProperties": false
+      },
+      "SubmitFriendLinkApplicationSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "PENDING",
+                  "PUBLISHED",
+                  "WHITELIST",
+                  "REJECTED",
+                  "DISCONNECT",
+                  "NO_BACKLINK",
+                  "BLOCKED"
+                ]
+              }
+            },
+            "required": ["id", "status"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "GetOwnFriendLink": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetOwnFriendLinkSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "avatar": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "slogan": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "friendLinkUrl": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "ignoreBacklink": {
+                    "type": "boolean"
+                  },
+                  "group": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "order": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "PUBLISHED",
+                      "WHITELIST",
+                      "REJECTED",
+                      "DISCONNECT",
+                      "NO_BACKLINK",
+                      "BLOCKED"
+                    ]
+                  },
+                  "checkSuccessCount": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "checkFailureCount": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "recentSuccessRate": {
+                    "default": null,
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "recentSampleCount": {
+                    "default": 0,
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "lastCheckedAt": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "avgResponseTime": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "applyNote": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "createdAt": {
+                    "type": "string"
+                  },
+                  "updatedAt": {
+                    "type": "string"
+                  },
+                  "publishedAt": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "owner": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/GetOwnFriendLinkSuccessResponse"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "auditor": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/GetOwnFriendLinkSuccessResponse"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "checkHistory": {
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "time": {
+                          "type": "string"
+                        },
+                        "checkType": {
+                          "type": "string",
+                          "enum": ["url", "backlink"]
+                        },
+                        "targetUrl": {
+                          "type": "string"
+                        },
+                        "responseTime": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "statusCode": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "ok": {
+                          "type": "boolean"
+                        },
+                        "hasBacklink": {
+                          "type": "boolean"
+                        },
+                        "issueType": {
+                          "default": "NONE",
+                          "type": "string",
+                          "enum": ["NONE", "DISCONNECT", "NO_BACKLINK"]
+                        },
+                        "note": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "time",
+                        "checkType",
+                        "targetUrl",
+                        "responseTime",
+                        "ok",
+                        "issueType"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "url",
+                  "avatar",
+                  "slogan",
+                  "friendLinkUrl",
+                  "ignoreBacklink",
+                  "group",
+                  "order",
+                  "status",
+                  "checkSuccessCount",
+                  "checkFailureCount",
+                  "recentSuccessRate",
+                  "recentSampleCount",
+                  "lastCheckedAt",
+                  "avgResponseTime",
+                  "applyNote",
+                  "createdAt",
+                  "updatedAt",
+                  "publishedAt",
+                  "owner",
+                  "auditor",
+                  "checkHistory"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "GetFriendLinkDetail": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          }
+        },
+        "required": ["id"],
+        "additionalProperties": false
+      },
+      "GetFriendLinkDetailSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "name": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "avatar": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "slogan": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "friendLinkUrl": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "ignoreBacklink": {
+                "type": "boolean"
+              },
+              "group": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "order": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "PENDING",
+                  "PUBLISHED",
+                  "WHITELIST",
+                  "REJECTED",
+                  "DISCONNECT",
+                  "NO_BACKLINK",
+                  "BLOCKED"
+                ]
+              },
+              "checkSuccessCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "checkFailureCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "recentSuccessRate": {
+                "default": null,
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "recentSampleCount": {
+                "default": 0,
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "lastCheckedAt": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "avgResponseTime": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "applyNote": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              },
+              "publishedAt": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "owner": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/GetFriendLinkDetailSuccessResponse"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "auditor": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/GetFriendLinkDetailSuccessResponse"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "checkHistory": {
+                "default": [],
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "time": {
+                      "type": "string"
+                    },
+                    "checkType": {
+                      "type": "string",
+                      "enum": ["url", "backlink"]
+                    },
+                    "targetUrl": {
+                      "type": "string"
+                    },
+                    "responseTime": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "statusCode": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "hasBacklink": {
+                      "type": "boolean"
+                    },
+                    "issueType": {
+                      "default": "NONE",
+                      "type": "string",
+                      "enum": ["NONE", "DISCONNECT", "NO_BACKLINK"]
+                    },
+                    "note": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "time",
+                    "checkType",
+                    "targetUrl",
+                    "responseTime",
+                    "ok",
+                    "issueType"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "url",
+              "avatar",
+              "slogan",
+              "friendLinkUrl",
+              "ignoreBacklink",
+              "group",
+              "order",
+              "status",
+              "checkSuccessCount",
+              "checkFailureCount",
+              "recentSuccessRate",
+              "recentSampleCount",
+              "lastCheckedAt",
+              "avgResponseTime",
+              "applyNote",
+              "createdAt",
+              "updatedAt",
+              "publishedAt",
+              "owner",
+              "auditor",
+              "checkHistory"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "ReviewFriendLink": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PUBLISHED", "REJECTED", "BLOCKED", "WHITELIST"]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": ["id", "status"],
+        "additionalProperties": false
+      },
+      "ReviewFriendLinkSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "PENDING",
+                  "PUBLISHED",
+                  "WHITELIST",
+                  "REJECTED",
+                  "DISCONNECT",
+                  "NO_BACKLINK",
+                  "BLOCKED"
+                ]
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            },
+            "required": ["id", "status", "updatedAt"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "CreateFriendLinkByAdmin": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 500,
+            "format": "uri"
+          },
+          "avatar": {
+            "type": "string",
+            "maxLength": 500,
+            "format": "uri"
+          },
+          "slogan": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "friendLinkUrl": {
+            "type": "string",
+            "maxLength": 500,
+            "format": "uri"
+          },
+          "applyNote": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "status": {
+            "default": "PUBLISHED",
+            "type": "string",
+            "enum": ["PUBLISHED", "WHITELIST"]
+          },
+          "ignoreBacklink": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "url",
+          "avatar",
+          "slogan",
+          "status",
+          "ignoreBacklink"
+        ],
+        "additionalProperties": false
+      },
+      "CreateFriendLinkByAdminSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "PENDING",
+                  "PUBLISHED",
+                  "WHITELIST",
+                  "REJECTED",
+                  "DISCONNECT",
+                  "NO_BACKLINK",
+                  "BLOCKED"
+                ]
+              },
+              "createdAt": {
+                "type": "string"
+              }
+            },
+            "required": ["id", "status", "createdAt"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "ParseFriendLinkByAdmin": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": ["url"],
+        "additionalProperties": false
+      },
+      "ParseFriendLinkByAdminSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "avatar": {
+                "type": "string",
+                "format": "uri"
+              },
+              "slogan": {
+                "type": "string",
+                "minLength": 1
+              },
+              "friendLinkUrl": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": ["url", "name", "avatar", "slogan", "friendLinkUrl"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "UpdateFriendLinkByAdmin": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 500,
+            "format": "uri"
+          },
+          "avatar": {
+            "type": "string",
+            "maxLength": 500,
+            "format": "uri"
+          },
+          "slogan": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "friendLinkUrl": {
+            "type": "string",
+            "maxLength": 500,
+            "format": "uri"
+          },
+          "applyNote": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "ignoreBacklink": {
+            "default": false,
+            "type": "boolean"
+          },
+          "group": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "order": {
+            "default": 0,
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "ownerUid": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PUBLISHED",
+              "WHITELIST",
+              "REJECTED",
+              "DISCONNECT",
+              "NO_BACKLINK",
+              "BLOCKED"
+            ]
+          }
+        },
+        "required": ["id", "name", "url", "ignoreBacklink", "order", "status"],
+        "additionalProperties": false
+      },
+      "UpdateFriendLinkByAdminSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "PENDING",
+                  "PUBLISHED",
+                  "WHITELIST",
+                  "REJECTED",
+                  "DISCONNECT",
+                  "NO_BACKLINK",
+                  "BLOCKED"
+                ]
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            },
+            "required": ["id", "status", "updatedAt"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "DeleteFriendLinkByAdmin": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          }
+        },
+        "required": ["id"],
+        "additionalProperties": false
+      },
+      "DeleteFriendLinkByAdminSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "deletedAt": {
+                "type": "string"
+              }
+            },
+            "required": ["id", "deletedAt"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "UpdateOwnFriendLink": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 500,
+            "format": "uri"
+          },
+          "avatar": {
+            "type": "string",
+            "maxLength": 500,
+            "format": "uri"
+          },
+          "slogan": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "friendLinkUrl": {
+            "type": "string",
+            "maxLength": 500,
+            "format": "uri"
+          },
+          "applyNote": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": ["name", "url", "avatar", "slogan", "friendLinkUrl"],
+        "additionalProperties": false
+      },
+      "UpdateOwnFriendLinkSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            },
+            "required": ["id", "updatedAt"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "DeleteOwnFriendLink": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DeleteOwnFriendLinkSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "deletedAt": {
+                "type": "string"
+              }
+            },
+            "required": ["id", "deletedAt"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "CheckFriendLinks": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0
+            }
+          },
+          "checkAll": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": ["checkAll"],
+        "additionalProperties": false
+      },
+      "CheckFriendLinksSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "checked": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "skipped": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "failed": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "statusChanged": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "results": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "PUBLISHED",
+                        "WHITELIST",
+                        "REJECTED",
+                        "DISCONNECT",
+                        "NO_BACKLINK",
+                        "BLOCKED"
+                      ]
+                    },
+                    "checked": {
+                      "type": "boolean"
+                    },
+                    "skipped": {
+                      "default": false,
+                      "type": "boolean"
+                    },
+                    "skipReason": {
+                      "type": "string"
+                    },
+                    "issueType": {
+                      "default": "NONE",
+                      "type": "string",
+                      "enum": ["NONE", "DISCONNECT", "NO_BACKLINK"]
+                    },
+                    "responseTime": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "status",
+                    "checked",
+                    "skipped",
+                    "issueType"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "total",
+              "checked",
+              "skipped",
+              "failed",
+              "statusChanged",
+              "results"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
       }
     },
     "securitySchemes": {
