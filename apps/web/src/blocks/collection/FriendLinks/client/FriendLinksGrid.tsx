@@ -473,50 +473,56 @@ export default function FriendLinksGrid({
   const highlight = animatedRect || { x: 0, y: 0, width: 0, height: 0 };
 
   return (
-    <div
-      ref={containerRef}
-      className="relative bg-background h-full"
-      onMouseLeave={clearActiveCard}
-      onBlurCapture={(event) => {
-        const nextFocus = event.relatedTarget as Node | null;
-        if (!nextFocus || !containerRef.current?.contains(nextFocus)) {
-          clearActiveCard();
-        }
-      }}
-    >
+    <GridItem areas={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}>
       <div
-        className="pointer-events-none absolute z-0 bg-primary [will-change:transform,width,height,opacity]"
-        style={{
-          transform: `translate3d(${highlight.x}px, ${highlight.y}px, 0)`,
-          width: highlight.width,
-          height: highlight.height,
-          opacity: highlightVisible ? 1 : 0,
-          transition: "opacity 160ms ease-out",
+        ref={containerRef}
+        className="relative bg-background h-full"
+        onMouseLeave={clearActiveCard}
+        onBlurCapture={(event) => {
+          const nextFocus = event.relatedTarget as Node | null;
+          if (!nextFocus || !containerRef.current?.contains(nextFocus)) {
+            clearActiveCard();
+          }
         }}
-      />
+      >
+        <div
+          className="pointer-events-none absolute z-0 bg-primary [will-change:transform,width,height,opacity]"
+          style={{
+            transform: `translate3d(${highlight.x}px, ${highlight.y}px, 0)`,
+            width: highlight.width,
+            height: highlight.height,
+            opacity: highlightVisible ? 1 : 0,
+            transition: "opacity 160ms ease-out",
+          }}
+        />
 
-      <RowGrid className="relative z-10">
-        {slots.map((item, index) => (
-          <GridItem
-            key={item ? `friend-link-${item.id}` : `friend-link-empty-${index}`}
-            areas={COLUMN_AREAS[index % COLUMNS] || createArray(1, 3)}
-            width={3.4}
-            height={0.32}
-            className="!border-0 overflow-hidden"
-          >
-            {item ? (
-              <FriendLinkCard
-                item={item}
-                inverseClipPath={inverseClipMap[item.id] || "inset(100% 0 0 0)"}
-                onActivate={activateCard}
-                registerRef={registerCardRef}
-              />
-            ) : (
-              <EmptyFriendLinkCard />
-            )}
-          </GridItem>
-        ))}
-      </RowGrid>
-    </div>
+        <RowGrid className="relative z-10">
+          {slots.map((item, index) => (
+            <GridItem
+              key={
+                item ? `friend-link-${item.id}` : `friend-link-empty-${index}`
+              }
+              areas={COLUMN_AREAS[index % COLUMNS] || createArray(1, 3)}
+              width={3.4}
+              height={0.32}
+              className="!border-0 overflow-hidden"
+            >
+              {item ? (
+                <FriendLinkCard
+                  item={item}
+                  inverseClipPath={
+                    inverseClipMap[item.id] || "inset(100% 0 0 0)"
+                  }
+                  onActivate={activateCard}
+                  registerRef={registerCardRef}
+                />
+              ) : (
+                <EmptyFriendLinkCard />
+              )}
+            </GridItem>
+          ))}
+        </RowGrid>
+      </div>
+    </GridItem>
   );
 }
