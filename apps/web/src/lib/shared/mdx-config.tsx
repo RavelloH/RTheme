@@ -47,6 +47,17 @@ import {
 // ============ 导出共享配置 ============
 const MARKDOWN_IMAGE_SIZES = "(max-width: 56rem) 100vw, 56rem";
 
+function parsePositiveDimension(value?: string | number): number | undefined {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value > 0 ? value : undefined;
+  }
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+  }
+  return undefined;
+}
+
 /**
  * 统一的代码高亮函数
  *
@@ -182,8 +193,14 @@ export function ImageComponent({
 }) {
   const imgSrc = typeof src === "string" ? src : "";
   const imgAlt = alt || "";
-  const imgWidth = width ? Number(width) : 800;
-  const imgHeight = height ? Number(height) : 400;
+  const parsedWidth = parsePositiveDimension(width);
+  const parsedHeight = parsePositiveDimension(height);
+  const imgWidth = parsedWidth ?? 800;
+  const imgHeight = parsedHeight ?? 400;
+  const imageStyle =
+    parsedWidth !== undefined
+      ? { width: `min(100%, ${imgWidth}px)`, height: "auto" }
+      : { width: "auto", maxWidth: "100%", height: "auto" };
 
   return (
     <span className="block">
@@ -193,7 +210,7 @@ export function ImageComponent({
         width={imgWidth}
         height={imgHeight}
         sizes={MARKDOWN_IMAGE_SIZES}
-        style={{ width: `min(100%, ${imgWidth}px)`, height: "auto" }}
+        style={imageStyle}
         data-lightbox="true"
       />
       {imgAlt && (

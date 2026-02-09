@@ -22,6 +22,17 @@ import {
 // ============ 服务器端组件 ============
 const MARKDOWN_IMAGE_SIZES = "(max-width: 56rem) 100vw, 56rem";
 
+function parsePositiveDimension(value?: string | number): number | undefined {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value > 0 ? value : undefined;
+  }
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+  }
+  return undefined;
+}
+
 /**
  * 服务器端代码块组件
  * 使用异步 Shiki 高亮，在服务器端完成渲染
@@ -80,8 +91,9 @@ export function ImageComponentServer({
   const imgAlt = alt || "";
 
   // 尝试从媒体文件映射中获取图片信息
-  let imgWidth = width ? Number(width) : undefined;
-  let imgHeight = height ? Number(height) : undefined;
+  let imgWidth = parsePositiveDimension(width);
+  let imgHeight = parsePositiveDimension(height);
+  let hasKnownWidth = imgWidth !== undefined;
   let blur: string | undefined;
 
   if (mediaFileMap && imgSrc) {
@@ -89,8 +101,15 @@ export function ImageComponentServer({
     const imageInfo = processedImages[0];
 
     if (imageInfo) {
-      imgWidth = imageInfo.width || imgWidth;
-      imgHeight = imageInfo.height || imgHeight;
+      const mappedWidth = parsePositiveDimension(imageInfo.width);
+      const mappedHeight = parsePositiveDimension(imageInfo.height);
+      if (mappedWidth !== undefined) {
+        imgWidth = mappedWidth;
+        hasKnownWidth = true;
+      }
+      if (mappedHeight !== undefined) {
+        imgHeight = mappedHeight;
+      }
       blur = imageInfo.blur || blur;
     }
   }
@@ -98,6 +117,9 @@ export function ImageComponentServer({
   // 如果没有获取到尺寸信息，使用默认值
   imgWidth = imgWidth || 800;
   imgHeight = imgHeight || 400;
+  const imageStyle = hasKnownWidth
+    ? { width: `min(100%, ${imgWidth}px)`, height: "auto" }
+    : { width: "auto", maxWidth: "100%", height: "auto" };
 
   return (
     <span className="block relative my-4">
@@ -109,7 +131,7 @@ export function ImageComponentServer({
         blur={blur}
         optimized={!!(blur && imgWidth && imgHeight)}
         sizes={MARKDOWN_IMAGE_SIZES}
-        style={{ width: `min(100%, ${imgWidth}px)`, height: "auto" }}
+        style={imageStyle}
         data-lightbox="true"
       />
       {imgAlt && (
