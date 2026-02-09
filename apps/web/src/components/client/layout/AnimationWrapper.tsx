@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
-import { usePathname } from "next/navigation";
 
 import { useEvent } from "@/hooks/use-event";
 import { useMobile } from "@/hooks/use-mobile";
@@ -457,7 +456,6 @@ export default function HorizontalScrollAnimationWrapper({
   const desktopHandlerRef = useRef<
     (message: HorizontalScrollProgressMessage) => void
   >(() => {});
-  const pathname = usePathname();
   const isMobile = useMobile();
   const horizontalScrollEventStore = useEvent<HorizontalScrollEventMap>();
 
@@ -1298,7 +1296,6 @@ export default function HorizontalScrollAnimationWrapper({
     enableParallax,
     enableFadeElements,
     enableLineReveal,
-    pathname,
     isMobile,
     horizontalScrollEventStore,
   ]);
