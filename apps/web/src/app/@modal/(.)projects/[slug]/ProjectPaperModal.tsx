@@ -262,7 +262,7 @@ export default function ProjectPaperModal({
                   mass: 0.92,
                 }
           }
-          className="pointer-events-auto relative min-h-[132vh] min-w-0 flex-1 overflow-hidden rounded-t-md border border-border/80 bg-background shadow-[0_-24px_70px_rgba(0,0,0,0.35)]"
+          className="pointer-events-auto relative min-h-[132vh] min-w-0 flex-1 overflow-hidden rounded-sm border border-border/80 bg-background shadow-[0_-24px_70px_rgba(0,0,0,0.35)]"
           onClick={(event) => event.stopPropagation()}
           role="dialog"
           aria-modal="true"

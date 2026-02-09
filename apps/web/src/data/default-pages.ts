@@ -656,7 +656,73 @@ export const defaultPages: DefaultPage[] = [
     slug: "/friends",
     content: "",
     contentType: "MARKDOWN",
-    config: {},
+    config: {
+      blocks: [
+        {
+          id: 1,
+          block: "default",
+          description: "",
+          content: {
+            title: {
+              value: "Friends / 友情链接",
+            },
+            footer: {
+              link: "/friends/new",
+              text: "申请 / 管理友链",
+              type: "normal",
+            },
+            header: {
+              value: "Nodes. Hubs. Links.",
+            },
+            layout: {
+              ratio: 1,
+            },
+            content: {
+              top: {
+                value: [
+                  "收录 & 联结所有连接。",
+                  "",
+                  "共收录 {friends} 个友情链接，",
+                  "欢迎交换友链，点击下方链接即可自助申请。",
+                ],
+              },
+              bottom: {
+                value: ["当前正在查看 友链列表。"],
+              },
+            },
+          },
+        },
+        {
+          id: 2,
+          block: "friend-links",
+          description: "",
+          content: {
+            limit: 0,
+            random: true,
+          },
+        },
+        {
+          id: 3,
+          block: "divider",
+          description: "",
+          content: {
+            text: "\\- Broken Links -",
+            color: "accent",
+            style: "text",
+          },
+        },
+        {
+          id: 4,
+          block: "invalid-friend-links",
+          description: "",
+          content: {
+            limit: 0,
+            showAsLink: false,
+            showDuration: true,
+          },
+        },
+      ],
+    },
     status: "ACTIVE",
     isSystemPage: true,
     metaDescription:
