@@ -41,6 +41,8 @@ import {
   createShikiConfig,
   mdxRehypePlugins,
   mdxRemarkPlugins,
+  normalizeCodeLanguage,
+  renderPlainCodeBlockHtml,
   type ShikiTheme,
 } from "@/lib/shared/mdx-config-shared";
 
@@ -71,32 +73,50 @@ export async function highlightCode(
   language: string,
   shikiTheme?: ShikiTheme,
 ): Promise<string> {
+  const resolvedLanguage = normalizeCodeLanguage(language);
+  const config = createShikiConfig(shikiTheme);
+
+  if (resolvedLanguage.textMode) {
+    try {
+      return await codeToHtml(code, {
+        lang: "text",
+        ...config,
+      });
+    } catch (err) {
+      console.error("Shiki text 模式渲染失败:", {
+        error: err,
+        language,
+      });
+      return renderPlainCodeBlockHtml(code);
+    }
+  }
+
   try {
-    const config = createShikiConfig(shikiTheme);
     return await codeToHtml(code, {
-      lang: language,
+      lang: resolvedLanguage.normalized,
       ...config,
     });
   } catch (err) {
-    console.error("Shiki 语法高亮错误:", { error: err, language, code });
-    // 如果指定的语言不支持，尝试用 text 语言重新渲染
-    if (language !== "text") {
-      try {
-        const config = createShikiConfig(shikiTheme);
-        return await codeToHtml(code, {
-          lang: "text",
-          ...config,
-        });
-      } catch (retryErr) {
-        console.error("Shiki text 渲染失败:", { error: retryErr, code });
-      }
+    console.error("Shiki 语法高亮错误:", {
+      error: err,
+      language,
+      normalizedLanguage: resolvedLanguage.normalized,
+      code,
+    });
+    try {
+      return await codeToHtml(code, {
+        lang: "text",
+        ...config,
+      });
+    } catch (retryErr) {
+      console.error("Shiki text 回退渲染失败:", {
+        error: retryErr,
+        language,
+        normalizedLanguage: resolvedLanguage.normalized,
+        code,
+      });
+      return renderPlainCodeBlockHtml(code);
     }
-    // 最后的降级方案：返回纯文本
-    const escapedCode = code
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-    return `<pre class="p-4 rounded-lg overflow-x-auto my-4" style="background-color:#FFFFFF;--shiki-dark-bg:#1E1E1E;color:#000000;--shiki-dark:#D4D4D4"><code class="font-mono text-sm">${escapedCode}</code></pre>`;
   }
 }
 

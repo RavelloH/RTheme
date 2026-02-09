@@ -16,6 +16,8 @@ import Link from "@/components/ui/Link";
 import { type MediaFileInfo, processImageUrl } from "@/lib/shared/image-utils";
 import {
   createShikiConfig,
+  normalizeCodeLanguage,
+  renderPlainCodeBlockHtml,
   type ShikiTheme,
 } from "@/lib/shared/mdx-config-shared";
 
@@ -47,12 +49,30 @@ export async function CodeBlockServer({
   shikiTheme?: ShikiTheme;
 }) {
   const language = className?.replace(/language-/, "") || "text";
-  const code = String(children).replace(/\n$/, "");
+  const code = String(children ?? "").replace(/\n$/, "");
+  const resolvedLanguage = normalizeCodeLanguage(language);
+  const config = createShikiConfig(shikiTheme);
+
+  if (resolvedLanguage.textMode) {
+    try {
+      const textHtml = await codeToHtml(code, {
+        lang: "text",
+        ...config,
+      });
+      return <div dangerouslySetInnerHTML={{ __html: textHtml }} />;
+    } catch (err) {
+      console.error("Shiki 服务端 text 模式渲染失败:", {
+        error: err,
+        language,
+      });
+      const fallbackHtml = renderPlainCodeBlockHtml(code);
+      return <div dangerouslySetInnerHTML={{ __html: fallbackHtml }} />;
+    }
+  }
 
   try {
-    const config = createShikiConfig(shikiTheme);
     const html = await codeToHtml(code, {
-      lang: language,
+      lang: resolvedLanguage.normalized,
       ...config,
     });
     return <div dangerouslySetInnerHTML={{ __html: html }} />;
@@ -60,13 +80,24 @@ export async function CodeBlockServer({
     console.error("Shiki 服务端语法高亮错误:", {
       error: err,
       language,
+      normalizedLanguage: resolvedLanguage.normalized,
     });
 
-    return (
-      <pre className="shiki">
-        <code>{code}</code>
-      </pre>
-    );
+    try {
+      const textHtml = await codeToHtml(code, {
+        lang: "text",
+        ...config,
+      });
+      return <div dangerouslySetInnerHTML={{ __html: textHtml }} />;
+    } catch (retryErr) {
+      console.error("Shiki 服务端 text 回退渲染失败:", {
+        error: retryErr,
+        language,
+        normalizedLanguage: resolvedLanguage.normalized,
+      });
+      const fallbackHtml = renderPlainCodeBlockHtml(code);
+      return <div dangerouslySetInnerHTML={{ __html: fallbackHtml }} />;
+    }
   }
 }
 

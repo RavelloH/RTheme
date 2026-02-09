@@ -61,6 +61,55 @@ export function createShikiConfig(theme?: ShikiTheme) {
  */
 export const shikiConfig = createShikiConfig();
 
+const TEXT_MODE_LANGUAGES = new Set(["text", "txt", "plain", "plaintext"]);
+
+const SHIKI_LANGUAGE_ALIASES: Record<string, string> = {
+  env: "dotenv",
+};
+
+export interface NormalizedCodeLanguage {
+  input: string;
+  normalized: string;
+  textMode: boolean;
+}
+
+/**
+ * 归一化代码块语言标识。
+ * - 处理别名（如 env -> dotenv）
+ * - text/txt/plain/plaintext 一律视为纯文本模式
+ */
+export function normalizeCodeLanguage(
+  language?: string,
+): NormalizedCodeLanguage {
+  const input = (language || "").trim().toLowerCase();
+
+  if (!input || TEXT_MODE_LANGUAGES.has(input)) {
+    return {
+      input,
+      normalized: "text",
+      textMode: true,
+    };
+  }
+
+  return {
+    input,
+    normalized: SHIKI_LANGUAGE_ALIASES[input] || input,
+    textMode: false,
+  };
+}
+
+/**
+ * 生成纯文本代码块 HTML（Shiki 不支持语言时的降级方案）
+ */
+export function renderPlainCodeBlockHtml(code: string): string {
+  const escapedCode = code
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  return `<pre class="p-4 rounded-lg overflow-x-auto my-4" style="background-color:#FFFFFF;--shiki-dark-bg:#1E1E1E;color:#000000;--shiki-dark:#D4D4D4"><code class="font-mono text-sm">${escapedCode}</code></pre>`;
+}
+
 // ============ Remark/Rehype 插件配置 ============
 
 /**
