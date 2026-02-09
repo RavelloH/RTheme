@@ -940,6 +940,7 @@ model FriendLink {
   updatedAt   DateTime  @updatedAt
   publishedAt DateTime?
 
+  @@unique([ownerId])
   @@index([status])
   @@index([group, order])
   @@index([lastCheckedAt])
@@ -952,6 +953,7 @@ enum FriendLinkStatus {
   DISCONNECT // 无法访问
   NO_BACKLINK // 无回链
   BLOCKED // 已拉黑
+  WHITELIST // 白名单，永久有效且跳过检查
 }
 
 enum ProjectStatus {
