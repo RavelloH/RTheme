@@ -300,10 +300,4 @@ export const PLACEHOLDER_REGISTRY: PlaceholderMeta[] = [
     description: "显示当前友链总数",
     interpolator: "friends",
   },
-  {
-    name: "friendsList",
-    description: "友链 URL 列表（用于随机跳转）",
-    interpolator: "friends",
-    isSubField: true,
-  },
 ];
