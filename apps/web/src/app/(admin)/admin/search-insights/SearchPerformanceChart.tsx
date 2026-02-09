@@ -62,7 +62,7 @@ export default function SearchPerformanceChart() {
     let firstNonZeroIndex = -1;
     for (let i = 0; i < stats.dailyTrend.length; i++) {
       const item = stats.dailyTrend[i];
-      if (item && (item.avgDuration > 0 || item.zeroResultCount > 0)) {
+      if (item && item.avgDuration > 0) {
         firstNonZeroIndex = i;
         break;
       }
@@ -76,24 +76,14 @@ export default function SearchPerformanceChart() {
 
     // 转换数据格式
     const chartData: AreaChartDataPoint[] = filteredTrend.map(
-      (item: {
-        date: string;
-        avgDuration: number;
-        zeroResultCount: number;
-      }) => ({
+      (item: { date: string; avgDuration: number }) => ({
         time: item.date,
         avgDuration: item.avgDuration,
-        zeroResultCount: item.zeroResultCount,
       }),
     );
 
     // 配置系列
     const series: SeriesConfig[] = [
-      {
-        key: "zeroResultCount",
-        label: "无结果次数",
-        color: "var(--color-warning)",
-      },
       {
         key: "avgDuration",
         label: "平均耗时",
