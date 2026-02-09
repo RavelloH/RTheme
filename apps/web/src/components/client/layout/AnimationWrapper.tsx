@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
+import { usePathname } from "next/navigation";
 
 import { useEvent } from "@/hooks/use-event";
 import { useMobile } from "@/hooks/use-mobile";
@@ -39,6 +40,8 @@ const LINE_TOP_EPSILON = 1;
 const INLINE_DISPLAY_VALUES = new Set(["inline", "inline-block", "contents"]);
 const NON_AUTO_LINE_REVEAL_SELECTOR =
   "a,button,input,textarea,select,option,label,video,audio,iframe,canvas,svg,table,pre,code";
+const PARALLAX_X_CSS_VARIABLE = "--np-parallax-x";
+const PARALLAX_TRANSLATE_DECLARATION = `var(${PARALLAX_X_CSS_VARIABLE}) 0`;
 
 type RevealPhase = "before" | "partial" | "after";
 type LineRevealMode = "auto" | "manual";
@@ -424,6 +427,7 @@ export default function HorizontalScrollAnimationWrapper({
   const desktopHandlerRef = useRef<
     (message: HorizontalScrollProgressMessage) => void
   >(() => {});
+  const pathname = usePathname();
   const isMobile = useMobile();
   const horizontalScrollEventStore = useEvent<HorizontalScrollEventMap>();
 
@@ -450,13 +454,11 @@ export default function HorizontalScrollAnimationWrapper({
         charFadeMaxWidth: 0,
         lineRevealMaxWidth: 0,
         parallax: [] as {
-          el: Element;
+          el: HTMLElement;
           speed: number;
-          initialX: number;
+          activationScrollX: number;
           leftOffset: number;
           width: number;
-          hasEntered: boolean;
-          entryScrollX: number;
           lastAppliedX: number;
         }[],
         fade: [] as {
@@ -604,6 +606,9 @@ export default function HorizontalScrollAnimationWrapper({
       };
       initDOM();
 
+      let initialCurrentX =
+        ((gsap.getProperty(content, "x") as number) || 0) - content.scrollLeft;
+
       const measure = () => {
         const containerRect = container.getBoundingClientRect();
         const contentRect = content.getBoundingClientRect();
@@ -617,16 +622,26 @@ export default function HorizontalScrollAnimationWrapper({
           wrapper.querySelectorAll("[data-parallax]").forEach((element) => {
             const rect = element.getBoundingClientRect();
             const leftOffset = rect.left - wrapperRect.left;
+            const parallaxTarget = element as HTMLElement;
+            const speedAttr = parseFloat(
+              element.getAttribute("data-parallax") || "0.5",
+            );
+            const speed = Number.isFinite(speedAttr) ? speedAttr : 0.5;
+
+            parallaxTarget.style.translate = PARALLAX_TRANSLATE_DECLARATION;
+            parallaxTarget.style.setProperty(PARALLAX_X_CSS_VARIABLE, "0px");
+
+            const entryScrollX =
+              cache.containerWidth - (cache.wrapperOffset + leftOffset);
+            const activationScrollX = Math.min(initialCurrentX, entryScrollX);
 
             cache.parallax.push({
-              el: element,
-              speed: parseFloat(element.getAttribute("data-parallax") || "0.5"),
-              initialX: (gsap.getProperty(element, "x") as number) || 0,
+              el: parallaxTarget,
+              speed,
+              activationScrollX,
               leftOffset,
               width: rect.width,
-              hasEntered: false,
-              entryScrollX: 0,
-              lastAppliedX: (gsap.getProperty(element, "x") as number) || 0,
+              lastAppliedX: Number.NaN,
             });
           });
           cache.parallax.sort((a, b) => a.leftOffset - b.leftOffset);
@@ -837,7 +852,7 @@ export default function HorizontalScrollAnimationWrapper({
         currentX: number,
         forceUpdateWhenOffscreen = false,
       ) => {
-        if (Math.abs(currentX - lastX) < 0.01) {
+        if (!forceUpdateWhenOffscreen && Math.abs(currentX - lastX) < 0.01) {
           return;
         }
         lastX = currentX;
@@ -852,7 +867,6 @@ export default function HorizontalScrollAnimationWrapper({
         const baseX = currentX + cache.wrapperOffset;
 
         if (enableParallax) {
-          const viewportPreparationZone = containerWidth;
           forEachHorizontalActiveItem(
             cache.parallax,
             baseX,
@@ -860,36 +874,20 @@ export default function HorizontalScrollAnimationWrapper({
             cache.parallaxMaxWidth,
             forceUpdateWhenOffscreen,
             (item) => {
-              const currentLeft = baseX + item.leftOffset;
-              const projectedParallaxX = item.hasEntered
-                ? item.initialX + (currentX - item.entryScrollX) * item.speed
-                : item.lastAppliedX;
-              const currentVisualLeft = currentLeft + projectedParallaxX;
-              const currentVisualRight = currentVisualLeft + item.width;
+              const parallaxX =
+                currentX <= item.activationScrollX
+                  ? (currentX - item.activationScrollX) * item.speed
+                  : 0;
 
-              const isInViewportArea =
-                currentVisualLeft < viewportPreparationZone &&
-                currentVisualRight > 0;
-
-              if (isInViewportArea) {
-                let parallaxX = projectedParallaxX;
-                if (!item.hasEntered) {
-                  item.hasEntered = true;
-                  item.entryScrollX = currentX;
-                  item.initialX =
-                    (gsap.getProperty(item.el, "x") as number) || 0;
-                  parallaxX = item.initialX;
-                }
-
-                if (Math.abs(parallaxX - item.lastAppliedX) > EPSILON) {
-                  gsap.set(item.el, { x: parallaxX });
-                  item.lastAppliedX = parallaxX;
-                }
-              } else if (currentVisualLeft >= viewportPreparationZone) {
-                if (item.hasEntered) {
-                  item.hasEntered = false;
-                  item.entryScrollX = 0;
-                }
+              if (
+                Number.isNaN(item.lastAppliedX) ||
+                Math.abs(parallaxX - item.lastAppliedX) > EPSILON
+              ) {
+                item.el.style.setProperty(
+                  PARALLAX_X_CSS_VARIABLE,
+                  `${parallaxX.toFixed(3)}px`,
+                );
+                item.lastAppliedX = parallaxX;
               }
             },
           );
@@ -1148,6 +1146,10 @@ export default function HorizontalScrollAnimationWrapper({
             handleHorizontalScrollEvent,
           );
         isSubscribed = true;
+        const currentX =
+          ((gsap.getProperty(content, "x") as number) || 0) -
+          content.scrollLeft;
+        updateLoop(currentX, true);
       };
 
       const unsubscribe = () => {
@@ -1191,12 +1193,16 @@ export default function HorizontalScrollAnimationWrapper({
 
       observer.observe(wrapper);
 
-      const initialCurrentX =
+      initialCurrentX =
         ((gsap.getProperty(content, "x") as number) || 0) - content.scrollLeft;
       updateLoop(initialCurrentX, true);
       syncSubscriptionByVisibility();
 
       const handleResize = () => {
+        const currentX =
+          ((gsap.getProperty(content, "x") as number) || 0) -
+          content.scrollLeft;
+        initialCurrentX = currentX;
         const prevWrapperWidth = cache.wrapperWidth;
         measure();
         const hasWrapperWidthChanged =
@@ -1206,9 +1212,6 @@ export default function HorizontalScrollAnimationWrapper({
           measure();
         }
         lastX = Number.NaN;
-        const currentX =
-          ((gsap.getProperty(content, "x") as number) || 0) -
-          content.scrollLeft;
         updateLoop(currentX, true);
         syncSubscriptionByVisibility();
       };
@@ -1222,6 +1225,15 @@ export default function HorizontalScrollAnimationWrapper({
         observer.disconnect();
       });
       cleanupFunctions.push(unsubscribe);
+      cleanupFunctions.push(() => {
+        wrapper.querySelectorAll("[data-parallax]").forEach((element) => {
+          const target = element as HTMLElement;
+          target.style.removeProperty(PARALLAX_X_CSS_VARIABLE);
+          if (target.style.translate === PARALLAX_TRANSLATE_DECLARATION) {
+            target.style.removeProperty("translate");
+          }
+        });
+      });
     }, wrapper);
 
     return () => {
@@ -1233,6 +1245,7 @@ export default function HorizontalScrollAnimationWrapper({
     enableParallax,
     enableFadeElements,
     enableLineReveal,
+    pathname,
     isMobile,
     horizontalScrollEventStore,
   ]);
