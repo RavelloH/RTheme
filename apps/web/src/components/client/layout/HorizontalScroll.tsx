@@ -230,7 +230,11 @@ export default function HorizontalScroll({
       );
 
     let animationFrameId: number | null = null;
-    const animateScroll = () => {
+    let lastFrameTime = 0;
+    const animateScroll = (timestamp: number) => {
+      const dt = lastFrameTime > 0 ? timestamp - lastFrameTime : 16;
+      lastFrameTime = timestamp;
+
       const diff =
         smoothScrollState.targetScrollLeft -
         smoothScrollState.currentScrollLeft;
@@ -240,11 +244,13 @@ export default function HorizontalScroll({
           smoothScrollState.targetScrollLeft;
         content.scrollLeft = smoothScrollState.targetScrollLeft;
         smoothScrollState.isAnimating = false;
+        lastFrameTime = 0;
         emitNativeProgress();
         return;
       }
 
-      smoothScrollState.currentScrollLeft += diff * 0.1;
+      const lerpFactor = 1 - Math.exp((-6 * dt) / 1000);
+      smoothScrollState.currentScrollLeft += diff * lerpFactor;
       content.scrollLeft = smoothScrollState.currentScrollLeft;
       animationFrameId = requestAnimationFrame(animateScroll);
     };
@@ -254,7 +260,6 @@ export default function HorizontalScroll({
       if (shouldIgnoreScroll(e.target as HTMLElement, e.deltaY)) return;
 
       e.preventDefault();
-      syncSizeCache(true);
 
       if (
         Math.abs(content.scrollLeft - smoothScrollState.currentScrollLeft) > 1
@@ -271,7 +276,12 @@ export default function HorizontalScroll({
 
       if (!smoothScrollState.isAnimating) {
         smoothScrollState.isAnimating = true;
-        animateScroll();
+        if (animationFrameId !== null) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+        }
+        lastFrameTime = 0;
+        animationFrameId = requestAnimationFrame(animateScroll);
       }
     };
 
@@ -333,7 +343,8 @@ export default function HorizontalScroll({
     const initialX = (gsap.getProperty(content, "x") as number) || 0;
     targetXRef.current = initialX;
 
-    const cleanupFunctions: (() => void)[] = [];
+    const abortController = new AbortController();
+    const { signal } = abortController;
 
     const ctx = gsap.context(() => {
       const sizeCache = {
@@ -449,7 +460,6 @@ export default function HorizontalScroll({
         }
 
         e.preventDefault();
-        syncSizeCache();
         const deltaX = e.deltaY * scrollSpeed;
         const newTargetX = targetXRef.current - deltaX;
         targetXRef.current = clampTargetX(newTargetX);
@@ -480,7 +490,7 @@ export default function HorizontalScroll({
         const touch = e.touches[0];
         if (!touch) return;
         const now = Date.now();
-        if (now - touchStateRef.current.lastTime < 16) return;
+        if (now - touchStateRef.current.lastTime < 4) return;
 
         const deltaX = touch.clientX - touchStateRef.current.currentX;
         const deltaY = touch.clientY - touchStateRef.current.startY;
@@ -540,19 +550,19 @@ export default function HorizontalScroll({
 
         let scrollDelta = 0;
         if (
-          e.code === "Space" ||
-          e.code === "ArrowRight" ||
-          e.code === "ArrowDown"
-        ) {
-          e.preventDefault();
-          scrollDelta = -100;
-        } else if (
           (e.code === "Space" && e.shiftKey) ||
           e.code === "ArrowLeft" ||
           e.code === "ArrowUp"
         ) {
           e.preventDefault();
           scrollDelta = 100;
+        } else if (
+          e.code === "Space" ||
+          e.code === "ArrowRight" ||
+          e.code === "ArrowDown"
+        ) {
+          e.preventDefault();
+          scrollDelta = -100;
         }
 
         if (scrollDelta !== 0) {
@@ -579,10 +589,7 @@ export default function HorizontalScroll({
           nestedScrollabilityCache = new WeakMap<HTMLElement, boolean>();
           syncSizeCache();
         };
-        window.addEventListener("resize", handleWindowResize);
-        cleanupFunctions.push(() =>
-          window.removeEventListener("resize", handleWindowResize),
-        );
+        window.addEventListener("resize", handleWindowResize, { signal });
       }
 
       if (typeof MutationObserver !== "undefined") {
@@ -596,44 +603,30 @@ export default function HorizontalScroll({
         });
       }
 
-      container.addEventListener("wheel", handleWheel, { passive: false });
-      container.addEventListener("touchstart", handleTouchStart, {
+      container.addEventListener("wheel", handleWheel, {
         passive: false,
+        signal,
+      });
+      container.addEventListener("touchstart", handleTouchStart, {
+        passive: true,
+        signal,
       });
       container.addEventListener("touchmove", handleTouchMove, {
         passive: false,
+        signal,
       });
       container.addEventListener("touchend", handleTouchEnd, {
+        passive: true,
+        signal,
+      });
+      document.addEventListener("keydown", handleKeyDown, {
         passive: false,
+        signal,
       });
-      document.addEventListener("keydown", handleKeyDown, { passive: false });
 
-      cleanupFunctions.push(() =>
-        container.removeEventListener("wheel", handleWheel),
-      );
-      cleanupFunctions.push(() =>
-        container.removeEventListener("touchstart", handleTouchStart),
-      );
-      cleanupFunctions.push(() =>
-        container.removeEventListener("touchmove", handleTouchMove),
-      );
-      cleanupFunctions.push(() =>
-        container.removeEventListener("touchend", handleTouchEnd),
-      );
-      cleanupFunctions.push(() =>
-        document.removeEventListener("keydown", handleKeyDown),
-      );
-      cleanupFunctions.push(() => {
-        if (resizeObserver) {
-          resizeObserver.disconnect();
-        }
-      });
-      cleanupFunctions.push(() => {
-        if (mutationObserver) {
-          mutationObserver.disconnect();
-        }
-      });
-      cleanupFunctions.push(() => {
+      signal.addEventListener("abort", () => {
+        if (resizeObserver) resizeObserver.disconnect();
+        if (mutationObserver) mutationObserver.disconnect();
         if (tickerStopTimer !== null) {
           window.clearTimeout(tickerStopTimer);
           tickerStopTimer = null;
@@ -644,8 +637,8 @@ export default function HorizontalScroll({
 
     return () => {
       if (animationRef.current) animationRef.current.kill();
+      abortController.abort();
       ctx.revert();
-      cleanupFunctions.forEach((cleanup) => cleanup());
     };
   }, [scrollSpeed, isMobile, forceNativeScroll, emitHorizontalProgress]);
 
