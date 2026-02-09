@@ -321,7 +321,7 @@ function FieldRenderer({
     case "toggle": {
       const currentValue = value ?? field.defaultValue;
       return (
-        <div className="mt-6 flex items-center gap-3">
+        <div className="mt-6 flex flex-col gap-3">
           <Switch
             label={field.label}
             checked={Boolean(currentValue)}
