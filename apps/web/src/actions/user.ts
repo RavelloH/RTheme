@@ -1454,8 +1454,12 @@ export async function getUserPublicProfile(
     return response.tooManyRequests();
   }
 
+  // 输入验证
+  if (!Number.isInteger(uid) || uid <= 0) {
+    return response.badRequest({ message: "无效的用户 ID" });
+  }
+
   try {
-    // 获取当前登录用户（可能为空）
     const cookieStore = await cookies();
     const token = cookieStore.get("ACCESS_TOKEN")?.value;
     const currentUser = token
@@ -1676,8 +1680,12 @@ export async function getUserActivity(
     return response.tooManyRequests();
   }
 
+  // 输入验证
+  if (!Number.isInteger(uid) || uid <= 0) {
+    return response.badRequest({ message: "无效的用户 ID" });
+  }
+
   try {
-    // 访客只显示 10 条
     const actualLimit = isGuest ? Math.min(limit, 10) : limit;
     const fetchLimit = actualLimit * 3; // 每种活动各查询 limit*3 条，确保有足够数据
 

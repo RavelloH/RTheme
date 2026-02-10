@@ -44,6 +44,7 @@ interface MemoryCacheItem<T> {
  * 当 Redis 不可用时使用
  */
 const memoryCache = new Map<string, MemoryCacheItem<unknown>>();
+const MEMORY_CACHE_MAX_SIZE = 1000;
 
 /**
  * 清理过期的内存缓存
@@ -59,6 +60,29 @@ function cleanExpiredMemoryCache(): void {
   });
 
   expiredKeys.forEach((key) => memoryCache.delete(key));
+}
+
+/**
+ * 确保内存缓存不超过大小限制，必要时淘汰最早过期的条目
+ */
+function ensureMemoryCacheSize(): void {
+  if (memoryCache.size < MEMORY_CACHE_MAX_SIZE) return;
+
+  // 先清理过期条目
+  cleanExpiredMemoryCache();
+  if (memoryCache.size < MEMORY_CACHE_MAX_SIZE) return;
+
+  // 仍然超限时，淘汰最早过期的条目
+  let oldestKey: string | null = null;
+  let oldestExpiry = Infinity;
+  for (const [key, item] of memoryCache) {
+    const expiry = item.expiresAt.getTime();
+    if (expiry < oldestExpiry) {
+      oldestExpiry = expiry;
+      oldestKey = key;
+    }
+  }
+  if (oldestKey) memoryCache.delete(oldestKey);
 }
 
 // 定期清理过期缓存（每5分钟）
@@ -137,6 +161,7 @@ export async function setCache<T>(
 
     // 同时写入内存缓存作为备份
     if (enableFallback) {
+      ensureMemoryCacheSize();
       const expiresAt = new Date(Date.now() + ttl * 1000);
       memoryCache.set(key, { data: value, expiresAt });
     }
@@ -150,6 +175,7 @@ export async function setCache<T>(
 
     // 降级到内存缓存
     if (enableFallback) {
+      ensureMemoryCacheSize();
       const expiresAt = new Date(Date.now() + ttl * 1000);
       memoryCache.set(key, { data: value, expiresAt });
       return true;

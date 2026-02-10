@@ -178,6 +178,14 @@ export async function hashPassword(
       );
     }
 
+    // 防止超长密码导致 HashDoS
+    if (password.length > 1024) {
+      throw new PasswordError(
+        PasswordErrorType.INVALID_INPUT,
+        "密码长度不能超过 1024 个字符",
+      );
+    }
+
     const config = getConfig();
 
     // 预处理密码

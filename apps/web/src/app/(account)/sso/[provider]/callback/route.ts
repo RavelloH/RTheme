@@ -34,7 +34,11 @@ export async function GET(
 
   // OAuth 提供商返回错误
   if (error) {
-    cookieStore.set("sso_login_error", `授权失败: ${error}`, {
+    // 限制 error 内容长度并移除潜在的恶意字符
+    const sanitizedError = String(error)
+      .slice(0, 200)
+      .replace(/[<>"'&]/g, "");
+    cookieStore.set("sso_login_error", `授权失败: ${sanitizedError}`, {
       httpOnly: false, // 客户端需要读取
       maxAge: 60, // 1分钟过期
       sameSite: "lax",
@@ -232,9 +236,14 @@ export async function GET(
         );
       }
 
-      // 绑定成功，获取重定向目标
-      const redirectTo =
+      // 绑定成功，获取重定向目标（验证必须为安全的相对路径）
+      let redirectTo =
         cookieStore.get(`${cookiePrefix}_redirect_to`)?.value || "/settings";
+
+      // 防止开放重定向：必须以 / 开头且不以 // 开头
+      if (!redirectTo.startsWith("/") || redirectTo.startsWith("//")) {
+        redirectTo = "/settings";
+      }
 
       // 清除相关 cookies
       cookieStore.delete(`${cookiePrefix}_state_${provider}`);

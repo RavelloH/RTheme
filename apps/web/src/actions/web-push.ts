@@ -80,7 +80,7 @@ export async function subscribeToWebPush(
   try {
     endpoint = (
       await assertPublicHttpUrl(data.endpoint, { requireHttps: true })
-    ).toString();
+    ).url.toString();
   } catch (error) {
     return response.badRequest({
       message: "订阅地址无效",
@@ -258,6 +258,10 @@ export async function getUserPushSubscriptions(
     serverConfig?.environment || "serveraction",
   );
 
+  if (!(await limitControl(await headers(), "getUserPushSubscriptions"))) {
+    return response.tooManyRequests();
+  }
+
   const user = await authVerify({
     allowedRoles: ["USER", "ADMIN", "EDITOR", "AUTHOR"],
   });
@@ -316,6 +320,10 @@ export async function deleteWebPushSubscription(
   const response = new ResponseBuilder(
     serverConfig?.environment || "serveraction",
   );
+
+  if (!(await limitControl(await headers(), "deleteWebPushSubscription"))) {
+    return response.tooManyRequests();
+  }
 
   const user = await authVerify({
     allowedRoles: ["USER", "ADMIN", "EDITOR", "AUTHOR"],

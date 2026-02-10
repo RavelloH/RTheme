@@ -1,6 +1,6 @@
 import "server-only";
 
-import { randomInt } from "crypto";
+import { randomInt, timingSafeEqual } from "crypto";
 import type { Transporter } from "nodemailer";
 import nodemailer from "nodemailer";
 import type SMTPTransport from "nodemailer/lib/smtp-transport";
@@ -34,11 +34,12 @@ function verify(inputCode: string, storedCodeWithTimestamp: string): boolean {
     const [storedCode, timestampStr] = storedCodeWithTimestamp.split("-");
     const timestamp = parseInt(timestampStr || "", 10);
 
-    return (
-      storedCode === inputCode &&
-      !isNaN(timestamp) &&
-      Date.now() - timestamp <= MAX_VERIFY_DURATION
-    );
+    if (!storedCode || !inputCode || isNaN(timestamp)) return false;
+    if (Date.now() - timestamp > MAX_VERIFY_DURATION) return false;
+
+    // 使用恒定时间比较防止时序攻击
+    if (inputCode.length !== storedCode.length) return false;
+    return timingSafeEqual(Buffer.from(inputCode), Buffer.from(storedCode));
   } catch {
     return false;
   }

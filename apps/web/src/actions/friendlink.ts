@@ -411,7 +411,7 @@ async function requestUrlWithTiming(url: string): Promise<{
   const start = performance.now();
 
   try {
-    let currentUrl = (await assertPublicHttpUrl(url.trim())).toString();
+    let currentUrl = (await assertPublicHttpUrl(url.trim())).url.toString();
     let redirectCount = 0;
 
     while (true) {
@@ -449,7 +449,7 @@ async function requestUrlWithTiming(url: string): Promise<{
         const redirectedUrl = new URL(locationHeader, currentUrl).toString();
         currentUrl = (
           await assertPublicHttpUrl(redirectedUrl.trim())
-        ).toString();
+        ).url.toString();
         redirectCount += 1;
         continue;
       }

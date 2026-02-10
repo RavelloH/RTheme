@@ -6,8 +6,39 @@
 import { randomBytes } from "node:crypto";
 
 import { generateCodeVerifier, GitHub, Google, MicrosoftEntraId } from "arctic";
+import { z } from "zod/v4";
 
 import { getConfig } from "@/lib/server/config-cache";
+
+// OAuth 用户信息验证 Schema
+const GoogleUserSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  name: z.string().optional(),
+  picture: z.string().optional(),
+});
+
+const GitHubUserSchema = z.object({
+  id: z.number(),
+  email: z.string().nullable(),
+  name: z.string().nullable(),
+  login: z.string(),
+  avatar_url: z.string().optional(),
+});
+
+const GitHubEmailSchema = z.array(
+  z.object({
+    email: z.string(),
+    primary: z.boolean(),
+  }),
+);
+
+const MicrosoftUserSchema = z.object({
+  id: z.string(),
+  mail: z.string().nullable(),
+  userPrincipalName: z.string().nullable(),
+  displayName: z.string().nullable(),
+});
 
 export type OAuthProvider = "google" | "github" | "microsoft";
 
@@ -178,7 +209,7 @@ export async function validateOAuthCallback(
         throw new Error("获取 Google 用户信息失败");
       }
 
-      const user = await response.json();
+      const user = GoogleUserSchema.parse(await response.json());
 
       return {
         provider: "google",
@@ -206,7 +237,7 @@ export async function validateOAuthCallback(
         throw new Error("获取 GitHub 用户信息失败");
       }
 
-      const user = await userResponse.json();
+      const user = GitHubUserSchema.parse(await userResponse.json());
 
       // 获取邮箱（可能需要额外请求）
       let email = user.email;
@@ -222,11 +253,9 @@ export async function validateOAuthCallback(
         );
 
         if (emailResponse.ok) {
-          const emails = await emailResponse.json();
-          const primaryEmail = emails.find(
-            (e: { primary: boolean; email: string }) => e.primary,
-          );
-          email = primaryEmail?.email || emails[0]?.email;
+          const emails = GitHubEmailSchema.parse(await emailResponse.json());
+          const primaryEmail = emails.find((e) => e.primary);
+          email = primaryEmail?.email || emails[0]?.email || null;
         }
       }
 
@@ -272,13 +301,18 @@ export async function validateOAuthCallback(
         );
       }
 
-      const user = await response.json();
+      const user = MicrosoftUserSchema.parse(await response.json());
+
+      const msEmail = user.mail || user.userPrincipalName;
+      if (!msEmail) {
+        throw new Error("无法获取 Microsoft 邮箱");
+      }
 
       return {
         provider: "microsoft",
         providerAccountId: user.id,
-        email: user.mail || user.userPrincipalName,
-        name: user.displayName,
+        email: msEmail,
+        name: user.displayName || undefined,
         avatar: undefined, // Microsoft Graph API 需要额外请求获取头像
       };
     }

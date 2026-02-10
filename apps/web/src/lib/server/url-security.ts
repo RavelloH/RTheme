@@ -31,8 +31,11 @@ function isReservedIpv6(ip: string): boolean {
   const normalized = ip.toLowerCase();
 
   if (normalized === "::1") return true; // loopback
+  if (normalized === "::") return true; // 未指定地址
   if (normalized.startsWith("fc") || normalized.startsWith("fd")) return true; // ULA
   if (normalized.startsWith("fe80:")) return true; // link-local
+  if (normalized.startsWith("ff")) return true; // 组播 ff00::/8
+  if (normalized.startsWith("2001:db8:")) return true; // 文档用途 2001:db8::/32
   if (normalized.startsWith("::ffff:")) {
     const mapped = normalized.replace(/^::ffff:/, "");
     if (net.isIP(mapped) === 4) {
@@ -53,7 +56,7 @@ function isReservedIp(ip: string): boolean {
 export async function assertPublicHttpUrl(
   rawUrl: string,
   options: { requireHttps?: boolean } = {},
-): Promise<URL> {
+): Promise<{ url: URL; resolvedIp?: string }> {
   const url: URL = new URL(rawUrl);
   const protocol = url.protocol.toLowerCase();
   const { requireHttps = false } = options;
@@ -84,7 +87,7 @@ export async function assertPublicHttpUrl(
     if (isReservedIp(hostname)) {
       throw new Error("不允许访问内网或保留地址");
     }
-    return url;
+    return { url, resolvedIp: hostname };
   }
 
   const records = await dns.lookup(hostname, {
@@ -99,7 +102,8 @@ export async function assertPublicHttpUrl(
     throw new Error("目标地址解析到内网或保留地址");
   }
 
-  return url;
+  // 返回第一个解析到的 IP 地址，供调用方直接使用以防止 DNS 重绑定
+  return { url, resolvedIp: records[0]!.address };
 }
 
 export async function readResponseBufferWithLimit(
