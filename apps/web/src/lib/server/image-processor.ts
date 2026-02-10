@@ -10,7 +10,7 @@ import sharp from "sharp";
 const BASE62_CHARS =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const MAX_PROCESS_IMAGE_BYTES = 50 * 1024 * 1024; // 50MB
-const MAX_IMAGE_PIXELS = 40_000_000; // 40MP
+const MAX_IMAGE_PIXELS = 400_000_000; // 40MP
 
 /**
  * 支持的图片格式

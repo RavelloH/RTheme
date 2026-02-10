@@ -52,17 +52,12 @@ const DEFAULT_CREATE_FORM: CreateFriendLinkForm = {
 
 function buildSummary(stats: FriendLinksStats): string[] {
   const lines: string[] = [];
+  lines.push(`当前共 ${stats.total} 条友链记录。`);
   lines.push(
-    `当前共 ${stats.total} 条友链记录，其中 ${stats.pending} 条待审核。`,
+    `可展示链接 ${stats.published + stats.whitelist} 条（发布 ${stats.published}，白名单 ${stats.whitelist}），绑定申请人 ${stats.withOwner} 条。`,
   );
   lines.push(
-    `可展示链接 ${stats.published + stats.whitelist} 条（发布 ${stats.published}，白名单 ${stats.whitelist}）。`,
-  );
-  lines.push(
-    `异常链接 ${stats.problematic} 条（无法访问 ${stats.disconnect}，无回链 ${stats.noBacklink}）。`,
-  );
-  lines.push(
-    `已拒绝 ${stats.rejected} 条，已拉黑 ${stats.blocked} 条，绑定申请人 ${stats.withOwner} 条。`,
+    `异常链接 ${stats.problematic} 条（无法访问 ${stats.disconnect}，无回链 ${stats.noBacklink}）。已拒绝 ${stats.rejected} 条，已拉黑 ${stats.blocked} 条`,
   );
   return lines;
 }
@@ -251,6 +246,11 @@ export default function FriendsReport() {
                   {buildSummary(stats).map((line) => (
                     <div key={line}>{line}</div>
                   ))}
+                  {stats.pending > 0 && (
+                    <div className="text-warning">
+                      {stats.pending} 条友链待审核。
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="inline-flex items-center gap-2">
