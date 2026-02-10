@@ -15,6 +15,7 @@ import {
 // TODO: Static Params
 const pageTextRenderModeMap = {
   BLOCK: null,
+  BUILDIN: null,
   MARKDOWN: "markdown",
   MDX: "mdx",
   HTML: "html",

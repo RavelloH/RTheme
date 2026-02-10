@@ -1,13 +1,21 @@
-export type PageEditorContentType = "BLOCK" | "MARKDOWN" | "MDX" | "HTML";
+export type PageEditorContentType =
+  | "BLOCK"
+  | "MARKDOWN"
+  | "MDX"
+  | "HTML"
+  | "BUILDIN";
 
 export function getPageEditorEntryPath(id: string): string {
-  return `/admin/pages/${id}`;
+  return `/admin/pages?id=${encodeURIComponent(id)}`;
 }
 
 export function getPageEditorPathByContentType(
   contentType: PageEditorContentType,
   id: string,
 ): string {
+  if (contentType === "BUILDIN") {
+    return getPageEditorEntryPath(id);
+  }
   if (contentType === "BLOCK") {
     return `/admin/pages/block/${id}`;
   }

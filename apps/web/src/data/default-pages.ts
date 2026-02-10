@@ -19,7 +19,7 @@ export interface DefaultPage {
   title: string;
   slug: string;
   content: string;
-  contentType?: "MARKDOWN" | "HTML" | "MDX" | "BLOCK";
+  contentType?: "MARKDOWN" | "HTML" | "MDX" | "BLOCK" | "BUILDIN";
   config?: PageConfig;
   status: "DRAFT" | "ACTIVE" | "SUSPENDED";
   // SEO 字段
@@ -1098,7 +1098,7 @@ export const defaultPages: DefaultPage[] = [
     title: "照片墙",
     slug: "/gallery",
     content: "",
-    contentType: "MARKDOWN",
+    contentType: "BUILDIN",
     config: {},
     status: "ACTIVE",
     isSystemPage: true,
@@ -1111,7 +1111,7 @@ export const defaultPages: DefaultPage[] = [
     title: "归档",
     slug: "/archive",
     content: "",
-    contentType: "MARKDOWN",
+    contentType: "BLOCK",
     config: {},
     status: "ACTIVE",
     isSystemPage: true,
@@ -1125,7 +1125,7 @@ export const defaultPages: DefaultPage[] = [
     title: "订阅",
     slug: "/subscribe",
     content: "",
-    contentType: "MARKDOWN",
+    contentType: "BLOCK",
     config: {},
     status: "ACTIVE",
     isSystemPage: true,

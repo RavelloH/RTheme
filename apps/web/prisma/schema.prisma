@@ -1015,6 +1015,7 @@ enum PageContentType {
   HTML
   MDX
   BLOCK
+  BUILDIN
 }
 
 enum MediaType {
