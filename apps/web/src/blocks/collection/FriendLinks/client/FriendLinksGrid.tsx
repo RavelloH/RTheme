@@ -231,11 +231,13 @@ function FriendLinkCardContent({
 function FriendLinkCard({
   item,
   inverseClipPath,
+  highlightVisible,
   onActivate,
   registerRef,
 }: {
   item: FriendLinkItem;
   inverseClipPath: string;
+  highlightVisible: boolean;
   onActivate: (id: number, element: HTMLAnchorElement) => void;
   registerRef: (id: number, element: HTMLAnchorElement | null) => void;
 }) {
@@ -262,8 +264,12 @@ function FriendLinkCard({
       </div>
 
       <div
-        className="pointer-events-none absolute inset-0 z-20 [will-change:clip-path]"
-        style={{ clipPath: inverseClipPath }}
+        className="pointer-events-none absolute inset-0 z-20 bg-primary [will-change:clip-path]"
+        style={{
+          clipPath: inverseClipPath,
+          opacity: highlightVisible ? 1 : 0,
+          transition: "opacity 160ms ease-out",
+        }}
       >
         <FriendLinkCardContent item={item} tone="inverse" />
       </div>
@@ -401,18 +407,35 @@ export default function FriendLinksGrid({
         return;
       }
 
+      refreshCardLayouts();
       const targetRect = resolveHighlightRect(container, element);
+      setCardLayoutMap((prev) => ({
+        ...prev,
+        [id]: targetRect,
+      }));
       setActiveCardId(id);
-      setHighlightVisible(true);
+      if (!highlightVisible) {
+        stopRectAnimation();
+        setAnimatedRectInstant(targetRect);
+        setHighlightVisible(true);
+        return;
+      }
       animateHighlightTo(targetRect);
     },
-    [animateHighlightTo],
+    [
+      animateHighlightTo,
+      highlightVisible,
+      refreshCardLayouts,
+      setAnimatedRectInstant,
+      stopRectAnimation,
+    ],
   );
 
   const clearActiveCard = useCallback(() => {
     setActiveCardId(null);
+    stopRectAnimation();
     setHighlightVisible(false);
-  }, []);
+  }, [stopRectAnimation]);
 
   useEffect(() => {
     refreshCardLayouts();
@@ -513,6 +536,7 @@ export default function FriendLinksGrid({
                   inverseClipPath={
                     inverseClipMap[item.id] || "inset(100% 0 0 0)"
                   }
+                  highlightVisible={highlightVisible}
                   onActivate={activateCard}
                   registerRef={registerCardRef}
                 />
