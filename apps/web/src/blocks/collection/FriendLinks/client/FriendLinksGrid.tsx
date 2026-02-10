@@ -7,7 +7,6 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
 } from "react";
 
 import type { FriendLinkItem } from "@/blocks/collection/FriendLinks/types";
@@ -230,16 +229,14 @@ function FriendLinkCardContent({
 
 function FriendLinkCard({
   item,
-  inverseClipPath,
-  highlightVisible,
   onActivate,
   registerRef,
+  registerOverlayRef,
 }: {
   item: FriendLinkItem;
-  inverseClipPath: string;
-  highlightVisible: boolean;
   onActivate: (id: number, element: HTMLAnchorElement) => void;
   registerRef: (id: number, element: HTMLAnchorElement | null) => void;
+  registerOverlayRef: (id: number, element: HTMLDivElement | null) => void;
 }) {
   const handleMouseEnter = (event: MouseEvent<HTMLAnchorElement>) => {
     onActivate(item.id, event.currentTarget);
@@ -264,10 +261,11 @@ function FriendLinkCard({
       </div>
 
       <div
+        ref={(el) => registerOverlayRef(item.id, el)}
         className="pointer-events-none absolute inset-0 z-20 bg-primary [will-change:clip-path]"
         style={{
-          clipPath: inverseClipPath,
-          opacity: highlightVisible ? 1 : 0,
+          clipPath: "inset(100% 0 0 0)",
+          opacity: 0,
           transition: "opacity 160ms ease-out",
         }}
       >
@@ -318,16 +316,15 @@ export default function FriendLinksGrid({
   }, [stableLinks, randomEnabled, limit]);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const highlightRef = useRef<HTMLDivElement | null>(null);
   const cardRefMap = useRef<Map<number, HTMLAnchorElement>>(new Map());
+  const overlayRefMap = useRef<Map<number, HTMLDivElement>>(new Map());
+  const cachedCardRects = useRef<Map<number, HighlightRect>>(new Map());
   const rectAnimationFrameRef = useRef<number | null>(null);
   const animatedRectRef = useRef<HighlightRect | null>(null);
-
-  const [cardLayoutMap, setCardLayoutMap] = useState<
-    Record<number, HighlightRect>
-  >({});
-  const [activeCardId, setActiveCardId] = useState<number | null>(null);
-  const [highlightVisible, setHighlightVisible] = useState(false);
-  const [animatedRect, setAnimatedRect] = useState<HighlightRect | null>(null);
+  const highlightVisibleRef = useRef(false);
+  const activeCardIdRef = useRef<number | null>(null);
+  const pendingHideRef = useRef(false);
 
   const stopRectAnimation = useCallback(() => {
     if (rectAnimationFrameRef.current !== null) {
@@ -336,22 +333,43 @@ export default function FriendLinksGrid({
     }
   }, []);
 
-  const refreshCardLayouts = useCallback(() => {
+  const performHide = useCallback(() => {
+    highlightVisibleRef.current = false;
+    if (highlightRef.current) {
+      highlightRef.current.style.opacity = "0";
+    }
+    overlayRefMap.current.forEach((overlayEl) => {
+      overlayEl.style.opacity = "0";
+    });
+  }, []);
+
+  const refreshCardRects = useCallback(() => {
     const container = containerRef.current;
     if (!container) {
       return;
     }
 
-    const next: Record<number, HighlightRect> = {};
+    cachedCardRects.current.clear();
     cardRefMap.current.forEach((element, id) => {
-      next[id] = resolveHighlightRect(container, element);
+      cachedCardRects.current.set(id, resolveHighlightRect(container, element));
     });
-    setCardLayoutMap(next);
   }, []);
 
-  const setAnimatedRectInstant = useCallback((rect: HighlightRect) => {
+  const applyHighlightRect = useCallback((rect: HighlightRect) => {
     animatedRectRef.current = rect;
-    setAnimatedRect(rect);
+
+    const el = highlightRef.current;
+    if (el) {
+      el.style.transform = `translate3d(${rect.x}px, ${rect.y}px, 0)`;
+      el.style.width = `${rect.width}px`;
+      el.style.height = `${rect.height}px`;
+    }
+
+    const visible = highlightVisibleRef.current;
+    overlayRefMap.current.forEach((overlayEl, key) => {
+      const cardRect = cachedCardRects.current.get(key);
+      overlayEl.style.clipPath = toInverseClipPath(cardRect, rect, visible);
+    });
   }, []);
 
   const animateHighlightTo = useCallback(
@@ -368,25 +386,29 @@ export default function FriendLinksGrid({
         fromRect.width === targetRect.width &&
         fromRect.height === targetRect.height
       ) {
-        setAnimatedRectInstant(targetRect);
+        applyHighlightRect(targetRect);
         return;
       }
 
       const tick = (now: number) => {
         const progress = Math.min((now - startTime) / duration, 1);
         const nextRect = interpolateRect(fromRect, targetRect, progress);
-        setAnimatedRectInstant(nextRect);
+        applyHighlightRect(nextRect);
 
         if (progress < 1) {
           rectAnimationFrameRef.current = requestAnimationFrame(tick);
         } else {
           rectAnimationFrameRef.current = null;
+          if (pendingHideRef.current) {
+            pendingHideRef.current = false;
+            performHide();
+          }
         }
       };
 
       rectAnimationFrameRef.current = requestAnimationFrame(tick);
     },
-    [setAnimatedRectInstant, stopRectAnimation],
+    [applyHighlightRect, performHide, stopRectAnimation],
   );
 
   const registerCardRef = useCallback(
@@ -400,6 +422,17 @@ export default function FriendLinksGrid({
     [],
   );
 
+  const registerOverlayRef = useCallback(
+    (id: number, element: HTMLDivElement | null) => {
+      if (element) {
+        overlayRefMap.current.set(id, element);
+      } else {
+        overlayRefMap.current.delete(id);
+      }
+    },
+    [],
+  );
+
   const activateCard = useCallback(
     (id: number, element: HTMLAnchorElement) => {
       const container = containerRef.current;
@@ -407,62 +440,67 @@ export default function FriendLinksGrid({
         return;
       }
 
-      refreshCardLayouts();
       const targetRect = resolveHighlightRect(container, element);
-      setCardLayoutMap((prev) => ({
-        ...prev,
-        [id]: targetRect,
-      }));
-      setActiveCardId(id);
-      if (!highlightVisible) {
+      cachedCardRects.current.set(id, targetRect);
+      activeCardIdRef.current = id;
+      pendingHideRef.current = false;
+
+      if (!highlightVisibleRef.current) {
         stopRectAnimation();
-        setAnimatedRectInstant(targetRect);
-        setHighlightVisible(true);
+        highlightVisibleRef.current = true;
+        if (highlightRef.current) {
+          highlightRef.current.style.opacity = "1";
+        }
+        overlayRefMap.current.forEach((overlayEl) => {
+          overlayEl.style.opacity = "1";
+        });
+        applyHighlightRect(targetRect);
         return;
       }
+
       animateHighlightTo(targetRect);
     },
-    [
-      animateHighlightTo,
-      highlightVisible,
-      refreshCardLayouts,
-      setAnimatedRectInstant,
-      stopRectAnimation,
-    ],
+    [animateHighlightTo, applyHighlightRect, stopRectAnimation],
   );
 
   const clearActiveCard = useCallback(() => {
-    setActiveCardId(null);
-    stopRectAnimation();
-    setHighlightVisible(false);
-  }, [stopRectAnimation]);
+    activeCardIdRef.current = null;
+    if (rectAnimationFrameRef.current !== null) {
+      pendingHideRef.current = true;
+    } else {
+      performHide();
+    }
+  }, [performHide]);
 
   useEffect(() => {
-    refreshCardLayouts();
-  }, [displayLinks, refreshCardLayouts]);
+    refreshCardRects();
+  }, [displayLinks, refreshCardRects]);
 
   useEffect(() => {
     const handleResize = () => {
-      refreshCardLayouts();
+      refreshCardRects();
 
-      if (activeCardId === null) {
+      const id = activeCardIdRef.current;
+      if (id === null) {
         return;
       }
 
       const container = containerRef.current;
-      const activeElement = cardRefMap.current.get(activeCardId);
+      const activeElement = cardRefMap.current.get(id);
       if (!container || !activeElement) {
         return;
       }
 
-      setAnimatedRectInstant(resolveHighlightRect(container, activeElement));
+      const rect = resolveHighlightRect(container, activeElement);
+      cachedCardRects.current.set(id, rect);
+      applyHighlightRect(rect);
     };
 
     window.addEventListener("resize", handleResize);
     return () => {
       window.removeEventListener("resize", handleResize);
     };
-  }, [activeCardId, refreshCardLayouts, setAnimatedRectInstant]);
+  }, [refreshCardRects, applyHighlightRect]);
 
   useEffect(() => {
     return () => {
@@ -471,29 +509,13 @@ export default function FriendLinksGrid({
   }, [stopRectAnimation]);
 
   useEffect(() => {
-    if (
-      activeCardId !== null &&
-      !displayLinks.some((link) => link.id === activeCardId)
-    ) {
+    const id = activeCardIdRef.current;
+    if (id !== null && !displayLinks.some((link) => link.id === id)) {
       clearActiveCard();
     }
-  }, [activeCardId, clearActiveCard, displayLinks]);
+  }, [clearActiveCard, displayLinks]);
 
   const slots = useMemo(() => buildFilledSlots(displayLinks), [displayLinks]);
-
-  const inverseClipMap = useMemo(() => {
-    const map: Record<number, string> = {};
-    for (const item of displayLinks) {
-      map[item.id] = toInverseClipPath(
-        cardLayoutMap[item.id],
-        animatedRect,
-        highlightVisible,
-      );
-    }
-    return map;
-  }, [animatedRect, cardLayoutMap, displayLinks, highlightVisible]);
-
-  const highlight = animatedRect || { x: 0, y: 0, width: 0, height: 0 };
 
   return (
     <GridItem areas={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}>
@@ -509,12 +531,13 @@ export default function FriendLinksGrid({
         }}
       >
         <div
-          className="pointer-events-none absolute z-0 bg-primary [will-change:transform,width,height,opacity]"
+          ref={highlightRef}
+          className="pointer-events-none absolute z-0 bg-primary [will-change:transform,width,height]"
           style={{
-            transform: `translate3d(${highlight.x}px, ${highlight.y}px, 0)`,
-            width: highlight.width,
-            height: highlight.height,
-            opacity: highlightVisible ? 1 : 0,
+            transform: "translate3d(0px, 0px, 0)",
+            width: 0,
+            height: 0,
+            opacity: 0,
             transition: "opacity 160ms ease-out",
           }}
         />
@@ -533,12 +556,9 @@ export default function FriendLinksGrid({
               {item ? (
                 <FriendLinkCard
                   item={item}
-                  inverseClipPath={
-                    inverseClipMap[item.id] || "inset(100% 0 0 0)"
-                  }
-                  highlightVisible={highlightVisible}
                   onActivate={activateCard}
                   registerRef={registerCardRef}
+                  registerOverlayRef={registerOverlayRef}
                 />
               ) : (
                 <EmptyFriendLinkCard />
