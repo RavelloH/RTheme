@@ -53,7 +53,7 @@ export interface PageItem {
   title: string;
   slug: string;
   content: string;
-  contentType: "MARKDOWN" | "HTML" | "MDX";
+  contentType: "MARKDOWN" | "HTML" | "MDX" | "BLOCK";
   config: PageConfig;
   status: "ACTIVE" | "SUSPENDED";
   deletedAt: Date | null;
@@ -505,7 +505,7 @@ async function getPageFromDatabase(slug: string): Promise<PageItem | null> {
       title: page.title,
       slug: page.slug,
       content: page.content,
-      contentType: page.contentType as "MARKDOWN" | "HTML" | "MDX",
+      contentType: page.contentType as "MARKDOWN" | "HTML" | "MDX" | "BLOCK",
       config: page.config as PageConfig,
       status: page.status as "ACTIVE" | "SUSPENDED",
       deletedAt: page.deletedAt,
@@ -555,7 +555,7 @@ async function getPageByIdFromDatabase(id: string): Promise<PageItem | null> {
       title: page.title,
       slug: page.slug,
       content: page.content,
-      contentType: page.contentType as "MARKDOWN" | "HTML" | "MDX",
+      contentType: page.contentType as "MARKDOWN" | "HTML" | "MDX" | "BLOCK",
       config: page.config as PageConfig,
       status: page.status as "ACTIVE" | "SUSPENDED",
       deletedAt: page.deletedAt,
@@ -750,7 +750,11 @@ async function getAllPagesFromDatabase(): Promise<Record<string, PageItem>> {
           title: page.title,
           slug: page.slug,
           content: page.content,
-          contentType: page.contentType as "MARKDOWN" | "HTML" | "MDX",
+          contentType: page.contentType as
+            | "MARKDOWN"
+            | "HTML"
+            | "MDX"
+            | "BLOCK",
           config: page.config as PageConfig,
           status: page.status as "ACTIVE" | "SUSPENDED",
           deletedAt: page.deletedAt,

@@ -19,7 +19,7 @@ export interface DefaultPage {
   title: string;
   slug: string;
   content: string;
-  contentType?: "MARKDOWN" | "HTML" | "MDX";
+  contentType?: "MARKDOWN" | "HTML" | "MDX" | "BLOCK";
   config?: PageConfig;
   status: "DRAFT" | "ACTIVE" | "SUSPENDED";
   // SEO 字段
@@ -39,7 +39,7 @@ export const defaultPages: DefaultPage[] = [
     title: "首页",
     slug: "/",
     content: "",
-    contentType: "MARKDOWN",
+    contentType: "BLOCK",
     config: {
       blocks: [
         {
@@ -203,7 +203,7 @@ export const defaultPages: DefaultPage[] = [
     title: "项目",
     slug: "/projects",
     content: "",
-    contentType: "MARKDOWN",
+    contentType: "BLOCK",
     config: {
       blocks: [
         {
@@ -289,7 +289,7 @@ export const defaultPages: DefaultPage[] = [
     title: "文章 - 第 {page} 页",
     slug: "/posts/page/:page",
     content: "",
-    contentType: "MARKDOWN",
+    contentType: "BLOCK",
     config: {
       pageSize: 20,
       blocks: [
@@ -365,7 +365,7 @@ export const defaultPages: DefaultPage[] = [
     title: "分类",
     slug: "/categories",
     content: "",
-    contentType: "MARKDOWN",
+    contentType: "BLOCK",
     config: {
       blocks: [
         {
@@ -429,7 +429,7 @@ export const defaultPages: DefaultPage[] = [
     title: "分类：{category} - 第 {page} 页",
     slug: "/categories/:slug.../page/:page",
     content: "",
-    contentType: "MARKDOWN",
+    contentType: "BLOCK",
     metaDescription:
       "浏览分类 {category} 下的文章，第 {page} 页，共 {totalPage} 页",
     config: {
@@ -523,7 +523,7 @@ export const defaultPages: DefaultPage[] = [
     title: "标签",
     slug: "/tags",
     content: "",
-    contentType: "MARKDOWN",
+    contentType: "BLOCK",
     config: {
       blocks: [
         {
@@ -590,7 +590,7 @@ export const defaultPages: DefaultPage[] = [
     title: "标签：{tag} - 第 {page} 页",
     slug: "/tags/:slug/page/:page",
     content: "",
-    contentType: "MARKDOWN",
+    contentType: "BLOCK",
     metaDescription: "浏览标签 {tag} 下的文章，第 {page} 页，共 {totalPage} 页",
     config: {
       blocks: [
@@ -678,7 +678,7 @@ export const defaultPages: DefaultPage[] = [
     title: "友链",
     slug: "/friends",
     content: "",
-    contentType: "MARKDOWN",
+    contentType: "BLOCK",
     config: {
       blocks: [
         {
@@ -758,7 +758,7 @@ export const defaultPages: DefaultPage[] = [
     title: "关于",
     slug: "/about",
     content: "",
-    contentType: "MARKDOWN",
+    contentType: "BLOCK",
     config: {
       blocks: [
         {

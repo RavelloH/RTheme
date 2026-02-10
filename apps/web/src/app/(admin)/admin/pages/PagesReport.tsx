@@ -47,7 +47,7 @@ export default function PagesReport() {
     title: "",
     slug: "",
     status: "ACTIVE" as "ACTIVE" | "SUSPENDED",
-    contentType: "MARKDOWN" as "MARKDOWN" | "HTML" | "MDX",
+    contentType: "BLOCK" as "MARKDOWN" | "HTML" | "MDX" | "BLOCK",
     metaDescription: "",
     metaKeywords: "",
     robotsIndex: true,
@@ -85,7 +85,7 @@ export default function PagesReport() {
       title: "",
       slug: "",
       status: "ACTIVE",
-      contentType: "MARKDOWN",
+      contentType: "BLOCK",
       metaDescription: "",
       metaKeywords: "",
       robotsIndex: true,
@@ -124,8 +124,12 @@ export default function PagesReport() {
         setCreateDialogOpen(false);
         // 刷新统计数据
         await fetchData(true);
-        // 跳转到布局编辑器
-        navigate(`/admin/pages/${result.data.id}`);
+        if (newPageForm.contentType === "BLOCK") {
+          // BLOCK 页面跳转到布局编辑器
+          navigate(`/admin/pages/${result.data.id}`);
+        } else {
+          toast.info("非 BLOCK 页面已创建，请在页面列表中进行文本编辑");
+        }
       } else {
         toast.error("创建失败");
       }
@@ -264,7 +268,7 @@ export default function PagesReport() {
                 基本信息
               </h3>
               <p className="text-sm text-muted-foreground">
-                填写页面的基本信息，创建后将进入布局编辑器。
+                填写页面的基本信息。仅 BLOCK 类型页面会在创建后进入布局编辑器。
               </p>
             </div>
             <div className="space-y-4">
@@ -377,10 +381,15 @@ export default function PagesReport() {
                   onChange={(value) =>
                     setNewPageForm({
                       ...newPageForm,
-                      contentType: value as "MARKDOWN" | "HTML" | "MDX",
+                      contentType: value as
+                        | "MARKDOWN"
+                        | "HTML"
+                        | "MDX"
+                        | "BLOCK",
                     })
                   }
                   options={[
+                    { value: "BLOCK", label: "BLOCK（布局编辑器）" },
                     { value: "MARKDOWN", label: "Markdown" },
                     { value: "HTML", label: "HTML" },
                     { value: "MDX", label: "MDX" },
@@ -435,7 +444,11 @@ export default function PagesReport() {
               disabled={isCreating}
             />
             <Button
-              label="创建并进入编辑器"
+              label={
+                newPageForm.contentType === "BLOCK"
+                  ? "创建并进入编辑器"
+                  : "创建页面"
+              }
               variant="primary"
               onClick={handleCreatePage}
               size="sm"
