@@ -8,7 +8,7 @@ import redis, { ensureRedisConnection } from "@/lib/server/redis";
 
 // 配置常量：基于角色的速率限制
 const RATE_LIMITS = {
-  GUEST: 20, // 访客（未登录）
+  GUEST: 30, // 访客（未登录）
   USER: 60, // 普通用户
   EDITOR: 120, // 编辑/作者
   ADMIN: 600, // 管理员

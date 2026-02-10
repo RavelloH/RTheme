@@ -1,4 +1,4 @@
-import { email, z } from "zod";
+import { z } from "zod";
 import {
   createSuccessResponseSchema,
   createErrorResponseSchema,
@@ -138,10 +138,12 @@ registerSchema(
     <<<<<<<<<< sendMessage() schema >>>>>>>>>>
 */
 
+export const MESSAGE_CONTENT_MAX_LENGTH = 2000;
+
 // 发送消息请求
 export const SendMessageRequestSchema = z.object({
   targetUid: z.number().int().positive(), // 目标用户 UID
-  content: z.string().min(1).max(5000),
+  content: z.string().trim().min(1).max(MESSAGE_CONTENT_MAX_LENGTH),
   tempId: z.string().optional(), // 临时 ID（用于乐观更新）
 });
 export type SendMessageRequest = z.infer<typeof SendMessageRequestSchema>;

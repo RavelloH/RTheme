@@ -13,6 +13,15 @@ import type {
   SearchUsersSuccessResponse,
   SendMessageSuccessResponse,
 } from "@repo/shared-types/api/message";
+import {
+  CheckMessagePermissionRequestSchema,
+  DeleteConversationRequestSchema,
+  GetConversationMessagesRequestSchema,
+  GetConversationsRequestSchema,
+  MarkConversationAsReadRequestSchema,
+  SearchUsersRequestSchema,
+  SendMessageRequestSchema,
+} from "@repo/shared-types/api/message";
 import crypto from "crypto";
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
@@ -26,13 +35,13 @@ import { sendNotice } from "@/lib/server/notice";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
+import { validateData } from "@/lib/server/validator";
 
 type MessageActionEnvironment = "serverless" | "serveraction";
 type MessageActionConfig = { environment?: MessageActionEnvironment };
 type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
-const MAX_MESSAGE_CONTENT_LENGTH = 2000;
 
 function calculateMD5(text: string): string {
   return crypto
@@ -130,6 +139,18 @@ export async function getConversations(
   if (!(await limitControl(await headers(), "getConversations"))) {
     return response.tooManyRequests();
   }
+
+  const validationError = validateData(
+    {
+      skip: actualSkip,
+      take: actualTake,
+      ...(actualLastPolledAt
+        ? { lastPolledAt: actualLastPolledAt.toISOString() }
+        : {}),
+    },
+    GetConversationsRequestSchema,
+  );
+  if (validationError) return response.badRequest(validationError);
 
   try {
     // 检查消息系统是否启用
@@ -342,6 +363,16 @@ export async function getConversationMessages(
     return response.tooManyRequests();
   }
 
+  const validationError = validateData(
+    {
+      conversationId,
+      skip: actualSkip,
+      take: actualTake,
+    },
+    GetConversationMessagesRequestSchema,
+  );
+  if (validationError) return response.badRequest(validationError);
+
   try {
     // 检查消息系统是否启用
     if (!(await checkMessageSystemEnabled())) {
@@ -531,6 +562,16 @@ export async function sendMessage(
     return response.tooManyRequests();
   }
 
+  const validationError = validateData(
+    {
+      targetUid,
+      content,
+      ...(actualTempId ? { tempId: actualTempId } : {}),
+    },
+    SendMessageRequestSchema,
+  );
+  if (validationError) return response.badRequest(validationError);
+
   try {
     // 检查消息系统是否启用
     if (!(await checkMessageSystemEnabled())) {
@@ -556,46 +597,7 @@ export async function sendMessage(
       });
     }
 
-    if (!Number.isInteger(targetUid) || targetUid <= 0) {
-      return response.badRequest({
-        message: "目标用户参数无效",
-        error: {
-          code: "INVALID_TARGET_UID",
-          message: "目标用户参数无效",
-        },
-      });
-    }
-
-    if (typeof content !== "string") {
-      return response.badRequest({
-        message: "消息内容格式错误",
-        error: {
-          code: "INVALID_CONTENT",
-          message: "消息内容格式错误",
-        },
-      });
-    }
-
     const normalizedContent = content.trim();
-    if (!normalizedContent) {
-      return response.badRequest({
-        message: "消息内容不能为空",
-        error: {
-          code: "EMPTY_CONTENT",
-          message: "消息内容不能为空",
-        },
-      });
-    }
-
-    if (normalizedContent.length > MAX_MESSAGE_CONTENT_LENGTH) {
-      return response.badRequest({
-        message: `消息内容不能超过 ${MAX_MESSAGE_CONTENT_LENGTH} 个字符`,
-        error: {
-          code: "CONTENT_TOO_LONG",
-          message: `消息内容不能超过 ${MAX_MESSAGE_CONTENT_LENGTH} 个字符`,
-        },
-      });
-    }
 
     // 验证不能给自己发消息
     if (targetUid === user.uid) {
@@ -950,6 +952,14 @@ export async function markConversationAsRead(
     return response.tooManyRequests();
   }
 
+  const validationError = validateData(
+    {
+      conversationId,
+    },
+    MarkConversationAsReadRequestSchema,
+  );
+  if (validationError) return response.badRequest(validationError);
+
   try {
     // 检查消息系统是否启用
     if (!(await checkMessageSystemEnabled())) {
@@ -1082,6 +1092,14 @@ export async function deleteConversation(
     return response.tooManyRequests();
   }
 
+  const validationError = validateData(
+    {
+      conversationId,
+    },
+    DeleteConversationRequestSchema,
+  );
+  if (validationError) return response.badRequest(validationError);
+
   try {
     // 检查消息系统是否启用
     if (!(await checkMessageSystemEnabled())) {
@@ -1188,6 +1206,14 @@ export async function searchUsers(
     return response.tooManyRequests();
   }
 
+  const validationError = validateData(
+    {
+      query,
+    },
+    SearchUsersRequestSchema,
+  );
+  if (validationError) return response.badRequest(validationError);
+
   try {
     // 检查消息系统是否启用
     if (!(await checkMessageSystemEnabled())) {
@@ -1290,6 +1316,14 @@ export async function checkMessagePermission(
   if (!(await limitControl(await headers(), "checkMessagePermission"))) {
     return response.tooManyRequests();
   }
+
+  const validationError = validateData(
+    {
+      targetUid,
+    },
+    CheckMessagePermissionRequestSchema,
+  );
+  if (validationError) return response.badRequest(validationError);
 
   try {
     // 检查消息系统是否启用
