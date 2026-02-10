@@ -1018,7 +1018,7 @@ export async function updateUserProfile(
     const sensitiveFields = ["username", "email"];
     if (sensitiveFields.includes(field)) {
       const { checkReauthToken } = await import("./reauth");
-      const hasReauthToken = await checkReauthToken();
+      const hasReauthToken = await checkReauthToken(uid);
       if (!hasReauthToken) {
         return response.forbidden({
           message: "需要重新验证身份",
@@ -1284,6 +1284,18 @@ export async function updateUserProfile(
 
     // 敏感字段修改后需要退出登录
     if (sensitiveFields.includes(field)) {
+      if (field === "email") {
+        await prisma.refreshToken.updateMany({
+          where: {
+            userUid: uid,
+            revokedAt: null,
+          },
+          data: {
+            revokedAt: new Date(),
+          },
+        });
+      }
+
       cookieStore.delete("ACCESS_TOKEN");
       cookieStore.delete("REFRESH_TOKEN");
       cookieStore.delete("REAUTH_TOKEN");

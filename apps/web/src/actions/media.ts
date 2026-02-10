@@ -39,11 +39,13 @@ import { generateCacheKey, getCache, setCache } from "@/lib/server/cache";
 import { generateSignedImageId } from "@/lib/server/image-crypto";
 import { type ProcessMode } from "@/lib/server/image-processor";
 import { getGalleryPhotosData } from "@/lib/server/media";
+import { deleteObject } from "@/lib/server/oss";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
 import { slugify } from "@/lib/server/slugify";
 import { validateData } from "@/lib/server/validator";
+import { isVirtualStorage } from "@/lib/server/virtual-storage";
 
 import type { Prisma } from ".prisma/client";
 
@@ -88,6 +90,38 @@ type ActionConfig = { environment?: ActionEnvironment };
 type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
+
+function sanitizeExifForClient(exif: unknown): unknown {
+  if (!exif || typeof exif !== "object" || Array.isArray(exif)) {
+    return exif;
+  }
+
+  const exifObj = exif as Record<string, unknown>;
+  const safeExif: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(exifObj)) {
+    const lowered = key.toLowerCase();
+    if (lowered === "raw" || lowered.includes("gps")) {
+      continue;
+    }
+    safeExif[key] = value;
+  }
+
+  return safeExif;
+}
+
+function extractObjectKeyFromStorageUrl(
+  storageUrl: string,
+  baseUrl: string,
+): string | null {
+  const normalizedBase = baseUrl.replace(/\/+$/, "");
+  if (!normalizedBase || !storageUrl.startsWith(normalizedBase)) {
+    return null;
+  }
+
+  const key = storageUrl.slice(normalizedBase.length).replace(/^\/+/, "");
+  return key || null;
+}
 
 /*
   getGalleryPhotos - 获取画廊照片列表（公开）
@@ -677,7 +711,7 @@ export async function getMediaDetail(
       altText: media.altText,
       blur: media.blur,
       thumbnails: media.thumbnails,
-      exif: media.exif,
+      exif: sanitizeExifForClient(media.exif),
       inGallery: media.galleryPhoto !== null,
       galleryPhoto: media.galleryPhoto
         ? {
@@ -1328,6 +1362,16 @@ export async function deleteMedia(
         id: true,
         originalName: true,
         userUid: true,
+        storageUrl: true,
+        StorageProvider: {
+          select: {
+            name: true,
+            type: true,
+            baseUrl: true,
+            pathTemplate: true,
+            config: true,
+          },
+        },
         galleryPhoto: {
           select: { id: true, slug: true },
         },
@@ -1355,6 +1399,105 @@ export async function deleteMedia(
       deletableIds = ids;
       hasPhotosInBatch = mediaToDelete.some((m) => !!m.galleryPhoto);
     }
+
+    // 删除存储后端对象（虚拟存储 EXTERNAL_URL 跳过）
+    const deletableMedia = mediaToDelete.filter((media) =>
+      deletableIds.includes(media.id),
+    );
+    await Promise.all(
+      deletableMedia.map(async (media) => {
+        const provider = media.StorageProvider;
+        if (!provider || isVirtualStorage(provider.name)) {
+          return;
+        }
+
+        const objectKey = extractObjectKeyFromStorageUrl(
+          media.storageUrl,
+          provider.baseUrl,
+        );
+        if (!objectKey) {
+          return;
+        }
+
+        try {
+          switch (provider.type) {
+            case "LOCAL":
+              await deleteObject({
+                type: "LOCAL",
+                baseUrl: provider.baseUrl,
+                pathTemplate: provider.pathTemplate,
+                config: provider.config as {
+                  rootDir: string;
+                  createDirIfNotExists?: boolean;
+                  fileMode?: string | number;
+                  dirMode?: string | number;
+                },
+                key: objectKey,
+              });
+              break;
+            case "AWS_S3":
+              await deleteObject({
+                type: "AWS_S3",
+                baseUrl: provider.baseUrl,
+                pathTemplate: provider.pathTemplate,
+                config: provider.config as {
+                  accessKeyId: string;
+                  secretAccessKey: string;
+                  region: string;
+                  bucket: string;
+                  endpoint?: string;
+                  basePath?: string;
+                  forcePathStyle?: boolean | string;
+                  acl?: string;
+                },
+                key: objectKey,
+              });
+              break;
+            case "VERCEL_BLOB":
+              await deleteObject({
+                type: "VERCEL_BLOB",
+                baseUrl: provider.baseUrl,
+                pathTemplate: provider.pathTemplate,
+                config: provider.config as {
+                  token: string;
+                  basePath?: string;
+                  access?: "public" | "private";
+                  cacheControl?: string;
+                },
+                key: objectKey,
+              });
+              break;
+            case "GITHUB_PAGES":
+              await deleteObject({
+                type: "GITHUB_PAGES",
+                baseUrl: provider.baseUrl,
+                pathTemplate: provider.pathTemplate,
+                config: provider.config as {
+                  owner: string;
+                  repo: string;
+                  branch: string;
+                  token: string;
+                  basePath?: string;
+                  committerName?: string;
+                  committerEmail?: string;
+                  apiBaseUrl?: string;
+                  commitMessageTemplate?: string;
+                },
+                key: objectKey,
+              });
+              break;
+            case "EXTERNAL_URL":
+              break;
+          }
+        } catch (error) {
+          console.error("Delete media object from storage failed:", {
+            mediaId: media.id,
+            storageUrl: media.storageUrl,
+            error,
+          });
+        }
+      }),
+    );
 
     // 删除媒体文件（Prisma 会自动处理关系）
     const result = await prisma.media.deleteMany({
@@ -1795,7 +1938,12 @@ export async function getAccessibleFolders(
   serverConfig?: ActionConfig,
 ): Promise<ApiResponse<FolderItem[] | null>>;
 export async function getAccessibleFolders(
-  { access_token, userRole, userUid, parentId }: GetAccessibleFoldersParams,
+  {
+    access_token,
+    userRole: _userRole,
+    userUid: _userUid,
+    parentId,
+  }: GetAccessibleFoldersParams,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<FolderItem[] | null>> {
   const response = new ResponseBuilder(
@@ -1817,11 +1965,55 @@ export async function getAccessibleFolders(
   }
 
   try {
+    const isPrivilegedUser = user.role === "ADMIN" || user.role === "EDITOR";
+
     // 构建查询条件
     const where: Record<string, unknown> = {};
 
     // 如果指定了 parentId，获取该文件夹下的子文件夹
     if (parentId !== undefined && parentId !== null) {
+      if (!isPrivilegedUser) {
+        const parentFolder = await prisma.virtualFolder.findUnique({
+          where: { id: parentId },
+          select: { id: true, path: true },
+        });
+
+        if (!parentFolder) {
+          return response.notFound({ message: "父文件夹不存在" });
+        }
+
+        const pathIds = parentFolder.path
+          .split("/")
+          .filter(Boolean)
+          .map((id) => Number(id))
+          .filter((id) => Number.isInteger(id));
+
+        const ancestors = pathIds.length
+          ? await prisma.virtualFolder.findMany({
+              where: { id: { in: pathIds } },
+              select: { systemType: true, userUid: true },
+            })
+          : [];
+
+        const hasPublicAccess = ancestors.some(
+          (folder) => folder.systemType === "ROOT_PUBLIC",
+        );
+        const hasOwnHomeAccess = ancestors.some(
+          (folder) =>
+            folder.systemType === "USER_HOME" && folder.userUid === user.uid,
+        );
+        const hasOtherUserHome = ancestors.some(
+          (folder) =>
+            folder.systemType === "USER_HOME" &&
+            folder.userUid !== null &&
+            folder.userUid !== user.uid,
+        );
+
+        if ((!hasPublicAccess && !hasOwnHomeAccess) || hasOtherUserHome) {
+          return response.forbidden({ message: "无权访问该文件夹" });
+        }
+      }
+
       where.parentId = parentId;
 
       const folders = await prisma.virtualFolder.findMany({
@@ -1889,11 +2081,11 @@ export async function getAccessibleFolders(
     // 1. 用户的 USER_HOME
     conditions.push({
       systemType: "USER_HOME",
-      userUid: userUid,
+      userUid: user.uid,
     });
 
     // 2. ROOT_USERS - 仅管理员/编辑可见
-    if (userRole === "ADMIN" || userRole === "EDITOR") {
+    if (isPrivilegedUser) {
       conditions.push({
         systemType: "ROOT_USERS",
       });

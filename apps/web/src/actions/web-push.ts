@@ -13,6 +13,7 @@ import { sendNotice } from "@/lib/server/notice";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
+import { assertPublicHttpUrl } from "@/lib/server/url-security";
 
 type WebPushActionEnvironment = "serverless" | "serveraction";
 type WebPushActionConfig = { environment?: WebPushActionEnvironment };
@@ -75,6 +76,21 @@ export async function subscribeToWebPush(
     return response.unauthorized({ message: "未登录" });
   }
 
+  let endpoint: string;
+  try {
+    endpoint = (
+      await assertPublicHttpUrl(data.endpoint, { requireHttps: true })
+    ).toString();
+  } catch (error) {
+    return response.badRequest({
+      message: "订阅地址无效",
+      error: {
+        code: "INVALID_ENDPOINT",
+        message: error instanceof Error ? error.message : "订阅地址无效",
+      },
+    });
+  }
+
   try {
     // 检查订阅数量限制
     const count = await prisma.pushSubscription.count({
@@ -91,13 +107,13 @@ export async function subscribeToWebPush(
 
     // 检查订阅是否已存在
     const existing = await prisma.pushSubscription.findUnique({
-      where: { endpoint: data.endpoint },
+      where: { endpoint },
     });
 
     if (existing) {
       // 更新现有订阅
       await prisma.pushSubscription.update({
-        where: { endpoint: data.endpoint },
+        where: { endpoint },
         data: {
           p256dh: data.p256dh,
           auth: data.auth,
@@ -117,7 +133,7 @@ export async function subscribeToWebPush(
     await prisma.pushSubscription.create({
       data: {
         userUid: user.uid,
-        endpoint: data.endpoint,
+        endpoint,
         p256dh: data.p256dh,
         auth: data.auth,
         deviceName: data.deviceName,
@@ -134,7 +150,7 @@ export async function subscribeToWebPush(
       message: "订阅失败",
       error: {
         code: "SERVER_ERROR",
-        message: error instanceof Error ? error.message : "订阅失败",
+        message: "订阅失败",
       },
     });
   }
@@ -179,7 +195,7 @@ export async function getVapidPublicKey(
       message: "获取 VAPID 公钥失败",
       error: {
         code: "SERVER_ERROR",
-        message: error instanceof Error ? error.message : "获取失败",
+        message: "获取失败",
       },
     });
   }
@@ -276,7 +292,7 @@ export async function getUserPushSubscriptions(
       message: "获取订阅列表失败",
       error: {
         code: "SERVER_ERROR",
-        message: error instanceof Error ? error.message : "获取失败",
+        message: "获取失败",
       },
     });
   }
@@ -327,7 +343,7 @@ export async function deleteWebPushSubscription(
       message: "删除订阅失败",
       error: {
         code: "SERVER_ERROR",
-        message: error instanceof Error ? error.message : "删除失败",
+        message: "删除失败",
       },
     });
   }
@@ -394,7 +410,7 @@ export async function updateWebPushSubscription(
       message: "更新订阅失败",
       error: {
         code: "SERVER_ERROR",
-        message: error instanceof Error ? error.message : "更新失败",
+        message: "更新失败",
       },
     });
   }
@@ -462,7 +478,7 @@ export async function sendTestWebPush(
       message: "发送测试通知失败",
       error: {
         code: "SERVER_ERROR",
-        message: error instanceof Error ? error.message : "发送失败",
+        message: "发送失败",
       },
     });
   }

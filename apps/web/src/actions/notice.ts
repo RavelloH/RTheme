@@ -131,7 +131,7 @@ export async function getNotices(
       message: "获取通知失败",
       error: {
         code: "SERVER_ERROR",
-        message: error instanceof Error ? error.message : "获取通知失败",
+        message: "获取通知失败",
       },
     });
   }
@@ -226,7 +226,7 @@ export async function getReadNotices(
       message: "获取已读通知失败",
       error: {
         code: "SERVER_ERROR",
-        message: error instanceof Error ? error.message : "获取已读通知失败",
+        message: "获取已读通知失败",
       },
     });
   }
@@ -322,7 +322,7 @@ export async function markNoticesAsRead(
       message: "标记通知失败",
       error: {
         code: "SERVER_ERROR",
-        message: error instanceof Error ? error.message : "标记通知失败",
+        message: "标记通知失败",
       },
     });
   }
@@ -403,7 +403,7 @@ export async function markAllNoticesAsRead(
       message: "标记所有通知失败",
       error: {
         code: "SERVER_ERROR",
-        message: error instanceof Error ? error.message : "标记所有通知失败",
+        message: "标记所有通知失败",
       },
     });
   }
@@ -480,8 +480,7 @@ export async function getUnreadNoticeCount(
       message: "获取未读通知数量失败",
       error: {
         code: "SERVER_ERROR",
-        message:
-          error instanceof Error ? error.message : "获取未读通知数量失败",
+        message: "获取未读通知数量失败",
       },
     });
   }

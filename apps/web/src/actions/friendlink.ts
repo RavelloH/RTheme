@@ -64,6 +64,10 @@ import { sendNotice } from "@/lib/server/notice";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
+import {
+  assertPublicHttpUrl,
+  readResponseBufferWithLimit,
+} from "@/lib/server/url-security";
 import { validateData } from "@/lib/server/validator";
 
 import type { Prisma } from ".prisma/client";
@@ -76,6 +80,8 @@ type ActionResult<T extends ApiResponseData> =
 
 const USER_ROLES: UserRole[] = ["USER", "ADMIN", "EDITOR", "AUTHOR"];
 const ADMIN_ROLES: UserRole[] = ["ADMIN"];
+const BACKLINK_CHECK_MAX_REDIRECTS = 3;
+const BACKLINK_CHECK_MAX_RESPONSE_BYTES = 2 * 1024 * 1024; // 2MB
 
 const FAILURE_ISSUE_TYPES: FriendLinkIssueType[] = [
   "DISCONNECT",
@@ -402,32 +408,67 @@ async function requestUrlWithTiming(url: string): Promise<{
   finalUrl: string | null;
   errorMessage?: string;
 }> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
   const start = performance.now();
 
   try {
-    const response = await fetch(url, {
-      method: "GET",
-      redirect: "follow",
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "NeutralPress FriendLinkChecker/1.0",
-      },
-      cache: "no-store",
-    });
-    const end = performance.now();
+    let currentUrl = (await assertPublicHttpUrl(url.trim())).toString();
+    let redirectCount = 0;
 
-    const responseTime = Math.max(0, Math.round(end - start));
-    const html = await response.text();
+    while (true) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
 
-    return {
-      ok: response.ok,
-      statusCode: response.status,
-      responseTime,
-      html,
-      finalUrl: response.url || url,
-    };
+      let response: Response;
+      try {
+        response = await fetch(currentUrl, {
+          method: "GET",
+          redirect: "manual",
+          signal: controller.signal,
+          headers: {
+            "User-Agent": "NeutralPress FriendLinkChecker/1.0",
+          },
+          cache: "no-store",
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
+
+      const locationHeader = response.headers.get("location");
+      if (response.status >= 300 && response.status < 400 && locationHeader) {
+        if (redirectCount >= BACKLINK_CHECK_MAX_REDIRECTS) {
+          return {
+            ok: false,
+            statusCode: response.status,
+            responseTime: Math.max(0, Math.round(performance.now() - start)),
+            html: null,
+            finalUrl: currentUrl,
+            errorMessage: "重定向次数过多",
+          };
+        }
+
+        const redirectedUrl = new URL(locationHeader, currentUrl).toString();
+        currentUrl = (
+          await assertPublicHttpUrl(redirectedUrl.trim())
+        ).toString();
+        redirectCount += 1;
+        continue;
+      }
+
+      const htmlBuffer = await readResponseBufferWithLimit(
+        response,
+        BACKLINK_CHECK_MAX_RESPONSE_BYTES,
+      );
+      const end = performance.now();
+      const responseTime = Math.max(0, Math.round(end - start));
+
+      return {
+        ok: response.ok,
+        statusCode: response.status,
+        responseTime,
+        html: htmlBuffer.toString("utf-8"),
+        finalUrl: currentUrl,
+      };
+    }
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "请求失败，未知错误";
@@ -439,8 +480,6 @@ async function requestUrlWithTiming(url: string): Promise<{
       finalUrl: null,
       errorMessage: message,
     };
-  } finally {
-    clearTimeout(timeout);
   }
 }
 

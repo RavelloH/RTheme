@@ -46,6 +46,23 @@ export interface ValidationErrorResponse {
   };
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function syncSanitizedObject(
+  target: Record<string, unknown>,
+  source: Record<string, unknown>,
+): void {
+  for (const key of Object.keys(target)) {
+    if (!(key in source)) {
+      delete target[key];
+    }
+  }
+
+  Object.assign(target, source);
+}
+
 /**
  * 验证请求数据
  * @param body 请求体数据
@@ -232,6 +249,10 @@ export function validateData<T>(
     }
 
     // 验证成功
+    if (isPlainObject(data) && isPlainObject(result.data)) {
+      syncSanitizedObject(data, result.data);
+    }
+
     return undefined;
   } catch (error) {
     console.error("Data validation error:", error);

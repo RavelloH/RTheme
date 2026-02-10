@@ -54,7 +54,7 @@ export async function GET(
 
     // 检查是否有有效的 REAUTH_TOKEN
     const { checkReauthToken } = await import("@/actions/reauth");
-    const hasReauthToken = await checkReauthToken();
+    const hasReauthToken = await checkReauthToken(currentUser.uid);
     if (!hasReauthToken) {
       // 没有 REAUTH_TOKEN，重定向到 settings 页面，由前端处理 reauth
       return NextResponse.redirect(

@@ -46,6 +46,15 @@ export interface AntiHotLinkCheckResult {
   reason?: string;
 }
 
+function escapeXml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
+}
+
 /**
  * 检查请求是否允许访问媒体资源
  * @param request Next.js 请求对象
@@ -124,6 +133,13 @@ export function generateFallbackImage({
   agents: string;
   location: string;
 }): Buffer {
+  const safeSiteURL = escapeXml(siteURL);
+  const safeTime = escapeXml(time);
+  const safeAssetsURL = escapeXml(assetsURL);
+  const safeIp = escapeXml(ip);
+  const safeAgents = escapeXml(agents);
+  const safeLocation = escapeXml(location);
+
   // 使用 SVG 生成占位图片
   const svg = `
 <svg width="1000" height="600" xmlns="http://www.w3.org/2000/svg">
@@ -133,14 +149,14 @@ export function generateFallbackImage({
     <text x="60" y="160" font-size="48" font-weight="bold">HTTP 403 Forbidden</text>
     <text x="60" y="220" font-size="24">致命错误：对此资源的访问被管理员全局安全配置阻断。</text>
     <text x="60" y="280" font-size="20" font-family=" Consolas, Menlo, monospace">
-      <tspan x="60" dy="00">----- IP: ${ip}</tspan>
-      <tspan x="60" dy="30">--- TIME: ${time}</tspan>
-      <tspan x="60" dy="30">- AGENTS: ${agents}</tspan>
-      <tspan x="60" dy="30">- ASSETS: ${assetsURL}</tspan>
-      <tspan x="60" dy="30">LOCATION: ${location}</tspan>
+      <tspan x="60" dy="00">----- IP: ${safeIp}</tspan>
+      <tspan x="60" dy="30">--- TIME: ${safeTime}</tspan>
+      <tspan x="60" dy="30">- AGENTS: ${safeAgents}</tspan>
+      <tspan x="60" dy="30">- ASSETS: ${safeAssetsURL}</tspan>
+      <tspan x="60" dy="30">LOCATION: ${safeLocation}</tspan>
     </text>
     <text x="60" y="460" font-size="20">
-      <tspan x="60" fill="#2dd4bf" text-decoration="underline">${siteURL}</tspan>
+      <tspan x="60" fill="#2dd4bf" text-decoration="underline">${safeSiteURL}</tspan>
       <tspan x="60" dy="30">请尝试在源站访问此资源，或更改站点安全配置。</tspan>
       <tspan x="60" dy="30">如有疑问，请联系当前站点的管理员，并提供以上信息。</tspan>
     </text>

@@ -3,6 +3,8 @@
  * 使用 arctic 库处理 Google、GitHub、Microsoft 的 OAuth 2.0 流程
  */
 
+import { randomBytes } from "node:crypto";
+
 import { generateCodeVerifier, GitHub, Google, MicrosoftEntraId } from "arctic";
 
 import { getConfig } from "@/lib/server/config-cache";
@@ -290,8 +292,5 @@ export async function validateOAuthCallback(
  * 生成随机 state 用于 CSRF 防护
  */
 export function generateState(): string {
-  return (
-    Math.random().toString(36).substring(2, 15) +
-    Math.random().toString(36).substring(2, 15)
-  );
+  return randomBytes(32).toString("hex");
 }

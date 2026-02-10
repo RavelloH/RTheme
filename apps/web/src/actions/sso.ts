@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { after } from "next/server";
 
 import { logAuditEvent } from "@/lib/server/audit";
-import { getConfigs } from "@/lib/server/config-cache";
+import { getConfig, getConfigs } from "@/lib/server/config-cache";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import {
   type AccessTokenPayload,
@@ -42,6 +42,26 @@ function toAccountProvider(provider: OAuthProvider): AccountProvider {
   return provider.toUpperCase() as AccountProvider;
 }
 
+function validatePasswordStrength(password: string): string | null {
+  if (password.length < 8) {
+    return "密码至少需要 8 个字符";
+  }
+
+  if (password.length > 100) {
+    return "密码不能超过 100 个字符";
+  }
+
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasDigit = /\d/.test(password);
+
+  if (!hasUppercase || !hasLowercase || !hasDigit) {
+    return "密码需包含大写字母、小写字母和数字";
+  }
+
+  return null;
+}
+
 /**
  * 解绑 SSO 账户
  */
@@ -53,19 +73,6 @@ export async function unlinkSSO({
   const response = new ResponseBuilder("serveraction");
 
   try {
-    // 检查是否有有效的 REAUTH_TOKEN
-    const { checkReauthToken } = await import("./reauth");
-    const hasReauthToken = await checkReauthToken();
-    if (!hasReauthToken) {
-      return response.forbidden({
-        message: "需要重新验证身份",
-        error: {
-          code: "NEED_REAUTH",
-          message: "需要重新验证身份",
-        },
-      }) as unknown as ApiResponse<null>;
-    }
-
     // 从 cookie 获取当前用户的 access token
     const cookieStore = await cookies();
     const token = cookieStore.get("ACCESS_TOKEN")?.value || "";
@@ -78,6 +85,18 @@ export async function unlinkSSO({
     }
 
     const { uid } = decoded;
+
+    const { checkReauthToken } = await import("./reauth");
+    const hasReauthToken = await checkReauthToken(uid);
+    if (!hasReauthToken) {
+      return response.forbidden({
+        message: "需要重新验证身份",
+        error: {
+          code: "NEED_REAUTH",
+          message: "需要重新验证身份",
+        },
+      }) as unknown as ApiResponse<null>;
+    }
 
     // 查找用户
     const user = await prisma.user.findUnique({
@@ -225,19 +244,6 @@ export async function setPassword({
   const response = new ResponseBuilder("serveraction");
 
   try {
-    // 检查是否有有效的 REAUTH_TOKEN
-    const { checkReauthToken } = await import("./reauth");
-    const hasReauthToken = await checkReauthToken();
-    if (!hasReauthToken) {
-      return response.forbidden({
-        message: "需要重新验证身份",
-        error: {
-          code: "NEED_REAUTH",
-          message: "需要重新验证身份",
-        },
-      }) as unknown as ApiResponse<null>;
-    }
-
     // 从 cookie 获取当前用户的 access token
     const cookieStore = await cookies();
     const token = cookieStore.get("ACCESS_TOKEN")?.value || "";
@@ -250,6 +256,18 @@ export async function setPassword({
     }
 
     const { uid } = decoded;
+
+    const { checkReauthToken } = await import("./reauth");
+    const hasReauthToken = await checkReauthToken(uid);
+    if (!hasReauthToken) {
+      return response.forbidden({
+        message: "需要重新验证身份",
+        error: {
+          code: "NEED_REAUTH",
+          message: "需要重新验证身份",
+        },
+      }) as unknown as ApiResponse<null>;
+    }
 
     // 查找用户
     const user = await prisma.user.findUnique({
@@ -273,6 +291,17 @@ export async function setPassword({
         error: {
           code: "PASSWORD_ALREADY_SET",
           message: "已设置密码，请使用修改密码功能",
+        },
+      }) as unknown as ApiResponse<null>;
+    }
+
+    const passwordStrengthError = validatePasswordStrength(newPassword);
+    if (passwordStrengthError) {
+      return response.badRequest({
+        message: passwordStrengthError,
+        error: {
+          code: "WEAK_PASSWORD",
+          message: passwordStrengthError,
         },
       }) as unknown as ApiResponse<null>;
     }
@@ -627,7 +656,7 @@ export async function handleSSOBind({
   } catch (error) {
     console.error("Handle SSO bind error:", error);
     return response.serverError({
-      message: error instanceof Error ? error.message : "绑定失败，请稍后重试",
+      message: "绑定失败，请稍后重试",
       error: {
         code: "SERVER_ERROR",
         message: "绑定失败，请稍后重试",
@@ -892,6 +921,23 @@ export async function handleSSOCallback({
       }>;
     }
 
+    const canRegister = await getConfig("user.registration.enabled");
+    if (!canRegister) {
+      clearOAuthCookies();
+      return response.forbidden({
+        message: "当前站点未开放注册",
+        error: {
+          code: "REGISTRATION_DISABLED",
+          message: "当前站点未开放注册",
+        },
+      }) as unknown as ApiResponse<{
+        userInfo?: UserInfo;
+        action: "login" | "verify" | "bind";
+        verifyToken?: string;
+        verifyEmail?: string;
+      }>;
+    }
+
     // 新用户：创建账户
     let username = oauthUser.email.split("@")[0]!;
     let usernameExists = await prisma.user.findUnique({ where: { username } });
@@ -1008,7 +1054,7 @@ export async function handleSSOCallback({
   } catch (error) {
     console.error("Handle SSO callback error:", error);
     return response.serverError({
-      message: error instanceof Error ? error.message : "登录失败，请稍后重试",
+      message: "登录失败，请稍后重试",
       error: {
         code: "SERVER_ERROR",
         message: "登录失败，请稍后重试",

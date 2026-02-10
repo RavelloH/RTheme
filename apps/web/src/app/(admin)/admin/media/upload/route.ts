@@ -9,13 +9,23 @@ import {
   type ProcessMode,
   SUPPORTED_IMAGE_FORMATS,
 } from "@/lib/server/image-processor";
-import { uploadObject } from "@/lib/server/oss";
+import { deleteObject, uploadObject } from "@/lib/server/oss";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
+import {
+  assertPublicHttpUrl,
+  readResponseBufferWithLimit,
+} from "@/lib/server/url-security";
 import { getOrCreateVirtualStorage } from "@/lib/server/virtual-storage";
 
 const response = new ResponseBuilder("serverless");
+const DEFAULT_EXTERNAL_MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const EXTERNAL_FETCH_TIMEOUT_MS = 15000;
+
+function getMediaHashLockKey(hash: string): bigint {
+  return BigInt(`0x${hash.slice(0, 15)}`);
+}
 
 /**
  * @openapi
@@ -107,8 +117,18 @@ export async function POST(request: NextRequest): Promise<Response> {
     if (folderId !== null) {
       const targetFolder = await prisma.virtualFolder.findUnique({
         where: { id: folderId },
-        select: { systemType: true },
+        select: { id: true, systemType: true, userUid: true, path: true },
       });
+      if (!targetFolder) {
+        return response.badRequest({
+          message: "目标文件夹不存在",
+          error: {
+            code: "INVALID_FOLDER",
+            message: "请选择有效的文件夹",
+          },
+        }) as Response;
+      }
+
       if (targetFolder?.systemType === "ROOT_USERS") {
         return response.badRequest({
           message: "不能上传到用户目录",
@@ -117,6 +137,45 @@ export async function POST(request: NextRequest): Promise<Response> {
             message: "请选择公共空间或我的文件夹",
           },
         }) as Response;
+      }
+
+      if (user.role === "AUTHOR") {
+        const pathIds = targetFolder.path
+          .split("/")
+          .filter(Boolean)
+          .map((id) => Number(id))
+          .filter((id) => Number.isInteger(id));
+
+        const ancestors = pathIds.length
+          ? await prisma.virtualFolder.findMany({
+              where: { id: { in: pathIds } },
+              select: { id: true, systemType: true, userUid: true },
+            })
+          : [];
+
+        const hasPublicAccess = ancestors.some(
+          (folder) => folder.systemType === "ROOT_PUBLIC",
+        );
+        const hasOwnHomeAccess = ancestors.some(
+          (folder) =>
+            folder.systemType === "USER_HOME" && folder.userUid === user.uid,
+        );
+        const hasOtherUserHome = ancestors.some(
+          (folder) =>
+            folder.systemType === "USER_HOME" &&
+            folder.userUid !== null &&
+            folder.userUid !== user.uid,
+        );
+
+        if ((!hasPublicAccess && !hasOwnHomeAccess) || hasOtherUserHome) {
+          return response.forbidden({
+            message: "没有权限上传到该文件夹",
+            error: {
+              code: "FORBIDDEN_FOLDER",
+              message: "只能上传到公共空间或自己的文件夹",
+            },
+          }) as Response;
+        }
       }
     }
 
@@ -141,17 +200,51 @@ export async function POST(request: NextRequest): Promise<Response> {
     // ========================================================================
     if (externalUrl) {
       try {
+        const safeExternalUrl = await assertPublicHttpUrl(externalUrl.trim());
+        const normalizedExternalUrl = safeExternalUrl.toString();
+
+        const defaultStorage = await prisma.storageProvider.findFirst({
+          where: { isDefault: true, isActive: true },
+          select: { maxFileSize: true },
+        });
+        const maxExternalSize =
+          defaultStorage?.maxFileSize && defaultStorage.maxFileSize > 0
+            ? defaultStorage.maxFileSize
+            : DEFAULT_EXTERNAL_MAX_FILE_SIZE;
+
         // 获取或创建虚拟存储提供商
         const virtualStorage = await getOrCreateVirtualStorage();
 
         // Fetch 外部图片
-        const imageResponse = await fetch(externalUrl, {
-          method: "GET",
-          headers: {
-            "User-Agent":
-              "Mozilla/5.0 (compatible; NeutralPress/1.0; +https://ravelloh.com)",
-          },
-        });
+        const controller = new AbortController();
+        const timeout = setTimeout(
+          () => controller.abort(),
+          EXTERNAL_FETCH_TIMEOUT_MS,
+        );
+        let imageResponse: Response;
+        try {
+          imageResponse = await fetch(normalizedExternalUrl, {
+            method: "GET",
+            redirect: "manual",
+            signal: controller.signal,
+            headers: {
+              "User-Agent":
+                "Mozilla/5.0 (compatible; NeutralPress/1.0; +https://ravelloh.com)",
+            },
+          });
+        } finally {
+          clearTimeout(timeout);
+        }
+
+        if (imageResponse.status >= 300 && imageResponse.status < 400) {
+          return response.badRequest({
+            message: "外部图片地址不允许重定向",
+            error: {
+              code: "REDIRECT_NOT_ALLOWED",
+              message: "请使用最终图片地址",
+            },
+          }) as Response;
+        }
 
         if (!imageResponse.ok) {
           return response.badRequest({
@@ -164,8 +257,10 @@ export async function POST(request: NextRequest): Promise<Response> {
         }
 
         // 检查 Content-Type
-        const contentType =
+        const contentTypeHeader =
           imageResponse.headers.get("content-type") || "image/jpeg";
+        const contentType =
+          contentTypeHeader.split(";")[0]?.trim() || "image/jpeg";
         if (!contentType.startsWith("image/")) {
           return response.badRequest({
             message: `URL 返回的不是图片类型: ${contentType}`,
@@ -177,11 +272,13 @@ export async function POST(request: NextRequest): Promise<Response> {
         }
 
         // 读取图片数据
-        const arrayBuffer = await imageResponse.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
+        const buffer = await readResponseBufferWithLimit(
+          imageResponse,
+          maxExternalSize,
+        );
 
         // 提取文件名
-        const urlObj = new URL(externalUrl);
+        const urlObj = new URL(normalizedExternalUrl);
         const pathParts = urlObj.pathname.split("/");
         const urlFilename =
           displayName ||
@@ -248,30 +345,76 @@ export async function POST(request: NextRequest): Promise<Response> {
           }) as Response;
         }
 
-        // 保存到数据库（不上传到 OSS，直接存储外部 URL）
-        const media = await prisma.media.create({
-          data: {
-            fileName: urlFilename,
-            originalName: urlFilename,
-            mimeType: processed.mimeType,
-            size: processed.size,
-            shortHash: processed.shortHash,
-            hash: processed.hash,
-            mediaType: "IMAGE",
-            width: processed.width,
-            height: processed.height,
-            altText: altText || undefined,
-            blur: processed.blur,
-            thumbnails: {},
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            exif: (processed.exif || {}) as any,
-            isOptimized: mode !== "original",
-            storageUrl: externalUrl, // 直接存储外部 URL
-            storageProviderId: virtualStorage.id, // 使用虚拟存储提供商
-            userUid: user.uid,
-            folderId: folderId || undefined,
-          },
+        const lockKey = getMediaHashLockKey(processed.hash);
+        const lockedCreateResult = await prisma.$transaction(async (tx) => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey})`;
+
+          const lockedExisting = await tx.media.findFirst({
+            where: { hash: processed.hash },
+            select: {
+              id: true,
+              originalName: true,
+              shortHash: true,
+              storageUrl: true,
+              width: true,
+              height: true,
+              size: true,
+            },
+          });
+
+          if (lockedExisting) {
+            return { existing: lockedExisting, media: null };
+          }
+
+          const media = await tx.media.create({
+            data: {
+              fileName: urlFilename,
+              originalName: urlFilename,
+              mimeType: processed.mimeType,
+              size: processed.size,
+              shortHash: processed.shortHash,
+              hash: processed.hash,
+              mediaType: "IMAGE",
+              width: processed.width,
+              height: processed.height,
+              altText: altText || undefined,
+              blur: processed.blur,
+              thumbnails: {},
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              exif: (processed.exif || {}) as any,
+              isOptimized: mode !== "original",
+              storageUrl: normalizedExternalUrl, // 直接存储外部 URL
+              storageProviderId: virtualStorage.id, // 使用虚拟存储提供商
+              userUid: user.uid,
+              folderId: folderId || undefined,
+            },
+          });
+
+          return { existing: null, media };
         });
+
+        if (lockedCreateResult.existing) {
+          const imageId = generateSignedImageId(
+            lockedCreateResult.existing.shortHash,
+          );
+          return response.ok({
+            data: {
+              id: lockedCreateResult.existing.id,
+              originalName: lockedCreateResult.existing.originalName,
+              shortHash: lockedCreateResult.existing.shortHash,
+              imageId,
+              url: `/p/${imageId}`,
+              originalSize: buffer.length,
+              processedSize: lockedCreateResult.existing.size,
+              isDuplicate: true,
+              width: lockedCreateResult.existing.width,
+              height: lockedCreateResult.existing.height,
+            },
+            message: "文件已存在（已去重）",
+          }) as Response;
+        }
+
+        const media = lockedCreateResult.media!;
 
         // 记录审计日志
         await logAuditEvent({
@@ -289,11 +432,11 @@ export async function POST(request: NextRequest): Promise<Response> {
               new: {
                 fileName: media.fileName,
                 originalName: media.originalName,
-                externalUrl,
+                externalUrl: normalizedExternalUrl,
                 size: buffer.length,
               },
             },
-            description: `导入外部图片: ${externalUrl}`,
+            description: `导入外部图片: ${normalizedExternalUrl}`,
           },
         });
 
@@ -496,29 +639,86 @@ export async function POST(request: NextRequest): Promise<Response> {
       },
     });
 
-    // 保存到数据库
-    const media = await prisma.media.create({
-      data: {
-        fileName,
-        originalName: file.name,
-        mimeType: processed.mimeType,
-        size: processed.size,
-        shortHash: processed.shortHash,
-        hash: processed.hash,
-        mediaType: "IMAGE",
-        width: processed.width,
-        height: processed.height,
-        blur: processed.blur,
-        thumbnails: {},
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        exif: (processed.exif || {}) as any,
-        isOptimized: mode !== "original",
-        storageUrl: uploadResult.url,
-        storageProviderId: storageProvider.id,
-        userUid: user.uid,
-        folderId: folderId || undefined,
-      },
+    const lockKey = getMediaHashLockKey(processed.hash);
+    const lockedCreateResult = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey})`;
+
+      const lockedExisting = await tx.media.findFirst({
+        where: { hash: processed.hash },
+        select: {
+          id: true,
+          originalName: true,
+          shortHash: true,
+          storageUrl: true,
+          width: true,
+          height: true,
+          size: true,
+        },
+      });
+
+      if (lockedExisting) {
+        return { existing: lockedExisting, media: null };
+      }
+
+      const media = await tx.media.create({
+        data: {
+          fileName,
+          originalName: file.name,
+          mimeType: processed.mimeType,
+          size: processed.size,
+          shortHash: processed.shortHash,
+          hash: processed.hash,
+          mediaType: "IMAGE",
+          width: processed.width,
+          height: processed.height,
+          blur: processed.blur,
+          thumbnails: {},
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          exif: (processed.exif || {}) as any,
+          isOptimized: mode !== "original",
+          storageUrl: uploadResult.url,
+          storageProviderId: storageProvider.id,
+          userUid: user.uid,
+          folderId: folderId || undefined,
+        },
+      });
+
+      return { existing: null, media };
     });
+
+    if (lockedCreateResult.existing) {
+      await deleteObject({
+        type: storageProvider.type,
+        baseUrl: storageProvider.baseUrl,
+        pathTemplate: storageProvider.pathTemplate,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        config: storageProvider.config as any,
+        key: uploadResult.key,
+      }).catch((error) => {
+        console.error("Delete duplicate uploaded object failed:", error);
+      });
+
+      const imageId = generateSignedImageId(
+        lockedCreateResult.existing.shortHash,
+      );
+      return response.ok({
+        data: {
+          id: lockedCreateResult.existing.id,
+          originalName: lockedCreateResult.existing.originalName,
+          shortHash: lockedCreateResult.existing.shortHash,
+          imageId,
+          url: `/p/${imageId}`,
+          originalSize: file.size,
+          processedSize: lockedCreateResult.existing.size,
+          isDuplicate: true,
+          width: lockedCreateResult.existing.width,
+          height: lockedCreateResult.existing.height,
+        },
+        message: "文件已存在（已去重）",
+      }) as Response;
+    }
+
+    const media = lockedCreateResult.media!;
 
     // 记录审计日志
     await logAuditEvent({
