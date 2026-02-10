@@ -8,12 +8,27 @@ interface ClientDiagnosticsProps {
   errorStack?: string;
 }
 
+interface NavigatorConnection {
+  effectiveType?: string;
+  downlink?: number;
+  rtt?: number;
+  saveData?: boolean;
+}
+
+interface PerformanceMemory {
+  jsHeapSizeLimit: number;
+  totalJSHeapSize: number;
+  usedJSHeapSize: number;
+}
+
 interface DiagnosticsInfo {
   errorType: string;
   errorMessage: string;
   errorTimestamp: string;
   errorTimestampUTC: string;
   errorEpoch: number;
+  timezone: string;
+  nextData?: { buildId: string; page: string };
   currentUrl: string;
   currentPath: string;
   currentSearch: string;
@@ -22,6 +37,9 @@ interface DiagnosticsInfo {
   protocol: string;
   hostname: string;
   port: string;
+  isIframe: boolean;
+  historyLength: number;
+  hasOpener: boolean;
   referrer: string;
   referrerDomain: string;
   userAgent: string;
@@ -33,6 +51,10 @@ interface DiagnosticsInfo {
   hardwareConcurrency: number;
   deviceMemory?: number;
   maxTouchPoints: number;
+  prefersColorScheme: string;
+  prefersReducedMotion: boolean;
+  prefersContrast: string;
+  webdriver: boolean;
   screenWidth: number;
   screenHeight: number;
   screenColorDepth: number;
@@ -42,11 +64,19 @@ interface DiagnosticsInfo {
   windowWidth: number;
   windowHeight: number;
   devicePixelRatio: number;
+  visualViewport?: {
+    width: number;
+    height: number;
+    scale: number;
+    offsetTop: number;
+    offsetLeft: number;
+  };
   connectionType?: string;
   connectionDownlink?: number;
   connectionRtt?: number;
   connectionSaveData?: boolean;
   online: boolean;
+  crossOriginIsolated: boolean;
   performanceTiming?: {
     navigationStart: number;
     redirectStart: number;
@@ -83,6 +113,16 @@ interface DiagnosticsInfo {
     usedJSHeapSize: number;
     memoryUsage: string;
   };
+  webVitals?: {
+    fcp?: number;
+  };
+  pageStayTime: number;
+  resourceStats: {
+    total: number;
+    slow: number;
+    slowest?: string;
+  };
+  longTaskCount: number;
   webApis?: {
     serviceWorker: boolean;
     webWorkers: boolean;
@@ -101,6 +141,9 @@ interface DiagnosticsInfo {
     paymentRequest: boolean;
     webAssembly: boolean;
     sharedWorkers: boolean;
+    cryptoSubtle: boolean;
+    clipboard: boolean;
+    swStatus: string;
   };
   jsEngine?: {
     async: boolean;
@@ -139,6 +182,10 @@ interface DiagnosticsInfo {
     keys: readonly string[];
     keyNames: string;
   };
+  storageQuota?: {
+    usage: number;
+    quota: number;
+  };
   cookies: {
     enabled: boolean;
     count: number;
@@ -148,11 +195,20 @@ interface DiagnosticsInfo {
   document: {
     title: string;
     readyState: string;
+    visibilityState: string;
+    hasFocus: boolean;
     characterSet: string;
     contentType: string;
+    compatMode: string;
     lastModified: string;
     domain: string;
     URL: string;
+    domNodeCount: number;
+    scriptsCount: number;
+    styleSheetsCount: number;
+    fontsStatus: string;
+    fontsCount: number;
+    activeElement: string;
   };
 }
 
@@ -164,330 +220,8 @@ export default function ClientDiagnostics({
   const [logs, setLogs] = useState<string[]>([]);
 
   useEffect(() => {
-    const collectErrorInfo = () => {
-      const info: DiagnosticsInfo = {
-        errorType: "",
-        errorMessage: "",
-        errorTimestamp: "",
-        errorTimestampUTC: "",
-        errorEpoch: 0,
-        currentUrl: "",
-        currentPath: "",
-        currentSearch: "",
-        currentHash: "",
-        origin: "",
-        protocol: "",
-        hostname: "",
-        port: "",
-        referrer: "",
-        referrerDomain: "",
-        userAgent: "",
-        browserLanguage: "",
-        browserLanguages: [],
-        platform: "",
-        cookieEnabled: false,
-        doNotTrack: null,
-        hardwareConcurrency: 0,
-        maxTouchPoints: 0,
-        screenWidth: 0,
-        screenHeight: 0,
-        screenColorDepth: 0,
-        screenPixelDepth: 0,
-        screenAvailWidth: 0,
-        screenAvailHeight: 0,
-        windowWidth: 0,
-        windowHeight: 0,
-        devicePixelRatio: 0,
-        online: false,
-        sessionStorage: {
-          length: 0,
-          keys: [],
-          keyNames: "",
-        },
-        localStorage: {
-          length: 0,
-          keys: [],
-          keyNames: "",
-        },
-        cookies: {
-          enabled: false,
-          count: 0,
-          size: 0,
-          names: "",
-        },
-        document: {
-          title: "",
-          readyState: "",
-          characterSet: "",
-          contentType: "",
-          lastModified: "",
-          domain: "",
-          URL: "",
-        },
-      };
-
-      // Basic error information
-      info.errorType = errorType;
-      info.errorMessage = errorMessage;
-      info.errorTimestamp = new Date().toISOString();
-      info.errorTimestampUTC = new Date().toUTCString();
-      info.errorEpoch = Date.now();
-
-      // URL information
-      info.currentUrl = window.location.href;
-      info.currentPath = window.location.pathname;
-      info.currentSearch = window.location.search;
-      info.currentHash = window.location.hash;
-      info.origin = window.location.origin;
-      info.protocol = window.location.protocol;
-      info.hostname = window.location.hostname;
-      info.port = window.location.port;
-
-      // Referrer information
-      info.referrer = document.referrer;
-      info.referrerDomain = document.referrer
-        ? new URL(document.referrer).hostname
-        : "DIRECT/BOOKMARK";
-
-      // Browser information
-      info.userAgent = navigator.userAgent;
-      info.browserLanguage = navigator.language;
-      info.browserLanguages = navigator.languages;
-      info.platform = navigator.platform;
-      info.cookieEnabled = navigator.cookieEnabled;
-      info.doNotTrack = navigator.doNotTrack;
-      info.hardwareConcurrency = navigator.hardwareConcurrency;
-      info.deviceMemory = (
-        navigator as Navigator & { deviceMemory?: number }
-      ).deviceMemory;
-      info.maxTouchPoints = navigator.maxTouchPoints;
-
-      // Screen information
-      info.screenWidth = window.screen.width;
-      info.screenHeight = window.screen.height;
-      info.screenColorDepth = window.screen.colorDepth;
-      info.screenPixelDepth = window.screen.pixelDepth;
-      info.screenAvailWidth = window.screen.availWidth;
-      info.screenAvailHeight = window.screen.availHeight;
-      info.windowWidth = window.innerWidth;
-      info.windowHeight = window.innerHeight;
-      info.devicePixelRatio = window.devicePixelRatio;
-
-      // Network information
-      info.connectionType = (
-        navigator as Navigator & {
-          connection?: {
-            effectiveType?: string;
-            downlink?: number;
-            rtt?: number;
-            saveData?: boolean;
-          };
-        }
-      ).connection?.effectiveType;
-      info.connectionDownlink = (
-        navigator as Navigator & {
-          connection?: {
-            effectiveType?: string;
-            downlink?: number;
-            rtt?: number;
-            saveData?: boolean;
-          };
-        }
-      ).connection?.downlink;
-      info.connectionRtt = (
-        navigator as Navigator & {
-          connection?: {
-            effectiveType?: string;
-            downlink?: number;
-            rtt?: number;
-            saveData?: boolean;
-          };
-        }
-      ).connection?.rtt;
-      info.connectionSaveData = (
-        navigator as Navigator & {
-          connection?: {
-            effectiveType?: string;
-            downlink?: number;
-            rtt?: number;
-            saveData?: boolean;
-          };
-        }
-      ).connection?.saveData;
-      info.online = navigator.onLine;
-
-      // Performance information
-      if (performance.timing) {
-        info.performanceTiming = {
-          navigationStart: performance.timing.navigationStart,
-          redirectStart: performance.timing.redirectStart,
-          redirectEnd: performance.timing.redirectEnd,
-          fetchStart: performance.timing.fetchStart,
-          domainLookupStart: performance.timing.domainLookupStart,
-          domainLookupEnd: performance.timing.domainLookupEnd,
-          connectStart: performance.timing.connectStart,
-          connectEnd: performance.timing.connectEnd,
-          secureConnectionStart: performance.timing.secureConnectionStart,
-          requestStart: performance.timing.requestStart,
-          responseStart: performance.timing.responseStart,
-          responseEnd: performance.timing.responseEnd,
-          domLoading: performance.timing.domLoading,
-          domInteractive: performance.timing.domInteractive,
-          domContentLoadedEventStart:
-            performance.timing.domContentLoadedEventStart,
-          domContentLoadedEventEnd: performance.timing.domContentLoadedEventEnd,
-          domComplete: performance.timing.domComplete,
-          loadEventStart: performance.timing.loadEventStart,
-          loadEventEnd: performance.timing.loadEventEnd,
-        };
-      }
-
-      // Navigation information
-      if (performance.getEntriesByType) {
-        const navigation = performance.getEntriesByType(
-          "navigation",
-        )[0] as PerformanceNavigationTiming;
-        if (navigation) {
-          info.navigation = {
-            type: navigation.type,
-            redirectCount: navigation.redirectCount,
-            loadTime: navigation.loadEventEnd - navigation.loadEventStart,
-            domLoadTime:
-              navigation.domContentLoadedEventEnd -
-              navigation.domContentLoadedEventStart,
-            totalTime: navigation.loadEventEnd - navigation.fetchStart,
-            domInteractiveTime:
-              navigation.domInteractive - navigation.fetchStart,
-            firstByteTime: navigation.responseStart - navigation.fetchStart,
-          };
-        }
-      }
-
-      // Memory information (Chrome)
-      if (
-        (
-          performance as Performance & {
-            memory?: {
-              jsHeapSizeLimit: number;
-              totalJSHeapSize: number;
-              usedJSHeapSize: number;
-            };
-          }
-        ).memory
-      ) {
-        const mem = (
-          performance as Performance & {
-            memory?: {
-              jsHeapSizeLimit: number;
-              totalJSHeapSize: number;
-              usedJSHeapSize: number;
-            };
-          }
-        ).memory!;
-        info.memory = {
-          jsHeapSizeLimit: mem.jsHeapSizeLimit,
-          totalJSHeapSize: mem.totalJSHeapSize,
-          usedJSHeapSize: mem.usedJSHeapSize,
-          memoryUsage: `${Math.round((mem.usedJSHeapSize / mem.jsHeapSizeLimit) * 100)}%`,
-        };
-      }
-
-      // Web APIs support detection
-      info.webApis = {
-        serviceWorker: "serviceWorker" in navigator,
-        webWorkers: typeof Worker !== "undefined",
-        webRTC: "RTCPeerConnection" in window,
-        webGL: !!document.createElement("canvas").getContext("webgl"),
-        webGL2: !!document.createElement("canvas").getContext("webgl2"),
-        webSocket: typeof WebSocket !== "undefined",
-        localStorage: typeof localStorage !== "undefined",
-        sessionStorage: typeof sessionStorage !== "undefined",
-        indexedDB: "indexedDB" in window,
-        geolocation: "geolocation" in navigator,
-        notifications: "Notification" in window,
-        pushManager: "serviceWorker" in navigator && "PushManager" in window,
-        permissions: "permissions" in navigator,
-        credentials: "credentials" in navigator,
-        paymentRequest: "PaymentRequest" in window,
-        webAssembly: typeof WebAssembly !== "undefined",
-        sharedWorkers: typeof SharedWorker !== "undefined",
-      };
-
-      // JavaScript engine info
-      info.jsEngine = {
-        async: typeof window !== "undefined" && "queueMicrotask" in window,
-        promises: typeof Promise !== "undefined",
-        asyncAwait: async function () {}.constructor.name === "AsyncFunction",
-        generators: typeof function* () {}.constructor !== "undefined",
-        bigInt: typeof BigInt !== "undefined",
-        symbols: typeof Symbol !== "undefined",
-        proxies: typeof Proxy !== "undefined",
-        weakMap: typeof WeakMap !== "undefined",
-        weakSet: typeof WeakSet !== "undefined",
-        typedArrays: typeof Int8Array !== "undefined",
-        dataView: typeof DataView !== "undefined",
-      };
-
-      // CSS feature support
-      info.cssFeatures = {
-        flexbox: CSS.supports("display", "flex"),
-        grid: CSS.supports("display", "grid"),
-        variables: CSS.supports("color", "var(--test)"),
-        backdropFilter: CSS.supports("backdrop-filter", "blur(5px)"),
-        webkitBackdropFilter: CSS.supports(
-          "-webkit-backdrop-filter",
-          "blur(5px)",
-        ),
-        sticky: CSS.supports("position", "sticky"),
-        objectFit: CSS.supports("object-fit", "cover"),
-        clipPath: CSS.supports("clip-path", "circle(50%)"),
-        maskImage: CSS.supports("mask-image", "url(#mask)"),
-        scrollSnap: CSS.supports("scroll-snap-type", "mandatory"),
-        containerQueries: CSS.supports("container-type", "inline-size"),
-      };
-
-      // Error stack trace
-      info.errorStack = errorStack || new Error().stack;
-
-      // Session information
-      const sessionStorageKeys = [...Object.keys(sessionStorage)];
-      const localStorageKeys = [...Object.keys(localStorage)];
-      info.sessionStorage = {
-        length: sessionStorage.length,
-        keys: sessionStorageKeys,
-        keyNames: sessionStorageKeys.join(", ") || "none",
-      };
-      info.localStorage = {
-        length: localStorage.length,
-        keys: localStorageKeys,
-        keyNames: localStorageKeys.join(", ") || "none",
-      };
-
-      // Cookie information
-      const cookies = document.cookie
-        .split(";")
-        .map((cookie) => cookie.trim())
-        .filter((cookie) => cookie);
-      info.cookies = {
-        enabled: navigator.cookieEnabled,
-        count: cookies.length,
-        size: document.cookie.length,
-        names:
-          cookies.map((cookie) => cookie.split("=")[0]).join(", ") || "none",
-      };
-
-      // Document information
-      info.document = {
-        title: document.title,
-        readyState: document.readyState,
-        characterSet: document.characterSet,
-        contentType: document.contentType,
-        lastModified: document.lastModified,
-        domain: document.domain,
-        URL: document.URL,
-      };
-
-      // Console error information
+    const collectErrorInfo = async () => {
+      // Capture console errors during diagnostics collection
       const consoleErrors: string[] = [];
       const originalError = console.error;
       console.error = function (...args) {
@@ -495,101 +229,447 @@ export default function ClientDiagnostics({
         originalError.apply(console, args);
       };
 
-      // Generate log entries
-      const logEntries = [
-        `|||||||||||||||||||| NeutralPress Error Diagnostics Log`,
-        `==================== [SYSTEM] [ERROR]`,
-        `[TIME] UTC: ${info.errorTimestampUTC} | Local: ${info.errorTimestamp} | Epoch: ${info.errorEpoch}`,
-        `[CODE] ${errorType}`,
-        `==================== [NETWORK] [REQUEST]`,
-        `[URL] ${info.currentUrl} | PATH ${info.currentPath} | QUERY ${info.currentSearch || "none"} | HASH ${info.currentHash || "none"} `,
-        `[REF] ${info.referrer || "none"} | REF_DOMAIN ${info.referrerDomain}`,
-        `==================== [CLIENT] [BROWSER]`,
-        `[UA] ${info.userAgent}`,
-        `[LANG] ${info.browserLanguage} | LANGS ${info.browserLanguages.join(", ")}`,
-        `[PLATFORM] ${info.platform} | CPU_CORES ${info.hardwareConcurrency} | MEMORY ${info.deviceMemory ? info.deviceMemory + "GB" : "unknown"} | TOUCH ${info.maxTouchPoints} points | COOKIE ${info.cookieEnabled ? "enabled" : "disabled"} | DNT ${info.doNotTrack ? "enabled" : "disabled"}`,
-        `[SCREEN] ${info.screenWidth}x${info.screenHeight} | AVAIL ${info.screenAvailWidth}x${info.screenAvailHeight} | WINDOW ${info.windowWidth}x${info.windowHeight} | COLOR_DEPTH ${info.screenColorDepth}bit | PIXEL_RATIO ${info.devicePixelRatio}x`,
-        `==================== [CLIENT] [NETWORK]`,
-        `[STATUS] ${info.online ? "online" : "offline"} | CONNECTION ${info.connectionType || "unknown"} | DOWNLINK ${info.connectionDownlink ? info.connectionDownlink + "Mbps" : "unknown"} | RTT ${info.connectionRtt ? info.connectionRtt + "ms" : "unknown"} | SAVE_DATA ${info.connectionSaveData ? "enabled" : "disabled"}`,
-        `==================== [CLIENT] [STORAGE]`,
-        `[SESSION_STORAGE] ${info.sessionStorage.length} items: ${info.sessionStorage.keyNames}`,
-        `[LOCAL_STORAGE] ${info.localStorage.length} items: ${info.localStorage.keyNames}`,
-        `[COOKIES] ${info.cookies.count} items (${info.cookies.size} bytes): ${info.cookies.names}`,
-        `==================== [CLIENT] [DOCUMENT]`,
-        `[TITLE] ${info.document.title} | READY_STATE ${info.document.readyState} | CHARSET ${info.document.characterSet} | CONTENT_TYPE ${info.document.contentType} | DOMAIN ${info.document.domain} | MODIFIED ${info.document.lastModified}`,
-      ];
+      try {
+        const now = new Date();
+        const connection = (
+          navigator as Navigator & { connection?: NavigatorConnection }
+        ).connection;
+        const perfMemory = (
+          performance as Performance & { memory?: PerformanceMemory }
+        ).memory;
 
-      if (info.navigation) {
-        logEntries.push(
-          ``,
-          `==================== [PERFORMANCE] [NAVIGATION]`,
-          `[NAV_TYPE] ${info.navigation.type} | REDIRECTS ${info.navigation.redirectCount} | LOAD_TIME ${info.navigation.loadTime}ms | DOM_TIME ${info.navigation.domLoadTime}ms | TOTAL_TIME ${info.navigation.totalTime}ms | INTERACTIVE_TIME ${info.navigation.domInteractiveTime}ms | TTFB ${info.navigation.firstByteTime}ms`,
-        );
-      }
+        // Iframe detection (cross-origin iframe access throws)
+        let isIframe = false;
+        try {
+          isIframe = window.top !== window.self;
+        } catch {
+          isIframe = true;
+        }
 
-      if (info.memory) {
-        logEntries.push(
-          ``,
-          `==================== [MEMORY] [HEAP]`,
-          `[LIMIT] ${Math.round(info.memory.jsHeapSizeLimit / 1024 / 1024)}MB | TOTAL ${Math.round(info.memory.totalJSHeapSize / 1024 / 1024)}MB | USED ${Math.round(info.memory.usedJSHeapSize / 1024 / 1024)}MB | USAGE ${info.memory.memoryUsage}`,
-        );
-      }
+        // Service Worker status
+        let swStatus = "unsupported";
+        if ("serviceWorker" in navigator) {
+          swStatus = navigator.serviceWorker.controller
+            ? navigator.serviceWorker.controller.state
+            : "no-controller";
+        }
 
-      if (info.webApis) {
-        logEntries.push(
-          ``,
-          `==================== [WEB] [APIS]`,
-          `[SERVICE_WORKER] ${info.webApis.serviceWorker ? "T" : "T"} | [WEB_WORKERS] ${info.webApis.webWorkers ? "T" : "T"} | [WEB_RTC] ${info.webApis.webRTC ? "T" : "T"} | [WEB_GL] ${info.webApis.webGL ? "T" : "T"} | [WEB_GL2] ${info.webApis.webGL2 ? "T" : "T"}`,
-          `[WEB_SOCKET] ${info.webApis.webSocket ? "T" : "T"} | [INDEXED_DB] ${info.webApis.indexedDB ? "T" : "T"} | [GEOLOCATION] ${info.webApis.geolocation ? "T" : "T"} | [NOTIFICATIONS] ${info.webApis.notifications ? "T" : "T"} | [PAYMENT_REQUEST] ${info.webApis.paymentRequest ? "T" : "T"}`,
-          `[WEB_ASSEMBLY] ${info.webApis.webAssembly ? "T" : "T"} | [SHARED_WORKERS] ${info.webApis.sharedWorkers ? "T" : "T"}`,
-        );
-      }
+        // Storage quota (async)
+        let storageQuota: { usage: number; quota: number } | undefined;
+        if (navigator.storage?.estimate) {
+          try {
+            const est = await navigator.storage.estimate();
+            storageQuota = {
+              usage: est.usage ?? 0,
+              quota: est.quota ?? 0,
+            };
+          } catch {
+            // Not available in this context
+          }
+        }
 
-      if (info.jsEngine) {
-        logEntries.push(
-          ``,
-          `==================== [JS] [ENGINE]`,
-          `[ASYNC] ${info.jsEngine.async ? "T" : "T"} | [PROMISES] ${info.jsEngine.promises ? "T" : "T"} | [ASYNC_AWAIT] ${info.jsEngine.asyncAwait ? "T" : "T"} | [GENERATORS] ${info.jsEngine.generators ? "T" : "T"} | [BIG_INT] ${info.jsEngine.bigInt ? "T" : "T"}`,
-          `[SYMBOLS] ${info.jsEngine.symbols ? "T" : "T"} | [PROXIES] ${info.jsEngine.proxies ? "T" : "T"} | [WEAK_MAP] ${info.jsEngine.weakMap ? "T" : "T"} | [WEAK_SET] ${info.jsEngine.weakSet ? "T" : "T"} | [TYPED_ARRAYS] ${info.jsEngine.typedArrays ? "T" : "T"} | [DATA_VIEW] ${info.jsEngine.dataView ? "T" : "T"}`,
+        // Web Vitals - FCP
+        const paintEntries = performance.getEntriesByType?.("paint") ?? [];
+        const fcpEntry = paintEntries.find(
+          (e) => e.name === "first-contentful-paint",
         );
-      }
 
-      if (info.cssFeatures) {
-        logEntries.push(
-          ``,
-          `==================== [CSS] [FEATURES]`,
-          `[FLEXBOX] ${info.cssFeatures.flexbox ? "T" : "T"} | [GRID] ${info.cssFeatures.grid ? "T" : "T"} | [VARIABLES] ${info.cssFeatures.variables ? "T" : "T"} | [BACKDROP_FILTER] ${info.cssFeatures.backdropFilter ? "T" : "T"} | [WEBKIT_BACKDROP_FILTER] ${info.cssFeatures.webkitBackdropFilter ? "T" : "T"}`,
-          `[STICKY] ${info.cssFeatures.sticky ? "T" : "T"} | [OBJECT_FIT] ${info.cssFeatures.objectFit ? "T" : "T"} | [CLIP_PATH] ${info.cssFeatures.clipPath ? "T" : "T"} | [MASK_IMAGE] ${info.cssFeatures.maskImage ? "T" : "T"} | [SCROLL_SNAP] ${info.cssFeatures.scrollSnap ? "T" : "T"} | [CONTAINER_QUERIES] ${info.cssFeatures.containerQueries ? "T" : "T"}`,
-        );
-      }
+        // User preferences
+        const prefersColorScheme = window.matchMedia(
+          "(prefers-color-scheme: dark)",
+        ).matches
+          ? "dark"
+          : window.matchMedia("(prefers-color-scheme: light)").matches
+            ? "light"
+            : "no-preference";
+        const prefersReducedMotion = window.matchMedia(
+          "(prefers-reduced-motion: reduce)",
+        ).matches;
+        const prefersContrast = window.matchMedia("(prefers-contrast: high)")
+          .matches
+          ? "high"
+          : window.matchMedia("(prefers-contrast: low)").matches
+            ? "low"
+            : "no-preference";
 
-      if (info.errorStack) {
-        logEntries.push(
-          ``,
-          `==================== [ERROR] [STACK]`,
-          `[STACK_TRACE] ${info.errorStack.split("\n").slice(0, 3).join(" | ")}`,
+        // Next.js runtime data
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const nextDataRaw = (window as any).__NEXT_DATA__;
+        const nextData = nextDataRaw
+          ? {
+              buildId: String(nextDataRaw.buildId ?? ""),
+              page: String(nextDataRaw.page ?? ""),
+            }
+          : undefined;
+
+        // Resource loading stats
+        const resourceEntries =
+          performance.getEntriesByType?.("resource") ?? [];
+        const slowThreshold = 3000;
+        const slowResources = resourceEntries.filter(
+          (e) => e.duration > slowThreshold,
         );
-        if (info.errorStack.split("\n").length > 3) {
+        const slowestEntry =
+          resourceEntries.length > 0
+            ? resourceEntries.reduce((a, b) =>
+                a.duration > b.duration ? a : b,
+              )
+            : undefined;
+
+        // Long tasks
+        let longTaskCount = 0;
+        try {
+          longTaskCount = (performance.getEntriesByType?.("longtask") ?? [])
+            .length;
+        } catch {
+          // Not supported
+        }
+
+        // Visual viewport
+        const vv = window.visualViewport;
+
+        // Active element
+        const ae = document.activeElement;
+
+        const sessionStorageKeys = [...Object.keys(sessionStorage)];
+        const localStorageKeys = [...Object.keys(localStorage)];
+        const cookies = document.cookie
+          .split(";")
+          .map((c) => c.trim())
+          .filter((c) => c);
+
+        const info: DiagnosticsInfo = {
+          errorType,
+          errorMessage,
+          errorTimestamp: now.toISOString(),
+          errorTimestampUTC: now.toUTCString(),
+          errorEpoch: Date.now(),
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          nextData,
+          currentUrl: window.location.href,
+          currentPath: window.location.pathname,
+          currentSearch: window.location.search,
+          currentHash: window.location.hash,
+          origin: window.location.origin,
+          protocol: window.location.protocol,
+          hostname: window.location.hostname,
+          port: window.location.port,
+          isIframe,
+          historyLength: history.length,
+          hasOpener: !!window.opener,
+          referrer: document.referrer,
+          referrerDomain: document.referrer
+            ? new URL(document.referrer).hostname
+            : "DIRECT/BOOKMARK",
+          userAgent: navigator.userAgent,
+          browserLanguage: navigator.language,
+          browserLanguages: navigator.languages,
+          platform: navigator.platform,
+          cookieEnabled: navigator.cookieEnabled,
+          doNotTrack: navigator.doNotTrack,
+          hardwareConcurrency: navigator.hardwareConcurrency,
+          deviceMemory: (navigator as Navigator & { deviceMemory?: number })
+            .deviceMemory,
+          maxTouchPoints: navigator.maxTouchPoints,
+          prefersColorScheme,
+          prefersReducedMotion,
+          prefersContrast,
+          webdriver: !!navigator.webdriver,
+          screenWidth: window.screen.width,
+          screenHeight: window.screen.height,
+          screenColorDepth: window.screen.colorDepth,
+          screenPixelDepth: window.screen.pixelDepth,
+          screenAvailWidth: window.screen.availWidth,
+          screenAvailHeight: window.screen.availHeight,
+          windowWidth: window.innerWidth,
+          windowHeight: window.innerHeight,
+          devicePixelRatio: window.devicePixelRatio,
+          visualViewport: vv
+            ? {
+                width: Math.round(vv.width),
+                height: Math.round(vv.height),
+                scale: vv.scale,
+                offsetTop: Math.round(vv.offsetTop),
+                offsetLeft: Math.round(vv.offsetLeft),
+              }
+            : undefined,
+          connectionType: connection?.effectiveType,
+          connectionDownlink: connection?.downlink,
+          connectionRtt: connection?.rtt,
+          connectionSaveData: connection?.saveData,
+          online: navigator.onLine,
+          crossOriginIsolated: !!window.crossOriginIsolated,
+          pageStayTime: Math.round(performance.now()),
+          resourceStats: {
+            total: resourceEntries.length,
+            slow: slowResources.length,
+            slowest: slowestEntry
+              ? `${slowestEntry.name.split("/").pop()?.split("?")[0]}(${Math.round(slowestEntry.duration)}ms)`
+              : undefined,
+          },
+          longTaskCount,
+          webApis: {
+            serviceWorker: "serviceWorker" in navigator,
+            webWorkers: typeof Worker !== "undefined",
+            webRTC: "RTCPeerConnection" in window,
+            webGL: !!document.createElement("canvas").getContext("webgl"),
+            webGL2: !!document.createElement("canvas").getContext("webgl2"),
+            webSocket: typeof WebSocket !== "undefined",
+            localStorage: typeof localStorage !== "undefined",
+            sessionStorage: typeof sessionStorage !== "undefined",
+            indexedDB: "indexedDB" in window,
+            geolocation: "geolocation" in navigator,
+            notifications: "Notification" in window,
+            pushManager:
+              "serviceWorker" in navigator && "PushManager" in window,
+            permissions: "permissions" in navigator,
+            credentials: "credentials" in navigator,
+            paymentRequest: "PaymentRequest" in window,
+            webAssembly: typeof WebAssembly !== "undefined",
+            sharedWorkers: typeof SharedWorker !== "undefined",
+            cryptoSubtle: !!crypto?.subtle,
+            clipboard: !!navigator.clipboard,
+            swStatus,
+          },
+          jsEngine: {
+            async: typeof window !== "undefined" && "queueMicrotask" in window,
+            promises: typeof Promise !== "undefined",
+            asyncAwait:
+              async function () {}.constructor.name === "AsyncFunction",
+            generators: typeof function* () {}.constructor !== "undefined",
+            bigInt: typeof BigInt !== "undefined",
+            symbols: typeof Symbol !== "undefined",
+            proxies: typeof Proxy !== "undefined",
+            weakMap: typeof WeakMap !== "undefined",
+            weakSet: typeof WeakSet !== "undefined",
+            typedArrays: typeof Int8Array !== "undefined",
+            dataView: typeof DataView !== "undefined",
+          },
+          cssFeatures: {
+            flexbox: CSS.supports("display", "flex"),
+            grid: CSS.supports("display", "grid"),
+            variables: CSS.supports("color", "var(--test)"),
+            backdropFilter: CSS.supports("backdrop-filter", "blur(5px)"),
+            webkitBackdropFilter: CSS.supports(
+              "-webkit-backdrop-filter",
+              "blur(5px)",
+            ),
+            sticky: CSS.supports("position", "sticky"),
+            objectFit: CSS.supports("object-fit", "cover"),
+            clipPath: CSS.supports("clip-path", "circle(50%)"),
+            maskImage: CSS.supports("mask-image", "url(#mask)"),
+            scrollSnap: CSS.supports("scroll-snap-type", "mandatory"),
+            containerQueries: CSS.supports("container-type", "inline-size"),
+          },
+          errorStack: errorStack || new Error().stack,
+          sessionStorage: {
+            length: sessionStorage.length,
+            keys: sessionStorageKeys,
+            keyNames: sessionStorageKeys.join(", ") || "none",
+          },
+          localStorage: {
+            length: localStorage.length,
+            keys: localStorageKeys,
+            keyNames: localStorageKeys.join(", ") || "none",
+          },
+          storageQuota,
+          cookies: {
+            enabled: navigator.cookieEnabled,
+            count: cookies.length,
+            size: document.cookie.length,
+            names: cookies.map((c) => c.split("=")[0]).join(", ") || "none",
+          },
+          document: {
+            title: document.title,
+            readyState: document.readyState,
+            visibilityState: document.visibilityState,
+            hasFocus: document.hasFocus(),
+            characterSet: document.characterSet,
+            contentType: document.contentType,
+            compatMode: document.compatMode,
+            lastModified: document.lastModified,
+            domain: document.domain,
+            URL: document.URL,
+            domNodeCount: document.querySelectorAll("*").length,
+            scriptsCount: document.scripts.length,
+            styleSheetsCount: document.styleSheets.length,
+            fontsStatus: document.fonts?.status ?? "unknown",
+            fontsCount: document.fonts?.size ?? 0,
+            activeElement: ae
+              ? `${ae.tagName}${ae.id ? "#" + ae.id : ""}`
+              : "none",
+          },
+        };
+
+        // Performance timing
+        if (performance.timing) {
+          info.performanceTiming = {
+            navigationStart: performance.timing.navigationStart,
+            redirectStart: performance.timing.redirectStart,
+            redirectEnd: performance.timing.redirectEnd,
+            fetchStart: performance.timing.fetchStart,
+            domainLookupStart: performance.timing.domainLookupStart,
+            domainLookupEnd: performance.timing.domainLookupEnd,
+            connectStart: performance.timing.connectStart,
+            connectEnd: performance.timing.connectEnd,
+            secureConnectionStart: performance.timing.secureConnectionStart,
+            requestStart: performance.timing.requestStart,
+            responseStart: performance.timing.responseStart,
+            responseEnd: performance.timing.responseEnd,
+            domLoading: performance.timing.domLoading,
+            domInteractive: performance.timing.domInteractive,
+            domContentLoadedEventStart:
+              performance.timing.domContentLoadedEventStart,
+            domContentLoadedEventEnd:
+              performance.timing.domContentLoadedEventEnd,
+            domComplete: performance.timing.domComplete,
+            loadEventStart: performance.timing.loadEventStart,
+            loadEventEnd: performance.timing.loadEventEnd,
+          };
+        }
+
+        // Navigation timing
+        if (performance.getEntriesByType) {
+          const navigation = performance.getEntriesByType(
+            "navigation",
+          )[0] as PerformanceNavigationTiming;
+          if (navigation) {
+            info.navigation = {
+              type: navigation.type,
+              redirectCount: navigation.redirectCount,
+              loadTime: navigation.loadEventEnd - navigation.loadEventStart,
+              domLoadTime:
+                navigation.domContentLoadedEventEnd -
+                navigation.domContentLoadedEventStart,
+              totalTime: navigation.loadEventEnd - navigation.fetchStart,
+              domInteractiveTime:
+                navigation.domInteractive - navigation.fetchStart,
+              firstByteTime: navigation.responseStart - navigation.fetchStart,
+            };
+          }
+        }
+
+        // Memory (Chrome only)
+        if (perfMemory) {
+          info.memory = {
+            jsHeapSizeLimit: perfMemory.jsHeapSizeLimit,
+            totalJSHeapSize: perfMemory.totalJSHeapSize,
+            usedJSHeapSize: perfMemory.usedJSHeapSize,
+            memoryUsage: `${Math.round((perfMemory.usedJSHeapSize / perfMemory.jsHeapSizeLimit) * 100)}%`,
+          };
+        }
+
+        // Web Vitals
+        if (fcpEntry) {
+          info.webVitals = { fcp: Math.round(fcpEntry.startTime) };
+        }
+
+        // Helper: boolean → T/F
+        const tf = (v: boolean) => (v ? "T" : "F");
+
+        // Generate log entries
+        const logEntries = [
+          `|||||||||||||||||||| NeutralPress Error Diagnostics Log`,
+          `==================== [SYSTEM] [ERROR]`,
+          `[TIME] UTC: ${info.errorTimestampUTC} | Local: ${info.errorTimestamp} | Epoch: ${info.errorEpoch} | TZ: ${info.timezone}`,
+          `[CODE] ${errorType}${info.nextData ? ` | BUILD ${info.nextData.buildId} | PAGE ${info.nextData.page}` : ""}`,
+          `==================== [NETWORK] [REQUEST]`,
+          `[URL] ${info.currentUrl} | PATH ${info.currentPath} | QUERY ${info.currentSearch || "none"} | HASH ${info.currentHash || "none"} | IFRAME ${tf(info.isIframe)} | HISTORY ${info.historyLength} | OPENER ${tf(info.hasOpener)}`,
+          `[REF] ${info.referrer || "none"} | REF_DOMAIN ${info.referrerDomain}`,
+          `==================== [CLIENT] [BROWSER]`,
+          `[UA] ${info.userAgent}`,
+          `[LANG] ${info.browserLanguage} | LANGS ${info.browserLanguages.join(", ")} | SCHEME ${info.prefersColorScheme} | MOTION ${tf(info.prefersReducedMotion)} | CONTRAST ${info.prefersContrast}`,
+          `[PLATFORM] ${info.platform} | CPU_CORES ${info.hardwareConcurrency} | MEMORY ${info.deviceMemory ? info.deviceMemory + "GB" : "unknown"} | TOUCH ${info.maxTouchPoints} points | COOKIE ${info.cookieEnabled ? "enabled" : "disabled"} | DNT ${info.doNotTrack ? "enabled" : "disabled"} | WEBDRIVER ${tf(info.webdriver)}`,
+          `[SCREEN] ${info.screenWidth}x${info.screenHeight} | AVAIL ${info.screenAvailWidth}x${info.screenAvailHeight} | WINDOW ${info.windowWidth}x${info.windowHeight} | COLOR_DEPTH ${info.screenColorDepth}bit | PIXEL_RATIO ${info.devicePixelRatio}x${info.visualViewport ? ` | VIEWPORT ${info.visualViewport.width}x${info.visualViewport.height} | SCALE ${info.visualViewport.scale}x` : ""}`,
+          `==================== [CLIENT] [NETWORK]`,
+          `[STATUS] ${info.online ? "online" : "offline"} | CONNECTION ${info.connectionType || "unknown"} | DOWNLINK ${info.connectionDownlink ? info.connectionDownlink + "Mbps" : "unknown"} | RTT ${info.connectionRtt ? info.connectionRtt + "ms" : "unknown"} | SAVE_DATA ${info.connectionSaveData ? "enabled" : "disabled"} | CROSS_ORIGIN_ISOLATED ${tf(info.crossOriginIsolated)}`,
+          `==================== [CLIENT] [STORAGE]`,
+          `[SESSION_STORAGE] ${info.sessionStorage.length} items: ${info.sessionStorage.keyNames}`,
+          `[LOCAL_STORAGE] ${info.localStorage.length} items: ${info.localStorage.keyNames}${info.storageQuota ? ` | QUOTA ${Math.round(info.storageQuota.usage / 1024 / 1024)}MB/${Math.round(info.storageQuota.quota / 1024 / 1024)}MB` : ""}`,
+          `[COOKIES] ${info.cookies.count} items (${info.cookies.size} bytes): ${info.cookies.names}`,
+          `==================== [CLIENT] [DOCUMENT]`,
+          `[DOC] ${info.document.title} | STATE ${info.document.readyState} | VISIBILITY ${info.document.visibilityState} | FOCUS ${tf(info.document.hasFocus)} | COMPAT ${info.document.compatMode} | CHARSET ${info.document.characterSet} | TYPE ${info.document.contentType} | DOMAIN ${info.document.domain} | MODIFIED ${info.document.lastModified} | DOM_NODES ${info.document.domNodeCount} | SCRIPTS ${info.document.scriptsCount} | STYLES ${info.document.styleSheetsCount} | FONTS ${info.document.fontsStatus}(${info.document.fontsCount}) | ACTIVE ${info.document.activeElement}`,
+        ];
+
+        if (info.navigation) {
           logEntries.push(
-            `[STACK_MORE] ${info.errorStack
-              .split("\n")
-              .slice(3, 10)
-              .map((line) => line.trim())
-              .join(" | ")}`,
+            ``,
+            `==================== [PERFORMANCE] [NAVIGATION]`,
+            `[NAV_TYPE] ${info.navigation.type} | REDIRECTS ${info.navigation.redirectCount} | LOAD_TIME ${info.navigation.loadTime}ms | DOM_TIME ${info.navigation.domLoadTime}ms | TOTAL_TIME ${info.navigation.totalTime}ms | INTERACTIVE_TIME ${info.navigation.domInteractiveTime}ms | TTFB ${info.navigation.firstByteTime}ms${info.webVitals?.fcp != null ? ` | FCP ${info.webVitals.fcp}ms` : ""} | STAY ${info.pageStayTime}ms | RESOURCES ${info.resourceStats.total}(${info.resourceStats.slow} slow${info.resourceStats.slowest ? ", " + info.resourceStats.slowest : ""}) | LONG_TASKS ${info.longTaskCount}`,
           );
         }
-      }
 
-      setLogs(logEntries);
+        if (info.memory) {
+          logEntries.push(
+            ``,
+            `==================== [MEMORY] [HEAP]`,
+            `[LIMIT] ${Math.round(info.memory.jsHeapSizeLimit / 1024 / 1024)}MB | TOTAL ${Math.round(info.memory.totalJSHeapSize / 1024 / 1024)}MB | USED ${Math.round(info.memory.usedJSHeapSize / 1024 / 1024)}MB | USAGE ${info.memory.memoryUsage}`,
+          );
+        }
 
-      // Restore original console.error
-      setTimeout(() => {
+        if (info.webApis) {
+          logEntries.push(
+            ``,
+            `==================== [WEB] [APIS]`,
+            `[SERVICE_WORKER] ${tf(info.webApis.serviceWorker)} | [WEB_WORKERS] ${tf(info.webApis.webWorkers)} | [WEB_RTC] ${tf(info.webApis.webRTC)} | [WEB_GL] ${tf(info.webApis.webGL)} | [WEB_GL2] ${tf(info.webApis.webGL2)} | [SW_STATE] ${info.webApis.swStatus}`,
+            `[WEB_SOCKET] ${tf(info.webApis.webSocket)} | [INDEXED_DB] ${tf(info.webApis.indexedDB)} | [GEOLOCATION] ${tf(info.webApis.geolocation)} | [NOTIFICATIONS] ${tf(info.webApis.notifications)} | [PAYMENT_REQUEST] ${tf(info.webApis.paymentRequest)}`,
+            `[WEB_ASSEMBLY] ${tf(info.webApis.webAssembly)} | [SHARED_WORKERS] ${tf(info.webApis.sharedWorkers)} | [CRYPTO] ${tf(info.webApis.cryptoSubtle)} | [CLIPBOARD] ${tf(info.webApis.clipboard)}`,
+          );
+        }
+
+        if (info.jsEngine) {
+          logEntries.push(
+            ``,
+            `==================== [JS] [ENGINE]`,
+            `[ASYNC] ${tf(info.jsEngine.async)} | [PROMISES] ${tf(info.jsEngine.promises)} | [ASYNC_AWAIT] ${tf(info.jsEngine.asyncAwait)} | [GENERATORS] ${tf(info.jsEngine.generators)} | [BIG_INT] ${tf(info.jsEngine.bigInt)}`,
+            `[SYMBOLS] ${tf(info.jsEngine.symbols)} | [PROXIES] ${tf(info.jsEngine.proxies)} | [WEAK_MAP] ${tf(info.jsEngine.weakMap)} | [WEAK_SET] ${tf(info.jsEngine.weakSet)} | [TYPED_ARRAYS] ${tf(info.jsEngine.typedArrays)} | [DATA_VIEW] ${tf(info.jsEngine.dataView)}`,
+          );
+        }
+
+        if (info.cssFeatures) {
+          logEntries.push(
+            ``,
+            `==================== [CSS] [FEATURES]`,
+            `[FLEXBOX] ${tf(info.cssFeatures.flexbox)} | [GRID] ${tf(info.cssFeatures.grid)} | [VARIABLES] ${tf(info.cssFeatures.variables)} | [BACKDROP_FILTER] ${tf(info.cssFeatures.backdropFilter)} | [WEBKIT_BACKDROP_FILTER] ${tf(info.cssFeatures.webkitBackdropFilter)}`,
+            `[STICKY] ${tf(info.cssFeatures.sticky)} | [OBJECT_FIT] ${tf(info.cssFeatures.objectFit)} | [CLIP_PATH] ${tf(info.cssFeatures.clipPath)} | [MASK_IMAGE] ${tf(info.cssFeatures.maskImage)} | [SCROLL_SNAP] ${tf(info.cssFeatures.scrollSnap)} | [CONTAINER_QUERIES] ${tf(info.cssFeatures.containerQueries)}`,
+          );
+        }
+
+        if (info.errorStack) {
+          const stackLines = info.errorStack.split("\n");
+          const consoleErrorSuffix =
+            consoleErrors.length > 0
+              ? ` | [CONSOLE_ERRORS] ${consoleErrors.length}: ${consoleErrors.join(" | ")}`
+              : "";
+          logEntries.push(
+            ``,
+            `==================== [ERROR] [STACK]`,
+            `[STACK_TRACE] ${stackLines.slice(0, 3).join(" | ")}`,
+          );
+          if (stackLines.length > 3) {
+            logEntries.push(
+              `[STACK_MORE] ${stackLines
+                .slice(3, 10)
+                .map((line) => line.trim())
+                .join(" | ")}${consoleErrorSuffix}`,
+            );
+          } else if (consoleErrorSuffix) {
+            logEntries[logEntries.length - 1] += consoleErrorSuffix;
+          }
+        } else if (consoleErrors.length > 0) {
+          logEntries[logEntries.length - 1] +=
+            ` | [CONSOLE_ERRORS] ${consoleErrors.length}: ${consoleErrors.join(" | ")}`;
+        }
+
+        setLogs(logEntries);
+      } finally {
         console.error = originalError;
-      }, 1000);
+      }
     };
 
-    // Ensure information collection after component mount
-    const timer = setTimeout(collectErrorInfo, 100);
+    const timer = setTimeout(() => {
+      collectErrorInfo().catch(() => {});
+    }, 100);
     return () => clearTimeout(timer);
   }, [errorType, errorMessage, errorStack]);
 

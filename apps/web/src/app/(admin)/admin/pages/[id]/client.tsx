@@ -20,6 +20,11 @@ export default function LayoutEditorClientWrapper({
   const toast = useToast();
 
   const handleSave = async (blocks: AllBlockConfigs[]) => {
+    if (page.contentType !== "BLOCK") {
+      toast.error("仅 BLOCK 类型页面可保存布局");
+      return;
+    }
+
     try {
       // 构造更新 payload
       // 注意：这里只更新 config.blocks，保留 components 和其他 config 字段

@@ -34,6 +34,19 @@ export default async function LayoutEditorPage({
     );
   }
 
+  if (page.contentType !== "BLOCK") {
+    return (
+      <MainLayout type="horizontal">
+        <HorizontalScroll className="h-full">
+          <AdminSidebar />
+          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+            仅 BLOCK 类型页面可使用布局编辑器，当前类型为 {page.contentType}
+          </div>
+        </HorizontalScroll>
+      </MainLayout>
+    );
+  }
+
   // 解析 Block 数据，实现编辑器中的"所见即所得"
   const config = getSystemPageConfig(page);
   const resolvedConfig = config

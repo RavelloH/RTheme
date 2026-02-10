@@ -73,6 +73,10 @@ const setValueAtPath = (
   setValueAtPath(newChild, rest, val);
 };
 
+const isBlockContentType = (
+  contentType: PageListItem["contentType"] | undefined,
+): boolean => contentType === "BLOCK";
+
 interface PageFormState {
   id: string;
   title: string;
@@ -777,13 +781,32 @@ export default function PagesTable() {
 
   // 处理跳转到布局编辑器
   const handleNavigateToEditor = () => {
+    if (!editingPage || !isBlockContentType(editingPage.contentType)) {
+      setNavigateDialogOpen(false);
+      toast.error("仅 BLOCK 类型页面可打开布局编辑器");
+      return;
+    }
+
     setNavigateDialogOpen(false);
     closeEditDialog();
-    navigate(`/admin/pages/${editingPage?.id}`);
+    navigate(`/admin/pages/${editingPage.id}`);
   };
 
   // 打开跳转确认对话框
   const openNavigateDialog = () => {
+    if (!editingPage) {
+      return;
+    }
+
+    if (!isBlockContentType(editingPage.contentType)) {
+      if (formData.contentType === "BLOCK") {
+        toast.info("请先保存内容类型为 BLOCK，再打开布局编辑器");
+      } else {
+        toast.error("仅 BLOCK 类型页面可打开布局编辑器");
+      }
+      return;
+    }
+
     setNavigateDialogOpen(true);
   };
 
@@ -817,8 +840,14 @@ export default function PagesTable() {
       variant: "ghost",
     },
     {
-      label: record.isSystemPage ? "布局编辑器" : "编辑页面",
-      onClick: () => navigate("/admin/pages/" + record.id),
+      label: isBlockContentType(record.contentType) ? "布局编辑器" : "编辑页面",
+      onClick: () => {
+        if (isBlockContentType(record.contentType)) {
+          navigate("/admin/pages/" + record.id);
+          return;
+        }
+        openEditDialog(record);
+      },
       icon: <RiFileEditLine size="1em" />,
       variant: "ghost",
     },
@@ -1180,7 +1209,10 @@ export default function PagesTable() {
     { value: "MARKDOWN", label: "Markdown" },
     { value: "HTML", label: "HTML" },
     { value: "MDX", label: "MDX" },
+    { value: "BLOCK", label: "BLOCK（布局编辑器）" },
   ];
+
+  const canUseLayoutEditor = isBlockContentType(editingPage?.contentType);
 
   return (
     <>
@@ -1365,26 +1397,36 @@ export default function PagesTable() {
               Object.keys(formData.config).length > 0 ? (
                 <>
                   <div className="space-y-6">{renderPageConfigFields()}</div>
-                  <Button
-                    label="打开布局编辑器"
-                    variant="primary"
-                    onClick={openNavigateDialog}
-                    size="md"
-                    className="w-full"
-                  />
+                  {canUseLayoutEditor ? (
+                    <Button
+                      label="打开布局编辑器"
+                      variant="primary"
+                      onClick={openNavigateDialog}
+                      size="md"
+                      className="w-full"
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      当前页面不是 BLOCK 类型，无法打开布局编辑器。
+                    </p>
+                  )}
                 </>
               ) : (
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    该系统页面暂未提供可快速编辑的配置。启动布局编辑器以进行自定义。
+                    {canUseLayoutEditor
+                      ? "该系统页面暂未提供可快速编辑的配置。启动布局编辑器以进行自定义。"
+                      : "当前页面不是 BLOCK 类型，无法打开布局编辑器。"}
                   </p>
-                  <Button
-                    label="打开布局编辑器"
-                    variant="primary"
-                    onClick={openNavigateDialog}
-                    size="md"
-                    className="w-full"
-                  />
+                  {canUseLayoutEditor && (
+                    <Button
+                      label="打开布局编辑器"
+                      variant="primary"
+                      onClick={openNavigateDialog}
+                      size="md"
+                      className="w-full"
+                    />
+                  )}
                 </div>
               )}
             </section>
@@ -1421,12 +1463,32 @@ export default function PagesTable() {
                   onChange={(e) => handleFieldChange("content", e.target.value)}
                   rows={8}
                   size="sm"
+                  disabled={formData.contentType === "BLOCK"}
                   helperText={
                     formData.contentType === "MARKDOWN"
                       ? "输入 Markdown 内容..."
-                      : "输入 HTML 内容..."
+                      : formData.contentType === "HTML"
+                        ? "输入 HTML 内容..."
+                        : formData.contentType === "MDX"
+                          ? "输入 MDX 内容..."
+                          : "BLOCK 类型由布局编辑器维护，无需在此填写正文。"
                   }
                 />
+                {canUseLayoutEditor ? (
+                  <Button
+                    label="打开布局编辑器"
+                    variant="primary"
+                    onClick={openNavigateDialog}
+                    size="md"
+                    className="w-full"
+                  />
+                ) : (
+                  formData.contentType === "BLOCK" && (
+                    <p className="text-sm text-muted-foreground">
+                      内容类型已改为 BLOCK，请先保存后再打开布局编辑器。
+                    </p>
+                  )
+                )}
               </div>
             </section>
           )}

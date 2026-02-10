@@ -1014,6 +1014,7 @@ enum PageContentType {
   MARKDOWN
   HTML
   MDX
+  BLOCK
 }
 
 enum MediaType {
