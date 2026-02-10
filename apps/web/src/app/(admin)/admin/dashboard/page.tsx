@@ -2,6 +2,7 @@ import DashboardAuditStats from "@/app/(admin)/admin/dashboard/DashboardAuditSta
 import DashboardCategoriesStats from "@/app/(admin)/admin/dashboard/DashboardCategoriesStats";
 import DashboardCommentsStats from "@/app/(admin)/admin/dashboard/DashboardCommentsStats";
 import DashboardDoctor from "@/app/(admin)/admin/dashboard/DashboardDoctor";
+import DashboardFriendsStats from "@/app/(admin)/admin/dashboard/DashboardFriendsStats";
 import DashboardMediaStats from "@/app/(admin)/admin/dashboard/DashboardMediaStats";
 import DashboardPagesStats from "@/app/(admin)/admin/dashboard/DashboardPagesStats";
 import DashboardPostsStats from "@/app/(admin)/admin/dashboard/DashboardPostsStats";
@@ -68,9 +69,7 @@ export default function AdminDashboard() {
             <DashboardProjectsStats />
           </GridItem>
           <GridItem areas={[1, 2, 3, 4]} width={3} height={0.5}>
-            <div className="flex items-center justify-center h-full">
-              友情链接图表
-            </div>
+            <DashboardFriendsStats />
           </GridItem>
           <GridItem areas={[5, 6, 7, 8]} width={3} height={0.5}>
             <DashboardSearchInsightStats />
