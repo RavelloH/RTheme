@@ -863,19 +863,6 @@ export async function changePassword(
     return response.tooManyRequests();
   }
 
-  // 检查是否有有效的 REAUTH_TOKEN
-  const { checkReauthToken } = await import("./reauth");
-  const hasReauthToken = await checkReauthToken();
-  if (!hasReauthToken) {
-    return response.forbidden({
-      message: "需要重新验证身份",
-      error: {
-        code: "NEED_REAUTH",
-        message: "需要重新验证身份",
-      },
-    });
-  }
-
   // 验证输入参数 - 只验证 new_password
   const validationError = validateData(
     {
@@ -899,6 +886,20 @@ export async function changePassword(
     if (!uid) {
       return response.unauthorized();
     }
+
+    // 检查是否有有效的 REAUTH_TOKEN，并绑定当前用户 UID
+    const { checkReauthToken } = await import("./reauth");
+    const hasReauthToken = await checkReauthToken(uid);
+    if (!hasReauthToken) {
+      return response.forbidden({
+        message: "需要重新验证身份",
+        error: {
+          code: "NEED_REAUTH",
+          message: "需要重新验证身份",
+        },
+      });
+    }
+
     // 查找用户
     const user = await prisma.user.findUnique({
       where: { uid },
@@ -1486,6 +1487,7 @@ export async function logout(
     const clearCookies = () => {
       cookieStore.delete("REFRESH_TOKEN");
       cookieStore.delete("ACCESS_TOKEN");
+      cookieStore.delete("REAUTH_TOKEN");
     };
 
     // 验证 Refresh Token
@@ -1531,6 +1533,12 @@ export async function logout(
             process.env.NODE_ENV === "production" ? "; Secure" : ""
           }`,
         ],
+        [
+          "set-cookie",
+          `REAUTH_TOKEN=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${
+            process.env.NODE_ENV === "production" ? "; Secure" : ""
+          }`,
+        ],
       ]),
     });
   } catch (error) {
@@ -1539,6 +1547,7 @@ export async function logout(
     const cookieStore = await cookies();
     cookieStore.delete("REFRESH_TOKEN");
     cookieStore.delete("ACCESS_TOKEN");
+    cookieStore.delete("REAUTH_TOKEN");
     return response.serverError();
   }
 }
@@ -1701,19 +1710,6 @@ export async function revokeSession(
   const validationError = validateData(params, RevokeSessionSchema);
   if (validationError) return response.badRequest(validationError);
 
-  // 检查是否有有效的 REAUTH_TOKEN
-  const { checkReauthToken } = await import("./reauth");
-  const hasReauthToken = await checkReauthToken();
-  if (!hasReauthToken) {
-    return response.forbidden({
-      message: "需要重新验证身份",
-      error: {
-        code: "NEED_REAUTH",
-        message: "需要重新验证身份",
-      },
-    });
-  }
-
   try {
     const { sessionId } = params;
 
@@ -1750,6 +1746,18 @@ export async function revokeSession(
     if (!decodedAccess) {
       return response.unauthorized({
         message: "未登录",
+      });
+    }
+
+    const { checkReauthToken } = await import("./reauth");
+    const hasReauthToken = await checkReauthToken(decodedAccess.uid);
+    if (!hasReauthToken) {
+      return response.forbidden({
+        message: "需要重新验证身份",
+        error: {
+          code: "NEED_REAUTH",
+          message: "需要重新验证身份",
+        },
       });
     }
 

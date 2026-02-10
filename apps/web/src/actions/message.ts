@@ -32,6 +32,7 @@ type MessageActionConfig = { environment?: MessageActionEnvironment };
 type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
+const MAX_MESSAGE_CONTENT_LENGTH = 2000;
 
 function calculateMD5(text: string): string {
   return crypto
@@ -555,6 +556,47 @@ export async function sendMessage(
       });
     }
 
+    if (!Number.isInteger(targetUid) || targetUid <= 0) {
+      return response.badRequest({
+        message: "目标用户参数无效",
+        error: {
+          code: "INVALID_TARGET_UID",
+          message: "目标用户参数无效",
+        },
+      });
+    }
+
+    if (typeof content !== "string") {
+      return response.badRequest({
+        message: "消息内容格式错误",
+        error: {
+          code: "INVALID_CONTENT",
+          message: "消息内容格式错误",
+        },
+      });
+    }
+
+    const normalizedContent = content.trim();
+    if (!normalizedContent) {
+      return response.badRequest({
+        message: "消息内容不能为空",
+        error: {
+          code: "EMPTY_CONTENT",
+          message: "消息内容不能为空",
+        },
+      });
+    }
+
+    if (normalizedContent.length > MAX_MESSAGE_CONTENT_LENGTH) {
+      return response.badRequest({
+        message: `消息内容不能超过 ${MAX_MESSAGE_CONTENT_LENGTH} 个字符`,
+        error: {
+          code: "CONTENT_TOO_LONG",
+          message: `消息内容不能超过 ${MAX_MESSAGE_CONTENT_LENGTH} 个字符`,
+        },
+      });
+    }
+
     // 验证不能给自己发消息
     if (targetUid === user.uid) {
       return response.badRequest({
@@ -653,7 +695,7 @@ export async function sendMessage(
       data: {
         conversationId: conversation.id,
         senderUid: user.uid,
-        content,
+        content: normalizedContent,
         type: "TEXT",
       },
     });
@@ -740,7 +782,8 @@ export async function sendMessage(
 
         const senderName = sender?.nickname || sender?.username || "用户";
         const messagePreview =
-          content.substring(0, 20) + (content.length > 20 ? "..." : "");
+          normalizedContent.substring(0, 20) +
+          (normalizedContent.length > 20 ? "..." : "");
 
         // 检查 Ably 是否启用
         const ablyEnabled = await isAblyEnabled();

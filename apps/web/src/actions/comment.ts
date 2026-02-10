@@ -1159,25 +1159,22 @@ export async function createComment(
   // 计算层级树形结构字段
   let depth = 0;
   let path = "";
-  let sortKey = "";
+  const sortKey = "pending";
+  let parentSortKey = "";
 
   if (parentId) {
     const parentComment = await prisma.comment.findUnique({
       where: { id: parentId },
-      select: { depth: true, path: true, sortKey: true, replyCount: true },
+      select: { depth: true, path: true, sortKey: true },
     });
-    if (parentComment) {
-      depth = parentComment.depth + 1;
-      // sortKey 基于父评论的 sortKey + 兄弟数量
-      const siblingIndex = parentComment.replyCount + 1;
-      sortKey = `${parentComment.sortKey}.${String(siblingIndex).padStart(4, "0")}`;
+    if (!parentComment) {
+      return response.badRequest({
+        message: "父评论不存在",
+      });
     }
-  } else {
-    // 顶级评论：计算当前文章的顶级评论数量
-    const rootCount = await prisma.comment.count({
-      where: { postId: post.id, parentId: null },
-    });
-    sortKey = String(rootCount + 1).padStart(4, "0");
+
+    depth = parentComment.depth + 1;
+    parentSortKey = parentComment.sortKey;
   }
 
   const record = await prisma.comment.create({
@@ -1215,9 +1212,13 @@ export async function createComment(
   }
 
   // 更新评论的 path
+  const finalSortKey = parentId
+    ? `${parentSortKey}.${String(record.id).padStart(10, "0")}`
+    : String(record.id).padStart(10, "0");
+
   await prisma.comment.update({
     where: { id: record.id },
-    data: { path },
+    data: { path, sortKey: finalSortKey },
   });
 
   // 更新父评论的 replyCount

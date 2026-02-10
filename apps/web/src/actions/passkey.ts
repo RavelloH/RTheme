@@ -81,7 +81,7 @@ export async function generatePasskeyRegistrationOptions(): Promise<
       }>;
     }
 
-    const hasReauth = await checkReauthToken();
+    const hasReauth = await checkReauthToken(authUser.uid);
     if (!hasReauth) {
       return response.unauthorized({
         message: "需要重新验证身份",
@@ -171,7 +171,7 @@ export async function verifyPasskeyRegistration(payload: {
         message: "请先登录",
       }) as unknown as ApiResponse<null>;
 
-    const hasReauth = await checkReauthToken();
+    const hasReauth = await checkReauthToken(authUser.uid);
     if (!hasReauth) {
       return response.unauthorized({
         message: "需要重新验证身份",
@@ -501,6 +501,8 @@ export async function verifyPasskeyAuthentication(payload: {
         email: true,
         avatar: true,
         role: true,
+        status: true,
+        deletedAt: true,
       },
     });
 
@@ -518,6 +520,26 @@ export async function verifyPasskeyAuthentication(payload: {
           exp: string;
         };
       }>;
+
+    if (user.deletedAt || user.status !== "ACTIVE") {
+      return response.forbidden({
+        message: "账号状态异常，无法登录",
+        error: {
+          code: "ACCOUNT_DISABLED",
+          message: "账号状态异常，无法登录",
+        },
+      }) as unknown as ApiResponse<{
+        userInfo: {
+          uid: number;
+          username: string;
+          nickname: string | null;
+          email: string;
+          avatar: string | null;
+          role: string;
+          exp: string;
+        };
+      }>;
+    }
 
     // 发放 token（跳过验证码）
     const expiredAtSeconds = 30 * 24 * 60 * 60; // 30天
@@ -853,7 +875,7 @@ export async function renamePasskey({
         message: "请先登录",
       }) as unknown as ApiResponse<null>;
 
-    const hasReauth = await checkReauthToken();
+    const hasReauth = await checkReauthToken(authUser.uid);
     if (!hasReauth) {
       return response.unauthorized({
         message: "需要重新验证身份",
@@ -918,7 +940,7 @@ export async function deletePasskey({
         message: "请先登录",
       }) as unknown as ApiResponse<null>;
 
-    const hasReauth = await checkReauthToken();
+    const hasReauth = await checkReauthToken(authUser.uid);
     if (!hasReauth) {
       return response.unauthorized({
         message: "需要重新验证身份",

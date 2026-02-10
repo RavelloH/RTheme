@@ -464,11 +464,17 @@ export async function getPostsTrends(
     const actualDays = Math.ceil(
       (now.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000),
     );
+    const boundedDays = Math.min(actualDays, 365);
+    const boundedStartDate = new Date(
+      now.getTime() - boundedDays * 24 * 60 * 60 * 1000,
+    );
 
     // 生成每日数据点
     const datePoints: Date[] = [];
-    for (let i = 0; i <= actualDays; i++) {
-      datePoints.push(new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000));
+    for (let i = 0; i <= boundedDays; i++) {
+      datePoints.push(
+        new Date(boundedStartDate.getTime() + i * 24 * 60 * 60 * 1000),
+      );
     }
 
     // 为每个时间点计算统计数据

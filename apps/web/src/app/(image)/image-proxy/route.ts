@@ -14,12 +14,15 @@ import { decryptUrl } from "@/lib/server/image-crypto";
 import { resolveIpLocation } from "@/lib/server/ip-utils";
 import prisma from "@/lib/server/prisma";
 import ResponseBuilder from "@/lib/server/response";
+import { readResponseBufferWithLimit } from "@/lib/server/url-security";
 import {
   formatIpLocation,
   parseUserAgent,
 } from "@/lib/server/user-agent-parser";
 
 const res = new ResponseBuilder("serverless");
+const PROXY_FETCH_TIMEOUT_MS = 15000;
+const PROXY_MAX_RESPONSE_BYTES = 20 * 1024 * 1024; // 20MB
 
 /**
  * 图片代理端点
@@ -146,12 +149,23 @@ export async function GET(request: NextRequest) {
     }
 
     // 6. 非本地存储或未找到媒体记录，使用 fetch 代理
-    const response = await fetch(storageUrl, {
-      headers: {
-        // 传递部分请求头
-        "User-Agent": request.headers.get("user-agent") || "NeutralPress/1.0",
-      },
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      PROXY_FETCH_TIMEOUT_MS,
+    );
+    let response: Response;
+    try {
+      response = await fetch(storageUrl, {
+        signal: controller.signal,
+        headers: {
+          // 传递部分请求头
+          "User-Agent": request.headers.get("user-agent") || "NeutralPress/1.0",
+        },
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!response.ok) {
       return res.badGateway({
@@ -164,16 +178,19 @@ export async function GET(request: NextRequest) {
     }
 
     // 7. 获取图片数据
-    const imageBuffer = await response.arrayBuffer();
+    const imageBuffer = await readResponseBufferWithLimit(
+      response,
+      PROXY_MAX_RESPONSE_BYTES,
+    );
     const contentType =
       response.headers.get("content-type") || "application/octet-stream";
 
     // 8. 返回图片，设置永久缓存
-    return new NextResponse(imageBuffer, {
+    return new NextResponse(new Uint8Array(imageBuffer), {
       status: 200,
       headers: {
         "Content-Type": contentType,
-        "Content-Length": imageBuffer.byteLength.toString(),
+        "Content-Length": imageBuffer.length.toString(),
         // 永久缓存（1年 + immutable）
         "Cache-Control": "public, max-age=31536000, immutable",
         // 安全头

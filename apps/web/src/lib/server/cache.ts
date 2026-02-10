@@ -213,11 +213,26 @@ export async function clearCache(
     await ensureRedisConnection();
 
     if (pattern) {
-      // 按模式删除
-      const keys = await redis.keys(pattern);
-      if (keys.length > 0) {
-        count = await redis.del(...keys);
-      }
+      // 按模式删除（使用 SCAN 避免 KEYS 阻塞）
+      let cursor = "0";
+      let deleted = 0;
+
+      do {
+        const [nextCursor, keys] = await redis.scan(
+          cursor,
+          "MATCH",
+          pattern,
+          "COUNT",
+          200,
+        );
+        cursor = nextCursor;
+
+        if (keys.length > 0) {
+          deleted += await redis.del(...keys);
+        }
+      } while (cursor !== "0");
+
+      count = deleted;
     } else {
       // 清空所有
       await redis.flushdb();

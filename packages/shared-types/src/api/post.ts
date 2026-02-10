@@ -26,8 +26,8 @@ registerSchema("PostLicenseSelection", PostLicenseSelectionSchema);
 */
 export const GetPostsTrendsSchema = z.object({
   access_token: z.string().optional(),
-  days: z.number().int().positive().default(365),
-  count: z.number().int().positive().default(30),
+  days: z.number().int().positive().max(365).default(365),
+  count: z.number().int().positive().max(100).default(30),
 });
 export type GetPostsTrends = z.infer<typeof GetPostsTrendsSchema>;
 registerSchema("GetPostsTrends", GetPostsTrendsSchema);

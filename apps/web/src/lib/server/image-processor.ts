@@ -9,6 +9,8 @@ import sharp from "sharp";
 
 const BASE62_CHARS =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const MAX_PROCESS_IMAGE_BYTES = 50 * 1024 * 1024; // 50MB
+const MAX_IMAGE_PIXELS = 40_000_000; // 40MP
 
 /**
  * 支持的图片格式
@@ -24,6 +26,16 @@ export const SUPPORTED_IMAGE_FORMATS = [
   "image/heif",
   "image/tiff",
 ] as const;
+
+const SHARP_FORMAT_TO_MIME: Record<string, string> = {
+  jpeg: "image/jpeg",
+  png: "image/png",
+  gif: "image/gif",
+  webp: "image/webp",
+  avif: "image/avif",
+  heif: "image/heif",
+  tiff: "image/tiff",
+};
 
 /**
  * 图片处理模式
@@ -348,6 +360,74 @@ function getExtensionFromFilename(filename: string): string {
   return "jpg";
 }
 
+function normalizeMimeType(mimeType: string): string {
+  const normalized = mimeType.trim().toLowerCase();
+  if (normalized === "image/jpg") {
+    return "image/jpeg";
+  }
+  return normalized;
+}
+
+function isMimeCompatible(
+  inputMimeType: string,
+  detectedMimeType: string,
+): boolean {
+  if (inputMimeType === detectedMimeType) {
+    return true;
+  }
+
+  // HEIC 和 HEIF 在编码层面可互通，统一视为兼容
+  const heifFamily = new Set(["image/heic", "image/heif"]);
+  if (heifFamily.has(inputMimeType) && heifFamily.has(detectedMimeType)) {
+    return true;
+  }
+
+  return false;
+}
+
+async function validateImageInput(
+  buffer: Buffer,
+  mimeType: string,
+): Promise<string> {
+  if (buffer.length > MAX_PROCESS_IMAGE_BYTES) {
+    throw new Error(
+      `图片文件过大：${(buffer.length / 1024 / 1024).toFixed(2)}MB，超过 ${(MAX_PROCESS_IMAGE_BYTES / 1024 / 1024).toFixed(2)}MB`,
+    );
+  }
+
+  const metadata = await sharp(buffer, {
+    limitInputPixels: MAX_IMAGE_PIXELS,
+  }).metadata();
+
+  if (!metadata.width || !metadata.height) {
+    throw new Error("无法获取图片尺寸");
+  }
+
+  const totalPixels = metadata.width * metadata.height;
+  if (totalPixels > MAX_IMAGE_PIXELS) {
+    throw new Error(`图片分辨率过高，最大允许 ${MAX_IMAGE_PIXELS} 像素`);
+  }
+
+  const detectedMimeType = metadata.format
+    ? SHARP_FORMAT_TO_MIME[metadata.format]
+    : "";
+  if (!detectedMimeType) {
+    throw new Error("不支持的图片格式");
+  }
+
+  const normalizedInput = normalizeMimeType(mimeType);
+  if (!isMimeCompatible(normalizedInput, detectedMimeType)) {
+    throw new Error("文件类型与文件内容不匹配");
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (!SUPPORTED_IMAGE_FORMATS.includes(detectedMimeType as any)) {
+    throw new Error(`不支持的图片格式: ${detectedMimeType}`);
+  }
+
+  return detectedMimeType;
+}
+
 // ============================================================================
 // 主入口
 // ============================================================================
@@ -367,11 +447,7 @@ export async function processImage(
   mimeType: string,
   mode: ProcessMode,
 ): Promise<ProcessedImage> {
-  // 验证文件类型
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if (!SUPPORTED_IMAGE_FORMATS.includes(mimeType as any)) {
-    throw new Error(`不支持的图片格式: ${mimeType}`);
-  }
+  const detectedMimeType = await validateImageInput(buffer, mimeType);
 
   switch (mode) {
     case "lossy":
@@ -379,7 +455,7 @@ export async function processImage(
     case "lossless":
       return processLossless(buffer, originalFilename);
     case "original":
-      return processOriginal(buffer, originalFilename, mimeType);
+      return processOriginal(buffer, originalFilename, detectedMimeType);
     default:
       throw new Error(`未知的处理模式: ${mode}`);
   }

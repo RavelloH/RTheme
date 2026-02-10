@@ -1743,11 +1743,14 @@ export async function deleteProjects(
       where,
       select: { id: true, slug: true, title: true },
     });
+    const deletableProjectIds = projectsToDelete.map((project) => project.id);
 
     // 删除媒体引用
-    await prisma.mediaReference.deleteMany({
-      where: { projectId: { in: ids } },
-    });
+    if (deletableProjectIds.length > 0) {
+      await prisma.mediaReference.deleteMany({
+        where: { projectId: { in: deletableProjectIds } },
+      });
+    }
 
     // 删除项目
     const result = await prisma.project.deleteMany({

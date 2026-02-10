@@ -757,7 +757,7 @@ export async function updatePages(
   }
 
   try {
-    const { ids, ...updateData } = params;
+    const { access_token: _accessToken, ids, ...updateData } = params;
 
     // 移除 undefined 值
     Object.keys(updateData).forEach((key) => {
@@ -1027,6 +1027,17 @@ export async function getAllPlaceholders(
   const response = new ResponseBuilder(
     serverConfig?.environment || "serveraction",
   );
+
+  if (!(await limitControl(await headers(), "getAllPlaceholders"))) {
+    return response.tooManyRequests();
+  }
+
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+  });
+  if (!user) {
+    return response.unauthorized({ message: "需要管理员权限" });
+  }
 
   try {
     const { interpolatorMap, PLACEHOLDER_REGISTRY } = await import(

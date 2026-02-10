@@ -144,13 +144,18 @@ export async function updateSettings(
     return response.unauthorized();
   }
 
-  // 校验配置值
+  // 校验配置值，并过滤出允许写入的配置项
+  const sanitizedSettings: typeof settings = [];
   for (const setting of settings) {
     const configDef = defaultConfigs.find((c) => c.key === setting.key);
     if (!configDef) {
-      // 允许更新未知配置吗？如果不允许，可以取消注释下面这行
-      // return response.badRequest({ message: `未知的配置项: ${setting.key}` });
-      continue;
+      return response.badRequest({
+        message: `未知的配置项: ${setting.key}`,
+        error: {
+          code: "INVALID_CONFIG_KEY",
+          message: `未知的配置项: ${setting.key}`,
+        },
+      });
     }
 
     const options = extractOptions(configDef.value);
@@ -212,11 +217,13 @@ export async function updateSettings(
         }
       }
     }
+
+    sanitizedSettings.push(setting);
   }
 
   try {
     // 查询所有要更新的配置项的旧值
-    const keys = settings.map((s) => s.key);
+    const keys = sanitizedSettings.map((s) => s.key);
     const oldConfigs = await prisma.config.findMany({
       where: {
         key: {
@@ -233,7 +240,7 @@ export async function updateSettings(
     // 使用事务批量更新配置项
     let updated = 0;
     await prisma.$transaction(async (tx) => {
-      for (const setting of settings) {
+      for (const setting of sanitizedSettings) {
         const result = await tx.config.upsert({
           where: { key: setting.key },
           update: { value: setting.value as Prisma.InputJsonValue },
@@ -253,14 +260,14 @@ export async function updateSettings(
     if (updated > 0) {
       // 构建旧值和新值记录
       const oldData: Record<string, unknown> = {
-        settings: settings.map((s) => ({
+        settings: sanitizedSettings.map((s) => ({
           key: s.key,
           oldValue: oldValuesMap.get(s.key) || null,
         })),
       };
 
       const newData: Record<string, unknown> = {
-        settings: settings.map((s) => ({
+        settings: sanitizedSettings.map((s) => ({
           key: s.key,
           newValue: s.value,
         })),

@@ -27,9 +27,9 @@ import {
 const REAUTH_TOKEN_EXPIRY = 600; // 10 分钟
 
 /**
- * 检查是否有有效的 REAUTH_TOKEN
+ * 检查是否有有效的 REAUTH_TOKEN，并绑定当前登录用户
  */
-export async function checkReauthToken(): Promise<boolean> {
+export async function checkReauthToken(expectedUid?: number): Promise<boolean> {
   try {
     const cookieStore = await cookies();
     const reauthToken = cookieStore.get("REAUTH_TOKEN")?.value;
@@ -47,10 +47,27 @@ export async function checkReauthToken(): Promise<boolean> {
     // 检查是否过期
     const now = Math.floor(Date.now() / 1000);
     if (decoded.exp < now) {
+      cookieStore.delete("REAUTH_TOKEN");
       return false;
     }
 
-    return true;
+    let verifyUid = expectedUid;
+
+    if (!verifyUid) {
+      const accessToken = cookieStore.get("ACCESS_TOKEN")?.value || "";
+      const accessDecoded = jwtTokenVerify<AccessTokenPayload>(accessToken);
+      if (!accessDecoded?.uid) {
+        return false;
+      }
+      verifyUid = accessDecoded.uid;
+    }
+
+    const isMatched = decoded.uid === verifyUid;
+    if (!isMatched) {
+      cookieStore.delete("REAUTH_TOKEN");
+    }
+
+    return isMatched;
   } catch (error) {
     console.error("Check reauth token error:", error);
     return false;
@@ -501,6 +518,37 @@ export async function verifySSOForReauth({
 
   try {
     const cookieStore = await cookies();
+    const oauthReauthToken = cookieStore.get(
+      `oauth_reauth_token_${provider}`,
+    )?.value;
+
+    if (!oauthReauthToken) {
+      return response.unauthorized({
+        message: "认证信息缺失，请重新发起验证",
+      }) as unknown as ApiResponse<null>;
+    }
+
+    const oauthReauthPayload = jwtTokenVerify<{
+      uid: number;
+      purpose: string;
+      provider: string;
+    }>(oauthReauthToken);
+
+    if (
+      !oauthReauthPayload ||
+      oauthReauthPayload.purpose !== "oauth_reauth" ||
+      oauthReauthPayload.provider !== provider
+    ) {
+      return response.forbidden({
+        message: "认证信息无效，请重新发起验证",
+      }) as unknown as ApiResponse<null>;
+    }
+
+    if (oauthReauthPayload.uid !== uid) {
+      return response.forbidden({
+        message: "认证用户不匹配，请重新发起验证",
+      }) as unknown as ApiResponse<null>;
+    }
 
     const user = await prisma.user.findUnique({
       where: { uid },
