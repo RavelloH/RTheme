@@ -5,6 +5,8 @@ import { unstable_cache } from "next/cache";
 import path from "path";
 
 import type { AllBlockConfigs } from "@/blocks/core/types/base";
+import { findCategoryByPath } from "@/lib/server/category-utils";
+import prisma from "@/lib/server/prisma";
 
 // 自定义 JSON 类型定义（避免与 Prisma 的 JsonValue 冲突）
 type CustomJsonValue =
@@ -76,6 +78,44 @@ export interface PageMatch {
 
 // 缓存文件路径
 const CACHE_FILE_PATH = path.join(process.cwd(), ".cache", ".page-cache.json");
+
+/**
+ * 基于关键词的资源存在性校验
+ * 规则（简化版）：
+ * - 仅当路径包含 "categories" 或 "tags" 且存在 slug 参数时才校验
+ * - categories: 按层级路径查分类是否存在
+ * - tags: 按 slug 查标签是否存在
+ */
+async function validateKeywordBoundResource(params: {
+  candidatePath: string;
+  pageSlug: string;
+  slug?: string;
+}): Promise<boolean> {
+  const slug = params.slug?.trim();
+  if (!slug) return true;
+
+  const routeSignature =
+    `${params.candidatePath} ${params.pageSlug}`.toLowerCase();
+  const hasCategoryKeyword = routeSignature.includes("categories");
+  const hasTagKeyword = routeSignature.includes("tags");
+
+  if (hasCategoryKeyword) {
+    const pathSlugs = slug.split("/").filter(Boolean);
+    if (pathSlugs.length === 0) return true;
+    const category = await findCategoryByPath(pathSlugs);
+    return !!category;
+  }
+
+  if (hasTagKeyword) {
+    const tag = await prisma.tag.findUnique({
+      where: { slug },
+      select: { slug: true },
+    });
+    return !!tag;
+  }
+
+  return true;
+}
 
 /**
  * 核心路由匹配逻辑
@@ -243,11 +283,22 @@ export async function getMatchingPage(
   for (const candidate of candidates) {
     const page = pageMap.get(candidate.path);
     if (page) {
+      const resolvedParams = candidate.getParams();
+      const isValid = await validateKeywordBoundResource({
+        candidatePath: candidate.path,
+        pageSlug: page.slug,
+        slug: resolvedParams.slug,
+      });
+
+      if (!isValid) {
+        continue;
+      }
+
       return {
         page,
         params: {
           url: currentPath,
-          ...candidate.getParams(),
+          ...resolvedParams,
         },
       };
     }
