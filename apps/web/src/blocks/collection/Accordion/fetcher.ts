@@ -7,6 +7,7 @@ import type { RuntimeBlockInput } from "@/blocks/core/definition";
 import {
   countCategoryPosts,
   findCategoryByPath,
+  getAllDescendantIds,
 } from "@/lib/server/category-utils";
 import { batchQueryMediaFiles } from "@/lib/server/image-query";
 import { getFeaturedImageUrl } from "@/lib/server/media-reference";
@@ -96,6 +97,11 @@ async function fetchTags(
               deletedAt: null,
             },
           },
+          project: {
+            where: {
+              status: "PUBLISHED",
+            },
+          },
         },
       },
     },
@@ -128,6 +134,7 @@ async function fetchTags(
       description: tag.description,
       featuredImage: processedCover,
       postCount: tag._count.posts,
+      projectCount: tag._count.project,
     };
   });
 }
@@ -166,10 +173,11 @@ async function fetchCategories(
 
   if (rootCategories.length === 0) return [];
 
-  // 并发获取：每个分类的文章数（使用物化路径递归统计）
-  const postCounts = await Promise.all(
-    rootCategories.map((cat) => countCategoryPosts(cat.id)),
-  );
+  // 并发获取：每个分类的文章数和项目数（使用物化路径递归统计）
+  const [postCounts, projectCounts] = await Promise.all([
+    Promise.all(rootCategories.map((cat) => countCategoryPosts(cat.id))),
+    Promise.all(rootCategories.map((cat) => countCategoryProjects(cat.id))),
+  ]);
 
   // 批量处理封面图
   const coverUrls: string[] = [];
@@ -196,6 +204,7 @@ async function fetchCategories(
       description: cat.description,
       featuredImage: processedCover,
       postCount: postCounts[idx] ?? 0,
+      projectCount: projectCounts[idx] ?? 0,
     };
   });
 
@@ -275,6 +284,7 @@ async function fetchChildCategories(
         description: "当前分类没有子分类，或者还没有创建任何分类",
         featuredImage: null,
         postCount: 0,
+        projectCount: 0,
       },
     ];
   }
@@ -319,10 +329,11 @@ async function fetchChildCategories(
     return [];
   }
 
-  // 并发获取：每个分类的文章数
-  const postCounts = await Promise.all(
-    childCategories.map((cat) => countCategoryPosts(cat.id)),
-  );
+  // 并发获取：每个分类的文章数和项目数
+  const [postCounts, projectCounts] = await Promise.all([
+    Promise.all(childCategories.map((cat) => countCategoryPosts(cat.id))),
+    Promise.all(childCategories.map((cat) => countCategoryProjects(cat.id))),
+  ]);
 
   // 批量处理封面图
   const coverUrls: string[] = [];
@@ -349,6 +360,7 @@ async function fetchChildCategories(
       description: cat.description,
       featuredImage: processedCover,
       postCount: postCounts[idx] ?? 0,
+      projectCount: projectCounts[idx] ?? 0,
     };
   });
 
@@ -358,4 +370,23 @@ async function fetchChildCategories(
   }
 
   return items;
+}
+
+/**
+ * 统计分类及其子孙分类下的项目数
+ */
+async function countCategoryProjects(categoryId: number): Promise<number> {
+  const descendantIds = await getAllDescendantIds(categoryId);
+  const allIds = [categoryId, ...descendantIds];
+
+  return prisma.project.count({
+    where: {
+      categories: {
+        some: {
+          id: { in: allIds },
+        },
+      },
+      status: "PUBLISHED",
+    },
+  });
 }

@@ -273,6 +273,7 @@ export const defaultPages: DefaultPage[] = [
               limit: 0,
               showFeatured: false,
             },
+            filterBy: "all",
           },
         },
       ],
@@ -477,6 +478,17 @@ export const defaultPages: DefaultPage[] = [
         },
         {
           id: 2,
+          block: "projects-list",
+          description: "",
+          content: {
+            filterBy: "category",
+            projects: {
+              limit: 0,
+            },
+          },
+        },
+        {
+          id: 3,
           block: "accordion",
           content: {
             source: "child-categories",
@@ -484,7 +496,7 @@ export const defaultPages: DefaultPage[] = [
           description: "",
         },
         {
-          id: 3,
+          id: 4,
           block: "paged-posts",
           description: "",
           content: {
@@ -492,7 +504,7 @@ export const defaultPages: DefaultPage[] = [
           },
         },
         {
-          id: 4,
+          id: 5,
           block: "pagination",
           content: {
             filterBy: "category",
@@ -627,6 +639,17 @@ export const defaultPages: DefaultPage[] = [
         },
         {
           id: 2,
+          block: "projects-list",
+          description: "",
+          content: {
+            filterBy: "tag",
+            projects: {
+              limit: 0,
+            },
+          },
+        },
+        {
+          id: 3,
           block: "paged-posts",
           content: {
             filterBy: "tag",
@@ -636,7 +659,7 @@ export const defaultPages: DefaultPage[] = [
           description: "",
         },
         {
-          id: 3,
+          id: 4,
           block: "pagination",
           content: {
             filterBy: "tag",

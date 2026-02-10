@@ -14,6 +14,18 @@ export const PROJECTS_LIST_BLOCK_FORM_CONFIG: BlockFormConfig = {
   },
   fields: [
     {
+      label: "筛选类型",
+      path: "filterBy",
+      type: "select",
+      helperText: "选择筛选条件类型",
+      options: [
+        { value: "all", label: "不筛选" },
+        { value: "tag", label: "标签" },
+        { value: "category", label: "分类" },
+      ],
+      defaultValue: "all",
+    },
+    {
       label: "项目排序方式",
       path: "projects.sort",
       type: "select",
@@ -44,6 +56,11 @@ export const PROJECTS_LIST_BLOCK_FORM_CONFIG: BlockFormConfig = {
   ],
   groups: [
     {
+      title: "数据源",
+      description: "配置筛选条件",
+      fields: ["filterBy"],
+    },
+    {
       title: "项目查询",
       fields: ["projects.sort", "projects.limit", "projects.showFeatured"],
     },
@@ -53,6 +70,7 @@ export const PROJECTS_LIST_BLOCK_FORM_CONFIG: BlockFormConfig = {
     config: 0,
   },
   previewData: {
+    filterBy: "all",
     projects: {
       sort: "publishedAt_desc",
       limit: 6,

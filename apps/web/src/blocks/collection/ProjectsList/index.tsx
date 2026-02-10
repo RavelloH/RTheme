@@ -210,28 +210,7 @@ export default function ProjectsListBlock({ block }: BlockComponentProps) {
   const displayProjects = data.displayProjects || [];
 
   if (displayProjects.length === 0) {
-    return (
-      <RowGrid>
-        <GridItem
-          areas={[1, 2, 3, 4, 5, 6]}
-          width={2}
-          mobileIndex={0}
-          fixedHeight={true}
-          className="bg-muted/30 flex items-center justify-center"
-        >
-          <div className="text-sm text-muted-foreground">暂无项目数据</div>
-        </GridItem>
-        <GridItem
-          areas={[7, 8, 9, 10, 11, 12]}
-          width={2}
-          mobileIndex={1}
-          fixedHeight={true}
-          className="bg-muted/20"
-        >
-          <div className="h-full w-full" />
-        </GridItem>
-      </RowGrid>
-    );
+    return null;
   }
 
   return (

@@ -4,6 +4,10 @@ import type {
   ProjectsListSortMode,
 } from "@/blocks/collection/ProjectsList/types";
 import type { RuntimeBlockInput } from "@/blocks/core/definition";
+import {
+  findCategoryByPath,
+  getAllDescendantIds,
+} from "@/lib/server/category-utils";
 import { batchQueryMediaFiles } from "@/lib/server/image-query";
 import { getAllFeaturedImageUrls } from "@/lib/server/media-reference";
 import prisma from "@/lib/server/prisma";
@@ -96,16 +100,36 @@ export async function projectsListFetcher(
   config: RuntimeBlockInput,
 ): Promise<ProjectsListData> {
   const content = (config.content || {}) as ProjectsListBlockContent;
+  const data = (config.data || {}) as Record<string, unknown>;
 
+  const filterBy = content.filterBy || "all";
+  const slug: string | null = (data.slug as string) || null;
   const sort = resolveSortMode(content.projects?.sort);
   const showFeatured = content.projects?.showFeatured ?? true;
   const rawLimit = content.projects?.limit ?? DISPLAY_LIMIT;
   const limit = rawLimit === 0 ? undefined : Math.max(1, rawLimit);
 
+  // 构建过滤条件
   const where: Prisma.ProjectWhereInput = {
     status: "PUBLISHED",
     ...(showFeatured ? {} : { isFeatured: false }),
   };
+
+  if (filterBy === "tag" && slug) {
+    where.tags = { some: { slug } };
+  } else if (filterBy === "category" && slug) {
+    const pathSlugs = slug.split("/").filter(Boolean);
+    const parentCategory =
+      pathSlugs.length > 0 ? await findCategoryByPath(pathSlugs) : null;
+
+    if (parentCategory) {
+      const descendantIds = await getAllDescendantIds(parentCategory.id);
+      const allIds = [parentCategory.id, ...descendantIds];
+      where.categories = { some: { id: { in: allIds } } };
+    } else {
+      return { displayProjects: [], totalProjects: 0 };
+    }
+  }
 
   const orderBy: Prisma.ProjectOrderByWithRelationInput[] = [
     ...(showFeatured ? [{ isFeatured: "desc" as const }] : []),

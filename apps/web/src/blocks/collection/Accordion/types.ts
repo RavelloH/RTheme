@@ -21,6 +21,7 @@ export interface AccordionItem {
   description: string | null;
   featuredImage: ProcessedImageData[] | null;
   postCount: number;
+  projectCount: number;
 }
 
 export interface AccordionData {
