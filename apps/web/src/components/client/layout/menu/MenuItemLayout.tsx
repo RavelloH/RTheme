@@ -163,15 +163,14 @@ export default function MenuItemWrapper({
   );
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const highlightRef = useRef<HTMLDivElement | null>(null);
   const itemRefMap = useRef<Map<string, HTMLDivElement>>(new Map());
+  const overlayRefMap = useRef<Map<string, HTMLDivElement>>(new Map());
+  const cachedItemRects = useRef<Map<string, HighlightRect>>(new Map());
   const rectAnimationFrameRef = useRef<number | null>(null);
   const animatedRectRef = useRef<HighlightRect | null>(null);
-
-  const [itemLayoutMap, setItemLayoutMap] = useState<
-    Record<string, HighlightRect>
-  >({});
-  const [highlightVisible, setHighlightVisible] = useState(false);
-  const [animatedRect, setAnimatedRect] = useState<HighlightRect | null>(null);
+  const highlightVisibleRef = useRef(false);
+  const pendingHideRef = useRef(false);
 
   const handleMenuClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const link = (e.currentTarget.querySelector("a") as HTMLAnchorElement)
@@ -197,19 +196,40 @@ export default function MenuItemWrapper({
     }
   }, []);
 
-  const setAnimatedRectInstant = useCallback((rect: HighlightRect) => {
-    animatedRectRef.current = rect;
-    setAnimatedRect(rect);
+  const performHide = useCallback(() => {
+    highlightVisibleRef.current = false;
+    if (highlightRef.current) {
+      highlightRef.current.style.opacity = "0";
+    }
+    overlayRefMap.current.forEach((overlayEl) => {
+      overlayEl.style.opacity = "0";
+    });
   }, []);
 
-  const refreshItemLayouts = useCallback(() => {
+  const refreshItemRects = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
-    const next: Record<string, HighlightRect> = {};
+    cachedItemRects.current.clear();
     itemRefMap.current.forEach((element, id) => {
-      next[id] = resolveHighlightRect(container, element);
+      cachedItemRects.current.set(id, resolveHighlightRect(container, element));
     });
-    setItemLayoutMap(next);
+  }, []);
+
+  const applyHighlightRect = useCallback((rect: HighlightRect) => {
+    animatedRectRef.current = rect;
+
+    const el = highlightRef.current;
+    if (el) {
+      el.style.transform = `translate3d(${rect.x}px, ${rect.y}px, 0)`;
+      el.style.width = `${rect.width}px`;
+      el.style.height = `${rect.height}px`;
+    }
+
+    const visible = highlightVisibleRef.current;
+    overlayRefMap.current.forEach((overlayEl, key) => {
+      const cardRect = cachedItemRects.current.get(key);
+      overlayEl.style.clipPath = toInverseClipPath(cardRect, rect, visible);
+    });
   }, []);
 
   const animateHighlightTo = useCallback(
@@ -225,58 +245,63 @@ export default function MenuItemWrapper({
         fromRect.width === targetRect.width &&
         fromRect.height === targetRect.height
       ) {
-        setAnimatedRectInstant(targetRect);
+        applyHighlightRect(targetRect);
         return;
       }
 
       const tick = (now: number) => {
         const progress = Math.min((now - startTime) / duration, 1);
         const nextRect = interpolateRect(fromRect, targetRect, progress);
-        setAnimatedRectInstant(nextRect);
+        applyHighlightRect(nextRect);
         if (progress < 1) {
           rectAnimationFrameRef.current = requestAnimationFrame(tick);
         } else {
           rectAnimationFrameRef.current = null;
+          if (pendingHideRef.current) {
+            pendingHideRef.current = false;
+            performHide();
+          }
         }
       };
 
       rectAnimationFrameRef.current = requestAnimationFrame(tick);
     },
-    [setAnimatedRectInstant, stopRectAnimation],
+    [applyHighlightRect, performHide, stopRectAnimation],
   );
 
   const activateItem = useCallback(
     (id: string, element: HTMLDivElement) => {
       const container = containerRef.current;
       if (!container) return;
-      refreshItemLayouts();
+      pendingHideRef.current = false;
       const targetRect = resolveHighlightRect(container, element);
-      setItemLayoutMap((prev) => ({
-        ...prev,
-        [id]: targetRect,
-      }));
-      if (!highlightVisible) {
+      cachedItemRects.current.set(id, targetRect);
+
+      if (!highlightVisibleRef.current) {
         stopRectAnimation();
-        setAnimatedRectInstant(targetRect);
-        setHighlightVisible(true);
+        highlightVisibleRef.current = true;
+        if (highlightRef.current) {
+          highlightRef.current.style.opacity = "1";
+        }
+        overlayRefMap.current.forEach((overlayEl) => {
+          overlayEl.style.opacity = "1";
+        });
+        applyHighlightRect(targetRect);
         return;
       }
 
       animateHighlightTo(targetRect);
     },
-    [
-      animateHighlightTo,
-      highlightVisible,
-      refreshItemLayouts,
-      setAnimatedRectInstant,
-      stopRectAnimation,
-    ],
+    [animateHighlightTo, applyHighlightRect, stopRectAnimation],
   );
 
   const clearHighlight = useCallback(() => {
-    stopRectAnimation();
-    setHighlightVisible(false);
-  }, [stopRectAnimation]);
+    if (rectAnimationFrameRef.current !== null) {
+      pendingHideRef.current = true;
+    } else {
+      performHide();
+    }
+  }, [performHide]);
 
   const registerItemRef = useCallback(
     (id: string, element: HTMLDivElement | null) => {
@@ -289,32 +314,30 @@ export default function MenuItemWrapper({
     [],
   );
 
-  useEffect(() => {
-    refreshItemLayouts();
-  }, [flatEntries, refreshItemLayouts]);
+  const registerOverlayRef = useCallback(
+    (id: string, element: HTMLDivElement | null) => {
+      if (element) {
+        overlayRefMap.current.set(id, element);
+      } else {
+        overlayRefMap.current.delete(id);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
-    const handleResize = () => {
-      refreshItemLayouts();
-    };
+    refreshItemRects();
+  }, [flatEntries, refreshItemRects]);
+
+  useEffect(() => {
+    const handleResize = () => refreshItemRects();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [refreshItemLayouts]);
+  }, [refreshItemRects]);
 
   useEffect(() => {
     return () => stopRectAnimation();
   }, [stopRectAnimation]);
-
-  const inverseClipMap: Record<string, string> = {};
-  for (const entry of flatEntries) {
-    inverseClipMap[entry.key] = toInverseClipPath(
-      itemLayoutMap[entry.key],
-      animatedRect,
-      highlightVisible,
-    );
-  }
-
-  const highlight = animatedRect || { x: 0, y: 0, width: 0, height: 0 };
 
   if (!mounted) {
     return (
@@ -352,12 +375,13 @@ export default function MenuItemWrapper({
   return (
     <div ref={containerRef} className="relative" onMouseLeave={clearHighlight}>
       <div
-        className="pointer-events-none absolute z-0 bg-primary [will-change:transform,width,height,opacity]"
+        ref={highlightRef}
+        className="pointer-events-none absolute z-0 bg-primary [will-change:transform,width,height]"
         style={{
-          transform: `translate3d(${highlight.x}px, ${highlight.y}px, 0)`,
-          width: highlight.width,
-          height: highlight.height,
-          opacity: highlightVisible ? 1 : 0,
+          transform: "translate3d(0px, 0px, 0)",
+          width: 0,
+          height: 0,
+          opacity: 0,
           transition: "opacity 160ms ease-out",
         }}
       />
@@ -402,10 +426,11 @@ export default function MenuItemWrapper({
                   </div>
 
                   <div
+                    ref={(el) => registerOverlayRef(key, el)}
                     className="pointer-events-none absolute inset-0 z-20 bg-primary !text-primary-foreground [will-change:clip-path] [&_*]:!text-primary-foreground"
                     style={{
-                      clipPath: inverseClipMap[key] || "inset(100% 0 0 0)",
-                      opacity: highlightVisible ? 1 : 0,
+                      clipPath: "inset(100% 0 0 0)",
+                      opacity: 0,
                       transition: "opacity 160ms ease-out",
                     }}
                   >
