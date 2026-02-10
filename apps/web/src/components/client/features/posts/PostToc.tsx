@@ -53,6 +53,42 @@ interface PostTocProps {
   transparent?: boolean;
 }
 
+function createHeadingSlug(text: string): string {
+  const trimmed = text.trim().toLowerCase();
+  const normalized = trimmed
+    .replace(/[^\p{L}\p{N}\s-]/gu, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return normalized || "section";
+}
+
+function ensureHeadingId(
+  heading: HTMLElement,
+  usedIds: Set<string>,
+): string | null {
+  const text = heading.textContent?.trim() || "";
+  if (!text) return null;
+
+  const initialId = heading.id?.trim();
+  const baseId = initialId || createHeadingSlug(text);
+
+  let id = baseId;
+  let index = 2;
+  while (usedIds.has(id)) {
+    id = `${baseId}-${index}`;
+    index += 1;
+  }
+
+  if (heading.id !== id) {
+    heading.id = id;
+  }
+
+  usedIds.add(id);
+  return id;
+}
+
 export default function PostToc({
   contentSelector = ".md-content, .max-w-4xl",
   isMobile = false,
@@ -240,14 +276,16 @@ export default function PostToc({
       return;
     }
 
-    // 查找所有已渲染的标题元素（只查找带 id 的标题）
+    // 查找所有已渲染的标题元素，并为缺失 id 的标题自动补全 id
     const headings = contentContainer.querySelectorAll(
-      "h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]",
+      "h1, h2, h3, h4, h5, h6",
     );
+    const usedIds = new Set<string>();
 
     headings.forEach((heading) => {
       const text = heading.textContent || "";
-      const id = heading.id;
+      const id = ensureHeadingId(heading as HTMLElement, usedIds);
+      if (!id) return;
 
       // 获取原始标题级别
       const originalLevel = parseInt(heading.tagName.substring(1)); // h1 -> 1, h2 -> 2, etc.
