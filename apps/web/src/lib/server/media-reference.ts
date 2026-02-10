@@ -280,7 +280,8 @@ export async function findMediaIdByUrl(
   }
 
   // 4. 尝试通过 storageUrl 部分匹配（如果 URL 是相对路径）
-  if (url.startsWith("/")) {
+  // 要求路径以斜杠开头且至少包含文件名部分，避免匹配过于宽泛
+  if (url.startsWith("/") && url.length > 1 && url.includes("/", 1)) {
     media = await prisma.media.findFirst({
       where: {
         storageUrl: {

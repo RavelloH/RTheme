@@ -179,12 +179,31 @@ export async function doctor(
     }> => {
       try {
         await ensureRedisConnection();
+
+        // 使用 SCAN 替代 KEYS，避免阻塞 Redis
+        const scanPattern = async (pattern: string): Promise<string[]> => {
+          const keys: string[] = [];
+          let cursor = "0";
+          do {
+            const [nextCursor, batch] = await redis.scan(
+              cursor,
+              "MATCH",
+              pattern,
+              "COUNT",
+              200,
+            );
+            cursor = nextCursor;
+            keys.push(...batch);
+          } while (cursor !== "0");
+          return keys;
+        };
+
         const [cacheKeys, rateKeys, analyticsKeys, viewCountKeys] =
           await Promise.all([
-            redis.keys("np:cache:*"),
-            redis.keys("np:rate:*"),
-            redis.keys("np:analytics:*"),
-            redis.keys("np:view_count:*"),
+            scanPattern("np:cache:*"),
+            scanPattern("np:rate:*"),
+            scanPattern("np:analytics:*"),
+            scanPattern("np:view_count:*"),
           ]);
 
         return {

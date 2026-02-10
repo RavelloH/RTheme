@@ -39,8 +39,18 @@ export async function checkReauthToken(expectedUid?: number): Promise<boolean> {
     }
 
     // 验证 token 是否有效
-    const decoded = jwtTokenVerify<{ uid: number; exp: number }>(reauthToken);
+    const decoded = jwtTokenVerify<{
+      uid: number;
+      type?: string;
+      exp: number;
+    }>(reauthToken);
     if (!decoded) {
+      return false;
+    }
+
+    // 校验 token 类型
+    if (decoded.type !== "reauth") {
+      cookieStore.delete("REAUTH_TOKEN");
       return false;
     }
 
@@ -291,6 +301,7 @@ export async function verifyPasswordForReauth({
     const reauthToken = jwtTokenSign({
       inner: {
         uid: user.uid,
+        type: "reauth",
         exp: expiredAtUnix,
       },
       expired: `${REAUTH_TOKEN_EXPIRY}s`,
@@ -470,6 +481,7 @@ export async function verifyTotpForReauth({
     const reauthToken = jwtTokenSign({
       inner: {
         uid: user.uid,
+        type: "reauth",
         exp: expiredAtUnix,
       },
       expired: `${REAUTH_TOKEN_EXPIRY}s`,
@@ -591,6 +603,7 @@ export async function verifySSOForReauth({
     const reauthToken = jwtTokenSign({
       inner: {
         uid: user.uid,
+        type: "reauth",
         exp: expiredAtUnix,
       },
       expired: `${REAUTH_TOKEN_EXPIRY}s`,

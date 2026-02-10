@@ -1302,90 +1302,139 @@ export async function getVisitStats(
     const last7DaysStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const last30DaysStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    // 查询最近24小时的 PageView 数据
-    const last24HoursPageViews = await prisma.pageView.findMany({
-      where: {
-        timestamp: {
-          gte: last24Hours,
+    // 使用数据库聚合查询替代将所有数据加载到内存
+    const [
+      last24hAgg,
+      totalPageViews,
+      totalVisitorsAgg,
+      totalArchive,
+      last7DaysAgg,
+      last7DaysArchive,
+      last30DaysAgg,
+      last30DaysArchive,
+    ] = await Promise.all([
+      // 最近24小时聚合统计
+      prisma.$queryRaw<
+        Array<{
+          total_views: bigint;
+          unique_visitors: bigint;
+        }>
+      >`
+        SELECT
+          COUNT(*) as total_views,
+          COUNT(DISTINCT "visitorId") as unique_visitors
+        FROM "PageView"
+        WHERE "timestamp" >= ${last24Hours}
+      `,
+
+      // 精确数据的总数
+      prisma.pageView.count(),
+
+      // 总独立访客数
+      prisma.$queryRaw<Array<{ count: bigint }>>`
+        SELECT COUNT(DISTINCT "visitorId") as count FROM "PageView"
+      `,
+
+      // 所有归档数据
+      prisma.pageViewArchive.aggregate({
+        _sum: {
+          totalViews: true,
+          uniqueVisitors: true,
         },
-      },
-      select: {
-        visitorId: true,
-        timestamp: true,
-        path: true,
-      },
-    });
+      }),
 
-    // 计算最近24小时的统计（使用与analytics.ts相同的会话计算逻辑）
-    const uniqueVisitors24h = new Set(
-      last24HoursPageViews.map((pv) => pv.visitorId),
-    ).size;
-    const totalViews24h = last24HoursPageViews.length;
+      // 最近7天精确数据聚合
+      prisma.$queryRaw<
+        Array<{
+          total_views: bigint;
+          unique_visitors: bigint;
+        }>
+      >`
+        SELECT
+          COUNT(*) as total_views,
+          COUNT(DISTINCT "visitorId") as unique_visitors
+        FROM "PageView"
+        WHERE "timestamp" >= ${last7DaysStart}
+      `,
 
-    // 计算会话和跳出率（参考 analytics.ts 的实现）
-    const SESSION_TIMEOUT = 30 * 60 * 1000; // 30分钟会话超时
-    const visitorSessions = new Map<
-      string,
-      Array<{ path: string; timestamp: Date }>
-    >();
+      // 最近7天归档数据
+      prisma.pageViewArchive.aggregate({
+        where: {
+          date: {
+            gte: last7DaysStart,
+          },
+        },
+        _sum: {
+          totalViews: true,
+          uniqueVisitors: true,
+        },
+      }),
 
-    for (const view of last24HoursPageViews) {
-      if (!visitorSessions.has(view.visitorId)) {
-        visitorSessions.set(view.visitorId, []);
-      }
-      visitorSessions.get(view.visitorId)!.push({
-        path: view.path,
-        timestamp: view.timestamp,
-      });
-    }
+      // 最近30天精确数据聚合
+      prisma.$queryRaw<
+        Array<{
+          total_views: bigint;
+          unique_visitors: bigint;
+        }>
+      >`
+        SELECT
+          COUNT(*) as total_views,
+          COUNT(DISTINCT "visitorId") as unique_visitors
+        FROM "PageView"
+        WHERE "timestamp" >= ${last30DaysStart}
+      `,
+
+      // 最近30天归档数据
+      prisma.pageViewArchive.aggregate({
+        where: {
+          date: {
+            gte: last30DaysStart,
+          },
+        },
+        _sum: {
+          totalViews: true,
+          uniqueVisitors: true,
+        },
+      }),
+    ]);
+
+    const uniqueVisitors24h = Number(last24hAgg[0]?.unique_visitors ?? 0);
+    const totalViews24h = Number(last24hAgg[0]?.total_views ?? 0);
+
+    // 计算会话/跳出率：使用数据库分组查询而非全量加载
+    const sessionData = await prisma.$queryRaw<
+      Array<{
+        visitorId: string;
+        view_count: bigint;
+        first_view: Date;
+        last_view: Date;
+      }>
+    >`
+      SELECT
+        "visitorId",
+        COUNT(*) as view_count,
+        MIN("timestamp") as first_view,
+        MAX("timestamp") as last_view
+      FROM "PageView"
+      WHERE "timestamp" >= ${last24Hours}
+      GROUP BY "visitorId"
+    `;
 
     let totalSessions24h = 0;
     let bounces24h = 0;
     let totalDuration24h = 0;
     let sessionsWithDuration24h = 0;
 
-    for (const views of visitorSessions.values()) {
-      if (views.length === 0) continue;
-
-      views.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-
-      let sessionPageCount = 0;
-      let sessionStartTime = views[0]!.timestamp.getTime();
-
-      for (let i = 0; i < views.length; i++) {
-        const currentView = views[i]!;
-        const currentTime = currentView.timestamp.getTime();
-
-        if (
-          i === 0 ||
-          currentTime - views[i - 1]!.timestamp.getTime() > SESSION_TIMEOUT
-        ) {
-          if (i > 0) {
-            totalSessions24h++;
-            if (sessionPageCount === 1) {
-              bounces24h++;
-            }
-            if (sessionPageCount > 1) {
-              const duration =
-                views[i - 1]!.timestamp.getTime() - sessionStartTime;
-              totalDuration24h += duration;
-              sessionsWithDuration24h++;
-            }
-          }
-          sessionPageCount = 1;
-          sessionStartTime = currentTime;
-        } else {
-          sessionPageCount++;
-        }
-      }
-
+    // 简化会话计算：每个访客至少算一个会话
+    for (const visitor of sessionData) {
+      const viewCount = Number(visitor.view_count);
       totalSessions24h++;
-      if (sessionPageCount === 1) {
+
+      if (viewCount === 1) {
         bounces24h++;
-      }
-      if (sessionPageCount > 1) {
+      } else {
         const duration =
-          views[views.length - 1]!.timestamp.getTime() - sessionStartTime;
+          visitor.last_view.getTime() - visitor.first_view.getTime();
         totalDuration24h += duration;
         sessionsWithDuration24h++;
       }
@@ -1398,95 +1447,25 @@ export async function getVisitStats(
         ? Math.round(totalDuration24h / sessionsWithDuration24h / 1000)
         : 0;
 
-    // 查询总访问量和独立访客（包括精确数据和归档数据）
-    const [totalPageViews, totalArchive, last7DaysArchive, last30DaysArchive] =
-      await Promise.all([
-        // 精确数据的总数
-        prisma.pageView.count(),
-
-        // 所有归档数据
-        prisma.pageViewArchive.aggregate({
-          _sum: {
-            totalViews: true,
-            uniqueVisitors: true,
-          },
-        }),
-
-        // 最近7天归档数据
-        prisma.pageViewArchive.aggregate({
-          where: {
-            date: {
-              gte: last7DaysStart,
-            },
-          },
-          _sum: {
-            totalViews: true,
-            uniqueVisitors: true,
-          },
-        }),
-
-        // 最近30天归档数据
-        prisma.pageViewArchive.aggregate({
-          where: {
-            date: {
-              gte: last30DaysStart,
-            },
-          },
-          _sum: {
-            totalViews: true,
-            uniqueVisitors: true,
-          },
-        }),
-      ]);
-
-    // 查询精确数据中的独立访客总数
-    const allVisitors = await prisma.pageView.findMany({
-      select: {
-        visitorId: true,
-      },
-      distinct: ["visitorId"],
-    });
-
-    // 查询最近7天和30天的精确数据
-    const [last7DaysPageViews, last30DaysPageViews] = await Promise.all([
-      prisma.pageView.findMany({
-        where: {
-          timestamp: {
-            gte: last7DaysStart,
-          },
-        },
-        select: {
-          visitorId: true,
-        },
-      }),
-      prisma.pageView.findMany({
-        where: {
-          timestamp: {
-            gte: last30DaysStart,
-          },
-        },
-        select: {
-          visitorId: true,
-        },
-      }),
-    ]);
-
     // 合并精确数据和归档数据
+    const totalVisitorsFromDb = Number(totalVisitorsAgg[0]?.count ?? 0);
     const totalViewsCount =
       totalPageViews + (totalArchive._sum.totalViews || 0);
     const totalVisitorsCount =
-      allVisitors.length + (totalArchive._sum.uniqueVisitors || 0);
+      totalVisitorsFromDb + (totalArchive._sum.uniqueVisitors || 0);
 
     const last7DaysViewsCount =
-      last7DaysPageViews.length + (last7DaysArchive._sum.totalViews || 0);
+      Number(last7DaysAgg[0]?.total_views ?? 0) +
+      (last7DaysArchive._sum.totalViews || 0);
     const last7DaysVisitorsCount =
-      new Set(last7DaysPageViews.map((pv) => pv.visitorId)).size +
+      Number(last7DaysAgg[0]?.unique_visitors ?? 0) +
       (last7DaysArchive._sum.uniqueVisitors || 0);
 
     const last30DaysViewsCount =
-      last30DaysPageViews.length + (last30DaysArchive._sum.totalViews || 0);
+      Number(last30DaysAgg[0]?.total_views ?? 0) +
+      (last30DaysArchive._sum.totalViews || 0);
     const last30DaysVisitorsCount =
-      new Set(last30DaysPageViews.map((pv) => pv.visitorId)).size +
+      Number(last30DaysAgg[0]?.unique_visitors ?? 0) +
       (last30DaysArchive._sum.uniqueVisitors || 0);
 
     // 获取第一条记录的日期来计算平均值

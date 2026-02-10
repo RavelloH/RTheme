@@ -200,8 +200,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     // ========================================================================
     if (externalUrl) {
       try {
-        const safeExternalUrl = await assertPublicHttpUrl(externalUrl.trim());
-        const normalizedExternalUrl = safeExternalUrl.toString();
+        const safeExternalResult = await assertPublicHttpUrl(
+          externalUrl.trim(),
+        );
+        const normalizedExternalUrl = safeExternalResult.url.toString();
 
         const defaultStorage = await prisma.storageProvider.findFirst({
           where: { isDefault: true, isActive: true },

@@ -25,6 +25,7 @@ export function isPrivateIP(ip: string): boolean {
   if (ip === "::1" || ip === "::ffff:127.0.0.1") return true;
 
   // IPv4 本地/内网地址
+  if (ip === "0.0.0.0") return true; // 未指定地址
   if (ip.startsWith("127.")) return true; // 回环地址
   if (ip.startsWith("10.")) return true; // A 类私有地址
   if (ip.startsWith("192.168.")) return true; // C 类私有地址
@@ -34,6 +35,16 @@ export function isPrivateIP(ip: string): boolean {
     if (second >= 16 && second <= 31) return true;
   }
   if (ip.startsWith("169.254.")) return true; // 链路本地地址
+  if (ip.startsWith("100.")) {
+    // 运营商级 NAT 100.64.0.0/10
+    const second = parseInt(ip.split(".")[1] ?? "0", 10);
+    if (second >= 64 && second <= 127) return true;
+  }
+  if (ip.startsWith("198.")) {
+    // 基准测试 198.18.0.0/15
+    const second = parseInt(ip.split(".")[1] ?? "0", 10);
+    if (second === 18 || second === 19) return true;
+  }
 
   return false;
 }

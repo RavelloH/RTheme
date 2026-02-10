@@ -59,7 +59,8 @@ if count >= limit then
 end
 
 -- Step 3: 允许请求，记录数据
-local member = apiName .. ":" .. now
+-- 添加随机后缀避免同毫秒 member 冲突导致计数偏低
+local member = apiName .. ":" .. now .. ":" .. math.random(100000, 999999)
 redis.call("ZADD", rateKey, now, member)
 redis.call("EXPIRE", rateKey, 86400)
 

@@ -95,7 +95,10 @@ export function jwtTokenVerify<T = AccessTokenPayload>(
 
     return null;
   } catch (error) {
-    console.error("JWT verification error:", error);
+    console.error(
+      "JWT verification error:",
+      error instanceof Error ? error.message : "unknown error",
+    );
     return null;
   }
 }

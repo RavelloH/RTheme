@@ -235,6 +235,14 @@ async function fetchGithubRepoInfo(
   error?: string;
 }> {
   try {
+    // 校验 repoPath 格式：必须为 owner/repo，且只包含合法字符
+    if (!/^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/.test(repoPath)) {
+      return {
+        description: null,
+        createdAt: null,
+        error: "仓库路径格式不正确，应为 owner/repo",
+      };
+    }
     const [owner, repo] = repoPath.split("/");
     if (!owner || !repo) {
       return {
@@ -298,6 +306,10 @@ async function syncSingleProjectGithub(
   forks?: number;
 }> {
   try {
+    // 校验 repoPath 格式
+    if (!/^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/.test(repoPath)) {
+      return { success: false, error: "仓库路径格式不正确，应为 owner/repo" };
+    }
     const [owner, repo] = repoPath.split("/");
     if (!owner || !repo) {
       return { success: false, error: "仓库路径格式不正确" };

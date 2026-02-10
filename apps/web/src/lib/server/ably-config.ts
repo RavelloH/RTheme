@@ -15,7 +15,6 @@ import { getConfig } from "@/lib/server/config-cache";
  */
 export const isAblyEnabled = async (): Promise<boolean> => {
   const apiKey = await getConfig("notice.ably.key");
-  console.log("查询了ably");
   return Boolean(apiKey);
 };
 

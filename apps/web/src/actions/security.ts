@@ -35,6 +35,26 @@ import ResponseBuilder from "@/lib/server/response";
 import { validateData } from "@/lib/server/validator";
 
 /**
+ * 使用 SCAN 替代 KEYS 命令，避免阻塞 Redis
+ */
+async function scanKeys(pattern: string): Promise<string[]> {
+  const keys: string[] = [];
+  let cursor = "0";
+  do {
+    const [nextCursor, batch] = await redis.scan(
+      cursor,
+      "MATCH",
+      pattern,
+      "COUNT",
+      200,
+    );
+    cursor = nextCursor;
+    keys.push(...batch);
+  } while (cursor !== "0");
+  return keys;
+}
+
+/**
  * 获取安全概览数据
  */
 export async function getSecurityOverview(
@@ -85,10 +105,10 @@ export async function getSecurityOverview(
     const currentHour = Math.floor(currentTime / 3600000);
 
     // 获取所有速率限制键（新的 key 格式）
-    const rateLimitKeys = await redis.keys("np:rate:ip:*");
+    const rateLimitKeys = await scanKeys("np:rate:ip:*");
 
     // 获取所有封禁键（新的 key 格式）
-    const banKeys = await redis.keys("np:rate:ban:*");
+    const banKeys = await scanKeys("np:rate:ban:*");
 
     // 获取全局统计计数器（永久）
     const [totalSuccessStr, totalErrorStr] = await Promise.all([
@@ -123,58 +143,88 @@ export async function getSecurityOverview(
       }
     }
 
-    // 获取最近24小时的统计数据
+    // 获取最近24小时的统计数据（使用 Pipeline 批量查询）
     let last24hSuccess = 0;
     let last24hError = 0;
     let last24hActiveHours = 0;
     const hourlyTrends: { hour: string; count: number }[] = [];
 
-    for (let i = 23; i >= 0; i--) {
-      const targetHour = currentHour - i;
-      const [successStr, errorStr] = await Promise.all([
-        redis.get(`np:rate:stat:hour:${targetHour}:success`),
-        redis.get(`np:rate:stat:hour:${targetHour}:error`),
-      ]);
-      const success = successStr ? parseInt(successStr, 10) : 0;
-      const error = errorStr ? parseInt(errorStr, 10) : 0;
-
-      last24hSuccess += success;
-      last24hError += error;
-
-      // 统计有数据的小时数
-      if (success > 0 || error > 0) {
-        last24hActiveHours++;
+    {
+      const pipeline = redis.pipeline();
+      for (let i = 23; i >= 0; i--) {
+        const targetHour = currentHour - i;
+        pipeline.get(`np:rate:stat:hour:${targetHour}:success`);
+        pipeline.get(`np:rate:stat:hour:${targetHour}:error`);
       }
+      const results = await pipeline.exec();
 
-      const hourTimestamp = targetHour * 3600000;
-      const date = new Date(hourTimestamp);
-      hourlyTrends.push({
-        hour: `${date.getHours().toString().padStart(2, "0")}:00`,
-        count: success + error,
-      });
+      for (let i = 23; i >= 0; i--) {
+        const idx = (23 - i) * 2;
+        const successStr = results?.[idx]?.[1] as string | null;
+        const errorStr = results?.[idx + 1]?.[1] as string | null;
+        const success = successStr ? parseInt(successStr, 10) : 0;
+        const error = errorStr ? parseInt(errorStr, 10) : 0;
+
+        last24hSuccess += success;
+        last24hError += error;
+
+        if (success > 0 || error > 0) {
+          last24hActiveHours++;
+        }
+
+        const targetHour = currentHour - i;
+        const hourTimestamp = targetHour * 3600000;
+        const date = new Date(hourTimestamp);
+        hourlyTrends.push({
+          hour: `${date.getHours().toString().padStart(2, "0")}:00`,
+          count: success + error,
+        });
+      }
     }
 
-    // 获取最近30天的统计数据（30*24=720小时）
+    // 获取最近30天的统计数据（使用 Pipeline 批量查询）
     let last30dSuccess = 0;
     let last30dError = 0;
-    const activeDaysSet = new Set<number>(); // 用 Set 记录有数据的天
+    const activeDaysSet = new Set<number>();
 
-    for (let i = 30 * 24 - 1; i >= 0; i--) {
-      const targetHour = currentHour - i;
-      const [successStr, errorStr] = await Promise.all([
-        redis.get(`np:rate:stat:hour:${targetHour}:success`),
-        redis.get(`np:rate:stat:hour:${targetHour}:error`),
-      ]);
-      const success = successStr ? parseInt(successStr, 10) : 0;
-      const error = errorStr ? parseInt(errorStr, 10) : 0;
+    {
+      // 分批执行 Pipeline，每批最多 500 条命令
+      const totalHours = 30 * 24;
+      const batchSize = 250; // 每批 250 小时 = 500 条命令
 
-      last30dSuccess += success;
-      last30dError += error;
+      for (
+        let batchStart = 0;
+        batchStart < totalHours;
+        batchStart += batchSize
+      ) {
+        const batchEnd = Math.min(batchStart + batchSize, totalHours);
+        const pipeline = redis.pipeline();
 
-      // 统计有数据的天数（按天去重）
-      if (success > 0 || error > 0) {
-        const dayIndex = Math.floor(targetHour / 24);
-        activeDaysSet.add(dayIndex);
+        for (let i = batchStart; i < batchEnd; i++) {
+          const targetHour = currentHour - (totalHours - 1 - i);
+          pipeline.get(`np:rate:stat:hour:${targetHour}:success`);
+          pipeline.get(`np:rate:stat:hour:${targetHour}:error`);
+        }
+
+        const results = await pipeline.exec();
+
+        for (let i = 0; i < batchEnd - batchStart; i++) {
+          const idx = i * 2;
+          const successStr = results?.[idx]?.[1] as string | null;
+          const errorStr = results?.[idx + 1]?.[1] as string | null;
+          const success = successStr ? parseInt(successStr, 10) : 0;
+          const error = errorStr ? parseInt(errorStr, 10) : 0;
+
+          last30dSuccess += success;
+          last30dError += error;
+
+          if (success > 0 || error > 0) {
+            const globalIdx = batchStart + i;
+            const targetHour = currentHour - (totalHours - 1 - globalIdx);
+            const dayIndex = Math.floor(targetHour / 24);
+            activeDaysSet.add(dayIndex);
+          }
+        }
       }
     }
 
@@ -272,8 +322,8 @@ export async function getIPList(
 
     // 使用新的 key 格式
     const [rateLimitKeys, banKeys] = await Promise.all([
-      redis.keys("np:rate:ip:*"),
-      redis.keys("np:rate:ban:*"),
+      scanKeys("np:rate:ip:*"),
+      scanKeys("np:rate:ban:*"),
     ]);
 
     // 创建封禁IP映射
@@ -668,21 +718,28 @@ export async function getRequestTrends(
     const trends: RequestTrendItem[] = [];
 
     if (granularity === "hour") {
-      // 使用新的独立小时统计数据（成功 + 错误）
+      // 使用 Pipeline 批量获取小时统计数据
+      const pipeline = redis.pipeline();
       for (let i = hours - 1; i >= 0; i--) {
         const targetHour = currentHour - i;
-        const [successStr, errorStr] = await Promise.all([
-          redis.get(`np:rate:stat:hour:${targetHour}:success`),
-          redis.get(`np:rate:stat:hour:${targetHour}:error`),
-        ]);
+        pipeline.get(`np:rate:stat:hour:${targetHour}:success`);
+        pipeline.get(`np:rate:stat:hour:${targetHour}:error`);
+      }
+      const results = await pipeline.exec();
+
+      for (let i = hours - 1; i >= 0; i--) {
+        const idx = (hours - 1 - i) * 2;
+        const successStr = results?.[idx]?.[1] as string | null;
+        const errorStr = results?.[idx + 1]?.[1] as string | null;
         const success = successStr ? parseInt(successStr, 10) : 0;
         const error = errorStr ? parseInt(errorStr, 10) : 0;
         const count = success + error;
 
+        const targetHour = currentHour - i;
         const hourTimestamp = targetHour * 3600000;
         const date = new Date(hourTimestamp);
         trends.push({
-          time: date.toISOString(), // 返回完整 ISO 8601 时间戳
+          time: date.toISOString(),
           timestamp: hourTimestamp,
           count,
           success,
@@ -691,7 +748,7 @@ export async function getRequestTrends(
       }
     } else {
       // 分钟级别统计使用 np:rate:ip:* 数据（保留24小时）
-      const rateLimitKeys = await redis.keys("np:rate:ip:*");
+      const rateLimitKeys = await scanKeys("np:rate:ip:*");
       const effectiveMinutes = Math.min(hours * 60, 60);
 
       for (let i = effectiveMinutes - 1; i >= 0; i--) {

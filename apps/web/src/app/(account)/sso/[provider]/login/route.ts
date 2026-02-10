@@ -198,8 +198,12 @@ export async function GET(
       });
     }
 
-    // 存储重定向目标
-    if (redirect_to) {
+    // 存储重定向目标（验证必须为相对路径，防止开放重定向）
+    if (
+      redirect_to &&
+      redirect_to.startsWith("/") &&
+      !redirect_to.startsWith("//")
+    ) {
       cookieStore.set(`${cookiePrefix}_redirect_to`, redirect_to, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",

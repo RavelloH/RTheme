@@ -183,7 +183,11 @@ export function verifyTotpCode(
     const time = currentTime + i * timeStep;
     const expectedCode = generateTotpCode(secret, timeStep, time);
 
-    if (code === expectedCode) {
+    // 使用恒定时间比较防止时序攻击
+    if (
+      code.length === expectedCode.length &&
+      crypto.timingSafeEqual(Buffer.from(code), Buffer.from(expectedCode))
+    ) {
       return true;
     }
   }
