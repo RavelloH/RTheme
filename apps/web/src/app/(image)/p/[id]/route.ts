@@ -11,7 +11,8 @@ import {
 import { getConfigs } from "@/lib/server/config-cache";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import {
-  encryptUrl,
+  encryptImageProxyPayload,
+  type ImageProxyPayload,
   parseImageId,
   verifySignature,
 } from "@/lib/server/image-crypto";
@@ -233,7 +234,48 @@ export async function GET(
   }
 
   // 6. 普通浏览器请求：302 重定向到 image-proxy
-  const encryptedUrl = encryptUrl(media.storageUrl);
+  const mediaWithProvider = await prisma.media.findUnique({
+    where: { shortHash },
+    include: { StorageProvider: true },
+  });
+
+  if (!mediaWithProvider) {
+    return res.notFound({
+      message: "图片不存在",
+      error: { code: "IMAGE_NOT_FOUND", message: "未找到对应的图片" },
+    }) as Response;
+  }
+
+  const proxyPayload: ImageProxyPayload = {
+    storageUrl: mediaWithProvider.storageUrl,
+    mimeType: mediaWithProvider.mimeType,
+  };
+
+  if (mediaWithProvider.StorageProvider.type === "LOCAL") {
+    const config = mediaWithProvider.StorageProvider.config as {
+      rootDir?: unknown;
+    };
+
+    if (typeof config.rootDir === "string" && config.rootDir.length > 0) {
+      const trimmedBase = mediaWithProvider.StorageProvider.baseUrl.replace(
+        /\/+$/,
+        "",
+      );
+      let key = mediaWithProvider.storageUrl;
+      if (mediaWithProvider.storageUrl.startsWith(trimmedBase)) {
+        key = mediaWithProvider.storageUrl
+          .substring(trimmedBase.length)
+          .replace(/^\/+/, "");
+      }
+
+      proxyPayload.localFile = {
+        rootDir: config.rootDir,
+        key,
+      };
+    }
+  }
+
+  const encryptedUrl = encryptImageProxyPayload(proxyPayload);
   const redirectUrl = new URL(
     `/image-proxy?url=${encodeURIComponent(encryptedUrl)}`,
     request.nextUrl.origin,
