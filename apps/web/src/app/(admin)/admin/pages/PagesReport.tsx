@@ -48,7 +48,7 @@ export default function PagesReport() {
     title: "",
     slug: "",
     status: "ACTIVE" as "ACTIVE" | "SUSPENDED",
-    contentType: "BLOCK" as "MARKDOWN" | "HTML" | "MDX" | "BLOCK",
+    contentType: "BLOCK" as "MARKDOWN" | "HTML" | "MDX" | "BLOCK" | "BUILDIN",
     metaDescription: "",
     metaKeywords: "",
     robotsIndex: true,
@@ -269,7 +269,8 @@ export default function PagesReport() {
                 基本信息
               </h3>
               <p className="text-sm text-muted-foreground">
-                填写页面的基本信息，创建后将进入对应类型的编辑器。
+                填写页面基本信息。创建后将进入对应类型编辑页（BUILDIN
+                会返回列表页）。
               </p>
             </div>
             <div className="space-y-4">
@@ -386,7 +387,8 @@ export default function PagesReport() {
                         | "MARKDOWN"
                         | "HTML"
                         | "MDX"
-                        | "BLOCK",
+                        | "BLOCK"
+                        | "BUILDIN",
                     })
                   }
                   options={[
@@ -394,6 +396,10 @@ export default function PagesReport() {
                     { value: "MARKDOWN", label: "Markdown" },
                     { value: "HTML", label: "HTML" },
                     { value: "MDX", label: "MDX" },
+                    {
+                      value: "BUILDIN",
+                      label: "BUILDIN（内置集成，仅基础信息）",
+                    },
                   ]}
                   size="sm"
                 />
@@ -445,7 +451,11 @@ export default function PagesReport() {
               disabled={isCreating}
             />
             <Button
-              label="创建并进入编辑器"
+              label={
+                newPageForm.contentType === "BUILDIN"
+                  ? "创建并返回列表"
+                  : "创建并进入编辑器"
+              }
               variant="primary"
               onClick={handleCreatePage}
               size="sm"

@@ -40,8 +40,8 @@ export default async function AdminPages() {
               </div>
               <div>
                 <div>
-                  也可以在此处创建自定义页面，自定义页面可选 Markdown、MDX、HTML
-                  三种格式。
+                  也可以在此处创建自定义页面，支持 Markdown、MDX、HTML、BLOCK 与
+                  BUILDIN 等内容类型。
                 </div>
                 <div>在HTML模式下，可自由引入任意内容。</div>
               </div>
