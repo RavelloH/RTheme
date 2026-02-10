@@ -11,6 +11,7 @@ export type ProjectsListSortMode =
   | "forks_desc";
 
 export interface ProjectsListBlockContent {
+  filterBy?: "all" | "tag" | "category";
   projects?: {
     sort?: ProjectsListSortMode;
     limit?: number;

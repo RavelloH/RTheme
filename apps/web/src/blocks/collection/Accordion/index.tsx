@@ -66,7 +66,7 @@ export default function AccordionBlock({ block }: BlockComponentProps) {
                 <>
                   {/* 移动端：计数和名称重叠 */}
                   <div className="text-8xl text-foreground/10 transition-all duration-300 ease-out group-hover:text-foreground/40">
-                    {item.postCount}
+                    {item.postCount + item.projectCount}
                   </div>
                   <h2
                     className="absolute text-4xl text-foreground transition-all duration-300 ease-out tracking-[0.1em] group-hover:scale-105"
@@ -79,7 +79,7 @@ export default function AccordionBlock({ block }: BlockComponentProps) {
                 <>
                   <div className="space-y-2">
                     <div className="text-5xl opacity-0">
-                      <div>{item.postCount}</div>
+                      <div>{item.postCount + item.projectCount}</div>
                     </div>
                   </div>
 
@@ -98,7 +98,7 @@ export default function AccordionBlock({ block }: BlockComponentProps) {
 
                   <div className="space-y-2">
                     <div className="text-5xl text-foreground/20 transition-all duration-300 ease-out group-hover:text-foreground/50">
-                      <div>{item.postCount}</div>
+                      <div>{item.postCount + item.projectCount}</div>
                     </div>
                   </div>
                 </>
