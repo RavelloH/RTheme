@@ -82,7 +82,7 @@ import { Tooltip } from "@/ui/Tooltip";
  * EditorCore - 纯 UI 编辑器组件
  *
  * 职责：
- * - 编辑器模式切换（Visual/Markdown/MDX）
+ * - 编辑器模式切换（Visual/Markdown/MDX/HTML）
  * - 编辑器实例管理
  * - 浮动工具栏渲染
  * - 字符统计
@@ -162,7 +162,10 @@ export function EditorCore({
         if (savedData) {
           const editorData = JSON.parse(savedData);
           const savedEditorType = editorData[storageKey]?.config?.editorType;
-          if (savedEditorType) {
+          if (
+            savedEditorType &&
+            availableModes.includes(savedEditorType as EditorMode)
+          ) {
             return savedEditorType as EditorMode;
           }
         }
@@ -242,7 +245,11 @@ export function EditorCore({
 
   // ==================== 加载保存的内容 ====================
   useEffect(() => {
-    if (editorType === "markdown" || editorType === "mdx") {
+    if (
+      editorType === "markdown" ||
+      editorType === "mdx" ||
+      editorType === "html"
+    ) {
       if (hasLoadedFromStorage.current) return;
 
       const savedData = loadEditorContent(storageKey);
@@ -319,7 +326,9 @@ export function EditorCore({
     if (
       monacoEditor &&
       markdownContent &&
-      (editorType === "markdown" || editorType === "mdx")
+      (editorType === "markdown" ||
+        editorType === "mdx" ||
+        editorType === "html")
     ) {
       const currentMonacoContent = monacoEditor.getValue();
       if (currentMonacoContent !== markdownContent) {
@@ -1210,13 +1219,21 @@ export function EditorCore({
 
               onChange?.(content);
             }}
-            mode={editorType === "mdx" ? "mdx" : "markdown"}
+            mode={
+              editorType === "mdx"
+                ? "mdx"
+                : editorType === "html"
+                  ? "html"
+                  : "markdown"
+            }
             onEditorReady={(monacoInstance) => {
               setMonacoEditor(monacoInstance);
 
               if (adapterManagerRef.current) {
                 if (editorType === "mdx") {
                   adapterManagerRef.current.registerMDXEditor(monacoInstance);
+                } else if (editorType === "html") {
+                  adapterManagerRef.current.registerHTMLEditor(monacoInstance);
                 } else {
                   adapterManagerRef.current.registerMarkdownEditor(
                     monacoInstance,
@@ -1262,7 +1279,9 @@ export function EditorCore({
                   ? "可视化编辑器"
                   : mode === "markdown"
                     ? "Markdown"
-                    : "MDX (Beta)",
+                    : mode === "mdx"
+                      ? "MDX (Beta)"
+                      : "HTML",
             }))}
             size="sm"
           />

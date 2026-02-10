@@ -10,6 +10,7 @@ import ErrorPage from "@/components/ui/Error";
 import { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcastSender } from "@/hooks/use-broadcast";
 import runWithAuth from "@/lib/client/run-with-auth";
+import { getPageEditorPathByContentType } from "@/lib/shared/page-editor-route";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
 import { Checkbox } from "@/ui/Checkbox";
@@ -124,12 +125,12 @@ export default function PagesReport() {
         setCreateDialogOpen(false);
         // 刷新统计数据
         await fetchData(true);
-        if (newPageForm.contentType === "BLOCK") {
-          // BLOCK 页面跳转到布局编辑器
-          navigate(`/admin/pages/${result.data.id}`);
-        } else {
-          toast.info("非 BLOCK 页面已创建，请在页面列表中进行文本编辑");
-        }
+        navigate(
+          getPageEditorPathByContentType(
+            newPageForm.contentType,
+            result.data.id,
+          ),
+        );
       } else {
         toast.error("创建失败");
       }
@@ -268,7 +269,7 @@ export default function PagesReport() {
                 基本信息
               </h3>
               <p className="text-sm text-muted-foreground">
-                填写页面的基本信息。仅 BLOCK 类型页面会在创建后进入布局编辑器。
+                填写页面的基本信息，创建后将进入对应类型的编辑器。
               </p>
             </div>
             <div className="space-y-4">
@@ -444,11 +445,7 @@ export default function PagesReport() {
               disabled={isCreating}
             />
             <Button
-              label={
-                newPageForm.contentType === "BLOCK"
-                  ? "创建并进入编辑器"
-                  : "创建页面"
-              }
+              label="创建并进入编辑器"
               variant="primary"
               onClick={handleCreatePage}
               size="sm"

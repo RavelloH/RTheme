@@ -1,30 +1,38 @@
-import LayoutEditorClientWrapper from "@/app/(admin)/admin/pages/[id]/client";
+import { redirect } from "next/navigation";
+
+import LayoutEditorClientWrapper from "@/app/(admin)/admin/pages/block/[id]/LayoutEditorClientWrapper";
+import {
+  getPageByIdParam,
+  resolveContentTypeEditorPath,
+} from "@/app/(admin)/admin/pages/page-editor";
 import AdminSidebar from "@/components/client/layout/AdminSidebar";
 import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
 import MainLayout from "@/components/client/layout/MainLayout";
 import { resolveBlockData } from "@/lib/server/block-data-resolver";
-import { getRawPageById, getSystemPageConfig } from "@/lib/server/page-cache";
-import { generateMetadata } from "@/lib/server/seo";
+import { getSystemPageConfig } from "@/lib/server/page-cache";
+import { generateMetadata as generateSeoMetadata } from "@/lib/server/seo";
 
-export const metadata = await generateMetadata(
-  {
-    title: "管理面板/页面管理/编辑页面",
-    description: "编辑页面布局和内容",
-  },
-  {
-    pathname: "/admin/pages/[id]",
-  },
-);
-
-export default async function LayoutEditorPage({
-  params,
-}: {
+type Props = {
   params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
+};
 
-  // Server-side data fetching
-  const page = await getRawPageById(id);
+export async function generateMetadata(props: Props) {
+  const { id } = await props.params;
+
+  return generateSeoMetadata(
+    {
+      title: `管理面板/页面管理/布局编辑器/${id}`,
+      description: `编辑页面布局：${id}`,
+    },
+    {
+      pathname: `/admin/pages/block/${id}`,
+    },
+  );
+}
+
+export default async function BlockPageEditorPage({ params }: Props) {
+  const { id } = await params;
+  const page = await getPageByIdParam(id);
 
   if (!page) {
     return (
@@ -35,19 +43,9 @@ export default async function LayoutEditorPage({
   }
 
   if (page.contentType !== "BLOCK") {
-    return (
-      <MainLayout type="horizontal">
-        <HorizontalScroll className="h-full">
-          <AdminSidebar />
-          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-            仅 BLOCK 类型页面可使用布局编辑器，当前类型为 {page.contentType}
-          </div>
-        </HorizontalScroll>
-      </MainLayout>
-    );
+    redirect(resolveContentTypeEditorPath(page));
   }
 
-  // 解析 Block 数据，实现编辑器中的"所见即所得"
   const config = getSystemPageConfig(page);
   const resolvedConfig = config
     ? await resolveBlockData(config as Parameters<typeof resolveBlockData>[0])

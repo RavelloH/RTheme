@@ -1,7 +1,7 @@
 /**
  * Monaco 编辑器基础适配器
  *
- * 为 Markdown 和 MDX 编辑器提供统一的基础功能
+ * 为 Markdown/MDX/HTML 编辑器提供统一的基础功能
  */
 
 import type {
@@ -19,7 +19,7 @@ import * as monacoHelpers from "@/components/client/features/editor/MonacoHelper
 /**
  * Monaco 编辑器基础适配器类
  *
- * Markdown 和 MDX 适配器将继承此类
+ * Markdown/MDX/HTML 适配器将继承此类
  */
 export abstract class BaseMonacoAdapter implements IEditorAdapter {
   abstract readonly type: EditorType;
@@ -58,10 +58,143 @@ export abstract class BaseMonacoAdapter implements IEditorAdapter {
       this.config.onStateChange?.(state);
     });
 
+    // Monaco 文本编辑器快捷键支持（Markdown/MDX/HTML）
+    const keyboardDisposable = this.editor.onKeyDown((event) => {
+      if (!this.handleKeyboardShortcut(event.browserEvent)) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+    });
+
     this.unsubscribers.push(() => {
       disposable.dispose();
       selectionDisposable.dispose();
+      keyboardDisposable.dispose();
     });
+  }
+
+  /**
+   * 处理快捷键命令
+   *
+   * 使用 `event.code`，避免不同键盘布局下 `event.key` 差异导致的快捷键失效。
+   */
+  protected handleKeyboardShortcut(event: KeyboardEvent): boolean {
+    const isCtrlOrMeta = event.ctrlKey || event.metaKey;
+    if (!isCtrlOrMeta) return false;
+
+    const { code, shiftKey, altKey } = event;
+
+    // 历史操作
+    if (!altKey && !shiftKey && code === "KeyZ") {
+      this.executeCommand("undo");
+      return true;
+    }
+
+    if (
+      (!altKey && shiftKey && code === "KeyZ") ||
+      (!altKey && !shiftKey && code === "KeyY")
+    ) {
+      this.executeCommand("redo");
+      return true;
+    }
+
+    // 标题：Ctrl/Cmd + Alt + 1..6
+    if (altKey && !shiftKey) {
+      const headingLevelMap: Record<string, 1 | 2 | 3 | 4 | 5 | 6> = {
+        Digit1: 1,
+        Digit2: 2,
+        Digit3: 3,
+        Digit4: 4,
+        Digit5: 5,
+        Digit6: 6,
+      };
+
+      const level = headingLevelMap[code];
+      if (level) {
+        this.executeCommandWithParams("heading", { level });
+        return true;
+      }
+    }
+
+    // 组合快捷键：Ctrl/Cmd + Shift + ...
+    if (shiftKey && !altKey) {
+      if (code === "Digit7") {
+        this.executeCommand("orderedList");
+        return true;
+      }
+      if (code === "Digit8") {
+        this.executeCommand("bulletList");
+        return true;
+      }
+      if (code === "Digit9") {
+        this.executeCommand("taskList");
+        return true;
+      }
+
+      if (code === "KeyL") {
+        this.executeCommand("alignLeft");
+        return true;
+      }
+      if (code === "KeyE") {
+        this.executeCommand("alignCenter");
+        return true;
+      }
+      if (code === "KeyR") {
+        this.executeCommand("alignRight");
+        return true;
+      }
+
+      if (code === "KeyS") {
+        this.executeCommand("strike");
+        return true;
+      }
+      if (code === "KeyH") {
+        this.executeCommand("highlight");
+        return true;
+      }
+      if (code === "KeyB") {
+        this.executeCommand("blockquote");
+        return true;
+      }
+    }
+
+    // Ctrl/Cmd + Alt + C：代码块
+    if (!shiftKey && altKey && code === "KeyC") {
+      this.executeCommand("codeBlock");
+      return true;
+    }
+
+    // 基础快捷键：Ctrl/Cmd + ...
+    if (!shiftKey && !altKey) {
+      if (code === "KeyB") {
+        this.executeCommand("bold");
+        return true;
+      }
+      if (code === "KeyI") {
+        this.executeCommand("italic");
+        return true;
+      }
+      if (code === "KeyU") {
+        this.executeCommand("underline");
+        return true;
+      }
+      if (code === "KeyE") {
+        this.executeCommand("code");
+        return true;
+      }
+      if (code === "Period") {
+        this.executeCommand("superscript");
+        return true;
+      }
+      if (code === "Comma") {
+        this.executeCommand("subscript");
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**

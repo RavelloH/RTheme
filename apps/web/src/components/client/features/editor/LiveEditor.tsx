@@ -9,7 +9,7 @@ import { MonacoEditor } from "@/components/client/features/editor/MonacoEditor";
 export interface LiveEditorProps {
   content: string;
   onChange: (content: string) => void;
-  mode: "markdown" | "mdx";
+  mode: "markdown" | "mdx" | "html";
   className?: string;
   onEditorReady?: (editor: editor.IStandaloneCodeEditor) => void;
 }
@@ -45,7 +45,8 @@ export function LiveEditor({
       const visibleHeight = editor.getLayoutInfo().height;
 
       // 计算滚动百分比
-      const scrollPercentage = scrollTop / (scrollHeight - visibleHeight);
+      const maxEditorScrollable = Math.max(scrollHeight - visibleHeight, 1);
+      const scrollPercentage = scrollTop / maxEditorScrollable;
 
       // 同步预览区域滚动
       const previewScrollHeight =
@@ -59,7 +60,7 @@ export function LiveEditor({
     return () => {
       disposable.dispose();
     };
-  }, []);
+  }, [mode]);
 
   return (
     <div className={`flex h-full w-full ${className}`}>
@@ -81,7 +82,7 @@ export function LiveEditor({
         />
       </div>
 
-      {/* 右侧: MDX 预览 */}
+      {/* 右侧: 实时预览 */}
       <div ref={previewContainerRef} className="w-1/2 h-full">
         <LivePreview content={content} mode={mode} />
       </div>

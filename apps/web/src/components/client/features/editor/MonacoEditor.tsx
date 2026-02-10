@@ -7,7 +7,7 @@ import type { editor } from "monaco-editor";
 export interface MonacoEditorProps {
   value: string;
   onChange: (value: string) => void;
-  language: "markdown" | "mdx";
+  language: "markdown" | "mdx" | "html";
   className?: string;
   onEditorReady?: (editor: editor.IStandaloneCodeEditor) => void;
 }

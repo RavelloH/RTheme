@@ -1,6 +1,6 @@
 "use client";
 
-import { Component, useEffect, useRef, useState } from "react";
+import { Component, useEffect, useMemo, useRef, useState } from "react";
 import { RiAlertLine, RiRefreshLine } from "@remixicon/react";
 import { hydrate } from "next-mdx-remote-client/csr";
 import type { SerializeResult } from "next-mdx-remote-client/serialize";
@@ -19,7 +19,7 @@ import Clickable from "@/ui/Clickable";
 
 export interface LivePreview {
   content: string;
-  mode: "markdown" | "mdx";
+  mode: "markdown" | "mdx" | "html";
   className?: string;
   onScroll?: (scrollTop: number, scrollHeight: number) => void;
 }
@@ -109,11 +109,38 @@ function withErrorBoundary<P extends object>(
   return ComponentWithErrorBoundary;
 }
 
+function extractHtmlBodyContent(content: string): string {
+  const bodyMatch = content.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  if (bodyMatch?.[1]) {
+    return bodyMatch[1];
+  }
+  return content;
+}
+
+function sanitizeHtmlPreviewContent(content: string): string {
+  const bodyContent = extractHtmlBodyContent(content);
+
+  const withoutScript = bodyContent.replace(
+    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+    "",
+  );
+  const withoutInlineHandlers = withoutScript.replace(
+    /\son\w+\s*=\s*(".*?"|'.*?'|[^\s>]+)/gi,
+    "",
+  );
+  const withoutJavascriptUrl = withoutInlineHandlers.replace(
+    /\s(href|src)\s*=\s*(['"])\s*javascript:[^'"]*\2/gi,
+    ` $1="#"`,
+  );
+
+  return withoutJavascriptUrl;
+}
+
 /**
  * MDX 编辑器预览组件
  *
  * 特性：
- * - 同时支持 Markdown 和 MDX 模式
+ * - 同时支持 Markdown / MDX / HTML 模式
  * - MDX 模式使用增强的组件配置（包含 ErrorBoundary）
  * - 实时编译和渲染
  * - 防抖优化（300ms）
@@ -137,6 +164,10 @@ export function LivePreview({
   const [renderError, setRenderError] = useState<Error | null>(null);
   const [retryKey, setRetryKey] = useState(0); // 用于触发重试
   const containerRef = useRef<HTMLDivElement>(null);
+  const sanitizedHtmlContent = useMemo(
+    () => sanitizeHtmlPreviewContent(content),
+    [content],
+  );
 
   // 重置错误状态
   const handleResetError = () => {
@@ -201,6 +232,15 @@ export function LivePreview({
     renderedContent = (
       <MDXErrorBoundary onReset={handleResetError}>
         <MarkdownClientRenderer source={content} shikiTheme={shikiTheme} />
+      </MDXErrorBoundary>
+    );
+  } else if (mode === "html") {
+    renderedContent = (
+      <MDXErrorBoundary onReset={handleResetError}>
+        <div
+          className="max-w-4xl mx-auto"
+          dangerouslySetInnerHTML={{ __html: sanitizedHtmlContent }}
+        />
       </MDXErrorBoundary>
     );
   } else {

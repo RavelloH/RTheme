@@ -1,7 +1,7 @@
 /**
  * 编辑器适配器系统 - 类型定义
  *
- * 提供统一的接口让三种编辑器（Tiptap、Markdown、MDX）保持行为同步
+ * 提供统一的接口让四种编辑器（Tiptap、Markdown、MDX、HTML）保持行为同步
  */
 
 import type { Editor as TiptapEditorType } from "@tiptap/react";
@@ -82,7 +82,7 @@ export const defaultEditorState: EditorState = {
 
 // ==================== 编辑器类型 ====================
 
-export type EditorType = "visual" | "markdown" | "mdx";
+export type EditorType = "visual" | "markdown" | "mdx" | "html";
 
 // ==================== 编辑器命令类型 ====================
 
