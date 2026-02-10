@@ -10,9 +10,8 @@ import {
 } from "@/lib/server/anti-hotlink";
 import { getConfigs } from "@/lib/server/config-cache";
 import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
-import { decryptUrl } from "@/lib/server/image-crypto";
+import { decryptImageProxyPayload } from "@/lib/server/image-crypto";
 import { resolveIpLocation } from "@/lib/server/ip-utils";
-import prisma from "@/lib/server/prisma";
 import ResponseBuilder from "@/lib/server/response";
 import { readResponseBufferWithLimit } from "@/lib/server/url-security";
 import {
@@ -27,10 +26,10 @@ const PROXY_MAX_RESPONSE_BYTES = 20 * 1024 * 1024; // 20MB
 /**
  * 图片代理端点
  *
- * 解密 URL 并代理获取图片内容
- * 对于本地存储的图片，直接从文件系统读取
+ * 解密 payload 并代理获取图片内容
+ * 对于本地存储的图片，直接从文件系统读取（无需数据库查询）
  *
- * GET /image-proxy?url={encryptedUrl}
+ * GET /image-proxy?url={encryptedPayload}
  */
 export async function GET(request: NextRequest) {
   // 1. 获取加密的 URL 参数
@@ -43,15 +42,15 @@ export async function GET(request: NextRequest) {
     }) as Response;
   }
 
-  // 2. 解密 URL
-  const storageUrl = decryptUrl(encryptedUrl);
-
-  if (!storageUrl) {
+  // 2. 解密 payload
+  const proxyPayload = decryptImageProxyPayload(encryptedUrl);
+  if (!proxyPayload) {
     return res.badRequest({
       message: "URL 解密失败",
       error: { code: "DECRYPT_FAILED", message: "无效的加密URL" },
     }) as Response;
   }
+  const { storageUrl, mimeType, localFile } = proxyPayload;
 
   // 3. 防盗链检查
   const antiHotLinkCheck = await checkAntiHotLink(request);
@@ -93,34 +92,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // 4. 查询数据库获取存储提供商信息
-    const media = await prisma.media.findFirst({
-      where: { storageUrl },
-      include: { StorageProvider: true },
-    });
-
-    // 5. 如果找到媒体记录且是本地存储，直接从文件系统读取
-    if (media?.StorageProvider.type === "LOCAL") {
-      const config = media.StorageProvider.config as {
-        rootDir: string;
-        createDirIfNotExists?: boolean;
-        fileMode?: string | number;
-        dirMode?: string | number;
-      };
-
-      const baseUrl = media.StorageProvider.baseUrl;
-
-      // 从 storageUrl 中提取相对路径（key）
-      // storageUrl 格式: baseUrl + key
-      const trimmedBase = baseUrl.replace(/\/+$/, "");
-      let key = storageUrl;
-      if (storageUrl.startsWith(trimmedBase)) {
-        key = storageUrl.substring(trimmedBase.length).replace(/^\/+/, "");
-      }
-
+    // 4. 本地文件场景：直接使用 payload 里的路径信息读取
+    if (localFile) {
       // 构建本地文件路径
-      const absoluteRoot = path.resolve(config.rootDir);
-      const diskPath = path.resolve(absoluteRoot, key);
+      const absoluteRoot = path.resolve(localFile.rootDir);
+      const normalizedKey = localFile.key.replace(/^\/+/, "");
+      const diskPath = path.resolve(absoluteRoot, normalizedKey);
 
       // 安全检查：防止路径穿越
       if (!diskPath.startsWith(absoluteRoot)) {
@@ -132,7 +109,7 @@ export async function GET(request: NextRequest) {
 
       // 读取本地文件
       const fileBuffer = await fs.readFile(diskPath);
-      const contentType = media.mimeType || "application/octet-stream";
+      const contentType = mimeType || "application/octet-stream";
 
       // 返回本地图片（Buffer 转 Uint8Array）
       return new NextResponse(new Uint8Array(fileBuffer), {
@@ -148,7 +125,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 6. 非本地存储或未找到媒体记录，使用 fetch 代理
+    // 5. 非本地存储，使用 fetch 代理
     const controller = new AbortController();
     const timeout = setTimeout(
       () => controller.abort(),
@@ -177,7 +154,7 @@ export async function GET(request: NextRequest) {
       }) as Response;
     }
 
-    // 7. 获取图片数据
+    // 6. 获取图片数据
     const imageBuffer = await readResponseBufferWithLimit(
       response,
       PROXY_MAX_RESPONSE_BYTES,
@@ -185,7 +162,7 @@ export async function GET(request: NextRequest) {
     const contentType =
       response.headers.get("content-type") || "application/octet-stream";
 
-    // 8. 返回图片，设置永久缓存
+    // 7. 返回图片，设置永久缓存
     return new NextResponse(new Uint8Array(imageBuffer), {
       status: 200,
       headers: {

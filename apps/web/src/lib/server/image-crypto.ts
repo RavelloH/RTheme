@@ -166,6 +166,49 @@ export function parseImageId(
 // URL 加密与解密
 // ============================================================================
 
+export type ImageProxyPayload = {
+  storageUrl: string;
+  mimeType?: string | null;
+  localFile?: {
+    rootDir: string;
+    key: string;
+  };
+};
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0;
+}
+
+function isImageProxyPayload(value: unknown): value is ImageProxyPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if (!isNonEmptyString(candidate.storageUrl)) {
+    return false;
+  }
+
+  if (
+    candidate.mimeType !== undefined &&
+    candidate.mimeType !== null &&
+    typeof candidate.mimeType !== "string"
+  ) {
+    return false;
+  }
+
+  if (candidate.localFile === undefined) {
+    return true;
+  }
+
+  if (!candidate.localFile || typeof candidate.localFile !== "object") {
+    return false;
+  }
+
+  const localFile = candidate.localFile as Record<string, unknown>;
+  return isNonEmptyString(localFile.rootDir) && isNonEmptyString(localFile.key);
+}
+
 /**
  * 加密 URL
  * @param url 原始 URL
@@ -229,6 +272,36 @@ export function decryptUrl(encryptedData: string): string | null {
     ]);
 
     return decrypted.toString("utf-8");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 加密图片代理载荷
+ * @param payload 图片代理请求所需的信息
+ * @returns base64url 编码的加密数据
+ */
+export function encryptImageProxyPayload(payload: ImageProxyPayload): string {
+  return encryptUrl(JSON.stringify(payload));
+}
+
+/**
+ * 解密图片代理载荷
+ * @param encryptedData base64url 编码的加密数据
+ * @returns 图片代理载荷或 null（解密/校验失败）
+ */
+export function decryptImageProxyPayload(
+  encryptedData: string,
+): ImageProxyPayload | null {
+  const decrypted = decryptUrl(encryptedData);
+  if (!decrypted) {
+    return null;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(decrypted);
+    return isImageProxyPayload(parsed) ? parsed : null;
   } catch {
     return null;
   }
