@@ -19,7 +19,7 @@ import {
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
-import { flushEventsToDatabase } from "@/actions/analytics";
+import { flushEventsToDatabase } from "@/lib/server/analytics-flush";
 import { authVerify } from "@/lib/server/auth-verify";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
