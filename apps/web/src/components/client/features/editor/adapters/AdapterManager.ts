@@ -1,7 +1,7 @@
 /**
  * 编辑器适配器管理器
  *
- * 统一管理三种编辑器适配器，实现：
+ * 统一管理四种编辑器适配器，实现：
  * 1. 适配器的创建和销毁
  * 2. 编辑器类型切换时的内容同步
  * 3. 统一的命令执行接口
@@ -9,6 +9,7 @@
  */
 
 import {
+  HTMLAdapter,
   MarkdownAdapter,
   MDXAdapter,
 } from "@/components/client/features/editor/adapters/MonacoAdapters";
@@ -64,6 +65,13 @@ export class AdapterManager {
    */
   registerMDXEditor(editor: MonacoInstance): void {
     this.switchAdapter("mdx", () => new MDXAdapter(editor, this.config));
+  }
+
+  /**
+   * 注册 Monaco HTML 编辑器
+   */
+  registerHTMLEditor(editor: MonacoInstance): void {
+    this.switchAdapter("html", () => new HTMLAdapter(editor, this.config));
   }
 
   /**

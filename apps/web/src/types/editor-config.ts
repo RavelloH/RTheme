@@ -1,7 +1,7 @@
 /**
  * 编辑器可用模式
  */
-export type EditorMode = "visual" | "markdown" | "mdx";
+export type EditorMode = "visual" | "markdown" | "mdx" | "html";
 
 /**
  * 编辑器配置类型
@@ -12,7 +12,7 @@ export interface EditorConfig {
   storageKey: string; // 存储键前缀
 
   // 可用的编辑器模式
-  availableModes: EditorMode[]; // 例如: ["visual", "markdown"] 或 ["visual", "markdown", "mdx"]
+  availableModes: EditorMode[]; // 例如: ["visual", "markdown"] 或 ["mdx"] 或 ["html"]
   defaultMode?: EditorMode; // 默认模式
 
   // 详细信息字段配置

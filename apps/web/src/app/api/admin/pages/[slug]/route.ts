@@ -65,7 +65,7 @@ import { getPageDetail, updatePage } from "@/actions/page";
  *                 description: 页面内容
  *               contentType:
  *                 type: string
- *                 enum: [MARKDOWN, HTML, MDX]
+ *                 enum: [MARKDOWN, HTML, MDX, BLOCK]
  *                 description: 内容类型
  *               excerpt:
  *                 type: string

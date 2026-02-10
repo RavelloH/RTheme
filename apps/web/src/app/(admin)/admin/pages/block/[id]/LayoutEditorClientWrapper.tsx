@@ -26,8 +26,7 @@ export default function LayoutEditorClientWrapper({
     }
 
     try {
-      // 构造更新 payload
-      // 注意：这里只更新 config.blocks，保留 components 和其他 config 字段
+      // 只更新 config.blocks，保留其他配置字段
       const currentConfig = (page.config as Record<string, unknown>) || {};
       const newConfig = {
         ...currentConfig,
@@ -35,7 +34,7 @@ export default function LayoutEditorClientWrapper({
       };
 
       const result = await runWithAuth(updatePage, {
-        slug: page.slug, // 标识符
+        slug: page.slug,
         config: newConfig,
       });
 
@@ -60,7 +59,7 @@ export default function LayoutEditorClientWrapper({
       pageId={page.id}
       initialBlocks={initialBlocks}
       onSave={handleSave}
-      onBack={() => router.back()} // 或者 router.push('/admin/pages')
+      onBack={() => router.back()}
       pageTitle={page.title}
     />
   );

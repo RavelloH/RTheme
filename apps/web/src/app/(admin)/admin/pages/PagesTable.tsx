@@ -22,6 +22,7 @@ import GridTable from "@/components/ui/GridTable";
 import { useNavigateWithTransition } from "@/components/ui/Link";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import runWithAuth from "@/lib/client/run-with-auth";
+import { getPageEditorPathByContentType } from "@/lib/shared/page-editor-route";
 import { AlertDialog } from "@/ui/AlertDialog";
 import { Button } from "@/ui/Button";
 import { Checkbox } from "@/ui/Checkbox";
@@ -789,7 +790,9 @@ export default function PagesTable() {
 
     setNavigateDialogOpen(false);
     closeEditDialog();
-    navigate(`/admin/pages/${editingPage.id}`);
+    navigate(
+      getPageEditorPathByContentType(editingPage.contentType, editingPage.id),
+    );
   };
 
   // 打开跳转确认对话框
@@ -840,14 +843,11 @@ export default function PagesTable() {
       variant: "ghost",
     },
     {
-      label: isBlockContentType(record.contentType) ? "布局编辑器" : "编辑页面",
-      onClick: () => {
-        if (isBlockContentType(record.contentType)) {
-          navigate("/admin/pages/" + record.id);
-          return;
-        }
-        openEditDialog(record);
-      },
+      label: isBlockContentType(record.contentType)
+        ? "布局编辑器"
+        : "文本编辑器",
+      onClick: () =>
+        navigate(getPageEditorPathByContentType(record.contentType, record.id)),
       icon: <RiFileEditLine size="1em" />,
       variant: "ghost",
     },
@@ -1076,6 +1076,13 @@ export default function PagesTable() {
       align: "left",
       sortable: true,
       mono: true,
+      render: (value: unknown) => {
+        const stringValue = String(value);
+        if (stringValue.length === 36) {
+          return <span>{stringValue.slice(0, 8)}...</span>;
+        }
+        return <span>{String(value)}</span>;
+      },
     },
     {
       key: "title",
