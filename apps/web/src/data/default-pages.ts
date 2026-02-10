@@ -195,7 +195,7 @@ export const defaultPages: DefaultPage[] = [
     isSystemPage: true,
     metaDescription:
       "NeutralPress 是专为博客和内容创作者设计的现代化CMS系统，提供完整的内容管理、发布和分析功能",
-    metaKeywords: "CMS, 内容管理系统, 博客, NeutralPress, 现代化, 内容创作",
+    metaKeywords: "",
     robotsIndex: true,
   },
   {
@@ -281,7 +281,7 @@ export const defaultPages: DefaultPage[] = [
     status: "ACTIVE",
     isSystemPage: true,
     metaDescription: "展示个人和团队的项目项目集，包含项目、商业案例和技术实践",
-    metaKeywords: "项目集, 项目, 技术实践, 案例展示, 个人项目",
+    metaKeywords: "",
     robotsIndex: true,
   },
   {
@@ -357,7 +357,7 @@ export const defaultPages: DefaultPage[] = [
     status: "ACTIVE",
     isSystemPage: true,
     metaDescription: "分享技术见解、开发经验和行业思考的博客文章",
-    metaKeywords: "博客, 技术文章, 开发经验, 系统设计, 技术分享",
+    metaKeywords: "",
     robotsIndex: true,
   },
   {
@@ -421,7 +421,7 @@ export const defaultPages: DefaultPage[] = [
     status: "ACTIVE",
     isSystemPage: true,
     metaDescription: "按主题和领域分类整理的文章列表，方便快速找到感兴趣的内容",
-    metaKeywords: "文章分类, 内容分类, 主题导航, 文章目录",
+    metaKeywords: "",
     robotsIndex: true,
   },
   {
@@ -515,7 +515,7 @@ export const defaultPages: DefaultPage[] = [
     },
     status: "ACTIVE",
     isSystemPage: true,
-    metaKeywords: "文章分类, 内容分类, 主题导航, 文章目录",
+    metaKeywords: "",
     robotsIndex: true,
   },
   {
@@ -582,7 +582,7 @@ export const defaultPages: DefaultPage[] = [
     status: "ACTIVE",
     isSystemPage: true,
     metaDescription: "通过标签快速发现相关文章，标签云展示内容的分布和热点话题",
-    metaKeywords: "标签, 标签云, 关键词, 文章标签, 内容索引",
+    metaKeywords: "",
     robotsIndex: true,
   },
   {
@@ -670,7 +670,7 @@ export const defaultPages: DefaultPage[] = [
     },
     status: "ACTIVE",
     isSystemPage: true,
-    metaKeywords: "标签, 标签云, 关键词, 文章标签, 内容索引",
+    metaKeywords: "",
     robotsIndex: true,
   },
   {
@@ -750,7 +750,7 @@ export const defaultPages: DefaultPage[] = [
     isSystemPage: true,
     metaDescription:
       "推荐的优秀网站、技术博客和合作伙伴，包含高质量的技术资源和创意项目",
-    metaKeywords: "友情链接, 推荐网站, 技术博客, 合作伙伴, 网站导航",
+    metaKeywords: "",
     robotsIndex: true,
   },
   {
@@ -1090,7 +1090,7 @@ export const defaultPages: DefaultPage[] = [
     isSystemPage: true,
     metaDescription:
       "了解 NeutralPress 团队的故事、使命和愿景，以及我们如何为内容创作者提供更好的工具",
-    metaKeywords: "关于我们, 团队介绍, 公司简介, 使命愿景, 团队故事",
+    metaKeywords: "",
     robotsIndex: true,
   },
   {
@@ -1103,7 +1103,49 @@ export const defaultPages: DefaultPage[] = [
     status: "ACTIVE",
     isSystemPage: true,
     metaDescription: "展示个人和团队的摄影项目，捕捉生活中的精彩瞬间与美好回忆",
-    metaKeywords: "照片墙, 摄影项目, 生活瞬间, 项目展示, 视觉故事",
+    metaKeywords: "",
+    robotsIndex: true,
+  },
+  {
+    id: "system-archive-page",
+    title: "归档",
+    slug: "/archive",
+    content: "",
+    contentType: "MARKDOWN",
+    config: {},
+    status: "ACTIVE",
+    isSystemPage: true,
+    metaDescription:
+      "按时间顺序整理的文章归档，方便浏览过去的内容和回顾历史记录",
+    metaKeywords: "",
+    robotsIndex: true,
+  },
+  {
+    id: "system-subscribe-page",
+    title: "订阅",
+    slug: "/subscribe",
+    content: "",
+    contentType: "MARKDOWN",
+    config: {},
+    status: "ACTIVE",
+    isSystemPage: true,
+    metaDescription:
+      "订阅我们的内容更新，获取最新的文章、项目和新闻，保持与社区的紧密联系",
+    metaKeywords: "",
+    robotsIndex: true,
+  },
+  {
+    id: "system-guestbook-page",
+    title: "留言板",
+    slug: "/guestbook",
+    content: "",
+    contentType: "MARKDOWN",
+    config: {},
+    status: "ACTIVE",
+    isSystemPage: true,
+    metaDescription:
+      "欢迎在留言板上留下你的想法、建议或问候，与我们和其他读者交流互动",
+    metaKeywords: "",
     robotsIndex: true,
   },
 ];

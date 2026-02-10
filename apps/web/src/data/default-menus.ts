@@ -94,21 +94,12 @@ export const defaultMenus: DefaultMenu[] = [
   // 常用链接
   // =====================================
   {
-    name: "站内信",
-    id: "menu-internal-messages",
-    icon: "message-2-fill",
-    slug: "messages",
+    name: "搜索",
+    id: "menu-search",
+    icon: "search-fill",
+    slug: "search",
     status: "ACTIVE",
     order: 1,
-    category: "COMMON",
-  },
-  {
-    name: "留言板",
-    id: "menus-guestbook",
-    icon: "chat-1-fill",
-    slug: "guestbook",
-    status: "ACTIVE",
-    order: 2,
     category: "COMMON",
   },
   {
@@ -117,23 +108,32 @@ export const defaultMenus: DefaultMenu[] = [
     icon: "image-2-fill",
     slug: "gallery",
     status: "ACTIVE",
+    order: 2,
+    category: "COMMON",
+  },
+  {
+    name: "归档",
+    id: "menu-archives",
+    icon: "archive-fill",
+    slug: "archive",
+    status: "ACTIVE",
     order: 3,
     category: "COMMON",
   },
   {
-    name: "站点日志",
-    id: "menu-logs",
-    icon: "file-search-fill",
-    slug: "logs",
+    name: "留言板",
+    id: "menus-guestbook",
+    icon: "chat-1-fill",
+    slug: "guestbook",
     status: "ACTIVE",
     order: 4,
     category: "COMMON",
   },
   {
-    name: "时间线",
-    id: "menu-timeline",
-    icon: "time-fill",
-    slug: "timeline",
+    name: "站内信",
+    id: "menu-internal-messages",
+    icon: "message-2-fill",
+    slug: "messages",
     status: "ACTIVE",
     order: 5,
     category: "COMMON",
@@ -156,7 +156,6 @@ export const defaultMenus: DefaultMenu[] = [
     order: 7,
     category: "COMMON",
   },
-
   // =====================================
   // 外部链接
   // =====================================
