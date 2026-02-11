@@ -1175,7 +1175,7 @@ export const defaultPages: DefaultPage[] = [
     title: "订阅",
     slug: "/subscribe",
     content: "",
-    contentType: "BLOCK",
+    contentType: "BUILDIN",
     config: {},
     status: "ACTIVE",
     isSystemPage: true,
