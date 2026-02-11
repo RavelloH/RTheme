@@ -1171,20 +1171,6 @@ export const defaultPages: DefaultPage[] = [
     robotsIndex: true,
   },
   {
-    id: "system-subscribe-page",
-    title: "订阅",
-    slug: "/subscribe",
-    content: "",
-    contentType: "BUILDIN",
-    config: {},
-    status: "ACTIVE",
-    isSystemPage: true,
-    metaDescription:
-      "订阅我们的内容更新，获取最新的文章、项目和新闻，保持与社区的紧密联系",
-    metaKeywords: "",
-    robotsIndex: true,
-  },
-  {
     id: "system-guestbook-page",
     title: "留言板",
     slug: "/guestbook",

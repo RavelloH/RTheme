@@ -47,6 +47,7 @@ import {
 import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
@@ -71,6 +72,86 @@ type ActionConfig = { environment?: ActionEnvironment };
 type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
+
+const SearchSiteSchema = z.object({
+  query: z.string().trim().min(1).max(200),
+  sessionId: z.string().max(100).optional(),
+  visitorId: z.string().max(100).optional(),
+});
+
+export type SearchSiteParams = z.infer<typeof SearchSiteSchema>;
+
+export interface SearchSitePostItem {
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  titleHighlight?: string;
+  excerptHighlight?: string | null;
+}
+
+export interface SearchSiteProjectItem {
+  id: number;
+  slug: string;
+  title: string;
+  description: string;
+}
+
+export interface SearchSiteTagItem {
+  slug: string;
+  name: string;
+  description: string | null;
+}
+
+export interface SearchSiteCategoryItem {
+  id: number;
+  slug: string;
+  name: string;
+  fullSlug: string;
+  description: string | null;
+}
+
+export interface SearchSitePhotoItem {
+  slug: string;
+  name: string;
+  description: string | null;
+  imageUrl: string;
+}
+
+export interface SearchSiteResult {
+  query: string;
+  posts: SearchSitePostItem[];
+  projects: SearchSiteProjectItem[];
+  tags: SearchSiteTagItem[];
+  categories: SearchSiteCategoryItem[];
+  photos: SearchSitePhotoItem[];
+  counts: {
+    posts: number;
+    projects: number;
+    tags: number;
+    categories: number;
+    photos: number;
+    total: number;
+  };
+}
+
+function createEmptySearchSiteResult(query: string): SearchSiteResult {
+  return {
+    query,
+    posts: [],
+    projects: [],
+    tags: [],
+    categories: [],
+    photos: [],
+    counts: {
+      posts: 0,
+      projects: 0,
+      tags: 0,
+      categories: 0,
+      photos: 0,
+      total: 0,
+    },
+  };
+}
 
 /**
  * 辅助函数：解析文章内容并提取纯文本
@@ -1425,6 +1506,252 @@ export async function searchPosts(
   } catch (error) {
     console.error("搜索文章失败:", error);
     return response.serverError({ message: "搜索文章失败" });
+  }
+}
+
+/*
+  searchSite - 全站搜索
+*/
+export async function searchSite(
+  params: SearchSiteParams,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<SearchSiteResult | null>>>;
+export async function searchSite(
+  params: SearchSiteParams,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<SearchSiteResult | null>>;
+export async function searchSite(
+  { query, sessionId, visitorId }: SearchSiteParams,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<SearchSiteResult | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "searchSite"))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      query,
+      sessionId,
+      visitorId,
+    },
+    SearchSiteSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  const normalizedQuery = query.trim();
+
+  if (!normalizedQuery) {
+    return response.ok({
+      data: createEmptySearchSiteResult(""),
+    });
+  }
+
+  const likePattern = `%${normalizedQuery}%`;
+  const prefixPattern = `${normalizedQuery}%`;
+
+  try {
+    const [postsResponse, rawProjects, rawTags, rawCategories, rawPhotos] =
+      await Promise.all([
+        searchPosts({
+          query: normalizedQuery,
+          page: 1,
+          pageSize: 20,
+          searchIn: "both",
+          status: "PUBLISHED",
+          sessionId,
+          visitorId,
+        }),
+        prisma.$queryRaw<
+          Array<{
+            id: number;
+            slug: string;
+            title: string;
+            description: string;
+          }>
+        >`
+          SELECT
+            p."id",
+            p."slug",
+            p."title",
+            p."description"
+          FROM "Project" p
+          WHERE p."status" = 'PUBLISHED'
+            AND (
+              LOWER(p."title") LIKE LOWER(${likePattern})
+              OR LOWER(p."slug") LIKE LOWER(${likePattern})
+              OR LOWER(COALESCE(p."description", '')) LIKE LOWER(${likePattern})
+            )
+          ORDER BY
+            CASE
+              WHEN LOWER(p."title") LIKE LOWER(${prefixPattern}) THEN 0
+              WHEN LOWER(p."slug") LIKE LOWER(${prefixPattern}) THEN 1
+              ELSE 2
+            END,
+            COALESCE(p."publishedAt", p."updatedAt") DESC
+          LIMIT 20
+        `,
+        prisma.$queryRaw<
+          Array<{
+            slug: string;
+            name: string;
+            description: string | null;
+          }>
+        >`
+          SELECT
+            t."slug",
+            t."name",
+            t."description"
+          FROM "Tag" t
+          WHERE
+            LOWER(t."name") LIKE LOWER(${likePattern})
+            OR LOWER(t."slug") LIKE LOWER(${likePattern})
+            OR LOWER(COALESCE(t."description", '')) LIKE LOWER(${likePattern})
+          ORDER BY
+            CASE
+              WHEN LOWER(t."name") LIKE LOWER(${prefixPattern}) THEN 0
+              WHEN LOWER(t."slug") LIKE LOWER(${prefixPattern}) THEN 1
+              ELSE 2
+            END,
+            t."updatedAt" DESC
+          LIMIT 20
+        `,
+        prisma.$queryRaw<
+          Array<{
+            id: number;
+            slug: string;
+            name: string;
+            fullSlug: string;
+            description: string | null;
+          }>
+        >`
+          SELECT
+            c."id",
+            c."slug",
+            c."name",
+            c."fullSlug",
+            c."description"
+          FROM "Category" c
+          WHERE
+            LOWER(c."name") LIKE LOWER(${likePattern})
+            OR LOWER(c."slug") LIKE LOWER(${likePattern})
+            OR LOWER(c."fullSlug") LIKE LOWER(${likePattern})
+            OR LOWER(COALESCE(c."description", '')) LIKE LOWER(${likePattern})
+          ORDER BY
+            CASE
+              WHEN LOWER(c."name") LIKE LOWER(${prefixPattern}) THEN 0
+              WHEN LOWER(c."fullSlug") LIKE LOWER(${prefixPattern}) THEN 1
+              ELSE 2
+            END,
+            c."depth" ASC,
+            c."updatedAt" DESC
+          LIMIT 20
+        `,
+        prisma.$queryRaw<
+          Array<{
+            slug: string;
+            name: string;
+            description: string | null;
+            shortHash: string;
+          }>
+        >`
+          SELECT
+            p."slug",
+            p."name",
+            p."description",
+            m."shortHash"
+          FROM "Photo" p
+          INNER JOIN "Media" m ON m."id" = p."mediaId"
+          WHERE
+            LOWER(p."name") LIKE LOWER(${likePattern})
+            OR LOWER(p."slug") LIKE LOWER(${likePattern})
+            OR LOWER(COALESCE(p."description", '')) LIKE LOWER(${likePattern})
+            OR LOWER(COALESCE(m."originalName", '')) LIKE LOWER(${likePattern})
+            OR LOWER(COALESCE(m."altText", '')) LIKE LOWER(${likePattern})
+          ORDER BY
+            CASE
+              WHEN LOWER(p."name") LIKE LOWER(${prefixPattern}) THEN 0
+              WHEN LOWER(p."slug") LIKE LOWER(${prefixPattern}) THEN 1
+              ELSE 2
+            END,
+            p."sortTime" DESC
+          LIMIT 20
+        `,
+      ]);
+
+    const posts: SearchSitePostItem[] =
+      postsResponse.success && postsResponse.data?.posts
+        ? postsResponse.data.posts.map((post) => ({
+            slug: post.slug,
+            title: post.title,
+            excerpt: post.excerpt,
+            titleHighlight: post.titleHighlight,
+            excerptHighlight: post.excerptHighlight,
+          }))
+        : [];
+
+    const projects: SearchSiteProjectItem[] = rawProjects.map((project) => ({
+      id: project.id,
+      slug: project.slug,
+      title: project.title,
+      description: project.description,
+    }));
+
+    const tags: SearchSiteTagItem[] = rawTags.map((tag) => ({
+      slug: tag.slug,
+      name: tag.name,
+      description: tag.description,
+    }));
+
+    const categories: SearchSiteCategoryItem[] = rawCategories.map(
+      (category) => ({
+        id: category.id,
+        slug: category.slug,
+        name: category.name,
+        fullSlug: category.fullSlug || category.slug,
+        description: category.description,
+      }),
+    );
+
+    const photos: SearchSitePhotoItem[] = rawPhotos.map((photo) => ({
+      slug: photo.slug,
+      name: photo.name,
+      description: photo.description,
+      imageUrl: `/p/${photo.shortHash}${generateSignature(photo.shortHash)}`,
+    }));
+
+    const counts = {
+      posts: posts.length,
+      projects: projects.length,
+      tags: tags.length,
+      categories: categories.length,
+      photos: photos.length,
+      total:
+        posts.length +
+        projects.length +
+        tags.length +
+        categories.length +
+        photos.length,
+    };
+
+    return response.ok({
+      data: {
+        query: normalizedQuery,
+        posts,
+        projects,
+        tags,
+        categories,
+        photos,
+        counts,
+      },
+    });
+  } catch (error) {
+    console.error("全站搜索失败:", error);
+    return response.serverError({ message: "全站搜索失败" });
   }
 }
 

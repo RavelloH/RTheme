@@ -256,6 +256,7 @@ const NO_TRANSITION_PATHS = [
   "/projects/",
   "/friends/new",
   "/subscribe",
+  "/search",
 ];
 
 // 检查路径是否应该跳过过渡效果
