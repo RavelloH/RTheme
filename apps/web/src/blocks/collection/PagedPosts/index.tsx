@@ -28,60 +28,58 @@ export default function PagedPostsBlock({ block }: BlockComponentProps) {
 
   // 文章网格组件
   const PostsGrid = React.useMemo(() => {
-    return (
-      <>
-        {posts.length > 0 && (
-          <RowGrid>
-            {Array(Math.ceil(posts.length / 4))
-              .fill(0)
-              .map((_, rowIndex) => (
-                <React.Fragment key={rowIndex}>
-                  {Array.from({ length: 4 }, (_, index) => {
-                    const postIndex = rowIndex * 4 + index;
-                    const post = posts[postIndex];
+    const rowsToRender = Math.max(1, Math.ceil(posts.length / 4));
 
-                    return (
-                      <GridItem
-                        key={post ? post.slug : `empty-${postIndex}`}
-                        areas={createArray(index * 3 + 1, (index + 1) * 3)}
-                        width={4}
-                        height={0.4}
-                        className=""
-                      >
-                        {post ? (
-                          <PostCard
-                            title={post.title}
-                            slug={post.slug}
-                            isPinned={post.isPinned}
-                            date={
-                              post.publishedAt
-                                ? new Date(post.publishedAt)
-                                    .toLocaleDateString("zh-CN", {
-                                      year: "numeric",
-                                      month: "2-digit",
-                                      day: "2-digit",
-                                    })
-                                    .replace(/\//g, "/")
-                                : ""
-                            }
-                            category={post.categories}
-                            tags={post.tags}
-                            cover={post.coverData}
-                            summary={post.excerpt || ""}
-                          />
-                        ) : (
-                          <EmptyPostCard
-                            direction={index % 2 === 0 ? "left" : "right"}
-                          />
-                        )}
-                      </GridItem>
-                    );
-                  })}
-                </React.Fragment>
-              ))}
-          </RowGrid>
-        )}
-      </>
+    return (
+      <RowGrid>
+        {Array(rowsToRender)
+          .fill(0)
+          .map((_, rowIndex) => (
+            <React.Fragment key={rowIndex}>
+              {Array.from({ length: 4 }, (_, index) => {
+                const postIndex = rowIndex * 4 + index;
+                const post = posts[postIndex];
+
+                return (
+                  <GridItem
+                    key={post ? post.slug : `empty-${postIndex}`}
+                    areas={createArray(index * 3 + 1, (index + 1) * 3)}
+                    width={4}
+                    height={0.4}
+                    className=""
+                  >
+                    {post ? (
+                      <PostCard
+                        title={post.title}
+                        slug={post.slug}
+                        isPinned={post.isPinned}
+                        date={
+                          post.publishedAt
+                            ? new Date(post.publishedAt)
+                                .toLocaleDateString("zh-CN", {
+                                  year: "numeric",
+                                  month: "2-digit",
+                                  day: "2-digit",
+                                })
+                                .replace(/\//g, "/")
+                            : ""
+                        }
+                        category={post.categories}
+                        tags={post.tags}
+                        cover={post.coverData}
+                        summary={post.excerpt || ""}
+                      />
+                    ) : (
+                      <EmptyPostCard
+                        direction={index % 2 === 0 ? "left" : "right"}
+                      />
+                    )}
+                  </GridItem>
+                );
+              })}
+            </React.Fragment>
+          ))}
+      </RowGrid>
     );
   }, [posts]);
 

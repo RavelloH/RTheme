@@ -237,18 +237,7 @@ export default function FeaturedProjectsBlock({ block }: BlockComponentProps) {
   const displayProjects = data.displayProjects || [];
 
   if (displayProjects.length === 0) {
-    return (
-      <RowGrid>
-        <GridItem
-          areas={FULL_AREAS}
-          width={1.5}
-          fixedHeight={true}
-          className="bg-muted/30 flex items-center justify-center"
-        >
-          <div className="text-sm text-foreground">暂无特色项目</div>
-        </GridItem>
-      </RowGrid>
-    );
+    return;
   }
 
   return <RowGrid>{displayProjects.map(renderProjectCard)}</RowGrid>;

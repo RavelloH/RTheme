@@ -26,6 +26,7 @@ export default function PostsBlock({ block }: BlockComponentProps) {
   const data = getBlockRuntimeData<PostsData>(block.runtime);
   const content = (block.content as PostsBlockContent) || {};
   const { displayPosts = [] } = data;
+  const columns = content.layout?.columns || "2";
 
   // 提取配置
   const titleLine1 = content.title?.line1;
@@ -33,6 +34,19 @@ export default function PostsBlock({ block }: BlockComponentProps) {
   const footerTitle = content.footer?.title;
   const footerDesc = content.footer?.description;
   const footerLink = content.footer?.link;
+
+  // 与 PagedPosts 保持一致：缺失数据时补位 EmptyPostCard
+  const targetPostCountMap: Record<string, number> = {
+    "1": 1,
+    "2": 5,
+    "3": 9,
+    "4": 13,
+  };
+  const targetPostCount = targetPostCountMap[columns] ?? displayPosts.length;
+  const postsWithFallback = Array.from(
+    { length: Math.max(displayPosts.length, targetPostCount) },
+    (_, index) => displayPosts[index],
+  );
 
   // 替换占位符
   const replacePlaceholders = (text: string): string => {
@@ -82,12 +96,12 @@ export default function PostsBlock({ block }: BlockComponentProps) {
       )}
 
       {/* 文章列表 */}
-      {displayPosts.map((post, index) => {
+      {postsWithFallback.map((post, index) => {
         const currentAreas = getArea(index);
 
         return (
           <GridItem
-            key={index}
+            key={post?.slug ?? `empty-${index}`}
             areas={currentAreas}
             width={4}
             height={0.4}
@@ -124,7 +138,7 @@ export default function PostsBlock({ block }: BlockComponentProps) {
       {/* 查看全部文章 - 占用文章后的下一个位置 */}
       {footerTitle && footerLink && (
         <GridItem
-          areas={getArea(displayPosts.length)}
+          areas={getArea(postsWithFallback.length)}
           width={4}
           height={0.4}
           className="uppercase "

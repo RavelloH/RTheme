@@ -62,7 +62,7 @@ export const CONFIG_DEFINITIONS = {
       "代码高亮主题。参考 https://shiki.style/themes ，填写主题 ID。",
   },
   "site.slogan.primary": {
-    default: "A neutral place to share your thoughts.",
+    default: "A neutral place to thoughts.",
     description: "站点主标语。显示在主页",
   },
   "site.slogan.secondary": {

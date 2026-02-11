@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Marquee from "react-fast-marquee";
 import gsap from "gsap";
 
@@ -133,7 +133,10 @@ export default function HomeImageGallery({
   images?: ProcessedImageData[];
   filter?: GalleryFilter;
 }) {
-  const displayImages = [...images].slice(0, 9);
+  const displayImages = useMemo(
+    () => images.filter((image) => Boolean(image?.url)).slice(0, 9),
+    [images],
+  );
   const containerRef = useRef<HTMLDivElement>(null);
   const imagesRef = useRef<(HTMLDivElement | null)[]>([]);
   const animationRef = useRef<gsap.core.Tween | null>(null);
@@ -461,6 +464,8 @@ export default function HomeImageGallery({
 
   useEffect(() => {
     if (isMobile) {
+      if (displayImages.length <= 1) return;
+
       // 移动端自动轮播
       const interval = setInterval(() => {
         setActiveIndex((prev) => (prev + 1) % displayImages.length);
