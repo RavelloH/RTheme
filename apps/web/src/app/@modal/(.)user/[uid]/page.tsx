@@ -1,6 +1,7 @@
 import "server-only";
 
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
+
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
