@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createSuccessResponseSchema, registerSchema } from "./common.js";
+import { emailSchema, nicknameSchema, usernameSchema } from "./auth.js";
 
 /*
     getUsersTrends() Schema
@@ -89,6 +90,46 @@ registerSchema(
   "GetUsersListSuccessResponse",
   GetUsersListSuccessResponseSchema,
 );
+
+/*
+    createUser() Schema
+*/
+const createUserPasswordSchema = z
+  .string()
+  .min(6, "密码至少需要6个字符")
+  .max(100, "密码不能超过100个字符");
+
+export const CreateUserSchema = z.object({
+  access_token: z.string().optional(),
+  username: usernameSchema,
+  nickname: nicknameSchema.optional(),
+  email: emailSchema,
+  password: createUserPasswordSchema,
+  role: z.enum(["USER", "ADMIN", "EDITOR", "AUTHOR"]).optional(),
+  status: z.enum(["ACTIVE", "SUSPENDED", "NEEDS_UPDATE"]).optional(),
+  emailVerified: z.boolean().optional(),
+  emailNotice: z.boolean().optional(),
+});
+export type CreateUser = z.infer<typeof CreateUserSchema>;
+registerSchema("CreateUser", CreateUserSchema);
+
+export const CreateUserSuccessResponseSchema = createSuccessResponseSchema(
+  z.object({
+    uid: z.number().int(),
+    username: z.string(),
+    nickname: z.string().nullable(),
+    email: z.string().email(),
+    role: z.enum(["USER", "ADMIN", "EDITOR", "AUTHOR"]),
+    status: z.enum(["ACTIVE", "SUSPENDED", "NEEDS_UPDATE"]),
+    emailVerified: z.boolean(),
+    emailNotice: z.boolean(),
+    createdAt: z.string(),
+  }),
+);
+export type CreateUserSuccessResponse = z.infer<
+  typeof CreateUserSuccessResponseSchema
+>;
+registerSchema("CreateUserSuccessResponse", CreateUserSuccessResponseSchema);
 
 /*
     updateUsers() Schema

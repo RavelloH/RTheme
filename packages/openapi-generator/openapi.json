@@ -1197,7 +1197,7 @@
                   },
                   "contentType": {
                     "type": "string",
-                    "enum": ["MARKDOWN", "HTML", "MDX"],
+                    "enum": ["MARKDOWN", "HTML", "MDX", "BLOCK", "BUILDIN"],
                     "description": "内容类型"
                   },
                   "excerpt": {
@@ -9870,14 +9870,14 @@
             "default": 365,
             "type": "integer",
             "exclusiveMinimum": true,
-            "maximum": 9007199254740991,
+            "maximum": 365,
             "minimum": 0
           },
           "count": {
             "default": 30,
             "type": "integer",
             "exclusiveMinimum": true,
-            "maximum": 9007199254740991,
+            "maximum": 100,
             "minimum": 0
           }
         },
@@ -15758,7 +15758,7 @@
                 },
                 "contentType": {
                   "type": "string",
-                  "enum": ["MARKDOWN", "HTML", "MDX"]
+                  "enum": ["MARKDOWN", "HTML", "MDX", "BLOCK", "BUILDIN"]
                 },
                 "createdAt": {
                   "type": "string"
@@ -15909,7 +15909,7 @@
               },
               "contentType": {
                 "type": "string",
-                "enum": ["MARKDOWN", "HTML", "MDX"]
+                "enum": ["MARKDOWN", "HTML", "MDX", "BLOCK", "BUILDIN"]
               },
               "status": {
                 "type": "string",
@@ -16045,7 +16045,7 @@
           },
           "contentType": {
             "type": "string",
-            "enum": ["MARKDOWN", "HTML", "MDX"]
+            "enum": ["MARKDOWN", "HTML", "MDX", "BLOCK", "BUILDIN"]
           },
           "content": {
             "type": "string"
@@ -16120,7 +16120,7 @@
           },
           "contentType": {
             "type": "string",
-            "enum": ["MARKDOWN", "HTML", "MDX"]
+            "enum": ["MARKDOWN", "HTML", "MDX", "BLOCK", "BUILDIN"]
           },
           "config": {},
           "status": {
@@ -16197,7 +16197,7 @@
           "contentType": {
             "default": "MARKDOWN",
             "type": "string",
-            "enum": ["MARKDOWN", "HTML", "MDX"]
+            "enum": ["MARKDOWN", "HTML", "MDX", "BLOCK", "BUILDIN"]
           },
           "config": {},
           "status": {
@@ -19911,7 +19911,7 @@
           "content": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 5000
+            "maxLength": 2000
           },
           "tempId": {
             "type": "string"
