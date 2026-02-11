@@ -6,7 +6,7 @@ import { config } from "dotenv";
 import fs from "fs";
 import path from "path";
 import Rlog from "rlog-js";
-import { pathToFileURL } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let prisma: any;
@@ -20,12 +20,34 @@ config({
 
 const rlog = new Rlog();
 
-// 项目的迁移记录（用于验证数据库是否属于当前项目）
-const PROJECT_MIGRATIONS = [
-  "20250907093828_init",
-  "20250910053758_password_reset",
-  "20250910054138_fix_nonuid_issue",
-];
+// 获取项目中第一个迁移目录名
+function getFirstProjectMigrationName(): string | null {
+  try {
+    const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+    const migrationsDir = path.resolve(scriptDir, "..", "prisma", "migrations");
+
+    if (!fs.existsSync(migrationsDir)) {
+      rlog.warning(`  Migrations directory not found: ${migrationsDir}`);
+      return null;
+    }
+
+    const migrationDirs = fs
+      .readdirSync(migrationsDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort((a, b) => a.localeCompare(b));
+
+    if (migrationDirs.length === 0) {
+      rlog.warning("  No migration directories found in prisma/migrations");
+      return null;
+    }
+
+    return migrationDirs[0] ?? null;
+  } catch (error) {
+    rlog.warning(`  Could not read project migrations: ${error}`);
+    return null;
+  }
+}
 
 // 主入口函数
 async function main() {
@@ -115,10 +137,36 @@ async function hasMigrationsTable(): Promise<boolean> {
   }
 }
 
+// 检查迁移表中是否存在任何迁移记录
+async function hasMigrationRecords(): Promise<boolean | null> {
+  try {
+    const result = await prisma.$queryRaw`
+      SELECT EXISTS (
+        SELECT 1
+        FROM _prisma_migrations
+      ) AS has_records
+    `;
+
+    return (
+      Array.isArray(result) &&
+      result[0] &&
+      (result[0] as { has_records: boolean }).has_records
+    );
+  } catch (error) {
+    rlog.warning(`  Could not check migration records: ${error}`);
+    return null;
+  }
+}
+
 // 检查数据库是否属于当前项目
 async function isProjectDatabase(): Promise<boolean> {
   try {
     if (!(await hasMigrationsTable())) {
+      return false;
+    }
+
+    const firstProjectMigration = getFirstProjectMigrationName();
+    if (!firstProjectMigration) {
       return false;
     }
 
@@ -136,28 +184,21 @@ async function isProjectDatabase(): Promise<boolean> {
       (m: { migration_name: string }) => m.migration_name,
     );
 
-    // 检查是否包含项目的核心迁移
-    const hasInitMigration = existingMigrations.some((name) =>
-      name.includes("init"),
+    // 必须与项目第一个迁移名完全匹配，才认为是当前项目数据库
+    const hasFirstProjectMigration = existingMigrations.some(
+      (existing) => existing === firstProjectMigration,
     );
 
-    // 如果有任何项目迁移记录，则认为是项目数据库
-    const hasProjectMigrations = PROJECT_MIGRATIONS.some((projectMigration) =>
-      existingMigrations.some((existing) => existing === projectMigration),
-    );
-
-    if (!hasInitMigration && !hasProjectMigrations) {
+    if (!hasFirstProjectMigration) {
       rlog.warning(
-        "  Database contains migrations but none match this project",
+        "  Database contains migrations but does not match this project's first migration",
       );
       rlog.warning("  Existing migrations:");
       existingMigrations.forEach((name) => {
         rlog.warning(`  | ${name}`);
       });
-      rlog.warning("  Expected project migrations:");
-      PROJECT_MIGRATIONS.forEach((name) => {
-        rlog.warning(`  | ${name}`);
-      });
+      rlog.warning("  Expected first project migration:");
+      rlog.warning(`  | ${firstProjectMigration}`);
       return false;
     }
 
@@ -259,6 +300,24 @@ async function updateDatabaseInternal(): Promise<void> {
     await runMigrateDeploy();
     rlog.success("✓ Database initialized successfully");
     return;
+  }
+
+  const hasMigrations = await hasMigrationsTable();
+  if (hasMigrations) {
+    const hasRecords = await hasMigrationRecords();
+    if (hasRecords === false) {
+      rlog.info(
+        "  Migrations table exists but contains no records, initializing with migrations...",
+      );
+      await runMigrateDeploy();
+      rlog.success("✓ Database initialized successfully");
+      return;
+    }
+    if (hasRecords === null) {
+      rlog.warning(
+        "  Could not determine whether migrations table has records, continuing with project database check...",
+      );
+    }
   }
 
   rlog.info(

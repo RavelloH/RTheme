@@ -103,9 +103,20 @@ psql
 然后，创建数据库和用户：
 
 ```sql
-CREATE DATABASE neutralpress; // 创建数据库
-CREATE USER neutralpress WITH PASSWORD 'neutralpress'; // 创建用户并设置密码
-GRANT ALL PRIVILEGES ON DATABASE neutralpress TO neutralpress; // 授予新用户对数据库的所有权限
+-- 1. 创建用户并设置密码
+CREATE USER neutralpress WITH PASSWORD 'neutralpress';
+
+-- 2. 授予创建数据库的权限
+ALTER USER neutralpress CREATEDB;
+
+-- 3. 创建数据库，并指定拥有者
+CREATE DATABASE neutralpress OWNER neutralpress;
+
+-- 4. 切换到新创建的数据库（仅能在 psql 命令行中执行，其他执行方式需要手动切换）
+\c neutralpress
+
+-- 5. 将 public 模式(Schema)的所有权移交给该用户
+ALTER SCHEMA public OWNER TO neutralpress;
 ```
 
 如果均按照上面的操作，则数据库名称为 `neutralpress`，用户名为 `neutralpress`，密码为 `neutralpress`。你可以根据需要修改这些值，但请确保在后续配置中使用相应的值。

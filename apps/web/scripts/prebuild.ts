@@ -24,7 +24,7 @@ rlog.file.init();
 
 const startTime = Date.now();
 rlog.log();
-rlog.log("NeutralPress Initializating...");
+rlog.log("NeutralPress Initializing...");
 rlog.log();
 
 rlog.log("Starting environment variables check...");
