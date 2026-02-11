@@ -1112,7 +1112,57 @@ export const defaultPages: DefaultPage[] = [
     slug: "/archive",
     content: "",
     contentType: "BLOCK",
-    config: {},
+    config: {
+      blocks: [
+        {
+          id: 1,
+          block: "default",
+          description: "",
+          content: {
+            title: {
+              value: "Archive / 归档",
+            },
+            header: {
+              value: "Years. Months. Days.",
+            },
+            content: {
+              top: {
+                value: [
+                  "回溯 & 列表所有时序。",
+                  "",
+                  "最近更新于 {lastPublishDays}，",
+                  "共索引 {posts} 篇文章。",
+                ],
+              },
+              bottom: {
+                value: ["当前正在查看 归档列表。"],
+              },
+            },
+          },
+        },
+        {
+          id: 2,
+          block: "archive-calendar",
+          description: "",
+          content: {
+            layout: {
+              style: "heatmap",
+            },
+          },
+        },
+        {
+          id: 3,
+          block: "archive-list",
+          description: "",
+          content: {
+            sort: "publishedAt_desc",
+            layout: {
+              mode: "horizontal",
+            },
+          },
+        },
+      ],
+    },
     status: "ACTIVE",
     isSystemPage: true,
     metaDescription:

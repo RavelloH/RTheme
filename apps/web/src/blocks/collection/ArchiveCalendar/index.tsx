@@ -11,7 +11,6 @@ import type {
 import type { BlockComponentProps } from "@/blocks/core/definition";
 import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
-import Link from "@/components/ui/Link";
 import { useMobile } from "@/hooks/use-mobile";
 import { Tooltip } from "@/ui/Tooltip";
 
@@ -228,20 +227,16 @@ function MobileHeatmap({
                       />
                     );
                   }
-                  const date = new Date(day.date);
-                  const month = date.getMonth() + 1;
-                  const dayOfMonth = date.getDate();
                   return (
-                    <Link
+                    <span
                       key={day.date}
-                      href={`/posts?year=${yearData.year}&month=${month}&day=${dayOfMonth}`}
                       className={`block rounded-sm ${getHeatmapColorByDay(day.count)}`}
                       style={{ width: cellSize, height: cellSize }}
                     >
                       <span className="sr-only">
                         {day.date}: {day.count} 篇
                       </span>
-                    </Link>
+                    </span>
                   );
                 })}
               </div>
@@ -411,19 +406,15 @@ function DesktopHeatmap({
                     />
                   );
                 }
-                const date = new Date(day.date);
-                const month = date.getMonth() + 1;
-                const dayOfMonth = date.getDate();
                 const linkElement = (
-                  <Link
-                    href={`/posts?year=${yearData.year}&month=${month}&day=${dayOfMonth}`}
+                  <span
                     className={`block rounded-sm transition-all hover:scale-110 hover:ring-1 hover:ring-primary hover:z-10 ${getHeatmapColorByDay(day.count)}`}
                     style={{ width: cellSize, height: cellSize }}
                   >
                     <span className="sr-only">
                       {day.date}: {day.count} 篇
                     </span>
-                  </Link>
+                  </span>
                 );
                 // 只有当天有文章时才显示 Tooltip
                 if (day.count === 0) {
@@ -528,9 +519,8 @@ export default function ArchiveCalendarBlock({ block }: BlockComponentProps) {
           {style === "calendar" && (
             <div className="grid grid-cols-4 gap-3 flex-1" data-line-reveal>
               {yearData.months.map((monthData) => (
-                <Link
+                <span
                   key={monthData.month}
-                  href={`/posts?year=${yearData.year}&month=${monthData.month}`}
                   className={`flex flex-col items-center justify-center p-3 transition-all hover:bg-primary/10 ${
                     monthData.count > 0 ? "" : "opacity-40"
                   }`}
@@ -541,7 +531,7 @@ export default function ArchiveCalendarBlock({ block }: BlockComponentProps) {
                   <span className="text-2xl font-medium">
                     {monthData.count}
                   </span>
-                </Link>
+                </span>
               ))}
             </div>
           )}
@@ -580,9 +570,8 @@ export default function ArchiveCalendarBlock({ block }: BlockComponentProps) {
           {style === "list" && (
             <div className="space-y-2 flex-1" data-line-reveal>
               {yearData.months.map((monthData) => (
-                <Link
+                <span
                   key={monthData.month}
-                  href={`/posts?year=${yearData.year}&month=${monthData.month}`}
                   className={`flex items-center justify-between py-2 px-4 hover:bg-muted/50 transition-colors ${
                     monthData.count === 0 ? "opacity-50" : ""
                   }`}
@@ -593,7 +582,7 @@ export default function ArchiveCalendarBlock({ block }: BlockComponentProps) {
                   >
                     {monthData.count} 篇
                   </span>
-                </Link>
+                </span>
               ))}
             </div>
           )}
