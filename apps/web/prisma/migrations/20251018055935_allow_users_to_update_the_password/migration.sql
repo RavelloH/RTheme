@@ -1,2 +1,0 @@
--- AlterEnum
-ALTER TYPE "UserStatus" ADD VALUE 'NEEDS_UPDATE';

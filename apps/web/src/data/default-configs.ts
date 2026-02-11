@@ -62,11 +62,11 @@ export const CONFIG_DEFINITIONS = {
       "代码高亮主题。参考 https://shiki.style/themes ，填写主题 ID。",
   },
   "site.slogan.primary": {
-    default: "Beginning of meditation.",
+    default: "A neutral place to share your thoughts.",
     description: "站点主标语。显示在主页",
   },
   "site.slogan.secondary": {
-    default: "Mind stuff, that's what they say when the verses fly.",
+    default: "Welcome to NeutralPress",
     description: "站点副标语。显示在菜单的最上方",
   },
   "site.birthday": {
@@ -138,12 +138,12 @@ export const CONFIG_DEFINITIONS = {
     description: "是否允许搜索引擎索引此站点",
   },
   "seo.twitter_site": {
-    default: "@ravellohh",
-    description: "[可选] 官方Twitter账号",
+    default: "",
+    description: "[可选] 官方Twitter账号，例如 @xxx",
   },
   "seo.twitter_creator": {
-    default: "@neutralpress",
-    description: "[可选] 内容创建者Twitter账号",
+    default: "",
+    description: "[可选] 内容创建者Twitter账号，例如 @xxx",
   },
   "seo.google_verification": {
     default: "",
