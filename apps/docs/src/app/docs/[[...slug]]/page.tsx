@@ -50,7 +50,8 @@ export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
 }
 
 export async function generateStaticParams() {
-  return source.generateParams();
+  const params = source.generateParams();
+  return params.length > 0 ? params : [{ slug: ["__neutralpress__"] }];
 }
 
 export async function generateMetadata(
