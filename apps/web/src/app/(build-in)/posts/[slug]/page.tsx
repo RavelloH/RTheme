@@ -61,9 +61,10 @@ export async function generateStaticParams() {
     },
   });
 
-  return posts.map((post) => ({
+  const params = posts.map((post) => ({
     slug: post.slug,
   }));
+  return params.length > 0 ? params : [{ slug: "__neutralpress__" }];
 }
 
 export async function generateMetadata({ params }: PageProps) {

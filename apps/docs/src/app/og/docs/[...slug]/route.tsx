@@ -29,8 +29,11 @@ export async function GET(
 }
 
 export function generateStaticParams() {
-  return source.getPages().map((page) => ({
+  const params = source.getPages().map((page) => ({
     lang: page.locale,
     slug: getPageImage(page).segments,
   }));
+  return params.length > 0
+    ? params
+    : [{ slug: ["__neutralpress__", "image.png"] }];
 }

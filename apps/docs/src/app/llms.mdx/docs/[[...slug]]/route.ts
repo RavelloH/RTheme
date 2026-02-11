@@ -19,5 +19,6 @@ export async function GET(
 }
 
 export function generateStaticParams() {
-  return source.generateParams();
+  const params = source.generateParams();
+  return params.length > 0 ? params : [{ slug: ["__neutralpress__"] }];
 }

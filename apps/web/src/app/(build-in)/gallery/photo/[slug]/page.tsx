@@ -18,7 +18,8 @@ export async function generateStaticParams() {
   const photos = await prisma.photo.findMany({
     select: { slug: true },
   });
-  return photos.map((photo) => ({ slug: photo.slug }));
+  const params = photos.map((photo) => ({ slug: photo.slug }));
+  return params.length > 0 ? params : [{ slug: "__neutralpress__" }];
 }
 
 export async function generateMetadata({

@@ -21,7 +21,8 @@ interface ProjectDetailPageProps {
 }
 
 export async function generateStaticParams() {
-  return getPublishedProjectStaticParams();
+  const params = await getPublishedProjectStaticParams();
+  return params.length > 0 ? params : [{ slug: "__neutralpress__" }];
 }
 
 export async function generateMetadata({
