@@ -506,49 +506,49 @@ export const CONFIG_DEFINITIONS = {
     description:
       "是否自动批准友链申请。若开启 friendlink.apply.checkBackLink ，则仅对通过反向链接检查的申请自动批准",
   },
-  "friendship.showProfile.enable": {
+  "friendlink.showProfile.enable": {
     default: true,
     description: "是否在友链列表中显示你的简介信息，以便其他站长添加",
   },
-  "friendship.profile.avatar": {
+  "friendlink.profile.avatar": {
     default: "/icon/512x",
     description: "你的信息中的头像URL地址",
   },
-  "friendship.profile.name": {
+  "friendlink.profile.name": {
     default: "",
     description: "你的信息中的名称。不填则使用站点标题",
   },
-  "friendship.profile.website": {
+  "friendlink.profile.website": {
     default: "",
     description: "你的信息中的网站地址。不填则使用站点 URL",
   },
-  "friendship.profile.description": {
+  "friendlink.profile.description": {
     default: "",
     description: "你的信息中的简介描述。不填则使用 site.slogan.primary",
   },
-  "friendship.autoCheck.enable": {
+  "friendlink.autoCheck.enable": {
     default: true,
     description: "是否定期自动检查友链的可用性。关闭后仅可手动检查",
   },
-  "friendship.autoCheck.checkBackLink.enable": {
+  "friendlink.autoCheck.checkBackLink.enable": {
     default: true,
     description:
       "是否在自动检查时，验证对方站点有本站点的反向链接。手动标记为跳过回链检查的友链除外",
   },
-  "friendship.autoCheck.autoManageStatus.enable": {
+  "friendlink.autoCheck.autoManageStatus.enable": {
     default: true,
     description:
       "是否根据自动检查结果，自动更新友链状态（例如：对方站点无法访问则标记为不可用）。这会导致友链检查连续失败 30 次后，自动隐藏该友链",
   },
-  "friendship.autoCheck.alertApplicant.enable": {
+  "friendlink.autoCheck.alertApplicant.enable": {
     default: true,
     description: "是否在自动检查发现友链异常时，发送通知给友链申请者",
   },
-  "friendship.autoCheck.alertAdmin.enable": {
+  "friendlink.autoCheck.alertAdmin.enable": {
     default: true,
     description: "是否在自动检查发现友链异常时，发送通知给管理员（ADMIN）",
   },
-  "friendship.noticeApplicant.enable": {
+  "friendlink.noticeApplicant.enable": {
     default: true,
     description:
       "是否在友链状态变更时，发送通知给友链申请者（例如：友链审核通过/拒绝/删除）",

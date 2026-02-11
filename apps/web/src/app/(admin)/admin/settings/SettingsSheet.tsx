@@ -684,10 +684,17 @@ export default function SettingSheet() {
 
     const categories: Record<string, string> = {
       site: "站点信息",
+      author: "作者信息",
       seo: "SEO配置",
       user: "用户策略",
       content: "内容策略",
+      friendlink: "友链管理",
       media: "媒体策略",
+      comment: "评论策略",
+      notice: "通知策略",
+      ai: "AI 集成",
+      analytics: "访问统计",
+      message: "私信策略",
     };
     return category ? categories[category] || category : "配置设置";
   };
