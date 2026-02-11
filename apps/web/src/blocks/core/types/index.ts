@@ -76,6 +76,15 @@ export type {
   MonthData,
 } from "../../collection/ArchiveCalendar/types";
 export type {
+  ArchiveListBlockConfig,
+  ArchiveListBlockContent,
+  ArchiveListData,
+  ArchiveListItem,
+  ArchiveListLayoutMode,
+  ArchiveListMonthGroup,
+  ArchiveListSortMode,
+} from "../../collection/ArchiveList/types";
+export type {
   AccordionBlockConfig,
   AccordionBlockContent,
 } from "../../collection/Accordion/types";
