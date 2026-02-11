@@ -301,96 +301,103 @@ export default function SearchContent({
   return (
     <>
       <AutoTransition type="fade" className="h-full">
-        {isSearching ? (
-          <RowGrid key="searching">
-            <GridItem
-              key={`loading}`}
-              areas={createArray(1, 12)}
-              width={1}
-              height={1}
-              className="flex items-center justify-center text-muted-foreground"
-            >
-              <LoadingIndicator />
-            </GridItem>
-          </RowGrid>
-        ) : posts.length === 0 && currentSearchQuery.trim() ? (
-          <RowGrid key="no-results">
-            <GridItem
-              areas={createArray(1, 12)}
-              width={1}
-              height={1}
-              className="flex items-center justify-center text-muted-foreground flex-col gap-4 p-10 text-center"
-            >
-              <RiGhostLine size={"5em"} className="opacity-70" />
-              {`未找到与 "${currentSearchToken.join("、") || currentSearchQuery}" 相关的文章`}
-            </GridItem>
-          </RowGrid>
-        ) : (
-          <RowGrid key={`results-${currentSearchQuery}`}>
-            {Array(Math.ceil(posts.length / 4))
-              .fill(0)
-              .map((_, rowIndex) => (
-                <React.Fragment key={rowIndex}>
-                  {Array.from({ length: 4 }, (_, index) => {
-                    const postIndex = rowIndex * 4 + index;
-                    const post = posts[postIndex];
+        {/** 与 PagedPosts 主体保持一致：至少渲染一行（4个） */}
+        {(() => {
+          const rowsToRender = Math.max(1, Math.ceil(posts.length / 4));
 
-                    return (
-                      <GridItem
-                        key={post ? post.slug : `empty-${postIndex}`}
-                        areas={createArray(index * 3 + 1, (index + 1) * 3)}
-                        width={4}
-                        height={0.4}
-                        className=""
-                      >
-                        {post ? (
-                          <PostCard
-                            title={
-                              post.titleHighlight ? (
-                                <HighlightedText html={post.titleHighlight} />
-                              ) : (
-                                post.title
-                              )
-                            }
-                            slug={post.slug}
-                            isPinned={post.isPinned}
-                            date={
-                              post.publishedAt
-                                ? new Date(post.publishedAt)
-                                    .toLocaleDateString("zh-CN", {
-                                      year: "numeric",
-                                      month: "2-digit",
-                                      day: "2-digit",
-                                    })
-                                    .replace(/\//g, "/")
-                                : ""
-                            }
-                            category={post.categories}
-                            tags={post.tags}
-                            cover={post.coverData}
-                            showAll={hasSearched.current}
-                            summary={
-                              post.excerptHighlight ? (
-                                <HighlightedText html={post.excerptHighlight} />
-                              ) : post.excerpt ? (
-                                post.excerpt
-                              ) : (
-                                ""
-                              )
-                            }
-                          />
-                        ) : (
-                          <EmptyPostCard
-                            direction={index % 2 === 0 ? "left" : "right"}
-                          />
-                        )}
-                      </GridItem>
-                    );
-                  })}
-                </React.Fragment>
-              ))}
-          </RowGrid>
-        )}
+          return isSearching ? (
+            <RowGrid key="searching">
+              <GridItem
+                key={`loading}`}
+                areas={createArray(1, 12)}
+                width={1}
+                height={1}
+                className="flex items-center justify-center text-muted-foreground"
+              >
+                <LoadingIndicator />
+              </GridItem>
+            </RowGrid>
+          ) : posts.length === 0 && currentSearchQuery.trim() ? (
+            <RowGrid key="no-results">
+              <GridItem
+                areas={createArray(1, 12)}
+                width={1}
+                height={1}
+                className="flex items-center justify-center text-muted-foreground flex-col gap-4 p-10 text-center"
+              >
+                <RiGhostLine size={"5em"} className="opacity-70" />
+                {`未找到与 "${currentSearchToken.join("、") || currentSearchQuery}" 相关的文章`}
+              </GridItem>
+            </RowGrid>
+          ) : (
+            <RowGrid key={`results-${currentSearchQuery}`}>
+              {Array(rowsToRender)
+                .fill(0)
+                .map((_, rowIndex) => (
+                  <React.Fragment key={rowIndex}>
+                    {Array.from({ length: 4 }, (_, index) => {
+                      const postIndex = rowIndex * 4 + index;
+                      const post = posts[postIndex];
+
+                      return (
+                        <GridItem
+                          key={post ? post.slug : `empty-${postIndex}`}
+                          areas={createArray(index * 3 + 1, (index + 1) * 3)}
+                          width={4}
+                          height={0.4}
+                          className=""
+                        >
+                          {post ? (
+                            <PostCard
+                              title={
+                                post.titleHighlight ? (
+                                  <HighlightedText html={post.titleHighlight} />
+                                ) : (
+                                  post.title
+                                )
+                              }
+                              slug={post.slug}
+                              isPinned={post.isPinned}
+                              date={
+                                post.publishedAt
+                                  ? new Date(post.publishedAt)
+                                      .toLocaleDateString("zh-CN", {
+                                        year: "numeric",
+                                        month: "2-digit",
+                                        day: "2-digit",
+                                      })
+                                      .replace(/\//g, "/")
+                                  : ""
+                              }
+                              category={post.categories}
+                              tags={post.tags}
+                              cover={post.coverData}
+                              showAll={hasSearched.current}
+                              summary={
+                                post.excerptHighlight ? (
+                                  <HighlightedText
+                                    html={post.excerptHighlight}
+                                  />
+                                ) : post.excerpt ? (
+                                  post.excerpt
+                                ) : (
+                                  ""
+                                )
+                              }
+                            />
+                          ) : (
+                            <EmptyPostCard
+                              direction={index % 2 === 0 ? "left" : "right"}
+                            />
+                          )}
+                        </GridItem>
+                      );
+                    })}
+                  </React.Fragment>
+                ))}
+            </RowGrid>
+          );
+        })()}
         <ViewCountBatchLoader />
       </AutoTransition>
     </>

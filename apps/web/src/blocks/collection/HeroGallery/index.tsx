@@ -1,11 +1,13 @@
 import GlobalMouseTracker from "@/blocks/collection/HeroGallery/client/GlobalMouseTracker";
 import HomeImageGallery from "@/blocks/collection/HeroGallery/client/HomeImageGallery";
 import HomeTextSection from "@/blocks/collection/HeroGallery/client/HomeTextSection";
+import { HERO_BLOCK_FORM_CONFIG } from "@/blocks/collection/HeroGallery/schema";
 import type { HeroData } from "@/blocks/collection/HeroGallery/types";
 import type { BlockComponentProps } from "@/blocks/core/definition";
 import { replacePlaceholders as replaceFn } from "@/blocks/core/lib";
 import { getBlockRuntimeData } from "@/blocks/core/runtime/envelope";
 import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
+import type { ProcessedImageData } from "@/lib/shared/image-common";
 
 interface HeroContent {
   line1?: { value?: string; bold?: boolean };
@@ -13,6 +15,19 @@ interface HeroContent {
   galleryImageFilter?: string;
   [key: string]: unknown;
 }
+
+const SCHEMA_PREVIEW_IMAGES: ProcessedImageData[] = (
+  (
+    HERO_BLOCK_FORM_CONFIG.previewData as
+      | {
+          galleryImages?: string[];
+        }
+      | undefined
+  )?.galleryImages || []
+)
+  .filter((url): url is string => typeof url === "string" && url.length > 0)
+  .slice(0, 9)
+  .map((url) => ({ url }));
 
 /**
  * HeroBlock - 服务端组件
@@ -34,6 +49,13 @@ export default function HeroBlock({ block }: BlockComponentProps) {
   const slogan = line2?.value || siteSlogan || "";
   const titleBold = line1?.bold ?? true;
   const sloganBold = line2?.bold ?? false;
+  const runtimeGalleryImages = Array.isArray(galleryImages)
+    ? galleryImages
+    : [];
+  const displayGalleryImages =
+    runtimeGalleryImages.length > 0
+      ? runtimeGalleryImages
+      : SCHEMA_PREVIEW_IMAGES;
 
   return (
     <RowGrid>
@@ -45,7 +67,7 @@ export default function HeroBlock({ block }: BlockComponentProps) {
         className="flex items-center justify-center"
       >
         <HomeImageGallery
-          images={galleryImages || []}
+          images={displayGalleryImages}
           filter={
             (galleryImageFilter as
               | "none"
