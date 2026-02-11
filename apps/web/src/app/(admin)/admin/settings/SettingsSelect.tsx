@@ -28,6 +28,10 @@ const settings = [
     key: "content",
   },
   {
+    name: "友链管理",
+    key: "friendlink",
+  },
+  {
     name: "媒体策略",
     key: "media",
   },
@@ -38,6 +42,10 @@ const settings = [
   {
     name: "通知策略",
     key: "notice",
+  },
+  {
+    name: "私信策略",
+    key: "message",
   },
   {
     name: "AI 集成",

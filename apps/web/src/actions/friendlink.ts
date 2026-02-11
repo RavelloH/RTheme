@@ -1634,7 +1634,7 @@ export async function updateFriendLinkByAdmin(
     });
 
     const noticeApplicantEnabled = await getConfig(
-      "friendship.noticeApplicant.enable",
+      "friendlink.noticeApplicant.enable",
     );
     const shouldNotifyStatus =
       noticeApplicantEnabled &&
@@ -1797,7 +1797,7 @@ export async function deleteFriendLinkByAdmin(
     });
 
     const noticeApplicantEnabled = await getConfig(
-      "friendship.noticeApplicant.enable",
+      "friendlink.noticeApplicant.enable",
     );
     if (noticeApplicantEnabled && current.ownerId) {
       const siteUrl = await getConfig("site.url");
@@ -1898,7 +1898,7 @@ export async function reviewFriendLink(
     });
 
     const noticeApplicantEnabled = await getConfig(
-      "friendship.noticeApplicant.enable",
+      "friendlink.noticeApplicant.enable",
     );
     if (
       noticeApplicantEnabled &&
@@ -2511,10 +2511,10 @@ export async function checkFriendLinks(
       alertAdminEnabled,
       siteUrl,
     ] = await getConfigs([
-      "friendship.autoCheck.checkBackLink.enable",
-      "friendship.autoCheck.autoManageStatus.enable",
-      "friendship.autoCheck.alertApplicant.enable",
-      "friendship.autoCheck.alertAdmin.enable",
+      "friendlink.autoCheck.checkBackLink.enable",
+      "friendlink.autoCheck.autoManageStatus.enable",
+      "friendlink.autoCheck.alertApplicant.enable",
+      "friendlink.autoCheck.alertAdmin.enable",
       "site.url",
     ]);
 
