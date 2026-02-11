@@ -9,6 +9,7 @@ import type {
   ApiResponseData,
 } from "@repo/shared-types/api/common";
 import type {
+  CreateUser,
   DeleteUsers,
   Disable2FA,
   GetUsersList,
@@ -22,6 +23,7 @@ import type {
   UserTrendItem,
 } from "@repo/shared-types/api/user";
 import {
+  CreateUserSchema,
   DeleteUsersSchema,
   Disable2FASchema,
   GetUsersListSchema,
@@ -37,6 +39,7 @@ import type { NextResponse } from "next/server";
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import { type AccessTokenPayload, jwtTokenVerify } from "@/lib/server/jwt";
+import { hashPassword } from "@/lib/server/password";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
@@ -386,6 +389,206 @@ export async function getUsersList(
     });
   } catch (error) {
     console.error("Get users list error:", error);
+    return response.serverError();
+  }
+}
+
+/*
+  createUser - 管理员创建用户
+*/
+export async function createUser(
+  params: CreateUser,
+  serverConfig: { environment: "serverless" },
+): Promise<
+  NextResponse<
+    ApiResponse<{
+      uid: number;
+      username: string;
+      nickname: string | null;
+      email: string;
+      role: "USER" | "ADMIN" | "EDITOR" | "AUTHOR";
+      status: "ACTIVE" | "SUSPENDED" | "NEEDS_UPDATE";
+      emailVerified: boolean;
+      emailNotice: boolean;
+      createdAt: string;
+    } | null>
+  >
+>;
+export async function createUser(
+  params: CreateUser,
+  serverConfig?: ActionConfig,
+): Promise<
+  ApiResponse<{
+    uid: number;
+    username: string;
+    nickname: string | null;
+    email: string;
+    role: "USER" | "ADMIN" | "EDITOR" | "AUTHOR";
+    status: "ACTIVE" | "SUSPENDED" | "NEEDS_UPDATE";
+    emailVerified: boolean;
+    emailNotice: boolean;
+    createdAt: string;
+  } | null>
+>;
+export async function createUser(
+  {
+    access_token,
+    username,
+    nickname,
+    email,
+    password,
+    role = "USER",
+    status = "ACTIVE",
+    emailVerified = false,
+    emailNotice = false,
+  }: CreateUser,
+  serverConfig?: ActionConfig,
+): Promise<
+  ActionResult<{
+    uid: number;
+    username: string;
+    nickname: string | null;
+    email: string;
+    role: "USER" | "ADMIN" | "EDITOR" | "AUTHOR";
+    status: "ACTIVE" | "SUSPENDED" | "NEEDS_UPDATE";
+    emailVerified: boolean;
+    emailNotice: boolean;
+    createdAt: string;
+  } | null>
+> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "createUser"))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      username,
+      nickname,
+      email,
+      password,
+      role,
+      status,
+      emailVerified,
+      emailNotice,
+    },
+    CreateUserSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    // 检查用户名和邮箱是否已存在（包含已删除账户，避免唯一索引冲突）
+    const [existingByUsername, existingByEmail] = await Promise.all([
+      prisma.user.findUnique({
+        where: { username },
+        select: { uid: true },
+      }),
+      prisma.user.findUnique({
+        where: { email },
+        select: { uid: true },
+      }),
+    ]);
+
+    if (existingByUsername) {
+      return response.badRequest({
+        message: `用户名 "${username}" 已存在`,
+      });
+    }
+
+    if (existingByEmail) {
+      return response.badRequest({
+        message: `邮箱 "${email}" 已存在`,
+      });
+    }
+
+    const hashedPassword = await hashPassword(password);
+
+    const newUser = await prisma.user.create({
+      data: {
+        username,
+        nickname: nickname?.trim() || username,
+        email,
+        password: hashedPassword,
+        role,
+        status,
+        emailVerified,
+        emailNotice,
+      },
+      select: {
+        uid: true,
+        username: true,
+        nickname: true,
+        email: true,
+        role: true,
+        status: true,
+        emailVerified: true,
+        emailNotice: true,
+        createdAt: true,
+      },
+    });
+
+    // 记录审计日志
+    const { after } = await import("next/server");
+    after(async () => {
+      await logAuditEvent({
+        user: {
+          uid: String(user.uid),
+        },
+        details: {
+          action: "CREATE",
+          resourceType: "USER",
+          resourceId: String(newUser.uid),
+          value: {
+            old: null,
+            new: {
+              uid: newUser.uid,
+              username: newUser.username,
+              nickname: newUser.nickname,
+              email: newUser.email,
+              role: newUser.role,
+              status: newUser.status,
+            },
+          },
+          description: `管理员创建用户：${newUser.username} (UID: ${newUser.uid})`,
+        },
+      });
+    });
+
+    // 刷新缓存标签
+    updateTag("users");
+    updateTag(`users/${newUser.uid}`);
+
+    return response.ok({
+      data: {
+        uid: newUser.uid,
+        username: newUser.username,
+        nickname: newUser.nickname,
+        email: newUser.email,
+        role: newUser.role,
+        status: newUser.status,
+        emailVerified: newUser.emailVerified,
+        emailNotice: newUser.emailNotice,
+        createdAt: newUser.createdAt.toISOString(),
+      },
+      message: "用户创建成功",
+    });
+  } catch (error) {
+    console.error("Create user error:", error);
     return response.serverError();
   }
 }

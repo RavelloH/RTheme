@@ -819,6 +819,8 @@ paths:
                     - MARKDOWN
                     - HTML
                     - MDX
+                    - BLOCK
+                    - BUILDIN
                   description: 内容类型
                 excerpt:
                   type: string
@@ -7314,13 +7316,13 @@ components:
           default: 365
           type: integer
           exclusiveMinimum: true
-          maximum: 9007199254740991
+          maximum: 365
           minimum: 0
         count:
           default: 30
           type: integer
           exclusiveMinimum: true
-          maximum: 9007199254740991
+          maximum: 100
           minimum: 0
       required:
         - days
@@ -11808,6 +11810,8 @@ components:
                   - MARKDOWN
                   - HTML
                   - MDX
+                  - BLOCK
+                  - BUILDIN
               createdAt:
                 type: string
               updatedAt:
@@ -11912,6 +11916,8 @@ components:
                 - MARKDOWN
                 - HTML
                 - MDX
+                - BLOCK
+                - BUILDIN
             status:
               type: string
               enum:
@@ -12009,6 +12015,8 @@ components:
             - MARKDOWN
             - HTML
             - MDX
+            - BLOCK
+            - BUILDIN
         content:
           type: string
         config: {}
@@ -12074,6 +12082,8 @@ components:
             - MARKDOWN
             - HTML
             - MDX
+            - BLOCK
+            - BUILDIN
         config: {}
         status:
           type: string
@@ -12143,6 +12153,8 @@ components:
             - MARKDOWN
             - HTML
             - MDX
+            - BLOCK
+            - BUILDIN
         config: {}
         status:
           default: ACTIVE
@@ -15056,7 +15068,7 @@ components:
         content:
           type: string
           minLength: 1
-          maxLength: 5000
+          maxLength: 2000
         tempId:
           type: string
       required:
