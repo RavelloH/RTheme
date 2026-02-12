@@ -155,7 +155,7 @@ export function EditorCore({
 
   // 适配器管理器
   const adapterManagerRef = useRef<AdapterManager | null>(null);
-  const isSyncingTitleToEditorRef = useRef(false);
+  const lastContentTitleRef = useRef<string | null>(null);
 
   // 初始化编辑器类型
   const [editorType, setEditorType] = useState<EditorMode>(() => {
@@ -213,9 +213,7 @@ export function EditorCore({
 
   const extractTitleFromMarkdown = useCallback(
     (markdown: string): string | null => {
-      const headingMatch = markdown.match(
-        /(^|\n)#\s+(.+?)(?:\s+#*\s*)?(?=\n|$)/,
-      );
+      const headingMatch = markdown.match(/(^|\r?\n)#\s+([^\r\n]*)(?=\r?\n|$)/);
       if (!headingMatch) {
         return null;
       }
@@ -229,18 +227,29 @@ export function EditorCore({
   const upsertTitleInMarkdown = useCallback(
     (markdown: string, nextTitle: string): string => {
       const normalizedTitle = nextTitle.trim();
-      const headingRegex = /(^|\n)#\s+(.+?)(?:\s+#*\s*)?(?=\n|$)/;
+      const headingRegex = /(^|\r?\n)#\s+([^\r\n]*)(\r?\n|$)/;
 
       if (headingRegex.test(markdown)) {
         if (!normalizedTitle) {
           return markdown
-            .replace(headingRegex, (_match, prefix: string) => prefix)
-            .replace(/^\n+/, "");
+            .replace(
+              headingRegex,
+              (
+                _match,
+                prefix: string,
+                _rawTitle: string,
+                lineEnding: string,
+              ) => {
+                return `${prefix}${lineEnding}`;
+              },
+            )
+            .replace(/^(?:\r?\n)+/, "");
         }
 
         return markdown.replace(
           headingRegex,
-          (_match, prefix: string) => `${prefix}# ${normalizedTitle}`,
+          (_match, prefix: string, _rawTitle: string, lineEnding: string) =>
+            `${prefix}# ${normalizedTitle}${lineEnding}`,
         );
       }
 
@@ -248,31 +257,35 @@ export function EditorCore({
         return markdown;
       }
 
+      const lineEnding = markdown.includes("\r\n") ? "\r\n" : "\n";
       if (!markdown.trim()) {
-        return `# ${normalizedTitle}\n`;
+        return `# ${normalizedTitle}${lineEnding}`;
       }
 
-      return `# ${normalizedTitle}\n\n${markdown.replace(/^\n+/, "")}`;
+      return `# ${normalizedTitle}${lineEnding}${lineEnding}${markdown.replace(/^(?:\r?\n)+/, "")}`;
     },
     [],
   );
 
   const syncTitleFromContent = useCallback(
     (nextContent: string) => {
-      if (!onTitleChange || isSyncingTitleToEditorRef.current) {
-        return;
-      }
-
       const extractedTitle = extractTitleFromMarkdown(nextContent);
-      if (extractedTitle === null) {
+      const normalizedExtractedTitle = extractedTitle?.trim() ?? null;
+
+      if (normalizedExtractedTitle === lastContentTitleRef.current) {
+        return;
+      }
+      lastContentTitleRef.current = normalizedExtractedTitle;
+
+      if (!onTitleChange || normalizedExtractedTitle === null) {
         return;
       }
 
-      if ((title || "").trim() === extractedTitle) {
+      if ((title || "").trim() === normalizedExtractedTitle) {
         return;
       }
 
-      onTitleChange(extractedTitle);
+      onTitleChange(normalizedExtractedTitle);
     },
     [extractTitleFromMarkdown, onTitleChange, title],
   );
@@ -486,6 +499,7 @@ export function EditorCore({
     if (typeof title !== "string") {
       return;
     }
+    const normalizedTitle = title.trim();
 
     const hasActiveEditor =
       editorType === "visual"
@@ -505,59 +519,51 @@ export function EditorCore({
     }
 
     const currentTitle = extractTitleFromMarkdown(currentContent) || "";
-    if (currentTitle === title.trim()) {
+    if (currentTitle === normalizedTitle) {
       return;
     }
 
-    const nextContent = upsertTitleInMarkdown(currentContent, title);
+    const nextContent = upsertTitleInMarkdown(currentContent, normalizedTitle);
     if (nextContent === currentContent) {
       return;
     }
 
-    isSyncingTitleToEditorRef.current = true;
+    saveEditorContent(
+      nextContent,
+      {
+        editorType: String(editorType),
+        isFullscreen,
+        showTableOfContents,
+      },
+      true,
+      storageKey,
+    );
 
-    try {
-      saveEditorContent(
-        nextContent,
-        {
-          editorType: String(editorType),
-          isFullscreen,
-          showTableOfContents,
-        },
-        true,
-        storageKey,
-      );
+    setInitialContent(nextContent);
+    setMarkdownContent(nextContent);
+    onChange?.(nextContent);
 
-      setInitialContent(nextContent);
-      setMarkdownContent(nextContent);
-      onChange?.(nextContent);
-
-      if (editorType === "visual" && editor) {
-        try {
-          // @ts-expect-error - markdown.parse方法可能没有类型定义
-          const parsed = editor.markdown.parse(nextContent);
-          editor.commands.setContent(parsed);
-        } catch (error) {
-          console.error("Failed to sync title to visual editor:", error);
-        }
+    if (editorType === "visual" && editor) {
+      try {
+        // @ts-expect-error - markdown.parse方法可能没有类型定义
+        const parsed = editor.markdown.parse(nextContent);
+        editor.commands.setContent(parsed);
+      } catch (error) {
+        console.error("Failed to sync title to visual editor:", error);
       }
+    }
 
-      if (
-        (editorType === "markdown" ||
-          editorType === "mdx" ||
-          editorType === "html") &&
-        monacoEditor
-      ) {
-        const currentPosition = monacoEditor.getPosition();
-        monacoEditor.setValue(nextContent);
-        if (currentPosition) {
-          monacoEditor.setPosition(currentPosition);
-        }
+    if (
+      (editorType === "markdown" ||
+        editorType === "mdx" ||
+        editorType === "html") &&
+      monacoEditor
+    ) {
+      const currentPosition = monacoEditor.getPosition();
+      monacoEditor.setValue(nextContent);
+      if (currentPosition) {
+        monacoEditor.setPosition(currentPosition);
       }
-    } finally {
-      queueMicrotask(() => {
-        isSyncingTitleToEditorRef.current = false;
-      });
     }
   }, [
     editor,

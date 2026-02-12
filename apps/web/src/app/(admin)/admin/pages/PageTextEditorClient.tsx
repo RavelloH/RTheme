@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { updatePage } from "@/actions/page";
 import { EditorCore } from "@/components/client/features/editor/EditorCore";
+import { useNavigateWithTransition } from "@/components/ui/Link";
 import {
   clearEditorContent,
   loadEditorContent,
@@ -54,6 +55,7 @@ export default function PageTextEditorClient({
   page,
 }: PageTextEditorClientProps) {
   const router = useRouter();
+  const navigate = useNavigateWithTransition();
   const toast = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [currentContent, setCurrentContent] = useState(page.content);
@@ -92,7 +94,7 @@ export default function PageTextEditorClient({
       id: "back",
       label: "返回页面列表",
       variant: "ghost",
-      onClick: () => router.push("/admin/pages"),
+      onClick: () => navigate("/admin/pages"),
     },
     {
       id: "save",
