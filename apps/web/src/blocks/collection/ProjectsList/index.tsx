@@ -184,7 +184,7 @@ function ProjectTextBlock({
                   className="inline-flex items-center rounded-sm border border-muted px-2 py-1 text-xs text-foreground hover:text-primary hover:border-primary/50 hover:bg-primary/20 transition-colors duration-500"
                   presets={["dynamic-icon", "arrow-out"]}
                 >
-                  <span>{formatLinkLabel(link, linkIndex)}</span>
+                  {formatLinkLabel(link, linkIndex)}
                 </Link>
               ))}
             </div>
