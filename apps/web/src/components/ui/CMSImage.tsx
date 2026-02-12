@@ -67,14 +67,14 @@ export default function CMSImage({
   if (hasError) {
     return (
       <span
-        className={`${fill ? "flex" : "inline-flex"} items-center justify-center bg-muted/30 text-muted-foreground ${className || ""}`}
+        className={`${fill ? "flex" : "inline-flex"} items-center justify-center bg-muted/30 text-muted-foreground max-w-full max-h-[50vh] ${className || ""}`}
         style={
           fill
             ? { position: "absolute", inset: 0 }
-            : { width: width || "100%", height: height || "100%" }
+            : { width: width, height: height }
         }
       >
-        <RiFileDamageFill size="2em" />
+        <RiFileDamageFill size="4em" />
       </span>
     );
   }
