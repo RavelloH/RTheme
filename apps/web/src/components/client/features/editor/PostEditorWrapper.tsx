@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { createPost, updatePost } from "@/actions/post";
 import { CategoryInput } from "@/components/client/features/categories/CategoryInput";
@@ -10,6 +9,7 @@ import MediaSelector from "@/components/client/features/media/MediaSelector";
 import PostLicensePicker from "@/components/client/features/posts/PostLicensePicker";
 import type { SelectedTag } from "@/components/client/features/tags/TagInput";
 import { TagInput } from "@/components/client/features/tags/TagInput";
+import { useNavigateWithTransition } from "@/components/ui/Link";
 import {
   clearEditorContent,
   loadEditorContent,
@@ -155,7 +155,7 @@ export function PostEditorWrapper({
   const [commitMessage, _setCommitMessage] = useState("");
 
   const toast = useToast();
-  const router = useRouter();
+  const navigate = useNavigateWithTransition();
 
   // ==================== 初始化表单数据 ====================
   useEffect(() => {
@@ -353,7 +353,7 @@ export function PostEditorWrapper({
 
         // 延迟导航
         setTimeout(() => {
-          router.push(successRedirectPath);
+          navigate(successRedirectPath);
         }, 1000);
       } else {
         toast.error(response.message || "操作失败，请稍后重试");
