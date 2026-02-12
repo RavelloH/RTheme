@@ -200,6 +200,7 @@ export function useMediaImport(
       try {
         const formData = new FormData();
         formData.append("externalUrl", importItem.url);
+        formData.append("importMode", importMode);
 
         if (importItem.customFileName) {
           formData.append("displayName", importItem.customFileName);

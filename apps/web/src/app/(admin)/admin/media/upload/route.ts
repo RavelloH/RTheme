@@ -22,6 +22,10 @@ import { getOrCreateVirtualStorage } from "@/lib/server/virtual-storage";
 const response = new ResponseBuilder("serverless");
 const DEFAULT_EXTERNAL_MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const EXTERNAL_FETCH_TIMEOUT_MS = 15000;
+type ExternalImportMode = "record" | "transfer";
+type StorageProviderRecord = NonNullable<
+  Awaited<ReturnType<typeof prisma.storageProvider.findFirst>>
+>;
 
 function getMediaHashLockKey(hash: string): bigint {
   return BigInt(`0x${hash.slice(0, 15)}`);
@@ -53,6 +57,10 @@ function getMediaHashLockKey(hash: string): bigint {
  *               storageProviderId:
  *                 type: string
  *                 description: 存储提供商ID（可选）
+ *               importMode:
+ *                 type: string
+ *                 enum: [record, transfer]
+ *                 description: 外部导入模式（record=外链优化，transfer=转存托管）
  *     responses:
  *       200:
  *         description: 上传成功
@@ -98,6 +106,14 @@ export async function POST(request: NextRequest): Promise<Response> {
     const storageProviderId = formData.get("storageProviderId") as
       | string
       | null;
+    const importModeRaw = formData.get("importMode") as string | null;
+    const normalizedImportMode = importModeRaw?.trim().toLowerCase();
+    const importMode: ExternalImportMode =
+      normalizedImportMode === "record" || normalizedImportMode === "transfer"
+        ? normalizedImportMode
+        : storageProviderId || mode !== "original"
+          ? "transfer"
+          : "record";
     const folderIdStr = formData.get("folderId") as string | null;
     let folderId = folderIdStr ? parseInt(folderIdStr, 10) : null;
     const file = formData.get("file") as File | null;
@@ -205,17 +221,66 @@ export async function POST(request: NextRequest): Promise<Response> {
         );
         const normalizedExternalUrl = safeExternalResult.url.toString();
 
-        const defaultStorage = await prisma.storageProvider.findFirst({
-          where: { isDefault: true, isActive: true },
-          select: { maxFileSize: true },
-        });
-        const maxExternalSize =
-          defaultStorage?.maxFileSize && defaultStorage.maxFileSize > 0
-            ? defaultStorage.maxFileSize
-            : DEFAULT_EXTERNAL_MAX_FILE_SIZE;
+        let transferStorageProvider: StorageProviderRecord | null = null;
+        if (importMode === "transfer") {
+          if (storageProviderId) {
+            transferStorageProvider = await prisma.storageProvider.findUnique({
+              where: { id: storageProviderId, isActive: true },
+            });
 
-        // 获取或创建虚拟存储提供商
-        const virtualStorage = await getOrCreateVirtualStorage();
+            if (!transferStorageProvider) {
+              return response.badRequest({
+                message: "指定的存储提供商不存在或未启用",
+                error: {
+                  code: "INVALID_STORAGE",
+                  message: "无效的存储提供商ID",
+                },
+              }) as Response;
+            }
+
+            // AUTHOR 只能使用默认存储提供商
+            if (user.role === "AUTHOR" && !transferStorageProvider.isDefault) {
+              return response.forbidden({
+                message: "权限不足，只能使用默认存储提供商",
+                error: {
+                  code: "FORBIDDEN",
+                  message: "AUTHOR 角色只能使用默认存储",
+                },
+              }) as Response;
+            }
+          } else {
+            transferStorageProvider = await prisma.storageProvider.findFirst({
+              where: { isDefault: true, isActive: true },
+            });
+          }
+
+          if (!transferStorageProvider) {
+            return response.badRequest({
+              message: "未找到可用的存储提供商",
+              error: { code: "NO_STORAGE", message: "请先配置存储提供商" },
+            }) as Response;
+          }
+        }
+
+        let maxExternalSize = DEFAULT_EXTERNAL_MAX_FILE_SIZE;
+        if (
+          transferStorageProvider?.maxFileSize &&
+          transferStorageProvider.maxFileSize > 0
+        ) {
+          maxExternalSize = transferStorageProvider.maxFileSize;
+        } else {
+          const defaultStorage = await prisma.storageProvider.findFirst({
+            where: { isDefault: true, isActive: true },
+            select: { maxFileSize: true },
+          });
+          if (defaultStorage?.maxFileSize && defaultStorage.maxFileSize > 0) {
+            maxExternalSize = defaultStorage.maxFileSize;
+          }
+        }
+
+        // 外链优化模式使用虚拟存储；转存模式走真实存储提供商
+        const virtualStorage =
+          importMode === "record" ? await getOrCreateVirtualStorage() : null;
 
         // Fetch 外部图片
         const controller = new AbortController();
@@ -347,6 +412,44 @@ export async function POST(request: NextRequest): Promise<Response> {
           }) as Response;
         }
 
+        let transferUploadResult: Awaited<
+          ReturnType<typeof uploadObject>
+        > | null = null;
+        let transferFileName: string | null = null;
+
+        if (importMode === "transfer" && transferStorageProvider) {
+          transferFileName = `${processed.shortHash}.${processed.extension}`;
+          transferUploadResult = await uploadObject({
+            type: transferStorageProvider.type,
+            baseUrl: transferStorageProvider.baseUrl,
+            pathTemplate: transferStorageProvider.pathTemplate,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            config: transferStorageProvider.config as any,
+            file: {
+              buffer: processed.buffer,
+              filename: transferFileName,
+              contentType: processed.mimeType,
+            },
+          });
+        }
+
+        const mediaFileName =
+          importMode === "transfer" && transferFileName
+            ? transferFileName
+            : urlFilename;
+        const mediaStorageUrl =
+          importMode === "transfer" && transferUploadResult
+            ? transferUploadResult.url
+            : normalizedExternalUrl;
+        const mediaStorageProviderId =
+          importMode === "transfer"
+            ? transferStorageProvider?.id
+            : virtualStorage?.id;
+
+        if (!mediaStorageProviderId) {
+          throw new Error("未找到可用的存储提供商");
+        }
+
         const lockKey = getMediaHashLockKey(processed.hash);
         const lockedCreateResult = await prisma.$transaction(async (tx) => {
           await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey})`;
@@ -370,7 +473,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
           const media = await tx.media.create({
             data: {
-              fileName: urlFilename,
+              fileName: mediaFileName,
               originalName: urlFilename,
               mimeType: processed.mimeType,
               size: processed.size,
@@ -385,8 +488,8 @@ export async function POST(request: NextRequest): Promise<Response> {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               exif: (processed.exif || {}) as any,
               isOptimized: mode !== "original",
-              storageUrl: normalizedExternalUrl, // 直接存储外部 URL
-              storageProviderId: virtualStorage.id, // 使用虚拟存储提供商
+              storageUrl: mediaStorageUrl,
+              storageProviderId: mediaStorageProviderId,
               userUid: user.uid,
               folderId: folderId || undefined,
             },
@@ -396,6 +499,26 @@ export async function POST(request: NextRequest): Promise<Response> {
         });
 
         if (lockedCreateResult.existing) {
+          if (
+            importMode === "transfer" &&
+            transferUploadResult &&
+            transferStorageProvider
+          ) {
+            await deleteObject({
+              type: transferStorageProvider.type,
+              baseUrl: transferStorageProvider.baseUrl,
+              pathTemplate: transferStorageProvider.pathTemplate,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              config: transferStorageProvider.config as any,
+              key: transferUploadResult.key,
+            }).catch((error) => {
+              console.error(
+                "Delete duplicate transferred object failed:",
+                error,
+              );
+            });
+          }
+
           const imageId = generateSignedImageId(
             lockedCreateResult.existing.shortHash,
           );
@@ -434,11 +557,14 @@ export async function POST(request: NextRequest): Promise<Response> {
               new: {
                 fileName: media.fileName,
                 originalName: media.originalName,
+                importMode,
                 externalUrl: normalizedExternalUrl,
                 size: buffer.length,
+                processedSize: processed.size,
+                storageProviderId: media.storageProviderId,
               },
             },
-            description: `导入外部图片: ${normalizedExternalUrl}`,
+            description: `${importMode === "transfer" ? "转存" : "导入"}外部图片: ${normalizedExternalUrl}`,
           },
         });
 
@@ -451,7 +577,7 @@ export async function POST(request: NextRequest): Promise<Response> {
             imageId,
             url: `/p/${imageId}`,
             originalSize: buffer.length,
-            processedSize: buffer.length,
+            processedSize: processed.size,
             isDuplicate: false,
             width: media.width,
             height: media.height,
