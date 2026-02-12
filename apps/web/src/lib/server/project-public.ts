@@ -16,6 +16,12 @@ import { MEDIA_SLOTS } from "@/types/media";
 
 import type { Prisma } from ".prisma/client";
 
+const PUBLIC_PROJECT_STATUSES = [
+  "PUBLISHED",
+  "DEVELOPING",
+  "ARCHIVED",
+] as const;
+
 function normalizeDescription(description: string): string {
   const compact = description.replace(/\s+/g, " ").trim();
   return compact || "暂无项目描述。";
@@ -77,6 +83,7 @@ export interface PublicProjectDetail {
   id: number;
   title: string;
   slug: string;
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED" | "DEVELOPING";
   description: string;
   content: string;
   stars: number;
@@ -117,7 +124,7 @@ export async function getPublishedProjectStaticParams(): Promise<
     async () => {
       const projects = await prisma.project.findMany({
         where: {
-          status: "PUBLISHED",
+          status: { in: [...PUBLIC_PROJECT_STATUSES] },
         },
         select: {
           slug: true,
@@ -143,7 +150,7 @@ export async function getPublishedProjectSeo(
       const project = await prisma.project.findUnique({
         where: {
           slug: s,
-          status: "PUBLISHED",
+          status: { in: [...PUBLIC_PROJECT_STATUSES] },
         },
         select: {
           title: true,
@@ -184,12 +191,13 @@ export async function getPublishedProjectDetail(slug: string): Promise<{
   const project = await prisma.project.findUnique({
     where: {
       slug,
-      status: "PUBLISHED",
+      status: { in: [...PUBLIC_PROJECT_STATUSES] },
     },
     select: {
       id: true,
       title: true,
       slug: true,
+      status: true,
       description: true,
       content: true,
       stars: true,
@@ -269,6 +277,7 @@ export async function getPublishedProjectDetail(slug: string): Promise<{
       id: project.id,
       title: project.title,
       slug: project.slug,
+      status: project.status,
       description: normalizeDescription(project.description),
       content: project.content || "",
       stars: project.stars,

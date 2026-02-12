@@ -94,7 +94,7 @@ export default function ProjectsReport() {
     title: "",
     slug: "",
     description: "",
-    status: "DRAFT" as "DRAFT" | "PUBLISHED" | "ARCHIVED" | "DEVELOPING",
+    status: "PUBLISHED" as "DRAFT" | "PUBLISHED" | "ARCHIVED" | "DEVELOPING",
     demoUrl: "",
     repoUrl: "",
     urls: "",
