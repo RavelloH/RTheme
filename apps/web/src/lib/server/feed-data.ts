@@ -73,8 +73,6 @@ export async function getFeedData(): Promise<FeedData> {
   cacheTag("posts", "config");
   cacheLife("max");
 
-  console.log(" > [RSS] Generating feed data...");
-
   const [
     urlConfig,
     titleConfig,
