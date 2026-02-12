@@ -145,9 +145,11 @@ async function processContentImagesAndExtractReferences(
   支持层级路径，如 "技术/前端/Next.js"
   返回最终分类的 ID
 */
-async function findOrCreateCategoryByPath(path: string): Promise<number> {
+async function findOrCreateCategoryByPath(
+  categoryPath: string,
+): Promise<number> {
   // 按 / 拆分路径，移除空白部分
-  const parts = path
+  const parts = categoryPath
     .split("/")
     .map((p) => p.trim())
     .filter((p) => p);
@@ -157,63 +159,114 @@ async function findOrCreateCategoryByPath(path: string): Promise<number> {
   }
 
   let currentParentId: number | null = null;
+  let currentParentPath = "";
+  let currentParentDepth = -1;
+  let currentParentFullSlug = "";
   let currentCategoryId: number | null = null;
+  type CategoryPathNode = {
+    id: number;
+    slug: string;
+    path: string;
+    depth: number;
+    fullSlug: string;
+  };
 
   // 逐层查找或创建分类
   for (const name of parts) {
     // 查找当前层级的分类
-    let category: {
-      id: number;
-      slug: string;
-      name: string;
-      description: string | null;
-      parentId: number | null;
-      createdAt: Date;
-      updatedAt: Date;
-    } | null = await prisma.category.findFirst({
+    let category: CategoryPathNode | null = (await prisma.category.findFirst({
       where: {
         name,
         parentId: currentParentId,
       },
-    });
+      select: {
+        id: true,
+        slug: true,
+        path: true,
+        depth: true,
+        fullSlug: true,
+      },
+    })) as CategoryPathNode | null;
 
     // 如果不存在则创建
     if (!category) {
       const slug = await slugify(name);
+      const depth = currentParentDepth + 1;
+      const fullSlug = currentParentFullSlug
+        ? `${currentParentFullSlug}/${slug}`
+        : slug;
 
-      // 计算路径、深度和 fullSlug
-      let path = "";
-      let depth = 0;
-      let fullSlug = slug;
-
-      if (currentParentId) {
-        const parent = await prisma.category.findUnique({
-          where: { id: currentParentId },
-          select: { path: true, depth: true, id: true, fullSlug: true },
-        });
-        if (parent) {
-          path = `${parent.path}${parent.id}/`;
-          depth = parent.depth + 1;
-          // 构建 fullSlug：父分类的 fullSlug + "/" + 当前 slug
-          fullSlug = parent.fullSlug ? `${parent.fullSlug}/${slug}` : slug;
-        }
-      }
-
-      category = await prisma.category.create({
+      const createdCategory: CategoryPathNode = (await prisma.category.create({
         data: {
           name,
           slug,
           parentId: currentParentId,
-          path,
+          path: "",
           depth,
           fullSlug,
         },
-      });
+        select: {
+          id: true,
+          slug: true,
+          path: true,
+          depth: true,
+          fullSlug: true,
+        },
+      })) as CategoryPathNode;
+
+      const correctPath = currentParentPath
+        ? `${currentParentPath}/${createdCategory.id}`
+        : `${createdCategory.id}`;
+
+      category = (await prisma.category.update({
+        where: { id: createdCategory.id },
+        data: { path: correctPath },
+        select: {
+          id: true,
+          slug: true,
+          path: true,
+          depth: true,
+          fullSlug: true,
+        },
+      })) as CategoryPathNode;
+    } else {
+      const expectedPath: string = currentParentPath
+        ? `${currentParentPath}/${category.id}`
+        : `${category.id}`;
+      const expectedDepth = currentParentDepth + 1;
+      const expectedFullSlug: string = currentParentFullSlug
+        ? `${currentParentFullSlug}/${category.slug}`
+        : category.slug;
+
+      if (
+        category.path !== expectedPath ||
+        category.depth !== expectedDepth ||
+        category.fullSlug !== expectedFullSlug
+      ) {
+        category = (await prisma.category.update({
+          where: { id: category.id },
+          data: {
+            path: expectedPath,
+            depth: expectedDepth,
+            fullSlug: expectedFullSlug,
+          },
+          select: {
+            id: true,
+            slug: true,
+            path: true,
+            depth: true,
+            fullSlug: true,
+          },
+        })) as CategoryPathNode;
+      }
     }
 
     // 更新父分类 ID，继续下一层
     currentCategoryId = category.id;
     currentParentId = category.id;
+    currentParentPath = category.path;
+    currentParentDepth = category.depth;
+    currentParentFullSlug = category.fullSlug;
   }
 
   if (currentCategoryId === null) {
@@ -237,11 +290,17 @@ async function getOrCreateUncategorizedCategory(): Promise<number> {
       slug: uncategorizedSlug,
       parentId: null, // 确保是根级分类
     },
+    select: {
+      id: true,
+      path: true,
+      depth: true,
+      fullSlug: true,
+    },
   });
 
   // 如果不存在则创建
   if (!category) {
-    category = await prisma.category.create({
+    const createdCategory = await prisma.category.create({
       data: {
         name: uncategorizedName,
         slug: uncategorizedSlug,
@@ -251,7 +310,46 @@ async function getOrCreateUncategorizedCategory(): Promise<number> {
         depth: 0,
         fullSlug: uncategorizedSlug,
       },
+      select: {
+        id: true,
+        path: true,
+        depth: true,
+        fullSlug: true,
+      },
     });
+
+    category = await prisma.category.update({
+      where: { id: createdCategory.id },
+      data: { path: `${createdCategory.id}` },
+      select: {
+        id: true,
+        path: true,
+        depth: true,
+        fullSlug: true,
+      },
+    });
+  } else {
+    const expectedPath = `${category.id}`;
+    if (
+      category.path !== expectedPath ||
+      category.depth !== 0 ||
+      category.fullSlug !== uncategorizedSlug
+    ) {
+      category = await prisma.category.update({
+        where: { id: category.id },
+        data: {
+          path: expectedPath,
+          depth: 0,
+          fullSlug: uncategorizedSlug,
+        },
+        select: {
+          id: true,
+          path: true,
+          depth: true,
+          fullSlug: true,
+        },
+      });
+    }
   }
 
   return category.id;

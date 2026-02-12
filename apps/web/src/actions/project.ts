@@ -114,8 +114,10 @@ async function processContentImagesAndExtractReferences(
 /*
   辅助函数：根据路径查找或创建分类
 */
-async function findOrCreateCategoryByPath(path: string): Promise<number> {
-  const parts = path
+async function findOrCreateCategoryByPath(
+  categoryPath: string,
+): Promise<number> {
+  const parts = categoryPath
     .split("/")
     .map((p) => p.trim())
     .filter((p) => p);
@@ -125,57 +127,110 @@ async function findOrCreateCategoryByPath(path: string): Promise<number> {
   }
 
   let currentParentId: number | null = null;
+  let currentParentPath = "";
+  let currentParentDepth = -1;
+  let currentParentFullSlug = "";
   let currentCategoryId: number | null = null;
+  type CategoryPathNode = {
+    id: number;
+    slug: string;
+    path: string;
+    depth: number;
+    fullSlug: string;
+  };
 
   for (const name of parts) {
-    let category: {
-      id: number;
-      slug: string;
-      name: string;
-      description: string | null;
-      parentId: number | null;
-      createdAt: Date;
-      updatedAt: Date;
-    } | null = await prisma.category.findFirst({
+    let category: CategoryPathNode | null = (await prisma.category.findFirst({
       where: {
         name,
         parentId: currentParentId,
       },
-    });
+      select: {
+        id: true,
+        slug: true,
+        path: true,
+        depth: true,
+        fullSlug: true,
+      },
+    })) as CategoryPathNode | null;
 
     if (!category) {
       const slug = await slugify(name);
+      const depth = currentParentDepth + 1;
+      const fullSlug = currentParentFullSlug
+        ? `${currentParentFullSlug}/${slug}`
+        : slug;
 
-      let path = "";
-      let depth = 0;
-      let fullSlug = slug;
-
-      if (currentParentId) {
-        const parent = await prisma.category.findUnique({
-          where: { id: currentParentId },
-          select: { path: true, depth: true, id: true, fullSlug: true },
-        });
-        if (parent) {
-          path = `${parent.path}${parent.id}/`;
-          depth = parent.depth + 1;
-          fullSlug = parent.fullSlug ? `${parent.fullSlug}/${slug}` : slug;
-        }
-      }
-
-      category = await prisma.category.create({
+      const createdCategory: CategoryPathNode = (await prisma.category.create({
         data: {
           name,
           slug,
           parentId: currentParentId,
-          path,
+          path: "",
           depth,
           fullSlug,
         },
-      });
+        select: {
+          id: true,
+          slug: true,
+          path: true,
+          depth: true,
+          fullSlug: true,
+        },
+      })) as CategoryPathNode;
+
+      const correctPath = currentParentPath
+        ? `${currentParentPath}/${createdCategory.id}`
+        : `${createdCategory.id}`;
+
+      category = (await prisma.category.update({
+        where: { id: createdCategory.id },
+        data: { path: correctPath },
+        select: {
+          id: true,
+          slug: true,
+          path: true,
+          depth: true,
+          fullSlug: true,
+        },
+      })) as CategoryPathNode;
+    } else {
+      const expectedPath: string = currentParentPath
+        ? `${currentParentPath}/${category.id}`
+        : `${category.id}`;
+      const expectedDepth = currentParentDepth + 1;
+      const expectedFullSlug: string = currentParentFullSlug
+        ? `${currentParentFullSlug}/${category.slug}`
+        : category.slug;
+
+      if (
+        category.path !== expectedPath ||
+        category.depth !== expectedDepth ||
+        category.fullSlug !== expectedFullSlug
+      ) {
+        category = (await prisma.category.update({
+          where: { id: category.id },
+          data: {
+            path: expectedPath,
+            depth: expectedDepth,
+            fullSlug: expectedFullSlug,
+          },
+          select: {
+            id: true,
+            slug: true,
+            path: true,
+            depth: true,
+            fullSlug: true,
+          },
+        })) as CategoryPathNode;
+      }
     }
 
     currentCategoryId = category.id;
     currentParentId = category.id;
+    currentParentPath = category.path;
+    currentParentDepth = category.depth;
+    currentParentFullSlug = category.fullSlug;
   }
 
   if (currentCategoryId === null) {
@@ -197,10 +252,16 @@ async function getOrCreateUncategorizedCategory(): Promise<number> {
       slug: uncategorizedSlug,
       parentId: null,
     },
+    select: {
+      id: true,
+      path: true,
+      depth: true,
+      fullSlug: true,
+    },
   });
 
   if (!category) {
-    category = await prisma.category.create({
+    const createdCategory = await prisma.category.create({
       data: {
         name: uncategorizedName,
         slug: uncategorizedSlug,
@@ -210,7 +271,46 @@ async function getOrCreateUncategorizedCategory(): Promise<number> {
         depth: 0,
         fullSlug: uncategorizedSlug,
       },
+      select: {
+        id: true,
+        path: true,
+        depth: true,
+        fullSlug: true,
+      },
     });
+
+    category = await prisma.category.update({
+      where: { id: createdCategory.id },
+      data: { path: `${createdCategory.id}` },
+      select: {
+        id: true,
+        path: true,
+        depth: true,
+        fullSlug: true,
+      },
+    });
+  } else {
+    const expectedPath = `${category.id}`;
+    if (
+      category.path !== expectedPath ||
+      category.depth !== 0 ||
+      category.fullSlug !== uncategorizedSlug
+    ) {
+      category = await prisma.category.update({
+        where: { id: category.id },
+        data: {
+          path: expectedPath,
+          depth: 0,
+          fullSlug: uncategorizedSlug,
+        },
+        select: {
+          id: true,
+          path: true,
+          depth: true,
+          fullSlug: true,
+        },
+      });
+    }
   }
 
   return category.id;
