@@ -4,6 +4,10 @@
   "globalEnv": [
     "NODE_ENV",
     "DATABASE_URL",
+    "PG_POOL_MAX",
+    "PG_CONNECTION_TIMEOUT_MS",
+    "PG_IDLE_TIMEOUT_MS",
+    "PG_MAX_LIFETIME",
     "REDIS_URL",
     "JWT_PRIVATE_KEY",
     "JWT_PUBLIC_KEY",

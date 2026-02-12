@@ -9,13 +9,20 @@ import BlockRenderer from "@/components/server/renderer/BlockRenderer";
 import type { PageConfig } from "@/data/default-pages";
 import { buildPageCacheTagsForBlocks } from "@/lib/server/block-cache";
 import { resolveBlockData } from "@/lib/server/block-data-resolver";
-import { getMatchingPage, getSystemPageConfig } from "@/lib/server/page-cache";
+import {
+  getMainRouteStaticParams,
+  getMatchingPage,
+  getSystemPageConfig,
+} from "@/lib/server/page-cache";
 import {
   generateMetadata as getBaseMetadata,
   type SeoTemplateParams,
 } from "@/lib/server/seo";
 
-// TODO: Static Params
+export async function generateStaticParams() {
+  return getMainRouteStaticParams();
+}
+
 const pageTextRenderModeMap = {
   BLOCK: null,
   BUILDIN: null,
