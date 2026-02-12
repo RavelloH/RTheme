@@ -54,6 +54,39 @@ type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
 
+async function getPublishedPostSlugsByTagSlugs(
+  tagSlugs: readonly string[],
+): Promise<Set<string>> {
+  if (tagSlugs.length === 0) {
+    return new Set<string>();
+  }
+
+  const posts = await prisma.post.findMany({
+    where: {
+      status: "PUBLISHED",
+      deletedAt: null,
+      tags: {
+        some: {
+          slug: {
+            in: Array.from(new Set(tagSlugs)),
+          },
+        },
+      },
+    },
+    select: {
+      slug: true,
+    },
+  });
+
+  return new Set(posts.map((post) => post.slug));
+}
+
+function updatePostCacheTagsBySlugs(slugs: Iterable<string>): void {
+  for (const slug of slugs) {
+    updateTags(`posts/${slug}`);
+  }
+}
+
 /*
   getTagsList - 获取标签列表
 */
@@ -571,7 +604,8 @@ export async function createTag(
     });
 
     // 刷新缓存标签
-    updateTags("tags");
+    updateTags("tags/list");
+    updateTags(`tags/${newTag.slug}`);
 
     return response.ok({
       data: {
@@ -678,6 +712,8 @@ export async function updateTag(
     if (!existingTag) {
       return response.notFound({ message: `标签 "${slug}" 不存在` });
     }
+
+    const relatedPostSlugs = await getPublishedPostSlugsByTagSlugs([slug]);
 
     // 如果要修改 slug，进行处理和验证
     let finalNewSlug: string | undefined;
@@ -799,10 +835,13 @@ export async function updateTag(
     }
 
     // 刷新缓存标签
-    updateTags("tags");
+    updateTags("tags/list");
     updateTags(`tags/${slug}`);
     updateTags(`tags/${updatedTag.slug}`);
-    updateTags("posts");
+    updatePostCacheTagsBySlugs(relatedPostSlugs);
+    if (relatedPostSlugs.size > 0) {
+      updateTags("posts/list");
+    }
 
     return response.ok({
       data: {
@@ -866,6 +905,8 @@ export async function deleteTags(
   }
 
   try {
+    const relatedPostSlugs = await getPublishedPostSlugsByTagSlugs(slugs);
+
     // 删除标签（Prisma 会自动处理多对多关系）
     const result = await prisma.tag.deleteMany({
       where: {
@@ -896,12 +937,15 @@ export async function deleteTags(
     });
 
     // 刷新缓存标签
-    updateTags("tags");
-    updateTags("posts");
+    updateTags("tags/list");
     // 刷新每个被删除的标签
     slugs.forEach((slug) => {
       updateTags(`tags/${slug}`);
     });
+    updatePostCacheTagsBySlugs(relatedPostSlugs);
+    if (relatedPostSlugs.size > 0) {
+      updateTags("posts/list");
+    }
 
     return response.ok({
       data: {

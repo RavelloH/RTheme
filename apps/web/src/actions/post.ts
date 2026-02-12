@@ -341,12 +341,69 @@ interface PublishedPostCacheInput {
   publishedAt: Date | null;
 }
 
+interface PostTagRelation {
+  slug: string;
+}
+
+interface PostCategoryRelation {
+  fullSlug: string;
+}
+
+interface PostCacheRelationInput {
+  tags?: readonly PostTagRelation[];
+  categories?: readonly PostCategoryRelation[];
+}
+
 function addPostSlugTag(
   target: Set<string>,
   slug: string | null | undefined,
 ): void {
   if (slug) {
     target.add(slug);
+  }
+}
+
+function addTagSlugTag(
+  target: Set<string>,
+  slug: string | null | undefined,
+): void {
+  if (slug) {
+    target.add(slug);
+  }
+}
+
+function addCategoryPathTags(
+  target: Set<string>,
+  fullSlug: string | null | undefined,
+): void {
+  if (!fullSlug) {
+    return;
+  }
+
+  const segments = fullSlug
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  if (segments.length === 0) {
+    return;
+  }
+
+  for (let index = 1; index <= segments.length; index += 1) {
+    target.add(segments.slice(0, index).join("/"));
+  }
+}
+
+function collectPostRelatedCacheTags(
+  tagSlugs: Set<string>,
+  categoryPaths: Set<string>,
+  post: PostCacheRelationInput,
+): void {
+  for (const tag of post.tags ?? []) {
+    addTagSlugTag(tagSlugs, tag.slug);
+  }
+
+  for (const category of post.categories ?? []) {
+    addCategoryPathTags(categoryPaths, category.fullSlug);
   }
 }
 
@@ -386,6 +443,18 @@ async function addAdjacentPublishedPostSlugs(
 function updatePostCacheTagsBySlugs(slugs: Iterable<string>): void {
   for (const slug of slugs) {
     updateTag(`posts/${slug}`);
+  }
+}
+
+function updateTagCacheTagsBySlugs(slugs: Iterable<string>): void {
+  for (const slug of slugs) {
+    updateTag(`tags/${slug}`);
+  }
+}
+
+function updateCategoryCacheTagsByPaths(paths: Iterable<string>): void {
+  for (const path of paths) {
+    updateTag(`categories/${path}`);
   }
 }
 
@@ -1240,6 +1309,22 @@ export async function createPost(
               }
             : undefined,
       },
+      select: {
+        id: true,
+        slug: true,
+        status: true,
+        publishedAt: true,
+        tags: {
+          select: {
+            slug: true,
+          },
+        },
+        categories: {
+          select: {
+            fullSlug: true,
+          },
+        },
+      },
     });
 
     // 记录审计日志
@@ -1296,17 +1381,29 @@ export async function createPost(
 
     // 刷新缓存标签
     const postDetailTagsToRefresh = new Set<string>();
+    const tagDetailTagsToRefresh = new Set<string>();
+    const categoryDetailTagsToRefresh = new Set<string>();
     addPostSlugTag(postDetailTagsToRefresh, post.slug);
     await addAdjacentPublishedPostSlugs(postDetailTagsToRefresh, {
       slug: post.slug,
       status: post.status,
       publishedAt: post.publishedAt,
     });
-    updatePostCacheTagsBySlugs(postDetailTagsToRefresh);
+    collectPostRelatedCacheTags(
+      tagDetailTagsToRefresh,
+      categoryDetailTagsToRefresh,
+      post,
+    );
 
-    updateTag("posts");
-    updateTag("categories");
-    updateTag("tags");
+    updatePostCacheTagsBySlugs(postDetailTagsToRefresh);
+    updateTagCacheTagsBySlugs(tagDetailTagsToRefresh);
+    updateCategoryCacheTagsByPaths(categoryDetailTagsToRefresh);
+
+    if (post.status === "PUBLISHED") {
+      updateTag("posts/list");
+      updateTag("tags/list");
+      updateTag("categories/list");
+    }
 
     return response.ok({
       data: {
@@ -1421,8 +1518,18 @@ export async function updatePost(
         postMode: true,
         license: true,
         userUid: true, // 需要获取作者 uid 以进行权限检查
-        categories: { select: { name: true } },
-        tags: { select: { name: true } },
+        categories: {
+          select: {
+            name: true,
+            fullSlug: true,
+          },
+        },
+        tags: {
+          select: {
+            name: true,
+            slug: true,
+          },
+        },
         mediaRefs: {
           include: {
             media: {
@@ -1715,6 +1822,16 @@ export async function updatePost(
           slug: true,
           status: true,
           publishedAt: true,
+          categories: {
+            select: {
+              fullSlug: true,
+            },
+          },
+          tags: {
+            select: {
+              slug: true,
+            },
+          },
         },
       });
 
@@ -1869,22 +1986,66 @@ export async function updatePost(
 
     // 刷新缓存标签
     const postDetailTagsToRefresh = new Set<string>();
+    const tagDetailTagsToRefresh = new Set<string>();
+    const categoryDetailTagsToRefresh = new Set<string>();
     addPostSlugTag(postDetailTagsToRefresh, slug);
     if (newSlug && newSlug !== slug) {
       addPostSlugTag(postDetailTagsToRefresh, newSlug);
     }
+    collectPostRelatedCacheTags(
+      tagDetailTagsToRefresh,
+      categoryDetailTagsToRefresh,
+      existingPost,
+    );
+    collectPostRelatedCacheTags(
+      tagDetailTagsToRefresh,
+      categoryDetailTagsToRefresh,
+      updatedPost,
+    );
+
     if (status !== undefined || publishedAt !== undefined) {
+      await addAdjacentPublishedPostSlugs(postDetailTagsToRefresh, {
+        slug: existingPost.slug,
+        status: existingPost.status,
+        publishedAt: existingPost.publishedAt,
+      });
       await addAdjacentPublishedPostSlugs(postDetailTagsToRefresh, {
         slug: updatedPost.slug,
         status: updatedPost.status,
         publishedAt: updatedPost.publishedAt,
       });
     }
-    updatePostCacheTagsBySlugs(postDetailTagsToRefresh);
 
-    updateTag("posts");
-    updateTag("categories");
-    updateTag("tags");
+    updatePostCacheTagsBySlugs(postDetailTagsToRefresh);
+    updateTagCacheTagsBySlugs(tagDetailTagsToRefresh);
+    updateCategoryCacheTagsByPaths(categoryDetailTagsToRefresh);
+
+    const wasPublished = existingPost.status === "PUBLISHED";
+    const isPublished = updatedPost.status === "PUBLISHED";
+    const categoryOrTagChanged = categories !== undefined || tags !== undefined;
+    const listFieldChanged =
+      title !== undefined ||
+      excerpt !== undefined ||
+      featuredImage !== undefined ||
+      isPinned !== undefined ||
+      content !== undefined ||
+      status !== undefined ||
+      publishedAt !== undefined ||
+      categoryOrTagChanged;
+
+    if (listFieldChanged && (wasPublished || isPublished)) {
+      updateTag("posts/list");
+    }
+
+    if (
+      (categoryOrTagChanged ||
+        status !== undefined ||
+        publishedAt !== undefined) &&
+      (wasPublished || isPublished)
+    ) {
+      updateTag("tags/list");
+      updateTag("categories/list");
+    }
 
     return response.ok({
       data: {
@@ -2042,6 +2203,16 @@ export async function updatePosts(
         metaKeywords: true,
         robotsIndex: true,
         postMode: true,
+        categories: {
+          select: {
+            fullSlug: true,
+          },
+        },
+        tags: {
+          select: {
+            slug: true,
+          },
+        },
         mediaRefs: {
           include: {
             media: {
@@ -2191,11 +2362,22 @@ export async function updatePosts(
 
     // 刷新缓存标签
     const postDetailTagsToRefresh = new Set<string>();
+    const tagDetailTagsToRefresh = new Set<string>();
+    const categoryDetailTagsToRefresh = new Set<string>();
     for (const post of postsBeforeUpdate) {
       addPostSlugTag(postDetailTagsToRefresh, post.slug);
+      collectPostRelatedCacheTags(
+        tagDetailTagsToRefresh,
+        categoryDetailTagsToRefresh,
+        post,
+      );
     }
 
     if (status !== undefined && postsBeforeUpdate.length > 0) {
+      for (const post of postsBeforeUpdate) {
+        await addAdjacentPublishedPostSlugs(postDetailTagsToRefresh, post);
+      }
+
       const updatedPublishedPosts = await prisma.post.findMany({
         where: {
           id: { in: postsBeforeUpdate.map((post) => post.id) },
@@ -2216,7 +2398,19 @@ export async function updatePosts(
     }
 
     updatePostCacheTagsBySlugs(postDetailTagsToRefresh);
-    updateTag("posts");
+    if (status !== undefined) {
+      updateTagCacheTagsBySlugs(tagDetailTagsToRefresh);
+      updateCategoryCacheTagsByPaths(categoryDetailTagsToRefresh);
+      updateTag("tags/list");
+      updateTag("categories/list");
+    }
+
+    const hasPublishedBeforeUpdate = postsBeforeUpdate.some(
+      (post) => post.status === "PUBLISHED",
+    );
+    if (hasPublishedBeforeUpdate || status === "PUBLISHED") {
+      updateTag("posts/list");
+    }
 
     return response.ok({
       data: { updated: result.count },
@@ -2282,7 +2476,19 @@ export async function deletePosts(
         id: true,
         title: true,
         slug: true,
+        status: true,
+        publishedAt: true,
         userUid: true,
+        categories: {
+          select: {
+            fullSlug: true,
+          },
+        },
+        tags: {
+          select: {
+            slug: true,
+          },
+        },
       },
     });
 
@@ -2311,6 +2517,19 @@ export async function deletePosts(
     // AUTHOR 只能删除自己的文章
     if (user.role === "AUTHOR") {
       deleteWhereCondition.userUid = user.uid;
+    }
+
+    const postDetailTagsToRefresh = new Set<string>();
+    const tagDetailTagsToRefresh = new Set<string>();
+    const categoryDetailTagsToRefresh = new Set<string>();
+    for (const post of postsToDelete) {
+      addPostSlugTag(postDetailTagsToRefresh, post.slug);
+      collectPostRelatedCacheTags(
+        tagDetailTagsToRefresh,
+        categoryDetailTagsToRefresh,
+        post,
+      );
+      await addAdjacentPublishedPostSlugs(postDetailTagsToRefresh, post);
     }
 
     const result = await prisma.post.updateMany({
@@ -2348,13 +2567,21 @@ export async function deletePosts(
     });
 
     // 刷新缓存标签
-    updateTag("posts");
-    updateTag("categories");
-    updateTag("tags");
-    // 刷新每个删除的文章
-    postsToDelete.forEach((post) => {
-      updateTag(`posts/${post.slug}`);
-    });
+    for (const post of postsToDelete) {
+      await addAdjacentPublishedPostSlugs(postDetailTagsToRefresh, post);
+    }
+    updatePostCacheTagsBySlugs(postDetailTagsToRefresh);
+    updateTagCacheTagsBySlugs(tagDetailTagsToRefresh);
+    updateCategoryCacheTagsByPaths(categoryDetailTagsToRefresh);
+
+    const hasPublishedDeletion = postsToDelete.some(
+      (post) => post.status === "PUBLISHED",
+    );
+    if (hasPublishedDeletion) {
+      updateTag("posts/list");
+      updateTag("tags/list");
+      updateTag("categories/list");
+    }
 
     return response.ok({
       data: { deleted: result.count },
@@ -2728,6 +2955,7 @@ export async function resetPostToVersion(
         id: true,
         content: true,
         versionMetadata: true,
+        status: true,
       },
     });
 
@@ -2803,8 +3031,10 @@ export async function resetPostToVersion(
     });
 
     // 刷新缓存标签
-    updateTag("posts");
     updateTag(`posts/${slug}`);
+    if (post.status === "PUBLISHED") {
+      updateTag("posts/list");
+    }
 
     return response.ok({
       data: {
@@ -2873,6 +3103,7 @@ export async function squashPostToVersion(
         id: true,
         content: true,
         versionMetadata: true,
+        status: true,
       },
     });
 
@@ -2947,8 +3178,10 @@ export async function squashPostToVersion(
     });
 
     // 刷新缓存标签
-    updateTag("posts");
     updateTag(`posts/${slug}`);
+    if (post.status === "PUBLISHED") {
+      updateTag("posts/list");
+    }
 
     return response.ok({
       data: {

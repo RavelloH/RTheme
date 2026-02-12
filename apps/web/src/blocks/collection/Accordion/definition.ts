@@ -9,7 +9,7 @@ export const accordionBlockDefinition = createBlockDefinition({
   component: () =>
     import("./index").then((componentModule) => componentModule.default),
   cache: {
-    tags: ({ content }) => {
+    tags: ({ content, context }) => {
       const normalizedContent =
         content && typeof content === "object"
           ? (content as Record<string, unknown>)
@@ -18,17 +18,34 @@ export const accordionBlockDefinition = createBlockDefinition({
         typeof normalizedContent.source === "string"
           ? normalizedContent.source
           : "tags";
+      const scopedSlug =
+        typeof context.slug === "string"
+          ? context.slug
+              .trim()
+              .split("/")
+              .map((segment) => segment.trim())
+              .filter(Boolean)
+              .join("/")
+          : "";
 
       switch (source) {
         case "tags":
-          return ["tags", "posts", "projects", "photos"];
+          return ["tags/list", "posts/list", "projects/list"];
         case "categories":
+          return ["categories/list", "posts/list", "projects/list"];
         case "child-categories":
-          return ["categories", "posts", "projects", "photos"];
+          return scopedSlug
+            ? ["categories/list", `categories/${scopedSlug}`]
+            : ["categories/list"];
         case "posts":
-          return ["posts", "photos"];
+          return ["posts/list"];
         default:
-          return ["tags", "categories", "posts", "projects", "photos"];
+          return [
+            "tags/list",
+            "categories/list",
+            "posts/list",
+            "projects/list",
+          ];
       }
     },
   },

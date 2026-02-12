@@ -9,7 +9,7 @@ export const paginationBlockDefinition = createBlockDefinition({
   component: () =>
     import("./index").then((componentModule) => componentModule.default),
   cache: {
-    tags: ({ content }) => {
+    tags: ({ content, context }) => {
       const normalizedContent =
         content && typeof content === "object"
           ? (content as Record<string, unknown>)
@@ -18,15 +18,28 @@ export const paginationBlockDefinition = createBlockDefinition({
         typeof normalizedContent.filterBy === "string"
           ? normalizedContent.filterBy
           : "all";
+      const scopedSlug =
+        typeof context.slug === "string"
+          ? context.slug
+              .trim()
+              .split("/")
+              .map((segment) => segment.trim())
+              .filter(Boolean)
+              .join("/")
+          : "";
 
       if (filterBy === "tag") {
-        return ["tags", "posts"];
+        return scopedSlug
+          ? ["posts/list", "tags/list", `tags/${scopedSlug}`]
+          : ["posts/list", "tags/list"];
       }
       if (filterBy === "category") {
-        return ["categories", "posts"];
+        return scopedSlug
+          ? ["posts/list", "categories/list", `categories/${scopedSlug}`]
+          : ["posts/list", "categories/list"];
       }
 
-      return ["posts"];
+      return ["posts/list", "tags/list", "categories/list"];
     },
   },
   capabilities: {

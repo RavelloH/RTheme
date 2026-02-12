@@ -9,7 +9,7 @@ export const featuredProjectsBlockDefinition = createBlockDefinition({
   component: () =>
     import("./index").then((componentModule) => componentModule.default),
   cache: {
-    tags: ["projects", "photos"],
+    tags: ["projects/list"],
   },
   capabilities: {
     context: "inherit",

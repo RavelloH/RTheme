@@ -29,51 +29,130 @@ export interface BuildPageCacheTagsParams {
   pageContext?: BlockPageContext;
 }
 
-const PLACEHOLDER_TAG_MAP: Record<string, readonly string[]> = {
-  posts: ["posts"],
-  postsList: ["posts"],
-  postsListPage: ["posts"],
-  postsListTotalPage: ["posts"],
-  postsListFirstPage: ["posts"],
-  postsListLastPage: ["posts"],
-  firstPublishAt: ["posts"],
-  lastPublishDays: ["posts"],
+const PLACEHOLDER_STATIC_TAG_MAP: Record<string, readonly string[]> = {
+  posts: ["posts/list"],
+  postsList: ["posts/list"],
+  postsListPage: ["posts/list"],
+  postsListTotalPage: ["posts/list"],
+  postsListFirstPage: ["posts/list"],
+  postsListLastPage: ["posts/list"],
+  firstPublishAt: ["posts/list"],
+  lastPublishDays: ["posts/list"],
 
-  categories: ["categories"],
-  rootCategories: ["categories"],
-  childCategories: ["categories"],
-  categoriesList: ["categories"],
+  categories: ["categories/list"],
+  rootCategories: ["categories/list"],
+  childCategories: ["categories/list"],
+  categoriesList: ["categories/list"],
 
-  tags: ["tags", "posts"],
-  tagsList: ["tags", "posts"],
+  tags: ["tags/list"],
+  tagsList: ["tags/list"],
 
-  category: ["categories", "posts"],
-  categoryName: ["categories", "posts"],
-  categoryDescription: ["categories", "posts"],
-  categorySubcategoryCount: ["categories", "posts"],
-  categoryPostCount: ["categories", "posts"],
-  categoryPage: ["categories", "posts"],
-  categoryTotalPage: ["categories", "posts"],
-  categoryFirstPage: ["categories", "posts"],
-  categoryLastPage: ["categories", "posts"],
+  category: ["categories/list"],
+  categoryName: ["categories/list"],
+  categoryDescription: ["categories/list"],
+  categorySubcategoryCount: ["categories/list"],
+  categoryPostCount: ["categories/list"],
+  categoryPage: ["categories/list"],
+  categoryTotalPage: ["categories/list"],
+  categoryFirstPage: ["categories/list"],
+  categoryLastPage: ["categories/list"],
 
-  tag: ["tags", "posts"],
-  tagName: ["tags", "posts"],
-  tagDescription: ["tags", "posts"],
-  tagPostCount: ["tags", "posts"],
-  tagPage: ["tags", "posts"],
-  tagTotalPage: ["tags", "posts"],
-  tagFirstPage: ["tags", "posts"],
-  tagLastPage: ["tags", "posts"],
+  tag: ["tags/list"],
+  tagName: ["tags/list"],
+  tagDescription: ["tags/list"],
+  tagPostCount: ["tags/list"],
+  tagPage: ["tags/list"],
+  tagTotalPage: ["tags/list"],
+  tagFirstPage: ["tags/list"],
+  tagLastPage: ["tags/list"],
 
-  projects: ["projects"],
-  projectsList: ["projects"],
+  projects: ["projects/list"],
+  projectsList: ["projects/list"],
 
   friends: ["friend-links"],
   friendsList: ["friend-links"],
-
-  pageInfo: ["categories", "tags"],
 };
+
+function normalizeContextSlug(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const normalized = value
+    .trim()
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .join("/");
+  return normalized || undefined;
+}
+
+function getPlaceholderScopedSlug(params: {
+  placeholderParams: Record<string, string>;
+  pageContext?: BlockPageContext;
+}): string | undefined {
+  return (
+    normalizeContextSlug(params.placeholderParams.slug) ||
+    normalizeContextSlug(params.pageContext?.slug)
+  );
+}
+
+function getPlaceholderDynamicTags(params: {
+  placeholderName: string;
+  placeholderParams: Record<string, string>;
+  pageContext?: BlockPageContext;
+}): readonly string[] {
+  const scopedSlug = getPlaceholderScopedSlug({
+    placeholderParams: params.placeholderParams,
+    pageContext: params.pageContext,
+  });
+
+  switch (params.placeholderName) {
+    case "category":
+    case "categoryName":
+    case "categoryDescription":
+    case "categorySubcategoryCount":
+    case "categoryPostCount":
+    case "categoryPage":
+    case "categoryTotalPage":
+    case "categoryFirstPage":
+    case "categoryLastPage":
+      return scopedSlug ? [`categories/${scopedSlug}`] : [];
+    case "tag":
+    case "tagName":
+    case "tagDescription":
+    case "tagPostCount":
+    case "tagPage":
+    case "tagTotalPage":
+    case "tagFirstPage":
+    case "tagLastPage":
+      return scopedSlug ? [`tags/${scopedSlug}`] : [];
+    case "pageInfo": {
+      const pageType =
+        typeof params.placeholderParams.page === "string"
+          ? params.placeholderParams.page
+          : "";
+      if (pageType === "category-detail" && scopedSlug) {
+        return [`categories/${scopedSlug}`];
+      }
+      if (pageType === "category-index") {
+        return ["categories/list"];
+      }
+      if (pageType === "tag-detail" && scopedSlug) {
+        return [`tags/${scopedSlug}`];
+      }
+      if (pageType === "tag-index") {
+        return ["tags/list"];
+      }
+      if (pageType === "posts-index") {
+        return ["posts/list"];
+      }
+      return [];
+    }
+    default:
+      return [];
+  }
+}
 
 function addTags(target: Set<string>, tags: Iterable<string>): void {
   for (const tag of tags) {
@@ -139,15 +218,26 @@ function getDefinitionDependencyTags(params: {
   }
 }
 
-function getPlaceholderDependencyTags(content: unknown): readonly string[] {
+function getPlaceholderDependencyTags(params: {
+  content: unknown;
+  pageContext?: BlockPageContext;
+}): readonly string[] {
   const tags = new Set<string>();
-  const placeholders = extractParsedPlaceholdersFromValue(content);
+  const placeholders = extractParsedPlaceholdersFromValue(params.content);
 
   for (const placeholder of placeholders) {
-    const mapped = PLACEHOLDER_TAG_MAP[placeholder.name];
+    const mapped = PLACEHOLDER_STATIC_TAG_MAP[placeholder.name];
     if (mapped) {
       addTags(tags, mapped);
     }
+    addTags(
+      tags,
+      getPlaceholderDynamicTags({
+        placeholderName: placeholder.name,
+        placeholderParams: placeholder.params,
+        pageContext: params.pageContext,
+      }),
+    );
   }
 
   return Array.from(tags);
@@ -160,7 +250,13 @@ function getBlockDependencyTags(params: {
   const tags = new Set<string>();
 
   addTags(tags, getDefinitionDependencyTags(params));
-  addTags(tags, getPlaceholderDependencyTags(params.block.content));
+  addTags(
+    tags,
+    getPlaceholderDependencyTags({
+      content: params.block.content,
+      pageContext: params.pageContext,
+    }),
+  );
 
   const definition = getBlockDefinition(params.block.block || "default");
   if (definition?.capabilities.media?.length) {
