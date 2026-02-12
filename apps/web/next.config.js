@@ -49,9 +49,30 @@ const nextConfig = () => {
         "**/*.d.ts",
       ],
     },
+    async rewrites() {
+      return [
+        {
+          source: "/favicon.ico",
+          destination: "/icon/48x",
+        },
+      ];
+    },
     // 配置缓存头
     async headers() {
       return [
+        {
+          source: "/favicon.ico",
+          headers: [
+            {
+              key: "Content-Type",
+              value: "image/x-icon",
+            },
+            {
+              key: "Cache-Control",
+              value: "public, max-age=31536000, immutable",
+            },
+          ],
+        },
         {
           // 为图标设置强缓存
           source: "/icon/:size*",
