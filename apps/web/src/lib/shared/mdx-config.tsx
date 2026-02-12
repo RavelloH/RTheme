@@ -48,6 +48,21 @@ import {
 
 // ============ 导出共享配置 ============
 const MARKDOWN_IMAGE_SIZES = "(max-width: 56rem) 100vw, 56rem";
+const CodeBlockContext = createContext(false);
+
+function extractCodeText(children?: React.ReactNode): string {
+  if (typeof children === "string") {
+    return children;
+  }
+
+  if (Array.isArray(children)) {
+    return children
+      .map((child) => (typeof child === "string" ? child : ""))
+      .join("");
+  }
+
+  return "";
+}
 
 function parsePositiveDimension(value?: string | number): number | undefined {
   if (typeof value === "number") {
@@ -287,22 +302,30 @@ export function createBaseMDXComponents(
 ): MDXComponents {
   return {
     // 代码处理
-    pre: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+    pre: ({ children }: { children?: React.ReactNode }) => (
+      <CodeBlockContext.Provider value>{children}</CodeBlockContext.Provider>
+    ),
     code: ({
       children,
       className,
     }: {
-      children?: string;
+      children?: React.ReactNode;
       className?: string;
     }) => {
-      if (className) {
-        return (
-          <CodeBlock className={className} shikiTheme={shikiTheme}>
-            {children}
-          </CodeBlock>
-        );
-      }
-      return <InlineCode>{children}</InlineCode>;
+      return (
+        <CodeBlockContext.Consumer>
+          {(isBlockCode) => {
+            if (isBlockCode) {
+              return (
+                <CodeBlock className={className} shikiTheme={shikiTheme}>
+                  {extractCodeText(children)}
+                </CodeBlock>
+              );
+            }
+            return <InlineCode>{children}</InlineCode>;
+          }}
+        </CodeBlockContext.Consumer>
+      );
     },
 
     // 链接
@@ -363,15 +386,33 @@ export function createEnhancedMDXComponents(
 
     // 覆盖基础组件，添加 ErrorBoundary
     pre: wrap(
-      ({ children }: React.ComponentPropsWithoutRef<"pre">) => <>{children}</>,
+      ({ children }: React.ComponentPropsWithoutRef<"pre">) => (
+        <CodeBlockContext.Provider value>{children}</CodeBlockContext.Provider>
+      ),
       "pre",
     ),
     code: wrap(
-      ({ children, className }: { children?: string; className?: string }) => {
-        if (className) {
-          return <CodeBlock className={className}>{children}</CodeBlock>;
-        }
-        return <InlineCode>{children}</InlineCode>;
+      ({
+        children,
+        className,
+      }: {
+        children?: React.ReactNode;
+        className?: string;
+      }) => {
+        return (
+          <CodeBlockContext.Consumer>
+            {(isBlockCode) => {
+              if (isBlockCode) {
+                return (
+                  <CodeBlock className={className} shikiTheme={shikiTheme}>
+                    {extractCodeText(children)}
+                  </CodeBlock>
+                );
+              }
+              return <InlineCode>{children}</InlineCode>;
+            }}
+          </CodeBlockContext.Consumer>
+        );
       },
       "code",
     ),
@@ -479,39 +520,37 @@ export function createMarkdownComponents(shikiTheme?: ShikiTheme): Components {
   return {
     // 代码处理
     pre: ({ children }: React.HTMLAttributes<HTMLPreElement>) => (
-      <>{children}</>
+      <CodeBlockContext.Provider value>{children}</CodeBlockContext.Provider>
     ),
     code: ({
       children,
       className,
-      inline,
     }: {
-      children?: string;
+      children?: React.ReactNode;
       className?: string;
-      inline?: boolean;
     }) => {
-      // 判断是否是行内代码
-      // ReactMarkdown 的行为：
-      // - 行内代码 `` `code` `` → inline=true, className=undefined
-      // - 代码块 ```code``` → inline=false, 可能有 className
-      const isInline = inline === true;
-
-      if (isInline) {
-        return (
-          <code className="px-1.5 py-0.5 rounded bg-foreground/10 text-foreground font-mono text-sm">
-            {children}
-          </code>
-        );
-      }
-
-      // 否则是代码块（即使没有 className，也使用 text 作为默认语言）
       return (
-        <CodeBlock
-          className={className || "language-text"}
-          shikiTheme={shikiTheme}
-        >
-          {children}
-        </CodeBlock>
+        <CodeBlockContext.Consumer>
+          {(isBlockCode) => {
+            if (!isBlockCode) {
+              return (
+                <code className="px-1.5 py-0.5 rounded bg-foreground/10 text-foreground font-mono text-sm">
+                  {children}
+                </code>
+              );
+            }
+
+            // 否则是代码块（即使没有 className，也使用 text 作为默认语言）
+            return (
+              <CodeBlock
+                className={className || "language-text"}
+                shikiTheme={shikiTheme}
+              >
+                {extractCodeText(children)}
+              </CodeBlock>
+            );
+          }}
+        </CodeBlockContext.Consumer>
       );
     },
 
