@@ -91,6 +91,100 @@ type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
 
+interface ReferencedContentCacheTargets {
+  postSlugs: Set<string>;
+  projectSlugs: Set<string>;
+  hasPublishedPost: boolean;
+  hasPublishedProject: boolean;
+}
+
+async function collectReferencedContentCacheTargets(
+  mediaIds: readonly number[],
+): Promise<ReferencedContentCacheTargets> {
+  if (mediaIds.length === 0) {
+    return {
+      postSlugs: new Set<string>(),
+      projectSlugs: new Set<string>(),
+      hasPublishedPost: false,
+      hasPublishedProject: false,
+    };
+  }
+
+  const references = await prisma.mediaReference.findMany({
+    where: {
+      mediaId: {
+        in: Array.from(new Set(mediaIds)),
+      },
+      OR: [{ postId: { not: null } }, { projectId: { not: null } }],
+    },
+    select: {
+      post: {
+        select: {
+          slug: true,
+          status: true,
+          deletedAt: true,
+        },
+      },
+      project: {
+        select: {
+          slug: true,
+          status: true,
+        },
+      },
+    },
+  });
+
+  const postSlugs = new Set<string>();
+  const projectSlugs = new Set<string>();
+  let hasPublishedPost = false;
+  let hasPublishedProject = false;
+
+  for (const reference of references) {
+    const post = reference.post;
+    if (post && !post.deletedAt) {
+      postSlugs.add(post.slug);
+      if (post.status === "PUBLISHED") {
+        hasPublishedPost = true;
+      }
+    }
+
+    const project = reference.project;
+    if (project) {
+      projectSlugs.add(project.slug);
+      if (project.status === "PUBLISHED") {
+        hasPublishedProject = true;
+      }
+    }
+  }
+
+  return {
+    postSlugs,
+    projectSlugs,
+    hasPublishedPost,
+    hasPublishedProject,
+  };
+}
+
+function invalidateReferencedContentCaches(
+  targets: ReferencedContentCacheTargets,
+): void {
+  for (const slug of targets.postSlugs) {
+    updateTag(`posts/${slug}`);
+  }
+
+  for (const slug of targets.projectSlugs) {
+    updateTag(`projects/${slug}`);
+  }
+
+  if (targets.hasPublishedPost) {
+    updateTag("posts/list");
+  }
+
+  if (targets.hasPublishedProject) {
+    updateTag("projects/list");
+  }
+}
+
 function sanitizeExifForClient(exif: unknown): unknown {
   if (!exif || typeof exif !== "object" || Array.isArray(exif)) {
     return exif;
@@ -1010,6 +1104,8 @@ export async function updateMedia(
         galleryPhoto: true,
       },
     });
+    const referencedContentCacheTargets =
+      await collectReferencedContentCacheTargets([id]);
 
     // 记录审计日志
     const auditOldValue: Record<string, string | boolean | null | object> = {};
@@ -1038,6 +1134,7 @@ export async function updateMedia(
     if (inGallery !== undefined || updateData.galleryPhoto) {
       updateTag("gallery/list");
     }
+    invalidateReferencedContentCaches(referencedContentCacheTargets);
 
     const oldSlug = existingMedia.galleryPhoto?.slug;
     const newSlug = updatedMedia.galleryPhoto?.slug;
@@ -1262,9 +1359,12 @@ export async function batchUpdateMedia(
 
     // 记录审计日志
     const { after } = await import("next/server");
+    const referencedContentCacheTargets =
+      await collectReferencedContentCacheTargets(updatableIds);
     if (inGallery !== undefined) {
       updateTag("gallery/list");
     }
+    invalidateReferencedContentCaches(referencedContentCacheTargets);
     after(async () => {
       // 如果是从图库移除，需要更新对应照片页面的缓存
       if (inGallery === false) {
@@ -1406,6 +1506,8 @@ export async function deleteMedia(
     const deletableMedia = mediaToDelete.filter((media) =>
       deletableIds.includes(media.id),
     );
+    const referencedContentCacheTargets =
+      await collectReferencedContentCacheTargets(deletableIds);
     await Promise.all(
       deletableMedia.map(async (media) => {
         const provider = media.StorageProvider;
@@ -1515,6 +1617,7 @@ export async function deleteMedia(
     if (hasPhotosInBatch) {
       updateTag("gallery/list");
     }
+    invalidateReferencedContentCaches(referencedContentCacheTargets);
     after(async () => {
       // 刷新被删除照片的页面缓存
       mediaToDelete.forEach((media) => {

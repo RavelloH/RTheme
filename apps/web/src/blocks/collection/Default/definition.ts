@@ -31,13 +31,13 @@ function inferRandomSourceFromDataSource(
 function getRandomSourceTags(source: string | undefined): readonly string[] {
   switch (source) {
     case "posts":
-      return ["posts"];
+      return ["posts/list"];
     case "categories":
-      return ["categories", "posts"];
+      return ["categories/list"];
     case "tags":
-      return ["tags", "posts"];
+      return ["tags/list"];
     case "projects":
-      return ["projects"];
+      return ["projects/list"];
     default:
       return [];
   }
@@ -52,30 +52,47 @@ export const defaultBlockDefinition = createBlockDefinition({
   component: () =>
     import("./index").then((componentModule) => componentModule.default),
   cache: {
-    tags: ({ content }) => {
+    tags: ({ content, context }) => {
       const tags = new Set<string>();
       const normalizedContent =
         content && typeof content === "object"
           ? (content as Record<string, unknown>)
           : {};
+      const scopedSlug =
+        typeof context.slug === "string"
+          ? context.slug
+              .trim()
+              .split("/")
+              .map((segment) => segment.trim())
+              .filter(Boolean)
+              .join("/")
+          : "";
 
       const dataSource = normalizeString(normalizedContent.dataSource);
       switch (dataSource) {
         case "posts-index":
-          tags.add("posts");
+          tags.add("posts/list");
           break;
         case "categories-index":
+          tags.add("categories/list");
+          break;
         case "category-detail":
-          tags.add("categories");
-          tags.add("posts");
+          tags.add("categories/list");
+          if (scopedSlug) {
+            tags.add(`categories/${scopedSlug}`);
+          }
           break;
         case "tags-index":
+          tags.add("tags/list");
+          break;
         case "tag-detail":
-          tags.add("tags");
-          tags.add("posts");
+          tags.add("tags/list");
+          if (scopedSlug) {
+            tags.add(`tags/${scopedSlug}`);
+          }
           break;
         case "projects-index":
-          tags.add("projects");
+          tags.add("projects/list");
           break;
         default:
           break;

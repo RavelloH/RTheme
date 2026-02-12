@@ -22,10 +22,10 @@ export const heroBlockDefinition = createBlockDefinition({
           : undefined;
 
       if (!galleryImagesOrigin || galleryImagesOrigin === "latestPosts") {
-        tags.add("posts");
+        tags.add("posts/list");
       }
       if (galleryImagesOrigin === "latestGallery") {
-        tags.add("photos");
+        tags.add("gallery/list");
       }
 
       return Array.from(tags);

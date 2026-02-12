@@ -9,7 +9,7 @@ export const archiveCalendarBlockDefinition = createBlockDefinition({
   component: () =>
     import("./index").then((componentModule) => componentModule.default),
   cache: {
-    tags: ["posts"],
+    tags: ["posts/list"],
   },
   capabilities: {
     context: "inherit",

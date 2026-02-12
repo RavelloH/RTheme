@@ -222,6 +222,81 @@ type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
 
+interface ProjectTagRelation {
+  slug: string;
+}
+
+interface ProjectCategoryRelation {
+  fullSlug: string;
+}
+
+interface ProjectCacheRelationInput {
+  tags?: readonly ProjectTagRelation[];
+  categories?: readonly ProjectCategoryRelation[];
+}
+
+function addProjectTagSlug(
+  target: Set<string>,
+  slug: string | null | undefined,
+): void {
+  if (slug) {
+    target.add(slug);
+  }
+}
+
+function addProjectCategoryPathTags(
+  target: Set<string>,
+  fullSlug: string | null | undefined,
+): void {
+  if (!fullSlug) {
+    return;
+  }
+
+  const segments = fullSlug
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  if (segments.length === 0) {
+    return;
+  }
+
+  for (let index = 1; index <= segments.length; index += 1) {
+    target.add(segments.slice(0, index).join("/"));
+  }
+}
+
+function collectProjectRelatedCacheTags(
+  tagSlugs: Set<string>,
+  categoryPaths: Set<string>,
+  project: ProjectCacheRelationInput,
+): void {
+  for (const tag of project.tags ?? []) {
+    addProjectTagSlug(tagSlugs, tag.slug);
+  }
+
+  for (const category of project.categories ?? []) {
+    addProjectCategoryPathTags(categoryPaths, category.fullSlug);
+  }
+}
+
+function updateProjectCacheTagsBySlugs(slugs: Iterable<string>): void {
+  for (const slug of slugs) {
+    updateTag(`projects/${slug}`);
+  }
+}
+
+function updateTagCacheTagsBySlugs(slugs: Iterable<string>): void {
+  for (const slug of slugs) {
+    updateTag(`tags/${slug}`);
+  }
+}
+
+function updateCategoryCacheTagsByPaths(paths: Iterable<string>): void {
+  for (const path of paths) {
+    updateTag(`categories/${path}`);
+  }
+}
+
 /*
   辅助函数：从 GitHub API 获取仓库信息
   用于自动填充 description 和 startedAt
@@ -1146,6 +1221,17 @@ export async function createProject(
       select: {
         id: true,
         slug: true,
+        status: true,
+        tags: {
+          select: {
+            slug: true,
+          },
+        },
+        categories: {
+          select: {
+            fullSlug: true,
+          },
+        },
       },
     });
 
@@ -1209,7 +1295,21 @@ export async function createProject(
     }
 
     // 更新缓存标签
-    updateTag("projects");
+    updateProjectCacheTagsBySlugs([project.slug]);
+    if (project.status === "PUBLISHED") {
+      const tagDetailTagsToRefresh = new Set<string>();
+      const categoryDetailTagsToRefresh = new Set<string>();
+      collectProjectRelatedCacheTags(
+        tagDetailTagsToRefresh,
+        categoryDetailTagsToRefresh,
+        project,
+      );
+      updateTagCacheTagsBySlugs(tagDetailTagsToRefresh);
+      updateCategoryCacheTagsByPaths(categoryDetailTagsToRefresh);
+      updateTag("projects/list");
+      updateTag("tags/list");
+      updateTag("categories/list");
+    }
 
     // 审计日志
     const { after } = await import("next/server");
@@ -1345,8 +1445,8 @@ export async function updateProject(
     const existingProject = await prisma.project.findUnique({
       where: { slug },
       include: {
-        categories: { select: { name: true } },
-        tags: { select: { name: true } },
+        categories: { select: { name: true, fullSlug: true } },
+        tags: { select: { name: true, slug: true } },
         mediaRefs: {
           include: {
             media: {
@@ -1477,6 +1577,17 @@ export async function updateProject(
       select: {
         id: true,
         slug: true,
+        status: true,
+        categories: {
+          select: {
+            fullSlug: true,
+          },
+        },
+        tags: {
+          select: {
+            slug: true,
+          },
+        },
       },
     });
 
@@ -1536,8 +1647,41 @@ export async function updateProject(
     }
 
     // 更新缓存标签
-    updateTag("projects");
-    updateTag(`projects/${updatedProject.slug}`);
+    const projectDetailTagsToRefresh = new Set<string>();
+    addProjectTagSlug(projectDetailTagsToRefresh, slug);
+    addProjectTagSlug(projectDetailTagsToRefresh, updatedProject.slug);
+    updateProjectCacheTagsBySlugs(projectDetailTagsToRefresh);
+
+    const tagDetailTagsToRefresh = new Set<string>();
+    const categoryDetailTagsToRefresh = new Set<string>();
+    collectProjectRelatedCacheTags(
+      tagDetailTagsToRefresh,
+      categoryDetailTagsToRefresh,
+      existingProject,
+    );
+    collectProjectRelatedCacheTags(
+      tagDetailTagsToRefresh,
+      categoryDetailTagsToRefresh,
+      updatedProject,
+    );
+    updateTagCacheTagsBySlugs(tagDetailTagsToRefresh);
+    updateCategoryCacheTagsByPaths(categoryDetailTagsToRefresh);
+
+    const wasPublished = existingProject.status === "PUBLISHED";
+    const isPublished = updatedProject.status === "PUBLISHED";
+    if (wasPublished || isPublished) {
+      updateTag("projects/list");
+    }
+
+    if (
+      (tags !== undefined ||
+        categories !== undefined ||
+        status !== undefined) &&
+      (wasPublished || isPublished)
+    ) {
+      updateTag("tags/list");
+      updateTag("categories/list");
+    }
 
     // 审计日志
     const { after } = await import("next/server");
@@ -1662,6 +1806,17 @@ export async function updateProjects(
       where,
       select: {
         slug: true,
+        status: true,
+        tags: {
+          select: {
+            slug: true,
+          },
+        },
+        categories: {
+          select: {
+            fullSlug: true,
+          },
+        },
       },
     });
 
@@ -1671,9 +1826,27 @@ export async function updateProjects(
     });
 
     // 更新缓存标签
-    updateTag("projects");
+    const projectDetailTagsToRefresh = new Set<string>();
+    const tagDetailTagsToRefresh = new Set<string>();
+    const categoryDetailTagsToRefresh = new Set<string>();
     for (const project of projectsToUpdate) {
-      updateTag(`projects/${project.slug}`);
+      addProjectTagSlug(projectDetailTagsToRefresh, project.slug);
+      collectProjectRelatedCacheTags(
+        tagDetailTagsToRefresh,
+        categoryDetailTagsToRefresh,
+        project,
+      );
+    }
+    updateProjectCacheTagsBySlugs(projectDetailTagsToRefresh);
+    if (projectsToUpdate.length > 0) {
+      updateTag("projects/list");
+    }
+
+    if (status !== undefined) {
+      updateTagCacheTagsBySlugs(tagDetailTagsToRefresh);
+      updateCategoryCacheTagsByPaths(categoryDetailTagsToRefresh);
+      updateTag("tags/list");
+      updateTag("categories/list");
     }
 
     // 审计日志
@@ -1763,7 +1936,22 @@ export async function deleteProjects(
     // 获取要删除的项目信息（用于审计日志）
     const projectsToDelete = await prisma.project.findMany({
       where,
-      select: { id: true, slug: true, title: true },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        status: true,
+        tags: {
+          select: {
+            slug: true,
+          },
+        },
+        categories: {
+          select: {
+            fullSlug: true,
+          },
+        },
+      },
     });
     const deletableProjectIds = projectsToDelete.map((project) => project.id);
 
@@ -1780,9 +1968,31 @@ export async function deleteProjects(
     });
 
     // 更新缓存标签
-    updateTag("projects");
+    const projectDetailTagsToRefresh = new Set<string>();
+    const tagDetailTagsToRefresh = new Set<string>();
+    const categoryDetailTagsToRefresh = new Set<string>();
     for (const project of projectsToDelete) {
-      updateTag(`projects/${project.slug}`);
+      addProjectTagSlug(projectDetailTagsToRefresh, project.slug);
+      collectProjectRelatedCacheTags(
+        tagDetailTagsToRefresh,
+        categoryDetailTagsToRefresh,
+        project,
+      );
+    }
+    updateProjectCacheTagsBySlugs(projectDetailTagsToRefresh);
+
+    if (projectsToDelete.length > 0) {
+      updateTag("projects/list");
+    }
+
+    const hasPublishedDeletion = projectsToDelete.some(
+      (project) => project.status === "PUBLISHED",
+    );
+    if (hasPublishedDeletion) {
+      updateTagCacheTagsBySlugs(tagDetailTagsToRefresh);
+      updateCategoryCacheTagsByPaths(categoryDetailTagsToRefresh);
+      updateTag("tags/list");
+      updateTag("categories/list");
     }
 
     // 审计日志
@@ -2015,10 +2225,14 @@ export async function syncProjectsGithub(
     const failed = syncResults.filter((r) => !r.success).length;
 
     // 更新缓存标签
-    updateTag("projects");
-    for (const project of projects) {
-      updateTag(`projects/${project.slug}`);
+    const projectDetailTagsToRefresh = new Set<string>();
+    if (projects.length > 0) {
+      updateTag("projects/list");
     }
+    for (const project of projects) {
+      addProjectTagSlug(projectDetailTagsToRefresh, project.slug);
+    }
+    updateProjectCacheTagsBySlugs(projectDetailTagsToRefresh);
 
     // 审计日志
     const { after } = await import("next/server");

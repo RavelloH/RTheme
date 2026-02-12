@@ -66,6 +66,33 @@ type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
 
+function addCategoryPathTags(
+  target: Set<string>,
+  fullSlug: string | null | undefined,
+): void {
+  if (!fullSlug) {
+    return;
+  }
+
+  const segments = fullSlug
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  if (segments.length === 0) {
+    return;
+  }
+
+  for (let index = 1; index <= segments.length; index += 1) {
+    target.add(segments.slice(0, index).join("/"));
+  }
+}
+
+function updateCategoryCacheTagsByPaths(paths: Iterable<string>): void {
+  for (const path of paths) {
+    updateTag(`categories/${path}`);
+  }
+}
+
 /*
   getCategoriesList - 获取分类列表
 */
@@ -986,8 +1013,10 @@ export async function createCategory(
     });
 
     // 刷新缓存标签
-    updateTag("categories");
-    updateTag("posts");
+    const categoryDetailTagsToRefresh = new Set<string>();
+    addCategoryPathTags(categoryDetailTagsToRefresh, category.fullSlug);
+    updateTag("categories/list");
+    updateCategoryCacheTagsByPaths(categoryDetailTagsToRefresh);
 
     return response.ok({
       data: {
@@ -1298,6 +1327,12 @@ export async function updateCategory(
       depthChange = updateData.depth - category.depth;
     }
 
+    const categoryDetailTagsToRefresh = new Set<string>();
+    addCategoryPathTags(categoryDetailTagsToRefresh, category.fullSlug);
+    if (typeof updateData.fullSlug === "string") {
+      addCategoryPathTags(categoryDetailTagsToRefresh, updateData.fullSlug);
+    }
+
     // 执行更新（事务处理，确保原子性）
     const updatedCategory = await prisma.$transaction(async (tx) => {
       // 1. 更新当前分类
@@ -1332,6 +1367,8 @@ export async function updateCategory(
             ? newFullSlugPrefix +
               desc.fullSlug.substring(oldFullSlugPrefix.length)
             : desc.fullSlug;
+          addCategoryPathTags(categoryDetailTagsToRefresh, desc.fullSlug);
+          addCategoryPathTags(categoryDetailTagsToRefresh, newFullSlug);
 
           await tx.category.update({
             where: { id: desc.id },
@@ -1363,6 +1400,8 @@ export async function updateCategory(
             ? newFullSlugPrefix +
               desc.fullSlug.substring(oldFullSlugPrefix.length)
             : desc.fullSlug;
+          addCategoryPathTags(categoryDetailTagsToRefresh, desc.fullSlug);
+          addCategoryPathTags(categoryDetailTagsToRefresh, newFullSlug);
 
           await tx.category.update({
             where: { id: desc.id },
@@ -1450,9 +1489,9 @@ export async function updateCategory(
     });
 
     // 刷新缓存标签
-    updateTag("categories");
-    updateTag(`categories/${updatedCategory.slug}`);
-    updateTag("posts");
+    updateTag("categories/list");
+    updateCategoryCacheTagsByPaths(categoryDetailTagsToRefresh);
+    updateTag("posts/list");
 
     return response.ok({
       data: {
@@ -1559,6 +1598,21 @@ export async function deleteCategories(
     }
     const cascadeDeleted = allIdsToDelete.size - ids.length;
 
+    const categoryDetailTagsToRefresh = new Set<string>();
+    const categoriesToDelete = await prisma.category.findMany({
+      where: {
+        id: {
+          in: Array.from(allIdsToDelete),
+        },
+      },
+      select: {
+        fullSlug: true,
+      },
+    });
+    for (const category of categoriesToDelete) {
+      addCategoryPathTags(categoryDetailTagsToRefresh, category.fullSlug);
+    }
+
     // 获取受影响的文章 ID
     const affectedPosts = await prisma.post.findMany({
       where: {
@@ -1654,8 +1708,9 @@ export async function deleteCategories(
     });
 
     // 刷新缓存标签
-    updateTag("categories");
-    updateTag("posts");
+    updateTag("categories/list");
+    updateCategoryCacheTagsByPaths(categoryDetailTagsToRefresh);
+    updateTag("posts/list");
 
     return response.ok({
       data: {
@@ -1825,6 +1880,10 @@ export async function moveCategories(
       id: c.id,
       parentId: c.parentId,
     }));
+    const categoryDetailTagsToRefresh = new Set<string>();
+    for (const category of oldCategories) {
+      addCategoryPathTags(categoryDetailTagsToRefresh, category.fullSlug);
+    }
 
     // 准备目标父级信息
     let targetPath = "";
@@ -1854,6 +1913,7 @@ export async function moveCategories(
         const newFullSlug = targetFullSlug
           ? `${targetFullSlug}/${cat.slug}`
           : cat.slug;
+        addCategoryPathTags(categoryDetailTagsToRefresh, newFullSlug);
         const newDepth = targetDepth + 1;
 
         // 2. 更新当前分类
@@ -1892,6 +1952,8 @@ export async function moveCategories(
             ? newFullSlugPrefix +
               desc.fullSlug.substring(oldFullSlugPrefix.length)
             : desc.fullSlug;
+          addCategoryPathTags(categoryDetailTagsToRefresh, desc.fullSlug);
+          addCategoryPathTags(categoryDetailTagsToRefresh, descNewFullSlug);
 
           await tx.category.update({
             where: { id: desc.id },
@@ -1930,8 +1992,9 @@ export async function moveCategories(
     });
 
     // 刷新缓存标签
-    updateTag("categories");
-    updateTag("posts");
+    updateTag("categories/list");
+    updateCategoryCacheTagsByPaths(categoryDetailTagsToRefresh);
+    updateTag("posts/list");
 
     return response.ok({
       data: {

@@ -23,7 +23,6 @@ import {
   SendMessageRequestSchema,
 } from "@repo/shared-types/api/message";
 import crypto from "crypto";
-import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
@@ -1158,8 +1157,8 @@ export async function deleteConversation(
       },
     });
 
-    // Revalidate
-    revalidatePath("/messages");
+    // 注意：不需要 revalidatePath，因为消息页面是客户端驱动的
+    // 数据通过轮询或 WebSocket 实时更新
 
     return response.ok({
       message: "删除会话成功",
