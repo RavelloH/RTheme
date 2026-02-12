@@ -1,0 +1,42 @@
+---
+title: 添加存储
+---
+
+## 介绍
+
+NeutralPress 支持以下存储源：
+
+- 本地存储：将文件存储在服务器的本地磁盘上，适合小型部署和测试环境。
+- AWS S3：使用 Amazon S3 存储文件。也可以使用任何支持 S3 协议的存储服务，例如 Cloudflare R2、阿里云 OSS 等。
+- Vercel Blob Storage：使用 Vercel 提供的 Blob 存储服务，适合部署在 Vercel 平台上的应用。
+- Github Pages（实验性）：将文件存储在 Github 仓库中。也可使用 CDN 服务（如 jsDelivr）进行加速。但是，因为上传图片后，需要等待 Github Pages 重新部署，延迟较高、体验较差。
+
+对于大多数用户，推荐使用 Vercel Blob（免费，但容量较小）或者 Cloudflare R2（免费，但是需要验证信用卡。容量大，推荐）。
+
+<Cards>
+  <Card title="本地存储" href="/docs/settings/storage/local">
+    将文件存储在服务器的本地磁盘上。
+  </Card>
+  <Card title="AWS S3" href="/docs/settings/storage/s3">
+    使用 Amazon S3 或兼容 S3 协议的存储服务。
+  </Card>
+  <Card title="Vercel Blob Storage" href="/docs/settings/storage/vercel-blob">
+    使用 Vercel 提供的 Blob 存储服务。
+  </Card>
+  <Card
+    title="Github Pages（实验性）"
+    href="/docs/settings/storage/github-pages"
+  >
+    将文件存储在 Github 仓库中。
+  </Card>
+</Cards>
+
+## 通用配置项
+
+- 内部名称：系统使用，建议小写英文+短横线
+- 显示名称：显示名称
+- 基础 URL：OSS 的公开URL路径
+- 最大文件大小：默认50MB
+- 路径模板：文件存储路径的模板，支持变量参考下方说明。
+
+  <include>../../../part/storage-path-template.md</include>

@@ -1,0 +1,42 @@
+---
+title: Github Pages 存储
+---
+
+## 介绍
+
+尽管不推荐，不过 NeutralPress 能够在上传文件时，将图片直接上传到你的 Github 仓库中，并通过 Github Pages 进行访问。
+
+但是，因为 Github Pages 需要重新部署网站，上传图片后，通常需要等待几分钟才能访问到图片，体验较差。因此，这种存储方式仅适合测试和实验性用途。
+
+此外，你可以通过使用 Vercel、Cloudflare Pages 等支持 Github 仓库同步的静态网站托管服务，来加速图片的访问速度。如果你的仓库是公开的，可以使用 jsDelivr 等 CDN 服务进行加速。
+
+## 配置
+
+<div className="fd-steps">
+<div className="fd-step">
+
+### 1.打开设置页面
+
+打开 NeutralPress 的管理面板，进入“存储管理”页面，点击添加存储服务商，选择 Github Pages。
+
+</div>
+<div className="fd-step">
+
+### 2.创建 Github 仓库
+
+如果你还没有 Github 仓库，请先创建一个新的 Github 仓库，用于存储上传的图片文件。
+前往 [Github 新建仓库页面](https://github.com/new) ，填写仓库名称等信息，创建一个新的仓库。
+
+### 3.生成访问令牌
+
+参考 [Github 同步](/docs/settings/github-sync) 页面的步骤，创建一个对此仓库具有读写权限的 Github 个人访问令牌。
+
+</div>
+<div className="fd-step">
+
+### 4.填写配置信息
+
+在 NeutralPress 的存储管理页面，填写相关配置信息。
+
+</div>
+</div>
