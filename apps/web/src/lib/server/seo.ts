@@ -1,5 +1,6 @@
 // SEO 相关库
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 
 import { findCategoryByPath } from "@/lib/server/category-utils";
 import { getRawConfig } from "@/lib/server/config-cache";
@@ -480,6 +481,25 @@ interface SeoTemplateData {
 }
 
 /**
+ * 根据 slug 查询标签数据（带缓存）
+ */
+const getCachedTagBySlug = (slug: string) =>
+  unstable_cache(
+    async (s: string) => {
+      const tag = await prisma.tag.findUnique({
+        where: { slug: s },
+        select: { name: true, description: true },
+      });
+      return tag;
+    },
+    [`seo-tag-${slug}`],
+    {
+      tags: ["tags/list"],
+      revalidate: false,
+    },
+  )(slug);
+
+/**
  * 获取标签信息（按需查询）
  */
 async function fetchTagData(
@@ -495,10 +515,7 @@ async function fetchTagData(
   if (!needsTag && !needsDescription) return {};
 
   try {
-    const tag = await prisma.tag.findUnique({
-      where: { slug },
-      select: { name: true, description: true },
-    });
+    const tag = await getCachedTagBySlug(slug);
 
     if (!tag) return {};
 

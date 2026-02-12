@@ -3,6 +3,8 @@
  * 用于处理层级分类的各种操作
  */
 
+import { unstable_cache } from "next/cache";
+
 import prisma from "@/lib/server/prisma";
 
 const PATH_SEPARATOR = "/";
@@ -20,13 +22,11 @@ interface CategoryTreeNode {
 }
 
 /**
- * 构建分类树形结构
- * @param parentId 父分类 ID，null 表示从根开始
- * @param maxDepth 最大层级深度，undefined 表示无限制
+ * 构建分类树形结构（内部实现）
  */
-export async function buildCategoryTree(
-  parentId: number | null = null,
-  maxDepth?: number,
+async function buildCategoryTreeImpl(
+  parentId: number | null,
+  maxDepth: number | undefined,
 ): Promise<CategoryTreeNode[]> {
   // 优化：使用一次查询获取所有相关分类，然后在内存中组装
   // 如果是从根开始，获取所有分类；如果指定 parentId，获取该子树
@@ -138,6 +138,26 @@ export async function buildCategoryTree(
 }
 
 /**
+ * 构建分类树形结构
+ * @param parentId 父分类 ID，null 表示从根开始
+ * @param maxDepth 最大层级深度，undefined 表示无限制
+ */
+export async function buildCategoryTree(
+  parentId: number | null = null,
+  maxDepth?: number,
+): Promise<CategoryTreeNode[]> {
+  const getCachedData = unstable_cache(
+    buildCategoryTreeImpl,
+    [`category-tree-${parentId ?? "root"}-${maxDepth ?? "all"}`],
+    {
+      tags: ["categories/list"],
+      revalidate: false,
+    },
+  );
+  return getCachedData(parentId, maxDepth);
+}
+
+/**
  * 验证分类移动是否会造成循环引用
  * @param categoryId 要移动的分类 ID
  * @param newParentId 新父分类 ID
@@ -181,44 +201,54 @@ export async function validateCategoryMove(
  * @returns slug 数组，从根到当前分类
  */
 export async function getCategoryPath(categoryId: number): Promise<string[]> {
-  const category = await prisma.category.findUnique({
-    where: { id: categoryId },
-    select: {
-      slug: true,
-      path: true,
+  const getCachedData = unstable_cache(
+    async (id: number) => {
+      const category = await prisma.category.findUnique({
+        where: { id },
+        select: {
+          slug: true,
+          path: true,
+        },
+      });
+
+      if (!category) {
+        return [];
+      }
+
+      // 解析 path 中的 ID
+      // path 格式：包含自己的 ID，格式如 "5/10/15"（与 Comment 一致）
+      // 需要排除最后一个（自己的 ID）
+      const ancestorIds = category.path
+        .split(PATH_SEPARATOR)
+        .filter((p) => p)
+        .map(Number)
+        .slice(0, -1);
+
+      if (ancestorIds.length === 0) {
+        return [category.slug];
+      }
+
+      // 批量查询祖先 slug
+      const ancestors = await prisma.category.findMany({
+        where: { id: { in: ancestorIds } },
+        select: { id: true, slug: true },
+      });
+
+      // 按路径顺序排序
+      const ancestorMap = new Map(ancestors.map((a) => [a.id, a.slug]));
+      const pathSlugs = ancestorIds
+        .map((id) => ancestorMap.get(id))
+        .filter((s): s is string => s !== undefined);
+
+      return [...pathSlugs, category.slug];
     },
-  });
-
-  if (!category) {
-    return [];
-  }
-
-  // 解析 path 中的 ID
-  // path 格式：包含自己的 ID，格式如 "5/10/15"（与 Comment 一致）
-  // 需要排除最后一个（自己的 ID）
-  const ancestorIds = category.path
-    .split(PATH_SEPARATOR)
-    .filter((p) => p)
-    .map(Number)
-    .slice(0, -1);
-
-  if (ancestorIds.length === 0) {
-    return [category.slug];
-  }
-
-  // 批量查询祖先 slug
-  const ancestors = await prisma.category.findMany({
-    where: { id: { in: ancestorIds } },
-    select: { id: true, slug: true },
-  });
-
-  // 按路径顺序排序
-  const ancestorMap = new Map(ancestors.map((a) => [a.id, a.slug]));
-  const pathSlugs = ancestorIds
-    .map((id) => ancestorMap.get(id))
-    .filter((s): s is string => s !== undefined);
-
-  return [...pathSlugs, category.slug];
+    [`category-path-${categoryId}`],
+    {
+      tags: ["categories/list"],
+      revalidate: false,
+    },
+  );
+  return getCachedData(categoryId);
 }
 
 /**
@@ -229,41 +259,51 @@ export async function getCategoryPath(categoryId: number): Promise<string[]> {
 export async function getCategoryNamePath(
   categoryId: number,
 ): Promise<string[]> {
-  const category = await prisma.category.findUnique({
-    where: { id: categoryId },
-    select: {
-      name: true,
-      path: true,
+  const getCachedData = unstable_cache(
+    async (id: number) => {
+      const category = await prisma.category.findUnique({
+        where: { id },
+        select: {
+          name: true,
+          path: true,
+        },
+      });
+
+      if (!category) {
+        return [];
+      }
+
+      // path 格式：包含自己的 ID，格式如 "5/10/15"（与 Comment 一致）
+      // 需要排除最后一个（自己的 ID）
+      const ancestorIds = category.path
+        .split(PATH_SEPARATOR)
+        .filter((p) => p)
+        .map(Number)
+        .slice(0, -1);
+
+      if (ancestorIds.length === 0) {
+        return [category.name];
+      }
+
+      const ancestors = await prisma.category.findMany({
+        where: { id: { in: ancestorIds } },
+        select: { id: true, name: true },
+      });
+
+      const ancestorMap = new Map(ancestors.map((a) => [a.id, a.name]));
+      const pathNames = ancestorIds
+        .map((id) => ancestorMap.get(id))
+        .filter((n): n is string => n !== undefined);
+
+      return [...pathNames, category.name];
     },
-  });
-
-  if (!category) {
-    return [];
-  }
-
-  // path 格式：包含自己的 ID，格式如 "5/10/15"（与 Comment 一致）
-  // 需要排除最后一个（自己的 ID）
-  const ancestorIds = category.path
-    .split(PATH_SEPARATOR)
-    .filter((p) => p)
-    .map(Number)
-    .slice(0, -1);
-
-  if (ancestorIds.length === 0) {
-    return [category.name];
-  }
-
-  const ancestors = await prisma.category.findMany({
-    where: { id: { in: ancestorIds } },
-    select: { id: true, name: true },
-  });
-
-  const ancestorMap = new Map(ancestors.map((a) => [a.id, a.name]));
-  const pathNames = ancestorIds
-    .map((id) => ancestorMap.get(id))
-    .filter((n): n is string => n !== undefined);
-
-  return [...pathNames, category.name];
+    [`category-name-path-${categoryId}`],
+    {
+      tags: ["categories/list"],
+      revalidate: false,
+    },
+  );
+  return getCachedData(categoryId);
 }
 
 /**
@@ -274,25 +314,35 @@ export async function getCategoryNamePath(
 export async function getAllDescendantIds(
   categoryId: number,
 ): Promise<number[]> {
-  const category = await prisma.category.findUnique({
-    where: { id: categoryId },
-    select: { path: true },
-  });
+  const getCachedData = unstable_cache(
+    async (id: number) => {
+      const category = await prisma.category.findUnique({
+        where: { id },
+        select: { path: true },
+      });
 
-  if (!category) return [];
+      if (!category) return [];
 
-  // 使用 path 前缀匹配（高性能）
-  // path 格式：包含自己的 ID，格式如 "5/10/15"（与 Comment 一致）
-  const prefix = `${category.path}${PATH_SEPARATOR}`;
+      // 使用 path 前缀匹配（高性能）
+      // path 格式：包含自己的 ID，格式如 "5/10/15"（与 Comment 一致）
+      const prefix = `${category.path}${PATH_SEPARATOR}`;
 
-  const descendants = await prisma.category.findMany({
-    where: {
-      path: { startsWith: prefix },
+      const descendants = await prisma.category.findMany({
+        where: {
+          path: { startsWith: prefix },
+        },
+        select: { id: true },
+      });
+
+      return descendants.map((d) => d.id);
     },
-    select: { id: true },
-  });
-
-  return descendants.map((d) => d.id);
+    [`category-descendants-${categoryId}`],
+    {
+      tags: ["categories/list"],
+      revalidate: false,
+    },
+  );
+  return getCachedData(categoryId);
 }
 
 /**
@@ -445,21 +495,32 @@ export async function findCategoryByPath(
   // 构建 fullSlug：用 "/" 连接所有 slug
   const fullSlug = pathSlugs.join("/");
 
-  // 单次查询，利用 fullSlug 索引
-  const category = await prisma.category.findUnique({
-    where: { fullSlug },
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      description: true,
-      parentId: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
+  const getCachedData = unstable_cache(
+    async (slug: string) => {
+      // 单次查询，利用 fullSlug 索引
+      const category = await prisma.category.findUnique({
+        where: { fullSlug: slug },
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          description: true,
+          parentId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
 
-  return category;
+      return category;
+    },
+    [`category-by-path-${fullSlug}`],
+    {
+      tags: ["categories/list"],
+      revalidate: false,
+    },
+  );
+
+  return getCachedData(fullSlug);
 }
 
 /**

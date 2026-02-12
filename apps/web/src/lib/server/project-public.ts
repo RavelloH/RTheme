@@ -1,5 +1,6 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
 import { notFound } from "next/navigation";
 
 import { batchQueryMediaFiles } from "@/lib/server/image-query";
@@ -112,48 +113,68 @@ export interface PublicProjectDetail {
 export async function getPublishedProjectStaticParams(): Promise<
   Array<{ slug: string }>
 > {
-  const projects = await prisma.project.findMany({
-    where: {
-      status: "PUBLISHED",
-    },
-    select: {
-      slug: true,
-    },
-  });
+  const getCachedData = unstable_cache(
+    async () => {
+      const projects = await prisma.project.findMany({
+        where: {
+          status: "PUBLISHED",
+        },
+        select: {
+          slug: true,
+        },
+      });
 
-  return projects.map((project) => ({ slug: project.slug }));
+      return projects.map((project) => ({ slug: project.slug }));
+    },
+    ["published-project-static-params"],
+    {
+      tags: ["projects/list"],
+      revalidate: false,
+    },
+  );
+  return getCachedData();
 }
 
 export async function getPublishedProjectSeo(
   slug: string,
 ): Promise<PublicProjectSeoData | null> {
-  const project = await prisma.project.findUnique({
-    where: {
-      slug,
-      status: "PUBLISHED",
-    },
-    select: {
-      title: true,
-      slug: true,
-      description: true,
-      metaDescription: true,
-      metaKeywords: true,
-      robotsIndex: true,
-    },
-  });
+  const getCachedData = unstable_cache(
+    async (s: string) => {
+      const project = await prisma.project.findUnique({
+        where: {
+          slug: s,
+          status: "PUBLISHED",
+        },
+        select: {
+          title: true,
+          slug: true,
+          description: true,
+          metaDescription: true,
+          metaKeywords: true,
+          robotsIndex: true,
+        },
+      });
 
-  if (!project) {
-    return null;
-  }
+      if (!project) {
+        return null;
+      }
 
-  return {
-    title: project.title,
-    slug: project.slug,
-    description: normalizeDescription(project.description),
-    metaDescription: project.metaDescription,
-    metaKeywords: project.metaKeywords,
-    robotsIndex: project.robotsIndex,
-  };
+      return {
+        title: project.title,
+        slug: project.slug,
+        description: normalizeDescription(project.description),
+        metaDescription: project.metaDescription,
+        metaKeywords: project.metaKeywords,
+        robotsIndex: project.robotsIndex,
+      };
+    },
+    [`published-project-seo-${slug}`],
+    {
+      tags: ["projects/list"],
+      revalidate: false,
+    },
+  );
+  return getCachedData(slug);
 }
 
 export async function getPublishedProjectDetail(slug: string): Promise<{

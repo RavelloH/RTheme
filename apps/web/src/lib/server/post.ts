@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { notFound } from "next/navigation";
 
 import { getFeaturedImageUrl } from "@/lib/server/media-reference";
@@ -76,90 +77,107 @@ export interface RenderedContent {
  * 只返回已发布且未被删除的文章
  */
 export async function getPublishedPost(slug: string): Promise<FullPostData> {
-  const post = await prisma.post.findUnique({
-    where: {
-      slug,
-      status: "PUBLISHED",
-      deletedAt: null,
-    },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      content: true,
-      excerpt: true,
-      status: true,
-      isPinned: true,
-      allowComments: true,
-      publishedAt: true,
-      createdAt: true,
-      updatedAt: true,
-      metaDescription: true,
-      metaKeywords: true,
-      robotsIndex: true,
-      postMode: true,
-      license: true,
-      author: {
-        select: {
-          uid: true,
-          username: true,
-          nickname: true,
+  const getCachedData = unstable_cache(
+    async (s: string) => {
+      const post = await prisma.post.findUnique({
+        where: {
+          slug: s,
+          status: "PUBLISHED",
+          deletedAt: null,
         },
-      },
-      categories: {
         select: {
           id: true,
-          name: true,
-        },
-      },
-      tags: {
-        select: {
-          name: true,
+          title: true,
           slug: true,
-        },
-      },
-      _count: {
-        select: {
-          comments: {
-            where: {
-              status: "APPROVED",
-              deletedAt: null,
-            },
-          },
-        },
-      },
-      viewCount: {
-        select: {
-          cachedCount: true,
-        },
-      },
-      mediaRefs: {
-        include: {
-          media: {
+          content: true,
+          excerpt: true,
+          status: true,
+          isPinned: true,
+          allowComments: true,
+          publishedAt: true,
+          createdAt: true,
+          updatedAt: true,
+          metaDescription: true,
+          metaKeywords: true,
+          robotsIndex: true,
+          postMode: true,
+          license: true,
+          author: {
             select: {
-              shortHash: true,
-              width: true,
-              height: true,
-              blur: true,
+              uid: true,
+              username: true,
+              nickname: true,
+            },
+          },
+          categories: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          tags: {
+            select: {
+              name: true,
+              slug: true,
+            },
+          },
+          _count: {
+            select: {
+              comments: {
+                where: {
+                  status: "APPROVED",
+                  deletedAt: null,
+                },
+              },
+            },
+          },
+          viewCount: {
+            select: {
+              cachedCount: true,
+            },
+          },
+          mediaRefs: {
+            include: {
+              media: {
+                select: {
+                  shortHash: true,
+                  width: true,
+                  height: true,
+                  blur: true,
+                },
+              },
             },
           },
         },
-      },
-    },
-  });
+      });
 
-  if (!post) {
+      if (!post) {
+        return null;
+      }
+
+      // 提取特色图片URL
+      const featuredImage = getFeaturedImageUrl(post.mediaRefs);
+
+      return {
+        ...post,
+        viewCount: post.viewCount?.cachedCount || 0,
+        featuredImage,
+      } as FullPostData;
+    },
+    [`published-post-${slug}`],
+    {
+      tags: ["posts/list"],
+      revalidate: false,
+    },
+  );
+
+  const result = await getCachedData(slug);
+
+  if (!result) {
     notFound();
   }
 
-  // 提取特色图片URL
-  const featuredImage = getFeaturedImageUrl(post.mediaRefs);
-
-  return {
-    ...post,
-    viewCount: post.viewCount?.cachedCount || 0,
-    featuredImage,
-  } as FullPostData;
+  return result;
 }
 
 /**
@@ -215,104 +233,115 @@ export interface AdjacentPosts {
 export async function getAdjacentPosts(
   currentSlug: string,
 ): Promise<AdjacentPosts> {
-  // 首先获取当前文章的发布时间
-  const currentPost = await prisma.post.findUnique({
-    where: { slug: currentSlug },
-    select: { publishedAt: true },
-  });
+  const getCachedData = unstable_cache(
+    async (slug: string) => {
+      // 首先获取当前文章的发布时间
+      const currentPost = await prisma.post.findUnique({
+        where: { slug },
+        select: { publishedAt: true },
+      });
 
-  if (!currentPost?.publishedAt) {
-    return { previous: null, next: null };
-  }
+      if (!currentPost?.publishedAt) {
+        return { previous: null, next: null };
+      }
 
-  const baseWhere = {
-    status: "PUBLISHED" as const,
-    deletedAt: null,
-    publishedAt: { not: null },
-  };
+      const baseWhere = {
+        status: "PUBLISHED" as const,
+        deletedAt: null,
+        publishedAt: { not: null },
+      };
 
-  // 获取上一篇文章（发布时间早于当前文章的最新一篇）
-  const previousPost = await prisma.post.findFirst({
-    where: {
-      ...baseWhere,
-      publishedAt: { lt: currentPost.publishedAt },
-    },
-    orderBy: { publishedAt: "desc" },
-    select: {
-      title: true,
-      slug: true,
-      publishedAt: true,
-      excerpt: true,
-      isPinned: true,
-      categories: {
-        select: {
-          name: true,
-          slug: true,
+      // 获取上一篇文章（发布时间早于当前文章的最新一篇）
+      const previousPost = await prisma.post.findFirst({
+        where: {
+          ...baseWhere,
+          publishedAt: { lt: currentPost.publishedAt },
         },
-      },
-      tags: {
+        orderBy: { publishedAt: "desc" },
         select: {
-          name: true,
+          title: true,
           slug: true,
-        },
-      },
-      mediaRefs: {
-        include: {
-          media: {
+          publishedAt: true,
+          excerpt: true,
+          isPinned: true,
+          categories: {
             select: {
-              shortHash: true,
-              width: true,
-              height: true,
-              blur: true,
+              name: true,
+              slug: true,
+            },
+          },
+          tags: {
+            select: {
+              name: true,
+              slug: true,
+            },
+          },
+          mediaRefs: {
+            include: {
+              media: {
+                select: {
+                  shortHash: true,
+                  width: true,
+                  height: true,
+                  blur: true,
+                },
+              },
             },
           },
         },
-      },
-    },
-  });
+      });
 
-  // 获取下一篇文章（发布时间晚于当前文章的最早一篇）
-  const nextPost = await prisma.post.findFirst({
-    where: {
-      ...baseWhere,
-      publishedAt: { gt: currentPost.publishedAt },
-    },
-    orderBy: { publishedAt: "asc" },
-    select: {
-      title: true,
-      slug: true,
-      publishedAt: true,
-      excerpt: true,
-      isPinned: true,
-      categories: {
-        select: {
-          name: true,
-          slug: true,
+      // 获取下一篇文章（发布时间晚于当前文章的最早一篇）
+      const nextPost = await prisma.post.findFirst({
+        where: {
+          ...baseWhere,
+          publishedAt: { gt: currentPost.publishedAt },
         },
-      },
-      tags: {
+        orderBy: { publishedAt: "asc" },
         select: {
-          name: true,
+          title: true,
           slug: true,
-        },
-      },
-      mediaRefs: {
-        include: {
-          media: {
+          publishedAt: true,
+          excerpt: true,
+          isPinned: true,
+          categories: {
             select: {
-              shortHash: true,
-              width: true,
-              height: true,
-              blur: true,
+              name: true,
+              slug: true,
+            },
+          },
+          tags: {
+            select: {
+              name: true,
+              slug: true,
+            },
+          },
+          mediaRefs: {
+            include: {
+              media: {
+                select: {
+                  shortHash: true,
+                  width: true,
+                  height: true,
+                  blur: true,
+                },
+              },
             },
           },
         },
-      },
-    },
-  });
+      });
 
-  return {
-    previous: previousPost,
-    next: nextPost,
-  };
+      return {
+        previous: previousPost,
+        next: nextPost,
+      };
+    },
+    [`adjacent-posts-${currentSlug}`],
+    {
+      tags: ["posts/list"],
+      revalidate: false,
+    },
+  );
+
+  return getCachedData(currentSlug);
 }
