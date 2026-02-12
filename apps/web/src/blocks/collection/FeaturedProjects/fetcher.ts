@@ -83,8 +83,8 @@ export async function featuredProjectsFetcher(
   };
 
   const orderBy: Prisma.ProjectOrderByWithRelationInput[] = onlyFeatured
-    ? [{ sortOrder: "asc" }, { publishedAt: "desc" }]
-    : [{ isFeatured: "desc" }, { sortOrder: "asc" }, { publishedAt: "desc" }];
+    ? [{ sortOrder: "desc" }, { publishedAt: "desc" }]
+    : [{ isFeatured: "desc" }, { sortOrder: "desc" }, { publishedAt: "desc" }];
 
   const [projects, totalProjects] = await Promise.all([
     prisma.project.findMany({

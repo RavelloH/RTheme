@@ -27,7 +27,7 @@ const SORT_ORDER_MAP: Record<
   publishedAt_asc: [{ publishedAt: "asc" }, { createdAt: "asc" }],
   updatedAt_desc: [{ updatedAt: "desc" }],
   createdAt_desc: [{ createdAt: "desc" }],
-  sortOrder_asc: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+  sortOrder_asc: [{ sortOrder: "desc" }, { createdAt: "desc" }],
   stars_desc: [{ stars: "desc" }, { createdAt: "desc" }],
   forks_desc: [{ forks: "desc" }, { createdAt: "desc" }],
 };
