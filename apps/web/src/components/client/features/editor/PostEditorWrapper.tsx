@@ -178,6 +178,19 @@ export function PostEditorWrapper({
     [],
   );
 
+  const handleEditorTitleChange = useCallback((nextTitle: string) => {
+    setFormData((prev) => {
+      if (prev.title === nextTitle) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        title: nextTitle,
+      };
+    });
+  }, []);
+
   // ==================== 保存详细信息 ====================
   const handleSaveDetails = async () => {
     if (!formData.title.trim()) {
@@ -756,6 +769,8 @@ export function PostEditorWrapper({
       <EditorCore
         content={content}
         storageKey={storageKey}
+        title={formData.title}
+        onTitleChange={handleEditorTitleChange}
         availableModes={availableModes}
         defaultMode={defaultMode}
         dialogs={[]}

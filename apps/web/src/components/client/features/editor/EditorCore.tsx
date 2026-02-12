@@ -101,6 +101,8 @@ export function EditorCore({
   dialogs = [],
   statusBarActions = [],
   onChange,
+  title,
+  onTitleChange,
   onSave: _onSave,
   onPublish: _onPublish,
   onModeChange,
@@ -153,6 +155,7 @@ export function EditorCore({
 
   // 适配器管理器
   const adapterManagerRef = useRef<AdapterManager | null>(null);
+  const isSyncingTitleToEditorRef = useRef(false);
 
   // 初始化编辑器类型
   const [editorType, setEditorType] = useState<EditorMode>(() => {
@@ -207,6 +210,72 @@ export function EditorCore({
       lastUpdatedAt: null,
     };
   }, [content, editorType, storageKey]);
+
+  const extractTitleFromMarkdown = useCallback(
+    (markdown: string): string | null => {
+      const headingMatch = markdown.match(
+        /(^|\n)#\s+(.+?)(?:\s+#*\s*)?(?=\n|$)/,
+      );
+      if (!headingMatch) {
+        return null;
+      }
+
+      const rawTitle = headingMatch[2];
+      return rawTitle ? rawTitle.trim() : null;
+    },
+    [],
+  );
+
+  const upsertTitleInMarkdown = useCallback(
+    (markdown: string, nextTitle: string): string => {
+      const normalizedTitle = nextTitle.trim();
+      const headingRegex = /(^|\n)#\s+(.+?)(?:\s+#*\s*)?(?=\n|$)/;
+
+      if (headingRegex.test(markdown)) {
+        if (!normalizedTitle) {
+          return markdown
+            .replace(headingRegex, (_match, prefix: string) => prefix)
+            .replace(/^\n+/, "");
+        }
+
+        return markdown.replace(
+          headingRegex,
+          (_match, prefix: string) => `${prefix}# ${normalizedTitle}`,
+        );
+      }
+
+      if (!normalizedTitle) {
+        return markdown;
+      }
+
+      if (!markdown.trim()) {
+        return `# ${normalizedTitle}\n`;
+      }
+
+      return `# ${normalizedTitle}\n\n${markdown.replace(/^\n+/, "")}`;
+    },
+    [],
+  );
+
+  const syncTitleFromContent = useCallback(
+    (nextContent: string) => {
+      if (!onTitleChange || isSyncingTitleToEditorRef.current) {
+        return;
+      }
+
+      const extractedTitle = extractTitleFromMarkdown(nextContent);
+      if (extractedTitle === null) {
+        return;
+      }
+
+      if ((title || "").trim() === extractedTitle) {
+        return;
+      }
+
+      onTitleChange(extractedTitle);
+    },
+    [extractTitleFromMarkdown, onTitleChange, title],
+  );
 
   // 编辑器状态
   const [editorState, setEditorState] = useState<AdapterEditorState>({
@@ -278,6 +347,7 @@ export function EditorCore({
     setInitialContent(storageContent);
     setMarkdownContent(storageContent);
     hasLoadedFromStorage.current = true;
+    syncTitleFromContent(storageContent);
 
     if (storageData.hasSavedDraft && isInitialMount.current) {
       const lastUpdated = new Date(
@@ -304,7 +374,14 @@ export function EditorCore({
     if (isInitialMount.current) {
       isInitialMount.current = false;
     }
-  }, [content, editorType, loadContentFromStorage, storageKey, toast]);
+  }, [
+    content,
+    editorType,
+    loadContentFromStorage,
+    storageKey,
+    syncTitleFromContent,
+    toast,
+  ]);
 
   const getCurrentEditorContent = useCallback(() => {
     try {
@@ -356,6 +433,7 @@ export function EditorCore({
 
       setInitialContent(latestContent);
       setMarkdownContent(latestContent);
+      syncTitleFromContent(latestContent);
       hasLoadedFromStorage.current = false;
 
       setEditorType(nextMode);
@@ -368,8 +446,132 @@ export function EditorCore({
       onModeChange,
       showTableOfContents,
       storageKey,
+      syncTitleFromContent,
     ],
   );
+
+  const handleEditorContentChange = useCallback(
+    (nextContent: string) => {
+      setMarkdownContent(nextContent);
+
+      try {
+        saveEditorContent(
+          nextContent,
+          {
+            editorType: String(editorType),
+            isFullscreen,
+            showTableOfContents,
+          },
+          true,
+          storageKey,
+        );
+      } catch (error) {
+        console.error("Failed to auto-save draft:", error);
+      }
+
+      onChange?.(nextContent);
+      syncTitleFromContent(nextContent);
+    },
+    [
+      editorType,
+      isFullscreen,
+      onChange,
+      showTableOfContents,
+      storageKey,
+      syncTitleFromContent,
+    ],
+  );
+
+  useEffect(() => {
+    if (typeof title !== "string") {
+      return;
+    }
+
+    const hasActiveEditor =
+      editorType === "visual"
+        ? !!editor
+        : editorType === "markdown" ||
+            editorType === "mdx" ||
+            editorType === "html"
+          ? !!monacoEditor
+          : false;
+    if (!hasActiveEditor) {
+      return;
+    }
+
+    const currentContent = getCurrentEditorContent();
+    if (!currentContent.trim()) {
+      return;
+    }
+
+    const currentTitle = extractTitleFromMarkdown(currentContent) || "";
+    if (currentTitle === title.trim()) {
+      return;
+    }
+
+    const nextContent = upsertTitleInMarkdown(currentContent, title);
+    if (nextContent === currentContent) {
+      return;
+    }
+
+    isSyncingTitleToEditorRef.current = true;
+
+    try {
+      saveEditorContent(
+        nextContent,
+        {
+          editorType: String(editorType),
+          isFullscreen,
+          showTableOfContents,
+        },
+        true,
+        storageKey,
+      );
+
+      setInitialContent(nextContent);
+      setMarkdownContent(nextContent);
+      onChange?.(nextContent);
+
+      if (editorType === "visual" && editor) {
+        try {
+          // @ts-expect-error - markdown.parse方法可能没有类型定义
+          const parsed = editor.markdown.parse(nextContent);
+          editor.commands.setContent(parsed);
+        } catch (error) {
+          console.error("Failed to sync title to visual editor:", error);
+        }
+      }
+
+      if (
+        (editorType === "markdown" ||
+          editorType === "mdx" ||
+          editorType === "html") &&
+        monacoEditor
+      ) {
+        const currentPosition = monacoEditor.getPosition();
+        monacoEditor.setValue(nextContent);
+        if (currentPosition) {
+          monacoEditor.setPosition(currentPosition);
+        }
+      }
+    } finally {
+      queueMicrotask(() => {
+        isSyncingTitleToEditorRef.current = false;
+      });
+    }
+  }, [
+    editor,
+    editorType,
+    extractTitleFromMarkdown,
+    getCurrentEditorContent,
+    isFullscreen,
+    monacoEditor,
+    onChange,
+    showTableOfContents,
+    storageKey,
+    title,
+    upsertTitleInMarkdown,
+  ]);
 
   // ==================== 编辑器类型切换时重置加载标记 ====================
   useEffect(() => {
@@ -1212,6 +1414,7 @@ export function EditorCore({
             <TiptapEditor
               placeholder="开始编写你的内容..."
               content={initialContent}
+              onChange={handleEditorContentChange}
               onEditorReady={handleEditorReady}
               className="h-full"
               showInvisibleChars={showInvisibleChars}
@@ -1258,23 +1461,7 @@ export function EditorCore({
         ) : (
           <LiveEditor
             content={markdownContent}
-            onChange={(content) => {
-              setMarkdownContent(content);
-
-              // 自动保存草稿到 localStorage
-              try {
-                saveEditorContent(
-                  content,
-                  { editorType: String(editorType) },
-                  true, // isMarkdown = true
-                  storageKey,
-                );
-              } catch (error) {
-                console.error("Failed to auto-save draft:", error);
-              }
-
-              onChange?.(content);
-            }}
+            onChange={handleEditorContentChange}
             mode={
               editorType === "mdx"
                 ? "mdx"

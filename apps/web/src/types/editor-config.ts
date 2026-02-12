@@ -264,6 +264,8 @@ export interface EditorCoreProps {
 
   // 事件回调
   onChange?: (content: string) => void;
+  title?: string;
+  onTitleChange?: (title: string) => void;
   onSave?: (formData: Record<string, unknown>) => void | Promise<void>;
   onPublish?: (formData: Record<string, unknown>) => void | Promise<void>;
   onModeChange?: (mode: EditorMode) => void;
