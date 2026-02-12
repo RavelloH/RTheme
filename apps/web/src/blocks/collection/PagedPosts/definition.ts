@@ -8,6 +8,9 @@ export const pagedPostsBlockDefinition = createBlockDefinition({
     ),
   component: () =>
     import("./index").then((componentModule) => componentModule.default),
+  cache: {
+    tags: ["posts", "categories", "tags", "photos"],
+  },
   capabilities: {
     context: "inherit",
     placeholders: {

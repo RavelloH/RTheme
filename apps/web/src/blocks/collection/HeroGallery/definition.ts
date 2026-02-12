@@ -8,6 +8,29 @@ export const heroBlockDefinition = createBlockDefinition({
     ),
   component: () =>
     import("./index").then((componentModule) => componentModule.default),
+  cache: {
+    tags: ({ content }) => {
+      const tags = new Set<string>(["config"]);
+      const normalizedContent =
+        content && typeof content === "object"
+          ? (content as Record<string, unknown>)
+          : {};
+
+      const galleryImagesOrigin =
+        typeof normalizedContent.galleryImagesOrigin === "string"
+          ? normalizedContent.galleryImagesOrigin
+          : undefined;
+
+      if (!galleryImagesOrigin || galleryImagesOrigin === "latestPosts") {
+        tags.add("posts");
+      }
+      if (galleryImagesOrigin === "latestGallery") {
+        tags.add("photos");
+      }
+
+      return Array.from(tags);
+    },
+  },
   capabilities: {
     context: "inherit",
     placeholders: {

@@ -2,10 +2,8 @@ import type {
   ResolvedBlock,
   RuntimeBlockInput,
 } from "@/blocks/core/definition";
-import {
-  resolveBlocks,
-  resolveSingleBlock,
-} from "@/blocks/core/runtime/pipeline";
+import { resolveSingleBlock } from "@/blocks/core/runtime/pipeline";
+import { resolveSingleBlockWithCache } from "@/lib/server/block-cache";
 
 interface BlockPageConfig {
   blocks?: RuntimeBlockInput[];
@@ -16,6 +14,11 @@ interface BlockPageConfig {
 export interface ResolvedBlockPageConfig
   extends Omit<BlockPageConfig, "blocks"> {
   blocks?: ResolvedBlock[];
+}
+
+interface ResolveBlockDataOptions {
+  pageId?: string;
+  disableCache?: boolean;
 }
 
 /**
@@ -34,15 +37,22 @@ export async function resolveSingleBlockData(
 export async function resolveBlockData(
   pageConfig: BlockPageConfig | null,
   pageContext?: Record<string, unknown>,
+  options: ResolveBlockDataOptions = {},
 ): Promise<ResolvedBlockPageConfig | null> {
   if (!pageConfig?.blocks?.length) {
     return pageConfig as ResolvedBlockPageConfig | null;
   }
 
   const pageContextData = pageContext ?? pageConfig.data ?? {};
-  const resolvedBlocks = await resolveBlocks(
-    pageConfig.blocks,
-    pageContextData,
+  const resolvedBlocks = await Promise.all(
+    pageConfig.blocks.map((block) =>
+      resolveSingleBlockWithCache({
+        block,
+        pageId: options.pageId,
+        pageContext: pageContextData,
+        disableCache: options.disableCache,
+      }),
+    ),
   );
 
   return {

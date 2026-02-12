@@ -1,10 +1,15 @@
+"use cache";
+
+import { cacheLife, cacheTag } from "next/cache";
 import { notFound } from "next/navigation";
 
+import type { RuntimeBlockInput } from "@/blocks/core/definition";
 import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
 import MainLayout from "@/components/client/layout/MainLayout";
 import PageTextContentLayout from "@/components/server/features/pages/PageTextContentLayout";
 import BlockRenderer from "@/components/server/renderer/BlockRenderer";
 import type { PageConfig } from "@/data/default-pages";
+import { buildPageCacheTagsForBlocks } from "@/lib/server/block-cache";
 import { resolveBlockData } from "@/lib/server/block-data-resolver";
 import { getMatchingPage, getSystemPageConfig } from "@/lib/server/page-cache";
 import {
@@ -59,13 +64,33 @@ export default async function Page({ params }: PageProps<"/[[...slug]]">) {
   if (!match) return notFound();
   const { page, params: resolvedParams } = match;
 
-  // cacheLife("max");
-  // TODO: Cache Tag
+  cacheTag(`pages/${page.id}`);
+  cacheLife("max");
 
   if (page.contentType === "BLOCK") {
     const config = getSystemPageConfig(page) as PageConfig;
+    const blockInputs = (
+      config &&
+      typeof config === "object" &&
+      "blocks" in config &&
+      Array.isArray((config as { blocks?: unknown }).blocks)
+        ? ((config as { blocks?: RuntimeBlockInput[] }).blocks ?? [])
+        : []
+    ) as RuntimeBlockInput[];
+    const pageTags = buildPageCacheTagsForBlocks({
+      pageId: page.id,
+      blocks: blockInputs,
+      pageContext: resolvedParams,
+    });
+
+    if (pageTags.length > 0) {
+      cacheTag(...pageTags);
+    }
+
     const { blocks = [] } =
-      (await resolveBlockData(config, resolvedParams)) || {};
+      (await resolveBlockData(config, resolvedParams, {
+        pageId: page.id,
+      })) || {};
 
     return (
       <MainLayout type="horizontal">

@@ -53,6 +53,7 @@ import {
   UpdateFriendLinkByAdminSchema,
   UpdateOwnFriendLinkSchema,
 } from "@repo/shared-types/api/friendlink";
+import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
@@ -82,6 +83,10 @@ const USER_ROLES: UserRole[] = ["USER", "ADMIN", "EDITOR", "AUTHOR"];
 const ADMIN_ROLES: UserRole[] = ["ADMIN"];
 const BACKLINK_CHECK_MAX_REDIRECTS = 3;
 const BACKLINK_CHECK_MAX_RESPONSE_BYTES = 2 * 1024 * 1024; // 2MB
+
+function invalidateFriendLinkCache(): void {
+  updateTag("friend-links");
+}
 
 const FAILURE_ISSUE_TYPES: FriendLinkIssueType[] = [
   "DISCONNECT",
@@ -1152,6 +1157,8 @@ export async function submitFriendLinkApplication(
           },
         });
 
+    invalidateFriendLinkCache();
+
     await notifyAdminsForApplication({
       applicantUid: user.uid,
       applicantUsername: user.username,
@@ -1329,6 +1336,8 @@ export async function updateOwnFriendLink(
       },
     });
 
+    invalidateFriendLinkCache();
+
     return response.ok({
       message: "友链信息已更新",
       data: {
@@ -1405,6 +1414,8 @@ export async function deleteOwnFriendLink(
         id: current.id,
       },
     });
+
+    invalidateFriendLinkCache();
 
     return response.ok({
       message: "友链记录已删除",
@@ -1633,6 +1644,8 @@ export async function updateFriendLinkByAdmin(
       },
     });
 
+    invalidateFriendLinkCache();
+
     const noticeApplicantEnabled = await getConfig(
       "friendlink.noticeApplicant.enable",
     );
@@ -1796,6 +1809,8 @@ export async function deleteFriendLinkByAdmin(
       },
     });
 
+    invalidateFriendLinkCache();
+
     const noticeApplicantEnabled = await getConfig(
       "friendlink.noticeApplicant.enable",
     );
@@ -1896,6 +1911,8 @@ export async function reviewFriendLink(
         ownerId: true,
       },
     });
+
+    invalidateFriendLinkCache();
 
     const noticeApplicantEnabled = await getConfig(
       "friendlink.noticeApplicant.enable",
@@ -2072,6 +2089,8 @@ export async function createFriendLinkByAdmin(
         createdAt: true,
       },
     });
+
+    invalidateFriendLinkCache();
 
     return response.ok({
       message: "友链已创建",
@@ -2607,6 +2626,10 @@ export async function checkFriendLinks(
       if (item.statusChanged) {
         statusChanged += 1;
       }
+    }
+
+    if (checked > 0) {
+      invalidateFriendLinkCache();
     }
 
     return response.ok({

@@ -8,6 +8,9 @@ export const invalidFriendLinksBlockDefinition = createBlockDefinition({
     ),
   component: () =>
     import("./index").then((componentModule) => componentModule.default),
+  cache: {
+    tags: ["friend-links"],
+  },
   capabilities: {
     context: "none",
     placeholders: {
