@@ -749,13 +749,6 @@ export function PostEditorWrapper({
             onClick={handleFinalSubmit}
             size="sm"
             loading={isSubmitting}
-            loadingText={
-              isEditMode
-                ? "保存中..."
-                : confirmAction === "publish"
-                  ? "发布中..."
-                  : "保存中..."
-            }
             disabled={!formData.title.trim()}
           />
         </div>
