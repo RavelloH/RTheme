@@ -183,6 +183,31 @@ export function EditorCore({
     return availableModes[0] || "visual";
   });
 
+  const loadContentFromStorage = useCallback(() => {
+    const savedData = loadEditorContent(storageKey);
+    if (savedData && typeof savedData.content === "string") {
+      return {
+        content: savedData.content,
+        hasSavedDraft: true,
+        lastUpdatedAt: savedData.lastUpdatedAt,
+      };
+    }
+
+    const fallbackContent = content || "";
+    saveEditorContent(
+      fallbackContent,
+      { editorType: String(editorType) },
+      true,
+      storageKey,
+    );
+
+    return {
+      content: fallbackContent,
+      hasSavedDraft: false,
+      lastUpdatedAt: null,
+    };
+  }, [content, editorType, storageKey]);
+
   // 编辑器状态
   const [editorState, setEditorState] = useState<AdapterEditorState>({
     isBold: false,
@@ -245,98 +270,106 @@ export function EditorCore({
 
   // ==================== 加载保存的内容 ====================
   useEffect(() => {
-    if (
-      editorType === "markdown" ||
-      editorType === "mdx" ||
-      editorType === "html"
-    ) {
-      if (hasLoadedFromStorage.current) return;
-
-      const savedData = loadEditorContent(storageKey);
-
-      if (savedData?.content) {
-        setMarkdownContent(savedData.content);
-        hasLoadedFromStorage.current = true;
-
-        if (isInitialMount.current) {
-          const lastUpdated = new Date(savedData.lastUpdatedAt).toLocaleString(
-            "zh-CN",
-          );
-
-          toast.info("已加载草稿", `上次保存于 ${lastUpdated}`, 10000, {
-            label: "撤销",
-            onClick: () => {
-              clearEditorContent(storageKey);
-              setMarkdownContent(content || "");
-              toast.success("已撤销", "草稿已删除");
-            },
-          });
-          isInitialMount.current = false;
-        }
-      } else {
-        setMarkdownContent(content || "");
-      }
-      return;
-    }
-
-    // Tiptap编辑器模式
-    if (!editor) return;
-
     if (hasLoadedFromStorage.current) return;
 
+    const storageData = loadContentFromStorage();
+    const storageContent = storageData.content;
+
+    setInitialContent(storageContent);
+    setMarkdownContent(storageContent);
+    hasLoadedFromStorage.current = true;
+
+    if (storageData.hasSavedDraft && isInitialMount.current) {
+      const lastUpdated = new Date(
+        storageData.lastUpdatedAt ?? "",
+      ).toLocaleString("zh-CN");
+
+      toast.info("已加载草稿", `上次保存于 ${lastUpdated}`, 10000, {
+        label: "撤销",
+        onClick: () => {
+          clearEditorContent(storageKey);
+          const fallbackContent = content || "";
+          setInitialContent(fallbackContent);
+          setMarkdownContent(fallbackContent);
+          saveEditorContent(
+            fallbackContent,
+            { editorType: String(editorType) },
+            true,
+            storageKey,
+          );
+          toast.success("已撤销", "草稿已删除");
+        },
+      });
+    }
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+    }
+  }, [content, editorType, loadContentFromStorage, storageKey, toast]);
+
+  const getCurrentEditorContent = useCallback(() => {
+    try {
+      if (editorType === "visual" && editor) {
+        return editor.getMarkdown().replace(/\n{3,}/g, "\n\n");
+      }
+
+      if (
+        (editorType === "markdown" ||
+          editorType === "mdx" ||
+          editorType === "html") &&
+        monacoEditor
+      ) {
+        return monacoEditor.getValue();
+      }
+
+      const adapterContent = adapterManagerRef.current?.getContent();
+      if (typeof adapterContent === "string") {
+        return adapterContent;
+      }
+    } catch (error) {
+      console.error("Failed to get current editor content:", error);
+    }
+
     const savedData = loadEditorContent(storageKey);
-
-    if (savedData?.content) {
-      const savedContent = savedData.content;
-      setInitialContent(savedContent);
-      hasLoadedFromStorage.current = true;
-
-      // 使用Markdown扩展的parse方法将Markdown转换为JSON
-      // @ts-expect-error - markdown.parse方法可能没有类型定义
-      const json = editor.markdown.parse(savedContent);
-      editor.commands.setContent(json);
-
-      if (isInitialMount.current) {
-        const lastUpdated = new Date(savedData.lastUpdatedAt).toLocaleString(
-          "zh-CN",
-        );
-
-        toast.info("已加载草稿", `上次保存于 ${lastUpdated}`, 10000, {
-          label: "撤销",
-          onClick: () => {
-            clearEditorContent(storageKey);
-            setInitialContent(content);
-
-            if (editor) {
-              editor.commands.setContent(content || "");
-            }
-
-            toast.success("已撤销", "草稿已删除");
-          },
-        });
-        isInitialMount.current = false;
-      }
-    } else {
-      setInitialContent(content);
+    if (savedData && typeof savedData.content === "string") {
+      return savedData.content;
     }
-  }, [editor, editorType, content, storageKey, toast]);
 
-  // ==================== 监控 markdownContent 变化 ====================
-  useEffect(() => {
-    if (
-      monacoEditor &&
-      markdownContent &&
-      (editorType === "markdown" ||
-        editorType === "mdx" ||
-        editorType === "html")
-    ) {
-      const currentMonacoContent = monacoEditor.getValue();
-      if (currentMonacoContent !== markdownContent) {
-        monacoEditor.setValue(markdownContent);
-        monacoEditor.setPosition({ lineNumber: 1, column: 1 });
-      }
-    }
-  }, [markdownContent, monacoEditor, editorType]);
+    return content || "";
+  }, [content, editor, editorType, monacoEditor, storageKey]);
+
+  const handleModeSwitch = useCallback(
+    (nextMode: EditorMode) => {
+      if (nextMode === editorType) return;
+
+      const latestContent = getCurrentEditorContent();
+
+      saveEditorContent(
+        latestContent,
+        {
+          editorType: String(nextMode),
+          isFullscreen,
+          showTableOfContents,
+        },
+        true,
+        storageKey,
+      );
+
+      setInitialContent(latestContent);
+      setMarkdownContent(latestContent);
+      hasLoadedFromStorage.current = false;
+
+      setEditorType(nextMode);
+      onModeChange?.(nextMode);
+    },
+    [
+      editorType,
+      getCurrentEditorContent,
+      isFullscreen,
+      onModeChange,
+      showTableOfContents,
+      storageKey,
+    ],
+  );
 
   // ==================== 编辑器类型切换时重置加载标记 ====================
   useEffect(() => {
@@ -646,13 +679,36 @@ export function EditorCore({
   };
 
   // ==================== 编辑器就绪回调 ====================
-  const handleEditorReady = useCallback((editorInstance: TiptapEditorType) => {
-    setEditor(editorInstance);
+  const handleEditorReady = useCallback(
+    (editorInstance: TiptapEditorType) => {
+      setEditor(editorInstance);
 
-    if (adapterManagerRef.current) {
-      adapterManagerRef.current.registerTiptapEditor(editorInstance);
-    }
-  }, []);
+      if (adapterManagerRef.current) {
+        adapterManagerRef.current.registerTiptapEditor(editorInstance);
+      }
+
+      const savedData = loadEditorContent(storageKey);
+      const storedContent =
+        savedData && typeof savedData.content === "string"
+          ? savedData.content
+          : "";
+
+      if (!storedContent) return;
+
+      try {
+        // @ts-expect-error - markdown.parse方法可能没有类型定义
+        const parsed = editorInstance.markdown.parse(storedContent);
+        editorInstance.commands.setContent(parsed);
+        setInitialContent(storedContent);
+      } catch (error) {
+        console.error(
+          "Failed to initialize visual editor from storage:",
+          error,
+        );
+      }
+    },
+    [storageKey],
+  );
 
   // ==================== 标题选项 ====================
   const headingOptions: DropdownOption[] = [
@@ -1241,17 +1297,14 @@ export function EditorCore({
                 }
               }
 
-              if (markdownContent && markdownContent.trim()) {
-                monacoInstance.setValue(markdownContent);
-                monacoInstance.setPosition({ lineNumber: 1, column: 1 });
-              } else {
-                const savedData = loadEditorContent(storageKey);
-                if (savedData?.content) {
-                  monacoInstance.setValue(savedData.content);
-                  monacoInstance.setPosition({ lineNumber: 1, column: 1 });
-                  setMarkdownContent(savedData.content);
-                }
-              }
+              const savedData = loadEditorContent(storageKey);
+              const storedContent =
+                savedData && typeof savedData.content === "string"
+                  ? savedData.content
+                  : "";
+              monacoInstance.setValue(storedContent);
+              monacoInstance.setPosition({ lineNumber: 1, column: 1 });
+              setMarkdownContent(storedContent);
             }}
           />
         )}
@@ -1267,11 +1320,7 @@ export function EditorCore({
         <div className="flex items-center gap-4">
           <Select
             value={editorType}
-            onChange={(value) => {
-              const newMode = value as EditorMode;
-              setEditorType(newMode);
-              onModeChange?.(newMode);
-            }}
+            onChange={(value) => handleModeSwitch(value as EditorMode)}
             options={availableModes.map((mode) => ({
               value: mode,
               label:
