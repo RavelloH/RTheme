@@ -447,6 +447,12 @@ interface PostCategoryRelation {
   fullSlug: string;
 }
 
+interface CategoryPathSource {
+  id: number;
+  name: string;
+  fullSlug: string;
+}
+
 interface PostCacheRelationInput {
   tags?: readonly PostTagRelation[];
   categories?: readonly PostCategoryRelation[];
@@ -489,6 +495,65 @@ function addCategoryPathTags(
   for (let index = 1; index <= segments.length; index += 1) {
     target.add(segments.slice(0, index).join("/"));
   }
+}
+
+async function buildCategoryDisplayPathMap(
+  categories: readonly CategoryPathSource[],
+): Promise<Map<number, string>> {
+  const result = new Map<number, string>();
+  if (categories.length === 0) {
+    return result;
+  }
+
+  const allPathPrefixes = new Set<string>();
+  for (const category of categories) {
+    const segments = category.fullSlug
+      .split("/")
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+    let current = "";
+    for (const segment of segments) {
+      current = current ? `${current}/${segment}` : segment;
+      allPathPrefixes.add(current);
+    }
+  }
+
+  const pathNodes = await prisma.category.findMany({
+    where: {
+      fullSlug: { in: Array.from(allPathPrefixes) },
+    },
+    select: {
+      fullSlug: true,
+      name: true,
+    },
+  });
+  const nameByFullSlug = new Map(
+    pathNodes.map((node) => [node.fullSlug, node.name]),
+  );
+
+  for (const category of categories) {
+    const segments = category.fullSlug
+      .split("/")
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+
+    let current = "";
+    const names: string[] = [];
+    for (const segment of segments) {
+      current = current ? `${current}/${segment}` : segment;
+      const nodeName = nameByFullSlug.get(current);
+      if (nodeName) {
+        names.push(nodeName);
+      }
+    }
+
+    result.set(
+      category.id,
+      names.length > 0 ? names.join(" / ") : category.name,
+    );
+  }
+
+  return result;
 }
 
 function collectPostRelatedCacheTags(
@@ -972,7 +1037,9 @@ export async function getPostsList(
         },
         categories: {
           select: {
+            id: true,
             name: true,
+            fullSlug: true,
           },
         },
         tags: {
@@ -998,6 +1065,9 @@ export async function getPostsList(
       },
     });
 
+    const allCategories = posts.flatMap((post) => post.categories);
+    const categoryPathMap = await buildCategoryDisplayPathMap(allCategories);
+
     // 转换数据格式
     let data: PostListItem[] = posts.map((post) => ({
       id: post.id,
@@ -1021,7 +1091,9 @@ export async function getPostsList(
         username: post.author.username,
         nickname: post.author.nickname,
       },
-      categories: post.categories.map((cat) => cat.name),
+      categories: post.categories.map(
+        (cat) => categoryPathMap.get(cat.id) || cat.name,
+      ),
       tags: post.tags.map((tag) => ({ name: tag.name, slug: tag.slug })),
       viewCount: post.viewCount?.cachedCount || 0,
     }));
@@ -1138,7 +1210,9 @@ export async function getPostDetail(
         },
         categories: {
           select: {
+            id: true,
             name: true,
+            fullSlug: true,
           },
         },
         tags: {
@@ -1170,6 +1244,8 @@ export async function getPostDetail(
     // text-version v2: content 字段已经是最新内容
     const latestContent = post.content;
 
+    const categoryPathMap = await buildCategoryDisplayPathMap(post.categories);
+
     // 转换数据格式
     const data: PostDetail = {
       id: post.id,
@@ -1194,7 +1270,9 @@ export async function getPostDetail(
         username: post.author.username,
         nickname: post.author.nickname,
       },
-      categories: post.categories.map((cat) => cat.name),
+      categories: post.categories.map(
+        (cat) => categoryPathMap.get(cat.id) || cat.name,
+      ),
       tags: post.tags.map((tag) => tag.name),
     };
 
