@@ -11,6 +11,12 @@ import { MEDIA_SLOTS } from "@/types/media";
 
 import type { Prisma } from ".prisma/client";
 
+const PUBLIC_PROJECT_STATUSES = [
+  "PUBLISHED",
+  "DEVELOPING",
+  "ARCHIVED",
+] as const;
+
 function normalizeCount(value: unknown): number {
   const parsed = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(parsed)) return 3;
@@ -78,7 +84,7 @@ export async function featuredProjectsFetcher(
   const onlyFeatured = content.projects?.onlyFeatured ?? true;
 
   const where: Prisma.ProjectWhereInput = {
-    status: "PUBLISHED",
+    status: { in: [...PUBLIC_PROJECT_STATUSES] },
     ...(onlyFeatured ? { isFeatured: true } : {}),
   };
 
@@ -95,6 +101,7 @@ export async function featuredProjectsFetcher(
         id: true,
         title: true,
         slug: true,
+        status: true,
         description: true,
         stars: true,
         forks: true,
@@ -155,6 +162,7 @@ export async function featuredProjectsFetcher(
       id: project.id,
       title: project.title,
       slug: project.slug,
+      status: project.status,
       description: normalizeDescription(project.description),
       stars: project.stars,
       forks: project.forks,

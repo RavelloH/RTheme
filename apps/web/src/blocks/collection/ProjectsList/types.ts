@@ -24,6 +24,7 @@ export interface ProjectsListItem {
   id: number;
   title: string;
   slug: string;
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED" | "DEVELOPING";
   description: string;
   stars: number;
   forks: number;

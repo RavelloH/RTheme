@@ -60,6 +60,21 @@ function formatLinkLabel(link: string, index: number): string {
   }
 }
 
+function getProjectStatusBadge(status: PublicProjectDetail["status"]): {
+  label: string;
+  className: string;
+} | null {
+  if (status === "DEVELOPING") {
+    return { label: "DEVELOPING", className: "text-success" };
+  }
+
+  if (status === "ARCHIVED") {
+    return { label: "ARCHIVED", className: "text-warning" };
+  }
+
+  return null;
+}
+
 interface ProjectDetailHeaderProps {
   project: PublicProjectDetail;
   variant?: ProjectDetailVariant;
@@ -75,6 +90,7 @@ export function ProjectDetailHeader({
   const authorName = project.author.nickname || project.author.username;
   const periodText = formatPeriod(project.startedAt, project.completedAt);
   const containerClassName = variant === "page" ? "" : "mx-auto max-w-6xl";
+  const statusBadge = getProjectStatusBadge(project.status);
   const heroRootClassName =
     cover && variant === "page"
       ? `relative overflow-hidden border-b border-border ${heroHeightClassName}`
@@ -221,6 +237,11 @@ export function ProjectDetailHeader({
                 <span className="flex items-center gap-1">
                   <RiCalendarLine size="1.2em" />
                   {periodText}
+                </span>
+              ) : null}
+              {statusBadge ? (
+                <span className={statusBadge.className}>
+                  {statusBadge.label}
                 </span>
               ) : null}
               {project.isFeatured ? (

@@ -114,11 +114,27 @@ function formatLinkLabel(link: string, index: number): string {
   }
 }
 
+function getProjectStatusBadge(status: FeaturedProjectItem["status"]): {
+  label: string;
+  className: string;
+} | null {
+  if (status === "DEVELOPING") {
+    return { label: "DEVELOPING", className: "text-success" };
+  }
+
+  if (status === "ARCHIVED") {
+    return { label: "ARCHIVED", className: "text-warning" };
+  }
+
+  return null;
+}
+
 function renderProjectCard(project: FeaturedProjectItem, index: number) {
   const detailHref = `/projects/${project.slug}`;
   const languagesText = project.languages.join(" / ");
   const licenseText = project.license?.trim();
   const periodText = formatPeriod(project.startedAt, project.completedAt);
+  const statusBadge = getProjectStatusBadge(project.status);
 
   return (
     <GridItem
@@ -204,6 +220,11 @@ function renderProjectCard(project: FeaturedProjectItem, index: number) {
                 <RiCalendarTodoLine size="1.2em" /> {periodText}
               </span>
             )}
+            {statusBadge ? (
+              <span className={statusBadge.className} data-fade>
+                {statusBadge.label}
+              </span>
+            ) : null}
             {project.isFeatured ? (
               <span className="text-primary" data-fade>
                 FEATURED

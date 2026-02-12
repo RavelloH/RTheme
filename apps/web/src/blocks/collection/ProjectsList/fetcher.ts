@@ -18,6 +18,11 @@ import type { Prisma } from ".prisma/client";
 
 const DISPLAY_LIMIT = 6;
 const DEFAULT_SORT: ProjectsListSortMode = "publishedAt_desc";
+const PUBLIC_PROJECT_STATUSES = [
+  "PUBLISHED",
+  "DEVELOPING",
+  "ARCHIVED",
+] as const;
 
 const SORT_ORDER_MAP: Record<
   ProjectsListSortMode,
@@ -111,7 +116,7 @@ export async function projectsListFetcher(
 
   // 构建过滤条件
   const where: Prisma.ProjectWhereInput = {
-    status: "PUBLISHED",
+    status: { in: [...PUBLIC_PROJECT_STATUSES] },
     ...(showFeatured ? {} : { isFeatured: false }),
   };
 
@@ -145,6 +150,7 @@ export async function projectsListFetcher(
         id: true,
         title: true,
         slug: true,
+        status: true,
         description: true,
         stars: true,
         forks: true,
@@ -205,6 +211,7 @@ export async function projectsListFetcher(
       id: project.id,
       title: project.title,
       slug: project.slug,
+      status: project.status,
       description: normalizeDescription(project.description),
       stars: project.stars,
       forks: project.forks,
