@@ -102,7 +102,6 @@ export default function PageTextEditorClient({
       variant: "primary",
       onClick: handleSave,
       loading: isSaving,
-      loadingText: "保存中...",
     },
   ];
 
