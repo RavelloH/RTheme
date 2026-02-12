@@ -27,6 +27,20 @@ rlog.log();
 rlog.log("NeutralPress Initializing...");
 rlog.log();
 
+const nextCacheDir = path.join(process.cwd(), ".next", "cache");
+if (fs.existsSync(nextCacheDir)) {
+  rlog.info("Clearing Next.js cache...");
+  fs.rmSync(nextCacheDir, { recursive: true, force: true });
+  rlog.log();
+}
+
+const cacheDir = path.join(process.cwd(), ".cache");
+if (fs.existsSync(cacheDir)) {
+  rlog.info("Clearing build cache...");
+  fs.rmSync(cacheDir, { recursive: true, force: true });
+  rlog.log();
+}
+
 rlog.log("Starting environment variables check...");
 const { checkEnvironmentVariables } = await import("./check-env.js");
 await checkEnvironmentVariables();

@@ -132,6 +132,7 @@ async function main() {
   if (fs.existsSync(cacheDir)) {
     try {
       fs.rmSync(cacheDir, { recursive: true, force: true });
+      rlog.success("✓ Cleaned up build cache");
     } catch {
       return;
     }
