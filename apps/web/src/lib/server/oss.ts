@@ -235,8 +235,21 @@ function normalizePosixPath(p: string): string {
 }
 
 function joinPrefix(prefix: string | undefined, key: string): string {
-  if (!prefix) return normalizePosixPath(key);
-  return normalizePosixPath(path.posix.join(prefix, key));
+  const normalizedKey = normalizePosixPath(key);
+  if (!prefix) return normalizedKey;
+
+  const normalizedPrefix = normalizePosixPath(prefix);
+  if (!normalizedPrefix) return normalizedKey;
+
+  // key 可能已包含 basePath（例如上传返回的 key 再用于删除时）
+  if (
+    normalizedKey === normalizedPrefix ||
+    normalizedKey.startsWith(`${normalizedPrefix}/`)
+  ) {
+    return normalizedKey;
+  }
+
+  return normalizePosixPath(path.posix.join(normalizedPrefix, normalizedKey));
 }
 
 function toPublicUrl(baseUrl: string, key: string): string {
