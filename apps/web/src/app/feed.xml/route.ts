@@ -1,4 +1,5 @@
 import { Feed } from "feed";
+import { cacheLife, cacheTag } from "next/cache";
 import { notFound } from "next/navigation";
 
 import { getFeedData } from "@/lib/server/feed-data";
@@ -51,11 +52,15 @@ function injectFeedStylesheet(xml: string): string {
   return `${declaration}\n${stylesheet}\n${body}`;
 }
 
-export async function GET() {
+async function generateRssFeed(): Promise<string | null> {
+  "use cache";
+  cacheTag("posts", "config");
+  cacheLife("max");
+
   const { posts, siteConfig, rssConfig } = await getFeedData();
 
   if (!rssConfig.enabled) {
-    return notFound();
+    return null;
   }
 
   const feed = new Feed({
@@ -105,7 +110,15 @@ export async function GET() {
     });
   });
 
-  const rss = injectFeedStylesheet(feed.rss2());
+  return injectFeedStylesheet(feed.rss2());
+}
+
+export async function GET() {
+  const rss = await generateRssFeed();
+
+  if (rss === null) {
+    return notFound();
+  }
 
   return new Response(rss, {
     headers: {
