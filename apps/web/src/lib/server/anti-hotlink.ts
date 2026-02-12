@@ -55,6 +55,74 @@ function escapeXml(value: string): string {
     .replaceAll("'", "&apos;");
 }
 
+export interface ImageErrorShellOptions {
+  siteURL: string;
+  time: string;
+  assetsURL: string;
+  ip: string;
+  agents: string;
+  location: string;
+  title: string;
+  statusText: string;
+  message: string;
+  hintLine1: string;
+  hintLine2: string;
+}
+
+/**
+ * 生成统一的图片错误壳（SVG）
+ */
+export function generateImageErrorShell({
+  siteURL,
+  time,
+  assetsURL,
+  ip,
+  agents,
+  location,
+  title,
+  statusText,
+  message,
+  hintLine1,
+  hintLine2,
+}: ImageErrorShellOptions): Buffer {
+  const safeSiteURL = escapeXml(siteURL);
+  const safeTime = escapeXml(time);
+  const safeAssetsURL = escapeXml(assetsURL);
+  const safeIp = escapeXml(ip);
+  const safeAgents = escapeXml(agents);
+  const safeLocation = escapeXml(location);
+  const safeTitle = escapeXml(title);
+  const safeStatusText = escapeXml(statusText);
+  const safeMessage = escapeXml(message);
+  const safeHintLine1 = escapeXml(hintLine1);
+  const safeHintLine2 = escapeXml(hintLine2);
+
+  const svg = `
+<svg width="1000" height="600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#000000"/>
+  <g font-family="sans-serif" fill="#ffffff">
+    <text x="60" y="100" font-size="64" font-weight="bold">${safeTitle}</text>
+    <text x="60" y="160" font-size="48" font-weight="bold">${safeStatusText}</text>
+    <text x="60" y="220" font-size="24">${safeMessage}</text>
+    <text x="60" y="280" font-size="20" font-family="Consolas, Menlo, monospace">
+      <tspan x="60" dy="00">----- IP: ${safeIp}</tspan>
+      <tspan x="60" dy="30">--- TIME: ${safeTime}</tspan>
+      <tspan x="60" dy="30">- AGENTS: ${safeAgents}</tspan>
+      <tspan x="60" dy="30">- ASSETS: ${safeAssetsURL}</tspan>
+      <tspan x="60" dy="30">LOCATION: ${safeLocation}</tspan>
+    </text>
+    <text x="60" y="460" font-size="20">
+      <tspan x="60" fill="#2dd4bf" text-decoration="underline">${safeSiteURL}</tspan>
+      <tspan x="60" dy="30">${safeHintLine1}</tspan>
+      <tspan x="60" dy="30">${safeHintLine2}</tspan>
+    </text>
+  </g>
+</svg>
+  `;
+
+  return Buffer.from(svg.trim(), "utf-8");
+}
+
 /**
  * 检查请求是否允许访问媒体资源
  * @param request Next.js 请求对象
@@ -133,37 +201,17 @@ export function generateFallbackImage({
   agents: string;
   location: string;
 }): Buffer {
-  const safeSiteURL = escapeXml(siteURL);
-  const safeTime = escapeXml(time);
-  const safeAssetsURL = escapeXml(assetsURL);
-  const safeIp = escapeXml(ip);
-  const safeAgents = escapeXml(agents);
-  const safeLocation = escapeXml(location);
-
-  // 使用 SVG 生成占位图片
-  const svg = `
-<svg width="1000" height="600" xmlns="http://www.w3.org/2000/svg">
-  <rect width="100%" height="100%" fill="#000000"/>
-  <g font-family="sans-serif" fill="#ffffff">
-    <text x="60" y="100" font-size="64" font-weight="bold">ERROR...</text>
-    <text x="60" y="160" font-size="48" font-weight="bold">HTTP 403 Forbidden</text>
-    <text x="60" y="220" font-size="24">致命错误：对此资源的访问被管理员全局安全配置阻断。</text>
-    <text x="60" y="280" font-size="20" font-family=" Consolas, Menlo, monospace">
-      <tspan x="60" dy="00">----- IP: ${safeIp}</tspan>
-      <tspan x="60" dy="30">--- TIME: ${safeTime}</tspan>
-      <tspan x="60" dy="30">- AGENTS: ${safeAgents}</tspan>
-      <tspan x="60" dy="30">- ASSETS: ${safeAssetsURL}</tspan>
-      <tspan x="60" dy="30">LOCATION: ${safeLocation}</tspan>
-    </text>
-    <text x="60" y="460" font-size="20">
-      <tspan x="60" fill="#2dd4bf" text-decoration="underline">${safeSiteURL}</tspan>
-      <tspan x="60" dy="30">请尝试在源站访问此资源，或更改站点安全配置。</tspan>
-      <tspan x="60" dy="30">如有疑问，请联系当前站点的管理员，并提供以上信息。</tspan>
-    </text>
-  </g>
-</svg>
-  `;
-
-  // 将 SVG 转换为 Buffer
-  return Buffer.from(svg.trim(), "utf-8");
+  return generateImageErrorShell({
+    siteURL,
+    time,
+    assetsURL,
+    ip,
+    agents,
+    location,
+    title: "ERROR...",
+    statusText: "HTTP 403 Forbidden",
+    message: "致命错误：对此资源的访问被管理员全局安全配置阻断。",
+    hintLine1: "请尝试在源站访问此资源，或更改站点安全配置。",
+    hintLine2: "如有疑问，请联系当前站点的管理员，并提供以上信息。",
+  });
 }

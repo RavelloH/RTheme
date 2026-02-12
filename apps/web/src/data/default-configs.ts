@@ -314,7 +314,7 @@ export const CONFIG_DEFINITIONS = {
   "media.antiHotLink.enable": {
     default: false,
     description:
-      "是否开启防盗链功能。开启后，从其他站点直接引用本站原始图片（/p/*、/image-proxy）将被拒绝。优化图片（/_next/image）不受影响。",
+      "是否开启防盗链功能。开启后，从其他站点直接引用本站原始图片（/p/*）将被拒绝。优化图片（/_next/image）不受影响。",
   },
   "media.antiHotLink.allowEmptyReferrer": {
     default: true,
