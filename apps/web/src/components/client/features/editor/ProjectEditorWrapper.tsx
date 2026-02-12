@@ -205,6 +205,19 @@ export function ProjectEditorWrapper({
     [],
   );
 
+  const handleEditorTitleChange = useCallback((nextTitle: string) => {
+    setFormData((prev) => {
+      if (prev.title === nextTitle) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        title: nextTitle,
+      };
+    });
+  }, []);
+
   // ==================== GitHub 同步处理 ====================
   const handleGithubSync = async () => {
     if (!projectId || !accessToken) {
@@ -928,6 +941,8 @@ export function ProjectEditorWrapper({
       <EditorCore
         content={content}
         storageKey={storageKey}
+        title={formData.title}
+        onTitleChange={handleEditorTitleChange}
         availableModes={availableModes}
         defaultMode={defaultMode}
         dialogs={[]}
