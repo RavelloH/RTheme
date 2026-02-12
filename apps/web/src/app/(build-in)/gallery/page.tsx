@@ -24,7 +24,14 @@ export const metadata = await generateMetadata(
 
 export default async function GalleryIndex() {
   "use cache";
-  cacheTag("photos", "config");
+  cacheTag(
+    "gallery/list",
+    "config/media.gallery.sortByShotTime",
+    "config/media.gallery.sortOrder",
+  );
+  if (page?.id) {
+    cacheTag(`pages/${page.id}`);
+  }
   cacheLife("max");
 
   const { photos, nextCursor } = await getGalleryPhotosData({});

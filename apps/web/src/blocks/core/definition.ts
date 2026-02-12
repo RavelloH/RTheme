@@ -64,10 +64,12 @@ export interface BlockCacheTagResolverParams<TContent = unknown> {
   context: BlockRuntimeContext;
 }
 
+export type BlockCacheTagResolver<TContent = unknown> =
+  | readonly string[]
+  | ((params: BlockCacheTagResolverParams<TContent>) => readonly string[]);
+
 export interface BlockCacheConfig<TContent = unknown> {
-  tags:
-    | readonly string[]
-    | ((params: BlockCacheTagResolverParams<TContent>) => readonly string[]);
+  tags: BlockCacheTagResolver<TContent>;
 }
 
 export interface BlockDefinition<TContent = unknown, TBusiness = unknown> {

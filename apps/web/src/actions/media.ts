@@ -1027,7 +1027,6 @@ export async function updateMedia(
       auditNewValue.altText = altText;
     }
     if (inGallery !== undefined) {
-      updateTag("photos");
       auditOldValue.inGallery = !!existingMedia.galleryPhoto;
       auditNewValue.inGallery = inGallery;
     }
@@ -1035,6 +1034,9 @@ export async function updateMedia(
     // 记录图库相关变更
     if (updateData.galleryPhoto) {
       auditNewValue.galleryPhotoChange = true;
+    }
+    if (inGallery !== undefined || updateData.galleryPhoto) {
+      updateTag("gallery/list");
     }
 
     const oldSlug = existingMedia.galleryPhoto?.slug;
@@ -1261,7 +1263,7 @@ export async function batchUpdateMedia(
     // 记录审计日志
     const { after } = await import("next/server");
     if (inGallery !== undefined) {
-      updateTag("photos");
+      updateTag("gallery/list");
     }
     after(async () => {
       // 如果是从图库移除，需要更新对应照片页面的缓存
@@ -1511,7 +1513,7 @@ export async function deleteMedia(
     // 记录审计日志
     const { after } = await import("next/server");
     if (hasPhotosInBatch) {
-      updateTag("photos");
+      updateTag("gallery/list");
     }
     after(async () => {
       // 刷新被删除照片的页面缓存

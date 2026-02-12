@@ -1,5 +1,3 @@
-"use cache";
-
 import { cacheLife, cacheTag } from "next/cache";
 import { notFound } from "next/navigation";
 
@@ -60,6 +58,8 @@ export const generateMetadata = async ({
 };
 
 export default async function Page({ params }: PageProps<"/[[...slug]]">) {
+  "use cache";
+
   const match = await getMatchingPage((await params).slug);
   if (!match) return notFound();
   const { page, params: resolvedParams } = match;

@@ -295,6 +295,9 @@ export async function updateSettings(
 
     // 刷新缓存标签
     updateTag("config");
+    for (const setting of sanitizedSettings) {
+      updateTag(`config/${setting.key}`);
+    }
 
     return response.ok({
       data: { updated },

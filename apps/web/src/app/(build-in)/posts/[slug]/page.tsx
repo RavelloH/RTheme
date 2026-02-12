@@ -208,12 +208,34 @@ export default async function PostPage({ params }: PageProps) {
     return `/categories/${pathUpToIndex}`;
   };
 
-  cacheTag(
-    `posts/${(await params).slug}`,
-    `posts/${adjacentPosts.previous?.slug || "none"}`,
-    `posts/${adjacentPosts.next?.slug || "none"}`,
+  const pageCacheTags = new Set<string>([
+    "config/comment.enable",
+    "config/comment.placeholder",
+    "config/comment.anonymous.enable",
+    "config/comment.anonymous.email.required",
+    "config/comment.anonymous.website.enable",
+    "config/comment.review.enable",
+    "config/comment.anonymous.review.enable",
+    "config/comment.locate.enable",
+    "config/site.url",
+    "config/site.shiki.theme",
+    "config/content.license.default",
+    "config/content.license.textTemplate",
+    `posts/${slug}`,
     `users/${post.author.uid}`,
-  );
+  ]);
+  if (adjacentPosts.previous?.slug) {
+    pageCacheTags.add(`posts/${adjacentPosts.previous.slug}`);
+  }
+  if (adjacentPosts.next?.slug) {
+    pageCacheTags.add(`posts/${adjacentPosts.next.slug}`);
+  }
+
+  for (const tag of post.tags) {
+    pageCacheTags.add(`tags/${tag.slug}`);
+  }
+
+  cacheTag(...Array.from(pageCacheTags));
   cacheLife("max");
   const horizontalPaddingClassName = "px-6 md:px-10";
   const featuredHeroHeightClassName = "h-[42.1em]";

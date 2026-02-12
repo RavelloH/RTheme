@@ -335,6 +335,60 @@ type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
 
+interface PublishedPostCacheInput {
+  slug: string;
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  publishedAt: Date | null;
+}
+
+function addPostSlugTag(
+  target: Set<string>,
+  slug: string | null | undefined,
+): void {
+  if (slug) {
+    target.add(slug);
+  }
+}
+
+async function addAdjacentPublishedPostSlugs(
+  target: Set<string>,
+  post: PublishedPostCacheInput,
+): Promise<void> {
+  if (post.status !== "PUBLISHED" || !post.publishedAt) {
+    return;
+  }
+
+  const [previousPost, nextPost] = await Promise.all([
+    prisma.post.findFirst({
+      where: {
+        status: "PUBLISHED",
+        deletedAt: null,
+        publishedAt: { lt: post.publishedAt },
+      },
+      orderBy: { publishedAt: "desc" },
+      select: { slug: true },
+    }),
+    prisma.post.findFirst({
+      where: {
+        status: "PUBLISHED",
+        deletedAt: null,
+        publishedAt: { gt: post.publishedAt },
+      },
+      orderBy: { publishedAt: "asc" },
+      select: { slug: true },
+    }),
+  ]);
+
+  addPostSlugTag(target, previousPost?.slug);
+  addPostSlugTag(target, nextPost?.slug);
+}
+
+function updatePostCacheTagsBySlugs(slugs: Iterable<string>): void {
+  for (const slug of slugs) {
+    updateTag(`posts/${slug}`);
+  }
+}
+
 /*
   辅助函数：更新文章搜索索引
   用于在文章保存后自动更新索引，无需认证（内部调用）
@@ -1241,6 +1295,15 @@ export async function createPost(
     });
 
     // 刷新缓存标签
+    const postDetailTagsToRefresh = new Set<string>();
+    addPostSlugTag(postDetailTagsToRefresh, post.slug);
+    await addAdjacentPublishedPostSlugs(postDetailTagsToRefresh, {
+      slug: post.slug,
+      status: post.status,
+      publishedAt: post.publishedAt,
+    });
+    updatePostCacheTagsBySlugs(postDetailTagsToRefresh);
+
     updateTag("posts");
     updateTag("categories");
     updateTag("tags");
@@ -1646,6 +1709,13 @@ export async function updatePost(
             },
           }),
         },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          status: true,
+          publishedAt: true,
+        },
       });
 
       return updated;
@@ -1798,11 +1868,21 @@ export async function updatePost(
     });
 
     // 刷新缓存标签
-    updateTag("posts");
-    updateTag(`posts/${slug}`);
+    const postDetailTagsToRefresh = new Set<string>();
+    addPostSlugTag(postDetailTagsToRefresh, slug);
     if (newSlug && newSlug !== slug) {
-      updateTag(`posts/${newSlug}`);
+      addPostSlugTag(postDetailTagsToRefresh, newSlug);
     }
+    if (status !== undefined || publishedAt !== undefined) {
+      await addAdjacentPublishedPostSlugs(postDetailTagsToRefresh, {
+        slug: updatedPost.slug,
+        status: updatedPost.status,
+        publishedAt: updatedPost.publishedAt,
+      });
+    }
+    updatePostCacheTagsBySlugs(postDetailTagsToRefresh);
+
+    updateTag("posts");
     updateTag("categories");
     updateTag("tags");
 
@@ -2110,11 +2190,33 @@ export async function updatePosts(
     });
 
     // 刷新缓存标签
+    const postDetailTagsToRefresh = new Set<string>();
+    for (const post of postsBeforeUpdate) {
+      addPostSlugTag(postDetailTagsToRefresh, post.slug);
+    }
+
+    if (status !== undefined && postsBeforeUpdate.length > 0) {
+      const updatedPublishedPosts = await prisma.post.findMany({
+        where: {
+          id: { in: postsBeforeUpdate.map((post) => post.id) },
+          deletedAt: null,
+          status: "PUBLISHED",
+        },
+        select: {
+          slug: true,
+          status: true,
+          publishedAt: true,
+        },
+      });
+
+      for (const post of updatedPublishedPosts) {
+        addPostSlugTag(postDetailTagsToRefresh, post.slug);
+        await addAdjacentPublishedPostSlugs(postDetailTagsToRefresh, post);
+      }
+    }
+
+    updatePostCacheTagsBySlugs(postDetailTagsToRefresh);
     updateTag("posts");
-    // 刷新每个更新的文章
-    postsBeforeUpdate.forEach((post) => {
-      updateTag(`posts/${post.slug}`);
-    });
 
     return response.ok({
       data: { updated: result.count },
