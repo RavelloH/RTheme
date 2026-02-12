@@ -91,6 +91,26 @@ interface ConfigValue {
   [key: string]: unknown;
 }
 
+function toPlainSerializable(value: unknown): unknown {
+  if (value instanceof URL) {
+    return value.toString();
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => toPlainSerializable(item));
+  }
+
+  if (value && typeof value === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [key, nested] of Object.entries(value)) {
+      result[key] = toPlainSerializable(nested);
+    }
+    return result;
+  }
+
+  return value;
+}
+
 // 辅助函数：获取字符串配置值
 function getStringValue(
   configValue: ConfigValue | undefined,
@@ -382,10 +402,10 @@ export async function generateMetadata(
     }
   }
 
-  return {
+  return toPlainSerializable({
     ...dynamicMetadata,
     ...processedOverrides,
-  };
+  }) as Metadata;
 }
 
 /**
