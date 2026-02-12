@@ -8,6 +8,27 @@ export const paginationBlockDefinition = createBlockDefinition({
     ),
   component: () =>
     import("./index").then((componentModule) => componentModule.default),
+  cache: {
+    tags: ({ content }) => {
+      const normalizedContent =
+        content && typeof content === "object"
+          ? (content as Record<string, unknown>)
+          : {};
+      const filterBy =
+        typeof normalizedContent.filterBy === "string"
+          ? normalizedContent.filterBy
+          : "all";
+
+      if (filterBy === "tag") {
+        return ["tags", "posts"];
+      }
+      if (filterBy === "category") {
+        return ["categories", "posts"];
+      }
+
+      return ["posts"];
+    },
+  },
   capabilities: {
     context: "inherit",
     placeholders: {

@@ -8,6 +8,9 @@ export const tagsCategoriesBlockDefinition = createBlockDefinition({
     ),
   component: () =>
     import("./index").then((componentModule) => componentModule.default),
+  cache: {
+    tags: ["tags", "categories", "posts"],
+  },
   capabilities: {
     context: "inherit",
     placeholders: {

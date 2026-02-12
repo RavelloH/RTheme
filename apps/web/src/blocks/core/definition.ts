@@ -58,12 +58,25 @@ export interface BlockMediaCapability {
   output?: string;
 }
 
+export interface BlockCacheTagResolverParams<TContent = unknown> {
+  block: RuntimeBlockInput<TContent>;
+  content: TContent;
+  context: BlockRuntimeContext;
+}
+
+export interface BlockCacheConfig<TContent = unknown> {
+  tags:
+    | readonly string[]
+    | ((params: BlockCacheTagResolverParams<TContent>) => readonly string[]);
+}
+
 export interface BlockDefinition<TContent = unknown, TBusiness = unknown> {
   type: BlockType;
   schema: () => Promise<BlockFormConfig>;
   component: () => Promise<
     ComponentType<BlockComponentProps<TContent, TBusiness>>
   >;
+  cache?: BlockCacheConfig<TContent>;
   capabilities: {
     context: "inherit" | "none";
     placeholders?: {

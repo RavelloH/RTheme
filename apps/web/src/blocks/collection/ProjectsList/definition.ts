@@ -8,6 +8,9 @@ export const projectsListBlockDefinition = createBlockDefinition({
     ),
   component: () =>
     import("./index").then((componentModule) => componentModule.default),
+  cache: {
+    tags: ["projects", "categories", "tags", "photos"],
+  },
   capabilities: {
     context: "inherit",
     media: [],

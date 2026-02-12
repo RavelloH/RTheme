@@ -8,6 +8,9 @@ export const archiveListBlockDefinition = createBlockDefinition({
     ),
   component: () =>
     import("./index").then((componentModule) => componentModule.default),
+  cache: {
+    tags: ["posts"],
+  },
   capabilities: {
     context: "inherit",
     placeholders: {
