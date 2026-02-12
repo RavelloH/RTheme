@@ -5,7 +5,6 @@ import { unstable_cache } from "next/cache";
 import path from "path";
 
 import type { AllBlockConfigs } from "@/blocks/core/types/base";
-import { findCategoryByPath } from "@/lib/server/category-utils";
 import prisma from "@/lib/server/prisma";
 
 // 自定义 JSON 类型定义（避免与 Prisma 的 JsonValue 冲突）
@@ -78,6 +77,356 @@ export interface PageMatch {
 
 // 缓存文件路径
 const CACHE_FILE_PATH = path.join(process.cwd(), ".cache", ".page-cache.json");
+const STATIC_PARAM_SUPPORTED_CONTENT_TYPES = [
+  "BLOCK",
+  "MDX",
+  "MARKDOWN",
+  "HTML",
+] as const;
+const PAGE_PLACEHOLDER_SEGMENT = "/page/:page";
+
+export interface MainRouteStaticParam {
+  slug: string[];
+}
+
+const getAllCategoryFullSlugs = unstable_cache(
+  async () => {
+    const categories = await prisma.category.findMany({
+      select: { fullSlug: true },
+    });
+
+    return categories
+      .map((category) => category.fullSlug.trim())
+      .filter((slug) => slug.length > 0);
+  },
+  ["page-cache-category-full-slugs"],
+  {
+    tags: ["categories"],
+    revalidate: false,
+  },
+);
+
+const getAllTagSlugs = unstable_cache(
+  async () => {
+    const tags = await prisma.tag.findMany({
+      select: { slug: true },
+    });
+
+    return tags.map((tag) => tag.slug.trim()).filter((slug) => slug.length > 0);
+  },
+  ["page-cache-tag-slugs"],
+  {
+    tags: ["tags"],
+    revalidate: false,
+  },
+);
+
+function normalizePagePath(pathname: string): string {
+  const trimmed = pathname.trim();
+  if (!trimmed || trimmed === "/") return "/";
+
+  const withLeadingSlash = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  const normalized = withLeadingSlash.replace(/\/{2,}/g, "/");
+  const withoutTrailingSlash = normalized.replace(/\/+$/g, "");
+
+  return withoutTrailingSlash || "/";
+}
+
+function pathToSlugSegments(pathname: string): string[] {
+  const normalized = normalizePagePath(pathname);
+  if (normalized === "/") return [];
+  return normalized.slice(1).split("/").filter(Boolean);
+}
+
+function toPositivePageSize(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+  return Math.floor(value);
+}
+
+function resolvePageSizeFromConfig(config: unknown): number {
+  if (!config || typeof config !== "object") {
+    return 20;
+  }
+
+  const configRecord = config as Record<string, unknown>;
+
+  const topLevelPageSize = toPositivePageSize(configRecord.pageSize);
+  if (topLevelPageSize) {
+    return topLevelPageSize;
+  }
+
+  const blocks = configRecord.blocks;
+  if (!Array.isArray(blocks)) {
+    return 20;
+  }
+
+  for (const block of blocks) {
+    if (!block || typeof block !== "object") continue;
+
+    const content = (block as { content?: unknown }).content;
+    if (!content || typeof content !== "object") continue;
+
+    const blockPageSize = toPositivePageSize(
+      (content as Record<string, unknown>).pageSize,
+    );
+    if (blockPageSize) {
+      return blockPageSize;
+    }
+  }
+
+  return 20;
+}
+
+function parseCategoryAncestorIds(pathValue: string): number[] {
+  return pathValue
+    .split("/")
+    .map((segment) => Number.parseInt(segment, 10))
+    .filter((id) => Number.isInteger(id) && id > 0);
+}
+
+function appendPaginatedPaths(
+  pathSet: Set<string>,
+  basePath: string,
+  totalPages: number,
+) {
+  const normalizedBasePath = normalizePagePath(basePath);
+  const safeTotalPages = Math.max(1, totalPages);
+
+  pathSet.add(normalizedBasePath);
+  for (let page = 1; page <= safeTotalPages; page++) {
+    pathSet.add(`${normalizedBasePath}/page/${page}`);
+  }
+}
+
+function isPageTemplate(pathname: string): boolean {
+  return pathname.endsWith(PAGE_PLACEHOLDER_SEGMENT);
+}
+
+/**
+ * 生成 main catch-all 路由的静态参数
+ * - 仅处理 BLOCK/MDX/MARKDOWN/HTML 页面
+ * - 根据页面模板自动展开 posts/tags/categories 的动态分页 slug
+ */
+export async function getMainRouteStaticParams(): Promise<
+  MainRouteStaticParam[]
+> {
+  const pages = await prisma.page.findMany({
+    where: {
+      deletedAt: null,
+      status: "ACTIVE",
+      contentType: {
+        in: [...STATIC_PARAM_SUPPORTED_CONTENT_TYPES],
+      },
+    },
+    select: {
+      slug: true,
+      config: true,
+    },
+    orderBy: {
+      slug: "asc",
+    },
+  });
+
+  if (pages.length === 0) {
+    return [{ slug: [] }];
+  }
+
+  const normalizedPages = pages.map((page) => ({
+    slug: normalizePagePath(page.slug),
+    config: page.config,
+  }));
+
+  const hasPostsTemplates = normalizedPages.some((page) => {
+    const lowerSlug = page.slug.toLowerCase();
+    return (
+      lowerSlug.includes("posts") &&
+      isPageTemplate(page.slug) &&
+      !page.slug.includes(":slug")
+    );
+  });
+  const hasTagTemplates = normalizedPages.some((page) => {
+    const lowerSlug = page.slug.toLowerCase();
+    return (
+      lowerSlug.includes("tags") &&
+      page.slug.includes(":slug") &&
+      !page.slug.includes(":slug...")
+    );
+  });
+  const hasCategoryTemplates = normalizedPages.some((page) => {
+    const lowerSlug = page.slug.toLowerCase();
+    return lowerSlug.includes("categories") && page.slug.includes(":slug...");
+  });
+  const needPostStats =
+    hasPostsTemplates || hasTagTemplates || hasCategoryTemplates;
+
+  const [tags, categories, publishedPosts] = await Promise.all([
+    hasTagTemplates
+      ? prisma.tag.findMany({
+          select: { slug: true },
+          orderBy: { slug: "asc" },
+        })
+      : Promise.resolve([] as Array<{ slug: string }>),
+    hasCategoryTemplates
+      ? prisma.category.findMany({
+          select: { id: true, fullSlug: true, path: true },
+          orderBy: { fullSlug: "asc" },
+        })
+      : Promise.resolve(
+          [] as Array<{ id: number; fullSlug: string; path: string }>,
+        ),
+    needPostStats
+      ? prisma.post.findMany({
+          where: {
+            status: "PUBLISHED",
+            deletedAt: null,
+          },
+          select: {
+            tags: { select: { slug: true } },
+            categories: { select: { id: true } },
+          },
+        })
+      : Promise.resolve(
+          [] as Array<{
+            tags: Array<{ slug: string }>;
+            categories: Array<{ id: number }>;
+          }>,
+        ),
+  ]);
+
+  const tagPostCountMap = new Map<string, number>();
+  if (hasTagTemplates) {
+    for (const post of publishedPosts) {
+      const seenTags = new Set<string>();
+      for (const tag of post.tags) {
+        if (seenTags.has(tag.slug)) continue;
+        seenTags.add(tag.slug);
+        tagPostCountMap.set(tag.slug, (tagPostCountMap.get(tag.slug) ?? 0) + 1);
+      }
+    }
+  }
+
+  const categoryPostCountMap = new Map<number, number>();
+  if (hasCategoryTemplates) {
+    const categoryAncestorsMap = new Map<number, number[]>();
+
+    for (const category of categories) {
+      const ancestorIds = parseCategoryAncestorIds(category.path);
+      categoryAncestorsMap.set(category.id, [...ancestorIds, category.id]);
+    }
+
+    for (const post of publishedPosts) {
+      const affectedCategoryIds = new Set<number>();
+
+      for (const category of post.categories) {
+        const categoryIds = categoryAncestorsMap.get(category.id) ?? [
+          category.id,
+        ];
+        categoryIds.forEach((id) => affectedCategoryIds.add(id));
+      }
+
+      affectedCategoryIds.forEach((categoryId) => {
+        categoryPostCountMap.set(
+          categoryId,
+          (categoryPostCountMap.get(categoryId) ?? 0) + 1,
+        );
+      });
+    }
+  }
+
+  const pathnameSet = new Set<string>();
+
+  for (const page of normalizedPages) {
+    const template = page.slug;
+    const lowerTemplate = template.toLowerCase();
+
+    if (!template.includes(":")) {
+      pathnameSet.add(template);
+      continue;
+    }
+
+    const pageSize = resolvePageSizeFromConfig(page.config);
+
+    if (
+      lowerTemplate.includes("posts") &&
+      isPageTemplate(template) &&
+      !template.includes(":slug")
+    ) {
+      const basePath =
+        template.slice(0, -PAGE_PLACEHOLDER_SEGMENT.length) || "/";
+      const totalPages = Math.max(
+        1,
+        Math.ceil(publishedPosts.length / pageSize),
+      );
+      appendPaginatedPaths(pathnameSet, basePath, totalPages);
+      continue;
+    }
+
+    if (
+      lowerTemplate.includes("tags") &&
+      template.includes(":slug") &&
+      !template.includes(":slug...")
+    ) {
+      const isPagedTemplate = isPageTemplate(template);
+      const baseTemplate = isPagedTemplate
+        ? template.slice(0, -PAGE_PLACEHOLDER_SEGMENT.length)
+        : template;
+
+      for (const tag of tags) {
+        const basePath = normalizePagePath(
+          baseTemplate.replace(":slug", tag.slug),
+        );
+        if (isPagedTemplate) {
+          const totalPages = Math.max(
+            1,
+            Math.ceil((tagPostCountMap.get(tag.slug) ?? 0) / pageSize),
+          );
+          appendPaginatedPaths(pathnameSet, basePath, totalPages);
+        } else {
+          pathnameSet.add(basePath);
+        }
+      }
+      continue;
+    }
+
+    if (lowerTemplate.includes("categories") && template.includes(":slug...")) {
+      const isPagedTemplate = isPageTemplate(template);
+      const baseTemplate = isPagedTemplate
+        ? template.slice(0, -PAGE_PLACEHOLDER_SEGMENT.length)
+        : template;
+
+      for (const category of categories) {
+        const fullSlug = category.fullSlug.trim();
+        if (!fullSlug) continue;
+
+        const basePath = normalizePagePath(
+          baseTemplate.replace(":slug...", fullSlug),
+        );
+
+        if (isPagedTemplate) {
+          const totalPages = Math.max(
+            1,
+            Math.ceil((categoryPostCountMap.get(category.id) ?? 0) / pageSize),
+          );
+          appendPaginatedPaths(pathnameSet, basePath, totalPages);
+        } else {
+          pathnameSet.add(basePath);
+        }
+      }
+    }
+  }
+
+  if (pathnameSet.size === 0) {
+    return [{ slug: [] }];
+  }
+
+  return Array.from(pathnameSet)
+    .sort((a, b) => a.localeCompare(b))
+    .map((pathname) => ({
+      slug: pathToSlugSegments(pathname),
+    }));
+}
 
 /**
  * 基于关键词的资源存在性校验
@@ -100,18 +449,21 @@ async function validateKeywordBoundResource(params: {
   const hasTagKeyword = routeSignature.includes("tags");
 
   if (hasCategoryKeyword) {
-    const pathSlugs = slug.split("/").filter(Boolean);
-    if (pathSlugs.length === 0) return true;
-    const category = await findCategoryByPath(pathSlugs);
-    return !!category;
+    const normalizedSlug = slug
+      .split("/")
+      .map((segment) => segment.trim())
+      .filter(Boolean)
+      .join("/");
+
+    if (!normalizedSlug) return true;
+
+    const categoryFullSlugs = await getAllCategoryFullSlugs();
+    return categoryFullSlugs.includes(normalizedSlug);
   }
 
   if (hasTagKeyword) {
-    const tag = await prisma.tag.findUnique({
-      where: { slug },
-      select: { slug: true },
-    });
-    return !!tag;
+    const tagSlugs = await getAllTagSlugs();
+    return tagSlugs.includes(slug);
   }
 
   return true;
