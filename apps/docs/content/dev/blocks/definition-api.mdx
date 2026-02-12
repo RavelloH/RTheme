@@ -1,22 +1,37 @@
 ---
 title: Definition API
-description: definition.ts 的字段语义、写法与约束
+description: definition.ts 的字段语义、写法、缓存声明与约束
 ---
 
 `definition.ts` 是区块声明入口。  
-它定义区块类型、schema 加载方式、组件加载方式、运行能力。
+它定义区块类型、schema 加载方式、组件加载方式、运行能力与缓存标签声明。
 
 ## 1. 类型定义
 
 见：`apps/web/src/blocks/core/definition.ts`
 
 ```ts
+export interface BlockCacheTagResolverParams<TContent = unknown> {
+  block: RuntimeBlockInput<TContent>;
+  content: TContent;
+  context: BlockRuntimeContext;
+}
+
+export type BlockCacheTagResolver<TContent = unknown> =
+  | readonly string[]
+  | ((params: BlockCacheTagResolverParams<TContent>) => readonly string[]);
+
+export interface BlockCacheConfig<TContent = unknown> {
+  tags: BlockCacheTagResolver<TContent>;
+}
+
 export interface BlockDefinition<TContent = unknown, TBusiness = unknown> {
   type: string;
   schema: () => Promise<BlockFormConfig>;
   component: () => Promise<
     ComponentType<BlockComponentProps<TContent, TBusiness>>
   >;
+  cache?: BlockCacheConfig<TContent>;
   capabilities: {
     context: "inherit" | "none";
     placeholders?: {
@@ -61,6 +76,27 @@ component: () =>
   import("./index").then((m) => m.default),
 ```
 
+### `cache`
+
+用于声明该 block 的缓存依赖标签。  
+你可以在 block 自己的 definition 中注册标签，不需要中心化配置。
+
+支持两种值类型：
+
+1. 固定数组：`["posts", "tags"]`
+2. 动态函数：根据 block content/context 返回标签
+
+```ts
+cache: {
+  tags: ({ content, context }) => {
+    const tags = ["gallery/list"];
+    if (content?.authorUid) tags.push(`users/${content.authorUid}`);
+    if (context.slug) tags.push(`posts/${context.slug}`);
+    return tags;
+  },
+},
+```
+
 ### `capabilities.context`
 
 1. `inherit`：可接收页面上下文（slug/page/url/pageSize）。
@@ -89,7 +125,43 @@ media: [
 ];
 ```
 
-## 3. 推荐模板
+## 3. 缓存标签设计建议
+
+优先细粒度标签，尽量避免全局标签导致大面积失效。
+
+推荐：
+
+1. 实体详情：`posts/{slug}`、`projects/{slug}`、`photos/{slug}`、`users/{uid}`。
+2. 配置项：`config/{key}`（例如 `config/site.shiki.theme`）。
+3. 明确列表：`gallery/list`、`friend-links/list`。
+
+谨慎使用：
+
+1. `posts`、`projects`、`photos`、`config` 这类全局标签。
+
+## 4. 与 Server Action 的配合（必须）
+
+仅声明 `cache.tags` 不够。  
+数据发生变更时，需要在对应 server action 中 `updateTag(...)` 精准失效。
+
+```ts
+// 文章更新
+updateTag(`posts/${slug}`);
+
+// 文章 slug 变更要同时失效旧/新
+updateTag(`posts/${oldSlug}`);
+updateTag(`posts/${newSlug}`);
+
+// 配置更新（按 key）
+updateTag(`config/${settingKey}`);
+
+// 图库列表
+updateTag("gallery/list");
+```
+
+如果你的页面有“上一篇/下一篇”这类邻接数据，也要在写操作里额外失效受影响邻居的标签。
+
+## 5. 推荐模板
 
 ```ts
 import { createBlockDefinition } from "@/blocks/core/definition";
@@ -98,6 +170,9 @@ export const featureBlockDefinition = createBlockDefinition({
   type: "feature",
   schema: () => import("./schema").then((m) => m.FEATURE_BLOCK_FORM_CONFIG),
   component: () => import("./index").then((m) => m.default),
+  cache: {
+    tags: ["feature/list"],
+  },
   capabilities: {
     context: "inherit",
     placeholders: {
@@ -110,16 +185,18 @@ export const featureBlockDefinition = createBlockDefinition({
 });
 ```
 
-## 4. 约束与反模式
+## 6. 约束与反模式
 
 ### 必须做
 
 1. `type` 唯一。
 2. `schema` 与 `component` 都使用懒加载。
 3. 对能力进行最小声明（只开启你真的需要的能力）。
+4. 缓存标签按需、细粒度设计，并在写操作中配套 `updateTag`。
 
 ### 禁止做
 
 1. 在 `definition.ts` 中直接 `import "./fetcher"`。
 2. 在 `component` loader 里混入业务请求逻辑。
 3. 让 `type` 与 `schema.blockType` 不一致。
+4. 把全站数据都挂在单个全局标签上（例如所有场景都用 `posts`）。

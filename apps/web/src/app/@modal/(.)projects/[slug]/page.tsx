@@ -24,11 +24,16 @@ export default async function ProjectDetailModalPage({
     getConfigs(["site.url", "site.shiki.theme"]),
   ]);
 
-  cacheTag(
-    "projects",
+  const pageCacheTags = new Set<string>([
+    "config/site.url",
+    "config/site.shiki.theme",
     `projects/${project.slug}`,
     `users/${project.author.uid}`,
-  );
+  ]);
+  for (const tag of project.tags) {
+    pageCacheTags.add(`tags/${tag.slug}`);
+  }
+  cacheTag(...Array.from(pageCacheTags));
   cacheLife("max");
 
   const contentRootId = `project-modal-content-${project.id}`;

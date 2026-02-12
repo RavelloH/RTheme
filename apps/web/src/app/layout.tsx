@@ -47,7 +47,14 @@ export default async function RootLayout({
   modal: React.ReactNode;
 }>) {
   "use cache";
-  cacheTag("config", "menus");
+  cacheTag(
+    "menus",
+    "config/site.color",
+    "config/site.title",
+    "config/analytics.enable",
+    "config/notice.ably.key",
+    "config/site.shiki.theme",
+  );
   cacheLife("max");
 
   // 获取所有需要的配置

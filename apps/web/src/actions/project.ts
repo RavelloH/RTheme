@@ -1658,6 +1658,13 @@ export async function updateProjects(
       updateData.enableConentSync = enableConentSync;
     }
 
+    const projectsToUpdate = await prisma.project.findMany({
+      where,
+      select: {
+        slug: true,
+      },
+    });
+
     const result = await prisma.project.updateMany({
       where,
       data: updateData,
@@ -1665,6 +1672,9 @@ export async function updateProjects(
 
     // 更新缓存标签
     updateTag("projects");
+    for (const project of projectsToUpdate) {
+      updateTag(`projects/${project.slug}`);
+    }
 
     // 审计日志
     const { after } = await import("next/server");
@@ -2006,6 +2016,9 @@ export async function syncProjectsGithub(
 
     // 更新缓存标签
     updateTag("projects");
+    for (const project of projects) {
+      updateTag(`projects/${project.slug}`);
+    }
 
     // 审计日志
     const { after } = await import("next/server");

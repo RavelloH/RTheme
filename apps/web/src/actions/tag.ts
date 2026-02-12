@@ -800,6 +800,7 @@ export async function updateTag(
 
     // 刷新缓存标签
     updateTags("tags");
+    updateTags(`tags/${slug}`);
     updateTags(`tags/${updatedTag.slug}`);
     updateTags("posts");
 

@@ -112,8 +112,6 @@ function filterGpsFromExif(exif: unknown): unknown {
 export default async function PhotoPage({ params }: PhotoPageProps) {
   "use cache";
   const { slug } = await params;
-  cacheTag(`photos/${slug}`);
-  cacheLife("max");
 
   if (!slug) {
     notFound();
@@ -142,6 +140,9 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
   if (!photo) {
     notFound();
   }
+
+  cacheTag(`photos/${slug}`, `users/${photo.media.user.uid}`);
+  cacheLife("max");
 
   // 计算用户邮箱的 MD5 值
   const emailMd5 = photo.media.user.email
