@@ -343,5 +343,23 @@ export async function getAdjacentPosts(
     },
   );
 
-  return getCachedData(currentSlug);
+  const cachedAdjacentPosts = await getCachedData(currentSlug);
+
+  const normalizeAdjacentPost = (
+    post: AdjacentPostData | null,
+  ): AdjacentPostData | null => {
+    if (!post) {
+      return null;
+    }
+
+    return {
+      ...post,
+      publishedAt: post.publishedAt ? new Date(post.publishedAt) : null,
+    };
+  };
+
+  return {
+    previous: normalizeAdjacentPost(cachedAdjacentPosts.previous),
+    next: normalizeAdjacentPost(cachedAdjacentPosts.next),
+  };
 }

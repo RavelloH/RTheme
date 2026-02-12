@@ -57,15 +57,23 @@ function ProjectImageBlock({
   index,
   areas,
   mobileIndex,
+  imageOnTop,
 }: {
   project: ProjectsListItem;
   index: number;
   areas: GridArea[];
   mobileIndex: number;
+  imageOnTop: boolean;
 }) {
   const title =
     project.title || `Project ${String(index + 1).padStart(2, "0")}`;
   const detailHref = `/projects/${project.slug}`;
+  const titlePositionClass = imageOnTop
+    ? "bottom-0"
+    : "bottom-0 md:top-0 md:bottom-auto";
+  const overlayDirectionClass = imageOnTop
+    ? "bg-gradient-to-t from-background via-background/90 to-transparent"
+    : "bg-gradient-to-t md:bg-gradient-to-b from-background via-background/90 to-transparent";
 
   return (
     <GridItem
@@ -89,9 +97,11 @@ function ProjectImageBlock({
         <div className="absolute inset-0 bg-background" />
       )}
 
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/90 to-transparent" />
+      <div className={`absolute inset-0 ${overlayDirectionClass}`} />
 
-      <div className="absolute inset-x-0 bottom-0 z-10 p-8 md:p-10 pointer-events-none">
+      <div
+        className={`absolute inset-x-0 ${titlePositionClass} z-10 p-8 md:p-10 pointer-events-none`}
+      >
         <h3 className="text-4xl md:text-5xl leading-tight text-foreground">
           <span
             className="relative inline bg-[linear-gradient(white,white)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]"
@@ -228,6 +238,7 @@ export default function ProjectsListBlock({ block }: BlockComponentProps) {
               index={index}
               areas={imageAreas}
               mobileIndex={mobileBase}
+              imageOnTop={imageOnTop}
             />
             <ProjectTextBlock
               project={project}
