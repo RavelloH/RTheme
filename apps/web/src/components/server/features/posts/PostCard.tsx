@@ -118,17 +118,23 @@ export default function PostCard({
             {title}
           </span>
         </div>
-        <div className="text-xl line-clamp-1 py-2 flex items-center text-white/90">
+        <div className="text-xl py-2 flex items-center flex-nowrap min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-white/90">
           {date && (
-            <span className="flex items-center gap-1 pr-3" data-fade>
+            <span
+              className="flex shrink-0 items-center gap-1 pr-3 whitespace-nowrap"
+              data-fade
+            >
               <RiTimeLine size={"1em"} />
               <span>{formatDate(date)}</span>
             </span>
           )}
           {category?.length !== 0 && (
-            <span className="flex items-center gap-1" data-fade>
-              <RiFolder2Line size={"1em"} />
-              <span>
+            <span
+              className="flex shrink-0 items-center gap-1 whitespace-nowrap"
+              data-fade
+            >
+              <RiFolder2Line size={"1em"} className="shrink-0" />
+              <span className="whitespace-nowrap">
                 {category?.map((cat, index) => (
                   <span key={cat.slug}>
                     <Link
@@ -145,15 +151,18 @@ export default function PostCard({
             </span>
           )}
           {/* 访问量与标签区域 */}
-          <span className="relative ml-3 hidden md:inline-block" data-fade>
+          <span
+            className="relative ml-3 hidden min-w-0 md:inline-flex md:min-w-0 md:items-center"
+            data-fade
+          >
             {showAll ? (
               /* showAll 模式：浏览量和标签并排显示 */
               <>
-                <span className="inline-flex items-center gap-3">
+                <span className="inline-flex min-w-0 items-center gap-3">
                   {tags && tags.length > 0 && (
-                    <>
-                      <span className="inline-flex items-center gap-1">
-                        <RiPriceTagLine size={"1em"} />
+                    <span className="inline-flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+                      <RiPriceTagLine size={"1em"} className="shrink-0" />
+                      <span className="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
                         {tags.map((tag, index) => (
                           <span key={tag.slug}>
                             <Link
@@ -166,10 +175,10 @@ export default function PostCard({
                           </span>
                         ))}
                       </span>
-                    </>
+                    </span>
                   )}
                   <span
-                    className="flex items-center gap-1 opacity-0 transition-all"
+                    className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap opacity-0 transition-all"
                     data-viewcount-slug={slug}
                   >
                     <RiEye2Line size={"1em"} />
@@ -183,7 +192,7 @@ export default function PostCard({
                 {/* 访问量（默认显示，hover时消失） */}
                 <span className="inline-flex items-center gap-1 absolute left-0 top-0 transition-all duration-300 group-hover:opacity-0 group-hover:-translate-y-2">
                   <span
-                    className="flex items-center gap-1 opacity-0 transition-all"
+                    className="inline-flex items-center gap-1 whitespace-nowrap opacity-0 transition-all"
                     data-viewcount-slug={slug}
                   >
                     <RiEye2Line size={"1em"} />
@@ -192,30 +201,32 @@ export default function PostCard({
                 </span>
                 {/* 标签（hover时出现） */}
                 <span
-                  className="inline-flex items-center gap-1 opacity-0 transition-all duration-300 group-hover:opacity-100
+                  className="inline-flex min-w-0 items-center gap-1 overflow-hidden opacity-0 transition-all duration-300 group-hover:opacity-100
                   transform translate-y-2 group-hover:translate-y-0
                   [transform-style:preserve-3d] group-hover:[transform:perspective(1000px)_translateY(0)_rotateX(0deg)]
                   [transform:perspective(1000px)_translateY(8px)_rotateX(15deg)]"
                 >
-                  <RiPriceTagLine size={"1em"} />
-                  {tags?.map((tag, index) => (
-                    <span key={tag.slug}>
-                      <Link
-                        href={`/tags/${tag.slug}`}
-                        className="hover:text-primary transition-colors text-white pointer-events-auto relative z-30"
-                      >
-                        #{tag.name}
-                      </Link>
-                      {index < tags.length - 1 && " "}
-                    </span>
-                  ))}
+                  <RiPriceTagLine size={"1em"} className="shrink-0" />
+                  <span className="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                    {tags?.map((tag, index) => (
+                      <span key={tag.slug}>
+                        <Link
+                          href={`/tags/${tag.slug}`}
+                          className="hover:text-primary transition-colors text-white pointer-events-auto relative z-30"
+                        >
+                          #{tag.name}
+                        </Link>
+                        {index < tags.length - 1 && " "}
+                      </span>
+                    ))}
+                  </span>
                 </span>
               </>
             ) : (
               /* 没有标签时，常态显示访问量 */
               <span className="inline-flex items-center gap-1" data-fade>
                 <span
-                  className="flex items-center gap-1 opacity-0 transition-all"
+                  className="inline-flex items-center gap-1 whitespace-nowrap opacity-0 transition-all"
                   data-viewcount-slug={slug}
                 >
                   <RiEye2Line size={"1em"} />
