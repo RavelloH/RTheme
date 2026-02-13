@@ -51,6 +51,11 @@ export const CONFIG_DEFINITIONS = {
     description:
       "代码高亮主题。参考 https://shiki.style/themes ，填写主题 ID。",
   },
+  "site.custom.script": {
+    default: "" as string,
+    description:
+      "[可选] 自定义脚本标签。可填写一个或多个 <script> 标签（支持 src 外链和内联脚本），将注入到页面底部用于加载自定义脚本",
+  },
   "site.slogan.primary": {
     default: "A neutral place to thoughts.",
     description: "站点主标语。显示在主页",
