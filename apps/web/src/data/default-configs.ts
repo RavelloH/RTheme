@@ -81,7 +81,16 @@ export const CONFIG_DEFINITIONS = {
     description:
       "站点版权信息。显示在菜单底部（桌面版）或页脚（移动版）。每行一条，可使用HTML",
   },
-
+  "site.avatar": {
+    default: "",
+    description:
+      "站点Logo图片URL地址，建议使用正方形图片。如果已在媒体管理中上传，直接填写 /p/ 路径的图片即可。留空使用 /avatar.jpg 默认头像",
+  },
+  "site.favicon": {
+    default: "/icon.png",
+    description:
+      "站点Favicon图标URL地址。如果已在媒体管理中上传，直接填写 /p/ 路径的图片即可",
+  },
   // =====================================
   // 作者相关设置
   // =====================================

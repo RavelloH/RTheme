@@ -7,6 +7,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 import Avatar from "@/../public/avatar.jpg";
+import { useConfig } from "@/context/ConfigContext";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { useMobile } from "@/hooks/use-mobile";
 import { useConsoleStore } from "@/store/console-store";
@@ -198,6 +199,8 @@ export default function HeaderWrapper({
 }: {
   children: React.ReactNode;
 }) {
+  const configuredAvatar = useConfig("site.avatar");
+  const avatarSrc = configuredAvatar?.trim() ? configuredAvatar : Avatar;
   const { isMenuOpen, toggleMenu } = useMenuStore();
   const { setConsoleOpen } = useConsoleStore();
   const headerRef = useRef<HTMLElement>(null);
@@ -360,7 +363,13 @@ export default function HeaderWrapper({
         }}
       >
         <div className="flex items-center" style={{ width: getHeaderHeight() }}>
-          <Image src={Avatar} alt="Logo" className="h-full w-auto" />
+          <Image
+            src={avatarSrc}
+            width={100}
+            height={100}
+            alt="Logo"
+            className="h-full w-auto"
+          />
         </div>
         <div className="flex-1 flex items-center justify-center relative h-full">
           <TitleTransition

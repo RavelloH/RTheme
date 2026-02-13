@@ -51,6 +51,7 @@ export default async function RootLayout({
     "menus",
     "config/site.color",
     "config/site.title",
+    "config/site.avatar",
     "config/analytics.enable",
     "config/notice.ably.key",
     "config/site.shiki.theme",
@@ -60,12 +61,13 @@ export default async function RootLayout({
   // 获取所有需要的配置
   const [
     menus,
-    [mainColor, siteName, enableAnalytics, ablyEnabled, shikiTheme],
+    [mainColor, siteName, siteAvatar, enableAnalytics, ablyEnabled, shikiTheme],
   ] = await Promise.all([
     getActiveMenusForClient(),
     getConfigs([
       "site.color",
       "site.title",
+      "site.avatar",
       "analytics.enable",
       "notice.ably.key",
       "site.shiki.theme",
@@ -76,6 +78,7 @@ export default async function RootLayout({
   const configs = {
     "site.color": mainColor,
     "site.title": siteName,
+    "site.avatar": siteAvatar,
     "site.shiki.theme": shikiTheme,
     "analytics.enable": enableAnalytics,
     "notice.ably.key": ablyEnabled,
