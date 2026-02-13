@@ -12,8 +12,8 @@ const redisOptions = {
   // 1. 允许重试
   maxRetriesPerRequest: 1,
 
-  // 2. 关闭懒连接
-  lazyConnect: false,
+  // 2. 开启懒连接
+  lazyConnect: true,
 
   // 3. 开启离线队列
   enableOfflineQueue: true,
