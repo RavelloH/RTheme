@@ -50,6 +50,7 @@ const nextConfig = () => {
         "node_modules/postcss/**/*",
         "**/*.map",
         "**/*.d.ts",
+        "./.cache/**/*",
       ],
     },
     async rewrites() {
