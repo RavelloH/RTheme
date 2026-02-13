@@ -1,6 +1,7 @@
 /**
  * 默认配置定义
  */
+import { DEFAULT_SITE_COLOR_CONFIG } from "@/lib/shared/site-color";
 
 // Prisma Json 类型定义
 type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
@@ -39,19 +40,8 @@ export const CONFIG_DEFINITIONS = {
     description: "站点主域名地址。无需添加尾缀斜杠",
   },
   "site.color": {
-    default: {
-      primary: "#2dd4bf",
-      background: {
-        light: "#ffffff",
-        dark: "#111111",
-      },
-      muted: {
-        light: "#f4f4f5",
-        dark: "#202023",
-      },
-    },
-    description:
-      "站点主题颜色设置。影响页面UI、用户默认头像等。需填写十六进制颜色值",
+    default: DEFAULT_SITE_COLOR_CONFIG,
+    description: "站点主题颜色变量。亮色/暗色独立配置，支持hex 或 oklch",
   },
   "site.shiki.theme": {
     default: {

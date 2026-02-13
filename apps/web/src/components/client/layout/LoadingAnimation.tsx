@@ -1,10 +1,12 @@
 "use client";
 
-import { type CSSProperties, useRef, useState } from "react";
+import { type CSSProperties, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
+import { useTheme } from "next-themes";
 
 import { PageLoadManager } from "@/components/client/layout/PageLoadManager";
 import { useConfig } from "@/context/ConfigContext";
+import { normalizeSiteColorConfig } from "@/lib/shared/site-color";
 import type { ConfigType } from "@/types/config";
 import { AutoTransition } from "@/ui/AutoTransition";
 
@@ -13,15 +15,25 @@ type LoadingAnimationProps = {
 };
 
 export function LoadingAnimation({ mainColor }: LoadingAnimationProps) {
-  const loadingPrimary = mainColor.primary || "#2dd4bf";
-  const loadingBackground = mainColor.background.dark || "#111111";
-  const loadingMuted = mainColor.muted.dark || "#111111";
+  const { resolvedTheme } = useTheme();
+  const normalizedColor = useMemo(
+    () => normalizeSiteColorConfig(mainColor),
+    [mainColor],
+  );
+  const activeThemeColors =
+    resolvedTheme === "light" ? normalizedColor.light : normalizedColor.dark;
+
+  const loadingPrimary = activeThemeColors.primary;
+  const loadingBackground = activeThemeColors.background;
+  const loadingMuted = activeThemeColors.muted;
+  const loadingForeground = activeThemeColors.foreground;
 
   const overlayStyle = {
     opacity: 1,
     "--color-primary": loadingPrimary,
     "--color-background": loadingBackground,
     "--color-muted": loadingMuted,
+    "--color-foreground": loadingForeground,
   } as CSSProperties;
 
   const siteName = useConfig("site.title");

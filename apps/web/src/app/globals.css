@@ -5,32 +5,27 @@
 @theme {
   --color-background: #ffffff;
   --color-foreground: #111111;
+
   --color-primary: #2dd4bf;
   --color-primary-foreground: #111111;
+
   --color-secondary: oklch(0.967 0.001 286.375);
   --color-secondary-foreground: oklch(0.21 0.006 285.885);
+
   --color-muted: oklch(0.967 0.001 286.375);
   --color-muted-foreground: oklch(0.552 0.016 285.938);
+
   --color-accent: oklch(0.967 0.001 286.375);
   --color-accent-foreground: oklch(0.21 0.006 285.885);
+
+  --color-warning: #eab308;
+  --color-error: #ef4444;
+  --color-success: #22c55e;
+
   --color-border: oklch(0.92 0.004 286.32);
   --color-input: oklch(0.92 0.004 286.32);
-  --color-ring: #0d9488;
-  --radius: 0.5rem;
-  --theme-red: #ef4444;
-  --color-success: #16a34a;
-  --color-success-foreground: #ffffff;
-  --color-error: #dc2626;
-  --color-error-foreground: #ffffff;
-  --color-warning: #ca8a04;
-  --color-warning-foreground: #ffffff;
 
-  /* 图表颜色 */
-  --chart-1: #2dd4bf;
-  --chart-2: #3b82f6;
-  --chart-3: #8b5cf6;
-  --chart-4: #ec4899;
-  --chart-5: #f59e0b;
+  --color-ring: #0d9488;
 }
 
 .dark {
@@ -39,7 +34,7 @@
     --color-foreground: oklch(0.9672 0 0);
 
     --color-primary: oklch(0.7845 0.1325 181.91);
-    --color-primary-foreground: var(--color-background);
+    --color-primary-foreground: oklch(0.1776 0 0);
 
     --color-secondary: oklch(0.274 0.006 286.033);
     --color-secondary-foreground: oklch(0.835 0.0077 260.73);
@@ -56,8 +51,8 @@
 
     --color-border: oklch(100% 0.00011 271.152 / 0.1);
     --color-input: oklch(1 0 0 / 15%);
+
     --color-ring: #0d9488;
-    --radius: 0.5rem;
   }
 }
 

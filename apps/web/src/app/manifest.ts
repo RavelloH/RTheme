@@ -5,6 +5,7 @@
 import type { MetadataRoute } from "next";
 
 import { getConfigs } from "@/lib/server/config-cache";
+import { normalizeSiteColorConfig } from "@/lib/shared/site-color";
 
 const ICON_SIZES = [16, 32, 48, 72, 96, 128, 144, 192, 256, 384, 512] as const;
 
@@ -17,19 +18,9 @@ function resolveManifestColors(siteColor: unknown): {
   themeColor: string;
   backgroundColor: string;
 } {
-  if (!siteColor || typeof siteColor !== "object" || Array.isArray(siteColor)) {
-    return {
-      themeColor: FALLBACK_THEME_COLOR,
-      backgroundColor: FALLBACK_BACKGROUND_COLOR,
-    };
-  }
-
-  const primary = (siteColor as { primary?: unknown }).primary;
-  const background = (siteColor as { background?: unknown }).background;
-  const backgroundLight =
-    background && typeof background === "object" && !Array.isArray(background)
-      ? (background as { light?: unknown }).light
-      : undefined;
+  const normalizedColor = normalizeSiteColorConfig(siteColor);
+  const primary = normalizedColor.light.primary;
+  const background = normalizedColor.light.background;
 
   return {
     themeColor:
@@ -37,8 +28,8 @@ function resolveManifestColors(siteColor: unknown): {
         ? primary
         : FALLBACK_THEME_COLOR,
     backgroundColor:
-      typeof backgroundLight === "string" && backgroundLight.trim()
-        ? backgroundLight
+      typeof background === "string" && background.trim()
+        ? background
         : FALLBACK_BACKGROUND_COLOR,
   };
 }

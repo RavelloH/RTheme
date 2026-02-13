@@ -1,7 +1,9 @@
 /**
  * 互补色生成器
- * 支持 HEX 颜色格式
+ * 支持 HEX 与 OKLCh 颜色格式
  */
+
+import { generateGradient } from "@/lib/shared/gradient";
 
 type Color = string;
 
@@ -51,6 +53,25 @@ function rgbToHex(rgb: RGB): string {
 }
 
 /**
+ * 将任意支持的颜色转换为 HEX
+ * 当前支持：
+ * - HEX
+ * - OKLCh（通过渐变工具转换）
+ */
+function toHexColor(color: string): string {
+  if (isHexColor(color)) {
+    return expandHex(color);
+  }
+
+  const [hex] = generateGradient(color, color, 2);
+  if (!hex || !isHexColor(hex)) {
+    throw new Error(`Unsupported color format: ${color}`);
+  }
+
+  return expandHex(hex);
+}
+
+/**
  * 生成互补色（通过 RGB 反转实现）
  * @param color 输入颜色（HEX 格式）
  * @returns HEX 格式的互补色
@@ -64,12 +85,10 @@ function rgbToHex(rgb: RGB): string {
  * // 返回: "#c47d09" (橙色)
  */
 export function generateComplementary(color: Color): string {
-  if (!isHexColor(color)) {
-    throw new Error(`Invalid HEX color format: ${color}`);
-  }
+  const hexColor = toHexColor(color);
 
   // 将 HEX 转换为 RGB
-  const rgb = hexToRgb(color);
+  const rgb = hexToRgb(hexColor);
 
   // 计算互补色：每个通道用 255 减去原值
   const complementaryRgb: RGB = {
