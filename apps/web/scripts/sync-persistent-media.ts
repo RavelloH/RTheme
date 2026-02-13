@@ -232,11 +232,22 @@ async function createPrismaClient(): Promise<any> {
   return prisma;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function fetchPersistentMedia(
-  prisma: any,
+  prisma: unknown,
 ): Promise<PersistentMediaRecord[]> {
-  const rows = (await prisma.media.findMany({
+  const typedPrisma = prisma as {
+    media: {
+      findMany: (args: unknown) => Promise<
+        Array<{
+          id: number;
+          storageUrl: string;
+          persistentPath: string | null;
+        }>
+      >;
+    };
+  };
+
+  const rows = await typedPrisma.media.findMany({
     where: {
       persistentPath: {
         not: null,
@@ -250,11 +261,7 @@ async function fetchPersistentMedia(
     orderBy: {
       id: "desc",
     },
-  })) as Array<{
-    id: number;
-    storageUrl: string;
-    persistentPath: string | null;
-  }>;
+  });
 
   const uniquePathMap = new Map<string, PersistentMediaRecord>();
 

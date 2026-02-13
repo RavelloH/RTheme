@@ -7,6 +7,7 @@ import MarqueeText from "@/blocks/collection/HeroGallery/client/MarqueeText";
 import { ProcessedText } from "@/blocks/core/components";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import CMSImage from "@/components/ui/CMSImage";
+import { useConfig } from "@/context/ConfigContext";
 import { useMobile } from "@/hooks/use-mobile";
 import type { ProcessedImageData } from "@/lib/shared/image-common";
 
@@ -29,6 +30,8 @@ export default function HomeTextSection({
   sloganBold = false,
   logoImage,
 }: HomeTextSectionProps) {
+  const configuredAvatar = useConfig("site.avatar");
+  const avatarSrc = configuredAvatar?.trim() ? configuredAvatar : Avatar;
   const isMobile = useMobile();
 
   if (!title && !slogan) return null;
@@ -111,8 +114,10 @@ export default function HomeTextSection({
               />
             ) : (
               <Image
-                src={Avatar}
+                src={avatarSrc}
                 alt="logo"
+                width={100}
+                height={100}
                 className="h-full w-auto object-cover"
               />
             )}
