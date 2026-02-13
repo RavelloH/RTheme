@@ -239,6 +239,8 @@ export default async function PostPage({ params }: PageProps) {
   cacheLife("max");
   const horizontalPaddingClassName = "px-6 md:px-10";
   const featuredHeroHeightClassName = "h-[42.1em]";
+  const contentRootId = "post-detail-content";
+  const contentSelector = `#${contentRootId} .md-content`;
 
   return (
     <MainLayout type="vertical" nopadding>
@@ -374,6 +376,7 @@ export default async function PostPage({ params }: PageProps) {
 
         {/* 文章内容 */}
         <div
+          id={contentRootId}
           className={`${horizontalPaddingClassName} max-w-7xl mx-auto pt-10 flex gap-6 relative h-full`}
         >
           <div className="flex-[8] h-full min-w-0">
@@ -527,12 +530,12 @@ export default async function PostPage({ params }: PageProps) {
           {/* 侧边栏容器 */}
           <div className="flex-[2] hidden lg:block max-w-screen h-full sticky top-10 self-start">
             {/* 目录（包含视口内容卡片） */}
-            <PostToc />
+            <PostToc contentSelector={contentSelector} />
           </div>
 
           {/* 移动端目录按钮 */}
           <div className="lg:hidden">
-            <PostToc isMobile={true} />
+            <PostToc isMobile={true} contentSelector={contentSelector} />
           </div>
         </div>
       </div>

@@ -118,6 +118,22 @@ export default function PostToc({
   const isUserClickRef = useRef(false);
   const clickedTargetIdRef = useRef<string | null>(null); // 记录点击的目标ID
 
+  const findContentContainer = useCallback(() => {
+    const selectors = contentSelector
+      .split(",")
+      .map((selector) => selector.trim())
+      .filter(Boolean);
+
+    for (const selector of selectors) {
+      const element = document.querySelector(selector);
+      if (element) {
+        return element as HTMLElement;
+      }
+    }
+
+    return null;
+  }, [contentSelector]);
+
   // 视口内容相关状态
   const [viewportItems, setViewportItems] = useState<ViewportContentItem[]>([]);
 
@@ -186,7 +202,7 @@ export default function PostToc({
 
   // 扫描视口内的内容
   const scanViewportContent = useCallback(() => {
-    const contentContainer = document.querySelector(contentSelector);
+    const contentContainer = findContentContainer();
     if (!contentContainer) return;
 
     const items: ViewportContentItem[] = [];
@@ -263,14 +279,14 @@ export default function PostToc({
     });
 
     setViewportItems(items);
-  }, [contentSelector, isElementInViewport]);
+  }, [findContentContainer, isElementInViewport]);
 
   // 从 DOM 中提取目录
   const extractTocItems = useCallback(() => {
     const items: TocItem[] = [];
 
     // 查找内容容器
-    const contentContainer = document.querySelector(contentSelector);
+    const contentContainer = findContentContainer();
     if (!contentContainer) {
       console.warn(`PostToc: 未找到内容容器 "${contentSelector}"`);
       return;
@@ -300,7 +316,7 @@ export default function PostToc({
     });
 
     setTocItems(items);
-  }, [contentSelector]);
+  }, [findContentContainer, contentSelector]);
 
   // 初始提取目录
   useEffect(() => {
@@ -363,7 +379,7 @@ export default function PostToc({
       let progress = 0;
 
       // 查找文章内容容器
-      const contentContainer = document.querySelector(contentSelector);
+      const contentContainer = findContentContainer();
 
       if (contentContainer) {
         const containerRect = contentContainer.getBoundingClientRect();
@@ -469,7 +485,7 @@ export default function PostToc({
     tocItems,
     scanViewportContent,
     broadcast,
-    contentSelector,
+    findContentContainer,
   ]);
 
   // 更新高亮指示器位置
@@ -664,7 +680,7 @@ export default function PostToc({
       let progress = 0;
 
       // 查找文章内容容器
-      const contentContainer = document.querySelector(contentSelector);
+      const contentContainer = findContentContainer();
 
       if (contentContainer) {
         const containerRect = contentContainer.getBoundingClientRect();
@@ -757,7 +773,7 @@ export default function PostToc({
         clearTimeout(mobileScrollTimeoutRef.current);
       }
     };
-  }, [isMobile, contentSelector, scanViewportContent, broadcast]);
+  }, [isMobile, findContentContainer, scanViewportContent, broadcast]);
 
   // 回到顶部
   const scrollToTop = () => {
