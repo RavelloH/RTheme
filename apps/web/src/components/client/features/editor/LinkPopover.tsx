@@ -74,7 +74,7 @@ export function LinkPopover({
           <RiLink size="1.2em" />
         </Toggle>
       </PopoverTrigger>
-      <PopoverContent className="w-96 p-4 bg-background/95 backdrop-blur-sm border border-foreground/10 rounded-lg shadow-lg">
+      <PopoverContent className="w-96 py-4 px-6 bg-muted/30 backdrop-blur-sm border border-foreground/10 rounded-sm shadow-lg">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Input

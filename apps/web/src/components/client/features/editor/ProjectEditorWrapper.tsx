@@ -799,7 +799,7 @@ export function ProjectEditorWrapper({
         <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
           基本信息
         </h3>
-        <div className="grid grid-cols-1 gap-4 bg-muted/20 p-4 rounded-lg">
+        <div className="grid grid-cols-1 gap-4 bg-muted/30 p-4 rounded-sm">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
               标题 <span className="text-error">*</span>
@@ -835,7 +835,7 @@ export function ProjectEditorWrapper({
         <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
           发布设置
         </h3>
-        <div className="grid grid-cols-2 gap-4 bg-muted/20 p-4 rounded-lg">
+        <div className="grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-sm">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
               状态
@@ -868,7 +868,7 @@ export function ProjectEditorWrapper({
         <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
           特色图片
         </h3>
-        <div className="bg-muted/20 p-4 rounded-lg">
+        <div className="bg-muted/30 p-4 rounded-sm">
           {formData.featuredImages.length > 0 ? (
             <div className="grid grid-cols-2 gap-2">
               {formData.featuredImages.map((url, index) => (
@@ -877,7 +877,7 @@ export function ProjectEditorWrapper({
                   <img
                     src={url}
                     alt={`特色图片预览 ${index + 1}`}
-                    className="w-full max-h-[20em] rounded-md object-cover"
+                    className="w-full max-h-[20em] rounded-sm object-cover"
                   />
                   <p className="text-xs text-foreground/60 break-all">{url}</p>
                 </div>
