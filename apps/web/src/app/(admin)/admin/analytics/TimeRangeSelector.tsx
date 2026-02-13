@@ -144,7 +144,7 @@ export default function TimeRangeSelector({
       <Clickable
         hoverScale={1}
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 rounded-lg border border-foreground/10 hover:border-foreground/20 transition-colors bg-background"
+        className="flex items-center gap-2 px-4 py-2 rounded-sm border border-foreground/10 hover:border-foreground/20 transition-colors bg-background"
       >
         <RiCalendarLine size="1em" className="text-muted-foreground" />
         <span className="text-sm font-medium">{getDisplayLabel()}</span>
@@ -164,7 +164,7 @@ export default function TimeRangeSelector({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 w-64 bg-background border border-foreground/10 rounded-lg shadow-lg z-50 overflow-hidden"
+            className="absolute right-0 mt-2 w-64 bg-background border border-foreground/10 rounded-sm shadow-lg z-50 overflow-hidden"
           >
             {!showCustom ? (
               <div className="py-2">

@@ -421,7 +421,7 @@ export default function MediaTableView({
         render: (_value: unknown, record: TableRowItem) => {
           if (record.type === "folder") {
             return (
-              <div className="w-12 h-12 bg-muted/30 rounded-lg overflow-hidden flex items-center justify-center">
+              <div className="w-12 h-12 bg-muted/30 rounded-sm overflow-hidden flex items-center justify-center">
                 <RiFolderLine size="1.5em" className="text-muted-foreground" />
               </div>
             );
@@ -430,7 +430,7 @@ export default function MediaTableView({
           const media = record.data as MediaListItem;
           if (media.mediaType === "IMAGE" && media.width && media.height) {
             return (
-              <div className="w-12 h-12 bg-muted rounded-lg overflow-hidden flex items-center justify-center">
+              <div className="w-12 h-12 bg-muted rounded-sm overflow-hidden flex items-center justify-center">
                 <CMSImage
                   src={`/p/${media.imageId}`}
                   alt={media.originalName}
@@ -443,7 +443,7 @@ export default function MediaTableView({
             );
           }
           return (
-            <div className="w-12 h-12 bg-muted rounded-lg overflow-hidden flex items-center justify-center">
+            <div className="w-12 h-12 bg-muted rounded-sm overflow-hidden flex items-center justify-center">
               {getFileTypeIcon(media.mediaType)}
             </div>
           );
