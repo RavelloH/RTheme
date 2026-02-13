@@ -8,7 +8,7 @@
  */
 
 import React from "react";
-import type { Components } from "react-markdown";
+import type { Components, ExtraProps } from "react-markdown";
 import { codeToHtml } from "shiki";
 
 import CMSImage from "@/components/ui/CMSImage";
@@ -33,6 +33,31 @@ function parsePositiveDimension(value?: string | number): number | undefined {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
   }
   return undefined;
+}
+
+function extractCodeText(children?: React.ReactNode): string {
+  if (typeof children === "string") {
+    return children;
+  }
+
+  if (Array.isArray(children)) {
+    return children
+      .map((child) => (typeof child === "string" ? child : ""))
+      .join("");
+  }
+
+  return "";
+}
+
+function isBlockCodeNode(node?: ExtraProps["node"]): boolean {
+  const startLine = node?.position?.start?.line;
+  const endLine = node?.position?.end?.line;
+
+  return (
+    typeof startLine === "number" &&
+    typeof endLine === "number" &&
+    endLine > startLine
+  );
 }
 
 /**
@@ -231,20 +256,28 @@ export function createServerMarkdownComponents(
     pre: ({ children }: React.HTMLAttributes<HTMLPreElement>) => (
       <>{children}</>
     ),
-    code: async (props: React.HTMLAttributes<HTMLElement>) => {
-      const { children, className } = props;
+    code: async (props: React.HTMLAttributes<HTMLElement> & ExtraProps) => {
+      const { children, className, node, ...rest } = props;
+      const isBlockCode = Boolean(className) || isBlockCodeNode(node);
 
-      if (className) {
+      if (isBlockCode) {
         // 代码块 - 使用服务端高亮
         return (
-          <CodeBlockServer className={className} shikiTheme={shikiTheme}>
-            {children as string}
+          <CodeBlockServer
+            className={className || "language-text"}
+            shikiTheme={shikiTheme}
+          >
+            {extractCodeText(children)}
           </CodeBlockServer>
         );
       }
 
       // 行内代码
-      return <code {...props}>{children}</code>;
+      return (
+        <code className={className} {...rest}>
+          {children}
+        </code>
+      );
     },
 
     // 链接

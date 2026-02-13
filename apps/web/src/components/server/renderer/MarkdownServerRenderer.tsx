@@ -1,7 +1,7 @@
 import "server-only";
 
 import React from "react";
-import Markdown from "react-markdown";
+import { MarkdownAsync } from "react-markdown";
 
 import { createServerMarkdownComponents } from "@/lib/server/mdx-config-server";
 import type { MediaFileInfo } from "@/lib/shared/image-utils";
@@ -30,16 +30,12 @@ export default async function MarkdownServerRenderer({
 }: MarkdownServerRendererProps) {
   // 使用统一的服务器端组件配置，传入主题
   const components = createServerMarkdownComponents(mediaFileMap, shikiTheme);
+  const content = await MarkdownAsync({
+    remarkPlugins: markdownRemarkPlugins,
+    rehypePlugins: markdownRehypePlugins,
+    components,
+    children: source,
+  });
 
-  return (
-    <div className={className}>
-      <Markdown
-        remarkPlugins={markdownRemarkPlugins}
-        rehypePlugins={markdownRehypePlugins}
-        components={components}
-      >
-        {source}
-      </Markdown>
-    </div>
-  );
+  return <div className={className}>{content}</div>;
 }
