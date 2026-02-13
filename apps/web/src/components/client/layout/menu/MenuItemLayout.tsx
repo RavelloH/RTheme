@@ -167,6 +167,7 @@ export default function MenuItemWrapper({
   const itemRefMap = useRef<Map<string, HTMLDivElement>>(new Map());
   const overlayRefMap = useRef<Map<string, HTMLDivElement>>(new Map());
   const cachedItemRects = useRef<Map<string, HighlightRect>>(new Map());
+  const enteredItemSetRef = useRef<Set<string>>(new Set());
   const rectAnimationFrameRef = useRef<number | null>(null);
   const animatedRectRef = useRef<HighlightRect | null>(null);
   const highlightVisibleRef = useRef(false);
@@ -271,8 +272,10 @@ export default function MenuItemWrapper({
 
   const activateItem = useCallback(
     (id: string, element: HTMLDivElement) => {
+      if (!enteredItemSetRef.current.has(id)) return;
       const container = containerRef.current;
       if (!container) return;
+      refreshItemRects();
       pendingHideRef.current = false;
       const targetRect = resolveHighlightRect(container, element);
       cachedItemRects.current.set(id, targetRect);
@@ -292,7 +295,12 @@ export default function MenuItemWrapper({
 
       animateHighlightTo(targetRect);
     },
-    [animateHighlightTo, applyHighlightRect, stopRectAnimation],
+    [
+      animateHighlightTo,
+      applyHighlightRect,
+      refreshItemRects,
+      stopRectAnimation,
+    ],
   );
 
   const clearHighlight = useCallback(() => {
@@ -325,8 +333,20 @@ export default function MenuItemWrapper({
     [],
   );
 
+  const markItemEnterCompleted = useCallback(
+    (id: string) => {
+      enteredItemSetRef.current.add(id);
+      const element = itemRefMap.current.get(id);
+      if (element?.matches(":hover")) {
+        activateItem(id, element);
+      }
+    },
+    [activateItem],
+  );
+
   useEffect(() => {
     refreshItemRects();
+    enteredItemSetRef.current.clear();
   }, [flatEntries, refreshItemRects]);
 
   useEffect(() => {
@@ -401,6 +421,7 @@ export default function MenuItemWrapper({
                   ref={(el) => registerItemRef(key, el)}
                   initial={{ opacity: 0, x: 50 }}
                   animate={{ opacity: 1, x: 0 }}
+                  onAnimationComplete={() => markItemEnterCompleted(key)}
                   transition={{
                     delay: itemIndex * 0.03,
                     type: "spring",
