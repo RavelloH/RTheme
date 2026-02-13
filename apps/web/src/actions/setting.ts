@@ -298,6 +298,8 @@ export async function updateSettings(
     for (const setting of sanitizedSettings) {
       updateTag(`config/${setting.key}`);
     }
+    // RootLayout 同时依赖 config 和 menus，配置变更后同步刷新菜单缓存，避免目录短暂丢失
+    updateTag("menus");
 
     return response.ok({
       data: { updated },
