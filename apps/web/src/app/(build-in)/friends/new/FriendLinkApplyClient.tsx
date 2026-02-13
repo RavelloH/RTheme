@@ -597,30 +597,28 @@ export default function FriendLinkApplyClient({
   return (
     <>
       <div className={`${isModal ? "px-6 pb-6" : "py-6"}`}>
-        <AutoResizer className="pt-3">
-          <AutoTransition type="slideDown" initial={false}>
-            {!isLoggedIn ? (
-              <section
-                className="rounded-sm border border-warning/30 bg-warning/10 px-4 py-3"
-                key="guest-warning"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="text-sm text-foreground">
-                    当前未登录，无法提交或管理友链。你可以先查看填写要求，登录后再操作。
-                  </div>
-                  <Button
-                    label="去登录"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleGotoLogin}
-                  />
+        <AutoTransition type="slideDown" initial={false}>
+          {!isLoggedIn ? (
+            <section
+              className="bg-warning/10 px-4 py-3 mt-5"
+              key="guest-warning"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="text-sm text-foreground">
+                  当前未登录，无法提交或管理友链。你可以先查看填写要求，登录后再操作。
                 </div>
-              </section>
-            ) : (
-              <div key="guest-warning-empty" />
-            )}
-          </AutoTransition>
-        </AutoResizer>
+                <Button
+                  label="去登录"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleGotoLogin}
+                />
+              </div>
+            </section>
+          ) : (
+            <div key="guest-warning-empty" />
+          )}
+        </AutoTransition>
 
         <section className={sectionClassName}>
           <h3 className={sectionTitleClassName}>申请说明</h3>

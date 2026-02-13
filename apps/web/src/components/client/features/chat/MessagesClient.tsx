@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { RiQuestionAnswerLine } from "@remixicon/react";
 import type {
   Conversation,
@@ -47,6 +47,7 @@ export default function MessagesClient({
     createdAt: string;
     senderUid: number;
   } | null>(null);
+  const processedUidParamRef = useRef<string | null>(null);
   const [_isLoadingTargetUser, setIsLoadingTargetUser] = useState(false);
   const searchParams = useSearchParams();
   const { removeMessageNotificationsByConversation, connectionStatus } =
@@ -393,7 +394,9 @@ export default function MessagesClient({
         const result = await searchUsers(uid.toString());
 
         if (result.success && result.data && result.data.users.length > 0) {
-          const user = result.data.users[0];
+          const user =
+            result.data.users.find((item) => item.uid === uid) ||
+            result.data.users[0];
           if (user) {
             // 设置临时用户并选中临时会话
             setTemporaryTargetUser(user);
@@ -409,6 +412,44 @@ export default function MessagesClient({
     },
     [conversations, handleSelectConversation],
   );
+
+  // 处理 URL 中的 uid 参数，自动打开已有会话或创建临时会话
+  useEffect(() => {
+    // 如果已指定 conversation，优先使用 conversation 参数
+    if (searchParams.get("conversation")) {
+      return;
+    }
+
+    const uidParam = searchParams.get("uid");
+    if (!uidParam) {
+      processedUidParamRef.current = null;
+      return;
+    }
+
+    if (processedUidParamRef.current === uidParam) {
+      return;
+    }
+    processedUidParamRef.current = uidParam;
+
+    const parsedUid = Number.parseInt(uidParam, 10);
+    if (
+      !Number.isFinite(parsedUid) ||
+      parsedUid <= 0 ||
+      parsedUid === currentUserId
+    ) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("uid");
+      window.history.replaceState({}, "", url.toString());
+      return;
+    }
+
+    void handleNewConversation(parsedUid);
+
+    // 清除 URL 中的 uid 参数，避免重复触发
+    const url = new URL(window.location.href);
+    url.searchParams.delete("uid");
+    window.history.replaceState({}, "", url.toString());
+  }, [searchParams, currentUserId, handleNewConversation]);
 
   // 处理会话删除
   const handleDeleteConversation = useCallback(
