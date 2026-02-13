@@ -1,9 +1,10 @@
 import "server-only";
 
+import { RiQuestionAnswerLine } from "@remixicon/react";
 import { cookies } from "next/headers";
+import Link from "next/link";
 
 import { getConversations } from "@/actions/message";
-import UnauthorizedPage from "@/app/unauthorized";
 import MessagesClient from "@/components/client/features/chat/MessagesClient";
 import ErrorPage from "@/components/ui/Error";
 import { authVerify } from "@/lib/server/auth-verify";
@@ -21,7 +22,44 @@ export const metadata = await generateMetadata(
   { pathname: "/messages" },
 );
 
-export default async function MessagesPage() {
+type SearchParamsRecord = Record<string, string | string[] | undefined>;
+
+function getFirstParam(value: string | string[] | undefined): string | null {
+  if (typeof value === "string" && value.length > 0) {
+    return value;
+  }
+  if (Array.isArray(value) && value.length > 0) {
+    return value[0] ?? null;
+  }
+  return null;
+}
+
+function buildMessagesRedirectPath(searchParams?: SearchParamsRecord): string {
+  const uid = getFirstParam(searchParams?.uid);
+  const conversation = getFirstParam(searchParams?.conversation);
+  const params = new URLSearchParams();
+
+  if (uid) {
+    params.set("uid", uid);
+  }
+
+  if (conversation) {
+    params.set("conversation", conversation);
+  }
+
+  const query = params.toString();
+  return query ? `/messages?${query}` : "/messages";
+}
+
+interface MessagesPageProps {
+  searchParams?: Promise<SearchParamsRecord>;
+}
+
+export default async function MessagesPage({
+  searchParams,
+}: MessagesPageProps) {
+  const resolvedSearchParams = await searchParams;
+
   // 检查登录状态
   const cookieStore = await cookies();
   const token = cookieStore.get("ACCESS_TOKEN")?.value;
@@ -31,7 +69,49 @@ export default async function MessagesPage() {
   });
 
   if (!user) {
-    return <UnauthorizedPage redirect="/messages" />;
+    const redirectPath = encodeURIComponent(
+      buildMessagesRedirectPath(resolvedSearchParams),
+    );
+    const loginHref = `/login?redirect=${redirectPath}`;
+    const registerHref = `/register?redirect=${redirectPath}`;
+
+    return (
+      <div className="flex h-full bg-background">
+        {/* 左侧：会话列表空态 */}
+        <div className="flex-shrink-0 w-96 border-r border-foreground/10 bg-background">
+          <div className="flex h-full flex-col">
+            <div className="flex-shrink-0 px-6 py-4 border-b border-foreground/10">
+              <h2 className="text-xl font-bold text-foreground">私信</h2>
+            </div>
+            <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                私信功能需要登录后使用
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 右侧：聊天窗口空态 */}
+        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground px-6 text-center">
+          <RiQuestionAnswerLine size="4em" className="mb-4" />
+          <p className="text-lg">私信功能需要登录后使用</p>
+          <div className="mt-4 flex items-center gap-3">
+            <Link
+              href={loginHref}
+              className="inline-flex items-center justify-center rounded-sm px-4 py-1.5 text-md bg-foreground text-background transition-opacity duration-200 hover:opacity-80"
+            >
+              登录
+            </Link>
+            <Link
+              href={registerHref}
+              className="inline-flex items-center justify-center rounded-sm bg-primary px-4 py-1.5 text-md text-primary-foreground transition-opacity duration-200 hover:opacity-80"
+            >
+              注册
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // 获取初始会话列表
