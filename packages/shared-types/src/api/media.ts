@@ -23,6 +23,27 @@ export const GallerySizeSchema = z.enum([
 
 export type GallerySize = z.infer<typeof GallerySizeSchema>;
 
+const PersistentPathSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(255)
+  .refine(
+    (value) => {
+      const normalized = value.replace(/\\/g, "/");
+      if (normalized.startsWith("/") || normalized.endsWith("/")) {
+        return false;
+      }
+      const segments = normalized.split("/");
+      return segments.every(
+        (segment) => segment.length > 0 && segment !== "." && segment !== "..",
+      );
+    },
+    {
+      message: "持久化路径必须是相对路径，且不能包含 . 或 .. 段",
+    },
+  );
+
 export const PhotoSchema = z.object({
   id: z.number(),
   slug: z.string(),
@@ -134,6 +155,7 @@ export const MediaDetailSchema = z.object({
   galleryPhoto: PhotoSchema.nullable().optional(),
   isOptimized: z.boolean(),
   storageUrl: z.string(),
+  persistentPath: PersistentPathSchema.nullable().optional(),
   createdAt: z.string(),
   storageProviderId: z.string(),
   folderId: z.number().int().positive().nullable().optional(),
@@ -214,6 +236,7 @@ export const UpdateMediaSchema = z.object({
   id: z.number().int().positive(),
   originalName: z.string().min(1).max(255).optional(),
   altText: z.string().max(255).nullable().optional(),
+  persistentPath: PersistentPathSchema.nullable().optional(),
   inGallery: z.boolean().optional(),
   // Gallery fields
   name: z.string().optional(),
@@ -231,6 +254,7 @@ export const UpdateMediaResponseSchema = z.object({
   id: z.number(),
   originalName: z.string(),
   altText: z.string().nullable(),
+  persistentPath: z.string().nullable().optional(),
   inGallery: z.boolean(),
   updatedAt: z.string(),
 });

@@ -72,6 +72,11 @@ try {
   await seedDefaults();
   rlog.log();
 
+  rlog.log("Starting persistent media synchronization...");
+  const { syncPersistentMedia } = await import("./sync-persistent-media.js");
+  await syncPersistentMedia();
+  rlog.log();
+
   rlog.log("Starting configuration cache generation...");
   const { generateConfigCache } = await import("./generate-config-cache.js");
   await generateConfigCache();

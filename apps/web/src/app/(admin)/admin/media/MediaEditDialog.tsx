@@ -228,6 +228,7 @@ export default function MediaEditDialog({
   // Basic Fields
   const [originalName, setOriginalName] = useState("");
   const [altText, setAltText] = useState("");
+  const [persistentPath, setPersistentPath] = useState("");
   const [inGallery, setInGallery] = useState(false);
 
   // Gallery Fields
@@ -253,6 +254,7 @@ export default function MediaEditDialog({
             const d = res.data;
             setOriginalName(d.originalName);
             setAltText(d.altText || "");
+            setPersistentPath(d.persistentPath || "");
             setInGallery(d.inGallery);
 
             if (d.galleryPhoto) {
@@ -369,6 +371,7 @@ export default function MediaEditDialog({
         id: media.id,
         originalName,
         altText: altText || null,
+        persistentPath: persistentPath.trim() ? persistentPath.trim() : null,
         inGallery,
         // Gallery fields
         ...(inGallery
@@ -428,6 +431,19 @@ export default function MediaEditDialog({
                     helperText="Alt Text"
                     size="sm"
                   />
+                  <div className="md:col-span-2">
+                    <Input
+                      label="持久化路径"
+                      value={persistentPath}
+                      onChange={(e) => setPersistentPath(e.target.value)}
+                      helperText="填写相对路径，例如 avatar.jpg 或 icons/icon.png"
+                      size="sm"
+                    />
+                    <p className="text-sm text-muted-foreground mt-2">
+                      填写后，下次构建部署时，文件将被保存到 public
+                      目录下，可以以 /path/to/file.jpg 形式访问。
+                    </p>
+                  </div>
                 </div>
               </div>
 
