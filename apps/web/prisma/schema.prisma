@@ -376,6 +376,7 @@ model Media {
   isOptimized Boolean @default(false)
 
   storageUrl        String   @db.VarChar(500)
+  persistentPath    String?  @db.VarChar(255) // 持久化到 public 的相对路径（如 avatar.jpg）
   createdAt         DateTime @default(now())
   storageProviderId String
 

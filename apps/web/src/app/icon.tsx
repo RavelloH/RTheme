@@ -97,6 +97,8 @@ export default async function Icon({
   const iconBuffer = await readFile(iconPath);
   const iconBase64 = `data:image/png;base64,${iconBuffer.toString("base64")}`;
 
+  console.log("Generating icon for metadata ID:", metadataId);
+
   // 从 metadata 中查找匹配的尺寸
   const metadata = generateImageMetadata();
   const metadataItem = metadata.find((item) => item.id === metadataId);

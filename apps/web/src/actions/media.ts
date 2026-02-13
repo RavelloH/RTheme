@@ -818,6 +818,7 @@ export async function getMediaDetail(
         : null,
       isOptimized: media.isOptimized,
       storageUrl: media.storageUrl,
+      persistentPath: media.persistentPath,
       createdAt: media.createdAt.toISOString(),
       storageProviderId: media.storageProviderId,
       folderId: media.folderId,
@@ -872,6 +873,7 @@ export async function updateMedia(
       id: number;
       originalName: string;
       altText: string | null;
+      persistentPath: string | null;
       inGallery: boolean;
       updatedAt: string;
     } | null>
@@ -885,6 +887,7 @@ export async function updateMedia(
     id: number;
     originalName: string;
     altText: string | null;
+    persistentPath: string | null;
     inGallery: boolean;
     updatedAt: string;
   } | null>
@@ -895,6 +898,7 @@ export async function updateMedia(
     id,
     originalName,
     altText,
+    persistentPath,
     inGallery,
     name,
     slug,
@@ -910,6 +914,7 @@ export async function updateMedia(
     id: number;
     originalName: string;
     altText: string | null;
+    persistentPath: string | null;
     inGallery: boolean;
     updatedAt: string;
   } | null>
@@ -928,6 +933,7 @@ export async function updateMedia(
       id,
       originalName,
       altText,
+      persistentPath,
       inGallery,
       name,
       slug,
@@ -941,6 +947,9 @@ export async function updateMedia(
   );
 
   if (validationError) return response.badRequest(validationError);
+
+  const normalizedPersistentPath =
+    typeof persistentPath === "string" ? persistentPath.trim() : persistentPath;
 
   // 身份验证
   const user = await authVerify({
@@ -974,6 +983,9 @@ export async function updateMedia(
     const updateData: Record<string, unknown> = {
       ...(originalName !== undefined ? { originalName } : {}),
       ...(altText !== undefined ? { altText } : {}),
+      ...(normalizedPersistentPath !== undefined
+        ? { persistentPath: normalizedPersistentPath }
+        : {}),
     };
 
     // 1. 如果用户指定了 slug，检查唯一性
@@ -1122,6 +1134,13 @@ export async function updateMedia(
       auditOldValue.altText = existingMedia.altText;
       auditNewValue.altText = altText;
     }
+    if (
+      normalizedPersistentPath !== undefined &&
+      normalizedPersistentPath !== existingMedia.persistentPath
+    ) {
+      auditOldValue.persistentPath = existingMedia.persistentPath;
+      auditNewValue.persistentPath = normalizedPersistentPath;
+    }
     if (inGallery !== undefined) {
       auditOldValue.inGallery = !!existingMedia.galleryPhoto;
       auditNewValue.inGallery = inGallery;
@@ -1169,6 +1188,7 @@ export async function updateMedia(
         id: updatedMedia.id,
         originalName: updatedMedia.originalName,
         altText: updatedMedia.altText,
+        persistentPath: updatedMedia.persistentPath,
         inGallery: !!updatedMedia.galleryPhoto,
         updatedAt: new Date().toISOString(), // 使用当前时间作为更新时间
       },
