@@ -34,10 +34,12 @@ const nextConfig = () => {
       "/api/**/*": [
         "./node_modules/.prisma/client/**/*",
         "./src/lib/server/lua-scripts/**/*.lua",
+        "./node_modules/node-ip2region/data/ip2region.db",
       ],
       "/*": [
         "./node_modules/.prisma/client/**/*",
         "./src/lib/server/lua-scripts/**/*.lua",
+        "./node_modules/node-ip2region/data/ip2region.db",
       ],
     },
     experimental: {
@@ -53,7 +55,6 @@ const nextConfig = () => {
         "**/@esbuild/linux-x64/**",
         "**/@esbuild/linux-arm64/**",
         "node_modules/typescript/**/*",
-        "node_modules/prettier/**/*",
         "node_modules/eslint/**/*",
         "node_modules/@types/**/*",
         "node_modules/webpack/**/*",

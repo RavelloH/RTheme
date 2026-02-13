@@ -57,12 +57,13 @@ function getIpSearcher() {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const IP2Region = require("node-ip2region");
-    // 使用 path.join 在运行时构建数据库路径，避免 bundler 将 .db 文件作为模块处理
+    // 通过包入口定位数据库，避免依赖 process.cwd() 导致部署路径不一致
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const path = require("path");
+    const packageJsonPath = require.resolve("node-ip2region/package.json");
     const dbPath = path.join(
-      process.cwd(),
-      "node_modules/node-ip2region/data/ip2region.db",
+      path.dirname(packageJsonPath),
+      "data/ip2region.db",
     );
     ipSearcher = IP2Region.create(dbPath);
     return ipSearcher;
