@@ -14,6 +14,7 @@ import type { Prisma } from ".prisma/client";
 
 const DISPLAY_LIMIT = 3;
 const DEFAULT_SORT: ProjectsSortMode = "publishedAt_desc";
+const DISPLAY_STATUSES = ["PUBLISHED", "ARCHIVED", "DEVELOPING"] as const;
 
 const SORT_ORDER_MAP: Record<
   ProjectsSortMode,
@@ -64,7 +65,9 @@ export async function projectsFetcher(
   const onlyWithCover = content.projects?.onlyWithCover ?? false;
 
   const where: Prisma.ProjectWhereInput = {
-    status: "PUBLISHED",
+    status: {
+      in: [...DISPLAY_STATUSES],
+    },
   };
 
   if (onlyWithCover) {
@@ -111,7 +114,9 @@ export async function projectsFetcher(
     }),
     prisma.project.count({
       where: {
-        status: "PUBLISHED",
+        status: {
+          in: [...DISPLAY_STATUSES],
+        },
       },
     }),
     prisma.project.count({ where }),
