@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { gsap } from "gsap";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 
@@ -217,9 +216,8 @@ export default function HeaderWrapper({
     "idle" | "exiting" | "entering"
   >("idle");
   const isMobile = useMobile();
-
-  // 根据设备类型获取高度值
-  const getHeaderHeight = () => (isMobile ? "6em" : "5em");
+  const headerHeight = isMobile ? "6em" : "5em";
+  const headerOffsetY = isMobile ? 112 : 80;
 
   // 监听广播消息
   useBroadcast((message: TransitionMessage) => {
@@ -311,20 +309,6 @@ export default function HeaderWrapper({
   useEffect(() => {
     const handleLoadingComplete = () => {
       setIsLoaded(true);
-
-      // 使用GSAP动画从上方滑入
-      if (headerRef.current) {
-        const headerHeight = isMobile ? 112 : 80; // 6em * 16px = 112px, 5em * 16px = 80px
-        gsap.fromTo(
-          headerRef.current,
-          { y: -headerHeight },
-          {
-            y: 0,
-            duration: 0.8,
-            ease: "power2.out",
-          },
-        );
-      }
     };
 
     window.addEventListener("loadingComplete", handleLoadingComplete);
@@ -332,7 +316,7 @@ export default function HeaderWrapper({
     return () => {
       window.removeEventListener("loadingComplete", handleLoadingComplete);
     };
-  }, [isMobile]);
+  }, []);
 
   // 初始化标题
   useEffect(() => {
@@ -344,14 +328,14 @@ export default function HeaderWrapper({
       <motion.header
         ref={headerRef}
         className={`w-full text-foreground bg-background border-y border-border flex fixed top-0 left-0 z-50`}
-        style={{ height: getHeaderHeight() }}
-        initial={{ y: -(isMobile ? 112 : 80) }}
+        style={{ height: headerHeight }}
+        initial={{ y: -headerOffsetY }}
         animate={{
           y: isMenuOpen
-            ? `calc(100vh - ${getHeaderHeight()})`
+            ? `calc(100vh - ${headerHeight})`
             : isLoaded
               ? 0
-              : -(isMobile ? 112 : 80),
+              : -headerOffsetY,
         }}
         transition={{
           type: "spring",
@@ -362,7 +346,7 @@ export default function HeaderWrapper({
           restSpeed: 0.01,
         }}
       >
-        <div className="flex items-center" style={{ width: getHeaderHeight() }}>
+        <div className="flex items-center" style={{ width: headerHeight }}>
           <Image
             src={avatarSrc}
             width={100}
@@ -387,7 +371,7 @@ export default function HeaderWrapper({
         </div>
         <div
           className="h-full border-l border-border flex items-center justify-center"
-          style={{ width: getHeaderHeight() }}
+          style={{ width: headerHeight }}
         >
           <MenuButton
             isOpen={isMenuOpen}
@@ -405,9 +389,9 @@ export default function HeaderWrapper({
         {isMenuOpen && (
           <motion.div
             className="fixed inset-0 bg-background z-40"
-            initial={{ y: `calc(-100% + ${getHeaderHeight()})` }}
+            initial={{ y: `calc(-100% + ${headerHeight})` }}
             animate={{ y: 0 }}
-            exit={{ y: `calc(-100% + ${getHeaderHeight()})` }}
+            exit={{ y: `calc(-100% + ${headerHeight})` }}
             transition={{
               type: "spring",
               damping: 35,
@@ -417,10 +401,7 @@ export default function HeaderWrapper({
               restSpeed: 0.01,
             }}
           >
-            <div
-              className="h-full"
-              style={{ paddingBottom: getHeaderHeight() }}
-            >
+            <div className="h-full" style={{ paddingBottom: headerHeight }}>
               {children}
             </div>
           </motion.div>
