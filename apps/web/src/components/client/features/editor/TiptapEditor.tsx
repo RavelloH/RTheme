@@ -697,6 +697,9 @@ export function TiptapEditor({
         paragraph: false,
         link: false,
         underline: false,
+        dropcursor: {
+          color: "var(--color-primary)",
+        },
       }),
       CustomHeading.configure({
         levels: [1, 2, 3, 4, 5, 6],
