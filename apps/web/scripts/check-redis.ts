@@ -22,7 +22,7 @@ export async function checkRedisConnection(): Promise<void> {
 
   // 使用较短的超时时间进行检查
   const redis = new Redis(redisUrl, {
-    maxRetriesPerRequest: 0,
+    maxRetriesPerRequest: 10,
     connectTimeout: 5000,
     lazyConnect: true,
   });
