@@ -30,6 +30,7 @@ const nextConfig = () => {
     reactCompiler: true,
     experimental: {
       optimizePackageImports: ["@remixicon/react"],
+      cpus: 4,
     },
     allowedDevOrigins: ["198.18.0.1"],
     outputFileTracingExcludes: {
