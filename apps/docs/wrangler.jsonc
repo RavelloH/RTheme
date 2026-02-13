@@ -5,6 +5,10 @@
   "name": "neutralpress-docs",
   "compatibility_date": "2025-12-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "build": {
+    // 直接执行 `wrangler deploy` 时，先生成 OpenNext 产物。
+    "command": "pnpm --filter docs cf:build"
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
