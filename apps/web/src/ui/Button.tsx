@@ -64,7 +64,7 @@ export function Button({
       case "ghost":
         return "text-foreground hover:bg-foreground hover:text-background";
       case "danger":
-        return "bg-[var(--theme-red)] text-white hover:opacity-80";
+        return "bg-error text-white hover:opacity-80";
       default:
         return "bg-foreground text-background hover:opacity-80";
     }
