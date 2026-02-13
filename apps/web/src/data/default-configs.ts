@@ -84,12 +84,12 @@ export const CONFIG_DEFINITIONS = {
   "site.avatar": {
     default: "",
     description:
-      "站点Logo图片URL地址，建议使用正方形图片。如果已在媒体管理中上传，直接填写 /p/ 路径的图片即可。留空使用 /avatar.jpg 默认头像",
+      "站点Logo图片URL地址，建议使用正方形图片。留空使用 /avatar.jpg 默认头像。注：修改 Logo 有两种方式：1.在媒体管理中上传，然后直接填写 /p/ 路径开头的图片链接即可；2. 将对应图片的持久化路径设置为 “avatar.jpg”，然后重新构建。",
   },
   "site.favicon": {
-    default: "/icon.png",
+    default: "",
     description:
-      "站点Favicon图标URL地址。如果已在媒体管理中上传，直接填写 /p/ 路径的图片即可",
+      "站点Favicon图标URL地址，建议使用正方形图片。留空使用 /icon.png 默认图标。注：修改 icon 有两种方式：1.在媒体管理中上传，然后直接填写 /p/ 路径开头的图片链接即可；2. 将对应图片的持久化路径设置为 “icon.png”，然后重新构建。",
   },
   // =====================================
   // 作者相关设置

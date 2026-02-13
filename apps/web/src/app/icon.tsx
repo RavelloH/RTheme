@@ -1,6 +1,6 @@
-import { readFile } from "fs/promises";
 import { ImageResponse } from "next/og";
-import { join } from "path";
+
+import { getConfigs } from "@/lib/server/config-cache";
 
 interface IconMetadata {
   contentType: string;
@@ -8,11 +8,47 @@ interface IconMetadata {
   id: string;
 }
 
-// 强制静态生成
-export const dynamic = "force-static";
-
 // 启用缓存
-export const revalidate = false;
+export const revalidate = 3600;
+
+const FALLBACK_SITE_URL = "http://localhost:3000";
+const FALLBACK_FAVICON_PATH = "/icon.png";
+
+function isExternalUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value);
+}
+
+function resolveSiteUrl(siteUrl: string): string {
+  const trimmed = siteUrl.trim();
+  if (!trimmed) {
+    return FALLBACK_SITE_URL;
+  }
+
+  try {
+    return new URL(trimmed).toString();
+  } catch {
+    return FALLBACK_SITE_URL;
+  }
+}
+
+function resolveFaviconUrl(favicon: string, siteUrl: string): string {
+  const trimmedFavicon = favicon.trim();
+  const normalizedFavicon = trimmedFavicon || FALLBACK_FAVICON_PATH;
+
+  if (isExternalUrl(normalizedFavicon)) {
+    return normalizedFavicon;
+  }
+
+  const normalizedPath = normalizedFavicon.startsWith("/")
+    ? normalizedFavicon
+    : `/${normalizedFavicon}`;
+
+  try {
+    return new URL(normalizedPath, resolveSiteUrl(siteUrl)).toString();
+  } catch {
+    return new URL(FALLBACK_FAVICON_PATH, FALLBACK_SITE_URL).toString();
+  }
+}
 
 export function generateImageMetadata(): IconMetadata[] {
   return [
@@ -91,11 +127,8 @@ export default async function Icon({
   params?: { __metadata_id__: string };
 }) {
   const metadataId = await id;
-
-  // 读取本地的 icon.png 文件
-  const iconPath = join(process.cwd(), "public", "icon.png");
-  const iconBuffer = await readFile(iconPath);
-  const iconBase64 = `data:image/png;base64,${iconBuffer.toString("base64")}`;
+  const [favicon, siteUrl] = await getConfigs(["site.favicon", "site.url"]);
+  const iconSrc = resolveFaviconUrl(favicon, siteUrl);
 
   console.log("Generating icon for metadata ID:", metadataId);
 
@@ -107,11 +140,18 @@ export default async function Icon({
   return new ImageResponse(
     (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={iconBase64} width={size} height={size} alt="Icon" />
+      <img src={iconSrc} width={size} height={size} alt="Icon" />
     ),
     {
       width: size,
       height: size,
+      headers: {
+        // 浏览器缓存 1 年，但在后台 1 天后可能重新验证 (SWR)
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "Content-Type": "image/png",
+        // 尝试在这里声明只 Vary 编码，但通常会被 Next.js 覆盖，所以需要 Middleware
+        Vary: "Accept-Encoding",
+      },
     },
   );
 }
