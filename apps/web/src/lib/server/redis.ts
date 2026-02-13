@@ -9,11 +9,27 @@ if (!process.env.REDIS_URL) {
 
 // Redis 配置选项
 const redisOptions = {
-  maxRetriesPerRequest: 0,
-  lazyConnect: true,
-  enableOfflineQueue: false,
-  connectTimeout: 5000,
-  commandTimeout: 5000,
+  // 1. 允许重试
+  maxRetriesPerRequest: 1,
+
+  // 2. 关闭懒连接
+  lazyConnect: false,
+
+  // 3. 开启离线队列
+  enableOfflineQueue: true,
+
+  // 4. 缩短超时
+  connectTimeout: 4000,
+  commandTimeout: 4000,
+
+  // 5. 失败策略：如果连接断开，不要无限重连，防止 Serverless 函数挂起直到超时
+  retryStrategy: (times: number) => {
+    // 如果重试超过 3 次，或者总时间超过 200ms，就停止重连
+    if (times > 3) {
+      return null;
+    }
+    return Math.min(times * 50, 2000);
+  },
 };
 
 // 全局 Redis 实例类型声明
