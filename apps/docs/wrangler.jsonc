@@ -7,17 +7,23 @@
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "build": {
     // 直接执行 `wrangler deploy` 时，先生成 OpenNext 产物。
-    "command": "pnpm --filter docs cf:build"
+    "command": "pnpm --filter docs cf:build",
   },
   "assets": {
     "directory": ".open-next/assets",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
+  },
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+    },
   },
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
       // 自引用绑定，service 必须与上方 name 保持一致。
-      "service": "neutralpress-docs"
-    }
-  ]
+      "service": "neutralpress-docs",
+    },
+  ],
 }

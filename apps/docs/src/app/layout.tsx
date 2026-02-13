@@ -15,6 +15,11 @@ export default function Layout({ children }: LayoutProps<"/">) {
           <ConfigProvider>{children}</ConfigProvider>
         </RootProvider>
       </body>
+      <script
+        defer
+        src="https://analytics.ravelloh.top/script.js"
+        data-website-id="3bdb8aab-a272-4cea-8193-63d8e03daac9"
+      ></script>
     </html>
   );
 }
