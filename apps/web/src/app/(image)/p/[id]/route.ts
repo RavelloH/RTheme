@@ -1,5 +1,7 @@
+import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { Readable } from "node:stream";
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
@@ -14,7 +16,7 @@ import { parseImageId, verifySignature } from "@/lib/server/image-crypto";
 import { resolveIpLocation } from "@/lib/server/ip-utils";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
-import { readResponseBufferWithLimit } from "@/lib/server/url-security";
+import ResponseBuilder from "@/lib/server/response";
 import {
   formatIpLocation,
   parseUserAgent,
@@ -73,26 +75,21 @@ async function createImageErrorResponse({
     headers: {
       "Content-Type": "image/svg+xml",
       "Content-Length": fallbackImage.byteLength.toString(),
-      "Cache-Control": "public, max-age=3600",
+      "Cache-Control": "public, max-age=60",
       "X-Content-Type-Options": "nosniff",
     },
   });
 }
 
-async function checkRateLimit(
-  request: NextRequest,
-  imageId: string,
-): Promise<Response | null> {
+async function checkRateLimit(request: NextRequest): Promise<Response | null> {
   const isAllowed = await limitControl(request.headers);
   if (isAllowed) {
     return null;
   }
 
-  return createImageErrorResponse({
-    imageId,
-    statusText: "HTTP 429 Too Many Requests",
+  return new ResponseBuilder().tooManyRequests({
     message: "请求过于频繁，请稍后再试。",
-  });
+  }) as Response;
 }
 
 async function checkAntiHotLinkGuard(
@@ -194,14 +191,16 @@ async function proxyImageFromSource({
       });
     }
 
-    const fileBuffer = await fs.readFile(diskPath);
+    const stat = await fs.stat(diskPath);
     const contentType = mimeType || "application/octet-stream";
+    const nodeStream = createReadStream(diskPath);
+    const webStream = Readable.toWeb(nodeStream) as ReadableStream<Uint8Array>;
 
-    return new NextResponse(new Uint8Array(fileBuffer), {
+    return new NextResponse(webStream, {
       status: 200,
       headers: {
         "Content-Type": contentType,
-        "Content-Length": fileBuffer.byteLength.toString(),
+        "Content-Length": stat.size.toString(),
         "Cache-Control": "public, max-age=31536000, immutable",
         "X-Content-Type-Options": "nosniff",
       },
@@ -230,23 +229,58 @@ async function proxyImageFromSource({
     });
   }
 
-  const imageBuffer = await readResponseBufferWithLimit(
-    response,
-    PROXY_MAX_RESPONSE_BYTES,
-  );
+  const contentLengthHeader = response.headers.get("content-length");
+  if (contentLengthHeader) {
+    const declaredSize = Number(contentLengthHeader);
+    if (
+      !Number.isNaN(declaredSize) &&
+      declaredSize > PROXY_MAX_RESPONSE_BYTES
+    ) {
+      return createImageErrorResponse({
+        imageId,
+        statusText: "HTTP 502 Bad Gateway",
+        message: "图片文件大小超出限制。",
+      });
+    }
+  }
+
+  if (!response.body) {
+    return createImageErrorResponse({
+      imageId,
+      statusText: "HTTP 502 Bad Gateway",
+      message: "存储服务返回了空响应体。",
+    });
+  }
+
+  let totalBytes = 0;
+  const sizeLimitedStream = new TransformStream<Uint8Array, Uint8Array>({
+    transform(chunk, controller) {
+      totalBytes += chunk.byteLength;
+      if (totalBytes > PROXY_MAX_RESPONSE_BYTES) {
+        controller.error(new Error("文件大小超出限制"));
+        return;
+      }
+      controller.enqueue(chunk);
+    },
+  });
+
   const contentType =
     response.headers.get("content-type") ||
     mimeType ||
     "application/octet-stream";
 
-  return new NextResponse(new Uint8Array(imageBuffer), {
+  const headers: Record<string, string> = {
+    "Content-Type": contentType,
+    "Cache-Control": "public, max-age=31536000, immutable",
+    "X-Content-Type-Options": "nosniff",
+  };
+  if (contentLengthHeader) {
+    headers["Content-Length"] = contentLengthHeader;
+  }
+
+  return new NextResponse(response.body.pipeThrough(sizeLimitedStream), {
     status: 200,
-    headers: {
-      "Content-Type": contentType,
-      "Content-Length": imageBuffer.length.toString(),
-      "Cache-Control": "public, max-age=31536000, immutable",
-      "X-Content-Type-Options": "nosniff",
-    },
+    headers,
   });
 }
 
@@ -293,7 +327,7 @@ export async function GET(
   // 3. 对非内部请求进行速率限制检查
   const rateLimitResult = await runExternalOnlyCheck({
     internalRequest,
-    check: async () => checkRateLimit(request, imageId),
+    check: async () => checkRateLimit(request),
   });
   if (rateLimitResult) {
     return rateLimitResult;
