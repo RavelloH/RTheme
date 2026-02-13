@@ -80,11 +80,15 @@ export default function UnauthorizedPage({ redirect }: { redirect?: string }) {
             </GridItem>
             <GridItem
               areas={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}
-              className="px-10 flex items-center text-foreground"
+              className="text-foreground"
               width={2}
               height={1.5}
             >
-              <ClientDiagnostics errorType="HTTP/401" />
+              <div className="h-full overflow-y-auto overflow-x-hidden p-10">
+                <div className="flex min-h-full items-center">
+                  <ClientDiagnostics errorType="HTTP/401" />
+                </div>
+              </div>
             </GridItem>
           </RowGrid>
         </HorizontalScroll>
