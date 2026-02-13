@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Editor from "@monaco-editor/react";
+import { useEffect, useRef, useState } from "react";
+import { loader } from "@monaco-editor/react";
+import type * as Monaco from "monaco-editor";
 import type { editor } from "monaco-editor";
 
 export interface MonacoEditorProps {
@@ -12,6 +13,47 @@ export interface MonacoEditorProps {
   onEditorReady?: (editor: editor.IStandaloneCodeEditor) => void;
 }
 
+const DEFAULT_EDITOR_OPTIONS: editor.IStandaloneEditorConstructionOptions = {
+  fontSize: 14,
+  lineHeight: 24,
+  fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+  minimap: {
+    enabled: true,
+  },
+  lineNumbers: "on",
+  folding: true,
+  wordWrap: "on",
+  wrappingIndent: "indent",
+  scrollBeyondLastLine: false,
+  smoothScrolling: true,
+  cursorBlinking: "smooth",
+  cursorSmoothCaretAnimation: "on",
+  renderLineHighlight: "all",
+  bracketPairColorization: {
+    enabled: true,
+  },
+  automaticLayout: true,
+  scrollbar: {
+    useShadows: false,
+    verticalScrollbarSize: 10,
+    horizontalScrollbarSize: 10,
+  },
+  readOnly: false,
+  domReadOnly: false,
+  contextmenu: true,
+  quickSuggestions: true,
+  acceptSuggestionOnEnter: "on",
+  tabCompletion: "on",
+  formatOnPaste: true,
+  formatOnType: true,
+  insertSpaces: false,
+  detectIndentation: false,
+};
+
+type Disposable = {
+  dispose: () => void;
+};
+
 export function MonacoEditor({
   value,
   onChange,
@@ -19,6 +61,20 @@ export function MonacoEditor({
   className = "",
   onEditorReady,
 }: MonacoEditorProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const modelRef = useRef<editor.ITextModel | null>(null);
+  const monacoRef = useRef<typeof Monaco | null>(null);
+  const onChangeRef = useRef(onChange);
+  const onEditorReadyRef = useRef(onEditorReady);
+  const latestValueRef = useRef(value);
+  const latestLanguageRef = useRef(language);
+  const latestThemeRef = useRef<"vs-light" | "vs-dark">("vs-light");
+  const focusTimerRef = useRef<number | null>(null);
+  const modelPathRef = useRef(
+    `inmemory://neutralpress/editor-${Math.random().toString(36).slice(2)}.md`,
+  );
+
   const [theme, setTheme] = useState<"vs-light" | "vs-dark">(() => {
     // 初始化时立即检测主题
     if (typeof window !== "undefined") {
@@ -49,15 +105,122 @@ export function MonacoEditor({
     return () => observer.disconnect();
   }, []);
 
-  const handleEditorDidMount = (editor: editor.IStandaloneCodeEditor) => {
-    // 自动聚焦编辑器
-    setTimeout(() => {
-      editor.focus();
-    }, 100);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
-    // 调用外部回调
-    onEditorReady?.(editor);
-  };
+  useEffect(() => {
+    onEditorReadyRef.current = onEditorReady;
+  }, [onEditorReady]);
+
+  useEffect(() => {
+    latestValueRef.current = value;
+  }, [value]);
+
+  useEffect(() => {
+    latestLanguageRef.current = language;
+  }, [language]);
+
+  useEffect(() => {
+    latestThemeRef.current = theme;
+  }, [theme]);
+
+  useEffect(() => {
+    let disposed = false;
+    let contentDisposable: Disposable | null = null;
+
+    const initializeEditor = async () => {
+      try {
+        const monaco = await loader.init();
+        if (disposed || !containerRef.current) return;
+
+        monacoRef.current = monaco;
+        const modelUri = monaco.Uri.parse(modelPathRef.current);
+        const model =
+          monaco.editor.getModel(modelUri) ||
+          monaco.editor.createModel(
+            latestValueRef.current,
+            latestLanguageRef.current,
+            modelUri,
+          );
+        modelRef.current = model;
+
+        const instance = monaco.editor.create(containerRef.current, {
+          model,
+          ...DEFAULT_EDITOR_OPTIONS,
+        });
+
+        editorRef.current = instance;
+        monaco.editor.setTheme(latestThemeRef.current);
+
+        contentDisposable = instance.onDidChangeModelContent(() => {
+          onChangeRef.current(instance.getValue());
+        });
+
+        focusTimerRef.current = window.setTimeout(() => {
+          if (disposed) return;
+          instance.focus();
+        }, 100);
+
+        onEditorReadyRef.current?.(instance);
+      } catch (error) {
+        console.error("Failed to initialize Monaco editor:", error);
+      }
+    };
+
+    void initializeEditor();
+
+    return () => {
+      disposed = true;
+
+      if (focusTimerRef.current !== null) {
+        window.clearTimeout(focusTimerRef.current);
+        focusTimerRef.current = null;
+      }
+
+      contentDisposable?.dispose();
+
+      const instance = editorRef.current;
+      editorRef.current = null;
+      instance?.dispose();
+
+      const model = modelRef.current;
+      modelRef.current = null;
+      model?.dispose();
+
+      monacoRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const monaco = monacoRef.current;
+    const model = modelRef.current;
+    if (!monaco || !model) return;
+
+    const nextLanguage = language === "markdown" ? "markdown" : language;
+    monaco.editor.setModelLanguage(model, nextLanguage);
+  }, [language]);
+
+  useEffect(() => {
+    const monaco = monacoRef.current;
+    if (!monaco) return;
+
+    monaco.editor.setTheme(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    const instance = editorRef.current;
+    if (!instance) return;
+
+    const currentValue = instance.getValue();
+    if (currentValue === value) return;
+
+    const currentPosition = instance.getPosition();
+    instance.setValue(value);
+    if (currentPosition) {
+      instance.setPosition(currentPosition);
+    }
+  }, [value]);
 
   return (
     <div
@@ -65,53 +228,7 @@ export function MonacoEditor({
       style={{ width: "100%", height: "100%" }}
       data-monaco-editor="true"
     >
-      <Editor
-        height="100%"
-        width="100%"
-        language={language}
-        value={value}
-        theme={theme}
-        onChange={(value) => onChange(value || "")}
-        onMount={handleEditorDidMount}
-        options={{
-          fontSize: 14,
-          lineHeight: 24,
-          fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
-          minimap: {
-            enabled: true,
-          },
-          lineNumbers: "on",
-          folding: true,
-          wordWrap: "on",
-          wrappingIndent: "indent",
-          scrollBeyondLastLine: false,
-          smoothScrolling: true,
-          cursorBlinking: "smooth",
-          cursorSmoothCaretAnimation: "on",
-          renderLineHighlight: "all",
-          bracketPairColorization: {
-            enabled: true,
-          },
-          automaticLayout: true,
-          scrollbar: {
-            useShadows: false,
-            verticalScrollbarSize: 10,
-            horizontalScrollbarSize: 10,
-          },
-          // 确保编辑器可编辑
-          readOnly: false,
-          domReadOnly: false,
-          // 确保可以接收键盘输入
-          contextmenu: true,
-          quickSuggestions: true,
-          acceptSuggestionOnEnter: "on",
-          tabCompletion: "on",
-          formatOnPaste: true, // 确保粘贴内容被正确处理
-          formatOnType: true, // 自动格式化
-          insertSpaces: false, // 保留制表符
-          detectIndentation: false, // 禁用自动缩进检测
-        }}
-      />
+      <div ref={containerRef} className="h-full w-full" />
     </div>
   );
 }

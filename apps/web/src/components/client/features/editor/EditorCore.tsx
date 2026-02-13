@@ -78,6 +78,10 @@ import { useToast } from "@/ui/Toast";
 import { Toggle } from "@/ui/Toggle";
 import { Tooltip } from "@/ui/Tooltip";
 
+type Disposable = {
+  dispose: () => void;
+};
+
 /**
  * EditorCore - 纯 UI 编辑器组件
  *
@@ -156,6 +160,7 @@ export function EditorCore({
   // 适配器管理器
   const adapterManagerRef = useRef<AdapterManager | null>(null);
   const lastContentTitleRef = useRef<string | null>(null);
+  const monacoDisposeRef = useRef<Disposable | null>(null);
 
   // 初始化编辑器类型
   const [editorType, setEditorType] = useState<EditorMode>(() => {
@@ -345,6 +350,8 @@ export function EditorCore({
     }
 
     return () => {
+      monacoDisposeRef.current?.dispose();
+      monacoDisposeRef.current = null;
       adapterManagerRef.current?.destroy();
       adapterManagerRef.current = null;
     };
@@ -559,10 +566,14 @@ export function EditorCore({
         editorType === "html") &&
       monacoEditor
     ) {
-      const currentPosition = monacoEditor.getPosition();
-      monacoEditor.setValue(nextContent);
-      if (currentPosition) {
-        monacoEditor.setPosition(currentPosition);
+      try {
+        const currentPosition = monacoEditor.getPosition();
+        monacoEditor.setValue(nextContent);
+        if (currentPosition) {
+          monacoEditor.setPosition(currentPosition);
+        }
+      } catch (error) {
+        console.error("Failed to sync title to code editor:", error);
       }
     }
   }, [
@@ -1476,6 +1487,13 @@ export function EditorCore({
                   : "markdown"
             }
             onEditorReady={(monacoInstance) => {
+              monacoDisposeRef.current?.dispose();
+              monacoDisposeRef.current = monacoInstance.onDidDispose(() => {
+                setMonacoEditor((current) =>
+                  current === monacoInstance ? null : current,
+                );
+              });
+
               setMonacoEditor(monacoInstance);
 
               if (adapterManagerRef.current) {
@@ -1495,9 +1513,13 @@ export function EditorCore({
                 savedData && typeof savedData.content === "string"
                   ? savedData.content
                   : "";
-              monacoInstance.setValue(storedContent);
-              monacoInstance.setPosition({ lineNumber: 1, column: 1 });
-              setMarkdownContent(storedContent);
+              try {
+                monacoInstance.setValue(storedContent);
+                monacoInstance.setPosition({ lineNumber: 1, column: 1 });
+                setMarkdownContent(storedContent);
+              } catch (error) {
+                console.error("Failed to initialize code editor:", error);
+              }
             }}
           />
         )}
