@@ -57,14 +57,27 @@ function getIpSearcher() {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const IP2Region = require("node-ip2region");
-    // 通过包入口定位数据库，避免依赖 process.cwd() 导致部署路径不一致
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require("fs");
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const path = require("path");
-    const packageJsonPath = require.resolve("node-ip2region/package.json");
-    const dbPath = path.join(
-      path.dirname(packageJsonPath),
-      "data/ip2region.db",
-    );
+    const cwd = process.cwd();
+    const dbPathCandidates = [
+      path.join(cwd, "node_modules/node-ip2region/data/ip2region.db"),
+      path.join(cwd, "../node_modules/node-ip2region/data/ip2region.db"),
+      path.join(cwd, "apps/web/node_modules/node-ip2region/data/ip2region.db"),
+    ];
+
+    const dbPath =
+      dbPathCandidates.find((candidate: string) => fs.existsSync(candidate)) ||
+      null;
+
+    if (!dbPath) {
+      throw new Error(
+        `ip2region.db 不存在，尝试路径: ${dbPathCandidates.join(", ")}`,
+      );
+    }
+
     ipSearcher = IP2Region.create(dbPath);
     return ipSearcher;
   } catch (error) {
