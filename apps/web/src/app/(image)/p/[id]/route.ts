@@ -82,7 +82,7 @@ async function createImageErrorResponse({
 }
 
 async function checkRateLimit(request: NextRequest): Promise<Response | null> {
-  const isAllowed = await limitControl(request.headers);
+  const isAllowed = await limitControl(request.headers, "image-proxy");
   if (isAllowed) {
     return null;
   }
