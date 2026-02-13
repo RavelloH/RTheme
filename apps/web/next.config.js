@@ -1,3 +1,5 @@
+import { cpus as osCpus } from "node:os";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = () => {
   return {
@@ -30,7 +32,11 @@ const nextConfig = () => {
     reactCompiler: true,
     experimental: {
       optimizePackageImports: ["@remixicon/react"],
-      cpus: 4,
+      cpus: osCpus().length,
+      outputFileTracingIncludes: {
+        "/api/**/*": ["./node_modules/.prisma/client/**/*"],
+        "/*": ["./node_modules/.prisma/client/**/*"],
+      },
     },
     allowedDevOrigins: ["198.18.0.1"],
     outputFileTracingExcludes: {
