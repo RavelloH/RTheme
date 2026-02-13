@@ -30,13 +30,19 @@ const nextConfig = () => {
     serverExternalPackages: ["ably", "akismet-api", "@node-rs/jieba"],
     cacheComponents: true,
     reactCompiler: true,
+    outputFileTracingIncludes: {
+      "/api/**/*": [
+        "./node_modules/.prisma/client/**/*",
+        "./src/lib/server/lua-scripts/**/*.lua",
+      ],
+      "/*": [
+        "./node_modules/.prisma/client/**/*",
+        "./src/lib/server/lua-scripts/**/*.lua",
+      ],
+    },
     experimental: {
       optimizePackageImports: ["@remixicon/react"],
       cpus: osCpus().length,
-      outputFileTracingIncludes: {
-        "/api/**/*": ["./node_modules/.prisma/client/**/*"],
-        "/*": ["./node_modules/.prisma/client/**/*"],
-      },
     },
     allowedDevOrigins: ["198.18.0.1"],
     outputFileTracingExcludes: {
