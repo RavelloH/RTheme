@@ -13,6 +13,7 @@ import {
 } from "@/data/default-configs";
 import { useBroadcast } from "@/hooks/use-broadcast";
 import runWithAuth from "@/lib/client/run-with-auth";
+import generateGradient from "@/lib/shared/gradient";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
 import { Input } from "@/ui/Input";
@@ -34,6 +35,12 @@ export default function SettingSheet() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editedValues, setEditedValues] = useState<Record<string, unknown>>({});
+  const [rawJsonValues, setRawJsonValues] = useState<Record<string, string>>(
+    {},
+  );
+  const [rawJsonErrors, setRawJsonErrors] = useState<Record<string, string>>(
+    {},
+  );
   const toast = useToast();
 
   // 监听分类选择广播
@@ -86,6 +93,8 @@ export default function SettingSheet() {
       });
 
       setSettings(mergedSettings);
+      setRawJsonValues({});
+      setRawJsonErrors({});
     } catch (error) {
       console.error("获取配置失败:", error);
       toast.error(
@@ -115,6 +124,196 @@ export default function SettingSheet() {
     );
     setFilteredSettings(filtered);
   }, [category, settings]);
+
+  const isJsonObject = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value);
+
+  const cloneJsonObject = (
+    value: Record<string, unknown>,
+  ): Record<string, unknown> => JSON.parse(JSON.stringify(value));
+
+  const getObjectSettingValue = (
+    settingKey: string,
+    source: Record<string, unknown> = editedValues,
+  ): Record<string, unknown> => {
+    const setting = settings.find((s) => s.key === settingKey);
+    const defaultValue = setting ? extractDefaultValue(setting.value) : null;
+    const baseObject = isJsonObject(defaultValue) ? defaultValue : {};
+
+    if (!(settingKey in source)) {
+      return cloneJsonObject(baseObject);
+    }
+
+    const editedValue = source[settingKey];
+    if (isJsonObject(editedValue)) {
+      return cloneJsonObject(editedValue);
+    }
+
+    if (typeof editedValue === "string") {
+      try {
+        const parsed = JSON.parse(editedValue);
+        if (isJsonObject(parsed)) {
+          return cloneJsonObject(parsed);
+        }
+      } catch {
+        // 保持回退逻辑
+      }
+    }
+
+    return cloneJsonObject(baseObject);
+  };
+
+  const clearRawJsonState = (settingKey: string) => {
+    setRawJsonErrors((prev) => {
+      if (!(settingKey in prev)) return prev;
+      const { [settingKey]: _, ...rest } = prev;
+      return rest;
+    });
+    setRawJsonValues((prev) => {
+      if (!(settingKey in prev)) return prev;
+      const { [settingKey]: _, ...rest } = prev;
+      return rest;
+    });
+  };
+
+  const setObjectSettingValue = (
+    settingKey: string,
+    objectValue: Record<string, unknown>,
+  ) => {
+    setEditedValues((prev) => {
+      const setting = settings.find((s) => s.key === settingKey);
+      if (!setting) return prev;
+
+      const originalValue = extractDefaultValue(setting.value);
+      const normalizedObject = cloneJsonObject(objectValue);
+
+      if (JSON.stringify(normalizedObject) === JSON.stringify(originalValue)) {
+        const { [settingKey]: _, ...rest } = prev;
+        return rest;
+      }
+
+      return { ...prev, [settingKey]: normalizedObject };
+    });
+  };
+
+  const setNestedObjectValue = (
+    target: Record<string, unknown>,
+    path: string[],
+    value: unknown,
+  ) => {
+    if (path.length === 0) return;
+
+    let current: Record<string, unknown> = target;
+    for (let i = 0; i < path.length - 1; i++) {
+      const key = path[i];
+      if (!key) continue;
+
+      const next = current[key];
+      if (!isJsonObject(next)) {
+        current[key] = {};
+      }
+      current = current[key] as Record<string, unknown>;
+    }
+
+    const lastKey = path[path.length - 1];
+    if (lastKey) {
+      current[lastKey] = value;
+    }
+  };
+
+  const validateJsonShape = (
+    template: unknown,
+    candidate: unknown,
+    path: string[] = [],
+  ): string | null => {
+    const pathLabel = path.length > 0 ? path.join(".") : "(root)";
+
+    if (Array.isArray(template)) {
+      return Array.isArray(candidate) ? null : `字段 ${pathLabel} 需要为数组`;
+    }
+
+    if (isJsonObject(template)) {
+      if (!isJsonObject(candidate)) {
+        return `字段 ${pathLabel} 需要为对象`;
+      }
+
+      const templateKeys = Object.keys(template);
+      const candidateKeys = Object.keys(candidate);
+
+      const missingKey = templateKeys.find((key) => !(key in candidate));
+      if (missingKey) {
+        const missingPath = [...path, missingKey].join(".");
+        return `缺少字段 ${missingPath}`;
+      }
+
+      const extraKey = candidateKeys.find((key) => !(key in template));
+      if (extraKey) {
+        const extraPath = [...path, extraKey].join(".");
+        return `字段 ${extraPath} 不在允许的结构中`;
+      }
+
+      for (const key of templateKeys) {
+        const error = validateJsonShape(template[key], candidate[key], [
+          ...path,
+          key,
+        ]);
+        if (error) return error;
+      }
+      return null;
+    }
+
+    if (template === null) {
+      return candidate === null ? null : `字段 ${pathLabel} 需要为 null`;
+    }
+
+    return typeof candidate === typeof template
+      ? null
+      : `字段 ${pathLabel} 的类型应为 ${typeof template}`;
+  };
+
+  const normalizeObjectByTemplate = (
+    template: unknown,
+    candidate: unknown,
+  ): unknown => {
+    if (Array.isArray(template)) {
+      return Array.isArray(candidate) ? candidate : template;
+    }
+
+    if (isJsonObject(template) && isJsonObject(candidate)) {
+      const normalized: Record<string, unknown> = {};
+      Object.keys(template).forEach((key) => {
+        normalized[key] = normalizeObjectByTemplate(
+          template[key],
+          candidate[key],
+        );
+      });
+      return normalized;
+    }
+
+    return candidate;
+  };
+
+  const toColorInputValue = (value: string): string => {
+    const trimmed = value.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) {
+      return trimmed;
+    }
+    if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) {
+      return `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`;
+    }
+
+    // 支持将 OKLCh（以及 gradient 支持的格式）转换为 HEX，供原生 color input 使用
+    try {
+      const [hex] = generateGradient(trimmed, trimmed, 2);
+      if (hex && /^#[0-9a-fA-F]{6}$/.test(hex)) {
+        return hex;
+      }
+    } catch {
+      // 转换失败时回退默认色
+    }
+
+    return "#2dd4bf";
+  };
 
   // 处理值变更
   const handleValueChange = (key: string, value: string) => {
@@ -146,41 +345,11 @@ export default function SettingSheet() {
   ) => {
     setEditedValues((prev) => {
       const setting = settings.find((s) => s.key === settingKey);
-      if (!setting) {
-        return prev;
-      }
+      if (!setting) return prev;
 
-      // 获取当前编辑的 JSON 对象（如果有）或原始对象
-      let currentJson: Record<string, unknown>;
-      if (settingKey in prev) {
-        currentJson =
-          typeof prev[settingKey] === "string"
-            ? JSON.parse(prev[settingKey] as string)
-            : (prev[settingKey] as Record<string, unknown>);
-      } else {
-        const defaultValue = extractDefaultValue(setting.value);
-        currentJson =
-          typeof defaultValue === "object" && defaultValue !== null
-            ? JSON.parse(JSON.stringify(defaultValue))
-            : {};
-      }
+      const currentJson = getObjectSettingValue(settingKey, prev);
+      setNestedObjectValue(currentJson, path, value);
 
-      // 更新嵌套路径的值
-      let current: Record<string, unknown> = currentJson;
-      for (let i = 0; i < path.length - 1; i++) {
-        const key = path[i];
-        if (!key) continue; // 跳过无效的键
-        if (!current[key]) {
-          current[key] = {};
-        }
-        current = current[key] as Record<string, unknown>;
-      }
-      const lastKey = path[path.length - 1];
-      if (lastKey) {
-        current[lastKey] = value;
-      }
-
-      // 检查是否与原始值相同
       const originalValue = extractDefaultValue(setting.value);
       if (JSON.stringify(currentJson) === JSON.stringify(originalValue)) {
         const { [settingKey]: _, ...rest } = prev;
@@ -189,6 +358,9 @@ export default function SettingSheet() {
 
       return { ...prev, [settingKey]: currentJson };
     });
+
+    // JSON 原始输入只作为辅助层；字段修改后回到“字段优先”状态
+    clearRawJsonState(settingKey);
   };
 
   // 保存配置
@@ -323,6 +495,8 @@ export default function SettingSheet() {
   // 刷新配置
   const handleRefresh = () => {
     setEditedValues({});
+    setRawJsonValues({});
+    setRawJsonErrors({});
     fetchSettings();
   };
 
@@ -415,31 +589,9 @@ export default function SettingSheet() {
 
   // 获取 JSON 对象中指定路径的值
   const getJsonFieldValue = (settingKey: string, path: string[]): string => {
-    // 首先检查 editedValues
-    if (settingKey in editedValues) {
-      const editedValue = editedValues[settingKey];
-      let current: unknown =
-        typeof editedValue === "string" ? JSON.parse(editedValue) : editedValue;
-      for (const key of path) {
-        if (
-          current &&
-          typeof current === "object" &&
-          key in (current as Record<string, unknown>)
-        ) {
-          current = (current as Record<string, unknown>)[key];
-        } else {
-          return "";
-        }
-      }
-      return String(current);
-    }
+    const objectValue = getObjectSettingValue(settingKey);
+    let current: unknown = objectValue;
 
-    // 否则从原始 setting 获取
-    const setting = settings.find((s) => s.key === settingKey);
-    if (!setting) return "";
-
-    const defaultValue = extractDefaultValue(setting.value);
-    let current: unknown = defaultValue;
     for (const key of path) {
       if (
         current &&
@@ -451,7 +603,67 @@ export default function SettingSheet() {
         return "";
       }
     }
+
     return String(current);
+  };
+
+  const getRawJsonDisplayValue = (settingKey: string): string => {
+    if (settingKey in rawJsonValues) {
+      return rawJsonValues[settingKey] || "";
+    }
+    return JSON.stringify(getObjectSettingValue(settingKey), null, 2);
+  };
+
+  const handleRawJsonChange = (settingKey: string, value: string) => {
+    setRawJsonValues((prev) => ({ ...prev, [settingKey]: value }));
+    setRawJsonErrors((prev) => {
+      if (!(settingKey in prev)) return prev;
+      const { [settingKey]: _, ...rest } = prev;
+      return rest;
+    });
+  };
+
+  const applyRawJsonToFields = (settingKey: string) => {
+    const setting = settings.find((s) => s.key === settingKey);
+    if (!setting) return;
+
+    const template = extractDefaultValue(setting.value);
+    if (!isJsonObject(template)) return;
+
+    const source = getRawJsonDisplayValue(settingKey);
+    try {
+      const parsed = JSON.parse(source);
+      const shapeError = validateJsonShape(template, parsed);
+      if (shapeError) {
+        setRawJsonErrors((prev) => ({ ...prev, [settingKey]: shapeError }));
+        toast.error("JSON 结构不匹配", shapeError);
+        return;
+      }
+
+      const normalized = normalizeObjectByTemplate(template, parsed);
+      if (!isJsonObject(normalized)) {
+        const errorMessage = "原始数据必须是 JSON 对象";
+        setRawJsonErrors((prev) => ({ ...prev, [settingKey]: errorMessage }));
+        toast.error("JSON 结构不匹配", errorMessage);
+        return;
+      }
+
+      setObjectSettingValue(settingKey, normalized);
+      setRawJsonValues((prev) => ({
+        ...prev,
+        [settingKey]: JSON.stringify(normalized, null, 2),
+      }));
+      setRawJsonErrors((prev) => {
+        if (!(settingKey in prev)) return prev;
+        const { [settingKey]: _, ...rest } = prev;
+        return rest;
+      });
+      toast.success("已应用原始数据", "字段输入框已同步更新");
+    } catch {
+      const errorMessage = "请输入合法的 JSON 格式";
+      setRawJsonErrors((prev) => ({ ...prev, [settingKey]: errorMessage }));
+      toast.error("JSON 解析失败", errorMessage);
+    }
   };
 
   // 渲染 JSON 对象的字段（递归）
@@ -532,6 +744,10 @@ export default function SettingSheet() {
         // 如果是叶子节点，显示字段名和 Input（作为 grid 的两个子元素）
         // 判断字段类型
         const fieldType = typeof value === "number" ? "number" : "text";
+        const currentFieldValue = getJsonFieldValue(settingKey, currentPath);
+        const isSiteColorField =
+          settingKey === "site.color" && typeof value === "string";
+        const colorPickerValue = toColorInputValue(currentFieldValue);
 
         fields.push(
           <div
@@ -574,15 +790,50 @@ export default function SettingSheet() {
             key={`${currentPath.join(".")}-input`}
             className="flex items-start"
           >
-            <Input
-              label="配置值"
-              type={fieldType}
-              value={getJsonFieldValue(settingKey, currentPath)}
-              onChange={(e) =>
-                handleJsonFieldChange(settingKey, currentPath, e.target.value)
-              }
-              size="sm"
-            />
+            {isSiteColorField ? (
+              <div className="w-full flex items-start gap-3">
+                <div className="flex-1">
+                  <Input
+                    label="配置值"
+                    type={fieldType}
+                    value={currentFieldValue}
+                    onChange={(e) =>
+                      handleJsonFieldChange(
+                        settingKey,
+                        currentPath,
+                        e.target.value,
+                      )
+                    }
+                    size="sm"
+                  />
+                </div>
+                <div className="mt-6 shrink-0">
+                  <input
+                    type="color"
+                    value={colorPickerValue}
+                    onChange={(e) =>
+                      handleJsonFieldChange(
+                        settingKey,
+                        currentPath,
+                        e.target.value,
+                      )
+                    }
+                    title="选择颜色"
+                    className="h-[2.45em] w-[3em] rounded-sm border border-border bg-background cursor-pointer"
+                  />
+                </div>
+              </div>
+            ) : (
+              <Input
+                label="配置值"
+                type={fieldType}
+                value={currentFieldValue}
+                onChange={(e) =>
+                  handleJsonFieldChange(settingKey, currentPath, e.target.value)
+                }
+                size="sm"
+              />
+            )}
           </div>,
         );
       }
@@ -805,6 +1056,30 @@ export default function SettingSheet() {
                               unknown
                             >,
                           )}
+                        </div>
+                        <div className="border-t border-border/40 pt-3 mt-2">
+                          <Input
+                            label="原始数据(JSON)"
+                            value={getRawJsonDisplayValue(setting.key)}
+                            onChange={(e) =>
+                              handleRawJsonChange(setting.key, e.target.value)
+                            }
+                            size="sm"
+                            helperText={
+                              rawJsonErrors[setting.key] ||
+                              "用于快速复制/粘贴对象。点击“应用到输入框”后才会同步到上方字段。"
+                            }
+                            error={Boolean(rawJsonErrors[setting.key])}
+                          />
+                          <div className="mt-2 flex justify-end">
+                            <Button
+                              label="应用到输入框"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => applyRawJsonToFields(setting.key)}
+                              disabled={saving || loading}
+                            />
+                          </div>
                         </div>
                       </div>
                     ) : (
