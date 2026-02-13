@@ -632,7 +632,10 @@ export async function getEndpointStats(
     const startTime = currentTime - hours * 3600000;
 
     // 从 np:rate:endpoint ZSET 中获取所有在时间范围内的记录
-    // 值格式: apiName:timestamp, 分数: timestamp
+    // 值格式:
+    // 1. 旧版: apiName:timestamp
+    // 2. 新版: apiName:timestamp:random
+    // 分数: timestamp
     const allRecords = await redis.zrangebyscore(
       "np:rate:endpoint",
       startTime,
@@ -643,12 +646,37 @@ export async function getEndpointStats(
     const endpointCounts = new Map<string, number>();
 
     for (const record of allRecords) {
-      // 记录格式: apiName:timestamp
-      const lastColonIndex = record.lastIndexOf(":");
-      if (lastColonIndex > 0) {
-        const endpoint = record.substring(0, lastColonIndex);
-        endpointCounts.set(endpoint, (endpointCounts.get(endpoint) || 0) + 1);
+      const segments = record.split(":");
+      if (segments.length === 0) {
+        continue;
       }
+
+      const lastSegment = segments[segments.length - 1];
+      const secondLastSegment = segments[segments.length - 2];
+      const isNumeric = (value: string | undefined) =>
+        !!value && /^\d+$/.test(value);
+
+      let endpoint: string;
+      // 新版格式: apiName:timestamp:random
+      if (
+        segments.length >= 3 &&
+        isNumeric(secondLastSegment) &&
+        isNumeric(lastSegment)
+      ) {
+        endpoint = segments.slice(0, -2).join(":");
+      } else if (segments.length >= 2 && isNumeric(lastSegment)) {
+        // 旧版格式: apiName:timestamp
+        endpoint = segments.slice(0, -1).join(":");
+      } else {
+        // 兼容异常历史数据，避免直接丢弃
+        endpoint = record;
+      }
+
+      if (!endpoint) {
+        continue;
+      }
+
+      endpointCounts.set(endpoint, (endpointCounts.get(endpoint) || 0) + 1);
     }
 
     let totalRequests = 0;
