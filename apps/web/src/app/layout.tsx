@@ -52,6 +52,7 @@ export default async function RootLayout({
     "config/site.color",
     "config/site.title",
     "config/site.avatar",
+    "config/site.custom.script",
     "config/analytics.enable",
     "config/notice.ably.key",
     "config/site.shiki.theme",
@@ -61,24 +62,37 @@ export default async function RootLayout({
   // 获取所有需要的配置
   const [
     menus,
-    [mainColor, siteName, siteAvatar, enableAnalytics, ablyEnabled, shikiTheme],
+    [
+      mainColor,
+      siteName,
+      siteAvatar,
+      customScriptConfig,
+      enableAnalytics,
+      ablyEnabled,
+      shikiTheme,
+    ],
   ] = await Promise.all([
     getActiveMenusForClient(),
     getConfigs([
       "site.color",
       "site.title",
       "site.avatar",
+      "site.custom.script",
       "analytics.enable",
       "notice.ably.key",
       "site.shiki.theme",
     ]),
   ]);
 
+  const customScript =
+    typeof customScriptConfig === "string" ? customScriptConfig.trim() : "";
+
   // 打包配置
   const configs = {
     "site.color": mainColor,
     "site.title": siteName,
     "site.avatar": siteAvatar,
+    "site.custom.script": customScript,
     "site.shiki.theme": shikiTheme,
     "analytics.enable": enableAnalytics,
     "notice.ably.key": ablyEnabled,
@@ -135,6 +149,12 @@ export default async function RootLayout({
             <TokenManager />
           </Suspense>
         </ToastProvider>
+        {customScript && (
+          <div
+            id="site-custom-script"
+            dangerouslySetInnerHTML={{ __html: customScript }}
+          />
+        )}
       </body>
     </html>
   );
