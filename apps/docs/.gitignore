@@ -7,6 +7,7 @@
 # test & build
 /coverage
 /.next/
+/.open-next/
 /out/
 /build
 *.tsbuildinfo
@@ -23,4 +24,5 @@ yarn-error.log*
 # others
 .env*.local
 .vercel
+/.wrangler
 next-env.d.ts
