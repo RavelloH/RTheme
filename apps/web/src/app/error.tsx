@@ -106,17 +106,21 @@ export default function Error({
             </GridItem>
             <GridItem
               areas={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}
-              className="px-10 flex items-center text-foreground"
+              className="text-foreground"
               width={2}
               height={1.5}
             >
-              <AutoTransition duration={0.5} type="fade">
-                <ClientDiagnostics
-                  errorType={error.name + "-" + error.digest}
-                  errorStack={error.stack}
-                  errorMessage={error.message}
-                />
-              </AutoTransition>
+              <div className="h-full overflow-y-auto overflow-x-hidden p-10">
+                <div className="flex min-h-full items-center">
+                  <AutoTransition duration={0.5} type="fade">
+                    <ClientDiagnostics
+                      errorType={error.name + "-" + error.digest}
+                      errorStack={error.stack}
+                      errorMessage={error.message}
+                    />
+                  </AutoTransition>
+                </div>
+              </div>
             </GridItem>
           </RowGrid>
         </HorizontalScroll>
