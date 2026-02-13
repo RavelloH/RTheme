@@ -1,13 +1,29 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { type CSSProperties, useRef, useState } from "react";
 import gsap from "gsap";
 
 import { PageLoadManager } from "@/components/client/layout/PageLoadManager";
 import { useConfig } from "@/context/ConfigContext";
+import type { ConfigType } from "@/types/config";
 import { AutoTransition } from "@/ui/AutoTransition";
 
-export function LoadingAnimation() {
+type LoadingAnimationProps = {
+  mainColor: ConfigType<"site.color">;
+};
+
+export function LoadingAnimation({ mainColor }: LoadingAnimationProps) {
+  const loadingPrimary = mainColor.primary || "#2dd4bf";
+  const loadingBackground = mainColor.background.dark || "#111111";
+  const loadingMuted = mainColor.muted.dark || "#111111";
+
+  const overlayStyle = {
+    opacity: 1,
+    "--color-primary": loadingPrimary,
+    "--color-background": loadingBackground,
+    "--color-muted": loadingMuted,
+  } as CSSProperties;
+
   const siteName = useConfig("site.title");
   const overlayRef = useRef<HTMLDivElement>(null);
   const hasTriggeredRef = useRef(false);
@@ -76,7 +92,7 @@ export function LoadingAnimation() {
       <div
         ref={overlayRef}
         className="fixed inset-0 z-[9999] bg-background pointer-events-none flex items-center justify-center uppercase"
-        style={{ opacity: 1 }}
+        style={overlayStyle}
       >
         <div
           className="border-foreground border-y flex flex-col items-start"
