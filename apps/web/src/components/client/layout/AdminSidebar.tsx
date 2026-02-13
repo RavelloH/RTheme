@@ -52,21 +52,34 @@ const AdminSidebarList = [
     role: roles.admin,
   },
   {
-    name: "项目管理",
-    icon: <RiFolder2Fill size={"1.5em"} />,
-    href: "/admin/projects",
-    role: roles.editor,
-  },
-  {
     name: "文章管理",
     icon: <RiArticleFill size={"1.5em"} />,
     href: "/admin/posts",
     role: roles.author,
   },
   {
+    name: "访问分析",
+    icon: <RiBarChart2Fill size={"1.5em"} />,
+    href: "/admin/analytics",
+    role: roles.editor,
+  },
+
+  {
+    name: "用户管理",
+    icon: <RiUserFill size={"1.5em"} />,
+    href: "/admin/users",
+    role: roles.admin,
+  },
+  {
     name: "评论管理",
     icon: <RiMessageFill size={"1.5em"} />,
     href: "/admin/comments",
+    role: roles.author,
+  },
+  {
+    name: "媒体管理",
+    icon: <RiAttachment2 size={"1.5em"} />,
+    href: "/admin/media",
     role: roles.author,
   },
   {
@@ -82,34 +95,10 @@ const AdminSidebarList = [
     role: roles.editor,
   },
   {
-    name: "页面管理",
-    icon: <RiFileFill size={"1.5em"} />,
-    href: "/admin/pages",
+    name: "项目管理",
+    icon: <RiFolder2Fill size={"1.5em"} />,
+    href: "/admin/projects",
     role: roles.editor,
-  },
-  {
-    name: "菜单管理",
-    icon: <RiMenuFill size={"1.5em"} />,
-    href: "/admin/menus",
-    role: roles.editor,
-  },
-  {
-    name: "用户管理",
-    icon: <RiUserFill size={"1.5em"} />,
-    href: "/admin/users",
-    role: roles.admin,
-  },
-  {
-    name: "媒体管理",
-    icon: <RiAttachment2 size={"1.5em"} />,
-    href: "/admin/media",
-    role: roles.author,
-  },
-  {
-    name: "存储管理",
-    icon: <RiHardDrive3Fill size={"1.5em"} />,
-    href: "/admin/storages",
-    role: roles.admin,
   },
   {
     name: "友情链接管理",
@@ -118,9 +107,21 @@ const AdminSidebarList = [
     role: roles.admin,
   },
   {
-    name: "访问分析",
-    icon: <RiBarChart2Fill size={"1.5em"} />,
-    href: "/admin/analytics",
+    name: "搜索洞察",
+    icon: <RiSearchEyeFill size={"1.5em"} />,
+    href: "/admin/search-insights",
+    role: roles.admin,
+  },
+  {
+    name: "搜索索引",
+    icon: <RiSearchFill size={"1.5em"} />,
+    href: "/admin/search",
+    role: roles.admin,
+  },
+  {
+    name: "页面管理",
+    icon: <RiFileFill size={"1.5em"} />,
+    href: "/admin/pages",
     role: roles.editor,
   },
   {
@@ -136,15 +137,15 @@ const AdminSidebarList = [
     role: roles.admin,
   },
   {
-    name: "搜索洞察",
-    icon: <RiSearchEyeFill size={"1.5em"} />,
-    href: "/admin/search-insights",
-    role: roles.admin,
+    name: "菜单管理",
+    icon: <RiMenuFill size={"1.5em"} />,
+    href: "/admin/menus",
+    role: roles.editor,
   },
   {
-    name: "搜索索引",
-    icon: <RiSearchFill size={"1.5em"} />,
-    href: "/admin/search",
+    name: "存储管理",
+    icon: <RiHardDrive3Fill size={"1.5em"} />,
+    href: "/admin/storages",
     role: roles.admin,
   },
   {
