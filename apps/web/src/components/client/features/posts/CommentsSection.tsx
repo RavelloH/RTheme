@@ -105,33 +105,6 @@ const LOCAL_PENDING_COMMENTS_KEY = "local_pending_comments";
 const levelColors = ["text-primary/80"];
 
 // ============ 工具函数 ============
-/**
- * 智能 HTML 转义函数
- * - 转义 HTML 标签使其可见但不执行
- * - 保留 Markdown 语法（引用、列表、标题等）
- * - 防止 XSS 攻击
- */
-const escapeHtmlButPreserveMarkdown = (text: string): string => {
-  const htmlEscapes: Record<string, string> = {
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
-  };
-
-  return (
-    text
-      // 1. 先用唯一标记保护行首的 > 符号（包括前面的空格）
-      .replace(/^(\s*>)/gm, "\x00PRESERVE_BLOCKQUOTE\x00")
-      // 2. 转义所有 HTML 特殊字符
-      .replace(/[&<>"']/g, (char) => htmlEscapes[char] ?? char)
-      // 3. 恢复 Markdown 引用符号（在转义之后）
-      // eslint-disable-next-line no-control-regex
-      .replace(/\x00PRESERVE_BLOCKQUOTE\x00/g, ">")
-  );
-};
-
 // 纯文本转义函数，用于不经过 Markdown 解析的地方
 const escapeHtml = (text: string): string => {
   const htmlEscapes: Record<string, string> = {
@@ -533,7 +506,7 @@ const SingleComment = React.memo(function SingleComment({
                 rehypePlugins={[rehypeKatex]}
                 components={components}
               >
-                {escapeHtmlButPreserveMarkdown(comment.content)}
+                {comment.content}
               </ReactMarkdown>
             </div>
 
@@ -1513,7 +1486,7 @@ export default function CommentsSection({
                       rehypePlugins={[rehypeKatex]}
                       components={components}
                     >
-                      {escapeHtmlButPreserveMarkdown(content)}
+                      {content}
                     </ReactMarkdown>
                   </div>
                 </div>
