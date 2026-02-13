@@ -192,7 +192,8 @@ export default function PostLicensePicker({
             }
           }}
           hoverScale={1}
-          className={`flex items-center gap-2 px-3 py-2 border border-border rounded-md text-sm transition-colors ${
+          tapScale={0.95}
+          className={`flex items-center gap-2 px-3 py-2 border border-border rounded-sm transition-colors ${
             disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-muted/50"
           }`}
         >

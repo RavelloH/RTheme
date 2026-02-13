@@ -140,16 +140,16 @@ export default function HomeImageGallery({
   const containerRef = useRef<HTMLDivElement>(null);
   const imagesRef = useRef<(HTMLDivElement | null)[]>([]);
   const animationRef = useRef<gsap.core.Tween | null>(null);
+  const replayTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 获取当前滤镜配置
   const filterConfig = getFilterConfig(filter);
   const isMobile = useMobile();
   const [activeIndex, setActiveIndex] = useState(0);
-  const [loadedCount, setLoadedCount] = useState(0);
-  const [isAllLoaded, setIsAllLoaded] = useState(false);
-  const [isAnimationComplete, setIsAnimationComplete] = useState(false);
+  const [isAllLoaded, setIsAllLoaded] = useState(true);
+  const [isAnimationComplete, setIsAnimationComplete] = useState(true);
 
-  // 播放入场动画的函数
+  // 播放入场动画（用于 loadingComplete 后重播）
   const playEntranceAnimation = useCallback(() => {
     if (isMobile) {
       setIsAnimationComplete(true);
@@ -157,27 +157,27 @@ export default function HomeImageGallery({
     }
 
     const images = imagesRef.current.filter(Boolean);
+    if (images.length === 0) {
+      setIsAnimationComplete(true);
+      return;
+    }
 
-    // 从左侧依次进入的动画 - 每张图片移动到各自的位置
     const tween = gsap.to(images, {
-      x: 0, // 移动到各自应该在的位置
+      x: 0,
       opacity: 1,
       duration: 1.2,
       ease: "power3.out",
-      stagger: 0.08, // 每张图片延迟0.08秒
+      stagger: 0.08,
       onComplete: () => {
-        // 动画完成后启用鼠标追踪
         setIsAnimationComplete(true);
       },
     });
 
-    // 保存动画引用
     animationRef.current = tween;
   }, [isMobile]);
 
-  // 重置图片到初始位置
-  const resetImages = useCallback(() => {
-    // 先杀掉正在进行的入场动画（如果有）
+  // 重置到入场动画前的隐藏位
+  const resetImagesForReplay = useCallback(() => {
     if (animationRef.current) {
       animationRef.current.kill();
       animationRef.current = null;
@@ -186,14 +186,12 @@ export default function HomeImageGallery({
     const images = imagesRef.current.filter(Boolean);
     const totalImages = images.length;
 
-    // 杀掉所有图片上的动画（包括鼠标追踪动画）
     images.forEach((img) => {
       if (img) {
         gsap.killTweensOf(img);
       }
     });
 
-    // 然后重置位置
     images.forEach((img, index) => {
       if (!img) return;
 
@@ -204,47 +202,41 @@ export default function HomeImageGallery({
       gsap.set(img, {
         left: `${baseX}%`,
         xPercent: xPercent,
-        x: -2000, // 重置到屏幕左侧外
+        x: -2000,
         opacity: 0,
       });
     });
-
-    setIsAnimationComplete(false);
   }, []);
 
-  // 监听页面加载动画完成事件
+  // 默认可见；收到 loadingComplete 后重新播放入场动画
   useEffect(() => {
     const handleLoadingComplete = () => {
-      // 收到页面加载完成事件，先重置图片
-      resetImages();
+      setIsAnimationComplete(false);
       setIsAllLoaded(false);
+      resetImagesForReplay();
 
-      // 延迟 500ms 后再播放动画
-      setTimeout(() => {
+      if (replayTimerRef.current) {
+        clearTimeout(replayTimerRef.current);
+      }
+
+      replayTimerRef.current = setTimeout(() => {
         setIsAllLoaded(true);
         playEntranceAnimation();
       }, 500);
     };
 
     window.addEventListener("loadingComplete", handleLoadingComplete);
-
     return () => {
       window.removeEventListener("loadingComplete", handleLoadingComplete);
+      if (replayTimerRef.current) {
+        clearTimeout(replayTimerRef.current);
+      }
+      if (animationRef.current) {
+        animationRef.current.kill();
+        animationRef.current = null;
+      }
     };
-  }, [resetImages, playEntranceAnimation]);
-
-  // 处理单张图片加载完成
-  const handleImageLoad = () => {
-    setLoadedCount((prev) => prev + 1);
-  };
-
-  // 当所有图片加载完成时，立即触发入场动画
-  useEffect(() => {
-    if (loadedCount === displayImages.length && !isAllLoaded) {
-      setIsAllLoaded(true);
-      playEntranceAnimation();
-    }
-  }, [loadedCount, displayImages.length, isAllLoaded, playEntranceAnimation]);
+  }, [playEntranceAnimation, resetImagesForReplay]);
 
   // 订阅全局鼠标移动事件
   useBroadcast<
@@ -480,39 +472,36 @@ export default function HomeImageGallery({
 
     const totalImages = images.length;
 
-    // 初始化图片位置 - 均匀分布在100%宽度，始终水平，默认黑白
-    // 只在未加载完成时初始化到左侧，避免覆盖入场动画
-    if (!isAllLoaded) {
-      images.forEach((img, index) => {
-        if (!img) return;
+    // 挂载后立即设置到可见基础位，避免等待 loadingComplete 才显示
+    images.forEach((img, index) => {
+      if (!img) return;
 
-        // 计算百分比位置
-        const baseProgress = totalImages > 1 ? index / (totalImages - 1) : 0.5;
-        const baseX = baseProgress * 100;
-        const xPercent = -baseProgress * 100; // 第一张 0%，最后一张 -100%
+      // 计算百分比位置
+      const baseProgress = totalImages > 1 ? index / (totalImages - 1) : 0.5;
+      const baseX = baseProgress * 100;
+      const xPercent = -baseProgress * 100; // 第一张 0%，最后一张 -100%
 
-        gsap.set(img, {
-          left: `${baseX}%`,
-          xPercent: xPercent,
-          x: -2000, // 加载完成前在屏幕左侧外（-2000px 确保完全不可见）
-          y: 0,
-          rotation: 0, // 始终水平，不旋转
-          filter: filterConfig.defaultFilter,
-          zIndex: totalImages - index, // 反向 z-index，后面的图片在上层
-          scale: 1,
-          opacity: 0, // 加载完成前隐藏
-        });
-
-        // 初始化叠加层透明度
-        const overlay = img.querySelector(".theme-overlay") as HTMLElement;
-        if (overlay) {
-          gsap.set(overlay, {
-            opacity: filterConfig.overlayOpacity ?? 0,
-          });
-        }
+      gsap.set(img, {
+        left: `${baseX}%`,
+        xPercent: xPercent,
+        x: 0,
+        y: 0,
+        rotation: 0, // 始终水平，不旋转
+        filter: filterConfig.defaultFilter,
+        zIndex: totalImages - index, // 反向 z-index，后面的图片在上层
+        scale: 1,
+        opacity: 1,
       });
-    }
-  }, [isMobile, displayImages.length, isAllLoaded, filterConfig]);
+
+      // 初始化叠加层透明度
+      const overlay = img.querySelector(".theme-overlay") as HTMLElement;
+      if (overlay) {
+        gsap.set(overlay, {
+          opacity: filterConfig.overlayOpacity ?? 0,
+        });
+      }
+    });
+  }, [isMobile, displayImages.length, filterConfig]);
 
   return (
     <div
@@ -568,7 +557,6 @@ export default function HomeImageGallery({
                 alt={`Gallery ${index + 1}`}
                 fill
                 className="object-cover"
-                onLoad={handleImageLoad}
               />
             </div>
           ))}
@@ -593,7 +581,6 @@ export default function HomeImageGallery({
                   alt={`Gallery ${index + 1}`}
                   fill
                   className="object-cover"
-                  onLoad={handleImageLoad}
                 />
                 {/* 主题色叠加层（仅对 mix-blend-hue 滤镜有效） */}
                 {filterConfig.overlayClass && (
