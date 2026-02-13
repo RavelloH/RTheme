@@ -106,7 +106,7 @@ export default async function RootLayout({
               <NotificationProvider>
                 <MenuProvider menus={menus}>
                   <ResponsiveFontScale scaleFactor={0.017} baseSize={0}>
-                    <LoadingAnimation />
+                    <LoadingAnimation mainColor={mainColor} />
                     <LayoutContainer>
                       <Suspense>
                         <Header menus={menus} />
