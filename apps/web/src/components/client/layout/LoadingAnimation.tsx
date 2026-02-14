@@ -50,16 +50,24 @@ export function LoadingAnimation({ mainColor }: LoadingAnimationProps) {
 
     // 等待文字切换动画完成后再淡出整个遮罩
     setTimeout(() => {
-      if (!overlayRef.current) return;
+      const notifyLoadingComplete = () => {
+        document.body.setAttribute("data-loading-complete", "true");
+        const event = new CustomEvent("loadingComplete");
+        window.dispatchEvent(event);
+      };
+
+      if (!overlayRef.current) {
+        notifyLoadingComplete();
+        return;
+      }
 
       gsap.to(overlayRef.current, {
         opacity: 0,
         duration: 0.5,
         ease: "power2.out",
         onComplete: () => {
-          // 触发所有组件的动画
-          const event = new CustomEvent("loadingComplete");
-          window.dispatchEvent(event);
+          // 统一由 LoadingAnimation 标记并广播加载完成状态
+          notifyLoadingComplete();
         },
       });
     }, 900);
