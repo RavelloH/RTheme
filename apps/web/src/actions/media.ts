@@ -2668,7 +2668,7 @@ export async function getMediaExplorerPage(
     return response.ok({
       data: {
         media: mediaResult.data || [],
-        folders,
+        folders: shouldSearchGlobal ? [] : folders,
         breadcrumb,
         currentFolderId,
         mediaFolderId,
