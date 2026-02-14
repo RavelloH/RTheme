@@ -45,8 +45,10 @@ function ensureColorRules(
   if (!sheet) return null;
 
   if (sheet.cssRules.length === 0) {
+    // sheet.insertRule(":root {}", 0);
+    // sheet.insertRule("html.dark {}", 1);
     sheet.insertRule(":root {}", 0);
-    sheet.insertRule("html.dark {}", 1);
+    // TODO: 我还没做亮色主题，所以先跳过
   }
 
   const rootRule = sheet.cssRules[0];
