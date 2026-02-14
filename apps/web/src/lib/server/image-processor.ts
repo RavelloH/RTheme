@@ -10,7 +10,13 @@ import sharp from "sharp";
 const BASE62_CHARS =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const MAX_PROCESS_IMAGE_BYTES = 50 * 1024 * 1024; // 50MB
-const MAX_IMAGE_PIXELS = 400_000_000; // 40MP
+const MAX_IMAGE_PIXELS = 400_000_000; // 400MP
+const LOSSY_MAX_EDGE = 2560;
+const LOSSY_AVIF_OPTIONS = {
+  quality: 50,
+  effort: 1,
+  chromaSubsampling: "4:2:0" as const,
+};
 
 /**
  * 支持的图片格式
@@ -188,39 +194,55 @@ async function extractExif(buffer: Buffer): Promise<Record<string, unknown>> {
 
 /**
  * 处理图片 - 有损压缩
- * 去除 EXIF → 转换为 AVIF（质量 50，effort 5，chromaSubsampling 4:4:4）
+ * 去除 EXIF + 限制最长边 2560 → 转换为 AVIF（质量 50，effort 1，chromaSubsampling 4:2:0）
  */
 async function processLossy(
   buffer: Buffer,
 
   _originalFilename: string,
 ): Promise<ProcessedImage> {
-  const image = sharp(buffer);
+  // 去除 EXIF 并统一方向；哈希继续基于该标准化原图计算
+  const strippedBuffer = await sharp(buffer).rotate().toBuffer();
 
-  // 去除 EXIF
-  const strippedBuffer = await image.rotate().toBuffer();
+  // 主流程：限制最长边为 2560，后续在 clone 流上分别生成主图与 blur
+  const resizedImage = sharp(strippedBuffer).resize({
+    width: LOSSY_MAX_EDGE,
+    height: LOSSY_MAX_EDGE,
+    fit: "inside",
+    withoutEnlargement: true,
+    fastShrinkOnLoad: true,
+  });
 
-  // 获取尺寸
-  const metadata = await sharp(strippedBuffer).metadata();
+  const metadata = await resizedImage.clone().metadata();
   if (!metadata.width || !metadata.height) {
     throw new Error("无法获取图片尺寸");
   }
 
-  // 转换为 AVIF
-  const processedBuffer = await sharp(strippedBuffer)
-    .avif({
-      quality: 50,
-      effort: 5,
-      chromaSubsampling: "4:4:4",
-    })
-    .toBuffer();
+  const isPortrait = metadata.height > metadata.width;
+  const blurWidth = isPortrait
+    ? 10
+    : Math.round((10 * metadata.width) / metadata.height);
+  const blurHeight = isPortrait
+    ? Math.round((10 * metadata.height) / metadata.width)
+    : 10;
+
+  const [processedBuffer, blurBuffer] = await Promise.all([
+    resizedImage.clone().avif(LOSSY_AVIF_OPTIONS).toBuffer(),
+    resizedImage
+      .clone()
+      .resize(blurWidth, blurHeight, {
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 20, effort: 0 })
+      .toBuffer(),
+  ]);
 
   // 计算哈希（使用去除 EXIF 后的原图）
   const hash = calculateHash(strippedBuffer);
   const shortHash = generateShortHash(strippedBuffer);
 
-  // 生成 blur
-  const blur = await generateBlurPlaceholder(strippedBuffer);
+  const blur = `data:image/webp;base64,${blurBuffer.toString("base64")}`;
 
   return {
     buffer: processedBuffer,

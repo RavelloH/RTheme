@@ -20,26 +20,18 @@ const nextConfig = () => {
 
   return {
     images: {
-      remotePatterns: [
-        {
-          protocol: "https",
-          hostname: "raw.ravelloh.top",
-          pathname: "/**",
-        },
-      ],
       localPatterns: [
         {
           pathname: "/p/**",
           search: "",
         },
       ],
-      deviceSizes: [640, 750, 828, 1080, 1200, 1920, 3840],
+      deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2560],
       imageSizes: [32, 48, 64, 96, 128, 256, 384],
-      qualities: [85],
+      qualities: [75],
       formats: ["image/avif", "image/webp"],
       minimumCacheTTL: 2678400,
       dangerouslyAllowSVG: true,
-      contentDispositionType: "attachment",
       contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     },
     output: "standalone",
