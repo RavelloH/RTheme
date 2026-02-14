@@ -35,7 +35,6 @@ const EXTERNAL_FETCH_TIMEOUT_MS = 15000;
 const DIRECT_UPLOAD_SIGN_EXPIRES_SECONDS = 600;
 const DIRECT_UPLOAD_TOKEN_EXPIRES_MS = 10 * 60 * 1000;
 const TEMP_UPLOAD_PATH_TEMPLATE = "temp/{year}/{month}/{filename}";
-const UPLOAD_ALLOW_METHODS = "POST, OPTIONS, HEAD";
 type ExternalImportMode = "record" | "transfer";
 type StorageProviderRecord = NonNullable<
   Awaited<ReturnType<typeof prisma.storageProvider.findFirst>>
@@ -43,39 +42,6 @@ type StorageProviderRecord = NonNullable<
 
 function getMediaHashLockKey(hash: string): bigint {
   return BigInt(`0x${hash.slice(0, 15)}`);
-}
-
-export async function OPTIONS(): Promise<Response> {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      Allow: UPLOAD_ALLOW_METHODS,
-    },
-  });
-}
-
-export async function HEAD(): Promise<Response> {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      Allow: UPLOAD_ALLOW_METHODS,
-    },
-  });
-}
-
-export async function GET(): Promise<Response> {
-  return response.response({
-    status: 405,
-    message: "Method Not Allowed",
-    error: {
-      code: "METHOD_NOT_ALLOWED",
-      message:
-        "请使用 POST /admin/media/upload（如果你在上传流程中看到该错误，通常表示请求被重定向或方法被改写）",
-    },
-    customHeaders: {
-      Allow: UPLOAD_ALLOW_METHODS,
-    },
-  }) as Response;
 }
 
 function normalizePosixPath(p: string): string {
@@ -257,16 +223,6 @@ export async function POST(request: NextRequest): Promise<Response> {
     )
       ?.trim()
       .toLowerCase();
-
-    console.info("[media/upload] request", {
-      method: request.method,
-      action: action || "upload",
-      pathname: request.nextUrl.pathname,
-      hasFile: Boolean(file),
-      storageProviderId: storageProviderId || "default",
-      referer: request.headers.get("referer") || "",
-      userAgent: request.headers.get("user-agent") || "",
-    });
 
     // 如果没有指定文件夹，默认使用公共空间根目录
     if (folderId === null) {
