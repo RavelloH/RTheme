@@ -1,17 +1,15 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "main": ".open-next/worker.js",
   // 部署前请按 Cloudflare 账号内的 Worker 命名规则调整名称。
   "name": "neutralpress-docs",
   "compatibility_date": "2025-12-01",
-  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "build": {
-    // 直接执行 `wrangler deploy` 时，先生成 OpenNext 产物。
-    "command": "pnpm --filter docs cf:build",
+    // 直接执行 `wrangler deploy` 时，先生成 Next.js 静态导出产物。
+    "command": "pnpm --filter docs build",
   },
   "assets": {
-    "directory": ".open-next/assets",
-    "binding": "ASSETS",
+    // Next.js `output: \"export\"` 默认输出目录。
+    "directory": "out",
   },
   "observability": {
     "logs": {
@@ -19,11 +17,4 @@
       "invocation_logs": true,
     },
   },
-  "services": [
-    {
-      "binding": "WORKER_SELF_REFERENCE",
-      // 自引用绑定，service 必须与上方 name 保持一致。
-      "service": "neutralpress-docs",
-    },
-  ],
 }

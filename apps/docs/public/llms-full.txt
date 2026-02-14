@@ -1,0 +1,7 @@
+# NeutralPress Docs
+
+For full documentation content, browse:
+- /docs
+
+Repository:
+- https://github.com/RavelloH/NeutralPress

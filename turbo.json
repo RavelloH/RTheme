@@ -86,7 +86,7 @@
     "docs#build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**"],
+      "outputs": [".next/**", "!.next/cache/**", "out/**"],
       "env": ["NODE_ENV"]
     }
   }
