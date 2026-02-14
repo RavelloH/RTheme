@@ -9,7 +9,6 @@ import { useBroadcast } from "@/hooks/use-broadcast";
 import { useMobile } from "@/hooks/use-mobile";
 import type { ProcessedImageData } from "@/lib/shared/image-common";
 import { AutoTransition } from "@/ui/AutoTransition";
-import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 type GalleryFilter =
   | "none"
@@ -510,33 +509,28 @@ export default function HomeImageGallery({
     >
       {/* 加载提示 */}
       <AutoTransition>
-        {!isAllLoaded &&
-          (isMobile ? (
-            <div className="flex items-center justify-center">
-              <LoadingIndicator />
-            </div>
-          ) : (
-            <div className="absolute inset-0 z-50 text-8xl">
-              <Marquee
-                speed={40}
-                autoFill={true}
-                direction="right"
-                className="h-1/2 border border-muted"
-              >
-                &nbsp;&nbsp;SCROLL&nbsp;&nbsp;{"==>"}
-                &nbsp;&nbsp;
-              </Marquee>
-              <Marquee
-                speed={40}
-                autoFill={true}
-                direction="left"
-                className="h-1/2 border border-muted"
-              >
-                &nbsp;&nbsp;SCROLL&nbsp;&nbsp;{"<=="}
-                &nbsp;&nbsp;
-              </Marquee>
-            </div>
-          ))}
+        {!isAllLoaded && !isMobile && (
+          <div className="absolute inset-0 z-50 text-8xl">
+            <Marquee
+              speed={40}
+              autoFill={true}
+              direction="right"
+              className="h-1/2 border border-muted"
+            >
+              &nbsp;&nbsp;SCROLL&nbsp;&nbsp;{"==>"}
+              &nbsp;&nbsp;
+            </Marquee>
+            <Marquee
+              speed={40}
+              autoFill={true}
+              direction="left"
+              className="h-1/2 border border-muted"
+            >
+              &nbsp;&nbsp;SCROLL&nbsp;&nbsp;{"<=="}
+              &nbsp;&nbsp;
+            </Marquee>
+          </div>
+        )}
       </AutoTransition>
 
       {isMobile ? (
