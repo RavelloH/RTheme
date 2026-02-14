@@ -1008,7 +1008,6 @@ export default function FriendLinkApplyClient({
                       size="sm"
                       onClick={() => void handleSubmitApply()}
                       loading={submitting}
-                      loadingText="正在提交申请"
                       disabled={!applyEnabled || loadingOwnLink}
                       verificationText="正在验证"
                     />
