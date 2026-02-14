@@ -26,6 +26,7 @@ export default function FooterDesktop({ menus }: FooterProps) {
   const isMenuOpen = useMenuStore((state) => state.isMenuOpen);
   const { isConsoleOpen } = useConsoleStore();
   const isFooterVisible = useFooterStore((state) => state.isFooterVisible);
+  const setFooterVisible = useFooterStore((state) => state.setFooterVisible);
   const [windowSize, setWindowSize] = useState({
     width: typeof window !== "undefined" ? window.innerWidth : 0,
     height: typeof window !== "undefined" ? window.innerHeight : 0,
@@ -62,6 +63,7 @@ export default function FooterDesktop({ menus }: FooterProps) {
         "data-loading-complete",
       );
       if (isAlreadyLoaded) {
+        setFooterVisible(true);
         setIsLoaded(true);
       }
     };
@@ -69,11 +71,9 @@ export default function FooterDesktop({ menus }: FooterProps) {
     const handleLoadingComplete = () => {
       // 标记页面已加载完成
       document.body.setAttribute("data-loading-complete", "true");
-      // 延迟设置 isLoaded，让 framer-motion 的 spring 动画自然进行
-      // 这避免了 GSAP 和 framer-motion 的动画冲突
-      setTimeout(() => {
-        setIsLoaded(true);
-      }, 200); // 与 Header 动画延迟保持一致
+      // 与 Header 同步显示，避免 Footer 出现晚于 Header
+      setFooterVisible(true);
+      setIsLoaded(true);
     };
 
     // 检查初始加载状态
@@ -84,7 +84,7 @@ export default function FooterDesktop({ menus }: FooterProps) {
     return () => {
       window.removeEventListener("loadingComplete", handleLoadingComplete);
     };
-  }, []);
+  }, [setFooterVisible]);
 
   useEffect(() => {
     if (isMenuOpen) {
