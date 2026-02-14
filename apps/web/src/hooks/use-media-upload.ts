@@ -81,6 +81,92 @@ interface UploadInitData {
   blobClientToken?: string;
 }
 
+function parseUploadResponseText<TData = UploadMediaResult>(
+  text: string,
+  status: number,
+  responseUrl?: string,
+): UploadApiResponse<TData> {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    const baseMessage =
+      status === 405
+        ? "上传端点返回 405（方法不允许），请求很可能在链路中被重定向或方法被改写"
+        : `接口返回空响应（HTTP ${status}）`;
+    return {
+      success: false,
+      message: responseUrl
+        ? `${baseMessage}，URL: ${responseUrl}`
+        : baseMessage,
+    };
+  }
+
+  try {
+    return JSON.parse(trimmed) as UploadApiResponse<TData>;
+  } catch {
+    const snippet =
+      trimmed.length > 180 ? `${trimmed.slice(0, 180)}...` : trimmed;
+    const baseMessage =
+      status === 405
+        ? "上传端点返回 405（方法不允许），请求很可能在链路中被重定向或方法被改写"
+        : `接口返回非 JSON（HTTP ${status}）`;
+    return {
+      success: false,
+      message: responseUrl
+        ? `${baseMessage}，URL: ${responseUrl}，响应片段：${snippet}`
+        : `${baseMessage}：${snippet}`,
+    };
+  }
+}
+
+async function parseUploadResponse<TData = UploadMediaResult>(
+  response: Response,
+): Promise<UploadApiResponse<TData>> {
+  const text = await response.text();
+  const parsed = parseUploadResponseText<TData>(
+    text,
+    response.status,
+    response.url,
+  );
+  if (!response.ok && parsed.success) {
+    const statusHint =
+      response.status === 405
+        ? "上传端点返回 405（方法不允许），请求很可能在链路中被重定向或方法被改写"
+        : `请求失败（HTTP ${response.status}）`;
+    return {
+      ...parsed,
+      success: false,
+      message: parsed.message || statusHint,
+    };
+  }
+  return parsed;
+}
+
+async function postUploadAction<TData = UploadMediaResult>(
+  formData: FormData,
+  action: "init" | "complete",
+): Promise<UploadApiResponse<TData>> {
+  let response: Response;
+  try {
+    response = await fetch("/admin/media/upload", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+      },
+      body: formData,
+      credentials: "include",
+      redirect: "error",
+      cache: "no-store",
+    });
+  } catch {
+    const stepText = action === "init" ? "初始化" : "完成";
+    throw new Error(
+      `${stepText}请求失败：网络错误，或请求被重定向（常见于反向代理把 POST 改成 GET）`,
+    );
+  }
+
+  return parseUploadResponse<TData>(response);
+}
+
 /**
  * 媒体上传 Hook
  * 提取完整的上传流程：文件状态管理、XHR 上传（含进度追踪）、并发队列、重试
@@ -258,14 +344,19 @@ export function useMediaUpload(
             });
 
             xhr.addEventListener("load", () => {
-              try {
-                const result = JSON.parse(
-                  xhr.responseText,
-                ) as UploadApiResponse;
-                resolve(result);
-              } catch {
-                reject(new Error("解析响应失败"));
+              const parsed = parseUploadResponseText(
+                xhr.responseText || "",
+                xhr.status,
+              );
+              if (xhr.status < 200 || xhr.status >= 300) {
+                resolve({
+                  ...parsed,
+                  success: false,
+                  message: parsed.message || `上传失败（HTTP ${xhr.status}）`,
+                });
+                return;
               }
+              resolve(parsed);
             });
 
             xhr.addEventListener("error", () => reject(new Error("网络错误")));
@@ -296,13 +387,10 @@ export function useMediaUpload(
           initFormData.append("folderId", String(folderId));
         }
 
-        const initResponse = await fetch("/admin/media/upload", {
-          method: "POST",
-          body: initFormData,
-          credentials: "include",
-        });
-        const initResult =
-          (await initResponse.json()) as UploadApiResponse<UploadInitData>;
+        const initResult = await postUploadAction<UploadInitData>(
+          initFormData,
+          "init",
+        );
 
         let result: UploadApiResponse;
 
@@ -426,12 +514,7 @@ export function useMediaUpload(
             completeFormData.append("folderId", String(folderId));
           }
 
-          const completeResponse = await fetch("/admin/media/upload", {
-            method: "POST",
-            body: completeFormData,
-            credentials: "include",
-          });
-          result = (await completeResponse.json()) as UploadApiResponse;
+          result = await postUploadAction(completeFormData, "complete");
         }
 
         if (result.success && result.data) {
