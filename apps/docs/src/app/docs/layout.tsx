@@ -11,7 +11,7 @@ import {
   Settings,
   Sparkles,
 } from "lucide-react";
-import { GithubInfo } from "fumadocs-ui/components/github-info";
+import { GithubInfo } from "@/components/github-info";
 
 export default function Layout({ children }: { children: ReactNode }) {
   const base = baseOptions();
