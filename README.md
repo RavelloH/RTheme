@@ -29,7 +29,6 @@ WordPress 之所以流行，是因为它易于使用且功能强大。但其技�
 
 ———— 以静态博客的成本，享受动态 CMS 的便利。NeutralPress 致力于成为下一代内容管理系统，让人人都能免费建站。
 
-
 ## 设计
 
 你是否已经厌倦了千篇一律的网站设计？
@@ -39,7 +38,6 @@ WordPress 之所以流行，是因为它易于使用且功能强大。但其技�
 使用 CMS 最多的不是访客，而是站长。因此，无论是后台还是前台，我们均保持完全统一的设计风格。
 
 ———— 保持中性，将情绪留给内容本身。**Neutral**，意为“**中性**”，象征着简洁与纯粹。
-
 
 ## 功能
 
@@ -70,7 +68,6 @@ WordPress 之所以流行，是因为它易于使用且功能强大。但其技�
 我们仍在不断更新，如果有更多功能需要，欢迎前往 [GitHub 讨论区](https://github.com/RavelloH/NeutralPress) 提出建议。
 
 ———— AI 时代，仅靠内容是不够的。NeutralPress 不仅仅只是一个内容管理系统，也是你的私人社区、数字门户、个人知识库。
-
 
 ## 预览
 
@@ -122,39 +119,39 @@ WordPress 之所以流行，是因为它易于使用且功能强大。但其技�
   <table>
     <tbody>
       <tr>
-        <td width="33%"><a href="https://neutralpress.net/repo/front/front-1.webp"><img src="https://neutralpress.net/repo/front/front-1.webp" width="100%" alt="Front 1"></a></td>
-        <td width="33%"><a href="https://neutralpress.net/repo/front/front-2.webp"><img src="https://neutralpress.net/repo/front/front-2.webp" width="100%" alt="Front 2"></a></td>
-        <td width="33%"><a href="https://neutralpress.net/repo/front/front-3.webp"><img src="https://neutralpress.net/repo/front/front-3.webp" width="100%" alt="Front 3"></a></td>
+        <td width="33%"><a href="https://neutralpress.net/repo/admin/admin-1.webp"><img src="https://neutralpress.net/repo/admin/admin-1.webp" width="100%" alt="Front 1"></a></td>
+        <td width="33%"><a href="https://neutralpress.net/repo/admin/admin-2.webp"><img src="https://neutralpress.net/repo/admin/admin-2.webp" width="100%" alt="Front 2"></a></td>
+        <td width="33%"><a href="https://neutralpress.net/repo/admin/admin-3.webp"><img src="https://neutralpress.net/repo/admin/admin-3.webp" width="100%" alt="Front 3"></a></td>
       </tr>
       <tr>
-        <td><a href="https://neutralpress.net/repo/front/front-4.webp"><img src="https://neutralpress.net/repo/front/front-4.webp" width="100%" alt="Front 4"></a></td>
-        <td><a href="https://neutralpress.net/repo/front/front-5.webp"><img src="https://neutralpress.net/repo/front/front-5.webp" width="100%" alt="Front 5"></a></td>
-        <td><a href="https://neutralpress.net/repo/front/front-6.webp"><img src="https://neutralpress.net/repo/front/front-6.webp" width="100%" alt="Front 6"></a></td>
+        <td><a href="https://neutralpress.net/repo/admin/admin-4.webp"><img src="https://neutralpress.net/repo/admin/admin-4.webp" width="100%" alt="Front 4"></a></td>
+        <td><a href="https://neutralpress.net/repo/admin/admin-5.webp"><img src="https://neutralpress.net/repo/admin/admin-5.webp" width="100%" alt="Front 5"></a></td>
+        <td><a href="https://neutralpress.net/repo/admin/admin-6.webp"><img src="https://neutralpress.net/repo/admin/admin-6.webp" width="100%" alt="Front 6"></a></td>
       </tr>
       <tr>
-        <td><a href="https://neutralpress.net/repo/front/front-7.webp"><img src="https://neutralpress.net/repo/front/front-7.webp" width="100%" alt="Front 7"></a></td>
-        <td><a href="https://neutralpress.net/repo/front/front-8.webp"><img src="https://neutralpress.net/repo/front/front-8.webp" width="100%" alt="Front 8"></a></td>
-        <td><a href="https://neutralpress.net/repo/front/front-9.webp"><img src="https://neutralpress.net/repo/front/front-9.webp" width="100%" alt="Front 9"></a></td>
+        <td><a href="https://neutralpress.net/repo/admin/admin-7.webp"><img src="https://neutralpress.net/repo/admin/admin-7.webp" width="100%" alt="Front 7"></a></td>
+        <td><a href="https://neutralpress.net/repo/admin/admin-8.webp"><img src="https://neutralpress.net/repo/admin/admin-8.webp" width="100%" alt="Front 8"></a></td>
+        <td><a href="https://neutralpress.net/repo/admin/admin-9.webp"><img src="https://neutralpress.net/repo/admin/admin-9.webp" width="100%" alt="Front 9"></a></td>
       </tr>
       <tr>
-        <td><a href="https://neutralpress.net/repo/front/front-10.webp"><img src="https://neutralpress.net/repo/front/front-10.webp" width="100%" alt="Front 10"></a></td>
-        <td><a href="https://neutralpress.net/repo/front/front-11.webp"><img src="https://neutralpress.net/repo/front/front-11.webp" width="100%" alt="Front 11"></a></td>
-        <td><a href="https://neutralpress.net/repo/front/front-12.webp"><img src="https://neutralpress.net/repo/front/front-12.webp" width="100%" alt="Front 12"></a></td>
+        <td><a href="https://neutralpress.net/repo/admin/admin-10.webp"><img src="https://neutralpress.net/repo/admin/admin-10.webp" width="100%" alt="Front 10"></a></td>
+        <td><a href="https://neutralpress.net/repo/admin/admin-11.webp"><img src="https://neutralpress.net/repo/admin/admin-11.webp" width="100%" alt="Front 11"></a></td>
+        <td><a href="https://neutralpress.net/repo/admin/admin-12.webp"><img src="https://neutralpress.net/repo/admin/admin-12.webp" width="100%" alt="Front 12"></a></td>
       </tr>
       <tr>
-        <td><a href="https://neutralpress.net/repo/front/front-13.webp"><img src="https://neutralpress.net/repo/front/front-13.webp" width="100%" alt="Front 13"></a></td>
-        <td><a href="https://neutralpress.net/repo/front/front-14.webp"><img src="https://neutralpress.net/repo/front/front-14.webp" width="100%" alt="Front 14"></a></td>
-        <td><a href="https://neutralpress.net/repo/front/front-15.webp"><img src="https://neutralpress.net/repo/front/front-15.webp" width="100%" alt="Front 15"></a></td>
+        <td><a href="https://neutralpress.net/repo/admin/admin-13.webp"><img src="https://neutralpress.net/repo/admin/admin-13.webp" width="100%" alt="Front 13"></a></td>
+        <td><a href="https://neutralpress.net/repo/admin/admin-14.webp"><img src="https://neutralpress.net/repo/admin/admin-14.webp" width="100%" alt="Front 14"></a></td>
+        <td><a href="https://neutralpress.net/repo/admin/admin-15.webp"><img src="https://neutralpress.net/repo/admin/admin-15.webp" width="100%" alt="Front 15"></a></td>
       </tr>
       <tr>
-        <td><a href="https://neutralpress.net/repo/front/front-16.webp"><img src="https://neutralpress.net/repo/front/front-16.webp" width="100%" alt="Front 16"></a></td>
-        <td><a href="https://neutralpress.net/repo/front/front-17.webp"><img src="https://neutralpress.net/repo/front/front-17.webp" width="100%" alt="Front 17"></a></td>
-        <td><a href="https://neutralpress.net/repo/front/front-18.webp"><img src="https://neutralpress.net/repo/front/front-18.webp" width="100%" alt="Front 18"></a></td>
+        <td><a href="https://neutralpress.net/repo/admin/admin-16.webp"><img src="https://neutralpress.net/repo/admin/admin-16.webp" width="100%" alt="Front 16"></a></td>
+        <td><a href="https://neutralpress.net/repo/admin/admin-17.webp"><img src="https://neutralpress.net/repo/admin/admin-17.webp" width="100%" alt="Front 17"></a></td>
+        <td><a href="https://neutralpress.net/repo/admin/admin-18.webp"><img src="https://neutralpress.net/repo/admin/admin-18.webp" width="100%" alt="Front 18"></a></td>
       </tr>
       <tr>
-        <td><a href="https://neutralpress.net/repo/front/front-19.webp"><img src="https://neutralpress.net/repo/front/front-19.webp" width="100%" alt="Front 19"></a></td>
-        <td><a href="https://neutralpress.net/repo/front/front-20.webp"><img src="https://neutralpress.net/repo/front/front-20.webp" width="100%" alt="Front 20"></a></td>
-        <td><a href="https://neutralpress.net/repo/front/front-21.webp"><img src="https://neutralpress.net/repo/front/front-21.webp" width="100%" alt="Front 21"></a></td>
+        <td><a href="https://neutralpress.net/repo/admin/admin-19.webp"><img src="https://neutralpress.net/repo/admin/admin-19.webp" width="100%" alt="Front 19"></a></td>
+        <td><a href="https://neutralpress.net/repo/admin/admin-20.webp"><img src="https://neutralpress.net/repo/admin/admin-20.webp" width="100%" alt="Front 20"></a></td>
+        <td><a href="https://neutralpress.net/repo/admin/admin-21.webp"><img src="https://neutralpress.net/repo/admin/admin-21.webp" width="100%" alt="Front 21"></a></td>
       </tr>
     </tbody>
   </table>
@@ -170,11 +167,9 @@ WordPress 之所以流行，是因为它易于使用且功能强大。但其技�
 
 <!--（如果需要，你可以前往后台的“备份还原”页面，导出 Demo 的数据并导入到自己的实例中。参照 [备份与还原](https://neutralpress.net/docs/feature/backup) ） -->
 
-
 ## 快速开始
 
 参考 [https://neutralpress.net/docs/deploy](https://neutralpress.net/docs/deploy)
-
 
 ## 贡献
 
