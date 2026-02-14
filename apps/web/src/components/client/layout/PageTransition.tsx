@@ -33,6 +33,7 @@ export default function PageTransition({ children }: PageTransitionProps) {
   const previousPathname = useRef<string>("");
   const gsapTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const lastScrollTop = useRef<number>(0);
+  const hasScrollBaseline = useRef(false);
   const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
   const isMobile = useMobile();
   const setFooterVisible = useFooterStore((state) => state.setFooterVisible);
@@ -251,6 +252,10 @@ export default function PageTransition({ children }: PageTransitionProps) {
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer) return;
 
+    // 以当前滚动位置作为基线，避免首次挂载/自动恢复滚动导致误判为“向下滚动”
+    lastScrollTop.current = scrollContainer.scrollTop;
+    hasScrollBaseline.current = false;
+
     const handleScroll = () => {
       // 首次加载完成前不处理滚动事件，避免 footer 抖动
       if (!isInitialLoadComplete) return;
@@ -260,14 +265,26 @@ export default function PageTransition({ children }: PageTransitionProps) {
       const clientHeight = scrollContainer.clientHeight;
       const scrollBottom = scrollHeight - clientHeight - currentScrollTop;
 
+      if (!hasScrollBaseline.current) {
+        hasScrollBaseline.current = true;
+        lastScrollTop.current = currentScrollTop;
+        return;
+      }
+
       // 清除之前的超时
       if (scrollTimeout.current) {
         clearTimeout(scrollTimeout.current);
       }
 
+      const scrollDelta = currentScrollTop - lastScrollTop.current;
+      if (Math.abs(scrollDelta) < 6) {
+        lastScrollTop.current = currentScrollTop;
+        return;
+      }
+
       // 判断滚动方向
-      const isScrollingDown = currentScrollTop > lastScrollTop.current;
-      const isScrollingUp = currentScrollTop < lastScrollTop.current;
+      const isScrollingDown = scrollDelta > 0;
+      const isScrollingUp = scrollDelta < 0;
 
       // 滚动到底部（距离底部小于50px）
       const isNearBottom = scrollBottom < 50;
@@ -307,7 +324,8 @@ export default function PageTransition({ children }: PageTransitionProps) {
     if (!isInitialLoadComplete) return;
 
     setFooterVisible(true);
-    lastScrollTop.current = 0;
+    lastScrollTop.current = scrollContainerRef.current?.scrollTop ?? 0;
+    hasScrollBaseline.current = false;
   }, [pathname, setFooterVisible, isInitialLoadComplete]);
 
   return (
