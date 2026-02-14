@@ -13,7 +13,6 @@ import {
   MenuHeader,
 } from "@/components/client/layout/menu/MenuMiscs";
 import MenuWrapper from "@/components/client/layout/menu/MenuWrapper";
-import { getConfigs } from "@/lib/server/config-cache";
 import type { MenuItem } from "@/types/menu";
 
 function getLinkHref(menu: MenuItem): string {
@@ -74,15 +73,23 @@ function toOutsiteMenuItemData(menu: MenuItem): MenuItemData {
   };
 }
 
-export default async function Menu({ menus }: { menus: MenuItem[] }) {
-  const [slogan, title, copyright, author, birthday] = await getConfigs([
-    "site.slogan.secondary",
-    "site.title",
-    "site.copyright",
-    "author.name",
-    "site.birthday",
-  ]);
+interface MenuProps {
+  menus: MenuItem[];
+  slogan: string;
+  title: string;
+  copyright: string[];
+  author: string;
+  birthday: string;
+}
 
+export default function Menu({
+  menus,
+  slogan,
+  title,
+  copyright,
+  author,
+  birthday,
+}: MenuProps) {
   const mainMenus = menus.filter((menu) => menu.category === "MAIN");
   const commonMenus = menus.filter((menu) => menu.category === "COMMON");
   const outsiteMenus = menus.filter((menu) => menu.category === "OUTSITE");

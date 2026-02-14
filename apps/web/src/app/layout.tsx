@@ -51,8 +51,12 @@ export default async function RootLayout({
     "menus",
     "config/site.color",
     "config/site.title",
+    "config/site.slogan.secondary",
     "config/site.avatar",
     "config/site.custom.script",
+    "config/site.birthday",
+    "config/site.copyright",
+    "config/author.name",
     "config/analytics.enable",
     "config/notice.ably.key",
     "config/site.shiki.theme",
@@ -65,8 +69,12 @@ export default async function RootLayout({
     [
       mainColor,
       siteName,
+      siteSloganSecondary,
       siteAvatar,
       customScriptConfig,
+      siteBirthday,
+      siteCopyright,
+      siteAuthor,
       enableAnalytics,
       ablyEnabled,
       shikiTheme,
@@ -76,8 +84,12 @@ export default async function RootLayout({
     getConfigs([
       "site.color",
       "site.title",
+      "site.slogan.secondary",
       "site.avatar",
       "site.custom.script",
+      "site.birthday",
+      "site.copyright",
+      "author.name",
       "analytics.enable",
       "notice.ably.key",
       "site.shiki.theme",
@@ -91,8 +103,12 @@ export default async function RootLayout({
   const configs = {
     "site.color": mainColor,
     "site.title": siteName,
+    "site.slogan.secondary": siteSloganSecondary,
     "site.avatar": siteAvatar,
     "site.custom.script": customScript,
+    "site.birthday": siteBirthday,
+    "site.copyright": siteCopyright,
+    "author.name": siteAuthor,
     "site.shiki.theme": shikiTheme,
     "analytics.enable": enableAnalytics,
     "notice.ably.key": ablyEnabled,
@@ -123,7 +139,14 @@ export default async function RootLayout({
                     <LoadingAnimation mainColor={mainColor} />
                     <LayoutContainer>
                       <Suspense>
-                        <Header menus={menus} />
+                        <Header
+                          menus={menus}
+                          slogan={siteSloganSecondary}
+                          title={siteName}
+                          copyright={siteCopyright}
+                          author={siteAuthor}
+                          birthday={siteBirthday}
+                        />
                       </Suspense>
                       <MainContent>
                         <Suspense>
