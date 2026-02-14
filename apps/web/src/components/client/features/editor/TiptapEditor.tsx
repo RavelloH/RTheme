@@ -16,6 +16,7 @@ import type { EditorView } from "@tiptap/pm/view";
 import type { Editor } from "@tiptap/react";
 import { EditorContent, Extension, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { put as putBlob } from "@vercel/blob/client";
 import type { BundledTheme } from "shiki";
 import CodeBlockShiki from "tiptap-extension-code-block-shiki";
 
@@ -167,6 +168,29 @@ export function setEditorToast(toast: typeof toastInstance): void {
   toastInstance = toast;
 }
 
+interface EditorUploadResult {
+  imageId: string;
+  originalName: string;
+}
+
+interface UploadApiResponse<TData = EditorUploadResult> {
+  success: boolean;
+  data?: TData;
+  message?: string;
+}
+
+interface UploadInitData {
+  uploadStrategy: "client" | "server";
+  providerType: string;
+  storageProviderId?: string;
+  tempKey?: string;
+  uploadMethod?: string;
+  uploadUrl?: string;
+  uploadHeaders?: Record<string, string>;
+  blobPathname?: string;
+  blobClientToken?: string;
+}
+
 // 上传图片到服务器的辅助函数
 async function uploadImageToServer(
   file: File,
@@ -182,76 +206,189 @@ async function uploadImageToServer(
   let lastProgressUpdate = 0;
   const PROGRESS_UPDATE_INTERVAL = 100; // 100ms 更新一次
 
-  try {
+  const updateUploadProgressToast = (progress: number) => {
+    if (!toastInstance || !currentUploadToastId) return;
+    toastInstance.update(
+      currentUploadToastId,
+      "正在上传图片",
+      file.name,
+      undefined,
+      progress,
+    );
+  };
+
+  const uploadViaServer = async (): Promise<UploadApiResponse> => {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("mode", "lossy"); // 默认使用有损压缩
+    formData.append("mode", "lossy");
 
-    // 使用 XMLHttpRequest 以支持进度追踪
     const xhr = new XMLHttpRequest();
 
-    // 创建 Promise 包装 XHR
-    const uploadPromise = new Promise<{
-      success: boolean;
-      data?: { imageId: string; originalName: string };
-      message?: string;
-    }>((resolve, reject) => {
-      // 上传进度
+    return new Promise<UploadApiResponse>((resolve, reject) => {
       xhr.upload.addEventListener("progress", (e) => {
         if (e.lengthComputable && currentUploadToastId) {
           const now = Date.now();
-          // 节流：每 100ms 更新一次，避免过于频繁
-          if (now - lastProgressUpdate < PROGRESS_UPDATE_INTERVAL) {
-            return;
-          }
+          if (now - lastProgressUpdate < PROGRESS_UPDATE_INTERVAL) return;
           lastProgressUpdate = now;
 
           const progress = Math.round((e.loaded / e.total) * 100);
-          // 使用 update 方法更新 Toast 内容，传递进度参数
-          if (toastInstance && currentUploadToastId) {
-            toastInstance.update(
-              currentUploadToastId,
-              "正在上传图片",
-              file.name,
-              undefined, // 不改变类型
-              progress, // 传递进度
-            );
-          }
+          updateUploadProgressToast(progress);
         }
       });
 
-      // 请求完成
       xhr.addEventListener("load", () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const result = JSON.parse(xhr.responseText);
-            resolve(result);
-          } catch {
-            reject(new Error("解析响应失败"));
-          }
-        } else {
-          try {
-            const result = JSON.parse(xhr.responseText);
-            resolve(result);
-          } catch {
-            reject(new Error(`上传失败: ${xhr.statusText}`));
-          }
+        try {
+          const result = JSON.parse(xhr.responseText) as UploadApiResponse;
+          resolve(result);
+        } catch {
+          reject(new Error("解析响应失败"));
         }
       });
 
-      // 请求错误
       xhr.addEventListener("error", () => {
         reject(new Error("网络错误"));
       });
+      xhr.addEventListener("abort", () => {
+        reject(new Error("上传已取消"));
+      });
 
-      // 发送请求
       xhr.open("POST", "/admin/media/upload");
       xhr.setRequestHeader("Accept", "application/json");
       xhr.withCredentials = true;
       xhr.send(formData);
     });
+  };
 
-    const result = await uploadPromise;
+  try {
+    const initFormData = new FormData();
+    initFormData.append("action", "init");
+    initFormData.append("mode", "lossy");
+    initFormData.append("fileName", file.name);
+    initFormData.append("fileSize", String(file.size));
+    initFormData.append("contentType", file.type || "application/octet-stream");
+
+    const initResponse = await fetch("/admin/media/upload", {
+      method: "POST",
+      body: initFormData,
+      credentials: "include",
+    });
+    const initResult =
+      (await initResponse.json()) as UploadApiResponse<UploadInitData>;
+
+    if (!initResult.success || !initResult.data) {
+      throw new Error(initResult.message || "初始化上传失败");
+    }
+
+    const initData = initResult.data;
+    let result: UploadApiResponse;
+
+    if (initData.uploadStrategy === "server") {
+      result = await uploadViaServer();
+    } else {
+      if (!initData.tempKey) {
+        throw new Error("初始化返回缺少 tempKey");
+      }
+
+      if (initData.providerType === "AWS_S3") {
+        const uploadUrl = initData.uploadUrl;
+        if (!uploadUrl) {
+          throw new Error("初始化返回缺少 uploadUrl");
+        }
+
+        const xhr = new XMLHttpRequest();
+        await new Promise<void>((resolve, reject) => {
+          xhr.upload.addEventListener("progress", (e) => {
+            if (e.lengthComputable && currentUploadToastId) {
+              const now = Date.now();
+              if (now - lastProgressUpdate < PROGRESS_UPDATE_INTERVAL) return;
+              lastProgressUpdate = now;
+
+              const progress = Math.round((e.loaded / e.total) * 100);
+              updateUploadProgressToast(progress);
+            }
+          });
+
+          xhr.addEventListener("load", () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve();
+            } else {
+              reject(
+                new Error(`直传临时文件失败: ${xhr.status} ${xhr.statusText}`),
+              );
+            }
+          });
+          xhr.addEventListener("error", () => {
+            reject(new Error("直传临时文件网络错误"));
+          });
+          xhr.addEventListener("abort", () => {
+            reject(new Error("直传临时文件已取消"));
+          });
+
+          xhr.open(initData.uploadMethod || "PUT", uploadUrl);
+          for (const [headerName, headerValue] of Object.entries(
+            initData.uploadHeaders || {},
+          )) {
+            xhr.setRequestHeader(headerName, headerValue);
+          }
+          xhr.send(file);
+        });
+      } else if (initData.providerType === "VERCEL_BLOB") {
+        if (!initData.blobPathname || !initData.blobClientToken) {
+          throw new Error("初始化返回缺少 Blob 上传参数");
+        }
+
+        await putBlob(initData.blobPathname, file, {
+          access: "public",
+          token: initData.blobClientToken,
+          contentType: file.type || undefined,
+          multipart: true,
+          onUploadProgress: ({ loaded, total }) => {
+            if (total <= 0 || !currentUploadToastId) return;
+            const now = Date.now();
+            if (now - lastProgressUpdate < PROGRESS_UPDATE_INTERVAL) return;
+            lastProgressUpdate = now;
+
+            const progress = Math.round((loaded / total) * 100);
+            updateUploadProgressToast(progress);
+          },
+        });
+      } else {
+        throw new Error(`暂不支持的直传存储类型: ${initData.providerType}`);
+      }
+
+      if (toastInstance && currentUploadToastId) {
+        toastInstance.update(
+          currentUploadToastId,
+          "正在处理图片",
+          file.name,
+          undefined,
+          undefined,
+        );
+      }
+
+      const completeStorageProviderId = initData.storageProviderId;
+      if (!completeStorageProviderId) {
+        throw new Error("缺少存储提供商ID");
+      }
+
+      const completeFormData = new FormData();
+      completeFormData.append("action", "complete");
+      completeFormData.append("mode", "lossy");
+      completeFormData.append("tempKey", initData.tempKey);
+      completeFormData.append("originalName", file.name);
+      completeFormData.append(
+        "originalMimeType",
+        file.type || "application/octet-stream",
+      );
+      completeFormData.append("storageProviderId", completeStorageProviderId);
+
+      const completeResponse = await fetch("/admin/media/upload", {
+        method: "POST",
+        body: completeFormData,
+        credentials: "include",
+      });
+      result = (await completeResponse.json()) as UploadApiResponse;
+    }
 
     if (result.success && result.data) {
       // 上传成功，先预加载图片再替换
