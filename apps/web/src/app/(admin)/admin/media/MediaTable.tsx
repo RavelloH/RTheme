@@ -22,11 +22,14 @@ import type { MediaDetail, MediaListItem } from "@repo/shared-types/api/media";
 
 import {
   batchUpdateMedia,
+  type BreadcrumbItem,
   createFolder,
   deleteFolders,
   deleteMedia,
+  ensureUserHomeFolder,
+  type FolderItem,
   getMediaDetail,
-  getMediaList,
+  getMediaExplorerPage,
   moveItems,
 } from "@/actions/media";
 import MediaEditDialog from "@/app/(admin)/admin/media/MediaEditDialog";
@@ -34,7 +37,6 @@ import MediaGridView from "@/app/(admin)/admin/media/MediaGridView";
 import MediaPreviewDialog from "@/app/(admin)/admin/media/MediaPreviewDialog";
 import MediaTableView from "@/app/(admin)/admin/media/MediaTableView";
 import MoveDialog from "@/app/(admin)/admin/media/MoveDialog";
-import { useFolderNavigation } from "@/components/client/features/media/FolderNavigation";
 import RowGrid from "@/components/client/layout/RowGrid";
 import type { FilterConfig } from "@/components/ui/GridTable";
 import { useBroadcast } from "@/hooks/use-broadcast";
@@ -121,22 +123,13 @@ export default function MediaTable() {
   // 用户信息和文件夹导航
   const [userRole, setUserRole] = useState<string>("");
   const [userUid, setUserUid] = useState<number>(0);
+  const [username, setUsername] = useState<string>("");
   const [accessToken, setAccessToken] = useState<string>("");
-
-  const {
-    currentFolderId,
-    folders,
-    breadcrumbItems,
-    enterFolder,
-    goBack,
-    navigateToBreadcrumb,
-    loadFolders,
-    mediaFolderId,
-  } = useFolderNavigation({
-    accessToken,
-    userRole,
-    userUid,
-  });
+  const [currentFolderId, setCurrentFolderId] = useState<number | null>(null);
+  const [folders, setFolders] = useState<FolderItem[]>([]);
+  const [breadcrumbItems, setBreadcrumbItems] = useState<BreadcrumbItem[]>([
+    { id: null, name: "全部" },
+  ]);
 
   // 从 localStorage 获取用户信息
   useEffect(() => {
@@ -146,6 +139,7 @@ export default function MediaTable() {
         const userInfo = JSON.parse(userInfoStr);
         setUserRole(userInfo.role);
         setUserUid(userInfo.uid);
+        setUsername(userInfo.username || "");
         const accessTokenStr = localStorage.getItem("access_token");
         if (accessTokenStr) {
           setAccessToken(accessTokenStr);
@@ -208,12 +202,9 @@ export default function MediaTable() {
         hasReferences?: boolean;
         createdAtStart?: string;
         createdAtEnd?: string;
-        folderId?: number | null;
       } = {
         page,
         pageSize: currentPageSize,
-        // 搜索时不传 folderId，让后端返回所有匹配结果（会自动过滤权限）
-        folderId: searchQuery?.trim() ? undefined : mediaFolderId,
       };
 
       // 排序参数
@@ -311,14 +302,7 @@ export default function MediaTable() {
 
       return params;
     },
-    [
-      sortKey,
-      sortOrder,
-      searchQuery,
-      filterValues,
-      mediaFolderId,
-      currentPageSize,
-    ],
+    [sortKey, sortOrder, searchQuery, filterValues, currentPageSize],
   );
 
   // 获取数据
@@ -327,7 +311,7 @@ export default function MediaTable() {
       setLoading(true);
       try {
         const params = buildRequestParams(page);
-        const result = await getMediaList({
+        const result = await getMediaExplorerPage({
           page: params.page,
           pageSize: params.pageSize,
           sortBy: params.sortBy || "createdAt",
@@ -342,15 +326,21 @@ export default function MediaTable() {
           hasReferences: params.hasReferences,
           createdAtStart: params.createdAtStart,
           createdAtEnd: params.createdAtEnd,
-          folderId: params.folderId,
+          currentFolderId,
         });
 
         if (result.success && result.data) {
+          const media = result.data.media || [];
+
           if (append) {
-            setData((prev) => [...prev, ...result.data!]);
+            setData((prev) => [...prev, ...media]);
           } else {
-            setData(result.data);
+            setData(media);
           }
+          setFolders(result.data.folders || []);
+          setBreadcrumbItems(
+            result.data.breadcrumb || [{ id: null, name: "全部" }],
+          );
           setTotalRecords(result.meta?.total || 0);
           // 判断是否还有更多
           const pages = result.meta?.totalPages || 1;
@@ -363,7 +353,7 @@ export default function MediaTable() {
         setLoading(false);
       }
     },
-    [buildRequestParams],
+    [buildRequestParams, currentFolderId],
   );
 
   // 初始加载和参数变化时重新获取
@@ -376,7 +366,7 @@ export default function MediaTable() {
     searchQuery,
     filterValues,
     refreshTrigger,
-    mediaFolderId,
+    currentFolderId,
     resetData,
     fetchData,
   ]);
@@ -453,6 +443,60 @@ export default function MediaTable() {
     setSelectedItems({ mediaIds: new Set(), folderIds: new Set() });
   }, []);
 
+  // ===== 文件夹导航处理 =====
+  const enterFolder = useCallback(
+    async (folderId: number | null) => {
+      if (folderId === -1) {
+        if (!accessToken || !userUid) {
+          toast.error("用户信息未准备完成，请稍后重试");
+          return;
+        }
+
+        const result = await ensureUserHomeFolder({
+          access_token: accessToken,
+          userUid,
+          username,
+        });
+
+        if (result.success && result.data) {
+          setCurrentFolderId(result.data.id);
+          setCurrentPage(1);
+          clearSelection();
+        } else {
+          toast.error(result.message || "无法进入我的文件夹");
+        }
+        return;
+      }
+
+      setCurrentFolderId(folderId);
+      setCurrentPage(1);
+      clearSelection();
+    },
+    [accessToken, userUid, username, toast, clearSelection],
+  );
+
+  const goBack = useCallback(() => {
+    if (breadcrumbItems.length <= 1) return;
+    const parentItem = breadcrumbItems[breadcrumbItems.length - 2];
+    if (!parentItem) return;
+
+    setCurrentFolderId(parentItem.id);
+    setCurrentPage(1);
+    clearSelection();
+  }, [breadcrumbItems, clearSelection]);
+
+  const navigateToBreadcrumb = useCallback(
+    (index: number) => {
+      const item = breadcrumbItems[index];
+      if (!item) return;
+
+      setCurrentFolderId(item.id);
+      setCurrentPage(1);
+      clearSelection();
+    },
+    [breadcrumbItems, clearSelection],
+  );
+
   // 批量选择回调（用于框选）
   const handleBatchSelect = useCallback(
     (mediaIds: number[], folderIds: number[], append: boolean) => {
@@ -486,12 +530,11 @@ export default function MediaTable() {
         toast.success(`已移动 ${total} 个项目`);
         clearSelection();
         setRefreshTrigger((prev) => prev + 1);
-        await loadFolders();
       } else {
         toast.error(result.message || "移动失败");
       }
     },
-    [accessToken, toast, clearSelection, loadFolders],
+    [accessToken, toast, clearSelection],
   );
 
   // ===== 排序处理 =====
@@ -846,8 +889,6 @@ export default function MediaTable() {
         clearSelection();
         closeBatchDeleteDialog();
         setRefreshTrigger((prev) => prev + 1);
-        // 刷新文件夹列表
-        await loadFolders();
       }
     } catch (error) {
       console.error("Batch delete error:", error);
@@ -861,7 +902,6 @@ export default function MediaTable() {
     toast,
     clearSelection,
     closeBatchDeleteDialog,
-    loadFolders,
   ]);
 
   // ===== 移动操作 =====
@@ -900,8 +940,6 @@ export default function MediaTable() {
           clearSelection();
           closeMoveDialog();
           setRefreshTrigger((prev) => prev + 1);
-          // 刷新文件夹列表
-          await loadFolders();
         } else {
           toast.error(result.message || "移动失败");
         }
@@ -912,14 +950,7 @@ export default function MediaTable() {
         setIsSubmitting(false);
       }
     },
-    [
-      accessToken,
-      selectedItems,
-      toast,
-      clearSelection,
-      closeMoveDialog,
-      loadFolders,
-    ],
+    [accessToken, selectedItems, toast, clearSelection, closeMoveDialog],
   );
 
   // ===== 创建文件夹 =====
@@ -935,8 +966,7 @@ export default function MediaTable() {
 
         if (result.success) {
           toast.success(`文件夹 "${name}" 创建成功`);
-          // 刷新文件夹列表
-          await loadFolders();
+          setRefreshTrigger((prev) => prev + 1);
           return true;
         } else {
           toast.error(result.message || "创建文件夹失败");
@@ -950,7 +980,7 @@ export default function MediaTable() {
         setCreateFolderLoading(false);
       }
     },
-    [accessToken, currentFolderId, toast, loadFolders],
+    [accessToken, currentFolderId, toast],
   );
 
   // ===== 工具函数 =====
