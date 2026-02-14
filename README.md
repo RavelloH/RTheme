@@ -6,11 +6,11 @@
 
 // Next.js-powered next-gen dynamic horizontal CMS blog. //
 
-![GitHub last commit](https://img.shields.io/github/last-commit/RavelloH/RTheme?style=for-the-badge)
-![GitHub repo size](https://img.shields.io/github/repo-size/RavelloH/RTheme?style=for-the-badge)
-![GitHub Repo stars](https://img.shields.io/github/stars/RavelloH/RTheme?style=for-the-badge)
+![GitHub last commit](https://img.shields.io/github/last-commit/RavelloH/NeutralPress?style=for-the-badge)
+![GitHub repo size](https://img.shields.io/github/repo-size/RavelloH/NeutralPress?style=for-the-badge)
+![GitHub Repo stars](https://img.shields.io/github/stars/RavelloH/NeutralPress?style=for-the-badge)
 
-DEMO: [https://ravelloh.com](https://ravelloh.com) | DOCS: [https://neutralpress.net](https://neutralpress.net/docs)
+Demo: [https://ravelloh.com](https://ravelloh.com) | Docs: [https://neutralpress.net](https://neutralpress.net)
 
 </div>
 
@@ -29,7 +29,6 @@ WordPress 之所以流行，是因为它易于使用且功能强大。但其技�
 
 ———— 以静态博客的成本，享受动态 CMS 的便利。NeutralPress 致力于成为下一代内容管理系统，让人人都能免费建站。
 
----
 
 ## 设计
 
@@ -41,7 +40,6 @@ WordPress 之所以流行，是因为它易于使用且功能强大。但其技�
 
 ———— 保持中性，将情绪留给内容本身。**Neutral**，意为“**中性**”，象征着简洁与纯粹。
 
----
 
 ## 功能
 
@@ -73,7 +71,6 @@ WordPress 之所以流行，是因为它易于使用且功能强大。但其技�
 
 ———— AI 时代，仅靠内容是不够的。NeutralPress 不仅仅只是一个内容管理系统，也是你的私人社区、数字门户、个人知识库。
 
----
 
 ## 预览
 
@@ -167,17 +164,17 @@ WordPress 之所以流行，是因为它易于使用且功能强大。但其技�
 
 你可以前往 [https://ravelloh.com](https://ravelloh.com) 来体验其前台显示效果。
 
-或者，前往 [Code Sandbox](https://codesandbox.io/p/sandbox/github/ravelloh/neutralpress) 来直接运行一个实例 Demo。在初始化后的 NeutralPress 中直接注册账号后，即可前往后台体验完整的 CMS 功能。
+<!-- 或者，前往 [Code Sandbox](https://codesandbox.io/p/sandbox/github/ravelloh/neutralpress) 来直接运行一个实例 Demo。在初始化后的 NeutralPress 中直接注册账号后，即可前往后台体验完整的 CMS 功能。 -->
 
 不过，我们更推荐你直接部署一个 NeutralPress 实例，以便体验全部功能。选择任意一种部署方式，几分钟内即可完成部署并开始使用。
 
-（如果需要，你可以前往后台的“备份还原”页面，导出 Demo 的数据并导入到自己的实例中。参照 [备份与还原](https://neutralpress.net/docs/feature/backup) ）
+<!--（如果需要，你可以前往后台的“备份还原”页面，导出 Demo 的数据并导入到自己的实例中。参照 [备份与还原](https://neutralpress.net/docs/feature/backup) ） -->
 
----
 
-<!-- ## 快速开始 -->
+## 快速开始
 
-<!-- --- -->
+参考 [https://neutralpress.net/docs/deploy](https://neutralpress.net/docs/deploy)
+
 
 ## 贡献
 
