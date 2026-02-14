@@ -1,3 +1,13 @@
+import path from "node:path";
+
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { head as headBlob } from "@vercel/blob";
+import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 import type { NextRequest } from "next/server";
 
 import { logAuditEvent } from "@/lib/server/audit";
@@ -9,7 +19,7 @@ import {
   type ProcessMode,
   SUPPORTED_IMAGE_FORMATS,
 } from "@/lib/server/image-processor";
-import { deleteObject, uploadObject } from "@/lib/server/oss";
+import { buildObjectKey, deleteObject, uploadObject } from "@/lib/server/oss";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
@@ -22,6 +32,9 @@ import { getOrCreateVirtualStorage } from "@/lib/server/virtual-storage";
 const response = new ResponseBuilder("serverless");
 const DEFAULT_EXTERNAL_MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const EXTERNAL_FETCH_TIMEOUT_MS = 15000;
+const DIRECT_UPLOAD_SIGN_EXPIRES_SECONDS = 600;
+const DIRECT_UPLOAD_TOKEN_EXPIRES_MS = 10 * 60 * 1000;
+const TEMP_UPLOAD_PATH_TEMPLATE = "temp/{year}/{month}/{filename}";
 type ExternalImportMode = "record" | "transfer";
 type StorageProviderRecord = NonNullable<
   Awaited<ReturnType<typeof prisma.storageProvider.findFirst>>
@@ -29,6 +42,80 @@ type StorageProviderRecord = NonNullable<
 
 function getMediaHashLockKey(hash: string): bigint {
   return BigInt(`0x${hash.slice(0, 15)}`);
+}
+
+function normalizePosixPath(p: string): string {
+  const trimmed = p.trim();
+  const normalized = path.posix.normalize(trimmed || "/{filename}");
+  const withoutDots = normalized.replace(/^(\.\.(\/|\\|$))+/, "");
+  return withoutDots.replace(/^\/+/, "");
+}
+
+function joinStoragePrefix(prefix: string | undefined, key: string): string {
+  const normalizedKey = normalizePosixPath(key);
+  if (!prefix) return normalizedKey;
+
+  const normalizedPrefix = normalizePosixPath(prefix);
+  if (!normalizedPrefix) return normalizedKey;
+
+  if (
+    normalizedKey === normalizedPrefix ||
+    normalizedKey.startsWith(`${normalizedPrefix}/`)
+  ) {
+    return normalizedKey;
+  }
+
+  return normalizePosixPath(path.posix.join(normalizedPrefix, normalizedKey));
+}
+
+function parseUploadFileSize(raw: string | null): number | null {
+  if (!raw) return null;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return Math.floor(parsed);
+}
+
+async function readS3BodyWithLimit(
+  body: unknown,
+  maxBytes: number,
+): Promise<Buffer> {
+  if (!body) {
+    throw new Error("临时文件内容为空");
+  }
+
+  if (
+    typeof body === "object" &&
+    "transformToByteArray" in body &&
+    typeof body.transformToByteArray === "function"
+  ) {
+    const bytes = await body.transformToByteArray();
+    if (bytes.byteLength > maxBytes) {
+      throw new Error("文件大小超出限制");
+    }
+    return Buffer.from(bytes);
+  }
+
+  if (
+    typeof body === "object" &&
+    Symbol.asyncIterator in body &&
+    typeof body[Symbol.asyncIterator] === "function"
+  ) {
+    const chunks: Buffer[] = [];
+    let total = 0;
+
+    for await (const chunk of body as AsyncIterable<Uint8Array | Buffer>) {
+      const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      total += buf.length;
+      if (total > maxBytes) {
+        throw new Error("文件大小超出限制");
+      }
+      chunks.push(buf);
+    }
+
+    return Buffer.concat(chunks, total);
+  }
+
+  throw new Error("不支持的临时文件响应格式");
 }
 
 /**
@@ -102,6 +189,8 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     // 解析 multipart/form-data
     const formData = await request.formData();
+    const actionRaw = formData.get("action") as string | null;
+    const action = actionRaw?.trim().toLowerCase();
     const mode = (formData.get("mode") as string) || "lossy";
     const storageProviderId = formData.get("storageProviderId") as
       | string
@@ -116,7 +205,24 @@ export async function POST(request: NextRequest): Promise<Response> {
           : "record";
     const folderIdStr = formData.get("folderId") as string | null;
     let folderId = folderIdStr ? parseInt(folderIdStr, 10) : null;
-    const file = formData.get("file") as File | null;
+    let file = formData.get("file") as File | null;
+    const initFileName = (formData.get("fileName") as string | null)?.trim();
+    const initFileSize = parseUploadFileSize(
+      formData.get("fileSize") as string | null,
+    );
+    const initContentTypeRaw = (formData.get("contentType") as string | null)
+      ?.trim()
+      .toLowerCase();
+    const initContentType = initContentTypeRaw || "application/octet-stream";
+    const completeTempKey = (formData.get("tempKey") as string | null)?.trim();
+    const completeOriginalName = (
+      formData.get("originalName") as string | null
+    )?.trim();
+    const completeOriginalMimeType = (
+      formData.get("originalMimeType") as string | null
+    )
+      ?.trim()
+      .toLowerCase();
 
     // 如果没有指定文件夹，默认使用公共空间根目录
     if (folderId === null) {
@@ -209,6 +315,451 @@ export async function POST(request: NextRequest): Promise<Response> {
           message: "处理模式必须为: lossy/lossless/original",
         },
       }) as Response;
+    }
+
+    // ========================================================================
+    // 客户端直传初始化分支
+    // ========================================================================
+    if (action === "init") {
+      if (!initFileName || initFileSize === null) {
+        return response.badRequest({
+          message: "缺少上传初始化参数",
+          error: {
+            code: "INVALID_INIT_PARAMS",
+            message: "请提供 fileName 与 fileSize",
+          },
+        }) as Response;
+      }
+
+      let storageProvider: StorageProviderRecord | null = null;
+      if (storageProviderId) {
+        storageProvider = await prisma.storageProvider.findUnique({
+          where: { id: storageProviderId, isActive: true },
+        });
+
+        if (!storageProvider) {
+          return response.badRequest({
+            message: "指定的存储提供商不存在或未启用",
+            error: {
+              code: "INVALID_STORAGE",
+              message: "无效的存储提供商ID",
+            },
+          }) as Response;
+        }
+
+        if (user.role === "AUTHOR" && !storageProvider.isDefault) {
+          return response.forbidden({
+            message: "权限不足，只能使用默认存储提供商",
+            error: {
+              code: "FORBIDDEN",
+              message: "AUTHOR 角色只能使用默认存储",
+            },
+          }) as Response;
+        }
+      } else {
+        storageProvider = await prisma.storageProvider.findFirst({
+          where: { isDefault: true, isActive: true },
+        });
+      }
+
+      if (!storageProvider) {
+        return response.badRequest({
+          message: "未找到可用的存储提供商",
+          error: { code: "NO_STORAGE", message: "请先配置存储提供商" },
+        }) as Response;
+      }
+
+      if (initFileSize > storageProvider.maxFileSize) {
+        return response.badRequest({
+          message: `文件大小超出限制: ${(initFileSize / 1024 / 1024).toFixed(2)}MB，最大允许 ${(storageProvider.maxFileSize / 1024 / 1024).toFixed(2)}MB`,
+          error: {
+            code: "FILE_TOO_LARGE",
+            message: `文件大小超出限制，最大允许 ${(storageProvider.maxFileSize / 1024 / 1024).toFixed(2)}MB`,
+          },
+        }) as Response;
+      }
+
+      if (!initContentType.startsWith("image/")) {
+        return response.badRequest({
+          message: `不是图片文件: ${initContentType || "未知"}`,
+          error: {
+            code: "NOT_IMAGE",
+            message: "只能上传图片文件",
+          },
+        }) as Response;
+      }
+
+      if (mode !== "original") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (!SUPPORTED_IMAGE_FORMATS.includes(initContentType as any)) {
+          const ext = initFileName.split(".").pop()?.toLowerCase();
+          const isHeicHeif = ext === "heic" || ext === "heif";
+          return response.badRequest({
+            message: isHeicHeif
+              ? "HEIC/HEIF 格式请选择「保留原片」模式上传"
+              : `不支持的图片格式: ${initContentType || "未知"}，请选择「保留原片」模式`,
+            error: {
+              code: "UNSUPPORTED_FORMAT",
+              message: isHeicHeif
+                ? "HEIC/HEIF 格式请选择「保留原片」模式上传"
+                : "不支持的图片格式，请选择「保留原片」模式",
+            },
+          }) as Response;
+        }
+      }
+
+      if (
+        storageProvider.type === "LOCAL" ||
+        storageProvider.type === "GITHUB_PAGES" ||
+        storageProvider.type === "EXTERNAL_URL"
+      ) {
+        return response.ok({
+          data: {
+            uploadStrategy: "server",
+            providerType: storageProvider.type,
+            storageProviderId: storageProvider.id,
+          },
+        }) as Response;
+      }
+
+      const tempKey = buildObjectKey({
+        filename: initFileName,
+        pathTemplate: TEMP_UPLOAD_PATH_TEMPLATE,
+        ensureUniqueName: true,
+      });
+
+      if (storageProvider.type === "AWS_S3") {
+        const s3Config = (storageProvider.config || {}) as {
+          accessKeyId?: string;
+          secretAccessKey?: string;
+          region?: string;
+          bucket?: string;
+          endpoint?: string;
+          basePath?: string;
+          forcePathStyle?: boolean | string;
+        };
+
+        if (
+          !s3Config.accessKeyId ||
+          !s3Config.secretAccessKey ||
+          !s3Config.region ||
+          !s3Config.bucket
+        ) {
+          return response.badRequest({
+            message: "AWS_S3 配置不完整",
+            error: {
+              code: "INVALID_STORAGE_CONFIG",
+              message: "请检查 accessKeyId/secretAccessKey/region/bucket",
+            },
+          }) as Response;
+        }
+
+        const objectKey = joinStoragePrefix(s3Config.basePath, tempKey);
+        const s3Client = new S3Client({
+          region: s3Config.region,
+          endpoint: s3Config.endpoint,
+          forcePathStyle:
+            s3Config.forcePathStyle === true ||
+            s3Config.forcePathStyle === "true",
+          credentials: {
+            accessKeyId: s3Config.accessKeyId,
+            secretAccessKey: s3Config.secretAccessKey,
+          },
+        });
+
+        const uploadCommand = new PutObjectCommand({
+          Bucket: s3Config.bucket,
+          Key: objectKey,
+          ContentType: initContentType,
+        });
+        const uploadUrl = await getSignedUrl(
+          s3Client as unknown as Parameters<typeof getSignedUrl>[0],
+          uploadCommand as unknown as Parameters<typeof getSignedUrl>[1],
+          { expiresIn: DIRECT_UPLOAD_SIGN_EXPIRES_SECONDS },
+        );
+
+        return response.ok({
+          data: {
+            uploadStrategy: "client",
+            providerType: "AWS_S3",
+            storageProviderId: storageProvider.id,
+            tempKey,
+            uploadMethod: "PUT",
+            uploadUrl,
+            uploadHeaders: {
+              "Content-Type": initContentType,
+            },
+          },
+        }) as Response;
+      }
+
+      if (storageProvider.type === "VERCEL_BLOB") {
+        const blobConfig = (storageProvider.config || {}) as {
+          token?: string;
+          basePath?: string;
+        };
+
+        if (!blobConfig.token) {
+          return response.badRequest({
+            message: "VERCEL_BLOB 配置缺少 token",
+            error: {
+              code: "INVALID_STORAGE_CONFIG",
+              message: "请检查 Vercel Blob token 配置",
+            },
+          }) as Response;
+        }
+
+        const blobPathname = joinStoragePrefix(blobConfig.basePath, tempKey);
+        const blobClientToken = await generateClientTokenFromReadWriteToken({
+          token: blobConfig.token,
+          pathname: blobPathname,
+          maximumSizeInBytes: storageProvider.maxFileSize,
+          allowedContentTypes: ["image/*"],
+          validUntil: Date.now() + DIRECT_UPLOAD_TOKEN_EXPIRES_MS,
+          addRandomSuffix: false,
+          allowOverwrite: false,
+        });
+
+        return response.ok({
+          data: {
+            uploadStrategy: "client",
+            providerType: "VERCEL_BLOB",
+            storageProviderId: storageProvider.id,
+            tempKey,
+            blobPathname,
+            blobClientToken,
+          },
+        }) as Response;
+      }
+
+      return response.ok({
+        data: {
+          uploadStrategy: "server",
+          providerType: storageProvider.type,
+          storageProviderId: storageProvider.id,
+        },
+      }) as Response;
+    }
+
+    // ========================================================================
+    // 客户端直传完成分支：下载 temp 后复用原上传流程
+    // ========================================================================
+    if (action === "complete") {
+      if (!completeTempKey) {
+        return response.badRequest({
+          message: "缺少 tempKey",
+          error: {
+            code: "INVALID_COMPLETE_PARAMS",
+            message: "请提供 tempKey",
+          },
+        }) as Response;
+      }
+
+      if (!storageProviderId) {
+        return response.badRequest({
+          message: "缺少存储提供商ID",
+          error: {
+            code: "INVALID_COMPLETE_PARAMS",
+            message: "complete 模式必须提供 storageProviderId",
+          },
+        }) as Response;
+      }
+
+      const storageProvider = await prisma.storageProvider.findUnique({
+        where: { id: storageProviderId, isActive: true },
+      });
+
+      if (!storageProvider) {
+        return response.badRequest({
+          message: "指定的存储提供商不存在或未启用",
+          error: {
+            code: "INVALID_STORAGE",
+            message: "无效的存储提供商ID",
+          },
+        }) as Response;
+      }
+
+      if (user.role === "AUTHOR" && !storageProvider.isDefault) {
+        return response.forbidden({
+          message: "权限不足，只能使用默认存储提供商",
+          error: {
+            code: "FORBIDDEN",
+            message: "AUTHOR 角色只能使用默认存储",
+          },
+        }) as Response;
+      }
+
+      if (storageProvider.type === "LOCAL") {
+        return response.badRequest({
+          message: "本地存储请使用直接上传模式",
+          error: {
+            code: "UNSUPPORTED_COMPLETE_MODE",
+            message: "LOCAL 存储不支持 complete 流程",
+          },
+        }) as Response;
+      }
+
+      let tempBuffer: Buffer;
+      let tempMimeType =
+        completeOriginalMimeType ||
+        initContentType ||
+        "application/octet-stream";
+
+      try {
+        if (storageProvider.type === "AWS_S3") {
+          const s3Config = (storageProvider.config || {}) as {
+            accessKeyId?: string;
+            secretAccessKey?: string;
+            region?: string;
+            bucket?: string;
+            endpoint?: string;
+            basePath?: string;
+            forcePathStyle?: boolean | string;
+          };
+
+          if (
+            !s3Config.accessKeyId ||
+            !s3Config.secretAccessKey ||
+            !s3Config.region ||
+            !s3Config.bucket
+          ) {
+            return response.badRequest({
+              message: "AWS_S3 配置不完整",
+              error: {
+                code: "INVALID_STORAGE_CONFIG",
+                message: "请检查 accessKeyId/secretAccessKey/region/bucket",
+              },
+            }) as Response;
+          }
+
+          const objectKey = joinStoragePrefix(
+            s3Config.basePath,
+            completeTempKey,
+          );
+          const s3Client = new S3Client({
+            region: s3Config.region,
+            endpoint: s3Config.endpoint,
+            forcePathStyle:
+              s3Config.forcePathStyle === true ||
+              s3Config.forcePathStyle === "true",
+            credentials: {
+              accessKeyId: s3Config.accessKeyId,
+              secretAccessKey: s3Config.secretAccessKey,
+            },
+          });
+
+          const object = await s3Client.send(
+            new GetObjectCommand({
+              Bucket: s3Config.bucket,
+              Key: objectKey,
+            }),
+          );
+
+          if (
+            typeof object.ContentLength === "number" &&
+            object.ContentLength > storageProvider.maxFileSize
+          ) {
+            return response.badRequest({
+              message: `文件大小超出限制: ${(object.ContentLength / 1024 / 1024).toFixed(2)}MB，最大允许 ${(storageProvider.maxFileSize / 1024 / 1024).toFixed(2)}MB`,
+              error: {
+                code: "FILE_TOO_LARGE",
+                message: `文件大小超出限制，最大允许 ${(storageProvider.maxFileSize / 1024 / 1024).toFixed(2)}MB`,
+              },
+            }) as Response;
+          }
+
+          tempBuffer = await readS3BodyWithLimit(
+            object.Body,
+            storageProvider.maxFileSize,
+          );
+          if (object.ContentType) {
+            tempMimeType =
+              object.ContentType.split(";")[0]?.trim() || tempMimeType;
+          }
+        } else if (storageProvider.type === "VERCEL_BLOB") {
+          const blobConfig = (storageProvider.config || {}) as {
+            token?: string;
+            basePath?: string;
+          };
+
+          if (!blobConfig.token) {
+            return response.badRequest({
+              message: "VERCEL_BLOB 配置缺少 token",
+              error: {
+                code: "INVALID_STORAGE_CONFIG",
+                message: "请检查 Vercel Blob token 配置",
+              },
+            }) as Response;
+          }
+
+          const blobPathname = joinStoragePrefix(
+            blobConfig.basePath,
+            completeTempKey,
+          );
+          const blobMeta = await headBlob(blobPathname, {
+            token: blobConfig.token,
+          });
+          const blobResponse = await fetch(blobMeta.downloadUrl, {
+            method: "GET",
+          });
+          if (!blobResponse.ok) {
+            throw new Error(
+              `无法读取临时文件: HTTP ${blobResponse.status} ${blobResponse.statusText}`,
+            );
+          }
+
+          const contentTypeHeader = blobResponse.headers.get("content-type");
+          if (contentTypeHeader) {
+            tempMimeType =
+              contentTypeHeader.split(";")[0]?.trim() || tempMimeType;
+          }
+          tempBuffer = await readResponseBufferWithLimit(
+            blobResponse,
+            storageProvider.maxFileSize,
+          );
+        } else {
+          return response.badRequest({
+            message: "该存储类型不支持 complete 流程",
+            error: {
+              code: "UNSUPPORTED_COMPLETE_MODE",
+              message: `当前存储类型 ${storageProvider.type} 暂不支持 complete`,
+            },
+          }) as Response;
+        }
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "读取临时文件失败";
+        return response.badRequest({
+          message: errorMessage,
+          error: {
+            code: "TEMP_FILE_READ_FAILED",
+            message: errorMessage,
+          },
+        }) as Response;
+      }
+
+      const { after } = await import("next/server");
+      after(async () => {
+        await deleteObject({
+          type: storageProvider.type,
+          baseUrl: storageProvider.baseUrl,
+          pathTemplate: storageProvider.pathTemplate,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          config: storageProvider.config as any,
+          key: completeTempKey,
+        }).catch((error) => {
+          console.error("Delete temp object failed:", error);
+        });
+      });
+
+      file = new File(
+        [new Uint8Array(tempBuffer)],
+        completeOriginalName || initFileName || `upload-${Date.now()}.bin`,
+        {
+          type: tempMimeType,
+          lastModified: Date.now(),
+        },
+      );
     }
 
     // ========================================================================

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { put as putBlob } from "@vercel/blob/client";
 
 export type ProcessMode = "lossy" | "lossless" | "original";
 
@@ -60,6 +61,24 @@ interface UseMediaUploadReturn {
   getDisplayFileName: (uploadFile: UploadFile) => string;
   handleImageError: (id: string) => void;
   clearFiles: () => void;
+}
+
+interface UploadApiResponse<TData = UploadMediaResult> {
+  success: boolean;
+  data?: TData;
+  message?: string;
+}
+
+interface UploadInitData {
+  uploadStrategy: "client" | "server";
+  providerType: string;
+  storageProviderId?: string;
+  tempKey?: string;
+  uploadMethod?: string;
+  uploadUrl?: string;
+  uploadHeaders?: Record<string, string>;
+  blobPathname?: string;
+  blobClientToken?: string;
 }
 
 /**
@@ -186,8 +205,6 @@ export function useMediaUpload(
       );
 
       try {
-        const formData = new FormData();
-
         // 如果有自定义文件名，创建新的 File 对象
         let fileToUpload = uploadFile.file;
         if (uploadFile.customName) {
@@ -197,94 +214,225 @@ export function useMediaUpload(
           });
         }
 
-        formData.append("file", fileToUpload);
-        formData.append("mode", mode);
+        const uploadViaServer = async (): Promise<UploadApiResponse> => {
+          const formData = new FormData();
+          formData.append("file", fileToUpload);
+          formData.append("mode", mode);
 
-        // 如果选择了存储提供商，添加到 FormData
-        if (storageId) {
-          formData.append("storageProviderId", storageId);
-        }
+          if (storageId) {
+            formData.append("storageProviderId", storageId);
+          }
 
-        // 如果选择了文件夹，添加到 FormData
-        if (folderId) {
-          formData.append("folderId", String(folderId));
-        }
+          if (folderId) {
+            formData.append("folderId", String(folderId));
+          }
 
-        // 使用 XMLHttpRequest 以支持进度追踪
-        const xhr = new XMLHttpRequest();
+          const xhr = new XMLHttpRequest();
 
-        // 创建 Promise 包装 XHR
-        const uploadPromise = new Promise<{
-          success: boolean;
-          data?: UploadMediaResult;
-          message?: string;
-        }>((resolve, reject) => {
-          // 上传进度
-          xhr.upload.addEventListener("progress", (e) => {
-            if (e.lengthComputable) {
-              const progress = Math.round((e.loaded / e.total) * 100);
+          return new Promise<UploadApiResponse>((resolve, reject) => {
+            xhr.upload.addEventListener("progress", (e) => {
+              if (e.lengthComputable) {
+                const progress = Math.round((e.loaded / e.total) * 100);
+                setFiles((prev) =>
+                  prev.map((f) =>
+                    f.id === uploadFile.id
+                      ? { ...f, uploadProgress: progress }
+                      : f,
+                  ),
+                );
+              }
+            });
+
+            xhr.upload.addEventListener("load", () => {
               setFiles((prev) =>
                 prev.map((f) =>
                   f.id === uploadFile.id
-                    ? { ...f, uploadProgress: progress }
+                    ? {
+                        ...f,
+                        status: "processing" as const,
+                        uploadProgress: 100,
+                      }
                     : f,
                 ),
               );
-            }
-          });
+            });
 
-          // 上传完成（服务器处理中）
-          xhr.upload.addEventListener("load", () => {
-            setFiles((prev) =>
-              prev.map((f) =>
-                f.id === uploadFile.id
-                  ? {
-                      ...f,
-                      status: "processing" as const,
-                      uploadProgress: 100,
-                    }
-                  : f,
-              ),
-            );
-          });
-
-          // 请求完成
-          xhr.addEventListener("load", () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
+            xhr.addEventListener("load", () => {
               try {
-                const result = JSON.parse(xhr.responseText);
+                const result = JSON.parse(
+                  xhr.responseText,
+                ) as UploadApiResponse;
                 resolve(result);
               } catch {
                 reject(new Error("解析响应失败"));
               }
-            } else {
-              try {
-                const result = JSON.parse(xhr.responseText);
-                resolve(result);
-              } catch {
-                reject(new Error(`上传失败: ${xhr.statusText}`));
-              }
-            }
-          });
+            });
 
-          // 请求错误
-          xhr.addEventListener("error", () => {
-            reject(new Error("网络错误"));
-          });
+            xhr.addEventListener("error", () => reject(new Error("网络错误")));
+            xhr.addEventListener("abort", () =>
+              reject(new Error("上传已取消")),
+            );
 
-          // 请求中止
-          xhr.addEventListener("abort", () => {
-            reject(new Error("上传已取消"));
+            xhr.open("POST", "/admin/media/upload");
+            xhr.setRequestHeader("Accept", "application/json");
+            xhr.withCredentials = true;
+            xhr.send(formData);
           });
+        };
 
-          // 发送请求
-          xhr.open("POST", "/admin/media/upload");
-          xhr.setRequestHeader("Accept", "application/json");
-          xhr.withCredentials = true;
-          xhr.send(formData);
+        const initFormData = new FormData();
+        initFormData.append("action", "init");
+        initFormData.append("mode", mode);
+        initFormData.append("fileName", fileToUpload.name);
+        initFormData.append("fileSize", String(fileToUpload.size));
+        initFormData.append(
+          "contentType",
+          fileToUpload.type || "application/octet-stream",
+        );
+        if (storageId) {
+          initFormData.append("storageProviderId", storageId);
+        }
+        if (folderId) {
+          initFormData.append("folderId", String(folderId));
+        }
+
+        const initResponse = await fetch("/admin/media/upload", {
+          method: "POST",
+          body: initFormData,
+          credentials: "include",
         });
+        const initResult =
+          (await initResponse.json()) as UploadApiResponse<UploadInitData>;
 
-        const result = await uploadPromise;
+        let result: UploadApiResponse;
+
+        if (!initResult.success || !initResult.data) {
+          throw new Error(initResult.message || "初始化上传失败");
+        }
+
+        const initData = initResult.data;
+
+        if (initData.uploadStrategy === "server") {
+          result = await uploadViaServer();
+        } else {
+          if (!initData.tempKey) {
+            throw new Error("初始化返回缺少 tempKey");
+          }
+
+          if (initData.providerType === "AWS_S3") {
+            const uploadUrl = initData.uploadUrl;
+            if (!uploadUrl) {
+              throw new Error("初始化返回缺少 uploadUrl");
+            }
+            const xhr = new XMLHttpRequest();
+            await new Promise<void>((resolve, reject) => {
+              xhr.upload.addEventListener("progress", (e) => {
+                if (e.lengthComputable) {
+                  const progress = Math.round((e.loaded / e.total) * 100);
+                  setFiles((prev) =>
+                    prev.map((f) =>
+                      f.id === uploadFile.id
+                        ? { ...f, uploadProgress: progress }
+                        : f,
+                    ),
+                  );
+                }
+              });
+
+              xhr.addEventListener("load", () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                  resolve();
+                } else {
+                  reject(
+                    new Error(
+                      `直传临时文件失败: ${xhr.status} ${xhr.statusText}`,
+                    ),
+                  );
+                }
+              });
+              xhr.addEventListener("error", () =>
+                reject(new Error("直传临时文件网络错误")),
+              );
+              xhr.addEventListener("abort", () =>
+                reject(new Error("直传临时文件已取消")),
+              );
+
+              xhr.open(initData.uploadMethod || "PUT", uploadUrl);
+              for (const [headerName, headerValue] of Object.entries(
+                initData.uploadHeaders || {},
+              )) {
+                xhr.setRequestHeader(headerName, headerValue);
+              }
+              xhr.send(fileToUpload);
+            });
+          } else if (initData.providerType === "VERCEL_BLOB") {
+            if (!initData.blobPathname || !initData.blobClientToken) {
+              throw new Error("初始化返回缺少 Blob 上传参数");
+            }
+
+            await putBlob(initData.blobPathname, fileToUpload, {
+              access: "public",
+              token: initData.blobClientToken,
+              contentType: fileToUpload.type || undefined,
+              multipart: true,
+              onUploadProgress: ({ loaded, total }) => {
+                if (total > 0) {
+                  const progress = Math.round((loaded / total) * 100);
+                  setFiles((prev) =>
+                    prev.map((f) =>
+                      f.id === uploadFile.id
+                        ? { ...f, uploadProgress: progress }
+                        : f,
+                    ),
+                  );
+                }
+              },
+            });
+          } else {
+            throw new Error(`暂不支持的直传存储类型: ${initData.providerType}`);
+          }
+
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === uploadFile.id
+                ? {
+                    ...f,
+                    status: "processing" as const,
+                    uploadProgress: 100,
+                  }
+                : f,
+            ),
+          );
+
+          const completeFormData = new FormData();
+          completeFormData.append("action", "complete");
+          completeFormData.append("mode", mode);
+          completeFormData.append("tempKey", initData.tempKey);
+          completeFormData.append("originalName", fileToUpload.name);
+          completeFormData.append(
+            "originalMimeType",
+            fileToUpload.type || "application/octet-stream",
+          );
+          const completeStorageProviderId =
+            storageId || initData.storageProviderId;
+          if (!completeStorageProviderId) {
+            throw new Error("缺少存储提供商ID");
+          }
+          completeFormData.append(
+            "storageProviderId",
+            completeStorageProviderId,
+          );
+          if (folderId) {
+            completeFormData.append("folderId", String(folderId));
+          }
+
+          const completeResponse = await fetch("/admin/media/upload", {
+            method: "POST",
+            body: completeFormData,
+            credentials: "include",
+          });
+          result = (await completeResponse.json()) as UploadApiResponse;
+        }
 
         if (result.success && result.data) {
           // 更新文件状态为成功
@@ -321,13 +469,15 @@ export function useMediaUpload(
         }
       } catch (error) {
         console.error(`上传文件失败: ${uploadFile.file.name}`, error);
+        const errorMessage =
+          error instanceof Error ? error.message : "上传失败，请稍后重试";
         setFiles((prev) =>
           prev.map((f) =>
             f.id === uploadFile.id
               ? {
                   ...f,
                   status: "error" as const,
-                  error: "上传失败，请稍后重试",
+                  error: errorMessage,
                   uploadProgress: undefined,
                 }
               : f,

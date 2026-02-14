@@ -67,6 +67,26 @@ https://xxxxxxxxxxxxxxxxxxx.r2.cloudflarestorage.com/yyyyyyyy
 </div>
 <div className="fd-step">
 
+### 5. 设置 CORS 规则
+
+最后一步，设置 CORS 规则。进入存储桶的设置页面，找到 CORS 规则，添加以下规则：
+
+```json
+[
+  {
+    "AllowedOrigins": ["http://localhost:3000", "https://你的正式域名"],
+    "AllowedMethods": ["PUT", "GET", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+（如果不本地开发，可以去掉 `http://localhost:3000` 这个来源）
+
+</div><div className="fd-step">
+
 ### 5. 在 NeutralPress 中配置 S3 存储
 
 分别填入上述五种字段：`基础 URL`、`endpoint`、`bucket`、`accessKeyId` 和 `secretAccessKey`。
