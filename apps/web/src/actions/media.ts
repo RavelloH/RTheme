@@ -2029,6 +2029,96 @@ export interface EnsureUserHomeFolderParams {
   username: string;
 }
 
+export interface GetMediaExplorerPageParams
+  extends Omit<GetMediaList, "folderId"> {
+  currentFolderId?: number | null;
+}
+
+export interface MediaExplorerPageData {
+  media: MediaListItem[];
+  folders: FolderItem[];
+  breadcrumb: BreadcrumbItem[];
+  currentFolderId: number | null;
+  mediaFolderId: number | null;
+  publicRootId: number | null;
+}
+
+function normalizeFoldersForMediaExplorer(
+  folders: FolderItem[],
+  currentFolderId: number | null,
+  currentUserUid: number,
+): FolderItem[] {
+  let processedFolders = [...folders];
+
+  // 根目录：隐藏 ROOT_PUBLIC（其文件会在媒体列表中显示）
+  if (currentFolderId === null) {
+    processedFolders = processedFolders
+      .filter((folder) => folder.systemType !== "ROOT_PUBLIC")
+      .map((folder) => {
+        if (
+          folder.systemType === "USER_HOME" &&
+          folder.userUid === currentUserUid
+        ) {
+          return { ...folder, name: "我的文件夹" };
+        }
+        return folder;
+      });
+
+    // 根目录保底展示“我的文件夹”入口（虚拟）
+    const hasUserHome = processedFolders.some(
+      (folder) =>
+        folder.systemType === "USER_HOME" && folder.userUid === currentUserUid,
+    );
+
+    if (!hasUserHome) {
+      processedFolders.unshift({
+        id: -1,
+        name: "我的文件夹",
+        systemType: "USER_HOME",
+        userUid: currentUserUid,
+        parentId: null,
+        path: "",
+        depth: 0,
+        order: -1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        fileCount: 0,
+      });
+    }
+
+    processedFolders.sort((a, b) => {
+      const aIsMyHome =
+        a.systemType === "USER_HOME" && a.userUid === currentUserUid;
+      const bIsMyHome =
+        b.systemType === "USER_HOME" && b.userUid === currentUserUid;
+      if (aIsMyHome && !bIsMyHome) return -1;
+      if (bIsMyHome && !aIsMyHome) return 1;
+
+      if (
+        a.systemType === "ROOT_USERS" &&
+        b.systemType !== "ROOT_USERS" &&
+        !bIsMyHome
+      ) {
+        return -1;
+      }
+      if (
+        b.systemType === "ROOT_USERS" &&
+        a.systemType !== "ROOT_USERS" &&
+        !aIsMyHome
+      ) {
+        return 1;
+      }
+
+      return a.order - b.order;
+    });
+
+    return processedFolders;
+  }
+
+  processedFolders.sort((a, b) => a.order - b.order);
+  return processedFolders;
+}
+
 // ============================================================================
 // 文件夹相关 Server Actions
 // ============================================================================
@@ -2404,6 +2494,190 @@ export async function getFolderBreadcrumb(
     });
   } catch (error) {
     console.error("GetFolderBreadcrumb error:", error);
+    return response.serverError();
+  }
+}
+
+/*
+  getMediaExplorerPage - 聚合获取媒体页数据（文件夹 + 面包屑 + 媒体列表）
+*/
+export async function getMediaExplorerPage(
+  params: GetMediaExplorerPageParams,
+  serverConfig: { environment: "serverless" },
+): Promise<NextResponse<ApiResponse<MediaExplorerPageData | null>>>;
+export async function getMediaExplorerPage(
+  params: GetMediaExplorerPageParams,
+  serverConfig?: ActionConfig,
+): Promise<ApiResponse<MediaExplorerPageData | null>>;
+export async function getMediaExplorerPage(
+  {
+    access_token,
+    page = 1,
+    pageSize = 25,
+    sortBy = "createdAt",
+    sortOrder = "desc",
+    search,
+    mediaType,
+    userUid,
+    sizeMin,
+    sizeMax,
+    inGallery,
+    isOptimized,
+    createdAtStart,
+    createdAtEnd,
+    hasReferences,
+    currentFolderId = null,
+  }: GetMediaExplorerPageParams,
+  serverConfig?: ActionConfig,
+): Promise<ActionResult<MediaExplorerPageData | null>> {
+  const response = new ResponseBuilder(
+    serverConfig?.environment || "serveraction",
+  );
+
+  if (!(await limitControl(await headers(), "getMediaExplorerPage"))) {
+    return response.tooManyRequests();
+  }
+
+  const validationError = validateData(
+    {
+      access_token,
+      page,
+      pageSize,
+      sortBy,
+      sortOrder,
+      search,
+      mediaType,
+      userUid,
+      sizeMin,
+      sizeMax,
+      inGallery,
+      isOptimized,
+      createdAtStart,
+      createdAtEnd,
+      hasReferences,
+      folderId: currentFolderId,
+    },
+    GetMediaListSchema,
+  );
+
+  if (validationError) return response.badRequest(validationError);
+
+  // 身份验证
+  const user = await authVerify({
+    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    accessToken: access_token,
+  });
+
+  if (!user) {
+    return response.unauthorized();
+  }
+
+  try {
+    const foldersResult = await getAccessibleFolders({
+      access_token: access_token || "",
+      userRole: user.role,
+      userUid: user.uid,
+      parentId: currentFolderId,
+    });
+
+    if (!foldersResult.success) {
+      return response.serverError({
+        message: foldersResult.message || "获取文件夹信息失败",
+      });
+    }
+
+    const rawFolders = foldersResult.data || [];
+    const publicRootId =
+      currentFolderId === null
+        ? ((foldersResult.meta as { publicRootId?: number } | undefined)
+            ?.publicRootId ?? null)
+        : null;
+
+    const folders = normalizeFoldersForMediaExplorer(
+      rawFolders,
+      currentFolderId,
+      user.uid,
+    );
+
+    const shouldSearchGlobal = Boolean(search?.trim());
+    const mediaFolderId =
+      currentFolderId === null ? publicRootId : currentFolderId;
+    const effectiveFolderId = shouldSearchGlobal ? undefined : mediaFolderId;
+
+    if (
+      !shouldSearchGlobal &&
+      currentFolderId === null &&
+      mediaFolderId === null
+    ) {
+      return response.ok({
+        data: {
+          media: [],
+          folders,
+          breadcrumb: [{ id: null, name: "全部" }],
+          currentFolderId,
+          mediaFolderId,
+          publicRootId,
+        },
+        meta: {
+          total: 0,
+          page,
+          pageSize,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: page > 1,
+        },
+      });
+    }
+
+    const [breadcrumbResult, mediaResult] = await Promise.all([
+      getFolderBreadcrumb({
+        access_token: access_token || "",
+        folderId: currentFolderId,
+      }),
+      getMediaList({
+        access_token,
+        page,
+        pageSize,
+        sortBy,
+        sortOrder,
+        search,
+        mediaType,
+        userUid,
+        sizeMin,
+        sizeMax,
+        inGallery,
+        isOptimized,
+        createdAtStart,
+        createdAtEnd,
+        hasReferences,
+        folderId: effectiveFolderId,
+      }),
+    ]);
+
+    if (!mediaResult.success) {
+      return response.serverError({
+        message: mediaResult.message || "获取媒体数据失败",
+      });
+    }
+
+    const fallbackBreadcrumb: BreadcrumbItem[] = [{ id: null, name: "全部" }];
+    const breadcrumb = breadcrumbResult.success
+      ? (breadcrumbResult.data ?? fallbackBreadcrumb)
+      : fallbackBreadcrumb;
+
+    return response.ok({
+      data: {
+        media: mediaResult.data || [],
+        folders,
+        breadcrumb,
+        currentFolderId,
+        mediaFolderId,
+        publicRootId,
+      },
+      meta: mediaResult.meta as PaginationMeta,
+    });
+  } catch (error) {
+    console.error("GetMediaExplorerPage error:", error);
     return response.serverError();
   }
 }
