@@ -2,6 +2,22 @@ import { cpus as osCpus } from "node:os";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = () => {
+  const tracingExcludes = [
+    "**/@esbuild/linux-x64/**",
+    "**/@esbuild/linux-arm64/**",
+    "node_modules/typescript/**/*",
+    "node_modules/eslint/**/*",
+    "node_modules/@types/**/*",
+    "node_modules/webpack/**/*",
+    "node_modules/terser/**/*",
+    "node_modules/esbuild/**/*",
+    "node_modules/@esbuild/**/*",
+    "node_modules/postcss/**/*",
+    "**/*.map",
+    "**/*.d.ts",
+    "./.cache/**/*",
+  ];
+
   return {
     images: {
       remotePatterns: [
@@ -48,24 +64,7 @@ const nextConfig = () => {
     },
     allowedDevOrigins: ["198.18.0.1"],
     outputFileTracingExcludes: {
-      "*": [
-        "node_modules/@img/sharp-libvips-linux*",
-        "node_modules/@img/sharp-linux*",
-        "node_modules/sharp/vendor/**",
-        "**/@esbuild/linux-x64/**",
-        "**/@esbuild/linux-arm64/**",
-        "node_modules/typescript/**/*",
-        "node_modules/eslint/**/*",
-        "node_modules/@types/**/*",
-        "node_modules/webpack/**/*",
-        "node_modules/terser/**/*",
-        "node_modules/esbuild/**/*",
-        "node_modules/@esbuild/**/*",
-        "node_modules/postcss/**/*",
-        "**/*.map",
-        "**/*.d.ts",
-        "./.cache/**/*",
-      ],
+      "*": tracingExcludes,
     },
     async rewrites() {
       return [
