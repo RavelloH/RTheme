@@ -185,7 +185,17 @@ function invalidateReferencedContentCaches(
   }
 }
 
-function sanitizeExifForClient(exif: unknown): unknown {
+interface SanitizeExifOptions {
+  keepRaw?: boolean;
+  keepGps?: boolean;
+}
+
+function sanitizeExifForClient(
+  exif: unknown,
+  options: SanitizeExifOptions = {},
+): unknown {
+  const { keepRaw = false, keepGps = false } = options;
+
   if (!exif || typeof exif !== "object" || Array.isArray(exif)) {
     return exif;
   }
@@ -195,7 +205,10 @@ function sanitizeExifForClient(exif: unknown): unknown {
 
   for (const [key, value] of Object.entries(exifObj)) {
     const lowered = key.toLowerCase();
-    if (lowered === "raw" || lowered.includes("gps")) {
+    if (!keepRaw && lowered === "raw") {
+      continue;
+    }
+    if (!keepGps && lowered.includes("gps")) {
       continue;
     }
     safeExif[key] = value;
@@ -805,7 +818,10 @@ export async function getMediaDetail(
       altText: media.altText,
       blur: media.blur,
       thumbnails: media.thumbnails,
-      exif: sanitizeExifForClient(media.exif),
+      exif: sanitizeExifForClient(media.exif, {
+        keepRaw: true,
+        keepGps: true,
+      }),
       inGallery: media.galleryPhoto !== null,
       galleryPhoto: media.galleryPhoto
         ? {
