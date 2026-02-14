@@ -34,6 +34,7 @@ export default function PageTransition({ children }: PageTransitionProps) {
   const gsapTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const lastScrollTop = useRef<number>(0);
   const hasScrollBaseline = useRef(false);
+  const hasUserScrollIntent = useRef(false);
   const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
   const isMobile = useMobile();
   const setFooterVisible = useFooterStore((state) => state.setFooterVisible);
@@ -247,6 +248,61 @@ export default function PageTransition({ children }: PageTransitionProps) {
     };
   }, []);
 
+  // 仅在检测到用户真实滚动意图后，才允许“向下滚动隐藏 footer”
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+
+    const markUserScrollIntent = () => {
+      hasUserScrollIntent.current = true;
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+
+      const scrollKeys = new Set([
+        "Space",
+        "ArrowDown",
+        "ArrowUp",
+        "PageDown",
+        "PageUp",
+        "End",
+        "Home",
+      ]);
+      if (!scrollKeys.has(event.code)) return;
+
+      const activeElement = document.activeElement as HTMLElement | null;
+      if (!activeElement) {
+        hasUserScrollIntent.current = true;
+        return;
+      }
+
+      const tagName = activeElement.tagName;
+      const isEditable =
+        activeElement.isContentEditable ||
+        tagName === "INPUT" ||
+        tagName === "TEXTAREA" ||
+        tagName === "SELECT";
+      if (!isEditable) {
+        hasUserScrollIntent.current = true;
+      }
+    };
+
+    scrollContainer.addEventListener("wheel", markUserScrollIntent, {
+      passive: true,
+    });
+    scrollContainer.addEventListener("touchstart", markUserScrollIntent, {
+      passive: true,
+    });
+    document.addEventListener("keydown", handleKeyDown, { passive: true });
+
+    return () => {
+      scrollContainer.removeEventListener("wheel", markUserScrollIntent);
+      scrollContainer.removeEventListener("touchstart", markUserScrollIntent);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
   // 滚动监听，控制 footer 显示/隐藏
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
@@ -290,8 +346,12 @@ export default function PageTransition({ children }: PageTransitionProps) {
       const isNearBottom = scrollBottom < 50;
 
       if (isScrollingDown && !isNearBottom) {
-        // 向下滚动且不在底部：隐藏 footer
-        setFooterVisible(false);
+        // 仅在用户主动滚动后才隐藏，避免初始化阶段误隐藏
+        if (hasUserScrollIntent.current) {
+          setFooterVisible(false);
+        } else {
+          setFooterVisible(true);
+        }
       } else if (isScrollingUp || isNearBottom) {
         // 向上滚动或到达底部：显示 footer
         setFooterVisible(true);
@@ -324,6 +384,7 @@ export default function PageTransition({ children }: PageTransitionProps) {
     if (!isInitialLoadComplete) return;
 
     setFooterVisible(true);
+    hasUserScrollIntent.current = false;
     lastScrollTop.current = scrollContainerRef.current?.scrollTop ?? 0;
     hasScrollBaseline.current = false;
   }, [pathname, setFooterVisible, isInitialLoadComplete]);
