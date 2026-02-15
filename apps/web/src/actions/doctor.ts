@@ -25,9 +25,12 @@ import {
   buildDoctorBriefFromIssues,
   formatDoctorCheckDetails,
   getDoctorCheckMessage,
+  getDoctorCheckOrder,
 } from "@/data/check-config";
 import { flushEventsToDatabase } from "@/lib/server/analytics-flush";
 import { authVerify } from "@/lib/server/auth-verify";
+import { getConfig } from "@/lib/server/config-cache";
+import { runDoctorMaintenance } from "@/lib/server/doctor-maintenance";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
@@ -53,11 +56,6 @@ type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
 
-const STATUS_SEVERITY_ORDER: Record<HealthCheckIssue["severity"], number> = {
-  error: 0,
-  warning: 1,
-  info: 2,
-};
 const DOCTOR_CACHE_WINDOW_MS = 23 * 60 * 60 * 1000;
 
 function snapshotStatusToSeverity(
@@ -155,9 +153,8 @@ function buildCheckDetails(
   );
 
   checks.sort((a, b) => {
-    const severityDiff =
-      STATUS_SEVERITY_ORDER[a.severity] - STATUS_SEVERITY_ORDER[b.severity];
-    if (severityDiff !== 0) return severityDiff;
+    const orderDiff = getDoctorCheckOrder(a.code) - getDoctorCheckOrder(b.code);
+    if (orderDiff !== 0) return orderDiff;
     return a.code.localeCompare(b.code);
   });
 
@@ -252,6 +249,14 @@ export async function doctor(
 
   try {
     const persistTriggerType: "MANUAL" | "AUTO" = force ? "MANUAL" : "AUTO";
+    if (force) {
+      const { after } = await import("next/server");
+      after(() => {
+        runDoctorMaintenance().catch((error) => {
+          console.error("Doctor maintenance background task failed:", error);
+        });
+      });
+    }
 
     if (!force) {
       const cachedRecord = await prisma.healthCheck.findFirst({
@@ -415,8 +420,74 @@ export async function doctor(
       }
     };
 
+    const getSiteSelfLatency = async (): Promise<{
+      ok: boolean;
+      latencyMs: number | null;
+      message?: string;
+    }> => {
+      try {
+        const siteUrlConfig = await getConfig("site.url");
+        const siteUrl =
+          typeof siteUrlConfig === "string" ? siteUrlConfig.trim() : "";
+
+        if (!siteUrl) {
+          return {
+            ok: false,
+            latencyMs: null,
+            message: "site.url 未配置",
+          };
+        }
+
+        let target: URL;
+        try {
+          target = new URL(siteUrl);
+        } catch {
+          return {
+            ok: false,
+            latencyMs: null,
+            message: "site.url 格式无效",
+          };
+        }
+
+        target.pathname = "/";
+        target.search = "";
+        target.hash = "";
+
+        const start = Date.now();
+        const response = await fetch(target.toString(), {
+          method: "GET",
+          cache: "no-store",
+          headers: {
+            "user-agent": "NeutralPress-Doctor/1.0",
+          },
+        });
+        const latencyMs = Date.now() - start;
+
+        if (!response.ok) {
+          return {
+            ok: false,
+            latencyMs,
+            message: `HTTP ${response.status}`,
+          };
+        }
+
+        return {
+          ok: true,
+          latencyMs,
+        };
+      } catch (error) {
+        console.error("Site self latency check failed:", error);
+        return {
+          ok: false,
+          latencyMs: null,
+          message: "访问失败",
+        };
+      }
+    };
+
     const [
-      _,
+      flushResult,
+      siteSelfLatencyResult,
       dbSizeResult,
       dbLatencyResult,
       dbConnectionResult,
@@ -424,7 +495,8 @@ export async function doctor(
       redisMemoryResult,
       redisKeyCountResult,
     ] = await Promise.all([
-      flushEventsToDatabase(),
+      measure(flushEventsToDatabase),
+      measure(getSiteSelfLatency),
       measure(getDBSize),
       measure(getDBLatency),
       measure(getDBConnectionCount),
@@ -436,6 +508,33 @@ export async function doctor(
     const snapshot: HealthCheckSnapshot = {
       checks: {},
     };
+
+    snapshot.checks.ANALYTICS_FLUSH_SUCCESS_COUNT = {
+      v: flushResult.value.success ? flushResult.value.flushedCount : null,
+      d: flushResult.durationMs,
+      s: flushResult.value.success ? "O" : "E",
+    };
+
+    if (
+      siteSelfLatencyResult.value.ok &&
+      siteSelfLatencyResult.value.latencyMs !== null
+    ) {
+      snapshot.checks.SITE_SELF_LATENCY = {
+        v: siteSelfLatencyResult.value.latencyMs,
+        d: siteSelfLatencyResult.durationMs,
+        s: classifyByThreshold(
+          siteSelfLatencyResult.value.latencyMs,
+          500,
+          1500,
+        ),
+      };
+    } else {
+      snapshot.checks.SITE_SELF_LATENCY = {
+        v: siteSelfLatencyResult.value.message || "检查失败",
+        d: siteSelfLatencyResult.durationMs,
+        s: "E",
+      };
+    }
 
     snapshot.checks.DB_LATENCY = {
       v: dbLatencyResult.value,

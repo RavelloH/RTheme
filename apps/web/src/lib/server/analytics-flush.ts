@@ -13,6 +13,11 @@ export const REDIS_VIEW_COUNT_KEY = "np:view_count:all";
 export const BATCH_SIZE = 500;
 const MAX_RETRIES = 2;
 
+export type FlushEventsResult = {
+  success: boolean;
+  flushedCount: number;
+};
+
 /**
  * Redis 操作的重试包装器
  */
@@ -462,13 +467,18 @@ async function archivePageViews() {
 /**
  * 批量写入 PageView 数据到数据库
  */
-export async function flushEventsToDatabase() {
+export async function flushEventsToDatabase(): Promise<FlushEventsResult> {
   try {
     const events = await withRetry(() =>
       redis.lrange(REDIS_QUEUE_KEY, 0, BATCH_SIZE - 1),
     );
 
-    if (events.length === 0) return;
+    if (events.length === 0) {
+      return {
+        success: true,
+        flushedCount: 0,
+      };
+    }
 
     const pageViews = events
       .map((event) => {
@@ -482,10 +492,13 @@ export async function flushEventsToDatabase() {
 
     if (pageViews.length === 0) {
       await withRetry(() => redis.ltrim(REDIS_QUEUE_KEY, events.length, -1));
-      return;
+      return {
+        success: true,
+        flushedCount: 0,
+      };
     }
 
-    await prisma.pageView.createMany({
+    const createResult = await prisma.pageView.createMany({
       data: pageViews,
       skipDuplicates: true,
     });
@@ -497,7 +510,15 @@ export async function flushEventsToDatabase() {
     await withRetry(() => redis.ltrim(REDIS_QUEUE_KEY, events.length, -1));
 
     console.log(`成功写入 ${pageViews.length} 条访问记录到数据库`);
+    return {
+      success: true,
+      flushedCount: createResult.count,
+    };
   } catch (error) {
     console.error("批量写入数据库失败:", error);
+    return {
+      success: false,
+      flushedCount: 0,
+    };
   }
 }

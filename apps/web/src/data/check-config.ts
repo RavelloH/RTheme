@@ -66,7 +66,23 @@ const CHECK_DEFINITIONS: Record<string, DoctorCheckDefinition> = {
     formatDetails: (value) =>
       typeof value === "number" ? `${value}` : undefined,
   },
+  ANALYTICS_FLUSH_SUCCESS_COUNT: {
+    message: "分析事件同步",
+    brief: "分析事件刷写失败",
+    formatDetails: (value) =>
+      typeof value === "number" ? `写入 ${value} 条` : undefined,
+  },
+  SITE_SELF_LATENCY: {
+    message: "站点自访问延迟",
+    brief: "站点访问延迟过高",
+    formatDetails: (value) =>
+      typeof value === "number" ? `${value}ms` : String(value ?? ""),
+  },
 };
+
+const CHECK_ORDER_MAP = new Map(
+  Object.keys(CHECK_DEFINITIONS).map((code, index) => [code, index]),
+);
 
 const FALLBACK_DEFINITION: DoctorCheckDefinition = {
   message: "未知检查项",
@@ -86,6 +102,11 @@ export function getDoctorCheckDefinition(code: string): DoctorCheckDefinition {
 
 export function getDoctorCheckMessage(code: string): string {
   return getDoctorCheckDefinition(code).message;
+}
+
+export function getDoctorCheckOrder(code: string): number {
+  const order = CHECK_ORDER_MAP.get(code);
+  return typeof order === "number" ? order : Number.MAX_SAFE_INTEGER;
 }
 
 export function formatDoctorCheckDetails(

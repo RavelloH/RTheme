@@ -45,14 +45,6 @@ export default function DoctorReport() {
     return parts.join("、") + "。";
   };
 
-  // 按严重程度排序
-  const getSortedResult = () => {
-    const severityOrder = { error: 0, warning: 1, info: 2 };
-    return [...result].sort(
-      (a, b) => severityOrder[a.severity] - severityOrder[b.severity],
-    );
-  };
-
   const fetchData = useCallback(
     async (manualRefresh: boolean = false) => {
       if (manualRefresh) {
@@ -96,7 +88,7 @@ export default function DoctorReport() {
             </div>
             <div>
               <div className="grid grid-cols-[auto_auto_auto] gap-x-4 gap-y-1 w-fit">
-                {getSortedResult().map((issue) => {
+                {result.map((issue) => {
                   const colorClass =
                     issue.severity === "error"
                       ? "text-error"
