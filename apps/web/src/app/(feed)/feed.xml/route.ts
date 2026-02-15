@@ -77,6 +77,7 @@ async function generateRssFeed(): Promise<string | null> {
     feedLinks: {
       atom: `${siteConfig.url}/feed.xml`,
       rss: `${siteConfig.url}/feed.xml`,
+      json: `${siteConfig.url}/feed.json`,
     },
     author: {
       name: siteConfig.author,
