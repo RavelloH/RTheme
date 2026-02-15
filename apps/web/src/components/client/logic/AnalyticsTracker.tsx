@@ -174,6 +174,9 @@ export function AnalyticsTracker() {
 
     lastPathRef.current = pathname;
 
+    // 管理后台页面不进行统计上报
+    if (pathname.startsWith("/admin")) return;
+
     const visitorId = getVisitorId();
     if (!visitorId) return;
 
