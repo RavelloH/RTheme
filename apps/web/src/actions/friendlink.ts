@@ -57,6 +57,7 @@ import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
+import { logAuditEvent } from "@/lib/server/audit";
 import type { UserRole } from "@/lib/server/auth-verify";
 import { authVerify } from "@/lib/server/auth-verify";
 import { verifyToken } from "@/lib/server/captcha";
@@ -1305,6 +1306,7 @@ export async function updateOwnFriendLink(
       },
       select: {
         id: true,
+        name: true,
         status: true,
       },
     });
@@ -1398,6 +1400,7 @@ export async function deleteOwnFriendLink(
       },
       select: {
         id: true,
+        name: true,
         status: true,
       },
     });
@@ -1426,6 +1429,29 @@ export async function deleteOwnFriendLink(
     });
 
     invalidateFriendLinkCache();
+
+    await logAuditEvent({
+      user: {
+        uid: String(user.uid),
+      },
+      details: {
+        action: "DELETE",
+        resourceType: "FRIEND_LINK",
+        resourceId: String(current.id),
+        value: {
+          old: {
+            id: current.id,
+            name: current.name,
+            ownerId: user.uid,
+          },
+          new: null,
+        },
+        description: `用户删除了友链「${current.name}」`,
+        metadata: {
+          id: current.id,
+        },
+      },
+    });
 
     return response.ok({
       message: "友链记录已删除",
@@ -1843,6 +1869,30 @@ export async function deleteFriendLinkByAdmin(
         `${siteUrl}/friends/new`,
       );
     }
+
+    await logAuditEvent({
+      user: {
+        uid: String(admin.uid),
+      },
+      details: {
+        action: "DELETE",
+        resourceType: "FRIEND_LINK",
+        resourceId: String(current.id),
+        value: {
+          old: {
+            id: current.id,
+            name: current.name,
+            ownerId: current.ownerId,
+          },
+          new: null,
+        },
+        description: `管理员删除了友链「${current.name}」`,
+        metadata: {
+          id: current.id,
+          ownerId: current.ownerId || 0,
+        },
+      },
+    });
 
     return response.ok({
       message: "友链记录已删除",
