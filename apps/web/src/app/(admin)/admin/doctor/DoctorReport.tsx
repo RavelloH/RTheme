@@ -103,15 +103,16 @@ export default function DoctorReport() {
                       : issue.severity === "warning"
                         ? "text-warning"
                         : "";
+                  const details = issue.details?.trim();
                   return (
                     <Fragment key={issue.code}>
                       <span className={`text-right ${colorClass}`}>
                         {issue.severity.toUpperCase()}:
                       </span>
-                      <span className={colorClass}>{issue.message}：</span>
                       <span className={colorClass}>
-                        {issue.details ? `${issue.details}` : ""}
+                        {details ? `${issue.message}：` : issue.message}
                       </span>
+                      <span className={colorClass}>{details ?? ""}</span>
                     </Fragment>
                   );
                 })}
