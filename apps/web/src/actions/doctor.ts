@@ -1,10 +1,12 @@
 "use server";
+
 import type {
   ApiResponse,
   ApiResponseData,
 } from "@repo/shared-types/api/common";
 import type {
   Doctor,
+  DoctorCheckDetail,
   DoctorHistoryItem,
   DoctorSuccessResponse,
   DoctorTrendItem,
@@ -19,6 +21,11 @@ import {
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
+import {
+  buildDoctorBriefFromIssues,
+  formatDoctorCheckDetails,
+  getDoctorCheckMessage,
+} from "@/data/check-config";
 import { flushEventsToDatabase } from "@/lib/server/analytics-flush";
 import { authVerify } from "@/lib/server/auth-verify";
 import prisma from "@/lib/server/prisma";
@@ -27,18 +34,185 @@ import redis, { ensureRedisConnection } from "@/lib/server/redis";
 import ResponseBuilder from "@/lib/server/response";
 import { validateData } from "@/lib/server/validator";
 
-type HealthCheckIssue = {
-  code: string;
-  message: string;
-  severity: "info" | "warning" | "error";
-  details?: string;
+type SnapshotStatus = "O" | "W" | "E";
+type SnapshotValue = number | string | boolean | null;
+type SnapshotCheck = {
+  v: SnapshotValue;
+  d: number;
+  s: SnapshotStatus;
 };
+type HealthCheckSnapshot = {
+  checks: Record<string, SnapshotCheck>;
+};
+
+type HealthCheckIssue = DoctorSuccessResponse["data"]["issues"][number];
 
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
 type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
+
+const STATUS_SEVERITY_ORDER: Record<HealthCheckIssue["severity"], number> = {
+  error: 0,
+  warning: 1,
+  info: 2,
+};
+const DOCTOR_CACHE_WINDOW_MS = 23 * 60 * 60 * 1000;
+
+function snapshotStatusToSeverity(
+  status: SnapshotStatus,
+): HealthCheckIssue["severity"] {
+  if (status === "E") return "error";
+  if (status === "W") return "warning";
+  return "info";
+}
+
+function classifyByThreshold(
+  value: number,
+  warningThreshold: number,
+  errorThreshold: number,
+): SnapshotStatus {
+  if (value < warningThreshold) return "O";
+  if (value < errorThreshold) return "W";
+  return "E";
+}
+
+function normalizeSnapshotValue(value: unknown): SnapshotValue {
+  if (
+    value === null ||
+    typeof value === "number" ||
+    typeof value === "string" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+  return null;
+}
+
+function parseSnapshot(snapshot: unknown): HealthCheckSnapshot {
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
+    return { checks: {} };
+  }
+
+  const snapshotObj = snapshot as { checks?: unknown };
+  if (
+    !snapshotObj.checks ||
+    typeof snapshotObj.checks !== "object" ||
+    Array.isArray(snapshotObj.checks)
+  ) {
+    return { checks: {} };
+  }
+
+  const normalizedChecks: Record<string, SnapshotCheck> = {};
+  const rawChecks = snapshotObj.checks as Record<string, unknown>;
+  for (const [code, rawCheck] of Object.entries(rawChecks)) {
+    if (!rawCheck || typeof rawCheck !== "object" || Array.isArray(rawCheck)) {
+      continue;
+    }
+    const checkObj = rawCheck as {
+      v?: unknown;
+      d?: unknown;
+      s?: unknown;
+    };
+    const durationMs =
+      typeof checkObj.d === "number" &&
+      Number.isFinite(checkObj.d) &&
+      checkObj.d >= 0
+        ? Math.round(checkObj.d)
+        : 0;
+    const status =
+      checkObj.s === "O" || checkObj.s === "W" || checkObj.s === "E"
+        ? checkObj.s
+        : "O";
+
+    normalizedChecks[code] = {
+      v: normalizeSnapshotValue(checkObj.v),
+      d: durationMs,
+      s: status,
+    };
+  }
+
+  return { checks: normalizedChecks };
+}
+
+function buildCheckDetails(
+  snapshotChecks: Record<string, SnapshotCheck>,
+): DoctorCheckDetail[] {
+  const checks: DoctorCheckDetail[] = Object.entries(snapshotChecks).map(
+    ([code, check]) => {
+      const severity = snapshotStatusToSeverity(check.s);
+      return {
+        code,
+        message: getDoctorCheckMessage(code),
+        severity,
+        details: formatDoctorCheckDetails(code, check.v),
+        value: check.v,
+        durationMs: check.d,
+        status: check.s,
+      };
+    },
+  );
+
+  checks.sort((a, b) => {
+    const severityDiff =
+      STATUS_SEVERITY_ORDER[a.severity] - STATUS_SEVERITY_ORDER[b.severity];
+    if (severityDiff !== 0) return severityDiff;
+    return a.code.localeCompare(b.code);
+  });
+
+  return checks;
+}
+
+function buildIssues(checks: DoctorCheckDetail[]): HealthCheckIssue[] {
+  return checks.map((check) => ({
+    code: check.code,
+    message: check.message,
+    severity: check.severity,
+    details: check.details,
+  }));
+}
+
+function buildCounts(snapshotChecks: Record<string, SnapshotCheck>): {
+  okCount: number;
+  warningCount: number;
+  errorCount: number;
+} {
+  let okCount = 0;
+  let warningCount = 0;
+  let errorCount = 0;
+
+  for (const check of Object.values(snapshotChecks)) {
+    if (check.s === "E") {
+      errorCount++;
+    } else if (check.s === "W") {
+      warningCount++;
+    } else {
+      okCount++;
+    }
+  }
+
+  return { okCount, warningCount, errorCount };
+}
+
+function getOverallStatus(
+  counts: ReturnType<typeof buildCounts>,
+): "OK" | "WARNING" | "ERROR" {
+  if (counts.errorCount > 0) return "ERROR";
+  if (counts.warningCount > 0) return "WARNING";
+  return "OK";
+}
+
+async function measure<T>(
+  fn: () => Promise<T>,
+): Promise<{ value: T; durationMs: number }> {
+  const start = Date.now();
+  const value = await fn();
+  return {
+    value,
+    durationMs: Date.now() - start,
+  };
+}
 
 export async function doctor(
   params: Doctor,
@@ -49,7 +223,7 @@ export async function doctor(
   serverConfig?: ActionConfig,
 ): Promise<ApiResponse<DoctorSuccessResponse["data"]>>;
 export async function doctor(
-  { access_token, force }: Doctor,
+  { access_token, force = false }: Doctor,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<DoctorSuccessResponse["data"] | null>> {
   const response = new ResponseBuilder(
@@ -58,6 +232,7 @@ export async function doctor(
   if (!(await limitControl(await headers(), "doctor"))) {
     return response.tooManyRequests();
   }
+
   const validationError = validateData(
     {
       access_token,
@@ -65,62 +240,86 @@ export async function doctor(
     },
     DoctorSchema,
   );
-
   if (validationError) return response.badRequest(validationError);
 
-  // 身份验证
   const user = await authVerify({
     allowedRoles: ["ADMIN"],
     accessToken: access_token,
   });
-
   if (!user) {
     return response.unauthorized();
   }
 
-  // 运行自检
   try {
+    const persistTriggerType: "MANUAL" | "AUTO" = force ? "MANUAL" : "AUTO";
+
     if (!force) {
-      // 检查数据库中24小时内是否有自检记录
-      const result = await prisma.healthCheck.findFirst({
+      const cachedRecord = await prisma.healthCheck.findFirst({
         where: {
           createdAt: {
-            gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
+            gte: new Date(Date.now() - DOCTOR_CACHE_WINDOW_MS),
           },
         },
         orderBy: {
           createdAt: "desc",
         },
+        select: {
+          startedAt: true,
+          createdAt: true,
+          durationMs: true,
+          triggerType: true,
+          overallStatus: true,
+          okCount: true,
+          warningCount: true,
+          errorCount: true,
+          snapshot: true,
+        },
       });
-      if (result) {
+
+      if (cachedRecord) {
+        const cachedSnapshot = parseSnapshot(cachedRecord.snapshot);
+        const cachedChecks = buildCheckDetails(cachedSnapshot.checks);
+        const cachedIssues = buildIssues(cachedChecks);
+
         return response.ok({
           data: {
-            createdAt: result.createdAt.toISOString(),
-            issues: result.issues as HealthCheckIssue[],
+            createdAt: cachedRecord.createdAt.toISOString(),
+            startedAt: cachedRecord.startedAt.toISOString(),
+            durationMs: cachedRecord.durationMs,
+            triggerType: cachedRecord.triggerType,
+            status: cachedRecord.overallStatus,
+            okCount: cachedRecord.okCount,
+            warningCount: cachedRecord.warningCount,
+            errorCount: cachedRecord.errorCount,
+            issues: cachedIssues,
           },
         });
       }
     }
-    // 自检
+
+    const startedAt = new Date();
+    const startedAtMs = Date.now();
+
     const getDBSize = async (): Promise<number> => {
       const result = await prisma.$queryRaw<
         Array<{ size: bigint }>
       >`SELECT pg_database_size(current_database()) AS size;`;
       return Number(result[0]?.size || 0);
     };
+
     const getDBLatency = async (): Promise<number> => {
       const start = Date.now();
       await prisma.$queryRaw`SELECT 1;`;
       return Date.now() - start;
     };
+
     const getDBConnectionCount = async (): Promise<number> => {
       const result = await prisma.$queryRaw<Array<{ count: bigint }>>`
-      SELECT count(*) FROM pg_stat_activity WHERE datname = current_database();
-    `;
+        SELECT count(*) FROM pg_stat_activity WHERE datname = current_database();
+      `;
       return Number(result[0]?.count || 0);
     };
 
-    // Redis 检查
     const getRedisLatency = async (): Promise<number> => {
       try {
         await ensureRedisConnection();
@@ -129,7 +328,7 @@ export async function doctor(
         return Date.now() - start;
       } catch (error) {
         console.error("Redis latency check failed:", error);
-        return -1; // 返回 -1 表示检查失败
+        return -1;
       }
     };
 
@@ -144,18 +343,16 @@ export async function doctor(
         const lines = info.split("\r\n");
 
         const getValue = (key: string): number => {
-          const line = lines.find((l) => l.startsWith(key));
+          const line = lines.find((item) => item.startsWith(key));
           if (!line) return 0;
-          const parts = line.split(":");
-          const value = parts[1];
+          const value = line.split(":")[1];
           return value ? parseInt(value, 10) || 0 : 0;
         };
 
         const getFloatValue = (key: string): number => {
-          const line = lines.find((l) => l.startsWith(key));
+          const line = lines.find((item) => item.startsWith(key));
           if (!line) return 0;
-          const parts = line.split(":");
-          const value = parts[1];
+          const value = line.split(":")[1];
           return value ? parseFloat(value) || 0 : 0;
         };
 
@@ -180,7 +377,6 @@ export async function doctor(
       try {
         await ensureRedisConnection();
 
-        // 使用 SCAN 替代 KEYS，避免阻塞 Redis
         const scanPattern = async (pattern: string): Promise<string[]> => {
           const keys: string[] = [];
           let cursor = "0";
@@ -219,120 +415,131 @@ export async function doctor(
       }
     };
 
-    // TODO: 更新检查
-    // TODO: 检查需归档数据
-    // TODO: 孤立文件
-    // TODO: 长期草稿
-    // TODO: 待审核内容积压
     const [
       _,
-      dbSize,
-      dbLatency,
-      dbConnections,
-      redisLatency,
-      redisMemory,
-      redisKeys,
+      dbSizeResult,
+      dbLatencyResult,
+      dbConnectionResult,
+      redisLatencyResult,
+      redisMemoryResult,
+      redisKeyCountResult,
     ] = await Promise.all([
       flushEventsToDatabase(),
-      getDBSize(),
-      getDBLatency(),
-      getDBConnectionCount(),
-      getRedisLatency(),
-      getRedisMemory(),
-      getRedisKeyCount(),
+      measure(getDBSize),
+      measure(getDBLatency),
+      measure(getDBConnectionCount),
+      measure(getRedisLatency),
+      measure(getRedisMemory),
+      measure(getRedisKeyCount),
     ]);
-    const issues: HealthCheckIssue[] = [];
 
-    issues.push({
-      code: "DB_LATENCY",
-      message: "DB响应时间",
-      severity:
-        dbLatency < 100 ? "info" : dbLatency < 300 ? "warning" : "error",
-      details: `${dbLatency}ms`,
-    });
+    const snapshot: HealthCheckSnapshot = {
+      checks: {},
+    };
 
-    issues.push({
-      code: "DB_CONNECTIONS",
-      message: "DB连接数",
-      severity:
-        dbConnections < 50 ? "info" : dbConnections < 150 ? "warning" : "error",
-      details: `${dbConnections}`,
-    });
+    snapshot.checks.DB_LATENCY = {
+      v: dbLatencyResult.value,
+      d: dbLatencyResult.durationMs,
+      s: classifyByThreshold(dbLatencyResult.value, 100, 300),
+    };
 
-    issues.push({
-      code: "DB_SIZE",
-      message: "DB大小",
-      severity: "info",
-      details: `${(dbSize / (1024 * 1024)).toFixed(2)} MB`,
-    });
+    snapshot.checks.DB_CONNECTIONS = {
+      v: dbConnectionResult.value,
+      d: dbConnectionResult.durationMs,
+      s: classifyByThreshold(dbConnectionResult.value, 50, 150),
+    };
 
-    // Redis 检查结果
-    if (redisLatency === -1) {
-      issues.push({
-        code: "REDIS_CONNECTION",
-        message: "Redis连接失败",
-        severity: "error",
-        details: "连接失败",
-      });
+    snapshot.checks.DB_SIZE = {
+      v: dbSizeResult.value,
+      d: dbSizeResult.durationMs,
+      s: "O",
+    };
+
+    if (redisLatencyResult.value === -1) {
+      snapshot.checks.REDIS_CONNECTION = {
+        v: false,
+        d: redisLatencyResult.durationMs,
+        s: "E",
+      };
     } else {
-      issues.push({
-        code: "REDIS_LATENCY",
-        message: "Redis响应时间",
-        severity:
-          redisLatency < 10 ? "info" : redisLatency < 50 ? "warning" : "error",
-        details: `${redisLatency}ms`,
-      });
-    }
+      snapshot.checks.REDIS_LATENCY = {
+        v: redisLatencyResult.value,
+        d: redisLatencyResult.durationMs,
+        s: classifyByThreshold(redisLatencyResult.value, 10, 50),
+      };
 
-    if (redisMemory.used !== -1) {
-      const usedMB = (redisMemory.used / (1024 * 1024)).toFixed(2);
+      if (redisMemoryResult.value.used !== -1) {
+        snapshot.checks.REDIS_MEMORY = {
+          v: redisMemoryResult.value.used,
+          d: redisMemoryResult.durationMs,
+          s: classifyByThreshold(
+            redisMemoryResult.value.used,
+            100 * 1024 * 1024,
+            500 * 1024 * 1024,
+          ),
+        };
 
-      issues.push({
-        code: "REDIS_MEMORY",
-        message: "Redis内存",
-        severity:
-          redisMemory.used < 100 * 1024 * 1024
-            ? "info"
-            : redisMemory.used < 500 * 1024 * 1024
-              ? "warning"
-              : "error",
-        details: `${usedMB} MB`,
-      });
+        if (redisMemoryResult.value.fragmentation > 0) {
+          snapshot.checks.REDIS_FRAGMENTATION = {
+            v: redisMemoryResult.value.fragmentation,
+            d: redisMemoryResult.durationMs,
+            s: classifyByThreshold(
+              redisMemoryResult.value.fragmentation,
+              1.5,
+              2.0,
+            ),
+          };
+        }
+      }
 
-      if (redisMemory.fragmentation > 0) {
-        issues.push({
-          code: "REDIS_FRAGMENTATION",
-          message: "Redis碎片率",
-          severity:
-            redisMemory.fragmentation < 1.5
-              ? "info"
-              : redisMemory.fragmentation < 2.0
-                ? "warning"
-                : "error",
-          details: `${redisMemory.fragmentation.toFixed(2)}`,
-        });
+      if (redisKeyCountResult.value.total !== -1) {
+        snapshot.checks.REDIS_KEYS = {
+          v: redisKeyCountResult.value.total,
+          d: redisKeyCountResult.durationMs,
+          s: "O",
+        };
       }
     }
 
-    if (redisKeys.total !== -1) {
-      issues.push({
-        code: "REDIS_KEYS",
-        message: "Redis键数",
-        severity: "info",
-        details: `${redisKeys.total}`,
-      });
-    }
+    const counts = buildCounts(snapshot.checks);
+    const status = getOverallStatus(counts);
+    const durationMs = Date.now() - startedAtMs;
+    const checks = buildCheckDetails(snapshot.checks);
+    const issues = buildIssues(checks);
 
-    // 保存检查结果到数据库
     const healthCheck = await prisma.healthCheck.create({
       data: {
-        issues: issues,
+        startedAt,
+        durationMs,
+        triggerType: persistTriggerType,
+        overallStatus: status,
+        okCount: counts.okCount,
+        warningCount: counts.warningCount,
+        errorCount: counts.errorCount,
+        snapshot,
+      },
+      select: {
+        startedAt: true,
+        createdAt: true,
+        durationMs: true,
+        triggerType: true,
+        overallStatus: true,
+        okCount: true,
+        warningCount: true,
+        errorCount: true,
       },
     });
 
     return response.ok({
       data: {
         createdAt: healthCheck.createdAt.toISOString(),
+        startedAt: healthCheck.startedAt.toISOString(),
+        durationMs: healthCheck.durationMs,
+        triggerType: healthCheck.triggerType,
+        status: healthCheck.overallStatus,
+        okCount: healthCheck.okCount,
+        warningCount: healthCheck.warningCount,
+        errorCount: healthCheck.errorCount,
         issues,
       },
     });
@@ -358,6 +565,9 @@ export async function getDoctorHistory(
     sortBy,
     sortOrder,
     id,
+    status,
+    triggerType,
+    okCount,
     errorCount,
     warningCount,
     createdAtStart,
@@ -381,6 +591,9 @@ export async function getDoctorHistory(
       sortBy,
       sortOrder,
       id,
+      status,
+      triggerType,
+      okCount,
       errorCount,
       warningCount,
       createdAtStart,
@@ -388,35 +601,38 @@ export async function getDoctorHistory(
     },
     GetDoctorHistorySchema,
   );
-
   if (validationError) return response.badRequest(validationError);
 
-  // 身份验证
   const user = await authVerify({
     allowedRoles: ["ADMIN"],
     accessToken: access_token,
   });
-
   if (!user) {
     return response.unauthorized();
   }
 
   try {
-    // 计算偏移量
     const skip = (page - 1) * pageSize;
 
-    // 构建 where 条件
     const where: {
       id?: number;
+      overallStatus?: "OK" | "WARNING" | "ERROR";
+      triggerType?: "MANUAL" | "AUTO" | "CRON";
+      okCount?: number;
+      errorCount?: number;
+      warningCount?: number;
       createdAt?: {
         gte?: Date;
         lte?: Date;
       };
     } = {};
 
-    if (id !== undefined) {
-      where.id = id;
-    }
+    if (id !== undefined) where.id = id;
+    if (status) where.overallStatus = status;
+    if (triggerType) where.triggerType = triggerType;
+    if (okCount !== undefined) where.okCount = okCount;
+    if (errorCount !== undefined) where.errorCount = errorCount;
+    if (warningCount !== undefined) where.warningCount = warningCount;
 
     if (createdAtStart || createdAtEnd) {
       where.createdAt = {};
@@ -424,125 +640,99 @@ export async function getDoctorHistory(
       if (createdAtEnd) where.createdAt.lte = new Date(createdAtEnd);
     }
 
-    // 获取总数（应用基础筛选）
-    const total = await prisma.healthCheck.count({ where });
-
-    // 构建排序条件
-    let orderBy: { id: "asc" | "desc" } | { createdAt: "asc" | "desc" } = {
+    let orderBy:
+      | { id: "asc" | "desc" }
+      | { createdAt: "asc" | "desc" }
+      | { overallStatus: "asc" | "desc" }
+      | { okCount: "asc" | "desc" }
+      | { warningCount: "asc" | "desc" }
+      | { errorCount: "asc" | "desc" }
+      | { triggerType: "asc" | "desc" }
+      | { durationMs: "asc" | "desc" } = {
       createdAt: "desc",
-    }; // 默认排序
+    };
 
     if (sortBy && sortOrder) {
-      if (sortBy === "id" || sortBy === "createdAt") {
-        // 直接字段排序
-        orderBy = { [sortBy]: sortOrder } as typeof orderBy;
+      switch (sortBy) {
+        case "id":
+          orderBy = { id: sortOrder };
+          break;
+        case "createdAt":
+          orderBy = { createdAt: sortOrder };
+          break;
+        case "status":
+          orderBy = { overallStatus: sortOrder };
+          break;
+        case "okCount":
+          orderBy = { okCount: sortOrder };
+          break;
+        case "warningCount":
+          orderBy = { warningCount: sortOrder };
+          break;
+        case "errorCount":
+          orderBy = { errorCount: sortOrder };
+          break;
+        case "triggerType":
+          orderBy = { triggerType: sortOrder };
+          break;
+        case "durationMs":
+          orderBy = { durationMs: sortOrder };
+          break;
       }
-      // errorCount 和 warningCount 需要在内存中排序，因为它们是计算字段
     }
 
-    // 获取分页数据
-    let records = await prisma.healthCheck.findMany({
-      skip:
-        sortBy === "errorCount" ||
-        sortBy === "warningCount" ||
-        errorCount !== undefined ||
-        warningCount !== undefined
-          ? 0
-          : skip,
-      take:
-        sortBy === "errorCount" ||
-        sortBy === "warningCount" ||
-        errorCount !== undefined ||
-        warningCount !== undefined
-          ? undefined
-          : pageSize,
-      where,
-      orderBy,
-      select: {
-        id: true,
-        createdAt: true,
-        issues: true,
-      },
+    const [total, records] = await Promise.all([
+      prisma.healthCheck.count({ where }),
+      prisma.healthCheck.findMany({
+        skip,
+        take: pageSize,
+        where,
+        orderBy,
+        select: {
+          id: true,
+          startedAt: true,
+          createdAt: true,
+          durationMs: true,
+          triggerType: true,
+          overallStatus: true,
+          okCount: true,
+          warningCount: true,
+          errorCount: true,
+          snapshot: true,
+        },
+      }),
+    ]);
+
+    const data: DoctorHistoryItem[] = records.map((record) => {
+      const snapshot = parseSnapshot(record.snapshot);
+      const checks = buildCheckDetails(snapshot.checks);
+      const issues = buildIssues(checks);
+      return {
+        id: record.id,
+        brief: buildDoctorBriefFromIssues(issues),
+        status: record.overallStatus,
+        triggerType: record.triggerType,
+        durationMs: record.durationMs,
+        startedAt: record.startedAt.toISOString(),
+        createdAt: record.createdAt.toISOString(),
+        okCount: record.okCount,
+        warningCount: record.warningCount,
+        errorCount: record.errorCount,
+        checks,
+      };
     });
 
-    // 如果需要按 errorCount 或 warningCount 筛选或排序，需要在内存中处理
-    if (
-      sortBy === "errorCount" ||
-      sortBy === "warningCount" ||
-      errorCount !== undefined ||
-      warningCount !== undefined
-    ) {
-      // 先应用筛选
-      if (errorCount !== undefined || warningCount !== undefined) {
-        records = records.filter((record) => {
-          const issues = record.issues as HealthCheckIssue[];
-          const actualErrorCount = issues.filter(
-            (issue) => issue.severity === "error",
-          ).length;
-          const actualWarningCount = issues.filter(
-            (issue) => issue.severity === "warning",
-          ).length;
-
-          let matchesError = true;
-          let matchesWarning = true;
-
-          if (errorCount !== undefined) {
-            matchesError = actualErrorCount === errorCount;
-          }
-          if (warningCount !== undefined) {
-            matchesWarning = actualWarningCount === warningCount;
-          }
-
-          return matchesError && matchesWarning;
-        });
-      }
-
-      // 再应用排序
-      if (sortBy === "errorCount" || sortBy === "warningCount") {
-        const severityType = sortBy === "errorCount" ? "error" : "warning";
-
-        records.sort((a, b) => {
-          const aIssues = a.issues as HealthCheckIssue[];
-          const bIssues = b.issues as HealthCheckIssue[];
-
-          const aCount = aIssues.filter(
-            (issue) => issue.severity === severityType,
-          ).length;
-          const bCount = bIssues.filter(
-            (issue) => issue.severity === severityType,
-          ).length;
-
-          const diff = aCount - bCount;
-          return sortOrder === "asc" ? diff : -diff;
-        });
-      }
-
-      // 最后应用分页
-      records = records.slice(skip, skip + pageSize);
-    }
-
-    // 转换数据格式
-    const data: DoctorHistoryItem[] = records.map((record) => ({
-      id: record.id,
-      createdAt: record.createdAt.toISOString(),
-      issues: record.issues as HealthCheckIssue[],
-    }));
-
-    // 计算分页元数据
     const totalPages = Math.ceil(total / pageSize);
     const meta = {
       page,
       pageSize,
       total,
       totalPages,
-      hasNext: page < totalPages,
-      hasPrev: page > 1,
+      hasNext: totalPages > 0 && page < totalPages,
+      hasPrev: totalPages > 0 && page > 1,
     };
 
-    return response.ok({
-      data,
-      meta,
-    });
+    return response.ok({ data, meta });
   } catch (error) {
     console.error("Get doctor history error:", error);
     return response.serverError();
@@ -577,26 +767,20 @@ export async function getDoctorTrends(
     },
     GetDoctorTrendsSchema,
   );
-
   if (validationError) return response.badRequest(validationError);
 
-  // 身份验证
   const user = await authVerify({
     allowedRoles: ["ADMIN"],
     accessToken: access_token,
   });
-
   if (!user) {
     return response.unauthorized();
   }
 
   try {
-    // 获取最近 N 天的时间范围
     const daysAgo = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-    // 获取最近 N 天和最近 N 次的并集
     const [recentByTime, recentByCount] = await Promise.all([
-      // 按时间获取：最近 N 天
       prisma.healthCheck.findMany({
         where: {
           createdAt: {
@@ -609,10 +793,11 @@ export async function getDoctorTrends(
         select: {
           id: true,
           createdAt: true,
-          issues: true,
+          okCount: true,
+          warningCount: true,
+          errorCount: true,
         },
       }),
-      // 按数量获取：最近 N 次
       prisma.healthCheck.findMany({
         take: count,
         orderBy: {
@@ -621,45 +806,33 @@ export async function getDoctorTrends(
         select: {
           id: true,
           createdAt: true,
-          issues: true,
+          okCount: true,
+          warningCount: true,
+          errorCount: true,
         },
       }),
     ]);
 
-    // 合并两个结果集并去重
     const mergedMap = new Map<number, (typeof recentByTime)[0]>();
-
     recentByTime.forEach((record) => {
       mergedMap.set(record.id, record);
     });
-
     recentByCount.forEach((record) => {
       mergedMap.set(record.id, record);
     });
 
-    // 转换为数组并按时间排序
     const merged = Array.from(mergedMap.values()).sort(
       (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
     );
 
-    // 转换数据格式
-    const data: DoctorTrendItem[] = merged.map((record) => {
-      const issues = record.issues as HealthCheckIssue[];
-      const counts = {
-        info: 0,
-        warning: 0,
-        error: 0,
-      };
-
-      issues.forEach((issue) => {
-        counts[issue.severity]++;
-      });
-
-      return {
-        time: record.createdAt.toISOString(),
-        data: counts,
-      };
-    });
+    const data: DoctorTrendItem[] = merged.map((record) => ({
+      time: record.createdAt.toISOString(),
+      data: {
+        info: record.okCount,
+        warning: record.warningCount,
+        error: record.errorCount,
+      },
+    }));
 
     return response.ok({ data });
   } catch (error) {

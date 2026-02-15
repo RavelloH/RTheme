@@ -12,7 +12,7 @@ const response = new ResponseBuilder("serverless");
  * /api/admin/doctor:
  *   post:
  *     summary: 运行自检
- *     description: 自我检查系统的健康状态。带有force参数时，忽略最近24小时内的缓存结果，强制重新运行自检。
+ *     description: 自我检查系统的健康状态。force=true 时强制重新运行，force=false 时优先返回 23 小时内最近记录。
  *     tags: Admin
  *     requestBody:
  *       required: true

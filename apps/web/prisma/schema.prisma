@@ -816,9 +816,36 @@ model CustomDictionary {
 }
 
 model HealthCheck {
-  id        Int      @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
+  startedAt  DateTime @default(now())
+  durationMs Int
+
+  triggerType HealthCheckTriggerType
+
+  overallStatus HealthStatus
+  okCount       Int
+  warningCount  Int
+  errorCount    Int
+
+  snapshot Json
+
   createdAt DateTime @default(now())
-  issues    Json?
+
+  @@index([startedAt(sort: Desc)])
+  @@index([overallStatus, startedAt(sort: Desc)])
+  @@index([triggerType, startedAt(sort: Desc)])
+}
+
+enum HealthStatus {
+  OK
+  WARNING
+  ERROR
+}
+
+enum HealthCheckTriggerType {
+  MANUAL
+  AUTO
+  CRON
 }
 
 // Web Push 订阅模型

@@ -22,12 +22,12 @@ export default function DashboardDoctor() {
   const [refreshTime, setRefreshTime] = useState<Date | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
-  const fetchData = async (forceRefresh: boolean = false) => {
-    if (forceRefresh) {
+  const fetchData = async (manualRefresh: boolean = false) => {
+    if (manualRefresh) {
       setResult([]);
     }
     setError(null);
-    const res = await doctor({ force: forceRefresh });
+    const res = await doctor({ force: manualRefresh });
     if (!res.success) {
       setError(new Error(res.message || "获取运行状况失败"));
       return;

@@ -54,12 +54,12 @@ export default function DoctorReport() {
   };
 
   const fetchData = useCallback(
-    async (forceRefresh: boolean = false) => {
-      if (forceRefresh) {
+    async (manualRefresh: boolean = false) => {
+      if (manualRefresh) {
         setResult([]);
       }
       setError(null);
-      const res = await doctor({ force: forceRefresh });
+      const res = await doctor({ force: manualRefresh });
       if (!res.success) {
         setError(new Error(res.message || "获取运行状况失败"));
         return;
@@ -69,7 +69,7 @@ export default function DoctorReport() {
       setRefreshTime(new Date(res.data.createdAt));
 
       // 刷新成功后广播消息,通知其他组件更新
-      if (forceRefresh) {
+      if (manualRefresh) {
         await broadcast({ type: "doctor-refresh" });
       }
     },
