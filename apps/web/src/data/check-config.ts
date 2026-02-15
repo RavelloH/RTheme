@@ -10,7 +10,7 @@ export type DoctorIssueLike = {
 export type DoctorCheckDefinition = {
   message: string;
   brief: string;
-  formatDetails: (value: DoctorCheckValue) => string;
+  formatDetails: (value: DoctorCheckValue) => string | undefined;
 };
 
 const CHECK_DEFINITIONS: Record<string, DoctorCheckDefinition> = {
@@ -18,13 +18,13 @@ const CHECK_DEFINITIONS: Record<string, DoctorCheckDefinition> = {
     message: "DB响应时间",
     brief: "数据库高延迟",
     formatDetails: (value) =>
-      typeof value === "number" ? `${value}ms` : String(value ?? "-"),
+      typeof value === "number" ? `${value}ms` : undefined,
   },
   DB_CONNECTIONS: {
     message: "DB连接数",
     brief: "数据库连接数过高",
     formatDetails: (value) =>
-      typeof value === "number" ? `${value}` : String(value ?? "-"),
+      typeof value === "number" ? `${value}` : undefined,
   },
   DB_SIZE: {
     message: "DB大小",
@@ -32,19 +32,19 @@ const CHECK_DEFINITIONS: Record<string, DoctorCheckDefinition> = {
     formatDetails: (value) =>
       typeof value === "number"
         ? `${(value / (1024 * 1024)).toFixed(2)} MB`
-        : String(value ?? "-"),
+        : undefined,
   },
   REDIS_CONNECTION: {
     message: "Redis连接",
     brief: "Redis连接失败",
     formatDetails: (value) =>
-      typeof value === "boolean" ? (value ? "连接正常" : "连接失败") : "-",
+      typeof value === "boolean" && value ? "连接正常" : undefined,
   },
   REDIS_LATENCY: {
     message: "Redis响应时间",
     brief: "Redis高延迟",
     formatDetails: (value) =>
-      typeof value === "number" ? `${value}ms` : String(value ?? "-"),
+      typeof value === "number" ? `${value}ms` : undefined,
   },
   REDIS_MEMORY: {
     message: "Redis内存",
@@ -52,26 +52,26 @@ const CHECK_DEFINITIONS: Record<string, DoctorCheckDefinition> = {
     formatDetails: (value) =>
       typeof value === "number"
         ? `${(value / (1024 * 1024)).toFixed(2)} MB`
-        : "获取失败",
+        : undefined,
   },
   REDIS_FRAGMENTATION: {
     message: "Redis碎片率",
     brief: "Redis碎片率过高",
     formatDetails: (value) =>
-      typeof value === "number" ? value.toFixed(2) : String(value ?? "-"),
+      typeof value === "number" ? value.toFixed(2) : undefined,
   },
   REDIS_KEYS: {
     message: "Redis键数",
     brief: "Redis键数量异常",
     formatDetails: (value) =>
-      typeof value === "number" ? `${value}` : String(value ?? "-"),
+      typeof value === "number" ? `${value}` : undefined,
   },
 };
 
 const FALLBACK_DEFINITION: DoctorCheckDefinition = {
   message: "未知检查项",
   brief: "检查项异常",
-  formatDetails: (value) => String(value ?? "-"),
+  formatDetails: (value) => (value === null ? undefined : String(value)),
 };
 
 export function getDoctorCheckDefinition(code: string): DoctorCheckDefinition {
@@ -91,8 +91,15 @@ export function getDoctorCheckMessage(code: string): string {
 export function formatDoctorCheckDetails(
   code: string,
   value: DoctorCheckValue,
-): string {
+): string | undefined {
   return getDoctorCheckDefinition(code).formatDetails(value);
+}
+
+function shouldAppendBriefDetails(brief: string, details?: string): boolean {
+  if (!details) return false;
+  const normalizedDetails = details.trim();
+  if (!normalizedDetails || normalizedDetails === "-") return false;
+  return !brief.includes(normalizedDetails);
 }
 
 export function buildDoctorBriefFromIssues(issues: DoctorIssueLike[]): string {
@@ -102,7 +109,10 @@ export function buildDoctorBriefFromIssues(issues: DoctorIssueLike[]): string {
   return errorIssues
     .map((item) => {
       const brief = getDoctorCheckDefinition(item.code).brief;
-      return item.details ? `${brief}：${item.details}` : brief;
+      if (!shouldAppendBriefDetails(brief, item.details)) {
+        return brief;
+      }
+      return `${brief}：${item.details!.trim()}`;
     })
     .join("，");
 }
