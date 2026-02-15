@@ -10,11 +10,13 @@ export async function friendsInterpolator(
   const [totalFriends, allFriends] = await Promise.all([
     prisma.friendLink.count({
       where: {
+        deletedAt: null,
         status: { in: ["PUBLISHED", "WHITELIST"] },
       },
     }),
     prisma.friendLink.findMany({
       where: {
+        deletedAt: null,
         status: { in: ["PUBLISHED", "WHITELIST"] },
       },
       select: {

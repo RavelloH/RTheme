@@ -107,6 +107,7 @@ export async function invalidFriendLinksBlockFetcher(
 
   const rawLinks = await prisma.friendLink.findMany({
     where: {
+      deletedAt: null,
       status: { in: ["DISCONNECT", "NO_BACKLINK"] },
     },
     select: {

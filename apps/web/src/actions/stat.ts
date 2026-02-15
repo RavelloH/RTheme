@@ -1631,6 +1631,7 @@ export async function getProjectsStats(
         COUNT(CASE WHEN "createdAt" >= ${thirtyDaysAgo} THEN 1 END) as new_30d,
         COUNT(CASE WHEN "createdAt" >= ${oneYearAgo} THEN 1 END) as new_1y
       FROM "Project"
+      WHERE "deletedAt" IS NULL
       GROUP BY status
     `;
 
@@ -1687,6 +1688,7 @@ export async function getProjectsStats(
         COALESCE(SUM(stars), 0) as total_stars,
         COALESCE(SUM(forks), 0) as total_forks
       FROM "Project"
+      WHERE "deletedAt" IS NULL
     `;
 
     const githubData = githubStats[0];

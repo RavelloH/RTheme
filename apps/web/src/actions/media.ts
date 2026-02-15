@@ -129,6 +129,7 @@ async function collectReferencedContentCacheTargets(
         select: {
           slug: true,
           status: true,
+          deletedAt: true,
         },
       },
     },
@@ -149,7 +150,7 @@ async function collectReferencedContentCacheTargets(
     }
 
     const project = reference.project;
-    if (project) {
+    if (project && !project.deletedAt) {
       projectSlugs.add(project.slug);
       if (project.status === "PUBLISHED") {
         hasPublishedProject = true;

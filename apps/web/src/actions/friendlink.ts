@@ -945,7 +945,7 @@ async function executeSingleCheck(
       : undefined;
 
   const updated = await prisma.friendLink.update({
-    where: { id: link.id },
+    where: { id: link.id, deletedAt: null },
     data: {
       checkSuccessCount: {
         increment: issueType === "NONE" ? 1 : 0,
@@ -1133,6 +1133,7 @@ export async function submitFriendLinkApplication(
       status: "PENDING" as const,
       auditorId: null,
       publishedAt: null,
+      deletedAt: null,
     };
 
     const friendLink = existing
@@ -1224,6 +1225,7 @@ export async function getOwnFriendLink(
     const record = await prisma.friendLink.findUnique({
       where: {
         ownerId: user.uid,
+        deletedAt: null,
       },
       include: {
         owner: {
@@ -1299,6 +1301,7 @@ export async function updateOwnFriendLink(
     const current = await prisma.friendLink.findUnique({
       where: {
         ownerId: user.uid,
+        deletedAt: null,
       },
       select: {
         id: true,
@@ -1321,6 +1324,7 @@ export async function updateOwnFriendLink(
     const updated = await prisma.friendLink.update({
       where: {
         id: current.id,
+        deletedAt: null,
       },
       data: {
         name: params.name.trim(),
@@ -1390,6 +1394,7 @@ export async function deleteOwnFriendLink(
     const current = await prisma.friendLink.findUnique({
       where: {
         ownerId: user.uid,
+        deletedAt: null,
       },
       select: {
         id: true,
@@ -1409,9 +1414,14 @@ export async function deleteOwnFriendLink(
       });
     }
 
-    await prisma.friendLink.delete({
+    const deletedAt = new Date();
+    await prisma.friendLink.update({
       where: {
         id: current.id,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt,
       },
     });
 
@@ -1421,7 +1431,7 @@ export async function deleteOwnFriendLink(
       message: "友链记录已删除",
       data: {
         id: current.id,
-        deletedAt: new Date().toISOString(),
+        deletedAt: deletedAt.toISOString(),
       },
     }) as ActionResult<DeleteOwnFriendLinkResult | null>;
   } catch (error) {
@@ -1469,6 +1479,7 @@ export async function getFriendLinkDetail(
     const record = await prisma.friendLink.findUnique({
       where: {
         id: params.id,
+        deletedAt: null,
       },
       include: {
         owner: {
@@ -1543,6 +1554,7 @@ export async function updateFriendLinkByAdmin(
     const current = await prisma.friendLink.findUnique({
       where: {
         id: params.id,
+        deletedAt: null,
       },
       select: {
         id: true,
@@ -1598,6 +1610,7 @@ export async function updateFriendLinkByAdmin(
       const occupied = await prisma.friendLink.findFirst({
         where: {
           ownerId: requestedOwnerUid,
+          deletedAt: null,
           id: {
             not: current.id,
           },
@@ -1617,6 +1630,7 @@ export async function updateFriendLinkByAdmin(
     const updated = await prisma.friendLink.update({
       where: {
         id: current.id,
+        deletedAt: null,
       },
       data: {
         name: params.name.trim(),
@@ -1789,6 +1803,7 @@ export async function deleteFriendLinkByAdmin(
     const current = await prisma.friendLink.findUnique({
       where: {
         id: params.id,
+        deletedAt: null,
       },
       select: {
         id: true,
@@ -1803,9 +1818,14 @@ export async function deleteFriendLinkByAdmin(
       });
     }
 
-    await prisma.friendLink.delete({
+    const deletedAt = new Date();
+    await prisma.friendLink.update({
       where: {
         id: current.id,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt,
       },
     });
 
@@ -1828,7 +1848,7 @@ export async function deleteFriendLinkByAdmin(
       message: "友链记录已删除",
       data: {
         id: current.id,
-        deletedAt: new Date().toISOString(),
+        deletedAt: deletedAt.toISOString(),
       },
     }) as ActionResult<DeleteFriendLinkByAdminResult | null>;
   } catch (error) {
@@ -1876,6 +1896,7 @@ export async function reviewFriendLink(
     const current = await prisma.friendLink.findUnique({
       where: {
         id: params.id,
+        deletedAt: null,
       },
       select: {
         id: true,
@@ -1896,6 +1917,7 @@ export async function reviewFriendLink(
     const updated = await prisma.friendLink.update({
       where: {
         id: current.id,
+        deletedAt: null,
       },
       data: {
         status: nextStatus,
@@ -2154,19 +2176,34 @@ export async function getFriendLinksStats(
       withOwner,
       problematic,
     ] = await Promise.all([
-      prisma.friendLink.count(),
-      prisma.friendLink.count({ where: { status: "PENDING" } }),
-      prisma.friendLink.count({ where: { status: "PUBLISHED" } }),
-      prisma.friendLink.count({ where: { status: "WHITELIST" } }),
-      prisma.friendLink.count({ where: { status: "REJECTED" } }),
-      prisma.friendLink.count({ where: { status: "BLOCKED" } }),
-      prisma.friendLink.count({ where: { status: "DISCONNECT" } }),
-      prisma.friendLink.count({ where: { status: "NO_BACKLINK" } }),
+      prisma.friendLink.count({ where: { deletedAt: null } }),
+      prisma.friendLink.count({
+        where: { status: "PENDING", deletedAt: null },
+      }),
+      prisma.friendLink.count({
+        where: { status: "PUBLISHED", deletedAt: null },
+      }),
+      prisma.friendLink.count({
+        where: { status: "WHITELIST", deletedAt: null },
+      }),
+      prisma.friendLink.count({
+        where: { status: "REJECTED", deletedAt: null },
+      }),
+      prisma.friendLink.count({
+        where: { status: "BLOCKED", deletedAt: null },
+      }),
+      prisma.friendLink.count({
+        where: { status: "DISCONNECT", deletedAt: null },
+      }),
+      prisma.friendLink.count({
+        where: { status: "NO_BACKLINK", deletedAt: null },
+      }),
       prisma.friendLink.count({
         where: {
           ownerId: {
             not: null,
           },
+          deletedAt: null,
         },
       }),
       prisma.friendLink.count({
@@ -2174,6 +2211,7 @@ export async function getFriendLinksStats(
           status: {
             in: ["DISCONNECT", "NO_BACKLINK"],
           },
+          deletedAt: null,
         },
       }),
     ]);
@@ -2264,6 +2302,7 @@ export async function getFriendLinksTrends(
               createdAt: {
                 lte: date,
               },
+              deletedAt: null,
             },
           }),
           prisma.friendLink.count({
@@ -2271,6 +2310,7 @@ export async function getFriendLinksTrends(
               publishedAt: {
                 lte: date,
               },
+              deletedAt: null,
             },
           }),
           prisma.friendLink.count({
@@ -2279,6 +2319,7 @@ export async function getFriendLinksTrends(
                 gte: oneDayBefore,
                 lte: date,
               },
+              deletedAt: null,
             },
           }),
         ]);
@@ -2358,7 +2399,9 @@ export async function getFriendLinksList(
       publishedAtEnd,
     } = params;
 
-    const whereConditions: Prisma.FriendLinkWhereInput[] = [];
+    const whereConditions: Prisma.FriendLinkWhereInput[] = [
+      { deletedAt: null },
+    ];
 
     if (search) {
       whereConditions.push({
@@ -2433,8 +2476,7 @@ export async function getFriendLinksList(
       });
     }
 
-    const where: Prisma.FriendLinkWhereInput =
-      whereConditions.length > 0 ? { AND: whereConditions } : {};
+    const where: Prisma.FriendLinkWhereInput = { AND: whereConditions };
 
     const [total, records] = await Promise.all([
       prisma.friendLink.count({
@@ -2538,8 +2580,11 @@ export async function checkFriendLinks(
     ]);
 
     const where: Prisma.FriendLinkWhereInput = params.checkAll
-      ? {}
+      ? {
+          deletedAt: null,
+        }
       : {
+          deletedAt: null,
           id: {
             in: params.ids || [],
           },

@@ -80,6 +80,7 @@ export async function friendLinksBlockFetcher(
 
   const rawLinks = await prisma.friendLink.findMany({
     where: {
+      deletedAt: null,
       status: { in: ["PUBLISHED", "WHITELIST"] },
       ...(groupFilter ? { group: groupFilter } : {}),
     },
