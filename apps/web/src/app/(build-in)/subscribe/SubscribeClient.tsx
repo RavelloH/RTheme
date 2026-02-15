@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ApiResponse } from "@repo/shared-types/api/common";
 import { usePathname, useSearchParams } from "next/navigation";
 
+import { subscribeMail } from "@/actions/mail-subscription";
 import { CaptchaButton } from "@/components/ui/CaptchaButton";
 import { useNavigateWithTransition } from "@/components/ui/Link";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import { useWebPush } from "@/hooks/use-webpush";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
@@ -16,28 +18,6 @@ import { useToast } from "@/ui/Toast";
 
 type SubscribeTab = "email" | "push" | "rss";
 
-const tabOptions = [
-  {
-    value: "email",
-    label: "邮箱订阅",
-    description: "通过邮箱接收更新",
-  },
-  {
-    value: "push",
-    label: "通知订阅",
-    description: "通过浏览器推送接收通知",
-  },
-  {
-    value: "rss",
-    label: "RSS 订阅",
-    description: "使用 RSS 阅读器订阅",
-  },
-] as Array<{
-  value: SubscribeTab;
-  label: string;
-  description: string;
-}>;
-
 const permissionLabelMap: Record<NotificationPermission, string> = {
   granted: "已授权",
   denied: "已拒绝",
@@ -45,11 +25,23 @@ const permissionLabelMap: Record<NotificationPermission, string> = {
 };
 
 interface SubscribeClientProps {
+  mailSubscriptionEnabled: boolean;
+  mailSubscriptionAnonymousEnabled: boolean;
+  mailSubscriptionCheckEnabled: boolean;
+  currentUser: {
+    uid: number;
+    email: string;
+    emailVerified: boolean;
+  } | null;
   isModal?: boolean;
   onRequestClose?: (targetPath?: string) => void;
 }
 
 export default function SubscribeClient({
+  mailSubscriptionEnabled,
+  mailSubscriptionAnonymousEnabled,
+  mailSubscriptionCheckEnabled,
+  currentUser,
   isModal = false,
   onRequestClose,
 }: SubscribeClientProps) {
@@ -57,18 +49,57 @@ export default function SubscribeClient({
   const navigate = useNavigateWithTransition();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<SubscribeTab>("email");
-  const [email, setEmail] = useState("");
+  const [activeTab, setActiveTab] = useState<SubscribeTab>(
+    mailSubscriptionEnabled ? "email" : "push",
+  );
+  const [email, setEmail] = useState(currentUser?.email || "");
   const [actionLoading, setActionLoading] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(Boolean(currentUser));
+  const [currentLoginEmail, setCurrentLoginEmail] = useState(
+    currentUser?.email || "",
+  );
+  const [captchaToken, setCaptchaToken] = useState("");
   const [rssUrl, setRssUrl] = useState("/feed.xml");
   const { isSupported, permission, subscribe, sendTestWebPush } = useWebPush();
+  const { broadcast } = useBroadcastSender<{ type: string; token?: string }>();
+
+  const subscribeTabOptions = useMemo(() => {
+    const options: Array<{
+      value: SubscribeTab;
+      label: string;
+      description: string;
+    }> = [];
+
+    if (mailSubscriptionEnabled) {
+      options.push({
+        value: "email",
+        label: "邮箱订阅",
+        description: "通过邮箱接收更新",
+      });
+    }
+
+    options.push(
+      {
+        value: "push",
+        label: "通知订阅",
+        description: "通过浏览器推送接收通知",
+      },
+      {
+        value: "rss",
+        label: "RSS 订阅",
+        description: "使用 RSS 阅读器订阅",
+      },
+    );
+
+    return options;
+  }, [mailSubscriptionEnabled]);
 
   const syncLoginStatus = useCallback(() => {
     try {
       const raw = localStorage.getItem("user_info");
       if (!raw) {
-        setIsLoggedIn(false);
+        setIsLoggedIn(Boolean(currentUser));
+        setCurrentLoginEmail(currentUser?.email || "");
         return;
       }
 
@@ -81,10 +112,28 @@ export default function SubscribeClient({
         typeof parsed.email === "string" && parsed.email.length > 0;
 
       setIsLoggedIn(hasUid || hasUsername || hasEmail);
+      setCurrentLoginEmail(
+        typeof parsed.email === "string"
+          ? parsed.email
+          : currentUser?.email || "",
+      );
     } catch {
-      setIsLoggedIn(false);
+      setIsLoggedIn(Boolean(currentUser));
+      setCurrentLoginEmail(currentUser?.email || "");
     }
-  }, []);
+  }, [currentUser]);
+
+  useBroadcast((message: { type: string; token?: string }) => {
+    if (message?.type === "captcha-solved" && message.token) {
+      setCaptchaToken(message.token);
+    }
+  });
+
+  useBroadcast((message: { type: string }) => {
+    if (message?.type === "captcha-error") {
+      toast.error("安全验证失败，请刷新后重试");
+    }
+  });
 
   useEffect(() => {
     syncLoginStatus();
@@ -122,6 +171,21 @@ export default function SubscribeClient({
     if (typeof window === "undefined") return;
     setRssUrl(new URL("/feed.xml", window.location.origin).toString());
   }, []);
+
+  useEffect(() => {
+    if (isLoggedIn && currentLoginEmail) {
+      setEmail(currentLoginEmail);
+    }
+  }, [currentLoginEmail, isLoggedIn]);
+
+  useEffect(() => {
+    if (
+      !subscribeTabOptions.some((option) => option.value === activeTab) &&
+      subscribeTabOptions[0]
+    ) {
+      setActiveTab(subscribeTabOptions[0].value);
+    }
+  }, [activeTab, subscribeTabOptions]);
 
   const buildRedirectUrl = useCallback(
     (basePath: string) => {
@@ -168,6 +232,78 @@ export default function SubscribeClient({
     }
     navigate(target);
   }, [buildRedirectUrl, navigate, onRequestClose]);
+
+  const resetCaptchaState = useCallback(() => {
+    setCaptchaToken("");
+    void broadcast({ type: "captcha-reset" });
+  }, [broadcast]);
+
+  const handleSubscribeEmail = useCallback(async () => {
+    if (!mailSubscriptionEnabled) {
+      toast.error("当前未开启邮箱订阅");
+      return;
+    }
+
+    if (!isLoggedIn && !mailSubscriptionAnonymousEnabled) {
+      toast.error("当前站点不允许匿名订阅，请先登录");
+      return;
+    }
+
+    if (!captchaToken) {
+      toast.error("请先完成安全验证");
+      return;
+    }
+
+    const targetEmail = email.trim();
+    if (!isLoggedIn && !targetEmail) {
+      toast.error("请填写邮箱地址");
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const result = await subscribeMail({
+        email: isLoggedIn ? undefined : targetEmail,
+        captcha_token: captchaToken,
+      });
+
+      if (result.success) {
+        if (result.data?.status === "PENDING_VERIFY") {
+          toast.success(result.message || "确认邮件已发送，请前往邮箱完成订阅");
+        } else {
+          toast.success(result.message || "订阅成功");
+        }
+        resetCaptchaState();
+        return;
+      }
+
+      const isMailUnavailable =
+        result.error?.code === "SERVICE_UNAVAILABLE" ||
+        result.message.includes("邮件通知功能未启用") ||
+        result.message.includes("未配置邮件发送服务") ||
+        result.message.includes("未开启邮箱订阅");
+      if (isMailUnavailable) {
+        toast.error("当前未开启邮箱订阅");
+      } else {
+        toast.error(result.message || "订阅失败");
+      }
+      resetCaptchaState();
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "订阅失败");
+      resetCaptchaState();
+    } finally {
+      setActionLoading(false);
+    }
+  }, [
+    captchaToken,
+    email,
+    isLoggedIn,
+    mailSubscriptionAnonymousEnabled,
+    mailSubscriptionEnabled,
+    resetCaptchaState,
+    toast,
+  ]);
 
   const handleSubscribePush = async () => {
     if (!isLoggedIn) {
@@ -218,36 +354,77 @@ export default function SubscribeClient({
   };
 
   const renderEmailTab = () => {
+    if (!mailSubscriptionEnabled) {
+      return (
+        <div className="rounded-sm border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground">
+          当前站点暂未开启邮箱订阅。
+        </div>
+      );
+    }
+
+    if (!isLoggedIn && !mailSubscriptionAnonymousEnabled) {
+      return (
+        <div className="space-y-5">
+          <div className="rounded-sm border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground">
+            当前站点不允许匿名邮箱订阅，请先登录或注册账号。
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-foreground/10">
+            <Button
+              label="登录"
+              size="sm"
+              variant="ghost"
+              onClick={handleGotoLogin}
+            />
+            <Button
+              label="注册"
+              size="sm"
+              variant="primary"
+              onClick={handleGotoRegister}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    const showVerifyTip = mailSubscriptionCheckEnabled && !isLoggedIn;
+    const canSubmit = isLoggedIn || Boolean(email.trim());
+
     return (
       <div className="space-y-5">
         <div>
           <p className="text-sm text-muted-foreground">
-            在新的文章发布时，我们会定期向您发送通知。
+            在新的文章发布时，我们会向您发送更新通知。
           </p>
+          {showVerifyTip ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              订阅后需要完成邮箱确认，确认成功后才会开始接收邮件。
+            </p>
+          ) : null}
         </div>
+
         <Input
           label="邮箱地址"
           type="email"
           size="sm"
           value={email}
+          disabled={isLoggedIn}
           onChange={(e) => setEmail(e.target.value)}
-          helperText="me@example.com"
+          helperText={isLoggedIn ? "将使用当前登录账户邮箱" : "me@example.com"}
         />
 
         <div className="flex items-center justify-between gap-3 pt-4 border-t border-foreground/10">
           <p className="text-sm text-muted-foreground">
-            您可在邮箱中随时取消订阅。
+            您可在邮件中的退订链接随时取消订阅。
           </p>
           <CaptchaButton
-            label="订阅通知"
+            label={showVerifyTip ? "发送确认邮件" : "订阅通知"}
             size="sm"
             variant="primary"
-            disabled={!email.trim()}
-            verificationText="正在检查"
-            onClick={() => {
-              // TODO: 实现邮箱订阅功能
-              toast.warning("订阅失败", "还没做这个功能，再等等吧");
-            }}
+            loading={actionLoading}
+            disabled={!canSubmit || actionLoading}
+            verificationText="正在安全检查"
+            onClick={handleSubscribeEmail}
           />
         </div>
       </div>
@@ -416,8 +593,8 @@ export default function SubscribeClient({
         <SegmentedControl
           value={activeTab}
           onChange={(tab) => setActiveTab(tab)}
-          options={tabOptions}
-          columns={3}
+          options={subscribeTabOptions}
+          columns={subscribeTabOptions.length}
         />
 
         <AutoResizer duration={0.28}>

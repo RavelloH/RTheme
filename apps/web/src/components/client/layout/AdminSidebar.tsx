@@ -5,6 +5,7 @@ import {
   RiArticleFill,
   RiAttachment2,
   RiBarChart2Fill,
+  RiCloudFill,
   RiDashboardHorizontalFill,
   RiDeleteBinFill,
   RiFileFill,
@@ -14,6 +15,7 @@ import {
   RiHardDrive3Fill,
   RiInformationFill,
   RiListView,
+  RiMailFill,
   RiMenuFill,
   RiMessageFill,
   RiPriceTag3Fill,
@@ -24,6 +26,7 @@ import {
   RiShieldFill,
   RiStethoscopeFill,
   RiTeamFill,
+  RiTimerLine,
   RiUserFill,
 } from "@remixicon/react";
 import { usePathname } from "next/navigation";
@@ -107,6 +110,7 @@ const AdminSidebarList = [
     href: "/admin/friends",
     role: roles.admin,
   },
+
   {
     name: "搜索洞察",
     icon: <RiSearchEyeFill size={"1.5em"} />,
@@ -118,6 +122,12 @@ const AdminSidebarList = [
     icon: <RiSearchFill size={"1.5em"} />,
     href: "/admin/search",
     role: roles.admin,
+  },
+  {
+    name: "邮件订阅",
+    icon: <RiMailFill size={"1.5em"} />,
+    href: "/admin/mail-subscriptions",
+    role: roles.author,
   },
   {
     name: "页面管理",
@@ -159,6 +169,18 @@ const AdminSidebarList = [
     name: "备份还原",
     icon: <RiSave3Fill size={"1.5em"} />,
     href: "/admin/backups",
+    role: roles.admin,
+  },
+  {
+    name: "计划任务",
+    icon: <RiTimerLine size={"1.5em"} />,
+    href: "/admin/cron",
+    role: roles.admin,
+  },
+  {
+    name: "云端互联",
+    icon: <RiCloudFill size={"1.5em"} />,
+    href: "/admin/cloud",
     role: roles.admin,
   },
   {

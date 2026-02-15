@@ -60,6 +60,7 @@ model User {
   passkeys          Passkey[]
   commentLikes      CommentLike[]
   pushSubscriptions PushSubscription[]
+  mailSubscriptions MailSubscription[]
   virtualFolders    VirtualFolder[]
   projects          Project[]
   ownedLinks        FriendLink[]              @relation("LinkOwner")
@@ -848,6 +849,44 @@ enum HealthCheckTriggerType {
   CRON
 }
 
+enum MailSubscriptionStatus {
+  PENDING_VERIFY
+  ACTIVE
+  UNSUBSCRIBED
+}
+
+model MailSubscription {
+  id    Int    @id @default(autoincrement())
+  email String @unique @db.VarChar(255)
+
+  // 关联用户（匿名可为空）
+  userUid Int?
+  user    User? @relation(fields: [userUid], references: [uid], onDelete: SetNull)
+
+  status MailSubscriptionStatus @default(PENDING_VERIFY)
+
+  // 二次验证（开启 check 时使用）
+  verifyTokenHash      String?   @db.VarChar(128)
+  verifyTokenExpiresAt DateTime?
+  verifiedAt           DateTime?
+
+  // 退订链接失效控制（每次退订后 +1）
+  unsubscribeVersion Int      @default(1)
+  unsubscribedAt     DateTime?
+
+  // 记录上次已发送的文章
+  lastSentPostId Int?
+  lastSentAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([status, lastSentPostId])
+  @@index([userUid])
+  @@index([verifyTokenExpiresAt])
+}
+
 // Web Push 订阅模型
 model PushSubscription {
   id      String @id @default(uuid())
@@ -906,7 +945,7 @@ model Project {
   enableGithubSync Boolean @default(true)
   enableConentSync Boolean @default(true)
 
-  status ProjectStatus @default(PUBLISHED)
+  status    ProjectStatus @default(PUBLISHED)
   deletedAt DateTime?
 
   userUid Int

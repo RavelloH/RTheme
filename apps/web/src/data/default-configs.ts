@@ -492,7 +492,21 @@ export const CONFIG_DEFINITIONS = {
     description:
       "WebPush VAPID 密钥对。需要同时配置 publicKey 与 privateKey。默认会初始化生成一套，一般无需修改",
   },
-
+  "notice.mailSubscription.enable": {
+    default: true,
+    description:
+      "是否允许用户订阅邮件通知。开启后，用户可以订阅文章更新。需要设置有效的邮件发送配置才能正常使用",
+  },
+  "notice.mailSubscription.anonymous.enable": {
+    default: true,
+    description:
+      "是否允许匿名用户订阅邮件通知。关闭后，只有注册用户可以订阅邮件通知",
+  },
+  "notice.mailSubscription.check.enable": {
+    default: true,
+    description:
+      "是否在用户订阅邮件通知时，发送一封确认邮件以验证邮箱地址的有效性。开启后可以减少无效邮箱订阅，但可能增加用户订阅的步骤",
+  },
   // =====================================
   // 友链管理
   // =====================================

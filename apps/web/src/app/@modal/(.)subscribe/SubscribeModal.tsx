@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import type { SubscribeContext } from "@/app/(build-in)/subscribe/subscribe-context";
 import SubscribeClient from "@/app/(build-in)/subscribe/SubscribeClient";
 import { useNavigateWithTransition } from "@/components/ui/Link";
 import { Dialog } from "@/ui/Dialog";
 
-export default function SubscribeModal() {
+type SubscribeModalProps = SubscribeContext;
+
+export default function SubscribeModal(props: SubscribeModalProps) {
   const router = useRouter();
   const navigate = useNavigateWithTransition();
   const [open, setOpen] = useState(true);
@@ -36,7 +39,11 @@ export default function SubscribeModal() {
       dismissable={true}
     >
       <div className="max-h-[calc(85vh-8em)]">
-        <SubscribeClient isModal={true} onRequestClose={handleClose} />
+        <SubscribeClient
+          {...props}
+          isModal={true}
+          onRequestClose={handleClose}
+        />
       </div>
     </Dialog>
   );
