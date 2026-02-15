@@ -6,6 +6,7 @@ import {
   RiAttachment2,
   RiBarChart2Fill,
   RiDashboardHorizontalFill,
+  RiDeleteBinFill,
   RiFileFill,
   RiFileInfoFill,
   RiFileShieldFill,
@@ -135,6 +136,12 @@ const AdminSidebarList = [
     icon: <RiFileShieldFill size={"1.5em"} />,
     href: "/admin/audit-logs",
     role: roles.admin,
+  },
+  {
+    name: "回收站",
+    icon: <RiDeleteBinFill size={"1.5em"} />,
+    href: "/admin/recycle-bin",
+    role: roles.author,
   },
   {
     name: "菜单管理",

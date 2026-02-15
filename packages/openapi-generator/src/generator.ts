@@ -228,6 +228,7 @@ export async function generateOpenAPISpec(): Promise<OpenAPISpec> {
     await import("@repo/shared-types/api/captcha");
     await import("@repo/shared-types/api/doctor");
     await import("@repo/shared-types/api/stats");
+    await import("@repo/shared-types/api/recycle-bin");
     // 你可以在这里添加更多的API模块导入
 
     // 获取所有已注册的schemas
