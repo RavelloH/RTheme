@@ -75,13 +75,37 @@ export async function GET(request: Request): Promise<Response> {
     );
     if (validationResult instanceof Response) return validationResult;
 
-    const { access_token, page, pageSize } = validationResult.data;
+    const {
+      access_token,
+      page,
+      pageSize,
+      sortBy,
+      sortOrder,
+      id,
+      status,
+      triggerType,
+      okCount,
+      warningCount,
+      errorCount,
+      createdAtStart,
+      createdAtEnd,
+    } = validationResult.data;
 
     return (await getDoctorHistory(
       {
         access_token,
         page,
         pageSize,
+        sortBy,
+        sortOrder,
+        id,
+        status,
+        triggerType,
+        okCount,
+        warningCount,
+        errorCount,
+        createdAtStart,
+        createdAtEnd,
       },
       {
         environment: "serverless",
