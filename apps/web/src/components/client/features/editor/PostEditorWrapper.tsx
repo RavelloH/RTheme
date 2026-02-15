@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { getLatestMailDispatchOverview } from "@/actions/mail-subscription";
 import { createPost, updatePost } from "@/actions/post";
 import { CategoryInput } from "@/components/client/features/categories/CategoryInput";
 import { EditorCore } from "@/components/client/features/editor/EditorCore";
@@ -149,6 +150,8 @@ export function PostEditorWrapper({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [mailDispatchDialogOpen, setMailDispatchDialogOpen] = useState(false);
+  const [activeSubscriberCount, setActiveSubscriberCount] = useState(0);
   const [confirmAction, setConfirmAction] = useState<
     "draft" | "publish" | null
   >(null);
@@ -156,6 +159,25 @@ export function PostEditorWrapper({
 
   const toast = useToast();
   const navigate = useNavigateWithTransition();
+
+  const navigateToDefaultSuccessPage = useCallback(() => {
+    setTimeout(() => {
+      navigate(successRedirectPath);
+    }, 1000);
+  }, [navigate, successRedirectPath]);
+
+  const checkMailDispatchPrompt = useCallback(async (): Promise<number> => {
+    try {
+      const result = await getLatestMailDispatchOverview();
+      if (!result.success || !result.data) {
+        return 0;
+      }
+      return result.data.totalActive > 0 ? result.data.totalActive : 0;
+    } catch (error) {
+      console.error("检查邮件分发提示失败:", error);
+      return 0;
+    }
+  }, []);
 
   // ==================== 初始化表单数据 ====================
   useEffect(() => {
@@ -329,6 +351,11 @@ export function PostEditorWrapper({
       }
 
       if (response.success) {
+        const isPublishSuccess = isEditMode
+          ? initialData?.status !== "PUBLISHED" &&
+            formData.status === "PUBLISHED"
+          : confirmAction === "publish";
+
         if (isEditMode) {
           const statusText =
             formData.status === "PUBLISHED"
@@ -351,10 +378,16 @@ export function PostEditorWrapper({
         clearEditorContent(storageKey);
         setConfirmDialogOpen(false);
 
-        // 延迟导航
-        setTimeout(() => {
-          navigate(successRedirectPath);
-        }, 1000);
+        if (isPublishSuccess) {
+          const activeCount = await checkMailDispatchPrompt();
+          if (activeCount > 0) {
+            setActiveSubscriberCount(activeCount);
+            setMailDispatchDialogOpen(true);
+            return;
+          }
+        }
+
+        navigateToDefaultSuccessPage();
       } else {
         toast.error(response.message || "操作失败，请稍后重试");
       }
@@ -756,6 +789,35 @@ export function PostEditorWrapper({
     </div>
   );
 
+  const renderMailDispatchDialogContent = () => (
+    <div className="px-6 py-6 space-y-6">
+      <p className="text-sm text-muted-foreground">
+        当前站点已开启邮箱订阅，且有 {activeSubscriberCount}{" "}
+        位活跃订阅者。是否前往邮件发送页面，向订阅者发送最新文章通知？
+      </p>
+      <div className="flex justify-end gap-2">
+        <Button
+          label="暂不发送"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setMailDispatchDialogOpen(false);
+            navigateToDefaultSuccessPage();
+          }}
+        />
+        <Button
+          label="前往发送页面"
+          variant="primary"
+          size="sm"
+          onClick={() => {
+            setMailDispatchDialogOpen(false);
+            navigate("/admin/mail-subscriptions");
+          }}
+        />
+      </div>
+    </div>
+  );
+
   // ==================== 渲染 ====================
   return (
     <>
@@ -802,6 +864,18 @@ export function PostEditorWrapper({
         size="lg"
       >
         {renderConfirmDialogContent()}
+      </Dialog>
+
+      <Dialog
+        open={mailDispatchDialogOpen}
+        onClose={() => {
+          setMailDispatchDialogOpen(false);
+          navigateToDefaultSuccessPage();
+        }}
+        title="发布成功，是否发送邮件通知"
+        size="md"
+      >
+        {renderMailDispatchDialogContent()}
       </Dialog>
     </>
   );

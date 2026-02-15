@@ -29,3 +29,9 @@ export type { EmailChangedTemplateProps } from "./EmailChanged";
 
 export { default as NotificationEmail } from "./NotificationEmail";
 export type { NotificationEmailProps } from "./NotificationEmail";
+
+export { MailSubscriptionVerifyEmail } from "./MailSubscriptionVerifyEmail";
+export type { MailSubscriptionVerifyEmailProps } from "./MailSubscriptionVerifyEmail";
+
+export { PostSubscriptionEmail } from "./PostSubscriptionEmail";
+export type { PostSubscriptionEmailProps } from "./PostSubscriptionEmail";
