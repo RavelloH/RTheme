@@ -1,3 +1,6 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+
 import { ImageResponse } from "next/og";
 
 import { getConfigs } from "@/lib/server/config-cache";
@@ -11,43 +14,121 @@ interface IconMetadata {
 // 启用缓存
 export const revalidate = 3600;
 
-const FALLBACK_SITE_URL = "http://localhost:3000";
 const FALLBACK_FAVICON_PATH = "/icon.png";
+const PUBLIC_DIR = path.join(process.cwd(), "public");
+const TRANSPARENT_PNG_DATA_URL =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4////fwAJ+wP+fD9x1QAAAABJRU5ErkJggg==";
+
+const MIME_TYPE_BY_EXT: Record<string, string> = {
+  ".avif": "image/avif",
+  ".gif": "image/gif",
+  ".ico": "image/x-icon",
+  ".jpeg": "image/jpeg",
+  ".jpg": "image/jpeg",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".webp": "image/webp",
+};
 
 function isExternalUrl(value: string): boolean {
   return /^https?:\/\//i.test(value);
 }
 
-function resolveSiteUrl(siteUrl: string): string {
-  const trimmed = siteUrl.trim();
-  if (!trimmed) {
-    return FALLBACK_SITE_URL;
+function stripUrlSearchAndHash(value: string): string {
+  return value.split(/[?#]/, 1)[0] || "";
+}
+
+function resolveMimeType(value: string, fallback = "image/png"): string {
+  const pathname = stripUrlSearchAndHash(value).toLowerCase();
+  const ext = path.extname(pathname);
+  return MIME_TYPE_BY_EXT[ext] || fallback;
+}
+
+function normalizeFaviconInput(favicon: string): string {
+  const trimmedFavicon = favicon.trim();
+  if (!trimmedFavicon) {
+    return FALLBACK_FAVICON_PATH;
+  }
+
+  if (isExternalUrl(trimmedFavicon)) {
+    return trimmedFavicon;
+  }
+
+  return trimmedFavicon.startsWith("/") ? trimmedFavicon : `/${trimmedFavicon}`;
+}
+
+function resolveSafePublicPath(relativePath: string): string | null {
+  const cleanedPath = stripUrlSearchAndHash(relativePath);
+  const normalizedRelativePath = cleanedPath.startsWith("/")
+    ? cleanedPath.slice(1)
+    : cleanedPath;
+
+  if (!normalizedRelativePath) {
+    return null;
+  }
+
+  const absolutePath = path.resolve(
+    PUBLIC_DIR,
+    ...normalizedRelativePath.split("/"),
+  );
+  const relative = path.relative(PUBLIC_DIR, absolutePath);
+
+  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) {
+    return null;
+  }
+
+  return absolutePath;
+}
+
+async function readLocalIconAsDataUrl(
+  iconPath: string,
+): Promise<string | null> {
+  const absolutePath = resolveSafePublicPath(iconPath);
+  if (!absolutePath) {
+    return null;
   }
 
   try {
-    return new URL(trimmed).toString();
+    const fileBuffer = await fs.readFile(absolutePath);
+    const mimeType = resolveMimeType(iconPath);
+    return `data:${mimeType};base64,${fileBuffer.toString("base64")}`;
   } catch {
-    return FALLBACK_SITE_URL;
+    return null;
   }
 }
 
-function resolveFaviconUrl(favicon: string, siteUrl: string): string {
-  const trimmedFavicon = favicon.trim();
-  const normalizedFavicon = trimmedFavicon || FALLBACK_FAVICON_PATH;
-
-  if (isExternalUrl(normalizedFavicon)) {
-    return normalizedFavicon;
-  }
-
-  const normalizedPath = normalizedFavicon.startsWith("/")
-    ? normalizedFavicon
-    : `/${normalizedFavicon}`;
-
+async function fetchRemoteIconAsDataUrl(
+  iconUrl: string,
+): Promise<string | null> {
   try {
-    return new URL(normalizedPath, resolveSiteUrl(siteUrl)).toString();
+    const response = await fetch(iconUrl);
+    if (!response.ok) {
+      return null;
+    }
+
+    const contentType =
+      response.headers.get("content-type")?.split(";")[0]?.trim() ||
+      resolveMimeType(iconUrl);
+    const buffer = Buffer.from(await response.arrayBuffer());
+
+    return `data:${contentType};base64,${buffer.toString("base64")}`;
   } catch {
-    return new URL(FALLBACK_FAVICON_PATH, FALLBACK_SITE_URL).toString();
+    return null;
   }
+}
+
+async function resolveFaviconDataUrl(favicon: string): Promise<string> {
+  const normalizedFavicon = normalizeFaviconInput(favicon);
+  const faviconDataUrl = isExternalUrl(normalizedFavicon)
+    ? await fetchRemoteIconAsDataUrl(normalizedFavicon)
+    : await readLocalIconAsDataUrl(normalizedFavicon);
+
+  if (faviconDataUrl) {
+    return faviconDataUrl;
+  }
+
+  const fallbackDataUrl = await readLocalIconAsDataUrl(FALLBACK_FAVICON_PATH);
+  return fallbackDataUrl || TRANSPARENT_PNG_DATA_URL;
 }
 
 export function generateImageMetadata(): IconMetadata[] {
@@ -127,10 +208,8 @@ export default async function Icon({
   params?: { __metadata_id__: string };
 }) {
   const metadataId = await id;
-  const [favicon, siteUrl] = await getConfigs(["site.favicon", "site.url"]);
-  const iconSrc = resolveFaviconUrl(favicon, siteUrl);
-
-  console.log("Generating icon for metadata ID:", metadataId);
+  const [favicon] = await getConfigs(["site.favicon"]);
+  const iconSrc = await resolveFaviconDataUrl(favicon);
 
   // 从 metadata 中查找匹配的尺寸
   const metadata = generateImageMetadata();

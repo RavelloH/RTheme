@@ -9,15 +9,6 @@ const rlog = new RLog();
 const PUBLIC_DIR = path.join(process.cwd(), "public");
 const SYNC_CONCURRENCY = 16;
 
-const PROTECTED_FILES = new Set([
-  "sw.js",
-  "feed.xsl",
-  "icon.png",
-  "avatar.jpg",
-  "avatar.old.jpg",
-  "icon.old.png",
-]);
-
 interface PersistentMediaRecord {
   id: number;
   storageUrl: string;
@@ -80,107 +71,6 @@ function toPublicAbsolutePath(relativePath: string): string {
     throw new Error(`路径越界: ${relativePath}`);
   }
   return absolutePath;
-}
-
-function collectPublicFilesRecursively(rootDir: string): string[] {
-  if (!fs.existsSync(rootDir)) {
-    return [];
-  }
-
-  const files: string[] = [];
-  const walk = (currentDir: string) => {
-    const entries = fs.readdirSync(currentDir, { withFileTypes: true });
-    for (const entry of entries) {
-      const fullPath = path.join(currentDir, entry.name);
-      if (entry.isDirectory()) {
-        walk(fullPath);
-        continue;
-      }
-
-      const relativePath = path
-        .relative(rootDir, fullPath)
-        .split(path.sep)
-        .join("/");
-      files.push(relativePath);
-    }
-  };
-
-  walk(rootDir);
-  return files;
-}
-
-function removeEmptyParentDirectories(startDir: string): void {
-  let currentDir = startDir;
-  while (currentDir.startsWith(PUBLIC_DIR) && currentDir !== PUBLIC_DIR) {
-    if (!fs.existsSync(currentDir)) {
-      currentDir = path.dirname(currentDir);
-      continue;
-    }
-
-    const files = fs.readdirSync(currentDir);
-    if (files.length > 0) break;
-    fs.rmdirSync(currentDir);
-    currentDir = path.dirname(currentDir);
-  }
-}
-
-function cleanupStalePublicFiles(targetPaths: Set<string>): number {
-  const currentFiles = collectPublicFilesRecursively(PUBLIC_DIR);
-  let removedCount = 0;
-
-  for (const file of currentFiles) {
-    if (PROTECTED_FILES.has(file)) continue;
-    if (targetPaths.has(file)) continue;
-
-    const absolutePath = path.resolve(PUBLIC_DIR, ...file.split("/"));
-    const relative = path.relative(PUBLIC_DIR, absolutePath);
-    if (relative.startsWith("..") || path.isAbsolute(relative)) continue;
-
-    fs.rmSync(absolutePath, { force: true });
-    removeEmptyParentDirectories(path.dirname(absolutePath));
-    removedCount += 1;
-  }
-
-  return removedCount;
-}
-
-function handleAvatarAndIconBackup(targetPaths: Set<string>): void {
-  const needAvatarUpdate = targetPaths.has("avatar.jpg");
-  const needIconUpdate = targetPaths.has("icon.png");
-  if (!needAvatarUpdate && !needIconUpdate) return;
-
-  const avatarPath = toPublicAbsolutePath("avatar.jpg");
-  const iconPath = toPublicAbsolutePath("icon.png");
-  const avatarOldPath = toPublicAbsolutePath("avatar.old.jpg");
-  const iconOldPath = toPublicAbsolutePath("icon.old.png");
-
-  const avatarOldExists = fs.existsSync(avatarOldPath);
-  const iconOldExists = fs.existsSync(iconOldPath);
-
-  if (avatarOldExists && iconOldExists) {
-    if (needAvatarUpdate && fs.existsSync(avatarPath)) {
-      fs.rmSync(avatarPath, { force: true });
-    }
-    if (needIconUpdate && fs.existsSync(iconPath)) {
-      fs.rmSync(iconPath, { force: true });
-    }
-    return;
-  }
-
-  if (!avatarOldExists && fs.existsSync(avatarPath)) {
-    fs.copyFileSync(avatarPath, avatarOldPath);
-  }
-
-  if (!iconOldExists && fs.existsSync(iconPath)) {
-    fs.copyFileSync(iconPath, iconOldPath);
-  }
-
-  if (needAvatarUpdate && fs.existsSync(avatarPath)) {
-    fs.rmSync(avatarPath, { force: true });
-  }
-  if (needIconUpdate && fs.existsSync(iconPath)) {
-    fs.rmSync(iconPath, { force: true });
-  }
 }
 
 async function getRemoteEtag(url: string): Promise<string | null> {
@@ -306,12 +196,6 @@ export async function syncPersistentMedia(): Promise<void> {
   try {
     prisma = await createPrismaClient();
     const mediaList = await fetchPersistentMedia(prisma);
-    const targetPaths = new Set(mediaList.map((item) => item.persistentPath));
-
-    rlog.log("> Cleaning stale files...");
-    const removedCount = cleanupStalePublicFiles(targetPaths);
-    handleAvatarAndIconBackup(targetPaths);
-    rlog.log();
 
     let downloadedCount = 0;
     let skippedCount = 0;
@@ -389,7 +273,7 @@ export async function syncPersistentMedia(): Promise<void> {
     }
 
     rlog.success(
-      `✓ Persistent media sync completed (downloaded: ${downloadedCount}, skipped: ${skippedCount}, cleaned: ${removedCount})`,
+      `✓ Persistent media sync completed (downloaded: ${downloadedCount}, skipped: ${skippedCount})`,
     );
   } finally {
     if (prisma) {

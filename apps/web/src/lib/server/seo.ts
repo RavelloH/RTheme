@@ -19,7 +19,8 @@ const STATIC_METADATA = {
   alternates: {
     canonical: "/",
     types: {
-      "application/rss+xml": "/rss.xml",
+      "application/rss+xml": "/feed.xml",
+      "application/feed+json": "/feed.json",
     },
   },
   robots: {
