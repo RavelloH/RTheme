@@ -372,6 +372,11 @@ export default function DoctorHistoryTable() {
       align: "left",
       sortable: true,
       mono: true,
+      render(value) {
+        if (typeof value === "string") {
+          return TRIGGER_TYPE_LABELS[value as DoctorHistoryItem["triggerType"]];
+        }
+      },
     },
     {
       key: "durationMs",
