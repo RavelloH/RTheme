@@ -66,6 +66,15 @@ const nextConfig = () => {
         },
       ];
     },
+    async redirects() {
+      return [
+        {
+          source: "/.well-known/change-password",
+          destination: "/settings#security",
+          permanent: false,
+        },
+      ];
+    },
     // 配置缓存头
     async headers() {
       return [

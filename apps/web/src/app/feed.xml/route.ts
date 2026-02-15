@@ -75,7 +75,6 @@ async function generateRssFeed(): Promise<string | null> {
     updated: posts.length > 0 ? new Date(posts[0]!.updatedAt) : new Date(),
     generator: "NeutralPress",
     feedLinks: {
-      json: `${siteConfig.url}/feed.json`,
       atom: `${siteConfig.url}/feed.xml`,
       rss: `${siteConfig.url}/feed.xml`,
     },
