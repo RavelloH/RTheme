@@ -84,6 +84,7 @@ export async function featuredProjectsFetcher(
   const onlyFeatured = content.projects?.onlyFeatured ?? true;
 
   const where: Prisma.ProjectWhereInput = {
+    deletedAt: null,
     status: { in: [...PUBLIC_PROJECT_STATUSES] },
     ...(onlyFeatured ? { isFeatured: true } : {}),
   };

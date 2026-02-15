@@ -65,6 +65,7 @@ export async function projectsFetcher(
   const onlyWithCover = content.projects?.onlyWithCover ?? false;
 
   const where: Prisma.ProjectWhereInput = {
+    deletedAt: null,
     status: {
       in: [...DISPLAY_STATUSES],
     },
@@ -114,6 +115,7 @@ export async function projectsFetcher(
     }),
     prisma.project.count({
       where: {
+        deletedAt: null,
         status: {
           in: [...DISPLAY_STATUSES],
         },

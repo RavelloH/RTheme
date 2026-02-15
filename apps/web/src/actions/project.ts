@@ -554,7 +554,7 @@ async function syncSingleProjectGithub(
 
     // 更新项目
     await prisma.project.update({
-      where: { id: projectId },
+      where: { id: projectId, deletedAt: null },
       data: updateData,
     });
 
@@ -619,6 +619,9 @@ export async function getProjectsTrends(
     const daysAgo = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
     const recentProjects = await prisma.project.findMany({
+      where: {
+        deletedAt: null,
+      },
       orderBy: {
         createdAt: "desc",
       },
@@ -656,12 +659,14 @@ export async function getProjectsTrends(
           prisma.project.count({
             where: {
               createdAt: { lte: date },
+              deletedAt: null,
             },
           }),
           prisma.project.count({
             where: {
               createdAt: { lte: date },
               userUid: user.uid,
+              deletedAt: null,
             },
           }),
           prisma.project.count({
@@ -670,6 +675,7 @@ export async function getProjectsTrends(
                 gt: prevDate,
                 lte: date,
               },
+              deletedAt: null,
             },
           }),
         ]);
@@ -771,7 +777,9 @@ export async function getProjectsList(
     const skip = (page - 1) * pageSize;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = {};
+    const where: any = {
+      deletedAt: null,
+    };
 
     // AUTHOR 只能查看自己的项目
     if (user.role === "AUTHOR") {
@@ -986,6 +994,7 @@ export async function getProjectDetail(
     const project = await prisma.project.findUnique({
       where: {
         slug,
+        deletedAt: null,
       },
       select: {
         id: true,
@@ -1543,7 +1552,7 @@ export async function updateProject(
   try {
     // 查找项目
     const existingProject = await prisma.project.findUnique({
-      where: { slug },
+      where: { slug, deletedAt: null },
       include: {
         categories: { select: { name: true, fullSlug: true } },
         tags: { select: { name: true, slug: true } },
@@ -1672,7 +1681,7 @@ export async function updateProject(
 
     // 更新项目
     const updatedProject = await prisma.project.update({
-      where: { slug },
+      where: { slug, deletedAt: null },
       data: updateData,
       select: {
         id: true,
@@ -1875,6 +1884,7 @@ export async function updateProjects(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {
       id: { in: ids },
+      deletedAt: null,
     };
 
     // AUTHOR 只能更新自己的项目
@@ -2026,6 +2036,7 @@ export async function deleteProjects(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {
       id: { in: ids },
+      deletedAt: null,
     };
 
     // AUTHOR 只能删除自己的项目
@@ -2053,18 +2064,12 @@ export async function deleteProjects(
         },
       },
     });
-    const deletableProjectIds = projectsToDelete.map((project) => project.id);
-
-    // 删除媒体引用
-    if (deletableProjectIds.length > 0) {
-      await prisma.mediaReference.deleteMany({
-        where: { projectId: { in: deletableProjectIds } },
-      });
-    }
-
-    // 删除项目
-    const result = await prisma.project.deleteMany({
+    // 软删除项目
+    const result = await prisma.project.updateMany({
       where,
+      data: {
+        deletedAt: new Date(),
+      },
     });
 
     // 更新缓存标签
@@ -2183,6 +2188,7 @@ export async function syncProjectsGithub(
     const where: any = {
       enableGithubSync: true,
       repoPath: { not: null },
+      deletedAt: null,
     };
 
     if (ids && ids.length > 0) {
@@ -2286,7 +2292,7 @@ export async function syncProjectsGithub(
 
           // 更新项目
           await prisma.project.update({
-            where: { id: project.id },
+            where: { id: project.id, deletedAt: null },
             data: updateData,
           });
 

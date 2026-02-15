@@ -116,6 +116,7 @@ export async function projectsListFetcher(
 
   // 构建过滤条件
   const where: Prisma.ProjectWhereInput = {
+    deletedAt: null,
     status: { in: [...PUBLIC_PROJECT_STATUSES] },
     ...(showFeatured ? {} : { isFeatured: false }),
   };

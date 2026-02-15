@@ -124,6 +124,7 @@ export async function getPublishedProjectStaticParams(): Promise<
     async () => {
       const projects = await prisma.project.findMany({
         where: {
+          deletedAt: null,
           status: { in: [...PUBLIC_PROJECT_STATUSES] },
         },
         select: {
@@ -150,6 +151,7 @@ export async function getPublishedProjectSeo(
       const project = await prisma.project.findUnique({
         where: {
           slug: s,
+          deletedAt: null,
           status: { in: [...PUBLIC_PROJECT_STATUSES] },
         },
         select: {
@@ -191,6 +193,7 @@ export async function getPublishedProjectDetail(slug: string): Promise<{
   const project = await prisma.project.findUnique({
     where: {
       slug,
+      deletedAt: null,
       status: { in: [...PUBLIC_PROJECT_STATUSES] },
     },
     select: {

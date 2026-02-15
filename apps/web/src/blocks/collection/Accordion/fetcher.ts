@@ -100,6 +100,7 @@ async function fetchTags(
           project: {
             where: {
               status: "PUBLISHED",
+              deletedAt: null,
             },
           },
         },
@@ -387,6 +388,7 @@ async function countCategoryProjects(categoryId: number): Promise<number> {
         },
       },
       status: "PUBLISHED",
+      deletedAt: null,
     },
   });
 }

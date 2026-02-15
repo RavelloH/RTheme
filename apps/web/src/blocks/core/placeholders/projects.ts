@@ -12,6 +12,7 @@ export async function projectsInterpolator(
   const [totalProjects, allProjects] = await Promise.all([
     prisma.project.count({
       where: {
+        deletedAt: null,
         status: {
           in: [...DISPLAY_STATUSES],
         },
@@ -19,6 +20,7 @@ export async function projectsInterpolator(
     }),
     prisma.project.findMany({
       where: {
+        deletedAt: null,
         status: {
           in: [...DISPLAY_STATUSES],
         },

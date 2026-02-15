@@ -907,6 +907,7 @@ model Project {
   enableConentSync Boolean @default(true)
 
   status ProjectStatus @default(PUBLISHED)
+  deletedAt DateTime?
 
   userUid Int
   author  User @relation(fields: [userUid], references: [uid], onDelete: Cascade)
@@ -923,6 +924,8 @@ model Project {
   completedAt DateTime?
 
   @@index([status])
+  @@index([status, deletedAt])
+  @@index([deletedAt])
   @@index([slug])
   @@index([createdAt])
 }
@@ -968,8 +971,11 @@ model FriendLink {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   publishedAt DateTime?
+  deletedAt   DateTime?
 
   @@unique([ownerId])
+  @@index([deletedAt])
+  @@index([status, deletedAt])
   @@index([status])
   @@index([group, order])
   @@index([lastCheckedAt])

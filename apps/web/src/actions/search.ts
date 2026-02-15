@@ -1581,6 +1581,7 @@ export async function searchSite(
             p."description"
           FROM "Project" p
           WHERE p."status" = 'PUBLISHED'
+            AND p."deletedAt" IS NULL
             AND (
               LOWER(p."title") LIKE LOWER(${likePattern})
               OR LOWER(p."slug") LIKE LOWER(${likePattern})
