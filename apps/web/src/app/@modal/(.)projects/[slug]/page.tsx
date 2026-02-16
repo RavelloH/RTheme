@@ -7,18 +7,10 @@ import {
   ProjectDetailHeader,
 } from "@/components/server/features/projects/ProjectDetailSections";
 import { getConfigs } from "@/lib/server/config-cache";
-import {
-  getPublishedProjectDetail,
-  getPublishedProjectStaticParams,
-} from "@/lib/server/project-public";
+import { getPublishedProjectDetail } from "@/lib/server/project-public";
 
 interface ProjectDetailModalPageProps {
   params: Promise<{ slug: string }>;
-}
-
-export async function generateStaticParams() {
-  const params = await getPublishedProjectStaticParams();
-  return params.length > 0 ? params : [{ slug: "__neutralpress__" }];
 }
 
 export default async function ProjectDetailModalPage({

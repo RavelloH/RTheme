@@ -9,14 +9,6 @@ interface PhotoModalProps {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateStaticParams() {
-  const photos = await prisma.photo.findMany({
-    select: { slug: true },
-  });
-  const params = photos.map((photo) => ({ slug: photo.slug }));
-  return params.length > 0 ? params : [{ slug: "__neutralpress__" }];
-}
-
 // 过滤 EXIF 数据中的 GPS 信息
 function filterGpsFromExif(exif: unknown): unknown {
   if (!exif || typeof exif !== "object") return exif;

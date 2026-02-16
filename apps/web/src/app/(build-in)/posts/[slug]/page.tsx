@@ -50,15 +50,20 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-// 生成静态参数
+const PREBUILD_POST_LIMIT = 12;
+
+// 仅预构建少量热门/最新文章，其余走 ISR
 export async function generateStaticParams() {
   const posts = await prisma.post.findMany({
     where: {
       status: "PUBLISHED",
+      deletedAt: null,
     },
     select: {
       slug: true,
     },
+    orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+    take: PREBUILD_POST_LIMIT,
   });
 
   const params = posts.map((post) => ({
