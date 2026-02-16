@@ -163,25 +163,21 @@ export default async function RootLayout({
                   <ResponsiveFontScale scaleFactor={0.017} baseSize={0}>
                     <LoadingAnimation mainColor={mainColor} />
                     <LayoutContainer>
-                      <Suspense>
-                        <Header
-                          menus={menus}
-                          slogan={siteSloganSecondary}
-                          title={siteName}
-                          copyright={siteCopyright}
-                          author={siteAuthor}
-                          birthday={siteBirthday}
-                        />
-                      </Suspense>
+                      <Header
+                        menus={menus}
+                        slogan={siteSloganSecondary}
+                        title={siteName}
+                        copyright={siteCopyright}
+                        author={siteAuthor}
+                        birthday={siteBirthday}
+                      />
                       <MainContent>
                         <Suspense>
                           <PageTransition>{children}</PageTransition>
                         </Suspense>
                       </MainContent>
                     </LayoutContainer>
-                    <Suspense>
-                      <Footer menus={menus} />
-                    </Suspense>
+                    <Footer menus={menus} />
                   </ResponsiveFontScale>
                 </MenuProvider>
                 <Suspense fallback={null}>{modal}</Suspense>
