@@ -33,6 +33,10 @@ interface StatsData {
   };
 }
 
+interface DashboardProjectsStatsProps {
+  initialData?: StatsData | null;
+}
+
 const getNewProjectsDescription = (
   last7Days: number,
   last30Days: number,
@@ -63,9 +67,13 @@ const getNewProjectsDescription = (
   return parts.join("，");
 };
 
-export default function DashboardProjectsStats() {
-  const [result, setResult] = useState<StatsData | null>(null);
-  const [refreshTime, setRefreshTime] = useState<Date | null>(null);
+export default function DashboardProjectsStats({
+  initialData = null,
+}: DashboardProjectsStatsProps) {
+  const [result, setResult] = useState<StatsData | null>(initialData);
+  const [refreshTime, setRefreshTime] = useState<Date | null>(
+    initialData ? new Date(initialData.updatedAt) : null,
+  );
   const [error, setError] = useState<Error | null>(null);
 
   const fetchData = useCallback(async (forceRefresh: boolean = false) => {
@@ -84,8 +92,9 @@ export default function DashboardProjectsStats() {
   }, []);
 
   useEffect(() => {
+    if (initialData) return;
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, initialData]);
 
   return (
     <AutoTransition type="scale" className="h-full">

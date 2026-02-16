@@ -18,6 +18,9 @@ import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 type stats = GetPostsStatsSuccessResponse["data"] | null;
+interface DashboardPostsStatsProps {
+  initialData?: stats;
+}
 
 const getDaysSince = (dateString: string | null): number | null => {
   if (!dateString) return null;
@@ -37,10 +40,14 @@ const getDaysSince = (dateString: string | null): number | null => {
   return diffDays;
 };
 
-export default function DashboardPostsStats() {
-  const [result, setResult] = useState<stats>(null);
-  const [isCache, setIsCache] = useState(true);
-  const [refreshTime, setRefreshTime] = useState<Date | null>(null);
+export default function DashboardPostsStats({
+  initialData = null,
+}: DashboardPostsStatsProps) {
+  const [result, setResult] = useState<stats>(initialData);
+  const [isCache, setIsCache] = useState(initialData?.cache ?? true);
+  const [refreshTime, setRefreshTime] = useState<Date | null>(
+    initialData ? new Date(initialData.updatedAt) : null,
+  );
   const [error, setError] = useState<Error | null>(null);
   const isMobile = useMobile();
 
@@ -50,7 +57,7 @@ export default function DashboardPostsStats() {
     }
     setError(null);
     const res = await getPostsStats({ force: forceRefresh });
-    if (!res.success) {
+    if (!res.success || !res.data) {
       setError(new Error(res.message || "获取文章统计数据失败"));
       return;
     }
@@ -60,8 +67,9 @@ export default function DashboardPostsStats() {
   };
 
   useEffect(() => {
+    if (initialData) return;
     fetchData();
-  }, []);
+  }, [initialData]);
 
   const getSummary = (result: stats) => {
     if (!result) return null;

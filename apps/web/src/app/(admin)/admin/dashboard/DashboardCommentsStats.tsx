@@ -26,6 +26,10 @@ interface ReportData {
   };
 }
 
+interface DashboardCommentsStatsProps {
+  initialData?: ReportData | null;
+}
+
 const getDaysSince = (dateString: string | null): number | null => {
   if (!dateString) return null;
   const date = new Date(dateString);
@@ -67,9 +71,13 @@ const getNewCommentsDescription = (
   return parts.join("，");
 };
 
-export default function DashboardCommentsStats() {
-  const [result, setResult] = useState<ReportData | null>(null);
-  const [refreshTime, setRefreshTime] = useState<Date | null>(null);
+export default function DashboardCommentsStats({
+  initialData = null,
+}: DashboardCommentsStatsProps) {
+  const [result, setResult] = useState<ReportData | null>(initialData);
+  const [refreshTime, setRefreshTime] = useState<Date | null>(
+    initialData ? new Date(initialData.updatedAt) : null,
+  );
   const [error, setError] = useState<Error | null>(null);
 
   const fetchData = async (forceRefresh: boolean = false) => {
@@ -88,8 +96,9 @@ export default function DashboardCommentsStats() {
   };
 
   useEffect(() => {
+    if (initialData) return;
     fetchData();
-  }, []);
+  }, [initialData]);
 
   return (
     <AutoTransition type="scale" className="h-full">
