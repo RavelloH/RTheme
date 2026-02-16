@@ -5,6 +5,8 @@ import { config } from "dotenv";
 import Redis from "ioredis";
 import Rlog from "rlog-js";
 
+import { parseRedisConnectionOptions } from "../src/lib/shared/redis-url";
+
 // 加载 .env 文件
 config({
   quiet: true,
@@ -21,7 +23,8 @@ export async function checkRedisConnection(): Promise<void> {
   }
 
   // 使用较短的超时时间进行检查
-  const redis = new Redis(redisUrl, {
+  const redis = new Redis({
+    ...parseRedisConnectionOptions(redisUrl),
     maxRetriesPerRequest: 10,
     connectTimeout: 5000,
     lazyConnect: true,

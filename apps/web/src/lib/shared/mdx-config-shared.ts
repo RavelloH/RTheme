@@ -65,6 +65,7 @@ const TEXT_MODE_LANGUAGES = new Set(["text", "txt", "plain", "plaintext"]);
 
 const SHIKI_LANGUAGE_ALIASES: Record<string, string> = {
   env: "dotenv",
+  ejs: "html",
 };
 
 export interface NormalizedCodeLanguage {
@@ -96,6 +97,15 @@ export function normalizeCodeLanguage(
     normalized: SHIKI_LANGUAGE_ALIASES[input] || input,
     textMode: false,
   };
+}
+
+export function shouldSilenceShikiError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+  return message.includes("is not included in this bundle");
 }
 
 /**

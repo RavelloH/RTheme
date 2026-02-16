@@ -2,6 +2,8 @@ import "server-only";
 
 import Redis from "ioredis";
 
+import { parseRedisConnectionOptions } from "@/lib/shared/redis-url";
+
 // 验证 Redis URL 环境变量
 if (!process.env.REDIS_URL) {
   throw new Error("REDIS_URL environment variable is required");
@@ -42,8 +44,15 @@ declare global {
 let isReconnecting = globalThis.isReconnecting ?? false;
 
 // 创建或复用 Redis 实例
+const redisConnectionOptions = parseRedisConnectionOptions(
+  process.env.REDIS_URL,
+);
 const redis =
-  globalThis.redis ?? new Redis(process.env.REDIS_URL, redisOptions);
+  globalThis.redis ??
+  new Redis({
+    ...redisConnectionOptions,
+    ...redisOptions,
+  });
 
 // 在开发环境中保存到 global，避免热重载时创建多个连接
 if (process.env.NODE_ENV !== "production") {
