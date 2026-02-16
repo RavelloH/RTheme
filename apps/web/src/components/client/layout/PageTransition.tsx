@@ -15,9 +15,28 @@ interface PageTransitionProps {
 interface TransitionMessage {
   type: "page-transition";
   direction: "left" | "right" | "up" | "down" | "unknown";
+  targetPath?: string;
 }
 
 type TransitionState = "idle" | "exiting" | "waiting" | "entering";
+
+function normalizeTransitionPath(path: string): string {
+  const trimmed = path.trim();
+  if (!trimmed) return "/";
+
+  try {
+    const url = new URL(trimmed, window.location.origin);
+    const normalized = url.pathname.replace(/\/+$/g, "");
+    return normalized || "/";
+  } catch {
+    const pathnameOnly = trimmed.split(/[?#]/)[0] || "/";
+    const withLeadingSlash = pathnameOnly.startsWith("/")
+      ? pathnameOnly
+      : `/${pathnameOnly}`;
+    const normalized = withLeadingSlash.replace(/\/+$/g, "");
+    return normalized || "/";
+  }
+}
 
 export default function PageTransition({ children }: PageTransitionProps) {
   const pathname = usePathname();
@@ -31,6 +50,7 @@ export default function PageTransition({ children }: PageTransitionProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const previousPathname = useRef<string>("");
+  const expectedPathname = useRef<string | null>(null);
   const gsapTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const lastScrollTop = useRef<number>(0);
   const hasScrollBaseline = useRef(false);
@@ -59,9 +79,15 @@ export default function PageTransition({ children }: PageTransitionProps) {
   // 监听广播消息
   useBroadcast<TransitionMessage>((message) => {
     if (message?.type === "page-transition" && transitionState === "idle") {
-      const { direction } = message;
+      const { direction, targetPath } = message;
       setTransitionDirection(direction);
       previousPathname.current = pathname;
+      if (targetPath) {
+        const normalizedTargetPath = normalizeTransitionPath(targetPath);
+        expectedPathname.current = normalizedTargetPath;
+      } else {
+        expectedPathname.current = null;
+      }
       startExitAnimation(direction);
     }
   });
@@ -119,6 +145,7 @@ export default function PageTransition({ children }: PageTransitionProps) {
         duration: 0.5,
         ease: "power1.inOut",
         onComplete: () => {
+          expectedPathname.current = null;
           setTransitionState("idle");
         },
       });
@@ -126,6 +153,7 @@ export default function PageTransition({ children }: PageTransitionProps) {
       // 从屏幕外移动到中央，同时透明度恢复
       const tl = gsap.timeline({
         onComplete: () => {
+          expectedPathname.current = null;
           setTransitionState("idle");
         },
       });
@@ -146,20 +174,26 @@ export default function PageTransition({ children }: PageTransitionProps) {
 
   // 监听 pathname 变化
   useEffect(() => {
-    if (
-      transitionState === "waiting" &&
-      pathname !== previousPathname.current
-    ) {
-      // pathname 变化，更新内容
-      setCurrentChildren(children);
+    if (transitionState !== "waiting") return;
 
-      // 延迟10ms后开始进入动画，确保DOM稳定
-      const delayTimer = setTimeout(() => {
-        startEnterAnimation();
-      }, 10);
+    const normalizedPathname = normalizeTransitionPath(pathname);
+    const normalizedPreviousPathname = normalizeTransitionPath(
+      previousPathname.current,
+    );
+    if (normalizedPathname === normalizedPreviousPathname) return;
 
-      return () => clearTimeout(delayTimer);
-    }
+    const targetPath = expectedPathname.current;
+    if (targetPath && normalizedPathname !== targetPath) return;
+
+    // pathname 变化，更新内容
+    setCurrentChildren(children);
+
+    // 延迟10ms后开始进入动画，确保DOM稳定
+    const delayTimer = setTimeout(() => {
+      startEnterAnimation();
+    }, 10);
+
+    return () => clearTimeout(delayTimer);
   }, [
     pathname,
     primaryRouteKey,
@@ -167,6 +201,18 @@ export default function PageTransition({ children }: PageTransitionProps) {
     children,
     startEnterAnimation,
   ]);
+
+  // 防止异常状态下卡在 waiting 导致页面空白
+  useEffect(() => {
+    if (transitionState !== "waiting") return;
+
+    const watchdog = setTimeout(() => {
+      setCurrentChildren(children);
+      startEnterAnimation();
+    }, 1200);
+
+    return () => clearTimeout(watchdog);
+  }, [transitionState, children, startEnterAnimation]);
 
   // 兜底同步：当未进入转场流程但 pathname 已变化时，仍确保页面子树按路由重建
   useEffect(() => {
