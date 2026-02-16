@@ -12,11 +12,18 @@ import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 type stats = GetVisitStatsSuccessResponse["data"] | null;
+interface DashboardVisitStatsProps {
+  initialData?: stats;
+}
 
-export default function DashboardVisitStats() {
-  const [result, setResult] = useState<stats>(null);
-  const [isCache, setIsCache] = useState(true);
-  const [refreshTime, setRefreshTime] = useState<Date | null>(null);
+export default function DashboardVisitStats({
+  initialData = null,
+}: DashboardVisitStatsProps) {
+  const [result, setResult] = useState<stats>(initialData);
+  const [isCache, setIsCache] = useState(initialData?.cache ?? true);
+  const [refreshTime, setRefreshTime] = useState<Date | null>(
+    initialData ? new Date(initialData.updatedAt) : null,
+  );
   const [error, setError] = useState<Error | null>(null);
 
   const fetchData = async (forceRefresh: boolean = false) => {
@@ -25,7 +32,7 @@ export default function DashboardVisitStats() {
     }
     setError(null);
     const res = await getVisitStats({ force: forceRefresh });
-    if (!res.success) {
+    if (!res.success || !res.data) {
       setError(new Error(res.message || "获取访问统计数据失败"));
       return;
     }
@@ -35,8 +42,9 @@ export default function DashboardVisitStats() {
   };
 
   useEffect(() => {
+    if (initialData) return;
     fetchData();
-  }, []);
+  }, [initialData]);
 
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);

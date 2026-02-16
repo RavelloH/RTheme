@@ -12,11 +12,18 @@ import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 type stats = GetTagsStatsSuccessResponse["data"] | null;
+interface DashboardTagsStatsProps {
+  initialData?: stats;
+}
 
-export default function DashboardTagsStats() {
-  const [result, setResult] = useState<stats>(null);
-  const [isCache, setIsCache] = useState(true);
-  const [refreshTime, setRefreshTime] = useState<Date | null>(null);
+export default function DashboardTagsStats({
+  initialData = null,
+}: DashboardTagsStatsProps) {
+  const [result, setResult] = useState<stats>(initialData);
+  const [isCache, setIsCache] = useState(initialData?.cache ?? true);
+  const [refreshTime, setRefreshTime] = useState<Date | null>(
+    initialData ? new Date(initialData.updatedAt) : null,
+  );
   const [error, setError] = useState<Error | null>(null);
 
   const fetchData = async (forceRefresh: boolean = false) => {
@@ -25,7 +32,7 @@ export default function DashboardTagsStats() {
     }
     setError(null);
     const res = await getTagsStats({ force: forceRefresh });
-    if (!res.success) {
+    if (!res.success || !res.data) {
       setError(new Error(res.message || "获取标签统计数据失败"));
       return;
     }
@@ -35,8 +42,9 @@ export default function DashboardTagsStats() {
   };
 
   useEffect(() => {
+    if (initialData) return;
     fetchData();
-  }, []);
+  }, [initialData]);
 
   const getSummary = (result: stats) => {
     if (!result) return null;
