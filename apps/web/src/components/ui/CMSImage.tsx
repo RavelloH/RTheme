@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { RiFileDamageFill } from "@remixicon/react";
-import type { ImageProps } from "next/image";
+import type { ImageLoader, ImageProps } from "next/image";
 import Image from "next/image";
+
+import { useConfig } from "@/context/ConfigContext";
+
+const DEFAULT_IMAGE_LOADER_TEMPLATE =
+  "/_next/image?url={url}&w={width}&q={quality}";
 
 interface CMSImageProps
   extends Omit<
@@ -33,6 +38,21 @@ function isCMSImage(url: string): boolean {
   return typeof url === "string" && url.startsWith("/p/");
 }
 
+function resolveLoaderUrl(
+  template: string,
+  src: string,
+  width: number,
+  quality?: number,
+): string {
+  const resolvedQuality =
+    typeof quality === "number" && Number.isFinite(quality) ? quality : 75;
+
+  return template
+    .replaceAll("{url}", encodeURIComponent(src))
+    .replaceAll("{width}", String(width))
+    .replaceAll("{quality}", String(resolvedQuality));
+}
+
 export default function CMSImage({
   src,
   width,
@@ -40,6 +60,7 @@ export default function CMSImage({
   fill,
   optimized,
   blur,
+  loader: overrideLoader,
   alt,
   onError,
   className,
@@ -47,6 +68,19 @@ export default function CMSImage({
   ...rest
 }: CMSImageProps) {
   const [hasError, setHasError] = useState(false);
+  const configuredLoaderTemplate = useConfig("media.customLoader");
+
+  const loaderTemplate =
+    typeof configuredLoaderTemplate === "string" &&
+    configuredLoaderTemplate.trim()
+      ? configuredLoaderTemplate.trim()
+      : DEFAULT_IMAGE_LOADER_TEMPLATE;
+
+  const configuredLoader = useCallback<ImageLoader>(
+    ({ src: imageSrc, width: imageWidth, quality }) =>
+      resolveLoaderUrl(loaderTemplate, imageSrc, imageWidth, quality),
+    [loaderTemplate],
+  );
 
   // 判断是否是 CMS 内部图片
   const isInternalImage = isCMSImage(src);
@@ -85,6 +119,7 @@ export default function CMSImage({
       {...(fill ? { fill: true } : { width, height })}
       alt={alt}
       unoptimized={!shouldOptimize}
+      loader={shouldOptimize ? (overrideLoader ?? configuredLoader) : undefined}
       priority={priority}
       loading={priority ? undefined : "lazy"}
       placeholder={isValidBlur ? "blur" : "empty"}

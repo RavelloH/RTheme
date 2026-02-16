@@ -81,6 +81,7 @@ export default async function RootLayout({
     "config/analytics.enable",
     "config/notice.ably.key",
     "config/site.shiki.theme",
+    "config/media.customLoader",
   );
   cacheLife("max");
 
@@ -99,6 +100,7 @@ export default async function RootLayout({
       enableAnalytics,
       ablyEnabled,
       shikiTheme,
+      mediaCustomLoader,
     ],
   ] = await Promise.all([
     getActiveMenusForClient(),
@@ -114,6 +116,7 @@ export default async function RootLayout({
       "analytics.enable",
       "notice.ably.key",
       "site.shiki.theme",
+      "media.customLoader",
     ]),
   ]);
 
@@ -133,6 +136,7 @@ export default async function RootLayout({
     "site.shiki.theme": shikiTheme,
     "analytics.enable": enableAnalytics,
     "notice.ably.key": ablyEnabled,
+    "media.customLoader": mediaCustomLoader,
   };
 
   return (
