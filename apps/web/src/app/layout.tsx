@@ -2,6 +2,7 @@
 import "server-only";
 
 import { Suspense } from "react";
+import type { Viewport } from "next";
 import { cacheLife, cacheTag } from "next/cache";
 // Fonts
 import { Inter } from "next/font/google";
@@ -22,9 +23,10 @@ import Footer from "@/components/server/layout/Footer";
 // Server Componments
 import Header from "@/components/server/layout/Header";
 import { ConfigProvider } from "@/context/ConfigContext";
-import { getConfigs } from "@/lib/server/config-cache";
+import { getConfig, getConfigs } from "@/lib/server/config-cache";
 // lib
 import { getActiveMenusForClient } from "@/lib/server/menu-cache";
+import { normalizeSiteColorConfig } from "@/lib/shared/site-color";
 // Types
 import { ToastProvider } from "@/ui/Toast";
 
@@ -38,6 +40,25 @@ const ibmPlexMono = IBM_Plex_Mono({
   weight: ["400", "500", "600", "700"],
   variable: "--font-mono",
 });
+
+export async function generateViewport(): Promise<Viewport> {
+  const siteColor = await getConfig("site.color");
+  const normalizedColor = normalizeSiteColorConfig(siteColor);
+
+  return {
+    colorScheme: "light dark",
+    themeColor: [
+      {
+        media: "(prefers-color-scheme: light)",
+        color: normalizedColor.light.primary,
+      },
+      {
+        media: "(prefers-color-scheme: dark)",
+        color: normalizedColor.dark.primary,
+      },
+    ],
+  };
+}
 
 export default async function RootLayout({
   children,
