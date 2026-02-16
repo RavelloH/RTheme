@@ -8,11 +8,20 @@ import ClientDiagnostics from "@/components/ui/ClientDiagnostics";
 import LinkButton from "@/components/ui/LinkButton";
 import { generateMetadata } from "@/lib/server/seo";
 
-export const metadata = await generateMetadata({
-  title: "404 Not Found",
-  description:
-    "在服务器中未找到此页面。这可能代表此页面已被删除、移动，或从未存在过。",
-});
+export const metadata = await generateMetadata(
+  {
+    title: "404 Not Found",
+    description:
+      "在服务器中未找到此页面。这可能代表此页面已被删除、移动，或从未存在过。",
+    robots: {
+      index: false,
+      follow: false,
+    },
+  },
+  {
+    pathname: "/404",
+  },
+);
 
 export default function NotFoundPage() {
   return (
