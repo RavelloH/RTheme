@@ -147,6 +147,13 @@ function postProcessTableAlignment(
 
 // Toast 实例（需要从外部传入）
 let toastInstance: {
+  loading: (
+    title: string,
+    message?: string,
+    duration?: number,
+    action?: { label: string; onClick: () => void },
+    progress?: number,
+  ) => string;
   info: (title: string, message?: string, duration?: number) => string;
   success: (title: string, message?: string, duration?: number) => string;
   error: (title: string, message?: string, duration?: number) => string;
@@ -155,13 +162,10 @@ let toastInstance: {
     id: string,
     title: string,
     message?: string,
-    type?: "success" | "error" | "warning" | "info",
+    type?: "success" | "error" | "warning" | "info" | "loading",
     progress?: number,
   ) => void;
 } | null = null;
-
-// 存储当前上传的 Toast ID（用于主动关闭）
-let currentUploadToastId: string | null = null;
 
 // 设置 Toast 实例
 export function setEditorToast(toast: typeof toastInstance): void {
@@ -199,17 +203,24 @@ async function uploadImageToServer(
 ): Promise<void> {
   // 显示上传中的 Toast（不自动关闭）
   // 格式：上方显示状态，下方显示文件名
-  currentUploadToastId =
-    toastInstance?.info("正在上传图片", file.name, 0) || null;
+  const uploadToastId =
+    toastInstance?.loading("正在上传图片", file.name, 0, undefined, 0) || null;
 
   // 用于节流进度更新，避免频繁更新 Toast
   let lastProgressUpdate = 0;
   const PROGRESS_UPDATE_INTERVAL = 100; // 100ms 更新一次
 
+  const dismissUploadToast = (delay: number) => {
+    if (!uploadToastId) return;
+    setTimeout(() => {
+      toastInstance?.dismiss(uploadToastId);
+    }, delay);
+  };
+
   const updateUploadProgressToast = (progress: number) => {
-    if (!toastInstance || !currentUploadToastId) return;
+    if (!toastInstance || !uploadToastId) return;
     toastInstance.update(
-      currentUploadToastId,
+      uploadToastId,
       "正在上传图片",
       file.name,
       undefined,
@@ -226,7 +237,7 @@ async function uploadImageToServer(
 
     return new Promise<UploadApiResponse>((resolve, reject) => {
       xhr.upload.addEventListener("progress", (e) => {
-        if (e.lengthComputable && currentUploadToastId) {
+        if (e.lengthComputable && uploadToastId) {
           const now = Date.now();
           if (now - lastProgressUpdate < PROGRESS_UPDATE_INTERVAL) return;
           lastProgressUpdate = now;
@@ -298,7 +309,7 @@ async function uploadImageToServer(
         const xhr = new XMLHttpRequest();
         await new Promise<void>((resolve, reject) => {
           xhr.upload.addEventListener("progress", (e) => {
-            if (e.lengthComputable && currentUploadToastId) {
+            if (e.lengthComputable && uploadToastId) {
               const now = Date.now();
               if (now - lastProgressUpdate < PROGRESS_UPDATE_INTERVAL) return;
               lastProgressUpdate = now;
@@ -343,7 +354,7 @@ async function uploadImageToServer(
           contentType: file.type || undefined,
           multipart: true,
           onUploadProgress: ({ loaded, total }) => {
-            if (total <= 0 || !currentUploadToastId) return;
+            if (total <= 0 || !uploadToastId) return;
             const now = Date.now();
             if (now - lastProgressUpdate < PROGRESS_UPDATE_INTERVAL) return;
             lastProgressUpdate = now;
@@ -356,12 +367,12 @@ async function uploadImageToServer(
         throw new Error(`暂不支持的直传存储类型: ${initData.providerType}`);
       }
 
-      if (toastInstance && currentUploadToastId) {
+      if (toastInstance && uploadToastId) {
         toastInstance.update(
-          currentUploadToastId,
+          uploadToastId,
           "正在处理图片",
           file.name,
-          undefined,
+          "loading",
           undefined,
         );
       }
@@ -438,9 +449,9 @@ async function uploadImageToServer(
         }
 
         // 更新 Toast 为成功状态（移除进度）
-        if (currentUploadToastId && toastInstance) {
+        if (uploadToastId && toastInstance) {
           toastInstance.update(
-            currentUploadToastId,
+            uploadToastId,
             "图片上传成功",
             file.name,
             "success",
@@ -448,12 +459,7 @@ async function uploadImageToServer(
           );
 
           // 2秒后自动关闭
-          setTimeout(() => {
-            if (currentUploadToastId) {
-              toastInstance?.dismiss(currentUploadToastId);
-              currentUploadToastId = null;
-            }
-          }, 2000);
+          dismissUploadToast(2000);
         }
 
         // 释放本地 URL
@@ -465,9 +471,9 @@ async function uploadImageToServer(
         console.error("图片预加载失败:", imageUrl);
 
         // 更新 Toast 为错误状态（移除进度）
-        if (currentUploadToastId && toastInstance) {
+        if (uploadToastId && toastInstance) {
           toastInstance.update(
-            currentUploadToastId,
+            uploadToastId,
             "图片加载失败",
             file.name,
             "error",
@@ -475,12 +481,7 @@ async function uploadImageToServer(
           );
 
           // 5秒后自动关闭
-          setTimeout(() => {
-            if (currentUploadToastId) {
-              toastInstance?.dismiss(currentUploadToastId);
-              currentUploadToastId = null;
-            }
-          }, 5000);
+          dismissUploadToast(5000);
         }
 
         // 不删除图片节点，保留 blob URL 以便用户可以看到
@@ -516,9 +517,9 @@ async function uploadImageToServer(
       }
 
       // 更新 Toast 为错误状态（移除进度）
-      if (currentUploadToastId && toastInstance) {
+      if (uploadToastId && toastInstance) {
         toastInstance.update(
-          currentUploadToastId,
+          uploadToastId,
           "图片上传失败",
           file.name,
           "error",
@@ -526,12 +527,7 @@ async function uploadImageToServer(
         );
 
         // 3秒后自动关闭
-        setTimeout(() => {
-          if (currentUploadToastId) {
-            toastInstance?.dismiss(currentUploadToastId);
-            currentUploadToastId = null;
-          }
-        }, 3000);
+        dismissUploadToast(3000);
       }
 
       // 释放本地 URL
@@ -564,9 +560,9 @@ async function uploadImageToServer(
     }
 
     // 更新 Toast 为错误状态（移除进度）
-    if (currentUploadToastId && toastInstance) {
+    if (uploadToastId && toastInstance) {
       toastInstance.update(
-        currentUploadToastId,
+        uploadToastId,
         "图片上传失败",
         file.name,
         "error",
@@ -574,12 +570,7 @@ async function uploadImageToServer(
       );
 
       // 3秒后自动关闭
-      setTimeout(() => {
-        if (currentUploadToastId) {
-          toastInstance?.dismiss(currentUploadToastId);
-          currentUploadToastId = null;
-        }
-      }, 3000);
+      dismissUploadToast(3000);
     }
 
     // 释放本地 URL
