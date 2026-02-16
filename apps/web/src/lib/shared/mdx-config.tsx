@@ -44,6 +44,7 @@ import {
   normalizeCodeLanguage,
   renderPlainCodeBlockHtml,
   type ShikiTheme,
+  shouldSilenceShikiError,
 } from "@/lib/shared/mdx-config-shared";
 
 // ============ 导出共享配置 ============
@@ -98,10 +99,12 @@ export async function highlightCode(
         ...config,
       });
     } catch (err) {
-      console.error("Shiki text 模式渲染失败:", {
-        error: err,
-        language,
-      });
+      if (!shouldSilenceShikiError(err)) {
+        console.error("Shiki text 模式渲染失败:", {
+          error: err,
+          language,
+        });
+      }
       return renderPlainCodeBlockHtml(code);
     }
   }
@@ -112,24 +115,28 @@ export async function highlightCode(
       ...config,
     });
   } catch (err) {
-    console.error("Shiki 语法高亮错误:", {
-      error: err,
-      language,
-      normalizedLanguage: resolvedLanguage.normalized,
-      code,
-    });
+    if (!shouldSilenceShikiError(err)) {
+      console.error("Shiki 语法高亮错误:", {
+        error: err,
+        language,
+        normalizedLanguage: resolvedLanguage.normalized,
+        code,
+      });
+    }
     try {
       return await codeToHtml(code, {
         lang: "text",
         ...config,
       });
     } catch (retryErr) {
-      console.error("Shiki text 回退渲染失败:", {
-        error: retryErr,
-        language,
-        normalizedLanguage: resolvedLanguage.normalized,
-        code,
-      });
+      if (!shouldSilenceShikiError(retryErr)) {
+        console.error("Shiki text 回退渲染失败:", {
+          error: retryErr,
+          language,
+          normalizedLanguage: resolvedLanguage.normalized,
+          code,
+        });
+      }
       return renderPlainCodeBlockHtml(code);
     }
   }

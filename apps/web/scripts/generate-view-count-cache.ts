@@ -9,6 +9,8 @@ import path from "path";
 import RLog from "rlog-js";
 import { pathToFileURL } from "url";
 
+import { parseRedisConnectionOptions } from "../src/lib/shared/redis-url";
+
 const rlog = new RLog();
 const REDIS_VIEW_COUNT_KEY = "np:view_count:all";
 
@@ -60,7 +62,8 @@ export default async function generateViewCountCache() {
       return;
     }
 
-    redis = new Redis(process.env.REDIS_URL, {
+    redis = new Redis({
+      ...parseRedisConnectionOptions(process.env.REDIS_URL),
       maxRetriesPerRequest: 3,
       retryStrategy: (times: number) => {
         if (times > 3) {

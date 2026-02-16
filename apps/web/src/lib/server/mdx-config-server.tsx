@@ -19,6 +19,7 @@ import {
   normalizeCodeLanguage,
   renderPlainCodeBlockHtml,
   type ShikiTheme,
+  shouldSilenceShikiError,
 } from "@/lib/shared/mdx-config-shared";
 
 // ============ 服务器端组件 ============
@@ -86,10 +87,12 @@ export async function CodeBlockServer({
       });
       return <div dangerouslySetInnerHTML={{ __html: textHtml }} />;
     } catch (err) {
-      console.error("Shiki 服务端 text 模式渲染失败:", {
-        error: err,
-        language,
-      });
+      if (!shouldSilenceShikiError(err)) {
+        console.error("Shiki 服务端 text 模式渲染失败:", {
+          error: err,
+          language,
+        });
+      }
       const fallbackHtml = renderPlainCodeBlockHtml(code);
       return <div dangerouslySetInnerHTML={{ __html: fallbackHtml }} />;
     }
@@ -102,11 +105,13 @@ export async function CodeBlockServer({
     });
     return <div dangerouslySetInnerHTML={{ __html: html }} />;
   } catch (err) {
-    console.error("Shiki 服务端语法高亮错误:", {
-      error: err,
-      language,
-      normalizedLanguage: resolvedLanguage.normalized,
-    });
+    if (!shouldSilenceShikiError(err)) {
+      console.error("Shiki 服务端语法高亮错误:", {
+        error: err,
+        language,
+        normalizedLanguage: resolvedLanguage.normalized,
+      });
+    }
 
     try {
       const textHtml = await codeToHtml(code, {
@@ -115,11 +120,13 @@ export async function CodeBlockServer({
       });
       return <div dangerouslySetInnerHTML={{ __html: textHtml }} />;
     } catch (retryErr) {
-      console.error("Shiki 服务端 text 回退渲染失败:", {
-        error: retryErr,
-        language,
-        normalizedLanguage: resolvedLanguage.normalized,
-      });
+      if (!shouldSilenceShikiError(retryErr)) {
+        console.error("Shiki 服务端 text 回退渲染失败:", {
+          error: retryErr,
+          language,
+          normalizedLanguage: resolvedLanguage.normalized,
+        });
+      }
       const fallbackHtml = renderPlainCodeBlockHtml(code);
       return <div dangerouslySetInnerHTML={{ __html: fallbackHtml }} />;
     }
