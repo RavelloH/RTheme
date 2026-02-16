@@ -18,11 +18,11 @@ export default function SettingsInfo() {
             有关配置项的详细文档，请参阅：
             <br />
             <Link
-              href="https://docs.ravelloh.com/docs/settings"
+              href="https://neutralpress.net/docs/settings"
               className="text-primary ml-auto"
               presets={["hover-underline", "arrow-out"]}
             >
-              https://docs.ravelloh.com/docs/settings
+              https://neutralpress.net/docs/settings
             </Link>
           </div>
           <div>

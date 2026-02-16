@@ -273,11 +273,11 @@ export default function StoragesAdd() {
             <p>
               有关各存储提供商的详细配置说明，请参阅文档：
               <Link
-                href="https://docs.ravelloh.com/docs/storage"
+                href="https://neutralpress.net/docs/storage"
                 className="text-primary ml-auto"
                 presets={["hover-underline", "arrow-out"]}
               >
-                https://docs.ravelloh.com/docs/storage
+                https://neutralpress.net/docs/storage
               </Link>
             </p>
             <StorageConfigFields

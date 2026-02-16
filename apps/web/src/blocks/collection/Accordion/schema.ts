@@ -13,7 +13,7 @@ export const ACCORDION_BLOCK_FORM_CONFIG: BlockFormConfig = {
   },
   theme: {
     name: "neutral",
-    url: "https://docs.ravelloh.com",
+    url: "https://neutralpress.net",
   },
   actions: {
     db: 1, // 1 次数据库查询获取数据

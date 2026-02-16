@@ -847,7 +847,7 @@ export async function POST(request: NextRequest): Promise<Response> {
             signal: controller.signal,
             headers: {
               "User-Agent":
-                "Mozilla/5.0 (compatible; NeutralPress/1.0; +https://ravelloh.com)",
+                "Mozilla/5.0 (compatible; NeutralPress/1.0; +https://neutralpress.net/bot)",
             },
           });
         } finally {

@@ -13,7 +13,7 @@ export const PAGED_POSTS_BLOCK_FORM_CONFIG: BlockFormConfig = {
   },
   theme: {
     name: "neutral",
-    url: "https://docs.ravelloh.com",
+    url: "https://neutralpress.net",
   },
   actions: {
     db: 2, // 2 次数据库查询（文章列表 + 总数）
