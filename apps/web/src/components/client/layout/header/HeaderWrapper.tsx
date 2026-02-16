@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -244,6 +244,20 @@ export default function HeaderWrapper({
     }, 200);
   };
 
+  // 更新标题
+  const updateTitle = useCallback(() => {
+    if (typeof document === "undefined") return;
+
+    const documentTitle = document.title || "";
+    const cleanTitle = documentTitle.includes(" | ")
+      ? documentTitle.split(" | ")[0] || "NeutralPress"
+      : documentTitle || "NeutralPress";
+
+    setDisplayTitle((previousTitle) =>
+      previousTitle === cleanTitle ? previousTitle : cleanTitle,
+    );
+  }, []);
+
   // 监听 pathname 变化（页面加载完成）
   useEffect(() => {
     if (pathname === previousPathname.current) return;
@@ -264,46 +278,43 @@ export default function HeaderWrapper({
     }
 
     previousPathname.current = pathname;
-  }, [pathname, transitionState, showLoading]);
+  }, [pathname, transitionState, showLoading, updateTitle]);
 
-  // 更新标题
-  const updateTitle = () => {
-    if (typeof document === "undefined") return;
-
-    const titleElement = document.querySelector("title");
-    if (!titleElement) return;
-
-    const documentTitle = titleElement.textContent || "";
-    const cleanTitle = documentTitle.includes(" | ")
-      ? documentTitle.split(" | ")[0] || "NeutralPress"
-      : documentTitle || "NeutralPress";
-
-    setDisplayTitle(cleanTitle);
-  };
-
-  // 监听 document.title 变化
+  // 监听 document.title 变化（包含 Next.js 替换 <title> 节点的情况）
   useEffect(() => {
     if (typeof document === "undefined") return;
 
-    // 创建一个 MutationObserver 来监听 title 元素的变化
-    const titleElement = document.querySelector("title");
-    if (!titleElement) return;
+    let rafId: number | null = null;
+    const syncTitle = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
 
-    const observer = new MutationObserver(() => {
-      updateTitle();
-    });
+      rafId = requestAnimationFrame(() => {
+        updateTitle();
+        rafId = null;
+      });
+    };
 
-    // 监听 title 元素的子节点变化（文本内容）
-    observer.observe(titleElement, {
+    const observer = new MutationObserver(syncTitle);
+
+    // 监听 head，确保 title 节点被替换时也能捕获
+    observer.observe(document.head, {
       childList: true,
       subtree: true,
       characterData: true,
     });
 
+    // 初始化同步一次，避免首屏拿到旧值
+    syncTitle();
+
     return () => {
       observer.disconnect();
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
     };
-  }, []);
+  }, [updateTitle]);
 
   // 监听加载完成事件
   useEffect(() => {
@@ -316,11 +327,6 @@ export default function HeaderWrapper({
     return () => {
       window.removeEventListener("loadingComplete", handleLoadingComplete);
     };
-  }, []);
-
-  // 初始化标题
-  useEffect(() => {
-    updateTitle();
   }, []);
 
   return (
