@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import { unstable_cache } from "next/cache";
 import { ImageResponse } from "next/og";
 
 import { getConfigs } from "@/lib/server/config-cache";
@@ -11,8 +12,9 @@ interface IconMetadata {
   id: string;
 }
 
-// 启用缓存
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
+
+const ICON_SOURCE_REVALIDATE_SECONDS = 3600;
 
 const FALLBACK_FAVICON_PATH = "/icon.png";
 const PUBLIC_DIR = path.join(process.cwd(), "public");
@@ -131,6 +133,18 @@ async function resolveFaviconDataUrl(favicon: string): Promise<string> {
   return fallbackDataUrl || TRANSPARENT_PNG_DATA_URL;
 }
 
+const getCachedFaviconDataUrl = unstable_cache(
+  async () => {
+    const [favicon] = await getConfigs(["site.favicon"]);
+    return resolveFaviconDataUrl(favicon);
+  },
+  ["metadata-icon-favicon-data-url"],
+  {
+    revalidate: ICON_SOURCE_REVALIDATE_SECONDS,
+    tags: ["config", "config/site.favicon"],
+  },
+);
+
 export function generateImageMetadata(): IconMetadata[] {
   return [
     {
@@ -208,8 +222,7 @@ export default async function Icon({
   params?: { __metadata_id__: string };
 }) {
   const metadataId = await id;
-  const [favicon] = await getConfigs(["site.favicon"]);
-  const iconSrc = await resolveFaviconDataUrl(favicon);
+  const iconSrc = await getCachedFaviconDataUrl();
 
   // 从 metadata 中查找匹配的尺寸
   const metadata = generateImageMetadata();
