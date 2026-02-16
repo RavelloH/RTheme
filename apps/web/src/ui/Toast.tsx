@@ -14,6 +14,7 @@ import {
   RiCloseLine,
   RiErrorWarningLine,
   RiInformationLine,
+  RiLoader4Line,
 } from "@remixicon/react";
 import {
   animate,
@@ -25,7 +26,7 @@ import {
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
 
-export type ToastType = "success" | "error" | "warning" | "info";
+export type ToastType = "success" | "error" | "warning" | "info" | "loading";
 
 export interface ToastAction {
   label: string;
@@ -49,6 +50,7 @@ interface ToastContextType {
     message?: string,
     duration?: number,
     action?: ToastAction,
+    progress?: number,
   ) => string;
   success: (
     title: string,
@@ -73,6 +75,13 @@ interface ToastContextType {
     message?: string,
     duration?: number,
     action?: ToastAction,
+  ) => string;
+  loading: (
+    title: string,
+    message?: string,
+    duration?: number,
+    action?: ToastAction,
+    progress?: number,
   ) => string;
   dismiss: (id: string) => void;
   persist: (id: string) => void;
@@ -126,6 +135,7 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
       message?: string,
       duration: number = 3000,
       action?: ToastAction,
+      progress?: number,
     ): string => {
       const id = `toast-${Date.now()}-${Math.random()}`;
       const newToast: ToastMessage = {
@@ -135,6 +145,7 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
         message,
         duration,
         action,
+        progress,
       };
 
       setToasts((prev) => {
@@ -205,6 +216,19 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
     [showToast],
   );
 
+  const loading = useCallback(
+    (
+      title: string,
+      message?: string,
+      duration?: number,
+      action?: ToastAction,
+      progress?: number,
+    ): string => {
+      return showToast("loading", title, message, duration, action, progress);
+    },
+    [showToast],
+  );
+
   const dismiss = useCallback(
     (id: string) => {
       removeToast(id);
@@ -245,6 +269,7 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
         error,
         warning,
         info,
+        loading,
         dismiss,
         persist,
         update,
@@ -390,6 +415,15 @@ function Toast({ toast, onRemove, canClose }: ToastProps) {
             key="info"
           >
             <RiInformationLine size="1.5em" />
+          </div>
+        );
+      case "loading":
+        return (
+          <div
+            className="flex h-6 w-6 items-center justify-center rounded-full text-primary"
+            key="loading"
+          >
+            <RiLoader4Line className="animate-spin" size="1.5em" />
           </div>
         );
     }
