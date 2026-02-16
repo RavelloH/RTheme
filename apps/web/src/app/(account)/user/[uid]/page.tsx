@@ -17,42 +17,58 @@ export async function generateMetadata({
 }: UserProfilePageProps): Promise<Metadata> {
   const { uid } = await params;
   const uidNumber = parseInt(uid, 10);
+  const pathname = `/user/${uid}`;
 
   if (isNaN(uidNumber)) {
-    return generateSEOMetadata({
-      title: "用户不存在",
-      robots: {
-        index: false,
-        follow: false,
+    return generateSEOMetadata(
+      {
+        title: "用户不存在",
+        robots: {
+          index: false,
+          follow: false,
+        },
       },
-    });
+      {
+        pathname,
+      },
+    );
   }
 
   // 获取用户基本信息
   const profileResult = await getUserPublicProfile(uidNumber);
 
   if (!profileResult.success || !profileResult.data) {
-    return generateSEOMetadata({
-      title: "用户不存在",
-      robots: {
-        index: false,
-        follow: false,
+    return generateSEOMetadata(
+      {
+        title: "用户不存在",
+        robots: {
+          index: false,
+          follow: false,
+        },
       },
-    });
+      {
+        pathname,
+      },
+    );
   }
 
   const { user } = profileResult.data;
   const displayName = user.nickname || user.username;
 
-  return generateSEOMetadata({
-    title: `${displayName} 的个人主页`,
-    description:
-      user.bio || `查看 ${displayName} 的个人资料、文章、评论和活动记录`,
-    robots: {
-      index: false, // 不索引用户档案页
-      follow: false,
+  return generateSEOMetadata(
+    {
+      title: `${displayName} 的个人主页`,
+      description:
+        user.bio || `查看 ${displayName} 的个人资料、文章、评论和活动记录`,
+      robots: {
+        index: false, // 不索引用户档案页
+        follow: false,
+      },
     },
-  });
+    {
+      pathname,
+    },
+  );
 }
 
 export default async function UserProfilePage({

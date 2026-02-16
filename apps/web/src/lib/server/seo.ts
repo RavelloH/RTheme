@@ -5,6 +5,7 @@ import { unstable_cache } from "next/cache";
 import { findCategoryByPath } from "@/lib/server/category-utils";
 import { getRawConfig } from "@/lib/server/config-cache";
 import prisma from "@/lib/server/prisma";
+import { normalizeSiteColorConfig } from "@/lib/shared/site-color";
 
 // 基础静态配置（不依赖数据库的固定值）
 const STATIC_METADATA = {
@@ -17,7 +18,6 @@ const STATIC_METADATA = {
     telephone: false,
   },
   alternates: {
-    canonical: "/",
     types: {
       "application/rss+xml": "/feed.xml",
       "application/feed+json": "/feed.json",
@@ -85,11 +85,13 @@ const seoConfigMap = {
   googleVerification: "seo.google_verification",
   category: "seo.category",
   country: "seo.country",
+  imageCardEnable: "seo.imageCard.enable",
+  indexEnable: "seo.index.enable",
 } as const;
 
 // 配置值类型定义
 interface ConfigValue {
-  default?: string | number | boolean | string[] | null;
+  default?: unknown;
   [key: string]: unknown;
 }
 
@@ -134,6 +136,110 @@ function getStringArrayValue(
   return fallback;
 }
 
+// 辅助函数：获取布尔配置值
+function getBooleanValue(
+  configValue: ConfigValue | undefined,
+  fallback: boolean = false,
+): boolean {
+  return typeof configValue?.default === "boolean"
+    ? configValue.default
+    : fallback;
+}
+
+function parseMetadataBase(url: string): URL | undefined {
+  const normalized = url.trim();
+  if (!normalized) return undefined;
+
+  try {
+    return new URL(normalized);
+  } catch {
+    console.warn(`[SEO] Invalid site.url config: ${normalized}`);
+    return undefined;
+  }
+}
+
+function normalizePathname(pathname?: string): string | undefined {
+  if (!pathname) return undefined;
+
+  const normalized = pathname.trim();
+  if (!normalized) return undefined;
+  if (/^https?:\/\//i.test(normalized)) return normalized;
+
+  return normalized.startsWith("/") ? normalized : `/${normalized}`;
+}
+
+function buildOpenGraphUrl(
+  metadataBase: URL | undefined,
+  pathname: string | undefined,
+): string | undefined {
+  if (!pathname) return undefined;
+
+  try {
+    if (/^https?:\/\//i.test(pathname)) {
+      return new URL(pathname).toString();
+    }
+
+    if (!metadataBase) return undefined;
+    return new URL(pathname, metadataBase).toString();
+  } catch {
+    console.warn(
+      `[SEO] Failed to build openGraph.url for pathname: ${pathname}`,
+    );
+    return undefined;
+  }
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    !(value instanceof URL)
+  );
+}
+
+function deepMergeMetadataValue(base: unknown, override: unknown): unknown {
+  if (override === undefined) return base;
+  if (!isPlainObject(base) || !isPlainObject(override)) return override;
+
+  const merged: Record<string, unknown> = { ...base };
+  for (const [key, value] of Object.entries(override)) {
+    merged[key] = deepMergeMetadataValue(merged[key], value);
+  }
+
+  return merged;
+}
+
+const DEEP_MERGE_METADATA_KEYS = [
+  "alternates",
+  "robots",
+  "openGraph",
+  "twitter",
+  "verification",
+  "other",
+  "pagination",
+] as const;
+
+function mergeMetadata(base: Metadata, overrides: Partial<Metadata>): Metadata {
+  const merged: Metadata = {
+    ...base,
+    ...overrides,
+  };
+
+  for (const key of DEEP_MERGE_METADATA_KEYS) {
+    const overrideValue = overrides[key];
+    if (overrideValue === undefined) continue;
+
+    const baseValue = base[key];
+    (merged as Record<string, unknown>)[key] = deepMergeMetadataValue(
+      baseValue,
+      overrideValue,
+    );
+  }
+
+  return merged;
+}
+
 /**
  * 解析标题模板
  * 模板格式: {pageTitle} | {title}( - {subtitle})
@@ -156,9 +262,11 @@ function parseTitleTemplate(
 ): string {
   let result = template;
 
-  // 如果没有子标题，移除所有括号及其内容
+  // 可选语法：仅处理包含 {subtitle} 的括号段
   if (!subtitle || subtitle.trim() === "") {
-    result = result.replace(/\([^)]*\)/g, "");
+    result = result.replace(/\(([^)]*\{subtitle\}[^)]*)\)/g, "");
+  } else {
+    result = result.replace(/\(([^)]*\{subtitle\}[^)]*)\)/g, "$1");
   }
 
   // 替换占位符
@@ -166,13 +274,11 @@ function parseTitleTemplate(
     .replace(/\{pageTitle\}/g, pageTitle || "")
     .replace(/\{title\}/g, title)
     .replace(/\{subtitle\}/g, subtitle || "")
-    // 移除括号（如果还有的话）
-    .replace(/[()]/g, "")
     // 清理多余的空格和分隔符
-    .replace(/\s+-\s+$/g, "")
-    .replace(/^\s+-\s+/g, "")
-    .replace(/\|\s+$/g, "")
-    .replace(/^\s+\|/g, "")
+    .replace(/\s+\|\s*$/g, "")
+    .replace(/^\s*\|\s+/g, "")
+    .replace(/\s+-\s*$/g, "")
+    .replace(/^\s*-\s+/g, "")
     .replace(/\s{2,}/g, " ")
     .trim();
 
@@ -210,12 +316,76 @@ function generateTitleMetadata(
   return title;
 }
 
-// 扩展的 Metadata 类型，支持分页
+type MetadataTitleValue = Metadata["title"] | undefined;
+
+function extractTitleText(title: MetadataTitleValue): string {
+  if (!title) return "";
+  if (typeof title === "string") return title;
+  if (typeof title !== "object") return "";
+
+  if ("absolute" in title && typeof title.absolute === "string") {
+    return title.absolute;
+  }
+
+  if ("default" in title && typeof title.default === "string") {
+    return title.default;
+  }
+
+  return "";
+}
+
+function buildSocialImageAlt(
+  title: MetadataTitleValue,
+  description?: string,
+): string {
+  const titleText = extractTitleText(title);
+  const parts = [titleText, description].filter(
+    (part): part is string => !!part && part.trim() !== "",
+  );
+
+  return parts.join(" - ") || "NeutralPress";
+}
+
+type PaginationLinkValue = string | URL | null;
+
+interface ExtendedPagination {
+  previous?: PaginationLinkValue;
+  next?: PaginationLinkValue;
+  prev?: PaginationLinkValue;
+}
+
+// 扩展的 Metadata 类型，兼容旧分页字段
 interface ExtendedMetadata extends Metadata {
-  pagination?: {
-    next?: string;
-    prev?: string;
+  pagination?: ExtendedPagination;
+}
+
+function normalizePagination(
+  pagination: ExtendedPagination | undefined,
+): Metadata["pagination"] | undefined {
+  if (!pagination) return undefined;
+
+  const previous = pagination.previous ?? pagination.prev;
+  const next = pagination.next;
+  if (!previous && !next) return undefined;
+
+  return {
+    ...(previous ? { previous } : {}),
+    ...(next ? { next } : {}),
   };
+}
+
+function normalizeMetadataOverrides(
+  overrides: Partial<ExtendedMetadata>,
+): Partial<Metadata> {
+  const { pagination, ...rest } = overrides;
+  const normalized: Partial<Metadata> = { ...rest };
+
+  const normalizedPagination = normalizePagination(pagination);
+  if (normalizedPagination) {
+    normalized.pagination = normalizedPagination;
+  }
+
+  return normalized;
 }
 
 // 生成动态SEO配置的异步函数
@@ -255,6 +425,21 @@ export async function generateMetadata(
   );
   const category = getStringValue(configValues[seoConfigMap.category]);
   const country = getStringValue(configValues[seoConfigMap.country]);
+  const imageCardEnabled = getBooleanValue(
+    configValues[seoConfigMap.imageCardEnable],
+    true,
+  );
+  const indexEnabled = getBooleanValue(
+    configValues[seoConfigMap.indexEnable],
+    true,
+  );
+
+  const siteColor = normalizeSiteColorConfig(
+    configValues[seoConfigMap.themeColor]?.default,
+  );
+  const metadataBase = parseMetadataBase(url);
+  const normalizedPathname = normalizePathname(options?.pathname);
+  const openGraphUrl = buildOpenGraphUrl(metadataBase, normalizedPathname);
 
   // 生成标题元数据
   const titleMetadata = generateTitleMetadata(
@@ -263,51 +448,133 @@ export async function generateMetadata(
     subtitle,
   );
 
+  // 处理页面级别的标题覆盖
+  const processedOverrides: Partial<ExtendedMetadata> = { ...overrides };
+
+  // SEO 插值处理：如果提供了 seoParams，自动对 title 和 description 进行插值
+  if (options?.seoParams) {
+    // 检查 title 是否包含占位符
+    if (
+      typeof processedOverrides.title === "string" &&
+      processedOverrides.title.includes("{")
+    ) {
+      processedOverrides.title = await interpolateSeoTemplate(
+        processedOverrides.title,
+        options.seoParams,
+      );
+    }
+
+    // 检查 description 是否包含占位符
+    if (
+      typeof processedOverrides.description === "string" &&
+      processedOverrides.description.includes("{")
+    ) {
+      processedOverrides.description = await interpolateSeoTemplate(
+        processedOverrides.description,
+        options.seoParams,
+      );
+    }
+  }
+
+  // 如果覆盖参数中包含标题，确保使用模板格式
+  if (processedOverrides.title) {
+    // 如果是对象格式，保持原样（允许页面完全控制标题）
+    if (typeof processedOverrides.title === "object") {
+      // 已经是最终格式，不需要处理
+    } else if (typeof processedOverrides.title === "string") {
+      // 如果是字符串标题，应用站点标题模板
+      if (titleTemplate) {
+        processedOverrides.title = parseTitleTemplate(
+          titleTemplate,
+          title || "NeutralPress",
+          subtitle,
+          processedOverrides.title,
+        );
+      } else {
+        // 没有模板时使用简单拼接
+        const siteTitle = title || "NeutralPress";
+        const fullTitle = subtitle ? `${siteTitle} - ${subtitle}` : siteTitle;
+        processedOverrides.title = `${processedOverrides.title} | ${fullTitle}`;
+      }
+    }
+  }
+
+  const resolvedTitle: Metadata["title"] =
+    processedOverrides.title ?? titleMetadata;
+  const resolvedDescription =
+    typeof processedOverrides.description === "string"
+      ? processedOverrides.description
+      : description || undefined;
+  const socialImageAlt = buildSocialImageAlt(
+    resolvedTitle,
+    resolvedDescription,
+  );
+
   // 构建最终的metadata
   const dynamicMetadata: Metadata = {
-    metadataBase: url ? new URL(url) : undefined,
+    metadataBase,
     title: titleMetadata,
     description: description || undefined,
     applicationName: appName || title || undefined,
     ...STATIC_METADATA,
+    themeColor: [
+      {
+        media: "(prefers-color-scheme: light)",
+        color: siteColor.light.primary,
+      },
+      {
+        media: "(prefers-color-scheme: dark)",
+        color: siteColor.dark.primary,
+      },
+    ],
     authors: author ? [{ name: author }] : undefined,
     creator: author || undefined,
     publisher: author || undefined,
     category: category || undefined,
     alternates: {
       ...STATIC_METADATA.alternates,
-      canonical: options?.pathname || "/",
+      ...(normalizedPathname ? { canonical: normalizedPathname } : {}),
+    },
+    robots: {
+      ...STATIC_METADATA.robots,
+      index: indexEnabled,
+      follow: indexEnabled,
+      googleBot: {
+        ...STATIC_METADATA.robots.googleBot,
+        index: indexEnabled,
+        follow: indexEnabled,
+      },
     },
     openGraph: {
       type: "website",
       locale: "zh-CN",
-      title: titleMetadata,
-      description: description || undefined,
+      title: resolvedTitle,
+      description: resolvedDescription,
       siteName: appName || title || undefined,
-      url: url || undefined,
+      ...(openGraphUrl ? { url: openGraphUrl } : {}),
       countryName: country || undefined,
-      images: title
+      images: imageCardEnabled
         ? [
             {
               url: "/og-image.png",
               width: 1200,
               height: 630,
-              alt: `${title}${subtitle ? ` - ${subtitle}` : ""} - ${description || ""}`,
+              alt: socialImageAlt,
               type: "image/png",
             },
           ]
         : undefined,
     },
     twitter: {
-      card: "summary_large_image",
+      card: imageCardEnabled ? "summary_large_image" : "summary",
       site: twitterSite || undefined,
       creator: twitterCreator || undefined,
-      title: titleMetadata,
-      description: description || undefined,
-      images: title
+      title: resolvedTitle,
+      description: resolvedDescription,
+      images: imageCardEnabled
         ? {
             url: "/twitter-card.png",
-            alt: `${title}${subtitle ? ` - ${subtitle}` : ""} Twitter Card`,
+            alt: `${socialImageAlt} Twitter Card`,
             width: 1200,
             height: 630,
           }
@@ -334,80 +601,9 @@ export async function generateMetadata(
     },
   };
 
-  // 处理页面级别的标题覆盖
-  const processedOverrides = { ...overrides };
-
-  // SEO 插值处理：如果提供了 seoParams，自动对 title 和 description 进行插值
-  if (options?.seoParams) {
-    // 检查 title 是否包含占位符
-    if (typeof overrides.title === "string" && overrides.title.includes("{")) {
-      processedOverrides.title = await interpolateSeoTemplate(
-        overrides.title,
-        options.seoParams,
-      );
-    }
-
-    // 检查 description 是否包含占位符
-    if (
-      typeof overrides.description === "string" &&
-      overrides.description.includes("{")
-    ) {
-      processedOverrides.description = await interpolateSeoTemplate(
-        overrides.description,
-        options.seoParams,
-      );
-    }
-  }
-
-  // 如果提供了分页信息，添加到 other 中以生成正确的 link 标签
-  if (overrides.pagination) {
-    const { pagination, ...overridesWithoutPagination } = overrides;
-
-    const otherMetadata: Record<string, string | number | (string | number)[]> =
-      {
-        ...processedOverrides.other,
-      };
-
-    if (pagination.prev) {
-      otherMetadata.prev = pagination.prev;
-    }
-
-    if (pagination.next) {
-      otherMetadata.next = pagination.next;
-    }
-
-    processedOverrides.other = otherMetadata;
-    Object.assign(processedOverrides, overridesWithoutPagination);
-  }
-
-  // 如果覆盖参数中包含标题，确保使用模板格式
-  // 注意：这里使用 processedOverrides.title，因为可能已经经过了 SEO 插值
-  if (processedOverrides.title) {
-    // 如果是对象格式，保持原样（允许页面完全控制标题）
-    if (typeof processedOverrides.title === "object") {
-      // 已经是最终格式，不需要处理
-    } else if (typeof processedOverrides.title === "string") {
-      // 如果是字符串标题，应用站点标题模板
-      if (titleTemplate) {
-        processedOverrides.title = parseTitleTemplate(
-          titleTemplate,
-          title || "NeutralPress",
-          subtitle,
-          processedOverrides.title,
-        );
-      } else {
-        // 没有模板时使用简单拼接
-        const siteTitle = title || "NeutralPress";
-        const fullTitle = subtitle ? `${siteTitle} - ${subtitle}` : siteTitle;
-        processedOverrides.title = `${processedOverrides.title} | ${fullTitle}`;
-      }
-    }
-  }
-
-  return toPlainSerializable({
-    ...dynamicMetadata,
-    ...processedOverrides,
-  }) as Metadata;
+  const normalizedOverrides = normalizeMetadataOverrides(processedOverrides);
+  const finalMetadata = mergeMetadata(dynamicMetadata, normalizedOverrides);
+  return toPlainSerializable(finalMetadata) as Metadata;
 }
 
 /**
