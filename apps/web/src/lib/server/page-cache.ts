@@ -429,6 +429,49 @@ export async function getMainRouteStaticParams(): Promise<
 }
 
 /**
+ * 生成 main catch-all 路由的顶级静态参数
+ * - 仅包含首页与一级路径
+ * - 忽略包含占位符的模板路径
+ */
+export async function getMainRouteTopLevelStaticParams(): Promise<
+  MainRouteStaticParam[]
+> {
+  const pages = await prisma.page.findMany({
+    where: {
+      deletedAt: null,
+      status: "ACTIVE",
+      contentType: {
+        in: [...STATIC_PARAM_SUPPORTED_CONTENT_TYPES],
+      },
+    },
+    select: {
+      slug: true,
+    },
+    orderBy: {
+      slug: "asc",
+    },
+  });
+
+  const pathnameSet = new Set<string>(["/"]);
+
+  for (const page of pages) {
+    const normalizedPath = normalizePagePath(page.slug);
+    if (normalizedPath.includes(":")) continue;
+
+    const slugSegments = pathToSlugSegments(normalizedPath);
+    if (slugSegments.length <= 1) {
+      pathnameSet.add(normalizedPath);
+    }
+  }
+
+  return Array.from(pathnameSet)
+    .sort((a, b) => a.localeCompare(b))
+    .map((pathname) => ({
+      slug: pathToSlugSegments(pathname),
+    }));
+}
+
+/**
  * 基于关键词的资源存在性校验
  * 规则（简化版）：
  * - 仅当路径包含 "categories" 或 "tags" 且存在 slug 参数时才校验

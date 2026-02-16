@@ -20,8 +20,10 @@ interface ProjectDetailPageProps {
   params: Promise<{ slug: string }>;
 }
 
+const PREBUILD_PROJECT_LIMIT = 8;
+
 export async function generateStaticParams() {
-  const params = await getPublishedProjectStaticParams();
+  const params = await getPublishedProjectStaticParams(PREBUILD_PROJECT_LIMIT);
   return params.length > 0 ? params : [{ slug: "__neutralpress__" }];
 }
 

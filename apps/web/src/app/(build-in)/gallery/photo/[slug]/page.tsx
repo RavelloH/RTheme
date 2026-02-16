@@ -14,14 +14,6 @@ interface PhotoPageProps {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateStaticParams() {
-  const photos = await prisma.photo.findMany({
-    select: { slug: true },
-  });
-  const params = photos.map((photo) => ({ slug: photo.slug }));
-  return params.length > 0 ? params : [{ slug: "__neutralpress__" }];
-}
-
 export async function generateMetadata({
   params,
 }: PhotoPageProps): Promise<Metadata> {

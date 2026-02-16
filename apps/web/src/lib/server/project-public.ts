@@ -117,11 +117,16 @@ export interface PublicProjectDetail {
   coverImages: ProcessedImageData[];
 }
 
-export async function getPublishedProjectStaticParams(): Promise<
-  Array<{ slug: string }>
-> {
+export async function getPublishedProjectStaticParams(
+  limit?: number,
+): Promise<Array<{ slug: string }>> {
+  const normalizedLimit =
+    typeof limit === "number" && Number.isFinite(limit) && limit > 0
+      ? Math.floor(limit)
+      : undefined;
+
   const getCachedData = unstable_cache(
-    async () => {
+    async (maxCount?: number) => {
       const projects = await prisma.project.findMany({
         where: {
           deletedAt: null,
@@ -130,6 +135,13 @@ export async function getPublishedProjectStaticParams(): Promise<
         select: {
           slug: true,
         },
+        orderBy: [
+          { isFeatured: "desc" },
+          { publishedAt: "desc" },
+          { updatedAt: "desc" },
+          { createdAt: "desc" },
+        ],
+        take: maxCount,
       });
 
       return projects.map((project) => ({ slug: project.slug }));
@@ -140,7 +152,7 @@ export async function getPublishedProjectStaticParams(): Promise<
       revalidate: false,
     },
   );
-  return getCachedData();
+  return getCachedData(normalizedLimit);
 }
 
 export async function getPublishedProjectSeo(

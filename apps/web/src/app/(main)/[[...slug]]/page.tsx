@@ -10,7 +10,7 @@ import type { PageConfig } from "@/data/default-pages";
 import { buildPageCacheTagsForBlocks } from "@/lib/server/block-cache";
 import { resolveBlockData } from "@/lib/server/block-data-resolver";
 import {
-  getMainRouteStaticParams,
+  getMainRouteTopLevelStaticParams,
   getMatchingPage,
   getSystemPageConfig,
 } from "@/lib/server/page-cache";
@@ -20,7 +20,7 @@ import {
 } from "@/lib/server/seo";
 
 export async function generateStaticParams() {
-  return getMainRouteStaticParams();
+  return getMainRouteTopLevelStaticParams();
 }
 
 const pageTextRenderModeMap = {
