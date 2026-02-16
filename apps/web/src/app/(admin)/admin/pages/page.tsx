@@ -48,11 +48,11 @@ export default async function AdminPages() {
               <div>
                 详细设置指南，请参阅文档：
                 <Link
-                  href="https://docs.ravelloh.com/docs/pages"
+                  href="https://neutralpress.net/docs/pages"
                   className="text-primary ml-auto"
                   presets={["hover-underline", "arrow-out"]}
                 >
-                  https://docs.ravelloh.com/docs/pages
+                  https://neutralpress.net/docs/pages
                 </Link>
               </div>
             </div>

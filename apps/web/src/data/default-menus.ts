@@ -172,7 +172,7 @@ export const defaultMenus: DefaultMenu[] = [
     name: "使用文档",
     id: "menu-documentation",
     icon: "book-2-fill",
-    link: "https://docs.ravelloh.com",
+    link: "https://neutralpress.net",
     status: "ACTIVE",
     order: 2,
     category: "OUTSITE",

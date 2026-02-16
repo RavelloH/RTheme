@@ -10,7 +10,7 @@ export const POSTS_BLOCK_FORM_CONFIG: BlockFormConfig = {
   },
   theme: {
     name: "neutral",
-    url: "https://docs.ravelloh.com",
+    url: "https://neutralpress.net",
   },
   fields: [
     {

@@ -301,7 +301,7 @@ export const MULTI_ROW_LAYOUT_FORM_CONFIG: BlockFormConfig = {
   },
   theme: {
     name: "neutral",
-    url: "https://docs.ravelloh.com",
+    url: "https://neutralpress.net",
   },
   actions: {
     db: 0,
