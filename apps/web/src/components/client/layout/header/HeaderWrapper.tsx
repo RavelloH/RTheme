@@ -16,6 +16,7 @@ import { useMenuStore } from "@/store/menu-store";
 interface TransitionMessage {
   type: "page-transition";
   direction: "left" | "right" | "up" | "down" | "unknown";
+  targetPath?: string;
 }
 
 interface TitleTransitionProps {

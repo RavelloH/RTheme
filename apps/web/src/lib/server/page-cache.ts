@@ -431,7 +431,7 @@ export async function getMainRouteStaticParams(): Promise<
 /**
  * 生成 main catch-all 路由的顶级静态参数
  * - 仅包含首页与一级路径
- * - 忽略包含占位符的模板路径
+ * - 对固定路径分页模板（如 /posts/page/:page）补充其基路径（/posts）
  */
 export async function getMainRouteTopLevelStaticParams(): Promise<
   MainRouteStaticParam[]
@@ -456,7 +456,23 @@ export async function getMainRouteTopLevelStaticParams(): Promise<
 
   for (const page of pages) {
     const normalizedPath = normalizePagePath(page.slug);
-    if (normalizedPath.includes(":")) continue;
+    if (normalizedPath.includes(":")) {
+      const hasPageSuffix = normalizedPath.endsWith(PAGE_PLACEHOLDER_SEGMENT);
+      if (!hasPageSuffix) continue;
+
+      const templateBasePath = normalizePagePath(
+        normalizedPath.slice(0, -PAGE_PLACEHOLDER_SEGMENT.length) || "/",
+      );
+
+      // 仅处理固定基路径分页模板，排除 /tags/:slug/page/:page 这类动态模板
+      if (templateBasePath.includes(":")) continue;
+
+      const baseSegments = pathToSlugSegments(templateBasePath);
+      if (baseSegments.length <= 1) {
+        pathnameSet.add(templateBasePath);
+      }
+      continue;
+    }
 
     const slugSegments = pathToSlugSegments(normalizedPath);
     if (slugSegments.length <= 1) {

@@ -32,6 +32,12 @@ interface CustomLinkProps extends React.ComponentProps<typeof NextLink> {
   >;
 }
 
+interface PageTransitionBroadcastMessage {
+  type: "page-transition";
+  direction: string;
+  targetPath?: string;
+}
+
 // 处理特殊链接类型
 function handleSpecialLinks(newPath: string): boolean {
   if (newPath.startsWith("#")) {
@@ -273,10 +279,12 @@ function executeNavigationWithTransition(
 ) {
   // 如果有方向，广播过渡消息
   if (direction) {
-    broadcast({
+    const transitionMessage: PageTransitionBroadcastMessage = {
       type: "page-transition",
       direction,
-    });
+      targetPath: newPath,
+    };
+    broadcast(transitionMessage);
   }
 
   // 预取目标页面
