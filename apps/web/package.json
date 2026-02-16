@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev --turbopack --port 3000",
     "build": "tsx scripts/prebuild.ts && next build --webpack && tsx scripts/postbuild.ts",
+    "build:standalone": "cross-env BUILD_STANDALONE=true pnpm build",
     "build:pre": "tsx scripts/prebuild.ts",
     "build:post": "tsx scripts/postbuild.ts",
     "generate:blocks": "tsx scripts/generate-block-business-catalog.ts && tsx scripts/generate-block-definition-catalog.ts",

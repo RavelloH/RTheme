@@ -46,14 +46,12 @@ const { checkEnvironmentVariables } = await import("./check-env.js");
 await checkEnvironmentVariables();
 rlog.log();
 
-rlog.log("Starting JWT key pair validation...");
-const { checkJWTKeyPair } = await import("./check-jwt-token.js");
-await checkJWTKeyPair();
-rlog.log();
-
-rlog.log("Starting Redis connection check...");
-const { checkRedisConnection } = await import("./check-redis.js");
-await checkRedisConnection();
+rlog.log("Starting JWT key pair validation and Redis connection check...");
+const [{ checkJWTKeyPair }, { checkRedisConnection }] = await Promise.all([
+  import("./check-jwt-token.js"),
+  import("./check-redis.js"),
+]);
+await Promise.all([checkJWTKeyPair(), checkRedisConnection()]);
 rlog.log();
 
 rlog.log("Starting database check...");
@@ -77,19 +75,21 @@ try {
   await syncPersistentMedia();
   rlog.log();
 
-  rlog.log("Starting configuration cache generation...");
-  const { generateConfigCache } = await import("./generate-config-cache.js");
-  await generateConfigCache();
-  rlog.log();
-
-  rlog.log("Starting menu cache generation...");
-  const { generateMenuCache } = await import("./generate-menu-cache.js");
-  await generateMenuCache();
-  rlog.log();
-
-  rlog.log("Starting page cache generation...");
-  const { generatePageCache } = await import("./generate-page-cache.js");
-  await generatePageCache();
+  rlog.log("Starting configuration, menu, and page cache generation...");
+  const [
+    { generateConfigCache },
+    { generateMenuCache },
+    { generatePageCache },
+  ] = await Promise.all([
+    import("./generate-config-cache.js"),
+    import("./generate-menu-cache.js"),
+    import("./generate-page-cache.js"),
+  ]);
+  await Promise.all([
+    generateConfigCache(),
+    generateMenuCache(),
+    generatePageCache(),
+  ]);
   rlog.log();
 
   rlog.log("Starting view count cache generation...");

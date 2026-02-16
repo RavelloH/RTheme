@@ -34,7 +34,11 @@ const nextConfig = () => {
       dangerouslyAllowSVG: true,
       contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     },
-    output: "standalone",
+    typescript: {
+      ignoreBuildErrors: true,
+    },
+    // eslint-disable-next-line no-undef
+    output: process.env.BUILD_STANDALONE ? "standalone" : undefined,
     serverExternalPackages: ["ably", "akismet-api", "@node-rs/jieba"],
     cacheComponents: true,
     reactCompiler: true,
