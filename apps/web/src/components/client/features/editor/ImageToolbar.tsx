@@ -120,9 +120,8 @@ export function ImageToolbar({
               label="Alt 文本"
               value={altText}
               onChange={(e) => setAltText(e.target.value)}
-              placeholder="请输入图片的替代文本"
               size="sm"
-              helperText="Alt 文本用于描述图片内容，对于 SEO 和无障碍访问很重要"
+              helperText="Alt 文本用于描述图片内容"
             />
           </div>
 
