@@ -12,7 +12,7 @@
     "JWT_PRIVATE_KEY",
     "JWT_PUBLIC_KEY",
     "MASTER_SECRET",
-    "IS_BUILDING"
+    "BUILD_STANDALONE"
   ],
   "tasks": {
     "build": {
@@ -27,7 +27,7 @@
         "JWT_PRIVATE_KEY",
         "JWT_PUBLIC_KEY",
         "MASTER_SECRET",
-        "IS_BUILDING"
+        "BUILD_STANDALONE"
       ]
     },
     "lint": {
@@ -52,7 +52,7 @@
         "JWT_PRIVATE_KEY",
         "JWT_PUBLIC_KEY",
         "MASTER_SECRET",
-        "IS_BUILDING"
+        "BUILD_STANDALONE"
       ]
     },
     "@repo/openapi-generator#dev": {
