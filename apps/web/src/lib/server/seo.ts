@@ -5,7 +5,6 @@ import { unstable_cache } from "next/cache";
 import { findCategoryByPath } from "@/lib/server/category-utils";
 import { getRawConfig } from "@/lib/server/config-cache";
 import prisma from "@/lib/server/prisma";
-import { normalizeSiteColorConfig } from "@/lib/shared/site-color";
 
 // 基础静态配置（不依赖数据库的固定值）
 const STATIC_METADATA = {
@@ -79,7 +78,6 @@ const seoConfigMap = {
   applicationName: "site.title",
   keywords: "seo.keywords",
   author: "author.name",
-  themeColor: "site.color",
   twitterSite: "seo.twitter_site",
   twitterCreator: "seo.twitter_creator",
   googleVerification: "seo.google_verification",
@@ -434,9 +432,6 @@ export async function generateMetadata(
     true,
   );
 
-  const siteColor = normalizeSiteColorConfig(
-    configValues[seoConfigMap.themeColor]?.default,
-  );
   const metadataBase = parseMetadataBase(url);
   const normalizedPathname = normalizePathname(options?.pathname);
   const openGraphUrl = buildOpenGraphUrl(metadataBase, normalizedPathname);
@@ -517,16 +512,6 @@ export async function generateMetadata(
     description: description || undefined,
     applicationName: appName || title || undefined,
     ...STATIC_METADATA,
-    themeColor: [
-      {
-        media: "(prefers-color-scheme: light)",
-        color: siteColor.light.primary,
-      },
-      {
-        media: "(prefers-color-scheme: dark)",
-        color: siteColor.dark.primary,
-      },
-    ],
     authors: author ? [{ name: author }] : undefined,
     creator: author || undefined,
     publisher: author || undefined,
