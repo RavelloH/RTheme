@@ -212,15 +212,8 @@ export default function PageTransition({ children }: PageTransitionProps) {
         previousPathname.current,
       );
 
-      // 路由未变化：取消本次转场并恢复显示，不播放进入动画
+      // 路由未变化：保持隐藏并继续等待，不触发进入动画
       if (normalizedPathname === normalizedPreviousPathname) {
-        if (containerRef.current) {
-          gsap.killTweensOf(containerRef.current);
-          gsap.set(containerRef.current, { x: 0, y: 0, opacity: 1 });
-        }
-
-        expectedPathname.current = null;
-        setTransitionState("idle");
         return;
       }
 
