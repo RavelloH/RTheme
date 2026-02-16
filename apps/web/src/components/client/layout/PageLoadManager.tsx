@@ -14,16 +14,18 @@ export function PageLoadManager({ onLoadComplete }: PageLoadManagerProps) {
     const checkPageLoad = () => {
       if (hasTriggeredRef.current) return;
 
-      // 不等待 window load，DOM 可交互后即可进入加载完成流程
-      const isReady = document.readyState !== "loading";
+      const isReady =
+        document.readyState === "complete" &&
+        window.performance &&
+        performance.getEntriesByType("navigation").length > 0;
 
       if (isReady) {
         hasTriggeredRef.current = true;
 
-        // 延迟一点时间确保首屏已稳定渲染
+        // 延迟一点时间确保所有资源都已加载
         setTimeout(() => {
           onLoadComplete();
-        }, 200);
+        }, 500);
       }
     };
 
