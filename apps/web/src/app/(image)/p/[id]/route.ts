@@ -15,8 +15,6 @@ import { getClientIP, getClientUserAgent } from "@/lib/server/get-client-info";
 import { parseImageId, verifySignature } from "@/lib/server/image-crypto";
 import { resolveIpLocation } from "@/lib/server/ip-utils";
 import prisma from "@/lib/server/prisma";
-import limitControl from "@/lib/server/rate-limit";
-import ResponseBuilder from "@/lib/server/response";
 import {
   formatIpLocation,
   parseUserAgent,
@@ -79,17 +77,6 @@ async function createImageErrorResponse({
       "X-Content-Type-Options": "nosniff",
     },
   });
-}
-
-async function checkRateLimit(request: NextRequest): Promise<Response | null> {
-  const isAllowed = await limitControl(request.headers, "image-proxy");
-  if (isAllowed) {
-    return null;
-  }
-
-  return new ResponseBuilder().tooManyRequests({
-    message: "请求过于频繁，请稍后再试。",
-  }) as Response;
 }
 
 async function checkAntiHotLinkGuard(
@@ -315,7 +302,7 @@ export async function GET(
   const { shortHash, signature } = parsed;
   const internalRequest = isInternal(request);
 
-  // 2. 验证签名（先验证签名，再检查速率限制）
+  // 2. 验证签名
   if (!verifySignature(shortHash, signature)) {
     return createImageErrorResponse({
       imageId,
@@ -324,16 +311,7 @@ export async function GET(
     });
   }
 
-  // 3. 对非内部请求进行速率限制检查
-  const rateLimitResult = await runExternalOnlyCheck({
-    internalRequest,
-    check: async () => checkRateLimit(request),
-  });
-  if (rateLimitResult) {
-    return rateLimitResult;
-  }
-
-  // 4. 查询媒体信息（包含存储提供商）
+  // 3. 查询媒体信息（包含存储提供商）
   const mediaWithProvider = await prisma.media.findUnique({
     where: { shortHash },
     include: { StorageProvider: true },
@@ -346,7 +324,7 @@ export async function GET(
     });
   }
 
-  // 5. 对非内部请求进行防盗链检查
+  // 4. 对非内部请求进行防盗链检查
   const antiHotLinkResult = await runExternalOnlyCheck({
     internalRequest,
     check: async () => checkAntiHotLinkGuard(request, imageId),
