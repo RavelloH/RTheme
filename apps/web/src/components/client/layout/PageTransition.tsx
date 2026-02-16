@@ -207,12 +207,30 @@ export default function PageTransition({ children }: PageTransitionProps) {
     if (transitionState !== "waiting") return;
 
     const watchdog = setTimeout(() => {
+      const normalizedPathname = normalizeTransitionPath(pathname);
+      const normalizedPreviousPathname = normalizeTransitionPath(
+        previousPathname.current,
+      );
+
+      // 路由未变化：取消本次转场并恢复显示，不播放进入动画
+      if (normalizedPathname === normalizedPreviousPathname) {
+        if (containerRef.current) {
+          gsap.killTweensOf(containerRef.current);
+          gsap.set(containerRef.current, { x: 0, y: 0, opacity: 1 });
+        }
+
+        expectedPathname.current = null;
+        setTransitionState("idle");
+        return;
+      }
+
+      // 路由已变化但未正确触发进入动画时，兜底进入
       setCurrentChildren(children);
       startEnterAnimation();
     }, 1200);
 
     return () => clearTimeout(watchdog);
-  }, [transitionState, children, startEnterAnimation]);
+  }, [transitionState, pathname, children, startEnterAnimation]);
 
   // 兜底同步：当未进入转场流程但 pathname 已变化时，仍确保页面子树按路由重建
   useEffect(() => {
