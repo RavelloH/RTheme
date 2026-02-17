@@ -26,6 +26,7 @@ export * from "./api/search.js";
 export * from "./api/project.js";
 export * from "./api/friendlink.js";
 export * from "./api/recycle-bin.js";
+export * from "./api/cron.js";
 
 // 类型安全的 API 客户端工具
 export { createApiClient } from "./client.js";

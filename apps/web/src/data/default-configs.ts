@@ -577,6 +577,25 @@ export const CONFIG_DEFINITIONS = {
       "是否在友链状态变更时，发送通知给友链申请者（例如：友链审核通过/拒绝/删除）",
   },
   // =====================================
+  // 计划任务
+  // =====================================
+  "cron.enable": {
+    default: true,
+    description: "是否启用计划任务手动触发入口。关闭后将跳过所有任务",
+  },
+  "cron.task.doctor.enable": {
+    default: true,
+    description: "计划任务是否执行 doctor 自检",
+  },
+  "cron.task.projects.enable": {
+    default: true,
+    description: "计划任务是否执行 projects 拉取",
+  },
+  "cron.task.friends.enable": {
+    default: true,
+    description: "计划任务是否执行 friends 检查",
+  },
+  // =====================================
   // AI 集成
   // =====================================
   "ai.enable": {
