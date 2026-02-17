@@ -156,14 +156,35 @@ function parseMetadataBase(url: string): URL | undefined {
   }
 }
 
+function normalizeCanonicalPath(pathname: string): string {
+  let normalized = pathname.trim();
+  if (!normalized) return "/";
+
+  normalized = normalized.startsWith("/") ? normalized : `/${normalized}`;
+  normalized = normalized.replace(/\/{2,}/g, "/");
+  normalized = normalized.replace(/\/+$/, "");
+  normalized = normalized.replace(/\/page\/1$/i, "");
+
+  return normalized || "/";
+}
+
 function normalizePathname(pathname?: string): string | undefined {
   if (!pathname) return undefined;
 
   const normalized = pathname.trim();
   if (!normalized) return undefined;
-  if (/^https?:\/\//i.test(normalized)) return normalized;
+  if (/^https?:\/\//i.test(normalized)) {
+    try {
+      const parsed = new URL(normalized);
+      parsed.pathname = normalizeCanonicalPath(parsed.pathname);
+      return parsed.toString();
+    } catch {
+      console.warn(`[SEO] Invalid absolute pathname: ${normalized}`);
+      return undefined;
+    }
+  }
 
-  return normalized.startsWith("/") ? normalized : `/${normalized}`;
+  return normalizeCanonicalPath(normalized);
 }
 
 function buildOpenGraphUrl(
@@ -183,6 +204,51 @@ function buildOpenGraphUrl(
     console.warn(
       `[SEO] Failed to build openGraph.url for pathname: ${pathname}`,
     );
+    return undefined;
+  }
+}
+
+function buildCanonicalUrl(
+  metadataBase: URL | undefined,
+  pathname: string | undefined,
+): string | undefined {
+  if (!pathname) return undefined;
+
+  try {
+    if (/^https?:\/\//i.test(pathname)) {
+      return new URL(pathname).toString();
+    }
+
+    if (!metadataBase) return undefined;
+    return new URL(pathname, metadataBase).toString();
+  } catch {
+    console.warn(`[SEO] Failed to build canonical for pathname: ${pathname}`);
+    return undefined;
+  }
+}
+
+function buildSocialImageUrl(
+  metadataBase: URL | undefined,
+  pathname?: string,
+): string | undefined {
+  if (!metadataBase) return undefined;
+
+  try {
+    const normalizedPath = pathname
+      ? normalizeCanonicalPath(extractPathnameForRule(pathname))
+      : "/";
+    const slugSegments = normalizedPath
+      .split("/")
+      .filter(Boolean)
+      .map((segment) => encodeURIComponent(segment));
+    const relativePath = `/social-image${
+      slugSegments.length > 0 ? `/${slugSegments.join("/")}` : ""
+    }`;
+    const imageUrl = new URL(relativePath, metadataBase);
+
+    return imageUrl.toString();
+  } catch {
+    console.warn("[SEO] Failed to build social image url");
     return undefined;
   }
 }
@@ -378,12 +444,121 @@ function normalizeMetadataOverrides(
   const { pagination, ...rest } = overrides;
   const normalized: Partial<Metadata> = { ...rest };
 
+  const normalizedRobots = normalizeRobotsOverride(normalized.robots);
+  if (normalizedRobots !== undefined) {
+    normalized.robots = normalizedRobots;
+  }
+
   const normalizedPagination = normalizePagination(pagination);
   if (normalizedPagination) {
     normalized.pagination = normalizedPagination;
   }
 
   return normalized;
+}
+
+function normalizeRobotsOverride(
+  robots: Metadata["robots"] | undefined,
+): Metadata["robots"] | undefined {
+  if (robots === undefined) return undefined;
+  if (!robots || typeof robots === "string") return robots;
+
+  const normalized = { ...robots } as Record<string, unknown>;
+  const googleBot = normalized.googleBot;
+
+  if (typeof googleBot === "string") {
+    return normalized as Metadata["robots"];
+  }
+
+  const normalizedGoogleBot =
+    googleBot && typeof googleBot === "object"
+      ? { ...(googleBot as Record<string, unknown>) }
+      : {};
+
+  if (
+    typeof normalized.index === "boolean" &&
+    normalizedGoogleBot.index === undefined
+  ) {
+    normalizedGoogleBot.index = normalized.index;
+  }
+
+  if (
+    typeof normalized.follow === "boolean" &&
+    normalizedGoogleBot.follow === undefined
+  ) {
+    normalizedGoogleBot.follow = normalized.follow;
+  }
+
+  if (Object.keys(normalizedGoogleBot).length > 0) {
+    normalized.googleBot = normalizedGoogleBot;
+  }
+
+  return normalized as Metadata["robots"];
+}
+
+const FORCE_NOINDEX_PREFIXES = [
+  "/admin",
+  "/login",
+  "/register",
+  "/reset-password",
+  "/email-verify",
+  "/logout",
+  "/messages",
+  "/notifications",
+  "/reauth",
+  "/settings",
+] as const;
+
+function extractPathnameForRule(pathname: string): string {
+  if (!/^https?:\/\//i.test(pathname)) {
+    return pathname;
+  }
+
+  try {
+    return new URL(pathname).pathname || "/";
+  } catch {
+    return pathname;
+  }
+}
+
+function shouldForceNoIndex(pathname?: string): boolean {
+  if (!pathname) return false;
+  const normalizedPath = extractPathnameForRule(pathname).toLowerCase();
+
+  return FORCE_NOINDEX_PREFIXES.some(
+    (prefix) =>
+      normalizedPath === prefix || normalizedPath.startsWith(`${prefix}/`),
+  );
+}
+
+function enforceNoIndexRobots(metadata: Metadata): Metadata {
+  const robots = metadata.robots;
+  const normalized =
+    robots && typeof robots === "object"
+      ? ({ ...robots } as Record<string, unknown>)
+      : {};
+
+  normalized.index = false;
+  normalized.follow = false;
+
+  const googleBot = normalized.googleBot;
+  if (googleBot && typeof googleBot === "object") {
+    normalized.googleBot = {
+      ...(googleBot as Record<string, unknown>),
+      index: false,
+      follow: false,
+    };
+  } else {
+    normalized.googleBot = {
+      index: false,
+      follow: false,
+    };
+  }
+
+  return {
+    ...metadata,
+    robots: normalized as Metadata["robots"],
+  };
 }
 
 // 生成动态SEO配置的异步函数
@@ -435,6 +610,9 @@ export async function generateMetadata(
   const metadataBase = parseMetadataBase(url);
   const normalizedPathname = normalizePathname(options?.pathname);
   const openGraphUrl = buildOpenGraphUrl(metadataBase, normalizedPathname);
+  const canonicalUrl = buildCanonicalUrl(metadataBase, normalizedPathname);
+  const forceNoIndex = shouldForceNoIndex(normalizedPathname);
+  const effectiveIndexEnabled = forceNoIndex ? false : indexEnabled;
 
   // 生成标题元数据
   const titleMetadata = generateTitleMetadata(
@@ -504,6 +682,9 @@ export async function generateMetadata(
     resolvedTitle,
     resolvedDescription,
   );
+  const socialImageUrl = imageCardEnabled
+    ? buildSocialImageUrl(metadataBase, normalizedPathname)
+    : undefined;
 
   // 构建最终的metadata
   const dynamicMetadata: Metadata = {
@@ -518,16 +699,16 @@ export async function generateMetadata(
     category: category || undefined,
     alternates: {
       ...STATIC_METADATA.alternates,
-      ...(normalizedPathname ? { canonical: normalizedPathname } : {}),
+      ...(canonicalUrl ? { canonical: canonicalUrl } : {}),
     },
     robots: {
       ...STATIC_METADATA.robots,
-      index: indexEnabled,
-      follow: indexEnabled,
+      index: effectiveIndexEnabled,
+      follow: effectiveIndexEnabled,
       googleBot: {
         ...STATIC_METADATA.robots.googleBot,
-        index: indexEnabled,
-        follow: indexEnabled,
+        index: effectiveIndexEnabled,
+        follow: effectiveIndexEnabled,
       },
     },
     openGraph: {
@@ -538,10 +719,10 @@ export async function generateMetadata(
       siteName: appName || title || undefined,
       ...(openGraphUrl ? { url: openGraphUrl } : {}),
       countryName: country || undefined,
-      images: imageCardEnabled
+      images: socialImageUrl
         ? [
             {
-              url: "/og-image.png",
+              url: socialImageUrl,
               width: 1200,
               height: 630,
               alt: socialImageAlt,
@@ -556,10 +737,10 @@ export async function generateMetadata(
       creator: twitterCreator || undefined,
       title: resolvedTitle,
       description: resolvedDescription,
-      images: imageCardEnabled
+      images: socialImageUrl
         ? {
-            url: "/twitter-card.png",
-            alt: `${socialImageAlt} Twitter Card`,
+            url: socialImageUrl,
+            alt: socialImageAlt,
             width: 1200,
             height: 630,
           }
@@ -587,7 +768,11 @@ export async function generateMetadata(
   };
 
   const normalizedOverrides = normalizeMetadataOverrides(processedOverrides);
-  const finalMetadata = mergeMetadata(dynamicMetadata, normalizedOverrides);
+  const mergedMetadata = mergeMetadata(dynamicMetadata, normalizedOverrides);
+  const finalMetadata = forceNoIndex
+    ? enforceNoIndexRobots(mergedMetadata)
+    : mergedMetadata;
+
   return toPlainSerializable(finalMetadata) as Metadata;
 }
 
