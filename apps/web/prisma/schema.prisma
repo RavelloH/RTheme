@@ -837,6 +837,29 @@ model HealthCheck {
   @@index([triggerType, startedAt(sort: Desc)])
 }
 
+model CronHistory {
+  id         Int      @id @default(autoincrement())
+  startedAt  DateTime @default(now())
+  durationMs Int
+
+  triggerType CronTriggerType
+  status      CronRunStatus
+
+  totalCount   Int
+  enabledCount Int
+  successCount Int
+  failedCount  Int
+  skippedCount Int
+
+  snapshot Json
+
+  createdAt DateTime @default(now())
+
+  @@index([startedAt(sort: Desc)])
+  @@index([status, startedAt(sort: Desc)])
+  @@index([triggerType, startedAt(sort: Desc)])
+}
+
 enum HealthStatus {
   OK
   WARNING
@@ -847,6 +870,18 @@ enum HealthCheckTriggerType {
   MANUAL
   AUTO
   CRON
+}
+
+enum CronTriggerType {
+  MANUAL
+  CLOUD
+  AUTO
+}
+
+enum CronRunStatus {
+  OK
+  PARTIAL
+  ERROR
 }
 
 enum MailSubscriptionStatus {
