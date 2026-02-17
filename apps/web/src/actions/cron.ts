@@ -30,6 +30,7 @@ import type { NextResponse } from "next/server";
 import { doctor } from "@/actions/doctor";
 import { checkFriendLinks } from "@/actions/friendlink";
 import { syncProjectsGithub } from "@/actions/project";
+import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import { getConfigs } from "@/lib/server/config-cache";
 import prisma from "@/lib/server/prisma";
@@ -530,6 +531,34 @@ export async function triggerCron(
       },
     });
 
+    try {
+      await logAuditEvent({
+        user: {
+          uid: user.uid.toString(),
+        },
+        details: {
+          action: "CREATE",
+          resourceType: "CRON_HISTORY",
+          resourceId: String(record.id),
+          value: {
+            old: null,
+            new: {
+              id: record.id,
+              triggerType: record.triggerType,
+              status: record.status,
+              enabledCount: record.enabledCount,
+              successCount: record.successCount,
+              failedCount: record.failedCount,
+              skippedCount: record.skippedCount,
+            },
+          },
+          description: `管理员触发计划任务 - 结果: ${record.status}`,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to log audit event:", error);
+    }
+
     return response.ok({
       data: toCronHistoryItem(record),
     });
@@ -908,6 +937,8 @@ export async function updateCronConfig(
   }
 
   try {
+    const previousConfig = await loadCronConfigState();
+
     const updates: Array<{
       key: (typeof CRON_CONFIG_KEYS)[number];
       value: boolean;
@@ -960,6 +991,30 @@ export async function updateCronConfig(
     }
 
     const data = await loadCronConfigState();
+
+    try {
+      await logAuditEvent({
+        user: {
+          uid: user.uid.toString(),
+        },
+        details: {
+          action: "UPDATE",
+          resourceType: "CRON_CONFIG",
+          resourceId: "global",
+          value: {
+            old: previousConfig,
+            new: data,
+          },
+          description: "管理员更新计划任务配置",
+          metadata: {
+            updateCount: updates.length,
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Failed to log audit event:", error);
+    }
+
     return response.ok({
       message: "计划任务配置已更新",
       data,

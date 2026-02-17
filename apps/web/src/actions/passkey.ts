@@ -598,6 +598,33 @@ export async function verifyPasskeyAuthentication(payload: {
       }
     });
 
+    try {
+      await logAuditEvent({
+        user: {
+          uid: user.uid.toString(),
+        },
+        details: {
+          action: "LOGIN",
+          resourceType: "PASSKEY",
+          resourceId: credentialIdB64,
+          value: {
+            old: { authenticated: false },
+            new: {
+              authenticated: true,
+              credentialId: credentialIdB64,
+              refreshTokenId: dbRefreshToken.id,
+            },
+          },
+          description: `用户通过 Passkey 登录成功 - uid: ${user.uid}`,
+          metadata: {
+            refreshTokenId: dbRefreshToken.id,
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Audit log error:", error);
+    }
+
     return response.ok({
       message: "登录成功",
       data: {
@@ -758,6 +785,26 @@ export async function verifyPasskeyForReauth(payload: {
       path: "/",
       priority: "high",
     });
+
+    try {
+      await logAuditEvent({
+        user: {
+          uid: String(authUser.uid),
+        },
+        details: {
+          action: "VERIFY",
+          resourceType: "PASSKEY_REAUTH",
+          resourceId: passkey.credentialId,
+          value: {
+            old: { reauthVerified: false },
+            new: { reauthVerified: true, credentialId: passkey.credentialId },
+          },
+          description: `用户通过 Passkey 完成二次验证 - uid: ${authUser.uid}`,
+        },
+      });
+    } catch (error) {
+      console.error("Audit log error:", error);
+    }
 
     return response.ok({
       message: "验证成功",

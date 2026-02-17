@@ -3,6 +3,7 @@
 import type { ApiResponse } from "@repo/shared-types/api/common";
 import { cookies, headers } from "next/headers";
 
+import { logAuditEvent } from "@/lib/server/audit";
 import { verifyToken } from "@/lib/server/captcha";
 import {
   type AccessTokenPayload,
@@ -284,6 +285,28 @@ export async function verifyPasswordForReauth({
 
       // 重置 TOTP 验证失败次数
       await resetTotpFailCount(user.uid);
+      try {
+        await logAuditEvent({
+          user: {
+            uid: user.uid.toString(),
+          },
+          details: {
+            action: "VERIFY",
+            resourceType: "REAUTH_PASSWORD",
+            resourceId: user.uid.toString(),
+            value: {
+              old: { reauthVerified: false },
+              new: { reauthVerified: false, requiresTotp: true },
+            },
+            description: `用户通过密码完成首段二次验证，等待 TOTP - uid: ${user.uid}`,
+            metadata: {
+              requiresTotp: true,
+            },
+          },
+        });
+      } catch (error) {
+        console.error("Failed to log audit event:", error);
+      }
 
       // 返回需要 TOTP 验证的响应
       return response.ok({
@@ -316,6 +339,29 @@ export async function verifyPasswordForReauth({
       path: "/",
       priority: "high",
     });
+
+    try {
+      await logAuditEvent({
+        user: {
+          uid: user.uid.toString(),
+        },
+        details: {
+          action: "VERIFY",
+          resourceType: "REAUTH_PASSWORD",
+          resourceId: user.uid.toString(),
+          value: {
+            old: { reauthVerified: false },
+            new: { reauthVerified: true, requiresTotp: false },
+          },
+          description: `用户通过密码完成二次验证 - uid: ${user.uid}`,
+          metadata: {
+            requiresTotp: false,
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Failed to log audit event:", error);
+    }
 
     return response.ok({
       message: "验证成功",
@@ -497,6 +543,32 @@ export async function verifyTotpForReauth({
       priority: "high",
     });
 
+    try {
+      await logAuditEvent({
+        user: {
+          uid: user.uid.toString(),
+        },
+        details: {
+          action: "VERIFY",
+          resourceType: "REAUTH_TOTP",
+          resourceId: user.uid.toString(),
+          value: {
+            old: { reauthVerified: false },
+            new: {
+              reauthVerified: true,
+              method: backup_code ? "backup_code" : "totp_code",
+            },
+          },
+          description: `用户通过 TOTP 完成二次验证 - uid: ${user.uid}`,
+          metadata: {
+            useBackupCode: Boolean(backup_code),
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Failed to log audit event:", error);
+    }
+
     return response.ok({
       message: "验证成功",
       data: null,
@@ -618,6 +690,26 @@ export async function verifySSOForReauth({
       path: "/",
       priority: "high",
     });
+
+    try {
+      await logAuditEvent({
+        user: {
+          uid: user.uid.toString(),
+        },
+        details: {
+          action: "VERIFY",
+          resourceType: "REAUTH_SSO",
+          resourceId: `${provider}:${providerAccountId}`,
+          value: {
+            old: { reauthVerified: false },
+            new: { reauthVerified: true, provider: provider.toUpperCase() },
+          },
+          description: `用户通过 ${provider.toUpperCase()} 完成二次验证 - uid: ${user.uid}`,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to log audit event:", error);
+    }
 
     return response.ok({
       message: "验证成功",

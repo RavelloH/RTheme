@@ -313,6 +313,33 @@ export async function verifyTotp(
       });
     });
 
+    try {
+      await logAuditEvent({
+        user: {
+          uid: user.uid.toString(),
+        },
+        details: {
+          action: "LOGIN",
+          resourceType: "AUTH",
+          resourceId: user.uid.toString(),
+          value: {
+            old: { authenticated: false, requiresTotp: true },
+            new: {
+              authenticated: true,
+              method: backup_code ? "backup_code" : "totp_code",
+              tokenTransport: token_transport,
+            },
+          },
+          description: `用户通过 TOTP 完成登录 - uid: ${user.uid}`,
+          metadata: {
+            useBackupCode: Boolean(backup_code),
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Failed to log audit event:", error);
+    }
+
     // 返回成功结果
     return response.ok({
       message: "登录成功",

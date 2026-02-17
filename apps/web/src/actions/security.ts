@@ -25,6 +25,7 @@ import {
 } from "@repo/shared-types/api/security";
 import { headers } from "next/headers";
 
+import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import { generateCacheKey, getCache, setCache } from "@/lib/server/cache";
 import { resolveIpLocation } from "@/lib/server/ip-utils";
@@ -483,6 +484,35 @@ export async function banIP(
 
     await redis.set(banKey, reason || "管理员手动封禁", "EX", duration);
 
+    try {
+      await logAuditEvent({
+        user: {
+          uid: user.uid.toString(),
+        },
+        details: {
+          action: "UPDATE",
+          resourceType: "SECURITY_IP",
+          resourceId: ip,
+          value: {
+            old: { banned: false },
+            new: {
+              banned: true,
+              bannedUntil,
+              duration,
+              reason: reason || "管理员手动封禁",
+            },
+          },
+          description: `管理员封禁 IP：${ip}`,
+          metadata: {
+            duration,
+            hasReason: Boolean(reason),
+          },
+        },
+      });
+    } catch (error) {
+      console.error("记录审计日志失败:", error);
+    }
+
     return response.ok({
       data: { ip, bannedUntil, reason },
     }) as ApiResponse<BanIPResponse | null>;
@@ -531,6 +561,29 @@ export async function unbanIP(
     const banKey = `np:rate:ban:${ip}`;
     const deleted = await redis.del(banKey);
 
+    try {
+      await logAuditEvent({
+        user: {
+          uid: user.uid.toString(),
+        },
+        details: {
+          action: "UPDATE",
+          resourceType: "SECURITY_IP",
+          resourceId: ip,
+          value: {
+            old: { banned: true },
+            new: { banned: false, unbanned: deleted > 0 },
+          },
+          description: `管理员解封 IP：${ip}`,
+          metadata: {
+            unbanned: deleted > 0,
+          },
+        },
+      });
+    } catch (error) {
+      console.error("记录审计日志失败:", error);
+    }
+
     return response.ok({
       data: { ip, unbanned: deleted > 0 },
     }) as ApiResponse<UnbanIPResponse | null>;
@@ -578,6 +631,29 @@ export async function clearRateLimit(
     // 使用新的 key 格式
     const key = `np:rate:ip:${ip}`;
     const deleted = await redis.del(key);
+
+    try {
+      await logAuditEvent({
+        user: {
+          uid: user.uid.toString(),
+        },
+        details: {
+          action: "UPDATE",
+          resourceType: "RATE_LIMIT",
+          resourceId: ip,
+          value: {
+            old: { rateLimitCleared: false },
+            new: { rateLimitCleared: deleted > 0 },
+          },
+          description: `管理员清除 IP 限流记录：${ip}`,
+          metadata: {
+            cleared: deleted > 0,
+          },
+        },
+      });
+    } catch (error) {
+      console.error("记录审计日志失败:", error);
+    }
 
     return response.ok({
       data: { ip, cleared: deleted > 0 },

@@ -276,6 +276,33 @@ export async function login(
       // 重置 TOTP 验证失败次数
       await resetTotpFailCount(user.uid);
 
+      try {
+        await logAuditEvent({
+          user: {
+            uid: user.uid.toString(),
+          },
+          details: {
+            action: "LOGIN",
+            resourceType: "AUTH",
+            resourceId: user.uid.toString(),
+            value: {
+              old: { authenticated: false },
+              new: {
+                authenticated: true,
+                requiresTotp: true,
+                tokenTransport: token_transport,
+              },
+            },
+            description: `用户登录通过密码验证，等待二次验证 - uid: ${user.uid}`,
+            metadata: {
+              requiresTotp: true,
+            },
+          },
+        });
+      } catch (error) {
+        console.error("Failed to log audit event:", error);
+      }
+
       // 返回需要 TOTP 验证的响应
       return response.ok({
         message: "密码验证成功，请输入两步验证码",
@@ -361,6 +388,33 @@ export async function login(
         },
       });
     });
+
+    try {
+      await logAuditEvent({
+        user: {
+          uid: user.uid.toString(),
+        },
+        details: {
+          action: "LOGIN",
+          resourceType: "AUTH",
+          resourceId: user.uid.toString(),
+          value: {
+            old: { authenticated: false },
+            new: {
+              authenticated: true,
+              refreshTokenId: dbRefreshToken.id,
+              tokenTransport: token_transport,
+            },
+          },
+          description: `用户登录成功 - uid: ${user.uid}`,
+          metadata: {
+            refreshTokenId: dbRefreshToken.id,
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Failed to log audit event:", error);
+    }
 
     // 返回成功结果
     return response.ok({
@@ -695,6 +749,33 @@ export async function refresh(
         priority: "high",
       });
     }
+
+    try {
+      await logAuditEvent({
+        user: {
+          uid: dbToken.user.uid.toString(),
+        },
+        details: {
+          action: "REFRESH_TOKEN",
+          resourceType: "AUTH",
+          resourceId: dbToken.id,
+          value: {
+            old: { accessTokenRefreshed: false },
+            new: {
+              accessTokenRefreshed: true,
+              tokenTransport: token_transport,
+            },
+          },
+          description: `用户刷新访问令牌 - uid: ${dbToken.user.uid}`,
+          metadata: {
+            tokenId: dbToken.id,
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Failed to log audit event:", error);
+    }
+
     return response.ok({
       message: "刷新成功",
       data: {
@@ -1086,6 +1167,26 @@ export async function requestPasswordReset(
 
     // 如果30分钟内已经发送过，不再重复发送
     if (recentReset) {
+      try {
+        await logAuditEvent({
+          user: {
+            uid: user.uid.toString(),
+          },
+          details: {
+            action: "REQUEST_PASSWORD_RESET",
+            resourceType: "USER",
+            resourceId: user.uid.toString(),
+            value: {
+              old: { resetEmailRecentlySent: false },
+              new: { resetEmailRecentlySent: true },
+            },
+            description: `用户重复请求密码重置（30 分钟内）- uid: ${user.uid}`,
+          },
+        });
+      } catch (error) {
+        console.error("Failed to log audit event:", error);
+      }
+
       return response.ok({
         message: "已发送重置密码链接，链接30分钟内有效",
       });
@@ -1144,6 +1245,26 @@ export async function requestPasswordReset(
         },
       });
     });
+
+    try {
+      await logAuditEvent({
+        user: {
+          uid: user.uid.toString(),
+        },
+        details: {
+          action: "REQUEST_PASSWORD_RESET",
+          resourceType: "USER",
+          resourceId: user.uid.toString(),
+          value: {
+            old: { passwordResetRequested: false },
+            new: { passwordResetRequested: true },
+          },
+          description: `用户请求密码重置 - uid: ${user.uid}`,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to log audit event:", error);
+    }
 
     // 返回成功结果
     return response.ok({
@@ -1400,6 +1521,26 @@ export async function resendEmailVerification(
       },
     });
 
+    try {
+      await logAuditEvent({
+        user: {
+          uid: user.uid.toString(),
+        },
+        details: {
+          action: "RESEND_EMAIL_VERIFICATION",
+          resourceType: "USER",
+          resourceId: user.uid.toString(),
+          value: {
+            old: { emailVerifyCodeUpdated: false },
+            new: { emailVerifyCodeUpdated: true },
+          },
+          description: `用户重新发送邮箱验证码 - uid: ${user.uid}`,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to log audit event:", error);
+    }
+
     // 统一将邮件发送逻辑放到 after 中，防止时间差泄露用户存在性
     after(async () => {
       try {
@@ -1516,6 +1657,31 @@ export async function logout(
 
     // 清除 Cookie
     clearCookies();
+
+    if (typeof decoded.uid === "number") {
+      try {
+        await logAuditEvent({
+          user: {
+            uid: decoded.uid.toString(),
+          },
+          details: {
+            action: "LOGOUT",
+            resourceType: "AUTH",
+            resourceId: decoded.tokenId,
+            value: {
+              old: { revokedAt: null },
+              new: { revokedAt: new Date() },
+            },
+            description: `用户退出登录 - uid: ${decoded.uid}`,
+            metadata: {
+              tokenId: decoded.tokenId,
+            },
+          },
+        });
+      } catch (error) {
+        console.error("Failed to log audit event:", error);
+      }
+    }
 
     return response.ok({
       message: "退出登录成功",
