@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
-import { usePathname, useSelectedLayoutSegments } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 import { useBroadcast } from "@/hooks/use-broadcast";
 import { useMobile } from "@/hooks/use-mobile";
@@ -15,33 +15,11 @@ interface PageTransitionProps {
 interface TransitionMessage {
   type: "page-transition";
   direction: "left" | "right" | "up" | "down" | "unknown";
-  targetPath?: string;
 }
 
 type TransitionState = "idle" | "exiting" | "waiting" | "entering";
 
-function normalizeTransitionPath(path: string): string {
-  const trimmed = path.trim();
-  if (!trimmed) return "/";
-
-  try {
-    const url = new URL(trimmed, window.location.origin);
-    const normalized = url.pathname.replace(/\/+$/g, "");
-    return normalized || "/";
-  } catch {
-    const pathnameOnly = trimmed.split(/[?#]/)[0] || "/";
-    const withLeadingSlash = pathnameOnly.startsWith("/")
-      ? pathnameOnly
-      : `/${pathnameOnly}`;
-    const normalized = withLeadingSlash.replace(/\/+$/g, "");
-    return normalized || "/";
-  }
-}
-
 export default function PageTransition({ children }: PageTransitionProps) {
-  const pathname = usePathname();
-  const selectedSegments = useSelectedLayoutSegments();
-  const primaryRouteKey = selectedSegments.join("/") || "__root__";
   const [currentChildren, setCurrentChildren] = useState(children);
   const [transitionState, setTransitionState] =
     useState<TransitionState>("idle");
@@ -50,12 +28,12 @@ export default function PageTransition({ children }: PageTransitionProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const previousPathname = useRef<string>("");
-  const expectedPathname = useRef<string | null>(null);
   const gsapTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const lastScrollTop = useRef<number>(0);
-  const hasScrollBaseline = useRef(false);
   const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
   const isMobile = useMobile();
+
+  const pathname = usePathname();
   const setFooterVisible = useFooterStore((state) => state.setFooterVisible);
 
   // 监听首次加载完成事件
@@ -79,15 +57,9 @@ export default function PageTransition({ children }: PageTransitionProps) {
   // 监听广播消息
   useBroadcast<TransitionMessage>((message) => {
     if (message?.type === "page-transition" && transitionState === "idle") {
-      const { direction, targetPath } = message;
+      const { direction } = message;
       setTransitionDirection(direction);
       previousPathname.current = pathname;
-      if (targetPath) {
-        const normalizedTargetPath = normalizeTransitionPath(targetPath);
-        expectedPathname.current = normalizedTargetPath;
-      } else {
-        expectedPathname.current = null;
-      }
       startExitAnimation(direction);
     }
   });
@@ -145,7 +117,6 @@ export default function PageTransition({ children }: PageTransitionProps) {
         duration: 0.5,
         ease: "power1.inOut",
         onComplete: () => {
-          expectedPathname.current = null;
           setTransitionState("idle");
         },
       });
@@ -153,7 +124,6 @@ export default function PageTransition({ children }: PageTransitionProps) {
       // 从屏幕外移动到中央，同时透明度恢复
       const tl = gsap.timeline({
         onComplete: () => {
-          expectedPathname.current = null;
           setTransitionState("idle");
         },
       });
@@ -174,62 +144,21 @@ export default function PageTransition({ children }: PageTransitionProps) {
 
   // 监听 pathname 变化
   useEffect(() => {
-    if (transitionState !== "waiting") return;
-
-    const normalizedPathname = normalizeTransitionPath(pathname);
-    const normalizedPreviousPathname = normalizeTransitionPath(
-      previousPathname.current,
-    );
-    if (normalizedPathname === normalizedPreviousPathname) return;
-
-    const targetPath = expectedPathname.current;
-    if (targetPath && normalizedPathname !== targetPath) return;
-
-    // pathname 变化，更新内容
-    setCurrentChildren(children);
-
-    // 延迟10ms后开始进入动画，确保DOM稳定
-    const delayTimer = setTimeout(() => {
-      startEnterAnimation();
-    }, 10);
-
-    return () => clearTimeout(delayTimer);
-  }, [
-    pathname,
-    primaryRouteKey,
-    transitionState,
-    children,
-    startEnterAnimation,
-  ]);
-
-  // 防止异常状态下卡在 waiting 导致页面空白
-  useEffect(() => {
-    if (transitionState !== "waiting") return;
-
-    const watchdog = setTimeout(() => {
-      const normalizedPathname = normalizeTransitionPath(pathname);
-      const normalizedPreviousPathname = normalizeTransitionPath(
-        previousPathname.current,
-      );
-
-      // 路由未变化：保持隐藏并继续等待，不触发进入动画
-      if (normalizedPathname === normalizedPreviousPathname) {
-        return;
-      }
-
-      // 路由已变化但未正确触发进入动画时，兜底进入
+    if (
+      transitionState === "waiting" &&
+      pathname !== previousPathname.current
+    ) {
+      // pathname 变化，更新内容
       setCurrentChildren(children);
-      startEnterAnimation();
-    }, 1200);
 
-    return () => clearTimeout(watchdog);
-  }, [transitionState, pathname, children, startEnterAnimation]);
+      // 延迟10ms后开始进入动画，确保DOM稳定
+      const delayTimer = setTimeout(() => {
+        startEnterAnimation();
+      }, 10);
 
-  // 兜底同步：当未进入转场流程但 pathname 已变化时，仍确保页面子树按路由重建
-  useEffect(() => {
-    if (transitionState !== "idle") return;
-    setCurrentChildren(children);
-  }, [children, primaryRouteKey, transitionState]);
+      return () => clearTimeout(delayTimer);
+    }
+  }, [pathname, transitionState, children, startEnterAnimation]);
 
   // 获取屏幕外位置属性
   const getScreenProps = (direction: string) => {
@@ -309,10 +238,6 @@ export default function PageTransition({ children }: PageTransitionProps) {
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer) return;
 
-    // 以当前滚动位置作为基线，避免首次挂载/自动恢复滚动导致误判为“向下滚动”
-    lastScrollTop.current = scrollContainer.scrollTop;
-    hasScrollBaseline.current = false;
-
     const handleScroll = () => {
       // 首次加载完成前不处理滚动事件，避免 footer 抖动
       if (!isInitialLoadComplete) return;
@@ -322,26 +247,14 @@ export default function PageTransition({ children }: PageTransitionProps) {
       const clientHeight = scrollContainer.clientHeight;
       const scrollBottom = scrollHeight - clientHeight - currentScrollTop;
 
-      if (!hasScrollBaseline.current) {
-        hasScrollBaseline.current = true;
-        lastScrollTop.current = currentScrollTop;
-        return;
-      }
-
       // 清除之前的超时
       if (scrollTimeout.current) {
         clearTimeout(scrollTimeout.current);
       }
 
-      const scrollDelta = currentScrollTop - lastScrollTop.current;
-      if (Math.abs(scrollDelta) < 6) {
-        lastScrollTop.current = currentScrollTop;
-        return;
-      }
-
       // 判断滚动方向
-      const isScrollingDown = scrollDelta > 0;
-      const isScrollingUp = scrollDelta < 0;
+      const isScrollingDown = currentScrollTop > lastScrollTop.current;
+      const isScrollingUp = currentScrollTop < lastScrollTop.current;
 
       // 滚动到底部（距离底部小于50px）
       const isNearBottom = scrollBottom < 50;
@@ -381,8 +294,7 @@ export default function PageTransition({ children }: PageTransitionProps) {
     if (!isInitialLoadComplete) return;
 
     setFooterVisible(true);
-    lastScrollTop.current = scrollContainerRef.current?.scrollTop ?? 0;
-    hasScrollBaseline.current = false;
+    lastScrollTop.current = 0;
   }, [pathname, setFooterVisible, isInitialLoadComplete]);
 
   return (
