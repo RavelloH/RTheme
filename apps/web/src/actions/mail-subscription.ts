@@ -11,6 +11,7 @@ import { headers } from "next/headers";
 import { MailSubscriptionVerifyEmail } from "@/emails/templates/MailSubscriptionVerifyEmail";
 import { PostSubscriptionEmail } from "@/emails/templates/PostSubscriptionEmail";
 import { renderEmail } from "@/emails/utils";
+import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import { verifyToken as verifyCaptchaToken } from "@/lib/server/captcha";
 import { getConfig, getConfigs } from "@/lib/server/config-cache";
@@ -1140,6 +1141,26 @@ export async function updateMailSubscriptionStatusByAdmin(params: {
           },
         });
 
+  try {
+    await logAuditEvent({
+      user: {
+        uid: user.uid.toString(),
+      },
+      details: {
+        action: "UPDATE",
+        resourceType: "MAIL_SUBSCRIPTION",
+        resourceId: String(updated.id),
+        value: {
+          old: { status: existing.status },
+          new: { status: updated.status },
+        },
+        description: `管理员更新邮件订阅状态: #${updated.id} ${existing.status} -> ${updated.status}`,
+      },
+    });
+  } catch (error) {
+    console.error("记录审计日志失败:", error);
+  }
+
   return response.ok({
     message: targetStatus === "ACTIVE" ? "已设为生效订阅" : "已设为退订状态",
     data: {
@@ -1189,7 +1210,7 @@ export async function resetMailSubscriptionLastSentByAdmin(params: {
 
   const existing = await prisma.mailSubscription.findUnique({
     where: { id },
-    select: { id: true },
+    select: { id: true, lastSentPostId: true },
   });
   if (!existing) {
     return response.notFound({
@@ -1208,6 +1229,26 @@ export async function resetMailSubscriptionLastSentByAdmin(params: {
       lastSentPostId: true,
     },
   });
+
+  try {
+    await logAuditEvent({
+      user: {
+        uid: user.uid.toString(),
+      },
+      details: {
+        action: "UPDATE",
+        resourceType: "MAIL_SUBSCRIPTION",
+        resourceId: String(updated.id),
+        value: {
+          old: { lastSentPostId: existing.lastSentPostId },
+          new: { lastSentPostId: updated.lastSentPostId },
+        },
+        description: `管理员重置邮件订阅发送标记: #${updated.id}`,
+      },
+    });
+  } catch (error) {
+    console.error("记录审计日志失败:", error);
+  }
 
   return response.ok({
     message: "已清空发送标记",
@@ -1396,6 +1437,29 @@ export async function cleanupInvalidMailSubscriptions(): Promise<
     },
   });
 
+  try {
+    await logAuditEvent({
+      user: {
+        uid: user.uid.toString(),
+      },
+      details: {
+        action: "DELETE",
+        resourceType: "MAIL_SUBSCRIPTION",
+        resourceId: "PENDING_VERIFY_EXPIRED",
+        value: {
+          old: { count: result.count },
+          new: null,
+        },
+        description: `管理员清理失效邮件订阅: ${result.count} 条`,
+        metadata: {
+          deletedCount: result.count,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("记录审计日志失败:", error);
+  }
+
   return response.ok({
     message:
       result.count > 0
@@ -1451,6 +1515,43 @@ export async function dispatchLatestPostMail(
   const cursorId = sanitizeCursor(params.cursorId);
   const batchSize = sanitizeBatchSize(params.batchSize);
 
+  const logDispatchAudit = async (payload: {
+    latestPostId: number;
+    pendingTotal: number;
+    processed: number;
+    sent: number;
+    failed: number;
+    nextCursor: number;
+    hasMore: boolean;
+    remainingAfter: number;
+  }) => {
+    try {
+      await logAuditEvent({
+        user: {
+          uid: user.uid.toString(),
+        },
+        details: {
+          action: "UPDATE",
+          resourceType: "MAIL_SUBSCRIPTION_DISPATCH",
+          resourceId: String(payload.latestPostId),
+          value: {
+            old: null,
+            new: payload,
+          },
+          description: `管理员执行订阅邮件投递: 文章 #${payload.latestPostId}, 处理 ${payload.processed}, 成功 ${payload.sent}, 失败 ${payload.failed}`,
+          metadata: {
+            processed: payload.processed,
+            sent: payload.sent,
+            failed: payload.failed,
+            hasMore: payload.hasMore,
+          },
+        },
+      });
+    } catch (error) {
+      console.error("记录审计日志失败:", error);
+    }
+  };
+
   const latestPost = await prisma.post.findFirst({
     where: {
       status: "PUBLISHED",
@@ -1498,6 +1599,17 @@ export async function dispatchLatestPostMail(
   });
 
   if (pendingTotal === 0) {
+    await logDispatchAudit({
+      latestPostId: latestPost.id,
+      pendingTotal,
+      processed: 0,
+      sent: 0,
+      failed: 0,
+      nextCursor: cursorId,
+      hasMore: false,
+      remainingAfter: 0,
+    });
+
     return response.ok({
       message: "所有订阅者都已收到最新文章",
       data: {
@@ -1533,6 +1645,17 @@ export async function dispatchLatestPostMail(
   });
 
   if (batch.length === 0) {
+    await logDispatchAudit({
+      latestPostId: latestPost.id,
+      pendingTotal,
+      processed: 0,
+      sent: 0,
+      failed: 0,
+      nextCursor: cursorId,
+      hasMore: false,
+      remainingAfter: pendingTotal,
+    });
+
     return response.ok({
       message: "已到达本轮发送末尾",
       data: {
@@ -1632,6 +1755,17 @@ export async function dispatchLatestPostMail(
     })) > 0;
 
   const remainingAfter = Math.max(0, pendingTotal - sent);
+
+  await logDispatchAudit({
+    latestPostId: latestPost.id,
+    pendingTotal,
+    processed: batch.length,
+    sent,
+    failed,
+    nextCursor,
+    hasMore,
+    remainingAfter,
+  });
 
   return response.ok({
     message: `本次处理 ${batch.length} 条，成功 ${sent} 条，失败 ${failed} 条`,

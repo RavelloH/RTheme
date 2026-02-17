@@ -28,6 +28,7 @@ import {
   getDoctorCheckOrder,
 } from "@/data/check-config";
 import { flushEventsToDatabase } from "@/lib/server/analytics-flush";
+import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import { getConfig } from "@/lib/server/config-cache";
 import { runDoctorMaintenance } from "@/lib/server/doctor-maintenance";
@@ -626,8 +627,36 @@ export async function doctor(
         okCount: true,
         warningCount: true,
         errorCount: true,
+        id: true,
       },
     });
+
+    try {
+      await logAuditEvent({
+        user: {
+          uid: user.uid.toString(),
+        },
+        details: {
+          action: "CREATE",
+          resourceType: "HEALTH_CHECK",
+          resourceId: String(healthCheck.id),
+          value: {
+            old: null,
+            new: {
+              id: healthCheck.id,
+              triggerType: healthCheck.triggerType,
+              status: healthCheck.overallStatus,
+              okCount: healthCheck.okCount,
+              warningCount: healthCheck.warningCount,
+              errorCount: healthCheck.errorCount,
+            },
+          },
+          description: `管理员执行系统体检 - 结果: ${healthCheck.overallStatus}`,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to log audit event:", error);
+    }
 
     return response.ok({
       data: {

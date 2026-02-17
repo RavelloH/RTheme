@@ -1776,6 +1776,43 @@ export async function updateFriendLinkByAdmin(
       }
     }
 
+    try {
+      await logAuditEvent({
+        user: {
+          uid: String(admin.uid),
+        },
+        details: {
+          action: "UPDATE",
+          resourceType: "FRIEND_LINK",
+          resourceId: String(updated.id),
+          value: {
+            old: {
+              name: current.name,
+              status: current.status,
+              ownerId: current.ownerId,
+              publishedAt: current.publishedAt,
+            },
+            new: {
+              name: params.name.trim(),
+              status: updated.status,
+              ownerId: updated.ownerId,
+              publishedAt:
+                ["PUBLISHED", "WHITELIST"].includes(updated.status) &&
+                !current.publishedAt,
+            },
+          },
+          description: `管理员更新友链「${current.name}」`,
+          metadata: {
+            id: updated.id,
+            statusChanged: updated.status !== current.status,
+            ownerChanged: updated.ownerId !== current.ownerId,
+          },
+        },
+      });
+    } catch (error) {
+      console.error("[FriendLink] 写入审计日志失败:", error);
+    }
+
     return response.ok({
       message: "友链信息已更新",
       data: {
@@ -2007,6 +2044,26 @@ export async function reviewFriendLink(
       await notifyManyUsers([updated.ownerId], title, content, reviewLink);
     }
 
+    try {
+      await logAuditEvent({
+        user: {
+          uid: String(admin.uid),
+        },
+        details: {
+          action: "UPDATE",
+          resourceType: "FRIEND_LINK",
+          resourceId: String(updated.id),
+          value: {
+            old: { status: current.status, publishedAt: current.publishedAt },
+            new: { status: updated.status },
+          },
+          description: `管理员审核友链「${current.name}」: ${current.status} -> ${updated.status}`,
+        },
+      });
+    } catch (error) {
+      console.error("[FriendLink] 写入审计日志失败:", error);
+    }
+
     return response.ok({
       message: "审核状态已更新",
       data: {
@@ -2163,6 +2220,33 @@ export async function createFriendLinkByAdmin(
     });
 
     invalidateFriendLinkCache();
+
+    try {
+      await logAuditEvent({
+        user: {
+          uid: String(admin.uid),
+        },
+        details: {
+          action: "CREATE",
+          resourceType: "FRIEND_LINK",
+          resourceId: String(created.id),
+          value: {
+            old: null,
+            new: {
+              name: params.name.trim(),
+              status: created.status,
+              url: params.url.trim(),
+            },
+          },
+          description: `管理员创建友链「${params.name.trim()}」`,
+          metadata: {
+            id: created.id,
+          },
+        },
+      });
+    } catch (error) {
+      console.error("[FriendLink] 写入审计日志失败:", error);
+    }
 
     return response.ok({
       message: "友链已创建",
@@ -2725,6 +2809,33 @@ export async function checkFriendLinks(
 
     if (checked > 0) {
       invalidateFriendLinkCache();
+    }
+
+    try {
+      await logAuditEvent({
+        user: {
+          uid: String(admin.uid),
+        },
+        details: {
+          action: "UPDATE",
+          resourceType: "FRIEND_LINK_CHECK",
+          resourceId: params.checkAll ? "ALL" : (params.ids || []).join(","),
+          value: {
+            old: null,
+            new: {
+              total: links.length,
+              checked,
+              skipped,
+              failed,
+              statusChanged,
+              checkAll: Boolean(params.checkAll),
+            },
+          },
+          description: `管理员执行友链检查（共 ${links.length} 条）`,
+        },
+      });
+    } catch (error) {
+      console.error("[FriendLink] 写入审计日志失败:", error);
     }
 
     return response.ok({
