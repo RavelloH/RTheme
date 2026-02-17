@@ -105,6 +105,16 @@ const nextConfig = () => {
             },
           ],
         },
+        {
+          // 社交分享图
+          source: "/social-image/:path*",
+          headers: [
+            {
+              key: "Cache-Control",
+              value: "public, max-age=31536000, s-maxage=31536000, immutable",
+            },
+          ],
+        },
       ];
     },
   };
