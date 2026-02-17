@@ -756,7 +756,7 @@ export async function GET(
   ]);
   const topPathText = truncateText(pathname, 84);
   const titleFontSize = title.length > 52 ? 58 : 64;
-  const descriptionFontSize = description.length > 120 ? 20 : 22;
+  const descriptionFontSize = description.length > 120 ? 22 : 26;
 
   return new ImageResponse(
     (
@@ -870,11 +870,11 @@ export async function GET(
               position: "relative",
               display: "flex",
               flexDirection: "column",
-              justifyContent: "flex-end",
+              justifyContent: heroImageDataUrl ? "flex-end" : "center",
               alignItems: "flex-start",
               width: "100%",
               height: "100%",
-              padding: "0 44px 40px",
+              padding: heroImageDataUrl ? "0 44px 40px" : "0 44px",
             }}
           >
             <div
