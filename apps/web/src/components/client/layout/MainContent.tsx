@@ -47,7 +47,7 @@ export function MainContent({ children }: MainContentProps) {
   return (
     <main
       ref={mainRef}
-      className={`${isMobile ? "min-h-screen" : "flex-1 overflow-hidden"}`}
+      className={`${isMobile ? "flex-1" : "flex-1 overflow-hidden"}`}
       style={{
         marginTop: getHeaderHeight(),
         opacity: 0,
