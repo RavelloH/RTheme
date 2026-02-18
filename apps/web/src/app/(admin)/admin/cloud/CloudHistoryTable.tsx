@@ -116,43 +116,6 @@ function buildTelemetryJson(record: CloudHistoryItem): unknown {
   };
 }
 
-function formatTelemetrySummary(item: CloudHistoryItem): string {
-  const telemetry = item.telemetry;
-  if (!telemetry) {
-    return item.message || "暂无遥测数据。";
-  }
-
-  const parts: string[] = [];
-  if (telemetry.latestStatus && telemetry.latestDurationMs !== null) {
-    parts.push(
-      `最新 Cron 为 ${telemetry.latestStatus}，耗时 ${telemetry.latestDurationMs}ms`,
-    );
-  }
-  if (
-    telemetry.doctorDurationMs !== null &&
-    telemetry.projectsDurationMs !== null &&
-    telemetry.friendsDurationMs !== null
-  ) {
-    parts.push(
-      `分项耗时：doctor ${telemetry.doctorDurationMs}ms、projects ${telemetry.projectsDurationMs}ms、friends ${telemetry.friendsDurationMs}ms`,
-    );
-  }
-  if (telemetry.healthStatus) {
-    parts.push(`健康状态 ${telemetry.healthStatus}`);
-  }
-  if (telemetry.verifyMs !== null) {
-    parts.push(`验签耗时 ${telemetry.verifyMs}ms`);
-  }
-  if (telemetry.appVersion) {
-    parts.push(`版本 ${telemetry.appVersion}`);
-  }
-
-  if (parts.length === 0) {
-    return item.message || "已接收，暂无可读摘要。";
-  }
-  return `${parts.join("；")}。`;
-}
-
 function parseBooleanFilter(value: string): boolean | undefined {
   const normalized = value.trim().toLowerCase();
   if (normalized === "true" || normalized === "1" || normalized === "yes") {
@@ -664,15 +627,6 @@ export default function CloudHistoryTable() {
                   <p className="text-sm">{selectedRecord.message || "-"}</p>
                 </div>
               </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-                摘要
-              </h3>
-              <p className="text-sm leading-7">
-                {formatTelemetrySummary(selectedRecord)}
-              </p>
             </div>
 
             <div className="space-y-4">
