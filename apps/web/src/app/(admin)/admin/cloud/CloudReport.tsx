@@ -328,7 +328,7 @@ export default function CloudReport() {
               key="report"
             >
               <div>
-                <div className="py-2 text-2xl">云端互联汇报</div>
+                <div className="py-2 text-2xl">云端互联</div>
                 <div className="space-y-1">
                   {summaryLines.map((line) => (
                     <div key={line}>{line}</div>

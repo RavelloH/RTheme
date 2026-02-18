@@ -222,7 +222,7 @@ export default function CronReport() {
               key="cron-report"
             >
               <div>
-                <div className="py-2 text-2xl">计划任务汇报</div>
+                <div className="py-2 text-2xl">计划任务</div>
                 <div className="space-y-1">
                   {buildSummary(config, latestRecord).map((line) => (
                     <div key={line}>{line}</div>
