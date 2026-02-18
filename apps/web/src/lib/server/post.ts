@@ -69,6 +69,17 @@ export type FullPostData = Omit<PostData, "categories" | "tags" | "author"> & {
   updatedAt: Date;
 };
 
+export interface LatestPostJsonLdItem {
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  metaDescription: string | null;
+  publishedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  featuredImage: string | null;
+}
+
 export interface RenderedContent {
   content: string;
   mode: "markdown" | "mdx";
@@ -180,6 +191,62 @@ export async function getPublishedPost(slug: string): Promise<FullPostData> {
   }
 
   return result;
+}
+
+export async function getLatestPublishedPostsForJsonLd(
+  limit: number = 10,
+): Promise<LatestPostJsonLdItem[]> {
+  const normalizedLimit =
+    Number.isFinite(limit) && limit > 0 ? Math.min(Math.floor(limit), 20) : 10;
+
+  const getCachedData = unstable_cache(
+    async (take: number) => {
+      const posts = await prisma.post.findMany({
+        where: {
+          status: "PUBLISHED",
+          deletedAt: null,
+        },
+        select: {
+          title: true,
+          slug: true,
+          excerpt: true,
+          metaDescription: true,
+          publishedAt: true,
+          createdAt: true,
+          updatedAt: true,
+          mediaRefs: {
+            include: {
+              media: {
+                select: {
+                  shortHash: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+        take,
+      });
+
+      return posts.map((post) => ({
+        title: post.title,
+        slug: post.slug,
+        excerpt: post.excerpt,
+        metaDescription: post.metaDescription,
+        publishedAt: post.publishedAt,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        featuredImage: getFeaturedImageUrl(post.mediaRefs),
+      }));
+    },
+    [`latest-posts-jsonld-${normalizedLimit}`],
+    {
+      tags: ["posts/list"],
+      revalidate: false,
+    },
+  );
+
+  return getCachedData(normalizedLimit);
 }
 
 /**

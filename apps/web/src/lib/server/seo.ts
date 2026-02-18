@@ -86,6 +86,94 @@ const seoConfigMap = {
   indexEnable: "seo.index.enable",
 } as const;
 
+// JSON-LD 类型定义
+export type JsonLdPageKind =
+  | "site"
+  | "webpage"
+  | "article"
+  | "project"
+  | "gallery"
+  | "photo";
+
+export interface JsonLdNode extends Record<string, unknown> {
+  "@id"?: string;
+  "@type"?: string | string[];
+}
+
+export type JsonLdGraph = JsonLdNode[];
+
+export interface JsonLdBreadcrumbItem {
+  name: string;
+  item?: string;
+}
+
+export interface JsonLdImage {
+  url: string;
+  width?: number;
+  height?: number;
+  alt?: string;
+}
+
+export interface JsonLdAuthor {
+  name: string;
+  url?: string;
+  type?: "Person" | "Organization";
+}
+
+export interface JsonLdGalleryItem {
+  name?: string;
+  url: string;
+  image?: string | JsonLdImage;
+  description?: string;
+}
+
+export interface JsonLdItemListEntry {
+  name: string;
+  url: string;
+  description?: string;
+  image?: string | JsonLdImage;
+  datePublished?: Date | string | null;
+  dateModified?: Date | string | null;
+}
+
+export interface JsonLdGraphInput {
+  kind: JsonLdPageKind;
+  pathname?: string;
+  title?: string;
+  description?: string;
+  keywords?: string[] | string | null;
+  robots?: Metadata["robots"];
+  breadcrumb?: JsonLdBreadcrumbItem[];
+  publishedAt?: Date | string | null;
+  updatedAt?: Date | string | null;
+  authors?: JsonLdAuthor[];
+  images?: Array<string | JsonLdImage>;
+  includeWebSite?: boolean;
+  includeOrganization?: boolean;
+  pageType?: "WebPage" | "CollectionPage";
+  article?: {
+    section?: string;
+    tags?: string[];
+  };
+  project?: {
+    links?: string[];
+    categories?: string[];
+    techStack?: string[];
+  };
+  gallery?: {
+    items?: JsonLdGalleryItem[];
+  };
+  photo?: {
+    caption?: string | null;
+  };
+  itemList?: {
+    idSuffix?: string;
+    name?: string;
+    itemType?: "BlogPosting" | "CreativeWork" | "WebPage";
+    items?: JsonLdItemListEntry[];
+  };
+}
+
 function toPlainSerializable(value: unknown): unknown {
   if (value instanceof URL) {
     return value.toString();
@@ -546,6 +634,659 @@ function enforceNoIndexRobots(metadata: Metadata): Metadata {
     ...metadata,
     robots: normalized as Metadata["robots"],
   };
+}
+
+interface JsonLdSiteContext {
+  metadataBase: URL | undefined;
+  siteUrl: string;
+  siteTitle: string;
+  siteDescription: string;
+  authorName: string;
+  logoUrl: string | undefined;
+  indexEnabled: boolean;
+}
+
+const getJsonLdSiteContext = unstable_cache(
+  async (): Promise<JsonLdSiteContext> => {
+    const [
+      metadataBaseConfig,
+      titleConfig,
+      descriptionConfig,
+      authorConfig,
+      avatarConfig,
+      indexEnableConfig,
+    ] = await getConfigs([
+      seoConfigMap.metadataBase,
+      seoConfigMap.title,
+      seoConfigMap.description,
+      seoConfigMap.author,
+      "site.avatar",
+      seoConfigMap.indexEnable,
+    ]);
+
+    const rawSiteUrl = getStringValue(metadataBaseConfig);
+    const metadataBase = parseMetadataBase(rawSiteUrl);
+    const siteUrl = (metadataBase?.toString() || rawSiteUrl || "").replace(
+      /\/+$/,
+      "",
+    );
+    const siteTitle = getStringValue(titleConfig, "NeutralPress");
+    const siteDescription = getStringValue(descriptionConfig, "");
+    const authorName = getStringValue(authorConfig, "");
+    const avatarPath = getStringValue(avatarConfig).trim() || "/icon/512x";
+    const logoUrl = buildCanonicalUrl(
+      metadataBase,
+      normalizePathname(avatarPath),
+    );
+    const indexEnabled = getBooleanValue(indexEnableConfig, true);
+
+    return {
+      metadataBase,
+      siteUrl,
+      siteTitle,
+      siteDescription,
+      authorName,
+      logoUrl,
+      indexEnabled,
+    };
+  },
+  ["jsonld-site-context"],
+  {
+    tags: [
+      "config/site.url",
+      "config/site.title",
+      "config/seo.description",
+      "config/author.name",
+      "config/site.avatar",
+      "config/seo.index.enable",
+    ],
+    revalidate: false,
+  },
+);
+
+function normalizeKeywordList(
+  keywords: string[] | string | null | undefined,
+): string[] {
+  if (!keywords) return [];
+  if (Array.isArray(keywords)) {
+    return keywords.map((keyword) => keyword.trim()).filter(Boolean);
+  }
+
+  return keywords
+    .split(",")
+    .map((keyword) => keyword.trim())
+    .filter(Boolean);
+}
+
+function normalizeDateValue(
+  date: Date | string | null | undefined,
+): string | null {
+  if (!date) return null;
+  const parsed = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString();
+}
+
+function normalizeImageList(
+  images: Array<string | JsonLdImage> | undefined,
+  metadataBase: URL | undefined,
+): JsonLdImage[] {
+  if (!images || images.length === 0) return [];
+
+  return images
+    .map((image) => {
+      if (typeof image === "string") {
+        const absUrl = buildAbsoluteUrl(image, metadataBase);
+        if (!absUrl) return null;
+        return { url: absUrl } satisfies JsonLdImage;
+      }
+
+      const absUrl = buildAbsoluteUrl(image.url, metadataBase);
+      if (!absUrl) return null;
+
+      return {
+        url: absUrl,
+        width: image.width,
+        height: image.height,
+        alt: image.alt,
+      } satisfies JsonLdImage;
+    })
+    .filter((image): image is JsonLdImage => image !== null);
+}
+
+function normalizeAuthorList(
+  authors: JsonLdAuthor[] | undefined,
+  metadataBase: URL | undefined,
+  fallbackAuthorName: string,
+): JsonLdAuthor[] {
+  const normalized =
+    authors
+      ?.map((author) => ({
+        name: author.name.trim(),
+        url: author.url
+          ? buildAbsoluteUrl(author.url, metadataBase)
+          : undefined,
+        type: author.type || "Person",
+      }))
+      .filter((author) => author.name.length > 0) ?? [];
+
+  if (normalized.length > 0) return normalized;
+
+  if (!fallbackAuthorName.trim()) return [];
+  return [{ name: fallbackAuthorName.trim(), type: "Person" }];
+}
+
+function resolveRobotsNoIndex(robots: Metadata["robots"] | undefined): boolean {
+  if (!robots) return false;
+  if (typeof robots === "string") {
+    return /noindex/i.test(robots);
+  }
+
+  if (robots.index === false) return true;
+  if (!robots.googleBot) return false;
+  if (typeof robots.googleBot === "string") {
+    return /noindex/i.test(robots.googleBot);
+  }
+
+  return robots.googleBot.index === false;
+}
+
+export function shouldEmitJsonLd(options: {
+  pathname?: string;
+  robots?: Metadata["robots"];
+  forceNoIndex?: boolean;
+}): boolean {
+  const normalizedPathname = normalizePathname(options.pathname);
+  const forcedNoIndex =
+    options.forceNoIndex ?? shouldForceNoIndex(normalizedPathname);
+  if (forcedNoIndex) return false;
+  if (resolveRobotsNoIndex(options.robots)) return false;
+  return true;
+}
+
+export function buildAbsoluteUrl(
+  pathnameOrUrl: string | undefined,
+  metadataBase: URL | undefined,
+): string | undefined {
+  const normalized = normalizePathname(pathnameOrUrl);
+  return buildCanonicalUrl(metadataBase, normalized);
+}
+
+function buildWebSiteJsonLd(site: JsonLdSiteContext): JsonLdNode {
+  return {
+    "@id": `${site.siteUrl}/#website`,
+    "@type": "WebSite",
+    url: site.siteUrl,
+    name: site.siteTitle,
+    description: site.siteDescription || undefined,
+    inLanguage: "zh-CN",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: `${site.siteUrl}/search?q={search_term_string}`,
+      "query-input": "required name=search_term_string",
+    },
+  };
+}
+
+function buildOrganizationJsonLd(site: JsonLdSiteContext): JsonLdNode {
+  return {
+    "@id": `${site.siteUrl}/#organization`,
+    "@type": "Organization",
+    url: site.siteUrl,
+    name: site.siteTitle,
+    description: site.siteDescription || undefined,
+    logo: site.logoUrl
+      ? {
+          "@type": "ImageObject",
+          url: site.logoUrl,
+        }
+      : undefined,
+  };
+}
+
+function buildBreadcrumbJsonLd(
+  items: JsonLdBreadcrumbItem[] | undefined,
+  metadataBase: URL | undefined,
+  canonicalUrl: string | undefined,
+): JsonLdNode | null {
+  if (!items || items.length === 0) return null;
+
+  const listItems = items
+    .map((item, index) => {
+      const name = item.name.trim();
+      if (!name) return null;
+
+      const absoluteItem =
+        buildAbsoluteUrl(item.item, metadataBase) ||
+        (index === items.length - 1 ? canonicalUrl : undefined);
+
+      return {
+        "@type": "ListItem",
+        position: index + 1,
+        name,
+        item: absoluteItem,
+      };
+    })
+    .filter(
+      (
+        item,
+      ): item is {
+        "@type": "ListItem";
+        position: number;
+        name: string;
+        item: string | undefined;
+      } => item !== null,
+    );
+
+  if (listItems.length === 0) return null;
+
+  return {
+    "@type": "BreadcrumbList",
+    itemListElement: listItems,
+  };
+}
+
+function buildThingList(names: string[]): JsonLdNode[] {
+  return names
+    .map((name) => name.trim())
+    .filter(Boolean)
+    .map((name) => ({
+      "@type": "Thing",
+      name,
+    }));
+}
+
+function buildGenericItemListJsonLd(
+  itemList: JsonLdGraphInput["itemList"] | undefined,
+  metadataBase: URL | undefined,
+  canonicalUrl: string | undefined,
+): JsonLdNode | null {
+  if (!itemList?.items || itemList.items.length === 0) return null;
+
+  const itemType = itemList.itemType || "WebPage";
+  const itemListElements = itemList.items
+    .slice(0, 20)
+    .map((entry, index) => {
+      const name = entry.name.trim();
+      if (!name) return null;
+
+      const itemUrl = buildAbsoluteUrl(entry.url, metadataBase);
+      if (!itemUrl) return null;
+
+      const imageUrl =
+        typeof entry.image === "string"
+          ? buildAbsoluteUrl(entry.image, metadataBase)
+          : buildAbsoluteUrl(entry.image?.url, metadataBase);
+      const datePublished = normalizeDateValue(entry.datePublished);
+      const dateModified = normalizeDateValue(entry.dateModified);
+
+      const itemEntity: JsonLdNode = {
+        "@type": itemType,
+        url: itemUrl,
+        description: entry.description,
+        ...(itemType === "BlogPosting" ? { headline: name } : { name }),
+        ...(imageUrl ? { image: imageUrl } : {}),
+        ...(datePublished ? { datePublished } : {}),
+        ...(dateModified ? { dateModified } : {}),
+      };
+
+      return {
+        "@type": "ListItem",
+        position: index + 1,
+        name,
+        url: itemUrl,
+        item: itemEntity,
+      };
+    })
+    .filter(
+      (
+        item,
+      ): item is {
+        "@type": "ListItem";
+        position: number;
+        name: string;
+        url: string;
+        item: JsonLdNode;
+      } => item !== null,
+    );
+
+  if (itemListElements.length === 0) return null;
+
+  return {
+    "@id": canonicalUrl
+      ? `${canonicalUrl}#${itemList.idSuffix || "itemlist"}`
+      : undefined,
+    "@type": "ItemList",
+    name: itemList.name,
+    itemListOrder: "https://schema.org/ItemListOrderDescending",
+    numberOfItems: itemListElements.length,
+    itemListElement: itemListElements,
+  };
+}
+
+function buildMainEntityJsonLd(
+  input: JsonLdGraphInput,
+  site: JsonLdSiteContext,
+  canonicalUrl: string | undefined,
+): { entity: JsonLdNode | null; extra: JsonLdNode[] } {
+  const title = input.title?.trim() || site.siteTitle;
+  const description =
+    input.description?.trim() || site.siteDescription || undefined;
+  const keywords = normalizeKeywordList(input.keywords);
+  const publishedAt = normalizeDateValue(input.publishedAt);
+  const updatedAt = normalizeDateValue(input.updatedAt);
+  const normalizedImages = normalizeImageList(input.images, site.metadataBase);
+  const normalizedAuthors = normalizeAuthorList(
+    input.authors,
+    site.metadataBase,
+    site.authorName,
+  );
+
+  if (input.kind === "article") {
+    return {
+      entity: {
+        "@id": canonicalUrl ? `${canonicalUrl}#article` : undefined,
+        "@type": "BlogPosting",
+        mainEntityOfPage: canonicalUrl,
+        url: canonicalUrl,
+        headline: title,
+        description,
+        inLanguage: "zh-CN",
+        datePublished: publishedAt || undefined,
+        dateModified: updatedAt || publishedAt || undefined,
+        author:
+          normalizedAuthors.length > 0
+            ? normalizedAuthors.map((author) => ({
+                "@type": author.type || "Person",
+                name: author.name,
+                url: author.url,
+              }))
+            : undefined,
+        publisher: {
+          "@id": `${site.siteUrl}/#organization`,
+        },
+        image:
+          normalizedImages.length > 0
+            ? normalizedImages.map((image) => image.url)
+            : undefined,
+        keywords: keywords.length > 0 ? keywords : undefined,
+        articleSection: input.article?.section,
+        about:
+          input.article?.tags && input.article.tags.length > 0
+            ? buildThingList(input.article.tags)
+            : undefined,
+        isPartOf: {
+          "@id": `${site.siteUrl}/#website`,
+        },
+      },
+      extra: [],
+    };
+  }
+
+  if (input.kind === "project") {
+    const categories = input.project?.categories ?? [];
+    const techStack = input.project?.techStack ?? [];
+
+    return {
+      entity: {
+        "@id": canonicalUrl ? `${canonicalUrl}#project` : undefined,
+        "@type": "CreativeWork",
+        url: canonicalUrl,
+        mainEntityOfPage: canonicalUrl,
+        name: title,
+        description,
+        inLanguage: "zh-CN",
+        datePublished: publishedAt || undefined,
+        dateModified: updatedAt || publishedAt || undefined,
+        author:
+          normalizedAuthors.length > 0
+            ? normalizedAuthors.map((author) => ({
+                "@type": author.type || "Person",
+                name: author.name,
+                url: author.url,
+              }))
+            : undefined,
+        image:
+          normalizedImages.length > 0
+            ? normalizedImages.map((image) => image.url)
+            : undefined,
+        keywords: keywords.length > 0 ? keywords : undefined,
+        genre: categories.length > 0 ? categories : undefined,
+        about: techStack.length > 0 ? buildThingList(techStack) : undefined,
+        sameAs:
+          input.project?.links && input.project.links.length > 0
+            ? input.project.links
+                .map((link) => buildAbsoluteUrl(link, site.metadataBase))
+                .filter((link): link is string => !!link)
+            : undefined,
+        isPartOf: {
+          "@id": `${site.siteUrl}/#website`,
+        },
+      },
+      extra: [],
+    };
+  }
+
+  if (input.kind === "photo") {
+    const image = normalizedImages[0];
+
+    return {
+      entity: {
+        "@id": canonicalUrl ? `${canonicalUrl}#photo` : undefined,
+        "@type": "ImageObject",
+        url: canonicalUrl,
+        name: title,
+        description,
+        caption: input.photo?.caption || description,
+        contentUrl: image?.url || canonicalUrl,
+        datePublished: publishedAt || undefined,
+        dateModified: updatedAt || publishedAt || undefined,
+        creator:
+          normalizedAuthors.length > 0
+            ? {
+                "@type": normalizedAuthors[0]?.type || "Person",
+                name: normalizedAuthors[0]?.name,
+                url: normalizedAuthors[0]?.url,
+              }
+            : undefined,
+        width: image?.width,
+        height: image?.height,
+        inLanguage: "zh-CN",
+        isPartOf: {
+          "@id": `${site.siteUrl}/#website`,
+        },
+      },
+      extra: [],
+    };
+  }
+
+  if (input.kind === "gallery") {
+    const galleryItems = input.gallery?.items ?? [];
+    const itemListElements = galleryItems.slice(0, 12).map((item, index) => {
+      const itemPageUrl = buildAbsoluteUrl(item.url, site.metadataBase);
+      const imageUrl =
+        typeof item.image === "string"
+          ? buildAbsoluteUrl(item.image, site.metadataBase)
+          : buildAbsoluteUrl(item.image?.url, site.metadataBase);
+
+      return {
+        "@type": "ListItem",
+        position: index + 1,
+        name: item.name || undefined,
+        url: itemPageUrl,
+        item: imageUrl
+          ? {
+              "@type": "ImageObject",
+              contentUrl: imageUrl,
+              url: itemPageUrl || imageUrl,
+              name: item.name || undefined,
+              description: item.description,
+            }
+          : itemPageUrl,
+      };
+    });
+
+    const itemListNode: JsonLdNode | null =
+      itemListElements.length > 0
+        ? {
+            "@id": canonicalUrl ? `${canonicalUrl}#itemlist` : undefined,
+            "@type": "ItemList",
+            itemListOrder: "https://schema.org/ItemListOrderAscending",
+            numberOfItems: itemListElements.length,
+            itemListElement: itemListElements,
+          }
+        : null;
+
+    return {
+      entity: {
+        "@id": canonicalUrl ? `${canonicalUrl}#gallery` : undefined,
+        "@type": "CollectionPage",
+        url: canonicalUrl,
+        mainEntityOfPage: canonicalUrl,
+        name: title,
+        description,
+        inLanguage: "zh-CN",
+        keywords: keywords.length > 0 ? keywords : undefined,
+        datePublished: publishedAt || undefined,
+        dateModified: updatedAt || publishedAt || undefined,
+        isPartOf: {
+          "@id": `${site.siteUrl}/#website`,
+        },
+        mainEntity: itemListNode ? { "@id": itemListNode["@id"] } : undefined,
+      },
+      extra: itemListNode ? [itemListNode] : [],
+    };
+  }
+
+  const pageType =
+    input.pageType || (input.kind === "site" ? "CollectionPage" : "WebPage");
+  const genericItemListNode = buildGenericItemListJsonLd(
+    input.itemList,
+    site.metadataBase,
+    canonicalUrl,
+  );
+  const mainEntityRef =
+    genericItemListNode && typeof genericItemListNode["@id"] === "string"
+      ? ({ "@id": genericItemListNode["@id"] } as JsonLdNode)
+      : genericItemListNode || undefined;
+
+  return {
+    entity: {
+      "@id": canonicalUrl ? `${canonicalUrl}#webpage` : undefined,
+      "@type": pageType,
+      url: canonicalUrl,
+      name: title,
+      description,
+      inLanguage: "zh-CN",
+      keywords: keywords.length > 0 ? keywords : undefined,
+      datePublished: publishedAt || undefined,
+      dateModified: updatedAt || publishedAt || undefined,
+      isPartOf: {
+        "@id": `${site.siteUrl}/#website`,
+      },
+      primaryImageOfPage:
+        normalizedImages.length > 0
+          ? {
+              "@type": "ImageObject",
+              url: normalizedImages[0]?.url,
+            }
+          : undefined,
+      mainEntity: mainEntityRef,
+    },
+    extra: genericItemListNode ? [genericItemListNode] : [],
+  };
+}
+
+function dedupeJsonLdGraph(nodes: JsonLdGraph): JsonLdGraph {
+  const idSet = new Set<string>();
+  const fallbackSet = new Set<string>();
+  const result: JsonLdGraph = [];
+
+  for (const node of nodes) {
+    const id = typeof node["@id"] === "string" ? node["@id"] : null;
+    if (id) {
+      if (idSet.has(id)) continue;
+      idSet.add(id);
+      result.push(node);
+      continue;
+    }
+
+    const signature = JSON.stringify(node);
+    if (fallbackSet.has(signature)) continue;
+    fallbackSet.add(signature);
+    result.push(node);
+  }
+
+  return result;
+}
+
+export async function generateJsonLdGraph(
+  input: JsonLdGraphInput,
+): Promise<JsonLdGraph> {
+  const site = await getJsonLdSiteContext();
+  if (!site.siteUrl || !site.indexEnabled) return [];
+
+  const normalizedPathname = normalizePathname(input.pathname);
+  const canonicalUrl = buildCanonicalUrl(site.metadataBase, normalizedPathname);
+  const forceNoIndex = shouldForceNoIndex(normalizedPathname);
+
+  if (
+    !shouldEmitJsonLd({
+      pathname: normalizedPathname,
+      robots: input.robots,
+      forceNoIndex,
+    })
+  ) {
+    return [];
+  }
+
+  const { entity, extra } = buildMainEntityJsonLd(input, site, canonicalUrl);
+  const breadcrumbNode = buildBreadcrumbJsonLd(
+    input.breadcrumb,
+    site.metadataBase,
+    canonicalUrl,
+  );
+
+  const graph: JsonLdGraph = [];
+
+  if (input.includeWebSite !== false) {
+    graph.push(buildWebSiteJsonLd(site));
+  }
+
+  if (input.includeOrganization !== false) {
+    graph.push(buildOrganizationJsonLd(site));
+  }
+
+  if (entity) {
+    graph.push(entity);
+  }
+
+  if (extra.length > 0) {
+    graph.push(...extra);
+  }
+
+  if (breadcrumbNode) {
+    graph.push(breadcrumbNode);
+  }
+
+  return dedupeJsonLdGraph(graph);
+}
+
+export function serializeJsonLdGraph(graph: JsonLdGraph): string {
+  if (graph.length === 0) return "";
+
+  const payload: Record<string, unknown> =
+    graph.length === 1
+      ? {
+          "@context": "https://schema.org",
+          ...graph[0],
+        }
+      : {
+          "@context": "https://schema.org",
+          "@graph": graph,
+        };
+
+  return JSON.stringify(payload).replace(/</g, "\\u003c");
 }
 
 // 生成动态SEO配置的异步函数
