@@ -2,6 +2,10 @@ import { z } from "zod";
 import { createSuccessResponseSchema, registerSchema } from "./common.js";
 import { CronTriggerTypeSchema } from "./cron.js";
 
+const CloudScheduleTimeSchema = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "时间格式必须为 HH:mm");
+
 export const CloudTriggerStatusSchema = z.enum([
   "RECEIVED",
   "DONE",
@@ -16,6 +20,7 @@ export type CloudVerifySource = z.infer<typeof CloudVerifySourceSchema>;
 export const CloudConfigSchema = z.object({
   enabled: z.boolean(),
   siteId: z.string().nullable(),
+  scheduleTime: z.string().nullable(),
   cloudBaseUrl: z.string(),
   dohDomain: z.string(),
   jwksUrl: z.string(),
@@ -132,6 +137,7 @@ export const UpdateCloudConfigSchema = z
   .object({
     access_token: z.string().optional(),
     enabled: z.boolean().optional(),
+    scheduleTime: CloudScheduleTimeSchema.or(z.literal("")).optional(),
     cloudBaseUrl: z.string().url().optional(),
     dohDomain: z.string().min(1).optional(),
     jwksUrl: z.string().url().optional(),
@@ -141,6 +147,7 @@ export const UpdateCloudConfigSchema = z
   .refine(
     (value) =>
       value.enabled !== undefined ||
+      value.scheduleTime !== undefined ||
       value.cloudBaseUrl !== undefined ||
       value.dohDomain !== undefined ||
       value.jwksUrl !== undefined ||

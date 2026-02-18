@@ -606,6 +606,11 @@ export const CONFIG_DEFINITIONS = {
     default: "",
     description: "实例唯一标识（UUID）。若为空，构建阶段将自动生成并写入",
   },
+  "cloud.schedule.time": {
+    default: "",
+    description:
+      "云端计划任务执行时间（UTC，HH:mm）。留空则由云端随机分配分钟槽位",
+  },
   "cloud.key.alg": {
     default: "ed25519",
     description: "实例签名算法。当前固定为 ed25519",

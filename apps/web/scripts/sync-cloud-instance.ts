@@ -29,6 +29,7 @@ interface CloudSyncConfig {
   sitePubKey: string;
   sitePrivKey: string;
   siteKeyAlg: string;
+  scheduleMinuteOfDay: number | null;
   cloudBaseUrl: string;
   siteUrl: string | null;
 }
@@ -119,6 +120,29 @@ function normalizeSiteUrlForCloud(raw: string): string | null {
   }
 
   return `${parsed.protocol}//${parsed.host}`;
+}
+
+function normalizeCloudScheduleTime(raw: string): string | null {
+  if (!raw) return null;
+  const value = raw.trim();
+  if (!value) return null;
+
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value);
+  if (!match) return null;
+
+  return `${match[1]}:${match[2]}`;
+}
+
+function scheduleTimeToMinuteOfDay(value: string | null): number | null {
+  if (!value) return null;
+  const [hourRaw, minuteRaw] = value.split(":");
+  const hour = Number.parseInt(hourRaw ?? "", 10);
+  const minute = Number.parseInt(minuteRaw ?? "", 10);
+
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+
+  return hour * 60 + minute;
 }
 
 async function createPrismaClient(): Promise<ScriptRuntime | null> {
@@ -225,6 +249,12 @@ async function ensureCloudIdentity(
   const siteKeyAlgRaw = normalizeString(
     await readConfigValue(prisma, "cloud.key.alg"),
   );
+  const scheduleTimeRaw = normalizeString(
+    await readConfigValue(prisma, "cloud.schedule.time"),
+  );
+  const scheduleMinuteOfDay = scheduleTimeToMinuteOfDay(
+    normalizeCloudScheduleTime(scheduleTimeRaw),
+  );
   const siteKeyAlg = siteKeyAlgRaw || "ed25519";
   const cloudBaseUrl = normalizeCloudBaseUrl(
     normalizeString(await readConfigValue(prisma, "cloud.api.baseUrl")),
@@ -266,6 +296,7 @@ async function ensureCloudIdentity(
     sitePubKey,
     sitePrivKey,
     siteKeyAlg,
+    scheduleMinuteOfDay,
     cloudBaseUrl,
     siteUrl,
   };
@@ -308,6 +339,7 @@ async function syncToCloud(configValue: CloudSyncConfig): Promise<void> {
     sitePubKey: configValue.sitePubKey,
     siteKeyAlg: configValue.siteKeyAlg || "ed25519",
     siteUrl: configValue.siteUrl,
+    minuteOfDay: configValue.scheduleMinuteOfDay,
     appVersion,
     buildId,
     commit,
