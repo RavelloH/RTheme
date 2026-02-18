@@ -466,6 +466,21 @@ export default function CloudReport() {
               disabled={savingConfig}
             />
           </div>
+          <p className="text-sm text-muted-foreground">
+            云端互联功能需要我们的中央服务器来提供支持。然而，由于此功能被设计为
+            0 配置、0
+            打扰的开箱即用，存在被恶意使用的风险，例如注册大量虚假实例来占用定时器资源，导致正常实例的定时任务无法按时执行。
+            <br />
+            因此，在每次任务触发后，实例将返回
+            <b> 完全匿名、不包含敏感业务数据 </b>
+            的性能统计信息，例如各项任务的执行时间和成功率等。这些数据将帮助我们改善
+            NeutralPress
+            的性能，并优化调度算法、识别虚假实例，以便更公平合理地分配资源，确保每个实例都能获得良好的服务质量。
+            <br />
+            我们始终保持公开透明。每次请求返回的遥测数据均可在任务的详情页面查看。服务端完全开源，你可以自己部署中央服务器，并修改上述的连接配置，使用你自己的服务器来提供云端互联服务。
+            <br />
+            中央调度服务：https://github.com/NeutralPress/cloud
+          </p>
           <div className="flex justify-end gap-4 pt-4 border-t border-foreground/10">
             <Button
               label="取消"
