@@ -46,6 +46,7 @@ const TASK_LABELS = {
   projects: "Projects 同步",
   friends: "友链检查",
   cleanup: "自动清理",
+  analytics: "访问统计整理",
 } as const;
 
 type CronTaskKey = keyof typeof TASK_LABELS;
@@ -59,6 +60,7 @@ const INTERNAL_REASON_LABELS: Record<string, string> = {
   "projects task not found": "缺少 Projects 任务快照",
   "friends task not found": "缺少 Friends 任务快照",
   "cleanup task not found": "缺少自动清理任务快照",
+  "analytics task not found": "缺少访问统计整理任务快照",
 };
 
 function formatDateTime(value: string): string {
@@ -260,6 +262,57 @@ function formatTaskSummary(
           ? `；标记 Push 为 inactive ${pushSubscriptionsMarkedInactive} 条`
           : "";
       return `任务执行成功：${deletedLabel}${affectedLabel}；明细：${detailParts.join("，")}${markedLabel}。`;
+    }
+  }
+
+  if (taskKey === "analytics" && isRecord(task.v)) {
+    const flushSuccess = task.v.flushSuccess === true;
+    const flushedCount = readNumber(task.v.flushedCount);
+    const syncedViewCountRows = readNumber(task.v.syncedViewCountRows);
+    const archivedDateGroups = readNumber(task.v.archivedDateGroups);
+    const archivedRawPageViewDeleted = readNumber(
+      task.v.archivedRawPageViewDeleted,
+    );
+    const expiredArchiveDeleted = readNumber(task.v.expiredArchiveDeleted);
+    const reportMode = readString(task.v.reportMode);
+    const reportRecipientCount = readNumber(task.v.reportRecipientCount);
+    const reportCycleCount = readNumber(task.v.reportCycleCount);
+    const reportNoticeSent = readNumber(task.v.reportNoticeSent);
+    const reportEmailSent = readNumber(task.v.reportEmailSent);
+    const reportErrorCount = readNumber(task.v.reportErrorCount);
+
+    const flushText = [
+      flushSuccess ? "刷写成功" : "刷写失败",
+      flushedCount !== null ? `写入 ${flushedCount} 条` : null,
+      syncedViewCountRows !== null
+        ? `缓存同步 ${syncedViewCountRows} 条`
+        : null,
+      archivedDateGroups !== null ? `归档 ${archivedDateGroups} 组` : null,
+      archivedRawPageViewDeleted !== null
+        ? `归档后删除原始 ${archivedRawPageViewDeleted} 条`
+        : null,
+      expiredArchiveDeleted !== null
+        ? `过期归档删除 ${expiredArchiveDeleted} 条`
+        : null,
+    ]
+      .filter(Boolean)
+      .join("，");
+
+    const reportText = [
+      reportMode ? `报告模式 ${reportMode}` : null,
+      reportRecipientCount !== null
+        ? `接收人 ${reportRecipientCount} 个`
+        : null,
+      reportCycleCount !== null ? `触发周期 ${reportCycleCount} 个` : null,
+      reportNoticeSent !== null ? `通知发送 ${reportNoticeSent} 条` : null,
+      reportEmailSent !== null ? `邮件发送 ${reportEmailSent} 封` : null,
+      reportErrorCount !== null ? `报告异常 ${reportErrorCount} 项` : null,
+    ]
+      .filter(Boolean)
+      .join("，");
+
+    if (flushText || reportText) {
+      return `任务执行成功：${flushText || "访问统计整理已执行"}${reportText ? `；${reportText}` : ""}。`;
     }
   }
 

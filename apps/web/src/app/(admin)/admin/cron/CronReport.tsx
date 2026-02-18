@@ -24,6 +24,7 @@ import Clickable from "@/ui/Clickable";
 import { Dialog } from "@/ui/Dialog";
 import { Input } from "@/ui/Input";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { Select } from "@/ui/Select";
 import { Switch } from "@/ui/Switch";
 import { useToast } from "@/ui/Toast";
 
@@ -128,7 +129,6 @@ function buildSummary(
 ): string[] {
   const lines: string[] = [];
   lines.push(`计划任务总开关：${config.enabled ? "已开启" : "已关闭"}。`);
-  lines.push(`自动清理：${config.tasks.cleanup ? "已开启" : "已关闭"}。`);
 
   if (!latest) {
     lines.push("暂无执行历史。");
@@ -164,9 +164,28 @@ export default function CronReport() {
   const [draftProjectsEnabled, setDraftProjectsEnabled] = useState(true);
   const [draftFriendsEnabled, setDraftFriendsEnabled] = useState(true);
   const [draftCleanupEnabled, setDraftCleanupEnabled] = useState(true);
+  const [draftAnalyticsEnabled, setDraftAnalyticsEnabled] = useState(true);
   const [draftCleanupConfig, setDraftCleanupConfig] = useState<
     CronConfig["cleanup"] | null
   >(null);
+  const [draftAnalyticsReportMode, setDraftAnalyticsReportMode] =
+    useState<CronConfig["analytics"]["report"]["mode"]>("NONE");
+  const [
+    draftAnalyticsReportDailyEnabled,
+    setDraftAnalyticsReportDailyEnabled,
+  ] = useState(false);
+  const [
+    draftAnalyticsReportWeeklyEnabled,
+    setDraftAnalyticsReportWeeklyEnabled,
+  ] = useState(false);
+  const [
+    draftAnalyticsReportMonthlyEnabled,
+    setDraftAnalyticsReportMonthlyEnabled,
+  ] = useState(false);
+  const [
+    draftAnalyticsNotifyAdminUidsText,
+    setDraftAnalyticsNotifyAdminUidsText,
+  ] = useState("");
 
   const fetchData = useCallback(
     async (forceRefresh: boolean) => {
@@ -232,7 +251,17 @@ export default function CronReport() {
     setDraftProjectsEnabled(config.tasks.projects);
     setDraftFriendsEnabled(config.tasks.friends);
     setDraftCleanupEnabled(config.tasks.cleanup);
+    setDraftAnalyticsEnabled(config.tasks.analytics);
     setDraftCleanupConfig(config.cleanup);
+    setDraftAnalyticsReportMode(config.analytics.report.mode);
+    setDraftAnalyticsReportDailyEnabled(config.analytics.report.dailyEnabled);
+    setDraftAnalyticsReportWeeklyEnabled(config.analytics.report.weeklyEnabled);
+    setDraftAnalyticsReportMonthlyEnabled(
+      config.analytics.report.monthlyEnabled,
+    );
+    setDraftAnalyticsNotifyAdminUidsText(
+      config.analytics.report.notifyAdminUids.join("\n"),
+    );
     setManageDialogOpen(true);
   }, [config]);
 
@@ -253,6 +282,14 @@ export default function CronReport() {
     [],
   );
 
+  const parseUidTextToArray = useCallback((value: string): string[] => {
+    const lines = value
+      .split(/[\n,]/)
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0 && /^\d+$/.test(item));
+    return Array.from(new Set(lines));
+  }, []);
+
   const handleSaveConfig = useCallback(async () => {
     if (!draftCleanupConfig) {
       toast.error("自动清理配置尚未准备就绪");
@@ -267,6 +304,14 @@ export default function CronReport() {
         projects: draftProjectsEnabled,
         friends: draftFriendsEnabled,
         cleanup: draftCleanupEnabled,
+        analytics: draftAnalyticsEnabled,
+        analyticsReportMode: draftAnalyticsReportMode,
+        analyticsReportDailyEnabled: draftAnalyticsReportDailyEnabled,
+        analyticsReportWeeklyEnabled: draftAnalyticsReportWeeklyEnabled,
+        analyticsReportMonthlyEnabled: draftAnalyticsReportMonthlyEnabled,
+        analyticsReportNotifyAdminUids: parseUidTextToArray(
+          draftAnalyticsNotifyAdminUidsText,
+        ),
         ...draftCleanupConfig,
       });
 
@@ -285,6 +330,12 @@ export default function CronReport() {
       setSavingConfig(false);
     }
   }, [
+    draftAnalyticsEnabled,
+    draftAnalyticsNotifyAdminUidsText,
+    draftAnalyticsReportDailyEnabled,
+    draftAnalyticsReportMode,
+    draftAnalyticsReportMonthlyEnabled,
+    draftAnalyticsReportWeeklyEnabled,
     draftDoctorEnabled,
     draftCleanupConfig,
     draftCleanupEnabled,
@@ -292,6 +343,7 @@ export default function CronReport() {
     draftFriendsEnabled,
     draftProjectsEnabled,
     fetchData,
+    parseUidTextToArray,
     toast,
   ]);
 
@@ -440,6 +492,12 @@ export default function CronReport() {
               onCheckedChange={setDraftCleanupEnabled}
               disabled={savingConfig}
             />
+            <Switch
+              label="启用访问统计整理"
+              checked={draftAnalyticsEnabled}
+              onCheckedChange={setDraftAnalyticsEnabled}
+              disabled={savingConfig}
+            />
           </div>
 
           <div>
@@ -464,6 +522,78 @@ export default function CronReport() {
                   }
                 />
               ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+              访问统计整理报告配置
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <div className="flex flex-col gap-2 col-span-2">
+                <label className="text-sm text-muted-foreground">
+                  报告发送方式
+                </label>
+                <Select
+                  value={draftAnalyticsReportMode}
+                  onChange={(value) =>
+                    setDraftAnalyticsReportMode(
+                      value as CronConfig["analytics"]["report"]["mode"],
+                    )
+                  }
+                  options={[
+                    {
+                      value: "NOTICE_EMAIL",
+                      label: "通知 + 邮件",
+                    },
+                    {
+                      value: "NOTICE",
+                      label: "仅通知",
+                    },
+                    {
+                      value: "EMAIL",
+                      label: "仅邮件",
+                    },
+                    {
+                      value: "NONE",
+                      label: "不发送报告",
+                    },
+                  ]}
+                  size="sm"
+                  disabled={savingConfig || !draftAnalyticsEnabled}
+                />
+              </div>
+              <Switch
+                label="每日发送昨日报告"
+                checked={draftAnalyticsReportDailyEnabled}
+                onCheckedChange={setDraftAnalyticsReportDailyEnabled}
+                disabled={savingConfig || !draftAnalyticsEnabled}
+              />
+              <Switch
+                label="每周一发送上周报告"
+                checked={draftAnalyticsReportWeeklyEnabled}
+                onCheckedChange={setDraftAnalyticsReportWeeklyEnabled}
+                disabled={savingConfig || !draftAnalyticsEnabled}
+              />
+              <Switch
+                label="每月 1 日发送上月报告"
+                checked={draftAnalyticsReportMonthlyEnabled}
+                onCheckedChange={setDraftAnalyticsReportMonthlyEnabled}
+                disabled={savingConfig || !draftAnalyticsEnabled}
+              />
+              <div className="md:col-span-2">
+                <Input
+                  label="接收管理员 UID"
+                  helperText="每行或逗号分隔一个 UID。留空则发送给所有 ADMIN/EDITOR。"
+                  rows={4}
+                  size="sm"
+                  value={draftAnalyticsNotifyAdminUidsText}
+                  onChange={(event) =>
+                    setDraftAnalyticsNotifyAdminUidsText(event.target.value)
+                  }
+                  disabled={savingConfig || !draftAnalyticsEnabled}
+                />
+              </div>
             </div>
           </div>
 

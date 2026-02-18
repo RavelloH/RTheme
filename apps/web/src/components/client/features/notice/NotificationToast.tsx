@@ -116,8 +116,7 @@ export function NotificationCard({
     setIsCardHovered(false);
   };
 
-  // 处理正文：换行替换为空格
-  const formattedContent = notification.content.replace(/\n/g, " ");
+  const formattedContent = notification.content;
 
   return (
     <motion.div
@@ -175,15 +174,7 @@ export function NotificationCard({
           <AutoResizer duration={0.25}>
             <AutoTransition type="fade" duration={0.2} initial={false}>
               {isCardHovered && (
-                <div
-                  className="text-sm text-muted-foreground leading-snug line-clamp-2 mt-1"
-                  style={{
-                    display: "-webkit-box",
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
-                  }}
-                >
+                <div className="text-sm text-muted-foreground leading-snug mt-1 whitespace-pre-line break-words">
                   {formattedContent}
                 </div>
               )}

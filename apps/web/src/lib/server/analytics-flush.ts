@@ -16,6 +16,16 @@ const MAX_RETRIES = 2;
 export type FlushEventsResult = {
   success: boolean;
   flushedCount: number;
+  syncedViewCountRows: number;
+  archivedDateGroups: number;
+  archivedRawPageViewDeleted: number;
+  expiredArchiveDeleted: number;
+};
+
+export type ArchivePageViewsResult = {
+  archivedDateGroups: number;
+  archivedRawPageViewDeleted: number;
+  expiredArchiveDeleted: number;
 };
 
 /**
@@ -40,14 +50,14 @@ export async function withRetry<T>(
 /**
  * 从 Redis Hash 同步访问量到数据库
  */
-async function syncViewCountsToDatabase() {
+async function syncViewCountsToDatabase(): Promise<number> {
   try {
     const allCounts = await withRetry(() =>
       redis.hgetall(REDIS_VIEW_COUNT_KEY),
     );
 
     if (!allCounts || Object.keys(allCounts).length === 0) {
-      return;
+      return 0;
     }
 
     const operations = Object.entries(allCounts).map(([path, count]) => {
@@ -72,8 +82,10 @@ async function syncViewCountsToDatabase() {
     await Promise.all(operations);
 
     console.log(`成功同步 ${operations.length} 条访问量到数据库`);
+    return operations.length;
   } catch (error) {
     console.error("同步访问量到数据库失败:", error);
+    return 0;
   }
 }
 
@@ -113,9 +125,12 @@ function getDateInTimezone(date: Date, timezone: string): Date {
 /**
  * 删除超过保留期限的归档数据
  */
-async function cleanupExpiredArchives(retentionDays: number, today: Date) {
+async function cleanupExpiredArchives(
+  retentionDays: number,
+  today: Date,
+): Promise<number> {
   if (retentionDays === 0) {
-    return;
+    return 0;
   }
 
   const retentionBoundary = new Date(today);
@@ -132,13 +147,21 @@ async function cleanupExpiredArchives(retentionDays: number, today: Date) {
   if (deleteArchiveResult.count > 0) {
     console.log(`删除 ${deleteArchiveResult.count} 条过期归档数据`);
   }
+
+  return deleteArchiveResult.count;
 }
 
 /**
  * 归档历史 PageView 数据
  * 将超过 precisionDays 的数据聚合到 PageViewArchive 表，并删除原始数据
  */
-async function archivePageViews() {
+async function archivePageViews(): Promise<ArchivePageViewsResult> {
+  const emptyResult: ArchivePageViewsResult = {
+    archivedDateGroups: 0,
+    archivedRawPageViewDeleted: 0,
+    expiredArchiveDeleted: 0,
+  };
+
   try {
     const configs = await prisma.config.findMany({
       where: {
@@ -158,7 +181,7 @@ async function archivePageViews() {
     );
 
     if (!configMap.get("analytics.enable")) {
-      return;
+      return emptyResult;
     }
 
     const timezone = (configMap.get("analytics.timezone") as string) || "UTC";
@@ -168,7 +191,7 @@ async function archivePageViews() {
       (configMap.get("analytics.retentionDays") as number) || 365;
 
     if (precisionDays === 0) {
-      return;
+      return emptyResult;
     }
 
     const now = new Date();
@@ -186,8 +209,14 @@ async function archivePageViews() {
     });
 
     if (pageViewsToArchive.length === 0) {
-      await cleanupExpiredArchives(retentionDays, todayInTimezone);
-      return;
+      const expiredArchiveDeleted = await cleanupExpiredArchives(
+        retentionDays,
+        todayInTimezone,
+      );
+      return {
+        ...emptyResult,
+        expiredArchiveDeleted,
+      };
     }
 
     const archiveMap = new Map<
@@ -458,9 +487,19 @@ async function archivePageViews() {
       `成功归档 ${archiveMap.size} 组数据，删除 ${deleteResult.count} 条原始记录`,
     );
 
-    await cleanupExpiredArchives(retentionDays, todayInTimezone);
+    const expiredArchiveDeleted = await cleanupExpiredArchives(
+      retentionDays,
+      todayInTimezone,
+    );
+
+    return {
+      archivedDateGroups: archiveMap.size,
+      archivedRawPageViewDeleted: deleteResult.count,
+      expiredArchiveDeleted,
+    };
   } catch (error) {
     console.error("归档数据失败:", error);
+    return emptyResult;
   }
 }
 
@@ -468,6 +507,12 @@ async function archivePageViews() {
  * 批量写入 PageView 数据到数据库
  */
 export async function flushEventsToDatabase(): Promise<FlushEventsResult> {
+  const emptyArchiveResult: ArchivePageViewsResult = {
+    archivedDateGroups: 0,
+    archivedRawPageViewDeleted: 0,
+    expiredArchiveDeleted: 0,
+  };
+
   try {
     const events = await withRetry(() =>
       redis.lrange(REDIS_QUEUE_KEY, 0, BATCH_SIZE - 1),
@@ -477,6 +522,8 @@ export async function flushEventsToDatabase(): Promise<FlushEventsResult> {
       return {
         success: true,
         flushedCount: 0,
+        syncedViewCountRows: 0,
+        ...emptyArchiveResult,
       };
     }
 
@@ -495,6 +542,8 @@ export async function flushEventsToDatabase(): Promise<FlushEventsResult> {
       return {
         success: true,
         flushedCount: 0,
+        syncedViewCountRows: 0,
+        ...emptyArchiveResult,
       };
     }
 
@@ -503,9 +552,9 @@ export async function flushEventsToDatabase(): Promise<FlushEventsResult> {
       skipDuplicates: true,
     });
 
-    await syncViewCountsToDatabase();
+    const syncedViewCountRows = await syncViewCountsToDatabase();
 
-    await archivePageViews();
+    const archiveResult = await archivePageViews();
 
     await withRetry(() => redis.ltrim(REDIS_QUEUE_KEY, events.length, -1));
 
@@ -513,12 +562,16 @@ export async function flushEventsToDatabase(): Promise<FlushEventsResult> {
     return {
       success: true,
       flushedCount: createResult.count,
+      syncedViewCountRows,
+      ...archiveResult,
     };
   } catch (error) {
     console.error("批量写入数据库失败:", error);
     return {
       success: false,
       flushedCount: 0,
+      syncedViewCountRows: 0,
+      ...emptyArchiveResult,
     };
   }
 }

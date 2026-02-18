@@ -964,6 +964,10 @@ export async function runAutoCleanupForCron() {
   return runAutoCleanupMaintenance();
 }
 
+export async function runAnalyticsRollupForCron() {
+  return flushEventsToDatabase();
+}
+
 export function summarizeTaskValue(value: unknown): SnapshotValue {
   return normalizeSnapshotValue(value);
 }

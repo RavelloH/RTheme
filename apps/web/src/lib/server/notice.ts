@@ -27,6 +27,10 @@ export interface SendNoticeOptions {
    * 发送者名称（仅当 type="message" 时使用）
    */
   senderName?: string;
+  /**
+   * 是否跳过邮件发送（仅发送站内通知与 Web Push）
+   */
+  skipEmail?: boolean;
 }
 
 /**
@@ -171,6 +175,10 @@ export async function sendNotice(
         `[Notice] Skipping Web Push for user ${userUid} (will be handled by client)`,
       );
     }
+  }
+
+  if (options?.skipEmail) {
+    return;
   }
 
   // 如果用户在线，不发送邮件

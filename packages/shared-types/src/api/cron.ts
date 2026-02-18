@@ -24,6 +24,32 @@ export const CronTaskSnapshotSchema = z.object({
 });
 export type CronTaskSnapshot = z.infer<typeof CronTaskSnapshotSchema>;
 
+export const CronAnalyticsReportModeSchema = z.enum([
+  "NONE",
+  "NOTICE",
+  "EMAIL",
+  "NOTICE_EMAIL",
+]);
+export type CronAnalyticsReportMode = z.infer<
+  typeof CronAnalyticsReportModeSchema
+>;
+
+export const AnalyticsCronReportConfigSchema = z.object({
+  mode: CronAnalyticsReportModeSchema,
+  dailyEnabled: z.boolean(),
+  weeklyEnabled: z.boolean(),
+  monthlyEnabled: z.boolean(),
+  notifyAdminUids: z.array(z.string().trim().min(1)),
+});
+export type AnalyticsCronReportConfig = z.infer<
+  typeof AnalyticsCronReportConfigSchema
+>;
+
+export const AnalyticsCronConfigSchema = z.object({
+  report: AnalyticsCronReportConfigSchema,
+});
+export type AnalyticsCronConfig = z.infer<typeof AnalyticsCronConfigSchema>;
+
 export const CleanupCronConfigSchema = z.object({
   searchLogRetentionDays: z.number().int().nonnegative(),
   healthCheckRetentionDays: z.number().int().nonnegative(),
@@ -48,6 +74,7 @@ export const CronSnapshotSchema = z.object({
     projects: CronTaskSnapshotSchema,
     friends: CronTaskSnapshotSchema,
     cleanup: CronTaskSnapshotSchema,
+    analytics: CronTaskSnapshotSchema,
   }),
 });
 export type CronSnapshot = z.infer<typeof CronSnapshotSchema>;
@@ -147,6 +174,7 @@ export const CronTrendItemSchema = z.object({
     projectsDurationMs: z.number().int().nonnegative(),
     friendsDurationMs: z.number().int().nonnegative(),
     cleanupDurationMs: z.number().int().nonnegative(),
+    analyticsDurationMs: z.number().int().nonnegative(),
     successCount: z.number().int().nonnegative(),
     failedCount: z.number().int().nonnegative(),
     skippedCount: z.number().int().nonnegative(),
@@ -181,8 +209,10 @@ export const CronConfigSchema = z.object({
     projects: z.boolean(),
     friends: z.boolean(),
     cleanup: z.boolean(),
+    analytics: z.boolean(),
   }),
   cleanup: CleanupCronConfigSchema,
+  analytics: AnalyticsCronConfigSchema,
   updatedAt: z.string(),
 });
 export type CronConfig = z.infer<typeof CronConfigSchema>;
@@ -208,6 +238,7 @@ export const UpdateCronConfigSchema = z
     projects: z.boolean().optional(),
     friends: z.boolean().optional(),
     cleanup: z.boolean().optional(),
+    analytics: z.boolean().optional(),
     searchLogRetentionDays: z.number().int().nonnegative().optional(),
     healthCheckRetentionDays: z.number().int().nonnegative().optional(),
     auditLogRetentionDays: z.number().int().nonnegative().optional(),
@@ -233,6 +264,14 @@ export const UpdateCronConfigSchema = z
       .int()
       .nonnegative()
       .optional(),
+    analyticsReportMode: CronAnalyticsReportModeSchema.optional(),
+    analyticsReportDailyEnabled: z.boolean().optional(),
+    analyticsReportWeeklyEnabled: z.boolean().optional(),
+    analyticsReportMonthlyEnabled: z.boolean().optional(),
+    analyticsReportNotifyAdminUids: z
+      .array(z.string().trim().min(1))
+      .max(500)
+      .optional(),
   })
   .refine(
     (value) =>
@@ -241,6 +280,7 @@ export const UpdateCronConfigSchema = z
       value.projects !== undefined ||
       value.friends !== undefined ||
       value.cleanup !== undefined ||
+      value.analytics !== undefined ||
       value.searchLogRetentionDays !== undefined ||
       value.healthCheckRetentionDays !== undefined ||
       value.auditLogRetentionDays !== undefined ||
@@ -253,7 +293,12 @@ export const UpdateCronConfigSchema = z
       value.passwordResetRetentionMinutes !== undefined ||
       value.pushSubscriptionMarkInactiveDays !== undefined ||
       value.pushSubscriptionDeleteInactiveDays !== undefined ||
-      value.pushSubscriptionDeleteDisabledUserDays !== undefined,
+      value.pushSubscriptionDeleteDisabledUserDays !== undefined ||
+      value.analyticsReportMode !== undefined ||
+      value.analyticsReportDailyEnabled !== undefined ||
+      value.analyticsReportWeeklyEnabled !== undefined ||
+      value.analyticsReportMonthlyEnabled !== undefined ||
+      value.analyticsReportNotifyAdminUids !== undefined,
     {
       message: "必须提供至少一个配置项",
     },
