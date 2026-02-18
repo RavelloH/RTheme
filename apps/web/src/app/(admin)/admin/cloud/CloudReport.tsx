@@ -323,7 +323,10 @@ export default function CloudReport() {
       <GridItem areas={[1, 2, 3, 4, 5, 6]} width={2} height={0.8}>
         <AutoTransition type="scale" className="h-full">
           {config ? (
-            <div className="flex h-full flex-col justify-between p-10">
+            <div
+              className="flex h-full flex-col justify-between p-10"
+              key="report"
+            >
               <div>
                 <div className="py-2 text-2xl">云端互联汇报</div>
                 <div className="space-y-1">
@@ -345,11 +348,11 @@ export default function CloudReport() {
               </div>
             </div>
           ) : error ? (
-            <div className="h-full px-10">
+            <div className="h-full px-10" key="error">
               <ErrorPage reason={error} reset={() => void fetchData(true)} />
             </div>
           ) : (
-            <div className="h-full">
+            <div className="h-full" key="loading">
               <LoadingIndicator />
             </div>
           )}
@@ -375,6 +378,11 @@ export default function CloudReport() {
         size="lg"
       >
         <div className="px-6 py-6 space-y-6">
+          <p className="text-sm text-muted-foreground">
+            云端互联允许 NeutralPress
+            实例与中央服务器通信，由中央服务器定时触发实例的定时任务，以便在实例处于
+            Serverless 状态时也能执行定时任务。
+          </p>
           <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
             基础开关
           </h3>
@@ -396,7 +404,6 @@ export default function CloudReport() {
           <p className="text-sm text-muted-foreground">
             留空则由云端随机分配执行分钟。不能保证每次都在同一时间执行，中央服务器负载较高时，可能会延后执行时间以平衡负载。
           </p>
-
           <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
             连接配置
           </h3>
@@ -437,7 +444,6 @@ export default function CloudReport() {
               disabled={savingConfig}
             />
           </div>
-
           <div className="flex justify-end gap-4 pt-4 border-t border-foreground/10">
             <Button
               label="取消"

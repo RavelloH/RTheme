@@ -27,14 +27,12 @@ import {
   getDoctorCheckMessage,
   getDoctorCheckOrder,
 } from "@/data/check-config";
-import { flushEventsToDatabase } from "@/lib/server/analytics-flush";
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
-import { getConfig } from "@/lib/server/config-cache";
+import { runDoctorHealthCheck } from "@/lib/server/cron-task-runner";
 import { runDoctorMaintenance } from "@/lib/server/doctor-maintenance";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
-import redis, { ensureRedisConnection } from "@/lib/server/redis";
 import ResponseBuilder from "@/lib/server/response";
 import { validateData } from "@/lib/server/validator";
 
@@ -65,16 +63,6 @@ function snapshotStatusToSeverity(
   if (status === "E") return "error";
   if (status === "W") return "warning";
   return "info";
-}
-
-function classifyByThreshold(
-  value: number,
-  warningThreshold: number,
-  errorThreshold: number,
-): SnapshotStatus {
-  if (value < warningThreshold) return "O";
-  if (value < errorThreshold) return "W";
-  return "E";
 }
 
 function normalizeSnapshotValue(value: unknown): SnapshotValue {
@@ -171,47 +159,6 @@ function buildIssues(checks: DoctorCheckDetail[]): HealthCheckIssue[] {
   }));
 }
 
-function buildCounts(snapshotChecks: Record<string, SnapshotCheck>): {
-  okCount: number;
-  warningCount: number;
-  errorCount: number;
-} {
-  let okCount = 0;
-  let warningCount = 0;
-  let errorCount = 0;
-
-  for (const check of Object.values(snapshotChecks)) {
-    if (check.s === "E") {
-      errorCount++;
-    } else if (check.s === "W") {
-      warningCount++;
-    } else {
-      okCount++;
-    }
-  }
-
-  return { okCount, warningCount, errorCount };
-}
-
-function getOverallStatus(
-  counts: ReturnType<typeof buildCounts>,
-): "OK" | "WARNING" | "ERROR" {
-  if (counts.errorCount > 0) return "ERROR";
-  if (counts.warningCount > 0) return "WARNING";
-  return "OK";
-}
-
-async function measure<T>(
-  fn: () => Promise<T>,
-): Promise<{ value: T; durationMs: number }> {
-  const start = Date.now();
-  const value = await fn();
-  return {
-    value,
-    durationMs: Date.now() - start,
-  };
-}
-
 export async function doctor(
   params: Doctor,
   serverConfig: { environment: "serverless" },
@@ -303,332 +250,8 @@ export async function doctor(
       }
     }
 
-    const startedAt = new Date();
-    const startedAtMs = Date.now();
-
-    const getDBSize = async (): Promise<number> => {
-      const result = await prisma.$queryRaw<
-        Array<{ size: bigint }>
-      >`SELECT pg_database_size(current_database()) AS size;`;
-      return Number(result[0]?.size || 0);
-    };
-
-    const getDBLatency = async (): Promise<number> => {
-      const start = Date.now();
-      await prisma.$queryRaw`SELECT 1;`;
-      return Date.now() - start;
-    };
-
-    const getDBConnectionCount = async (): Promise<number> => {
-      const result = await prisma.$queryRaw<Array<{ count: bigint }>>`
-        SELECT count(*) FROM pg_stat_activity WHERE datname = current_database();
-      `;
-      return Number(result[0]?.count || 0);
-    };
-
-    const getRedisLatency = async (): Promise<number> => {
-      try {
-        await ensureRedisConnection();
-        const start = Date.now();
-        await redis.ping();
-        return Date.now() - start;
-      } catch (error) {
-        console.error("Redis latency check failed:", error);
-        return -1;
-      }
-    };
-
-    const getRedisMemory = async (): Promise<{
-      used: number;
-      peak: number;
-      fragmentation: number;
-    }> => {
-      try {
-        await ensureRedisConnection();
-        const info = await redis.info("memory");
-        const lines = info.split("\r\n");
-
-        const getValue = (key: string): number => {
-          const line = lines.find((item) => item.startsWith(key));
-          if (!line) return 0;
-          const value = line.split(":")[1];
-          return value ? parseInt(value, 10) || 0 : 0;
-        };
-
-        const getFloatValue = (key: string): number => {
-          const line = lines.find((item) => item.startsWith(key));
-          if (!line) return 0;
-          const value = line.split(":")[1];
-          return value ? parseFloat(value) || 0 : 0;
-        };
-
-        return {
-          used: getValue("used_memory"),
-          peak: getValue("used_memory_peak"),
-          fragmentation: getFloatValue("mem_fragmentation_ratio"),
-        };
-      } catch (error) {
-        console.error("Redis memory check failed:", error);
-        return { used: -1, peak: -1, fragmentation: -1 };
-      }
-    };
-
-    const getRedisKeyCount = async (): Promise<{
-      cache: number;
-      rate: number;
-      analytics: number;
-      viewCount: number;
-      total: number;
-    }> => {
-      try {
-        await ensureRedisConnection();
-
-        const scanPattern = async (pattern: string): Promise<string[]> => {
-          const keys: string[] = [];
-          let cursor = "0";
-          do {
-            const [nextCursor, batch] = await redis.scan(
-              cursor,
-              "MATCH",
-              pattern,
-              "COUNT",
-              200,
-            );
-            cursor = nextCursor;
-            keys.push(...batch);
-          } while (cursor !== "0");
-          return keys;
-        };
-
-        const [cacheKeys, rateKeys, analyticsKeys, viewCountKeys] =
-          await Promise.all([
-            scanPattern("np:cache:*"),
-            scanPattern("np:rate:*"),
-            scanPattern("np:analytics:*"),
-            scanPattern("np:view_count:*"),
-          ]);
-
-        return {
-          cache: cacheKeys.length,
-          rate: rateKeys.length,
-          analytics: analyticsKeys.length,
-          viewCount: viewCountKeys.length,
-          total: await redis.dbsize(),
-        };
-      } catch (error) {
-        console.error("Redis key count check failed:", error);
-        return { cache: -1, rate: -1, analytics: -1, viewCount: -1, total: -1 };
-      }
-    };
-
-    const getSiteSelfLatency = async (): Promise<{
-      ok: boolean;
-      latencyMs: number | null;
-      message?: string;
-    }> => {
-      try {
-        const siteUrlConfig = await getConfig("site.url");
-        const siteUrl =
-          typeof siteUrlConfig === "string" ? siteUrlConfig.trim() : "";
-
-        if (!siteUrl) {
-          return {
-            ok: false,
-            latencyMs: null,
-            message: "site.url 未配置",
-          };
-        }
-
-        let target: URL;
-        try {
-          target = new URL(siteUrl);
-        } catch {
-          return {
-            ok: false,
-            latencyMs: null,
-            message: "site.url 格式无效",
-          };
-        }
-
-        target.pathname = "/";
-        target.search = "";
-        target.hash = "";
-
-        const start = Date.now();
-        const response = await fetch(target.toString(), {
-          method: "GET",
-          cache: "no-store",
-          headers: {
-            "user-agent": "NeutralPress-Doctor/1.0",
-          },
-        });
-        const latencyMs = Date.now() - start;
-
-        if (!response.ok) {
-          return {
-            ok: false,
-            latencyMs,
-            message: `HTTP ${response.status}`,
-          };
-        }
-
-        return {
-          ok: true,
-          latencyMs,
-        };
-      } catch (error) {
-        console.error("Site self latency check failed:", error);
-        return {
-          ok: false,
-          latencyMs: null,
-          message: "访问失败",
-        };
-      }
-    };
-
-    const [
-      flushResult,
-      siteSelfLatencyResult,
-      dbSizeResult,
-      dbLatencyResult,
-      dbConnectionResult,
-      redisLatencyResult,
-      redisMemoryResult,
-      redisKeyCountResult,
-    ] = await Promise.all([
-      measure(flushEventsToDatabase),
-      measure(getSiteSelfLatency),
-      measure(getDBSize),
-      measure(getDBLatency),
-      measure(getDBConnectionCount),
-      measure(getRedisLatency),
-      measure(getRedisMemory),
-      measure(getRedisKeyCount),
-    ]);
-
-    const snapshot: HealthCheckSnapshot = {
-      checks: {},
-    };
-
-    snapshot.checks.ANALYTICS_FLUSH_SUCCESS_COUNT = {
-      v: flushResult.value.success ? flushResult.value.flushedCount : null,
-      d: flushResult.durationMs,
-      s: flushResult.value.success ? "O" : "E",
-    };
-
-    if (
-      siteSelfLatencyResult.value.ok &&
-      siteSelfLatencyResult.value.latencyMs !== null
-    ) {
-      snapshot.checks.SITE_SELF_LATENCY = {
-        v: siteSelfLatencyResult.value.latencyMs,
-        d: siteSelfLatencyResult.durationMs,
-        s: classifyByThreshold(
-          siteSelfLatencyResult.value.latencyMs,
-          500,
-          1500,
-        ),
-      };
-    } else {
-      snapshot.checks.SITE_SELF_LATENCY = {
-        v: siteSelfLatencyResult.value.message || "检查失败",
-        d: siteSelfLatencyResult.durationMs,
-        s: "E",
-      };
-    }
-
-    snapshot.checks.DB_LATENCY = {
-      v: dbLatencyResult.value,
-      d: dbLatencyResult.durationMs,
-      s: classifyByThreshold(dbLatencyResult.value, 100, 300),
-    };
-
-    snapshot.checks.DB_CONNECTIONS = {
-      v: dbConnectionResult.value,
-      d: dbConnectionResult.durationMs,
-      s: classifyByThreshold(dbConnectionResult.value, 50, 150),
-    };
-
-    snapshot.checks.DB_SIZE = {
-      v: dbSizeResult.value,
-      d: dbSizeResult.durationMs,
-      s: "O",
-    };
-
-    if (redisLatencyResult.value === -1) {
-      snapshot.checks.REDIS_CONNECTION = {
-        v: false,
-        d: redisLatencyResult.durationMs,
-        s: "E",
-      };
-    } else {
-      snapshot.checks.REDIS_LATENCY = {
-        v: redisLatencyResult.value,
-        d: redisLatencyResult.durationMs,
-        s: classifyByThreshold(redisLatencyResult.value, 10, 50),
-      };
-
-      if (redisMemoryResult.value.used !== -1) {
-        snapshot.checks.REDIS_MEMORY = {
-          v: redisMemoryResult.value.used,
-          d: redisMemoryResult.durationMs,
-          s: classifyByThreshold(
-            redisMemoryResult.value.used,
-            100 * 1024 * 1024,
-            500 * 1024 * 1024,
-          ),
-        };
-
-        if (redisMemoryResult.value.fragmentation > 0) {
-          snapshot.checks.REDIS_FRAGMENTATION = {
-            v: redisMemoryResult.value.fragmentation,
-            d: redisMemoryResult.durationMs,
-            s: classifyByThreshold(
-              redisMemoryResult.value.fragmentation,
-              1.5,
-              2.0,
-            ),
-          };
-        }
-      }
-
-      if (redisKeyCountResult.value.total !== -1) {
-        snapshot.checks.REDIS_KEYS = {
-          v: redisKeyCountResult.value.total,
-          d: redisKeyCountResult.durationMs,
-          s: "O",
-        };
-      }
-    }
-
-    const counts = buildCounts(snapshot.checks);
-    const status = getOverallStatus(counts);
-    const durationMs = Date.now() - startedAtMs;
-    const checks = buildCheckDetails(snapshot.checks);
-    const issues = buildIssues(checks);
-
-    const healthCheck = await prisma.healthCheck.create({
-      data: {
-        startedAt,
-        durationMs,
-        triggerType: persistTriggerType,
-        overallStatus: status,
-        okCount: counts.okCount,
-        warningCount: counts.warningCount,
-        errorCount: counts.errorCount,
-        snapshot,
-      },
-      select: {
-        startedAt: true,
-        createdAt: true,
-        durationMs: true,
-        triggerType: true,
-        overallStatus: true,
-        okCount: true,
-        warningCount: true,
-        errorCount: true,
-        id: true,
-      },
+    const healthCheck = await runDoctorHealthCheck({
+      triggerType: persistTriggerType,
     });
 
     try {
@@ -644,14 +267,14 @@ export async function doctor(
             old: null,
             new: {
               id: healthCheck.id,
-              triggerType: healthCheck.triggerType,
-              status: healthCheck.overallStatus,
-              okCount: healthCheck.okCount,
-              warningCount: healthCheck.warningCount,
-              errorCount: healthCheck.errorCount,
+              triggerType: healthCheck.data.triggerType,
+              status: healthCheck.data.status,
+              okCount: healthCheck.data.okCount,
+              warningCount: healthCheck.data.warningCount,
+              errorCount: healthCheck.data.errorCount,
             },
           },
-          description: `管理员执行系统体检 - 结果: ${healthCheck.overallStatus}`,
+          description: `管理员执行系统体检 - 结果: ${healthCheck.data.status}`,
         },
       });
     } catch (error) {
@@ -659,17 +282,7 @@ export async function doctor(
     }
 
     return response.ok({
-      data: {
-        createdAt: healthCheck.createdAt.toISOString(),
-        startedAt: healthCheck.startedAt.toISOString(),
-        durationMs: healthCheck.durationMs,
-        triggerType: healthCheck.triggerType,
-        status: healthCheck.overallStatus,
-        okCount: healthCheck.okCount,
-        warningCount: healthCheck.warningCount,
-        errorCount: healthCheck.errorCount,
-        issues,
-      },
+      data: healthCheck.data,
     });
   } catch (error) {
     console.error("Doctor error:", error);

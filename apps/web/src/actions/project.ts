@@ -36,6 +36,7 @@ import type { NextResponse } from "next/server";
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import { getConfig } from "@/lib/server/config-cache";
+import { runProjectsGithubSync } from "@/lib/server/cron-task-runner";
 import { generateSignature } from "@/lib/server/image-crypto";
 import {
   findMediaIdByUrl,
@@ -2180,165 +2181,13 @@ export async function syncProjectsGithub(
   }
 
   try {
-    // 获取 GitHub Token
-    const githubToken = await getConfig("content.githubAutoSync.personalKey");
-
-    // 查找需要同步的项目
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = {
-      enableGithubSync: true,
-      repoPath: { not: null },
-      deletedAt: null,
-    };
-
-    if (ids && ids.length > 0) {
-      where.id = { in: ids };
-    }
-
-    const projects = await prisma.project.findMany({
-      where,
-      select: {
-        id: true,
-        slug: true,
-        repoPath: true,
-        enableConentSync: true,
-      },
-    });
-
-    if (projects.length === 0) {
-      return response.ok({
-        data: {
-          synced: 0,
-          failed: 0,
-          results: [],
-        },
-      });
-    }
-
-    // 并发同步所有项目
-    const results = await Promise.allSettled(
-      projects.map(async (project) => {
-        try {
-          if (!project.repoPath) {
-            throw new Error("仓库路径为空");
-          }
-
-          const [owner, repo] = project.repoPath.split("/");
-          if (!owner || !repo) {
-            throw new Error("仓库路径格式不正确");
-          }
-
-          // 构建 API 请求 headers
-          const apiHeaders: Record<string, string> = {
-            Accept: "application/vnd.github.v3+json",
-            "User-Agent": "NeutralPress-CMS",
-          };
-
-          if (githubToken) {
-            apiHeaders.Authorization = `Bearer ${githubToken}`;
-          }
-
-          // 获取仓库信息
-          const repoResponse = await fetch(
-            `https://api.github.com/repos/${owner}/${repo}`,
-            { headers: apiHeaders },
-          );
-
-          if (!repoResponse.ok) {
-            throw new Error(
-              `GitHub API 错误: ${repoResponse.status} ${repoResponse.statusText}`,
-            );
-          }
-
-          const repoData = await repoResponse.json();
-
-          // 获取语言信息
-          const languagesResponse = await fetch(
-            `https://api.github.com/repos/${owner}/${repo}/languages`,
-            { headers: apiHeaders },
-          );
-
-          let languages: Record<string, number> | null = null;
-          if (languagesResponse.ok) {
-            languages = await languagesResponse.json();
-          }
-
-          // 准备更新数据
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const updateData: any = {
-            stars: repoData.stargazers_count || 0,
-            forks: repoData.forks_count || 0,
-            languages,
-            license: repoData.license?.spdx_id || null,
-          };
-
-          // 如果启用了内容同步，获取 README
-          if (project.enableConentSync) {
-            const readmeResponse = await fetch(
-              `https://api.github.com/repos/${owner}/${repo}/readme`,
-              {
-                headers: {
-                  ...apiHeaders,
-                  Accept: "application/vnd.github.v3.raw",
-                },
-              },
-            );
-
-            if (readmeResponse.ok) {
-              const readmeContent = await readmeResponse.text();
-              updateData.content = readmeContent;
-            }
-          }
-
-          // 更新项目
-          await prisma.project.update({
-            where: { id: project.id, deletedAt: null },
-            data: updateData,
-          });
-
-          return {
-            id: project.id,
-            slug: project.slug,
-            success: true,
-            stars: updateData.stars,
-            forks: updateData.forks,
-          };
-        } catch (error) {
-          return {
-            id: project.id,
-            slug: project.slug,
-            success: false,
-            error: error instanceof Error ? error.message : "未知错误",
-          };
-        }
-      }),
-    );
-
-    // 处理结果
-    const syncResults = results.map((result) => {
-      if (result.status === "fulfilled") {
-        return result.value;
-      }
-      return {
-        id: 0,
-        slug: "",
-        success: false,
-        error: "Promise rejected",
-      };
-    });
-
-    const synced = syncResults.filter((r) => r.success).length;
-    const failed = syncResults.filter((r) => !r.success).length;
-
-    // 更新缓存标签
-    const projectDetailTagsToRefresh = new Set<string>();
-    if (projects.length > 0) {
-      updateTag("projects/list");
-    }
-    for (const project of projects) {
-      addProjectTagSlug(projectDetailTagsToRefresh, project.slug);
-    }
-    updateProjectCacheTagsBySlugs(projectDetailTagsToRefresh);
+    const syncResult = await runProjectsGithubSync({ ids });
+    const synced = syncResult.synced;
+    const failed = syncResult.failed;
+    const resourceIds = syncResult.results
+      .map((item) => item.id)
+      .filter((id) => id > 0)
+      .join(",");
 
     // 审计日志
     const { after } = await import("next/server");
@@ -2348,7 +2197,7 @@ export async function syncProjectsGithub(
         details: {
           action: "SYNC",
           resourceType: "PROJECT",
-          resourceId: projects.map((p) => p.id).join(","),
+          resourceId: resourceIds || "AUTO",
           value: { old: null, new: { synced, failed } },
           description: `GitHub 同步: ${synced} 成功, ${failed} 失败`,
           metadata: {
@@ -2363,7 +2212,7 @@ export async function syncProjectsGithub(
       data: {
         synced,
         failed,
-        results: syncResults,
+        results: syncResult.results,
       },
     });
   } catch (error) {

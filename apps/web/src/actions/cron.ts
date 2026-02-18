@@ -27,12 +27,14 @@ import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
-import { doctor } from "@/actions/doctor";
-import { checkFriendLinks } from "@/actions/friendlink";
-import { syncProjectsGithub } from "@/actions/project";
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import { getConfigs } from "@/lib/server/config-cache";
+import {
+  runDoctorForCron,
+  runFriendLinksCheckForCron,
+  runProjectsSyncForCron,
+} from "@/lib/server/cron-task-runner";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
@@ -244,22 +246,9 @@ async function executeDoctorTask(): Promise<CronTaskSnapshot> {
   const startedAt = new Date();
   const startedAtMs = Date.now();
   try {
-    const result = await doctor({ force: true });
+    const result = await runDoctorForCron();
     const endedAt = new Date();
     const durationMs = Date.now() - startedAtMs;
-
-    if (!result.success || !result.data) {
-      return {
-        e: true,
-        x: true,
-        s: "E",
-        d: durationMs,
-        v: null,
-        m: result.message || "doctor 执行失败",
-        b: startedAt.toISOString(),
-        f: endedAt.toISOString(),
-      };
-    }
 
     return {
       e: true,
@@ -267,10 +256,10 @@ async function executeDoctorTask(): Promise<CronTaskSnapshot> {
       s: "O",
       d: durationMs,
       v: {
-        status: result.data.status,
-        okCount: result.data.okCount,
-        warningCount: result.data.warningCount,
-        errorCount: result.data.errorCount,
+        status: result.status,
+        okCount: result.okCount,
+        warningCount: result.warningCount,
+        errorCount: result.errorCount,
       },
       m: null,
       b: startedAt.toISOString(),
@@ -294,33 +283,21 @@ async function executeProjectsTask(): Promise<CronTaskSnapshot> {
   const startedAt = new Date();
   const startedAtMs = Date.now();
   try {
-    const result = await syncProjectsGithub({});
+    const result = await runProjectsSyncForCron();
     const endedAt = new Date();
     const durationMs = Date.now() - startedAtMs;
 
-    if (!result.success || !result.data) {
-      return {
-        e: true,
-        x: true,
-        s: "E",
-        d: durationMs,
-        v: null,
-        m: result.message || "projects 执行失败",
-        b: startedAt.toISOString(),
-        f: endedAt.toISOString(),
-      };
-    }
-
+    const taskOk = result.failed === 0;
     return {
       e: true,
       x: true,
-      s: "O",
+      s: taskOk ? "O" : "E",
       d: durationMs,
       v: {
-        synced: result.data.synced,
-        failed: result.data.failed,
+        synced: result.synced,
+        failed: result.failed,
       },
-      m: null,
+      m: taskOk ? null : `同步失败 ${result.failed} 项`,
       b: startedAt.toISOString(),
       f: endedAt.toISOString(),
     };
@@ -342,34 +319,23 @@ async function executeFriendsTask(): Promise<CronTaskSnapshot> {
   const startedAt = new Date();
   const startedAtMs = Date.now();
   try {
-    const result = await checkFriendLinks({ checkAll: true });
+    const result = await runFriendLinksCheckForCron();
     const endedAt = new Date();
     const durationMs = Date.now() - startedAtMs;
-
-    if (!result.success || !result.data) {
-      return {
-        e: true,
-        x: true,
-        s: "E",
-        d: durationMs,
-        v: null,
-        m: result.message || "friends 执行失败",
-        b: startedAt.toISOString(),
-        f: endedAt.toISOString(),
-      };
-    }
 
     return {
       e: true,
       x: true,
+      // 友链任务的业务失败数是检查结果的一部分，不代表任务执行失败。
+      // 只要检查流程成功运行并产出结果，就视为任务成功。
       s: "O",
       d: durationMs,
       v: {
-        total: result.data.total,
-        checked: result.data.checked,
-        skipped: result.data.skipped,
-        failed: result.data.failed,
-        statusChanged: result.data.statusChanged,
+        total: result.total,
+        checked: result.checked,
+        skipped: result.skipped,
+        failed: result.failed,
+        statusChanged: result.statusChanged,
       },
       m: null,
       b: startedAt.toISOString(),
