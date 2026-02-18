@@ -111,12 +111,12 @@ export default function PostCard({
       {/* 内容区域 */}
       <div className="relative z-20 pl-10 pr-12 h-full flex flex-col justify-center pointer-events-none">
         <div className="text-3xl text-white group-hover:text-white transition-colors duration-300 relative">
-          <span
+          <h2
             className="relative inline box-decoration-clone bg-[linear-gradient(white,white)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]"
             data-fade-char
           >
             {title}
-          </span>
+          </h2>
         </div>
         <div className="text-xl py-2 flex items-center flex-nowrap min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-white/90">
           {date && (

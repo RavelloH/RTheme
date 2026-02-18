@@ -119,7 +119,7 @@ export function LoadingAnimation({ mainColor }: LoadingAnimationProps) {
           style={{ paddingTop: "20px", paddingBottom: "20px" }}
         >
           {/* 站点名称 */}
-          <h1
+          <span
             className="font-bold text-foreground whitespace-nowrap"
             style={{
               fontSize: "clamp(36px, 8vw, 72px)",
@@ -128,7 +128,7 @@ export function LoadingAnimation({ mainColor }: LoadingAnimationProps) {
             }}
           >
             {siteName}
-          </h1>
+          </span>
 
           {/* 加载状态文字，带渐变效果 */}
           {/* 使用 grid 布局，确保两个状态的文字占据相同的空间 */}

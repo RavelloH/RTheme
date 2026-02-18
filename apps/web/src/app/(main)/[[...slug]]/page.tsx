@@ -10,6 +10,7 @@ import JsonLdScript from "@/components/server/seo/JsonLdScript";
 import type { PageConfig } from "@/data/default-pages";
 import { buildPageCacheTagsForBlocks } from "@/lib/server/block-cache";
 import { resolveBlockData } from "@/lib/server/block-data-resolver";
+import { getActiveMenusByCategory } from "@/lib/server/menu-cache";
 import {
   getMainRouteTopLevelStaticParams,
   getMatchingPage,
@@ -17,6 +18,7 @@ import {
 } from "@/lib/server/page-cache";
 import { getLatestPublishedPostsForJsonLd } from "@/lib/server/post";
 import {
+  buildMainMenuJsonLdBreadcrumb,
   generateJsonLdGraph,
   generateMetadata as getBaseMetadata,
   type JsonLdBreadcrumbItem,
@@ -127,9 +129,13 @@ export default async function Page({ params }: PageProps<"/[[...slug]]">) {
   if (!match) return notFound();
   const { page, params: resolvedParams } = match;
   const isHomePage = resolvedParams.url === "/";
-  const latestPostsForJsonLd = isHomePage
-    ? await getLatestPublishedPostsForJsonLd(10)
-    : [];
+  const [latestPostsForJsonLd, mainMenus] = await Promise.all([
+    isHomePage ? getLatestPublishedPostsForJsonLd(10) : Promise.resolve([]),
+    isHomePage ? getActiveMenusByCategory("MAIN") : Promise.resolve([]),
+  ]);
+  const breadcrumb = isHomePage
+    ? buildMainMenuJsonLdBreadcrumb(mainMenus)
+    : buildMainRouteBreadcrumb(resolvedParams.url, page.title);
   const jsonLdGraph = await generateJsonLdGraph({
     kind: resolvedParams.url === "/" ? "site" : "webpage",
     pathname: resolvedParams.url,
@@ -142,7 +148,7 @@ export default async function Page({ params }: PageProps<"/[[...slug]]">) {
       : "WebPage",
     publishedAt: page.createdAt,
     updatedAt: page.updatedAt,
-    breadcrumb: buildMainRouteBreadcrumb(resolvedParams.url, page.title),
+    breadcrumb,
     itemList: isHomePage
       ? {
           idSuffix: "latest-posts",
@@ -155,6 +161,15 @@ export default async function Page({ params }: PageProps<"/[[...slug]]">) {
             image: post.featuredImage || undefined,
             datePublished: post.publishedAt || post.createdAt,
             dateModified: post.updatedAt,
+            authors: post.author
+              ? [
+                  {
+                    name: post.author.name,
+                    url: post.author.profilePath,
+                    type: "Person",
+                  },
+                ]
+              : undefined,
           })),
         }
       : undefined,
@@ -170,7 +185,7 @@ export default async function Page({ params }: PageProps<"/[[...slug]]">) {
     "config/seo.index.enable",
   );
   if (isHomePage) {
-    cacheTag("posts/list");
+    cacheTag("posts/list", "menus");
   }
   cacheLife("max");
 

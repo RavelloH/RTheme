@@ -78,6 +78,10 @@ export interface LatestPostJsonLdItem {
   createdAt: Date;
   updatedAt: Date;
   featuredImage: string | null;
+  author: {
+    name: string;
+    profilePath: string;
+  } | null;
 }
 
 export interface RenderedContent {
@@ -223,6 +227,13 @@ export async function getLatestPublishedPostsForJsonLd(
               },
             },
           },
+          author: {
+            select: {
+              uid: true,
+              username: true,
+              nickname: true,
+            },
+          },
         },
         orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
         take,
@@ -237,6 +248,12 @@ export async function getLatestPublishedPostsForJsonLd(
         createdAt: post.createdAt,
         updatedAt: post.updatedAt,
         featuredImage: getFeaturedImageUrl(post.mediaRefs),
+        author: post.author
+          ? {
+              name: post.author.nickname || post.author.username,
+              profilePath: `/user/${post.author.uid}`,
+            }
+          : null,
       }));
     },
     [`latest-posts-jsonld-${normalizedLimit}`],
