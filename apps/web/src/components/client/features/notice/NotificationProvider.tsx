@@ -27,7 +27,6 @@ import { type MessageNotificationItem } from "@/components/client/features/notic
 import { type NotificationItem } from "@/components/client/features/notice/NotificationToast";
 import UnifiedNotificationContainer from "@/components/client/features/notice/UnifiedNotificationContainer";
 import UnreadNoticeTracker from "@/components/client/features/notice/UnreadNoticeTracker";
-import { useConfig } from "@/context/ConfigContext";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 
 type AblyRealtime = Realtime;
@@ -289,11 +288,12 @@ const LOCK_NAME = "ably_connection_lock"; // Web Locks API 锁名称
  */
 export default function NotificationProvider({
   children,
+  ablyEnabled,
 }: {
   children: ReactNode;
+  ablyEnabled: boolean;
 }) {
-  const ablyKey = useConfig("notice.ably.key");
-  const isAblyEnabled = !!ablyKey;
+  const isAblyEnabled = ablyEnabled;
   const { broadcast } = useBroadcastSender<BroadcastMessage>();
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("idle");
