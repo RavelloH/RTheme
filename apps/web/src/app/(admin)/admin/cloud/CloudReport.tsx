@@ -1,0 +1,422 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { RiCloudLine, RiRefreshLine, RiSettings4Line } from "@remixicon/react";
+import type {
+  CloudConfig,
+  CloudHistoryItem,
+  CloudRemoteStatus,
+} from "@repo/shared-types/api/cloud";
+
+import {
+  getCloudConfig,
+  getCloudHistory,
+  getCloudRemoteStatus,
+  syncCloudNow,
+  updateCloudConfig,
+} from "@/actions/cloud";
+import { GridItem } from "@/components/client/layout/RowGrid";
+import ErrorPage from "@/components/ui/Error";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
+import { AlertDialog } from "@/ui/AlertDialog";
+import { AutoTransition } from "@/ui/AutoTransition";
+import { Button } from "@/ui/Button";
+import Clickable from "@/ui/Clickable";
+import { Dialog } from "@/ui/Dialog";
+import { Input } from "@/ui/Input";
+import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { Switch } from "@/ui/Switch";
+import { useToast } from "@/ui/Toast";
+
+const CLOUD_STATUS_LABELS: Record<string, string> = {
+  active: "已激活",
+  pending_url: "待补全 URL",
+  disabled: "已停用",
+};
+
+const LOCAL_STATUS_LABELS: Record<CloudHistoryItem["status"], string> = {
+  RECEIVED: "已接收",
+  DONE: "已完成",
+  ERROR: "执行失败",
+  REJECTED: "已拒绝",
+};
+
+const VERIFY_SOURCE_LABELS: Record<
+  NonNullable<CloudHistoryItem["verifySource"]>,
+  string
+> = {
+  DOH: "DoH",
+  JWKS: "JWKS",
+  NONE: "NONE",
+};
+
+function formatDateTime(value: string): string {
+  return new Date(value).toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+function formatRate(value: number | null | undefined): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "-";
+  return `${(value * 100).toFixed(2)}%`;
+}
+
+function buildSummary(
+  config: CloudConfig,
+  remote: CloudRemoteStatus | null,
+  latest: CloudHistoryItem | null,
+): string[] {
+  const lines: string[] = [];
+  lines.push(`云端互联总开关：${config.enabled ? "已开启" : "已关闭"}。`);
+  lines.push(`实例 ID：${config.siteId || "尚未生成"}。`);
+
+  if (remote?.available) {
+    const remoteStatus = remote.status
+      ? (CLOUD_STATUS_LABELS[remote.status] ?? remote.status)
+      : "未知";
+    lines.push(
+      `云端状态：${remoteStatus}；事件总数 ${remote.eventsTotal ?? "-"}，成功率 ${formatRate(remote.successRate)}。`,
+    );
+    if (remote.registeredAt) {
+      lines.push(`注册时间：${formatDateTime(remote.registeredAt)}。`);
+    }
+  } else if (remote?.message) {
+    lines.push(`云端状态暂不可用：${remote.message}。`);
+  } else {
+    lines.push("云端状态暂不可用。");
+  }
+
+  if (!latest) {
+    lines.push("本地尚无云触发历史记录。");
+  } else {
+    lines.push(
+      `本地最近投递：${formatDateTime(latest.receivedAt)}，状态 ${LOCAL_STATUS_LABELS[latest.status]}，验签来源 ${latest.verifySource ? VERIFY_SOURCE_LABELS[latest.verifySource] : "无"}。`,
+    );
+  }
+  return lines;
+}
+
+export default function CloudReport() {
+  const toast = useToast();
+  const { broadcast } = useBroadcastSender<{ type: string }>();
+
+  const [config, setConfig] = useState<CloudConfig | null>(null);
+  const [remoteStatus, setRemoteStatus] = useState<CloudRemoteStatus | null>(
+    null,
+  );
+  const [latestRecord, setLatestRecord] = useState<CloudHistoryItem | null>(
+    null,
+  );
+  const [error, setError] = useState<Error | null>(null);
+
+  const [manageDialogOpen, setManageDialogOpen] = useState(false);
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  const [draftEnabled, setDraftEnabled] = useState(true);
+  const [draftCloudBaseUrl, setDraftCloudBaseUrl] = useState("");
+  const [draftDohDomain, setDraftDohDomain] = useState("");
+  const [draftJwksUrl, setDraftJwksUrl] = useState("");
+  const [draftIssuer, setDraftIssuer] = useState("");
+  const [draftAudience, setDraftAudience] = useState("");
+
+  const fetchData = useCallback(
+    async (forceRefresh: boolean) => {
+      if (forceRefresh) {
+        setConfig(null);
+        setRemoteStatus(null);
+        setLatestRecord(null);
+      }
+
+      setError(null);
+      try {
+        const [configResult, remoteResult, historyResult] = await Promise.all([
+          getCloudConfig({}),
+          getCloudRemoteStatus({}),
+          getCloudHistory({
+            page: 1,
+            pageSize: 1,
+            sortBy: "receivedAt",
+            sortOrder: "desc",
+          }),
+        ]);
+
+        if (!configResult.success || !configResult.data) {
+          setError(new Error(configResult.message || "获取云配置失败"));
+          return;
+        }
+
+        setConfig(configResult.data);
+        if (remoteResult.success && remoteResult.data) {
+          setRemoteStatus(remoteResult.data);
+        } else {
+          setRemoteStatus(null);
+        }
+
+        if (
+          historyResult.success &&
+          historyResult.data &&
+          historyResult.data.length > 0
+        ) {
+          setLatestRecord(historyResult.data[0] ?? null);
+        } else {
+          setLatestRecord(null);
+        }
+
+        if (forceRefresh) {
+          await broadcast({ type: "cloud-refresh" });
+        }
+      } catch (fetchError) {
+        console.error("[CloudReport] 获取数据失败:", fetchError);
+        setError(new Error("获取云端互联数据失败"));
+      }
+    },
+    [broadcast],
+  );
+
+  useBroadcast<{ type: string }>((message) => {
+    if (message.type === "cloud-refresh") {
+      void fetchData(false);
+    }
+  });
+
+  useEffect(() => {
+    void fetchData(false);
+  }, [fetchData]);
+
+  const summaryLines = useMemo(() => {
+    if (!config) return [];
+    return buildSummary(config, remoteStatus, latestRecord);
+  }, [config, remoteStatus, latestRecord]);
+
+  const openManageDialog = useCallback(() => {
+    if (!config) return;
+    setDraftEnabled(config.enabled);
+    setDraftCloudBaseUrl(config.cloudBaseUrl);
+    setDraftDohDomain(config.dohDomain);
+    setDraftJwksUrl(config.jwksUrl);
+    setDraftIssuer(config.issuer);
+    setDraftAudience(config.audience);
+    setManageDialogOpen(true);
+  }, [config]);
+
+  const handleSaveConfig = useCallback(async () => {
+    setSavingConfig(true);
+    try {
+      const result = await updateCloudConfig({
+        enabled: draftEnabled,
+        cloudBaseUrl: draftCloudBaseUrl,
+        dohDomain: draftDohDomain,
+        jwksUrl: draftJwksUrl,
+        issuer: draftIssuer,
+        audience: draftAudience,
+      });
+
+      if (!result.success || !result.data) {
+        toast.error(result.message || "保存云配置失败");
+        return;
+      }
+
+      toast.success("云端互联配置已更新");
+      setManageDialogOpen(false);
+      await fetchData(true);
+    } catch (saveError) {
+      console.error("[CloudReport] 保存配置失败:", saveError);
+      toast.error("保存云配置失败");
+    } finally {
+      setSavingConfig(false);
+    }
+  }, [
+    draftAudience,
+    draftCloudBaseUrl,
+    draftDohDomain,
+    draftEnabled,
+    draftIssuer,
+    draftJwksUrl,
+    fetchData,
+    toast,
+  ]);
+
+  const handleManualSync = useCallback(async () => {
+    setSyncing(true);
+    try {
+      const result = await syncCloudNow({});
+      if (!result.success || !result.data) {
+        toast.error(result.message || "手动同步失败");
+        return;
+      }
+
+      if (result.data.synced) {
+        toast.success("手动同步成功");
+      } else {
+        toast.error(result.data.message || "手动同步失败");
+      }
+      setSyncDialogOpen(false);
+      await fetchData(true);
+    } catch (syncError) {
+      console.error("[CloudReport] 手动同步失败:", syncError);
+      toast.error("手动同步失败，请稍后重试");
+    } finally {
+      setSyncing(false);
+    }
+  }, [fetchData, toast]);
+
+  return (
+    <>
+      <GridItem areas={[1, 2, 3, 4]} width={3} height={0.8}>
+        <AutoTransition type="scale" className="h-full">
+          {config ? (
+            <div className="flex h-full flex-col justify-between p-10">
+              <div>
+                <div className="py-2 text-2xl">云端互联汇报</div>
+                <div className="space-y-1">
+                  {summaryLines.map((line) => (
+                    <div key={line}>{line}</div>
+                  ))}
+                </div>
+              </div>
+              <div className="inline-flex items-center gap-2">
+                最近刷新于:{" "}
+                {formatDateTime(
+                  latestRecord?.receivedAt ||
+                    config.updatedAt ||
+                    new Date().toISOString(),
+                )}
+                <Clickable onClick={() => void fetchData(true)}>
+                  <RiRefreshLine size="1em" />
+                </Clickable>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="h-full px-10">
+              <ErrorPage reason={error} reset={() => void fetchData(true)} />
+            </div>
+          ) : (
+            <div className="h-full">
+              <LoadingIndicator />
+            </div>
+          )}
+        </AutoTransition>
+      </GridItem>
+
+      <GridItem areas={[5, 6]} width={6} height={0.2}>
+        <AutoTransition type="scale" className="h-full">
+          <button
+            className="h-full w-full flex gap-2 items-center justify-center text-2xl hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
+            onClick={openManageDialog}
+          >
+            <RiSettings4Line size="1.1em" />
+            管理云端互联
+          </button>
+        </AutoTransition>
+      </GridItem>
+
+      <GridItem areas={[7, 8]} width={6} height={0.2}>
+        <AutoTransition type="scale" className="h-full">
+          <button
+            className="h-full w-full flex gap-2 items-center justify-center text-2xl hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
+            onClick={() => setSyncDialogOpen(true)}
+          >
+            <RiCloudLine size="1.1em" />
+            手动同步
+          </button>
+        </AutoTransition>
+      </GridItem>
+
+      <AlertDialog
+        open={syncDialogOpen}
+        onClose={() => setSyncDialogOpen(false)}
+        onConfirm={() => void handleManualSync()}
+        title="确认手动同步"
+        description="将立刻向 NeutralPress Cloud 上报当前实例配置，是否继续？"
+        confirmText="立即同步"
+        cancelText="取消"
+        variant="info"
+        loading={syncing}
+      />
+
+      <Dialog
+        open={manageDialogOpen}
+        onClose={() => setManageDialogOpen(false)}
+        title="云端互联设置"
+        size="lg"
+      >
+        <div className="px-6 py-6 space-y-6">
+          <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+            基础开关
+          </h3>
+          <Switch
+            label="启用 NeutralPress Cloud"
+            checked={draftEnabled}
+            onCheckedChange={setDraftEnabled}
+            disabled={savingConfig}
+          />
+
+          <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+            连接配置
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              size="sm"
+              label="Cloud Base URL"
+              value={draftCloudBaseUrl}
+              onChange={(event) => setDraftCloudBaseUrl(event.target.value)}
+              disabled={savingConfig}
+            />
+            <Input
+              size="sm"
+              label="DoH Domain"
+              value={draftDohDomain}
+              onChange={(event) => setDraftDohDomain(event.target.value)}
+              disabled={savingConfig}
+            />
+            <Input
+              size="sm"
+              label="JWKS URL"
+              value={draftJwksUrl}
+              onChange={(event) => setDraftJwksUrl(event.target.value)}
+              disabled={savingConfig}
+            />
+            <Input
+              size="sm"
+              label="Issuer"
+              value={draftIssuer}
+              onChange={(event) => setDraftIssuer(event.target.value)}
+              disabled={savingConfig}
+            />
+            <Input
+              size="sm"
+              label="Audience"
+              value={draftAudience}
+              onChange={(event) => setDraftAudience(event.target.value)}
+              disabled={savingConfig}
+            />
+          </div>
+
+          <div className="flex justify-end gap-4 pt-4 border-t border-foreground/10">
+            <Button
+              label="取消"
+              variant="ghost"
+              size="sm"
+              disabled={savingConfig}
+              onClick={() => setManageDialogOpen(false)}
+            />
+            <Button
+              label="保存配置"
+              variant="primary"
+              size="sm"
+              loading={savingConfig}
+              onClick={() => void handleSaveConfig()}
+            />
+          </div>
+        </div>
+      </Dialog>
+    </>
+  );
+}

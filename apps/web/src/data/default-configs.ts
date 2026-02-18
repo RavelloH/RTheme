@@ -596,6 +596,49 @@ export const CONFIG_DEFINITIONS = {
     description: "计划任务是否执行 friends 检查",
   },
   // =====================================
+  // 云端互联
+  // =====================================
+  "cloud.enable": {
+    default: true,
+    description: "是否启用 NeutralPress Cloud 互联功能",
+  },
+  "cloud.id": {
+    default: "",
+    description: "实例唯一标识（UUID）。若为空，构建阶段将自动生成并写入",
+  },
+  "cloud.key.alg": {
+    default: "ed25519",
+    description: "实例签名算法。当前固定为 ed25519",
+  },
+  "cloud.key.pub": {
+    default: "",
+    description: "实例公钥（PEM）。构建阶段自动生成",
+  },
+  "cloud.key.priv": {
+    default: "",
+    description: "实例私钥（PEM）。构建阶段自动生成",
+  },
+  "cloud.api.baseUrl": {
+    default: "https://cloud.neutralpress.net",
+    description: "NeutralPress Cloud 服务地址（不含尾部斜杠）",
+  },
+  "cloud.verify.dohDomain": {
+    default: "key.neutralpress.net",
+    description: "云端验签公钥的 DoH TXT 域名",
+  },
+  "cloud.verify.jwksUrl": {
+    default: "https://cloud.neutralpress.net/.well-known/jwks.json",
+    description: "DoH 验签失败时的 JWKS 回退地址",
+  },
+  "cloud.verify.issuer": {
+    default: "np-cloud",
+    description: "云端触发 JWT 的 issuer 期望值",
+  },
+  "cloud.verify.audience": {
+    default: "np-instance",
+    description: "云端触发 JWT 的 audience 期望值",
+  },
+  // =====================================
   // AI 集成
   // =====================================
   "ai.enable": {

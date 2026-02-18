@@ -389,6 +389,124 @@ async function executeFriendsTask(): Promise<CronTaskSnapshot> {
   }
 }
 
+async function runCronAndPersist(
+  triggerType: "MANUAL" | "CLOUD" | "AUTO",
+): Promise<CronHistoryRecord> {
+  const config = await loadCronConfigState();
+  const startedAt = new Date();
+  const startedAtMs = Date.now();
+
+  const taskSnapshots: Record<CronTaskKey, CronTaskSnapshot> = {
+    doctor: createSkippedTaskSnapshot("task disabled"),
+    projects: createSkippedTaskSnapshot("task disabled"),
+    friends: createSkippedTaskSnapshot("task disabled"),
+  };
+
+  const taskEnabled: Record<CronTaskKey, boolean> = {
+    doctor: config.enabled && config.tasks.doctor,
+    projects: config.enabled && config.tasks.projects,
+    friends: config.enabled && config.tasks.friends,
+  };
+
+  if (!config.enabled) {
+    taskSnapshots.doctor = createSkippedTaskSnapshot("cron disabled");
+    taskSnapshots.projects = createSkippedTaskSnapshot("cron disabled");
+    taskSnapshots.friends = createSkippedTaskSnapshot("cron disabled");
+  } else {
+    const runners: Array<Promise<void>> = [];
+
+    for (const key of CRON_TASK_KEYS) {
+      if (!taskEnabled[key]) {
+        taskSnapshots[key] = createSkippedTaskSnapshot("task disabled");
+        continue;
+      }
+
+      if (key === "doctor") {
+        runners.push(
+          (async () => {
+            taskSnapshots.doctor = await executeDoctorTask();
+          })(),
+        );
+      } else if (key === "projects") {
+        runners.push(
+          (async () => {
+            taskSnapshots.projects = await executeProjectsTask();
+          })(),
+        );
+      } else {
+        runners.push(
+          (async () => {
+            taskSnapshots.friends = await executeFriendsTask();
+          })(),
+        );
+      }
+    }
+
+    await Promise.all(runners);
+  }
+
+  const totalCount = CRON_TASK_KEYS.length;
+  const enabledCount = CRON_TASK_KEYS.filter((key) => taskEnabled[key]).length;
+  const successCount = CRON_TASK_KEYS.filter(
+    (key) => taskSnapshots[key].x && taskSnapshots[key].s === "O",
+  ).length;
+  const failedCount = CRON_TASK_KEYS.filter(
+    (key) => taskSnapshots[key].x && taskSnapshots[key].s === "E",
+  ).length;
+  const skippedCount = CRON_TASK_KEYS.filter(
+    (key) => taskSnapshots[key].s === "S",
+  ).length;
+
+  const status = getCronStatus(enabledCount, successCount, failedCount);
+  const durationMs = Date.now() - startedAtMs;
+
+  const snapshot: CronSnapshot = {
+    version: 1,
+    tasks: taskSnapshots,
+  };
+
+  return await prisma.cronHistory.create({
+    data: {
+      startedAt,
+      durationMs,
+      triggerType,
+      status,
+      totalCount,
+      enabledCount,
+      successCount,
+      failedCount,
+      skippedCount,
+      snapshot: snapshot as unknown as Prisma.InputJsonValue,
+    },
+    select: {
+      id: true,
+      startedAt: true,
+      createdAt: true,
+      durationMs: true,
+      triggerType: true,
+      status: true,
+      totalCount: true,
+      enabledCount: true,
+      successCount: true,
+      failedCount: true,
+      skippedCount: true,
+      snapshot: true,
+    },
+  });
+}
+
+export async function triggerCronInternal(
+  triggerType: "MANUAL" | "CLOUD" | "AUTO" = "CLOUD",
+): Promise<CronHistoryItem | null> {
+  try {
+    const record = await runCronAndPersist(triggerType);
+    return toCronHistoryItem(record);
+  } catch (error) {
+    console.error("Trigger cron internal error:", error);
+    return null;
+  }
+}
+
 export async function triggerCron(
   params: TriggerCron,
   serverConfig: { environment: "serverless" },
@@ -427,109 +545,7 @@ export async function triggerCron(
   }
 
   try {
-    const config = await loadCronConfigState();
-    const startedAt = new Date();
-    const startedAtMs = Date.now();
-
-    const taskSnapshots: Record<CronTaskKey, CronTaskSnapshot> = {
-      doctor: createSkippedTaskSnapshot("task disabled"),
-      projects: createSkippedTaskSnapshot("task disabled"),
-      friends: createSkippedTaskSnapshot("task disabled"),
-    };
-
-    const taskEnabled: Record<CronTaskKey, boolean> = {
-      doctor: config.enabled && config.tasks.doctor,
-      projects: config.enabled && config.tasks.projects,
-      friends: config.enabled && config.tasks.friends,
-    };
-
-    if (!config.enabled) {
-      taskSnapshots.doctor = createSkippedTaskSnapshot("cron disabled");
-      taskSnapshots.projects = createSkippedTaskSnapshot("cron disabled");
-      taskSnapshots.friends = createSkippedTaskSnapshot("cron disabled");
-    } else {
-      const runners: Array<Promise<void>> = [];
-
-      for (const key of CRON_TASK_KEYS) {
-        if (!taskEnabled[key]) {
-          taskSnapshots[key] = createSkippedTaskSnapshot("task disabled");
-          continue;
-        }
-
-        if (key === "doctor") {
-          runners.push(
-            (async () => {
-              taskSnapshots.doctor = await executeDoctorTask();
-            })(),
-          );
-        } else if (key === "projects") {
-          runners.push(
-            (async () => {
-              taskSnapshots.projects = await executeProjectsTask();
-            })(),
-          );
-        } else {
-          runners.push(
-            (async () => {
-              taskSnapshots.friends = await executeFriendsTask();
-            })(),
-          );
-        }
-      }
-
-      await Promise.all(runners);
-    }
-
-    const totalCount = CRON_TASK_KEYS.length;
-    const enabledCount = CRON_TASK_KEYS.filter(
-      (key) => taskEnabled[key],
-    ).length;
-    const successCount = CRON_TASK_KEYS.filter(
-      (key) => taskSnapshots[key].x && taskSnapshots[key].s === "O",
-    ).length;
-    const failedCount = CRON_TASK_KEYS.filter(
-      (key) => taskSnapshots[key].x && taskSnapshots[key].s === "E",
-    ).length;
-    const skippedCount = CRON_TASK_KEYS.filter(
-      (key) => taskSnapshots[key].s === "S",
-    ).length;
-
-    const status = getCronStatus(enabledCount, successCount, failedCount);
-    const durationMs = Date.now() - startedAtMs;
-
-    const snapshot: CronSnapshot = {
-      version: 1,
-      tasks: taskSnapshots,
-    };
-
-    const record = await prisma.cronHistory.create({
-      data: {
-        startedAt,
-        durationMs,
-        triggerType,
-        status,
-        totalCount,
-        enabledCount,
-        successCount,
-        failedCount,
-        skippedCount,
-        snapshot: snapshot as unknown as Prisma.InputJsonValue,
-      },
-      select: {
-        id: true,
-        startedAt: true,
-        createdAt: true,
-        durationMs: true,
-        triggerType: true,
-        status: true,
-        totalCount: true,
-        enabledCount: true,
-        successCount: true,
-        failedCount: true,
-        skippedCount: true,
-        snapshot: true,
-      },
-    });
+    const record = await runCronAndPersist(triggerType);
 
     try {
       await logAuditEvent({
