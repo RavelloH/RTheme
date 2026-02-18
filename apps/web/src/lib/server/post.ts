@@ -329,81 +329,8 @@ export interface RecommendedPostData {
   matchedKeywords: string[];
 }
 
-interface RecommendationTokenStat {
-  token: string;
-  count: number;
-}
-
 const RECOMMENDATION_DEFAULT_LIMIT = 6;
 const RECOMMENDATION_DEFAULT_CANDIDATE_LIMIT = 80;
-const RECOMMENDATION_TARGET_CONTENT_LIMIT = 2400;
-const RECOMMENDATION_TOKEN_LIMIT = 20;
-
-function isValidRecommendationToken(token: string): boolean {
-  if (token.length < 2 || token.length > 40) {
-    return false;
-  }
-
-  if (/^\d+$/.test(token)) {
-    return false;
-  }
-
-  return /[a-zA-Z0-9\u4e00-\u9fff]/.test(token);
-}
-
-function extractTokenFrequencyFromTsvector(
-  tsvectorStr: string | null | undefined,
-): Map<string, number> {
-  const frequency = new Map<string, number>();
-  if (!tsvectorStr) return frequency;
-
-  const matches = tsvectorStr.match(/'([^']+)':[\d,]+/g) || [];
-
-  for (const match of matches) {
-    const tokenMatch = match.match(/'([^']+)':([\d,]+)/);
-    if (!tokenMatch || !tokenMatch[1] || !tokenMatch[2]) {
-      continue;
-    }
-
-    const token = tokenMatch[1].trim().toLowerCase();
-    if (!isValidRecommendationToken(token)) {
-      continue;
-    }
-
-    const positions = tokenMatch[2].split(",").filter(Boolean).length;
-    if (positions <= 0) {
-      continue;
-    }
-
-    frequency.set(token, (frequency.get(token) || 0) + positions);
-  }
-
-  return frequency;
-}
-
-function getTopFrequentTokensFromSearchVectors(
-  titleSearchVector: string | null | undefined,
-  contentSearchVector: string | null | undefined,
-  limit: number,
-): RecommendationTokenStat[] {
-  const titleFrequency = extractTokenFrequencyFromTsvector(titleSearchVector);
-  const contentFrequency =
-    extractTokenFrequencyFromTsvector(contentSearchVector);
-
-  for (const [token, count] of contentFrequency.entries()) {
-    titleFrequency.set(token, (titleFrequency.get(token) || 0) + count);
-  }
-
-  return Array.from(titleFrequency.entries())
-    .map(([token, count]) => ({ token, count }))
-    .sort((a, b) => {
-      if (b.count !== a.count) {
-        return b.count - a.count;
-      }
-      return b.token.length - a.token.length;
-    })
-    .slice(0, limit);
-}
 
 function toSafePositiveInt(
   value: number,
@@ -562,7 +489,7 @@ export async function getAdjacentPosts(
 
 /**
  * 获取推荐文章
- * 推荐维度：分类、标签、数据库分词向量高频词
+ * 推荐维度：分类、标签
  */
 export async function getRecommendedPosts(
   currentPost: FullPostData,
@@ -589,30 +516,12 @@ export async function getRecommendedPosts(
       );
       const currentTagSlugs = new Set(currentPost.tags.map((t) => t.slug));
 
-      const vectorData = await prisma.$queryRawUnsafe<
-        Array<{
-          titleSearchVector: string | null;
-          contentSearchVector: string | null;
-        }>
-      >(
-        `SELECT "titleSearchVector"::text as "titleSearchVector", "contentSearchVector"::text as "contentSearchVector" FROM "Post" WHERE id = $1`,
-        currentPost.id,
-      );
-
-      const topTokenStats = getTopFrequentTokensFromSearchVectors(
-        vectorData[0]?.titleSearchVector,
-        vectorData[0]?.contentSearchVector,
-        RECOMMENDATION_TOKEN_LIMIT,
-      );
-
       const postSelect = {
         title: true,
         slug: true,
         excerpt: true,
         publishedAt: true,
         createdAt: true,
-        metaKeywords: true,
-        plain: true,
         mediaRefs: {
           where: {
             slot: MEDIA_SLOTS.POST_FEATURED_IMAGE,
@@ -717,37 +626,13 @@ export async function getRecommendedPosts(
           const matchedTagCount = candidate.tags.reduce((count, tag) => {
             return count + (currentTagSlugs.has(tag.slug) ? 1 : 0);
           }, 0);
-
-          const targetTitle = candidate.title.toLowerCase();
-          const targetText = [
-            targetTitle,
-            candidate.excerpt || "",
-            candidate.metaKeywords || "",
-            candidate.plain?.slice(0, RECOMMENDATION_TARGET_CONTENT_LIMIT) ||
-              "",
-            candidate.categories.map((category) => category.name).join(" "),
-            candidate.tags.map((tag) => tag.name).join(" "),
-          ]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase();
-
-          const matchedKeywords: string[] = [];
-          let tokenScore = 0;
-          for (const tokenStat of topTokenStats) {
-            if (targetText.includes(tokenStat.token)) {
-              matchedKeywords.push(tokenStat.token);
-              tokenScore += Math.min(tokenStat.count, 4);
-            }
-          }
-
           const recommendationScore =
-            matchedCategoryCount * 12 + matchedTagCount * 8 + tokenScore;
+            matchedCategoryCount * 12 + matchedTagCount * 8;
 
           return {
             ...candidate,
             recommendationScore,
-            matchedKeywords,
+            matchedKeywords: [],
           };
         },
       );
