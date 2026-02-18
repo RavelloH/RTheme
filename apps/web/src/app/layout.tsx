@@ -98,7 +98,7 @@ export default async function RootLayout({
       siteCopyright,
       siteAuthor,
       enableAnalytics,
-      ablyEnabled,
+      ablyApiKey,
       shikiTheme,
       mediaCustomLoader,
     ],
@@ -122,6 +122,8 @@ export default async function RootLayout({
 
   const customScript =
     typeof customScriptConfig === "string" ? customScriptConfig.trim() : "";
+  const isAblyEnabled =
+    typeof ablyApiKey === "string" && ablyApiKey.trim().length > 0;
 
   // 打包配置
   const configs = {
@@ -135,7 +137,6 @@ export default async function RootLayout({
     "author.name": siteAuthor,
     "site.shiki.theme": shikiTheme,
     "analytics.enable": enableAnalytics,
-    "notice.ably.key": ablyEnabled,
     "media.customLoader": mediaCustomLoader,
   };
 
@@ -158,7 +159,7 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <ConfigProvider configs={configs}>
-              <NotificationProvider>
+              <NotificationProvider ablyEnabled={isAblyEnabled}>
                 <MenuProvider menus={menus}>
                   <ResponsiveFontScale scaleFactor={0.017} baseSize={0}>
                     <LoadingAnimation mainColor={mainColor} />
