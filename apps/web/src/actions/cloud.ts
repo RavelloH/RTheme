@@ -64,6 +64,7 @@ type ActionResult<T extends ApiResponseData> =
 const CLOUD_CONFIG_KEYS = [
   "cloud.enable",
   "cloud.id",
+  "cloud.schedule.time",
   "cloud.api.baseUrl",
   "cloud.verify.dohDomain",
   "cloud.verify.jwksUrl",
@@ -74,6 +75,7 @@ const CLOUD_CONFIG_KEYS = [
 const CLOUD_IDENTITY_KEYS = [
   "cloud.enable",
   "cloud.id",
+  "cloud.schedule.time",
   "cloud.key.pub",
   "cloud.key.priv",
   "cloud.key.alg",
@@ -104,6 +106,8 @@ type CloudIdentity = {
   sitePubKey: string;
   sitePrivKey: string;
   siteKeyAlg: string;
+  scheduleTime: string | null;
+  scheduleMinuteOfDay: number | null;
   cloudBaseUrl: string;
   siteUrl: string | null;
 };
@@ -158,6 +162,29 @@ function normalizeSiteUrlForCloud(raw: string): string | null {
   }
 
   return `${parsed.protocol}//${parsed.host}`;
+}
+
+function normalizeCloudScheduleTime(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(trimmed);
+  if (!match) return null;
+
+  return `${match[1]}:${match[2]}`;
+}
+
+function scheduleTimeToMinuteOfDay(value: string | null): number | null {
+  if (!value) return null;
+  const [hourRaw, minuteRaw] = value.split(":");
+  const hour = Number.parseInt(hourRaw ?? "", 10);
+  const minute = Number.parseInt(minuteRaw ?? "", 10);
+
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+
+  return hour * 60 + minute;
 }
 
 function isUuid(value: string): boolean {
@@ -305,8 +332,16 @@ function resolveBuildIdFromCommit(commit: string | null): string | null {
 }
 
 async function loadCloudConfigState(): Promise<CloudConfig> {
-  const [enabled, siteId, baseUrl, dohDomain, jwksUrl, issuer, audience] =
-    await getConfigs([...CLOUD_CONFIG_KEYS]);
+  const [
+    enabled,
+    siteId,
+    scheduleTimeRaw,
+    baseUrl,
+    dohDomain,
+    jwksUrl,
+    issuer,
+    audience,
+  ] = await getConfigs([...CLOUD_CONFIG_KEYS]);
 
   const updatedRecords = await prisma.config.findMany({
     where: {
@@ -335,6 +370,7 @@ async function loadCloudConfigState(): Promise<CloudConfig> {
   return {
     enabled: Boolean(enabled),
     siteId: normalizeString(siteId) || null,
+    scheduleTime: normalizeCloudScheduleTime(scheduleTimeRaw),
     cloudBaseUrl: normalizeCloudBaseUrl(normalizeString(baseUrl)),
     dohDomain: normalizeString(dohDomain) || "key.neutralpress.net",
     jwksUrl:
@@ -373,6 +409,7 @@ async function ensureCloudIdentityForSync(): Promise<{
   const [
     enabledRaw,
     siteIdRaw,
+    scheduleTimeRaw,
     sitePubKeyRaw,
     sitePrivKeyRaw,
     siteKeyAlgRaw,
@@ -394,6 +431,8 @@ async function ensureCloudIdentityForSync(): Promise<{
   let sitePubKey = normalizeString(sitePubKeyRaw);
   let sitePrivKey = normalizeString(sitePrivKeyRaw);
   const siteKeyAlg = normalizeString(siteKeyAlgRaw) || "ed25519";
+  const scheduleTime = normalizeCloudScheduleTime(scheduleTimeRaw);
+  const scheduleMinuteOfDay = scheduleTimeToMinuteOfDay(scheduleTime);
   const cloudBaseUrl = normalizeCloudBaseUrl(normalizeString(cloudBaseUrlRaw));
   const siteUrl = normalizeSiteUrlForCloud(normalizeString(siteUrlRaw));
 
@@ -431,6 +470,8 @@ async function ensureCloudIdentityForSync(): Promise<{
       sitePubKey,
       sitePrivKey,
       siteKeyAlg,
+      scheduleTime,
+      scheduleMinuteOfDay,
       cloudBaseUrl,
       siteUrl,
     },
@@ -465,6 +506,7 @@ async function syncCloudIdentity(identity: CloudIdentity): Promise<{
     sitePubKey: identity.sitePubKey,
     siteKeyAlg: identity.siteKeyAlg,
     siteUrl: identity.siteUrl,
+    minuteOfDay: identity.scheduleMinuteOfDay,
     appVersion,
     buildId,
     commit,
@@ -742,6 +784,7 @@ export async function updateCloudConfig(
   {
     access_token,
     enabled,
+    scheduleTime,
     cloudBaseUrl,
     dohDomain,
     jwksUrl,
@@ -762,6 +805,7 @@ export async function updateCloudConfig(
     {
       access_token,
       enabled,
+      scheduleTime,
       cloudBaseUrl,
       dohDomain,
       jwksUrl,
@@ -786,6 +830,12 @@ export async function updateCloudConfig(
 
     if (enabled !== undefined) {
       updates.push({ key: "cloud.enable", value: enabled });
+    }
+    if (scheduleTime !== undefined) {
+      updates.push({
+        key: "cloud.schedule.time",
+        value: normalizeCloudScheduleTime(scheduleTime) ?? "",
+      });
     }
     if (cloudBaseUrl !== undefined) {
       updates.push({

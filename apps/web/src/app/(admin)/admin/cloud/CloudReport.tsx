@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { RiCloudLine, RiRefreshLine, RiSettings4Line } from "@remixicon/react";
+import { RiRefreshLine, RiSettings4Line } from "@remixicon/react";
 import type {
   CloudConfig,
   CloudHistoryItem,
@@ -18,7 +18,6 @@ import {
 import { GridItem } from "@/components/client/layout/RowGrid";
 import ErrorPage from "@/components/ui/Error";
 import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
-import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
 import Clickable from "@/ui/Clickable";
@@ -66,14 +65,73 @@ function formatRate(value: number | null | undefined): string {
   return `${(value * 100).toFixed(2)}%`;
 }
 
+function normalizeHhMm(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(trimmed);
+  if (!match) return null;
+  return `${match[1]}:${match[2]}`;
+}
+
+function minuteToHhMm(minuteOfDay: number): string {
+  const minute = ((minuteOfDay % 1440) + 1440) % 1440;
+  const hourPart = String(Math.floor(minute / 60)).padStart(2, "0");
+  const minutePart = String(minute % 60).padStart(2, "0");
+  return `${hourPart}:${minutePart}`;
+}
+
+function hhMmToMinute(value: string): number {
+  const [hourRaw, minuteRaw] = value.split(":");
+  const hour = Number.parseInt(hourRaw ?? "0", 10);
+  const minute = Number.parseInt(minuteRaw ?? "0", 10);
+  return hour * 60 + minute;
+}
+
+function utcToLocalHhMm(utcHhMm: string | null | undefined): string | null {
+  const normalized = normalizeHhMm(utcHhMm);
+  if (!normalized) return null;
+  const utcMinute = hhMmToMinute(normalized);
+  const offset = new Date().getTimezoneOffset();
+  return minuteToHhMm(utcMinute - offset);
+}
+
+function localToUtcHhMm(localHhMm: string | null | undefined): string | null {
+  const normalized = normalizeHhMm(localHhMm);
+  if (!normalized) return null;
+  const localMinute = hhMmToMinute(normalized);
+  const offset = new Date().getTimezoneOffset();
+  return minuteToHhMm(localMinute + offset);
+}
+
+function utcMinuteToLocalHhMm(value: number | null | undefined): string | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  const utcMinute = ((Math.round(value) % 1440) + 1440) % 1440;
+  const offset = new Date().getTimezoneOffset();
+  return minuteToHhMm(utcMinute - offset);
+}
+
+function getLocalTimezoneLabel(): string {
+  const offsetMinutes = -new Date().getTimezoneOffset();
+  const sign = offsetMinutes >= 0 ? "+" : "-";
+  const absMinutes = Math.abs(offsetMinutes);
+  const hourPart = String(Math.floor(absMinutes / 60)).padStart(2, "0");
+  const minutePart = String(absMinutes % 60).padStart(2, "0");
+  return `UTC${sign}${hourPart}:${minutePart}`;
+}
+
 function buildSummary(
   config: CloudConfig,
   remote: CloudRemoteStatus | null,
   latest: CloudHistoryItem | null,
 ): string[] {
+  const timezone = getLocalTimezoneLabel();
+  const localScheduleTime = utcToLocalHhMm(config.scheduleTime);
   const lines: string[] = [];
   lines.push(`云端互联总开关：${config.enabled ? "已开启" : "已关闭"}。`);
   lines.push(`实例 ID：${config.siteId || "尚未生成"}。`);
+  lines.push(
+    `本地计划执行时间（${timezone}）：${localScheduleTime ?? "未设置（云端随机分配）"}。`,
+  );
 
   if (remote?.available) {
     const remoteStatus = remote.status
@@ -84,6 +142,10 @@ function buildSummary(
     );
     if (remote.registeredAt) {
       lines.push(`注册时间：${formatDateTime(remote.registeredAt)}。`);
+    }
+    const localMinuteSlot = utcMinuteToLocalHhMm(remote.minuteOfDay);
+    if (localMinuteSlot) {
+      lines.push(`云端当前执行槽位（${timezone}）：${localMinuteSlot}。`);
     }
   } else if (remote?.message) {
     lines.push(`云端状态暂不可用：${remote.message}。`);
@@ -115,11 +177,10 @@ export default function CloudReport() {
   const [error, setError] = useState<Error | null>(null);
 
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
-  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
-  const [syncing, setSyncing] = useState(false);
 
   const [draftEnabled, setDraftEnabled] = useState(true);
+  const [draftScheduleTime, setDraftScheduleTime] = useState("");
   const [draftCloudBaseUrl, setDraftCloudBaseUrl] = useState("");
   const [draftDohDomain, setDraftDohDomain] = useState("");
   const [draftJwksUrl, setDraftJwksUrl] = useState("");
@@ -198,6 +259,7 @@ export default function CloudReport() {
   const openManageDialog = useCallback(() => {
     if (!config) return;
     setDraftEnabled(config.enabled);
+    setDraftScheduleTime(utcToLocalHhMm(config.scheduleTime) ?? "");
     setDraftCloudBaseUrl(config.cloudBaseUrl);
     setDraftDohDomain(config.dohDomain);
     setDraftJwksUrl(config.jwksUrl);
@@ -209,8 +271,10 @@ export default function CloudReport() {
   const handleSaveConfig = useCallback(async () => {
     setSavingConfig(true);
     try {
+      const scheduleTimeUtc = localToUtcHhMm(draftScheduleTime) ?? "";
       const result = await updateCloudConfig({
         enabled: draftEnabled,
+        scheduleTime: scheduleTimeUtc,
         cloudBaseUrl: draftCloudBaseUrl,
         dohDomain: draftDohDomain,
         jwksUrl: draftJwksUrl,
@@ -223,7 +287,17 @@ export default function CloudReport() {
         return;
       }
 
-      toast.success("云端互联配置已更新");
+      const syncResult = await syncCloudNow({});
+      if (!syncResult.success || !syncResult.data?.synced) {
+        toast.error(
+          syncResult.message ||
+            syncResult.data?.message ||
+            "配置已保存，但同步到云端失败",
+        );
+      } else {
+        toast.success("云端互联配置已更新并同步");
+      }
+
       setManageDialogOpen(false);
       await fetchData(true);
     } catch (saveError) {
@@ -239,37 +313,14 @@ export default function CloudReport() {
     draftEnabled,
     draftIssuer,
     draftJwksUrl,
+    draftScheduleTime,
     fetchData,
     toast,
   ]);
 
-  const handleManualSync = useCallback(async () => {
-    setSyncing(true);
-    try {
-      const result = await syncCloudNow({});
-      if (!result.success || !result.data) {
-        toast.error(result.message || "手动同步失败");
-        return;
-      }
-
-      if (result.data.synced) {
-        toast.success("手动同步成功");
-      } else {
-        toast.error(result.data.message || "手动同步失败");
-      }
-      setSyncDialogOpen(false);
-      await fetchData(true);
-    } catch (syncError) {
-      console.error("[CloudReport] 手动同步失败:", syncError);
-      toast.error("手动同步失败，请稍后重试");
-    } finally {
-      setSyncing(false);
-    }
-  }, [fetchData, toast]);
-
   return (
     <>
-      <GridItem areas={[1, 2, 3, 4]} width={3} height={0.8}>
+      <GridItem areas={[1, 2, 3, 4, 5, 6]} width={2} height={0.8}>
         <AutoTransition type="scale" className="h-full">
           {config ? (
             <div className="flex h-full flex-col justify-between p-10">
@@ -305,7 +356,7 @@ export default function CloudReport() {
         </AutoTransition>
       </GridItem>
 
-      <GridItem areas={[5, 6]} width={6} height={0.2}>
+      <GridItem areas={[7, 8]} width={6} height={0.2}>
         <AutoTransition type="scale" className="h-full">
           <button
             className="h-full w-full flex gap-2 items-center justify-center text-2xl hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
@@ -316,30 +367,6 @@ export default function CloudReport() {
           </button>
         </AutoTransition>
       </GridItem>
-
-      <GridItem areas={[7, 8]} width={6} height={0.2}>
-        <AutoTransition type="scale" className="h-full">
-          <button
-            className="h-full w-full flex gap-2 items-center justify-center text-2xl hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
-            onClick={() => setSyncDialogOpen(true)}
-          >
-            <RiCloudLine size="1.1em" />
-            手动同步
-          </button>
-        </AutoTransition>
-      </GridItem>
-
-      <AlertDialog
-        open={syncDialogOpen}
-        onClose={() => setSyncDialogOpen(false)}
-        onConfirm={() => void handleManualSync()}
-        title="确认手动同步"
-        description="将立刻向 NeutralPress Cloud 上报当前实例配置，是否继续？"
-        confirmText="立即同步"
-        cancelText="取消"
-        variant="info"
-        loading={syncing}
-      />
 
       <Dialog
         open={manageDialogOpen}
@@ -357,6 +384,18 @@ export default function CloudReport() {
             onCheckedChange={setDraftEnabled}
             disabled={savingConfig}
           />
+          <Input
+            size="sm"
+            type="time"
+            step={60}
+            label={`执行时间（本地 ${getLocalTimezoneLabel()}）`}
+            value={draftScheduleTime}
+            onChange={(event) => setDraftScheduleTime(event.target.value)}
+            disabled={savingConfig}
+          />
+          <p className="text-sm text-muted-foreground">
+            留空则由云端随机分配执行分钟。不能保证每次都在同一时间执行，中央服务器负载较高时，可能会延后执行时间以平衡负载。
+          </p>
 
           <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
             连接配置
