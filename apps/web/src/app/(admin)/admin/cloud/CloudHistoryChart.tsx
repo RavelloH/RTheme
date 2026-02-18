@@ -4,10 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CloudTrendItem } from "@repo/shared-types/api/cloud";
 
 import { getCloudTrends } from "@/actions/cloud";
-import BarChart, {
-  type BarChartDataPoint,
+import StackedBarChart, {
   type SeriesConfig,
-} from "@/components/client/charts/BarChart";
+  type StackedBarChartDataPoint,
+} from "@/components/client/charts/StackedBarChart";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import { useMainColor } from "@/components/client/layout/ThemeProvider";
 import ErrorPage from "@/components/ui/Error";
@@ -57,7 +57,7 @@ export default function CloudHistoryChart() {
     void fetchData();
   }, [fetchData, refreshTrigger]);
 
-  const chartData: BarChartDataPoint[] = data.map((item) => ({
+  const chartData: StackedBarChartDataPoint[] = data.map((item) => ({
     time: item.time,
     accepted: item.data.acceptedCount,
     rejected: item.data.rejectedCount,
@@ -121,7 +121,7 @@ export default function CloudHistoryChart() {
           <>
             <div className="text-2xl mb-2 px-10">云触发事件趋势</div>
             <div className="w-full h-full" key="content">
-              <BarChart
+              <StackedBarChart
                 data={chartData}
                 series={series}
                 className="w-full h-full"

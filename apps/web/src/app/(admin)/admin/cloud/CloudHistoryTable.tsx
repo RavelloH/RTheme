@@ -22,11 +22,16 @@ type SortKey =
   | "dedupHit"
   | "createdAt";
 
-const STATUS_LABELS: Record<CloudHistoryItem["status"], string> = {
+type CloudDisplayStatus = CloudHistoryItem["status"] | "TIMEOUT";
+
+const RECEIVED_TIMEOUT_MS = 5 * 60 * 1000;
+
+const STATUS_LABELS: Record<CloudDisplayStatus, string> = {
   RECEIVED: "已接收",
   DONE: "已完成",
   ERROR: "执行失败",
   REJECTED: "已拒绝",
+  TIMEOUT: "超时",
 };
 
 const VERIFY_SOURCE_LABELS: Record<
@@ -55,8 +60,27 @@ function formatDateTime(value: string): string {
   });
 }
 
-function getStatusClass(status: CloudHistoryItem["status"]): string {
-  if (status === "ERROR" || status === "REJECTED") return "text-error";
+function getDisplayStatus(
+  record: Pick<CloudHistoryItem, "status" | "receivedAt">,
+): CloudDisplayStatus {
+  if (record.status !== "RECEIVED") {
+    return record.status;
+  }
+
+  const receivedAtMs = new Date(record.receivedAt).getTime();
+  if (!Number.isFinite(receivedAtMs)) {
+    return "RECEIVED";
+  }
+
+  return Date.now() - receivedAtMs >= RECEIVED_TIMEOUT_MS
+    ? "TIMEOUT"
+    : "RECEIVED";
+}
+
+function getStatusClass(status: CloudDisplayStatus): string {
+  if (status === "ERROR" || status === "REJECTED" || status === "TIMEOUT") {
+    return "text-error";
+  }
   if (status === "RECEIVED") return "text-warning";
   return "text-success";
 }
@@ -359,20 +383,13 @@ export default function CloudHistoryTable() {
       align: "center",
       sortable: true,
       mono: true,
-      render: (value: unknown) => {
-        if (
-          value === "RECEIVED" ||
-          value === "DONE" ||
-          value === "ERROR" ||
-          value === "REJECTED"
-        ) {
-          return (
-            <span className={getStatusClass(value)}>
-              {STATUS_LABELS[value]}
-            </span>
-          );
-        }
-        return "-";
+      render: (_: unknown, record) => {
+        const displayStatus = getDisplayStatus(record);
+        return (
+          <span className={getStatusClass(displayStatus)}>
+            {STATUS_LABELS[displayStatus]}
+          </span>
+        );
       },
     },
     {
@@ -522,11 +539,14 @@ export default function CloudHistoryTable() {
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">状态</label>
-                  <p
-                    className={`text-sm ${getStatusClass(selectedRecord.status)}`}
-                  >
-                    {STATUS_LABELS[selectedRecord.status]}
-                  </p>
+                  {(() => {
+                    const displayStatus = getDisplayStatus(selectedRecord);
+                    return (
+                      <p className={`text-sm ${getStatusClass(displayStatus)}`}>
+                        {STATUS_LABELS[displayStatus]}
+                      </p>
+                    );
+                  })()}
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">
