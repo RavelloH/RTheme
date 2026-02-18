@@ -32,6 +32,7 @@ import { getFeaturedImageUrl } from "@/lib/server/media-reference";
 import {
   getAdjacentPosts,
   getPublishedPost,
+  getRecommendedPosts,
   renderPostContent,
 } from "@/lib/server/post";
 import prisma from "@/lib/server/prisma";
@@ -104,6 +105,7 @@ export default async function PostPage({ params }: PageProps) {
     categorySlugPath,
     postMediaFileMap,
     adjacentPosts,
+    recommendedPosts,
     previousFeaturedImage,
     nextFeaturedImage;
   const [
@@ -141,6 +143,11 @@ export default async function PostPage({ params }: PageProps) {
       getAdjacentPosts(slug),
     ]);
 
+    [renderedContent, recommendedPosts] = await Promise.all([
+      renderPostContent(post),
+      getRecommendedPosts(post, { limit: 3 }),
+    ]);
+
     // 获取所有分类的路径
     if (post.categories.length > 0) {
       const categoryPaths = await Promise.all(
@@ -152,9 +159,6 @@ export default async function PostPage({ params }: PageProps) {
       categoryPath = categoryPaths[0]; // 使用第一个分类的名称路径
       categorySlugPath = categorySlugPaths[0]; // 使用第一个分类的 slug 路径
     }
-
-    // 渲染文章内容
-    renderedContent = await renderPostContent(post);
 
     // 查询文章特色图片的媒体文件信息
     postMediaFileMap = new Map();
@@ -175,6 +179,13 @@ export default async function PostPage({ params }: PageProps) {
     }
     if (nextFeaturedImage) {
       allImageUrls.add(nextFeaturedImage);
+    }
+
+    // 添加推荐文章的封面图片
+    for (const recommendedPost of recommendedPosts) {
+      if (recommendedPost.featuredImage) {
+        allImageUrls.add(recommendedPost.featuredImage);
+      }
     }
 
     // 查询文章内容中的所有图片
@@ -226,6 +237,7 @@ export default async function PostPage({ params }: PageProps) {
     "config/site.shiki.theme",
     "config/content.license.default",
     "config/content.license.textTemplate",
+    "posts/list",
     `posts/${slug}`,
     `users/${post.author.uid}`,
   ]);
@@ -455,6 +467,114 @@ export default async function PostPage({ params }: PageProps) {
                 </div>
               </div>
             </div>
+            {recommendedPosts.length > 0 && (
+              <div className="max-w-7xl mx-auto pt-16">
+                <h2 className="text-2xl font-bold mb-6">相关文章</h2>
+                <div className="relative border-y border-border">
+                  <div className="grid grid-cols-1 gap-0">
+                    {recommendedPosts.map((recommendedPost, index) => {
+                      const isLast = index === recommendedPosts.length - 1;
+                      const recommendedCoverImage =
+                        recommendedPost.featuredImage
+                          ? processImageUrl(
+                              recommendedPost.featuredImage,
+                              postMediaFileMap,
+                            )[0]
+                          : null;
+                      const inlineTagLabels =
+                        recommendedPost.tags.length > 0
+                          ? recommendedPost.tags
+                              .slice(0, 3)
+                              .map((tag) => tag.name)
+                          : recommendedPost.matchedKeywords.slice(0, 3);
+
+                      return (
+                        <div
+                          key={recommendedPost.slug}
+                          className={isLast ? "" : "border-b border-border/50"}
+                        >
+                          <Link
+                            href={`/posts/${recommendedPost.slug}`}
+                            className="group block h-full w-full bg-background overflow-hidden relative transition-colors duration-300 hover:bg-primary/5"
+                          >
+                            {recommendedCoverImage && (
+                              <>
+                                <div className="absolute inset-0 z-0 opacity-30 grayscale transition-all duration-500 ease-out group-hover:opacity-100 group-hover:scale-105 group-hover:grayscale-0 pointer-events-none">
+                                  <CMSImage
+                                    src={recommendedCoverImage.url}
+                                    alt={recommendedPost.title}
+                                    fill
+                                    className="object-cover"
+                                    sizes="(max-width: 768px) 100vw, 900px"
+                                    optimized={
+                                      !!(
+                                        recommendedCoverImage.width &&
+                                        recommendedCoverImage.height
+                                      )
+                                    }
+                                    width={recommendedCoverImage.width}
+                                    height={recommendedCoverImage.height}
+                                    blur={recommendedCoverImage.blur}
+                                    priority={false}
+                                  />
+                                </div>
+                                <div className="absolute inset-0 z-0 bg-gradient-to-r from-background via-background/60 to-background pointer-events-none" />
+                              </>
+                            )}
+                            <div className="relative z-10 h-full flex flex-col p-5 md:p-8">
+                              <div className="font-mono text-xs tracking-widest text-muted-foreground uppercase group-hover:text-foreground transition-colors">
+                                Recommended
+                              </div>
+
+                              <div className="pt-4">
+                                <h3 className="text-lg md:text-xl font-bold leading-tight tracking-tight text-foreground line-clamp-2 relative inline box-decoration-clone bg-[linear-gradient(currentColor,currentColor)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]">
+                                  {recommendedPost.title}
+                                </h3>
+                              </div>
+
+                              {recommendedPost.excerpt && (
+                                <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                                  {recommendedPost.excerpt}
+                                </p>
+                              )}
+
+                              <div className="w-full mt-auto pt-4 font-mono text-xs text-muted-foreground">
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 uppercase">
+                                  {recommendedPost.publishedAt && (
+                                    <span>
+                                      {formatDate(
+                                        recommendedPost.publishedAt,
+                                      ).slice(0, 10)}
+                                    </span>
+                                  )}
+                                  {recommendedPost.categories.length > 0 && (
+                                    <span>
+                                      {recommendedPost.categories
+                                        .slice(0, 2)
+                                        .map((category) => category.name)
+                                        .join(" / ")}
+                                    </span>
+                                  )}
+                                  {inlineTagLabels.map((tagLabel) => (
+                                    <span
+                                      key={`${recommendedPost.slug}-${tagLabel}`}
+                                      className="inline-flex items-center gap-0.5 normal-case"
+                                    >
+                                      <RiHashtag size="1em" />
+                                      {tagLabel}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </Link>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
             {/* 上一篇和下一篇文章 */}
             {(adjacentPosts.previous || adjacentPosts.next) && (
               <div className="max-w-7xl mx-auto pt-16">
