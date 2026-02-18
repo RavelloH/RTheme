@@ -183,6 +183,10 @@ function formatTaskSummary(
 
   if (taskKey === "cleanup" && isRecord(task.v)) {
     const totalDeleted = readNumber(task.v.totalDeleted);
+    const totalAffected = readNumber(task.v.totalAffected);
+    const searchLogDeleted = readNumber(task.v.searchLogDeleted);
+    const healthCheckDeleted = readNumber(task.v.healthCheckDeleted);
+    const auditLogDeleted = readNumber(task.v.auditLogDeleted);
     const recycleBinDeleted = readNumber(task.v.recycleBinDeleted);
     const cronHistoryDeleted = readNumber(task.v.cronHistoryDeleted);
     const cloudTriggerHistoryDeleted = readNumber(
@@ -192,16 +196,70 @@ function formatTaskSummary(
     const unsubscribedMailSubscriptionDeleted = readNumber(
       task.v.unsubscribedMailSubscriptionDeleted,
     );
+    const refreshTokenDeleted = readNumber(task.v.refreshTokenDeleted);
+    const passwordResetDeleted = readNumber(task.v.passwordResetDeleted);
+    const pushSubscriptionsMarkedInactive = readNumber(
+      task.v.pushSubscriptionsMarkedInactive,
+    );
+    const pushSubscriptionsDeletedInactive = readNumber(
+      task.v.pushSubscriptionsDeletedInactive,
+    );
+    const pushSubscriptionsDeletedForDisabledUsers = readNumber(
+      task.v.pushSubscriptionsDeletedForDisabledUsers,
+    );
 
-    if (
-      totalDeleted !== null &&
-      recycleBinDeleted !== null &&
-      cronHistoryDeleted !== null &&
-      cloudTriggerHistoryDeleted !== null &&
-      noticeDeleted !== null &&
-      unsubscribedMailSubscriptionDeleted !== null
-    ) {
-      return `任务执行成功：共清理 ${totalDeleted} 条；回收站 ${recycleBinDeleted} 条，CronHistory ${cronHistoryDeleted} 条，CloudTriggerHistory ${cloudTriggerHistoryDeleted} 条，Notice ${noticeDeleted} 条，UNSUBSCRIBED 订阅 ${unsubscribedMailSubscriptionDeleted} 条。`;
+    const detailParts: string[] = [];
+    if (searchLogDeleted !== null) {
+      detailParts.push(`SearchLog ${searchLogDeleted} 条`);
+    }
+    if (healthCheckDeleted !== null) {
+      detailParts.push(`HealthCheck ${healthCheckDeleted} 条`);
+    }
+    if (auditLogDeleted !== null) {
+      detailParts.push(`AuditLog ${auditLogDeleted} 条`);
+    }
+    if (cronHistoryDeleted !== null) {
+      detailParts.push(`CronHistory ${cronHistoryDeleted} 条`);
+    }
+    if (cloudTriggerHistoryDeleted !== null) {
+      detailParts.push(`CloudTriggerHistory ${cloudTriggerHistoryDeleted} 条`);
+    }
+    if (noticeDeleted !== null) {
+      detailParts.push(`Notice ${noticeDeleted} 条`);
+    }
+    if (recycleBinDeleted !== null) {
+      detailParts.push(`回收站 ${recycleBinDeleted} 条`);
+    }
+    if (unsubscribedMailSubscriptionDeleted !== null) {
+      detailParts.push(
+        `UNSUBSCRIBED 订阅 ${unsubscribedMailSubscriptionDeleted} 条`,
+      );
+    }
+    if (refreshTokenDeleted !== null) {
+      detailParts.push(`RefreshToken ${refreshTokenDeleted} 条`);
+    }
+    if (passwordResetDeleted !== null) {
+      detailParts.push(`PasswordReset ${passwordResetDeleted} 条`);
+    }
+    if (pushSubscriptionsDeletedInactive !== null) {
+      detailParts.push(`Push(inactive) ${pushSubscriptionsDeletedInactive} 条`);
+    }
+    if (pushSubscriptionsDeletedForDisabledUsers !== null) {
+      detailParts.push(
+        `Push(禁用用户) ${pushSubscriptionsDeletedForDisabledUsers} 条`,
+      );
+    }
+
+    if (detailParts.length > 0) {
+      const deletedLabel =
+        totalDeleted !== null ? `共删除 ${totalDeleted} 条` : "已完成删除清理";
+      const affectedLabel =
+        totalAffected !== null ? `，共影响 ${totalAffected} 条` : "";
+      const markedLabel =
+        pushSubscriptionsMarkedInactive !== null
+          ? `；标记 Push 为 inactive ${pushSubscriptionsMarkedInactive} 条`
+          : "";
+      return `任务执行成功：${deletedLabel}${affectedLabel}；明细：${detailParts.join("，")}${markedLabel}。`;
     }
   }
 
