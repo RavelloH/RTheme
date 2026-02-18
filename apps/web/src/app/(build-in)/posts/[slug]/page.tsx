@@ -19,6 +19,7 @@ import MainLayout from "@/components/client/layout/MainLayout";
 import ViewCountBatchLoader from "@/components/client/logic/ViewCountBatchLoader";
 import AdjacentPostCard from "@/components/server/features/posts/AdjacentPostCard";
 import UniversalRenderer from "@/components/server/renderer/UniversalRenderer";
+import JsonLdScript from "@/components/server/seo/JsonLdScript";
 import CMSImage from "@/components/ui/CMSImage";
 import ImageLightbox from "@/components/ui/ImageLightbox";
 import Link from "@/components/ui/Link";
@@ -36,7 +37,10 @@ import {
   renderPostContent,
 } from "@/lib/server/post";
 import prisma from "@/lib/server/prisma";
-import { generateMetadata as generateSEOMetadata } from "@/lib/server/seo";
+import {
+  generateJsonLdGraph,
+  generateMetadata as generateSEOMetadata,
+} from "@/lib/server/seo";
 import {
   extractInternalHashes,
   processImageUrl,
@@ -224,7 +228,55 @@ export default async function PostPage({ params }: PageProps) {
     return `/categories/${pathUpToIndex}`;
   };
 
+  const breadcrumb = [
+    { name: "首页", item: "/" },
+    { name: "文章", item: "/posts" },
+    ...(categoryPath && categorySlugPath
+      ? categoryPath.map((categoryName, index) => ({
+          name: categoryName,
+          item: generateCategoryLink(categorySlugPath, index),
+        }))
+      : []),
+    {
+      name: post.title,
+      item: `/posts/${post.slug}`,
+    },
+  ];
+
+  const jsonLdGraph = await generateJsonLdGraph({
+    kind: "article",
+    pathname: `/posts/${post.slug}`,
+    title: post.title,
+    description:
+      post.excerpt || post.metaDescription || `阅读文章《${post.title}》`,
+    keywords: post.metaKeywords || post.tags.map((tag) => tag.name),
+    robots: {
+      index: post.robotsIndex,
+    },
+    publishedAt: post.publishedAt || post.createdAt,
+    updatedAt: post.updatedAt,
+    authors: [
+      {
+        name: post.author.nickname || post.author.username,
+        url: `/user/${post.author.uid}`,
+        type: "Person",
+      },
+    ],
+    images: post.featuredImage ? [post.featuredImage] : [],
+    breadcrumb,
+    article: {
+      section: post.categories[0]?.name,
+      tags: post.tags.map((tag) => tag.name),
+    },
+  });
+
   const pageCacheTags = new Set<string>([
+    "config/site.url",
+    "config/site.title",
+    "config/seo.description",
+    "config/author.name",
+    "config/site.avatar",
+    "config/seo.index.enable",
     "config/comment.enable",
     "config/comment.placeholder",
     "config/comment.anonymous.enable",
@@ -233,7 +285,6 @@ export default async function PostPage({ params }: PageProps) {
     "config/comment.review.enable",
     "config/comment.anonymous.review.enable",
     "config/comment.locate.enable",
-    "config/site.url",
     "config/site.shiki.theme",
     "config/content.license.default",
     "config/content.license.textTemplate",
@@ -261,6 +312,7 @@ export default async function PostPage({ params }: PageProps) {
 
   return (
     <MainLayout type="vertical" nopadding>
+      <JsonLdScript id="jsonld-post" graph={jsonLdGraph} />
       {/* 批量加载访问量 */}
       <ViewCountBatchLoader />
 

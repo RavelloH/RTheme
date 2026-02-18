@@ -6,6 +6,7 @@ import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
 import MainLayout from "@/components/client/layout/MainLayout";
 import PageTextContentLayout from "@/components/server/features/pages/PageTextContentLayout";
 import BlockRenderer from "@/components/server/renderer/BlockRenderer";
+import JsonLdScript from "@/components/server/seo/JsonLdScript";
 import type { PageConfig } from "@/data/default-pages";
 import { buildPageCacheTagsForBlocks } from "@/lib/server/block-cache";
 import { resolveBlockData } from "@/lib/server/block-data-resolver";
@@ -14,8 +15,11 @@ import {
   getMatchingPage,
   getSystemPageConfig,
 } from "@/lib/server/page-cache";
+import { getLatestPublishedPostsForJsonLd } from "@/lib/server/post";
 import {
+  generateJsonLdGraph,
   generateMetadata as getBaseMetadata,
+  type JsonLdBreadcrumbItem,
   type SeoTemplateParams,
 } from "@/lib/server/seo";
 
@@ -30,6 +34,58 @@ const pageTextRenderModeMap = {
   MDX: "mdx",
   HTML: "html",
 } as const;
+
+const BREADCRUMB_LABEL_MAP: Record<string, string> = {
+  posts: "文章",
+  tags: "标签",
+  categories: "分类",
+  gallery: "画廊",
+  projects: "项目",
+};
+
+function formatSegmentLabel(segment: string): string {
+  const lowered = segment.toLowerCase();
+  if (BREADCRUMB_LABEL_MAP[lowered]) {
+    return BREADCRUMB_LABEL_MAP[lowered]!;
+  }
+
+  return decodeURIComponent(segment).replace(/-/g, " ");
+}
+
+function buildMainRouteBreadcrumb(
+  pathname: string,
+  title: string,
+): JsonLdBreadcrumbItem[] {
+  const breadcrumb: JsonLdBreadcrumbItem[] = [{ name: "首页", item: "/" }];
+  const segments = pathname.split("/").filter(Boolean);
+
+  let currentPath = "";
+  for (const segment of segments) {
+    currentPath += `/${segment}`;
+    breadcrumb.push({
+      name: formatSegmentLabel(segment),
+      item: currentPath,
+    });
+  }
+
+  if (breadcrumb[breadcrumb.length - 1]?.name !== title) {
+    breadcrumb.push({ name: title, item: pathname });
+  }
+
+  return breadcrumb;
+}
+
+function isCollectionPage(pathname: string): boolean {
+  const normalized = pathname.toLowerCase();
+  if (normalized.includes("/page/")) return true;
+  return (
+    normalized === "/" ||
+    normalized.startsWith("/posts") ||
+    normalized.startsWith("/tags") ||
+    normalized.startsWith("/categories") ||
+    normalized.startsWith("/gallery")
+  );
+}
 
 export const generateMetadata = async ({
   params,
@@ -70,8 +126,52 @@ export default async function Page({ params }: PageProps<"/[[...slug]]">) {
   const match = await getMatchingPage((await params).slug);
   if (!match) return notFound();
   const { page, params: resolvedParams } = match;
+  const isHomePage = resolvedParams.url === "/";
+  const latestPostsForJsonLd = isHomePage
+    ? await getLatestPublishedPostsForJsonLd(10)
+    : [];
+  const jsonLdGraph = await generateJsonLdGraph({
+    kind: resolvedParams.url === "/" ? "site" : "webpage",
+    pathname: resolvedParams.url,
+    title: page.title,
+    description: page.metaDescription || undefined,
+    keywords: page.metaKeywords,
+    robots: { index: page.robotsIndex },
+    pageType: isCollectionPage(resolvedParams.url)
+      ? "CollectionPage"
+      : "WebPage",
+    publishedAt: page.createdAt,
+    updatedAt: page.updatedAt,
+    breadcrumb: buildMainRouteBreadcrumb(resolvedParams.url, page.title),
+    itemList: isHomePage
+      ? {
+          idSuffix: "latest-posts",
+          name: "最新文章",
+          itemType: "BlogPosting",
+          items: latestPostsForJsonLd.map((post) => ({
+            name: post.title,
+            url: `/posts/${post.slug}`,
+            description: post.excerpt || post.metaDescription || undefined,
+            image: post.featuredImage || undefined,
+            datePublished: post.publishedAt || post.createdAt,
+            dateModified: post.updatedAt,
+          })),
+        }
+      : undefined,
+  });
 
-  cacheTag(`pages/${page.id}`);
+  cacheTag(
+    `pages/${page.id}`,
+    "config/site.url",
+    "config/site.title",
+    "config/seo.description",
+    "config/author.name",
+    "config/site.avatar",
+    "config/seo.index.enable",
+  );
+  if (isHomePage) {
+    cacheTag("posts/list");
+  }
   cacheLife("max");
 
   if (page.contentType === "BLOCK") {
@@ -101,6 +201,7 @@ export default async function Page({ params }: PageProps<"/[[...slug]]">) {
 
     return (
       <MainLayout type="horizontal">
+        <JsonLdScript id="jsonld-main" graph={jsonLdGraph} />
         <HorizontalScroll className="h-full" disableContentAnimation>
           <BlockRenderer
             blocks={blocks}
@@ -124,6 +225,7 @@ export default async function Page({ params }: PageProps<"/[[...slug]]">) {
         description={page.metaDescription}
         source={page.content}
         mode={renderMode}
+        jsonLdGraph={jsonLdGraph}
       />
     );
   }

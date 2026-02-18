@@ -6,9 +6,13 @@ import { notFound } from "next/navigation";
 import PhotoDetailClient from "@/app/(build-in)/gallery/photo/[slug]/PhotoDetailClient";
 import HorizontalScroll from "@/components/client/layout/HorizontalScroll";
 import MainLayout from "@/components/client/layout/MainLayout";
+import JsonLdScript from "@/components/server/seo/JsonLdScript";
 import { generateSignedImageId } from "@/lib/server/image-crypto";
 import prisma from "@/lib/server/prisma";
-import { generateMetadata as generateSeoMetadata } from "@/lib/server/seo";
+import {
+  generateJsonLdGraph,
+  generateMetadata as generateSeoMetadata,
+} from "@/lib/server/seo";
 
 interface PhotoPageProps {
   params: Promise<{ slug: string }>;
@@ -133,7 +137,16 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
     notFound();
   }
 
-  cacheTag(`photos/${slug}`, `users/${photo.media.user.uid}`);
+  cacheTag(
+    `photos/${slug}`,
+    `users/${photo.media.user.uid}`,
+    "config/site.url",
+    "config/site.title",
+    "config/seo.description",
+    "config/author.name",
+    "config/site.avatar",
+    "config/seo.index.enable",
+  );
   cacheLife("max");
 
   // 计算用户邮箱的 MD5 值
@@ -161,9 +174,46 @@ export default async function PhotoPage({ params }: PhotoPageProps) {
 
   const signedId = generateSignedImageId(photo.media.shortHash);
   const imageUrl = `/p/${signedId}`;
+  const title = photo.name || "无标题照片";
+  const description =
+    photo.description ||
+    photo.media.altText ||
+    `由 ${photo.media.user.nickname || photo.media.user.username} 拍摄`;
+  const jsonLdGraph = await generateJsonLdGraph({
+    kind: "photo",
+    pathname: `/gallery/photo/${photo.slug}`,
+    title,
+    description,
+    authors: [
+      {
+        name: photo.media.user.nickname || photo.media.user.username,
+        type: "Person",
+        url: `/user/${photo.media.user.uid}`,
+      },
+    ],
+    images: [
+      {
+        url: imageUrl,
+        width: photo.media.width || undefined,
+        height: photo.media.height || undefined,
+        alt: photo.media.altText || undefined,
+      },
+    ],
+    publishedAt: photo.shotAt || photo.createdAt,
+    updatedAt: photo.updatedAt,
+    breadcrumb: [
+      { name: "首页", item: "/" },
+      { name: "画廊", item: "/gallery" },
+      { name: title, item: `/gallery/photo/${photo.slug}` },
+    ],
+    photo: {
+      caption: description,
+    },
+  });
 
   return (
     <MainLayout type="horizontal">
+      <JsonLdScript id="jsonld-photo" graph={jsonLdGraph} />
       <HorizontalScroll className="h-full">
         <PhotoDetailClient photo={processedPhoto} imageUrl={imageUrl} />
       </HorizontalScroll>

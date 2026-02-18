@@ -1,8 +1,10 @@
 import PostToc from "@/components/client/features/posts/PostToc";
 import MainLayout from "@/components/client/layout/MainLayout";
 import UniversalRenderer from "@/components/server/renderer/UniversalRenderer";
+import JsonLdScript from "@/components/server/seo/JsonLdScript";
 import ImageLightbox from "@/components/ui/ImageLightbox";
 import { getConfigs } from "@/lib/server/config-cache";
+import type { JsonLdGraph } from "@/lib/server/seo";
 
 interface PageTextContentLayoutProps {
   pageId: string;
@@ -10,6 +12,7 @@ interface PageTextContentLayoutProps {
   description?: string | null;
   source: string;
   mode: "markdown" | "mdx" | "html";
+  jsonLdGraph?: JsonLdGraph;
 }
 
 export default async function PageTextContentLayout({
@@ -18,6 +21,7 @@ export default async function PageTextContentLayout({
   description,
   source,
   mode,
+  jsonLdGraph = [],
 }: PageTextContentLayoutProps) {
   const [shikiTheme] = await getConfigs(["site.shiki.theme"]);
   const contentRootId = `page-content-${pageId}`;
@@ -25,6 +29,7 @@ export default async function PageTextContentLayout({
 
   return (
     <MainLayout type="vertical" nopadding>
+      <JsonLdScript id={`jsonld-page-${pageId}`} graph={jsonLdGraph} />
       <ImageLightbox />
       <div id={contentRootId} className="h-full w-full">
         {/* 参考 posts 头图区结构：保留大标题布局，去掉背景图/顶部信息条/标签 */}
