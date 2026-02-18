@@ -68,9 +68,12 @@ export async function generateMetadata({
 export default async function ProjectDetailPage({
   params,
 }: ProjectDetailPageProps) {
-  "use cache";
-
   const { slug } = await params;
+  return renderProjectDetailPage(slug);
+}
+
+async function renderProjectDetailPage(slug: string) {
+  "use cache";
   const [{ project, mediaFileMap }, [siteURL, shikiTheme]] = await Promise.all([
     getPublishedProjectDetail(slug),
     getConfigs(["site.url", "site.shiki.theme"]),

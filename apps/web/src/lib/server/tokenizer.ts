@@ -111,7 +111,6 @@ class TokenizerManager {
       this.loadedDictHash = currentHash;
       this.isInitialized = true;
     } catch (error) {
-      console.error("[自定义词典] 加载失败:", error);
       // 降级：使用基础词典
       if (!this.jieba) {
         this.jieba = Jieba.withDict(dict);
@@ -521,8 +520,7 @@ const getCustomDictionary = unstable_cache(
         }
       }
       return words;
-    } catch (error) {
-      console.error("[自定义词典] 查询失败:", error);
+    } catch {
       return [];
     }
   },
@@ -545,9 +543,6 @@ function expandSemantics(token: string, type: TokenType): string[] {
   const results = new Set<string>();
   const raw = token.trim();
   const lower = raw.toLowerCase();
-
-  // 不要删除这行日志，用于调试不同类型 token 的裂变效果
-  console.log("Expanding token:", raw, "of type:", type);
 
   // 1. 保留小写版本
   results.add(lower);
@@ -898,9 +893,8 @@ function expandSemantics(token: string, type: TokenType): string[] {
             }
           });
         }
-      } catch (error) {
+      } catch {
         // 如果解析失败，至少保留原始 URL
-        console.error("[URL 解析失败]", error);
       }
       break;
     }
@@ -1038,8 +1032,6 @@ function postprocess(tokens: string[]): string[] {
       // 但如果是编程符号（版本操作符、括号等），保留它（使用小写比较）
       if (!PROGRAMMING_SYMBOLS.has(lower)) {
         continue;
-      } else {
-        console.log("[postprocess] 保留编程符号:", token);
       }
     }
 
@@ -1049,7 +1041,6 @@ function postprocess(tokens: string[]): string[] {
     }
   }
 
-  console.log("[postprocess] 最终结果:", result);
   return result;
 }
 
@@ -1085,8 +1076,6 @@ export async function analyzeText(text: string): Promise<string[]> {
     for (const token of lexer) {
       if (token.type === TOKEN_TYPES.WHITESPACE) continue;
 
-      console.log("[Lexer] Token:", token.value, "Type:", token.type);
-
       if (token.type === TOKEN_TYPES.TEXT) {
         // 使用 jieba 搜索引擎模式进行中文分词
         // cutForSearch 返回包括完整词和子词的分词结果
@@ -1109,8 +1098,7 @@ export async function analyzeText(text: string): Promise<string[]> {
     const result = postprocess(finalTokens);
 
     return result;
-  } catch (error) {
-    console.error("[分词器] 处理文本失败:", error);
+  } catch {
     // 降级：返回空数组
     return [];
   }
@@ -1120,13 +1108,8 @@ export async function analyzeText(text: string): Promise<string[]> {
  * 手动重置分词器词典（用于测试或强制刷新）
  */
 export async function resetTokenizerDictionary(): Promise<void> {
-  try {
-    const manager = TokenizerManager.getInstance();
-    await manager.resetDictionary();
-  } catch (error) {
-    console.error("[分词器] 重置词典失败:", error);
-    throw error;
-  }
+  const manager = TokenizerManager.getInstance();
+  await manager.resetDictionary();
 }
 
 /**

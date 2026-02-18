@@ -16,9 +16,12 @@ interface ProjectDetailModalPageProps {
 export default async function ProjectDetailModalPage({
   params,
 }: ProjectDetailModalPageProps) {
-  "use cache";
-
   const { slug } = await params;
+  return renderProjectDetailModalPage(slug);
+}
+
+async function renderProjectDetailModalPage(slug: string) {
+  "use cache";
   const [{ project, mediaFileMap }, [siteURL, shikiTheme]] = await Promise.all([
     getPublishedProjectDetail(slug),
     getConfigs(["site.url", "site.shiki.theme"]),

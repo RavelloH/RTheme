@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 
 import { getFeaturedImageUrl } from "@/lib/server/media-reference";
 import prisma from "@/lib/server/prisma";
-import { analyzeText } from "@/lib/server/tokenizer";
 import { MEDIA_SLOTS } from "@/types/media";
 
 export interface PostData {
@@ -337,7 +336,6 @@ interface RecommendationTokenStat {
 
 const RECOMMENDATION_DEFAULT_LIMIT = 6;
 const RECOMMENDATION_DEFAULT_CANDIDATE_LIMIT = 80;
-const RECOMMENDATION_SOURCE_CONTENT_LIMIT = 8000;
 const RECOMMENDATION_TARGET_CONTENT_LIMIT = 2400;
 const RECOMMENDATION_TOKEN_LIMIT = 20;
 
@@ -353,22 +351,50 @@ function isValidRecommendationToken(token: string): boolean {
   return /[a-zA-Z0-9\u4e00-\u9fff]/.test(token);
 }
 
-function getTopFrequentTokens(
-  tokens: string[],
-  limit: number,
-): RecommendationTokenStat[] {
+function extractTokenFrequencyFromTsvector(
+  tsvectorStr: string | null | undefined,
+): Map<string, number> {
   const frequency = new Map<string, number>();
+  if (!tsvectorStr) return frequency;
 
-  for (const token of tokens) {
-    const normalized = token.trim().toLowerCase();
-    if (!isValidRecommendationToken(normalized)) {
+  const matches = tsvectorStr.match(/'([^']+)':[\d,]+/g) || [];
+
+  for (const match of matches) {
+    const tokenMatch = match.match(/'([^']+)':([\d,]+)/);
+    if (!tokenMatch || !tokenMatch[1] || !tokenMatch[2]) {
       continue;
     }
 
-    frequency.set(normalized, (frequency.get(normalized) || 0) + 1);
+    const token = tokenMatch[1].trim().toLowerCase();
+    if (!isValidRecommendationToken(token)) {
+      continue;
+    }
+
+    const positions = tokenMatch[2].split(",").filter(Boolean).length;
+    if (positions <= 0) {
+      continue;
+    }
+
+    frequency.set(token, (frequency.get(token) || 0) + positions);
   }
 
-  return Array.from(frequency.entries())
+  return frequency;
+}
+
+function getTopFrequentTokensFromSearchVectors(
+  titleSearchVector: string | null | undefined,
+  contentSearchVector: string | null | undefined,
+  limit: number,
+): RecommendationTokenStat[] {
+  const titleFrequency = extractTokenFrequencyFromTsvector(titleSearchVector);
+  const contentFrequency =
+    extractTokenFrequencyFromTsvector(contentSearchVector);
+
+  for (const [token, count] of contentFrequency.entries()) {
+    titleFrequency.set(token, (titleFrequency.get(token) || 0) + count);
+  }
+
+  return Array.from(titleFrequency.entries())
     .map(([token, count]) => ({ token, count }))
     .sort((a, b) => {
       if (b.count !== a.count) {
@@ -536,7 +562,7 @@ export async function getAdjacentPosts(
 
 /**
  * 获取推荐文章
- * 推荐维度：分类、标签、高频分词
+ * 推荐维度：分类、标签、数据库分词向量高频词
  */
 export async function getRecommendedPosts(
   currentPost: FullPostData,
@@ -563,20 +589,19 @@ export async function getRecommendedPosts(
       );
       const currentTagSlugs = new Set(currentPost.tags.map((t) => t.slug));
 
-      const recommendationSource = [
-        currentPost.title,
-        currentPost.excerpt || "",
-        currentPost.metaKeywords || "",
-        currentPost.categories.map((c) => c.name).join(" "),
-        currentPost.tags.map((t) => t.name).join(" "),
-        currentPost.content.slice(0, RECOMMENDATION_SOURCE_CONTENT_LIMIT),
-      ]
-        .filter(Boolean)
-        .join("\n");
+      const vectorData = await prisma.$queryRawUnsafe<
+        Array<{
+          titleSearchVector: string | null;
+          contentSearchVector: string | null;
+        }>
+      >(
+        `SELECT "titleSearchVector"::text as "titleSearchVector", "contentSearchVector"::text as "contentSearchVector" FROM "Post" WHERE id = $1`,
+        currentPost.id,
+      );
 
-      const sourceTokens = await analyzeText(recommendationSource);
-      const topTokenStats = getTopFrequentTokens(
-        sourceTokens,
+      const topTokenStats = getTopFrequentTokensFromSearchVectors(
+        vectorData[0]?.titleSearchVector,
+        vectorData[0]?.contentSearchVector,
         RECOMMENDATION_TOKEN_LIMIT,
       );
 
@@ -693,8 +718,9 @@ export async function getRecommendedPosts(
             return count + (currentTagSlugs.has(tag.slug) ? 1 : 0);
           }, 0);
 
+          const targetTitle = candidate.title.toLowerCase();
           const targetText = [
-            candidate.title,
+            targetTitle,
             candidate.excerpt || "",
             candidate.metaKeywords || "",
             candidate.plain?.slice(0, RECOMMENDATION_TARGET_CONTENT_LIMIT) ||
