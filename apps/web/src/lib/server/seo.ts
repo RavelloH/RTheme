@@ -134,6 +134,16 @@ export interface JsonLdItemListEntry {
   image?: string | JsonLdImage;
   datePublished?: Date | string | null;
   dateModified?: Date | string | null;
+  authors?: JsonLdAuthor[];
+}
+
+export interface JsonLdMenuNavigationItem {
+  name: string;
+  slug?: string | null;
+  link?: string | null;
+  page?: {
+    slug?: string | null;
+  } | null;
 }
 
 export interface JsonLdGraphInput {
@@ -886,6 +896,60 @@ function buildBreadcrumbJsonLd(
   };
 }
 
+function normalizeMenuPath(path: string | null | undefined): string | null {
+  if (!path) return null;
+  const trimmed = path.trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return null;
+  if (trimmed.startsWith("#")) return null;
+
+  const withoutHash = trimmed.split("#")[0];
+  const withoutQuery = withoutHash?.split("?")[0] ?? "";
+  if (!withoutQuery) return null;
+
+  const normalized = withoutQuery.startsWith("/")
+    ? withoutQuery
+    : `/${withoutQuery}`;
+  const compacted = normalized.replace(/\/{2,}/g, "/").replace(/\/+$/, "");
+
+  return compacted || "/";
+}
+
+export function buildMainMenuJsonLdBreadcrumb(
+  menus: JsonLdMenuNavigationItem[] | undefined,
+  options?: {
+    homeName?: string;
+    maxItems?: number;
+  },
+): JsonLdBreadcrumbItem[] {
+  const homeName = options?.homeName?.trim() || "首页";
+  const maxItems =
+    typeof options?.maxItems === "number" && Number.isFinite(options.maxItems)
+      ? Math.max(1, Math.floor(options.maxItems))
+      : 12;
+
+  const breadcrumb: JsonLdBreadcrumbItem[] = [{ name: homeName, item: "/" }];
+  const seen = new Set<string>(["/"]);
+
+  for (const menu of menus ?? []) {
+    if (breadcrumb.length >= maxItems) break;
+
+    const name = menu.name.trim();
+    if (!name) continue;
+
+    const path = normalizeMenuPath(menu.page?.slug || menu.slug || menu.link);
+    if (!path || seen.has(path)) continue;
+
+    seen.add(path);
+    breadcrumb.push({
+      name,
+      item: path,
+    });
+  }
+
+  return breadcrumb;
+}
+
 function buildThingList(names: string[]): JsonLdNode[] {
   return names
     .map((name) => name.trim())
@@ -900,6 +964,7 @@ function buildGenericItemListJsonLd(
   itemList: JsonLdGraphInput["itemList"] | undefined,
   metadataBase: URL | undefined,
   canonicalUrl: string | undefined,
+  fallbackAuthorName: string,
 ): JsonLdNode | null {
   if (!itemList?.items || itemList.items.length === 0) return null;
 
@@ -919,12 +984,26 @@ function buildGenericItemListJsonLd(
           : buildAbsoluteUrl(entry.image?.url, metadataBase);
       const datePublished = normalizeDateValue(entry.datePublished);
       const dateModified = normalizeDateValue(entry.dateModified);
+      const normalizedAuthors = normalizeAuthorList(
+        entry.authors,
+        metadataBase,
+        fallbackAuthorName,
+      );
 
       const itemEntity: JsonLdNode = {
         "@type": itemType,
         url: itemUrl,
         description: entry.description,
         ...(itemType === "BlogPosting" ? { headline: name } : { name }),
+        ...(itemType === "BlogPosting" && normalizedAuthors.length > 0
+          ? {
+              author: normalizedAuthors.map((author) => ({
+                "@type": author.type || "Person",
+                name: author.name,
+                url: author.url,
+              })),
+            }
+          : {}),
         ...(imageUrl ? { image: imageUrl } : {}),
         ...(datePublished ? { datePublished } : {}),
         ...(dateModified ? { dateModified } : {}),
@@ -1164,6 +1243,7 @@ function buildMainEntityJsonLd(
     input.itemList,
     site.metadataBase,
     canonicalUrl,
+    site.authorName,
   );
   const mainEntityRef =
     genericItemListNode && typeof genericItemListNode["@id"] === "string"
