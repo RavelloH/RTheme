@@ -860,6 +860,32 @@ model CronHistory {
   @@index([triggerType, startedAt(sort: Desc)])
 }
 
+model CloudTriggerHistory {
+  id         Int      @id @default(autoincrement())
+  deliveryId String   @unique @db.VarChar(80)
+
+  requestedAt DateTime?
+  receivedAt  DateTime @default(now())
+
+  triggerType CronTriggerType
+  verifyOk    Boolean
+  verifySource String? @db.VarChar(16)
+
+  accepted Boolean @default(false)
+  dedupHit Boolean @default(false)
+  status   CloudTriggerStatus
+
+  message       String? @db.VarChar(500)
+  cronHistoryId Int?
+  telemetry     Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([receivedAt(sort: Desc)])
+  @@index([status, receivedAt(sort: Desc)])
+}
+
 enum HealthStatus {
   OK
   WARNING
@@ -882,6 +908,13 @@ enum CronRunStatus {
   OK
   PARTIAL
   ERROR
+}
+
+enum CloudTriggerStatus {
+  RECEIVED
+  DONE
+  ERROR
+  REJECTED
 }
 
 enum MailSubscriptionStatus {

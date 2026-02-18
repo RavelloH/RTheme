@@ -75,6 +75,11 @@ try {
   await syncPersistentMedia();
   rlog.log();
 
+  rlog.log("Starting cloud instance synchronization...");
+  const { syncCloudInstance } = await import("./sync-cloud-instance.js");
+  await syncCloudInstance();
+  rlog.log();
+
   rlog.log("Starting configuration, menu, and page cache generation...");
   const [
     { generateConfigCache },
