@@ -599,6 +599,10 @@ export const CONFIG_DEFINITIONS = {
     default: true,
     description: "计划任务是否执行自动清理",
   },
+  "cron.task.analytics.enable": {
+    default: true,
+    description: "计划任务是否执行访问统计整理",
+  },
   "cron.task.cleanup.searchLog.retentionDays": {
     default: 90,
     description: "自动清理 SearchLog 的保留天数",
@@ -651,6 +655,33 @@ export const CONFIG_DEFINITIONS = {
     default: 30,
     description:
       "对 webPushEnabled=false 用户，自动删除 inactive PushSubscription 的阈值天数",
+  },
+  "cron.task.analytics.report.mode": {
+    default: "NONE" as "NONE" | "NOTICE" | "EMAIL" | "NOTICE_EMAIL",
+    options: [
+      { value: "NONE", label: "不发送报告" },
+      { value: "NOTICE", label: "仅通知" },
+      { value: "EMAIL", label: "仅邮件" },
+      { value: "NOTICE_EMAIL", label: "通知 + 邮件" },
+    ],
+    description: "访问统计整理后，管理员报告发送方式",
+  },
+  "cron.task.analytics.report.daily.enable": {
+    default: false,
+    description: "是否在每日触发后发送昨日访问统计报告",
+  },
+  "cron.task.analytics.report.weekly.enable": {
+    default: false,
+    description: "是否在周一触发后发送上周访问统计报告（周一至周日）",
+  },
+  "cron.task.analytics.report.monthly.enable": {
+    default: false,
+    description: "是否在每月 1 日触发后发送上月访问统计报告",
+  },
+  "cron.task.analytics.report.notifyAdmin.uid": {
+    default: ["1"] as string[],
+    description:
+      "访问统计报告应发送给哪些管理员 UID。每行一个；留空则发送给所有 ADMIN/EDITOR。",
   },
   // =====================================
   // 云端互联

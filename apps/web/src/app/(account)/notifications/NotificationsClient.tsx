@@ -289,11 +289,11 @@ export default function NotificationsClient({
               {/* 正文：普通样式 */}
               {notice.content && (
                 <p
-                  className={`text-sm leading-relaxed ${
+                  className={`text-sm leading-relaxed whitespace-pre-line break-words ${
                     isRead ? "text-muted-foreground/80" : "text-foreground/80"
                   }`}
                 >
-                  {notice.content.replace(/\n/g, " ")}
+                  {notice.content}
                 </p>
               )}
 

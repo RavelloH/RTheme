@@ -11,4938 +11,7 @@
       "description": "开发环境"
     }
   ],
-  "paths": {
-    "/api/admin/audit-logs": {
-      "get": {
-        "summary": "获取审计日志",
-        "description": "需管理员身份，分页获取系统审计日志，支持过滤和排序",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 1
-            },
-            "description": "页码"
-          },
-          {
-            "in": "query",
-            "name": "pageSize",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 500,
-              "default": 10
-            },
-            "description": "每页数量"
-          },
-          {
-            "in": "query",
-            "name": "sortBy",
-            "schema": {
-              "type": "string",
-              "enum": ["id", "timestamp", "action", "resource", "userUid"]
-            },
-            "description": "排序字段"
-          },
-          {
-            "in": "query",
-            "name": "sortOrder",
-            "schema": {
-              "type": "string",
-              "enum": ["asc", "desc"]
-            },
-            "description": "排序顺序"
-          },
-          {
-            "in": "query",
-            "name": "action",
-            "schema": {
-              "type": "string"
-            },
-            "description": "按操作类型过滤"
-          },
-          {
-            "in": "query",
-            "name": "resource",
-            "schema": {
-              "type": "string"
-            },
-            "description": "按资源类型过滤"
-          },
-          {
-            "in": "query",
-            "name": "userUid",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "按用户UID过滤"
-          },
-          {
-            "in": "query",
-            "name": "startDate",
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "description": "开始日期"
-          },
-          {
-            "in": "query",
-            "name": "endDate",
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "description": "结束日期"
-          },
-          {
-            "in": "query",
-            "name": "search",
-            "schema": {
-              "type": "string"
-            },
-            "description": "搜索关键词（搜索描述、资源ID、IP地址、User Agent、操作类型、资源类型、用户名等）"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Admin"],
-        "responses": {
-          "200": {
-            "description": "返回审计日志列表",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetAuditLogsSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权，Access Token 无效或不存在，权限不足",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/audit-logs/trends": {
-      "get": {
-        "summary": "获取审计日志趋势数据",
-        "description": "需管理员身份，获取最近N天和最近N次的审计日志趋势数据",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "days",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 365,
-              "default": 30
-            },
-            "description": "获取最近多少天的数据"
-          },
-          {
-            "in": "query",
-            "name": "count",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 1000,
-              "default": 30
-            },
-            "description": "获取最近多少次的数据"
-          },
-          {
-            "in": "query",
-            "name": "groupBy",
-            "schema": {
-              "type": "string",
-              "enum": ["action", "resource"],
-              "default": "action"
-            },
-            "description": "分组方式（按操作类型或资源类型）"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Admin"],
-        "responses": {
-          "200": {
-            "description": "返回审计日志趋势数据",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetAuditTrendsSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权，Access Token 无效或不存在，权限不足",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/categories/create": {
-      "post": {
-        "summary": "创建分类",
-        "description": "需管理员/编辑身份，创建新分类",
-        "tags": ["Categories"],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["name"],
-                "properties": {
-                  "name": {
-                    "type": "string",
-                    "description": "分类名称"
-                  },
-                  "slug": {
-                    "type": "string",
-                    "description": "分类slug（可选，不提供则自动生成）"
-                  },
-                  "description": {
-                    "type": ["string", null],
-                    "description": "分类描述"
-                  },
-                  "parentId": {
-                    "type": ["integer", null],
-                    "description": "父分类ID（null表示顶级分类）"
-                  },
-                  "parentSlug": {
-                    "type": "string",
-                    "description": "父分类slug（与parentId二选一）"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "创建成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateCategorySuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误或分类已存在"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "500": {
-            "description": "服务器错误"
-          }
-        }
-      }
-    },
-    "/api/admin/categories/delete": {
-      "delete": {
-        "summary": "批量删除分类",
-        "description": "需管理员身份，批量删除分类（级联删除所有子孙分类）",
-        "tags": ["Categories"],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["ids"],
-                "properties": {
-                  "ids": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer"
-                    },
-                    "description": "要删除的分类ID数组",
-                    "minItems": 1
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "删除成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeleteCategoriesSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "500": {
-            "description": "服务器错误"
-          }
-        }
-      }
-    },
-    "/api/admin/categories/distribution": {
-      "get": {
-        "summary": "获取分类分布统计",
-        "description": "需管理员/编辑/作者身份，获取当前层级分类的文章分布情况（含子孙分类），用于环形图展示",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "parentId",
-            "schema": {
-              "type": ["integer", null]
-            },
-            "description": "父分类ID（null表示顶级分类）"
-          },
-          {
-            "in": "query",
-            "name": "parentSlug",
-            "schema": {
-              "type": "string"
-            },
-            "description": "父分类slug"
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "返回数量限制（默认10）"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Categories"],
-        "responses": {
-          "200": {
-            "description": "返回分类分布数据",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetCategoriesDistributionSuccessResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/categories/list": {
-      "get": {
-        "summary": "获取分类列表",
-        "description": "需管理员/编辑身份，获取分类列表，支持分页、搜索、排序和筛选",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "页码"
-          },
-          {
-            "in": "query",
-            "name": "pageSize",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "每页数量"
-          },
-          {
-            "in": "query",
-            "name": "sortBy",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "slug",
-                "name",
-                "directPostCount",
-                "totalPostCount",
-                "directChildCount",
-                "totalChildCount",
-                "createdAt",
-                "updatedAt"
-              ]
-            },
-            "description": "排序字段"
-          },
-          {
-            "in": "query",
-            "name": "sortOrder",
-            "schema": {
-              "type": "string",
-              "enum": ["asc", "desc"]
-            },
-            "description": "排序方向"
-          },
-          {
-            "in": "query",
-            "name": "search",
-            "schema": {
-              "type": "string"
-            },
-            "description": "搜索关键词"
-          },
-          {
-            "in": "query",
-            "name": "parentId",
-            "schema": {
-              "type": ["integer", null]
-            },
-            "description": "父分类ID（null表示顶级分类）"
-          },
-          {
-            "in": "query",
-            "name": "parentSlug",
-            "schema": {
-              "type": "string"
-            },
-            "description": "父分类slug"
-          },
-          {
-            "in": "query",
-            "name": "hasZeroPosts",
-            "schema": {
-              "type": "boolean"
-            },
-            "description": "筛选无文章关联的分类"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Categories"],
-        "responses": {
-          "200": {
-            "description": "返回分类列表",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetCategoriesListSuccessResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/categories/move": {
-      "put": {
-        "summary": "批量移动分类",
-        "description": "需管理员/编辑身份，将多个分类移动到同一个父分类下",
-        "tags": ["Categories"],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["ids", "targetParentId"],
-                "properties": {
-                  "ids": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer"
-                    },
-                    "description": "要移动的分类ID数组",
-                    "minItems": 1
-                  },
-                  "targetParentId": {
-                    "type": ["integer", null],
-                    "description": "目标父分类ID（null表示移动到顶级）"
-                  },
-                  "targetParentSlug": {
-                    "type": ["string", null],
-                    "description": "目标父分类slug（与targetParentId二选一）"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "移动成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MoveCategoriesSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误或会造成循环引用"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "500": {
-            "description": "服务器错误"
-          }
-        }
-      }
-    },
-    "/api/admin/categories/update": {
-      "put": {
-        "summary": "更新分类",
-        "description": "需管理员/编辑身份，更新分类信息，支持移动到新父分类",
-        "tags": ["Categories"],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "integer",
-                    "description": "分类ID（与slug二选一）"
-                  },
-                  "slug": {
-                    "type": "string",
-                    "description": "分类slug（与id二选一）"
-                  },
-                  "newSlug": {
-                    "type": "string",
-                    "description": "新的slug"
-                  },
-                  "newName": {
-                    "type": "string",
-                    "description": "新的名称"
-                  },
-                  "description": {
-                    "type": ["string", null],
-                    "description": "描述"
-                  },
-                  "parentId": {
-                    "type": ["integer", null],
-                    "description": "新的父分类ID（移动分类）"
-                  },
-                  "parentSlug": {
-                    "type": ["string", null],
-                    "description": "新的父分类slug"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "更新成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UpdateCategorySuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误或会造成循环引用"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "404": {
-            "description": "分类不存在"
-          },
-          "500": {
-            "description": "服务器错误"
-          }
-        }
-      }
-    },
-    "/api/admin/doctor/history": {
-      "get": {
-        "summary": "获取自检历史记录",
-        "description": "需管理员身份，分页获取系统自检历史记录",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 1
-            },
-            "description": "页码"
-          },
-          {
-            "in": "query",
-            "name": "pageSize",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 10
-            },
-            "description": "每页数量"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Admin"],
-        "responses": {
-          "200": {
-            "description": "返回自检历史记录",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetDoctorHistorySuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权，Access Token 无效或不存在，权限不足",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/doctor": {
-      "post": {
-        "summary": "运行自检",
-        "description": "自我检查系统的健康状态。force=true 时强制重新运行，force=false 时优先返回 23 小时内最近记录。",
-        "tags": ["Admin"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Doctor"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "自检完成",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DoctorSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权，Access Token 无效或不存在，权限不足",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/doctor/trends": {
-      "get": {
-        "summary": "获取自检趋势数据",
-        "description": "需管理员身份，获取最近N天和最近N次的自检趋势数据",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "days",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 365,
-              "default": 30
-            },
-            "description": "获取最近多少天的数据"
-          },
-          {
-            "in": "query",
-            "name": "count",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 1000,
-              "default": 30
-            },
-            "description": "获取最近多少次的数据"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Admin"],
-        "responses": {
-          "200": {
-            "description": "返回自检趋势数据",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetDoctorTrendsSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权，Access Token 无效或不存在，权限不足",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/pages/batch": {
-      "patch": {
-        "summary": "批量更新页面",
-        "description": "需管理员身份，批量更新页面",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdatePages"
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Pages"],
-        "responses": {
-          "200": {
-            "description": "更新成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UpdatePagesSuccessResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "summary": "批量删除页面",
-        "description": "需管理员身份，批量删除页面（系统页面不会被删除）",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeletePages"
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Pages"],
-        "responses": {
-          "200": {
-            "description": "删除成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeletePagesSuccessResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/pages": {
-      "get": {
-        "summary": "获取页面列表",
-        "description": "需管理员身份，获取页面列表",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "页码"
-          },
-          {
-            "in": "query",
-            "name": "pageSize",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "每页数量"
-          },
-          {
-            "in": "query",
-            "name": "sortBy",
-            "schema": {
-              "type": "string",
-              "enum": ["id", "title", "slug", "createdAt", "updatedAt"]
-            },
-            "description": "排序字段"
-          },
-          {
-            "in": "query",
-            "name": "sortOrder",
-            "schema": {
-              "type": "string",
-              "enum": ["asc", "desc"]
-            },
-            "description": "排序方向"
-          },
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": "string",
-              "enum": ["ACTIVE", "SUSPENDED"]
-            },
-            "description": "页面状态"
-          },
-          {
-            "in": "query",
-            "name": "search",
-            "schema": {
-              "type": "string"
-            },
-            "description": "搜索关键词"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Pages"],
-        "responses": {
-          "200": {
-            "description": "返回页面列表",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetPagesListSuccessResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "新建页面",
-        "description": "需管理员身份，创建新页面",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreatePage"
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Pages"],
-        "responses": {
-          "200": {
-            "description": "返回创建的页面信息",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreatePageSuccessResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/pages/{slug}": {
-      "get": {
-        "summary": "获取页面详情",
-        "description": "需管理员身份，通过 slug 获取单个页面的详细信息",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "slug",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "页面的唯一标识符"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Pages"],
-        "responses": {
-          "200": {
-            "description": "返回页面详情",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetPageDetailSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "403": {
-            "description": "无权访问此页面"
-          },
-          "404": {
-            "description": "页面不存在"
-          },
-          "500": {
-            "description": "服务器错误"
-          }
-        }
-      },
-      "patch": {
-        "summary": "更新页面",
-        "description": "需管理员身份，通过 slug 更新单个页面",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "slug",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "页面的唯一标识符"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "newSlug": {
-                    "type": "string",
-                    "description": "新的 slug（如果需要修改）"
-                  },
-                  "title": {
-                    "type": "string",
-                    "description": "页面标题"
-                  },
-                  "content": {
-                    "type": "string",
-                    "description": "页面内容"
-                  },
-                  "contentType": {
-                    "type": "string",
-                    "enum": ["MARKDOWN", "HTML", "MDX", "BLOCK", "BUILDIN"],
-                    "description": "内容类型"
-                  },
-                  "excerpt": {
-                    "type": "string",
-                    "description": "页面摘要"
-                  },
-                  "config": {
-                    "type": "object",
-                    "description": "页面配置（系统页面使用）"
-                  },
-                  "status": {
-                    "type": "string",
-                    "enum": ["ACTIVE", "SUSPENDED"],
-                    "description": "页面状态"
-                  },
-                  "metaDescription": {
-                    "type": "string",
-                    "description": "SEO 描述"
-                  },
-                  "metaKeywords": {
-                    "type": "string",
-                    "description": "SEO 关键词"
-                  },
-                  "robotsIndex": {
-                    "type": "boolean",
-                    "description": "是否允许搜索引擎索引"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Pages"],
-        "responses": {
-          "200": {
-            "description": "更新成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UpdatePageSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "403": {
-            "description": "无权修改此页面"
-          },
-          "404": {
-            "description": "页面不存在"
-          },
-          "500": {
-            "description": "服务器错误"
-          }
-        }
-      }
-    },
-    "/api/admin/posts/delete": {
-      "post": {
-        "summary": "批量删除文章",
-        "description": "需管理员/编辑/作者身份，批量删除文章",
-        "tags": ["Posts"],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["ids"],
-                "properties": {
-                  "ids": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer"
-                    },
-                    "description": "要删除的文章 ID 数组"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "删除成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "deleted": {
-                          "type": "integer",
-                          "description": "成功删除的文章数量"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "500": {
-            "description": "服务器错误"
-          }
-        }
-      }
-    },
-    "/api/admin/posts": {
-      "get": {
-        "summary": "获取文章列表",
-        "description": "需管理员/编辑/作者身份，获取文章列表",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "页码"
-          },
-          {
-            "in": "query",
-            "name": "pageSize",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "每页数量"
-          },
-          {
-            "in": "query",
-            "name": "sortBy",
-            "schema": {
-              "type": "string",
-              "enum": ["id", "title", "publishedAt", "updatedAt", "createdAt"]
-            },
-            "description": "排序字段"
-          },
-          {
-            "in": "query",
-            "name": "sortOrder",
-            "schema": {
-              "type": "string",
-              "enum": ["asc", "desc"]
-            },
-            "description": "排序方向"
-          },
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": "string",
-              "enum": ["DRAFT", "PUBLISHED", "ARCHIVED"]
-            },
-            "description": "文章状态"
-          },
-          {
-            "in": "query",
-            "name": "search",
-            "schema": {
-              "type": "string"
-            },
-            "description": "搜索关键词"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Posts"],
-        "responses": {
-          "200": {
-            "description": "返回文章列表",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetPostsListSuccessResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "新建文章",
-        "description": "需管理员/编辑/作者身份，创建新文章",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreatePost"
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Posts"],
-        "responses": {
-          "200": {
-            "description": "返回创建的文章信息",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreatePostSuccessResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/posts/trends": {
-      "get": {
-        "summary": "获取文章趋势数据",
-        "description": "需管理员/编辑/作者身份，获取文章增长趋势",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "days",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "统计天数（默认365天）"
-          },
-          {
-            "in": "query",
-            "name": "count",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "数据点数量（默认30个）"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Posts"],
-        "responses": {
-          "200": {
-            "description": "返回文章趋势数据",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetPostsTrendsSuccessResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/posts/update": {
-      "post": {
-        "summary": "批量更新文章",
-        "description": "需管理员/编辑/作者身份，批量更新文章信息",
-        "tags": ["Posts"],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["ids"],
-                "properties": {
-                  "ids": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer"
-                    },
-                    "description": "要更新的文章 ID 数组"
-                  },
-                  "status": {
-                    "type": "string",
-                    "enum": ["DRAFT", "PUBLISHED", "ARCHIVED"],
-                    "description": "新的状态"
-                  },
-                  "isPinned": {
-                    "type": "boolean",
-                    "description": "是否置顶"
-                  },
-                  "allowComments": {
-                    "type": "boolean",
-                    "description": "是否允许评论"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "更新成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "updated": {
-                          "type": "integer",
-                          "description": "成功更新的文章数量"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "500": {
-            "description": "服务器错误"
-          }
-        }
-      }
-    },
-    "/api/admin/posts/{slug}/history": {
-      "get": {
-        "summary": "获取文章历史版本列表",
-        "description": "获取指定文章的所有历史版本，需要身份验证。ADMIN/EDITOR 可查看所有文章，AUTHOR 只能查看自己的文章。",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "slug",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "文章 slug"
-          },
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 1
-            },
-            "description": "页码"
-          },
-          {
-            "in": "query",
-            "name": "pageSize",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 25
-            },
-            "description": "每页数量"
-          },
-          {
-            "in": "query",
-            "name": "sortBy",
-            "schema": {
-              "type": "string",
-              "enum": ["timestamp"],
-              "default": "timestamp"
-            },
-            "description": "排序字段"
-          },
-          {
-            "in": "query",
-            "name": "sortOrder",
-            "schema": {
-              "type": "string",
-              "enum": ["asc", "desc"],
-              "default": "desc"
-            },
-            "description": "排序顺序"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Admin", "Posts"],
-        "responses": {
-          "200": {
-            "description": "返回文章历史版本列表",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetPostHistorySuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权，Access Token 无效或不存在",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "权限不足",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ForbiddenErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "文章不存在",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotFoundErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/posts/{slug}": {
-      "get": {
-        "summary": "获取文章详情",
-        "description": "需管理员/编辑/作者身份，通过 slug 获取单个文章的详细信息",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "slug",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "文章的唯一标识符"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Posts"],
-        "responses": {
-          "200": {
-            "description": "返回文章详情",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetPostDetailSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "403": {
-            "description": "无权访问此文章"
-          },
-          "404": {
-            "description": "文章不存在"
-          },
-          "500": {
-            "description": "服务器错误"
-          }
-        }
-      },
-      "patch": {
-        "summary": "更新文章",
-        "description": "需管理员/编辑/作者身份，通过 slug 更新单个文章",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "slug",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "文章的唯一标识符"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "newSlug": {
-                    "type": "string",
-                    "description": "新的 slug（如果需要修改）"
-                  },
-                  "title": {
-                    "type": "string",
-                    "description": "文章标题"
-                  },
-                  "content": {
-                    "type": "string",
-                    "description": "文章内容"
-                  },
-                  "excerpt": {
-                    "type": "string",
-                    "description": "文章摘要"
-                  },
-                  "featuredImage": {
-                    "type": "string",
-                    "description": "特色图片 URL"
-                  },
-                  "status": {
-                    "type": "string",
-                    "enum": ["DRAFT", "PUBLISHED", "ARCHIVED"],
-                    "description": "文章状态"
-                  },
-                  "isPinned": {
-                    "type": "boolean",
-                    "description": "是否置顶"
-                  },
-                  "allowComments": {
-                    "type": "boolean",
-                    "description": "是否允许评论"
-                  },
-                  "publishedAt": {
-                    "type": "string",
-                    "format": "date-time",
-                    "description": "发布时间"
-                  },
-                  "metaDescription": {
-                    "type": "string",
-                    "description": "SEO 描述"
-                  },
-                  "metaKeywords": {
-                    "type": "string",
-                    "description": "SEO 关键词"
-                  },
-                  "robotsIndex": {
-                    "type": "boolean",
-                    "description": "是否允许搜索引擎索引"
-                  },
-                  "categories": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "文章分类"
-                  },
-                  "tags": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "文章标签"
-                  },
-                  "commitMessage": {
-                    "type": "string",
-                    "description": "版本提交信息"
-                  },
-                  "postMode": {
-                    "type": "string",
-                    "enum": ["MARKDOWN", "MDX"],
-                    "description": "文章编辑器模式"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Posts"],
-        "responses": {
-          "200": {
-            "description": "更新成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UpdatePostSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "403": {
-            "description": "无权修改此文章"
-          },
-          "404": {
-            "description": "文章不存在"
-          },
-          "500": {
-            "description": "服务器错误"
-          }
-        }
-      }
-    },
-    "/api/admin/settings": {
-      "get": {
-        "summary": "获取所有配置项",
-        "description": "需管理员身份，获取系统所有配置项",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Settings"],
-        "responses": {
-          "200": {
-            "description": "返回所有配置项",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetSettingsSuccessResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权，Access Token 无效或不存在，权限不足",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/settings/set": {
-      "post": {
-        "summary": "批量更新配置项",
-        "description": "需管理员身份，批量更新系统配置项",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Settings"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["settings"],
-                "properties": {
-                  "access_token": {
-                    "type": "string",
-                    "description": "访问令牌（也可以通过 Authorization header 传递）"
-                  },
-                  "settings": {
-                    "type": "array",
-                    "description": "要更新的配置项列表",
-                    "minItems": 1,
-                    "items": {
-                      "type": "object",
-                      "required": ["key", "value"],
-                      "properties": {
-                        "key": {
-                          "type": "string",
-                          "description": "配置项键名",
-                          "minLength": 1
-                        },
-                        "value": {
-                          "description": "配置项值（支持任意 JSON 类型）"
-                        }
-                      }
-                    }
-                  }
-                }
-              },
-              "example": {
-                "settings": [
-                  {
-                    "key": "site.title",
-                    "value": "我的网站"
-                  },
-                  {
-                    "key": "site.description",
-                    "value": "欢迎来到我的网站"
-                  },
-                  {
-                    "key": "features.comments",
-                    "value": true
-                  }
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "成功更新配置项",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UpdateSettingsSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权，Access Token 无效或不存在，权限不足",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/storage/batch": {
-      "delete": {
-        "summary": "批量删除存储提供商",
-        "description": "需管理员身份，批量删除多个存储提供商",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Storage"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "access_token": {
-                    "type": "string",
-                    "description": "访问令牌"
-                  },
-                  "ids": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "存储提供商ID列表"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "删除成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeleteStorageResponseWrapper"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误或存储提供商有关联的媒体文件",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "存储提供商不存在",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotFoundErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/storage": {
-      "get": {
-        "summary": "获取存储提供商列表",
-        "description": "需管理员身份，获取存储提供商列表",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            },
-            "description": "页码"
-          },
-          {
-            "in": "query",
-            "name": "pageSize",
-            "schema": {
-              "type": "integer",
-              "default": 25
-            },
-            "description": "每页数量"
-          },
-          {
-            "in": "query",
-            "name": "sortBy",
-            "schema": {
-              "type": "string",
-              "enum": ["id", "name", "type", "createdAt", "updatedAt"],
-              "default": "createdAt"
-            },
-            "description": "排序字段"
-          },
-          {
-            "in": "query",
-            "name": "sortOrder",
-            "schema": {
-              "type": "string",
-              "enum": ["asc", "desc"],
-              "default": "desc"
-            },
-            "description": "排序方向"
-          },
-          {
-            "in": "query",
-            "name": "search",
-            "schema": {
-              "type": "string"
-            },
-            "description": "搜索关键词"
-          },
-          {
-            "in": "query",
-            "name": "type",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "LOCAL",
-                "AWS_S3",
-                "GITHUB_PAGES",
-                "VERCEL_BLOB",
-                "EXTERNAL_URL"
-              ]
-            },
-            "description": "存储类型筛选"
-          },
-          {
-            "in": "query",
-            "name": "isActive",
-            "schema": {
-              "type": "boolean"
-            },
-            "description": "状态筛选"
-          },
-          {
-            "in": "query",
-            "name": "isDefault",
-            "schema": {
-              "type": "boolean"
-            },
-            "description": "默认存储筛选"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Storage"],
-        "responses": {
-          "200": {
-            "description": "返回存储提供商列表",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetStorageListResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "创建存储提供商",
-        "description": "需管理员身份，创建新的存储提供商",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Storage"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateStorage"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "创建成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateStorageResponseWrapper"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "存储名称已存在",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConflictErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/storage/{id}": {
-      "get": {
-        "summary": "获取存储提供商详情",
-        "description": "需管理员身份，获取指定存储提供商的详细信息",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "存储提供商ID"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Storage"],
-        "responses": {
-          "200": {
-            "description": "返回存储提供商详情",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetStorageDetailResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "存储提供商不存在",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotFoundErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "更新存储提供商",
-        "description": "需管理员身份，更新指定存储提供商的信息",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "存储提供商ID"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Storage"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateStorage"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "更新成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UpdateStorageResponseWrapper"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "存储提供商不存在",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotFoundErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "存储名称已存在",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConflictErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "summary": "删除存储提供商",
-        "description": "需管理员身份，删除指定的存储提供商",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "存储提供商ID"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Storage"],
-        "responses": {
-          "200": {
-            "description": "删除成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeleteStorageResponseWrapper"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误或存储提供商有关联的媒体文件",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "存储提供商不存在",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotFoundErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/storage/{id}/set-default": {
-      "patch": {
-        "summary": "设置默认存储提供商",
-        "description": "需管理员身份，将指定存储提供商设为默认存储",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "存储提供商ID"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Storage"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "access_token": {
-                    "type": "string",
-                    "description": "访问令牌"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "设置成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SetDefaultStorageResponseWrapper"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "存储提供商不存在",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotFoundErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/storage/{id}/toggle-status": {
-      "patch": {
-        "summary": "切换存储提供商状态",
-        "description": "需管理员身份，切换指定存储提供商的激活/停用状态",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "存储提供商ID"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Storage"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "access_token": {
-                    "type": "string",
-                    "description": "访问令牌"
-                  },
-                  "isActive": {
-                    "type": "boolean",
-                    "description": "新的状态"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "状态切换成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToggleStorageStatusResponseWrapper"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "存储提供商不存在",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotFoundErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/tags/create": {
-      "post": {
-        "summary": "创建标签",
-        "description": "需管理员/编辑身份，创建新标签",
-        "tags": ["Tags"],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["name"],
-                "properties": {
-                  "name": {
-                    "type": "string",
-                    "description": "标签名称"
-                  },
-                  "description": {
-                    "type": ["string", null],
-                    "description": "标签描述"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "创建成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateTagSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误或标签已存在"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "500": {
-            "description": "服务器错误"
-          }
-        }
-      }
-    },
-    "/api/admin/tags/delete": {
-      "post": {
-        "summary": "批量删除标签",
-        "description": "需管理员身份，批量删除标签",
-        "tags": ["Tags"],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["slugs"],
-                "properties": {
-                  "slugs": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "要删除的标签 slug 数组"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "删除成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeleteTagsSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "500": {
-            "description": "服务器错误"
-          }
-        }
-      }
-    },
-    "/api/admin/tags/distribution": {
-      "get": {
-        "summary": "获取标签分布数据",
-        "description": "需管理员/编辑身份，获取标签使用分布，用于环形图展示",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "返回前N个标签"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Tags"],
-        "responses": {
-          "200": {
-            "description": "返回标签分布数据",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetTagsDistributionSuccessResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/tags/list": {
-      "get": {
-        "summary": "获取标签列表",
-        "description": "需管理员/编辑身份，获取标签列表，支持分页、搜索、排序和筛选",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "页码"
-          },
-          {
-            "in": "query",
-            "name": "pageSize",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "每页数量"
-          },
-          {
-            "in": "query",
-            "name": "sortBy",
-            "schema": {
-              "type": "string",
-              "enum": ["name", "postCount", "createdAt", "updatedAt"]
-            },
-            "description": "排序字段"
-          },
-          {
-            "in": "query",
-            "name": "sortOrder",
-            "schema": {
-              "type": "string",
-              "enum": ["asc", "desc"]
-            },
-            "description": "排序方向"
-          },
-          {
-            "in": "query",
-            "name": "search",
-            "schema": {
-              "type": "string"
-            },
-            "description": "搜索关键词"
-          },
-          {
-            "in": "query",
-            "name": "hasZeroPosts",
-            "schema": {
-              "type": "boolean"
-            },
-            "description": "筛选无文章关联的标签"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Tags"],
-        "responses": {
-          "200": {
-            "description": "返回标签列表",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetTagsListSuccessResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/tags/update": {
-      "post": {
-        "summary": "更新标签",
-        "description": "需管理员/编辑身份，更新标签信息",
-        "tags": ["Tags"],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["slug"],
-                "properties": {
-                  "slug": {
-                    "type": "string",
-                    "description": "当前标签 slug"
-                  },
-                  "newSlug": {
-                    "type": "string",
-                    "description": "新标签 slug（可选）"
-                  },
-                  "newName": {
-                    "type": "string",
-                    "description": "新标签名称（可选）"
-                  },
-                  "description": {
-                    "type": ["string", null],
-                    "description": "标签描述"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "更新成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UpdateTagSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "404": {
-            "description": "标签不存在"
-          },
-          "500": {
-            "description": "服务器错误"
-          }
-        }
-      }
-    },
-    "/api/admin/users/delete": {
-      "post": {
-        "summary": "批量删除用户",
-        "description": "批量软删除用户。只允许管理员操作，不允许删除当前用户。",
-        "tags": ["Users"],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["uids"],
-                "properties": {
-                  "uids": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer"
-                    },
-                    "description": "要删除的用户 UID 数组"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "删除成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "deleted": {
-                          "type": "integer",
-                          "description": "成功删除的用户数量"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "500": {
-            "description": "服务器错误"
-          }
-        }
-      }
-    },
-    "/api/admin/users/list": {
-      "get": {
-        "summary": "获取用户列表",
-        "description": "需管理员身份，分页获取用户列表，支持排序、筛选和搜索",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 1
-            },
-            "description": "页码"
-          },
-          {
-            "in": "query",
-            "name": "pageSize",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 25
-            },
-            "description": "每页数量"
-          },
-          {
-            "in": "query",
-            "name": "sortBy",
-            "schema": {
-              "type": "string",
-              "enum": ["uid", "username", "createdAt", "lastUseAt"],
-              "default": "uid"
-            },
-            "description": "排序字段"
-          },
-          {
-            "in": "query",
-            "name": "sortOrder",
-            "schema": {
-              "type": "string",
-              "enum": ["asc", "desc"],
-              "default": "asc"
-            },
-            "description": "排序方式"
-          },
-          {
-            "in": "query",
-            "name": "role",
-            "schema": {
-              "type": "string",
-              "enum": ["USER", "ADMIN", "EDITOR", "AUTHOR"]
-            },
-            "description": "按角色筛选"
-          },
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": "string",
-              "enum": ["ACTIVE", "SUSPENDED", "NEEDS_UPDATE"]
-            },
-            "description": "按状态筛选"
-          },
-          {
-            "in": "query",
-            "name": "search",
-            "schema": {
-              "type": "string"
-            },
-            "description": "搜索关键词（用户名、昵称、邮箱）"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Users"],
-        "responses": {
-          "200": {
-            "description": "返回用户列表",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetUsersListSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权，Access Token 无效或不存在，权限不足",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/users/trends": {
-      "get": {
-        "summary": "获取用户增长趋势数据",
-        "description": "需管理员身份，获取最近N天的用户增长趋势数据，包括总用户数、新增用户、活跃用户",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "days",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 365,
-              "default": 30
-            },
-            "description": "获取最近多少天的数据"
-          },
-          {
-            "in": "query",
-            "name": "count",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 1000,
-              "default": 30
-            },
-            "description": "数据点数量"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Users"],
-        "responses": {
-          "200": {
-            "description": "返回用户趋势数据",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetUsersTrendsSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权，Access Token 无效或不存在，权限不足",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/users/update": {
-      "post": {
-        "summary": "批量更新用户信息",
-        "description": "批量更新用户信息。只允许管理员操作。\n- 单个用户（uids.length === 1）：可以更改所有字段（除当前用户的角色和状态）\n- 批量更新（uids.length > 1）：只允许更改角色和状态，不允许包含当前用户\n",
-        "tags": ["Users"],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["uids"],
-                "properties": {
-                  "uids": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer"
-                    },
-                    "description": "要更新的用户 UID 数组"
-                  },
-                  "role": {
-                    "type": "string",
-                    "enum": ["USER", "ADMIN", "EDITOR", "AUTHOR"],
-                    "description": "新的角色（批量更新或单个用户）"
-                  },
-                  "status": {
-                    "type": "string",
-                    "enum": ["ACTIVE", "SUSPENDED", "NEEDS_UPDATE"],
-                    "description": "新的状态（批量更新或单个用户）"
-                  },
-                  "username": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 50,
-                    "description": "用户名（仅单个用户编辑）"
-                  },
-                  "nickname": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "description": "昵称（仅单个用户编辑）"
-                  },
-                  "email": {
-                    "type": "string",
-                    "format": "email",
-                    "description": "邮箱地址（仅单个用户编辑）"
-                  },
-                  "avatar": {
-                    "type": "string",
-                    "format": "uri",
-                    "description": "头像 URL（仅单个用户编辑）"
-                  },
-                  "website": {
-                    "type": "string",
-                    "format": "uri",
-                    "description": "个人网站（仅单个用户编辑）"
-                  },
-                  "bio": {
-                    "type": "string",
-                    "maxLength": 500,
-                    "description": "个人简介（仅单个用户编辑）"
-                  },
-                  "emailVerified": {
-                    "type": "boolean",
-                    "description": "邮箱验证状态（仅单个用户编辑）"
-                  },
-                  "emailNotice": {
-                    "type": "boolean",
-                    "description": "是否接收邮件通知（仅单个用户编辑）"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "更新成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "updated": {
-                          "type": "integer",
-                          "description": "成功更新的用户数量"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "500": {
-            "description": "服务器错误"
-          }
-        }
-      }
-    },
-    "/api/auth/email-verify/resend": {
-      "post": {
-        "summary": "重发邮箱验证码",
-        "description": "重新发送邮箱验证码到用户邮箱，用于邮箱验证",
-        "tags": ["Auth"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ResendEmailVerification"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "验证码发送成功（为安全起见，即使用户不存在也返回成功）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResendEmailVerificationSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误或邮箱已验证",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/ValidationErrorResponse"
-                    },
-                    {
-                      "$ref": "#/components/schemas/EmailAlreadyVerifiedErrorResponse"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/email/verify": {
-      "post": {
-        "summary": "邮箱验证",
-        "description": "验证用户邮箱地址",
-        "tags": ["Auth"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EmailVerification"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "邮箱验证成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmailVerifySuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误或验证码无效",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/ValidationErrorResponse"
-                    },
-                    {
-                      "$ref": "#/components/schemas/EmailAlreadyVerifiedErrorResponse"
-                    },
-                    {
-                      "$ref": "#/components/schemas/InvalidOrExpiredCodeErrorResponse"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权，Access Token 无效或不存在",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/login": {
-      "post": {
-        "summary": "用户登录",
-        "description": "登录并获取 ACCESS_TOKEN 和 REFRESH_TOKEN",
-        "tags": ["Auth"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Login"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "登录成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LoginSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误或用户状态异常",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/ValidationErrorResponse"
-                    },
-                    {
-                      "$ref": "#/components/schemas/InvalidCredentialsErrorResponse"
-                    },
-                    {
-                      "$ref": "#/components/schemas/SsoUserErrorResponse"
-                    },
-                    {
-                      "$ref": "#/components/schemas/EmailNotVerifiedErrorResponse"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/logout": {
-      "post": {
-        "summary": "退出登录",
-        "description": "传入 REFRESH_TOKEN 来退出登录。可以通过请求体传递 refresh_token，或在 Cookie 中携带名为 REFRESH_TOKEN 的令牌。",
-        "tags": ["Auth"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Logout"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "退出登录成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LogoutSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误或刷新令牌无效",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/ValidationErrorResponse"
-                    },
-                    {
-                      "$ref": "#/components/schemas/InvalidCredentialsErrorResponse"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/password/change": {
-      "post": {
-        "summary": "修改密码",
-        "description": "修改用户密码，需要提供旧密码和access_token验证",
-        "tags": ["Auth"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChangePassword"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "密码修改成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChangePasswordSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误或密码验证失败",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/ValidationErrorResponse"
-                    },
-                    {
-                      "$ref": "#/components/schemas/NoPasswordSetErrorResponse"
-                    },
-                    {
-                      "$ref": "#/components/schemas/InvalidOldPasswordErrorResponse"
-                    },
-                    {
-                      "$ref": "#/components/schemas/PasswordsIdenticalErrorResponse"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权，Access Token 无效或不存在",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/password/request": {
-      "post": {
-        "summary": "请求密码重置",
-        "description": "通过邮箱地址请求密码重置，系统将发送重置链接到用户邮箱",
-        "tags": ["Auth"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RequestPasswordReset"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "密码重置请求成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PasswordResetRequestSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/password/reset": {
-      "post": {
-        "summary": "重置密码",
-        "description": "使用重置码重置用户密码",
-        "tags": ["Auth"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ResetPassword"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "密码重置成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResetPasswordSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误或重置码无效",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/ValidationErrorResponse"
-                    },
-                    {
-                      "$ref": "#/components/schemas/InvalidResetCodeErrorResponse"
-                    },
-                    {
-                      "$ref": "#/components/schemas/ExpiredResetCodeErrorResponse"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/refresh": {
-      "post": {
-        "summary": "令牌刷新",
-        "description": "传入 REFRESH_TOKEN 刷新 ACCESS_TOKEN。可以通过请求体传递 refresh_token，或在 Cookie 中携带名为 REFRESH_TOKEN 的令牌。",
-        "tags": ["Auth"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefreshToken"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "令牌刷新成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LoginSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误或刷新令牌无效",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/ValidationErrorResponse"
-                    },
-                    {
-                      "$ref": "#/components/schemas/InvalidCredentialsErrorResponse"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/register": {
-      "post": {
-        "summary": "用户注册",
-        "description": "注册新用户",
-        "tags": ["Auth"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Register"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "注册成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegisterSuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "用户名或邮箱已存在",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConflictErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/captcha/get": {
-      "get": {
-        "summary": "获取验证码",
-        "description": "获取一个新的验证码，客户端需要解决这个PoW才能进行敏感操作",
-        "tags": ["Captcha"],
-        "responses": {
-          "200": {
-            "description": "成功返回验证码数据",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CaptchaGetResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/captcha/verify": {
-      "post": {
-        "summary": "验证验证码",
-        "description": "验证传入的验证码是否正确",
-        "tags": ["Captcha"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CaptchaVerifyRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "验证成功",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CaptchaVerifySuccessResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/search": {
-      "get": {
-        "summary": "搜索文章",
-        "description": "使用全文搜索功能搜索文章。支持标题、内容或全文搜索，使用 PostgreSQL tsvector 和自定义分词器。",
-        "tags": ["Search"],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "maxLength": 200
-            },
-            "description": "搜索关键词"
-          },
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "default": 1,
-              "minimum": 1
-            },
-            "description": "页码"
-          },
-          {
-            "in": "query",
-            "name": "pageSize",
-            "schema": {
-              "type": "integer",
-              "default": 10,
-              "maximum": 50
-            },
-            "description": "每页数量"
-          },
-          {
-            "in": "query",
-            "name": "searchIn",
-            "schema": {
-              "type": "string",
-              "enum": ["title", "content", "both"],
-              "default": "both"
-            },
-            "description": "搜索范围"
-          },
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": "string",
-              "enum": ["DRAFT", "PUBLISHED", "ARCHIVED"]
-            },
-            "description": "文章状态筛选"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "成功返回搜索结果",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": true
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "posts": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "id": {
-                                "type": "integer"
-                              },
-                              "slug": {
-                                "type": "string"
-                              },
-                              "title": {
-                                "type": "string"
-                              },
-                              "excerpt": {
-                                "type": ["string", null]
-                              },
-                              "status": {
-                                "type": "string"
-                              },
-                              "publishedAt": {
-                                "type": ["string", null],
-                                "format": "date-time"
-                              },
-                              "createdAt": {
-                                "type": "string",
-                                "format": "date-time"
-                              },
-                              "updatedAt": {
-                                "type": "string",
-                                "format": "date-time"
-                              },
-                              "author": {
-                                "type": "object",
-                                "properties": {
-                                  "uid": {
-                                    "type": "integer"
-                                  },
-                                  "username": {
-                                    "type": "string"
-                                  },
-                                  "nickname": {
-                                    "type": ["string", null]
-                                  }
-                                }
-                              },
-                              "rank": {
-                                "type": "number",
-                                "description": "搜索相关性排名分数"
-                              }
-                            }
-                          }
-                        },
-                        "total": {
-                          "type": "integer",
-                          "description": "总结果数"
-                        },
-                        "query": {
-                          "type": "string",
-                          "description": "原始搜索词"
-                        },
-                        "tokensUsed": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          },
-                          "description": "实际使用的分词结果"
-                        }
-                      }
-                    },
-                    "meta": {
-                      "type": "object",
-                      "properties": {
-                        "page": {
-                          "type": "integer"
-                        },
-                        "pageSize": {
-                          "type": "integer"
-                        },
-                        "total": {
-                          "type": "integer"
-                        },
-                        "totalPages": {
-                          "type": "integer"
-                        },
-                        "hasNext": {
-                          "type": "boolean"
-                        },
-                        "hasPrev": {
-                          "type": "boolean"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误"
-          },
-          "429": {
-            "description": "请求过于频繁"
-          },
-          "500": {
-            "description": "服务器错误"
-          }
-        }
-      }
-    },
-    "/api/stats/audit": {
-      "get": {
-        "summary": "获取审计日志统计数据",
-        "description": "需管理员身份，获取审计日志统计信息",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "force",
-            "schema": {
-              "type": "boolean"
-            },
-            "description": "是否强制刷新缓存"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Audit"],
-        "responses": {
-          "200": {
-            "description": "返回审计日志统计数据",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetAuditStatsSuccessResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权，Access Token 无效或不存在，权限不足",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/stats/categories": {
-      "get": {
-        "summary": "获取分类统计数据",
-        "description": "需管理员/编辑身份，获取分类统计信息",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "force",
-            "schema": {
-              "type": "boolean"
-            },
-            "description": "是否强制刷新缓存"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Categories"],
-        "responses": {
-          "200": {
-            "description": "返回分类统计数据",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetCategoriesStatsSuccessResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权，Access Token 无效或不存在，权限不足",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/stats/pages": {
-      "get": {
-        "summary": "获取页面统计信息",
-        "description": "需管理员身份，获取页面统计数据",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "force",
-            "schema": {
-              "type": "boolean",
-              "default": false
-            },
-            "description": "是否强制刷新缓存"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Pages"],
-        "responses": {
-          "200": {
-            "description": "返回页面统计信息",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetPagesStatsSuccessResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/stats/posts": {
-      "get": {
-        "summary": "获取文章统计数据",
-        "description": "需管理员/编辑/作者身份，获取文章统计信息",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "force",
-            "schema": {
-              "type": "boolean"
-            },
-            "description": "是否强制刷新缓存"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Posts"],
-        "responses": {
-          "200": {
-            "description": "返回文章数据",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetPostsStatsSuccessResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权，Access Token 无效或不存在，权限不足",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/stats/storage": {
-      "get": {
-        "summary": "获取存储统计数据",
-        "description": "需管理员身份，获取存储统计信息",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "force",
-            "schema": {
-              "type": "boolean"
-            },
-            "description": "是否强制刷新缓存"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Storage"],
-        "responses": {
-          "200": {
-            "description": "返回存储统计数据",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetStorageStatsSuccessResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权，Access Token 无效或不存在，权限不足",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/stats/tags": {
-      "get": {
-        "summary": "获取标签统计数据",
-        "description": "需管理员/编辑身份，获取标签统计信息",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "force",
-            "schema": {
-              "type": "boolean"
-            },
-            "description": "是否强制刷新缓存"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Tags"],
-        "responses": {
-          "200": {
-            "description": "返回标签统计数据",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetTagsStatsSuccessResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权，Access Token 无效或不存在，权限不足",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/stats/users": {
-      "get": {
-        "summary": "获取用户统计数据",
-        "description": "需管理员身份，获取用户统计信息",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "force",
-            "schema": {
-              "type": "boolean"
-            },
-            "description": "是否强制刷新缓存"
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "tags": ["Users"],
-        "responses": {
-          "200": {
-            "description": "返回用户数据",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetUsersStatsSuccessResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未授权，Access Token 无效或不存在，权限不足",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnauthorizedErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求过于频繁",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RateLimitErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "服务器内部错误",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/tags/search": {
-      "get": {
-        "summary": "搜索标签",
-        "description": "轻量级标签搜索接口，用于自动补全。支持按名称和 slug 模糊搜索。",
-        "tags": ["Tags"],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "query",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "搜索关键词"
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "default": 10
-            },
-            "description": "返回结果数量限制"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "成功返回搜索结果",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": true
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "slug": {
-                            "type": "string",
-                            "example": "minecraft"
-                          },
-                          "name": {
-                            "type": "string",
-                            "example": "Minecraft"
-                          },
-                          "postCount": {
-                            "type": "integer",
-                            "example": 5
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "请求参数错误"
-          },
-          "401": {
-            "description": "未授权"
-          },
-          "429": {
-            "description": "请求过于频繁"
-          }
-        }
-      }
-    }
-  },
+  "paths": {},
   "components": {
     "schemas": {
       "ApiResponse": {
@@ -24687,6 +19756,1738 @@
               }
             },
             "required": ["deleted", "byType"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "TriggerCron": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "triggerType": {
+            "default": "MANUAL",
+            "type": "string",
+            "enum": ["MANUAL", "CLOUD", "AUTO"]
+          }
+        },
+        "required": ["triggerType"],
+        "additionalProperties": false
+      },
+      "TriggerCronSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              "startedAt": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "durationMs": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "triggerType": {
+                "type": "string",
+                "enum": ["MANUAL", "CLOUD", "AUTO"]
+              },
+              "status": {
+                "type": "string",
+                "enum": ["OK", "PARTIAL", "ERROR"]
+              },
+              "totalCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "enabledCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "successCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "failedCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "skippedCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "snapshot": {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "default": 1,
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0
+                  },
+                  "tasks": {
+                    "type": "object",
+                    "properties": {
+                      "doctor": {
+                        "$ref": "#/components/schemas/TriggerCronSuccessResponse"
+                      },
+                      "projects": {
+                        "$ref": "#/components/schemas/TriggerCronSuccessResponse"
+                      },
+                      "friends": {
+                        "$ref": "#/components/schemas/TriggerCronSuccessResponse"
+                      },
+                      "cleanup": {
+                        "$ref": "#/components/schemas/TriggerCronSuccessResponse"
+                      }
+                    },
+                    "required": ["doctor", "projects", "friends", "cleanup"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["version", "tasks"],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "id",
+              "startedAt",
+              "createdAt",
+              "durationMs",
+              "triggerType",
+              "status",
+              "totalCount",
+              "enabledCount",
+              "successCount",
+              "failedCount",
+              "skippedCount",
+              "snapshot"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "GetCronHistory": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "page": {
+            "default": 1,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "pageSize": {
+            "default": 25,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 500,
+            "minimum": 0
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "id",
+              "createdAt",
+              "startedAt",
+              "status",
+              "triggerType",
+              "durationMs",
+              "enabledCount",
+              "successCount",
+              "failedCount",
+              "skippedCount"
+            ]
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": ["asc", "desc"]
+          },
+          "id": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "enum": ["OK", "PARTIAL", "ERROR"]
+          },
+          "triggerType": {
+            "type": "string",
+            "enum": ["MANUAL", "CLOUD", "AUTO"]
+          },
+          "createdAtStart": {
+            "type": "string"
+          },
+          "createdAtEnd": {
+            "type": "string"
+          }
+        },
+        "required": ["page", "pageSize"],
+        "additionalProperties": false
+      },
+      "GetCronHistorySuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
+                "startedAt": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "durationMs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "triggerType": {
+                  "type": "string",
+                  "enum": ["MANUAL", "CLOUD", "AUTO"]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["OK", "PARTIAL", "ERROR"]
+                },
+                "totalCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "enabledCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "successCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "failedCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "skippedCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "snapshot": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "default": 1,
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
+                    "tasks": {
+                      "type": "object",
+                      "properties": {
+                        "doctor": {
+                          "$ref": "#/components/schemas/GetCronHistorySuccessResponse"
+                        },
+                        "projects": {
+                          "$ref": "#/components/schemas/GetCronHistorySuccessResponse"
+                        },
+                        "friends": {
+                          "$ref": "#/components/schemas/GetCronHistorySuccessResponse"
+                        },
+                        "cleanup": {
+                          "$ref": "#/components/schemas/GetCronHistorySuccessResponse"
+                        }
+                      },
+                      "required": ["doctor", "projects", "friends", "cleanup"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["version", "tasks"],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "startedAt",
+                "createdAt",
+                "durationMs",
+                "triggerType",
+                "status",
+                "totalCount",
+                "enabledCount",
+                "successCount",
+                "failedCount",
+                "skippedCount",
+                "snapshot"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "GetCronTrends": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "days": {
+            "default": 30,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 365,
+            "minimum": 0
+          },
+          "count": {
+            "default": 30,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 500,
+            "minimum": 0
+          }
+        },
+        "required": ["days", "count"],
+        "additionalProperties": false
+      },
+      "GetCronTrendsSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "time": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "totalDurationMs": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "doctorDurationMs": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "projectsDurationMs": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "friendsDurationMs": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "cleanupDurationMs": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "successCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "failedCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "skippedCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "totalDurationMs",
+                    "doctorDurationMs",
+                    "projectsDurationMs",
+                    "friendsDurationMs",
+                    "cleanupDurationMs",
+                    "successCount",
+                    "failedCount",
+                    "skippedCount"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["time", "data"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "GetCronConfig": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetCronConfigSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "tasks": {
+                "type": "object",
+                "properties": {
+                  "doctor": {
+                    "type": "boolean"
+                  },
+                  "projects": {
+                    "type": "boolean"
+                  },
+                  "friends": {
+                    "type": "boolean"
+                  },
+                  "cleanup": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["doctor", "projects", "friends", "cleanup"],
+                "additionalProperties": false
+              },
+              "cleanup": {
+                "type": "object",
+                "properties": {
+                  "searchLogRetentionDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "healthCheckRetentionDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "auditLogRetentionDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "cronHistoryRetentionDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "cloudTriggerHistoryRetentionDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "noticeRetentionDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "recycleBinRetentionDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "mailSubscriptionUnsubscribedRetentionDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "refreshTokenExpiredRetentionDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "passwordResetRetentionMinutes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "pushSubscriptionMarkInactiveDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "pushSubscriptionDeleteInactiveDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "pushSubscriptionDeleteDisabledUserDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "searchLogRetentionDays",
+                  "healthCheckRetentionDays",
+                  "auditLogRetentionDays",
+                  "cronHistoryRetentionDays",
+                  "cloudTriggerHistoryRetentionDays",
+                  "noticeRetentionDays",
+                  "recycleBinRetentionDays",
+                  "mailSubscriptionUnsubscribedRetentionDays",
+                  "refreshTokenExpiredRetentionDays",
+                  "passwordResetRetentionMinutes",
+                  "pushSubscriptionMarkInactiveDays",
+                  "pushSubscriptionDeleteInactiveDays",
+                  "pushSubscriptionDeleteDisabledUserDays"
+                ],
+                "additionalProperties": false
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            },
+            "required": ["enabled", "tasks", "cleanup", "updatedAt"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "UpdateCronConfig": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "$ref": "#/components/schemas/UpdateCronConfig"
+          },
+          "enabled": {
+            "$ref": "#/components/schemas/UpdateCronConfig"
+          },
+          "doctor": {
+            "$ref": "#/components/schemas/UpdateCronConfig"
+          },
+          "projects": {
+            "$ref": "#/components/schemas/UpdateCronConfig"
+          },
+          "friends": {
+            "$ref": "#/components/schemas/UpdateCronConfig"
+          },
+          "cleanup": {
+            "$ref": "#/components/schemas/UpdateCronConfig"
+          },
+          "searchLogRetentionDays": {
+            "$ref": "#/components/schemas/UpdateCronConfig"
+          },
+          "healthCheckRetentionDays": {
+            "$ref": "#/components/schemas/UpdateCronConfig"
+          },
+          "auditLogRetentionDays": {
+            "$ref": "#/components/schemas/UpdateCronConfig"
+          },
+          "cronHistoryRetentionDays": {
+            "$ref": "#/components/schemas/UpdateCronConfig"
+          },
+          "cloudTriggerHistoryRetentionDays": {
+            "$ref": "#/components/schemas/UpdateCronConfig"
+          },
+          "noticeRetentionDays": {
+            "$ref": "#/components/schemas/UpdateCronConfig"
+          },
+          "recycleBinRetentionDays": {
+            "$ref": "#/components/schemas/UpdateCronConfig"
+          },
+          "mailSubscriptionUnsubscribedRetentionDays": {
+            "$ref": "#/components/schemas/UpdateCronConfig"
+          },
+          "refreshTokenExpiredRetentionDays": {
+            "$ref": "#/components/schemas/UpdateCronConfig"
+          },
+          "passwordResetRetentionMinutes": {
+            "$ref": "#/components/schemas/UpdateCronConfig"
+          },
+          "pushSubscriptionMarkInactiveDays": {
+            "$ref": "#/components/schemas/UpdateCronConfig"
+          },
+          "pushSubscriptionDeleteInactiveDays": {
+            "$ref": "#/components/schemas/UpdateCronConfig"
+          },
+          "pushSubscriptionDeleteDisabledUserDays": {
+            "$ref": "#/components/schemas/UpdateCronConfig"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateCronConfigSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "tasks": {
+                "type": "object",
+                "properties": {
+                  "doctor": {
+                    "type": "boolean"
+                  },
+                  "projects": {
+                    "type": "boolean"
+                  },
+                  "friends": {
+                    "type": "boolean"
+                  },
+                  "cleanup": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["doctor", "projects", "friends", "cleanup"],
+                "additionalProperties": false
+              },
+              "cleanup": {
+                "type": "object",
+                "properties": {
+                  "searchLogRetentionDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "healthCheckRetentionDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "auditLogRetentionDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "cronHistoryRetentionDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "cloudTriggerHistoryRetentionDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "noticeRetentionDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "recycleBinRetentionDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "mailSubscriptionUnsubscribedRetentionDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "refreshTokenExpiredRetentionDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "passwordResetRetentionMinutes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "pushSubscriptionMarkInactiveDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "pushSubscriptionDeleteInactiveDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "pushSubscriptionDeleteDisabledUserDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "searchLogRetentionDays",
+                  "healthCheckRetentionDays",
+                  "auditLogRetentionDays",
+                  "cronHistoryRetentionDays",
+                  "cloudTriggerHistoryRetentionDays",
+                  "noticeRetentionDays",
+                  "recycleBinRetentionDays",
+                  "mailSubscriptionUnsubscribedRetentionDays",
+                  "refreshTokenExpiredRetentionDays",
+                  "passwordResetRetentionMinutes",
+                  "pushSubscriptionMarkInactiveDays",
+                  "pushSubscriptionDeleteInactiveDays",
+                  "pushSubscriptionDeleteDisabledUserDays"
+                ],
+                "additionalProperties": false
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            },
+            "required": ["enabled", "tasks", "cleanup", "updatedAt"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "GetCloudConfig": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetCloudConfigSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "siteId": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "scheduleTime": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "cloudBaseUrl": {
+                "type": "string"
+              },
+              "dohDomain": {
+                "type": "string"
+              },
+              "jwksUrl": {
+                "type": "string"
+              },
+              "issuer": {
+                "type": "string"
+              },
+              "audience": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "enabled",
+              "siteId",
+              "scheduleTime",
+              "cloudBaseUrl",
+              "dohDomain",
+              "jwksUrl",
+              "issuer",
+              "audience",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "UpdateCloudConfig": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "$ref": "#/components/schemas/UpdateCloudConfig"
+          },
+          "enabled": {
+            "$ref": "#/components/schemas/UpdateCloudConfig"
+          },
+          "scheduleTime": {
+            "$ref": "#/components/schemas/UpdateCloudConfig"
+          },
+          "cloudBaseUrl": {
+            "$ref": "#/components/schemas/UpdateCloudConfig"
+          },
+          "dohDomain": {
+            "$ref": "#/components/schemas/UpdateCloudConfig"
+          },
+          "jwksUrl": {
+            "$ref": "#/components/schemas/UpdateCloudConfig"
+          },
+          "issuer": {
+            "$ref": "#/components/schemas/UpdateCloudConfig"
+          },
+          "audience": {
+            "$ref": "#/components/schemas/UpdateCloudConfig"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateCloudConfigSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "siteId": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "scheduleTime": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "cloudBaseUrl": {
+                "type": "string"
+              },
+              "dohDomain": {
+                "type": "string"
+              },
+              "jwksUrl": {
+                "type": "string"
+              },
+              "issuer": {
+                "type": "string"
+              },
+              "audience": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "enabled",
+              "siteId",
+              "scheduleTime",
+              "cloudBaseUrl",
+              "dohDomain",
+              "jwksUrl",
+              "issuer",
+              "audience",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "GetCloudHistory": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "page": {
+            "default": 1,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "pageSize": {
+            "default": 25,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 500,
+            "minimum": 0
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "id",
+              "receivedAt",
+              "status",
+              "verifySource",
+              "accepted",
+              "dedupHit",
+              "createdAt"
+            ]
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": ["asc", "desc"]
+          },
+          "id": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "deliveryId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["RECEIVED", "DONE", "ERROR", "REJECTED"]
+          },
+          "verifySource": {
+            "type": "string",
+            "enum": ["DOH", "JWKS", "NONE"]
+          },
+          "accepted": {
+            "type": "boolean"
+          },
+          "dedupHit": {
+            "type": "boolean"
+          },
+          "createdAtStart": {
+            "type": "string"
+          },
+          "createdAtEnd": {
+            "type": "string"
+          }
+        },
+        "required": ["page", "pageSize"],
+        "additionalProperties": false
+      },
+      "GetCloudHistorySuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
+                "deliveryId": {
+                  "type": "string"
+                },
+                "triggerType": {
+                  "type": "string",
+                  "enum": ["MANUAL", "CLOUD", "AUTO"]
+                },
+                "requestedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "receivedAt": {
+                  "type": "string"
+                },
+                "verifyOk": {
+                  "type": "boolean"
+                },
+                "verifySource": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": ["DOH", "JWKS", "NONE"]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "accepted": {
+                  "type": "boolean"
+                },
+                "dedupHit": {
+                  "type": "boolean"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["RECEIVED", "DONE", "ERROR", "REJECTED"]
+                },
+                "message": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "cronHistoryId": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "telemetry": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "schemaVer": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "collectedAt": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "latestStatus": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "latestDurationMs": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "doctorDurationMs": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "projectsDurationMs": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "friendsDurationMs": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "healthStatus": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "appVersion": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "verifyMs": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "tokenAgeMs": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "raw": {}
+                      },
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "deliveryId",
+                "triggerType",
+                "requestedAt",
+                "receivedAt",
+                "verifyOk",
+                "verifySource",
+                "accepted",
+                "dedupHit",
+                "status",
+                "message",
+                "cronHistoryId",
+                "telemetry",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "GetCloudTrends": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "days": {
+            "default": 30,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 365,
+            "minimum": 0
+          },
+          "count": {
+            "default": 60,
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 500,
+            "minimum": 0
+          }
+        },
+        "required": ["days", "count"],
+        "additionalProperties": false
+      },
+      "GetCloudTrendsSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "time": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "acceptedCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "rejectedCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "dedupCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "verifyDohCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "verifyJwksCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "errorCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "acceptedCount",
+                    "rejectedCount",
+                    "dedupCount",
+                    "verifyDohCount",
+                    "verifyJwksCount",
+                    "errorCount"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["time", "data"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "GetCloudRemoteStatus": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetCloudRemoteStatusSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "available": {
+                "type": "boolean"
+              },
+              "cloudOnline": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "siteId": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "instanceId": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "status": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "pendingReason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "minuteOfDay": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "nextRunAt": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "registeredAt": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "firstSeenAt": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "lastSyncAt": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "eventsTotal": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "eventsSuccess": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "successRate": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "message": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": ["available"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["success", "message", "timestamp", "requestId", "data"],
+        "additionalProperties": false
+      },
+      "SyncCloudNow": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SyncCloudNowSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "synced": {
+                "type": "boolean"
+              },
+              "siteId": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "instanceId": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "status": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "pendingReason": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "minuteOfDay": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "nextRunAt": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "cloudActiveKid": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "syncedAt": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "message": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": ["synced"],
             "additionalProperties": false
           }
         },

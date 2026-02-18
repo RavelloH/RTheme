@@ -27,10 +27,12 @@ import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
+import { dispatchAnalyticsCronReports } from "@/lib/server/analytics-cron-report";
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import { getConfigs } from "@/lib/server/config-cache";
 import {
+  runAnalyticsRollupForCron,
   runAutoCleanupForCron,
   runDoctorForCron,
   runFriendLinksCheckForCron,
@@ -50,7 +52,7 @@ type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
 
-type CronTaskKey = "doctor" | "projects" | "friends" | "cleanup";
+type CronTaskKey = "doctor" | "projects" | "friends" | "cleanup" | "analytics";
 type CronTaskStatus = "O" | "E" | "S";
 type CronTaskSnapshot = CronSnapshot["tasks"][CronTaskKey];
 
@@ -75,6 +77,7 @@ const CRON_CONFIG_KEYS = [
   "cron.task.projects.enable",
   "cron.task.friends.enable",
   "cron.task.cleanup.enable",
+  "cron.task.analytics.enable",
   "cron.task.cleanup.searchLog.retentionDays",
   "cron.task.cleanup.healthCheck.retentionDays",
   "cron.task.cleanup.auditLog.retentionDays",
@@ -88,6 +91,11 @@ const CRON_CONFIG_KEYS = [
   "cron.task.cleanup.pushSubscription.markInactiveDays",
   "cron.task.cleanup.pushSubscription.deleteInactiveDays",
   "cron.task.cleanup.pushSubscription.deleteDisabledUserDays",
+  "cron.task.analytics.report.mode",
+  "cron.task.analytics.report.daily.enable",
+  "cron.task.analytics.report.weekly.enable",
+  "cron.task.analytics.report.monthly.enable",
+  "cron.task.analytics.report.notifyAdmin.uid",
 ] as const;
 
 const CRON_TASK_KEYS: CronTaskKey[] = [
@@ -95,6 +103,7 @@ const CRON_TASK_KEYS: CronTaskKey[] = [
   "projects",
   "friends",
   "cleanup",
+  "analytics",
 ];
 
 const CRON_CLEANUP_SETTING_KEYS = {
@@ -120,6 +129,14 @@ const CRON_CLEANUP_SETTING_KEYS = {
     "cron.task.cleanup.pushSubscription.deleteDisabledUserDays",
 } as const;
 
+const CRON_ANALYTICS_SETTING_KEYS = {
+  reportMode: "cron.task.analytics.report.mode",
+  reportDailyEnabled: "cron.task.analytics.report.daily.enable",
+  reportWeeklyEnabled: "cron.task.analytics.report.weekly.enable",
+  reportMonthlyEnabled: "cron.task.analytics.report.monthly.enable",
+  reportNotifyAdminUids: "cron.task.analytics.report.notifyAdmin.uid",
+} as const;
+
 function toErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim().length > 0) {
     return error.message;
@@ -132,6 +149,36 @@ function normalizeNonNegativeInt(value: unknown, fallback = 0): number {
     return fallback;
   }
   return Math.max(0, Math.round(value));
+}
+
+function normalizeAnalyticsReportMode(
+  value: unknown,
+): CronConfig["analytics"]["report"]["mode"] {
+  if (
+    value === "NONE" ||
+    value === "NOTICE" ||
+    value === "EMAIL" ||
+    value === "NOTICE_EMAIL"
+  ) {
+    return value;
+  }
+  return "NONE";
+}
+
+function normalizeUidArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const dedup = new Set<string>();
+  for (const item of value) {
+    if (typeof item !== "string") continue;
+    const normalized = item.trim();
+    if (!normalized || !/^\d+$/.test(normalized)) continue;
+    dedup.add(normalized);
+  }
+
+  return Array.from(dedup);
 }
 
 function scheduleStorageTempCleanupInBackground(): void {
@@ -230,6 +277,7 @@ function normalizeCronSnapshot(snapshot: unknown): CronSnapshot {
         projects: createSkippedTaskSnapshot("invalid snapshot"),
         friends: createSkippedTaskSnapshot("invalid snapshot"),
         cleanup: createSkippedTaskSnapshot("invalid snapshot"),
+        analytics: createSkippedTaskSnapshot("invalid snapshot"),
       },
     };
   }
@@ -247,6 +295,9 @@ function normalizeCronSnapshot(snapshot: unknown): CronSnapshot {
   const projectsFallback = createSkippedTaskSnapshot("projects task not found");
   const friendsFallback = createSkippedTaskSnapshot("friends task not found");
   const cleanupFallback = createSkippedTaskSnapshot("cleanup task not found");
+  const analyticsFallback = createSkippedTaskSnapshot(
+    "analytics task not found",
+  );
 
   return {
     version:
@@ -260,6 +311,7 @@ function normalizeCronSnapshot(snapshot: unknown): CronSnapshot {
       projects: normalizeTaskSnapshot(rawTasks.projects, projectsFallback),
       friends: normalizeTaskSnapshot(rawTasks.friends, friendsFallback),
       cleanup: normalizeTaskSnapshot(rawTasks.cleanup, cleanupFallback),
+      analytics: normalizeTaskSnapshot(rawTasks.analytics, analyticsFallback),
     },
   };
 }
@@ -288,6 +340,7 @@ async function loadCronConfigState(): Promise<CronConfig> {
     projectsEnabled,
     friendsEnabled,
     cleanupEnabled,
+    analyticsEnabled,
     searchLogRetentionDays,
     healthCheckRetentionDays,
     auditLogRetentionDays,
@@ -301,6 +354,11 @@ async function loadCronConfigState(): Promise<CronConfig> {
     pushSubscriptionMarkInactiveDays,
     pushSubscriptionDeleteInactiveDays,
     pushSubscriptionDeleteDisabledUserDays,
+    analyticsReportMode,
+    analyticsReportDailyEnabled,
+    analyticsReportWeeklyEnabled,
+    analyticsReportMonthlyEnabled,
+    analyticsReportNotifyAdminUids,
   ] = await getConfigs([...CRON_CONFIG_KEYS]);
 
   const records = await prisma.config.findMany({
@@ -334,6 +392,7 @@ async function loadCronConfigState(): Promise<CronConfig> {
       projects: Boolean(projectsEnabled),
       friends: Boolean(friendsEnabled),
       cleanup: Boolean(cleanupEnabled),
+      analytics: Boolean(analyticsEnabled),
     },
     cleanup: {
       searchLogRetentionDays: normalizeNonNegativeInt(searchLogRetentionDays),
@@ -367,6 +426,15 @@ async function loadCronConfigState(): Promise<CronConfig> {
       pushSubscriptionDeleteDisabledUserDays: normalizeNonNegativeInt(
         pushSubscriptionDeleteDisabledUserDays,
       ),
+    },
+    analytics: {
+      report: {
+        mode: normalizeAnalyticsReportMode(analyticsReportMode),
+        dailyEnabled: Boolean(analyticsReportDailyEnabled),
+        weeklyEnabled: Boolean(analyticsReportWeeklyEnabled),
+        monthlyEnabled: Boolean(analyticsReportMonthlyEnabled),
+        notifyAdminUids: normalizeUidArray(analyticsReportNotifyAdminUids),
+      },
     },
     updatedAt,
   };
@@ -551,6 +619,81 @@ async function executeCleanupTask(): Promise<CronTaskSnapshot> {
   }
 }
 
+async function executeAnalyticsTask(
+  triggerType: "MANUAL" | "CLOUD" | "AUTO",
+): Promise<CronTaskSnapshot> {
+  const startedAt = new Date();
+  const startedAtMs = Date.now();
+  try {
+    const flushResult = await runAnalyticsRollupForCron();
+    const reportResult = flushResult.success
+      ? await dispatchAnalyticsCronReports({
+          triggerType,
+          flushResult,
+        })
+      : {
+          mode: "NONE",
+          timezone: "UTC",
+          recipientCount: 0,
+          cycleResults: [],
+          noticeSent: 0,
+          emailSent: 0,
+          errors: [],
+        };
+    const endedAt = new Date();
+    const durationMs = Date.now() - startedAtMs;
+    const reportErrorCount = reportResult.errors.length;
+
+    return {
+      e: true,
+      x: true,
+      s: flushResult.success ? "O" : "E",
+      d: durationMs,
+      v: {
+        flushSuccess: flushResult.success,
+        flushedCount: flushResult.flushedCount,
+        syncedViewCountRows: flushResult.syncedViewCountRows,
+        archivedDateGroups: flushResult.archivedDateGroups,
+        archivedRawPageViewDeleted: flushResult.archivedRawPageViewDeleted,
+        expiredArchiveDeleted: flushResult.expiredArchiveDeleted,
+        reportMode: reportResult.mode,
+        reportTimezone: reportResult.timezone,
+        reportRecipientCount: reportResult.recipientCount,
+        reportCycleCount: reportResult.cycleResults.length,
+        reportNoticeSent: reportResult.noticeSent,
+        reportEmailSent: reportResult.emailSent,
+        reportErrorCount,
+        reportErrors: reportResult.errors,
+        reportCycles: reportResult.cycleResults.map((cycle) => ({
+          cycle: cycle.cycle,
+          periodLabel: cycle.periodLabel,
+          noticeSent: cycle.noticeSent,
+          emailSent: cycle.emailSent,
+          errorCount: cycle.errorCount,
+        })),
+      },
+      m: flushResult.success
+        ? reportErrorCount > 0
+          ? `访问统计报告发送出现 ${reportErrorCount} 项异常`
+          : null
+        : "访问统计整理失败",
+      b: startedAt.toISOString(),
+      f: endedAt.toISOString(),
+    };
+  } catch (error) {
+    return {
+      e: true,
+      x: true,
+      s: "E",
+      d: Date.now() - startedAtMs,
+      v: null,
+      m: toErrorMessage(error, "analytics 执行失败"),
+      b: startedAt.toISOString(),
+      f: new Date().toISOString(),
+    };
+  }
+}
+
 async function runCronAndPersist(
   triggerType: "MANUAL" | "CLOUD" | "AUTO",
 ): Promise<CronHistoryRecord> {
@@ -563,6 +706,7 @@ async function runCronAndPersist(
     projects: createSkippedTaskSnapshot("task disabled"),
     friends: createSkippedTaskSnapshot("task disabled"),
     cleanup: createSkippedTaskSnapshot("task disabled"),
+    analytics: createSkippedTaskSnapshot("task disabled"),
   };
 
   const taskEnabled: Record<CronTaskKey, boolean> = {
@@ -570,6 +714,7 @@ async function runCronAndPersist(
     projects: config.enabled && config.tasks.projects,
     friends: config.enabled && config.tasks.friends,
     cleanup: config.enabled && config.tasks.cleanup,
+    analytics: config.enabled && config.tasks.analytics,
   };
 
   if (!config.enabled) {
@@ -577,6 +722,7 @@ async function runCronAndPersist(
     taskSnapshots.projects = createSkippedTaskSnapshot("cron disabled");
     taskSnapshots.friends = createSkippedTaskSnapshot("cron disabled");
     taskSnapshots.cleanup = createSkippedTaskSnapshot("cron disabled");
+    taskSnapshots.analytics = createSkippedTaskSnapshot("cron disabled");
   } else {
     const runners: Array<Promise<void>> = [];
 
@@ -604,10 +750,16 @@ async function runCronAndPersist(
             taskSnapshots.friends = await executeFriendsTask();
           })(),
         );
-      } else {
+      } else if (key === "cleanup") {
         runners.push(
           (async () => {
             taskSnapshots.cleanup = await executeCleanupTask();
+          })(),
+        );
+      } else {
+        runners.push(
+          (async () => {
+            taskSnapshots.analytics = await executeAnalyticsTask(triggerType);
           })(),
         );
       }
@@ -1025,6 +1177,7 @@ export async function getCronTrends(
           projectsDurationMs: snapshot.tasks.projects.d,
           friendsDurationMs: snapshot.tasks.friends.d,
           cleanupDurationMs: snapshot.tasks.cleanup.d,
+          analyticsDurationMs: snapshot.tasks.analytics.d,
           successCount: record.successCount,
           failedCount: record.failedCount,
           skippedCount: record.skippedCount,
@@ -1100,6 +1253,7 @@ export async function updateCronConfig(
     projects,
     friends,
     cleanup,
+    analytics,
     searchLogRetentionDays,
     healthCheckRetentionDays,
     auditLogRetentionDays,
@@ -1113,6 +1267,11 @@ export async function updateCronConfig(
     pushSubscriptionMarkInactiveDays,
     pushSubscriptionDeleteInactiveDays,
     pushSubscriptionDeleteDisabledUserDays,
+    analyticsReportMode,
+    analyticsReportDailyEnabled,
+    analyticsReportWeeklyEnabled,
+    analyticsReportMonthlyEnabled,
+    analyticsReportNotifyAdminUids,
   }: UpdateCronConfig,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<CronConfig | null>> {
@@ -1132,6 +1291,7 @@ export async function updateCronConfig(
       projects,
       friends,
       cleanup,
+      analytics,
       searchLogRetentionDays,
       healthCheckRetentionDays,
       auditLogRetentionDays,
@@ -1145,6 +1305,11 @@ export async function updateCronConfig(
       pushSubscriptionMarkInactiveDays,
       pushSubscriptionDeleteInactiveDays,
       pushSubscriptionDeleteDisabledUserDays,
+      analyticsReportMode,
+      analyticsReportDailyEnabled,
+      analyticsReportWeeklyEnabled,
+      analyticsReportMonthlyEnabled,
+      analyticsReportNotifyAdminUids,
     },
     UpdateCronConfigSchema,
   );
@@ -1163,7 +1328,7 @@ export async function updateCronConfig(
 
     const updates: Array<{
       key: (typeof CRON_CONFIG_KEYS)[number];
-      value: boolean | number;
+      value: boolean | number | string | string[];
     }> = [];
 
     if (enabled !== undefined) {
@@ -1180,6 +1345,9 @@ export async function updateCronConfig(
     }
     if (cleanup !== undefined) {
       updates.push({ key: "cron.task.cleanup.enable", value: cleanup });
+    }
+    if (analytics !== undefined) {
+      updates.push({ key: "cron.task.analytics.enable", value: analytics });
     }
     if (searchLogRetentionDays !== undefined) {
       updates.push({
@@ -1257,6 +1425,36 @@ export async function updateCronConfig(
       updates.push({
         key: CRON_CLEANUP_SETTING_KEYS.pushSubscriptionDeleteDisabledUserDays,
         value: pushSubscriptionDeleteDisabledUserDays,
+      });
+    }
+    if (analyticsReportMode !== undefined) {
+      updates.push({
+        key: CRON_ANALYTICS_SETTING_KEYS.reportMode,
+        value: normalizeAnalyticsReportMode(analyticsReportMode),
+      });
+    }
+    if (analyticsReportDailyEnabled !== undefined) {
+      updates.push({
+        key: CRON_ANALYTICS_SETTING_KEYS.reportDailyEnabled,
+        value: analyticsReportDailyEnabled,
+      });
+    }
+    if (analyticsReportWeeklyEnabled !== undefined) {
+      updates.push({
+        key: CRON_ANALYTICS_SETTING_KEYS.reportWeeklyEnabled,
+        value: analyticsReportWeeklyEnabled,
+      });
+    }
+    if (analyticsReportMonthlyEnabled !== undefined) {
+      updates.push({
+        key: CRON_ANALYTICS_SETTING_KEYS.reportMonthlyEnabled,
+        value: analyticsReportMonthlyEnabled,
+      });
+    }
+    if (analyticsReportNotifyAdminUids !== undefined) {
+      updates.push({
+        key: CRON_ANALYTICS_SETTING_KEYS.reportNotifyAdminUids,
+        value: normalizeUidArray(analyticsReportNotifyAdminUids),
       });
     }
 

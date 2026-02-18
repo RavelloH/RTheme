@@ -35,3 +35,10 @@ export type { MailSubscriptionVerifyEmailProps } from "./MailSubscriptionVerifyE
 
 export { PostSubscriptionEmail } from "./PostSubscriptionEmail";
 export type { PostSubscriptionEmailProps } from "./PostSubscriptionEmail";
+
+export { default as AnalyticsDigestEmail } from "./AnalyticsDigestEmail";
+export type {
+  AnalyticsDigestEmailProps,
+  AnalyticsDigestTopItem,
+  AnalyticsDigestTrend,
+} from "./AnalyticsDigestEmail";
