@@ -65,52 +65,33 @@ function JSONHighlight({ json }: { json: unknown }) {
   const [html, setHtml] = useState("");
 
   useEffect(() => {
-    let disposed = false;
-
-    const run = async () => {
-      const jsonString = JSON.stringify(json ?? null, null, 2);
+    const highlightCode = async () => {
       try {
+        const jsonString = JSON.stringify(json, null, 2);
         const highlighted = await codeToHtml(jsonString, {
           lang: "json",
           themes: {
-            light: "github-light",
-            dark: "github-dark",
+            light: "dark-plus",
+            dark: "dark-plus",
           },
         });
-
-        if (!disposed) {
-          setHtml(highlighted);
-        }
-      } catch (error) {
-        console.error("[CloudHistoryTable] Shiki 高亮失败:", error);
-        if (!disposed) {
-          const escaped = jsonString
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;");
-          setHtml(`<pre class="shiki"><code>${escaped}</code></pre>`);
-        }
+        setHtml(highlighted);
+      } catch (err) {
+        console.error("Shiki 高亮错误:", err);
+        const jsonString = JSON.stringify(json, null, 2);
+        setHtml(`${jsonString.replace(/</g, "&lt;").replace(/>/g, "&gt;")}`);
       }
     };
 
-    void run();
-    return () => {
-      disposed = true;
-    };
+    highlightCode();
   }, [json]);
 
   return (
-    <div
-      className="
-        rounded-sm
-        border border-foreground/10
-        overflow-auto
-        max-h-[40vh]
-        [&_pre]:!m-0
-        [&_pre]:!rounded-none
-      "
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className="text-xs overflow-auto rounded-lg ">
+      <pre className="shiki bg-[#1E1E1E] p-4 rounded-lg overflow-x-auto">
+        <code dangerouslySetInnerHTML={{ __html: html }}></code>
+      </pre>
+    </div>
   );
 }
 
@@ -397,6 +378,18 @@ export default function CloudHistoryTable() {
       mono: true,
     },
     {
+      key: "deliveryId",
+      title: "Delivery ID",
+      dataIndex: "deliveryId",
+      align: "left",
+      render: (value: unknown) =>
+        typeof value === "string" && value.trim().length > 0 ? (
+          <span className="font-mono break-all line-clamp-2">{value}</span>
+        ) : (
+          "-"
+        ),
+    },
+    {
       key: "status",
       title: "状态",
       dataIndex: "status",
@@ -466,32 +459,18 @@ export default function CloudHistoryTable() {
       },
     },
     {
-      key: "deliveryId",
-      title: "Delivery ID",
-      width: "25%",
-      dataIndex: "deliveryId",
+      key: "message",
+      title: "附加信息",
+      dataIndex: "message",
       align: "left",
       render: (value: unknown) =>
         typeof value === "string" && value.trim().length > 0 ? (
-          <span className="font-mono text-xs break-all line-clamp-2">
-            {value}
-          </span>
+          <span className="line-clamp-2">{value}</span>
         ) : (
           "-"
         ),
     },
-    {
-      key: "summary",
-      title: "摘要",
-      width: "30%",
-      dataIndex: "id",
-      align: "left",
-      render: (_: unknown, record) => (
-        <span className="text-sm line-clamp-2">
-          {formatTelemetrySummary(record)}
-        </span>
-      ),
-    },
+
     {
       key: "receivedAt",
       title: "接收时间",
@@ -689,7 +668,7 @@ export default function CloudHistoryTable() {
 
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-                自然语言摘要
+                摘要
               </h3>
               <p className="text-sm leading-7">
                 {formatTelemetrySummary(selectedRecord)}
@@ -698,7 +677,7 @@ export default function CloudHistoryTable() {
 
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-                遥测 JSON（Shiki 高亮）
+                遥测 JSON
               </h3>
               <JSONHighlight json={buildTelemetryJson(selectedRecord)} />
             </div>
