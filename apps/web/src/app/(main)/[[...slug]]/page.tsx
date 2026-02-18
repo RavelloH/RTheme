@@ -123,9 +123,14 @@ export const generateMetadata = async ({
 };
 
 export default async function Page({ params }: PageProps<"/[[...slug]]">) {
+  const resolvedParams = await params;
+  return renderMainPage(resolvedParams.slug);
+}
+
+async function renderMainPage(slug: string[] | undefined) {
   "use cache";
 
-  const match = await getMatchingPage((await params).slug);
+  const match = await getMatchingPage(slug);
   if (!match) return notFound();
   const { page, params: resolvedParams } = match;
   const isHomePage = resolvedParams.url === "/";

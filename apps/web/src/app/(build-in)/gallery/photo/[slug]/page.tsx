@@ -106,8 +106,12 @@ function filterGpsFromExif(exif: unknown): unknown {
 }
 
 export default async function PhotoPage({ params }: PhotoPageProps) {
-  "use cache";
   const { slug } = await params;
+  return renderPhotoPage(slug);
+}
+
+async function renderPhotoPage(slug: string) {
+  "use cache";
 
   if (!slug) {
     notFound();
