@@ -7,7 +7,7 @@ import type {
   FriendLinkStatus,
 } from "@repo/shared-types/api/friendlink";
 import type { SyncProjectsGithubResult } from "@repo/shared-types/api/project";
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 
 import {
   formatDoctorCheckDetails,
@@ -603,9 +603,9 @@ export async function runProjectsGithubSync(
   const synced = syncResults.filter((item) => item.success).length;
   const failed = syncResults.filter((item) => !item.success).length;
 
-  updateTag("projects/list");
+  revalidateTag("projects/list", "max");
   for (const project of projects) {
-    updateTag(`projects/${project.slug}`);
+    revalidateTag(`projects/${project.slug}`, "max");
   }
 
   return {
@@ -689,26 +689,29 @@ export async function runFriendLinksCheck(
     };
   }
 
-  let checked = 0;
-  let skipped = 0;
-  let failed = 0;
-  let statusChanged = 0;
+  type CheckExecutionResult = {
+    result: CheckFriendLinksResult["results"][number];
+    failed: boolean;
+    statusChanged: boolean;
+  };
 
-  const results: CheckFriendLinksResult["results"] = [];
-
-  for (const link of links) {
+  const executeSingleCheck = async (
+    link: (typeof links)[number],
+  ): Promise<CheckExecutionResult> => {
     if (link.status === "WHITELIST") {
-      skipped += 1;
-      results.push({
-        id: link.id,
-        status: link.status as FriendLinkStatus,
-        checked: false,
-        skipped: true,
-        skipReason: "WHITELIST",
-        issueType: "NONE",
-        message: "白名单链接，已跳过检查",
-      });
-      continue;
+      return {
+        result: {
+          id: link.id,
+          status: link.status as FriendLinkStatus,
+          checked: false,
+          skipped: true,
+          skipReason: "WHITELIST",
+          issueType: "NONE",
+          message: "白名单链接，已跳过检查",
+        },
+        failed: false,
+        statusChanged: false,
+      };
     }
 
     const shouldCheckBacklink =
@@ -807,28 +810,61 @@ export async function runFriendLinksCheck(
       },
     });
 
-    checked += 1;
-    if (issueType !== "NONE") failed += 1;
-    if (nextStatus !== link.status) statusChanged += 1;
+    return {
+      result: {
+        id: link.id,
+        status: updated.status as FriendLinkStatus,
+        checked: true,
+        skipped: false,
+        issueType,
+        responseTime: requestResult.responseTime,
+        message:
+          issueType === "NONE"
+            ? "检查通过"
+            : issueType === "DISCONNECT"
+              ? "站点不可访问"
+              : "未检测到回链",
+      },
+      failed: issueType !== "NONE",
+      statusChanged: nextStatus !== link.status,
+    };
+  };
 
-    results.push({
-      id: link.id,
-      status: updated.status as FriendLinkStatus,
-      checked: true,
-      skipped: false,
-      issueType,
-      responseTime: requestResult.responseTime,
-      message:
-        issueType === "NONE"
-          ? "检查通过"
-          : issueType === "DISCONNECT"
-            ? "站点不可访问"
-            : "未检测到回链",
-    });
+  const CONCURRENCY_LIMIT = 100;
+  const executedResults: CheckExecutionResult[] = [];
+
+  for (let start = 0; start < links.length; start += CONCURRENCY_LIMIT) {
+    const batch = links.slice(start, start + CONCURRENCY_LIMIT);
+    const batchResults = await Promise.all(
+      batch.map((link) => executeSingleCheck(link)),
+    );
+    executedResults.push(...batchResults);
+  }
+
+  const results: CheckFriendLinksResult["results"] = executedResults.map(
+    (item) => item.result,
+  );
+  let checked = 0;
+  let skipped = 0;
+  let failed = 0;
+  let statusChanged = 0;
+
+  for (const item of executedResults) {
+    if (item.result.skipped) {
+      skipped += 1;
+    } else {
+      checked += 1;
+    }
+    if (item.failed) {
+      failed += 1;
+    }
+    if (item.statusChanged) {
+      statusChanged += 1;
+    }
   }
 
   if (checked > 0) {
-    updateTag("friend-links");
+    revalidateTag("friend-links", "max");
   }
 
   return {
