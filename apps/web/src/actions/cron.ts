@@ -31,6 +31,7 @@ import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import { getConfigs } from "@/lib/server/config-cache";
 import {
+  runAutoCleanupForCron,
   runDoctorForCron,
   runFriendLinksCheckForCron,
   runProjectsSyncForCron,
@@ -48,7 +49,7 @@ type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
 
-type CronTaskKey = "doctor" | "projects" | "friends";
+type CronTaskKey = "doctor" | "projects" | "friends" | "cleanup";
 type CronTaskStatus = "O" | "E" | "S";
 type CronTaskSnapshot = CronSnapshot["tasks"][CronTaskKey];
 
@@ -72,15 +73,64 @@ const CRON_CONFIG_KEYS = [
   "cron.task.doctor.enable",
   "cron.task.projects.enable",
   "cron.task.friends.enable",
+  "cron.task.cleanup.enable",
+  "cron.task.cleanup.searchLog.retentionDays",
+  "cron.task.cleanup.healthCheck.retentionDays",
+  "cron.task.cleanup.auditLog.retentionDays",
+  "cron.task.cleanup.cronHistory.retentionDays",
+  "cron.task.cleanup.cloudTriggerHistory.retentionDays",
+  "cron.task.cleanup.notice.retentionDays",
+  "cron.task.cleanup.recycleBin.retentionDays",
+  "cron.task.cleanup.mailSubscriptionUnsubscribed.retentionDays",
+  "cron.task.cleanup.refreshToken.expiredRetentionDays",
+  "cron.task.cleanup.passwordReset.retentionMinutes",
+  "cron.task.cleanup.pushSubscription.markInactiveDays",
+  "cron.task.cleanup.pushSubscription.deleteInactiveDays",
+  "cron.task.cleanup.pushSubscription.deleteDisabledUserDays",
 ] as const;
 
-const CRON_TASK_KEYS: CronTaskKey[] = ["doctor", "projects", "friends"];
+const CRON_TASK_KEYS: CronTaskKey[] = [
+  "doctor",
+  "projects",
+  "friends",
+  "cleanup",
+];
+
+const CRON_CLEANUP_SETTING_KEYS = {
+  searchLogRetentionDays: "cron.task.cleanup.searchLog.retentionDays",
+  healthCheckRetentionDays: "cron.task.cleanup.healthCheck.retentionDays",
+  auditLogRetentionDays: "cron.task.cleanup.auditLog.retentionDays",
+  cronHistoryRetentionDays: "cron.task.cleanup.cronHistory.retentionDays",
+  cloudTriggerHistoryRetentionDays:
+    "cron.task.cleanup.cloudTriggerHistory.retentionDays",
+  noticeRetentionDays: "cron.task.cleanup.notice.retentionDays",
+  recycleBinRetentionDays: "cron.task.cleanup.recycleBin.retentionDays",
+  mailSubscriptionUnsubscribedRetentionDays:
+    "cron.task.cleanup.mailSubscriptionUnsubscribed.retentionDays",
+  refreshTokenExpiredRetentionDays:
+    "cron.task.cleanup.refreshToken.expiredRetentionDays",
+  passwordResetRetentionMinutes:
+    "cron.task.cleanup.passwordReset.retentionMinutes",
+  pushSubscriptionMarkInactiveDays:
+    "cron.task.cleanup.pushSubscription.markInactiveDays",
+  pushSubscriptionDeleteInactiveDays:
+    "cron.task.cleanup.pushSubscription.deleteInactiveDays",
+  pushSubscriptionDeleteDisabledUserDays:
+    "cron.task.cleanup.pushSubscription.deleteDisabledUserDays",
+} as const;
 
 function toErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim().length > 0) {
     return error.message;
   }
   return fallback;
+}
+
+function normalizeNonNegativeInt(value: unknown, fallback = 0): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.max(0, Math.round(value));
 }
 
 function getCronStatus(
@@ -154,6 +204,7 @@ function normalizeCronSnapshot(snapshot: unknown): CronSnapshot {
         doctor: createSkippedTaskSnapshot("invalid snapshot"),
         projects: createSkippedTaskSnapshot("invalid snapshot"),
         friends: createSkippedTaskSnapshot("invalid snapshot"),
+        cleanup: createSkippedTaskSnapshot("invalid snapshot"),
       },
     };
   }
@@ -170,6 +221,7 @@ function normalizeCronSnapshot(snapshot: unknown): CronSnapshot {
   const doctorFallback = createSkippedTaskSnapshot("doctor task not found");
   const projectsFallback = createSkippedTaskSnapshot("projects task not found");
   const friendsFallback = createSkippedTaskSnapshot("friends task not found");
+  const cleanupFallback = createSkippedTaskSnapshot("cleanup task not found");
 
   return {
     version:
@@ -182,6 +234,7 @@ function normalizeCronSnapshot(snapshot: unknown): CronSnapshot {
       doctor: normalizeTaskSnapshot(rawTasks.doctor, doctorFallback),
       projects: normalizeTaskSnapshot(rawTasks.projects, projectsFallback),
       friends: normalizeTaskSnapshot(rawTasks.friends, friendsFallback),
+      cleanup: normalizeTaskSnapshot(rawTasks.cleanup, cleanupFallback),
     },
   };
 }
@@ -204,8 +257,26 @@ function toCronHistoryItem(record: CronHistoryRecord): CronHistoryItem {
 }
 
 async function loadCronConfigState(): Promise<CronConfig> {
-  const [cronEnabled, doctorEnabled, projectsEnabled, friendsEnabled] =
-    await getConfigs([...CRON_CONFIG_KEYS]);
+  const [
+    cronEnabled,
+    doctorEnabled,
+    projectsEnabled,
+    friendsEnabled,
+    cleanupEnabled,
+    searchLogRetentionDays,
+    healthCheckRetentionDays,
+    auditLogRetentionDays,
+    cronHistoryRetentionDays,
+    cloudTriggerHistoryRetentionDays,
+    noticeRetentionDays,
+    recycleBinRetentionDays,
+    mailSubscriptionUnsubscribedRetentionDays,
+    refreshTokenExpiredRetentionDays,
+    passwordResetRetentionMinutes,
+    pushSubscriptionMarkInactiveDays,
+    pushSubscriptionDeleteInactiveDays,
+    pushSubscriptionDeleteDisabledUserDays,
+  ] = await getConfigs([...CRON_CONFIG_KEYS]);
 
   const records = await prisma.config.findMany({
     where: {
@@ -237,6 +308,40 @@ async function loadCronConfigState(): Promise<CronConfig> {
       doctor: Boolean(doctorEnabled),
       projects: Boolean(projectsEnabled),
       friends: Boolean(friendsEnabled),
+      cleanup: Boolean(cleanupEnabled),
+    },
+    cleanup: {
+      searchLogRetentionDays: normalizeNonNegativeInt(searchLogRetentionDays),
+      healthCheckRetentionDays: normalizeNonNegativeInt(
+        healthCheckRetentionDays,
+      ),
+      auditLogRetentionDays: normalizeNonNegativeInt(auditLogRetentionDays),
+      cronHistoryRetentionDays: normalizeNonNegativeInt(
+        cronHistoryRetentionDays,
+      ),
+      cloudTriggerHistoryRetentionDays: normalizeNonNegativeInt(
+        cloudTriggerHistoryRetentionDays,
+      ),
+      noticeRetentionDays: normalizeNonNegativeInt(noticeRetentionDays),
+      recycleBinRetentionDays: normalizeNonNegativeInt(recycleBinRetentionDays),
+      mailSubscriptionUnsubscribedRetentionDays: normalizeNonNegativeInt(
+        mailSubscriptionUnsubscribedRetentionDays,
+      ),
+      refreshTokenExpiredRetentionDays: normalizeNonNegativeInt(
+        refreshTokenExpiredRetentionDays,
+      ),
+      passwordResetRetentionMinutes: normalizeNonNegativeInt(
+        passwordResetRetentionMinutes,
+      ),
+      pushSubscriptionMarkInactiveDays: normalizeNonNegativeInt(
+        pushSubscriptionMarkInactiveDays,
+      ),
+      pushSubscriptionDeleteInactiveDays: normalizeNonNegativeInt(
+        pushSubscriptionDeleteInactiveDays,
+      ),
+      pushSubscriptionDeleteDisabledUserDays: normalizeNonNegativeInt(
+        pushSubscriptionDeleteDisabledUserDays,
+      ),
     },
     updatedAt,
   };
@@ -355,6 +460,59 @@ async function executeFriendsTask(): Promise<CronTaskSnapshot> {
   }
 }
 
+async function executeCleanupTask(): Promise<CronTaskSnapshot> {
+  const startedAt = new Date();
+  const startedAtMs = Date.now();
+  try {
+    const result = await runAutoCleanupForCron();
+    const endedAt = new Date();
+    const durationMs = Date.now() - startedAtMs;
+    const totalDeleted =
+      result.searchLogDeleted +
+      result.healthCheckDeleted +
+      result.auditLogDeleted +
+      result.cronHistoryDeleted +
+      result.cloudTriggerHistoryDeleted +
+      result.noticeDeleted +
+      result.recycleBinDeleted +
+      result.unsubscribedMailSubscriptionDeleted +
+      result.refreshTokenDeleted +
+      result.passwordResetDeleted +
+      result.pushSubscriptionsDeletedInactive +
+      result.pushSubscriptionsDeletedForDisabledUsers;
+
+    return {
+      e: true,
+      x: true,
+      s: "O",
+      d: durationMs,
+      v: {
+        totalDeleted,
+        recycleBinDeleted: result.recycleBinDeleted,
+        cronHistoryDeleted: result.cronHistoryDeleted,
+        cloudTriggerHistoryDeleted: result.cloudTriggerHistoryDeleted,
+        noticeDeleted: result.noticeDeleted,
+        unsubscribedMailSubscriptionDeleted:
+          result.unsubscribedMailSubscriptionDeleted,
+      },
+      m: null,
+      b: startedAt.toISOString(),
+      f: endedAt.toISOString(),
+    };
+  } catch (error) {
+    return {
+      e: true,
+      x: true,
+      s: "E",
+      d: Date.now() - startedAtMs,
+      v: null,
+      m: toErrorMessage(error, "cleanup 执行失败"),
+      b: startedAt.toISOString(),
+      f: new Date().toISOString(),
+    };
+  }
+}
+
 async function runCronAndPersist(
   triggerType: "MANUAL" | "CLOUD" | "AUTO",
 ): Promise<CronHistoryRecord> {
@@ -366,18 +524,21 @@ async function runCronAndPersist(
     doctor: createSkippedTaskSnapshot("task disabled"),
     projects: createSkippedTaskSnapshot("task disabled"),
     friends: createSkippedTaskSnapshot("task disabled"),
+    cleanup: createSkippedTaskSnapshot("task disabled"),
   };
 
   const taskEnabled: Record<CronTaskKey, boolean> = {
     doctor: config.enabled && config.tasks.doctor,
     projects: config.enabled && config.tasks.projects,
     friends: config.enabled && config.tasks.friends,
+    cleanup: config.enabled && config.tasks.cleanup,
   };
 
   if (!config.enabled) {
     taskSnapshots.doctor = createSkippedTaskSnapshot("cron disabled");
     taskSnapshots.projects = createSkippedTaskSnapshot("cron disabled");
     taskSnapshots.friends = createSkippedTaskSnapshot("cron disabled");
+    taskSnapshots.cleanup = createSkippedTaskSnapshot("cron disabled");
   } else {
     const runners: Array<Promise<void>> = [];
 
@@ -399,10 +560,16 @@ async function runCronAndPersist(
             taskSnapshots.projects = await executeProjectsTask();
           })(),
         );
-      } else {
+      } else if (key === "friends") {
         runners.push(
           (async () => {
             taskSnapshots.friends = await executeFriendsTask();
+          })(),
+        );
+      } else {
+        runners.push(
+          (async () => {
+            taskSnapshots.cleanup = await executeCleanupTask();
           })(),
         );
       }
@@ -819,6 +986,7 @@ export async function getCronTrends(
           doctorDurationMs: snapshot.tasks.doctor.d,
           projectsDurationMs: snapshot.tasks.projects.d,
           friendsDurationMs: snapshot.tasks.friends.d,
+          cleanupDurationMs: snapshot.tasks.cleanup.d,
           successCount: record.successCount,
           failedCount: record.failedCount,
           skippedCount: record.skippedCount,
@@ -887,7 +1055,27 @@ export async function updateCronConfig(
   serverConfig?: ActionConfig,
 ): Promise<ApiResponse<CronConfig | null>>;
 export async function updateCronConfig(
-  { access_token, enabled, doctor, projects, friends }: UpdateCronConfig,
+  {
+    access_token,
+    enabled,
+    doctor,
+    projects,
+    friends,
+    cleanup,
+    searchLogRetentionDays,
+    healthCheckRetentionDays,
+    auditLogRetentionDays,
+    cronHistoryRetentionDays,
+    cloudTriggerHistoryRetentionDays,
+    noticeRetentionDays,
+    recycleBinRetentionDays,
+    mailSubscriptionUnsubscribedRetentionDays,
+    refreshTokenExpiredRetentionDays,
+    passwordResetRetentionMinutes,
+    pushSubscriptionMarkInactiveDays,
+    pushSubscriptionDeleteInactiveDays,
+    pushSubscriptionDeleteDisabledUserDays,
+  }: UpdateCronConfig,
   serverConfig?: ActionConfig,
 ): Promise<ActionResult<CronConfig | null>> {
   const response = new ResponseBuilder(
@@ -905,6 +1093,20 @@ export async function updateCronConfig(
       doctor,
       projects,
       friends,
+      cleanup,
+      searchLogRetentionDays,
+      healthCheckRetentionDays,
+      auditLogRetentionDays,
+      cronHistoryRetentionDays,
+      cloudTriggerHistoryRetentionDays,
+      noticeRetentionDays,
+      recycleBinRetentionDays,
+      mailSubscriptionUnsubscribedRetentionDays,
+      refreshTokenExpiredRetentionDays,
+      passwordResetRetentionMinutes,
+      pushSubscriptionMarkInactiveDays,
+      pushSubscriptionDeleteInactiveDays,
+      pushSubscriptionDeleteDisabledUserDays,
     },
     UpdateCronConfigSchema,
   );
@@ -923,7 +1125,7 @@ export async function updateCronConfig(
 
     const updates: Array<{
       key: (typeof CRON_CONFIG_KEYS)[number];
-      value: boolean;
+      value: boolean | number;
     }> = [];
 
     if (enabled !== undefined) {
@@ -937,6 +1139,87 @@ export async function updateCronConfig(
     }
     if (friends !== undefined) {
       updates.push({ key: "cron.task.friends.enable", value: friends });
+    }
+    if (cleanup !== undefined) {
+      updates.push({ key: "cron.task.cleanup.enable", value: cleanup });
+    }
+    if (searchLogRetentionDays !== undefined) {
+      updates.push({
+        key: CRON_CLEANUP_SETTING_KEYS.searchLogRetentionDays,
+        value: searchLogRetentionDays,
+      });
+    }
+    if (healthCheckRetentionDays !== undefined) {
+      updates.push({
+        key: CRON_CLEANUP_SETTING_KEYS.healthCheckRetentionDays,
+        value: healthCheckRetentionDays,
+      });
+    }
+    if (auditLogRetentionDays !== undefined) {
+      updates.push({
+        key: CRON_CLEANUP_SETTING_KEYS.auditLogRetentionDays,
+        value: auditLogRetentionDays,
+      });
+    }
+    if (cronHistoryRetentionDays !== undefined) {
+      updates.push({
+        key: CRON_CLEANUP_SETTING_KEYS.cronHistoryRetentionDays,
+        value: cronHistoryRetentionDays,
+      });
+    }
+    if (cloudTriggerHistoryRetentionDays !== undefined) {
+      updates.push({
+        key: CRON_CLEANUP_SETTING_KEYS.cloudTriggerHistoryRetentionDays,
+        value: cloudTriggerHistoryRetentionDays,
+      });
+    }
+    if (noticeRetentionDays !== undefined) {
+      updates.push({
+        key: CRON_CLEANUP_SETTING_KEYS.noticeRetentionDays,
+        value: noticeRetentionDays,
+      });
+    }
+    if (recycleBinRetentionDays !== undefined) {
+      updates.push({
+        key: CRON_CLEANUP_SETTING_KEYS.recycleBinRetentionDays,
+        value: recycleBinRetentionDays,
+      });
+    }
+    if (mailSubscriptionUnsubscribedRetentionDays !== undefined) {
+      updates.push({
+        key: CRON_CLEANUP_SETTING_KEYS.mailSubscriptionUnsubscribedRetentionDays,
+        value: mailSubscriptionUnsubscribedRetentionDays,
+      });
+    }
+    if (refreshTokenExpiredRetentionDays !== undefined) {
+      updates.push({
+        key: CRON_CLEANUP_SETTING_KEYS.refreshTokenExpiredRetentionDays,
+        value: refreshTokenExpiredRetentionDays,
+      });
+    }
+    if (passwordResetRetentionMinutes !== undefined) {
+      updates.push({
+        key: CRON_CLEANUP_SETTING_KEYS.passwordResetRetentionMinutes,
+        value: passwordResetRetentionMinutes,
+      });
+    }
+    if (pushSubscriptionMarkInactiveDays !== undefined) {
+      updates.push({
+        key: CRON_CLEANUP_SETTING_KEYS.pushSubscriptionMarkInactiveDays,
+        value: pushSubscriptionMarkInactiveDays,
+      });
+    }
+    if (pushSubscriptionDeleteInactiveDays !== undefined) {
+      updates.push({
+        key: CRON_CLEANUP_SETTING_KEYS.pushSubscriptionDeleteInactiveDays,
+        value: pushSubscriptionDeleteInactiveDays,
+      });
+    }
+    if (pushSubscriptionDeleteDisabledUserDays !== undefined) {
+      updates.push({
+        key: CRON_CLEANUP_SETTING_KEYS.pushSubscriptionDeleteDisabledUserDays,
+        value: pushSubscriptionDeleteDisabledUserDays,
+      });
     }
 
     if (updates.length === 0) {

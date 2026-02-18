@@ -30,7 +30,6 @@ import {
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import { runDoctorHealthCheck } from "@/lib/server/cron-task-runner";
-import { runDoctorMaintenance } from "@/lib/server/doctor-maintenance";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
@@ -197,14 +196,6 @@ export async function doctor(
 
   try {
     const persistTriggerType: "MANUAL" | "AUTO" = force ? "MANUAL" : "AUTO";
-    if (force) {
-      const { after } = await import("next/server");
-      after(() => {
-        runDoctorMaintenance().catch((error) => {
-          console.error("Doctor maintenance background task failed:", error);
-        });
-      });
-    }
 
     if (!force) {
       const cachedRecord = await prisma.healthCheck.findFirst({

@@ -16,6 +16,7 @@ import {
 } from "@/data/check-config";
 import { flushEventsToDatabase } from "@/lib/server/analytics-flush";
 import { getConfig, getConfigs } from "@/lib/server/config-cache";
+import { runAutoCleanupMaintenance } from "@/lib/server/doctor-maintenance";
 import prisma from "@/lib/server/prisma";
 import redis, { ensureRedisConnection } from "@/lib/server/redis";
 import {
@@ -957,6 +958,10 @@ export async function runFriendLinksCheckForCron(): Promise<CheckFriendLinksResu
   return runFriendLinksCheck({
     checkAll: true,
   });
+}
+
+export async function runAutoCleanupForCron() {
+  return runAutoCleanupMaintenance();
 }
 
 export function summarizeTaskValue(value: unknown): SnapshotValue {
