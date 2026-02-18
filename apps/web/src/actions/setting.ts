@@ -16,6 +16,7 @@ import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
+import { syncCloudNow } from "@/actions/cloud";
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import prisma from "@/lib/server/prisma";
@@ -236,6 +237,11 @@ export async function updateSettings(
     const oldValuesMap = new Map(
       oldConfigs.map((config) => [config.key, config.value]),
     );
+    const siteUrlSetting = sanitizedSettings.find((s) => s.key === "site.url");
+    const shouldSyncCloudAfterUpdate =
+      siteUrlSetting !== undefined &&
+      extractDefaultValue(oldValuesMap.get("site.url")) !==
+        extractDefaultValue(siteUrlSetting.value);
 
     // 使用事务批量更新配置项
     let updated = 0;
@@ -300,6 +306,23 @@ export async function updateSettings(
     }
     // RootLayout 同时依赖 config 和 menus，配置变更后同步刷新菜单缓存，避免目录短暂丢失
     updateTag("menus");
+
+    if (shouldSyncCloudAfterUpdate && updated > 0) {
+      try {
+        const syncResult = await syncCloudNow({ access_token });
+        if (!syncResult.success || !syncResult.data?.synced) {
+          console.warn(
+            "[updateSettings] site.url 已更新，但自动同步云端失败:",
+            syncResult.message || syncResult.data?.message || "未知错误",
+          );
+        }
+      } catch (syncError) {
+        console.error(
+          "[updateSettings] site.url 已更新，但自动同步云端异常:",
+          syncError,
+        );
+      }
+    }
 
     return response.ok({
       data: { updated },
