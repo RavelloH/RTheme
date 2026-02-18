@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { RiEyeLine } from "@remixicon/react";
 import type { CloudHistoryItem } from "@repo/shared-types/api/cloud";
+import { codeToHtml } from "shiki";
 
 import { getCloudHistory } from "@/actions/cloud";
 import type { FilterConfig } from "@/components/ui/GridTable";
@@ -37,6 +38,12 @@ const VERIFY_SOURCE_LABELS: Record<
   NONE: "NONE",
 };
 
+const TRIGGER_TYPE_LABELS: Record<CloudHistoryItem["triggerType"], string> = {
+  MANUAL: "手动触发",
+  CLOUD: "云端触发",
+  AUTO: "自动触发",
+};
+
 function formatDateTime(value: string): string {
   return new Date(value).toLocaleString("zh-CN", {
     year: "numeric",
@@ -52,6 +59,80 @@ function getStatusClass(status: CloudHistoryItem["status"]): string {
   if (status === "ERROR" || status === "REJECTED") return "text-error";
   if (status === "RECEIVED") return "text-warning";
   return "text-success";
+}
+
+function JSONHighlight({ json }: { json: unknown }) {
+  const [html, setHtml] = useState("");
+
+  useEffect(() => {
+    let disposed = false;
+
+    const run = async () => {
+      const jsonString = JSON.stringify(json ?? null, null, 2);
+      try {
+        const highlighted = await codeToHtml(jsonString, {
+          lang: "json",
+          themes: {
+            light: "github-light",
+            dark: "github-dark",
+          },
+        });
+
+        if (!disposed) {
+          setHtml(highlighted);
+        }
+      } catch (error) {
+        console.error("[CloudHistoryTable] Shiki 高亮失败:", error);
+        if (!disposed) {
+          const escaped = jsonString
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;");
+          setHtml(`<pre class="shiki"><code>${escaped}</code></pre>`);
+        }
+      }
+    };
+
+    void run();
+    return () => {
+      disposed = true;
+    };
+  }, [json]);
+
+  return (
+    <div
+      className="
+        rounded-sm
+        border border-foreground/10
+        overflow-auto
+        max-h-[40vh]
+        [&_pre]:!m-0
+        [&_pre]:!rounded-none
+      "
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+}
+
+function buildTelemetryJson(record: CloudHistoryItem): unknown {
+  if (!record.telemetry) return null;
+  if (record.telemetry.raw !== undefined) {
+    return record.telemetry.raw;
+  }
+
+  return {
+    schemaVer: record.telemetry.schemaVer ?? null,
+    collectedAt: record.telemetry.collectedAt ?? null,
+    latestStatus: record.telemetry.latestStatus ?? null,
+    latestDurationMs: record.telemetry.latestDurationMs ?? null,
+    doctorDurationMs: record.telemetry.doctorDurationMs ?? null,
+    projectsDurationMs: record.telemetry.projectsDurationMs ?? null,
+    friendsDurationMs: record.telemetry.friendsDurationMs ?? null,
+    healthStatus: record.telemetry.healthStatus ?? null,
+    appVersion: record.telemetry.appVersion ?? null,
+    verifyMs: record.telemetry.verifyMs ?? null,
+    tokenAgeMs: record.telemetry.tokenAgeMs ?? null,
+  };
 }
 
 function formatTelemetrySummary(item: CloudHistoryItem): string {
@@ -488,15 +569,29 @@ export default function CloudHistoryTable() {
           <div className="px-6 py-6 space-y-6">
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
-                基本信息
+                记录概览
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground">
+                    记录 ID
+                  </label>
+                  <p className="text-sm font-mono">{selectedRecord.id}</p>
+                </div>
                 <div>
                   <label className="text-sm text-muted-foreground">状态</label>
                   <p
                     className={`text-sm ${getStatusClass(selectedRecord.status)}`}
                   >
                     {STATUS_LABELS[selectedRecord.status]}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">
+                    触发类型
+                  </label>
+                  <p className="text-sm">
+                    {TRIGGER_TYPE_LABELS[selectedRecord.triggerType]}
                   </p>
                 </div>
                 <div>
@@ -511,10 +606,44 @@ export default function CloudHistoryTable() {
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">
+                    验签结果
+                  </label>
+                  <p className="text-sm">
+                    {selectedRecord.verifyOk ? "通过" : "未通过"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">
                     接收时间
                   </label>
                   <p className="text-sm font-mono">
                     {formatDateTime(selectedRecord.receivedAt)}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">
+                    请求时间
+                  </label>
+                  <p className="text-sm font-mono">
+                    {selectedRecord.requestedAt
+                      ? formatDateTime(selectedRecord.requestedAt)
+                      : "-"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">
+                    创建时间
+                  </label>
+                  <p className="text-sm font-mono">
+                    {formatDateTime(selectedRecord.createdAt)}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">
+                    更新时间
+                  </label>
+                  <p className="text-sm font-mono">
+                    {formatDateTime(selectedRecord.updatedAt)}
                   </p>
                 </div>
                 <div>
@@ -541,6 +670,14 @@ export default function CloudHistoryTable() {
                     {selectedRecord.dedupHit ? "是" : "否"}
                   </p>
                 </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">
+                    Cron 记录 ID
+                  </label>
+                  <p className="text-sm font-mono">
+                    {selectedRecord.cronHistoryId ?? "-"}
+                  </p>
+                </div>
                 <div className="md:col-span-2">
                   <label className="text-sm text-muted-foreground">
                     附加信息
@@ -557,6 +694,13 @@ export default function CloudHistoryTable() {
               <p className="text-sm leading-7">
                 {formatTelemetrySummary(selectedRecord)}
               </p>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+                遥测 JSON（Shiki 高亮）
+              </h3>
+              <JSONHighlight json={buildTelemetryJson(selectedRecord)} />
             </div>
           </div>
         )}

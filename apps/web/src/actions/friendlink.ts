@@ -15,7 +15,6 @@ import type {
   DeleteOwnFriendLink,
   DeleteOwnFriendLinkResult,
   FriendLinkCheckHistoryItem,
-  FriendLinkCheckResultItem,
   FriendLinkIssueType,
   FriendLinkListItem,
   FriendLinksStats,
@@ -62,6 +61,7 @@ import type { UserRole } from "@/lib/server/auth-verify";
 import { authVerify } from "@/lib/server/auth-verify";
 import { verifyToken } from "@/lib/server/captcha";
 import { getConfig, getConfigs } from "@/lib/server/config-cache";
+import { runFriendLinksCheck } from "@/lib/server/cron-task-runner";
 import { sendNotice } from "@/lib/server/notice";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
@@ -94,39 +94,6 @@ const FAILURE_ISSUE_TYPES: FriendLinkIssueType[] = [
   "NO_BACKLINK",
 ];
 
-type FriendLinkCheckContext = {
-  checkBacklinkEnabled: boolean;
-  autoManageStatusEnabled: boolean;
-  alertApplicantEnabled: boolean;
-  alertAdminEnabled: boolean;
-  siteUrl: string;
-  siteDomain: string | null;
-  adminUids: number[];
-};
-
-type CheckExecutionResult = {
-  statusChanged: boolean;
-  failed: boolean;
-  result: FriendLinkCheckResultItem;
-};
-
-type FriendLinkCheckRecord = {
-  id: number;
-  name: string;
-  url: string;
-  avatar: string | null;
-  slogan: string | null;
-  friendLinkUrl: string | null;
-  ignoreBacklink: boolean;
-  status: FriendLinkStatus;
-  checkSuccessCount: number;
-  checkFailureCount: number;
-  avgResponseTime: number | null;
-  checkHistory: Prisma.JsonValue;
-  ownerId: number | null;
-  publishedAt: Date | null;
-};
-
 type FriendLinkRecordWithUsers = Prisma.FriendLinkGetPayload<{
   include: {
     owner: {
@@ -151,14 +118,6 @@ type ParseCheckHistoryOptions = {
   friendLinkUrl?: string | null;
   defaultCheckType?: "url" | "backlink";
   defaultTargetUrl?: string | null;
-};
-
-type StoredCheckHistoryItem = {
-  time: string;
-  responseTime: number | null;
-  statusCode: number | null;
-  issueType: FriendLinkIssueType;
-  hasBacklink?: boolean;
 };
 
 function getPaginationMeta(
@@ -261,20 +220,6 @@ function parseCheckHistory(
   return normalized;
 }
 
-function toStoredCheckHistoryEvent(
-  item: FriendLinkCheckHistoryItem,
-): StoredCheckHistoryItem {
-  return {
-    time: item.time,
-    responseTime: item.responseTime,
-    statusCode: item.statusCode ?? null,
-    issueType: item.issueType,
-    ...(typeof item.hasBacklink === "boolean"
-      ? { hasBacklink: item.hasBacklink }
-      : {}),
-  };
-}
-
 function toFriendLinkListItem(
   record: FriendLinkRecordWithUsers,
   options?: {
@@ -331,19 +276,6 @@ function toFriendLinkListItem(
       : null,
     checkHistory: options?.includeHistory === false ? [] : history,
   };
-}
-
-function countIssues(history: FriendLinkCheckHistoryItem[]): number {
-  return history.filter((item) => FAILURE_ISSUE_TYPES.includes(item.issueType))
-    .length;
-}
-
-function isFullFailure(history: FriendLinkCheckHistoryItem[]): boolean {
-  return history.length === 30 && countIssues(history) === 30;
-}
-
-function shouldAutoManageStatus(currentStatus: FriendLinkStatus): boolean {
-  return ["PUBLISHED", "DISCONNECT", "NO_BACKLINK"].includes(currentStatus);
 }
 
 async function getAdminUids(): Promise<number[]> {
@@ -789,238 +721,6 @@ function parseFriendLinkFromHtml(
     slogan: slogan || hostname,
     avatar: avatar || "",
     friendLinkUrl: friendLinkUrl || null,
-  };
-}
-
-async function notifyCheckThreshold(params: {
-  link: FriendLinkCheckRecord;
-  issueCount: number;
-  threshold: 10 | 20;
-  issueType: FriendLinkIssueType;
-  context: FriendLinkCheckContext;
-}): Promise<void> {
-  const issueText = params.issueType === "DISCONNECT" ? "无法访问" : "缺少回链";
-  const title = `友链「${params.link.name}」检查异常达到 ${params.threshold} 次`;
-  const content = `最近 30 次检查中已有 ${params.issueCount} 次异常，当前主要问题：${issueText}。请及时处理。`;
-  const adminLink = `${params.context.siteUrl}/admin/friends`;
-  const applicantLink = `${params.context.siteUrl}/friends/new`;
-
-  if (params.context.alertAdminEnabled && params.context.adminUids.length > 0) {
-    await notifyManyUsers(params.context.adminUids, title, content, adminLink);
-  }
-
-  if (params.context.alertApplicantEnabled && params.link.ownerId) {
-    await notifyManyUsers([params.link.ownerId], title, content, applicantLink);
-  }
-}
-
-async function notifyFullFailure(params: {
-  link: FriendLinkCheckRecord;
-  nextStatus: FriendLinkStatus;
-  context: FriendLinkCheckContext;
-  autoManaged: boolean;
-}): Promise<void> {
-  const title = `友链「${params.link.name}」最近 30 次检查全部失败`;
-  const content = params.autoManaged
-    ? `该友链最近 30 次检查均异常，系统已自动调整状态为 ${params.nextStatus}。`
-    : `该友链最近 30 次检查均异常，请管理员尽快处理。`;
-  const adminLink = `${params.context.siteUrl}/admin/friends`;
-  const applicantLink = `${params.context.siteUrl}/friends/new`;
-
-  if (params.context.alertAdminEnabled && params.context.adminUids.length > 0) {
-    await notifyManyUsers(params.context.adminUids, title, content, adminLink);
-  }
-
-  if (params.context.alertApplicantEnabled && params.link.ownerId) {
-    await notifyManyUsers([params.link.ownerId], title, content, applicantLink);
-  }
-}
-
-async function executeSingleCheck(
-  link: FriendLinkCheckRecord,
-  context: FriendLinkCheckContext,
-): Promise<CheckExecutionResult> {
-  if (link.status === "WHITELIST") {
-    return {
-      statusChanged: false,
-      failed: false,
-      result: {
-        id: link.id,
-        status: link.status,
-        checked: false,
-        skipped: true,
-        skipReason: "WHITELIST",
-        issueType: "NONE",
-        message: "白名单链接，已跳过检查",
-      },
-    };
-  }
-
-  const shouldCheckBacklink =
-    context.checkBacklinkEnabled &&
-    !link.ignoreBacklink &&
-    Boolean(link.friendLinkUrl) &&
-    Boolean(context.siteDomain);
-  const targetUrl = shouldCheckBacklink
-    ? (link.friendLinkUrl as string)
-    : link.url;
-  const checkType = shouldCheckBacklink ? "backlink" : "url";
-
-  const requestResult = await requestUrlWithTiming(targetUrl);
-
-  let issueType: FriendLinkIssueType = "NONE";
-  let note: string | undefined;
-  let hasBacklink: boolean | undefined;
-
-  if (!requestResult.ok) {
-    issueType = "DISCONNECT";
-    note = requestResult.errorMessage
-      ? `请求失败: ${requestResult.errorMessage}`
-      : `HTTP 状态码 ${requestResult.statusCode ?? "unknown"}`;
-  } else if (shouldCheckBacklink) {
-    hasBacklink = hasBacklinkInHtml(
-      requestResult.html || "",
-      context.siteDomain as string,
-    );
-    if (!hasBacklink) {
-      issueType = "NO_BACKLINK";
-      note = "未在友链页面中检测到本站域名";
-    }
-  }
-
-  const history = parseCheckHistory(link.checkHistory, {
-    url: link.url,
-    friendLinkUrl: link.friendLinkUrl,
-    defaultCheckType: checkType,
-    defaultTargetUrl: targetUrl,
-  });
-  const previousIssueCount = countIssues(history);
-  const previousFullFailure = isFullFailure(history);
-
-  const newHistoryEvent: FriendLinkCheckHistoryItem = {
-    time: new Date().toISOString(),
-    checkType,
-    targetUrl,
-    responseTime: requestResult.responseTime,
-    statusCode: requestResult.statusCode,
-    ok: issueType === "NONE",
-    hasBacklink,
-    issueType,
-    note,
-  };
-
-  const newHistory = [...history, newHistoryEvent].slice(-30);
-  const storedHistory = newHistory.map(toStoredCheckHistoryEvent);
-  const currentIssueCount = countIssues(newHistory);
-  const currentFullFailure = isFullFailure(newHistory);
-  const hasDisconnectIssue = newHistory.some(
-    (item) => item.issueType === "DISCONNECT",
-  );
-
-  let nextStatus = link.status;
-  if (
-    context.autoManageStatusEnabled &&
-    shouldAutoManageStatus(link.status as FriendLinkStatus)
-  ) {
-    if (currentFullFailure) {
-      nextStatus = hasDisconnectIssue ? "DISCONNECT" : "NO_BACKLINK";
-    } else if (
-      issueType === "NONE" &&
-      ["DISCONNECT", "NO_BACKLINK"].includes(link.status)
-    ) {
-      nextStatus = "PUBLISHED";
-    }
-  }
-
-  const shouldChangeStatus = nextStatus !== link.status;
-  const previousChecks = link.checkSuccessCount + link.checkFailureCount;
-  const nextAvgResponseTime =
-    typeof requestResult.responseTime === "number"
-      ? link.avgResponseTime == null
-        ? requestResult.responseTime
-        : Math.round(
-            (link.avgResponseTime * previousChecks +
-              requestResult.responseTime) /
-              (previousChecks + 1),
-          )
-      : undefined;
-
-  const updated = await prisma.friendLink.update({
-    where: { id: link.id, deletedAt: null },
-    data: {
-      checkSuccessCount: {
-        increment: issueType === "NONE" ? 1 : 0,
-      },
-      checkFailureCount: {
-        increment: issueType === "NONE" ? 0 : 1,
-      },
-      lastCheckedAt: new Date(),
-      checkHistory: storedHistory as unknown as Prisma.JsonArray,
-      ...(typeof nextAvgResponseTime === "number"
-        ? { avgResponseTime: nextAvgResponseTime }
-        : {}),
-      ...(shouldChangeStatus
-        ? {
-            status: nextStatus,
-            ...(nextStatus === "PUBLISHED" && !link.publishedAt
-              ? { publishedAt: new Date() }
-              : {}),
-          }
-        : {}),
-    },
-    select: {
-      status: true,
-    },
-  });
-
-  if (issueType !== "NONE") {
-    if (previousIssueCount < 10 && currentIssueCount >= 10) {
-      await notifyCheckThreshold({
-        link,
-        issueCount: currentIssueCount,
-        threshold: 10,
-        issueType,
-        context,
-      });
-    }
-
-    if (previousIssueCount < 20 && currentIssueCount >= 20) {
-      await notifyCheckThreshold({
-        link,
-        issueCount: currentIssueCount,
-        threshold: 20,
-        issueType,
-        context,
-      });
-    }
-  }
-
-  if (currentFullFailure && !previousFullFailure) {
-    await notifyFullFailure({
-      link,
-      nextStatus: updated.status as FriendLinkStatus,
-      context,
-      autoManaged: context.autoManageStatusEnabled,
-    });
-  }
-
-  return {
-    statusChanged: shouldChangeStatus,
-    failed: issueType !== "NONE",
-    result: {
-      id: link.id,
-      status: updated.status as FriendLinkStatus,
-      checked: true,
-      skipped: false,
-      issueType,
-      responseTime: requestResult.responseTime,
-      message:
-        issueType === "NONE"
-          ? "检查通过"
-          : issueType === "DISCONNECT"
-            ? "站点不可访问"
-            : "未检测到回链",
-    },
   };
 }
 
@@ -2699,117 +2399,10 @@ export async function checkFriendLinks(
   }
 
   try {
-    const [
-      checkBacklinkEnabled,
-      autoManageStatusEnabled,
-      alertApplicantEnabled,
-      alertAdminEnabled,
-      siteUrl,
-    ] = await getConfigs([
-      "friendlink.autoCheck.checkBackLink.enable",
-      "friendlink.autoCheck.autoManageStatus.enable",
-      "friendlink.autoCheck.alertApplicant.enable",
-      "friendlink.autoCheck.alertAdmin.enable",
-      "site.url",
-    ]);
-
-    const where: Prisma.FriendLinkWhereInput = params.checkAll
-      ? {
-          deletedAt: null,
-        }
-      : {
-          deletedAt: null,
-          id: {
-            in: params.ids || [],
-          },
-        };
-
-    const links = (await prisma.friendLink.findMany({
-      where,
-      select: {
-        id: true,
-        name: true,
-        url: true,
-        avatar: true,
-        slogan: true,
-        friendLinkUrl: true,
-        ignoreBacklink: true,
-        status: true,
-        checkSuccessCount: true,
-        checkFailureCount: true,
-        avgResponseTime: true,
-        checkHistory: true,
-        ownerId: true,
-        publishedAt: true,
-      },
-      orderBy: {
-        id: "asc",
-      },
-    })) as FriendLinkCheckRecord[];
-
-    if (links.length === 0) {
-      return response.ok({
-        message: "没有可检查的友链记录",
-        data: {
-          total: 0,
-          checked: 0,
-          skipped: 0,
-          failed: 0,
-          statusChanged: 0,
-          results: [],
-        },
-      }) as ActionResult<CheckFriendLinksResult | null>;
-    }
-
-    const adminUids = alertAdminEnabled ? await getAdminUids() : [];
-    const context: FriendLinkCheckContext = {
-      checkBacklinkEnabled,
-      autoManageStatusEnabled,
-      alertApplicantEnabled,
-      alertAdminEnabled,
-      siteUrl,
-      siteDomain: getDomainFromUrl(siteUrl),
-      adminUids,
-    };
-
-    const CONCURRENCY_LIMIT = 100;
-    const executedResults: CheckExecutionResult[] = [];
-
-    for (let start = 0; start < links.length; start += CONCURRENCY_LIMIT) {
-      const batch = links.slice(start, start + CONCURRENCY_LIMIT);
-      const batchResults = await Promise.all(
-        batch.map((link) => executeSingleCheck(link, context)),
-      );
-      executedResults.push(...batchResults);
-    }
-
-    const results: FriendLinkCheckResultItem[] = executedResults.map(
-      (item) => item.result,
-    );
-    let checked = 0;
-    let skipped = 0;
-    let failed = 0;
-    let statusChanged = 0;
-
-    for (const item of executedResults) {
-      if (item.result.skipped) {
-        skipped += 1;
-      } else {
-        checked += 1;
-      }
-
-      if (item.failed) {
-        failed += 1;
-      }
-
-      if (item.statusChanged) {
-        statusChanged += 1;
-      }
-    }
-
-    if (checked > 0) {
-      invalidateFriendLinkCache();
-    }
+    const data = await runFriendLinksCheck({
+      checkAll: Boolean(params.checkAll),
+      ids: params.ids,
+    });
 
     try {
       await logAuditEvent({
@@ -2823,15 +2416,15 @@ export async function checkFriendLinks(
           value: {
             old: null,
             new: {
-              total: links.length,
-              checked,
-              skipped,
-              failed,
-              statusChanged,
+              total: data.total,
+              checked: data.checked,
+              skipped: data.skipped,
+              failed: data.failed,
+              statusChanged: data.statusChanged,
               checkAll: Boolean(params.checkAll),
             },
           },
-          description: `管理员执行友链检查（共 ${links.length} 条）`,
+          description: `管理员执行友链检查（共 ${data.total} 条）`,
         },
       });
     } catch (error) {
@@ -2840,14 +2433,7 @@ export async function checkFriendLinks(
 
     return response.ok({
       message: "友链检查完成",
-      data: {
-        total: links.length,
-        checked,
-        skipped,
-        failed,
-        statusChanged,
-        results,
-      },
+      data,
     }) as ActionResult<CheckFriendLinksResult | null>;
   } catch (error) {
     console.error("[FriendLink] 检查失败:", error);

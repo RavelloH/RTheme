@@ -1,0 +1,863 @@
+import "server-only";
+
+import type { DoctorSuccessResponse } from "@repo/shared-types/api/doctor";
+import type {
+  CheckFriendLinksResult,
+  FriendLinkIssueType,
+  FriendLinkStatus,
+} from "@repo/shared-types/api/friendlink";
+import type { SyncProjectsGithubResult } from "@repo/shared-types/api/project";
+import { updateTag } from "next/cache";
+
+import {
+  formatDoctorCheckDetails,
+  getDoctorCheckMessage,
+  getDoctorCheckOrder,
+} from "@/data/check-config";
+import { flushEventsToDatabase } from "@/lib/server/analytics-flush";
+import { getConfig, getConfigs } from "@/lib/server/config-cache";
+import prisma from "@/lib/server/prisma";
+import redis, { ensureRedisConnection } from "@/lib/server/redis";
+import {
+  assertPublicHttpUrl,
+  readResponseBufferWithLimit,
+} from "@/lib/server/url-security";
+
+import { Prisma } from ".prisma/client";
+
+type SnapshotStatus = "O" | "W" | "E";
+type SnapshotValue = number | string | boolean | null;
+type SnapshotCheck = {
+  v: SnapshotValue;
+  d: number;
+  s: SnapshotStatus;
+};
+type HealthCheckSnapshot = {
+  checks: Record<string, SnapshotCheck>;
+};
+
+type StoredFriendLinkCheckHistoryItem = {
+  time: string;
+  responseTime: number | null;
+  statusCode: number | null;
+  issueType: FriendLinkIssueType;
+  hasBacklink?: boolean;
+};
+
+function classifyByThreshold(
+  value: number,
+  warningThreshold: number,
+  errorThreshold: number,
+): SnapshotStatus {
+  if (value < warningThreshold) return "O";
+  if (value < errorThreshold) return "W";
+  return "E";
+}
+
+function snapshotStatusToSeverity(
+  status: SnapshotStatus,
+): "info" | "warning" | "error" {
+  if (status === "E") return "error";
+  if (status === "W") return "warning";
+  return "info";
+}
+
+function normalizeSnapshotValue(value: unknown): SnapshotValue {
+  if (
+    value === null ||
+    typeof value === "number" ||
+    typeof value === "string" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+  return null;
+}
+
+function buildDoctorIssues(
+  snapshotChecks: Record<string, SnapshotCheck>,
+): DoctorSuccessResponse["data"]["issues"] {
+  const checks = Object.entries(snapshotChecks).map(([code, check]) => ({
+    code,
+    message: getDoctorCheckMessage(code),
+    severity: snapshotStatusToSeverity(check.s),
+    details: formatDoctorCheckDetails(code, check.v),
+  }));
+
+  checks.sort((a, b) => {
+    const orderDiff = getDoctorCheckOrder(a.code) - getDoctorCheckOrder(b.code);
+    if (orderDiff !== 0) return orderDiff;
+    return a.code.localeCompare(b.code);
+  });
+
+  return checks;
+}
+
+async function measure<T>(
+  fn: () => Promise<T>,
+): Promise<{ value: T; durationMs: number }> {
+  const started = Date.now();
+  const value = await fn();
+  return { value, durationMs: Date.now() - started };
+}
+
+function getOverallStatus(counts: {
+  okCount: number;
+  warningCount: number;
+  errorCount: number;
+}): "OK" | "WARNING" | "ERROR" {
+  if (counts.errorCount > 0) return "ERROR";
+  if (counts.warningCount > 0) return "WARNING";
+  return "OK";
+}
+
+function parseFriendLinkHistory(
+  rawHistory: Prisma.JsonValue,
+): StoredFriendLinkCheckHistoryItem[] {
+  if (!Array.isArray(rawHistory)) return [];
+
+  const parsed: StoredFriendLinkCheckHistoryItem[] = [];
+  for (const item of rawHistory) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      continue;
+    }
+    const record = item as Record<string, unknown>;
+    const issueTypeRaw = record.issueType;
+    const issueType: FriendLinkIssueType =
+      issueTypeRaw === "DISCONNECT" ||
+      issueTypeRaw === "NO_BACKLINK" ||
+      issueTypeRaw === "NONE"
+        ? issueTypeRaw
+        : "NONE";
+
+    parsed.push({
+      time:
+        typeof record.time === "string"
+          ? record.time
+          : new Date(0).toISOString(),
+      responseTime:
+        typeof record.responseTime === "number" &&
+        Number.isFinite(record.responseTime)
+          ? Math.max(0, Math.round(record.responseTime))
+          : null,
+      statusCode:
+        typeof record.statusCode === "number" &&
+        Number.isFinite(record.statusCode)
+          ? Math.round(record.statusCode)
+          : null,
+      issueType,
+      ...(typeof record.hasBacklink === "boolean"
+        ? { hasBacklink: record.hasBacklink }
+        : {}),
+    });
+  }
+
+  return parsed;
+}
+
+function countFriendLinkIssues(
+  history: StoredFriendLinkCheckHistoryItem[],
+): number {
+  return history.filter((item) => item.issueType !== "NONE").length;
+}
+
+function isFriendLinkFullFailure(
+  history: StoredFriendLinkCheckHistoryItem[],
+): boolean {
+  return history.length === 30 && countFriendLinkIssues(history) === 30;
+}
+
+function shouldAutoManageFriendLinkStatus(status: FriendLinkStatus): boolean {
+  return (
+    status === "PUBLISHED" ||
+    status === "DISCONNECT" ||
+    status === "NO_BACKLINK"
+  );
+}
+
+function getDomainFromUrl(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^www\./i, "").toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function hasBacklinkInHtml(html: string, siteDomain: string): boolean {
+  const escapedDomain = escapeRegex(siteDomain);
+  const domainRegex = new RegExp(
+    `https?:\\/\\/(?:[^"'>\\s]*\\.)?${escapedDomain}(?:[\\/"'\\s]|$)`,
+    "i",
+  );
+  if (domainRegex.test(html)) return true;
+
+  const plainDomainRegex = new RegExp(`\\b${escapedDomain}\\b`, "i");
+  return plainDomainRegex.test(html);
+}
+
+async function requestUrlWithTiming(url: string): Promise<{
+  ok: boolean;
+  statusCode: number | null;
+  responseTime: number | null;
+  html: string | null;
+}> {
+  const startedAt = performance.now();
+  try {
+    const safeUrl = (await assertPublicHttpUrl(url.trim())).url.toString();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    let response: Response;
+
+    try {
+      response = await fetch(safeUrl, {
+        method: "GET",
+        redirect: "follow",
+        signal: controller.signal,
+        headers: {
+          "User-Agent": "NeutralPress FriendLinkChecker/1.0",
+        },
+        cache: "no-store",
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    const htmlBuffer = await readResponseBufferWithLimit(
+      response,
+      2 * 1024 * 1024,
+    );
+    return {
+      ok: response.ok,
+      statusCode: response.status,
+      responseTime: Math.max(0, Math.round(performance.now() - startedAt)),
+      html: htmlBuffer.toString("utf-8"),
+    };
+  } catch {
+    return {
+      ok: false,
+      statusCode: null,
+      responseTime: null,
+      html: null,
+    };
+  }
+}
+
+export async function runDoctorHealthCheck(
+  options: RunDoctorHealthCheckOptions,
+): Promise<RunDoctorHealthCheckResult> {
+  const startedAt = new Date();
+  const startedAtMs = Date.now();
+
+  const getDbSize = async (): Promise<number> => {
+    const result = await prisma.$queryRaw<Array<{ size: bigint }>>`
+      SELECT pg_database_size(current_database()) AS size;
+    `;
+    return Number(result[0]?.size || 0);
+  };
+
+  const getDbLatency = async (): Promise<number> => {
+    const started = Date.now();
+    await prisma.$queryRaw`SELECT 1;`;
+    return Date.now() - started;
+  };
+
+  const getDbConnectionCount = async (): Promise<number> => {
+    const result = await prisma.$queryRaw<Array<{ count: bigint }>>`
+      SELECT count(*) FROM pg_stat_activity WHERE datname = current_database();
+    `;
+    return Number(result[0]?.count || 0);
+  };
+
+  const getRedisLatency = async (): Promise<number> => {
+    try {
+      await ensureRedisConnection();
+      const started = Date.now();
+      await redis.ping();
+      return Date.now() - started;
+    } catch {
+      return -1;
+    }
+  };
+
+  const getSiteSelfLatency = async (): Promise<{
+    ok: boolean;
+    latencyMs: number | null;
+    message?: string;
+  }> => {
+    try {
+      const siteUrlConfig = await getConfig("site.url");
+      const siteUrl =
+        typeof siteUrlConfig === "string" ? siteUrlConfig.trim() : "";
+
+      if (!siteUrl) {
+        return { ok: false, latencyMs: null, message: "site.url 未配置" };
+      }
+
+      const target = new URL(siteUrl);
+      target.pathname = "/";
+      target.search = "";
+      target.hash = "";
+
+      const started = Date.now();
+      const response = await fetch(target.toString(), {
+        method: "GET",
+        cache: "no-store",
+      });
+      const latencyMs = Date.now() - started;
+
+      if (!response.ok) {
+        return {
+          ok: false,
+          latencyMs,
+          message: `HTTP ${response.status}`,
+        };
+      }
+
+      return {
+        ok: true,
+        latencyMs,
+      };
+    } catch {
+      return { ok: false, latencyMs: null, message: "访问失败" };
+    }
+  };
+
+  const [
+    flushResult,
+    siteLatencyResult,
+    dbSizeResult,
+    dbLatencyResult,
+    dbConnectionResult,
+    redisLatencyResult,
+  ] = await Promise.all([
+    measure(flushEventsToDatabase),
+    measure(getSiteSelfLatency),
+    measure(getDbSize),
+    measure(getDbLatency),
+    measure(getDbConnectionCount),
+    measure(getRedisLatency),
+  ]);
+
+  const snapshot: HealthCheckSnapshot = { checks: {} };
+
+  snapshot.checks.ANALYTICS_FLUSH_SUCCESS_COUNT = {
+    v: flushResult.value.success ? flushResult.value.flushedCount : null,
+    d: flushResult.durationMs,
+    s: flushResult.value.success ? "O" : "E",
+  };
+
+  if (
+    siteLatencyResult.value.ok &&
+    siteLatencyResult.value.latencyMs !== null
+  ) {
+    snapshot.checks.SITE_SELF_LATENCY = {
+      v: siteLatencyResult.value.latencyMs,
+      d: siteLatencyResult.durationMs,
+      s: classifyByThreshold(siteLatencyResult.value.latencyMs, 500, 1500),
+    };
+  } else {
+    snapshot.checks.SITE_SELF_LATENCY = {
+      v: siteLatencyResult.value.message || "检查失败",
+      d: siteLatencyResult.durationMs,
+      s: "E",
+    };
+  }
+
+  snapshot.checks.DB_LATENCY = {
+    v: dbLatencyResult.value,
+    d: dbLatencyResult.durationMs,
+    s: classifyByThreshold(dbLatencyResult.value, 100, 300),
+  };
+
+  snapshot.checks.DB_CONNECTIONS = {
+    v: dbConnectionResult.value,
+    d: dbConnectionResult.durationMs,
+    s: classifyByThreshold(dbConnectionResult.value, 50, 150),
+  };
+
+  snapshot.checks.DB_SIZE = {
+    v: dbSizeResult.value,
+    d: dbSizeResult.durationMs,
+    s: "O",
+  };
+
+  if (redisLatencyResult.value === -1) {
+    snapshot.checks.REDIS_CONNECTION = {
+      v: false,
+      d: redisLatencyResult.durationMs,
+      s: "E",
+    };
+  } else {
+    snapshot.checks.REDIS_LATENCY = {
+      v: redisLatencyResult.value,
+      d: redisLatencyResult.durationMs,
+      s: classifyByThreshold(redisLatencyResult.value, 10, 50),
+    };
+  }
+
+  const checks = Object.values(snapshot.checks);
+  const okCount = checks.filter((check) => check.s === "O").length;
+  const warningCount = checks.filter((check) => check.s === "W").length;
+  const errorCount = checks.filter((check) => check.s === "E").length;
+  const status = getOverallStatus({ okCount, warningCount, errorCount });
+  const durationMs = Date.now() - startedAtMs;
+  const issues = buildDoctorIssues(snapshot.checks);
+
+  const created = await prisma.healthCheck.create({
+    data: {
+      startedAt,
+      durationMs,
+      triggerType: options.triggerType,
+      overallStatus: status,
+      okCount,
+      warningCount,
+      errorCount,
+      snapshot: snapshot as unknown as Prisma.InputJsonValue,
+    },
+    select: {
+      createdAt: true,
+      startedAt: true,
+      durationMs: true,
+      triggerType: true,
+      overallStatus: true,
+      okCount: true,
+      warningCount: true,
+      errorCount: true,
+      id: true,
+    },
+  });
+
+  return {
+    id: created.id,
+    data: {
+      createdAt: created.createdAt.toISOString(),
+      startedAt: created.startedAt.toISOString(),
+      durationMs: created.durationMs,
+      triggerType: created.triggerType,
+      status: created.overallStatus,
+      okCount: created.okCount,
+      warningCount: created.warningCount,
+      errorCount: created.errorCount,
+      issues,
+    },
+  };
+}
+
+export async function runDoctorForCron(): Promise<
+  DoctorSuccessResponse["data"]
+> {
+  const result = await runDoctorHealthCheck({
+    triggerType: "CRON",
+  });
+  return result.data;
+}
+
+type RunProjectsGithubSyncOptions = {
+  ids?: number[];
+};
+
+export async function runProjectsGithubSync(
+  options: RunProjectsGithubSyncOptions = {},
+): Promise<SyncProjectsGithubResult> {
+  const githubToken = await getConfig("content.githubAutoSync.personalKey");
+  const projects = await prisma.project.findMany({
+    where: {
+      enableGithubSync: true,
+      repoPath: { not: null },
+      deletedAt: null,
+      ...(options.ids && options.ids.length > 0
+        ? {
+            id: {
+              in: options.ids,
+            },
+          }
+        : {}),
+    },
+    select: {
+      id: true,
+      slug: true,
+      repoPath: true,
+      enableConentSync: true,
+    },
+  });
+
+  if (projects.length === 0) {
+    return { synced: 0, failed: 0, results: [] };
+  }
+
+  const results = await Promise.allSettled(
+    projects.map(async (project) => {
+      if (!project.repoPath) {
+        return {
+          id: project.id,
+          slug: project.slug,
+          success: false,
+          error: "仓库路径为空",
+        };
+      }
+
+      const [owner, repo] = project.repoPath.split("/");
+      if (!owner || !repo) {
+        return {
+          id: project.id,
+          slug: project.slug,
+          success: false,
+          error: "仓库路径格式不正确",
+        };
+      }
+
+      const headers: Record<string, string> = {
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "NeutralPress-CMS",
+      };
+      if (typeof githubToken === "string" && githubToken.trim()) {
+        headers.Authorization = `Bearer ${githubToken}`;
+      }
+
+      const repoResponse = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}`,
+        { headers },
+      );
+
+      if (!repoResponse.ok) {
+        return {
+          id: project.id,
+          slug: project.slug,
+          success: false,
+          error: `GitHub API 错误: ${repoResponse.status} ${repoResponse.statusText}`,
+        };
+      }
+
+      const repoData = await repoResponse.json();
+      const languagesResponse = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/languages`,
+        { headers },
+      );
+
+      let languages: Record<string, number> | null = null;
+      if (languagesResponse.ok) {
+        languages = await languagesResponse.json();
+      }
+
+      const stars =
+        typeof repoData.stargazers_count === "number"
+          ? repoData.stargazers_count
+          : 0;
+      const forks =
+        typeof repoData.forks_count === "number" ? repoData.forks_count : 0;
+
+      const updateData: Prisma.ProjectUpdateInput = {
+        stars,
+        forks,
+        languages:
+          languages === null
+            ? Prisma.JsonNull
+            : (languages as Prisma.InputJsonValue),
+        license: repoData.license?.spdx_id || null,
+      };
+
+      if (project.enableConentSync) {
+        const readmeResponse = await fetch(
+          `https://api.github.com/repos/${owner}/${repo}/readme`,
+          {
+            headers: {
+              ...headers,
+              Accept: "application/vnd.github.v3.raw",
+            },
+          },
+        );
+        if (readmeResponse.ok) {
+          updateData.content = await readmeResponse.text();
+        }
+      }
+
+      await prisma.project.update({
+        where: { id: project.id, deletedAt: null },
+        data: updateData,
+      });
+
+      return {
+        id: project.id,
+        slug: project.slug,
+        success: true,
+        stars,
+        forks,
+      };
+    }),
+  );
+
+  const syncResults = results.map((item) => {
+    if (item.status === "fulfilled") return item.value;
+    return {
+      id: 0,
+      slug: "",
+      success: false,
+      error: "Promise rejected",
+    };
+  });
+
+  const synced = syncResults.filter((item) => item.success).length;
+  const failed = syncResults.filter((item) => !item.success).length;
+
+  updateTag("projects/list");
+  for (const project of projects) {
+    updateTag(`projects/${project.slug}`);
+  }
+
+  return {
+    synced,
+    failed,
+    results: syncResults,
+  };
+}
+
+export async function runProjectsSyncForCron(): Promise<SyncProjectsGithubResult> {
+  return runProjectsGithubSync();
+}
+
+type RunFriendLinksCheckOptions = {
+  checkAll?: boolean;
+  ids?: number[];
+};
+
+export async function runFriendLinksCheck(
+  options: RunFriendLinksCheckOptions = {},
+): Promise<CheckFriendLinksResult> {
+  const checkAll = options.checkAll ?? false;
+  const ids = options.ids ?? [];
+
+  if (!checkAll && ids.length === 0) {
+    return {
+      total: 0,
+      checked: 0,
+      skipped: 0,
+      failed: 0,
+      statusChanged: 0,
+      results: [],
+    };
+  }
+
+  const [checkBacklinkEnabled, autoManageStatusEnabled, siteUrl] =
+    await getConfigs([
+      "friendlink.autoCheck.checkBackLink.enable",
+      "friendlink.autoCheck.autoManageStatus.enable",
+      "site.url",
+    ]);
+
+  const siteDomain = getDomainFromUrl(siteUrl);
+  const links = await prisma.friendLink.findMany({
+    where: {
+      deletedAt: null,
+      ...(checkAll
+        ? {}
+        : {
+            id: {
+              in: ids,
+            },
+          }),
+    },
+    select: {
+      id: true,
+      name: true,
+      url: true,
+      friendLinkUrl: true,
+      ignoreBacklink: true,
+      status: true,
+      checkSuccessCount: true,
+      checkFailureCount: true,
+      avgResponseTime: true,
+      checkHistory: true,
+      publishedAt: true,
+    },
+    orderBy: {
+      id: "asc",
+    },
+  });
+
+  if (links.length === 0) {
+    return {
+      total: 0,
+      checked: 0,
+      skipped: 0,
+      failed: 0,
+      statusChanged: 0,
+      results: [],
+    };
+  }
+
+  let checked = 0;
+  let skipped = 0;
+  let failed = 0;
+  let statusChanged = 0;
+
+  const results: CheckFriendLinksResult["results"] = [];
+
+  for (const link of links) {
+    if (link.status === "WHITELIST") {
+      skipped += 1;
+      results.push({
+        id: link.id,
+        status: link.status as FriendLinkStatus,
+        checked: false,
+        skipped: true,
+        skipReason: "WHITELIST",
+        issueType: "NONE",
+        message: "白名单链接，已跳过检查",
+      });
+      continue;
+    }
+
+    const shouldCheckBacklink =
+      Boolean(checkBacklinkEnabled) &&
+      !link.ignoreBacklink &&
+      Boolean(link.friendLinkUrl) &&
+      Boolean(siteDomain);
+    const targetUrl = shouldCheckBacklink
+      ? (link.friendLinkUrl as string)
+      : link.url;
+
+    const requestResult = await requestUrlWithTiming(targetUrl);
+    let issueType: FriendLinkIssueType = "NONE";
+    let hasBacklink: boolean | undefined;
+
+    if (!requestResult.ok) {
+      issueType = "DISCONNECT";
+    } else if (shouldCheckBacklink) {
+      hasBacklink = hasBacklinkInHtml(
+        requestResult.html || "",
+        siteDomain as string,
+      );
+      if (!hasBacklink) {
+        issueType = "NO_BACKLINK";
+      }
+    }
+
+    const history = parseFriendLinkHistory(link.checkHistory);
+    const newHistoryItem: StoredFriendLinkCheckHistoryItem = {
+      time: new Date().toISOString(),
+      responseTime: requestResult.responseTime,
+      statusCode: requestResult.statusCode,
+      issueType,
+      ...(typeof hasBacklink === "boolean" ? { hasBacklink } : {}),
+    };
+    const newHistory = [...history, newHistoryItem].slice(-30);
+    const hasDisconnectIssue = newHistory.some(
+      (item) => item.issueType === "DISCONNECT",
+    );
+
+    let nextStatus = link.status as FriendLinkStatus;
+    if (
+      Boolean(autoManageStatusEnabled) &&
+      shouldAutoManageFriendLinkStatus(nextStatus)
+    ) {
+      if (isFriendLinkFullFailure(newHistory)) {
+        nextStatus = hasDisconnectIssue ? "DISCONNECT" : "NO_BACKLINK";
+      } else if (
+        issueType === "NONE" &&
+        (nextStatus === "DISCONNECT" || nextStatus === "NO_BACKLINK")
+      ) {
+        nextStatus = "PUBLISHED";
+      }
+    }
+
+    const previousChecks = link.checkSuccessCount + link.checkFailureCount;
+    const nextAvgResponseTime =
+      typeof requestResult.responseTime === "number"
+        ? link.avgResponseTime == null
+          ? requestResult.responseTime
+          : Math.round(
+              (link.avgResponseTime * previousChecks +
+                requestResult.responseTime) /
+                (previousChecks + 1),
+            )
+        : undefined;
+
+    const updated = await prisma.friendLink.update({
+      where: {
+        id: link.id,
+        deletedAt: null,
+      },
+      data: {
+        checkSuccessCount: {
+          increment: issueType === "NONE" ? 1 : 0,
+        },
+        checkFailureCount: {
+          increment: issueType === "NONE" ? 0 : 1,
+        },
+        lastCheckedAt: new Date(),
+        checkHistory: newHistory as unknown as Prisma.JsonArray,
+        ...(typeof nextAvgResponseTime === "number"
+          ? { avgResponseTime: nextAvgResponseTime }
+          : {}),
+        ...(nextStatus !== link.status
+          ? {
+              status: nextStatus,
+              ...(nextStatus === "PUBLISHED" && !link.publishedAt
+                ? { publishedAt: new Date() }
+                : {}),
+            }
+          : {}),
+      },
+      select: {
+        status: true,
+      },
+    });
+
+    checked += 1;
+    if (issueType !== "NONE") failed += 1;
+    if (nextStatus !== link.status) statusChanged += 1;
+
+    results.push({
+      id: link.id,
+      status: updated.status as FriendLinkStatus,
+      checked: true,
+      skipped: false,
+      issueType,
+      responseTime: requestResult.responseTime,
+      message:
+        issueType === "NONE"
+          ? "检查通过"
+          : issueType === "DISCONNECT"
+            ? "站点不可访问"
+            : "未检测到回链",
+    });
+  }
+
+  if (checked > 0) {
+    updateTag("friend-links");
+  }
+
+  return {
+    total: links.length,
+    checked,
+    skipped,
+    failed,
+    statusChanged,
+    results,
+  };
+}
+
+export async function runFriendLinksCheckForCron(): Promise<CheckFriendLinksResult> {
+  return runFriendLinksCheck({
+    checkAll: true,
+  });
+}
+
+export function summarizeTaskValue(value: unknown): SnapshotValue {
+  return normalizeSnapshotValue(value);
+}
+
+type DoctorTriggerType = "MANUAL" | "AUTO" | "CRON";
+
+type RunDoctorHealthCheckOptions = {
+  triggerType: DoctorTriggerType;
+};
+
+export type RunDoctorHealthCheckResult = {
+  id: number;
+  data: DoctorSuccessResponse["data"];
+};
