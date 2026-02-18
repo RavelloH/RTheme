@@ -6,6 +6,8 @@ const CloudScheduleTimeSchema = z
   .string()
   .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "时间格式必须为 HH:mm");
 
+export const CLOUD_RECEIVED_TIMEOUT_MS = 5 * 60 * 1000;
+
 export const CloudTriggerStatusSchema = z.enum([
   "RECEIVED",
   "DONE",
@@ -93,6 +95,7 @@ export const CloudTrendItemSchema = z.object({
     verifyDohCount: z.number().int().nonnegative(),
     verifyJwksCount: z.number().int().nonnegative(),
     errorCount: z.number().int().nonnegative(),
+    timeoutCount: z.number().int().nonnegative(),
   }),
 });
 export type CloudTrendItem = z.infer<typeof CloudTrendItemSchema>;

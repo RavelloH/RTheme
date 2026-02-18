@@ -25,6 +25,7 @@ import type {
   UpdateCloudConfig,
 } from "@repo/shared-types/api/cloud";
 import {
+  CLOUD_RECEIVED_TIMEOUT_MS,
   GetCloudConfigSchema,
   GetCloudHistorySchema,
   GetCloudRemoteStatusSchema,
@@ -1346,8 +1347,10 @@ export async function getCloudTrends(
         verifyDohCount: number;
         verifyJwksCount: number;
         errorCount: number;
+        timeoutCount: number;
       }
     >();
+    const nowMs = Date.now();
 
     for (const item of mergedMap.values()) {
       const dayKey = `${item.receivedAt.toISOString().slice(0, 10)}T00:00:00.000Z`;
@@ -1359,6 +1362,7 @@ export async function getCloudTrends(
           verifyDohCount: 0,
           verifyJwksCount: 0,
           errorCount: 0,
+          timeoutCount: 0,
         });
       }
       const bucket = bucketMap.get(dayKey)!;
@@ -1378,6 +1382,12 @@ export async function getCloudTrends(
       }
       if (item.status === "ERROR" || item.status === "REJECTED") {
         bucket.errorCount += 1;
+      }
+      if (
+        item.status === "RECEIVED" &&
+        nowMs - item.receivedAt.getTime() >= CLOUD_RECEIVED_TIMEOUT_MS
+      ) {
+        bucket.timeoutCount += 1;
       }
     }
 
