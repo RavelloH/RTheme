@@ -78,7 +78,7 @@ export async function postsListInterpolator(
           month: "long",
           day: "numeric",
         })
-        .replace(/年/, "年 ")
+        .replace(/年/, " 年 ")
         .replace(/月/, " 月 ")
         .replace(/日/, " 日")
     : "未知日期";
