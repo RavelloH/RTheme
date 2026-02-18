@@ -2,7 +2,6 @@ import "server-only";
 
 import { getConfigs } from "@/lib/server/config-cache";
 import prisma from "@/lib/server/prisma";
-import { cleanupStorageTempFolders } from "@/lib/server/storage-temp-cleanup";
 
 const AUTO_CLEANUP_CONFIG_KEYS = [
   "cron.task.cleanup.searchLog.retentionDays",
@@ -44,7 +43,6 @@ export type AutoCleanupResult = {
   noticeDeleted: number;
   recycleBinDeleted: number;
   unsubscribedMailSubscriptionDeleted: number;
-  storageTempCleanupSuccess: boolean;
   refreshTokenDeleted: number;
   passwordResetDeleted: number;
   pushSubscriptionsMarkedInactive: number;
@@ -130,7 +128,6 @@ export async function runAutoCleanupMaintenance(): Promise<AutoCleanupResult> {
   );
 
   const [
-    storageCleanup,
     searchLogCleanup,
     healthCheckCleanup,
     auditLogCleanup,
@@ -151,7 +148,6 @@ export async function runAutoCleanupMaintenance(): Promise<AutoCleanupResult> {
     pushDeleteInactiveCleanup,
     pushDeleteDisabledUserCleanup,
   ] = await Promise.allSettled([
-    cleanupStorageTempFolders(),
     prisma.searchLog.deleteMany({
       where: {
         createdAt: {
@@ -298,12 +294,6 @@ export async function runAutoCleanupMaintenance(): Promise<AutoCleanupResult> {
     }),
   ]);
 
-  if (storageCleanup.status === "rejected") {
-    console.error(
-      "Auto cleanup: storage temp cleanup failed",
-      storageCleanup.reason,
-    );
-  }
   if (searchLogCleanup.status === "rejected") {
     console.error(
       "Auto cleanup: search log cleanup failed",
@@ -465,7 +455,6 @@ export async function runAutoCleanupMaintenance(): Promise<AutoCleanupResult> {
       unsubscribedMailSubscriptionCleanup.status === "fulfilled"
         ? unsubscribedMailSubscriptionCleanup.value.count
         : 0,
-    storageTempCleanupSuccess: storageCleanup.status === "fulfilled",
     refreshTokenDeleted:
       refreshTokenCleanup.status === "fulfilled"
         ? refreshTokenCleanup.value.count

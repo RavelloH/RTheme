@@ -39,6 +39,7 @@ import {
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
+import { cleanupStorageTempFolders } from "@/lib/server/storage-temp-cleanup";
 import { validateData } from "@/lib/server/validator";
 
 import type { Prisma } from ".prisma/client";
@@ -131,6 +132,30 @@ function normalizeNonNegativeInt(value: unknown, fallback = 0): number {
     return fallback;
   }
   return Math.max(0, Math.round(value));
+}
+
+function scheduleStorageTempCleanupInBackground(): void {
+  void (async () => {
+    try {
+      const { after } = await import("next/server");
+      after(() => {
+        cleanupStorageTempFolders().catch((error) => {
+          console.error("Auto cleanup: storage temp cleanup failed", error);
+        });
+      });
+    } catch (error) {
+      console.error(
+        "Auto cleanup: failed to schedule storage temp cleanup with after",
+        error,
+      );
+      cleanupStorageTempFolders().catch((fallbackError) => {
+        console.error(
+          "Auto cleanup: fallback storage temp cleanup failed",
+          fallbackError,
+        );
+      });
+    }
+  })();
 }
 
 function getCronStatus(
@@ -464,6 +489,7 @@ async function executeCleanupTask(): Promise<CronTaskSnapshot> {
   const startedAt = new Date();
   const startedAtMs = Date.now();
   try {
+    scheduleStorageTempCleanupInBackground();
     const result = await runAutoCleanupForCron();
     const endedAt = new Date();
     const durationMs = Date.now() - startedAtMs;
@@ -480,6 +506,7 @@ async function executeCleanupTask(): Promise<CronTaskSnapshot> {
       result.passwordResetDeleted +
       result.pushSubscriptionsDeletedInactive +
       result.pushSubscriptionsDeletedForDisabledUsers;
+    const totalAffected = totalDeleted + result.pushSubscriptionsMarkedInactive;
 
     return {
       e: true,
@@ -488,12 +515,23 @@ async function executeCleanupTask(): Promise<CronTaskSnapshot> {
       d: durationMs,
       v: {
         totalDeleted,
+        totalAffected,
+        searchLogDeleted: result.searchLogDeleted,
+        healthCheckDeleted: result.healthCheckDeleted,
+        auditLogDeleted: result.auditLogDeleted,
         recycleBinDeleted: result.recycleBinDeleted,
         cronHistoryDeleted: result.cronHistoryDeleted,
         cloudTriggerHistoryDeleted: result.cloudTriggerHistoryDeleted,
         noticeDeleted: result.noticeDeleted,
         unsubscribedMailSubscriptionDeleted:
           result.unsubscribedMailSubscriptionDeleted,
+        refreshTokenDeleted: result.refreshTokenDeleted,
+        passwordResetDeleted: result.passwordResetDeleted,
+        pushSubscriptionsMarkedInactive: result.pushSubscriptionsMarkedInactive,
+        pushSubscriptionsDeletedInactive:
+          result.pushSubscriptionsDeletedInactive,
+        pushSubscriptionsDeletedForDisabledUsers:
+          result.pushSubscriptionsDeletedForDisabledUsers,
       },
       m: null,
       b: startedAt.toISOString(),

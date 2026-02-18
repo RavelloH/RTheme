@@ -415,7 +415,7 @@ export default function CronReport() {
           <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
             任务管理
           </h3>
-          <div className="space-y-4 grid grid-cols-2">
+          <div className="grid grid-cols-2 gap-4">
             <Switch
               label="启用运行状况检查"
               checked={draftDoctorEnabled}
