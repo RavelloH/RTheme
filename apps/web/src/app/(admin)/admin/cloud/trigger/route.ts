@@ -1,4 +1,4 @@
-import { after, type NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { triggerCronInternal } from "@/actions/cron";
@@ -22,6 +22,17 @@ const CloudTriggerRequestSchema = z.object({
   requestedAt: z.string().optional(),
 });
 
+const CLOUD_TRIGGER_TIMEOUT_MS = 25000;
+
+type TelemetryBuildInput = {
+  accepted: boolean;
+  dedupHit: boolean;
+  verifySource: VerifySource;
+  dnssecAd: boolean | null;
+  verifyMs: number;
+  tokenAgeMs: number | null;
+};
+
 function toIsoDateOrNull(value: string | undefined): Date | null {
   if (!value) return null;
   const date = new Date(value);
@@ -38,72 +49,82 @@ function parseBearerToken(value: string | null): string | null {
   return token.length > 0 ? token : null;
 }
 
-async function buildTelemetry(input: {
-  accepted: boolean;
-  dedupHit: boolean;
-  verifySource: VerifySource;
-  dnssecAd: boolean | null;
-  verifyMs: number;
-  tokenAgeMs: number | null;
-}): Promise<CloudTelemetry> {
+function createFallbackTelemetry(input: TelemetryBuildInput): CloudTelemetry {
+  const nowIso = new Date().toISOString();
+  return {
+    schemaVer: "np-cloud-telemetry-v1",
+    collectedAt: nowIso,
+    accepted: input.accepted,
+    dedupHit: input.dedupHit,
+    protocolVerification: {
+      accepted: input.accepted,
+      dedupHit: input.dedupHit,
+      verifySource: input.verifySource,
+      dnssecAd: input.dnssecAd,
+      verifyMs: input.verifyMs,
+      tokenAgeMs: input.tokenAgeMs,
+    },
+    configSnapshot: {
+      cronEnabled: false,
+      doctorEnabled: false,
+      projectsEnabled: false,
+      friendsEnabled: false,
+    },
+    latestCronSummary: {
+      latestRunId: null,
+      latestCreatedAt: null,
+      latestStatus: null,
+      latestDurationMs: null,
+      enabledCount: null,
+      successCount: null,
+      failedCount: null,
+      skippedCount: null,
+    },
+    taskDurations: {
+      doctorDurationMs: null,
+      projectsDurationMs: null,
+      friendsDurationMs: null,
+    },
+    runtimeHealth: {
+      healthRecordId: null,
+      healthCreatedAt: null,
+      healthStatus: null,
+      healthOkCount: null,
+      healthWarningCount: null,
+      healthErrorCount: null,
+      dbLatencyMs: null,
+      redisLatencyMs: null,
+      siteSelfLatencyMs: null,
+    },
+    versionInfo: {
+      appVersion: null,
+      runtimeNodeVersion: process.version,
+      buildId: null,
+      commit: null,
+    },
+  };
+}
+
+async function buildTelemetry(
+  input: TelemetryBuildInput,
+): Promise<CloudTelemetry> {
   try {
     return await collectCloudTelemetry(input);
   } catch (error) {
     console.error("[cloud-trigger] 采集遥测失败:", error);
-    const nowIso = new Date().toISOString();
-    return {
-      schemaVer: "np-cloud-telemetry-v1",
-      collectedAt: nowIso,
-      accepted: input.accepted,
-      dedupHit: input.dedupHit,
-      protocolVerification: {
-        accepted: input.accepted,
-        dedupHit: input.dedupHit,
-        verifySource: input.verifySource,
-        dnssecAd: input.dnssecAd,
-        verifyMs: input.verifyMs,
-        tokenAgeMs: input.tokenAgeMs,
-      },
-      configSnapshot: {
-        cronEnabled: false,
-        doctorEnabled: false,
-        projectsEnabled: false,
-        friendsEnabled: false,
-      },
-      latestCronSummary: {
-        latestRunId: null,
-        latestCreatedAt: null,
-        latestStatus: null,
-        latestDurationMs: null,
-        enabledCount: null,
-        successCount: null,
-        failedCount: null,
-        skippedCount: null,
-      },
-      taskDurations: {
-        doctorDurationMs: null,
-        projectsDurationMs: null,
-        friendsDurationMs: null,
-      },
-      runtimeHealth: {
-        healthRecordId: null,
-        healthCreatedAt: null,
-        healthStatus: null,
-        healthOkCount: null,
-        healthWarningCount: null,
-        healthErrorCount: null,
-        dbLatencyMs: null,
-        redisLatencyMs: null,
-        siteSelfLatencyMs: null,
-      },
-      versionInfo: {
-        appVersion: null,
-        runtimeNodeVersion: process.version,
-        buildId: null,
-        commit: null,
-      },
-    };
+    return createFallbackTelemetry(input);
   }
+}
+
+function getRemainingTimeoutMs(requestedAt: string | undefined): number {
+  const requestedDate = toIsoDateOrNull(requestedAt);
+  if (!requestedDate) {
+    return CLOUD_TRIGGER_TIMEOUT_MS;
+  }
+
+  const elapsedMs = Date.now() - requestedDate.getTime();
+  const remainingMs = CLOUD_TRIGGER_TIMEOUT_MS - elapsedMs;
+  return Math.max(0, Math.min(CLOUD_TRIGGER_TIMEOUT_MS, remainingMs));
 }
 
 function toJsonResponse(
@@ -394,65 +415,129 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     },
   });
 
-  const telemetry = await buildTelemetry({
+  const telemetryInput: TelemetryBuildInput = {
     accepted: true,
     dedupHit: false,
     verifySource: verification.source,
     dnssecAd: verification.dnssecAd,
     verifyMs: verification.verifyMs,
     tokenAgeMs: verification.tokenAgeMs,
-  });
+  };
 
-  await prisma.cloudTriggerHistory
-    .update({
-      where: { id: created.id },
-      data: {
-        telemetry: telemetry as unknown as Prisma.InputJsonValue,
-      },
-    })
-    .catch(() => undefined);
+  let latestTelemetry: CloudTelemetry | null = null;
+  const telemetryPromise: Promise<CloudTelemetry> = (async () => {
+    const telemetry = await buildTelemetry(telemetryInput);
+    latestTelemetry = telemetry;
+    await prisma.cloudTriggerHistory
+      .update({
+        where: { id: created.id },
+        data: {
+          telemetry: telemetry as unknown as Prisma.InputJsonValue,
+        },
+      })
+      .catch(() => undefined);
+    return telemetry;
+  })();
 
-  after(() => {
-    void (async () => {
-      try {
-        const cronRecord = await triggerCronInternal("CLOUD");
-        await prisma.cloudTriggerHistory.update({
+  const cronPromise: Promise<{
+    cronRecordId: number | null;
+    success: boolean;
+    message: string;
+  }> = (async () => {
+    try {
+      const cronRecord = await triggerCronInternal("CLOUD");
+      const success = Boolean(cronRecord);
+      const message = success
+        ? `cron 执行完成，记录 #${cronRecord!.id}`
+        : "cron 执行失败";
+
+      await prisma.cloudTriggerHistory
+        .update({
           where: {
             id: created.id,
           },
           data: {
-            status: cronRecord ? "DONE" : "ERROR",
+            status: success ? "DONE" : "ERROR",
             cronHistoryId: cronRecord?.id ?? null,
-            message: cronRecord
-              ? `已进入后台执行，cron 记录 #${cronRecord.id}`
-              : "后台触发 cron 失败",
+            message,
           },
-        });
-      } catch (error) {
-        console.error("[cloud-trigger] 后台执行失败:", error);
-        await prisma.cloudTriggerHistory
-          .update({
-            where: {
-              id: created.id,
-            },
-            data: {
-              status: "ERROR",
-              message:
-                error instanceof Error
-                  ? error.message
-                  : "后台触发 cron 时发生未知错误",
-            },
-          })
-          .catch(() => undefined);
-      }
-    })();
+        })
+        .catch(() => undefined);
+
+      return {
+        cronRecordId: cronRecord?.id ?? null,
+        success,
+        message,
+      };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "cron 执行时发生未知错误";
+      console.error("[cloud-trigger] 执行 cron 失败:", error);
+      await prisma.cloudTriggerHistory
+        .update({
+          where: {
+            id: created.id,
+          },
+          data: {
+            status: "ERROR",
+            message,
+          },
+        })
+        .catch(() => undefined);
+
+      return {
+        cronRecordId: null,
+        success: false,
+        message,
+      };
+    }
+  })();
+
+  const completePromise = Promise.all([telemetryPromise, cronPromise]).then(
+    ([telemetry, cron]) => ({
+      type: "complete" as const,
+      telemetry,
+      cron,
+    }),
+  );
+
+  const timeoutMs = getRemainingTimeoutMs(parsed.data.requestedAt);
+  const timeoutPromise = new Promise<{ type: "timeout" }>((resolve) => {
+    setTimeout(() => resolve({ type: "timeout" }), timeoutMs);
   });
+
+  const raceResult = await Promise.race([completePromise, timeoutPromise]);
+
+  if (raceResult.type === "complete") {
+    return toJsonResponse(200, {
+      ok: true,
+      accepted: true,
+      dedupHit: false,
+      message: raceResult.cron.message,
+      data: raceResult.telemetry,
+    });
+  }
+
+  const timeoutTelemetry =
+    latestTelemetry ?? createFallbackTelemetry(telemetryInput);
+
+  await prisma.cloudTriggerHistory
+    .updateMany({
+      where: {
+        id: created.id,
+        status: "RECEIVED",
+      },
+      data: {
+        message: `达到 ${CLOUD_TRIGGER_TIMEOUT_MS / 1000}s 返回窗口，已先返回遥测数据`,
+      },
+    })
+    .catch(() => undefined);
 
   return toJsonResponse(200, {
     ok: true,
     accepted: true,
     dedupHit: false,
-    message: "请求已接收，cron 将在后台执行",
-    data: telemetry,
+    message: `达到 ${CLOUD_TRIGGER_TIMEOUT_MS / 1000}s 返回窗口，已先返回遥测数据`,
+    data: timeoutTelemetry,
   });
 }
