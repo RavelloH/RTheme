@@ -44,6 +44,33 @@ type StoredFriendLinkCheckHistoryItem = {
   hasBacklink?: boolean;
 };
 
+const DOCTOR_SITE_SELF_TIMEOUT_MS = 10000;
+const PROJECTS_FETCH_TIMEOUT_MS = 15000;
+
+function toErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+  return fallback;
+}
+
+async function fetchWithTimeout(
+  input: string | URL,
+  init: RequestInit = {},
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function classifyByThreshold(
   value: number,
   warningThreshold: number,
@@ -303,10 +330,14 @@ export async function runDoctorHealthCheck(
       target.hash = "";
 
       const started = Date.now();
-      const response = await fetch(target.toString(), {
-        method: "GET",
-        cache: "no-store",
-      });
+      const response = await fetchWithTimeout(
+        target.toString(),
+        {
+          method: "GET",
+          cache: "no-store",
+        },
+        DOCTOR_SITE_SELF_TIMEOUT_MS,
+      );
       const latencyMs = Date.now() - started;
 
       if (!response.ok) {
@@ -321,8 +352,12 @@ export async function runDoctorHealthCheck(
         ok: true,
         latencyMs,
       };
-    } catch {
-      return { ok: false, latencyMs: null, message: "访问失败" };
+    } catch (error) {
+      const message = toErrorMessage(error, "访问失败");
+      if (message.toLowerCase().includes("abort")) {
+        return { ok: false, latencyMs: null, message: "访问超时" };
+      }
+      return { ok: false, latencyMs: null, message };
     }
   };
 
@@ -518,9 +553,10 @@ export async function runProjectsGithubSync(
         headers.Authorization = `Bearer ${githubToken}`;
       }
 
-      const repoResponse = await fetch(
+      const repoResponse = await fetchWithTimeout(
         `https://api.github.com/repos/${owner}/${repo}`,
         { headers },
+        PROJECTS_FETCH_TIMEOUT_MS,
       );
 
       if (!repoResponse.ok) {
@@ -533,9 +569,10 @@ export async function runProjectsGithubSync(
       }
 
       const repoData = await repoResponse.json();
-      const languagesResponse = await fetch(
+      const languagesResponse = await fetchWithTimeout(
         `https://api.github.com/repos/${owner}/${repo}/languages`,
         { headers },
+        PROJECTS_FETCH_TIMEOUT_MS,
       );
 
       let languages: Record<string, number> | null = null;
@@ -561,7 +598,7 @@ export async function runProjectsGithubSync(
       };
 
       if (project.enableConentSync) {
-        const readmeResponse = await fetch(
+        const readmeResponse = await fetchWithTimeout(
           `https://api.github.com/repos/${owner}/${repo}/readme`,
           {
             headers: {
@@ -569,6 +606,7 @@ export async function runProjectsGithubSync(
               Accept: "application/vnd.github.v3.raw",
             },
           },
+          PROJECTS_FETCH_TIMEOUT_MS,
         );
         if (readmeResponse.ok) {
           updateData.content = await readmeResponse.text();
@@ -590,13 +628,14 @@ export async function runProjectsGithubSync(
     }),
   );
 
-  const syncResults = results.map((item) => {
+  const syncResults = results.map((item, index) => {
     if (item.status === "fulfilled") return item.value;
+    const source = projects[index];
     return {
-      id: 0,
-      slug: "",
+      id: source?.id ?? 0,
+      slug: source?.slug ?? "",
       success: false,
-      error: "Promise rejected",
+      error: toErrorMessage(item.reason, "Promise rejected"),
     };
   });
 
@@ -714,120 +753,136 @@ export async function runFriendLinksCheck(
       };
     }
 
-    const shouldCheckBacklink =
-      Boolean(checkBacklinkEnabled) &&
-      !link.ignoreBacklink &&
-      Boolean(link.friendLinkUrl) &&
-      Boolean(siteDomain);
-    const targetUrl = shouldCheckBacklink
-      ? (link.friendLinkUrl as string)
-      : link.url;
+    try {
+      const shouldCheckBacklink =
+        Boolean(checkBacklinkEnabled) &&
+        !link.ignoreBacklink &&
+        Boolean(link.friendLinkUrl) &&
+        Boolean(siteDomain);
+      const targetUrl = shouldCheckBacklink
+        ? (link.friendLinkUrl as string)
+        : link.url;
 
-    const requestResult = await requestUrlWithTiming(targetUrl);
-    let issueType: FriendLinkIssueType = "NONE";
-    let hasBacklink: boolean | undefined;
+      const requestResult = await requestUrlWithTiming(targetUrl);
+      let issueType: FriendLinkIssueType = "NONE";
+      let hasBacklink: boolean | undefined;
 
-    if (!requestResult.ok) {
-      issueType = "DISCONNECT";
-    } else if (shouldCheckBacklink) {
-      hasBacklink = hasBacklinkInHtml(
-        requestResult.html || "",
-        siteDomain as string,
-      );
-      if (!hasBacklink) {
-        issueType = "NO_BACKLINK";
+      if (!requestResult.ok) {
+        issueType = "DISCONNECT";
+      } else if (shouldCheckBacklink) {
+        hasBacklink = hasBacklinkInHtml(
+          requestResult.html || "",
+          siteDomain as string,
+        );
+        if (!hasBacklink) {
+          issueType = "NO_BACKLINK";
+        }
       }
-    }
 
-    const history = parseFriendLinkHistory(link.checkHistory);
-    const newHistoryItem: StoredFriendLinkCheckHistoryItem = {
-      time: new Date().toISOString(),
-      responseTime: requestResult.responseTime,
-      statusCode: requestResult.statusCode,
-      issueType,
-      ...(typeof hasBacklink === "boolean" ? { hasBacklink } : {}),
-    };
-    const newHistory = [...history, newHistoryItem].slice(-30);
-    const hasDisconnectIssue = newHistory.some(
-      (item) => item.issueType === "DISCONNECT",
-    );
-
-    let nextStatus = link.status as FriendLinkStatus;
-    if (
-      Boolean(autoManageStatusEnabled) &&
-      shouldAutoManageFriendLinkStatus(nextStatus)
-    ) {
-      if (isFriendLinkFullFailure(newHistory)) {
-        nextStatus = hasDisconnectIssue ? "DISCONNECT" : "NO_BACKLINK";
-      } else if (
-        issueType === "NONE" &&
-        (nextStatus === "DISCONNECT" || nextStatus === "NO_BACKLINK")
-      ) {
-        nextStatus = "PUBLISHED";
-      }
-    }
-
-    const previousChecks = link.checkSuccessCount + link.checkFailureCount;
-    const nextAvgResponseTime =
-      typeof requestResult.responseTime === "number"
-        ? link.avgResponseTime == null
-          ? requestResult.responseTime
-          : Math.round(
-              (link.avgResponseTime * previousChecks +
-                requestResult.responseTime) /
-                (previousChecks + 1),
-            )
-        : undefined;
-
-    const updated = await prisma.friendLink.update({
-      where: {
-        id: link.id,
-        deletedAt: null,
-      },
-      data: {
-        checkSuccessCount: {
-          increment: issueType === "NONE" ? 1 : 0,
-        },
-        checkFailureCount: {
-          increment: issueType === "NONE" ? 0 : 1,
-        },
-        lastCheckedAt: new Date(),
-        checkHistory: newHistory as unknown as Prisma.JsonArray,
-        ...(typeof nextAvgResponseTime === "number"
-          ? { avgResponseTime: nextAvgResponseTime }
-          : {}),
-        ...(nextStatus !== link.status
-          ? {
-              status: nextStatus,
-              ...(nextStatus === "PUBLISHED" && !link.publishedAt
-                ? { publishedAt: new Date() }
-                : {}),
-            }
-          : {}),
-      },
-      select: {
-        status: true,
-      },
-    });
-
-    return {
-      result: {
-        id: link.id,
-        status: updated.status as FriendLinkStatus,
-        checked: true,
-        skipped: false,
-        issueType,
+      const history = parseFriendLinkHistory(link.checkHistory);
+      const newHistoryItem: StoredFriendLinkCheckHistoryItem = {
+        time: new Date().toISOString(),
         responseTime: requestResult.responseTime,
-        message:
-          issueType === "NONE"
-            ? "检查通过"
-            : issueType === "DISCONNECT"
-              ? "站点不可访问"
-              : "未检测到回链",
-      },
-      failed: issueType !== "NONE",
-      statusChanged: nextStatus !== link.status,
-    };
+        statusCode: requestResult.statusCode,
+        issueType,
+        ...(typeof hasBacklink === "boolean" ? { hasBacklink } : {}),
+      };
+      const newHistory = [...history, newHistoryItem].slice(-30);
+      const hasDisconnectIssue = newHistory.some(
+        (item) => item.issueType === "DISCONNECT",
+      );
+
+      let nextStatus = link.status as FriendLinkStatus;
+      if (
+        Boolean(autoManageStatusEnabled) &&
+        shouldAutoManageFriendLinkStatus(nextStatus)
+      ) {
+        if (isFriendLinkFullFailure(newHistory)) {
+          nextStatus = hasDisconnectIssue ? "DISCONNECT" : "NO_BACKLINK";
+        } else if (
+          issueType === "NONE" &&
+          (nextStatus === "DISCONNECT" || nextStatus === "NO_BACKLINK")
+        ) {
+          nextStatus = "PUBLISHED";
+        }
+      }
+
+      const previousChecks = link.checkSuccessCount + link.checkFailureCount;
+      const nextAvgResponseTime =
+        typeof requestResult.responseTime === "number"
+          ? link.avgResponseTime == null
+            ? requestResult.responseTime
+            : Math.round(
+                (link.avgResponseTime * previousChecks +
+                  requestResult.responseTime) /
+                  (previousChecks + 1),
+              )
+          : undefined;
+
+      const updated = await prisma.friendLink.update({
+        where: {
+          id: link.id,
+          deletedAt: null,
+        },
+        data: {
+          checkSuccessCount: {
+            increment: issueType === "NONE" ? 1 : 0,
+          },
+          checkFailureCount: {
+            increment: issueType === "NONE" ? 0 : 1,
+          },
+          lastCheckedAt: new Date(),
+          checkHistory: newHistory as unknown as Prisma.JsonArray,
+          ...(typeof nextAvgResponseTime === "number"
+            ? { avgResponseTime: nextAvgResponseTime }
+            : {}),
+          ...(nextStatus !== link.status
+            ? {
+                status: nextStatus,
+                ...(nextStatus === "PUBLISHED" && !link.publishedAt
+                  ? { publishedAt: new Date() }
+                  : {}),
+              }
+            : {}),
+        },
+        select: {
+          status: true,
+        },
+      });
+
+      return {
+        result: {
+          id: link.id,
+          status: updated.status as FriendLinkStatus,
+          checked: true,
+          skipped: false,
+          issueType,
+          responseTime: requestResult.responseTime,
+          message:
+            issueType === "NONE"
+              ? "检查通过"
+              : issueType === "DISCONNECT"
+                ? "站点不可访问"
+                : "未检测到回链",
+        },
+        failed: issueType !== "NONE",
+        statusChanged: nextStatus !== link.status,
+      };
+    } catch (error) {
+      return {
+        result: {
+          id: link.id,
+          status: link.status as FriendLinkStatus,
+          checked: true,
+          skipped: false,
+          issueType: "DISCONNECT",
+          responseTime: null,
+          message: toErrorMessage(error, "检查失败"),
+        },
+        failed: true,
+        statusChanged: false,
+      };
+    }
   };
 
   const CONCURRENCY_LIMIT = 100;
@@ -835,10 +890,31 @@ export async function runFriendLinksCheck(
 
   for (let start = 0; start < links.length; start += CONCURRENCY_LIMIT) {
     const batch = links.slice(start, start + CONCURRENCY_LIMIT);
-    const batchResults = await Promise.all(
+    const batchResults = await Promise.allSettled(
       batch.map((link) => executeSingleCheck(link)),
     );
-    executedResults.push(...batchResults);
+    batchResults.forEach((item, index) => {
+      if (item.status === "fulfilled") {
+        executedResults.push(item.value);
+        return;
+      }
+
+      const source = batch[index];
+      if (!source) return;
+      executedResults.push({
+        result: {
+          id: source.id,
+          status: source.status as FriendLinkStatus,
+          checked: true,
+          skipped: false,
+          issueType: "DISCONNECT",
+          responseTime: null,
+          message: toErrorMessage(item.reason, "检查失败"),
+        },
+        failed: true,
+        statusChanged: false,
+      });
+    });
   }
 
   const results: CheckFriendLinksResult["results"] = executedResults.map(
