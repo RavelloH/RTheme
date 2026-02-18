@@ -1,26 +1,41 @@
 import "server-only";
 
+import { getConfigs } from "@/lib/server/config-cache";
 import prisma from "@/lib/server/prisma";
 import { cleanupStorageTempFolders } from "@/lib/server/storage-temp-cleanup";
 
-const DEFAULT_RETENTION_DAYS = 90;
-const AUDIT_LOG_RETENTION_DAYS = 180;
-const CRON_HISTORY_RETENTION_DAYS = 90;
-const CLOUD_TRIGGER_HISTORY_RETENTION_DAYS = 90;
-const NOTICE_RETENTION_DAYS = 365;
-const RECYCLE_BIN_RETENTION_DAYS = 30;
-const MAIL_SUBSCRIPTION_UNSUBSCRIBED_RETENTION_DAYS = 30;
-const PUSH_SUBSCRIPTION_INACTIVE_AFTER_DAYS = 30;
-const PUSH_SUBSCRIPTION_DELETE_AFTER_DAYS = 90;
-const PUSH_SUBSCRIPTION_DISABLED_USER_DELETE_AFTER_DAYS = 30;
-const PASSWORD_RESET_VALIDITY_MS = 30 * 60 * 1000;
+const AUTO_CLEANUP_CONFIG_KEYS = [
+  "cron.task.cleanup.searchLog.retentionDays",
+  "cron.task.cleanup.healthCheck.retentionDays",
+  "cron.task.cleanup.auditLog.retentionDays",
+  "cron.task.cleanup.cronHistory.retentionDays",
+  "cron.task.cleanup.cloudTriggerHistory.retentionDays",
+  "cron.task.cleanup.notice.retentionDays",
+  "cron.task.cleanup.recycleBin.retentionDays",
+  "cron.task.cleanup.mailSubscriptionUnsubscribed.retentionDays",
+  "cron.task.cleanup.refreshToken.expiredRetentionDays",
+  "cron.task.cleanup.passwordReset.retentionMinutes",
+  "cron.task.cleanup.pushSubscription.markInactiveDays",
+  "cron.task.cleanup.pushSubscription.deleteInactiveDays",
+  "cron.task.cleanup.pushSubscription.deleteDisabledUserDays",
+] as const;
 
-function getCutoffDate(days: number): Date {
+function toNonNegativeInt(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.max(0, Math.round(value));
+}
+
+function getCutoffDateByDays(days: number): Date {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 }
 
-export type DoctorMaintenanceResult = {
-  retentionDays: number;
+function getCutoffDateByMinutes(minutes: number): Date {
+  return new Date(Date.now() - minutes * 60 * 1000);
+}
+
+export type AutoCleanupResult = {
   searchLogDeleted: number;
   healthCheckDeleted: number;
   auditLogDeleted: number;
@@ -37,33 +52,82 @@ export type DoctorMaintenanceResult = {
   pushSubscriptionsDeletedForDisabledUsers: number;
 };
 
-export async function runDoctorMaintenance(
-  retentionDays = DEFAULT_RETENTION_DAYS,
-): Promise<DoctorMaintenanceResult> {
-  const cutoffDate = getCutoffDate(retentionDays);
-  const auditLogCutoffDate = getCutoffDate(AUDIT_LOG_RETENTION_DAYS);
-  const cronHistoryCutoffDate = getCutoffDate(CRON_HISTORY_RETENTION_DAYS);
-  const cloudTriggerHistoryCutoffDate = getCutoffDate(
-    CLOUD_TRIGGER_HISTORY_RETENTION_DAYS,
+export async function runAutoCleanupMaintenance(): Promise<AutoCleanupResult> {
+  const [
+    searchLogRetentionDaysRaw,
+    healthCheckRetentionDaysRaw,
+    auditLogRetentionDaysRaw,
+    cronHistoryRetentionDaysRaw,
+    cloudTriggerHistoryRetentionDaysRaw,
+    noticeRetentionDaysRaw,
+    recycleBinRetentionDaysRaw,
+    mailSubscriptionUnsubscribedRetentionDaysRaw,
+    refreshTokenExpiredRetentionDaysRaw,
+    passwordResetRetentionMinutesRaw,
+    pushSubscriptionMarkInactiveDaysRaw,
+    pushSubscriptionDeleteInactiveDaysRaw,
+    pushSubscriptionDeleteDisabledUserDaysRaw,
+  ] = await getConfigs([...AUTO_CLEANUP_CONFIG_KEYS]);
+
+  const searchLogRetentionDays = toNonNegativeInt(searchLogRetentionDaysRaw);
+  const healthCheckRetentionDays = toNonNegativeInt(
+    healthCheckRetentionDaysRaw,
   );
-  const noticeCutoffDate = getCutoffDate(NOTICE_RETENTION_DAYS);
-  const recycleBinCutoffDate = getCutoffDate(RECYCLE_BIN_RETENTION_DAYS);
-  const unsubscribedMailSubscriptionCutoffDate = getCutoffDate(
-    MAIL_SUBSCRIPTION_UNSUBSCRIBED_RETENTION_DAYS,
+  const auditLogRetentionDays = toNonNegativeInt(auditLogRetentionDaysRaw);
+  const cronHistoryRetentionDays = toNonNegativeInt(
+    cronHistoryRetentionDaysRaw,
   );
-  const pushInactiveCutoffDate = getCutoffDate(
-    PUSH_SUBSCRIPTION_INACTIVE_AFTER_DAYS,
+  const cloudTriggerHistoryRetentionDays = toNonNegativeInt(
+    cloudTriggerHistoryRetentionDaysRaw,
   );
-  const pushDeleteCutoffDate = getCutoffDate(
-    PUSH_SUBSCRIPTION_DELETE_AFTER_DAYS,
+  const noticeRetentionDays = toNonNegativeInt(noticeRetentionDaysRaw);
+  const recycleBinRetentionDays = toNonNegativeInt(recycleBinRetentionDaysRaw);
+  const mailSubscriptionUnsubscribedRetentionDays = toNonNegativeInt(
+    mailSubscriptionUnsubscribedRetentionDaysRaw,
   );
-  const pushDisabledUserDeleteCutoffDate = getCutoffDate(
-    PUSH_SUBSCRIPTION_DISABLED_USER_DELETE_AFTER_DAYS,
+  const refreshTokenExpiredRetentionDays = toNonNegativeInt(
+    refreshTokenExpiredRetentionDaysRaw,
   );
-  const passwordResetCutoffDate = new Date(
-    Date.now() - PASSWORD_RESET_VALIDITY_MS,
+  const passwordResetRetentionMinutes = toNonNegativeInt(
+    passwordResetRetentionMinutesRaw,
   );
-  const now = new Date();
+  const pushSubscriptionMarkInactiveDays = toNonNegativeInt(
+    pushSubscriptionMarkInactiveDaysRaw,
+  );
+  const pushSubscriptionDeleteInactiveDays = toNonNegativeInt(
+    pushSubscriptionDeleteInactiveDaysRaw,
+  );
+  const pushSubscriptionDeleteDisabledUserDays = toNonNegativeInt(
+    pushSubscriptionDeleteDisabledUserDaysRaw,
+  );
+
+  const searchLogCutoffDate = getCutoffDateByDays(searchLogRetentionDays);
+  const healthCheckCutoffDate = getCutoffDateByDays(healthCheckRetentionDays);
+  const auditLogCutoffDate = getCutoffDateByDays(auditLogRetentionDays);
+  const cronHistoryCutoffDate = getCutoffDateByDays(cronHistoryRetentionDays);
+  const cloudTriggerHistoryCutoffDate = getCutoffDateByDays(
+    cloudTriggerHistoryRetentionDays,
+  );
+  const noticeCutoffDate = getCutoffDateByDays(noticeRetentionDays);
+  const recycleBinCutoffDate = getCutoffDateByDays(recycleBinRetentionDays);
+  const mailSubscriptionUnsubscribedCutoffDate = getCutoffDateByDays(
+    mailSubscriptionUnsubscribedRetentionDays,
+  );
+  const refreshTokenCutoffDate = getCutoffDateByDays(
+    refreshTokenExpiredRetentionDays,
+  );
+  const passwordResetCutoffDate = getCutoffDateByMinutes(
+    passwordResetRetentionMinutes,
+  );
+  const pushMarkInactiveCutoffDate = getCutoffDateByDays(
+    pushSubscriptionMarkInactiveDays,
+  );
+  const pushDeleteInactiveCutoffDate = getCutoffDateByDays(
+    pushSubscriptionDeleteInactiveDays,
+  );
+  const pushDeleteDisabledUserCutoffDate = getCutoffDateByDays(
+    pushSubscriptionDeleteDisabledUserDays,
+  );
 
   const [
     storageCleanup,
@@ -91,14 +155,14 @@ export async function runDoctorMaintenance(
     prisma.searchLog.deleteMany({
       where: {
         createdAt: {
-          lt: cutoffDate,
+          lt: searchLogCutoffDate,
         },
       },
     }),
     prisma.healthCheck.deleteMany({
       where: {
         createdAt: {
-          lt: cutoffDate,
+          lt: healthCheckCutoffDate,
         },
       },
     }),
@@ -183,14 +247,14 @@ export async function runDoctorMaintenance(
       where: {
         status: "UNSUBSCRIBED",
         unsubscribedAt: {
-          lt: unsubscribedMailSubscriptionCutoffDate,
+          lt: mailSubscriptionUnsubscribedCutoffDate,
         },
       },
     }),
     prisma.refreshToken.deleteMany({
       where: {
         expiresAt: {
-          lt: now,
+          lt: refreshTokenCutoffDate,
         },
       },
     }),
@@ -205,7 +269,7 @@ export async function runDoctorMaintenance(
       where: {
         isActive: true,
         lastUsedAt: {
-          lt: pushInactiveCutoffDate,
+          lt: pushMarkInactiveCutoffDate,
         },
       },
       data: {
@@ -216,7 +280,7 @@ export async function runDoctorMaintenance(
       where: {
         isActive: false,
         lastUsedAt: {
-          lt: pushDeleteCutoffDate,
+          lt: pushDeleteInactiveCutoffDate,
         },
       },
     }),
@@ -224,8 +288,8 @@ export async function runDoctorMaintenance(
       where: {
         isActive: false,
         lastUsedAt: {
-          lt: pushDisabledUserDeleteCutoffDate,
-          gte: pushDeleteCutoffDate,
+          lt: pushDeleteDisabledUserCutoffDate,
+          gte: pushDeleteInactiveCutoffDate,
         },
         user: {
           webPushEnabled: false,
@@ -236,127 +300,146 @@ export async function runDoctorMaintenance(
 
   if (storageCleanup.status === "rejected") {
     console.error(
-      "Doctor maintenance: storage temp cleanup failed",
+      "Auto cleanup: storage temp cleanup failed",
       storageCleanup.reason,
     );
   }
   if (searchLogCleanup.status === "rejected") {
     console.error(
-      "Doctor maintenance: search log cleanup failed",
+      "Auto cleanup: search log cleanup failed",
       searchLogCleanup.reason,
     );
   }
   if (healthCheckCleanup.status === "rejected") {
     console.error(
-      "Doctor maintenance: health check cleanup failed",
+      "Auto cleanup: health check cleanup failed",
       healthCheckCleanup.reason,
     );
   }
   if (auditLogCleanup.status === "rejected") {
     console.error(
-      "Doctor maintenance: audit log cleanup failed",
+      "Auto cleanup: audit log cleanup failed",
       auditLogCleanup.reason,
     );
   }
   if (cronHistoryCleanup.status === "rejected") {
     console.error(
-      "Doctor maintenance: cron history cleanup failed",
+      "Auto cleanup: cron history cleanup failed",
       cronHistoryCleanup.reason,
     );
   }
   if (cloudTriggerHistoryCleanup.status === "rejected") {
     console.error(
-      "Doctor maintenance: cloud trigger history cleanup failed",
+      "Auto cleanup: cloud trigger history cleanup failed",
       cloudTriggerHistoryCleanup.reason,
     );
   }
   if (noticeCleanup.status === "rejected") {
-    console.error(
-      "Doctor maintenance: notice cleanup failed",
-      noticeCleanup.reason,
-    );
+    console.error("Auto cleanup: notice cleanup failed", noticeCleanup.reason);
   }
   if (recycleProjectCleanup.status === "rejected") {
     console.error(
-      "Doctor maintenance: recycle project cleanup failed",
+      "Auto cleanup: recycle project cleanup failed",
       recycleProjectCleanup.reason,
     );
   }
   if (recycleFriendLinkCleanup.status === "rejected") {
     console.error(
-      "Doctor maintenance: recycle friend link cleanup failed",
+      "Auto cleanup: recycle friend link cleanup failed",
       recycleFriendLinkCleanup.reason,
     );
   }
   if (recyclePostCleanup.status === "rejected") {
     console.error(
-      "Doctor maintenance: recycle post cleanup failed",
+      "Auto cleanup: recycle post cleanup failed",
       recyclePostCleanup.reason,
     );
   }
   if (recyclePageCleanup.status === "rejected") {
     console.error(
-      "Doctor maintenance: recycle page cleanup failed",
+      "Auto cleanup: recycle page cleanup failed",
       recyclePageCleanup.reason,
     );
   }
   if (recycleCommentCleanup.status === "rejected") {
     console.error(
-      "Doctor maintenance: recycle comment cleanup failed",
+      "Auto cleanup: recycle comment cleanup failed",
       recycleCommentCleanup.reason,
     );
   }
   if (recycleUserCleanup.status === "rejected") {
     console.error(
-      "Doctor maintenance: recycle user cleanup failed",
+      "Auto cleanup: recycle user cleanup failed",
       recycleUserCleanup.reason,
     );
   }
   if (recycleMessageCleanup.status === "rejected") {
     console.error(
-      "Doctor maintenance: recycle message cleanup failed",
+      "Auto cleanup: recycle message cleanup failed",
       recycleMessageCleanup.reason,
     );
   }
   if (unsubscribedMailSubscriptionCleanup.status === "rejected") {
     console.error(
-      "Doctor maintenance: unsubscribed mail subscription cleanup failed",
+      "Auto cleanup: unsubscribed mail subscription cleanup failed",
       unsubscribedMailSubscriptionCleanup.reason,
     );
   }
   if (refreshTokenCleanup.status === "rejected") {
     console.error(
-      "Doctor maintenance: refresh token cleanup failed",
+      "Auto cleanup: refresh token cleanup failed",
       refreshTokenCleanup.reason,
     );
   }
   if (passwordResetCleanup.status === "rejected") {
     console.error(
-      "Doctor maintenance: password reset cleanup failed",
+      "Auto cleanup: password reset cleanup failed",
       passwordResetCleanup.reason,
     );
   }
   if (pushMarkInactiveCleanup.status === "rejected") {
     console.error(
-      "Doctor maintenance: push mark inactive cleanup failed",
+      "Auto cleanup: push mark inactive cleanup failed",
       pushMarkInactiveCleanup.reason,
     );
   }
   if (pushDeleteInactiveCleanup.status === "rejected") {
     console.error(
-      "Doctor maintenance: push inactive cleanup failed",
+      "Auto cleanup: push inactive cleanup failed",
       pushDeleteInactiveCleanup.reason,
     );
   }
   if (pushDeleteDisabledUserCleanup.status === "rejected") {
     console.error(
-      "Doctor maintenance: push disabled-user cleanup failed",
+      "Auto cleanup: push disabled-user cleanup failed",
       pushDeleteDisabledUserCleanup.reason,
     );
   }
 
+  const recycleBinDeleted =
+    (recycleProjectCleanup.status === "fulfilled"
+      ? recycleProjectCleanup.value.count
+      : 0) +
+    (recycleFriendLinkCleanup.status === "fulfilled"
+      ? recycleFriendLinkCleanup.value.count
+      : 0) +
+    (recyclePostCleanup.status === "fulfilled"
+      ? recyclePostCleanup.value.count
+      : 0) +
+    (recyclePageCleanup.status === "fulfilled"
+      ? recyclePageCleanup.value.count
+      : 0) +
+    (recycleCommentCleanup.status === "fulfilled"
+      ? recycleCommentCleanup.value.count
+      : 0) +
+    (recycleUserCleanup.status === "fulfilled"
+      ? recycleUserCleanup.value.count
+      : 0) +
+    (recycleMessageCleanup.status === "fulfilled"
+      ? recycleMessageCleanup.value.count
+      : 0);
+
   return {
-    retentionDays,
     searchLogDeleted:
       searchLogCleanup.status === "fulfilled"
         ? searchLogCleanup.value.count
@@ -377,28 +460,7 @@ export async function runDoctorMaintenance(
         : 0,
     noticeDeleted:
       noticeCleanup.status === "fulfilled" ? noticeCleanup.value.count : 0,
-    recycleBinDeleted:
-      (recycleProjectCleanup.status === "fulfilled"
-        ? recycleProjectCleanup.value.count
-        : 0) +
-      (recycleFriendLinkCleanup.status === "fulfilled"
-        ? recycleFriendLinkCleanup.value.count
-        : 0) +
-      (recyclePostCleanup.status === "fulfilled"
-        ? recyclePostCleanup.value.count
-        : 0) +
-      (recyclePageCleanup.status === "fulfilled"
-        ? recyclePageCleanup.value.count
-        : 0) +
-      (recycleCommentCleanup.status === "fulfilled"
-        ? recycleCommentCleanup.value.count
-        : 0) +
-      (recycleUserCleanup.status === "fulfilled"
-        ? recycleUserCleanup.value.count
-        : 0) +
-      (recycleMessageCleanup.status === "fulfilled"
-        ? recycleMessageCleanup.value.count
-        : 0),
+    recycleBinDeleted,
     unsubscribedMailSubscriptionDeleted:
       unsubscribedMailSubscriptionCleanup.status === "fulfilled"
         ? unsubscribedMailSubscriptionCleanup.value.count
@@ -425,4 +487,9 @@ export async function runDoctorMaintenance(
         ? pushDeleteDisabledUserCleanup.value.count
         : 0,
   };
+}
+
+// 兼容旧调用，后续可移除。
+export async function runDoctorMaintenance(): Promise<AutoCleanupResult> {
+  return runAutoCleanupMaintenance();
 }

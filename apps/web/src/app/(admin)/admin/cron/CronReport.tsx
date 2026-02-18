@@ -22,6 +22,7 @@ import { AutoTransition } from "@/ui/AutoTransition";
 import { Button } from "@/ui/Button";
 import Clickable from "@/ui/Clickable";
 import { Dialog } from "@/ui/Dialog";
+import { Input } from "@/ui/Input";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 import { Switch } from "@/ui/Switch";
 import { useToast } from "@/ui/Toast";
@@ -37,6 +38,78 @@ const STATUS_LABELS: Record<CronHistoryItem["status"], string> = {
   PARTIAL: "部分成功",
   ERROR: "失败",
 };
+
+const CLEANUP_FIELD_CONFIG: Array<{
+  key: keyof CronConfig["cleanup"];
+  label: string;
+  helperText: string;
+}> = [
+  {
+    key: "searchLogRetentionDays",
+    label: "搜索日志保留天数",
+    helperText: "按 createdAt 清理",
+  },
+  {
+    key: "healthCheckRetentionDays",
+    label: "运行状况检查日志保留天数",
+    helperText: "按 createdAt 清理",
+  },
+  {
+    key: "auditLogRetentionDays",
+    label: "审计日志保留天数",
+    helperText: "按 timestamp 清理",
+  },
+  {
+    key: "cronHistoryRetentionDays",
+    label: "计划任务日志保留天数",
+    helperText: "按 createdAt 清理",
+  },
+  {
+    key: "cloudTriggerHistoryRetentionDays",
+    label: "云触发日志保留天数",
+    helperText: "按 createdAt 清理",
+  },
+  {
+    key: "noticeRetentionDays",
+    label: "通知保留天数",
+    helperText: "按 createdAt 清理",
+  },
+  {
+    key: "recycleBinRetentionDays",
+    label: "回收站保留天数",
+    helperText: "按 deletedAt 清理",
+  },
+  {
+    key: "mailSubscriptionUnsubscribedRetentionDays",
+    label: "已退订订阅保留天数",
+    helperText: "按 unsubscribedAt 清理",
+  },
+  {
+    key: "refreshTokenExpiredRetentionDays",
+    label: "过期 RefreshToken 保留天数",
+    helperText: "0 表示过期即清理",
+  },
+  {
+    key: "passwordResetRetentionMinutes",
+    label: "密码重置记录保留分钟",
+    helperText: "按 createdAt 清理",
+  },
+  {
+    key: "pushSubscriptionMarkInactiveDays",
+    label: "不活跃 Web Push 标记天数",
+    helperText: "按 lastUsedAt 标记",
+  },
+  {
+    key: "pushSubscriptionDeleteInactiveDays",
+    label: "不活跃 Web Push 保留天数",
+    helperText: "按 lastUsedAt 删除",
+  },
+  {
+    key: "pushSubscriptionDeleteDisabledUserDays",
+    label: "被用户禁用的 Web Push 保留天数",
+    helperText: "按 lastUsedAt 删除",
+  },
+];
 
 function formatDateTime(value: string): string {
   return new Date(value).toLocaleString("zh-CN", {
@@ -55,6 +128,7 @@ function buildSummary(
 ): string[] {
   const lines: string[] = [];
   lines.push(`计划任务总开关：${config.enabled ? "已开启" : "已关闭"}。`);
+  lines.push(`自动清理：${config.tasks.cleanup ? "已开启" : "已关闭"}。`);
 
   if (!latest) {
     lines.push("暂无执行历史。");
@@ -89,6 +163,10 @@ export default function CronReport() {
   const [draftDoctorEnabled, setDraftDoctorEnabled] = useState(true);
   const [draftProjectsEnabled, setDraftProjectsEnabled] = useState(true);
   const [draftFriendsEnabled, setDraftFriendsEnabled] = useState(true);
+  const [draftCleanupEnabled, setDraftCleanupEnabled] = useState(true);
+  const [draftCleanupConfig, setDraftCleanupConfig] = useState<
+    CronConfig["cleanup"] | null
+  >(null);
 
   const fetchData = useCallback(
     async (forceRefresh: boolean) => {
@@ -153,10 +231,34 @@ export default function CronReport() {
     setDraftDoctorEnabled(config.tasks.doctor);
     setDraftProjectsEnabled(config.tasks.projects);
     setDraftFriendsEnabled(config.tasks.friends);
+    setDraftCleanupEnabled(config.tasks.cleanup);
+    setDraftCleanupConfig(config.cleanup);
     setManageDialogOpen(true);
   }, [config]);
 
+  const handleCleanupConfigChange = useCallback(
+    (key: keyof CronConfig["cleanup"], value: string) => {
+      const nextValue = Number.parseInt(value, 10);
+      setDraftCleanupConfig((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          [key]:
+            Number.isFinite(nextValue) && nextValue >= 0
+              ? nextValue
+              : prev[key],
+        };
+      });
+    },
+    [],
+  );
+
   const handleSaveConfig = useCallback(async () => {
+    if (!draftCleanupConfig) {
+      toast.error("自动清理配置尚未准备就绪");
+      return;
+    }
+
     setSavingConfig(true);
     try {
       const result = await updateCronConfig({
@@ -164,6 +266,8 @@ export default function CronReport() {
         doctor: draftDoctorEnabled,
         projects: draftProjectsEnabled,
         friends: draftFriendsEnabled,
+        cleanup: draftCleanupEnabled,
+        ...draftCleanupConfig,
       });
 
       if (!result.success || !result.data) {
@@ -182,6 +286,8 @@ export default function CronReport() {
     }
   }, [
     draftDoctorEnabled,
+    draftCleanupConfig,
+    draftCleanupEnabled,
     draftEnabled,
     draftFriendsEnabled,
     draftProjectsEnabled,
@@ -328,6 +434,37 @@ export default function CronReport() {
               onCheckedChange={setDraftFriendsEnabled}
               disabled={savingConfig}
             />
+            <Switch
+              label="启用自动清理"
+              checked={draftCleanupEnabled}
+              onCheckedChange={setDraftCleanupEnabled}
+              disabled={savingConfig}
+            />
+          </div>
+
+          <div>
+            <h3 className="text-lg font-medium text-foreground border-b border-foreground/10 pb-2">
+              自动清理配置
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {CLEANUP_FIELD_CONFIG.map((item) => (
+                <Input
+                  key={item.key}
+                  type="number"
+                  label={item.label}
+                  helperText={item.helperText}
+                  min={0}
+                  size="sm"
+                  value={draftCleanupConfig?.[item.key] ?? 0}
+                  onChange={(event) =>
+                    handleCleanupConfigChange(item.key, event.target.value)
+                  }
+                  disabled={
+                    savingConfig || !draftCleanupEnabled || !draftCleanupConfig
+                  }
+                />
+              ))}
+            </div>
           </div>
 
           <div className="flex justify-end gap-4 pt-4 border-t border-foreground/10">
@@ -343,6 +480,7 @@ export default function CronReport() {
               variant="primary"
               size="sm"
               loading={savingConfig}
+              disabled={!draftCleanupConfig}
               onClick={() => void handleSaveConfig()}
             />
           </div>

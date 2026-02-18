@@ -24,12 +24,30 @@ export const CronTaskSnapshotSchema = z.object({
 });
 export type CronTaskSnapshot = z.infer<typeof CronTaskSnapshotSchema>;
 
+export const CleanupCronConfigSchema = z.object({
+  searchLogRetentionDays: z.number().int().nonnegative(),
+  healthCheckRetentionDays: z.number().int().nonnegative(),
+  auditLogRetentionDays: z.number().int().nonnegative(),
+  cronHistoryRetentionDays: z.number().int().nonnegative(),
+  cloudTriggerHistoryRetentionDays: z.number().int().nonnegative(),
+  noticeRetentionDays: z.number().int().nonnegative(),
+  recycleBinRetentionDays: z.number().int().nonnegative(),
+  mailSubscriptionUnsubscribedRetentionDays: z.number().int().nonnegative(),
+  refreshTokenExpiredRetentionDays: z.number().int().nonnegative(),
+  passwordResetRetentionMinutes: z.number().int().nonnegative(),
+  pushSubscriptionMarkInactiveDays: z.number().int().nonnegative(),
+  pushSubscriptionDeleteInactiveDays: z.number().int().nonnegative(),
+  pushSubscriptionDeleteDisabledUserDays: z.number().int().nonnegative(),
+});
+export type CleanupCronConfig = z.infer<typeof CleanupCronConfigSchema>;
+
 export const CronSnapshotSchema = z.object({
   version: z.number().int().positive().default(1),
   tasks: z.object({
     doctor: CronTaskSnapshotSchema,
     projects: CronTaskSnapshotSchema,
     friends: CronTaskSnapshotSchema,
+    cleanup: CronTaskSnapshotSchema,
   }),
 });
 export type CronSnapshot = z.infer<typeof CronSnapshotSchema>;
@@ -128,6 +146,7 @@ export const CronTrendItemSchema = z.object({
     doctorDurationMs: z.number().int().nonnegative(),
     projectsDurationMs: z.number().int().nonnegative(),
     friendsDurationMs: z.number().int().nonnegative(),
+    cleanupDurationMs: z.number().int().nonnegative(),
     successCount: z.number().int().nonnegative(),
     failedCount: z.number().int().nonnegative(),
     skippedCount: z.number().int().nonnegative(),
@@ -161,7 +180,9 @@ export const CronConfigSchema = z.object({
     doctor: z.boolean(),
     projects: z.boolean(),
     friends: z.boolean(),
+    cleanup: z.boolean(),
   }),
+  cleanup: CleanupCronConfigSchema,
   updatedAt: z.string(),
 });
 export type CronConfig = z.infer<typeof CronConfigSchema>;
@@ -186,13 +207,53 @@ export const UpdateCronConfigSchema = z
     doctor: z.boolean().optional(),
     projects: z.boolean().optional(),
     friends: z.boolean().optional(),
+    cleanup: z.boolean().optional(),
+    searchLogRetentionDays: z.number().int().nonnegative().optional(),
+    healthCheckRetentionDays: z.number().int().nonnegative().optional(),
+    auditLogRetentionDays: z.number().int().nonnegative().optional(),
+    cronHistoryRetentionDays: z.number().int().nonnegative().optional(),
+    cloudTriggerHistoryRetentionDays: z.number().int().nonnegative().optional(),
+    noticeRetentionDays: z.number().int().nonnegative().optional(),
+    recycleBinRetentionDays: z.number().int().nonnegative().optional(),
+    mailSubscriptionUnsubscribedRetentionDays: z
+      .number()
+      .int()
+      .nonnegative()
+      .optional(),
+    refreshTokenExpiredRetentionDays: z.number().int().nonnegative().optional(),
+    passwordResetRetentionMinutes: z.number().int().nonnegative().optional(),
+    pushSubscriptionMarkInactiveDays: z.number().int().nonnegative().optional(),
+    pushSubscriptionDeleteInactiveDays: z
+      .number()
+      .int()
+      .nonnegative()
+      .optional(),
+    pushSubscriptionDeleteDisabledUserDays: z
+      .number()
+      .int()
+      .nonnegative()
+      .optional(),
   })
   .refine(
     (value) =>
       value.enabled !== undefined ||
       value.doctor !== undefined ||
       value.projects !== undefined ||
-      value.friends !== undefined,
+      value.friends !== undefined ||
+      value.cleanup !== undefined ||
+      value.searchLogRetentionDays !== undefined ||
+      value.healthCheckRetentionDays !== undefined ||
+      value.auditLogRetentionDays !== undefined ||
+      value.cronHistoryRetentionDays !== undefined ||
+      value.cloudTriggerHistoryRetentionDays !== undefined ||
+      value.noticeRetentionDays !== undefined ||
+      value.recycleBinRetentionDays !== undefined ||
+      value.mailSubscriptionUnsubscribedRetentionDays !== undefined ||
+      value.refreshTokenExpiredRetentionDays !== undefined ||
+      value.passwordResetRetentionMinutes !== undefined ||
+      value.pushSubscriptionMarkInactiveDays !== undefined ||
+      value.pushSubscriptionDeleteInactiveDays !== undefined ||
+      value.pushSubscriptionDeleteDisabledUserDays !== undefined,
     {
       message: "必须提供至少一个配置项",
     },

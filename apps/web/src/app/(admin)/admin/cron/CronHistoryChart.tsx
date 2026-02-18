@@ -62,17 +62,19 @@ export default function CronHistoryChart() {
     doctor: item.data.doctorDurationMs,
     projects: item.data.projectsDurationMs,
     friends: item.data.friendsDurationMs,
+    cleanup: item.data.cleanupDurationMs,
   }));
 
   const colors = useMemo(() => {
     try {
-      return generateGradient(mainColor, generateComplementary(mainColor), 3);
+      return generateGradient(mainColor, generateComplementary(mainColor), 4);
     } catch (colorError) {
       console.error("[CronHistoryChart] 生成图表配色失败:", colorError);
       return [
         "var(--color-success)",
         "var(--color-warning)",
         "var(--color-error)",
+        "var(--color-info)",
       ];
     }
   }, [mainColor]);
@@ -92,6 +94,11 @@ export default function CronHistoryChart() {
       key: "friends",
       label: "Friends",
       color: colors[2] || "var(--color-error)",
+    },
+    {
+      key: "cleanup",
+      label: "Cleanup",
+      color: colors[3] || "var(--color-info)",
     },
   ];
 

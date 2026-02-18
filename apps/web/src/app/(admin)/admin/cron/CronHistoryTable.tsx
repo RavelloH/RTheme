@@ -45,6 +45,7 @@ const TASK_LABELS = {
   doctor: "运行状况检查",
   projects: "Projects 同步",
   friends: "友链检查",
+  cleanup: "自动清理",
 } as const;
 
 type CronTaskKey = keyof typeof TASK_LABELS;
@@ -57,6 +58,7 @@ const INTERNAL_REASON_LABELS: Record<string, string> = {
   "doctor task not found": "缺少 Doctor 任务快照",
   "projects task not found": "缺少 Projects 任务快照",
   "friends task not found": "缺少 Friends 任务快照",
+  "cleanup task not found": "缺少自动清理任务快照",
 };
 
 function formatDateTime(value: string): string {
@@ -176,6 +178,30 @@ function formatTaskSummary(
       statusChanged !== null
     ) {
       return `任务执行成功：共 ${total} 条，已检查 ${checked} 条，跳过 ${skipped} 条，失败 ${failed} 条，状态变更 ${statusChanged} 条。`;
+    }
+  }
+
+  if (taskKey === "cleanup" && isRecord(task.v)) {
+    const totalDeleted = readNumber(task.v.totalDeleted);
+    const recycleBinDeleted = readNumber(task.v.recycleBinDeleted);
+    const cronHistoryDeleted = readNumber(task.v.cronHistoryDeleted);
+    const cloudTriggerHistoryDeleted = readNumber(
+      task.v.cloudTriggerHistoryDeleted,
+    );
+    const noticeDeleted = readNumber(task.v.noticeDeleted);
+    const unsubscribedMailSubscriptionDeleted = readNumber(
+      task.v.unsubscribedMailSubscriptionDeleted,
+    );
+
+    if (
+      totalDeleted !== null &&
+      recycleBinDeleted !== null &&
+      cronHistoryDeleted !== null &&
+      cloudTriggerHistoryDeleted !== null &&
+      noticeDeleted !== null &&
+      unsubscribedMailSubscriptionDeleted !== null
+    ) {
+      return `任务执行成功：共清理 ${totalDeleted} 条；回收站 ${recycleBinDeleted} 条，CronHistory ${cronHistoryDeleted} 条，CloudTriggerHistory ${cloudTriggerHistoryDeleted} 条，Notice ${noticeDeleted} 条，UNSUBSCRIBED 订阅 ${unsubscribedMailSubscriptionDeleted} 条。`;
     }
   }
 

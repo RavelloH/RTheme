@@ -595,6 +595,63 @@ export const CONFIG_DEFINITIONS = {
     default: true,
     description: "计划任务是否执行 friends 检查",
   },
+  "cron.task.cleanup.enable": {
+    default: true,
+    description: "计划任务是否执行自动清理",
+  },
+  "cron.task.cleanup.searchLog.retentionDays": {
+    default: 90,
+    description: "自动清理 SearchLog 的保留天数",
+  },
+  "cron.task.cleanup.healthCheck.retentionDays": {
+    default: 90,
+    description: "自动清理 HealthCheck 的保留天数",
+  },
+  "cron.task.cleanup.auditLog.retentionDays": {
+    default: 180,
+    description: "自动清理 AuditLog 的保留天数",
+  },
+  "cron.task.cleanup.cronHistory.retentionDays": {
+    default: 90,
+    description: "自动清理 CronHistory 的保留天数",
+  },
+  "cron.task.cleanup.cloudTriggerHistory.retentionDays": {
+    default: 90,
+    description: "自动清理 CloudTriggerHistory 的保留天数",
+  },
+  "cron.task.cleanup.notice.retentionDays": {
+    default: 365,
+    description: "自动清理 Notice 的保留天数",
+  },
+  "cron.task.cleanup.recycleBin.retentionDays": {
+    default: 30,
+    description: "自动清理回收站资源（deletedAt）的保留天数",
+  },
+  "cron.task.cleanup.mailSubscriptionUnsubscribed.retentionDays": {
+    default: 30,
+    description: "自动清理 UNSUBSCRIBED 邮件订阅的保留天数",
+  },
+  "cron.task.cleanup.refreshToken.expiredRetentionDays": {
+    default: 7,
+    description: "自动清理过期 RefreshToken 的保留天数（0 表示过期即清理）",
+  },
+  "cron.task.cleanup.passwordReset.retentionMinutes": {
+    default: 30,
+    description: "自动清理 PasswordReset 的保留分钟数",
+  },
+  "cron.task.cleanup.pushSubscription.markInactiveDays": {
+    default: 180,
+    description: "PushSubscription 标记为 inactive 的阈值天数",
+  },
+  "cron.task.cleanup.pushSubscription.deleteInactiveDays": {
+    default: 90,
+    description: "自动删除 inactive PushSubscription 的阈值天数",
+  },
+  "cron.task.cleanup.pushSubscription.deleteDisabledUserDays": {
+    default: 30,
+    description:
+      "对 webPushEnabled=false 用户，自动删除 inactive PushSubscription 的阈值天数",
+  },
   // =====================================
   // 云端互联
   // =====================================
