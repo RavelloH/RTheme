@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
 
 import { findCategoryByPath } from "@/lib/server/category-utils";
-import { getRawConfig } from "@/lib/server/config-cache";
+import { getConfigs } from "@/lib/server/config-cache";
 import prisma from "@/lib/server/prisma";
 
 // 基础静态配置（不依赖数据库的固定值）
@@ -75,7 +75,6 @@ const seoConfigMap = {
   subtitle: "site.subtitle",
   titleTemplate: "site.title.template",
   description: "seo.description",
-  applicationName: "site.title",
   keywords: "seo.keywords",
   author: "author.name",
   twitterSite: "seo.twitter_site",
@@ -86,12 +85,6 @@ const seoConfigMap = {
   imageCardEnable: "seo.imageCard.enable",
   indexEnable: "seo.index.enable",
 } as const;
-
-// 配置值类型定义
-interface ConfigValue {
-  default?: unknown;
-  [key: string]: unknown;
-}
 
 function toPlainSerializable(value: unknown): unknown {
   if (value instanceof URL) {
@@ -114,34 +107,28 @@ function toPlainSerializable(value: unknown): unknown {
 }
 
 // 辅助函数：获取字符串配置值
-function getStringValue(
-  configValue: ConfigValue | undefined,
-  fallback: string = "",
-): string {
-  return typeof configValue?.default === "string"
-    ? configValue.default
-    : fallback;
+function getStringValue(configValue: unknown, fallback: string = ""): string {
+  return typeof configValue === "string" ? configValue : fallback;
 }
 
 // 辅助函数：获取字符串数组配置值
 function getStringArrayValue(
-  configValue: ConfigValue | undefined,
+  configValue: unknown,
   fallback: string[] = [],
 ): string[] {
-  const value = configValue?.default;
-  if (Array.isArray(value)) return value;
-  if (typeof value === "string") return value.split(",").map((k) => k.trim());
+  if (Array.isArray(configValue)) return configValue;
+  if (typeof configValue === "string") {
+    return configValue.split(",").map((k) => k.trim());
+  }
   return fallback;
 }
 
 // 辅助函数：获取布尔配置值
 function getBooleanValue(
-  configValue: ConfigValue | undefined,
+  configValue: unknown,
   fallback: boolean = false,
 ): boolean {
-  return typeof configValue?.default === "boolean"
-    ? configValue.default
-    : fallback;
+  return typeof configValue === "boolean" ? configValue : fallback;
 }
 
 function parseMetadataBase(url: string): URL | undefined {
@@ -567,45 +554,54 @@ export async function generateMetadata(
   options?: { pathname?: string; seoParams?: SeoTemplateParams },
 ): Promise<Metadata> {
   // 批量获取所有需要的配置
-  const configKeys = Object.values(seoConfigMap);
-  const configs = await Promise.all(configKeys.map((key) => getRawConfig(key)));
-
-  // 构建配置映射
-  const configValues = Object.fromEntries(
-    configKeys.map((key, index) => [
-      key,
-      configs[index]?.value as ConfigValue | undefined,
-    ]),
-  ) as Record<string, ConfigValue | undefined>;
+  const [
+    metadataBaseConfig,
+    titleConfig,
+    subtitleConfig,
+    titleTemplateConfig,
+    descriptionConfig,
+    keywordsConfig,
+    authorConfig,
+    twitterSiteConfig,
+    twitterCreatorConfig,
+    googleVerificationConfig,
+    categoryConfig,
+    countryConfig,
+    imageCardEnableConfig,
+    indexEnableConfig,
+  ] = await getConfigs([
+    seoConfigMap.metadataBase,
+    seoConfigMap.title,
+    seoConfigMap.subtitle,
+    seoConfigMap.titleTemplate,
+    seoConfigMap.description,
+    seoConfigMap.keywords,
+    seoConfigMap.author,
+    seoConfigMap.twitterSite,
+    seoConfigMap.twitterCreator,
+    seoConfigMap.googleVerification,
+    seoConfigMap.category,
+    seoConfigMap.country,
+    seoConfigMap.imageCardEnable,
+    seoConfigMap.indexEnable,
+  ]);
 
   // 动态获取的值
-  const url = getStringValue(configValues[seoConfigMap.metadataBase]);
-  const title = getStringValue(configValues[seoConfigMap.title]);
-  const subtitle = getStringValue(configValues[seoConfigMap.subtitle]);
-  const titleTemplate = getStringValue(
-    configValues[seoConfigMap.titleTemplate],
-  );
-  const description = getStringValue(configValues[seoConfigMap.description]);
-  const appName = getStringValue(configValues[seoConfigMap.applicationName]);
-  const keywords = getStringArrayValue(configValues[seoConfigMap.keywords]);
-  const author = getStringValue(configValues[seoConfigMap.author]);
-  const twitterSite = getStringValue(configValues[seoConfigMap.twitterSite]);
-  const twitterCreator = getStringValue(
-    configValues[seoConfigMap.twitterCreator],
-  );
-  const googleVerification = getStringValue(
-    configValues[seoConfigMap.googleVerification],
-  );
-  const category = getStringValue(configValues[seoConfigMap.category]);
-  const country = getStringValue(configValues[seoConfigMap.country]);
-  const imageCardEnabled = getBooleanValue(
-    configValues[seoConfigMap.imageCardEnable],
-    true,
-  );
-  const indexEnabled = getBooleanValue(
-    configValues[seoConfigMap.indexEnable],
-    true,
-  );
+  const url = getStringValue(metadataBaseConfig);
+  const title = getStringValue(titleConfig);
+  const subtitle = getStringValue(subtitleConfig);
+  const titleTemplate = getStringValue(titleTemplateConfig);
+  const description = getStringValue(descriptionConfig);
+  const appName = title;
+  const keywords = getStringArrayValue(keywordsConfig);
+  const author = getStringValue(authorConfig);
+  const twitterSite = getStringValue(twitterSiteConfig);
+  const twitterCreator = getStringValue(twitterCreatorConfig);
+  const googleVerification = getStringValue(googleVerificationConfig);
+  const category = getStringValue(categoryConfig);
+  const country = getStringValue(countryConfig);
+  const imageCardEnabled = getBooleanValue(imageCardEnableConfig, true);
+  const indexEnabled = getBooleanValue(indexEnableConfig, true);
 
   const metadataBase = parseMetadataBase(url);
   const normalizedPathname = normalizePathname(options?.pathname);
