@@ -462,9 +462,9 @@ export default function CloudHistoryTable() {
         typeof value === "string" ? formatDateTime(value) : "-",
     },
     {
-      key: "createdAt",
+      key: "updatedAt",
       title: "记录时间",
-      dataIndex: "createdAt",
+      dataIndex: "updatedAt",
       align: "left",
       sortable: true,
       mono: true,
