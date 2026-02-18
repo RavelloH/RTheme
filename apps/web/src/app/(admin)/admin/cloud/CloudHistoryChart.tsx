@@ -63,11 +63,12 @@ export default function CloudHistoryChart() {
     rejected: item.data.rejectedCount,
     dedup: item.data.dedupCount,
     error: item.data.errorCount,
+    timeout: item.data.timeoutCount,
   }));
 
   const colors = useMemo(() => {
     try {
-      return generateGradient(mainColor, generateComplementary(mainColor), 4);
+      return generateGradient(mainColor, generateComplementary(mainColor), 5);
     } catch (colorError) {
       console.error("[CloudHistoryChart] 生成图表配色失败:", colorError);
       return [
@@ -75,6 +76,7 @@ export default function CloudHistoryChart() {
         "var(--color-warning)",
         "var(--color-foreground)",
         "var(--color-error)",
+        "var(--color-primary)",
       ];
     }
   }, [mainColor]);
@@ -99,6 +101,11 @@ export default function CloudHistoryChart() {
       key: "error",
       label: "错误",
       color: colors[3] || "var(--color-error)",
+    },
+    {
+      key: "timeout",
+      label: "超时",
+      color: colors[4] || "var(--color-primary)",
     },
   ];
 

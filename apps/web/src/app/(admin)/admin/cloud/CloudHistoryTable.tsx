@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { RiEyeLine } from "@remixicon/react";
-import type { CloudHistoryItem } from "@repo/shared-types/api/cloud";
+import {
+  CLOUD_RECEIVED_TIMEOUT_MS,
+  type CloudHistoryItem,
+} from "@repo/shared-types/api/cloud";
 import { codeToHtml } from "shiki";
 
 import { getCloudHistory } from "@/actions/cloud";
@@ -23,8 +26,6 @@ type SortKey =
   | "createdAt";
 
 type CloudDisplayStatus = CloudHistoryItem["status"] | "TIMEOUT";
-
-const RECEIVED_TIMEOUT_MS = 5 * 60 * 1000;
 
 const STATUS_LABELS: Record<CloudDisplayStatus, string> = {
   RECEIVED: "已接收",
@@ -72,7 +73,7 @@ function getDisplayStatus(
     return "RECEIVED";
   }
 
-  return Date.now() - receivedAtMs >= RECEIVED_TIMEOUT_MS
+  return Date.now() - receivedAtMs >= CLOUD_RECEIVED_TIMEOUT_MS
     ? "TIMEOUT"
     : "RECEIVED";
 }

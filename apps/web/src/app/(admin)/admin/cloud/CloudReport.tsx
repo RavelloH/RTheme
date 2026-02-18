@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { RiRefreshLine, RiSettings4Line } from "@remixicon/react";
-import type {
-  CloudConfig,
-  CloudHistoryItem,
-  CloudRemoteStatus,
+import {
+  CLOUD_RECEIVED_TIMEOUT_MS,
+  type CloudConfig,
+  type CloudHistoryItem,
+  type CloudRemoteStatus,
 } from "@repo/shared-types/api/cloud";
 
 import {
@@ -33,11 +34,14 @@ const CLOUD_STATUS_LABELS: Record<string, string> = {
   disabled: "已停用",
 };
 
-const LOCAL_STATUS_LABELS: Record<CloudHistoryItem["status"], string> = {
+type LocalDisplayStatus = CloudHistoryItem["status"] | "TIMEOUT";
+
+const LOCAL_STATUS_LABELS: Record<LocalDisplayStatus, string> = {
   RECEIVED: "已接收",
   DONE: "已完成",
   ERROR: "执行失败",
   REJECTED: "已拒绝",
+  TIMEOUT: "超时",
 };
 
 const VERIFY_SOURCE_LABELS: Record<
@@ -63,6 +67,23 @@ function formatDateTime(value: string): string {
 function formatRate(value: number | null | undefined): string {
   if (typeof value !== "number" || !Number.isFinite(value)) return "-";
   return `${(value * 100).toFixed(2)}%`;
+}
+
+function getLocalDisplayStatus(
+  record: Pick<CloudHistoryItem, "status" | "receivedAt">,
+): LocalDisplayStatus {
+  if (record.status !== "RECEIVED") {
+    return record.status;
+  }
+
+  const receivedAtMs = new Date(record.receivedAt).getTime();
+  if (!Number.isFinite(receivedAtMs)) {
+    return "RECEIVED";
+  }
+
+  return Date.now() - receivedAtMs >= CLOUD_RECEIVED_TIMEOUT_MS
+    ? "TIMEOUT"
+    : "RECEIVED";
 }
 
 function normalizeHhMm(value: string | null | undefined): string | null {
@@ -156,8 +177,9 @@ function buildSummary(
   if (!latest) {
     lines.push("本地尚无云触发历史记录。");
   } else {
+    const latestStatus = getLocalDisplayStatus(latest);
     lines.push(
-      `本地最近投递：${formatDateTime(latest.receivedAt)}，状态 ${LOCAL_STATUS_LABELS[latest.status]}，验签来源 ${latest.verifySource ? VERIFY_SOURCE_LABELS[latest.verifySource] : "无"}。`,
+      `本地最近投递：${formatDateTime(latest.receivedAt)}，状态 ${LOCAL_STATUS_LABELS[latestStatus]}，验签来源 ${latest.verifySource ? VERIFY_SOURCE_LABELS[latest.verifySource] : "无"}。`,
     );
   }
   return lines;

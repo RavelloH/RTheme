@@ -15601,11 +15601,14 @@ components:
                       $ref: "#/components/schemas/TriggerCronSuccessResponse"
                     cleanup:
                       $ref: "#/components/schemas/TriggerCronSuccessResponse"
+                    analytics:
+                      $ref: "#/components/schemas/TriggerCronSuccessResponse"
                   required:
                     - doctor
                     - projects
                     - friends
                     - cleanup
+                    - analytics
                   additionalProperties: false
               required:
                 - version
@@ -15774,11 +15777,14 @@ components:
                         $ref: "#/components/schemas/GetCronHistorySuccessResponse"
                       cleanup:
                         $ref: "#/components/schemas/GetCronHistorySuccessResponse"
+                      analytics:
+                        $ref: "#/components/schemas/GetCronHistorySuccessResponse"
                     required:
                       - doctor
                       - projects
                       - friends
                       - cleanup
+                      - analytics
                     additionalProperties: false
                 required:
                   - version
@@ -15868,6 +15874,10 @@ components:
                     type: integer
                     minimum: 0
                     maximum: 9007199254740991
+                  analyticsDurationMs:
+                    type: integer
+                    minimum: 0
+                    maximum: 9007199254740991
                   successCount:
                     type: integer
                     minimum: 0
@@ -15886,6 +15896,7 @@ components:
                   - projectsDurationMs
                   - friendsDurationMs
                   - cleanupDurationMs
+                  - analyticsDurationMs
                   - successCount
                   - failedCount
                   - skippedCount
@@ -15935,11 +15946,14 @@ components:
                   type: boolean
                 cleanup:
                   type: boolean
+                analytics:
+                  type: boolean
               required:
                 - doctor
                 - projects
                 - friends
                 - cleanup
+                - analytics
               additionalProperties: false
             cleanup:
               type: object
@@ -16011,12 +16025,47 @@ components:
                 - pushSubscriptionDeleteInactiveDays
                 - pushSubscriptionDeleteDisabledUserDays
               additionalProperties: false
+            analytics:
+              type: object
+              properties:
+                report:
+                  type: object
+                  properties:
+                    mode:
+                      type: string
+                      enum:
+                        - NONE
+                        - NOTICE
+                        - EMAIL
+                        - NOTICE_EMAIL
+                    dailyEnabled:
+                      type: boolean
+                    weeklyEnabled:
+                      type: boolean
+                    monthlyEnabled:
+                      type: boolean
+                    notifyAdminUids:
+                      type: array
+                      items:
+                        type: string
+                        minLength: 1
+                  required:
+                    - mode
+                    - dailyEnabled
+                    - weeklyEnabled
+                    - monthlyEnabled
+                    - notifyAdminUids
+                  additionalProperties: false
+              required:
+                - report
+              additionalProperties: false
             updatedAt:
               type: string
           required:
             - enabled
             - tasks
             - cleanup
+            - analytics
             - updatedAt
           additionalProperties: false
       required:
@@ -16040,6 +16089,8 @@ components:
         friends:
           $ref: "#/components/schemas/UpdateCronConfig"
         cleanup:
+          $ref: "#/components/schemas/UpdateCronConfig"
+        analytics:
           $ref: "#/components/schemas/UpdateCronConfig"
         searchLogRetentionDays:
           $ref: "#/components/schemas/UpdateCronConfig"
@@ -16066,6 +16117,16 @@ components:
         pushSubscriptionDeleteInactiveDays:
           $ref: "#/components/schemas/UpdateCronConfig"
         pushSubscriptionDeleteDisabledUserDays:
+          $ref: "#/components/schemas/UpdateCronConfig"
+        analyticsReportMode:
+          $ref: "#/components/schemas/UpdateCronConfig"
+        analyticsReportDailyEnabled:
+          $ref: "#/components/schemas/UpdateCronConfig"
+        analyticsReportWeeklyEnabled:
+          $ref: "#/components/schemas/UpdateCronConfig"
+        analyticsReportMonthlyEnabled:
+          $ref: "#/components/schemas/UpdateCronConfig"
+        analyticsReportNotifyAdminUids:
           $ref: "#/components/schemas/UpdateCronConfig"
       additionalProperties: false
     UpdateCronConfigSuccessResponse:
@@ -16096,11 +16157,14 @@ components:
                   type: boolean
                 cleanup:
                   type: boolean
+                analytics:
+                  type: boolean
               required:
                 - doctor
                 - projects
                 - friends
                 - cleanup
+                - analytics
               additionalProperties: false
             cleanup:
               type: object
@@ -16172,12 +16236,47 @@ components:
                 - pushSubscriptionDeleteInactiveDays
                 - pushSubscriptionDeleteDisabledUserDays
               additionalProperties: false
+            analytics:
+              type: object
+              properties:
+                report:
+                  type: object
+                  properties:
+                    mode:
+                      type: string
+                      enum:
+                        - NONE
+                        - NOTICE
+                        - EMAIL
+                        - NOTICE_EMAIL
+                    dailyEnabled:
+                      type: boolean
+                    weeklyEnabled:
+                      type: boolean
+                    monthlyEnabled:
+                      type: boolean
+                    notifyAdminUids:
+                      type: array
+                      items:
+                        type: string
+                        minLength: 1
+                  required:
+                    - mode
+                    - dailyEnabled
+                    - weeklyEnabled
+                    - monthlyEnabled
+                    - notifyAdminUids
+                  additionalProperties: false
+              required:
+                - report
+              additionalProperties: false
             updatedAt:
               type: string
           required:
             - enabled
             - tasks
             - cleanup
+            - analytics
             - updatedAt
           additionalProperties: false
       required:
