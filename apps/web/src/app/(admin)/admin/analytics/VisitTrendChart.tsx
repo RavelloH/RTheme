@@ -95,7 +95,6 @@ export default function PathTrendChart({
                   className="w-full h-full"
                   timeGranularity={timeGranularity}
                   showYear="auto"
-                  fillMissingData={true}
                   overlappingBars={true}
                 />
               </div>
