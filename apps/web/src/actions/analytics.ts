@@ -595,10 +595,10 @@ export async function getAnalyticsStats(
       });
     }
 
-    let totalSessions = 0;
-    let bounces = 0; // 单页会话数
-    let totalDuration = 0; // 总停留时长（毫秒）
-    let sessionsWithDuration = 0;
+    let pageViewTotalSessions = 0;
+    let pageViewBounces = 0; // 单页会话数
+    let pageViewTotalDurationMs = 0; // 总停留时长（毫秒）
+    let pageViewSessionsWithDuration = 0;
 
     // 分析每个访客的会话
     for (const views of visitorSessions.values()) {
@@ -622,16 +622,16 @@ export async function getAnalyticsStats(
           // 新会话开始
           if (i > 0) {
             // 保存上一个会话的统计
-            totalSessions++;
+            pageViewTotalSessions++;
             if (sessionPageCount === 1) {
-              bounces++;
+              pageViewBounces++;
             }
             if (sessionPageCount > 1) {
               // 计算会话停留时长（从第一个页面到最后一个页面的时间）
               const duration =
                 views[i - 1]!.timestamp.getTime() - sessionStartTime;
-              totalDuration += duration;
-              sessionsWithDuration++;
+              pageViewTotalDurationMs += duration;
+              pageViewSessionsWithDuration++;
             }
           }
           _sessionStart = i;
@@ -643,23 +643,48 @@ export async function getAnalyticsStats(
       }
 
       // 保存最后一个会话
-      totalSessions++;
+      pageViewTotalSessions++;
       if (sessionPageCount === 1) {
-        bounces++;
+        pageViewBounces++;
       }
       if (sessionPageCount > 1) {
         const duration =
           views[views.length - 1]!.timestamp.getTime() - sessionStartTime;
-        totalDuration += duration;
-        sessionsWithDuration++;
+        pageViewTotalDurationMs += duration;
+        pageViewSessionsWithDuration++;
       }
     }
+
+    // 合并归档数据中的会话指标
+    const archivedTotalSessions = archivedData.reduce(
+      (sum, item) => sum + item.totalSessions,
+      0,
+    );
+    const archivedBounces = archivedData.reduce(
+      (sum, item) => sum + item.bounces,
+      0,
+    );
+    const archivedTotalDurationSeconds = archivedData.reduce(
+      (sum, item) => sum + item.totalDuration,
+      0,
+    );
+    const archivedSessionsWithDuration = archivedData.reduce((sum, item) => {
+      // 归档数据未单独存 sessionsWithDuration，可由 totalSessions - bounces 推导
+      return sum + Math.max(item.totalSessions - item.bounces, 0);
+    }, 0);
+
+    const totalSessions = pageViewTotalSessions + archivedTotalSessions;
+    const bounces = pageViewBounces + archivedBounces;
+    const sessionsWithDuration =
+      pageViewSessionsWithDuration + archivedSessionsWithDuration;
+    const totalDurationSeconds =
+      pageViewTotalDurationMs / 1000 + archivedTotalDurationSeconds;
 
     const bounceRate = totalSessions > 0 ? (bounces / totalSessions) * 100 : 0;
     const averageDuration =
       sessionsWithDuration > 0
-        ? Math.round(totalDuration / sessionsWithDuration / 1000)
-        : 0; // 转换为秒
+        ? Math.round(totalDurationSeconds / sessionsWithDuration)
+        : 0;
     const pageViewsPerSession =
       totalSessions > 0 ? totalViews / totalSessions : 0;
 
