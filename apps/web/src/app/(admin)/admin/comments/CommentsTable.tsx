@@ -206,7 +206,7 @@ export default function CommentsTable() {
     {
       key: "content",
       title: "内容",
-      width: "35em",
+      width: "32em",
       render: (_, record) => (
         <div className="line-clamp-2">
           {record.replyTo && (
@@ -267,6 +267,7 @@ export default function CommentsTable() {
     {
       key: "postSlug",
       title: "文章",
+      width: "16em",
       sortable: true,
       render: (_, record) => (
         <div>
