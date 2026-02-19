@@ -85,6 +85,10 @@ export interface GridTableProps<T extends Record<string, unknown>> {
     >,
   ) => void; // 筛选回调
   externalFilterOpenToken?: number; // 外部触发打开筛选弹窗（值变化即触发）
+  externalFilterValues?: Record<
+    string,
+    string | string[] | { start?: string; end?: string }
+  >; // 外部同步筛选值（用于联动点击筛选）
   // 表格配置
   striped?: boolean;
   hoverable?: boolean;
@@ -135,6 +139,7 @@ export default function GridTable<T extends Record<string, unknown>>({
   filterConfig,
   onFilterChange,
   externalFilterOpenToken,
+  externalFilterValues,
   striped = true,
   hoverable = true,
   bordered = false,
@@ -426,6 +431,58 @@ export default function GridTable<T extends Record<string, unknown>>({
       openFilterDialog();
     }
   }, [externalFilterOpenToken, filterConfig, openFilterDialog]);
+
+  // 外部同步筛选值（确保弹窗内展示与外部联动一致）
+  useEffect(() => {
+    if (!externalFilterValues) {
+      return;
+    }
+
+    const getValueSignature = (
+      value: string | string[] | { start?: string; end?: string },
+    ): string => {
+      if (Array.isArray(value)) {
+        return `arr:${value.join(",")}`;
+      }
+      if (typeof value === "object" && value !== null && "start" in value) {
+        return `range:${value.start || ""}|${value.end || ""}`;
+      }
+      return `str:${String(value)}`;
+    };
+
+    const isSameFilters = (
+      left: Record<
+        string,
+        string | string[] | { start?: string; end?: string }
+      >,
+      right: Record<
+        string,
+        string | string[] | { start?: string; end?: string }
+      >,
+    ): boolean => {
+      const leftKeys = Object.keys(left);
+      const rightKeys = Object.keys(right);
+      if (leftKeys.length !== rightKeys.length) {
+        return false;
+      }
+      for (const key of leftKeys) {
+        if (!(key in right)) {
+          return false;
+        }
+        if (getValueSignature(left[key]!) !== getValueSignature(right[key]!)) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+    if (isSameFilters(filterValues, externalFilterValues)) {
+      return;
+    }
+
+    setFilterValues(externalFilterValues);
+    setTempFilterValues(externalFilterValues);
+  }, [externalFilterValues, filterValues]);
 
   // 关闭筛选对话框
   const closeFilterDialog = useCallback(() => {

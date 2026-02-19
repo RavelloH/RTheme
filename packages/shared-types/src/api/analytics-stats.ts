@@ -21,6 +21,9 @@ export const GetAnalyticsStatsSchema = z
     deviceType: z.string().optional(),
     browser: z.string().optional(),
     os: z.string().optional(),
+    referer: z.string().optional(),
+    screenSize: z.string().optional(),
+    language: z.string().optional(),
     timestampStart: z.string().optional(),
     timestampEnd: z.string().optional(),
   })
@@ -138,6 +141,9 @@ export const GetRealTimeStatsSchema = z.object({
   deviceType: z.string().optional(),
   browser: z.string().optional(),
   os: z.string().optional(),
+  referer: z.string().optional(),
+  screenSize: z.string().optional(),
+  language: z.string().optional(),
   timestampStart: z.string().optional(),
   timestampEnd: z.string().optional(),
 });

@@ -50,14 +50,20 @@ export default function AnalyticsOverview({
                   <Clickable
                     hoverScale={1}
                     onClick={() => onOpenFilterDialog?.()}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-sm border transition-colors ${
+                    className={`flex min-w-0 max-w-[20rem] items-center gap-2 px-4 py-2 rounded-sm border transition-colors ${
                       activeFilterCount > 0
                         ? "text-primary bg-primary/30 border-primary/40"
-                        : "text-muted-foreground bg-background border-foreground/10 hover:border-foreground/20"
+                        : "text-foreground bg-background border-foreground/10 hover:border-foreground/20"
                     }`}
                   >
-                    <RiFilterLine size="1em" />
-                    <span className="text-sm font-medium">
+                    <RiFilterLine
+                      className="text-muted-foreground"
+                      size="1em"
+                    />
+                    <span
+                      className="max-w-[14rem] truncate text-sm font-medium sm:max-w-[16rem]"
+                      title={filterSummaryText}
+                    >
                       {filterSummaryText}
                     </span>
                   </Clickable>

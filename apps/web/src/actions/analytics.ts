@@ -538,6 +538,9 @@ type AnalyticsQueryFilters = {
   deviceType?: string;
   browser?: string;
   os?: string;
+  referer?: string;
+  screenSize?: string;
+  language?: string;
   timestampStart?: string;
   timestampEnd?: string;
 };
@@ -574,9 +577,132 @@ function hasAnalyticsFilters(filters: AnalyticsQueryFilters): boolean {
       normalizeFilterText(filters.deviceType) ||
       normalizeFilterText(filters.browser) ||
       normalizeFilterText(filters.os) ||
+      normalizeFilterText(filters.referer) ||
+      normalizeFilterText(filters.screenSize) ||
+      normalizeFilterText(filters.language) ||
       normalizeFilterText(filters.timestampStart) ||
       normalizeFilterText(filters.timestampEnd),
   );
+}
+
+type UnknownAwareField =
+  | "country"
+  | "region"
+  | "city"
+  | "deviceType"
+  | "browser"
+  | "os"
+  | "screenSize"
+  | "language";
+
+/**
+ * 维度筛选值为“未知”时，需要匹配 null/空串/unknown/未知 等历史值。
+ */
+function buildUnknownAwareDimensionFilter(
+  field: UnknownAwareField,
+  value: string,
+): Prisma.PageViewWhereInput {
+  const isUnknown = value === "未知";
+
+  if (!isUnknown) {
+    switch (field) {
+      case "country":
+        return { country: { contains: value, mode: "insensitive" } };
+      case "region":
+        return { region: { contains: value, mode: "insensitive" } };
+      case "city":
+        return { city: { contains: value, mode: "insensitive" } };
+      case "deviceType":
+        return { deviceType: { contains: value, mode: "insensitive" } };
+      case "browser":
+        return { browser: { contains: value, mode: "insensitive" } };
+      case "os":
+        return { os: { contains: value, mode: "insensitive" } };
+      case "screenSize":
+        return { screenSize: { contains: value, mode: "insensitive" } };
+      case "language":
+        return { language: { contains: value, mode: "insensitive" } };
+      default:
+        return {};
+    }
+  }
+
+  switch (field) {
+    case "country":
+      return {
+        OR: [
+          { country: null },
+          { country: "" },
+          { country: "未知" },
+          { country: { equals: "unknown", mode: "insensitive" } },
+        ],
+      };
+    case "region":
+      return {
+        OR: [
+          { region: null },
+          { region: "" },
+          { region: "未知" },
+          { region: { equals: "unknown", mode: "insensitive" } },
+        ],
+      };
+    case "city":
+      return {
+        OR: [
+          { city: null },
+          { city: "" },
+          { city: "未知" },
+          { city: { equals: "unknown", mode: "insensitive" } },
+        ],
+      };
+    case "deviceType":
+      return {
+        OR: [
+          { deviceType: null },
+          { deviceType: "" },
+          { deviceType: "未知" },
+          { deviceType: { equals: "unknown", mode: "insensitive" } },
+        ],
+      };
+    case "browser":
+      return {
+        OR: [
+          { browser: null },
+          { browser: "" },
+          { browser: "未知" },
+          { browser: { equals: "unknown", mode: "insensitive" } },
+        ],
+      };
+    case "os":
+      return {
+        OR: [
+          { os: null },
+          { os: "" },
+          { os: "未知" },
+          { os: { equals: "unknown", mode: "insensitive" } },
+        ],
+      };
+    case "screenSize":
+      return {
+        OR: [
+          { screenSize: null },
+          { screenSize: "" },
+          { screenSize: "未知" },
+          { screenSize: { equals: "unknown", mode: "insensitive" } },
+        ],
+      };
+    case "language":
+      return {
+        OR: [
+          { language: null },
+          { language: "" },
+          { language: "未知" },
+          { language: { equals: "unknown", mode: "insensitive" } },
+        ],
+      };
+    default:
+      return {};
+  }
 }
 
 /**
@@ -610,6 +736,9 @@ function buildPageViewWhere(options: {
     deviceType: normalizeFilterText(filters?.deviceType),
     browser: normalizeFilterText(filters?.browser),
     os: normalizeFilterText(filters?.os),
+    referer: normalizeFilterText(filters?.referer),
+    screenSize: normalizeFilterText(filters?.screenSize),
+    language: normalizeFilterText(filters?.language),
     timestampStart: normalizeFilterText(filters?.timestampStart),
     timestampEnd: normalizeFilterText(filters?.timestampEnd),
   };
@@ -636,43 +765,67 @@ function buildPageViewWhere(options: {
   }
 
   if (normalizedFilters.path) {
-    conditions.push({ path: { contains: normalizedFilters.path } });
+    conditions.push({ path: normalizedFilters.path });
   }
   if (normalizedFilters.visitorId) {
     conditions.push({ visitorId: normalizedFilters.visitorId });
   }
   if (normalizedFilters.country) {
-    conditions.push({
-      country: { contains: normalizedFilters.country, mode: "insensitive" },
-    });
+    conditions.push(
+      buildUnknownAwareDimensionFilter("country", normalizedFilters.country),
+    );
   }
   if (normalizedFilters.region) {
-    conditions.push({
-      region: { contains: normalizedFilters.region, mode: "insensitive" },
-    });
+    conditions.push(
+      buildUnknownAwareDimensionFilter("region", normalizedFilters.region),
+    );
   }
   if (normalizedFilters.city) {
-    conditions.push({
-      city: { contains: normalizedFilters.city, mode: "insensitive" },
-    });
+    conditions.push(
+      buildUnknownAwareDimensionFilter("city", normalizedFilters.city),
+    );
   }
   if (normalizedFilters.deviceType) {
-    conditions.push({
-      deviceType: {
-        contains: normalizedFilters.deviceType,
-        mode: "insensitive",
-      },
-    });
+    conditions.push(
+      buildUnknownAwareDimensionFilter(
+        "deviceType",
+        normalizedFilters.deviceType,
+      ),
+    );
   }
   if (normalizedFilters.browser) {
-    conditions.push({
-      browser: { contains: normalizedFilters.browser, mode: "insensitive" },
-    });
+    conditions.push(
+      buildUnknownAwareDimensionFilter("browser", normalizedFilters.browser),
+    );
   }
   if (normalizedFilters.os) {
-    conditions.push({
-      os: { contains: normalizedFilters.os, mode: "insensitive" },
-    });
+    conditions.push(
+      buildUnknownAwareDimensionFilter("os", normalizedFilters.os),
+    );
+  }
+  if (normalizedFilters.referer) {
+    if (normalizedFilters.referer === "直接访问") {
+      conditions.push({
+        OR: [{ referer: null }, { referer: "" }],
+      });
+    } else {
+      conditions.push({
+        referer: { contains: normalizedFilters.referer, mode: "insensitive" },
+      });
+    }
+  }
+  if (normalizedFilters.screenSize) {
+    conditions.push(
+      buildUnknownAwareDimensionFilter(
+        "screenSize",
+        normalizedFilters.screenSize,
+      ),
+    );
+  }
+  if (normalizedFilters.language) {
+    conditions.push(
+      buildUnknownAwareDimensionFilter("language", normalizedFilters.language),
+    );
   }
 
   const filterStart = parseFilterDate(normalizedFilters.timestampStart);
@@ -736,6 +889,9 @@ export async function getAnalyticsStats(
       deviceType,
       browser,
       os: osFilter,
+      referer,
+      screenSize,
+      language,
       timestampStart,
       timestampEnd,
     } = params;
@@ -750,6 +906,9 @@ export async function getAnalyticsStats(
       deviceType,
       browser,
       os: osFilter,
+      referer,
+      screenSize,
+      language,
       timestampStart,
       timestampEnd,
     };
@@ -997,20 +1156,25 @@ export async function getAnalyticsStats(
     let todayViewsFromArchive = 0;
     if (todayStartUtc && tomorrowStartUtc) {
       const todayArchiveDate = dateKeyToArchiveDate(todayDayKey);
+      const todayPageViewWhere = buildPageViewWhere({
+        baseTimeRange: {
+          gte: todayStartUtc,
+          lt: tomorrowStartUtc,
+        },
+        filters: queryFilters,
+        excludeBots: true,
+      });
+
       const [todayPageViewCount, todayArchive] = await Promise.all([
         prisma.pageView.count({
-          where: {
-            timestamp: {
-              gte: todayStartUtc,
-              lt: tomorrowStartUtc,
-            },
-            OR: [{ deviceType: { not: "bot" } }, { deviceType: null }],
-          },
+          where: todayPageViewWhere,
         }),
-        prisma.pageViewArchive.findUnique({
-          where: { date: todayArchiveDate },
-          select: { totalViews: true },
-        }),
+        hasAdvancedFilters
+          ? Promise.resolve(null)
+          : prisma.pageViewArchive.findUnique({
+              where: { date: todayArchiveDate },
+              select: { totalViews: true },
+            }),
       ]);
 
       todayViewsFromPageView = todayPageViewCount;
@@ -1483,6 +1647,9 @@ export async function getPageViews(
       deviceType,
       browser,
       os,
+      referer,
+      screenSize,
+      language,
       timestampStart,
       timestampEnd,
     } = params;
@@ -1499,6 +1666,9 @@ export async function getPageViews(
         deviceType,
         browser,
         os,
+        referer,
+        screenSize,
+        language,
         timestampStart,
         timestampEnd,
       },
@@ -1604,6 +1774,9 @@ export async function getRealTimeStats(
       deviceType,
       browser,
       os,
+      referer,
+      screenSize,
+      language,
       timestampStart,
       timestampEnd,
     } = params;
@@ -1628,6 +1801,9 @@ export async function getRealTimeStats(
         deviceType,
         browser,
         os,
+        referer,
+        screenSize,
+        language,
         timestampStart,
         timestampEnd,
       },

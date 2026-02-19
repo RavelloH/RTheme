@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from "react";
 import DonutChart, {
   type DonutChartDataPoint,
 } from "@/components/client/charts/DonutChart";
+import Clickable from "@/ui/Clickable";
 
 export interface DimensionStatsItem {
   name: string;
@@ -17,6 +18,9 @@ interface DimensionStatsChartProps {
   items: DimensionStatsItem[];
   colors: string[];
   className?: string;
+  enableFilter?: boolean;
+  onItemClick?: (name: string) => void;
+  activeItemName?: string;
 }
 
 export default function DimensionStatsChart({
@@ -24,10 +28,14 @@ export default function DimensionStatsChart({
   items,
   colors,
   className = "",
+  enableFilter = false,
+  onItemClick,
+  activeItemName,
 }: DimensionStatsChartProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showTopGradient, setShowTopGradient] = useState(false);
   const [showBottomGradient, setShowBottomGradient] = useState(true);
+  const isFilterEnabled = enableFilter && !!onItemClick;
 
   // 转换为 DonutChart 数据格式
   const chartData: DonutChartDataPoint[] = useMemo(
@@ -91,27 +99,56 @@ export default function DimensionStatsChart({
           <div className="text-2xl mb-4">{title}</div>
           <div className="space-y-1">
             {items.map((item, index) => (
-              <div
-                key={item.name}
-                className="flex items-center justify-between rounded transition-colors"
-              >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div
-                    className="w-3 h-3 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: colors[index] }}
-                  />
-                  <div className="text-sm truncate" title={item.name}>
-                    {item.name}
+              <div key={item.name}>
+                {isFilterEnabled ? (
+                  <Clickable
+                    hoverScale={1}
+                    onClick={() => onItemClick(item.name)}
+                    className={`flex items-center justify-between rounded px-1 py-0.5 transition-colors ${
+                      activeItemName === item.name
+                        ? "text-primary bg-primary/20"
+                        : "hover:bg-muted/40"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: colors[index] }}
+                      />
+                      <div className="text-sm truncate" title={item.name}>
+                        {item.name}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 flex-shrink-0">
+                      <div className="text-sm font-medium">
+                        {item.count.toLocaleString()}
+                      </div>
+                      <div className="text-sm text-muted-foreground w-16 text-right">
+                        {item.percentage.toFixed(1)}%
+                      </div>
+                    </div>
+                  </Clickable>
+                ) : (
+                  <div className="flex items-center justify-between rounded transition-colors">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: colors[index] }}
+                      />
+                      <div className="text-sm truncate" title={item.name}>
+                        {item.name}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 flex-shrink-0">
+                      <div className="text-sm font-medium">
+                        {item.count.toLocaleString()}
+                      </div>
+                      <div className="text-sm text-muted-foreground w-16 text-right">
+                        {item.percentage.toFixed(1)}%
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-4 flex-shrink-0">
-                  <div className="text-sm font-medium">
-                    {item.count.toLocaleString()}
-                  </div>
-                  <div className="text-sm text-muted-foreground w-16 text-right">
-                    {item.percentage.toFixed(1)}%
-                  </div>
-                </div>
+                )}
               </div>
             ))}
           </div>

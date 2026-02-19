@@ -16,6 +16,10 @@ interface DimensionStatsProps {
   items: StatItem[] | null;
   mainColor?: string; // 改为可选
   position: "up" | "middle" | "down";
+  enableQuickFilter?: boolean;
+  quickFilterField?: string;
+  onQuickFilter?: (field: string, value: string) => void;
+  activeFilterValue?: string;
 }
 
 export default function DimensionStats({
@@ -23,6 +27,10 @@ export default function DimensionStats({
   items,
   mainColor: mainColorProp,
   position,
+  enableQuickFilter = false,
+  quickFilterField,
+  onQuickFilter,
+  activeFilterValue,
 }: DimensionStatsProps) {
   const themeColor = useMainColor(); // 从 ThemeProvider 获取主题颜色
 
@@ -48,6 +56,9 @@ export default function DimensionStats({
     }
   }, [displayItems, mainColorProp, themeColor.primary]);
 
+  const isQuickFilterEnabled =
+    enableQuickFilter && !!quickFilterField && !!onQuickFilter;
+
   return (
     <GridItem
       areas={
@@ -67,6 +78,15 @@ export default function DimensionStats({
               title={title}
               items={displayItems}
               colors={colors}
+              enableFilter={isQuickFilterEnabled}
+              onItemClick={
+                isQuickFilterEnabled
+                  ? (value) => onQuickFilter(quickFilterField, value)
+                  : undefined
+              }
+              activeItemName={
+                isQuickFilterEnabled ? activeFilterValue : undefined
+              }
             />
           </div>
         ) : (

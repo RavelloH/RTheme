@@ -6,16 +6,21 @@ import { GridItem } from "@/components/client/layout/RowGrid";
 import generateComplementary from "@/lib/shared/complementary";
 import generateGradient from "@/lib/shared/gradient";
 import { AutoTransition } from "@/ui/AutoTransition";
+import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 interface PathStatsChartProps {
   paths: PathStat[] | null;
   mainColor: string;
+  onPathClick?: (path: string) => void;
+  activePath?: string;
 }
 
 export default function PathStatsChart({
   paths,
   mainColor,
+  onPathClick,
+  activePath,
 }: PathStatsChartProps) {
   // 生成循环滚动渐变色（1 2 3 2 1 2 3 ...）
   const colors = (() => {
@@ -55,7 +60,17 @@ export default function PathStatsChart({
               <div className="flex-1 overflow-y-auto pr-2">
                 <div className="space-y-3">
                   {paths.map((path, index) => (
-                    <div key={path.path} className="flex items-center gap-4">
+                    <Clickable
+                      hoverScale={1}
+                      key={path.path}
+                      onClick={() => onPathClick?.(path.path)}
+                      disabled={!onPathClick}
+                      className={`flex items-center gap-4 rounded-sm px-2 py-1 transition-colors ${
+                        activePath === path.path
+                          ? "text-primary bg-primary/20"
+                          : "hover:bg-muted/40"
+                      }`}
+                    >
                       <div className="w-64 truncate text-sm" title={path.path}>
                         {path.path}
                       </div>
@@ -74,7 +89,7 @@ export default function PathStatsChart({
                       <div className="w-16 text-right text-sm text-muted-foreground">
                         {path.percentage.toFixed(1)}%
                       </div>
-                    </div>
+                    </Clickable>
                   ))}
                 </div>
               </div>

@@ -9,6 +9,8 @@ import AnalyticsTrendChart from "@/app/(admin)/admin/analytics/AnalyticsTrendCha
 import DimensionStats from "@/app/(admin)/admin/analytics/DimensionStats";
 import PageViewTable, {
   type AnalyticsFilterSummary,
+  type AnalyticsQuickFilterField,
+  type AnalyticsQuickFilterRequest,
   type AnalyticsTableQuery,
 } from "@/app/(admin)/admin/analytics/PageViewTable";
 import PathStatsChart from "@/app/(admin)/admin/analytics/PathStatsChart";
@@ -44,6 +46,8 @@ export default function AnalyticsStats() {
   const [openFilterToken, setOpenFilterToken] = useState<number | undefined>(
     undefined,
   );
+  const [quickFilterRequest, setQuickFilterRequest] =
+    useState<AnalyticsQuickFilterRequest | null>(null);
   const themeColor = useMainColor(); // 从 ThemeProvider 获取主题颜色
 
   // 从 localStorage 读取上次选择的时间段
@@ -91,6 +95,21 @@ export default function AnalyticsStats() {
   const handleOpenFilterDialog = useCallback(() => {
     setOpenFilterToken((prev) => (prev ?? 0) + 1);
   }, []);
+
+  const handleQuickFilter = useCallback(
+    (field: AnalyticsQuickFilterField, value: string) => {
+      const normalizedValue = value.trim();
+      if (!normalizedValue) {
+        return;
+      }
+      setQuickFilterRequest((prev) => ({
+        token: (prev?.token ?? 0) + 1,
+        field,
+        value: normalizedValue,
+      }));
+    },
+    [],
+  );
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -172,6 +191,8 @@ export default function AnalyticsStats() {
         <PathStatsChart
           paths={data?.topPaths || null}
           mainColor={themeColor.primary}
+          onPathClick={(path) => handleQuickFilter("path", path)}
+          activePath={tableQuery.path}
         />
       </RowGrid>
       <RowGrid>
@@ -180,54 +201,108 @@ export default function AnalyticsStats() {
           title="流量来源"
           items={data?.referers || null}
           mainColor={generateColorForDimension(0)}
+          enableQuickFilter
+          quickFilterField="referer"
+          activeFilterValue={tableQuery.referer}
+          onQuickFilter={(field, value) =>
+            handleQuickFilter(field as AnalyticsQuickFilterField, value)
+          }
         />
         <DimensionStats
           position="middle"
           title="浏览器"
           items={data?.browsers || null}
           mainColor={generateColorForDimension(1)}
+          enableQuickFilter
+          quickFilterField="browser"
+          activeFilterValue={tableQuery.browser}
+          onQuickFilter={(field, value) =>
+            handleQuickFilter(field as AnalyticsQuickFilterField, value)
+          }
         />
         <DimensionStats
           position="down"
           title="操作系统"
           items={data?.os || null}
           mainColor={generateColorForDimension(2)}
+          enableQuickFilter
+          quickFilterField="os"
+          activeFilterValue={tableQuery.os}
+          onQuickFilter={(field, value) =>
+            handleQuickFilter(field as AnalyticsQuickFilterField, value)
+          }
         />
         <DimensionStats
           position="up"
           title="设备类型"
           items={data?.devices || null}
           mainColor={generateColorForDimension(3)}
+          enableQuickFilter
+          quickFilterField="deviceType"
+          activeFilterValue={tableQuery.deviceType}
+          onQuickFilter={(field, value) =>
+            handleQuickFilter(field as AnalyticsQuickFilterField, value)
+          }
         />
         <DimensionStats
           position="middle"
           title="屏幕尺寸"
           items={data?.screenSizes || null}
           mainColor={generateColorForDimension(4)}
+          enableQuickFilter
+          quickFilterField="screenSize"
+          activeFilterValue={tableQuery.screenSize}
+          onQuickFilter={(field, value) =>
+            handleQuickFilter(field as AnalyticsQuickFilterField, value)
+          }
         />
         <DimensionStats
           position="down"
           title="语言"
           items={data?.languages || null}
           mainColor={generateColorForDimension(5)}
+          enableQuickFilter
+          quickFilterField="language"
+          activeFilterValue={tableQuery.language}
+          onQuickFilter={(field, value) =>
+            handleQuickFilter(field as AnalyticsQuickFilterField, value)
+          }
         />
         <DimensionStats
           position="up"
           title="国家分布"
           items={data?.countries || null}
           mainColor={generateColorForDimension(6)}
+          enableQuickFilter
+          quickFilterField="country"
+          activeFilterValue={tableQuery.country}
+          onQuickFilter={(field, value) =>
+            handleQuickFilter(field as AnalyticsQuickFilterField, value)
+          }
         />
         <DimensionStats
           position="middle"
           title="地区分布"
           items={data?.regions || null}
           mainColor={generateColorForDimension(7)}
+          enableQuickFilter
+          quickFilterField="region"
+          activeFilterValue={tableQuery.region}
+          onQuickFilter={(field, value) =>
+            handleQuickFilter(field as AnalyticsQuickFilterField, value)
+          }
         />
         <DimensionStats
           position="down"
           title="城市分布"
           items={data?.cities || null}
           mainColor={generateColorForDimension(8)}
+          enableQuickFilter
+          quickFilterField="city"
+          activeFilterValue={tableQuery.city}
+          onQuickFilter={(field, value) =>
+            handleQuickFilter(field as AnalyticsQuickFilterField, value)
+          }
         />
       </RowGrid>
       <RowGrid>
@@ -235,6 +310,7 @@ export default function AnalyticsStats() {
           onQueryChange={handleTableQueryChange}
           onFilterSummaryChange={handleFilterSummaryChange}
           requestOpenFilterToken={openFilterToken}
+          quickFilterRequest={quickFilterRequest}
         />
       </RowGrid>
     </>
