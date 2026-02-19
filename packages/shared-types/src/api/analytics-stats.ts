@@ -11,6 +11,18 @@ export const GetAnalyticsStatsSchema = z
     hours: z.number().int().min(1).max(168).optional(), // 统计小时数（最多7天）
     startDate: z.string().optional(), // 自定义开始日期 YYYY-MM-DD
     endDate: z.string().optional(), // 自定义结束日期 YYYY-MM-DD
+    // 与 PageViewTable 对齐的全局筛选字段
+    search: z.string().optional(),
+    path: z.string().optional(),
+    visitorId: z.string().optional(),
+    country: z.string().optional(),
+    region: z.string().optional(),
+    city: z.string().optional(),
+    deviceType: z.string().optional(),
+    browser: z.string().optional(),
+    os: z.string().optional(),
+    timestampStart: z.string().optional(),
+    timestampEnd: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -117,6 +129,17 @@ export interface RealTimeDataPoint {
 export const GetRealTimeStatsSchema = z.object({
   access_token: z.string().optional(),
   minutes: z.number().int().min(1).max(60).optional().default(30), // 统计分钟数，默认30分钟
+  search: z.string().optional(),
+  path: z.string().optional(),
+  visitorId: z.string().optional(),
+  country: z.string().optional(),
+  region: z.string().optional(),
+  city: z.string().optional(),
+  deviceType: z.string().optional(),
+  browser: z.string().optional(),
+  os: z.string().optional(),
+  timestampStart: z.string().optional(),
+  timestampEnd: z.string().optional(),
 });
 
 export type GetRealTimeStats = z.infer<typeof GetRealTimeStatsSchema>;

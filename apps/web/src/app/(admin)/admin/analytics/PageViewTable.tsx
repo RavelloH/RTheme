@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { RiEyeLine } from "@remixicon/react";
 import type { PageViewItem } from "@repo/shared-types";
 
@@ -21,7 +21,218 @@ function formatStayDuration(duration: number | null | undefined): string {
   return `${duration} 秒`;
 }
 
-export default function PageViewTable() {
+type TableFilterValues = Record<
+  string,
+  string | string[] | { start?: string; end?: string }
+>;
+
+export interface AnalyticsTableQuery {
+  search?: string;
+  path?: string;
+  visitorId?: string;
+  country?: string;
+  region?: string;
+  city?: string;
+  deviceType?: string;
+  browser?: string;
+  os?: string;
+  timestampStart?: string;
+  timestampEnd?: string;
+}
+
+export interface AnalyticsFilterSummary {
+  activeCount: number;
+  text: string;
+}
+
+interface PageViewTableProps {
+  onQueryChange?: (query: AnalyticsTableQuery) => void;
+  onFilterSummaryChange?: (summary: AnalyticsFilterSummary) => void;
+  requestOpenFilterToken?: number;
+}
+
+function normalizeFilterText(value: string | undefined): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+const FILTER_LABEL_MAP: Record<string, string> = {
+  path: "访问路径",
+  visitorId: "访客ID",
+  country: "国家",
+  region: "地区",
+  city: "城市",
+  deviceType: "设备类型",
+  browser: "浏览器",
+  os: "操作系统",
+  timestamp: "访问时间",
+};
+
+function formatFilterCondition(
+  key: string,
+  value: string | string[] | { start?: string; end?: string },
+): string | null {
+  const label = FILTER_LABEL_MAP[key] || key;
+
+  if (typeof value === "string") {
+    const normalizedValue = normalizeFilterText(value);
+    if (!normalizedValue) return null;
+    return `${label} = ${normalizedValue}`;
+  }
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) return null;
+    return `${label} = ${value.join("、")}`;
+  }
+
+  if (value && typeof value === "object") {
+    const start = normalizeFilterText(value.start);
+    const end = normalizeFilterText(value.end);
+    if (start && end) {
+      return `${label} = ${start} ~ ${end}`;
+    }
+    if (start) {
+      return `${label} >= ${start}`;
+    }
+    if (end) {
+      return `${label} <= ${end}`;
+    }
+  }
+
+  return null;
+}
+
+function buildFilterSummary(
+  filterValues: TableFilterValues,
+): AnalyticsFilterSummary {
+  const conditions: string[] = [];
+
+  for (const [key, value] of Object.entries(filterValues)) {
+    const condition = formatFilterCondition(key, value);
+    if (condition) {
+      conditions.push(condition);
+    }
+  }
+
+  if (conditions.length === 1) {
+    return {
+      activeCount: 1,
+      text: conditions[0]!,
+    };
+  }
+
+  if (conditions.length > 1) {
+    return {
+      activeCount: conditions.length,
+      text: `${conditions.length} 个筛选条件`,
+    };
+  }
+
+  return {
+    activeCount: 0,
+    text: "筛选",
+  };
+}
+
+function buildAnalyticsTableQuery(
+  searchQuery: string,
+  filterValues: TableFilterValues,
+): AnalyticsTableQuery {
+  const query: AnalyticsTableQuery = {};
+
+  const search = normalizeFilterText(searchQuery);
+  if (search) {
+    query.search = search;
+  }
+
+  const path =
+    typeof filterValues.path === "string"
+      ? normalizeFilterText(filterValues.path)
+      : undefined;
+  if (path) {
+    query.path = path;
+  }
+
+  const visitorId =
+    typeof filterValues.visitorId === "string"
+      ? normalizeFilterText(filterValues.visitorId)
+      : undefined;
+  if (visitorId) {
+    query.visitorId = visitorId;
+  }
+
+  const country =
+    typeof filterValues.country === "string"
+      ? normalizeFilterText(filterValues.country)
+      : undefined;
+  if (country) {
+    query.country = country;
+  }
+
+  const region =
+    typeof filterValues.region === "string"
+      ? normalizeFilterText(filterValues.region)
+      : undefined;
+  if (region) {
+    query.region = region;
+  }
+
+  const city =
+    typeof filterValues.city === "string"
+      ? normalizeFilterText(filterValues.city)
+      : undefined;
+  if (city) {
+    query.city = city;
+  }
+
+  const deviceType =
+    typeof filterValues.deviceType === "string"
+      ? normalizeFilterText(filterValues.deviceType)
+      : undefined;
+  if (deviceType) {
+    query.deviceType = deviceType;
+  }
+
+  const browser =
+    typeof filterValues.browser === "string"
+      ? normalizeFilterText(filterValues.browser)
+      : undefined;
+  if (browser) {
+    query.browser = browser;
+  }
+
+  const os =
+    typeof filterValues.os === "string"
+      ? normalizeFilterText(filterValues.os)
+      : undefined;
+  if (os) {
+    query.os = os;
+  }
+
+  if (filterValues.timestamp && typeof filterValues.timestamp === "object") {
+    const dateRange = filterValues.timestamp as {
+      start?: string;
+      end?: string;
+    };
+    const timestampStart = normalizeFilterText(dateRange.start);
+    const timestampEnd = normalizeFilterText(dateRange.end);
+    if (timestampStart) {
+      query.timestampStart = timestampStart;
+    }
+    if (timestampEnd) {
+      query.timestampEnd = timestampEnd;
+    }
+  }
+
+  return query;
+}
+
+export default function PageViewTable({
+  onQueryChange,
+  onFilterSummaryChange,
+  requestOpenFilterToken,
+}: PageViewTableProps) {
   const [data, setData] = useState<PageViewItem[]>([]);
   const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -31,11 +242,26 @@ export default function PageViewTable() {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterValues, setFilterValues] = useState<
-    Record<string, string | string[] | { start?: string; end?: string }>
-  >({});
+  const [filterValues, setFilterValues] = useState<TableFilterValues>({});
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedView, setSelectedView] = useState<PageViewItem | null>(null);
+
+  const query = useMemo(
+    () => buildAnalyticsTableQuery(searchQuery, filterValues),
+    [searchQuery, filterValues],
+  );
+  const filterSummary = useMemo(
+    () => buildFilterSummary(filterValues),
+    [filterValues],
+  );
+
+  useEffect(() => {
+    onQueryChange?.(query);
+  }, [onQueryChange, query]);
+
+  useEffect(() => {
+    onFilterSummaryChange?.(filterSummary);
+  }, [onFilterSummaryChange, filterSummary]);
 
   // 处理排序变化
   const handleSortChange = (key: string, order: "asc" | "desc" | null) => {
@@ -53,12 +279,7 @@ export default function PageViewTable() {
   };
 
   // 处理筛选变化
-  const handleFilterChange = (
-    filters: Record<
-      string,
-      string | string[] | { start?: string; end?: string }
-    >,
-  ) => {
+  const handleFilterChange = (filters: TableFilterValues) => {
     setFilterValues(filters);
     setPage(1);
   };
@@ -142,20 +363,10 @@ export default function PageViewTable() {
             | "country"
             | "city";
           sortOrder?: "asc" | "desc";
-          search?: string;
-          path?: string;
-          visitorId?: string;
-          country?: string;
-          region?: string;
-          city?: string;
-          deviceType?: string;
-          browser?: string;
-          os?: string;
-          timestampStart?: string;
-          timestampEnd?: string;
-        } = {
+        } & AnalyticsTableQuery = {
           page,
           pageSize,
+          ...query,
         };
 
         if (sortKey && sortOrder) {
@@ -167,64 +378,6 @@ export default function PageViewTable() {
             | "country"
             | "city";
           params.sortOrder = sortOrder;
-        }
-
-        if (searchQuery && searchQuery.trim()) {
-          params.search = searchQuery.trim();
-        }
-
-        if (filterValues.path && typeof filterValues.path === "string") {
-          params.path = filterValues.path.trim();
-        }
-
-        if (
-          filterValues.visitorId &&
-          typeof filterValues.visitorId === "string"
-        ) {
-          params.visitorId = filterValues.visitorId.trim();
-        }
-
-        if (filterValues.country && typeof filterValues.country === "string") {
-          params.country = filterValues.country.trim();
-        }
-
-        if (filterValues.region && typeof filterValues.region === "string") {
-          params.region = filterValues.region.trim();
-        }
-
-        if (filterValues.city && typeof filterValues.city === "string") {
-          params.city = filterValues.city.trim();
-        }
-
-        if (
-          filterValues.deviceType &&
-          typeof filterValues.deviceType === "string"
-        ) {
-          params.deviceType = filterValues.deviceType.trim();
-        }
-
-        if (filterValues.browser && typeof filterValues.browser === "string") {
-          params.browser = filterValues.browser.trim();
-        }
-
-        if (filterValues.os && typeof filterValues.os === "string") {
-          params.os = filterValues.os.trim();
-        }
-
-        if (
-          filterValues.timestamp &&
-          typeof filterValues.timestamp === "object"
-        ) {
-          const dateRange = filterValues.timestamp as {
-            start?: string;
-            end?: string;
-          };
-          if (dateRange.start) {
-            params.timestampStart = dateRange.start;
-          }
-          if (dateRange.end) {
-            params.timestampEnd = dateRange.end;
-          }
         }
 
         const result = await getPageViews(params);
@@ -249,7 +402,7 @@ export default function PageViewTable() {
     }
 
     fetchData();
-  }, [page, pageSize, sortKey, sortOrder, searchQuery, filterValues]);
+  }, [page, pageSize, sortKey, sortOrder, query]);
 
   const columns: TableColumn<PageViewItem>[] = [
     {
@@ -440,6 +593,7 @@ export default function PageViewTable() {
         searchPlaceholder="搜索路径、访客ID、国家、城市..."
         filterConfig={filterConfig}
         onFilterChange={handleFilterChange}
+        externalFilterOpenToken={requestOpenFilterToken}
         striped
         hoverable
         bordered={false}

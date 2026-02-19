@@ -84,6 +84,7 @@ export interface GridTableProps<T extends Record<string, unknown>> {
       string | string[] | { start?: string; end?: string }
     >,
   ) => void; // 筛选回调
+  externalFilterOpenToken?: number; // 外部触发打开筛选弹窗（值变化即触发）
   // 表格配置
   striped?: boolean;
   hoverable?: boolean;
@@ -133,6 +134,7 @@ export default function GridTable<T extends Record<string, unknown>>({
   searchPlaceholder = "搜索...",
   filterConfig,
   onFilterChange,
+  externalFilterOpenToken,
   striped = true,
   hoverable = true,
   bordered = false,
@@ -192,6 +194,7 @@ export default function GridTable<T extends Record<string, unknown>>({
   const [tempFilterValues, setTempFilterValues] = useState<
     Record<string, string | string[] | { start?: string; end?: string }>
   >({});
+  const lastExternalFilterOpenTokenRef = useRef<number | undefined>(undefined);
 
   // 标记是否已从 URL 初始化
   const initializedRef = useRef(false);
@@ -409,6 +412,20 @@ export default function GridTable<T extends Record<string, unknown>>({
     setTempFilterValues({ ...filterValues });
     setFilterDialogOpen(true);
   }, [filterValues]);
+
+  // 外部触发：打开筛选对话框
+  useEffect(() => {
+    if (externalFilterOpenToken === undefined) {
+      return;
+    }
+    if (lastExternalFilterOpenTokenRef.current === externalFilterOpenToken) {
+      return;
+    }
+    lastExternalFilterOpenTokenRef.current = externalFilterOpenToken;
+    if (filterConfig && filterConfig.length > 0) {
+      openFilterDialog();
+    }
+  }, [externalFilterOpenToken, filterConfig, openFilterDialog]);
 
   // 关闭筛选对话框
   const closeFilterDialog = useCallback(() => {

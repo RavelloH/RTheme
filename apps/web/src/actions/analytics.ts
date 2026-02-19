@@ -49,6 +49,8 @@ import redis from "@/lib/server/redis";
 import ResponseBuilder from "@/lib/server/response";
 import { validateData } from "@/lib/server/validator";
 
+import type { Prisma } from ".prisma/client";
+
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
 type ActionResult<T extends ApiResponseData> =
@@ -526,6 +528,171 @@ function mergeArchivedStats(
   return items;
 }
 
+type AnalyticsQueryFilters = {
+  search?: string;
+  path?: string;
+  visitorId?: string;
+  country?: string;
+  region?: string;
+  city?: string;
+  deviceType?: string;
+  browser?: string;
+  os?: string;
+  timestampStart?: string;
+  timestampEnd?: string;
+};
+
+/**
+ * 规范化文本筛选值（空串归一为 undefined）
+ */
+function normalizeFilterText(value: string | undefined): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+/**
+ * 解析筛选时间（无效时间返回 null）
+ */
+function parseFilterDate(value: string | undefined): Date | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * 是否启用了高级筛选（会影响归档数据是否可用）
+ */
+function hasAnalyticsFilters(filters: AnalyticsQueryFilters): boolean {
+  return Boolean(
+    normalizeFilterText(filters.search) ||
+      normalizeFilterText(filters.path) ||
+      normalizeFilterText(filters.visitorId) ||
+      normalizeFilterText(filters.country) ||
+      normalizeFilterText(filters.region) ||
+      normalizeFilterText(filters.city) ||
+      normalizeFilterText(filters.deviceType) ||
+      normalizeFilterText(filters.browser) ||
+      normalizeFilterText(filters.os) ||
+      normalizeFilterText(filters.timestampStart) ||
+      normalizeFilterText(filters.timestampEnd),
+  );
+}
+
+/**
+ * 构建 PageView 查询条件（支持基础时间范围 + 高级筛选）
+ */
+function buildPageViewWhere(options: {
+  baseTimeRange?: Prisma.DateTimeFilter;
+  filters?: AnalyticsQueryFilters;
+  excludeBots?: boolean;
+}): Prisma.PageViewWhereInput {
+  const { baseTimeRange, filters, excludeBots = false } = options;
+  const conditions: Prisma.PageViewWhereInput[] = [];
+
+  if (baseTimeRange) {
+    conditions.push({ timestamp: baseTimeRange });
+  }
+
+  if (excludeBots) {
+    conditions.push({
+      OR: [{ deviceType: { not: "bot" } }, { deviceType: null }],
+    });
+  }
+
+  const normalizedFilters: AnalyticsQueryFilters = {
+    search: normalizeFilterText(filters?.search),
+    path: normalizeFilterText(filters?.path),
+    visitorId: normalizeFilterText(filters?.visitorId),
+    country: normalizeFilterText(filters?.country),
+    region: normalizeFilterText(filters?.region),
+    city: normalizeFilterText(filters?.city),
+    deviceType: normalizeFilterText(filters?.deviceType),
+    browser: normalizeFilterText(filters?.browser),
+    os: normalizeFilterText(filters?.os),
+    timestampStart: normalizeFilterText(filters?.timestampStart),
+    timestampEnd: normalizeFilterText(filters?.timestampEnd),
+  };
+
+  if (normalizedFilters.search) {
+    conditions.push({
+      OR: [
+        { path: { contains: normalizedFilters.search, mode: "insensitive" } },
+        {
+          visitorId: {
+            contains: normalizedFilters.search,
+            mode: "insensitive",
+          },
+        },
+        {
+          country: {
+            contains: normalizedFilters.search,
+            mode: "insensitive",
+          },
+        },
+        { city: { contains: normalizedFilters.search, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  if (normalizedFilters.path) {
+    conditions.push({ path: { contains: normalizedFilters.path } });
+  }
+  if (normalizedFilters.visitorId) {
+    conditions.push({ visitorId: normalizedFilters.visitorId });
+  }
+  if (normalizedFilters.country) {
+    conditions.push({
+      country: { contains: normalizedFilters.country, mode: "insensitive" },
+    });
+  }
+  if (normalizedFilters.region) {
+    conditions.push({
+      region: { contains: normalizedFilters.region, mode: "insensitive" },
+    });
+  }
+  if (normalizedFilters.city) {
+    conditions.push({
+      city: { contains: normalizedFilters.city, mode: "insensitive" },
+    });
+  }
+  if (normalizedFilters.deviceType) {
+    conditions.push({
+      deviceType: {
+        contains: normalizedFilters.deviceType,
+        mode: "insensitive",
+      },
+    });
+  }
+  if (normalizedFilters.browser) {
+    conditions.push({
+      browser: { contains: normalizedFilters.browser, mode: "insensitive" },
+    });
+  }
+  if (normalizedFilters.os) {
+    conditions.push({
+      os: { contains: normalizedFilters.os, mode: "insensitive" },
+    });
+  }
+
+  const filterStart = parseFilterDate(normalizedFilters.timestampStart);
+  const filterEnd = parseFilterDate(normalizedFilters.timestampEnd);
+  if (filterStart || filterEnd) {
+    const timestampFilter: Prisma.DateTimeFilter = {};
+    if (filterStart) timestampFilter.gte = filterStart;
+    if (filterEnd) timestampFilter.lte = filterEnd;
+    conditions.push({ timestamp: timestampFilter });
+  }
+
+  if (conditions.length === 0) {
+    return {};
+  }
+  if (conditions.length === 1) {
+    return conditions[0]!;
+  }
+  return { AND: conditions };
+}
+
 /**
  * 获取访问统计数据
  */
@@ -560,7 +727,33 @@ export async function getAnalyticsStats(
       hours,
       startDate: customStartDate,
       endDate: customEndDate,
+      search,
+      path,
+      visitorId,
+      country,
+      region,
+      city,
+      deviceType,
+      browser,
+      os: osFilter,
+      timestampStart,
+      timestampEnd,
     } = params;
+
+    const queryFilters: AnalyticsQueryFilters = {
+      search,
+      path,
+      visitorId,
+      country,
+      region,
+      city,
+      deviceType,
+      browser,
+      os: osFilter,
+      timestampStart,
+      timestampEnd,
+    };
+    const hasAdvancedFilters = hasAnalyticsFilters(queryFilters);
 
     const configs = await prisma.config.findMany({
       where: {
@@ -679,14 +872,16 @@ export async function getAnalyticsStats(
 
     // 1. 查询 PageView 数据（精确数据）
     // 注意：PageView 只包含未归档的数据，通常是最近 precisionDays 天的数据
-    const pageViews = await prisma.pageView.findMany({
-      where: {
-        timestamp: {
-          gte: startDate,
-          lte: endDate,
-        },
-        OR: [{ deviceType: { not: "bot" } }, { deviceType: null }],
+    const pageViewWhere = buildPageViewWhere({
+      baseTimeRange: {
+        gte: startDate,
+        lte: endDate,
       },
+      filters: queryFilters,
+      excludeBots: true,
+    });
+    const pageViews = await prisma.pageView.findMany({
+      where: pageViewWhere,
       select: {
         path: true,
         timestamp: true,
@@ -725,51 +920,53 @@ export async function getAnalyticsStats(
       timezoneStats: Record<string, number> | null;
     }> = [];
 
-    // 2. 查询归档数据（总是查询，因为即使在 precisionDays 内也可能有归档数据）
-    const rawArchived = await prisma.pageViewArchive.findMany({
-      where: {
-        date: {
-          gte: archiveStartDate,
-          lt: archiveEndDate, // 使用 lt 而不是 lte
+    // 2. 查询归档数据（仅无高级筛选时启用）
+    if (!hasAdvancedFilters) {
+      const rawArchived = await prisma.pageViewArchive.findMany({
+        where: {
+          date: {
+            gte: archiveStartDate,
+            lt: archiveEndDate, // 使用 lt 而不是 lte
+          },
         },
-      },
-      select: {
-        date: true,
-        totalViews: true,
-        uniqueVisitors: true,
-        totalSessions: true,
-        bounces: true,
-        totalDuration: true,
-        pathStats: true,
-        refererStats: true,
-        countryStats: true,
-        regionStats: true,
-        cityStats: true,
-        deviceStats: true,
-        browserStats: true,
-        osStats: true,
-        screenStats: true,
-        languageStats: true,
-        timezoneStats: true,
-      },
-    });
-    archivedData = rawArchived.map((item) => ({
-      ...item,
-      pathStats: item.pathStats as Record<
-        string,
-        { views: number; visitors: number }
-      > | null,
-      refererStats: item.refererStats as Record<string, number> | null,
-      countryStats: item.countryStats as Record<string, number> | null,
-      regionStats: item.regionStats as Record<string, number> | null,
-      cityStats: item.cityStats as Record<string, number> | null,
-      deviceStats: item.deviceStats as Record<string, number> | null,
-      browserStats: item.browserStats as Record<string, number> | null,
-      osStats: item.osStats as Record<string, number> | null,
-      screenStats: item.screenStats as Record<string, number> | null,
-      languageStats: item.languageStats as Record<string, number> | null,
-      timezoneStats: item.timezoneStats as Record<string, number> | null,
-    }));
+        select: {
+          date: true,
+          totalViews: true,
+          uniqueVisitors: true,
+          totalSessions: true,
+          bounces: true,
+          totalDuration: true,
+          pathStats: true,
+          refererStats: true,
+          countryStats: true,
+          regionStats: true,
+          cityStats: true,
+          deviceStats: true,
+          browserStats: true,
+          osStats: true,
+          screenStats: true,
+          languageStats: true,
+          timezoneStats: true,
+        },
+      });
+      archivedData = rawArchived.map((item) => ({
+        ...item,
+        pathStats: item.pathStats as Record<
+          string,
+          { views: number; visitors: number }
+        > | null,
+        refererStats: item.refererStats as Record<string, number> | null,
+        countryStats: item.countryStats as Record<string, number> | null,
+        regionStats: item.regionStats as Record<string, number> | null,
+        cityStats: item.cityStats as Record<string, number> | null,
+        deviceStats: item.deviceStats as Record<string, number> | null,
+        browserStats: item.browserStats as Record<string, number> | null,
+        osStats: item.osStats as Record<string, number> | null,
+        screenStats: item.screenStats as Record<string, number> | null,
+        languageStats: item.languageStats as Record<string, number> | null,
+        timezoneStats: item.timezoneStats as Record<string, number> | null,
+      }));
+    }
 
     // 3. 计算概览数据
     const totalViewsFromPageView = pageViews.length;
@@ -1291,70 +1488,21 @@ export async function getPageViews(
     } = params;
 
     // 构建 where 条件
-    const where: {
-      path?: { contains: string };
-      visitorId?: string | { contains: string };
-      country?: { contains: string; mode: "insensitive" };
-      region?: { contains: string; mode: "insensitive" };
-      city?: { contains: string; mode: "insensitive" };
-      deviceType?: { contains: string; mode: "insensitive" };
-      browser?: { contains: string; mode: "insensitive" };
-      os?: { contains: string; mode: "insensitive" };
-      timestamp?: { gte?: Date; lte?: Date };
-      OR?: Array<{
-        path?: { contains: string; mode: "insensitive" };
-        visitorId?: { contains: string; mode: "insensitive" };
-        country?: { contains: string; mode: "insensitive" };
-        city?: { contains: string; mode: "insensitive" };
-      }>;
-    } = {};
-
-    // 全局搜索
-    if (search && search.trim()) {
-      where.OR = [
-        { path: { contains: search.trim(), mode: "insensitive" } },
-        { visitorId: { contains: search.trim(), mode: "insensitive" } },
-        { country: { contains: search.trim(), mode: "insensitive" } },
-        { city: { contains: search.trim(), mode: "insensitive" } },
-      ];
-    }
-
-    // 字段筛选
-    if (path) {
-      where.path = { contains: path };
-    }
-    if (visitorId) {
-      where.visitorId = visitorId;
-    }
-    if (country) {
-      where.country = { contains: country, mode: "insensitive" };
-    }
-    if (region) {
-      where.region = { contains: region, mode: "insensitive" };
-    }
-    if (city) {
-      where.city = { contains: city, mode: "insensitive" };
-    }
-    if (deviceType) {
-      where.deviceType = { contains: deviceType, mode: "insensitive" };
-    }
-    if (browser) {
-      where.browser = { contains: browser, mode: "insensitive" };
-    }
-    if (os) {
-      where.os = { contains: os, mode: "insensitive" };
-    }
-
-    // 时间范围筛选
-    if (timestampStart || timestampEnd) {
-      where.timestamp = {};
-      if (timestampStart) {
-        where.timestamp.gte = new Date(timestampStart);
-      }
-      if (timestampEnd) {
-        where.timestamp.lte = new Date(timestampEnd);
-      }
-    }
+    const where = buildPageViewWhere({
+      filters: {
+        search,
+        path,
+        visitorId,
+        country,
+        region,
+        city,
+        deviceType,
+        browser,
+        os,
+        timestampStart,
+        timestampEnd,
+      },
+    });
 
     // 构建 orderBy
     const orderBy: Record<string, "asc" | "desc"> = {};
@@ -1445,21 +1593,49 @@ export async function getRealTimeStats(
     // 先同步 Redis 数据到数据库
     await flushEventsToDatabase();
 
-    const { minutes = 30 } = params;
+    const {
+      minutes = 30,
+      search,
+      path,
+      visitorId,
+      country,
+      region,
+      city,
+      deviceType,
+      browser,
+      os,
+      timestampStart,
+      timestampEnd,
+    } = params;
 
     // 计算时间范围
     const now = new Date();
     const startTime = new Date(now.getTime() - minutes * 60 * 1000);
 
     // 查询 PageView 数据
-    const pageViews = await prisma.pageView.findMany({
-      where: {
-        timestamp: {
-          gte: startTime,
-          lte: now,
-        },
-        OR: [{ deviceType: { not: "bot" } }, { deviceType: null }],
+    const pageViewsWhere = buildPageViewWhere({
+      baseTimeRange: {
+        gte: startTime,
+        lte: now,
       },
+      filters: {
+        search,
+        path,
+        visitorId,
+        country,
+        region,
+        city,
+        deviceType,
+        browser,
+        os,
+        timestampStart,
+        timestampEnd,
+      },
+      excludeBots: true,
+    });
+
+    const pageViews = await prisma.pageView.findMany({
+      where: pageViewsWhere,
       select: {
         timestamp: true,
         visitorId: true,
