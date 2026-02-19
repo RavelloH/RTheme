@@ -233,8 +233,9 @@ export async function getFeedData(): Promise<FeedData> {
 
   const formattedCategories: FeedCategory[] = allCategories.map((c) => {
     const path = categoryPathsMap.get(c.id);
+    const fullSlug = path?.[path.length - 1]?.slug;
     return {
-      slug: path ? path.map((p) => p.slug).join("/") : c.slug,
+      slug: fullSlug ?? c.slug,
       updatedAt: c.updatedAt,
     };
   });
