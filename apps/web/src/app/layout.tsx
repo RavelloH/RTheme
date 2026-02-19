@@ -18,6 +18,7 @@ import ResponsiveFontScale from "@/components/client/layout/ResponsiveFontScale"
 // Client Components
 import { ThemeProvider } from "@/components/client/layout/ThemeProvider";
 import { AnalyticsTracker } from "@/components/client/logic/AnalyticsTracker";
+import { RecentVisitTracker } from "@/components/client/logic/RecentVisitTracker";
 import TokenManager from "@/components/client/logic/TokenManager";
 import Footer from "@/components/server/layout/Footer";
 // Server Componments
@@ -153,8 +154,8 @@ export default async function RootLayout({
         <ToastProvider>
           <ThemeProvider
             attribute="class"
-            defaultTheme="system"
-            enableSystem
+            defaultTheme="dark"
+            enableSystem={false}
             mainColor={mainColor}
             disableTransitionOnChange
           >
@@ -194,6 +195,9 @@ export default async function RootLayout({
               <AnalyticsTracker />
             </Suspense>
           )}
+          <Suspense>
+            <RecentVisitTracker />
+          </Suspense>
           <Suspense>
             <TokenManager />
           </Suspense>

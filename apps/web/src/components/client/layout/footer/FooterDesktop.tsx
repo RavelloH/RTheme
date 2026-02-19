@@ -24,7 +24,7 @@ export default function FooterDesktop({ menus }: FooterProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const pathname = usePathname();
   const isMenuOpen = useMenuStore((state) => state.isMenuOpen);
-  const { isConsoleOpen } = useConsoleStore();
+  const { isConsoleOpen, setConsoleOpen } = useConsoleStore();
   const isFooterVisible = useFooterStore((state) => state.isFooterVisible);
   const [windowSize, setWindowSize] = useState({
     width: typeof window !== "undefined" ? window.innerWidth : 0,
@@ -98,6 +98,10 @@ export default function FooterDesktop({ menus }: FooterProps) {
       setShouldAnimate(false);
     }
   }, [isMenuOpen]);
+
+  useEffect(() => {
+    setConsoleOpen(false);
+  }, [pathname, setConsoleOpen]);
 
   // 菜单 hover 颜色动画处理
   const handleMenuHover = (index: number, isActive: boolean) => {

@@ -367,7 +367,7 @@ export default function HeaderWrapper({
             direction={transitionDirection}
             isVisible={showTitle}
           >
-            <span>{displayTitle}</span>
+            <h1>{displayTitle}</h1>
           </TitleTransition>
           <TitleTransition
             direction={transitionDirection}
