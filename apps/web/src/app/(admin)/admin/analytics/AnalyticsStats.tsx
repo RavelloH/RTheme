@@ -1,13 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { AnalyticsStatsData } from "@repo/shared-types";
+import type { AnalyticsStatsData, GetAnalyticsStats } from "@repo/shared-types";
 
 import { getAnalyticsStats } from "@/actions/analytics";
 import AnalyticsOverview from "@/app/(admin)/admin/analytics/AnalyticsOverview";
 import AnalyticsTrendChart from "@/app/(admin)/admin/analytics/AnalyticsTrendChart";
 import DimensionStats from "@/app/(admin)/admin/analytics/DimensionStats";
-import PageViewTable from "@/app/(admin)/admin/analytics/PageViewTable";
+import PageViewTable, {
+  type AnalyticsFilterSummary,
+  type AnalyticsTableQuery,
+} from "@/app/(admin)/admin/analytics/PageViewTable";
 import PathStatsChart from "@/app/(admin)/admin/analytics/PathStatsChart";
 import type { TimeRangeValue } from "@/app/(admin)/admin/analytics/TimeRangeSelector";
 import PathTrendChart from "@/app/(admin)/admin/analytics/VisitTrendChart";
@@ -16,9 +19,31 @@ import { useMainColor } from "@/components/client/layout/ThemeProvider";
 import generateComplementary from "@/lib/shared/complementary";
 import generateGradient from "@/lib/shared/gradient";
 
+function isSameTableQuery(
+  prev: AnalyticsTableQuery,
+  next: AnalyticsTableQuery,
+): boolean {
+  const keys = new Set([...Object.keys(prev), ...Object.keys(next)]);
+  for (const key of keys) {
+    const typedKey = key as keyof AnalyticsTableQuery;
+    if (prev[typedKey] !== next[typedKey]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export default function AnalyticsStats() {
   const [data, setData] = useState<AnalyticsStatsData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [tableQuery, setTableQuery] = useState<AnalyticsTableQuery>({});
+  const [filterSummary, setFilterSummary] = useState<AnalyticsFilterSummary>({
+    activeCount: 0,
+    text: "筛选",
+  });
+  const [openFilterToken, setOpenFilterToken] = useState<number | undefined>(
+    undefined,
+  );
   const themeColor = useMainColor(); // 从 ThemeProvider 获取主题颜色
 
   // 从 localStorage 读取上次选择的时间段
@@ -44,26 +69,53 @@ export default function AnalyticsStats() {
     }
   };
 
+  const handleTableQueryChange = useCallback((query: AnalyticsTableQuery) => {
+    setTableQuery((prev) => (isSameTableQuery(prev, query) ? prev : query));
+  }, []);
+
+  const handleFilterSummaryChange = useCallback(
+    (summary: AnalyticsFilterSummary) => {
+      setFilterSummary((prev) => {
+        if (
+          prev.activeCount === summary.activeCount &&
+          prev.text === summary.text
+        ) {
+          return prev;
+        }
+        return summary;
+      });
+    },
+    [],
+  );
+
+  const handleOpenFilterDialog = useCallback(() => {
+    setOpenFilterToken((prev) => (prev ?? 0) + 1);
+  }, []);
+
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      let params: {
+      let baseParams: {
         days?: number;
         hours?: number;
         startDate?: string;
         endDate?: string;
       };
       if (timeRange.type === "preset") {
-        params = { days: timeRange.days };
+        baseParams = { days: timeRange.days };
       } else if (timeRange.type === "hours") {
-        params = { hours: timeRange.hours };
+        baseParams = { hours: timeRange.hours };
       } else {
-        params = {
+        baseParams = {
           startDate: timeRange.startDate,
           endDate: timeRange.endDate,
         };
       }
 
+      const params: GetAnalyticsStats = {
+        ...baseParams,
+        ...tableQuery,
+      };
       const res = await getAnalyticsStats(params);
       if (!res.success) {
         setIsLoading(false);
@@ -77,7 +129,7 @@ export default function AnalyticsStats() {
       // 静默处理错误，各个子组件会显示loading状态
       setIsLoading(false);
     }
-  }, [timeRange]);
+  }, [timeRange, tableQuery]);
 
   useEffect(() => {
     fetchData();
@@ -101,6 +153,9 @@ export default function AnalyticsStats() {
           overview={data?.overview || null}
           timeRange={timeRange}
           onTimeRangeChange={handleTimeRangeChange}
+          filterSummaryText={filterSummary.text}
+          activeFilterCount={filterSummary.activeCount}
+          onOpenFilterDialog={handleOpenFilterDialog}
         />
         <PathTrendChart
           dailyTrend={data?.dailyTrend || null}
@@ -108,7 +163,10 @@ export default function AnalyticsStats() {
           isLoading={isLoading}
           timeRange={timeRange}
         />
-        <AnalyticsTrendChart mainColor={themeColor.primary} />
+        <AnalyticsTrendChart
+          mainColor={themeColor.primary}
+          filters={tableQuery}
+        />
       </RowGrid>
       <RowGrid>
         <PathStatsChart
@@ -173,7 +231,11 @@ export default function AnalyticsStats() {
         />
       </RowGrid>
       <RowGrid>
-        <PageViewTable />
+        <PageViewTable
+          onQueryChange={handleTableQueryChange}
+          onFilterSummaryChange={handleFilterSummaryChange}
+          requestOpenFilterToken={openFilterToken}
+        />
       </RowGrid>
     </>
   );

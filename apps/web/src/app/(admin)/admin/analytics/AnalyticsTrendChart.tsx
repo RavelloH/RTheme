@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { getRealTimeStats } from "@/actions/analytics";
+import type { AnalyticsTableQuery } from "@/app/(admin)/admin/analytics/PageViewTable";
 import AreaChart, {
   type AreaChartDataPoint,
   type SeriesConfig,
@@ -13,18 +14,23 @@ import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 interface AnalyticsTrendChartProps {
   mainColor: string;
+  filters?: AnalyticsTableQuery;
 }
 
 export default function AnalyticsTrendChart({
   mainColor,
+  filters,
 }: AnalyticsTrendChartProps) {
   const [chartData, setChartData] = useState<AreaChartDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
   // 获取实时访问数据
-  const fetchRealTimeData = async () => {
+  const fetchRealTimeData = useCallback(async () => {
     try {
-      const res = await getRealTimeStats({ minutes: 60 });
+      const res = await getRealTimeStats({
+        minutes: 60,
+        ...filters,
+      });
       if (res.success && res.data) {
         const data: AreaChartDataPoint[] = res.data.dataPoints.map((point) => ({
           time: point.time,
@@ -38,9 +44,10 @@ export default function AnalyticsTrendChart({
       console.error("获取实时访问数据失败:", error);
       setLoading(false);
     }
-  };
+  }, [filters]);
 
   useEffect(() => {
+    setLoading(true);
     // 立即获取一次数据
     fetchRealTimeData();
 
@@ -50,7 +57,7 @@ export default function AnalyticsTrendChart({
     }, 60000); // 60秒
 
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchRealTimeData]);
 
   const series: SeriesConfig[] = [
     {

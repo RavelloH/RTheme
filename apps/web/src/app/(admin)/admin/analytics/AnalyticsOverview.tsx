@@ -1,5 +1,6 @@
 "use client";
 
+import { RiFilterLine } from "@remixicon/react";
 import type { AnalyticsOverview as AnalyticsOverviewType } from "@repo/shared-types";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -7,18 +8,25 @@ import type { TimeRangeValue } from "@/app/(admin)/admin/analytics/TimeRangeSele
 import TimeRangeSelector from "@/app/(admin)/admin/analytics/TimeRangeSelector";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import { AutoTransition } from "@/ui/AutoTransition";
+import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 interface AnalyticsOverviewProps {
   overview: AnalyticsOverviewType | null;
   timeRange: TimeRangeValue;
   onTimeRangeChange: (value: TimeRangeValue) => void;
+  filterSummaryText?: string;
+  activeFilterCount?: number;
+  onOpenFilterDialog?: () => void;
 }
 
 export default function AnalyticsOverview({
   overview,
   timeRange,
   onTimeRangeChange,
+  filterSummaryText = "筛选",
+  activeFilterCount = 0,
+  onOpenFilterDialog,
 }: AnalyticsOverviewProps) {
   const averageViewsLabel =
     timeRange.type === "hours" ? "时均访问" : "日均访问";
@@ -38,10 +46,26 @@ export default function AnalyticsOverview({
             >
               <div className="flex items-center justify-between">
                 <div className="text-2xl py-2">访问分析</div>
-                <TimeRangeSelector
-                  value={timeRange}
-                  onChange={onTimeRangeChange}
-                />
+                <div className="flex items-center gap-2">
+                  <Clickable
+                    hoverScale={1}
+                    onClick={() => onOpenFilterDialog?.()}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-sm border transition-colors ${
+                      activeFilterCount > 0
+                        ? "text-primary bg-primary/30 border-primary/40"
+                        : "text-muted-foreground bg-background border-foreground/10 hover:border-foreground/20"
+                    }`}
+                  >
+                    <RiFilterLine size="1em" />
+                    <span className="text-sm font-medium">
+                      {filterSummaryText}
+                    </span>
+                  </Clickable>
+                  <TimeRangeSelector
+                    value={timeRange}
+                    onChange={onTimeRangeChange}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4">
