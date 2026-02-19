@@ -546,15 +546,37 @@ export default function PageViewTable() {
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">
+                    浏览器版本
+                  </label>
+                  <p className="text-sm">
+                    {selectedView.browserVersion || "-"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">
                     操作系统
                   </label>
                   <p className="text-sm">{selectedView.os || "-"}</p>
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">
+                    系统版本
+                  </label>
+                  <p className="text-sm">{selectedView.osVersion || "-"}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">
                     屏幕尺寸
                   </label>
                   <p className="text-sm">{selectedView.screenSize || "-"}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm text-muted-foreground">
+                    完整 UA
+                  </label>
+                  <p className="text-sm font-mono break-all whitespace-pre-wrap">
+                    {selectedView.userAgent || "-"}
+                  </p>
                 </div>
               </div>
             </div>
@@ -572,6 +594,16 @@ export default function PageViewTable() {
                 <div>
                   <label className="text-sm text-muted-foreground">时区</label>
                   <p className="text-sm">{selectedView.timezone || "-"}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">
+                    停留时长
+                  </label>
+                  <p className="text-sm">
+                    {typeof selectedView.duration === "number"
+                      ? `${selectedView.duration} 秒`
+                      : "-"}
+                  </p>
                 </div>
               </div>
             </div>

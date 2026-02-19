@@ -55,6 +55,10 @@ export interface PageViewItem {
   path: string;
   visitorId: string;
   ipAddress: string;
+  userAgent: string | null;
+  browserVersion: string | null;
+  osVersion: string | null;
+  duration: number | null;
   referer: string | null;
   country: string | null;
   region: string | null;
