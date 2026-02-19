@@ -16712,6 +16712,10 @@ components:
                     type: integer
                     minimum: 0
                     maximum: 9007199254740991
+                  timeoutCount:
+                    type: integer
+                    minimum: 0
+                    maximum: 9007199254740991
                 required:
                   - acceptedCount
                   - rejectedCount
@@ -16719,6 +16723,7 @@ components:
                   - verifyDohCount
                   - verifyJwksCount
                   - errorCount
+                  - timeoutCount
                 additionalProperties: false
             required:
               - time
