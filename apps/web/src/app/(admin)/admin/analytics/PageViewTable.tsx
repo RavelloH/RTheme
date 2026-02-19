@@ -11,6 +11,16 @@ import Clickable from "@/ui/Clickable";
 import { Dialog } from "@/ui/Dialog";
 import type { TableColumn } from "@/ui/Table";
 
+function formatStayDuration(duration: number | null | undefined): string {
+  if (typeof duration !== "number") {
+    return "-";
+  }
+  if (duration === 0) {
+    return "从此页退出";
+  }
+  return `${duration} 秒`;
+}
+
 export default function PageViewTable() {
   const [data, setData] = useState<PageViewItem[]>([]);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -600,9 +610,7 @@ export default function PageViewTable() {
                     停留时长
                   </label>
                   <p className="text-sm">
-                    {typeof selectedView.duration === "number"
-                      ? `${selectedView.duration} 秒`
-                      : "-"}
+                    {formatStayDuration(selectedView.duration)}
                   </p>
                 </div>
               </div>
