@@ -533,16 +533,31 @@ async function archivePageViews(): Promise<ArchivePageViewsResult> {
         timestamp: {
           lt: archiveBoundary,
         },
+        OR: [{ deviceType: { not: "bot" } }, { deviceType: null }],
       },
     });
 
     if (pageViewsToArchive.length === 0) {
+      const botDeleteResult = await prisma.pageView.deleteMany({
+        where: {
+          timestamp: {
+            lt: archiveBoundary,
+          },
+          deviceType: "bot",
+        },
+      });
+
+      if (botDeleteResult.count > 0) {
+        console.log(`清理 ${botDeleteResult.count} 条 bot 原始访问记录`);
+      }
+
       const expiredArchiveDeleted = await cleanupExpiredArchives(
         retentionDays,
         todayInArchiveDate,
       );
       return {
         ...emptyResult,
+        archivedRawPageViewDeleted: botDeleteResult.count,
         expiredArchiveDeleted,
       };
     }

@@ -285,6 +285,7 @@ async function collectRangeStats(
     FROM "PageView"
     WHERE ("timestamp" AT TIME ZONE ${timezone}) >= ${startTs}::timestamp
       AND ("timestamp" AT TIME ZONE ${timezone}) < ${endTs}::timestamp
+      AND ("deviceType" IS NULL OR "deviceType" <> 'bot')
   `;
 
   const archiveRows = await prisma.pageViewArchive.findMany({
@@ -325,6 +326,7 @@ async function collectRangeStats(
       FROM "PageView"
       WHERE ("timestamp" AT TIME ZONE ${timezone}) >= ${startTs}::timestamp
         AND ("timestamp" AT TIME ZONE ${timezone}) < ${endTs}::timestamp
+        AND ("deviceType" IS NULL OR "deviceType" <> 'bot')
       GROUP BY "path"
     `,
     prisma.$queryRaw<Array<{ referer: string | null; count: bigint }>>`
@@ -332,6 +334,7 @@ async function collectRangeStats(
       FROM "PageView"
       WHERE ("timestamp" AT TIME ZONE ${timezone}) >= ${startTs}::timestamp
         AND ("timestamp" AT TIME ZONE ${timezone}) < ${endTs}::timestamp
+        AND ("deviceType" IS NULL OR "deviceType" <> 'bot')
       GROUP BY "referer"
     `,
   ]);

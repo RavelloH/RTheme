@@ -1325,14 +1325,21 @@ export async function getVisitStats(
           COUNT(DISTINCT "visitorId") as unique_visitors
         FROM "PageView"
         WHERE "timestamp" >= ${last24Hours}
+          AND ("deviceType" IS NULL OR "deviceType" <> 'bot')
       `,
 
       // 精确数据的总数
-      prisma.pageView.count(),
+      prisma.pageView.count({
+        where: {
+          OR: [{ deviceType: { not: "bot" } }, { deviceType: null }],
+        },
+      }),
 
       // 总独立访客数
       prisma.$queryRaw<Array<{ count: bigint }>>`
-        SELECT COUNT(DISTINCT "visitorId") as count FROM "PageView"
+        SELECT COUNT(DISTINCT "visitorId") as count
+        FROM "PageView"
+        WHERE ("deviceType" IS NULL OR "deviceType" <> 'bot')
       `,
 
       // 所有归档数据
@@ -1355,6 +1362,7 @@ export async function getVisitStats(
           COUNT(DISTINCT "visitorId") as unique_visitors
         FROM "PageView"
         WHERE "timestamp" >= ${last7DaysStart}
+          AND ("deviceType" IS NULL OR "deviceType" <> 'bot')
       `,
 
       // 最近7天归档数据
@@ -1382,6 +1390,7 @@ export async function getVisitStats(
           COUNT(DISTINCT "visitorId") as unique_visitors
         FROM "PageView"
         WHERE "timestamp" >= ${last30DaysStart}
+          AND ("deviceType" IS NULL OR "deviceType" <> 'bot')
       `,
 
       // 最近30天归档数据
@@ -1417,6 +1426,7 @@ export async function getVisitStats(
         MAX("timestamp") as last_view
       FROM "PageView"
       WHERE "timestamp" >= ${last24Hours}
+        AND ("deviceType" IS NULL OR "deviceType" <> 'bot')
       GROUP BY "visitorId"
     `;
 
@@ -1479,6 +1489,9 @@ export async function getVisitStats(
     });
 
     const firstPageView = await prisma.pageView.findFirst({
+      where: {
+        OR: [{ deviceType: { not: "bot" } }, { deviceType: null }],
+      },
       orderBy: {
         timestamp: "asc",
       },

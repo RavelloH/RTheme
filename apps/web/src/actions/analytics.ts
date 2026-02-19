@@ -31,6 +31,7 @@ import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 import { join } from "path";
 import { UAParser } from "ua-parser-js";
+import { isAIBot, isBot } from "ua-parser-js/helpers";
 
 import {
   BATCH_SIZE,
@@ -357,10 +358,13 @@ export async function trackPageView(
     const browserVersion = uaResult.browser.version || null;
     const os = uaResult.os.name || null;
     const osVersion = uaResult.os.version || null;
+    const isBotVisitor = isBot(uaResult) || isAIBot(uaResult);
 
-    // 判断设备类型
+    // 判断设备类型（机器人统一标记为 bot）
     let deviceType: string | null = null;
-    if (uaResult.device.type) {
+    if (isBotVisitor) {
+      deviceType = "bot";
+    } else if (uaResult.device.type) {
       deviceType = uaResult.device.type; // mobile, tablet 等
     } else if (uaResult.device.model || uaResult.device.vendor) {
       deviceType = "mobile";
@@ -681,6 +685,7 @@ export async function getAnalyticsStats(
           gte: startDate,
           lte: endDate,
         },
+        OR: [{ deviceType: { not: "bot" } }, { deviceType: null }],
       },
       select: {
         path: true,
@@ -802,6 +807,7 @@ export async function getAnalyticsStats(
               gte: todayStartUtc,
               lt: tomorrowStartUtc,
             },
+            OR: [{ deviceType: { not: "bot" } }, { deviceType: null }],
           },
         }),
         prisma.pageViewArchive.findUnique({
@@ -1452,6 +1458,7 @@ export async function getRealTimeStats(
           gte: startTime,
           lte: now,
         },
+        OR: [{ deviceType: { not: "bot" } }, { deviceType: null }],
       },
       select: {
         timestamp: true,
