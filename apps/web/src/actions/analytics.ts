@@ -111,6 +111,206 @@ async function normalizeReferer(
   }
 }
 
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+type DateKeyParts = {
+  year: number;
+  month: number;
+  day: number;
+};
+
+type ZonedDateTimeInput = DateKeyParts & {
+  hour: number;
+  minute: number;
+  second: number;
+  millisecond: number;
+};
+
+/**
+ * 规范化统计时区配置
+ */
+function normalizeAnalyticsTimezone(rawTimezone: unknown): string {
+  const timezone =
+    typeof rawTimezone === "string" && rawTimezone.trim()
+      ? rawTimezone.trim()
+      : "UTC";
+
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date());
+    return timezone;
+  } catch {
+    return "UTC";
+  }
+}
+
+/**
+ * 解析 YYYY-MM-DD 本地日期键
+ */
+function parseDateKey(dateKey: string): DateKeyParts | null {
+  const match = dateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+
+  const year = Number.parseInt(match[1]!, 10);
+  const month = Number.parseInt(match[2]!, 10);
+  const day = Number.parseInt(match[3]!, 10);
+
+  if (
+    !Number.isFinite(year) ||
+    !Number.isFinite(month) ||
+    !Number.isFinite(day)
+  ) {
+    return null;
+  }
+
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  if (
+    probe.getUTCFullYear() !== year ||
+    probe.getUTCMonth() !== month - 1 ||
+    probe.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return { year, month, day };
+}
+
+/**
+ * 本地日期加减天数
+ */
+function addDaysToDateKey(dateKey: string, days: number): string {
+  const parsed = parseDateKey(dateKey);
+  if (!parsed) return dateKey;
+
+  const base = new Date(Date.UTC(parsed.year, parsed.month - 1, parsed.day));
+  base.setUTCDate(base.getUTCDate() + days);
+  return base.toISOString().slice(0, 10);
+}
+
+/**
+ * 比较两个本地日期键的天数差（含首尾）
+ */
+function getInclusiveDayCount(
+  startDateKey: string,
+  endDateKey: string,
+): number {
+  const start = parseDateKey(startDateKey);
+  const end = parseDateKey(endDateKey);
+  if (!start || !end) return 0;
+
+  const startMs = Date.UTC(start.year, start.month - 1, start.day);
+  const endMs = Date.UTC(end.year, end.month - 1, end.day);
+  return Math.floor((endMs - startMs) / DAY_IN_MS) + 1;
+}
+
+/**
+ * 获取日期在指定时区下的本地日期键（YYYY-MM-DD）
+ */
+function getDateKeyInTimezone(date: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+
+  if (!year || !month || !day) {
+    return date.toISOString().slice(0, 10);
+  }
+
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * 获取给定 UTC 时间在指定时区下的偏移（毫秒）
+ */
+function getTimezoneOffsetMs(date: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+
+  const year = Number(parts.find((part) => part.type === "year")?.value);
+  const month = Number(parts.find((part) => part.type === "month")?.value);
+  const day = Number(parts.find((part) => part.type === "day")?.value);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value);
+  const minute = Number(parts.find((part) => part.type === "minute")?.value);
+  const second = Number(parts.find((part) => part.type === "second")?.value);
+
+  const asUtcMs = Date.UTC(year, month - 1, day, hour, minute, second, 0);
+  const utcMs = Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    date.getUTCHours(),
+    date.getUTCMinutes(),
+    date.getUTCSeconds(),
+    0,
+  );
+  return asUtcMs - utcMs;
+}
+
+/**
+ * 指定时区下的本地时间 -> UTC 时间
+ */
+function zonedDateTimeToUtc(input: ZonedDateTimeInput, timeZone: string): Date {
+  const utcGuessMs = Date.UTC(
+    input.year,
+    input.month - 1,
+    input.day,
+    input.hour,
+    input.minute,
+    input.second,
+    input.millisecond,
+  );
+
+  let utcDate = new Date(utcGuessMs);
+  const firstOffset = getTimezoneOffsetMs(utcDate, timeZone);
+  utcDate = new Date(utcGuessMs - firstOffset);
+
+  const secondOffset = getTimezoneOffsetMs(utcDate, timeZone);
+  if (secondOffset !== firstOffset) {
+    utcDate = new Date(utcGuessMs - secondOffset);
+  }
+
+  return utcDate;
+}
+
+/**
+ * 指定时区下某本地日期的起始 UTC 时间
+ */
+function getUtcStartOfDateKey(dateKey: string, timeZone: string): Date | null {
+  const parsed = parseDateKey(dateKey);
+  if (!parsed) return null;
+
+  return zonedDateTimeToUtc(
+    {
+      ...parsed,
+      hour: 0,
+      minute: 0,
+      second: 0,
+      millisecond: 0,
+    },
+    timeZone,
+  );
+}
+
+/**
+ * 将本地日期键转换为归档表中的日期（UTC 零点）
+ */
+function dateKeyToArchiveDate(dateKey: string): Date {
+  return new Date(`${dateKey}T00:00:00.000Z`);
+}
+
 /**
  * 追踪页面浏览
  */
@@ -358,12 +558,39 @@ export async function getAnalyticsStats(
       endDate: customEndDate,
     } = params;
 
+    const configs = await prisma.config.findMany({
+      where: {
+        key: {
+          in: ["analytics.timezone", "analytics.precisionDays"],
+        },
+      },
+    });
+    const configMap = new Map(
+      configs.map((item) => [
+        item.key,
+        (item.value as { default: unknown }).default,
+      ]),
+    );
+
+    const analyticsTimezone = normalizeAnalyticsTimezone(
+      configMap.get("analytics.timezone"),
+    );
+
+    const _precisionDays =
+      typeof configMap.get("analytics.precisionDays") === "number"
+        ? (configMap.get("analytics.precisionDays") as number)
+        : 30;
+
     let startDate: Date;
     let endDate: Date;
     let calculatedDays: number;
     let isHourlyMode = false; // 是否为小时模式
+    let rangeStartDayKey: string;
+    let rangeEndDayKey: string;
 
-    // 计算时间范围（使用 UTC）
+    // 计算时间范围：
+    // - 小时模式：滚动窗口，使用绝对 UTC 时间
+    // - 天/自定义模式：按 analytics.timezone 的本地日边界
     const now = new Date();
 
     if (hours !== undefined) {
@@ -374,67 +601,77 @@ export async function getAnalyticsStats(
 
       // 计算涵盖的天数（用于图表显示）
       calculatedDays = hours; // 在小时模式下，用小时数代替天数
+      rangeStartDayKey = getDateKeyInTimezone(startDate, analyticsTimezone);
+      rangeEndDayKey = getDateKeyInTimezone(endDate, analyticsTimezone);
     } else if (customStartDate && customEndDate) {
       // 使用自定义日期范围
-      const [startYear, startMonth, startDay] = customStartDate
-        .split("-")
-        .map(Number);
-      const [endYear, endMonth, endDay] = customEndDate.split("-").map(Number);
+      const startParsed = parseDateKey(customStartDate);
+      const endParsed = parseDateKey(customEndDate);
+      if (!startParsed || !endParsed) {
+        return response.badRequest({
+          message: "日期格式无效，请使用 YYYY-MM-DD",
+        }) as unknown as GetAnalyticsStatsResponse;
+      }
 
-      startDate = new Date(
-        Date.UTC(startYear!, startMonth! - 1, startDay!, 0, 0, 0, 0),
-      );
-      endDate = new Date(
-        Date.UTC(endYear!, endMonth! - 1, endDay!, 23, 59, 59, 999),
-      );
+      rangeStartDayKey = customStartDate;
+      rangeEndDayKey = customEndDate;
 
-      // 计算天数差异
-      calculatedDays =
-        Math.ceil(
-          (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
-        ) + 1;
+      const startUtc = getUtcStartOfDateKey(
+        rangeStartDayKey,
+        analyticsTimezone,
+      );
+      const endExclusiveUtc = getUtcStartOfDateKey(
+        addDaysToDateKey(rangeEndDayKey, 1),
+        analyticsTimezone,
+      );
+      if (!startUtc || !endExclusiveUtc) {
+        return response.badRequest({
+          message: "日期范围计算失败，请检查参数",
+        }) as unknown as GetAnalyticsStatsResponse;
+      }
+
+      startDate = startUtc;
+      endDate = new Date(endExclusiveUtc.getTime() - 1);
+      calculatedDays = getInclusiveDayCount(rangeStartDayKey, rangeEndDayKey);
     } else {
       // 使用天数方式
       const dayCount = days || 30;
       calculatedDays = dayCount;
 
-      startDate = new Date(
-        Date.UTC(
-          now.getUTCFullYear(),
-          now.getUTCMonth(),
-          now.getUTCDate() - (dayCount - 1),
-          0,
-          0,
-          0,
-          0,
-        ),
-      );
+      rangeEndDayKey = getDateKeyInTimezone(now, analyticsTimezone);
+      rangeStartDayKey = addDaysToDateKey(rangeEndDayKey, -(dayCount - 1));
 
-      endDate = new Date(
-        Date.UTC(
-          now.getUTCFullYear(),
-          now.getUTCMonth(),
-          now.getUTCDate(),
-          23,
-          59,
-          59,
-          999,
-        ),
+      const startUtc = getUtcStartOfDateKey(
+        rangeStartDayKey,
+        analyticsTimezone,
       );
+      const endExclusiveUtc = getUtcStartOfDateKey(
+        addDaysToDateKey(rangeEndDayKey, 1),
+        analyticsTimezone,
+      );
+      if (!startUtc || !endExclusiveUtc) {
+        return response.serverError() as unknown as GetAnalyticsStatsResponse;
+      }
+
+      startDate = startUtc;
+      endDate = new Date(endExclusiveUtc.getTime() - 1);
     }
 
-    // 归档数据使用的日期范围（需要包含结束日期的下一天）
-    const archiveStartDate = new Date(startDate);
-    const archiveEndDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
-    archiveEndDate.setUTCHours(0, 0, 0, 0);
-
-    // 获取配置中的 precisionDays（用于了解归档策略，但现在我们总是查询两个表）
-    const precisionConfig = await prisma.config.findUnique({
-      where: { key: "analytics.precisionDays" },
-    });
-    const _precisionDays = precisionConfig
-      ? ((precisionConfig.value as { default: number }).default as number)
-      : 30;
+    // 归档数据日期范围：
+    // - 天/自定义模式：按本地日边界映射到归档日期键
+    // - 小时模式：保留原有 UTC 逻辑（归档为天粒度，只能近似）
+    let archiveStartDate: Date;
+    let archiveEndDate: Date;
+    if (isHourlyMode) {
+      archiveStartDate = new Date(startDate);
+      archiveEndDate = new Date(endDate.getTime() + DAY_IN_MS);
+      archiveEndDate.setUTCHours(0, 0, 0, 0);
+    } else {
+      archiveStartDate = dateKeyToArchiveDate(rangeStartDayKey);
+      archiveEndDate = dateKeyToArchiveDate(
+        addDaysToDateKey(rangeEndDayKey, 1),
+      );
+    }
 
     // 1. 查询 PageView 数据（精确数据）
     // 注意：PageView 只包含未归档的数据，通常是最近 precisionDays 天的数据
@@ -547,32 +784,31 @@ export async function getAnalyticsStats(
     const uniqueVisitors =
       uniqueVisitorsFromPageView + uniqueVisitorsFromArchive;
 
-    // 今日访问（只统计 PageView，使用 UTC）
-    const todayStart = new Date(
-      Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate(),
-        0,
-        0,
-        0,
-        0,
-      ),
+    // 今日访问（按 analytics.timezone）
+    const todayDayKey = getDateKeyInTimezone(now, analyticsTimezone);
+    const todayStartUtc = getUtcStartOfDateKey(todayDayKey, analyticsTimezone);
+    const tomorrowStartUtc = getUtcStartOfDateKey(
+      addDaysToDateKey(todayDayKey, 1),
+      analyticsTimezone,
     );
-    const todayEnd = new Date(
-      Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate(),
-        23,
-        59,
-        59,
-        999,
-      ),
-    );
-    const todayViews = pageViews.filter(
-      (v) => v.timestamp >= todayStart && v.timestamp <= todayEnd,
-    ).length;
+    const todayEndUtc = tomorrowStartUtc
+      ? new Date(tomorrowStartUtc.getTime() - 1)
+      : new Date();
+
+    const todayViewsFromPageView =
+      todayStartUtc && tomorrowStartUtc
+        ? pageViews.filter(
+            (view) =>
+              view.timestamp >= todayStartUtc && view.timestamp <= todayEndUtc,
+          ).length
+        : 0;
+
+    const todayArchiveDateKey = dateKeyToArchiveDate(todayDayKey).toISOString();
+    const todayViewsFromArchive = archivedData
+      .filter((item) => item.date.toISOString() === todayArchiveDateKey)
+      .reduce((sum, item) => sum + item.totalViews, 0);
+
+    const todayViews = todayViewsFromPageView + todayViewsFromArchive;
 
     const averageViews =
       calculatedDays > 0 ? Math.round(totalViews / calculatedDays) : 0;
@@ -689,6 +925,25 @@ export async function getAnalyticsStats(
       totalSessions > 0 ? totalViews / totalSessions : 0;
 
     // 4. 计算每日趋势
+    const dayStartIsoCache = new Map<string, string>();
+    const getDayStartIsoByDateKey = (dateKey: string): string => {
+      const cached = dayStartIsoCache.get(dateKey);
+      if (cached) return cached;
+
+      const utcStart = getUtcStartOfDateKey(dateKey, analyticsTimezone);
+      const iso = utcStart
+        ? utcStart.toISOString()
+        : new Date(`${dateKey}T00:00:00.000Z`).toISOString();
+      dayStartIsoCache.set(dateKey, iso);
+      return iso;
+    };
+
+    const getDayStartIsoByDate = (date: Date): string => {
+      return getDayStartIsoByDateKey(
+        getDateKeyInTimezone(date, analyticsTimezone),
+      );
+    };
+
     const dailyTrendMap = new Map<
       string,
       { views: number; visitors: Set<string> }
@@ -706,21 +961,11 @@ export async function getAnalyticsStats(
     } else {
       // 天模式：按天初始化
       for (let i = 0; i < calculatedDays; i++) {
-        const date = new Date(startDate);
-        date.setUTCDate(date.getUTCDate() + i);
-        const dayStart = new Date(
-          Date.UTC(
-            date.getUTCFullYear(),
-            date.getUTCMonth(),
-            date.getUTCDate(),
-            0,
-            0,
-            0,
-            0,
-          ),
-        );
-        const dateKey = dayStart.toISOString();
-        dailyTrendMap.set(dateKey, { views: 0, visitors: new Set() });
+        const dateKey = addDaysToDateKey(rangeStartDayKey, i);
+        dailyTrendMap.set(getDayStartIsoByDateKey(dateKey), {
+          views: 0,
+          visitors: new Set(),
+        });
       }
     }
 
@@ -731,19 +976,8 @@ export async function getAnalyticsStats(
         // 小时精度：取到小时级别
         timeKey = view.timestamp.toISOString().substring(0, 13) + ":00:00.000Z";
       } else {
-        // 天精度：取到当天零点（UTC）
-        const dayStart = new Date(
-          Date.UTC(
-            view.timestamp.getUTCFullYear(),
-            view.timestamp.getUTCMonth(),
-            view.timestamp.getUTCDate(),
-            0,
-            0,
-            0,
-            0,
-          ),
-        );
-        timeKey = dayStart.toISOString();
+        // 天精度：取 analytics.timezone 的当天零点
+        timeKey = getDayStartIsoByDate(view.timestamp);
       }
       const trend = dailyTrendMap.get(timeKey);
       if (trend) {
@@ -755,18 +989,8 @@ export async function getAnalyticsStats(
     // 聚合归档数据（仅在天模式下使用）
     if (!isHourlyMode) {
       for (const archive of archivedData) {
-        const dayStart = new Date(
-          Date.UTC(
-            archive.date.getUTCFullYear(),
-            archive.date.getUTCMonth(),
-            archive.date.getUTCDate(),
-            0,
-            0,
-            0,
-            0,
-          ),
-        );
-        const dateKey = dayStart.toISOString();
+        const archiveDateKey = archive.date.toISOString().slice(0, 10);
+        const dateKey = getDayStartIsoByDateKey(archiveDateKey);
         const trend = dailyTrendMap.get(dateKey);
         if (trend) {
           trend.views += archive.totalViews;
@@ -828,21 +1052,8 @@ export async function getAnalyticsStats(
     } else {
       // 天模式：按天初始化
       for (let i = 0; i < calculatedDays; i++) {
-        const date = new Date(startDate);
-        date.setUTCDate(date.getUTCDate() + i);
-        const dayStart = new Date(
-          Date.UTC(
-            date.getUTCFullYear(),
-            date.getUTCMonth(),
-            date.getUTCDate(),
-            0,
-            0,
-            0,
-            0,
-          ),
-        );
-        const dateKey = dayStart.toISOString();
-        dailyPathTrendMap.set(dateKey, {});
+        const dateKey = addDaysToDateKey(rangeStartDayKey, i);
+        dailyPathTrendMap.set(getDayStartIsoByDateKey(dateKey), {});
       }
     }
 
@@ -854,18 +1065,7 @@ export async function getAnalyticsStats(
           timeKey =
             view.timestamp.toISOString().substring(0, 13) + ":00:00.000Z";
         } else {
-          const dayStart = new Date(
-            Date.UTC(
-              view.timestamp.getUTCFullYear(),
-              view.timestamp.getUTCMonth(),
-              view.timestamp.getUTCDate(),
-              0,
-              0,
-              0,
-              0,
-            ),
-          );
-          timeKey = dayStart.toISOString();
+          timeKey = getDayStartIsoByDate(view.timestamp);
         }
         const pathViews = dailyPathTrendMap.get(timeKey);
         if (pathViews) {
