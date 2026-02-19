@@ -153,7 +153,9 @@ async function renderPostPage(slug: string) {
 
     [renderedContent, recommendedPosts] = await Promise.all([
       renderPostContent(post),
-      getRecommendedPosts(post, { limit: 3 }),
+      getRecommendedPosts(post, { limit: 3, candidateLimit: 24 }).catch(
+        () => [],
+      ),
     ]);
 
     // 获取所有分类的路径

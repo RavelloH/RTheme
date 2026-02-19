@@ -515,6 +515,14 @@ export async function getRecommendedPosts(
         currentPost.categories.map((c) => c.id),
       );
       const currentTagSlugs = new Set(currentPost.tags.map((t) => t.slug));
+      const relationQueryTake = Math.min(
+        candidateLimit,
+        Math.max(limit * 6, 24),
+      );
+      const fallbackQueryTake = Math.min(
+        candidateLimit,
+        Math.max(limit * 3, 12),
+      );
 
       const postSelect = {
         title: true,
@@ -555,7 +563,6 @@ export async function getRecommendedPosts(
       const baseWhere = {
         status: "PUBLISHED" as const,
         deletedAt: null,
-        slug: { not: currentPost.slug },
       };
 
       const relationWhereClauses: Array<Record<string, unknown>> = [];
@@ -582,29 +589,41 @@ export async function getRecommendedPosts(
         });
       }
 
-      const [relationCandidates, recentCandidates] = await Promise.all([
+      const relationCandidates =
         relationWhereClauses.length > 0
-          ? prisma.post.findMany({
+          ? await prisma.post.findMany({
               where: {
                 ...baseWhere,
+                slug: { not: currentPost.slug },
                 OR: relationWhereClauses,
               },
               select: postSelect,
               orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
-              take: candidateLimit,
+              take: relationQueryTake,
             })
-          : Promise.resolve([]),
-        prisma.post.findMany({
-          where: baseWhere,
-          select: postSelect,
-          orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
-          take: candidateLimit,
-        }),
-      ]);
+          : [];
+
+      const recentCandidates =
+        relationCandidates.length < limit
+          ? await prisma.post.findMany({
+              where: {
+                ...baseWhere,
+                slug: {
+                  notIn: [
+                    currentPost.slug,
+                    ...relationCandidates.map((post) => post.slug),
+                  ],
+                },
+              },
+              select: postSelect,
+              orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+              take: fallbackQueryTake,
+            })
+          : [];
 
       const candidatesMap = new Map<
         string,
-        (typeof recentCandidates)[number]
+        (typeof relationCandidates)[number]
       >();
       for (const post of relationCandidates) {
         candidatesMap.set(post.slug, post);
