@@ -20,6 +20,9 @@ export default function AnalyticsOverview({
   timeRange,
   onTimeRangeChange,
 }: AnalyticsOverviewProps) {
+  const averageViewsLabel =
+    timeRange.type === "hours" ? "时均访问" : "日均访问";
+
   return (
     <GridItem areas={[1, 2, 3, 4]} width={3} height={0.8}>
       <AutoTransition type="scale" className="h-full">
@@ -61,7 +64,9 @@ export default function AnalyticsOverview({
                   </div>
                 </div>
                 <div className="flex flex-col">
-                  <div className="text-sm text-muted-foreground">日均访问</div>
+                  <div className="text-sm text-muted-foreground">
+                    {averageViewsLabel}
+                  </div>
                   <div className="text-3xl font-bold">
                     {overview.averageViews.toLocaleString()}
                   </div>
