@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RiEyeLine } from "@remixicon/react";
 import type { PageViewItem } from "@repo/shared-types";
 
@@ -36,8 +36,29 @@ export interface AnalyticsTableQuery {
   deviceType?: string;
   browser?: string;
   os?: string;
+  referer?: string;
+  screenSize?: string;
+  language?: string;
   timestampStart?: string;
   timestampEnd?: string;
+}
+
+export type AnalyticsQuickFilterField =
+  | "path"
+  | "referer"
+  | "browser"
+  | "os"
+  | "deviceType"
+  | "screenSize"
+  | "language"
+  | "country"
+  | "region"
+  | "city";
+
+export interface AnalyticsQuickFilterRequest {
+  token: number;
+  field: AnalyticsQuickFilterField;
+  value: string;
 }
 
 export interface AnalyticsFilterSummary {
@@ -49,6 +70,7 @@ interface PageViewTableProps {
   onQueryChange?: (query: AnalyticsTableQuery) => void;
   onFilterSummaryChange?: (summary: AnalyticsFilterSummary) => void;
   requestOpenFilterToken?: number;
+  quickFilterRequest?: AnalyticsQuickFilterRequest | null;
 }
 
 function normalizeFilterText(value: string | undefined): string | undefined {
@@ -59,6 +81,7 @@ function normalizeFilterText(value: string | undefined): string | undefined {
 
 const FILTER_LABEL_MAP: Record<string, string> = {
   path: "访问路径",
+  referer: "流量来源",
   visitorId: "访客ID",
   country: "国家",
   region: "地区",
@@ -66,6 +89,8 @@ const FILTER_LABEL_MAP: Record<string, string> = {
   deviceType: "设备类型",
   browser: "浏览器",
   os: "操作系统",
+  screenSize: "屏幕尺寸",
+  language: "语言",
   timestamp: "访问时间",
 };
 
@@ -133,6 +158,57 @@ function buildFilterSummary(
     activeCount: 0,
     text: "筛选",
   };
+}
+
+function syncFilterValuesToUrl(
+  filterConfig: FilterConfig[],
+  filters: TableFilterValues,
+): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const url = new URL(window.location.href);
+  const params = url.searchParams;
+
+  // 清除旧筛选参数
+  filterConfig.forEach((config) => {
+    params.delete(config.key);
+    if (config.type === "dateRange" && config.dateFields) {
+      params.delete(config.dateFields.start);
+      params.delete(config.dateFields.end);
+    }
+  });
+
+  // 写入新筛选参数
+  Object.entries(filters).forEach(([key, value]) => {
+    if (Array.isArray(value)) {
+      if (value.length > 0) {
+        params.set(key, value.join(","));
+      }
+      return;
+    }
+
+    if (typeof value === "object" && value !== null && "start" in value) {
+      const config = filterConfig.find((item) => item.key === key);
+      if (config?.type === "dateRange" && config.dateFields) {
+        if (value.start) {
+          params.set(config.dateFields.start, value.start);
+        }
+        if (value.end) {
+          params.set(config.dateFields.end, value.end);
+        }
+      }
+      return;
+    }
+
+    const normalized = normalizeFilterText(String(value));
+    if (normalized) {
+      params.set(key, normalized);
+    }
+  });
+
+  window.history.pushState({}, "", url.toString());
 }
 
 function buildAnalyticsTableQuery(
@@ -210,6 +286,30 @@ function buildAnalyticsTableQuery(
     query.os = os;
   }
 
+  const referer =
+    typeof filterValues.referer === "string"
+      ? normalizeFilterText(filterValues.referer)
+      : undefined;
+  if (referer) {
+    query.referer = referer;
+  }
+
+  const screenSize =
+    typeof filterValues.screenSize === "string"
+      ? normalizeFilterText(filterValues.screenSize)
+      : undefined;
+  if (screenSize) {
+    query.screenSize = screenSize;
+  }
+
+  const language =
+    typeof filterValues.language === "string"
+      ? normalizeFilterText(filterValues.language)
+      : undefined;
+  if (language) {
+    query.language = language;
+  }
+
   if (filterValues.timestamp && typeof filterValues.timestamp === "object") {
     const dateRange = filterValues.timestamp as {
       start?: string;
@@ -232,6 +332,7 @@ export default function PageViewTable({
   onQueryChange,
   onFilterSummaryChange,
   requestOpenFilterToken,
+  quickFilterRequest,
 }: PageViewTableProps) {
   const [data, setData] = useState<PageViewItem[]>([]);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -245,6 +346,7 @@ export default function PageViewTable({
   const [filterValues, setFilterValues] = useState<TableFilterValues>({});
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedView, setSelectedView] = useState<PageViewItem | null>(null);
+  const lastQuickFilterTokenRef = useRef<number | undefined>(undefined);
 
   const query = useMemo(
     () => buildAnalyticsTableQuery(searchQuery, filterValues),
@@ -285,56 +387,127 @@ export default function PageViewTable({
   };
 
   // 筛选配置
-  const filterConfig: FilterConfig[] = [
-    {
-      key: "path",
-      label: "访问路径",
-      type: "input",
-      inputType: "text",
-      placeholder: "例如：/posts/example",
-    },
-    {
-      key: "visitorId",
-      label: "访客ID",
-      type: "input",
-      inputType: "text",
-      placeholder: "输入访客ID",
-    },
-    {
-      key: "country",
-      label: "国家",
-      type: "input",
-      inputType: "text",
-      placeholder: "例如：中国",
-    },
-    {
-      key: "city",
-      label: "城市",
-      type: "input",
-      inputType: "text",
-      placeholder: "例如：北京",
-    },
-    {
-      key: "deviceType",
-      label: "设备类型",
-      type: "input",
-      inputType: "text",
-      placeholder: "例如：mobile、desktop",
-    },
-    {
-      key: "browser",
-      label: "浏览器",
-      type: "input",
-      inputType: "text",
-      placeholder: "例如：Chrome、Firefox",
-    },
-    {
-      key: "timestamp",
-      label: "访问时间",
-      type: "dateRange",
-      dateFields: { start: "timestampStart", end: "timestampEnd" },
-    },
-  ];
+  const filterConfig: FilterConfig[] = useMemo(
+    () => [
+      {
+        key: "path",
+        label: "访问路径",
+        type: "input",
+        inputType: "text",
+        placeholder: "例如：/posts/example",
+      },
+      {
+        key: "visitorId",
+        label: "访客ID",
+        type: "input",
+        inputType: "text",
+        placeholder: "输入访客ID",
+      },
+      {
+        key: "country",
+        label: "国家",
+        type: "input",
+        inputType: "text",
+        placeholder: "例如：中国",
+      },
+      {
+        key: "region",
+        label: "地区",
+        type: "input",
+        inputType: "text",
+        placeholder: "例如：北京",
+      },
+      {
+        key: "city",
+        label: "城市",
+        type: "input",
+        inputType: "text",
+        placeholder: "例如：北京",
+      },
+      {
+        key: "deviceType",
+        label: "设备类型",
+        type: "input",
+        inputType: "text",
+        placeholder: "例如：mobile、desktop",
+      },
+      {
+        key: "browser",
+        label: "浏览器",
+        type: "input",
+        inputType: "text",
+        placeholder: "例如：Chrome、Firefox",
+      },
+      {
+        key: "os",
+        label: "操作系统",
+        type: "input",
+        inputType: "text",
+        placeholder: "例如：Windows、iOS",
+      },
+      {
+        key: "referer",
+        label: "流量来源",
+        type: "input",
+        inputType: "text",
+        placeholder: "例如：google.com",
+      },
+      {
+        key: "screenSize",
+        label: "屏幕尺寸",
+        type: "input",
+        inputType: "text",
+        placeholder: "例如：1920x1080",
+      },
+      {
+        key: "language",
+        label: "语言",
+        type: "input",
+        inputType: "text",
+        placeholder: "例如：zh-CN",
+      },
+      {
+        key: "timestamp",
+        label: "访问时间",
+        type: "dateRange",
+        dateFields: { start: "timestampStart", end: "timestampEnd" },
+      },
+    ],
+    [],
+  );
+
+  // 外部快速筛选（点击路径/维度）：同值二次点击会取消该筛选，并同步 URL
+  useEffect(() => {
+    if (!quickFilterRequest) {
+      return;
+    }
+    if (lastQuickFilterTokenRef.current === quickFilterRequest.token) {
+      return;
+    }
+    lastQuickFilterTokenRef.current = quickFilterRequest.token;
+
+    const normalizedValue = normalizeFilterText(quickFilterRequest.value);
+    if (!normalizedValue) {
+      return;
+    }
+
+    const currentValue = filterValues[quickFilterRequest.field];
+    const currentNormalized =
+      typeof currentValue === "string"
+        ? normalizeFilterText(currentValue)
+        : undefined;
+
+    const nextFilters: TableFilterValues = { ...filterValues };
+    if (currentNormalized === normalizedValue) {
+      delete nextFilters[quickFilterRequest.field];
+    } else {
+      nextFilters[quickFilterRequest.field] = normalizedValue;
+    }
+
+    setFilterValues(nextFilters);
+    syncFilterValuesToUrl(filterConfig, nextFilters);
+    setPage(1);
+  }, [quickFilterRequest, filterConfig, filterValues]);
 
   // 打开详情对话框
   const openDetailDialog = (view: PageViewItem) => {
@@ -594,6 +767,7 @@ export default function PageViewTable({
         filterConfig={filterConfig}
         onFilterChange={handleFilterChange}
         externalFilterOpenToken={requestOpenFilterToken}
+        externalFilterValues={filterValues}
         striped
         hoverable
         bordered={false}
