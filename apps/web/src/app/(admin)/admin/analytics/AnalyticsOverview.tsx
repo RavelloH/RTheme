@@ -57,7 +57,9 @@ export default function AnalyticsOverview({
                     }`}
                   >
                     <RiFilterLine
-                      className="text-muted-foreground"
+                      className={
+                        activeFilterCount > 0 ? "" : "text-muted-foreground"
+                      }
                       size="1em"
                     />
                     <span

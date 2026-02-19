@@ -537,7 +537,7 @@ export default function PostsTable() {
     },
     {
       label: "数据分析",
-      onClick: () => navigate("/admin/analytics?postId=" + record.slug),
+      onClick: () => navigate("/admin/analytics?path=/posts/" + record.slug),
       icon: <RiBarChartBoxLine size="1em" />,
       variant: "ghost",
     },
