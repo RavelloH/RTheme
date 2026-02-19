@@ -420,8 +420,11 @@ export default function PostIndexTable() {
       dataIndex: "title",
       align: "left",
       sortable: false,
+      width: "32em",
       render: (value: unknown) => {
-        return <span className="font-medium">{String(value)}</span>;
+        return (
+          <span className="font-medium line-clamp-1">{String(value)}</span>
+        );
       },
     },
     {
@@ -430,12 +433,13 @@ export default function PostIndexTable() {
       dataIndex: "slug",
       align: "left",
       sortable: true,
+      width: "24em",
       mono: true,
       render: (value: unknown) => {
         return (
           <Link
             href={`/admin/posts/${String(value)}`}
-            className="text-sm text-primary font-mono"
+            className="text-sm text-primary font-mono line-clamp-1"
             presets={["hover-underline"]}
           >
             {String(value)}
