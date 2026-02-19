@@ -791,22 +791,28 @@ export async function getAnalyticsStats(
       addDaysToDateKey(todayDayKey, 1),
       analyticsTimezone,
     );
-    const todayEndUtc = tomorrowStartUtc
-      ? new Date(tomorrowStartUtc.getTime() - 1)
-      : new Date();
+    let todayViewsFromPageView = 0;
+    let todayViewsFromArchive = 0;
+    if (todayStartUtc && tomorrowStartUtc) {
+      const todayArchiveDate = dateKeyToArchiveDate(todayDayKey);
+      const [todayPageViewCount, todayArchive] = await Promise.all([
+        prisma.pageView.count({
+          where: {
+            timestamp: {
+              gte: todayStartUtc,
+              lt: tomorrowStartUtc,
+            },
+          },
+        }),
+        prisma.pageViewArchive.findUnique({
+          where: { date: todayArchiveDate },
+          select: { totalViews: true },
+        }),
+      ]);
 
-    const todayViewsFromPageView =
-      todayStartUtc && tomorrowStartUtc
-        ? pageViews.filter(
-            (view) =>
-              view.timestamp >= todayStartUtc && view.timestamp <= todayEndUtc,
-          ).length
-        : 0;
-
-    const todayArchiveDateKey = dateKeyToArchiveDate(todayDayKey).toISOString();
-    const todayViewsFromArchive = archivedData
-      .filter((item) => item.date.toISOString() === todayArchiveDateKey)
-      .reduce((sum, item) => sum + item.totalViews, 0);
+      todayViewsFromPageView = todayPageViewCount;
+      todayViewsFromArchive = todayArchive?.totalViews || 0;
+    }
 
     const todayViews = todayViewsFromPageView + todayViewsFromArchive;
 
