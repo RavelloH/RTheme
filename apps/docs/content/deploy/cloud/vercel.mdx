@@ -4,7 +4,7 @@ title: Vercel
 
 ## 简介
 
-Vercel 是 Next.js 的官方托管平台，免费套餐额度较多，同时提供 PostgreSQL 和 Redis，但瓶颈是图片优化服务较少，仅支持 1000 张照片/月。
+Vercel 是 Next.js 的官方托管平台，免费套餐额度较多，同时提供 PostgreSQL 和 Redis，是快速开始的最佳选择。
 
 Vercel 的云服务免费提供 `.vercel.app` 的二级域名，但因某种原因导致境内无法访问。绑定自己的域名可解决此问题。
 
@@ -20,21 +20,114 @@ Vercel 的云服务免费提供 `.vercel.app` 的二级域名，但因某种原�
 </div>
 <div className="fd-step">
 
+### 创建项目
+
+有两种方式可以选择：Fork 项目后导入 Vercel ，或者使用 Vercel 的一键创建功能。
+
+其中，更推荐先 Fork 再导入。因为这样后续更新更方便:
+
+1. 首先，在 GitHub 上 Fork 项目到自己的账号下。
+   ![Fork 项目](./images/vercel/vercel-1.webp)
+2. 然后，在 Vercel 上使用 Github 登录。
+   ![Github 登录](./images/vercel/vercel-2.webp)
+3. 你可能需要安装一个 Vercel 的 GitHub 应用，安装后选择 Fork 的项目。
+   ![安装应用](./images/vercel/vercel-3.webp)
+   ![同意权限](./images/vercel/vercel-4.webp)
+4. 最后，选择 Fork 的项目并导入。
+   ![选择项目](./images/vercel/vercel-5.webp)
+
+最后，你应该能看到这样的页面：
+![项目页面](./images/vercel/vercel-6.webp)
+
+此时，你需要点击“Edit”，将项目切换为 apps/web 目录：
+![切换目录](./images/vercel/vercel-7.webp)
+
+点击“Build and Output Settings”，你应该能看到下面的环境变量设置：
+![环境变量](./images/vercel/vercel-8.webp)
+
+接下来，请转到 [#获取 PostgreSQL](#获取-postgresql) 步骤，配置下面的环境变量部分。
+
+---
+
+或者，你也可以选择一键创建项目，但这样更新更复杂些，需要配置 Github Token。
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FRavelloH%2FNeutralPress&env=DATABASE_URL,REDIS_URL,MASTER_SECRET,JWT_PRIVATE_KEY,JWT_PUBLIC_KEY,LANG&envDefaults=%7B%22LANG%22%3A%22zh_CN%22%7D&envDescription=%E5%8F%82%E8%80%83%20Vercel%20%E9%83%A8%E7%BD%B2%E6%96%87%E6%A1%A3%EF%BC%9A&envLink=https%3A%2F%2Fneutralpress.net%2Fdocs%2Fdeploy%2Fcloud%2Fvercel&project-name=neutralpress&repository-name=neutralpress&demo-title=Demo%3A%20RavelloH's%20Blog&demo-description=%E5%BC%80%E5%8F%91%E8%80%85%E8%87%AA%E5%B7%B1%E7%9A%84%20NeutralPress%20%E5%AE%9E%E4%BE%8B&demo-url=https%3A%2F%2Fravelloh.com&demo-image=https%3A%2F%2Fneutralpress.net%2Frepo%2Ffront%2Ffront-1.webp)
+
+![一键创建](./images/vercel/vercel-9.webp)
+
+然后，你应该能看到下方的环境变量设置：
+![环境变量](./images/vercel/vercel-10.webp)
+
+接下来，请转到 [#获取 PostgreSQL](#获取-postgresql) 步骤，配置下面的环境变量部分。
+
+</div>
+<div className="fd-step">
+
 ### 获取 PostgreSQL
+
+然后，不要关闭当前这个页面，点击此处新打开一个 Vercel 标签页：[Vercel](https://vercel.com/)。
+
+在左侧菜单中选择“Storage”，找到 Neon 的 PostgreSQL 并Create：
+
+1. 安装 PostgreSQL:
+   ![安装 PostgreSQL](./images/vercel/vercel-11.webp)
+
+2. 同意权限
+   ![同意权限](./images/vercel/vercel-12.webp)
+
+3. 创建数据库。这里的地区可以选离你近一些的。如果你更改了地区，记得记住这个地区，我们稍后会调整函数的部署地区，使其响应更快。
+   ![创建数据库](./images/vercel/vercel-13.webp)
+
+4. 创建完成后是这样的。之后，点击 Done，进入数据库详情页面
+   ![数据库详情](./images/vercel/vercel-14.webp)
+
+5. 点击 “Show Secret”，复制下方的 `DATABASE_URL`，粘贴到下方输入框：
+   ![复制 DATABASE_URL](./images/vercel/vercel-15.webp)
+
+<ConfigForm label="DATABASE_URL" />
 
 </div>
 <div className="fd-step">
 
 ### 获取 Redis
 
+1. 回到 Vercel 的 Storage 页面，点击 Create Database。
+   ![安装 Redis](./images/vercel/vercel-16.webp)
+
+2. 选择“Redis - Serverless Redis”，同意权限并创建。
+   ![选择](./images/vercel/vercel-17.webp)
+
+3. 同样选择一个地区，并创建那个免费的计划：
+   ![选择计划](./images/vercel/vercel-18.webp)
+
+4. 创建完成后，点击 Done，进入 Redis 详情页面，点击 “Show Secret”，复制下方的 `REDIS_URL`，（刚打开的时候，可能会显示“database_provisioning_in_progress”，这个时候刷新一下就行）粘贴到下方输入框：
+   ![复制 REDIS_URL](./images/vercel/vercel-19.webp)
+
+<ConfigForm label="REDIS_URL" />
+
 </div>
 <div className="fd-step">
 
-### Fork 或导入项目
+### 导入配置
 
-<include>../../../part/fork.mdx</include>
+填写下面的表单以生成所需的环境变量。你在上面的步骤中，应该已经填写了 PostgreSQL 和 Redis 的连接字符串。其余字段不填则自动生成。
 
-或者，你也可以选择直接导入项目：
+<ConfigForm />
+
+复制上面的字段，粘贴到 Vercel 的环境变量设置中（可全部复制后一键粘贴），保存后点击 Deploy。稍等5分钟，你的 CMS 就可以访问了。
+
+</div>
+<div className="fd-step">
+
+### 优化配置
+
+默认情况下，Vercel 会将函数部署在美国，这可能会导致国内访问较慢。你可以将函数部署在离你近的地区，以提升访问速度。注意需要让 PostgreSQL 、Redis 和函数处在同一地区，建议选择 Singapore 或者 Tokyo。
+
+![选择地区](./images/vercel/vercel-20.webp)
+
+在项目设置的 “Functions” 中，找到“Regions”，选择你之前创建数据库时选的地区，保存后重新部署即可。
+
+重新部署项目的方式是，在项目首页点击“Deployments”，找到最新的部署，点击右侧的“Redeploy”按钮即可。
+![重新部署](./images/vercel/vercel-21.webp)
 
 </div>
 </div>

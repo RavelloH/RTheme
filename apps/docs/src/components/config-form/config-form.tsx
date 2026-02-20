@@ -207,7 +207,7 @@ export function MainConfigForm() {
 
         <ConfigField
           label="DATABASE_URL"
-          placeholder="postgresql://用户名:密码@主机:端口/数据库名"
+          placeholder="postgresql://用户名:密码@主机[:端口]/数据库名"
         />
         <ConfigField
           label="REDIS_URL"

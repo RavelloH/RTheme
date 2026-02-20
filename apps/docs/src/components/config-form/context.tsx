@@ -40,9 +40,9 @@ function validateDatabaseUrl(value: string): string | null {
     return "必须是 PostgreSQL 连接字符串 (postgresql:// 或 postgres://)";
   }
   // 简单格式验证
-  const pattern = /^postgresql?:\/\/.+@.+:.+\/.+$/;
+  const pattern = /^postgresql?:\/\/.+@.+(?::\d+)?\/.+$/;
   if (!pattern.test(value)) {
-    return "连接字符串格式不正确，应为: postgresql://用户名:密码@主机:端口/数据库名";
+    return "连接字符串格式不正确，应为: postgresql://用户名:密码@主机[:端口]/数据库名";
   }
   return null;
 }
