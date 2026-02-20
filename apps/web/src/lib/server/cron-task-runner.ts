@@ -47,6 +47,14 @@ type StoredFriendLinkCheckHistoryItem = {
 
 const DOCTOR_SITE_SELF_TIMEOUT_MS = 10000;
 const PROJECTS_FETCH_TIMEOUT_MS = 15000;
+const DB_CONNECTION_USAGE_WARNING_PERCENT = 50;
+const DB_CONNECTION_USAGE_ERROR_PERCENT = 80;
+const REDIS_LATENCY_WARNING_MS = 25;
+const REDIS_LATENCY_ERROR_MS = 100;
+const REDIS_MEMORY_WARNING_BYTES = 16 * 1024 * 1024;
+const REDIS_MEMORY_ERROR_BYTES = 64 * 1024 * 1024;
+const REDIS_KEYS_WARNING_COUNT = 750;
+const REDIS_KEYS_ERROR_COUNT = 1500;
 
 function toErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim().length > 0) {
@@ -293,11 +301,21 @@ export async function runDoctorHealthCheck(
     return Date.now() - started;
   };
 
-  const getDbConnectionCount = async (): Promise<number> => {
-    const result = await prisma.$queryRaw<Array<{ count: bigint }>>`
-      SELECT count(*) FROM pg_stat_activity WHERE datname = current_database();
+  const getDbConnectionUsagePercent = async (): Promise<number> => {
+    const result = await prisma.$queryRaw<Array<{ used: bigint; max: string }>>`
+      SELECT
+        count(*) FILTER (WHERE backend_type = 'client backend') AS used,
+        current_setting('max_connections') AS max
+      FROM pg_stat_activity
+      ;
     `;
-    return Number(result[0]?.count || 0);
+
+    const usedConnections = Number(result[0]?.used || 0);
+    const maxConnections = Number(result[0]?.max || 0);
+    if (!Number.isFinite(maxConnections) || maxConnections <= 0) {
+      return 0;
+    }
+    return (usedConnections / maxConnections) * 100;
   };
 
   const getRedisLatency = async (): Promise<number> => {
@@ -308,6 +326,45 @@ export async function runDoctorHealthCheck(
       return Date.now() - started;
     } catch {
       return -1;
+    }
+  };
+
+  const parseRedisInfoNumber = (info: string, key: string): number | null => {
+    const prefix = `${key}:`;
+    for (const rawLine of info.split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith("#") || !line.startsWith(prefix)) {
+        continue;
+      }
+      const value = Number.parseInt(line.slice(prefix.length), 10);
+      if (Number.isFinite(value) && value >= 0) {
+        return value;
+      }
+      return null;
+    }
+    return null;
+  };
+
+  const getRedisMemoryUsage = async (): Promise<number | null> => {
+    try {
+      await ensureRedisConnection();
+      const memoryInfo = await redis.info("memory");
+      return parseRedisInfoNumber(memoryInfo, "used_memory");
+    } catch {
+      return null;
+    }
+  };
+
+  const getRedisKeysCount = async (): Promise<number | null> => {
+    try {
+      await ensureRedisConnection();
+      const keyCount = Number(await redis.dbsize());
+      if (Number.isFinite(keyCount) && keyCount >= 0) {
+        return keyCount;
+      }
+      return null;
+    } catch {
+      return null;
     }
   };
 
@@ -369,13 +426,17 @@ export async function runDoctorHealthCheck(
     dbLatencyResult,
     dbConnectionResult,
     redisLatencyResult,
+    redisMemoryResult,
+    redisKeysResult,
   ] = await Promise.all([
     measure(flushEventsToDatabase),
     measure(getSiteSelfLatency),
     measure(getDbSize),
     measure(getDbLatency),
-    measure(getDbConnectionCount),
+    measure(getDbConnectionUsagePercent),
     measure(getRedisLatency),
+    measure(getRedisMemoryUsage),
+    measure(getRedisKeysCount),
   ]);
 
   const snapshot: HealthCheckSnapshot = { checks: {} };
@@ -412,7 +473,11 @@ export async function runDoctorHealthCheck(
   snapshot.checks.DB_CONNECTIONS = {
     v: dbConnectionResult.value,
     d: dbConnectionResult.durationMs,
-    s: classifyByThreshold(dbConnectionResult.value, 50, 150),
+    s: classifyByThreshold(
+      dbConnectionResult.value,
+      DB_CONNECTION_USAGE_WARNING_PERCENT,
+      DB_CONNECTION_USAGE_ERROR_PERCENT,
+    ),
   };
 
   snapshot.checks.DB_SIZE = {
@@ -431,7 +496,47 @@ export async function runDoctorHealthCheck(
     snapshot.checks.REDIS_LATENCY = {
       v: redisLatencyResult.value,
       d: redisLatencyResult.durationMs,
-      s: classifyByThreshold(redisLatencyResult.value, 10, 50),
+      s: classifyByThreshold(
+        redisLatencyResult.value,
+        REDIS_LATENCY_WARNING_MS,
+        REDIS_LATENCY_ERROR_MS,
+      ),
+    };
+  }
+
+  if (redisMemoryResult.value === null) {
+    snapshot.checks.REDIS_MEMORY = {
+      v: "检查失败",
+      d: redisMemoryResult.durationMs,
+      s: "E",
+    };
+  } else {
+    snapshot.checks.REDIS_MEMORY = {
+      v: redisMemoryResult.value,
+      d: redisMemoryResult.durationMs,
+      s: classifyByThreshold(
+        redisMemoryResult.value,
+        REDIS_MEMORY_WARNING_BYTES,
+        REDIS_MEMORY_ERROR_BYTES,
+      ),
+    };
+  }
+
+  if (redisKeysResult.value === null) {
+    snapshot.checks.REDIS_KEYS = {
+      v: "检查失败",
+      d: redisKeysResult.durationMs,
+      s: "E",
+    };
+  } else {
+    snapshot.checks.REDIS_KEYS = {
+      v: redisKeysResult.value,
+      d: redisKeysResult.durationMs,
+      s: classifyByThreshold(
+        redisKeysResult.value,
+        REDIS_KEYS_WARNING_COUNT,
+        REDIS_KEYS_ERROR_COUNT,
+      ),
     };
   }
 

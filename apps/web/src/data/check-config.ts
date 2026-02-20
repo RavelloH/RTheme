@@ -21,10 +21,10 @@ const CHECK_DEFINITIONS: Record<string, DoctorCheckDefinition> = {
       typeof value === "number" ? `${value}ms` : undefined,
   },
   DB_CONNECTIONS: {
-    message: "DB连接数",
-    brief: "数据库连接数过高",
+    message: "DB连接占用率",
+    brief: "数据库连接占用率过高",
     formatDetails: (value) =>
-      typeof value === "number" ? `${value}` : undefined,
+      typeof value === "number" ? `${value.toFixed(2)}%` : undefined,
   },
   DB_SIZE: {
     message: "DB大小",
