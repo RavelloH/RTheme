@@ -21,8 +21,8 @@ import { AlertDialog } from "@/ui/AlertDialog";
 import { AutoResizer } from "@/ui/AutoResizer";
 import { AutoTransition } from "@/ui/AutoTransition";
 import Clickable from "@/ui/Clickable";
-import { useToast } from "@/ui/Toast";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
+import { useToast } from "@/ui/Toast";
 
 type StoredUserInfo = {
   uid?: number;
@@ -816,7 +816,7 @@ export function Panel({ onClose: _onClose }: { onClose: () => void }) {
                                   }
                                 >
                                   {!isOgImageLoaded ? (
-                                    <div className="flex h-full items-center justify-center bg-foreground/5 text-xs text-muted-foreground">
+                                    <div className="flex h-full items-center justify-center bg-background text-xs">
                                       <LoadingIndicator />
                                     </div>
                                   ) : null}

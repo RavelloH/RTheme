@@ -60,6 +60,7 @@ function formatChartValue(code: string, value: number): string {
     case "ANALYTICS_FLUSH_SUCCESS_COUNT":
       return `写入 ${Math.round(value)} 条`;
     case "DB_CONNECTIONS":
+      return `${value.toFixed(2)}%`;
     case "REDIS_KEYS":
       return `${Math.round(value)}`;
     default:
