@@ -4,7 +4,7 @@ import { Inter } from "next/font/google";
 import { ConfigProvider } from "@/components/config-form";
 import type { Metadata } from "next";
 import Script from "next/script";
-import { initOrama } from "@/lib/search";
+import SearchDialog from "@/components/search-dialog";
 
 export const metadata: Metadata = {
   title: {
@@ -28,10 +28,7 @@ export default function Layout({ children }: LayoutProps<"/">) {
       <body className="flex flex-col min-h-screen">
         <RootProvider
           search={{
-            options: {
-              type: "static",
-              initOrama,
-            },
+            SearchDialog,
           }}
         >
           <ConfigProvider>{children}</ConfigProvider>
