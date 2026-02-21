@@ -35,6 +35,7 @@ export async function generateMetadata({
   params,
 }: ProjectDetailPageProps): Promise<Metadata> {
   const { slug } = await params;
+
   const project = await getPublishedProjectSeo(slug);
 
   if (!project) {

@@ -2,14 +2,13 @@
 // 检查环境变量设置是否正确
 
 import { randomBytes } from "crypto";
-import { config } from "dotenv";
 import Rlog from "rlog-js";
 import { pathToFileURL } from "url";
 
-// 加载 .env 文件
-config({
-  quiet: true,
-});
+import { loadWebEnv } from "@/../scripts/load-env";
+
+// 加载 apps/web 与仓库根目录下的 .env* 文件
+loadWebEnv();
 
 const rlog = new Rlog();
 

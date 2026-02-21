@@ -1,0 +1,64 @@
+---
+title: Docker 部署
+---
+
+使用 Docker Compose 可以一键拉起 NeutralPress、PostgreSQL 和 Redis。
+
+## 1. 准备环境变量
+
+在仓库根目录复制模板：
+
+```bash
+cp .env.example .env
+```
+
+然后编辑 `.env`，至少填写：
+
+1. `MASTER_SECRET`
+2. `JWT_PRIVATE_KEY`
+3. `JWT_PUBLIC_KEY`
+
+## 2. 拉取镜像并启动
+
+默认镜像地址是 `ghcr.io/ravelloh/neutralpress:latest`。如果你要指定其他镜像，可以先设置 `NEUTRALPRESS_IMAGE`。
+
+```bash
+# 可选：指定镜像
+export NEUTRALPRESS_IMAGE=ghcr.io/ravelloh/neutralpress:latest
+
+# 启动
+docker compose up -d
+```
+
+启动顺序：
+
+1. `postgres` 和 `redis` 先启动并通过健康检查
+2. `init` 执行一次运行期初始化（迁移、种子、缓存预热）
+3. `web` 启动
+
+## 3. 访问站点
+
+默认地址：
+
+```txt
+http://localhost:3000
+```
+
+## 4. 查看日志
+
+```bash
+docker compose logs -f init
+docker compose logs -f web
+```
+
+## 5. 停止与清理
+
+```bash
+docker compose down
+```
+
+如需同时删除数据库和 Redis 数据卷：
+
+```bash
+docker compose down -v
+```

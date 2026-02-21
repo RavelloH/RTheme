@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: neutralpress-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: neutralpress
+      POSTGRES_USER: neutralpress
+      POSTGRES_PASSWORD: neutralpress
+    volumes:
+      - neutralpress-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neutralpress -d neutralpress"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: neutralpress-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - neutralpress-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  init:
+    image: ${NEUTRALPRESS_IMAGE:-ghcr.io/ravelloh/neutralpress:latest}
+    container_name: neutralpress-init
+    restart: "no"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["pnpm", "--filter", "web", "run", "init:runtime"]
+
+  web:
+    image: ${NEUTRALPRESS_IMAGE:-ghcr.io/ravelloh/neutralpress:latest}
+    container_name: neutralpress-web
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    ports:
+      - "3000:3000"
+
+volumes:
+  neutralpress-postgres-data:
+  neutralpress-redis-data:

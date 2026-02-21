@@ -12,7 +12,8 @@
     "JWT_PRIVATE_KEY",
     "JWT_PUBLIC_KEY",
     "MASTER_SECRET",
-    "BUILD_STANDALONE"
+    "BUILD_STANDALONE",
+    "BUILD_PROFILE"
   ],
   "tasks": {
     "build": {
@@ -27,12 +28,19 @@
         "JWT_PRIVATE_KEY",
         "JWT_PUBLIC_KEY",
         "MASTER_SECRET",
-        "BUILD_STANDALONE"
+        "BUILD_STANDALONE",
+        "BUILD_PROFILE"
       ]
     },
     "lint": {
       "outputs": [],
-      "env": ["NODE_ENV", "JWT_PRIVATE_KEY", "JWT_PUBLIC_KEY", "MASTER_SECRET"]
+      "env": [
+        "NODE_ENV",
+        "JWT_PRIVATE_KEY",
+        "JWT_PUBLIC_KEY",
+        "MASTER_SECRET",
+        "BUILD_PROFILE"
+      ]
     },
     "format": {
       "inputs": ["$TURBO_DEFAULT$", ".prettierrc", ".prettierignore"],
@@ -40,7 +48,13 @@
     },
     "check-types": {
       "dependsOn": ["^check-types"],
-      "env": ["NODE_ENV", "JWT_PRIVATE_KEY", "JWT_PUBLIC_KEY", "MASTER_SECRET"]
+      "env": [
+        "NODE_ENV",
+        "JWT_PRIVATE_KEY",
+        "JWT_PUBLIC_KEY",
+        "MASTER_SECRET",
+        "BUILD_PROFILE"
+      ]
     },
     "dev": {
       "cache": false,
@@ -52,7 +66,8 @@
         "JWT_PRIVATE_KEY",
         "JWT_PUBLIC_KEY",
         "MASTER_SECRET",
-        "BUILD_STANDALONE"
+        "BUILD_STANDALONE",
+        "BUILD_PROFILE"
       ]
     },
     "@repo/openapi-generator#dev": {

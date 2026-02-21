@@ -2,21 +2,20 @@
 // 数据库更新和迁移脚本
 
 import { execSync } from "child_process";
-import { config } from "dotenv";
 import fs from "fs";
 import path from "path";
 import Rlog from "rlog-js";
 import { fileURLToPath, pathToFileURL } from "url";
+
+import { loadWebEnv } from "@/../scripts/load-env";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let prisma: any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let pool: any;
 
-// 加载 .env 文件
-config({
-  quiet: true,
-});
+// 加载 apps/web 与仓库根目录下的 .env* 文件
+loadWebEnv();
 
 const rlog = new Rlog();
 

@@ -9,9 +9,10 @@ import {
 } from "node:crypto";
 import path from "node:path";
 
-import { config } from "dotenv";
 import RLog from "rlog-js";
 import { pathToFileURL } from "url";
+
+import { loadWebEnv } from "@/../scripts/load-env";
 
 import {
   buildCloudSignMessage,
@@ -19,7 +20,7 @@ import {
   generateNonce,
 } from "../src/lib/shared/cloud-signature.js";
 
-config({ quiet: true });
+loadWebEnv();
 
 const rlog = new RLog();
 

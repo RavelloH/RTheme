@@ -1,16 +1,15 @@
 // scripts/check-redis.ts
 // 检查 Redis 连接是否正常
 
-import { config } from "dotenv";
 import Redis from "ioredis";
 import Rlog from "rlog-js";
 
+import { loadWebEnv } from "@/../scripts/load-env";
+
 import { parseRedisConnectionOptions } from "../src/lib/shared/redis-url";
 
-// 加载 .env 文件
-config({
-  quiet: true,
-});
+// 加载 apps/web 与仓库根目录下的 .env* 文件
+loadWebEnv();
 
 const rlog = new Rlog();
 

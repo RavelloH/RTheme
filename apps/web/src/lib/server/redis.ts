@@ -4,10 +4,9 @@ import Redis from "ioredis";
 
 import { parseRedisConnectionOptions } from "@/lib/shared/redis-url";
 
-// 验证 Redis URL 环境变量
-if (!process.env.REDIS_URL) {
-  throw new Error("REDIS_URL environment variable is required");
-}
+const redisUrl = process.env.REDIS_URL || "redis://127.0.0.1:6379";
+
+// 构建阶段没有 REDIS_URL 时，使用兜底地址并保持 lazyConnect
 
 // Redis 配置选项
 const redisOptions = {
@@ -44,9 +43,7 @@ declare global {
 let isReconnecting = globalThis.isReconnecting ?? false;
 
 // 创建或复用 Redis 实例
-const redisConnectionOptions = parseRedisConnectionOptions(
-  process.env.REDIS_URL,
-);
+const redisConnectionOptions = parseRedisConnectionOptions(redisUrl);
 const redis =
   globalThis.redis ??
   new Redis({
