@@ -70,7 +70,7 @@ interface CommentConfig {
 interface CommentsSectionProps {
   slug: string;
   allowComments: boolean;
-  authorUid: number;
+  authorUid?: number | null;
   commentConfig: CommentConfig;
 }
 
@@ -279,7 +279,7 @@ interface SingleCommentProps {
   isInHoverPath: boolean;
   isCurrentHovered: boolean;
   isDirectParent: boolean;
-  authorUid: number;
+  authorUid?: number | null;
   navigate: (href: string) => void;
   components: Components;
 }
@@ -1124,8 +1124,11 @@ export default function CommentsSection({
 
   // 提交评论
   const handleSubmit = async () => {
+    const targetLabel = slug.startsWith("/") ? "页面" : "文章";
     // 验证
-    if (!allowComments) return toastError("评论已关闭", "该文章未开启评论");
+    if (!allowComments) {
+      return toastError("评论已关闭", `该${targetLabel}未开启评论`);
+    }
     if (!content.trim()) return toastError("评论不能为空");
     if (content.length > 1000) return toastError("评论过长", "最多 1000 字");
     if (isAnonymous && !commentConfig.anonymousEnabled)

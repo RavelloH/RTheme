@@ -1,8 +1,13 @@
 /* Tiptap Editor Styles */
 
-.tiptap,
-.md-content {
+.tiptap {
   @apply min-h-full text-secondary-foreground;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.md-content {
+  @apply text-secondary-foreground;
   word-wrap: break-word;
   overflow-wrap: break-word;
 }

@@ -1,3 +1,4 @@
+import CommentsSection from "@/components/client/features/posts/CommentsSection";
 import PostToc from "@/components/client/features/posts/PostToc";
 import MainLayout from "@/components/client/layout/MainLayout";
 import UniversalRenderer from "@/components/server/renderer/UniversalRenderer";
@@ -8,22 +9,71 @@ import type { JsonLdGraph } from "@/lib/server/seo";
 
 interface PageTextContentLayoutProps {
   pageId: string;
+  slug: string;
   title: string;
+  authorUid?: number | null;
   description?: string | null;
   source: string;
   mode: "markdown" | "mdx" | "html";
+  allowComments: boolean;
   jsonLdGraph?: JsonLdGraph;
 }
 
 export default async function PageTextContentLayout({
   pageId,
+  slug,
   title,
+  authorUid,
   description,
   source,
   mode,
+  allowComments,
   jsonLdGraph = [],
 }: PageTextContentLayoutProps) {
-  const [shikiTheme] = await getConfigs(["site.shiki.theme"]);
+  const [shikiTheme, commentEnabled] = await getConfigs([
+    "site.shiki.theme",
+    "comment.enable",
+  ]);
+
+  let commentConfig: {
+    placeholder: string;
+    anonymousEnabled: boolean;
+    anonymousEmailRequired: boolean;
+    anonymousWebsiteEnabled: boolean;
+    reviewAll: boolean;
+    reviewAnonymous: boolean;
+    locateEnabled: boolean;
+  } | null = null;
+
+  if (commentEnabled && allowComments) {
+    const [
+      placeholder,
+      anonymousEnabled,
+      anonymousEmailRequired,
+      anonymousWebsiteEnabled,
+      reviewAll,
+      reviewAnonymous,
+      locateEnabled,
+    ] = await getConfigs([
+      "comment.placeholder",
+      "comment.anonymous.enable",
+      "comment.anonymous.email.required",
+      "comment.anonymous.website.enable",
+      "comment.review.enable",
+      "comment.anonymous.review.enable",
+      "comment.locate.enable",
+    ]);
+
+    commentConfig = {
+      placeholder,
+      anonymousEnabled,
+      anonymousEmailRequired,
+      anonymousWebsiteEnabled,
+      reviewAll,
+      reviewAnonymous,
+      locateEnabled,
+    };
+  }
   const contentRootId = `page-content-${pageId}`;
   const contentSelector = `#${contentRootId} .md-content`;
 
@@ -59,6 +109,14 @@ export default async function PageTextContentLayout({
                 mode={mode}
                 shikiTheme={shikiTheme}
               />
+              {commentEnabled && commentConfig && (
+                <CommentsSection
+                  slug={slug}
+                  allowComments={allowComments}
+                  authorUid={authorUid}
+                  commentConfig={commentConfig}
+                />
+              )}
             </div>
 
             <div className="sticky top-10 hidden h-full max-w-screen self-start lg:block lg:flex-[2]">

@@ -228,6 +228,19 @@ function summarizeText(
     : normalized;
 }
 
+function resolveCommentResourceReference(item: {
+  post: { slug: string } | null;
+  page?: { slug: string } | null;
+}): string {
+  if (item.post?.slug) return item.post.slug;
+  if (item.page?.slug) {
+    return item.page.slug.startsWith("/")
+      ? item.page.slug
+      : `/${item.page.slug}`;
+  }
+  return "";
+}
+
 function normalizeAuditIds(rawIds: unknown): string[] {
   if (typeof rawIds === "string") {
     return rawIds
@@ -829,6 +842,11 @@ export async function getRecycleBinList(
                     slug: true,
                   },
                 },
+                page: {
+                  select: {
+                    slug: true,
+                  },
+                },
               },
             })
           : Promise.resolve([]),
@@ -976,7 +994,7 @@ export async function getRecycleBinList(
           resourceName:
             summarizeText(item.content, 48) ||
             `${item.authorName || "匿名"} 的评论`,
-          resourceReference: item.post.slug,
+          resourceReference: resolveCommentResourceReference(item),
           createdAt: item.createdAt.toISOString(),
           deletedAt:
             item.deletedAt?.toISOString() || item.createdAt.toISOString(),
@@ -1549,6 +1567,11 @@ export async function restoreRecycleBinItems(
               slug: true,
             },
           },
+          page: {
+            select: {
+              slug: true,
+            },
+          },
         },
       });
       const ids = rows.map((item) => item.id);
@@ -1566,7 +1589,7 @@ export async function restoreRecycleBinItems(
           oldValue: null,
           newValue: rows.map((item) => ({
             id: item.id,
-            postSlug: item.post.slug,
+            postSlug: resolveCommentResourceReference(item),
             content: summarizeText(item.content, 80),
           })),
           description: `从回收站恢复 ${result.count} 条评论`,
@@ -1930,6 +1953,11 @@ export async function purgeRecycleBinItems(
               slug: true,
             },
           },
+          page: {
+            select: {
+              slug: true,
+            },
+          },
         },
       });
       const ids = rows.map((item) => item.id);
@@ -1945,7 +1973,7 @@ export async function purgeRecycleBinItems(
           resourceId: ids.join(","),
           oldValue: rows.map((item) => ({
             id: item.id,
-            postSlug: item.post.slug,
+            postSlug: resolveCommentResourceReference(item),
             content: summarizeText(item.content, 80),
           })),
           newValue: null,
@@ -2407,6 +2435,11 @@ export async function clearRecycleBin(
               slug: true,
             },
           },
+          page: {
+            select: {
+              slug: true,
+            },
+          },
         },
       });
       const ids = rows.map((item) => item.id);
@@ -2422,7 +2455,7 @@ export async function clearRecycleBin(
           resourceId: ids.join(","),
           oldValue: rows.map((item) => ({
             id: item.id,
-            postSlug: item.post.slug,
+            postSlug: resolveCommentResourceReference(item),
             content: summarizeText(item.content, 80),
           })),
           newValue: null,

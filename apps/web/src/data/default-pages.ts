@@ -11,6 +11,7 @@ type JsonArray = JsonValue[];
 // 页面配置接口
 export interface PageConfig {
   blocks?: AllBlockConfigs[];
+  allowComments?: boolean;
   [key: string]: unknown;
 }
 
@@ -1170,18 +1171,20 @@ export const defaultPages: DefaultPage[] = [
     metaKeywords: "",
     robotsIndex: true,
   },
-  // {
-  //   id: "system-guestbook-page",
-  //   title: "留言板",
-  //   slug: "/guestbook",
-  //   content: "",
-  //   contentType: "MARKDOWN",
-  //   config: {},
-  //   status: "ACTIVE",
-  //   isSystemPage: true,
-  //   metaDescription:
-  //     "欢迎在留言板上留下你的想法、建议或问候，与我们和其他读者交流互动",
-  //   metaKeywords: "",
-  //   robotsIndex: true,
-  // },
+  {
+    id: "system-guestbook-page",
+    title: "留言板",
+    slug: "/guestbook",
+    content: "欢迎留言。",
+    contentType: "MARKDOWN",
+    config: {
+      allowComments: true,
+    },
+    status: "ACTIVE",
+    isSystemPage: true,
+    metaDescription:
+      "欢迎在留言板上留下你的想法、建议或问候，与我们和其他读者交流互动",
+    metaKeywords: "",
+    robotsIndex: true,
+  },
 ];
