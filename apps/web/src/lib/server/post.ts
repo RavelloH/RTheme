@@ -129,6 +129,7 @@ export async function getPublishedPost(slug: string): Promise<FullPostData> {
             select: {
               id: true,
               name: true,
+              slug: true,
             },
           },
           tags: {
@@ -513,7 +514,11 @@ export async function getRecommendedPosts(
     async (): Promise<RecommendedPostData[]> => {
       const currentCategoryIds = new Set(
         currentPost.categories
-          .filter((category) => category.slug !== "uncategorized")
+          .filter(
+            (category) =>
+              typeof category.slug === "string" &&
+              category.slug !== "uncategorized",
+          )
           .map((c) => c.id),
       );
       const currentTagSlugs = new Set(currentPost.tags.map((t) => t.slug));
