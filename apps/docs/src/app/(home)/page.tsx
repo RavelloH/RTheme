@@ -1,16 +1,27 @@
-import Link from "next/link";
+import { Hero } from "./_components/hero";
+import { Philosophy } from "./_components/philosophy";
+import { Features } from "./_components/features";
+import { FrontShowcase, AdminShowcase } from "./_components/showcase";
+import { Architecture } from "./_components/architecture";
+import { FeatureList } from "./_components/feature-list";
+import { CallToAction } from "./_components/cta";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "主页",
+};
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col justify-center text-center flex-1">
-      <h1 className="text-2xl font-bold mb-4">Hello World</h1>
-      <p>
-        You can open{" "}
-        <Link href="/docs" className="font-medium underline">
-          /docs
-        </Link>{" "}
-        and see the documentation.
-      </p>
-    </div>
+    <main className="min-h-screen">
+      <Hero />
+      <Philosophy />
+      <Features />
+      <FrontShowcase />
+      <AdminShowcase />
+      <Architecture />
+      <FeatureList />
+      <CallToAction />
+    </main>
   );
 }

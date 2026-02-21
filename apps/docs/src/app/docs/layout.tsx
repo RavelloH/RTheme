@@ -40,7 +40,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           children: (
             <GithubInfo
               owner="RavelloH"
-              repo="RTheme"
+              repo="NeutralPress"
               className="flex justify-between"
             />
           ),
