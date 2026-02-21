@@ -512,17 +512,20 @@ export async function getRecommendedPosts(
   const getCachedData = unstable_cache(
     async (): Promise<RecommendedPostData[]> => {
       const currentCategoryIds = new Set(
-        currentPost.categories.map((c) => c.id),
+        currentPost.categories
+          .filter((category) => category.slug !== "uncategorized")
+          .map((c) => c.id),
       );
       const currentTagSlugs = new Set(currentPost.tags.map((t) => t.slug));
       const relationQueryTake = Math.min(
         candidateLimit,
         Math.max(limit * 6, 24),
       );
-      const fallbackQueryTake = Math.min(
-        candidateLimit,
-        Math.max(limit * 3, 12),
-      );
+
+      // 精确推荐：仅当存在有效分类（排除未分类）或标签时才推荐
+      if (currentCategoryIds.size === 0 && currentTagSlugs.size === 0) {
+        return [];
+      }
 
       const postSelect = {
         title: true,
@@ -589,72 +592,36 @@ export async function getRecommendedPosts(
         });
       }
 
-      const relationCandidates =
-        relationWhereClauses.length > 0
-          ? await prisma.post.findMany({
-              where: {
-                ...baseWhere,
-                slug: { not: currentPost.slug },
-                OR: relationWhereClauses,
-              },
-              select: postSelect,
-              orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
-              take: relationQueryTake,
-            })
-          : [];
-
-      const recentCandidates =
-        relationCandidates.length < limit
-          ? await prisma.post.findMany({
-              where: {
-                ...baseWhere,
-                slug: {
-                  notIn: [
-                    currentPost.slug,
-                    ...relationCandidates.map((post) => post.slug),
-                  ],
-                },
-              },
-              select: postSelect,
-              orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
-              take: fallbackQueryTake,
-            })
-          : [];
-
-      const candidatesMap = new Map<
-        string,
-        (typeof relationCandidates)[number]
-      >();
-      for (const post of relationCandidates) {
-        candidatesMap.set(post.slug, post);
-      }
-      for (const post of recentCandidates) {
-        if (!candidatesMap.has(post.slug)) {
-          candidatesMap.set(post.slug, post);
-        }
-      }
-
-      const scoredPosts = Array.from(candidatesMap.values()).map(
-        (candidate) => {
-          const matchedCategoryCount = candidate.categories.reduce(
-            (count, cat) => {
-              return count + (currentCategoryIds.has(cat.id) ? 1 : 0);
-            },
-            0,
-          );
-          const matchedTagCount = candidate.tags.reduce((count, tag) => {
-            return count + (currentTagSlugs.has(tag.slug) ? 1 : 0);
-          }, 0);
-          const recommendationScore =
-            matchedCategoryCount * 12 + matchedTagCount * 8;
-
-          return {
-            ...candidate,
-            recommendationScore,
-            matchedKeywords: [],
-          };
+      const relationCandidates = await prisma.post.findMany({
+        where: {
+          ...baseWhere,
+          slug: { not: currentPost.slug },
+          OR: relationWhereClauses,
         },
-      );
+        select: postSelect,
+        orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+        take: relationQueryTake,
+      });
+
+      const scoredPosts = relationCandidates.map((candidate) => {
+        const matchedCategoryCount = candidate.categories.reduce(
+          (count, cat) => {
+            return count + (currentCategoryIds.has(cat.id) ? 1 : 0);
+          },
+          0,
+        );
+        const matchedTagCount = candidate.tags.reduce((count, tag) => {
+          return count + (currentTagSlugs.has(tag.slug) ? 1 : 0);
+        }, 0);
+        const recommendationScore =
+          matchedCategoryCount * 12 + matchedTagCount * 8;
+
+        return {
+          ...candidate,
+          recommendationScore,
+          matchedKeywords: [],
+        };
+      });
 
       scoredPosts.sort((a, b) => {
         if (b.recommendationScore !== a.recommendationScore) {
@@ -666,13 +633,9 @@ export async function getRecommendedPosts(
         return bPublished - aPublished;
       });
 
-      const relevant = scoredPosts.filter(
-        (post) => post.recommendationScore > 0,
-      );
-      const fallback = scoredPosts.filter(
-        (post) => post.recommendationScore <= 0,
-      );
-      const selected = [...relevant, ...fallback].slice(0, limit);
+      const selected = scoredPosts
+        .filter((post) => post.recommendationScore > 0)
+        .slice(0, limit);
 
       return selected.map((post) => ({
         title: post.title,
