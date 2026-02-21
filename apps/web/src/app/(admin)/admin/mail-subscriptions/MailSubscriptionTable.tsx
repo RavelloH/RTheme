@@ -8,9 +8,14 @@ import {
   resetMailSubscriptionLastSentByAdmin,
   updateMailSubscriptionStatusByAdmin,
 } from "@/actions/mail-subscription";
+import {
+  MAIL_SUBSCRIPTIONS_REFRESH_EVENT,
+  type MailSubscriptionsRefreshMessage,
+} from "@/app/(admin)/admin/mail-subscriptions/constants";
 import type { ActionButton, FilterConfig } from "@/components/ui/GridTable";
 import GridTable from "@/components/ui/GridTable";
 import Link from "@/components/ui/Link";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import { AlertDialog } from "@/ui/AlertDialog";
 import type { TableColumn } from "@/ui/Table";
 import { useToast } from "@/ui/Toast";
@@ -50,6 +55,7 @@ function formatDateTime(value: string | null): string {
 
 export default function MailSubscriptionTable() {
   const toast = useToast();
+  const { broadcast } = useBroadcastSender<MailSubscriptionsRefreshMessage>();
   const [data, setData] = useState<MailSubscriptionRecord[]>([]);
   const [latestPostId, setLatestPostId] = useState<number | null>(null);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -76,6 +82,15 @@ export default function MailSubscriptionTable() {
   const [targetStatus, setTargetStatus] = useState<"ACTIVE" | "UNSUBSCRIBED">(
     "ACTIVE",
   );
+
+  useBroadcast<MailSubscriptionsRefreshMessage>((message) => {
+    if (
+      message.type === MAIL_SUBSCRIPTIONS_REFRESH_EVENT &&
+      message.source !== "table"
+    ) {
+      setRefreshTrigger((prev) => prev + 1);
+    }
+  });
 
   useEffect(() => {
     async function fetchData() {
@@ -196,13 +211,17 @@ export default function MailSubscriptionTable() {
         toast.success(
           `状态更新完成：成功 ${successCount} 条，失败 ${failedCount} 条`,
         );
+        setRefreshTrigger((prev) => prev + 1);
+        await broadcast({
+          type: MAIL_SUBSCRIPTIONS_REFRESH_EVENT,
+          source: "table",
+        });
       } else {
         toast.error("状态更新失败");
       }
       setStatusDialogOpen(false);
       setSelectedRows([]);
       setSelectedRowKeys(new Set());
-      setRefreshTrigger((prev) => prev + 1);
     } catch (error) {
       console.error("[MailSubscriptionTable] 更新状态失败:", error);
       toast.error("状态更新失败");
@@ -232,13 +251,17 @@ export default function MailSubscriptionTable() {
         toast.success(
           `重置完成：成功 ${successCount} 条，失败 ${failedCount} 条`,
         );
+        setRefreshTrigger((prev) => prev + 1);
+        await broadcast({
+          type: MAIL_SUBSCRIPTIONS_REFRESH_EVENT,
+          source: "table",
+        });
       } else {
         toast.error("重置发送标记失败");
       }
       setResetDialogOpen(false);
       setSelectedRows([]);
       setSelectedRowKeys(new Set());
-      setRefreshTrigger((prev) => prev + 1);
     } catch (error) {
       console.error("[MailSubscriptionTable] 重置发送标记失败:", error);
       toast.error("重置发送标记失败");
