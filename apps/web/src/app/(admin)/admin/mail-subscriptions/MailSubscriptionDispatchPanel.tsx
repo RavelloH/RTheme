@@ -13,12 +13,17 @@ import {
   getLatestMailDispatchOverview,
   getMailSubscriptionStatusDistribution,
 } from "@/actions/mail-subscription";
+import {
+  MAIL_SUBSCRIPTIONS_REFRESH_EVENT,
+  type MailSubscriptionsRefreshMessage,
+} from "@/app/(admin)/admin/mail-subscriptions/constants";
 import DimensionStatsChart, {
   type DimensionStatsItem,
 } from "@/components/client/charts/DimensionStatsChart";
 import { GridItem } from "@/components/client/layout/RowGrid";
 import { useMainColor } from "@/components/client/layout/ThemeProvider";
 import ErrorPage from "@/components/ui/Error";
+import { useBroadcast, useBroadcastSender } from "@/hooks/use-broadcast";
 import generateComplementary from "@/lib/shared/complementary";
 import generateGradient from "@/lib/shared/gradient";
 import { AlertDialog } from "@/ui/AlertDialog";
@@ -66,8 +71,8 @@ export default function MailSubscriptionDispatchPanel() {
   const dispatchToastIdRef = useRef<string | null>(null);
   const [controlDialogOpen, setControlDialogOpen] = useState(false);
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
-  const [loadingOverview, setLoadingOverview] = useState(false);
-  const [loadingDistribution, setLoadingDistribution] = useState(false);
+  const [loadingOverview, setLoadingOverview] = useState(true);
+  const [loadingDistribution, setLoadingDistribution] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [cleaningInvalid, setCleaningInvalid] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -88,6 +93,7 @@ export default function MailSubscriptionDispatchPanel() {
   const [distributionError, setDistributionError] = useState<Error | null>(
     null,
   );
+  const [overviewError, setOverviewError] = useState<Error | null>(null);
   const [overview, setOverview] = useState<{
     latestPost: {
       id: number;
@@ -98,6 +104,7 @@ export default function MailSubscriptionDispatchPanel() {
     totalActive: number;
     pendingTotal: number;
   } | null>(null);
+  const { broadcast } = useBroadcastSender<MailSubscriptionsRefreshMessage>();
 
   const parsedBatchSize = Math.max(
     1,
@@ -107,6 +114,7 @@ export default function MailSubscriptionDispatchPanel() {
   const refreshOverview = useCallback(async () => {
     setLoadingOverview(true);
     setLoadingDistribution(true);
+    setOverviewError(null);
     try {
       const [overviewResult, distributionResult] = await Promise.all([
         getLatestMailDispatchOverview(),
@@ -114,6 +122,9 @@ export default function MailSubscriptionDispatchPanel() {
       ]);
 
       if (!overviewResult.success || !overviewResult.data) {
+        setOverviewError(
+          new Error(overviewResult.message || "读取发送概览失败"),
+        );
         toast.error(overviewResult.message || "读取发送概览失败");
       } else {
         const overviewData = overviewResult.data;
@@ -134,6 +145,7 @@ export default function MailSubscriptionDispatchPanel() {
       }
     } catch (error) {
       console.error(error);
+      setOverviewError(new Error("读取发送概览失败"));
       toast.error("读取发送概览失败");
       setDistribution([]);
       setDistributionError(new Error("读取状态占比失败"));
@@ -143,9 +155,25 @@ export default function MailSubscriptionDispatchPanel() {
     }
   }, [toast]);
 
+  const broadcastRefresh = useCallback(async () => {
+    await broadcast({
+      type: MAIL_SUBSCRIPTIONS_REFRESH_EVENT,
+      source: "dispatch-panel",
+    });
+  }, [broadcast]);
+
   useEffect(() => {
     void refreshOverview();
   }, [refreshOverview]);
+
+  useBroadcast<MailSubscriptionsRefreshMessage>((message) => {
+    if (
+      message.type === MAIL_SUBSCRIPTIONS_REFRESH_EVENT &&
+      message.source !== "dispatch-panel"
+    ) {
+      void refreshOverview();
+    }
+  });
 
   useEffect(() => {
     return () => {
@@ -379,8 +407,12 @@ export default function MailSubscriptionDispatchPanel() {
       }
 
       await refreshOverview();
+      if (processedTotal > 0) {
+        await broadcastRefresh();
+      }
     }
   }, [
+    broadcastRefresh,
     overview?.latestPost,
     overview?.pendingTotal,
     processOnce,
@@ -408,17 +440,19 @@ export default function MailSubscriptionDispatchPanel() {
         toast.error(result.message || "清理失效订阅失败");
         return;
       }
-      toast.success(
-        result.message || `已清理 ${result.data.deleted} 条失效订阅`,
-      );
+      const deletedCount = result.data.deleted || 0;
+      toast.success(result.message || `已清理 ${deletedCount} 条失效订阅`);
       await refreshOverview();
+      if (deletedCount > 0) {
+        await broadcastRefresh();
+      }
     } catch (error) {
       console.error(error);
       toast.error("清理失效订阅失败");
     } finally {
       setCleaningInvalid(false);
     }
-  }, [isRunning, processing, refreshOverview, toast]);
+  }, [broadcastRefresh, isRunning, processing, refreshOverview, toast]);
 
   const handleConfirmCleanup = useCallback(async () => {
     await handleCleanupInvalid();
@@ -456,30 +490,50 @@ export default function MailSubscriptionDispatchPanel() {
     <>
       <GridItem areas={[1, 2, 3, 4]} width={3} height={0.8}>
         <AutoTransition type="scale" className="h-full">
-          <div className="flex h-full flex-col justify-between p-10">
-            <div>
-              <div className="py-2 text-2xl">邮件订阅分发</div>
-              <AutoResizer duration={0.24}>
-                <div className="space-y-1">
-                  <div>
-                    {overview?.latestPost
-                      ? `最新文章《${overview.latestPost.title}》(#${overview.latestPost.id})`
-                      : "当前暂无可发送的已发布文章"}
-                    。
+          {loadingOverview && !overview ? (
+            <div className="h-full" key="overview-loading">
+              <LoadingIndicator />
+            </div>
+          ) : overviewError && !overview ? (
+            <div className="h-full px-10" key="overview-error">
+              <ErrorPage
+                reason={overviewError}
+                reset={() => {
+                  void refreshOverview();
+                }}
+              />
+            </div>
+          ) : (
+            <div className="flex h-full flex-col justify-between p-10">
+              <div>
+                <div className="py-2 text-2xl">邮件订阅分发</div>
+                <AutoResizer duration={0.24}>
+                  <div className="space-y-1">
+                    <div>
+                      {overview?.latestPost
+                        ? `最新文章《${overview.latestPost.title}》(#${overview.latestPost.id})`
+                        : "当前暂无可发送的已发布文章"}
+                      。
+                    </div>
+                    <div>活跃订阅 {overview?.totalActive ?? 0} 条。</div>
+                    {overviewError && (
+                      <div className="text-warning text-sm">
+                        最近一次刷新失败，当前展示的是上次成功数据。
+                      </div>
+                    )}
                   </div>
-                  <div>活跃订阅 {overview?.totalActive ?? 0} 条。</div>
-                </div>
-              </AutoResizer>
+                </AutoResizer>
+              </div>
+              <div className="inline-flex items-center gap-2">
+                {overviewUpdatedAt
+                  ? `最近更新于 ${overviewUpdatedAt.toLocaleString("zh-CN")}`
+                  : "等待首次加载"}
+                <Clickable onClick={() => void refreshOverview()}>
+                  <RiRefreshLine size="1em" />
+                </Clickable>
+              </div>
             </div>
-            <div className="inline-flex items-center gap-2">
-              {overviewUpdatedAt
-                ? `最近更新于 ${overviewUpdatedAt.toLocaleString("zh-CN")}`
-                : "等待首次加载"}
-              <Clickable onClick={() => void refreshOverview()}>
-                <RiRefreshLine size="1em" />
-              </Clickable>
-            </div>
-          </div>
+          )}
         </AutoTransition>
       </GridItem>
 
