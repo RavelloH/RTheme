@@ -1,4 +1,45 @@
+import fs from "node:fs";
 import { cpus as osCpus } from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { config as loadDotenv } from "dotenv";
+
+const webRootDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRootDir = path.resolve(webRootDir, "..", "..");
+
+function getEnvFiles(nodeEnv) {
+  const files = [`.env.${nodeEnv}.local`];
+  if (nodeEnv !== "test") {
+    files.push(".env.local");
+  }
+  files.push(`.env.${nodeEnv}`, ".env");
+  return files;
+}
+
+function loadEnvFromDirectory(dir, envFiles) {
+  for (const envFile of envFiles) {
+    const envPath = path.join(dir, envFile);
+    if (!fs.existsSync(envPath)) {
+      continue;
+    }
+    loadDotenv({
+      path: envPath,
+      quiet: true,
+    });
+  }
+}
+
+function loadMonorepoEnv() {
+  const nodeEnv = globalThis.process.env.NODE_ENV ?? "development";
+  const envFiles = getEnvFiles(nodeEnv);
+
+  // app 内配置优先，根目录作为兜底
+  loadEnvFromDirectory(webRootDir, envFiles);
+  loadEnvFromDirectory(repoRootDir, envFiles);
+}
+
+loadMonorepoEnv();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = () => {

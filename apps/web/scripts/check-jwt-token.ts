@@ -3,16 +3,15 @@
 
 import type { KeyObject } from "crypto";
 import { createPrivateKey, createPublicKey, generateKeyPairSync } from "crypto";
-import { config } from "dotenv";
 import type { SignOptions, VerifyOptions } from "jsonwebtoken";
 import jwt from "jsonwebtoken";
 import Rlog from "rlog-js";
 import { pathToFileURL } from "url";
 
-// Load .env file
-config({
-  quiet: true,
-});
+import { loadWebEnv } from "@/../scripts/load-env";
+
+// Load .env* from apps/web and repo root.
+loadWebEnv();
 
 const rlog = new Rlog();
 
