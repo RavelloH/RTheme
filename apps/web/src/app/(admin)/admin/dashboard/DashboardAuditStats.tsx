@@ -24,17 +24,9 @@ type StatsData = {
   };
 };
 
-interface DashboardAuditStatsProps {
-  initialData?: StatsData | null;
-}
-
-export default function DashboardAuditStats({
-  initialData = null,
-}: DashboardAuditStatsProps) {
-  const [result, setResult] = useState<StatsData | null>(initialData);
-  const [refreshTime, setRefreshTime] = useState<Date | null>(
-    initialData ? new Date(initialData.updatedAt) : null,
-  );
+export default function DashboardAuditStats() {
+  const [result, setResult] = useState<StatsData | null>(null);
+  const [refreshTime, setRefreshTime] = useState<Date | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchData = async (forceRefresh: boolean = false) => {
@@ -53,9 +45,8 @@ export default function DashboardAuditStats({
   };
 
   useEffect(() => {
-    if (initialData) return;
     fetchData();
-  }, [initialData]);
+  }, []);
 
   return (
     <AutoTransition type="scale" className="h-full">

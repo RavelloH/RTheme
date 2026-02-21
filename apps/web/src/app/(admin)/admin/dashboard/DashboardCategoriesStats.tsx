@@ -30,18 +30,10 @@ type StatsData = {
   };
 } | null;
 
-interface DashboardCategoriesStatsProps {
-  initialData?: StatsData;
-}
-
-export default function DashboardCategoriesStats({
-  initialData = null,
-}: DashboardCategoriesStatsProps) {
-  const [result, setResult] = useState<StatsData>(initialData);
-  const [isCache, setIsCache] = useState(initialData?.cache ?? true);
-  const [refreshTime, setRefreshTime] = useState<Date | null>(
-    initialData ? new Date(initialData.updatedAt) : null,
-  );
+export default function DashboardCategoriesStats() {
+  const [result, setResult] = useState<StatsData>(null);
+  const [isCache, setIsCache] = useState(true);
+  const [refreshTime, setRefreshTime] = useState<Date | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchData = async (forceRefresh: boolean = false) => {
@@ -61,9 +53,8 @@ export default function DashboardCategoriesStats({
   };
 
   useEffect(() => {
-    if (initialData) return;
     fetchData();
-  }, [initialData]);
+  }, []);
 
   const getSummary = (result: StatsData) => {
     if (!result) return null;

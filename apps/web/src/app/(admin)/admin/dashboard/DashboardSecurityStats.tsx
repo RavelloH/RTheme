@@ -29,19 +29,9 @@ const calcErrorRate = (
   return ((e / total) * 100).toFixed(2) + "%";
 };
 
-interface DashboardSecurityStatsProps {
-  initialData?: SecurityOverviewData | null;
-}
-
-export default function DashboardSecurityStats({
-  initialData = null,
-}: DashboardSecurityStatsProps) {
-  const [result, setResult] = useState<SecurityOverviewData | null>(
-    initialData,
-  );
-  const [refreshTime, setRefreshTime] = useState<Date | null>(
-    initialData ? new Date(initialData.updatedAt) : null,
-  );
+export default function DashboardSecurityStats() {
+  const [result, setResult] = useState<SecurityOverviewData | null>(null);
+  const [refreshTime, setRefreshTime] = useState<Date | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchData = async (forceRefresh: boolean = false) => {
@@ -60,9 +50,8 @@ export default function DashboardSecurityStats({
   };
 
   useEffect(() => {
-    if (initialData) return;
     fetchData();
-  }, [initialData]);
+  }, []);
 
   // 计算状态描述
   const getStatusDescription = () => {
