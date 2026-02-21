@@ -865,7 +865,7 @@ export async function getMailSubscriptionList(
   }
 
   const user = await authVerify({
-    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    allowedRoles: ["ADMIN", "EDITOR"],
   });
 
   if (!user) {
@@ -1058,7 +1058,7 @@ export async function updateMailSubscriptionStatusByAdmin(params: {
   }
 
   const user = await authVerify({
-    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    allowedRoles: ["ADMIN", "EDITOR"],
   });
   if (!user) {
     return response.unauthorized({
@@ -1193,7 +1193,7 @@ export async function resetMailSubscriptionLastSentByAdmin(params: {
   }
 
   const user = await authVerify({
-    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    allowedRoles: ["ADMIN", "EDITOR"],
   });
   if (!user) {
     return response.unauthorized({
@@ -1272,7 +1272,7 @@ export async function getLatestMailDispatchOverview(): Promise<
   }
 
   const user = await authVerify({
-    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    allowedRoles: ["ADMIN", "EDITOR"],
   });
 
   if (!user) {
@@ -1346,7 +1346,7 @@ export async function getMailSubscriptionStatusDistribution(): Promise<
   }
 
   const user = await authVerify({
-    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    allowedRoles: ["ADMIN", "EDITOR"],
   });
 
   if (!user) {
@@ -1408,7 +1408,7 @@ export async function cleanupInvalidMailSubscriptions(): Promise<
   }
 
   const user = await authVerify({
-    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    allowedRoles: ["ADMIN", "EDITOR"],
   });
 
   if (!user) {
@@ -1483,7 +1483,7 @@ export async function dispatchLatestPostMail(
   }
 
   const user = await authVerify({
-    allowedRoles: ["ADMIN", "EDITOR", "AUTHOR"],
+    allowedRoles: ["ADMIN", "EDITOR"],
   });
 
   if (!user) {

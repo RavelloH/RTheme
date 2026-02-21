@@ -108,12 +108,26 @@ export async function subscribeToWebPush(
     // 检查订阅是否已存在
     const existing = await prisma.pushSubscription.findUnique({
       where: { endpoint },
+      select: {
+        id: true,
+        userUid: true,
+      },
     });
 
     if (existing) {
+      if (existing.userUid !== user.uid) {
+        return response.forbidden({
+          message: "无权更新该订阅",
+          error: {
+            code: "FORBIDDEN",
+            message: "订阅不属于当前用户",
+          },
+        });
+      }
+
       // 更新现有订阅
       await prisma.pushSubscription.update({
-        where: { endpoint },
+        where: { id: existing.id },
         data: {
           p256dh: data.p256dh,
           auth: data.auth,
