@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import { ConfigProvider } from "@/components/config-form";
 import type { Metadata } from "next";
 import Script from "next/script";
+import { initOrama } from "@/lib/search";
 
 export const metadata: Metadata = {
   title: {
@@ -29,6 +30,7 @@ export default function Layout({ children }: LayoutProps<"/">) {
           search={{
             options: {
               type: "static",
+              initOrama,
             },
           }}
         >
