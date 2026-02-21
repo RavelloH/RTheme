@@ -95,6 +95,7 @@ interface PageFormState {
   contentType: PageListItem["contentType"];
   content: string;
   config: ConfigRecord | null;
+  allowComments: boolean;
   pageSize?: number;
   metaDescription: string;
   metaKeywords: string;
@@ -218,6 +219,7 @@ export default function PagesTable() {
     contentType: "MARKDOWN",
     content: "",
     config: null,
+    allowComments: false,
     pageSize: 20,
     metaDescription: "",
     metaKeywords: "",
@@ -551,8 +553,11 @@ export default function PagesTable() {
   // 打开编辑对话框
   const openEditDialog = (pageItem: PageListItem) => {
     setEditingPage(pageItem);
-    const config = isConfigObject(pageItem.config)
+    const sourceConfig = isConfigObject(pageItem.config)
       ? (pageItem.config as ConfigRecord)
+      : null;
+    const config = sourceConfig
+      ? (JSON.parse(JSON.stringify(sourceConfig)) as ConfigRecord)
       : null;
     setFormData({
       id: pageItem.id,
@@ -562,7 +567,8 @@ export default function PagesTable() {
       contentType: pageItem.contentType,
       content: "",
       config,
-      pageSize: (config?.pageSize as number) || 20,
+      allowComments: sourceConfig?.allowComments === true,
+      pageSize: (sourceConfig?.pageSize as number) || 20,
       metaDescription: pageItem.metaDescription || "",
       metaKeywords: pageItem.metaKeywords || "",
       robotsIndex: pageItem.robotsIndex,
@@ -584,21 +590,30 @@ export default function PagesTable() {
 
     setIsSubmitting(true);
     try {
+      const currentConfig = isConfigObject(editingPage.config)
+        ? (editingPage.config as ConfigRecord)
+        : null;
+      const currentConfigPageSize = (currentConfig?.pageSize as number) ?? 20;
+      const currentConfigAllowComments = currentConfig?.allowComments === true;
+
       // 确保 config 存在并包含 pageSize
-      let finalConfig = collectConfigInputValues();
+      const collectedConfig = collectConfigInputValues();
+      const finalConfig = isConfigObject(collectedConfig)
+        ? (JSON.parse(JSON.stringify(collectedConfig)) as ConfigRecord)
+        : ({} as ConfigRecord);
 
-      // 如果没有 config，创建一个空的 config
-      if (!finalConfig) {
-        finalConfig = {};
-      }
-
-      // 如果 formData 有 pageSize，确保它在 config 中
+      // 如果 formData 有 pageSize，确保它写回 config
       if (formData.pageSize !== undefined) {
-        (finalConfig as ConfigRecord).pageSize = formData.pageSize;
+        finalConfig.pageSize = formData.pageSize;
+      }
+      if (isTextContentType(formData.contentType)) {
+        finalConfig.allowComments = formData.allowComments;
+      } else if ("allowComments" in finalConfig) {
+        delete finalConfig.allowComments;
       }
 
-      const currentConfigPageSize = (editingPage.config as ConfigRecord)
-        ?.pageSize as number;
+      const hasConfigChanges =
+        JSON.stringify(finalConfig) !== JSON.stringify(currentConfig || {});
       const hasChanges =
         formData.title !== editingPage.title ||
         formData.slug !== editingPage.slug ||
@@ -609,8 +624,8 @@ export default function PagesTable() {
         formData.robotsIndex !== editingPage.robotsIndex ||
         formData.content !== "" ||
         formData.pageSize !== currentConfigPageSize ||
-        JSON.stringify(finalConfig ?? {}) !==
-          JSON.stringify(editingPage.config || {});
+        formData.allowComments !== currentConfigAllowComments ||
+        hasConfigChanges;
 
       if (!hasChanges) {
         toast.info("没有字段被修改");
@@ -632,11 +647,7 @@ export default function PagesTable() {
             ? formData.contentType
             : undefined,
         content: formData.content ? formData.content : undefined,
-        config:
-          JSON.stringify(finalConfig ?? {}) !==
-          JSON.stringify(editingPage.config || {})
-            ? (finalConfig ?? undefined)
-            : undefined,
+        config: hasConfigChanges ? finalConfig : undefined,
         metaDescription:
           formData.metaDescription !== (editingPage.metaDescription || "")
             ? formData.metaDescription
@@ -1406,6 +1417,20 @@ export default function PagesTable() {
               <p className="text-sm text-muted-foreground">
                 每页显示的文章数量（仅对支持分页的页面有效）
               </p>
+              {isTextContentType(formData.contentType) && (
+                <>
+                  <Checkbox
+                    label="允许评论"
+                    checked={formData.allowComments}
+                    onChange={(e) =>
+                      handleFieldChange("allowComments", e.target.checked)
+                    }
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    仅文本页（Markdown / MDX / HTML）支持评论区。
+                  </p>
+                </>
+              )}
             </div>
           </section>
 

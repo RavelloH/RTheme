@@ -1940,6 +1940,12 @@ export async function getUserActivity(
               title: true,
             },
           },
+          page: {
+            select: {
+              slug: true,
+              title: true,
+            },
+          },
           parent: {
             select: {
               content: true,
@@ -1980,6 +1986,12 @@ export async function getUserActivity(
                 },
               },
               post: {
+                select: {
+                  slug: true,
+                  title: true,
+                },
+              },
+              page: {
                 select: {
                   slug: true,
                   title: true,
@@ -2027,14 +2039,29 @@ export async function getUserActivity(
 
     // 处理评论活动
     comments.forEach((comment) => {
+      const target = comment.post
+        ? {
+            slug: comment.post.slug,
+            title: comment.post.title,
+          }
+        : comment.page
+          ? {
+              slug: comment.page.slug.startsWith("/")
+                ? comment.page.slug
+                : `/${comment.page.slug}`,
+              title: comment.page.title,
+            }
+          : null;
+      if (!target) return;
+
       activities.push({
         id: `comment-${comment.id}`,
         type: "comment",
         createdAt: comment.createdAt.toISOString(),
         comment: {
           content: comment.content,
-          postSlug: comment.post.slug,
-          postTitle: comment.post.title,
+          postSlug: target.slug,
+          postTitle: target.title,
           likesCount: comment._count.likes,
           parentComment: comment.parent
             ? {
@@ -2053,6 +2080,20 @@ export async function getUserActivity(
     likes.forEach((like) => {
       // 如果评论的作者不存在，跳过这条点赞记录
       if (!like.comment.user) return;
+      const target = like.comment.post
+        ? {
+            slug: like.comment.post.slug,
+            title: like.comment.post.title,
+          }
+        : like.comment.page
+          ? {
+              slug: like.comment.page.slug.startsWith("/")
+                ? like.comment.page.slug
+                : `/${like.comment.page.slug}`,
+              title: like.comment.page.title,
+            }
+          : null;
+      if (!target) return;
 
       activities.push({
         id: `like-${like.id}`,
@@ -2061,8 +2102,8 @@ export async function getUserActivity(
         like: {
           commentContent: like.comment.content,
           commentAuthorUsername: like.comment.user.username,
-          postSlug: like.comment.post.slug,
-          postTitle: like.comment.post.title,
+          postSlug: target.slug,
+          postTitle: target.title,
           commentLikesCount: like.comment._count.likes,
         },
       });

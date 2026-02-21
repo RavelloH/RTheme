@@ -60,6 +60,10 @@ import { verifyToken } from "@/lib/server/captcha";
 import { getConfig, getConfigs } from "@/lib/server/config-cache";
 import { getClientIP } from "@/lib/server/get-client-info";
 import { resolveIpLocation } from "@/lib/server/ip-utils";
+import {
+  normalizePageSlug,
+  resolvePageAllowComments,
+} from "@/lib/server/page-comments";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
@@ -69,6 +73,26 @@ import type { Prisma } from ".prisma/client";
 
 const COMMENT_ROLES: UserRole[] = ["USER", "ADMIN", "EDITOR", "AUTHOR"];
 
+type CommentTarget =
+  | {
+      type: "post";
+      id: number;
+      slug: string;
+      title: string;
+      allowComments: boolean;
+      ownerUid: number | null;
+      updatedAt: Date | null;
+    }
+  | {
+      type: "page";
+      id: string;
+      slug: string;
+      title: string;
+      allowComments: boolean;
+      ownerUid: number | null;
+      updatedAt: Date | null;
+    };
+
 // 计算 MD5 哈希值的辅助函数
 function calculateMD5(text: string): string {
   return crypto
@@ -77,14 +101,174 @@ function calculateMD5(text: string): string {
     .digest("hex");
 }
 
+function toAbsolutePath(pathname: string): string {
+  return normalizePageSlug(pathname);
+}
+
+function joinSiteUrl(siteUrl: string, pathname: string): string {
+  const base = siteUrl.replace(/\/+$/, "");
+  const path = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  return `${base}${path}`;
+}
+
+function isLikelyPageSlug(slug: string): boolean {
+  return slug.trim().startsWith("/");
+}
+
+function buildTargetPath(target: CommentTarget): string {
+  if (target.type === "post") {
+    return `/posts/${target.slug}`;
+  }
+  return toAbsolutePath(target.slug);
+}
+
+function buildCommentPermalink(
+  siteUrl: string,
+  target: CommentTarget,
+  commentId: string,
+): string {
+  const contentPath = buildTargetPath(target);
+  return `${joinSiteUrl(siteUrl, contentPath)}#comment-${commentId}`;
+}
+
+function buildCommentTargetWhere(
+  target: CommentTarget,
+): Prisma.CommentWhereInput {
+  return target.type === "post" ? { postId: target.id } : { pageId: target.id };
+}
+
+function resolveTargetFromRelations(relations: {
+  post: { slug: string; title?: string | null } | null;
+  page: { slug: string; title?: string | null } | null;
+}): {
+  type: "post" | "page";
+  slug: string;
+  title: string | null;
+} | null {
+  if (relations.post) {
+    return {
+      type: "post",
+      slug: relations.post.slug,
+      title: relations.post.title ?? null,
+    };
+  }
+
+  if (relations.page) {
+    return {
+      type: "page",
+      slug: toAbsolutePath(relations.page.slug),
+      title: relations.page.title ?? null,
+    };
+  }
+
+  return null;
+}
+
+async function loadCommentTarget(
+  slugInput: string,
+): Promise<CommentTarget | null> {
+  const slug = slugInput.trim();
+  if (!slug) return null;
+
+  const shouldCheckPageFirst = isLikelyPageSlug(slug);
+  const normalizedPageSlug = toAbsolutePath(slug);
+
+  if (shouldCheckPageFirst) {
+    const page = await prisma.page.findUnique({
+      where: {
+        slug: normalizedPageSlug,
+        status: "ACTIVE",
+        deletedAt: null,
+        contentType: { in: ["MARKDOWN", "MDX", "HTML"] },
+      },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        config: true,
+        userUid: true,
+        updatedAt: true,
+      },
+    });
+
+    if (page) {
+      return {
+        type: "page",
+        id: page.id,
+        slug: page.slug,
+        title: page.title,
+        allowComments: resolvePageAllowComments(page.config),
+        ownerUid: page.userUid,
+        updatedAt: page.updatedAt,
+      };
+    }
+  }
+
+  const post = await prisma.post.findUnique({
+    where: { slug, status: "PUBLISHED", deletedAt: null },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      allowComments: true,
+      userUid: true,
+      publishedAt: true,
+    },
+  });
+
+  if (post) {
+    return {
+      type: "post",
+      id: post.id,
+      slug: post.slug,
+      title: post.title,
+      allowComments: post.allowComments,
+      ownerUid: post.userUid,
+      updatedAt: post.publishedAt,
+    };
+  }
+
+  if (!shouldCheckPageFirst) {
+    const fallbackPage = await prisma.page.findFirst({
+      where: {
+        slug: { in: [slug, normalizedPageSlug] },
+        status: "ACTIVE",
+        deletedAt: null,
+        contentType: { in: ["MARKDOWN", "MDX", "HTML"] },
+      },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        config: true,
+        userUid: true,
+        updatedAt: true,
+      },
+    });
+
+    if (fallbackPage) {
+      return {
+        type: "page",
+        id: fallbackPage.id,
+        slug: fallbackPage.slug,
+        title: fallbackPage.title,
+        allowComments: resolvePageAllowComments(fallbackPage.config),
+        ownerUid: fallbackPage.userUid,
+        updatedAt: fallbackPage.updatedAt,
+      };
+    }
+  }
+
+  return null;
+}
+
 /**
  * 发送评论通知的辅助函数
  * 只有当评论状态为 APPROVED 时才调用此函数
  */
 async function sendCommentNotification(params: {
   commentId: string;
-  postId: number;
-  postSlug: string;
+  target: CommentTarget;
   parentId: string | null;
   currentUid: number | null;
   commenterName: string;
@@ -104,37 +288,34 @@ async function sendCommentNotification(params: {
     ]);
     if (!noticeEnabled) return;
 
-    // 获取文章完整信息
-    const postInfo = await prisma.post.findUnique({
-      where: { id: params.postId },
-      select: {
-        title: true,
-        slug: true,
-        userUid: true,
-      },
-    });
-    if (!postInfo) return;
-
-    const commentLink = `${siteUrl}/posts/${params.postSlug}#comment-${params.commentId}`;
+    const commentLink = buildCommentPermalink(
+      siteUrl,
+      params.target,
+      params.commentId,
+    );
     const truncatedContent =
       params.content.length > 50
         ? params.content.slice(0, 50) + "..."
         : params.content;
 
-    // 场景1：文章被评论（无 parentId）
+    // 场景1：页面/文章被评论（无 parentId）
     if (!params.parentId) {
       const postsNoticeEnabled = await getConfig("notice.posts.enable");
       if (!postsNoticeEnabled) return;
 
-      // 如果是自己评论自己的文章，不通知
-      if (params.currentUid && params.currentUid === postInfo.userUid) return;
+      // 如果是自己评论自己的内容，不通知
+      if (params.currentUid && params.currentUid === params.target.ownerUid) {
+        return;
+      }
 
-      const noticeTitle = `${params.commenterName} 评论了《${postInfo.title}》`;
-      const noticeContent = `${params.commenterName} 在《${postInfo.title}》评论："${truncatedContent}"`;
+      if (!params.target.ownerUid) return;
+
+      const noticeTitle = `${params.commenterName} 评论了《${params.target.title}》`;
+      const noticeContent = `${params.commenterName} 在《${params.target.title}》评论："${truncatedContent}"`;
 
       // 发送站内通知
       await sendNotice(
-        postInfo.userUid,
+        params.target.ownerUid,
         noticeTitle,
         noticeContent,
         commentLink,
@@ -191,7 +372,7 @@ async function sendCommentNotification(params: {
           : parentComment.content;
 
       const noticeTitle = `${params.commenterName} 回复了您`;
-      const noticeContent = `您在《${postInfo.title}》发布的评论\n"${truncatedParentContent}"\n被 ${params.commenterName} 回复了：\n"${truncatedContent}"`;
+      const noticeContent = `您在《${params.target.title}》发布的评论\n"${truncatedParentContent}"\n被 ${params.commenterName} 回复了：\n"${truncatedContent}"`;
 
       // 登录用户：发送站内通知
       if (parentComment.userUid && commentNoticeEnabled) {
@@ -303,14 +484,6 @@ type ActionResult<T extends ApiResponseData> =
   | NextResponse<ApiResponse<T>>
   | ApiResponse<T>;
 
-async function loadPostId(slug: string) {
-  const post = await prisma.post.findUnique({
-    where: { slug, status: "PUBLISHED", deletedAt: null },
-    select: { id: true, allowComments: true },
-  });
-  return post;
-}
-
 function buildPaginationMeta({
   page,
   pageSize,
@@ -339,7 +512,22 @@ const commentSelect = {
   status: true,
   createdAt: true,
   parentId: true,
-  post: { select: { slug: true } },
+  postId: true,
+  pageId: true,
+  post: {
+    select: {
+      slug: true,
+      title: true,
+      publishedAt: true,
+    },
+  },
+  page: {
+    select: {
+      slug: true,
+      title: true,
+      updatedAt: true,
+    },
+  },
   userUid: true,
   authorName: true,
   authorEmail: true,
@@ -375,10 +563,7 @@ const commentSelect = {
 type PublicComment = Prisma.CommentGetPayload<{
   select: typeof commentSelect;
 }>;
-const adminCommentSelect = {
-  ...commentSelect,
-  post: { select: { slug: true, title: true } },
-} satisfies Prisma.CommentSelect;
+const adminCommentSelect = commentSelect;
 type AdminComment = Prisma.CommentGetPayload<{
   select: typeof adminCommentSelect;
 }>;
@@ -390,6 +575,14 @@ async function mapCommentToItem(
   maxDepth?: number, // 用于判断是否有更多深层子评论
   isLiked?: boolean, // 当前用户是否已点赞
 ): Promise<CommentItem> {
+  const target = resolveTargetFromRelations({
+    post: comment.post,
+    page: comment.page,
+  });
+  if (!target) {
+    throw new Error(`评论 ${comment.id} 缺少归属对象`);
+  }
+
   const displayName =
     comment.user?.nickname ||
     comment.user?.username ||
@@ -420,9 +613,15 @@ async function mapCommentToItem(
     comment.replyCount > 0 &&
     (maxDepth <= 1 || comment.depth >= maxDepth - 1);
 
+  const targetWhere: Prisma.CommentWhereInput =
+    comment.postId !== null
+      ? { postId: comment.postId }
+      : { pageId: comment.pageId };
+
   // 从数据库查询此评论的所有后代数量（使用 path 前缀匹配）
   const descendantCount = await prisma.comment.count({
     where: {
+      ...targetWhere,
       path: { startsWith: comment.path + "/" },
       deletedAt: null,
       OR: [
@@ -434,7 +633,7 @@ async function mapCommentToItem(
 
   return {
     id: comment.id,
-    postSlug: comment.post.slug,
+    postSlug: target.slug,
     parentId: comment.parentId,
     content: comment.content,
     status: comment.status,
@@ -510,12 +709,12 @@ export async function getPostComments(
     return response.forbidden({ message: "评论功能已关闭" });
   }
 
-  const post = await loadPostId(slug);
-  if (!post) {
-    return response.notFound({ message: "文章不存在或未发布" });
+  const target = await loadCommentTarget(slug);
+  if (!target) {
+    return response.notFound({ message: "评论目标不存在或不可访问" });
   }
-  if (!post.allowComments) {
-    return response.forbidden({ message: "该文章未开启评论" });
+  if (!target.allowComments) {
+    return response.forbidden({ message: "该内容未开启评论" });
   }
 
   const authUser = await authVerify({ allowedRoles: COMMENT_ROLES });
@@ -523,7 +722,7 @@ export async function getPostComments(
 
   // 只获取顶级评论（分页），不再自动加载子评论
   const rootWhere: Prisma.CommentWhereInput = {
-    postId: post.id,
+    ...buildCommentTargetWhere(target),
     deletedAt: null,
     parentId: null, // 仅顶级评论
     OR: [
@@ -543,7 +742,7 @@ export async function getPostComments(
     getConfig("comment.locate.enable"),
     prisma.comment.count({
       where: {
-        postId: post.id,
+        ...buildCommentTargetWhere(target),
         deletedAt: null,
         OR: [
           { status: "APPROVED" },
@@ -734,7 +933,6 @@ export async function getCommentReplies(
       id: true,
       depth: true,
       path: true,
-      post: { select: { slug: true } },
     },
   });
   if (!parent) return response.notFound({ message: "评论不存在" });
@@ -834,12 +1032,12 @@ export async function getDirectChildren(
     return response.forbidden({ message: "评论功能已关闭" });
   }
 
-  const post = await loadPostId(postSlug);
-  if (!post) {
-    return response.notFound({ message: "文章不存在或未发布" });
+  const target = await loadCommentTarget(postSlug);
+  if (!target) {
+    return response.notFound({ message: "评论目标不存在或不可访问" });
   }
-  if (!post.allowComments) {
-    return response.forbidden({ message: "该文章未开启评论" });
+  if (!target.allowComments) {
+    return response.forbidden({ message: "该内容未开启评论" });
   }
 
   const authUser = await authVerify({ allowedRoles: COMMENT_ROLES });
@@ -850,17 +1048,23 @@ export async function getDirectChildren(
   if (parentId) {
     const parent = await prisma.comment.findUnique({
       where: { id: parentId, deletedAt: null },
-      select: { depth: true },
+      select: { depth: true, postId: true, pageId: true },
     });
     if (!parent) {
       return response.notFound({ message: "父评论不存在" });
+    }
+    const sameTarget =
+      (target.type === "post" && parent.postId === target.id) ||
+      (target.type === "page" && parent.pageId === target.id);
+    if (!sameTarget) {
+      return response.badRequest({ message: "父评论不属于当前内容" });
     }
     parentDepth = parent.depth;
   }
 
   // 构建查询条件：只查询直接子评论（depth = parentDepth + 1）
   const where: Prisma.CommentWhereInput = {
-    postId: post.id,
+    ...buildCommentTargetWhere(target),
     deletedAt: null,
     parentId: parentId, // null 表示主级评论
     depth: parentDepth + 1,
@@ -1088,10 +1292,12 @@ export async function createComment(
     "comment.anonymous.review.enable",
   ]);
 
-  const post = await loadPostId(slug);
-  if (!post) return response.notFound({ message: "文章不存在或未发布" });
-  if (!post.allowComments) {
-    return response.forbidden({ message: "该文章未开启评论" });
+  const target = await loadCommentTarget(slug);
+  if (!target) {
+    return response.notFound({ message: "评论目标不存在或不可访问" });
+  }
+  if (!target.allowComments) {
+    return response.forbidden({ message: "该内容未开启评论" });
   }
 
   const authUser = await authVerify({
@@ -1111,9 +1317,19 @@ export async function createComment(
   if (parentId) {
     const parentComment = await prisma.comment.findUnique({
       where: { id: parentId, deletedAt: null },
-      select: { postId: true, depth: true, path: true, sortKey: true },
+      select: {
+        postId: true,
+        pageId: true,
+        depth: true,
+        path: true,
+        sortKey: true,
+      },
     });
-    if (!parentComment || parentComment.postId !== post.id) {
+    const parentMatchesTarget =
+      !!parentComment &&
+      ((target.type === "post" && parentComment.postId === target.id) ||
+        (target.type === "page" && parentComment.pageId === target.id));
+    if (!parentMatchesTarget) {
       return response.badRequest({ message: "回复目标不存在" });
     }
   }
@@ -1182,7 +1398,8 @@ export async function createComment(
       content,
       status,
       parentId: parentId || null,
-      postId: post.id,
+      postId: target.type === "post" ? target.id : null,
+      pageId: target.type === "page" ? target.id : null,
       userUid: dbUser?.uid ?? null,
       authorName: dbUser?.nickname || dbUser?.username || authorName || "匿名",
       authorEmail: dbUser?.email || authorEmail || null,
@@ -1281,7 +1498,7 @@ export async function createComment(
         userIp: ipAddress || "",
         userAgent,
         referrer,
-        permalink: `${siteUrl}/posts/${slug}#comment-${record.id}`,
+        permalink: buildCommentPermalink(siteUrl, target, record.id),
         commentType: "comment",
         commentAuthor: dbUser?.nickname || dbUser?.username || authorName,
         commentAuthorEmail: dbUser?.email || authorEmail || undefined,
@@ -1319,8 +1536,7 @@ export async function createComment(
         if (normalStatus === "APPROVED") {
           await sendCommentNotification({
             commentId: record.id,
-            postId: post.id,
-            postSlug: slug,
+            target,
             parentId: parentId || null,
             currentUid,
             commenterName:
@@ -1345,8 +1561,7 @@ export async function createComment(
     after(async () => {
       await sendCommentNotification({
         commentId: record.id,
-        postId: post.id,
-        postSlug: slug,
+        target,
         parentId: parentId || null,
         currentUid,
         commenterName:
@@ -1420,8 +1635,18 @@ export async function updateCommentStatus(
         select: {
           id: true,
           slug: true,
+          title: true,
           publishedAt: true,
           userUid: true, // 确保获取文章作者ID
+        },
+      },
+      page: {
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          updatedAt: true,
+          userUid: true,
         },
       },
       user: {
@@ -1484,10 +1709,41 @@ export async function updateCommentStatus(
         // 只处理状态发生变化的评论
         if (comment.status === status) continue;
 
+        const rawTarget = resolveTargetFromRelations({
+          post: comment.post,
+          page: comment.page,
+        });
+        if (!rawTarget) continue;
+
+        let target: CommentTarget;
+        if (rawTarget.type === "post") {
+          if (!comment.post) continue;
+          target = {
+            type: "post",
+            id: comment.post.id,
+            slug: rawTarget.slug,
+            title: rawTarget.title || "文章",
+            allowComments: true,
+            ownerUid: comment.post.userUid ?? null,
+            updatedAt: comment.post.publishedAt ?? null,
+          };
+        } else {
+          if (!comment.page) continue;
+          target = {
+            type: "page",
+            id: comment.page.id,
+            slug: rawTarget.slug,
+            title: rawTarget.title || "页面",
+            allowComments: true,
+            ownerUid: comment.page.userUid ?? null,
+            updatedAt: comment.page.updatedAt ?? null,
+          };
+        }
+
         // 构建评论数据
         const commentData: CommentData = {
           userIp: comment.ipAddress || "",
-          permalink: `${siteUrl}/posts/${comment.post.slug}#comment-${comment.id}`,
+          permalink: buildCommentPermalink(siteUrl, target, comment.id),
           commentType: "comment",
           commentAuthor:
             comment.user?.nickname ||
@@ -1500,7 +1756,7 @@ export async function updateCommentStatus(
             comment.user?.website || comment.authorWebsite || undefined,
           commentContent: comment.content,
           commentDateGmt: comment.createdAt,
-          commentPostModifiedGmt: comment.post.publishedAt || undefined,
+          commentPostModifiedGmt: target.updatedAt || undefined,
           isTest: process.env.NODE_ENV === "development",
         };
 
@@ -1530,11 +1786,41 @@ export async function updateCommentStatus(
         // 只处理状态发生变化的评论（从非 APPROVED 变为 APPROVED）
         if (comment.status === "APPROVED") continue;
 
+        const rawTarget = resolveTargetFromRelations({
+          post: comment.post,
+          page: comment.page,
+        });
+        if (!rawTarget) continue;
+
+        let target: CommentTarget;
+        if (rawTarget.type === "post") {
+          if (!comment.post) continue;
+          target = {
+            type: "post",
+            id: comment.post.id,
+            slug: rawTarget.slug,
+            title: rawTarget.title || "文章",
+            allowComments: true,
+            ownerUid: comment.post.userUid ?? null,
+            updatedAt: comment.post.publishedAt ?? null,
+          };
+        } else {
+          if (!comment.page) continue;
+          target = {
+            type: "page",
+            id: comment.page.id,
+            slug: rawTarget.slug,
+            title: rawTarget.title || "页面",
+            allowComments: true,
+            ownerUid: comment.page.userUid ?? null,
+            updatedAt: comment.page.updatedAt ?? null,
+          };
+        }
+
         // 发送通知
         await sendCommentNotification({
           commentId: comment.id,
-          postId: comment.post.id,
-          postSlug: comment.post.slug,
+          target,
           parentId: comment.parentId,
           currentUid: comment.userUid,
           commenterName:
@@ -1667,34 +1953,42 @@ export async function getCommentsAdmin(
     parentOnly,
   } = params;
 
-  // 构建 post 查询条件
-  const postWhere: Prisma.PostWhereInput = {};
-  if (slug) {
-    postWhere.slug = slug;
-  }
-  // AUTHOR 角色只能查看自己文章下的评论
+  const whereConditions: Prisma.CommentWhereInput[] = [{ deletedAt: null }];
+
+  // AUTHOR 角色只能查看自己文章下的评论，不包含页面评论
   if (authUser.role === "AUTHOR") {
-    postWhere.userUid = authUser.uid;
+    whereConditions.push({ post: { userUid: authUser.uid } });
   }
 
-  const where: Prisma.CommentWhereInput = {
-    deletedAt: null,
-    ...(Object.keys(postWhere).length > 0 ? { post: postWhere } : {}),
-    ...(uid ? { userUid: uid } : {}),
-    ...(parentOnly ? { parentId: null } : {}),
-    ...(status?.length ? { status: { in: status } } : {}),
-  };
-
+  if (uid) {
+    whereConditions.push({ userUid: uid });
+  }
+  if (parentOnly) {
+    whereConditions.push({ parentId: null });
+  }
+  if (status?.length) {
+    whereConditions.push({ status: { in: status } });
+  }
+  if (slug) {
+    const normalizedPageSlug = toAbsolutePath(slug);
+    whereConditions.push({
+      OR: [{ post: { slug } }, { page: { slug: normalizedPageSlug } }],
+    });
+  }
   if (search) {
-    where.OR = [
-      { content: { contains: search } },
-      { authorName: { contains: search } },
-      { authorEmail: { contains: search } },
-      { authorWebsite: { contains: search } },
-      { user: { username: { contains: search } } },
-      { user: { nickname: { contains: search } } },
-    ];
+    whereConditions.push({
+      OR: [
+        { content: { contains: search } },
+        { authorName: { contains: search } },
+        { authorEmail: { contains: search } },
+        { authorWebsite: { contains: search } },
+        { user: { username: { contains: search } } },
+        { user: { nickname: { contains: search } } },
+      ],
+    });
   }
+
+  const where: Prisma.CommentWhereInput = { AND: whereConditions };
 
   const [total, rows] = await Promise.all([
     prisma.comment.count({ where }),
@@ -1737,9 +2031,13 @@ export async function getCommentsAdmin(
         undefined,
         likedCommentIds.has(row.id),
       );
+      const target = resolveTargetFromRelations({
+        post: row.post,
+        page: row.page,
+      });
       return {
         ...mapped,
-        postTitle: row.post.title,
+        postTitle: target?.title ?? null,
         email: row.authorEmail,
         ipAddress: row.ipAddress,
         userAgent: row.userAgent,
@@ -1801,6 +2099,7 @@ export async function getCommentHistory(
       createdAt: true,
       status: true,
       post: { select: { slug: true, title: true } },
+      page: { select: { slug: true, title: true } },
     },
   });
 
@@ -1831,10 +2130,14 @@ export async function getCommentHistory(
       posts: new Map<string, number>(),
     };
 
-    if (row.post?.slug) {
-      const slug = row.post.slug;
-      slugTitleMap.set(slug, row.post.title ?? null);
-      item.posts.set(slug, (item.posts.get(slug) || 0) + 1);
+    const target = resolveTargetFromRelations({
+      post: row.post,
+      page: row.page,
+    });
+    if (target?.slug) {
+      const targetSlug = target.slug;
+      slugTitleMap.set(targetSlug, target.title ?? null);
+      item.posts.set(targetSlug, (item.posts.get(targetSlug) || 0) + 1);
     }
 
     item.total += 1;

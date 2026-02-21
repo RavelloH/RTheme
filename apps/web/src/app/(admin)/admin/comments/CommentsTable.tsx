@@ -40,6 +40,11 @@ const statusLabels: Record<CommentStatus, string> = {
 type SortKey = "createdAt" | "status" | "id" | "postSlug";
 type AdminCommentRow = AdminCommentItem & { postTitle?: string | null };
 
+function resolveCommentTargetHref(slug: string): string {
+  if (!slug) return "#";
+  return slug.startsWith("/") ? slug : `/posts/${slug}`;
+}
+
 export default function CommentsTable() {
   const [data, setData] = useState<AdminCommentRow[]>([]);
   const [page, setPage] = useState(1);
@@ -266,13 +271,13 @@ export default function CommentsTable() {
     },
     {
       key: "postSlug",
-      title: "文章",
+      title: "内容",
       width: "16em",
       sortable: true,
       render: (_, record) => (
         <div>
           <Link
-            href={`/posts/${record.postSlug}`}
+            href={resolveCommentTargetHref(record.postSlug)}
             target="_blank"
             presets={["hover-color"]}
             title={record.postTitle || record.postSlug}
@@ -334,9 +339,9 @@ export default function CommentsTable() {
     },
     {
       key: "slug",
-      label: "文章 Slug",
+      label: "内容 Slug",
       type: "input",
-      placeholder: "按文章筛选",
+      placeholder: "按内容路径筛选",
     },
     {
       key: "uid",
@@ -558,10 +563,10 @@ export default function CommentsTable() {
                   </p>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="text-sm text-muted-foreground">文章</label>
+                  <label className="text-sm text-muted-foreground">内容</label>
                   <p className="text-sm">
                     <Link
-                      href={`/posts/${selectedComment.postSlug}`}
+                      href={resolveCommentTargetHref(selectedComment.postSlug)}
                       target="_blank"
                       presets={["hover-underline"]}
                       className="text-primary"

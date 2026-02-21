@@ -259,8 +259,10 @@ model Comment {
   status    CommentStatus @default(PENDING)
 
   // 关系
-  postId Int
-  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId Int?
+  post   Post? @relation(fields: [postId], references: [id], onDelete: Cascade)
+  pageId String?
+  page   Page? @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
   // 登录用户评论
   userUid       Int?
@@ -286,15 +288,19 @@ model Comment {
 
   // 索引优化
   @@index([postId])
+  @@index([pageId])
   @@index([userUid])
   @@index([status])
   @@index([parentId])
   @@index([createdAt])
   @@index([postId, status]) // 复合索引：按文章和状态查询
+  @@index([pageId, status]) // 复合索引：按页面和状态查询
   @@index([userUid, status]) // 复合索引：按用户和状态查询
   @@index([status, createdAt]) // 复合索引：按状态和时间查询
   @@index([postId, status, sortKey]) // 复合索引：按 DFS 顺序查询评论树
+  @@index([pageId, status, sortKey]) // 复合索引：按 DFS 顺序查询评论树
   @@index([postId, status, depth]) // 复合索引：按层级过滤
+  @@index([pageId, status, depth]) // 复合索引：按层级过滤
   @@index([path]) // 物化路径索引：用于查找子树
 }
 
@@ -533,6 +539,7 @@ model Page {
   // 导航关系
   menus     Menu[]
   mediaRefs MediaReference[]
+  comments  Comment[]
 
   // 索引优化
   @@index([status])

@@ -16,6 +16,7 @@ import {
   getMatchingPage,
   getSystemPageConfig,
 } from "@/lib/server/page-cache";
+import { resolvePageAllowComments } from "@/lib/server/page-comments";
 import { getLatestPublishedPostsForJsonLd } from "@/lib/server/post";
 import {
   buildMainMenuJsonLdBreadcrumb,
@@ -238,13 +239,17 @@ async function renderMainPage(slug: string[] | undefined) {
 
   const renderMode = pageTextRenderModeMap[page.contentType];
   if (renderMode) {
+    const allowComments = resolvePageAllowComments(page.config);
     return (
       <PageTextContentLayout
         pageId={page.id}
+        slug={page.slug}
         title={page.title}
+        authorUid={page.userUid}
         description={page.metaDescription}
         source={page.content}
         mode={renderMode}
+        allowComments={allowComments}
         jsonLdGraph={jsonLdGraph}
       />
     );
