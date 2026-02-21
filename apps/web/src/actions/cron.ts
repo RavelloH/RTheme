@@ -818,18 +818,6 @@ async function runCronAndPersist(
   });
 }
 
-export async function triggerCronInternal(
-  triggerType: "MANUAL" | "CLOUD" | "AUTO" = "CLOUD",
-): Promise<CronHistoryItem | null> {
-  try {
-    const record = await runCronAndPersist(triggerType);
-    return toCronHistoryItem(record);
-  } catch (error) {
-    console.error("Trigger cron internal error:", error);
-    return null;
-  }
-}
-
 export async function triggerCron(
   params: TriggerCron,
   serverConfig: { environment: "serverless" },

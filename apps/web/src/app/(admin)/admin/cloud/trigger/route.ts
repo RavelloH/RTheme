@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-import { triggerCronInternal } from "@/actions/cron";
+import { triggerCron } from "@/actions/cron";
 import {
   type CloudTelemetry,
   collectCloudTelemetry,
@@ -11,6 +11,7 @@ import {
   type VerifySource,
 } from "@/lib/server/cloud-trigger-verify";
 import { getConfigs } from "@/lib/server/config-cache";
+import { jwtTokenSign } from "@/lib/server/jwt";
 import prisma from "@/lib/server/prisma";
 
 import type { Prisma } from ".prisma/client";
@@ -47,6 +48,18 @@ function parseBearerToken(value: string | null): string | null {
   if (!value.startsWith("Bearer ")) return null;
   const token = value.slice(7).trim();
   return token.length > 0 ? token : null;
+}
+
+function createInternalCronAccessToken(): string {
+  return jwtTokenSign({
+    inner: {
+      uid: 0,
+      username: "cloud_trigger_system",
+      nickname: "cloud-trigger",
+      role: "ADMIN",
+    },
+    expired: "60s",
+  });
 }
 
 function createFallbackTelemetry(input: TelemetryBuildInput): CloudTelemetry {
@@ -445,11 +458,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     message: string;
   }> = (async () => {
     try {
-      const cronRecord = await triggerCronInternal("CLOUD");
+      const accessToken = createInternalCronAccessToken();
+      const cronResponse = await triggerCron({
+        access_token: accessToken,
+        triggerType: "CLOUD",
+      });
+      const cronRecord = cronResponse.success ? cronResponse.data : null;
       const success = Boolean(cronRecord);
-      const message = success
-        ? `cron 执行完成，记录 #${cronRecord!.id}`
-        : "cron 执行失败";
+      const message = cronRecord
+        ? `cron 执行完成，记录 #${cronRecord.id}`
+        : cronResponse.message || "cron 执行失败";
 
       await prisma.cloudTriggerHistory
         .update({
