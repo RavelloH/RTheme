@@ -57,6 +57,9 @@ const nextConfig = () => {
     experimental: {
       optimizePackageImports: ["@remixicon/react"],
       cpus: osCpus().length,
+      serverActions: {
+        bodySizeLimit: "4mb",
+      },
     },
     allowedDevOrigins: ["198.18.0.1"],
     outputFileTracingExcludes: {
