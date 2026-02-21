@@ -56,6 +56,11 @@ type BackupScopeDefinition = BackupScopeItem & {
   dataKeys: string[];
 };
 
+type SequenceTarget = {
+  table: string;
+  column: string;
+};
+
 type ParsedAndValidatedArchive = {
   archive: BackupArchive;
   checksum: string;
@@ -154,6 +159,32 @@ const SCOPE_DEFINITIONS: BackupScopeDefinition[] = [
     ],
   },
 ];
+
+const AUTOINCREMENT_SEQUENCE_TARGETS: Record<BackupScope, SequenceTarget[]> = {
+  CORE_BASE: [
+    { table: "User", column: "uid" },
+    { table: "CustomDictionary", column: "id" },
+    { table: "MailSubscription", column: "id" },
+  ],
+  ASSETS: [
+    { table: "VirtualFolder", column: "id" },
+    { table: "Media", column: "id" },
+    { table: "Photo", column: "id" },
+  ],
+  CONTENT: [
+    { table: "Category", column: "id" },
+    { table: "Post", column: "id" },
+    { table: "Project", column: "id" },
+    { table: "FriendLink", column: "id" },
+  ],
+  ANALYTICS: [{ table: "SearchLog", column: "id" }],
+  OPS_LOGS: [
+    { table: "AuditLog", column: "id" },
+    { table: "HealthCheck", column: "id" },
+    { table: "CronHistory", column: "id" },
+    { table: "CloudTriggerHistory", column: "id" },
+  ],
+};
 
 function getScopeDefinition(scope: BackupScope): BackupScopeDefinition {
   const found = SCOPE_DEFINITIONS.find((item) => item.scope === scope);
@@ -1387,6 +1418,99 @@ async function buildDependencyIssues(
   const issues: BackupIssue[] = [];
 
   if (scope === "CORE_BASE") {
+    const incomingUserUids = new Set(
+      uniqueNumbers(
+        getRows(data, "users").map((row) => readNumber(row, "uid")),
+      ),
+    );
+    const incomingConversationIds = new Set(
+      uniqueStrings(
+        getRows(data, "conversations").map((row) => readString(row, "id")),
+      ),
+    );
+    const incomingMessageIds = new Set(
+      uniqueStrings(
+        getRows(data, "messages").map((row) => readString(row, "id")),
+      ),
+    );
+
+    const participantConversationIds = uniqueStrings(
+      getRows(data, "conversationParticipants").map((row) =>
+        readString(row, "conversationId"),
+      ),
+    );
+    const participantUserUids = uniqueNumbers(
+      getRows(data, "conversationParticipants").map((row) =>
+        readNumber(row, "userUid"),
+      ),
+    );
+    const messageConversationIds = uniqueStrings(
+      getRows(data, "messages").map((row) => readString(row, "conversationId")),
+    );
+    const messageSenderUids = uniqueNumbers(
+      getRows(data, "messages").map((row) => readNumber(row, "senderUid")),
+    );
+    const replyToMessageIds = uniqueStrings(
+      getRows(data, "messages").map((row) =>
+        readString(row, "replyToMessageId"),
+      ),
+    );
+
+    const missingParticipantConversations = participantConversationIds.filter(
+      (conversationId) => !incomingConversationIds.has(conversationId),
+    );
+    if (missingParticipantConversations.length > 0) {
+      issues.push({
+        level: "error",
+        code: "MISSING_CONVERSATIONS_FOR_PARTICIPANTS",
+        message: "会话参与者数据存在未定义的 Conversation 引用",
+      });
+    }
+
+    const missingParticipantUsers = participantUserUids.filter(
+      (userUid) => !incomingUserUids.has(userUid),
+    );
+    if (missingParticipantUsers.length > 0) {
+      issues.push({
+        level: "error",
+        code: "MISSING_USERS_FOR_PARTICIPANTS",
+        message: "会话参与者数据存在未定义的 User 引用",
+      });
+    }
+
+    const missingMessageConversations = messageConversationIds.filter(
+      (conversationId) => !incomingConversationIds.has(conversationId),
+    );
+    if (missingMessageConversations.length > 0) {
+      issues.push({
+        level: "error",
+        code: "MISSING_CONVERSATIONS_FOR_MESSAGES",
+        message: "私信数据存在未定义的 Conversation 引用",
+      });
+    }
+
+    const missingMessageSenders = messageSenderUids.filter(
+      (userUid) => !incomingUserUids.has(userUid),
+    );
+    if (missingMessageSenders.length > 0) {
+      issues.push({
+        level: "error",
+        code: "MISSING_USERS_FOR_MESSAGES",
+        message: "私信数据存在未定义的发送者 User 引用",
+      });
+    }
+
+    const missingReplyTargets = replyToMessageIds.filter(
+      (messageId) => !incomingMessageIds.has(messageId),
+    );
+    if (missingReplyTargets.length > 0) {
+      issues.push({
+        level: "error",
+        code: "MISSING_MESSAGE_REPLY_TARGETS",
+        message: "私信回复关系中存在找不到的 replyToMessageId",
+      });
+    }
+
     const [postCount, projectCount, commentCount, mediaCount, mediaRefCount] =
       await Promise.all([
         prisma.post.count(),
@@ -1481,6 +1605,20 @@ async function buildDependencyIssues(
         getRows(data, "comments").map((row) => readString(row, "id")),
       ),
     );
+    const parentCommentIds = uniqueStrings(
+      getRows(data, "comments").map((row) => readString(row, "parentId")),
+    );
+    const missingParentComments = parentCommentIds.filter(
+      (commentId) => !incomingCommentIds.has(commentId),
+    );
+    if (missingParentComments.length > 0) {
+      issues.push({
+        level: "error",
+        code: "MISSING_COMMENT_PARENTS",
+        message: "评论数据中存在找不到对应父评论的 parentId",
+      });
+    }
+
     const likedCommentIds = uniqueStrings(
       getRows(data, "commentLikes").map((row) => readString(row, "commentId")),
     );
@@ -1506,6 +1644,45 @@ async function buildDependencyIssues(
         code: "CONTENT_CASCADE_WARNING",
         message:
           "当前实例存在评论数据，替换内容会覆盖现有评论与点赞，请确认这是预期行为",
+      });
+    }
+
+    const [existingMediaReferenceCount, existingViewCountCacheCount] =
+      await Promise.all([
+        prisma.mediaReference.count({
+          where: {
+            OR: [
+              { postId: { not: null } },
+              { projectId: { not: null } },
+              { tagSlug: { not: null } },
+              { categoryId: { not: null } },
+            ],
+          },
+        }),
+        prisma.viewCountCache.count({
+          where: {
+            postSlug: {
+              not: null,
+            },
+          },
+        }),
+      ]);
+
+    if (existingMediaReferenceCount > 0) {
+      issues.push({
+        level: "warning",
+        code: "CONTENT_ASSETS_CASCADE_WARNING",
+        message:
+          "替换内容会级联删除与文章/项目/标签/分类关联的媒体引用，请确认是否已准备重建媒体关系",
+      });
+    }
+
+    if (existingViewCountCacheCount > 0) {
+      issues.push({
+        level: "warning",
+        code: "CONTENT_ANALYTICS_CASCADE_WARNING",
+        message:
+          "替换内容会级联删除与文章 slug 绑定的访问缓存数据，请确认统计数据可接受重建",
       });
     }
   }
@@ -1702,10 +1879,10 @@ async function buildDependencyIssues(
       });
       if (existed !== slugs.length) {
         issues.push({
-          level: "warning",
+          level: "error",
           code: "MISSING_POST_SLUGS",
           message:
-            "访问统计中存在部分文章 slug 在目标库中不存在，相关缓存记录可能无法导入",
+            "访问统计中存在部分文章 slug 在目标库中不存在，请先还原内容分组后再导入分析数据",
         });
       }
     }
@@ -1753,6 +1930,56 @@ async function createManyInBatches(
     total += await handler(batch);
   }
   return total;
+}
+
+function escapeSqlLiteral(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
+function assertSafeSqlIdentifier(value: string): string {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) {
+    throw new Error(`检测到不安全的 SQL 标识符: ${value}`);
+  }
+  return value;
+}
+
+function quoteSqlIdentifier(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
+async function resetTableSequence(
+  tx: PrismaTransaction,
+  target: SequenceTarget,
+): Promise<void> {
+  const tableName = assertSafeSqlIdentifier(target.table);
+  const columnName = assertSafeSqlIdentifier(target.column);
+  const quotedTable = quoteSqlIdentifier(tableName);
+  const quotedColumn = quoteSqlIdentifier(columnName);
+
+  const sequenceRows = await tx.$queryRawUnsafe<Array<{ seq: string | null }>>(
+    `SELECT pg_get_serial_sequence('${escapeSqlLiteral(quotedTable)}', '${escapeSqlLiteral(columnName)}') AS seq`,
+  );
+  const sequenceName = sequenceRows[0]?.seq;
+  if (!sequenceName) {
+    return;
+  }
+
+  await tx.$executeRawUnsafe(
+    `SELECT setval(
+      '${escapeSqlLiteral(sequenceName)}',
+      COALESCE((SELECT MAX(${quotedColumn}) FROM ${quotedTable}), 1),
+      EXISTS (SELECT 1 FROM ${quotedTable})
+    )`,
+  );
+}
+
+async function resetAutoIncrementSequences(
+  tx: PrismaTransaction,
+  scope: BackupScope,
+): Promise<void> {
+  for (const target of AUTOINCREMENT_SEQUENCE_TARGETS[scope]) {
+    await resetTableSequence(tx, target);
+  }
 }
 
 async function setPostTagLinks(
@@ -1994,6 +2221,8 @@ async function replaceCoreBaseScope(
     return result.count;
   });
 
+  await resetAutoIncrementSequences(tx, "CORE_BASE");
+
   const tableStats = existingPlans.map((item) => ({
     ...item,
     toDelete: item.current,
@@ -2053,6 +2282,8 @@ async function replaceAssetsScope(
     const result = await tx.mediaReference.createMany({ data: batch as never });
     return result.count;
   });
+
+  await resetAutoIncrementSequences(tx, "ASSETS");
 
   const tableStats = existingPlans.map((item) => ({
     ...item,
@@ -2139,6 +2370,8 @@ async function replaceContentScope(
   await setProjectTagLinks(tx, projectTagLinks);
   await setProjectCategoryLinks(tx, projectCategoryLinks);
 
+  await resetAutoIncrementSequences(tx, "CONTENT");
+
   const tableStats = existingPlans.map((item) => ({
     ...item,
     toDelete: item.current,
@@ -2187,6 +2420,8 @@ async function replaceAnalyticsScope(
     return result.count;
   });
 
+  await resetAutoIncrementSequences(tx, "ANALYTICS");
+
   const tableStats = existingPlans.map((item) => ({
     ...item,
     toDelete: item.current,
@@ -2234,6 +2469,8 @@ async function replaceOpsLogsScope(
     });
     return result.count;
   });
+
+  await resetAutoIncrementSequences(tx, "OPS_LOGS");
 
   const tableStats = existingPlans.map((item) => ({
     ...item,
