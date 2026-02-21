@@ -17,20 +17,9 @@ type issue = {
   details?: string;
 }[];
 
-interface DashboardDoctorProps {
-  initialData?: {
-    issues: issue;
-    createdAt: string;
-  } | null;
-}
-
-export default function DashboardDoctor({
-  initialData = null,
-}: DashboardDoctorProps) {
-  const [result, setResult] = useState<issue>(initialData?.issues ?? []);
-  const [refreshTime, setRefreshTime] = useState<Date | null>(
-    initialData ? new Date(initialData.createdAt) : null,
-  );
+export default function DashboardDoctor() {
+  const [result, setResult] = useState<issue>([]);
+  const [refreshTime, setRefreshTime] = useState<Date | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchData = async (manualRefresh: boolean = false) => {
@@ -39,7 +28,7 @@ export default function DashboardDoctor({
     }
     setError(null);
     const res = await doctor({ force: manualRefresh });
-    if (!res.success || !res.data) {
+    if (!res.success) {
       setError(new Error(res.message || "获取运行状况失败"));
       return;
     }
@@ -48,9 +37,8 @@ export default function DashboardDoctor({
   };
 
   useEffect(() => {
-    if (initialData) return;
     fetchData();
-  }, [initialData]);
+  }, []);
   // 统计不同严重级别的问题数量
   const errorCount = result.filter((item) => item.severity === "error").length;
   const warningCount = result.filter(

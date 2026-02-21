@@ -23,18 +23,10 @@ type StatsData = {
   };
 } | null;
 
-interface DashboardPagesStatsProps {
-  initialData?: StatsData;
-}
-
-export default function DashboardPagesStats({
-  initialData = null,
-}: DashboardPagesStatsProps) {
-  const [result, setResult] = useState<StatsData>(initialData);
-  const [isCache, setIsCache] = useState(initialData?.cache ?? true);
-  const [refreshTime, setRefreshTime] = useState<Date | null>(
-    initialData ? new Date(initialData.updatedAt) : null,
-  );
+export default function DashboardPagesStats() {
+  const [result, setResult] = useState<StatsData>(null);
+  const [isCache, setIsCache] = useState(true);
+  const [refreshTime, setRefreshTime] = useState<Date | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchData = async (forceRefresh: boolean = false) => {
@@ -53,9 +45,8 @@ export default function DashboardPagesStats({
   };
 
   useEffect(() => {
-    if (initialData) return;
     fetchData();
-  }, [initialData]);
+  }, []);
 
   const getSummary = (result: StatsData) => {
     if (!result) return null;

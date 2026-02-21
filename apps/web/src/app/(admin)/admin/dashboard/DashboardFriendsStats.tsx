@@ -23,17 +23,9 @@ function buildSummary(stats: FriendLinksStats): string[] {
   return lines;
 }
 
-interface DashboardFriendsStatsProps {
-  initialData?: FriendLinksStats | null;
-}
-
-export default function DashboardFriendsStats({
-  initialData = null,
-}: DashboardFriendsStatsProps) {
-  const [stats, setStats] = useState<FriendLinksStats | null>(initialData);
-  const [refreshTime, setRefreshTime] = useState<Date | null>(
-    initialData ? new Date(initialData.updatedAt) : null,
-  );
+export default function DashboardFriendsStats() {
+  const [stats, setStats] = useState<FriendLinksStats | null>(null);
+  const [refreshTime, setRefreshTime] = useState<Date | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchStats = useCallback(async (forceRefresh: boolean = false) => {
@@ -58,9 +50,8 @@ export default function DashboardFriendsStats({
   }, []);
 
   useEffect(() => {
-    if (initialData) return;
     void fetchStats();
-  }, [fetchStats, initialData]);
+  }, [fetchStats]);
 
   return (
     <AutoTransition type="scale" className="h-full">

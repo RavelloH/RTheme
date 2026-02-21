@@ -49,14 +49,8 @@ function generateDescription(
   return elements;
 }
 
-interface DashboardSearchInsightStatsProps {
-  initialData?: SearchLogStatsResult | null;
-}
-
-export default function DashboardSearchInsightStats({
-  initialData = null,
-}: DashboardSearchInsightStatsProps) {
-  const [stats, setStats] = useState<SearchLogStatsResult | null>(initialData);
+export default function DashboardSearchInsightStats() {
+  const [stats, setStats] = useState<SearchLogStatsResult | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [days] = useState<number>(30);
 
@@ -84,9 +78,8 @@ export default function DashboardSearchInsightStats({
   };
 
   useEffect(() => {
-    if (initialData) return;
     fetchStats();
-  }, [initialData]);
+  }, []);
 
   return (
     <AutoTransition type="scale" className="h-full">

@@ -83,16 +83,8 @@ function generateDescription(
   return elements;
 }
 
-interface DashboardSearchIndexStatsProps {
-  initialData?: SearchIndexStatsResult | null;
-}
-
-export default function DashboardSearchIndexStats({
-  initialData = null,
-}: DashboardSearchIndexStatsProps) {
-  const [stats, setStats] = useState<SearchIndexStatsResult | null>(
-    initialData,
-  );
+export default function DashboardSearchIndexStats() {
+  const [stats, setStats] = useState<SearchIndexStatsResult | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchStats = async (forceRefresh = false) => {
@@ -116,9 +108,8 @@ export default function DashboardSearchIndexStats({
   };
 
   useEffect(() => {
-    if (initialData) return;
     fetchStats();
-  }, [initialData]);
+  }, []);
 
   return (
     <AutoTransition type="scale" className="h-full">

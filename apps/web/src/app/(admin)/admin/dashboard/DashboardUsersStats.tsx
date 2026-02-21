@@ -12,18 +12,11 @@ import Clickable from "@/ui/Clickable";
 import { LoadingIndicator } from "@/ui/LoadingIndicator";
 
 type stats = GetUsersStatsSuccessResponse["data"] | null;
-interface DashboardUsersStatsProps {
-  initialData?: stats;
-}
 
-export default function DashboardUsersStats({
-  initialData = null,
-}: DashboardUsersStatsProps) {
-  const [result, setResult] = useState<stats>(initialData);
-  const [isCache, setIsCache] = useState(initialData?.cache ?? true);
-  const [refreshTime, setRefreshTime] = useState<Date | null>(
-    initialData ? new Date(initialData.updatedAt) : null,
-  );
+export default function DashboardUsersStats() {
+  const [result, setResult] = useState<stats>(null);
+  const [isCache, setIsCache] = useState(true);
+  const [refreshTime, setRefreshTime] = useState<Date | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchData = async (forceRefresh: boolean = false) => {
@@ -32,7 +25,7 @@ export default function DashboardUsersStats({
     }
     setError(null);
     const res = await getUsersStats({ force: forceRefresh });
-    if (!res.success || !res.data) {
+    if (!res.success) {
       setError(new Error(res.message || "获取用户统计数据失败"));
       return;
     }
@@ -42,9 +35,8 @@ export default function DashboardUsersStats({
   };
 
   useEffect(() => {
-    if (initialData) return;
     fetchData();
-  }, [initialData]);
+  }, []);
 
   const getSummary = (result: stats) => {
     if (!result) return null;

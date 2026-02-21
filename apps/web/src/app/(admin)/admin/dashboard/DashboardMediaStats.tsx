@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { RiRefreshLine } from "@remixicon/react";
-import type { MediaStats } from "@repo/shared-types/api/media";
 
 import { getMediaStats } from "@/actions/media";
 import ErrorPage from "@/components/ui/Error";
@@ -29,65 +28,10 @@ type StatsData = {
   };
 };
 
-interface DashboardMediaStatsProps {
-  initialData?: MediaStats | null;
-}
-
-const getFileTypeName = (type: string) => {
-  switch (type) {
-    case "IMAGE":
-      return "图片";
-    case "VIDEO":
-      return "视频";
-    case "AUDIO":
-      return "音频";
-    case "FILE":
-      return "文件";
-    default:
-      return "其他";
-  }
-};
-
-function formatMediaStats(data: MediaStats): StatsData {
-  const last7Days = data.dailyStats
-    .slice(0, 7)
-    .reduce((sum, day) => sum + day.newFiles, 0);
-  const last30Days = data.dailyStats.reduce(
-    (sum, day) => sum + day.newFiles,
-    0,
-  );
-  const averageDailyNew =
-    data.dailyStats.length > 0
-      ? Math.round(last30Days / data.dailyStats.length)
-      : 0;
-
-  return {
-    updatedAt: data.updatedAt,
-    cache: data.cache,
-    totalFiles: data.totalFiles,
-    totalSize: data.totalSize,
-    averageDailyNew,
-    typeDistribution: data.typeDistribution.map((type) => ({
-      ...type,
-      name: getFileTypeName(type.type),
-    })),
-    recentStats: {
-      last7Days,
-      last30Days,
-    },
-  };
-}
-
-export default function DashboardMediaStats({
-  initialData = null,
-}: DashboardMediaStatsProps) {
-  const [result, setResult] = useState<StatsData | null>(
-    initialData ? formatMediaStats(initialData) : null,
-  );
-  const [isCache, setIsCache] = useState(initialData?.cache ?? true);
-  const [refreshTime, setRefreshTime] = useState<Date | null>(
-    initialData ? new Date(initialData.updatedAt) : null,
-  );
+export default function DashboardMediaStats() {
+  const [result, setResult] = useState<StatsData | null>(null);
+  const [isCache, setIsCache] = useState(true);
+  const [refreshTime, setRefreshTime] = useState<Date | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchData = async (forceRefresh: boolean = false) => {
@@ -97,11 +41,58 @@ export default function DashboardMediaStats({
     setError(null);
     try {
       const res = await getMediaStats({ days: 30, force: forceRefresh });
-      if (!res.success || !res.data) {
+      if (!res.success) {
         setError(new Error(res.message || "获取媒体统计失败"));
         return;
       }
-      setResult(formatMediaStats(res.data));
+      if (!res.data) return;
+
+      // 获取文件类型名称
+      const getFileTypeName = (type: string) => {
+        switch (type) {
+          case "IMAGE":
+            return "图片";
+          case "VIDEO":
+            return "视频";
+          case "AUDIO":
+            return "音频";
+          case "FILE":
+            return "文件";
+          default:
+            return "其他";
+        }
+      };
+
+      // 计算最近统计数据
+      const last7Days = res.data.dailyStats
+        .slice(0, 7)
+        .reduce((sum, day) => sum + day.newFiles, 0);
+      const last30Days = res.data.dailyStats.reduce(
+        (sum, day) => sum + day.newFiles,
+        0,
+      );
+      const averageDailyNew =
+        res.data.dailyStats.length > 0
+          ? Math.round(last30Days / res.data.dailyStats.length)
+          : 0;
+
+      const formattedData: StatsData = {
+        updatedAt: res.data.updatedAt,
+        cache: res.data.cache,
+        totalFiles: res.data.totalFiles,
+        totalSize: res.data.totalSize,
+        averageDailyNew,
+        typeDistribution: res.data.typeDistribution.map((type) => ({
+          ...type,
+          name: getFileTypeName(type.type),
+        })),
+        recentStats: {
+          last7Days,
+          last30Days,
+        },
+      };
+
+      setResult(formattedData);
       setIsCache(res.data.cache);
       setRefreshTime(new Date(res.data.updatedAt));
     } catch (err) {
@@ -110,9 +101,8 @@ export default function DashboardMediaStats({
   };
 
   useEffect(() => {
-    if (initialData) return;
     fetchData();
-  }, [initialData]);
+  }, []);
 
   // 格式化文件大小
   const formatFileSize = (bytes: number) => {
