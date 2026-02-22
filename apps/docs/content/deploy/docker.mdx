@@ -35,6 +35,7 @@ docker compose up -d
 1. `postgres` 和 `redis` 先启动并通过健康检查
 2. `init` 执行一次运行期初始化（迁移、种子、缓存预热）
 3. `web` 启动
+4. `bootstrap-cache` 调用内部接口刷新 cacheTag（清理构建期 portable 数据缓存）
 
 ## 3. 访问站点
 
@@ -49,6 +50,7 @@ http://localhost:3000
 ```bash
 docker compose logs -f init
 docker compose logs -f web
+docker compose logs -f bootstrap-cache
 ```
 
 ## 5. 停止与清理
