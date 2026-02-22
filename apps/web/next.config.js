@@ -118,12 +118,9 @@ function collectRuntimePackageIncludes(entryPackageNames) {
 /** @type {import('next').NextConfig} */
 const nextConfig = () => {
   const isStandaloneBuild = ["1", "true"].includes(
-    String(process.env.BUILD_STANDALONE ?? "").toLowerCase(),
+    String(globalThis.process.env.BUILD_STANDALONE ?? "").toLowerCase(),
   );
-  const isVercelBuild = ["1", "true"].includes(
-    String(process.env.VERCEL ?? "").toLowerCase(),
-  );
-  const shouldUseAggressivePrismaTracing = isStandaloneBuild && !isVercelBuild;
+  const shouldUseAggressivePrismaTracing = isStandaloneBuild;
 
   const prismaRequiredPackages = [
     "prisma",
@@ -198,8 +195,8 @@ const nextConfig = () => {
     typescript: {
       ignoreBuildErrors: true,
     },
-    // eslint-disable-next-line no-undef
-    output: process.env.BUILD_STANDALONE ? "standalone" : undefined,
+
+    output: globalThis.process.env.BUILD_STANDALONE ? "standalone" : undefined,
     outputFileTracingRoot: repoRootDir,
     serverExternalPackages,
     cacheComponents: true,

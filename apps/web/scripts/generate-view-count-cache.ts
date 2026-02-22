@@ -5,9 +5,9 @@
  */
 
 import { Redis } from "ioredis";
-import path from "path";
 import RLog from "rlog-js";
-import { pathToFileURL } from "url";
+
+import { loadPrismaClientConstructor } from "@/../scripts/load-prisma-client";
 
 import { parseRedisConnectionOptions } from "../src/lib/shared/redis-url";
 
@@ -32,14 +32,7 @@ export default async function generateViewCountCache(options?: {
     if (!prisma) {
       // 1. 动态导入 Prisma 客户端
       try {
-        const clientPath = path.join(
-          process.cwd(),
-          "node_modules",
-          ".prisma",
-          "client",
-        );
-        const clientUrl = pathToFileURL(clientPath).href;
-        const { PrismaClient } = await import(clientUrl);
+        const PrismaClient = await loadPrismaClientConstructor();
         const { Pool } = await import("pg");
         const { PrismaPg } = await import("@prisma/adapter-pg");
 

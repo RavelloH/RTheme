@@ -1,9 +1,9 @@
 // scripts/seed-defaults.ts
 // 数据库默认值种子脚本
 
-import path from "path";
 import RLog from "rlog-js";
-import { pathToFileURL } from "url";
+
+import { loadPrismaClientConstructor } from "@/../scripts/load-prisma-client";
 
 const rlog = new RLog();
 
@@ -25,15 +25,7 @@ export async function seedDefaults(options?: { prisma?: any }) {
     let prisma: any = externalPrisma;
     if (!prisma) {
       try {
-        // 使用 pathToFileURL 确保跨平台兼容性
-        const clientPath = path.join(
-          process.cwd(),
-          "node_modules",
-          ".prisma",
-          "client",
-        );
-        const clientUrl = pathToFileURL(clientPath).href;
-        const { PrismaClient } = await import(clientUrl);
+        const PrismaClient = await loadPrismaClientConstructor();
         const { Pool } = await import("pg");
         const { PrismaPg } = await import("@prisma/adapter-pg");
 

@@ -6,7 +6,8 @@
 import fs from "fs";
 import path from "path";
 import RLog from "rlog-js";
-import { pathToFileURL } from "url";
+
+import { loadPrismaClientConstructor } from "@/../scripts/load-prisma-client";
 
 const rlog = new RLog();
 
@@ -52,15 +53,7 @@ async function generatePageCache() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let prisma: any;
     try {
-      // 使用 pathToFileURL 确保跨平台兼容性
-      const clientPath = path.join(
-        process.cwd(),
-        "node_modules",
-        ".prisma",
-        "client",
-      );
-      const clientUrl = pathToFileURL(clientPath).href;
-      const { PrismaClient } = await import(clientUrl);
+      const PrismaClient = await loadPrismaClientConstructor();
       const { Pool } = await import("pg");
       const { PrismaPg } = await import("@prisma/adapter-pg");
 

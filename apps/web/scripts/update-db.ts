@@ -8,6 +8,7 @@ import Rlog from "rlog-js";
 import { pathToFileURL } from "url";
 
 import { loadWebEnv } from "@/../scripts/load-env";
+import { loadPrismaClientConstructor } from "@/../scripts/load-prisma-client";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let prisma: any;
@@ -73,14 +74,7 @@ async function main() {
 // 初始化 Prisma 客户端
 async function initializePrismaClient() {
   try {
-    const clientPath = path.join(
-      process.cwd(),
-      "node_modules",
-      ".prisma",
-      "client",
-    );
-    const clientUrl = pathToFileURL(clientPath).href;
-    const { PrismaClient } = await import(clientUrl);
+    const PrismaClient = await loadPrismaClientConstructor();
     const { Pool } = await import("pg");
     const { PrismaPg } = await import("@prisma/adapter-pg");
 
