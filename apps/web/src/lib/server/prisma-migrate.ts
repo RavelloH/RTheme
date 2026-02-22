@@ -2,7 +2,6 @@ import "server-only";
 
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
 
 type Logger = (line: string) => void;
@@ -17,19 +16,7 @@ function resolveFirstExistingPath(candidates: string[]): string | null {
 }
 
 function resolvePrismaCliPath(cwd: string): string {
-  const require = createRequire(import.meta.url);
   const explicitPrismaCliPath = process.env.PRISMA_CLI_PATH;
-
-  const resolveByRequire = (
-    basedir: string,
-    request: string,
-  ): string | null => {
-    try {
-      return require.resolve(request, { paths: [basedir] });
-    } catch {
-      return null;
-    }
-  };
 
   const resolveByPnpmStore = (basedir: string): string | null => {
     const pnpmDir = path.resolve(basedir, "node_modules", ".pnpm");
@@ -59,15 +46,6 @@ function resolvePrismaCliPath(cwd: string): string {
   const cliPath = resolveFirstExistingPath(
     [
       explicitPrismaCliPath ?? "",
-      resolveByRequire(cwd, "prisma/build/index.js"),
-      resolveByRequire(
-        path.resolve(cwd, "apps", "web"),
-        "prisma/build/index.js",
-      ),
-      resolveByRequire(
-        path.resolve(cwd, "prisma-runtime", "node_modules"),
-        "prisma/build/index.js",
-      ),
       path.resolve(cwd, "node_modules", "prisma", "build", "index.js"),
       path.resolve(
         cwd,

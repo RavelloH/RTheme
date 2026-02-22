@@ -10,9 +10,9 @@ import {
 import path from "node:path";
 
 import RLog from "rlog-js";
-import { pathToFileURL } from "url";
 
 import { loadWebEnv } from "@/../scripts/load-env";
+import { loadPrismaClientConstructor } from "@/../scripts/load-prisma-client";
 
 import {
   buildCloudSignMessage,
@@ -37,15 +37,8 @@ interface CloudSyncConfig {
 
 interface ScriptPrismaClient {
   config: {
-    findUnique(args: {
-      where: { key: string };
-      select: { value: true };
-    }): Promise<{ value: unknown } | null>;
-    upsert(args: {
-      where: { key: string };
-      update: { value: { default: unknown } };
-      create: { key: string; value: { default: unknown } };
-    }): Promise<unknown>;
+    findUnique(args: unknown): Promise<{ value: unknown } | null>;
+    upsert(args: unknown): Promise<unknown>;
   };
   $connect(): Promise<void>;
   $disconnect(): Promise<void>;
@@ -148,14 +141,7 @@ function scheduleTimeToMinuteOfDay(value: string | null): number | null {
 
 async function createPrismaClient(): Promise<ScriptRuntime | null> {
   try {
-    const clientPath = path.join(
-      process.cwd(),
-      "node_modules",
-      ".prisma",
-      "client",
-    );
-    const clientUrl = pathToFileURL(clientPath).href;
-    const { PrismaClient } = await import(clientUrl);
+    const PrismaClient = await loadPrismaClientConstructor();
     const { Pool } = await import("pg");
     const { PrismaPg } = await import("@prisma/adapter-pg");
 
@@ -401,9 +387,9 @@ async function syncToCloud(configValue: CloudSyncConfig): Promise<void> {
 }
 
 export async function syncCloudInstance(options?: {
-  prisma?: ScriptPrismaClient;
+  prisma?: unknown;
 }): Promise<void> {
-  const externalPrisma = options?.prisma;
+  const externalPrisma = options?.prisma as ScriptPrismaClient | undefined;
   const runtime = externalPrisma
     ? { prisma: externalPrisma, pool: null }
     : await createPrismaClient();

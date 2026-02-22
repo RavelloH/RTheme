@@ -16,7 +16,8 @@
     "CACHE_BOOTSTRAP_RETRIES",
     "CACHE_BOOTSTRAP_INTERVAL_MS",
     "BUILD_STANDALONE",
-    "BUILD_PROFILE"
+    "BUILD_PROFILE",
+    "PRISMA_CLI_PATH"
   ],
   "tasks": {
     "build": {
@@ -35,7 +36,8 @@
         "CACHE_BOOTSTRAP_RETRIES",
         "CACHE_BOOTSTRAP_INTERVAL_MS",
         "BUILD_STANDALONE",
-        "BUILD_PROFILE"
+        "BUILD_PROFILE",
+        "PRISMA_CLI_PATH"
       ]
     },
     "lint": {
@@ -82,7 +84,8 @@
         "CACHE_BOOTSTRAP_RETRIES",
         "CACHE_BOOTSTRAP_INTERVAL_MS",
         "BUILD_STANDALONE",
-        "BUILD_PROFILE"
+        "BUILD_PROFILE",
+        "PRISMA_CLI_PATH"
       ]
     },
     "@repo/openapi-generator#dev": {
