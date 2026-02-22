@@ -39,11 +39,15 @@ ENV PRISMA_CLI_PATH=/app/prisma-runtime/node_modules/prisma/build/index.js
 RUN groupadd --system --gid 1001 nodejs && useradd --system --uid 1001 nextjs
 
 # standalone 主体
-COPY --from=builder /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 # Prisma schema/migrations（运行期 migrate deploy 需要）
-COPY --from=builder /app/apps/web/prisma ./apps/web/prisma
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/prisma ./apps/web/prisma
 # Prisma CLI 完整依赖树（用于 migrate deploy，避免动态依赖缺失）
-COPY --from=builder /tmp/prisma-runtime-install/node_modules ./prisma-runtime/node_modules
+COPY --from=builder --chown=nextjs:nodejs /tmp/prisma-runtime-install/node_modules ./prisma-runtime/node_modules
+
+# Next.js 运行期会写入 .next（例如 ISR/prerender 缓存）
+RUN mkdir -p /app/apps/web/.next/cache \
+  && chown -R nextjs:nodejs /app/apps/web/.next
 
 USER nextjs
 
