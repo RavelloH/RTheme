@@ -26,7 +26,7 @@ function sleep(ms: number): Promise<void> {
 function resolveBootstrapConfig() {
   const endpoint =
     process.env.CACHE_BOOTSTRAP_URL?.trim() ||
-    "http://web:3000/api/internal/cache/bootstrap";
+    "http://web:3000/internal/cache/bootstrap";
   const maxAttempts = parsePositiveInt(process.env.CACHE_BOOTSTRAP_RETRIES, 60);
   const intervalMs = parsePositiveInt(
     process.env.CACHE_BOOTSTRAP_INTERVAL_MS,

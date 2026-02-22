@@ -60,7 +60,7 @@ services:
     env_file:
       - .env
     environment:
-      CACHE_BOOTSTRAP_URL: http://web:3000/api/internal/cache/bootstrap
+      CACHE_BOOTSTRAP_URL: http://web:3000/internal/cache/bootstrap
       CACHE_BOOTSTRAP_RETRIES: 90
       CACHE_BOOTSTRAP_INTERVAL_MS: 2000
     depends_on:
