@@ -8,10 +8,19 @@ ENABLE_ENGINE_BOOTSTRAP=true
 NETWORK_ROUTE_MODE="${NP_BOOT_ROUTE_PROFILE:-auto}"
 USE_MAINLAND_MIRROR=false
 CONTAINER_TOOL=(docker)
+FORCE_DOWNLOAD=false
 ENGINE_BOOTSTRAP_URL="https://linuxmirrors.cn/docker.sh"
 REGION_DISCOVERY_ENDPOINT="https://ip.api.ravelloh.top/"
 GATEWAY_URL="https://get.neutralpress.net"
+TEMP_FILES=()
 
+echo "███╗   ██╗███████╗██╗   ██╗████████╗██████╗  █████╗ ██╗     ██████╗ ██████╗ ███████╗███████╗███████╗";
+echo "████╗  ██║██╔════╝██║   ██║╚══██╔══╝██╔══██╗██╔══██╗██║     ██╔══██╗██╔══██╗██╔════╝██╔════╝██╔════╝";
+echo "██╔██╗ ██║█████╗  ██║   ██║   ██║   ██████╔╝███████║██║     ██████╔╝██████╔╝█████╗  ███████╗███████╗";
+echo "██║╚██╗██║██╔══╝  ██║   ██║   ██║   ██╔══██╗██╔══██║██║     ██╔═══╝ ██╔══██╗██╔══╝  ╚════██║╚════██║";
+echo "██║ ╚████║███████╗╚██████╔╝   ██║   ██║  ██║██║  ██║███████╗██║     ██║  ██║███████╗███████║███████║";
+echo "╚═╝  ╚═══╝╚══════╝ ╚═════╝    ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝";
+echo "                                                                                                    ";
 usage() {
   cat <<'EOF'
 NeutralPress Docker 一键部署脚本
@@ -23,9 +32,10 @@ NeutralPress Docker 一键部署脚本
   --workspace <path>      工作目录（默认: 当前目录下的 neutralpress）
   --artifact <image>      指定镜像地址（写入 .env 的 NEUTRALPRESS_IMAGE）
   --route-profile <mode>  网络路由策略：auto|mainland|overseas（默认: auto）
+  --force                 覆盖已存在的 docker-compose.yml（覆盖前自动备份）
   --skip-engine-setup     禁用容器引擎自动安装（缺失时直接失败）
   --prepare-only          仅下载配置并生成 .env，不执行 docker compose up
-  -h, --help        显示帮助
+  -h, --help              显示帮助
 EOF
 }
 
@@ -41,6 +51,38 @@ fail() {
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || fail "缺少命令: $1"
 }
+
+track_temp_file() {
+  TEMP_FILES+=("$1")
+}
+
+cleanup_temp_files() {
+  local temp_file
+  for temp_file in "${TEMP_FILES[@]}"; do
+    rm -f "$temp_file"
+  done
+}
+
+container_command_hint() {
+  if ! command -v docker >/dev/null 2>&1; then
+    printf 'docker'
+    return
+  fi
+
+  if docker info >/dev/null 2>&1; then
+    printf 'docker'
+    return
+  fi
+
+  if command -v sudo >/dev/null 2>&1 && sudo -n docker info >/dev/null 2>&1; then
+    printf 'sudo docker'
+    return
+  fi
+
+  printf 'docker'
+}
+
+trap cleanup_temp_files EXIT
 
 is_linux() {
   [[ "$(uname -s)" == "Linux" ]]
@@ -64,11 +106,21 @@ download_file() {
   local url="$1"
   local output="$2"
   if command -v curl >/dev/null 2>&1; then
-    curl -fsSL "$url" -o "$output"
+    curl -fsSL \
+      --retry 3 \
+      --retry-delay 1 \
+      --connect-timeout 10 \
+      --max-time 120 \
+      "$url" \
+      -o "$output"
     return
   fi
   if command -v wget >/dev/null 2>&1; then
-    wget -qO "$output" "$url"
+    wget -qO "$output" \
+      --tries=3 \
+      --waitretry=1 \
+      --timeout=10 \
+      "$url"
     return
   fi
   fail "未找到 curl 或 wget，无法下载文件"
@@ -77,34 +129,50 @@ download_file() {
 fetch_text() {
   local url="$1"
   if command -v curl >/dev/null 2>&1; then
-    curl -fsSL --max-time 5 "$url"
+    curl -fsSL \
+      --retry 3 \
+      --retry-delay 1 \
+      --connect-timeout 3 \
+      --max-time 5 \
+      "$url"
     return
   fi
   if command -v wget >/dev/null 2>&1; then
-    wget -qO- --timeout=5 "$url"
+    wget -qO- \
+      --tries=3 \
+      --waitretry=1 \
+      --timeout=5 \
+      "$url"
     return
   fi
   fail "未找到 curl 或 wget，无法请求网络"
 }
 
-escape_sed_replacement() {
-  local value="$1"
-  value="${value//\\/\\\\}"
-  value="${value//&/\\&}"
-  value="${value//|/\\|}"
-  printf '%s' "$value"
-}
-
 upsert_env() {
   local key="$1"
   local value="$2"
-  local escaped
-  escaped="$(escape_sed_replacement "$value")"
-  if grep -qE "^${key}=" .env; then
-    sed -i "s|^${key}=.*|${key}=${escaped}|" .env
-  else
-    printf '\n%s=%s\n' "$key" "$value" >>.env
-  fi
+  local temp_env
+
+  temp_env="$(mktemp)"
+  track_temp_file "$temp_env"
+
+  awk -v key="$key" -v value="$value" '
+    BEGIN { prefix = key "="; replaced = 0 }
+    index($0, prefix) == 1 {
+      print prefix value
+      replaced = 1
+      next
+    }
+    { print }
+    END {
+      if (replaced == 0) {
+        print ""
+        print prefix value
+      }
+    }
+  ' .env >"$temp_env"
+
+  mv "$temp_env" .env
 }
 
 resolve_network_route() {
@@ -118,12 +186,6 @@ resolve_network_route() {
         USE_MAINLAND_MIRROR=true
       else
         USE_MAINLAND_MIRROR=false
-      fi
-
-      if [[ -n "$country_code" ]]; then
-        log "网络环境检测完成：country=${country_code}，USE_MAINLAND_MIRROR=${USE_MAINLAND_MIRROR}"
-      else
-        log "网络环境检测失败，默认按非中国大陆网络处理"
       fi
       ;;
     mainland)
@@ -154,6 +216,7 @@ bootstrap_container_engine_if_needed() {
   
   local installer
   installer="$(mktemp)"
+  track_temp_file "$installer"
   download_file "$ENGINE_BOOTSTRAP_URL" "$installer"
   chmod +x "$installer"
 
@@ -162,7 +225,7 @@ bootstrap_container_engine_if_needed() {
     run_with_privilege bash "$installer" \
       --source mirrors.aliyun.com/docker-ce \
       --source-registry dockerproxy.net \
-      --protocol http \
+      --protocol https \
       --install-latest true \
       --close-firewall true
   else
@@ -170,7 +233,7 @@ bootstrap_container_engine_if_needed() {
     run_with_privilege bash "$installer" \
       --source download.docker.com \
       --source-registry registry.hub.docker.com \
-      --protocol http \
+      --protocol https \
       --install-latest true \
       --close-firewall true
   fi
@@ -216,6 +279,10 @@ while [[ $# -gt 0 ]]; do
       NETWORK_ROUTE_MODE="$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')"
       shift 2
       ;;
+    --force)
+      FORCE_DOWNLOAD=true
+      shift
+      ;;
     --skip-engine-setup)
       ENABLE_ENGINE_BOOTSTRAP=false
       shift
@@ -255,7 +322,18 @@ mkdir -p "$WORKSPACE_DIR"
 cd "$WORKSPACE_DIR"
 
 log "从网关下载部署文件到: $WORKSPACE_DIR"
-download_file "${GATEWAY_URL}/docker-compose.yml" "docker-compose.yml"
+if [[ -f docker-compose.yml ]]; then
+  if [[ "$FORCE_DOWNLOAD" == "true" ]]; then
+    compose_backup_file="docker-compose.yml.bak.$(date +%Y%m%d%H%M%S)"
+    cp "docker-compose.yml" "$compose_backup_file"
+    log "检测到已有 docker-compose.yml，已备份到: $compose_backup_file"
+    download_file "${GATEWAY_URL}/docker-compose.yml" "docker-compose.yml"
+  else
+    log "检测到已有 docker-compose.yml，跳过下载（如需覆盖请使用 --force）"
+  fi
+else
+  download_file "${GATEWAY_URL}/docker-compose.yml" "docker-compose.yml"
+fi
 
 if [[ ! -f .env ]]; then
   log "正在从网关生成安全的初始环境变量配置..."
@@ -273,8 +351,10 @@ if [[ "$SHOULD_BOOT" == "true" ]]; then
   container_exec compose pull
   container_exec compose up -d
   log "部署完成，默认访问地址: http://localhost:3000"
-  log "查看日志: cd $WORKSPACE_DIR && ${CONTAINER_TOOL[*]} compose logs -f web"
+  log "查看日志: cd \"$WORKSPACE_DIR\" && ${CONTAINER_TOOL[*]} compose logs -f web"
+  log "停止容器: cd \"$WORKSPACE_DIR\" && ${CONTAINER_TOOL[*]} compose down"
 else
   log "已完成配置准备（未启动容器）"
-  log "启动命令: cd $WORKSPACE_DIR && docker compose up -d"
+  container_hint="$(container_command_hint)"
+  log "启动命令: cd \"$WORKSPACE_DIR\" && $container_hint compose up -d"
 fi
