@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SOURCE_OWNER="${NP_BOOT_SOURCE_OWNER:-RavelloH}"
-SOURCE_PROJECT="${NP_BOOT_SOURCE_PROJECT:-NeutralPress}"
-SOURCE_REVISION="${NP_BOOT_SOURCE_REVISION:-main}"
 WORKSPACE_DIR="${NP_BOOT_WORKSPACE:-$PWD/neutralpress}"
 IMAGE_OVERRIDE="${NP_BOOT_IMAGE_OVERRIDE:-}"
 SHOULD_BOOT=true
@@ -13,6 +10,7 @@ USE_MAINLAND_MIRROR=false
 CONTAINER_TOOL=(docker)
 ENGINE_BOOTSTRAP_URL="https://linuxmirrors.cn/docker.sh"
 REGION_DISCOVERY_ENDPOINT="https://ip.api.ravelloh.top/"
+GATEWAY_URL="https://get.neutralpress.net"
 
 usage() {
   cat <<'EOF'
@@ -23,7 +21,6 @@ NeutralPress Docker 一键部署脚本
 
 选项:
   --workspace <path>      工作目录（默认: 当前目录下的 neutralpress）
-  --channel <ref>         仓库分支/Tag/提交（默认: main）
   --artifact <image>      指定镜像地址（写入 .env 的 NEUTRALPRESS_IMAGE）
   --route-profile <mode>  网络路由策略：auto|mainland|overseas（默认: auto）
   --skip-engine-setup     禁用容器引擎自动安装（缺失时直接失败）
@@ -110,63 +107,6 @@ upsert_env() {
   fi
 }
 
-read_env() {
-  local key="$1"
-  local line
-  line="$(grep -E "^${key}=" .env | tail -n1 || true)"
-  if [[ -z "$line" ]]; then
-    printf ''
-    return
-  fi
-  printf '%s' "${line#*=}"
-}
-
-pem_to_env_string() {
-  local file="$1"
-  local encoded
-  encoded="$(awk 'BEGIN { ORS=""; } { sub(/\r$/, ""); printf "%s\\\\n", $0 }' "$file")"
-  encoded="${encoded%\\n}"
-  printf '"%s"' "$encoded"
-}
-
-generate_master_secret_if_needed() {
-  local current
-  current="$(read_env "MASTER_SECRET")"
-  if [[ -z "$current" || "$current" == change_me_to_a_random_string_with_at_least_32_chars* ]]; then
-    local secret
-    secret="$(openssl rand -hex 32)"
-    upsert_env "MASTER_SECRET" "$secret"
-    log "已自动生成 MASTER_SECRET"
-  fi
-}
-
-generate_jwt_keys_if_needed() {
-  local current_private current_public
-  current_private="$(read_env "JWT_PRIVATE_KEY")"
-  current_public="$(read_env "JWT_PUBLIC_KEY")"
-
-  if [[ "$current_private" != *PASTE_YOUR_PRIVATE_KEY_HERE* && "$current_public" != *PASTE_YOUR_PUBLIC_KEY_HERE* ]]; then
-    return
-  fi
-
-  local tmp_dir private_file public_file private_env public_env
-  tmp_dir="$(mktemp -d)"
-  private_file="${tmp_dir}/jwt-private.pem"
-  public_file="${tmp_dir}/jwt-public.pem"
-
-  openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -out "$private_file" >/dev/null 2>&1
-  openssl pkey -in "$private_file" -pubout -out "$public_file" >/dev/null 2>&1
-
-  private_env="$(pem_to_env_string "$private_file")"
-  public_env="$(pem_to_env_string "$public_file")"
-
-  upsert_env "JWT_PRIVATE_KEY" "$private_env"
-  upsert_env "JWT_PUBLIC_KEY" "$public_env"
-
-  rm -rf "$tmp_dir"
-  log "已自动生成 JWT_PRIVATE_KEY / JWT_PUBLIC_KEY"
-}
-
 resolve_network_route() {
   case "$NETWORK_ROUTE_MODE" in
     auto)
@@ -211,13 +151,7 @@ bootstrap_container_engine_if_needed() {
   fi
 
   is_linux || fail "自动安装 Docker 仅支持 Linux 环境"
-  need_cmd bash
-  if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
-    fail "自动安装 Docker 需要 curl 或 wget"
-  fi
-
-  resolve_network_route
-
+  
   local installer
   installer="$(mktemp)"
   download_file "$ENGINE_BOOTSTRAP_URL" "$installer"
@@ -272,11 +206,6 @@ while [[ $# -gt 0 ]]; do
       WORKSPACE_DIR="$2"
       shift 2
       ;;
-    --channel)
-      [[ $# -ge 2 ]] || fail "--channel 需要一个参数"
-      SOURCE_REVISION="$2"
-      shift 2
-      ;;
     --artifact)
       [[ $# -ge 2 ]] || fail "--artifact 需要一个参数"
       IMAGE_OVERRIDE="$2"
@@ -305,7 +234,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-need_cmd openssl
+# --- 集中进行前置依赖检查 ---
+need_cmd bash
+if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
+  fail "需要 curl 或 wget 来下载网络文件"
+fi
+
+# 统一初始化全局网络环境状态
+resolve_network_route
 
 if [[ "$SHOULD_BOOT" == "true" ]]; then
   bootstrap_container_engine_if_needed
@@ -315,22 +251,17 @@ if [[ "$SHOULD_BOOT" == "true" ]]; then
   fi
 fi
 
-RAW_BASE_URL="https://raw.githubusercontent.com/${SOURCE_OWNER}/${SOURCE_PROJECT}/${SOURCE_REVISION}"
-
 mkdir -p "$WORKSPACE_DIR"
 cd "$WORKSPACE_DIR"
 
-log "下载部署文件到: $WORKSPACE_DIR"
-download_file "${RAW_BASE_URL}/docker-compose.yml" "docker-compose.yml"
-download_file "${RAW_BASE_URL}/.env.example" ".env.example"
+log "从网关下载部署文件到: $WORKSPACE_DIR"
+download_file "${GATEWAY_URL}/docker-compose.yml" "docker-compose.yml"
 
 if [[ ! -f .env ]]; then
-  cp .env.example .env
-  log "已创建 .env（基于 .env.example）"
+  log "正在从网关生成安全的初始环境变量配置..."
+  download_file "${GATEWAY_URL}/env" ".env"
+  log "已成功创建 .env 文件"
 fi
-
-generate_master_secret_if_needed
-generate_jwt_keys_if_needed
 
 if [[ -n "$IMAGE_OVERRIDE" ]]; then
   upsert_env "NEUTRALPRESS_IMAGE" "$IMAGE_OVERRIDE"

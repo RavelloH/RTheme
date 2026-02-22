@@ -8,17 +8,16 @@ title: 一键部署
 curl -fsSL https://get.neutralpress.net | bash
 ```
 
-脚本会自动执行：
+脚本会自动完成下列操作：
 
 1. 下载 `docker-compose.yml` 和 `.env.example`
 2. 创建 `.env`（如果不存在）
-3. 自动生成 `MASTER_SECRET`、`JWT_PRIVATE_KEY`、`JWT_PUBLIC_KEY`（仅在占位符状态时生成）
+3. 自动生成 `MASTER_SECRET`、`JWT_PRIVATE_KEY`、`JWT_PUBLIC_KEY`
 4. 如果未安装 Docker，会自动安装 Docker + Docker Compose（仅 Linux）
 5. 执行 `docker compose up -d`
 
 ## 前置条件
 
-- 已安装 `openssl`
 - 已安装 `curl` 或 `wget`
 - Linux 环境下可用 root 或 sudo（仅在自动安装 Docker 时需要）
 
@@ -80,7 +79,16 @@ curl -fsSL https://raw.githubusercontent.com/RavelloH/NeutralPress/main/scripts/
 
 ```bash
 cd /opt/neutralpress
+
+# 查看日志
 docker compose logs -f web
+
+# 关闭容器
 docker compose down
+
+# 在关闭容器后，重新启动容器
+docker compose up -d
+
+# 删除容器和数据卷
 docker compose down -v
 ```
