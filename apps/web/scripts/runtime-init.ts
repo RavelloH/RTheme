@@ -58,23 +58,6 @@ export async function runRuntimeInitialization(): Promise<void> {
   await syncCloudInstance();
   rlog.log();
 
-  rlog.log("Starting configuration, menu, and page cache generation...");
-  const [
-    { generateConfigCache },
-    { generateMenuCache },
-    { generatePageCache },
-  ] = await Promise.all([
-    import("./generate-config-cache.js"),
-    import("./generate-menu-cache.js"),
-    import("./generate-page-cache.js"),
-  ]);
-  await Promise.all([
-    generateConfigCache(),
-    generateMenuCache(),
-    generatePageCache(),
-  ]);
-  rlog.log();
-
   rlog.log("Starting view count cache generation...");
   const { default: generateViewCountCache } = await import(
     "./generate-view-count-cache.js"
