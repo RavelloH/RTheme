@@ -33,25 +33,42 @@ export type TotpTokenPayload = {
   exp: number;
 };
 
-// 检查环境变量
-if (!process.env.JWT_PRIVATE_KEY) {
-  throw new Error("JWT_PRIVATE_KEY environment variable is not set");
+let cachedPrivateKey: KeyObject | null = null;
+let cachedPublicKey: KeyObject | null = null;
+
+function getPrivateKey(): KeyObject {
+  if (cachedPrivateKey) {
+    return cachedPrivateKey;
+  }
+
+  const key = process.env.JWT_PRIVATE_KEY;
+  if (!key) {
+    throw new Error("JWT_PRIVATE_KEY environment variable is not set");
+  }
+
+  cachedPrivateKey = createPrivateKey({
+    key,
+    format: "pem",
+  });
+  return cachedPrivateKey;
 }
 
-if (!process.env.JWT_PUBLIC_KEY) {
-  throw new Error("JWT_PUBLIC_KEY environment variable is not set");
+function getPublicKey(): KeyObject {
+  if (cachedPublicKey) {
+    return cachedPublicKey;
+  }
+
+  const key = process.env.JWT_PUBLIC_KEY;
+  if (!key) {
+    throw new Error("JWT_PUBLIC_KEY environment variable is not set");
+  }
+
+  cachedPublicKey = createPublicKey({
+    key,
+    format: "pem",
+  });
+  return cachedPublicKey;
 }
-
-// 安全加载私钥
-const privateKey: KeyObject = createPrivateKey({
-  key: process.env.JWT_PRIVATE_KEY,
-  format: "pem",
-});
-
-const publicKey: KeyObject = createPublicKey({
-  key: process.env.JWT_PUBLIC_KEY,
-  format: "pem",
-});
 
 export function jwtTokenSign({ inner, expired = "7d" }: TokenSignOptions) {
   const signOptions: SignOptions = {
@@ -66,18 +83,22 @@ export function jwtTokenSign({ inner, expired = "7d" }: TokenSignOptions) {
     signOptions.expiresIn = expired as SignOptions["expiresIn"];
   }
 
-  return jwt.sign(inner, privateKey, signOptions);
+  return jwt.sign(inner, getPrivateKey(), signOptions);
 }
 
 export function jwtTokenVerify<T = AccessTokenPayload>(
   tokenText: string,
 ): T | null {
+  if (!tokenText) {
+    return null;
+  }
+
   const verifyOptions: VerifyOptions = {
     algorithms: ["ES256"],
   };
 
   try {
-    const decoded = jwt.verify(tokenText, publicKey, verifyOptions);
+    const decoded = jwt.verify(tokenText, getPublicKey(), verifyOptions);
 
     // 如果是字符串类型，尝试解析为JSON对象
     if (typeof decoded === "string") {
