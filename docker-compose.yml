@@ -53,6 +53,21 @@ services:
     ports:
       - "3000:3000"
 
+  bootstrap-cache:
+    image: ${NEUTRALPRESS_IMAGE:-ghcr.io/ravelloh/neutralpress:latest}
+    container_name: neutralpress-bootstrap-cache
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      CACHE_BOOTSTRAP_URL: http://web:3000/api/internal/cache/bootstrap
+      CACHE_BOOTSTRAP_RETRIES: 90
+      CACHE_BOOTSTRAP_INTERVAL_MS: 2000
+    depends_on:
+      web:
+        condition: service_started
+    command: ["pnpm", "--filter", "web", "run", "cache:bootstrap"]
+
 volumes:
   neutralpress-postgres-data:
   neutralpress-redis-data:
